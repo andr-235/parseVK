@@ -1,0 +1,102 @@
+export interface Keyword {
+  id: number
+  word: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Comment {
+  id: number
+  author: string
+  authorId?: string | null
+  authorUrl?: string | null
+  authorAvatar?: string | null
+  commentUrl?: string | null
+  text: string
+  createdAt: string
+  publishedAt?: string | null
+  isRead: boolean
+}
+
+export interface Group {
+  id: number
+  vkId: number
+  name: string
+  screenName?: string
+  isClosed?: number
+  deactivated?: string
+  type?: string
+  photo50?: string
+  photo100?: string
+  photo200?: string
+  activity?: string
+  ageLimits?: number
+  description?: string
+  membersCount?: number
+  status?: string
+  verified?: number
+  wall?: number
+  addresses?: any
+  city?: any
+  counters?: any
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TableColumn {
+  header: string
+  key: string
+  render?: (item: any, index: number) => React.ReactNode
+  sortable?: boolean
+  emptyValue?: React.ReactNode
+  expandable?: boolean
+  truncateAt?: number
+  headerClassName?: string
+  cellClassName?: string
+}
+
+export type TaskStatus = 'pending' | 'processing' | 'running' | 'completed' | 'failed'
+
+export interface TaskStatsInfo {
+  groups?: number
+  success?: number
+  failed?: number
+  processing?: number
+  running?: number
+  pending?: number
+  processed?: number
+  posts?: number
+  comments?: number
+  authors?: number
+}
+
+export interface Task {
+  id: number | string
+  status: TaskStatus
+  createdAt: string
+  completedAt?: string | null
+  groupsCount: number
+  successCount?: number | null
+  failedCount?: number | null
+  title?: string | null
+  scope?: 'ALL' | 'SELECTED' | string | null
+  skippedGroupsMessage?: string | null
+  postLimit?: number | null
+  groupIds?: Array<number | string> | null
+  stats?: TaskStatsInfo
+}
+
+export interface TaskDetails extends Task {
+  groups: {
+    groupId: number | string
+    groupName: string
+    status: 'pending' | 'processing' | 'running' | 'success' | 'failed'
+    error?: string | null
+    parsedData?: Record<string, unknown> | null
+    progressPercent?: number | null
+    processedCount?: number | null
+    totalCount?: number | null
+    currentIndex?: number | null
+    remainingCount?: number | null
+  }[]
+}

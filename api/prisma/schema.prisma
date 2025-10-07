@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  completed   Boolean  @default(false)
+  totalItems      Int      @default(0)
+  processedItems  Int      @default(0)
+  progress        Float    @default(0)
+  status          String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Group {
+  id                    Int       @id @default(autoincrement())
+  vkId                  Int       @unique
+  name                  String
+  screenName            String?
+  isClosed              Int?
+  deactivated           String?
+  type                  String?
+  photo50               String?
+  photo100              String?
+  photo200              String?
+  activity              String?
+  ageLimits             Int?
+  description           String?   @db.Text
+  membersCount          Int?
+  status                String?
+  verified              Int?
+  wall                  Int?
+  addresses             Json?
+  city                  Json?
+  counters              Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  posts                 Post[]
+}
+
+model Post {
+  id                     Int       @id @default(autoincrement())
+  ownerId                Int
+  vkPostId               Int
+  fromId                 Int
+  postedAt               DateTime
+  text                   String    @db.Text
+  commentsCount          Int
+  commentsCanPost        Int
+  commentsGroupsCanPost  Boolean
+  commentsCanClose       Boolean
+  commentsCanOpen        Boolean
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  groupId                Int?
+  group                  Group?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  comments               Comment[]
+
+  @@unique([ownerId, vkPostId])
+}
+
+
+model Comment {
+  id             Int      @id @default(autoincrement())
+  postId         Int
+  ownerId        Int
+  vkCommentId    Int
+  fromId         Int
+  text           String   @db.Text
+  publishedAt    DateTime
+  likesCount     Int?
+  parentsStack   Json?
+  threadCount    Int?
+  threadItems    Json?
+  attachments    Json?
+  replyToUser    Int?
+  replyToComment Int?
+  authorVkId    Int?
+  author        Author? @relation(fields: [authorVkId], references: [vkUserId], onDelete: SetNull)
+  isDeleted      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  post           Post     @relation(fields: [ownerId, postId], references: [ownerId, vkPostId], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([authorVkId])
+  @@unique([ownerId, vkCommentId])
+}
+
+model Author {
+  id              Int      @id @default(autoincrement())
+  vkUserId        Int      @unique
+  firstName       String
+  lastName        String
+  domain          String?
+  screenName      String?
+  isClosed        Boolean?
+  canAccessClosed Boolean?
+  photo50         String?
+  photo100        String?
+  photo200Orig    String?
+  city            Json?
+  country         Json?
+  comments        Comment[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Keyword {
+  id        Int      @id @default(autoincrement())
+  word      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
