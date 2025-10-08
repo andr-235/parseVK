@@ -3,7 +3,6 @@ import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
 import GroupsHero from './Groups/components/GroupsHero'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
-import PageTitle from '../components/PageTitle'
 import GroupsTableCard from './Groups/components/GroupsTableCard'
 import styles from './GroupsPage.module.css'
 
