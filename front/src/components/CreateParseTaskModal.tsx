@@ -84,34 +84,75 @@ function CreateParseTaskModal({ isOpen, groups, isLoading, onClose, onSubmit }: 
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="modal-content modal-content--enhanced"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-parse-modal-title"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="modal-header">
-          <h2>Создание задачи на парсинг групп</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <div className="modal-title">
+            <h2 id="create-parse-modal-title">Создание задачи на парсинг групп</h2>
+            <p>
+              Сформируйте список групп с помощью поиска и быстрых действий. Мы сразу подсчитаем выбранные
+              сообщества и подскажем, сколько осталось.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            aria-label="Закрыть модальное окно"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
         <div className="modal-body">
-          <div className="group-selection-header">
-            <p>Выберите группы, которые нужно распарсить.</p>
-            <div className="group-selection-actions">
-              <button type="button" className="link-button" onClick={handleSelectAll}>
+          <div className="modal-body-top">
+            <div className="selection-summary" role="status" aria-live="polite">
+              <div className="selection-summary__count">{selectedIds.size}</div>
+              <div className="selection-summary__text">
+                <span className="selection-summary__label">Выбрано групп</span>
+                <span className="selection-summary__meta">
+                  из {groups.length} доступных • найдено {filteredGroups.length}
+                </span>
+              </div>
+            </div>
+            <div className="selection-actions">
+              <button type="button" className="chip-button" onClick={handleSelectAll}>
                 Выбрать все
               </button>
-              <button type="button" className="link-button" onClick={handleDeselectAll}>
+              <button type="button" className="chip-button chip-button--ghost" onClick={handleDeselectAll}>
                 Снять выделение
               </button>
             </div>
-            <input
-              type="text"
-              className="group-search-input"
-              placeholder="Поиск по названию или ID"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
+          </div>
+
+          <div className="group-selection-header">
+            <div className="input-with-icon">
+              <span className="input-icon" aria-hidden="true">
+                🔍
+              </span>
+              <input
+                type="text"
+                className="group-search-input"
+                placeholder="Поиск по названию, ссылке или ID"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+            <p className="group-selection-hint">
+              Начните вводить название или идентификатор — список обновится мгновенно.
+            </p>
           </div>
 
           <div className="group-selection-list">
             {filteredGroups.length === 0 ? (
-              <div className="empty-state">Нет групп по заданным условиям</div>
+              <div className="empty-state">
+                <h3>Не нашли подходящих групп</h3>
+                <p>Попробуйте изменить запрос или сбросить фильтры выбора.</p>
+              </div>
             ) : (
               filteredGroups.map((group) => {
                 const displayName = getDisplayName(group)
@@ -124,8 +165,10 @@ function CreateParseTaskModal({ isOpen, groups, isLoading, onClose, onSubmit }: 
                       checked={isChecked}
                       onChange={() => handleToggle(group.id)}
                     />
-                    <span className="group-name">{displayName}</span>
-                    {group.vkId ? <span className="group-meta">{'vk.com/club' + group.vkId}</span> : null}
+                    <div className="group-info">
+                      <span className="group-name">{displayName}</span>
+                      {group.vkId ? <span className="group-meta">{'vk.com/club' + group.vkId}</span> : null}
+                    </div>
                   </label>
                 )
               })
