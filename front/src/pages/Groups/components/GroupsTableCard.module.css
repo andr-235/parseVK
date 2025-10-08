@@ -1,10 +1,11 @@
 .card {
-  --groups-card-padding: clamp(20px, 4vw, 32px);
-  --groups-card-radius: 22px;
-  --groups-card-gap: 24px;
-  --groups-card-shadow: 0 22px 48px -36px rgba(0, 0, 0, 0.28);
+  --groups-card-padding: clamp(24px, 5vw, 36px);
+  --groups-card-radius: clamp(20px, 5vw, 26px);
+  --groups-card-gap: clamp(20px, 4vw, 28px);
+  --groups-card-header-gap: clamp(16px, 3vw, 24px);
   --groups-card-border: var(--border-color);
   --groups-card-background: var(--bg-secondary);
+  --groups-card-shadow: 0 24px 48px -34px rgba(0, 0, 0, 0.28);
   display: flex;
   flex-direction: column;
   gap: var(--groups-card-gap);
@@ -15,12 +16,16 @@
   box-shadow: var(--groups-card-shadow);
 }
 
+:global(.app.dark-mode) .card {
+  --groups-card-shadow: 0 28px 56px -34px rgba(93, 173, 226, 0.5);
+}
+
 .header {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: clamp(16px, 3vw, 24px);
+  gap: var(--groups-card-header-gap);
 }
 
 .info {
@@ -64,17 +69,23 @@
   width: 100%;
 }
 
-.counter {
-  --counter-background: rgba(52, 152, 219, 0.12);
-  --counter-color: #3498db;
+.counter,
+.loadingBadge {
+  --groups-card-chip-padding: 8px 18px;
+  --groups-card-chip-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 18px;
-  border-radius: 999px;
+  padding: var(--groups-card-chip-padding);
+  border-radius: var(--groups-card-chip-radius);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.counter {
+  --counter-background: rgba(52, 152, 219, 0.12);
+  --counter-color: #3498db;
   background: var(--counter-background);
   color: var(--counter-color);
 }
@@ -82,14 +93,6 @@
 .loadingBadge {
   --counter-background: rgba(241, 196, 15, 0.18);
   --counter-color: #f1c40f;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 18px;
-  border-radius: 999px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   background: var(--counter-background);
   color: var(--counter-color);
 }
@@ -107,6 +110,10 @@
 
 .clearButton {
   min-width: 180px;
+}
+
+.actions :global(button) {
+  min-height: 44px;
 }
 
 .tableContainer {
@@ -148,8 +155,8 @@
 }
 
 .emptyIllustration {
-  width: 120px;
-  height: 120px;
+  width: clamp(100px, 28vw, 140px);
+  height: clamp(100px, 28vw, 140px);
   border-radius: 30px;
   background: linear-gradient(135deg, rgba(52, 152, 219, 0.16), rgba(52, 152, 219, 0.04));
   border: 1px dashed rgba(52, 152, 219, 0.35);
@@ -158,14 +165,14 @@
 }
 
 .emptyIcon {
-  width: 60px;
-  height: 60px;
+  width: clamp(56px, 16vw, 68px);
+  height: clamp(56px, 16vw, 68px);
   border-radius: 50%;
   background: linear-gradient(135deg, rgba(52, 152, 219, 0.2), rgba(52, 152, 219, 0.05));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: clamp(28px, 8vw, 36px);
   color: #3498db;
 }
 
@@ -204,14 +211,16 @@
   }
 }
 
-@media (max-width: 540px) {
+@media (max-width: 640px) {
   .card {
-    --groups-card-padding: 20px;
-    --groups-card-radius: 18px;
+    --groups-card-padding: clamp(20px, 7vw, 28px);
+    --groups-card-radius: 20px;
+    --groups-card-gap: clamp(18px, 6vw, 26px);
   }
 
-  .title {
-    font-size: 20px;
+  .controls {
+    min-width: auto;
+    align-items: stretch;
   }
 
   .actions {
@@ -222,5 +231,20 @@
   .filtersButton,
   .clearButton {
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    gap: 18px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .loadingState,
+  .emptyState {
+    padding: clamp(20px, 10vw, 36px);
   }
 }
