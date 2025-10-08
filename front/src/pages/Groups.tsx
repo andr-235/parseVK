@@ -1,10 +1,11 @@
 import { useState, useEffect, type ChangeEvent } from 'react'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
+import GroupsHero from './Groups/components/GroupsHero'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import PageTitle from '../components/PageTitle'
 import GroupsTableCard from './Groups/components/GroupsTableCard'
-import './Groups.css'
+import styles from './GroupsPage.module.css'
 
 function Groups() {
   const groups = useGroupsStore((state) => state.groups)
@@ -54,53 +55,8 @@ function Groups() {
   }
 
   return (
-    <div className="groups-page">
-      <section className="groups-hero">
-        <div className="groups-hero__content">
-          <PageTitle>Группы</PageTitle>
-          <p className="groups-hero__subtitle">
-            Управляйте списком сообществ, добавляйте новые источники вручную или импортируйте их из файла.
-            Сводка ниже помогает оценить состояние каталога и статус обновления данных.
-          </p>
-
-          <div className="groups-stats">
-            <div className="groups-stat-card">
-              <span className="groups-stat-card__label">Всего групп</span>
-              <span className="groups-stat-card__value">{isLoading ? '—' : groupsCount}</span>
-              <span className="groups-stat-card__hint">
-                {isLoading
-                  ? 'Получаем актуальный список сообществ'
-                  : hasGroups
-                    ? 'Список готов к работе — таблица ниже покажет подробности'
-                    : 'Пока что список пуст — добавьте первую группу, чтобы начать'}
-              </span>
-            </div>
-
-            <div className="groups-stat-card">
-              <span className="groups-stat-card__label">Статус обновления</span>
-              <span className={`groups-badge ${isLoading ? 'groups-badge--loading' : 'groups-badge--ready'}`}>
-                {isLoading ? 'Обновляем данные' : 'Актуальные данные'}
-              </span>
-              <span className="groups-stat-card__hint">
-                {isLoading
-                  ? 'Это может занять несколько секунд'
-                  : 'Последняя загрузка данных завершена успешно'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <aside className="groups-hero__side">
-          <div className="groups-hero__card">
-            <h2 className="groups-hero__title">Как начать работу</h2>
-            <ul className="groups-hero__list">
-              <li>Вставьте ссылку на сообщество ВК и нажмите «Добавить».</li>
-              <li>Загрузите заранее подготовленный файл со списком ссылок.</li>
-              <li>Следите за статусом импорта — новые записи появятся в таблице автоматически.</li>
-            </ul>
-          </div>
-        </aside>
-      </section>
+    <div className={styles.page}>
+      <GroupsHero isLoading={isLoading} totalGroups={groupsCount} hasGroups={hasGroups} />
 
       <GroupsActionsPanel
         onAdd={handleAddGroup}
