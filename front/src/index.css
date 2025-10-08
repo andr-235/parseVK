@@ -21,8 +21,7 @@
     --card-border-radius: 18px;
   }
 
-  .dark,
-  .app.dark-mode {
+  .dark {
     --bg-primary: #1a1a1a;
     --bg-secondary: #2d2d2d;
     --bg-sidebar: #1c1c1c;

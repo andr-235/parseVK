@@ -14,14 +14,17 @@ function KeywordInput({ value, onChange, onAdd, placeholder }: KeywordInputProps
   }
 
   return (
-    <div className="keyword-input-group">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
       <Input
         value={value}
         onChange={onChange}
         onEnter={handleAdd}
         placeholder={placeholder}
+        className="sm:min-w-[260px] sm:flex-1"
       />
-      <Button onClick={handleAdd}>Добавить</Button>
+      <Button onClick={handleAdd} className="w-full sm:w-auto">
+        Добавить
+      </Button>
     </div>
   )
 }
