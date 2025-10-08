@@ -55,6 +55,8 @@ function Groups() {
     }
   }
 
+  const isDeleteDisabled = !hasGroups || isLoading
+
   return (
     <div className="groups-page">
       <section className="groups-hero">
@@ -143,7 +145,7 @@ function Groups() {
                   : 'После добавления групп их карточки появятся в таблице с возможностью управления.'}
             </p>
           </div>
-          <div className="groups-table-card__header-controls">
+          <div className="groups-table-card__actions">
             {!isLoading && (
               <span className="groups-table-card__counter">
                 {totalGroups} {totalGroups === 1 ? 'группа' : totalGroups >= 2 && totalGroups <= 4 ? 'группы' : 'групп'}
@@ -151,7 +153,7 @@ function Groups() {
             )}
             <Button
               onClick={handleDeleteAllGroups}
-              disabled={!hasGroups || isLoading}
+              disabled={isDeleteDisabled}
               variant="danger"
               className="groups-table-card__clear-button"
             >
