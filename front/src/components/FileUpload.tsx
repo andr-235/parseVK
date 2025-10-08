@@ -20,7 +20,7 @@ function FileUpload({ onUpload, accept = '.txt', buttonText = 'Загрузит�
   }
 
   return (
-    <div className="file-upload-group">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <Input
         ref={fileInputRef}
         type="file"
@@ -29,7 +29,7 @@ function FileUpload({ onUpload, accept = '.txt', buttonText = 'Загрузит�
         style={{ display: 'none' }}
         id="file-upload"
       />
-      <Button onClick={triggerUpload}>
+      <Button onClick={triggerUpload} className="w-full sm:w-auto">
         {buttonText}
       </Button>
     </div>

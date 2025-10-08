@@ -114,12 +114,12 @@ const Table = memo(function Table({ columns, data, emptyMessage, searchTerm = ''
         const displayText = !shouldTruncate || isExpanded ? text : truncateText(text, truncateAt)
 
         return (
-          <div className="table-cell-expandable">
-            <span>{displayText}</span>
+          <div className="space-y-2">
+            <span className="block text-sm leading-relaxed text-text-primary">{displayText}</span>
             {shouldTruncate && (
               <button
                 type="button"
-                className="table-cell-toggle"
+                className="text-sm font-semibold text-accent-primary transition-colors duration-200 hover:text-accent-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60"
                 onClick={() => toggleCell(cellKey)}
               >
                 {isExpanded ? 'Скрыть' : 'Показать полностью'}
@@ -136,37 +136,41 @@ const Table = memo(function Table({ columns, data, emptyMessage, searchTerm = ''
 
   if (sortedData.length === 0 && emptyMessage) {
     return (
-      <p className="empty-message">
+      <p className="rounded-2xl border border-dashed border-border bg-background-secondary/50 px-6 py-8 text-center text-sm text-text-secondary">
         {searchTerm ? 'Ничего не найдено' : emptyMessage}
       </p>
     )
   }
 
   return (
-    <table className="keywords-table">
-      <thead>
+    <table className="min-w-full divide-y divide-border overflow-hidden rounded-2xl bg-background-secondary text-sm text-text-primary shadow-soft-md">
+      <thead className="bg-background-secondary/60">
         <tr>
           {columns.map((col) => (
             <th
               key={col.key}
               onClick={() => col.sortable !== false && handleSort(col.key)}
-              className={
-                [col.sortable !== false ? 'sortable' : '', col.headerClassName]
-                  .filter(Boolean)
-                  .join(' ') || undefined
-              }
+              className={[
+                'px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary',
+                col.sortable !== false ? 'cursor-pointer select-none transition-colors duration-200 hover:text-text-primary' : '',
+                col.headerClassName ?? '',
+              ]
+                .filter(Boolean)
+                .join(' ') || undefined}
             >
-              {col.header}
-              {sortKey === col.key && (
-                <span className="sort-indicator">
-                  {sortDirection === 'asc' ? ' ↑' : ' ↓'}
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1">
+                {col.header}
+                {sortKey === col.key && (
+                  <span className="text-text-secondary">
+                    {sortDirection === 'asc' ? '↑' : '↓'}
+                  </span>
+                )}
+              </span>
             </th>
           ))}
         </tr>
       </thead>
-      <tbody>
+      <tbody className="divide-y divide-border bg-background-secondary">
         {sortedData.map((item, index) => {
           const rowKeyCandidate =
             item?.id ?? item?.key ?? item?.groupId ?? (Array.isArray(item?.groupIds) ? item.groupIds.join('-') : undefined)
@@ -176,9 +180,25 @@ const Table = memo(function Table({ columns, data, emptyMessage, searchTerm = ''
               : index
 
           return (
-            <tr key={String(rowKey)} className={item.isRead ? 'comment-read' : ''}>
+            <tr
+              key={String(rowKey)}
+              className={[
+                'transition-colors duration-150 hover:bg-background-primary/70',
+                item.isRead ? 'opacity-70' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               {columns.map((col) => (
-                <td key={col.key} className={col.cellClassName || undefined}>
+                <td
+                  key={col.key}
+                  className={[
+                    'px-5 py-4 align-top text-sm',
+                    col.cellClassName ?? '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ') || undefined}
+                >
                   {renderCell(item, col, index)}
                 </td>
               ))}

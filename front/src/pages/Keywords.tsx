@@ -51,7 +51,9 @@ function Keywords() {
   const hasKeywords = keywordCount > 0
 
   const tableContent = isLoading ? (
-    <p className="empty-message">Загрузка ключевых слов...</p>
+    <p className="rounded-2xl border border-dashed border-border bg-background-secondary/50 px-6 py-8 text-center text-sm text-text-secondary">
+      Загрузка ключевых слов...
+    </p>
   ) : (
     <Table
       columns={getKeywordTableColumns(deleteKeyword)}
@@ -62,37 +64,42 @@ function Keywords() {
   )
 
   return (
-    <div className="keywords-page">
+    <div className="flex flex-col gap-8">
       <PageTitle>Ключевые слова</PageTitle>
 
-      <section className="keywords-hero" aria-label="Сводка по ключевым словам">
-        <div className="keywords-hero__intro">
-          <h2 className="keywords-hero__title">Настройте фильтрацию комментариев</h2>
-          <p className="keywords-hero__description">
-            Добавляйте ключевые слова для быстрого отслеживания релевантных комментариев. Вы можете
-            ввести слова вручную или загрузить список из файла.
-          </p>
-          <ul className="keywords-hero__tips">
+      <section
+        className="grid gap-6 rounded-3xl border border-border bg-gradient-to-br from-accent-primary/10 via-purple-500/10 to-accent-info/10 p-8 shadow-soft-lg transition-colors duration-300 md:grid-cols-[minmax(0,_2fr)_minmax(220px,_1fr)]"
+        aria-label="Сводка по ключевым словам"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold text-text-primary">Настройте фильтрацию комментариев</h2>
+            <p className="max-w-2xl text-sm leading-relaxed text-text-secondary">
+              Добавляйте ключевые слова для быстрого отслеживания релевантных комментариев. Вы можете
+              ввести слова вручную или загрузить список из файла.
+            </p>
+          </div>
+          <ul className="space-y-2 text-sm text-text-secondary">
             <li>Используйте точные формулировки, чтобы повысить точность поиска.</li>
             <li>Загружайте файлы в формате CSV или TXT для массового добавления слов.</li>
             <li>Удаляйте устаревшие ключевые слова, чтобы поддерживать актуальность фильтра.</li>
           </ul>
         </div>
-        <div className="keywords-hero__stats" aria-live="polite">
-          <span className="keywords-hero__count">{keywordCount}</span>
-          <span className="keywords-hero__label">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-border/60 bg-background-secondary/70 p-6 text-center shadow-soft-md" aria-live="polite">
+          <span className="text-5xl font-bold text-accent-primary">{keywordCount}</span>
+          <span className="text-sm font-medium text-text-secondary">
             {hasKeywords ? 'ключевых слов активно' : 'ключевых слов пока нет'}
           </span>
         </div>
       </section>
 
-      <section className="keywords-actions" aria-label="Управление ключевыми словами">
-        <div className="keywords-actions__card">
-          <h3 className="keywords-actions__title">Добавление ключевых слов</h3>
-          <p className="keywords-actions__subtitle">
+      <section className="grid gap-4 md:grid-cols-2" aria-label="Управление ключевыми словами">
+        <div className="rounded-3xl border border-border bg-background-secondary/80 p-6 shadow-soft-lg transition-colors duration-300">
+          <h3 className="text-lg font-semibold text-text-primary">Добавление ключевых слов</h3>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
             Введите слово вручную или загрузите готовый список. Поиск обновляется мгновенно при вводе.
           </p>
-          <div className="keywords-actions__controls">
+          <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
             <KeywordInput
               value={keywordValue}
               onChange={(e) => setKeywordValue(e.target.value)}
@@ -102,9 +109,9 @@ function Keywords() {
             <FileUpload onUpload={handleFileUpload} />
           </div>
         </div>
-        <div className="keywords-actions__card keywords-actions__card--hint">
-          <h3 className="keywords-actions__title">Советы по работе</h3>
-          <ul className="keywords-actions__list">
+        <div className="rounded-3xl border border-dashed border-accent-success/40 bg-background-secondary/60 p-6 shadow-soft-md">
+          <h3 className="text-lg font-semibold text-text-primary">Советы по работе</h3>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-text-secondary">
             <li>Проверяйте список после импорта, чтобы удалить дубликаты.</li>
             <li>Используйте короткие и понятные формулировки.</li>
             <li>Добавляйте ключевые слова по темам для разных сценариев.</li>
@@ -112,22 +119,24 @@ function Keywords() {
         </div>
       </section>
 
-      <section className="keywords-table-section" aria-label="Список ключевых слов">
-        <div className="keywords-table-card">
-          <header className="keywords-table-card__header">
-            <div>
-              <h3 className="keywords-table-card__title">Список ключевых слов</h3>
-              <p className="keywords-table-card__description">
+      <section className="space-y-4" aria-label="Список ключевых слов">
+        <div className="overflow-hidden rounded-3xl border border-border bg-background-secondary shadow-soft-lg">
+          <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-text-primary">Список ключевых слов</h3>
+              <p className="text-sm text-text-secondary">
                 {hasKeywords
                   ? 'Управляйте существующими ключевыми словами, чтобы контролировать выдачу комментариев.'
                   : 'Добавьте первое ключевое слово, чтобы начать фильтрацию комментариев.'}
               </p>
             </div>
             {hasKeywords && (
-              <span className="keywords-table-card__badge">{keywordCount}</span>
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-primary/10 text-lg font-semibold text-accent-primary">
+                {keywordCount}
+              </span>
             )}
           </header>
-          <div className="keywords-table-card__body">{tableContent}</div>
+          <div className="px-2 py-4 sm:px-6">{tableContent}</div>
         </div>
       </section>
     </div>

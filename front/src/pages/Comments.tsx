@@ -104,6 +104,16 @@ function Comments() {
     return 'Нет комментариев'
   }, [isLoading, readFilter, showOnlyKeywordComments, searchTerm])
 
+  const toggleButtonClass = (active: boolean) =>
+    [
+      'rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors duration-200',
+      active
+        ? 'border-transparent bg-accent-primary text-white shadow-soft-sm'
+        : 'border-border bg-background-primary/40 text-text-secondary hover:bg-background-secondary/60',
+    ]
+      .filter(Boolean)
+      .join(' ')
+
   useEffect(() => {
     if (comments.length === 0) {
       const load = async () => {
@@ -133,35 +143,37 @@ function Comments() {
   }, [fetchKeywords, keywords.length])
 
   return (
-    <div className="comments-page">
-      <div className="comments-page__header">
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-4 rounded-3xl border border-border bg-background-secondary/80 p-6 shadow-soft-lg transition-colors duration-300 md:flex-row md:items-center md:justify-between">
         <div>
           <PageTitle>Комментарии</PageTitle>
-          <p className="comments-page__subtitle">
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary">
             Управляйте обратной связью из сообществ и отмечайте важные сообщения быстрее
           </p>
         </div>
-        <div className="comments-page__badge">{filteredComments.length} элементов</div>
+        <div className="inline-flex h-12 items-center justify-center rounded-full bg-accent-primary/10 px-5 text-sm font-semibold text-accent-primary">
+          {filteredComments.length} элементов
+        </div>
       </div>
 
-      <div className="comments-overview" aria-label="Сводка по комментариям">
-        <div className="comments-overview__card">
-          <span className="comments-overview__label">Всего комментариев</span>
-          <span className="comments-overview__value">{comments.length}</span>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Сводка по комментариям">
+        <div className="rounded-2xl border border-border bg-background-primary/50 p-5 shadow-soft-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Всего комментариев</span>
+          <span className="mt-3 block text-3xl font-bold text-text-primary">{comments.length}</span>
         </div>
-        <div className="comments-overview__card comments-overview__card--accent">
-          <span className="comments-overview__label">Непрочитанные</span>
-          <span className="comments-overview__value">{unreadCount}</span>
-          <span className="comments-overview__helper">Отметьте прочитанными, чтобы убрать из очереди</span>
+        <div className="rounded-2xl border border-accent-danger/40 bg-background-primary/50 p-5 shadow-soft-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Непрочитанные</span>
+          <span className="mt-3 block text-3xl font-bold text-accent-danger">{unreadCount}</span>
+          <span className="mt-2 block text-xs text-text-secondary">Отметьте прочитанными, чтобы убрать из очереди</span>
         </div>
-        <div className="comments-overview__card">
-          <span className="comments-overview__label">Прочитанные</span>
-          <span className="comments-overview__value">{readCount}</span>
+        <div className="rounded-2xl border border-border bg-background-primary/50 p-5 shadow-soft-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Прочитанные</span>
+          <span className="mt-3 block text-3xl font-bold text-accent-success">{readCount}</span>
         </div>
-        <div className="comments-overview__card">
-          <span className="comments-overview__label">С ключевыми словами</span>
-          <span className="comments-overview__value">{keywordMatchesCount}</span>
-          <span className="comments-overview__helper">
+        <div className="rounded-2xl border border-border bg-background-primary/50 p-5 shadow-soft-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">С ключевыми словами</span>
+          <span className="mt-3 block text-3xl font-bold text-accent-primary">{keywordMatchesCount}</span>
+          <span className="mt-2 block text-xs text-text-secondary">
             {normalizedKeywords.length > 0
               ? `Используются ключи: ${normalizedKeywords.join(', ')}`
               : 'Добавьте ключевые слова, чтобы отслеживать инсайты'}
@@ -169,28 +181,28 @@ function Comments() {
         </div>
       </div>
 
-      <section className="comments-controls" aria-label="Фильтры и поиск по комментариям">
-        <div className="comments-controls__row">
-          <div className="comments-controls__search">
+      <section className="space-y-4 rounded-3xl border border-border bg-background-secondary/80 p-6 shadow-soft-lg" aria-label="Фильтры и поиск по комментариям">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="w-full lg:max-w-md">
             <SearchInput
               value={searchTerm}
               onChange={setSearchTerm}
               placeholder="Поиск по автору, тексту или ID"
             />
           </div>
-          <div className="comments-controls__group" role="group" aria-label="Фильтр по ключевым словам">
-            <span className="comments-controls__label">Показать</span>
-            <div className="comments-filter__toggle">
+          <div className="flex flex-wrap items-center gap-4" role="group" aria-label="Фильтр по ключевым словам">
+            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Показать</span>
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                className={`comments-filter__option ${showOnlyKeywordComments ? '' : 'is-active'}`}
+                className={toggleButtonClass(!showOnlyKeywordComments)}
                 onClick={() => setShowOnlyKeywordComments(false)}
               >
                 Все
               </button>
               <button
                 type="button"
-                className={`comments-filter__option ${showOnlyKeywordComments ? 'is-active' : ''}`}
+                className={`${toggleButtonClass(showOnlyKeywordComments)} ${keywords.length === 0 ? 'cursor-not-allowed opacity-60' : ''}`}
                 onClick={() => setShowOnlyKeywordComments(true)}
                 disabled={keywords.length === 0}
               >
@@ -198,26 +210,26 @@ function Comments() {
               </button>
             </div>
           </div>
-          <div className="comments-controls__group" role="group" aria-label="Фильтр по статусу прочтения">
-            <span className="comments-controls__label">Статус</span>
-            <div className="comments-filter__toggle">
+          <div className="flex flex-wrap items-center gap-4" role="group" aria-label="Фильтр по статусу прочтения">
+            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Статус</span>
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                className={`comments-filter__option ${readFilter === 'all' ? 'is-active' : ''}`}
+                className={toggleButtonClass(readFilter === 'all')}
                 onClick={() => setReadFilter('all')}
               >
                 Все
               </button>
               <button
                 type="button"
-                className={`comments-filter__option ${readFilter === 'unread' ? 'is-active' : ''}`}
+                className={toggleButtonClass(readFilter === 'unread')}
                 onClick={() => setReadFilter('unread')}
               >
                 Непрочитанные
               </button>
               <button
                 type="button"
-                className={`comments-filter__option ${readFilter === 'read' ? 'is-active' : ''}`}
+                className={toggleButtonClass(readFilter === 'read')}
                 onClick={() => setReadFilter('read')}
               >
                 Прочитанные
@@ -226,11 +238,11 @@ function Comments() {
           </div>
         </div>
         {keywords.length === 0 && (
-          <span className="comments-filter__hint">Добавьте ключевые слова, чтобы включить фильтр</span>
+          <span className="text-xs text-text-secondary">Добавьте ключевые слова, чтобы включить фильтр</span>
         )}
       </section>
 
-      <div className="comments-table-card">
+      <div className="overflow-hidden rounded-3xl border border-border bg-background-secondary shadow-soft-lg px-2 py-4 sm:px-6">
         <Table
           columns={getCommentTableColumns(keywords, toggleReadStatus)}
           data={filteredComments}

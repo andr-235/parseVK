@@ -6,7 +6,7 @@ interface MainContentProps {
 
 function MainContent({ children }: MainContentProps) {
   return (
-    <main className="main-content">
+    <main className="flex-1 overflow-y-auto bg-background-primary px-8 py-8 transition-colors duration-300 lg:px-12">
       {children}
     </main>
   )
