@@ -214,7 +214,6 @@
 }
 
 @media (max-width: 600px) {
-  .groups-page .groups-hero,
   .groups-page .groups-actions,
   .groups-page .groups-table-card {
     padding: 20px;
@@ -224,10 +223,6 @@
   .groups-page .groups-table-card__actions {
     width: 100%;
     align-items: stretch;
-  }
-
-  .groups-page .groups-stat-card__value {
-    font-size: 28px;
   }
 
   .groups-page .groups-table-card__title {
