@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, type ChangeEvent } from 'react'
 import PageTitle from '../components/PageTitle'
 import Table from '../components/Table'
-import GroupInput from '../components/GroupInput'
 import Button from '../components/Button'
-import FileUpload from '../components/FileUpload'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
+import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import './Groups.css'
 
 function Groups() {
@@ -18,8 +17,8 @@ function Groups() {
   const deleteAllGroups = useGroupsStore((state) => state.deleteAllGroups)
   const [url, setUrl] = useState('')
 
-  const totalGroups = useMemo(() => groups.length, [groups])
-  const hasGroups = totalGroups > 0
+  const groupsCount = groups.length
+  const hasGroups = groupsCount > 0
 
   useEffect(() => {
     fetchGroups()
@@ -31,7 +30,7 @@ function Groups() {
     }
   }
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       await loadFromFile(file)
@@ -70,7 +69,7 @@ function Groups() {
           <div className="groups-stats">
             <div className="groups-stat-card">
               <span className="groups-stat-card__label">Всего групп</span>
-              <span className="groups-stat-card__value">{isLoading ? '—' : totalGroups}</span>
+              <span className="groups-stat-card__value">{isLoading ? '—' : groupsCount}</span>
               <span className="groups-stat-card__hint">
                 {isLoading
                   ? 'Получаем актуальный список сообществ'
@@ -106,32 +105,13 @@ function Groups() {
         </aside>
       </section>
 
-      <section className="groups-actions">
-        <div className="groups-actions__block">
-          <h3 className="groups-actions__title">Добавить вручную</h3>
-          <GroupInput
-            url={url}
-            onUrlChange={(e) => setUrl(e.target.value)}
-            onAdd={handleAddGroup}
-          />
-          <p className="groups-actions__hint">
-            Вставьте полный URL сообщества — мы автоматически получим его информацию и добавим в таблицу.
-          </p>
-        </div>
-
-        <div className="groups-divider" aria-hidden="true" />
-
-        <div className="groups-actions__block">
-          <h3 className="groups-actions__title">Импорт из файла</h3>
-          <FileUpload
-            onUpload={handleFileUpload}
-            buttonText="Загрузить из файла"
-          />
-          <p className="groups-actions__hint">
-            Поддерживаются текстовые файлы со ссылками на группы. Каждая ссылка должна быть указана с новой строки.
-          </p>
-        </div>
-      </section>
+      <GroupsActionsPanel
+        onAdd={handleAddGroup}
+        onUpload={handleFileUpload}
+        isLoading={isLoading}
+        url={url}
+        setUrl={setUrl}
+      />
 
       <section className="groups-table-card">
         <div className="groups-table-card__header">
@@ -148,7 +128,12 @@ function Groups() {
           <div className="groups-table-card__actions">
             {!isLoading && (
               <span className="groups-table-card__counter">
-                {totalGroups} {totalGroups === 1 ? 'группа' : totalGroups >= 2 && totalGroups <= 4 ? 'группы' : 'групп'}
+                {groupsCount}{' '}
+                {groupsCount === 1
+                  ? 'группа'
+                  : groupsCount >= 2 && groupsCount <= 4
+                    ? 'группы'
+                    : 'групп'}
               </span>
             )}
             <Button
