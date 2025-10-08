@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import Table from '../components/Table'
-import GroupInput from '../components/GroupInput'
 import Button from '../components/Button'
-import FileUpload from '../components/FileUpload'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
+import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import './Groups.css'
 import GroupsHero from './Groups/components/GroupsHero'
 
@@ -64,32 +63,13 @@ function Groups() {
         hasGroups={hasGroups}
       />
 
-      <section className="groups-actions">
-        <div className="groups-actions__block">
-          <h3 className="groups-actions__title">Добавить вручную</h3>
-          <GroupInput
-            url={url}
-            onUrlChange={(e) => setUrl(e.target.value)}
-            onAdd={handleAddGroup}
-          />
-          <p className="groups-actions__hint">
-            Вставьте полный URL сообщества — мы автоматически получим его информацию и добавим в таблицу.
-          </p>
-        </div>
-
-        <div className="groups-divider" aria-hidden="true" />
-
-        <div className="groups-actions__block">
-          <h3 className="groups-actions__title">Импорт из файла</h3>
-          <FileUpload
-            onUpload={handleFileUpload}
-            buttonText="Загрузить из файла"
-          />
-          <p className="groups-actions__hint">
-            Поддерживаются текстовые файлы со ссылками на группы. Каждая ссылка должна быть указана с новой строки.
-          </p>
-        </div>
-      </section>
+      <GroupsActionsPanel
+        onAdd={handleAddGroup}
+        onUpload={handleFileUpload}
+        isLoading={isLoading}
+        url={url}
+        setUrl={setUrl}
+      />
 
       <section className="groups-table-card">
         <div className="groups-table-card__header">
