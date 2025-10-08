@@ -1,0 +1,137 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 32px;
+  border-radius: 22px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 20px 40px -34px rgba(0, 0, 0, 0.3);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 620px;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 18px;
+  border: 1px solid rgba(52, 152, 219, 0.18);
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.08), rgba(52, 152, 219, 0.02));
+  box-shadow: 0 18px 32px -28px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 48px -28px rgba(52, 152, 219, 0.35);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2c3e50;
+  background: rgba(52, 152, 219, 0.2);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cardHint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.cardHelp {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(44, 62, 80, 0.75);
+}
+
+.divider {
+  width: 100%;
+  min-height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(52, 152, 219, 0) 0%,
+    rgba(52, 152, 219, 0.35) 50%,
+    rgba(52, 152, 219, 0) 100%
+  );
+}
+
+@media (max-width: 900px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+
+  .divider {
+    display: none;
+  }
+}
+
+:global(.app.dark-mode) .card {
+  border-color: rgba(93, 173, 226, 0.3);
+  background: linear-gradient(135deg, rgba(93, 173, 226, 0.14), rgba(46, 134, 193, 0.05));
+  box-shadow: 0 24px 48px -32px rgba(93, 173, 226, 0.45);
+}
+
+:global(.app.dark-mode) .card:hover {
+  box-shadow: 0 28px 56px -32px rgba(93, 173, 226, 0.55);
+}
+
+:global(.app.dark-mode) .badge {
+  color: #ecf0f1;
+  background: rgba(93, 173, 226, 0.3);
+}
+
+:global(.app.dark-mode) .cardHelp {
+  color: rgba(236, 240, 241, 0.75);
+}

@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, type ChangeEvent } from 'react'
 import PageTitle from '../components/PageTitle'
 import Table from '../components/Table'
-import GroupInput from '../components/GroupInput'
 import Button from '../components/Button'
-import FileUpload from '../components/FileUpload'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
+import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import './Groups.css'
 
 function Groups() {
@@ -31,7 +30,7 @@ function Groups() {
     }
   }
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       await loadFromFile(file)
@@ -106,32 +105,13 @@ function Groups() {
         </aside>
       </section>
 
-      <section className="groups-actions">
-        <div className="groups-actions__block">
-          <h3 className="groups-actions__title">Добавить вручную</h3>
-          <GroupInput
-            url={url}
-            onUrlChange={(e) => setUrl(e.target.value)}
-            onAdd={handleAddGroup}
-          />
-          <p className="groups-actions__hint">
-            Вставьте полный URL сообщества — мы автоматически получим его информацию и добавим в таблицу.
-          </p>
-        </div>
-
-        <div className="groups-divider" aria-hidden="true" />
-
-        <div className="groups-actions__block">
-          <h3 className="groups-actions__title">Импорт из файла</h3>
-          <FileUpload
-            onUpload={handleFileUpload}
-            buttonText="Загрузить из файла"
-          />
-          <p className="groups-actions__hint">
-            Поддерживаются текстовые файлы со ссылками на группы. Каждая ссылка должна быть указана с новой строки.
-          </p>
-        </div>
-      </section>
+      <GroupsActionsPanel
+        onAdd={handleAddGroup}
+        onUpload={handleFileUpload}
+        isLoading={isLoading}
+        url={url}
+        setUrl={setUrl}
+      />
 
       <section className="groups-table-card">
         <div className="groups-table-card__header">
