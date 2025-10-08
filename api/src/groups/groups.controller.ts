@@ -13,6 +13,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { GroupsService } from './groups.service';
 import { SaveGroupDto } from './dto/save-group.dto';
 import { IGroupResponse, IDeleteResponse } from './interfaces/group.interface';
+import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface';
 
 @Controller('groups')
 export class GroupsController {
@@ -25,7 +26,9 @@ export class GroupsController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadGroups(@UploadedFile() file: Express.Multer.File) {
+  async uploadGroups(
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<IBulkSaveGroupsResult> {
     if (!file) {
       throw new BadRequestException('File is required');
     }

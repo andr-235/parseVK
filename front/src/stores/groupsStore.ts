@@ -20,7 +20,16 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     try {
       const group = await groupsService.addGroup(name, description)
       if (group) {
-        set((state) => ({ groups: [...state.groups, group] }))
+        set((state) => {
+          const existingIndex = state.groups.findIndex((item) => item.id === group.id)
+          if (existingIndex === -1) {
+            return { groups: [...state.groups, group] }
+          }
+
+          const updatedGroups = state.groups.slice()
+          updatedGroups[existingIndex] = group
+          return { groups: updatedGroups }
+        })
         return true
       }
       return false

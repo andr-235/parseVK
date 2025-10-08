@@ -25,11 +25,14 @@ export const groupsApi = {
     if (!response.ok) throw new Error('Failed to upload groups')
     const data = await response.json()
     const failedErrors = Array.isArray(data?.failed)
-      ? data.failed.map((item: { identifier?: string; error?: string }) => {
-          if (item?.identifier && item?.error) {
-            return `${item.identifier}: ${item.error}`
+      ? data.failed.map((item: { identifier?: string; error?: string; errorMessage?: string }) => {
+          const message = item?.error ?? item?.errorMessage
+
+          if (item?.identifier && typeof message === 'string') {
+            return `${item.identifier}: ${message}`
           }
-          return item?.error ?? 'Unknown error'
+
+          return message ?? 'Unknown error'
         })
       : []
 

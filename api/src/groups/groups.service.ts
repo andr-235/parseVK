@@ -3,6 +3,10 @@ import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import { IGroup } from '../vk/interfaces/group.interfaces';
 import { IGroupResponse, IDeleteResponse } from './interfaces/group.interface';
+import {
+  IBulkSaveGroupError,
+  IBulkSaveGroupsResult,
+} from './interfaces/group-bulk.interface';
 
 @Injectable()
 export class GroupsService {
@@ -14,12 +18,10 @@ export class GroupsService {
   ) {}
 
   async saveGroup(identifier: string | number): Promise<IGroupResponse> {
-    const parsedIdentifier = typeof identifier === 'string'
-      ? this.parseVkIdentifier(identifier)
-      : identifier;
-
-    this.logger.log(`Запрашиваем данные группы ${parsedIdentifier}`);
-
+    const parsedIdentifier: string | number =
+      typeof identifier === 'string'
+        ? this.parseVkIdentifier(identifier)
+        : identifier;
     const response = await this.vkService.getGroups(parsedIdentifier);
 
     if (!response?.groups || response.groups.length === 0) {
@@ -101,12 +103,12 @@ export class GroupsService {
 
     // Паттерны для разных форматов
     const patterns = [
-      /vk\.com\/club(\d+)/,      // https://vk.com/club123456
-      /vk\.com\/public(\d+)/,    // https://vk.com/public123456
+      /vk\.com\/club(\d+)/, // https://vk.com/club123456
+      /vk\.com\/public(\d+)/, // https://vk.com/public123456
       /vk\.com\/([a-zA-Z0-9_]+)/, // https://vk.com/screen_name
-      /^club(\d+)$/,              // club123456
-      /^public(\d+)$/,            // public123456
-      /^(\d+)$/,                  // 123456
+      /^club(\d+)$/, // club123456
+      /^public(\d+)$/, // public123456
+      /^(\d+)$/, // 123456
     ];
 
     for (const pattern of patterns) {
@@ -120,51 +122,62 @@ export class GroupsService {
     return trimmed;
   }
 
-  async bulkSaveGroups(identifiers: string[]): Promise<{
-    success: IGroupResponse[];
-    failed: { identifier: string; error: string }[];
-    total: number;
-    successCount: number;
-    failedCount: number;
-  }> {
+  async bulkSaveGroups(identifiers: string[]): Promise<IBulkSaveGroupsResult> {
     const success: IGroupResponse[] = [];
-    const failed: { identifier: string; error: string }[] = [];
+    const failed: IBulkSaveGroupError[] = [];
     const batchSize = 10; // Обрабатываем по 10 групп за раз
 
-    // Парсим все идентификаторы
-    const parsedIdentifiers = identifiers.map(id => this.parseVkIdentifier(id));
+    const seen = new Set<string>();
+    const uniqueEntries: Array<{
+      originalIdentifier: string;
+      parsedIdentifier: string;
+    }> = [];
 
-    this.logger.log(`Начинаем загрузку ${parsedIdentifiers.length} групп`);
+    for (const originalIdentifier of identifiers) {
+      const parsedIdentifier = this.parseVkIdentifier(originalIdentifier);
+      const normalizedKey = parsedIdentifier.toLowerCase();
+
+      if (seen.has(normalizedKey)) {
+        failed.push({
+          identifier: originalIdentifier,
+          errorMessage: 'Дубликат в списке идентификаторов',
+        });
+        continue;
+      }
+
+      seen.add(normalizedKey);
+      uniqueEntries.push({
+        originalIdentifier,
+        parsedIdentifier,
+      });
+    }
 
     // Обрабатываем батчами
-    for (let i = 0; i < parsedIdentifiers.length; i += batchSize) {
-      const batch = parsedIdentifiers.slice(i, i + batchSize);
+    for (let i = 0; i < uniqueEntries.length; i += batchSize) {
+      const batch = uniqueEntries.slice(i, i + batchSize);
 
-      this.logger.log(`Обрабатываем батч групп ${i + 1}-${i + batch.length} из ${parsedIdentifiers.length}`);
-
-      const batchPromises = batch.map(async (identifier, index) => {
-        const originalIdentifier = identifiers[i + index];
-        try {
-          const group = await this.saveGroup(identifier);
-          success.push(group);
-          this.logger.log(`Группа ${identifier} успешно загружена`);
-        } catch (error: unknown) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error';
-          failed.push({
-            identifier: originalIdentifier,
-            error: errorMessage,
-          });
-          this.logger.error(`Ошибка при загрузке группы ${identifier}: ${errorMessage}`);
-        }
-      });
+      const batchPromises = batch.map(
+        async ({ parsedIdentifier, originalIdentifier }) => {
+          try {
+            const group = await this.saveGroup(parsedIdentifier);
+            success.push(group);
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : 'Unknown error';
+            failed.push({
+              identifier: originalIdentifier,
+              errorMessage,
+            });
+          }
+        },
+      );
 
       // Ждем завершения текущего батча перед следующим (чтобы не перегрузить VK API)
       await Promise.all(batchPromises);
 
       // Небольшая задержка между батчами для соблюдения rate limit VK API
-      if (i + batchSize < parsedIdentifiers.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+      if (i + batchSize < uniqueEntries.length) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
 
@@ -181,19 +194,13 @@ export class GroupsService {
     };
   }
 
-  async uploadGroupsFromFile(fileContent: string): Promise<{
-    success: IGroupResponse[];
-    failed: { identifier: string; error: string }[];
-    total: number;
-    successCount: number;
-    failedCount: number;
-  }> {
+  async uploadGroupsFromFile(
+    fileContent: string,
+  ): Promise<IBulkSaveGroupsResult> {
     const identifiers = fileContent
       .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-
-    this.logger.log(`Получен файл с ${identifiers.length} строками для загрузки групп`);
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
 
     return this.bulkSaveGroups(identifiers);
   }
