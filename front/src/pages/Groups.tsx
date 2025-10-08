@@ -20,8 +20,8 @@ function Groups() {
   const deleteAllGroups = useGroupsStore((state) => state.deleteAllGroups)
   const [url, setUrl] = useState('')
 
-  const totalGroups = groups.length
-  const hasGroups = totalGroups > 0
+  const groupsCount = groups.length
+  const hasGroups = groupsCount > 0
 
   useEffect(() => {
     fetchGroups()
@@ -72,7 +72,7 @@ function Groups() {
           <div className="groups-stats">
             <div className="groups-stat-card">
               <span className="groups-stat-card__label">Всего групп</span>
-              <span className="groups-stat-card__value">{isLoading ? '—' : totalGroups}</span>
+              <span className="groups-stat-card__value">{isLoading ? '—' : groupsCount}</span>
               <span className="groups-stat-card__hint">
                 {isLoading
                   ? 'Получаем актуальный список сообществ'
@@ -131,7 +131,12 @@ function Groups() {
           <div className="groups-table-card__actions">
             {!isLoading && (
               <span className="groups-table-card__counter">
-                {totalGroups} {totalGroups === 1 ? 'группа' : totalGroups >= 2 && totalGroups <= 4 ? 'группы' : 'групп'}
+                {groupsCount}{' '}
+                {groupsCount === 1
+                  ? 'группа'
+                  : groupsCount >= 2 && groupsCount <= 4
+                    ? 'группы'
+                    : 'групп'}
               </span>
             )}
             <Button
