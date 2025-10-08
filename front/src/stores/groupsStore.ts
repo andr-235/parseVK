@@ -11,7 +11,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     try {
       const groups = await groupsService.fetchGroups()
       set({ groups, isLoading: false })
-    } catch (error) {
+    } catch {
       set({ isLoading: false })
     }
   },
@@ -33,7 +33,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         return true
       }
       return false
-    } catch (error) {
+    } catch {
       return false
     }
   },
@@ -44,7 +44,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
       set((state) => ({
         groups: state.groups.filter(group => group.id !== id)
       }))
-    } catch (error) {
+    } catch {
       // Error handled in service
     }
   },
@@ -53,5 +53,16 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     const result = await groupsService.uploadGroupsFile(file)
     await get().fetchGroups()
     return result
+  },
+
+  deleteAllGroups: async () => {
+    set({ isLoading: true })
+    try {
+      await groupsService.deleteAllGroups()
+      set({ groups: [], isLoading: false })
+    } catch (error) {
+      set({ isLoading: false })
+      throw error
+    }
   }
 }))

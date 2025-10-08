@@ -36,6 +36,7 @@ export interface GroupsState {
   addGroup: (url: string) => Promise<boolean>
   deleteGroup: (id: number) => Promise<void>
   loadFromFile: (file: File) => Promise<{ saved: number; errors: string[] }>
+  deleteAllGroups: () => Promise<void>
 }
 
 // Tasks Store Types

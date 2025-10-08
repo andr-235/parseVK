@@ -6,9 +6,18 @@ interface ButtonProps {
   onClick?: () => void | Promise<void>
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
+  variant?: 'primary' | 'secondary' | 'danger'
+  className?: string
 }
 
-const Button = memo(function Button({ children, onClick, type = 'button', disabled = false }: ButtonProps) {
+const Button = memo(function Button({
+  children,
+  onClick,
+  type = 'button',
+  disabled = false,
+  variant = 'primary',
+  className,
+}: ButtonProps) {
   const handleClick = () => {
     if (disabled) {
       return
@@ -19,8 +28,16 @@ const Button = memo(function Button({ children, onClick, type = 'button', disabl
     }
   }
 
+  const buttonClassName = [
+    'button',
+    variant !== 'primary' ? variant : '',
+    className ?? '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <button className="button" onClick={handleClick} type={type} disabled={disabled}>
+    <button className={buttonClassName} onClick={handleClick} type={type} disabled={disabled}>
       {children}
     </button>
   )

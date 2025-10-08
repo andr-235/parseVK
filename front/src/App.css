@@ -141,6 +141,15 @@
   background-color: #2980b9;
 }
 
+.button.danger {
+  background-color: var(--accent-danger);
+}
+
+.button.danger:hover,
+.button.danger:focus-visible {
+  background-color: #dc2626;
+}
+
 /* Keywords page styles */
 .keywords-page {
   display: flex;
@@ -380,7 +389,6 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
 
 .search-clear:hover {
   color: var(--text-primary);

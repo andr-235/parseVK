@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import PageTitle from '../components/PageTitle'
 import Table from '../components/Table'
 import GroupInput from '../components/GroupInput'
+import Button from '../components/Button'
 import FileUpload from '../components/FileUpload'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
@@ -14,6 +15,7 @@ function Groups() {
   const addGroup = useGroupsStore((state) => state.addGroup)
   const deleteGroup = useGroupsStore((state) => state.deleteGroup)
   const loadFromFile = useGroupsStore((state) => state.loadFromFile)
+  const deleteAllGroups = useGroupsStore((state) => state.deleteAllGroups)
   const [url, setUrl] = useState('')
 
   const totalGroups = useMemo(() => groups.length, [groups])
@@ -31,7 +33,26 @@ function Groups() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    file && await loadFromFile(file)
+    if (file) {
+      await loadFromFile(file)
+    }
+  }
+
+  const handleDeleteAllGroups = async () => {
+    if (!hasGroups || isLoading) {
+      return
+    }
+
+    const confirmed = window.confirm('Удалить все группы из списка и базы данных? Это действие нельзя отменить.')
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      await deleteAllGroups()
+    } catch {
+      // Ошибки обрабатываются в сервисе
+    }
   }
 
   return (
@@ -122,11 +143,21 @@ function Groups() {
                   : 'После добавления групп их карточки появятся в таблице с возможностью управления.'}
             </p>
           </div>
-          {!isLoading && (
-            <span className="groups-table-card__counter">
-              {totalGroups} {totalGroups === 1 ? 'группа' : totalGroups >= 2 && totalGroups <= 4 ? 'группы' : 'групп'}
-            </span>
-          )}
+          <div className="groups-table-card__header-controls">
+            {!isLoading && (
+              <span className="groups-table-card__counter">
+                {totalGroups} {totalGroups === 1 ? 'группа' : totalGroups >= 2 && totalGroups <= 4 ? 'группы' : 'групп'}
+              </span>
+            )}
+            <Button
+              onClick={handleDeleteAllGroups}
+              disabled={!hasGroups || isLoading}
+              variant="danger"
+              className="groups-table-card__clear-button"
+            >
+              Очистить список
+            </Button>
+          </div>
         </div>
 
         <Table

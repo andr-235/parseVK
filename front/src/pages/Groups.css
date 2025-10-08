@@ -214,9 +214,25 @@
 .groups-page .groups-table-card__header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 24px;
   flex-wrap: wrap;
+}
+
+.groups-page .groups-table-card__header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.groups-page .groups-table-card__header-controls > * {
+  flex-shrink: 0;
+}
+
+.groups-page .groups-table-card__clear-button {
+  margin-top: 0;
 }
 
 .groups-page .groups-table-card__title {
@@ -265,5 +281,11 @@
 
   .groups-page .groups-table-card__title {
     font-size: 20px;
+  }
+
+  .groups-page .groups-table-card__header-controls {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
   }
 }

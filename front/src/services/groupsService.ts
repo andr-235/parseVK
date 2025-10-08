@@ -41,6 +41,24 @@ export const groupsService = {
     }
   },
 
+  async deleteAllGroups(): Promise<number> {
+    try {
+      const response = await groupsApi.deleteAllGroups()
+      const deletedCount = typeof response?.count === 'number' ? response.count : 0
+
+      toast.success(
+        deletedCount > 0
+          ? `Удалено групп: ${deletedCount}`
+          : 'Список групп уже пуст'
+      )
+
+      return deletedCount
+    } catch (error) {
+      toast.error('Ошибка при очистке групп')
+      throw error
+    }
+  },
+
   async uploadGroupsFile(file: File): Promise<{ saved: number; errors: string[] }> {
     try {
       const response = await groupsApi.uploadGroups(file)

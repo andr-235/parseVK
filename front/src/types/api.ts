@@ -26,8 +26,7 @@ export interface IGroupResponse {
 }
 
 export interface IDeleteResponse {
-  message: string
-  deletedCount: number
+  count: number
 }
 
 export interface IKeywordResponse {
