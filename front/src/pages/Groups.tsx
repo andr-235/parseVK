@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type ChangeEvent } from 'react'
+import { useState, useEffect, type ChangeEvent } from 'react'
 import PageTitle from '../components/PageTitle'
 import Table from '../components/Table'
 import Button from '../components/Button'
@@ -19,6 +19,9 @@ function Groups() {
   const loadFromFile = useGroupsStore((state) => state.loadFromFile)
   const deleteAllGroups = useGroupsStore((state) => state.deleteAllGroups)
   const [url, setUrl] = useState('')
+
+  const totalGroups = groups.length
+  const hasGroups = totalGroups > 0
 
   useEffect(() => {
     fetchGroups()
