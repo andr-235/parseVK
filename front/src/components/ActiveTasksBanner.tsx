@@ -4,6 +4,16 @@ import { getTaskStatusText } from '../utils/statusHelpers'
 import type { Task } from '../types'
 import { calculateTaskProgress } from '../utils/taskProgress'
 
+const STATUS_BADGE_BASE = 'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide'
+
+const taskStatusClasses: Record<Task['status'], string> = {
+  pending: 'bg-accent-warning/20 text-accent-warning',
+  processing: 'bg-accent-primary/20 text-accent-primary',
+  running: 'bg-accent-primary/20 text-accent-primary',
+  completed: 'bg-accent-success/20 text-accent-success',
+  failed: 'bg-accent-danger/20 text-accent-danger',
+}
+
 interface ActiveTasksBannerProps {
   tasks: Task[]
   isCreating: boolean
@@ -98,21 +108,22 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
       : ''
 
   return (
-    <div className="active-tasks-banner">
-      <div className="active-tasks-banner__header">
-        <div className="active-tasks-banner__summary">
-          <div className="active-tasks-banner__title">Активные процессы парсинга</div>
-          <div className="active-tasks-banner__subtitle">{subtitle}</div>
+    <div className="rounded-3xl border border-border bg-background-secondary/80 p-6 shadow-soft-lg transition-colors duration-300">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-2">
+          <div className="text-xl font-semibold text-text-primary">Активные процессы парсинга</div>
+          <div className="text-sm leading-relaxed text-text-secondary">{subtitle}</div>
         </div>
         {(isCreating || hasActiveTasks) && indicatorText && (
-          <div className="active-tasks-banner__indicator">
-            <span className="active-tasks-banner__pulse-dot" />
+          <div className="inline-flex items-center gap-2 rounded-full bg-accent-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-accent-primary">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent-primary" aria-hidden />
             <span>{indicatorText}</span>
           </div>
         )}
       </div>
 
       <ProgressBar
+        className="mt-6"
         current={summary.processed}
         total={progressTotal}
         label={aggregatedLabel}
@@ -122,7 +133,7 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
       />
 
       {hasActiveTasks ? (
-        <div className="active-tasks-banner__tasks">
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
           {tasks.map((task) => {
             const progress = calculateTaskProgress(task)
             const hasTotals = progress.total > 0
@@ -143,10 +154,15 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
                 : 'primary'
 
             return (
-              <div key={task.id} className="active-tasks-banner__task">
-                <div className="active-tasks-banner__task-header">
-                  <span className="active-tasks-banner__task-title">{task.title ?? `Задача ${task.id}`}</span>
-                  <span className={`status-badge status-${task.status}`}>
+              <div
+                key={task.id}
+                className="flex flex-col gap-3 rounded-2xl border border-border bg-background-primary/50 p-4 shadow-soft-sm transition-colors duration-200 hover:border-accent-primary/40"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-sm font-semibold text-text-primary">
+                    {task.title ?? `Задача ${task.id}`}
+                  </span>
+                  <span className={`${STATUS_BADGE_BASE} ${taskStatusClasses[task.status]}`}>
                     {getTaskStatusText(task.status)}
                   </span>
                 </div>
@@ -159,22 +175,30 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
                   tone={tone}
                   indeterminate={!hasTotals}
                 />
-                <div className="active-tasks-banner__task-meta">
+                <div className="flex flex-wrap gap-3 text-xs text-text-secondary">
                   <span>
                     Обработано: {formatNumber(progress.processed)}
                     {hasTotals ? ` / ${formatNumber(progress.total)}` : ''}
                   </span>
                   {progress.processing > 0 && <span>В работе: {formatNumber(progress.processing)}</span>}
                   {progress.pending > 0 && <span>В очереди: {formatNumber(progress.pending)}</span>}
-                  {progress.success > 0 && <span className="success-text">Успешно: {formatNumber(progress.success)}</span>}
-                  {progress.failed > 0 && <span className="error-text">Ошибок: {formatNumber(progress.failed)}</span>}
+                  {progress.success > 0 && (
+                    <span className="font-semibold text-accent-success">
+                      Успешно: {formatNumber(progress.success)}
+                    </span>
+                  )}
+                  {progress.failed > 0 && (
+                    <span className="font-semibold text-accent-danger">
+                      Ошибок: {formatNumber(progress.failed)}
+                    </span>
+                  )}
                 </div>
               </div>
             )
           })}
         </div>
       ) : (
-        <div className="active-tasks-banner__empty">
+        <div className="mt-6 space-y-3 rounded-2xl border border-dashed border-border/70 bg-background-primary/30 p-6 text-center text-sm text-text-secondary">
           <ProgressBar
             current={0}
             total={1}

@@ -1,4 +1,4 @@
-import './App.css'
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useThemeStore } from './stores'
@@ -12,9 +12,23 @@ import Keywords from './pages/Keywords'
 function App() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode)
 
+  useEffect(() => {
+    const root = document.documentElement
+
+    if (isDarkMode) {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
+
+    return () => {
+      root.classList.remove('dark')
+    }
+  }, [isDarkMode])
+
   return (
     <BrowserRouter>
-      <div className={`app ${isDarkMode ? 'dark-mode' : ''}`}>
+      <div className="flex h-screen bg-background-primary text-text-primary transition-colors duration-300">
         <Sidebar title="ВК Аналитик" />
         <MainContent>
           <Routes>
@@ -30,8 +44,8 @@ function App() {
           toastOptions={{
             duration: 3000,
             style: {
-              background: '#333',
-              color: '#fff',
+              background: 'var(--bg-sidebar)',
+              color: 'var(--text-light)',
             },
           }}
         />

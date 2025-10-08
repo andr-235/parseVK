@@ -1,4 +1,3 @@
-import '../App.css'
 import { forwardRef } from 'react'
 
 interface InputProps {
@@ -10,10 +9,11 @@ interface InputProps {
   accept?: string
   style?: React.CSSProperties
   id?: string
+  className?: string
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ value, onChange, onEnter, placeholder, type = 'text', accept, style, id }, ref) => {
+  ({ value, onChange, onEnter, placeholder, type = 'text', accept, style, id, className }, ref) => {
     const handleKeyPress = onEnter
       ? (e: React.KeyboardEvent<HTMLInputElement>) => {
           if (e.key === 'Enter') {
@@ -21,6 +21,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           }
         }
       : undefined
+
+    const inputClassName = [
+      'w-full rounded-xl border border-border bg-background-primary px-4 py-3 text-base text-text-primary shadow-soft-sm transition-colors duration-200 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/40',
+      className ?? '',
+    ]
+      .filter(Boolean)
+      .join(' ')
 
     return (
       <input
@@ -30,7 +37,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         onChange={onChange}
         onKeyPress={handleKeyPress}
         placeholder={placeholder}
-        className="keyword-input"
+        className={inputClassName}
         accept={accept}
         style={style}
         id={id}

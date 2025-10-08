@@ -9,14 +9,17 @@ interface GroupInputProps {
 
 function GroupInput({ url, onUrlChange, onAdd }: GroupInputProps) {
   return (
-    <div className="keyword-input-group">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
       <Input
         value={url}
         onChange={onUrlChange}
         onEnter={onAdd}
         placeholder="URL группы"
+        className="sm:min-w-[260px] sm:flex-1"
       />
-      <Button onClick={onAdd}>Добавить</Button>
+      <Button onClick={onAdd} className="w-full sm:w-auto">
+        Добавить
+      </Button>
     </div>
   )
 }

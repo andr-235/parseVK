@@ -166,74 +166,75 @@ function Tasks() {
         : 'Создать задачу на парсинг групп'
 
   return (
-    <div className="tasks-page">
-      <section className="tasks-header">
-        <div className="tasks-header__title">
+    <div className="flex flex-col gap-8">
+      <section className="flex flex-col gap-6 rounded-3xl border border-border bg-background-secondary/80 p-6 shadow-soft-lg transition-colors duration-300 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-2">
           <PageTitle>Задачи</PageTitle>
-          <p className="tasks-header__subtitle">
+          <p className="max-w-2xl text-sm leading-relaxed text-text-secondary">
             Управляйте задачами парсинга и отслеживайте их прогресс в режиме реального времени.
           </p>
         </div>
 
-        <div className="tasks-header__actions">
+        <div className="flex w-full flex-col items-start gap-3 md:w-auto md:items-end">
           <Button
             onClick={handleOpenCreateModal}
             disabled={isCreating || areGroupsLoading}
+            className="w-full md:w-auto"
           >
             {createButtonText}
           </Button>
-          <span className="tasks-header__meta">Последнее обновление: {formattedLastUpdated}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Последнее обновление: {formattedLastUpdated}
+          </span>
         </div>
       </section>
 
       {(isCreating || hasActiveTasks) && (
-        <div className="tasks-banner">
+        <section>
           <ActiveTasksBanner tasks={activeTasks} isCreating={isCreating} />
-        </div>
+        </section>
       )}
 
-      <section className="tasks-overview">
-        <div className="tasks-stats-grid">
-          <article className="tasks-stat-card tasks-stat-card--primary">
-            <span className="tasks-stat-card__label">Всего задач</span>
-            <span className="tasks-stat-card__value">{taskMetrics.total}</span>
-            <span className="tasks-stat-card__hint">Все созданные задачи за выбранный период</span>
+      <section>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <article className="rounded-2xl border border-border bg-background-primary/50 p-5 shadow-soft-sm transition-colors duration-200">
+            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Всего задач</span>
+            <span className="mt-3 block text-3xl font-bold text-text-primary">{taskMetrics.total}</span>
+            <span className="mt-2 block text-sm text-text-secondary">Все созданные задачи за выбранный период</span>
           </article>
-          <article className="tasks-stat-card tasks-stat-card--info">
-            <span className="tasks-stat-card__label">В работе</span>
-            <span className="tasks-stat-card__value">{taskMetrics.active}</span>
-            <span className="tasks-stat-card__hint">Активные и выполняющиеся в настоящий момент задачи</span>
+          <article className="rounded-2xl border border-border bg-background-primary/50 p-5 shadow-soft-sm transition-colors duration-200">
+            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">В работе</span>
+            <span className="mt-3 block text-3xl font-bold text-accent-info">{taskMetrics.active}</span>
+            <span className="mt-2 block text-sm text-text-secondary">Активные и выполняющиеся в настоящий момент задачи</span>
           </article>
-          <article className="tasks-stat-card tasks-stat-card--warning">
-            <span className="tasks-stat-card__label">Ожидают запуска</span>
-            <span className="tasks-stat-card__value">{taskMetrics.pending}</span>
-            <span className="tasks-stat-card__hint">Задачи в очереди на запуск</span>
+          <article className="rounded-2xl border border-border bg-background-primary/50 p-5 shadow-soft-sm transition-colors duration-200">
+            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Ожидают запуска</span>
+            <span className="mt-3 block text-3xl font-bold text-accent-warning">{taskMetrics.pending}</span>
+            <span className="mt-2 block text-sm text-text-secondary">Задачи в очереди на запуск</span>
           </article>
-          <article className="tasks-stat-card tasks-stat-card--success">
-            <span className="tasks-stat-card__label">Завершены</span>
-            <span className="tasks-stat-card__value">{taskMetrics.completed}</span>
-            <span className="tasks-stat-card__hint">Успешно выполненные задачи</span>
+          <article className="rounded-2xl border border-border bg-background-primary/50 p-5 shadow-soft-sm transition-colors duration-200">
+            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Завершены</span>
+            <span className="mt-3 block text-3xl font-bold text-accent-success">{taskMetrics.completed}</span>
+            <span className="mt-2 block text-sm text-text-secondary">Успешно выполненные задачи</span>
           </article>
-          <article className="tasks-stat-card tasks-stat-card--danger">
-            <span className="tasks-stat-card__label">С ошибками</span>
-            <span className="tasks-stat-card__value">{taskMetrics.failed}</span>
-            <span className="tasks-stat-card__hint">Задачи, завершившиеся с ошибкой</span>
+          <article className="rounded-2xl border border-border bg-background-primary/50 p-5 shadow-soft-sm transition-colors duration-200">
+            <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">С ошибками</span>
+            <span className="mt-3 block text-3xl font-bold text-accent-danger">{taskMetrics.failed}</span>
+            <span className="mt-2 block text-sm text-text-secondary">Задачи, завершившиеся с ошибкой</span>
           </article>
         </div>
       </section>
 
-      <section className="tasks-table-card">
-        <header className="tasks-table-card__header">
-          <div>
-            <h2 className="tasks-table-card__title">История запусков</h2>
-            <p className="tasks-table-card__subtitle">
-              Сравнивайте статусы, просматривайте детали и повторно запускайте задачи при необходимости.
-            </p>
-          </div>
+      <section className="overflow-hidden rounded-3xl border border-border bg-background-secondary shadow-soft-lg">
+        <header className="space-y-2 border-b border-border px-6 py-5">
+          <h2 className="text-xl font-semibold text-text-primary">История запусков</h2>
+          <p className="text-sm text-text-secondary">
+            Сравнивайте статусы, просматривайте детали и повторно запускайте задачи при необходимости.
+          </p>
         </header>
 
         <div
-          className="tasks-table-card__body"
+          className="px-2 py-4 sm:px-6"
           onClick={(e) => handleRowClick(e, tasks, (id) => {
             void handleTaskSelect(id)
           })}

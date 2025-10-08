@@ -1,5 +1,4 @@
 import { memo } from 'react'
-import '../App.css'
 
 interface ButtonProps {
   children: React.ReactNode
@@ -18,6 +17,16 @@ const Button = memo(function Button({
   variant = 'primary',
   className,
 }: ButtonProps) {
+  const baseClassName =
+    'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60'
+
+  const variantClassName = {
+    primary: 'bg-accent-primary text-white hover:bg-accent-primary/90 focus-visible:ring-accent-primary',
+    secondary:
+      'border border-border bg-background-secondary text-text-primary hover:bg-background-secondary/80 focus-visible:ring-accent-primary',
+    danger: 'bg-accent-danger text-white hover:bg-accent-danger/90 focus-visible:ring-accent-danger',
+  }[variant]
+
   const handleClick = () => {
     if (disabled) {
       return
@@ -28,11 +37,7 @@ const Button = memo(function Button({
     }
   }
 
-  const buttonClassName = [
-    'button',
-    variant !== 'primary' ? variant : '',
-    className ?? '',
-  ]
+  const buttonClassName = [baseClassName, variantClassName, className ?? '']
     .filter(Boolean)
     .join(' ')
 

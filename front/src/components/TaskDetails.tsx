@@ -3,7 +3,6 @@ import type { TaskDetails as TaskDetailsType } from '../types'
 import { getTaskStatusText, getGroupStatusText } from '../utils/statusHelpers'
 import { calculateTaskProgress } from '../utils/taskProgress'
 import ProgressBar from './ProgressBar'
-import '../App.css'
 
 interface TaskDetailsProps {
   task: TaskDetailsType | undefined
@@ -31,6 +30,27 @@ const getNumberFromObject = (source: Record<string, unknown>, ...keys: string[])
   }
 
   return null
+}
+
+type TaskStatus = TaskDetailsType['status']
+type GroupStatus = TaskDetailsType['groups'][number]['status']
+
+const STATUS_BADGE_BASE = 'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide'
+
+const taskStatusClasses: Record<TaskStatus, string> = {
+  pending: 'bg-accent-warning/20 text-accent-warning',
+  processing: 'bg-accent-primary/20 text-accent-primary',
+  running: 'bg-accent-primary/20 text-accent-primary',
+  completed: 'bg-accent-success/20 text-accent-success',
+  failed: 'bg-accent-danger/20 text-accent-danger',
+}
+
+const groupStatusClasses: Record<GroupStatus, string> = {
+  pending: 'bg-accent-warning/20 text-accent-warning',
+  processing: 'bg-accent-primary/20 text-accent-primary',
+  running: 'bg-accent-primary/20 text-accent-primary',
+  success: 'bg-accent-success/20 text-accent-success',
+  failed: 'bg-accent-danger/20 text-accent-danger',
 }
 
 function TaskDetails({ task, onClose }: TaskDetailsProps) {
@@ -206,7 +226,7 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
       const safeCurrent = clamp(currentValue, 0, safeTotal)
 
       return (
-        <div className="group-progress">
+        <div className="space-y-2 rounded-xl border border-border/60 bg-background-primary/40 p-4">
           <ProgressBar
             current={indeterminate ? 1 : safeCurrent}
             total={indeterminate ? 1 : safeTotal}
@@ -225,26 +245,26 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
       const commentsCount = parsedData ? getNumberFromObject(parsedData, 'commentsCount', 'comments') : null
       const posts = parsedData ? getNumberFromObject(parsedData, 'postsCount', 'posts') : null
 
-      let detail: ReactNode = <span className="group-progress__status success-text">Данные получены</span>
+      let detail: ReactNode = <span className="text-sm font-medium text-accent-success">Данные получены</span>
 
       if (commentsCount !== null && posts !== null) {
-        detail = <span className="group-progress__status success-text">Постов: {posts} / Комментариев: {commentsCount}</span>
+        detail = <span className="text-sm font-medium text-accent-success">Постов: {posts} / Комментариев: {commentsCount}</span>
       } else if (commentsCount !== null) {
-        detail = <span className="group-progress__status success-text">Комментариев: {commentsCount}</span>
+        detail = <span className="text-sm font-medium text-accent-success">Комментариев: {commentsCount}</span>
       } else if (posts !== null) {
-        detail = <span className="group-progress__status success-text">Постов: {posts}</span>
+        detail = <span className="text-sm font-medium text-accent-success">Постов: {posts}</span>
       }
 
       return renderProgress('success', 1, 1, 'Готово', detail)
     }
 
     if (group.status === 'failed') {
-      const detail = <span className="group-progress__status error-text">{group.error ?? 'Ошибка парсинга'}</span>
+      const detail = <span className="text-sm font-medium text-accent-danger">{group.error ?? 'Ошибка парсинга'}</span>
       return renderProgress('danger', 1, 1, 'Ошибка', detail)
     }
 
     if (group.status === 'pending') {
-      const detail = <span className="group-progress__status">Ждёт обработки</span>
+      const detail = <span className="text-sm text-text-secondary">Ждёт обработки</span>
       return renderProgress('primary', 0, 1, 'В очереди', detail)
     }
 
@@ -252,7 +272,7 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
       const progressInfo = resolveGroupProgress(group, parsedData)
 
       if (!progressInfo) {
-        return renderProgress('primary', 0, 1, 'Обработка...', <span className="group-progress__status">Парсим посты...</span>, true)
+        return renderProgress('primary', 0, 1, 'Обработка...', <span className="text-sm text-text-secondary">Парсим посты...</span>, true)
       }
 
       const infoParts: string[] = []
@@ -296,7 +316,7 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
           : 'Обработка...'
 
       const detail = (
-        <span className="group-progress__status">
+        <span className="text-sm text-text-secondary">
           {infoParts.length > 0 ? infoParts.join(' • ') : 'Посты обрабатываются'}
         </span>
       )
@@ -310,60 +330,74 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Детали задачи #{task.id}</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="flex w-full max-h-[90vh] max-w-5xl flex-col overflow-hidden rounded-3xl bg-background-secondary text-text-primary shadow-soft-lg transition-colors duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-border px-8 py-6">
+          <h2 className="text-2xl font-semibold tracking-tight">Детали задачи #{task.id}</h2>
+          <button
+            type="button"
+            className="rounded-full bg-background-primary/40 p-2 text-2xl leading-none text-text-secondary transition-colors duration-200 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60"
+            onClick={onClose}
+            aria-label="Закрыть модальное окно"
+          >
+            ×
+          </button>
+        </header>
 
-        <div className="modal-body">
-          <div className="task-info">
+        <div className="flex-1 overflow-y-auto px-8 py-6">
+          <section className="grid gap-4 text-sm sm:grid-cols-2">
             {task.title && (
-              <div className="info-row">
-                <span className="info-label">Название:</span>
-                <span>{task.title}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Название</p>
+                <p className="mt-1 text-base font-medium text-text-primary">{task.title}</p>
               </div>
             )}
-            <div className="info-row">
-              <span className="info-label">Статус:</span>
-              <span className={`status-badge status-${task.status}`}>
+            <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Статус</p>
+              <span className={`${STATUS_BADGE_BASE} mt-2 ${taskStatusClasses[task.status]}`}>
                 {getTaskStatusText(task.status)}
               </span>
             </div>
             {scopeLabel && (
-              <div className="info-row">
-                <span className="info-label">Охват:</span>
-                <span>{scopeLabel}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Охват</p>
+                <p className="mt-1 text-base font-medium text-text-primary">{scopeLabel}</p>
               </div>
             )}
-            <div className="info-row">
-              <span className="info-label">Создана:</span>
-              <span>{formatDate(task.createdAt)}</span>
+            <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Создана</p>
+              <p className="mt-1 text-base font-medium text-text-primary">{formatDate(task.createdAt)}</p>
             </div>
             {task.completedAt && (
-              <div className="info-row">
-                <span className="info-label">Завершена:</span>
-                <span>{formatDate(task.completedAt)}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Завершена</p>
+                <p className="mt-1 text-base font-medium text-text-primary">{formatDate(task.completedAt)}</p>
               </div>
             )}
             {task.postLimit != null && Number.isFinite(task.postLimit) && (
-              <div className="info-row">
-                <span className="info-label">Лимит постов:</span>
-                <span>{task.postLimit}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Лимит постов</p>
+                <p className="mt-1 text-base font-medium text-text-primary">{task.postLimit}</p>
               </div>
             )}
-            <div className="info-row">
-              <span className="info-label">Всего групп:</span>
-              <span>{totalGroups}</span>
+            <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Всего групп</p>
+              <p className="mt-1 text-base font-semibold text-text-primary">{totalGroups}</p>
             </div>
             {totalGroups > 0 && (
-              <div className="info-row info-row--column">
-                <div className="info-row__header">
-                  <span className="info-label">Прогресс:</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm sm:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-medium text-text-secondary">
+                  <span>Прогресс</span>
                   <span>{processedTotal} / {totalGroups}</span>
                 </div>
                 <ProgressBar
+                  className="mt-3"
                   current={processedTotal}
                   total={totalGroups}
                   showLabel
@@ -373,86 +407,92 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
               </div>
             )}
             {activeGroups > 0 && (
-              <div className="info-row">
-                <span className="info-label">В работе:</span>
-                <span>{activeGroups}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">В работе</p>
+                <p className="mt-1 text-base font-medium text-text-primary">{activeGroups}</p>
               </div>
             )}
             {pendingGroups > 0 && (
-              <div className="info-row">
-                <span className="info-label">В очереди:</span>
-                <span>{pendingGroups}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">В очереди</p>
+                <p className="mt-1 text-base font-medium text-text-primary">{pendingGroups}</p>
               </div>
             )}
             {successCount !== null && (
-              <div className="info-row">
-                <span className="info-label">Успешно:</span>
-                <span className="success-text">{successCount}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Успешно</p>
+                <p className="mt-1 text-base font-semibold text-accent-success">{successCount}</p>
               </div>
             )}
             {failedCount !== null && (
-              <div className="info-row">
-                <span className="info-label">Ошибок:</span>
-                <span className="error-text">{failedCount}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Ошибок</p>
+                <p className="mt-1 text-base font-semibold text-accent-danger">{failedCount}</p>
               </div>
             )}
             {postsCount !== null && (
-              <div className="info-row">
-                <span className="info-label">Постов:</span>
-                <span>{postsCount}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Постов</p>
+                <p className="mt-1 text-base font-medium text-text-primary">{postsCount}</p>
               </div>
             )}
             {commentsCountTotal !== null && (
-              <div className="info-row">
-                <span className="info-label">Комментариев:</span>
-                <span>{commentsCountTotal}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Комментариев</p>
+                <p className="mt-1 text-base font-medium text-text-primary">{commentsCountTotal}</p>
               </div>
             )}
             {authorsCount !== null && (
-              <div className="info-row">
-                <span className="info-label">Авторов:</span>
-                <span>{authorsCount}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Авторов</p>
+                <p className="mt-1 text-base font-medium text-text-primary">{authorsCount}</p>
               </div>
             )}
             {task.skippedGroupsMessage && (
-              <div className="info-row info-row--column">
-                <span className="info-label">Пропущенные группы:</span>
-                <span className="warning-text">{task.skippedGroupsMessage}</span>
+              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm sm:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Пропущенные группы</p>
+                <p className="mt-1 text-sm font-medium text-accent-warning">{task.skippedGroupsMessage}</p>
               </div>
             )}
-          </div>
+          </section>
 
-          <h3>Группы</h3>
-          <table className="keywords-table">
-            <thead>
-              <tr>
-                <th>№</th>
-                <th>Название группы</th>
-                <th>Статус</th>
-                <th>Результат</th>
-              </tr>
-            </thead>
-            <tbody>
-              {task.groups.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>Нет данных по группам</td>
-                </tr>
-              ) : (
-                task.groups.map((group, index) => (
-                  <tr key={`${group.groupId}-${index}`}>
-                    <td>{index + 1}</td>
-                    <td>{group.groupName}</td>
-                    <td>
-                      <span className={`status-badge status-${group.status}`}>
-                        {getGroupStatusText(group.status)}
-                      </span>
-                    </td>
-                    <td>{renderGroupResult(group)}</td>
+          <section className="mt-10 space-y-4">
+            <h3 className="text-lg font-semibold text-text-primary">Группы</h3>
+            <div className="overflow-hidden rounded-2xl border border-border bg-background-secondary shadow-soft-md">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-background-secondary/70 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  <tr>
+                    <th className="px-5 py-3">№</th>
+                    <th className="px-5 py-3">Название группы</th>
+                    <th className="px-5 py-3">Статус</th>
+                    <th className="px-5 py-3">Результат</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {task.groups.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-5 py-6 text-center text-sm text-text-secondary">
+                        Нет данных по группам
+                      </td>
+                    </tr>
+                  ) : (
+                    task.groups.map((group, index) => (
+                      <tr key={`${group.groupId}-${index}`} className="transition-colors duration-150 hover:bg-background-primary/70">
+                        <td className="px-5 py-4 align-top text-sm font-medium text-text-secondary">{index + 1}</td>
+                        <td className="px-5 py-4 align-top text-sm font-medium text-text-primary">{group.groupName}</td>
+                        <td className="px-5 py-4 align-top">
+                          <span className={`${STATUS_BADGE_BASE} ${groupStatusClasses[group.status]}`}>
+                            {getGroupStatusText(group.status)}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 align-top">{renderGroupResult(group)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </div>
     </div>
