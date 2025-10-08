@@ -47,6 +47,9 @@ function Keywords() {
     }
   }
 
+  const keywordCount = keywords.length
+  const hasKeywords = keywordCount > 0
+
   const tableContent = isLoading ? (
     <p className="empty-message">Загрузка ключевых слов...</p>
   ) : (
@@ -59,20 +62,74 @@ function Keywords() {
   )
 
   return (
-    <div>
+    <div className="keywords-page">
       <PageTitle>Ключевые слова</PageTitle>
 
-      <div className="keywords-controls">
-        <KeywordInput
-          value={keywordValue}
-          onChange={(e) => setKeywordValue(e.target.value)}
-          onAdd={handleAddKeyword}
-          placeholder="Поиск и добавление ключевого слова"
-        />
-        <FileUpload onUpload={handleFileUpload} />
-      </div>
+      <section className="keywords-hero" aria-label="Сводка по ключевым словам">
+        <div className="keywords-hero__intro">
+          <h2 className="keywords-hero__title">Настройте фильтрацию комментариев</h2>
+          <p className="keywords-hero__description">
+            Добавляйте ключевые слова для быстрого отслеживания релевантных комментариев. Вы можете
+            ввести слова вручную или загрузить список из файла.
+          </p>
+          <ul className="keywords-hero__tips">
+            <li>Используйте точные формулировки, чтобы повысить точность поиска.</li>
+            <li>Загружайте файлы в формате CSV или TXT для массового добавления слов.</li>
+            <li>Удаляйте устаревшие ключевые слова, чтобы поддерживать актуальность фильтра.</li>
+          </ul>
+        </div>
+        <div className="keywords-hero__stats" aria-live="polite">
+          <span className="keywords-hero__count">{keywordCount}</span>
+          <span className="keywords-hero__label">
+            {hasKeywords ? 'ключевых слов активно' : 'ключевых слов пока нет'}
+          </span>
+        </div>
+      </section>
 
-      {tableContent}
+      <section className="keywords-actions" aria-label="Управление ключевыми словами">
+        <div className="keywords-actions__card">
+          <h3 className="keywords-actions__title">Добавление ключевых слов</h3>
+          <p className="keywords-actions__subtitle">
+            Введите слово вручную или загрузите готовый список. Поиск обновляется мгновенно при вводе.
+          </p>
+          <div className="keywords-actions__controls">
+            <KeywordInput
+              value={keywordValue}
+              onChange={(e) => setKeywordValue(e.target.value)}
+              onAdd={handleAddKeyword}
+              placeholder="Поиск и добавление ключевого слова"
+            />
+            <FileUpload onUpload={handleFileUpload} />
+          </div>
+        </div>
+        <div className="keywords-actions__card keywords-actions__card--hint">
+          <h3 className="keywords-actions__title">Советы по работе</h3>
+          <ul className="keywords-actions__list">
+            <li>Проверяйте список после импорта, чтобы удалить дубликаты.</li>
+            <li>Используйте короткие и понятные формулировки.</li>
+            <li>Добавляйте ключевые слова по темам для разных сценариев.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="keywords-table-section" aria-label="Список ключевых слов">
+        <div className="keywords-table-card">
+          <header className="keywords-table-card__header">
+            <div>
+              <h3 className="keywords-table-card__title">Список ключевых слов</h3>
+              <p className="keywords-table-card__description">
+                {hasKeywords
+                  ? 'Управляйте существующими ключевыми словами, чтобы контролировать выдачу комментариев.'
+                  : 'Добавьте первое ключевое слово, чтобы начать фильтрацию комментариев.'}
+              </p>
+            </div>
+            {hasKeywords && (
+              <span className="keywords-table-card__badge">{keywordCount}</span>
+            )}
+          </header>
+          <div className="keywords-table-card__body">{tableContent}</div>
+        </div>
+      </section>
     </div>
   )
 }
