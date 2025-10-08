@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ChangeEvent } from 'react'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
+import PageTitle from '../components/PageTitle'
+import GroupsTableCard from './Groups/components/GroupsTableCard'
 import './Groups.css'
 
 function Groups() {
