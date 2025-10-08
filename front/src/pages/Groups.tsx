@@ -4,7 +4,6 @@ import { getGroupTableColumns } from '../config/groupTableColumns'
 import GroupsHero from './Groups/components/GroupsHero'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import GroupsTableCard from './Groups/components/GroupsTableCard'
-import styles from './GroupsPage.module.css'
 
 function Groups() {
   const groups = useGroupsStore((state) => state.groups)
@@ -54,7 +53,7 @@ function Groups() {
   }
 
   return (
-    <div className={styles.page}>
+    <div className="flex flex-col gap-8 md:gap-10 px-4 sm:px-6 lg:px-8 pb-12 lg:pb-16">
       <GroupsHero isLoading={isLoading} totalGroups={groupsCount} hasGroups={hasGroups} />
 
       <GroupsActionsPanel

@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import type { ReactNode } from 'react'
+import clsx from 'clsx'
 import Button from '../../../components/Button'
 import Table from '../../../components/Table'
 import type { Group, TableColumn } from '../../../types'
-import styles from './GroupsTableCard.module.css'
 
 type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn[]
 
@@ -53,26 +53,36 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
 
   if (isLoading && !hasGroups) {
     body = (
-      <div className={styles.loadingState} aria-live="polite" aria-busy="true">
-        <div className={styles.loader} />
-        <p className={styles.loadingText}>Загружаем группы…</p>
+      <div
+        className="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-[20px] bg-background-primary p-10 text-center text-text-secondary md:p-12"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div className="h-12 w-12 rounded-full border-4 border-[rgba(52,152,219,0.2)] border-t-[#3498db] animate-spin" />
+        <p className="font-semibold text-text-primary">Загружаем группы…</p>
       </div>
     )
   } else if (!hasGroups) {
     body = (
-      <div className={styles.emptyState} role="status">
-        <div className={styles.emptyIllustration} aria-hidden="true">
-          <div className={styles.emptyIcon}>📁</div>
+      <div
+        className="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-[20px] bg-background-primary p-10 text-center text-text-secondary md:p-12"
+        role="status"
+      >
+        <div className="grid place-items-center rounded-[30px] border border-dashed border-[rgba(52,152,219,0.35)] bg-[linear-gradient(135deg,rgba(52,152,219,0.16),rgba(52,152,219,0.04))] p-6">
+          <div className="flex h-[clamp(56px,16vw,68px)] w-[clamp(56px,16vw,68px)] items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(52,152,219,0.2),rgba(52,152,219,0.05))] text-[clamp(28px,8vw,36px)] text-[#3498db]">
+            📁
+          </div>
         </div>
-        <h3 className={styles.emptyTitle}>Список пуст</h3>
-        <p className={styles.emptyDescription}>
-          Добавьте группы по ссылке или загрузите список из файла — после обработки данные появятся здесь и будут доступны для управления.
+        <h3 className="text-lg font-semibold text-text-primary">Список пуст</h3>
+        <p className="max-w-[420px] text-[15px] leading-relaxed">
+          Добавьте группы по ссылке или загрузите список из файла — после обработки данные появятся здесь и будут доступны для
+          управления.
         </p>
       </div>
     )
   } else {
     body = (
-      <div className={styles.tableContainer}>
+      <div className="overflow-x-auto rounded-[20px]">
         <Table
           columns={tableColumns}
           data={groups}
@@ -82,33 +92,32 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
     )
   }
 
+  const metaBadgeClassName = 'inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.04em]'
+
   return (
-    <section className={styles.card} aria-label="Список групп">
-      <header className={styles.header}>
-        <div className={styles.info}>
-          <h2 className={styles.title}>Список групп</h2>
-          <p className={styles.subtitle}>{subtitle}</p>
+    <section className="flex flex-col gap-8 rounded-[26px] border border-border bg-background-secondary p-6 shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] md:gap-10 md:p-8 dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Список групп">
+      <header className="flex flex-wrap items-start justify-between gap-6">
+        <div className="flex min-w-[260px] flex-1 flex-col gap-2">
+          <h2 className="text-2xl font-bold text-text-primary">Список групп</h2>
+          <p className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">{subtitle}</p>
         </div>
-        <div className={styles.controls}>
-          <div className={styles.meta}>
+        <div className="flex min-w-[220px] flex-col items-end gap-3">
+          <div className="flex w-full flex-wrap items-center justify-end gap-3">
             {isLoading ? (
-              <span className={styles.loadingBadge}>Загрузка…</span>
+              <span className={clsx(metaBadgeClassName, 'bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]')}>
+                Загрузка…
+              </span>
             ) : (
-              <span className={styles.counter}>
+              <span className={clsx(metaBadgeClassName, 'bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]')}>
                 {groups.length} {getCounterLabel(groups.length)}
               </span>
             )}
           </div>
-          <div className={styles.actions}>
-            <Button className={styles.filtersButton} variant="secondary" disabled>
+          <div className="flex flex-wrap justify-end gap-3">
+            <Button className="min-w-[160px]" variant="secondary" disabled>
               Фильтры (скоро)
             </Button>
-            <Button
-              className={styles.clearButton}
-              variant="danger"
-              onClick={onClear}
-              disabled={clearDisabled}
-            >
+            <Button className="min-w-[180px]" variant="danger" onClick={onClear} disabled={clearDisabled}>
               Очистить список
             </Button>
           </div>
