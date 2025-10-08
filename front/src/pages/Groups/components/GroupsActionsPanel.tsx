@@ -1,4 +1,4 @@
-import { ChangeEvent, Dispatch, SetStateAction } from 'react'
+import type { ChangeEvent, Dispatch, SetStateAction } from 'react'
 import GroupInput from '../../../components/GroupInput'
 import FileUpload from '../../../components/FileUpload'
 import styles from './GroupsActionsPanel.module.css'

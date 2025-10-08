@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import Table from '../components/Table'
-import Button from '../components/Button'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import './Groups.css'
 import GroupsHero from './Groups/components/GroupsHero'
+import GroupsTableCard from './Groups/components/GroupsTableCard'
 
 function Groups() {
   const groups = useGroupsStore((state) => state.groups)
@@ -53,8 +52,6 @@ function Groups() {
     }
   }
 
-  const isDeleteDisabled = !hasGroups || isLoading
-
   return (
     <div className="groups-page">
       <GroupsHero
@@ -71,41 +68,13 @@ function Groups() {
         setUrl={setUrl}
       />
 
-      <section className="groups-table-card">
-        <div className="groups-table-card__header">
-          <div>
-            <h2 className="groups-table-card__title">Список групп</h2>
-            <p className="groups-table-card__subtitle">
-              {isLoading
-                ? 'Мы подготавливаем данные...'
-                : hasGroups
-                  ? 'Ниже отображаются все добавленные сообщества. Вы можете удалить любую запись из таблицы.'
-                  : 'После добавления групп их карточки появятся в таблице с возможностью управления.'}
-            </p>
-          </div>
-          <div className="groups-table-card__actions">
-            {!isLoading && (
-              <span className="groups-table-card__counter">
-                {totalGroups} {totalGroups === 1 ? 'группа' : totalGroups >= 2 && totalGroups <= 4 ? 'группы' : 'групп'}
-              </span>
-            )}
-            <Button
-              onClick={handleDeleteAllGroups}
-              disabled={isDeleteDisabled}
-              variant="danger"
-              className="groups-table-card__clear-button"
-            >
-              Очистить список
-            </Button>
-          </div>
-        </div>
-
-        <Table
-          columns={getGroupTableColumns(deleteGroup)}
-          data={groups}
-          emptyMessage={isLoading ? 'Загрузка...' : 'Нет групп. Добавьте новую группу или загрузите из файла.'}
-        />
-      </section>
+      <GroupsTableCard
+        groups={groups}
+        isLoading={isLoading}
+        onClear={handleDeleteAllGroups}
+        onDelete={deleteGroup}
+        columns={getGroupTableColumns}
+      />
     </div>
   )
 }
