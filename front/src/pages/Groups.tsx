@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, type ChangeEvent } from 'react'
+import PageTitle from '../components/PageTitle'
 import Table from '../components/Table'
 import Button from '../components/Button'
 import { useGroupsStore } from '../stores'
@@ -29,7 +30,7 @@ function Groups() {
     }
   }
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       await loadFromFile(file)
