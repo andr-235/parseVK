@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import { IGroup } from '../vk/interfaces/group.interfaces';
@@ -6,6 +6,8 @@ import { IGroupResponse, IDeleteResponse } from './interfaces/group.interface';
 
 @Injectable()
 export class GroupsService {
+  private readonly logger = new Logger(GroupsService.name);
+
   constructor(
     private prisma: PrismaService,
     private vkService: VkService,
@@ -15,9 +17,13 @@ export class GroupsService {
     const parsedIdentifier = typeof identifier === 'string'
       ? this.parseVkIdentifier(identifier)
       : identifier;
+
+    this.logger.log(`Запрашиваем данные группы ${parsedIdentifier}`);
+
     const response = await this.vkService.getGroups(parsedIdentifier);
 
     if (!response?.groups || response.groups.length === 0) {
+      this.logger.warn(`Группа ${parsedIdentifier} не найдена`);
       throw new Error('Group not found');
     }
 
@@ -67,6 +73,8 @@ export class GroupsService {
         counters: groupData.counters,
       },
     });
+
+    this.logger.log(`Группа ${groupData.id} сохранена в базе (id записи ${group.id})`);
 
     return group;
   }
@@ -126,20 +134,28 @@ export class GroupsService {
     // Парсим все идентификаторы
     const parsedIdentifiers = identifiers.map(id => this.parseVkIdentifier(id));
 
+    this.logger.log(`Начинаем загрузку ${parsedIdentifiers.length} групп`);
+
     // Обрабатываем батчами
     for (let i = 0; i < parsedIdentifiers.length; i += batchSize) {
       const batch = parsedIdentifiers.slice(i, i + batchSize);
+
+      this.logger.log(`Обрабатываем батч групп ${i + 1}-${i + batch.length} из ${parsedIdentifiers.length}`);
 
       const batchPromises = batch.map(async (identifier, index) => {
         const originalIdentifier = identifiers[i + index];
         try {
           const group = await this.saveGroup(identifier);
           success.push(group);
-        } catch (error) {
+          this.logger.log(`Группа ${identifier} успешно загружена`);
+        } catch (error: unknown) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
           failed.push({
             identifier: originalIdentifier,
-            error: error.message || 'Unknown error',
+            error: errorMessage,
           });
+          this.logger.error(`Ошибка при загрузке группы ${identifier}: ${errorMessage}`);
         }
       });
 
@@ -151,6 +167,10 @@ export class GroupsService {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
+
+    this.logger.log(
+      `Загрузка групп завершена: всего ${identifiers.length}, успешно ${success.length}, с ошибками ${failed.length}`,
+    );
 
     return {
       success,
@@ -172,6 +192,8 @@ export class GroupsService {
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 0);
+
+    this.logger.log(`Получен файл с ${identifiers.length} строками для загрузки групп`);
 
     return this.bulkSaveGroups(identifiers);
   }

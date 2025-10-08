@@ -12,6 +12,7 @@ async function bootstrap() {
   app.useLogger(logger);
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.enableCors();
+  app.useGlobalInterceptors(new LoggingInterceptor());
   app.setGlobalPrefix('api');
 
   const port = process.env.PORT ?? 3000;

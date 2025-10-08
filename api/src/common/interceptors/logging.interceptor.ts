@@ -5,53 +5,39 @@ import {
   Logger,
   NestInterceptor,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  private readonly logger = new Logger(LoggingInterceptor.name);
+  private readonly logger = new Logger('HTTP');
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    if (context.getType() !== 'http') {
-      return next.handle();
-    }
-
-    const httpContext = context.switchToHttp();
-    const request = httpContext.getRequest<Request>();
-    const response = httpContext.getResponse<Response>();
-    const { method, originalUrl } = request;
+    const request = context.switchToHttp().getRequest<Request>();
+    const response = context.switchToHttp().getResponse<Response>();
+    const { method, originalUrl, ip } = request;
+    const userAgent = request.get('user-agent') ?? '';
     const startedAt = Date.now();
 
-    this.logger.log(`Запрос ${method} ${originalUrl}`);
+    this.logger.log(
+      `Запрос: ${method} ${originalUrl} — UA: ${userAgent || 'неизвестно'} — IP: ${ip}`,
+    );
 
     return next.handle().pipe(
       tap({
         next: () => {
+          const duration = Date.now() - startedAt;
+          const contentLength = response.get('content-length') ?? '0';
           this.logger.log(
-            `Ответ ${method} ${originalUrl} со статусом ${response.statusCode} за ${Date.now() - startedAt}мс`,
+            `Ответ: ${method} ${originalUrl} — статус ${response.statusCode} — ${contentLength}b — ${duration}мс`,
           );
         },
-        error: (error: unknown) => {
-          const statusFromError =
-            typeof error === 'object' && error !== null && 'status' in error
-              ? Number((error as Record<string, unknown>).status)
-              : undefined;
-          const messageFromError =
-            typeof error === 'object' && error !== null && 'message' in error
-              ? String((error as Record<string, unknown>).message)
-              : 'Неизвестная ошибка';
-          const stackFromError =
-            typeof error === 'object' && error !== null && 'stack' in error
-              ? String((error as Record<string, unknown>).stack)
-              : undefined;
-
-          const status = response.statusCode || statusFromError || 500;
-
+        error: (error: Error) => {
+          const duration = Date.now() - startedAt;
           this.logger.error(
-            `Ошибка ${method} ${originalUrl} со статусом ${status}: ${messageFromError}`,
-            stackFromError,
+            `Ошибка: ${method} ${originalUrl} — статус ${response.statusCode} — ${duration}мс — ${error.message}`,
+            error.stack,
           );
         },
       }),
