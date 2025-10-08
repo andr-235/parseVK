@@ -1,24 +1,23 @@
-import { useState, useEffect, useMemo } from 'react'
-import PageTitle from '../components/PageTitle'
+import { useState, useEffect } from 'react'
 import Table from '../components/Table'
 import Button from '../components/Button'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import './Groups.css'
+import GroupsHero from './Groups/components/GroupsHero'
 
 function Groups() {
   const groups = useGroupsStore((state) => state.groups)
   const isLoading = useGroupsStore((state) => state.isLoading)
+  const totalGroups = useGroupsStore((state) => state.groups.length)
+  const hasGroups = useGroupsStore((state) => state.groups.length > 0)
   const fetchGroups = useGroupsStore((state) => state.fetchGroups)
   const addGroup = useGroupsStore((state) => state.addGroup)
   const deleteGroup = useGroupsStore((state) => state.deleteGroup)
   const loadFromFile = useGroupsStore((state) => state.loadFromFile)
   const deleteAllGroups = useGroupsStore((state) => state.deleteAllGroups)
   const [url, setUrl] = useState('')
-
-  const totalGroups = useMemo(() => groups.length, [groups])
-  const hasGroups = totalGroups > 0
 
   useEffect(() => {
     fetchGroups()
