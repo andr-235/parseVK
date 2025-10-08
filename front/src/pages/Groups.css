@@ -139,47 +139,6 @@
   padding-left: 18px;
 }
 
-.groups-page .groups-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-  padding: 28px 32px;
-  border-radius: 22px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 20px 40px -34px rgba(0, 0, 0, 0.3);
-}
-
-.groups-page .groups-actions__block {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.groups-page .groups-actions__title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.groups-page .groups-actions__hint {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.groups-page .groups-divider {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    180deg,
-    rgba(52, 152, 219, 0) 0%,
-    rgba(52, 152, 219, 0.3) 50%,
-    rgba(52, 152, 219, 0) 100%
-  );
-  align-self: stretch;
-}
 
 @media (max-width: 900px) {
   .groups-page .groups-hero {
@@ -190,14 +149,6 @@
     order: -1;
   }
 
-  .groups-page .groups-divider {
-    display: none;
-  }
-
-  .groups-page .groups-actions {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
 }
 
 .groups-page .groups-table-card {
