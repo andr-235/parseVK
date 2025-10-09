@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
+import { Card } from '../../../components/ui/card'
 import {
   Table,
   TableBody,
@@ -66,30 +67,32 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
     }
 
     return (
-      <div className="overflow-x-auto rounded-[20px] border border-border bg-background-primary">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {tableColumns.map((column) => (
-                <TableHead key={column.key} className={column.headerClassName}>
-                  {column.header}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {groups.map((group, index) => (
-              <TableRow key={group.id || index}>
+      <Card className="relative w-full overflow-hidden rounded-[20px] p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
                 {tableColumns.map((column) => (
-                  <TableCell key={column.key} className={column.cellClassName}>
-                    {column.render ? column.render(group, index) : group[column.key as keyof Group]}
-                  </TableCell>
+                  <TableHead key={column.key} className={column.headerClassName}>
+                    {column.header}
+                  </TableHead>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {groups.map((group, index) => (
+                <TableRow key={group.id || index}>
+                  {tableColumns.map((column) => (
+                    <TableCell key={column.key} className={column.cellClassName}>
+                      {column.render ? column.render(group, index) : group[column.key as keyof Group]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
     )
   }
 

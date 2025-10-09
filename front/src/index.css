@@ -160,4 +160,28 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Кастомный скроллбар для таблиц */
+  .overflow-x-auto::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+  }
+
+  /* Firefox */
+  .overflow-x-auto {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+  }
 }

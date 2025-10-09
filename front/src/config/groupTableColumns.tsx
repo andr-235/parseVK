@@ -1,4 +1,5 @@
-import {Button} from '../components/ui/button'
+import { Button } from '../components/ui/button'
+import { ExpandableText } from '../components/ExpandableText'
 import type { TableColumn, Group } from '../types'
 
 const GROUP_TYPE_LABELS: Record<string, string> = {
@@ -11,27 +12,35 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
   {
     header: 'ID',
     key: 'id',
-    cellClassName: 'table-cell-nowrap',
-    headerClassName: 'table-cell-nowrap'
+    cellClassName: 'table-cell-nowrap w-[80px]',
+    headerClassName: 'table-cell-nowrap w-[80px]'
   },
   {
     header: 'Фото',
     key: 'photo',
+    cellClassName: 'w-[70px]',
+    headerClassName: 'w-[70px]',
     render: (item: Group) => (
       item.photo50 ? <img src={item.photo50} alt={item.name} style={{ width: 50, height: 50, borderRadius: '50%' }} /> : '-'
     )
   },
   {
     header: 'VK ID',
-    key: 'vkId'
+    key: 'vkId',
+    cellClassName: 'table-cell-nowrap w-[100px]',
+    headerClassName: 'table-cell-nowrap w-[100px]'
   },
   {
     header: 'Название',
-    key: 'name'
+    key: 'name',
+    cellClassName: 'max-w-[200px] truncate',
+    headerClassName: 'w-[200px]'
   },
   {
     header: 'Screen Name',
     key: 'screenName',
+    cellClassName: 'max-w-[150px] truncate',
+    headerClassName: 'w-[150px]',
     render: (item: Group) => item.screenName || '-'
   },
   {
@@ -50,42 +59,51 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
   {
     header: 'Описание',
     key: 'description',
-    expandable: true,
-    truncateAt: 240,
-    emptyValue: '-',
-    cellClassName: 'table-cell-description',
-    headerClassName: 'table-cell-description'
+    cellClassName: 'table-cell-description max-w-[250px]',
+    headerClassName: 'table-cell-description w-[250px]',
+    render: (item: Group) => (
+      <ExpandableText text={item.description || ''} maxLength={50} />
+    )
   },
   {
     header: 'Участники',
     key: 'membersCount',
+    cellClassName: 'table-cell-nowrap w-[120px]',
+    headerClassName: 'table-cell-nowrap w-[120px]',
     render: (item: Group) => item.membersCount?.toLocaleString() || '-'
   },
   {
     header: 'Статус',
     key: 'status',
-    render: (item: Group) => item.status || '-'
+    cellClassName: 'max-w-[150px]',
+    headerClassName: 'w-[150px]',
+    render: (item: Group) => (
+      <ExpandableText text={item.status || ''} maxLength={50} />
+    )
   },
   {
     header: 'Закрытая',
     key: 'isClosed',
+    cellClassName: 'table-cell-nowrap w-[100px]',
+    headerClassName: 'table-cell-nowrap w-[100px]',
     render: (item: Group) => item.isClosed === 1 ? 'Да' : item.isClosed === 0 ? 'Нет' : '-'
   },
   {
     header: 'Действия',
     key: 'actions',
-    cellClassName: 'table-cell-actions',
-    headerClassName: 'table-cell-actions',
+    cellClassName: 'table-cell-actions sticky right-0 bg-background-primary',
+    headerClassName: 'table-cell-actions sticky right-0 bg-background-primary w-[180px]',
     render: (item: Group) => (
-      <div className="table-actions">
+      <div className="table-actions flex gap-2">
         <Button
+          size="sm"
           onClick={() => {
             window.open(`https://vk.com/${item.screenName || `club${item.vkId}`}`, '_blank')
           }}
         >
           Перейти
         </Button>
-        <Button onClick={() => deleteGroup(item.id)}>
+        <Button size="sm" variant="destructive" onClick={() => deleteGroup(item.id)}>
           Удалить
         </Button>
       </div>

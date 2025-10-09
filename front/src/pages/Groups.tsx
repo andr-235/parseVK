@@ -54,7 +54,7 @@ function Groups() {
 
   return (
     <div className="flex flex-col gap-8 md:gap-10 px-4 sm:px-6 lg:px-8 pb-12 lg:pb-16">
-      <GroupsHero isLoading={isLoading} totalGroups={groupsCount} hasGroups={hasGroups} />
+      <GroupsHero />
 
       <GroupsActionsPanel
         onAdd={handleAddGroup}
