@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import Button from './Button'
+import { Button } from './ui/button'
 import type { Group } from '../types'
 
 interface CreateParseTaskModalProps {
@@ -75,8 +75,12 @@ function CreateParseTaskModal({ isOpen, groups, isLoading, onClose, onSubmit }: 
   }
 
   const handleSubmit = () => {
+    if (isLoading) {
+      return
+    }
     const ids = Array.from(selectedIds)
     onSubmit(ids)
+    onClose()
   }
 
   if (!isOpen) {
@@ -126,7 +130,7 @@ function CreateParseTaskModal({ isOpen, groups, isLoading, onClose, onSubmit }: 
                 {selectedIds.size}
               </div>
               <div className="space-y-1">
-                <span className="text-sm font-semibold uppercase tracking-wide text-text-secondary">Выбрано групп</span>
+                <span className="text-sm font-semibold uppercase tracking-wide text-text-secondary">Выбрано групп</span> 
                 <span className="text-sm text-text-secondary">
                   из {groups.length} доступных • найдено {filteredGroups.length}
                 </span>

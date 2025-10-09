@@ -1,6 +1,6 @@
 import { useRef } from 'react'
-import Input from './Input'
-import Button from './Button'
+import {Input} from './ui/input'
+import {Button} from './ui/button'
 
 interface FileUploadProps {
   onUpload: (event: React.ChangeEvent<HTMLInputElement>) => void | Promise<void>

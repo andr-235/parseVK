@@ -1,4 +1,4 @@
-import Button from '../components/Button'
+import {Button} from '../components/ui/button'
 import type { TableColumn, Keyword } from '../types'
 
 export const getKeywordTableColumns = (deleteKeyword: (id: number) => Promise<void>): TableColumn[] => [

@@ -1,5 +1,5 @@
-import Input from './Input'
-import Button from './Button'
+import {Input} from './ui/input'
+import {Button} from './ui/button'
 
 interface GroupInputProps {
   url: string
@@ -13,7 +13,7 @@ function GroupInput({ url, onUrlChange, onAdd }: GroupInputProps) {
       <Input
         value={url}
         onChange={onUrlChange}
-        onEnter={onAdd}
+        onKeyDown={onAdd}
         placeholder="URL группы"
         className="sm:min-w-[260px] sm:flex-1"
       />

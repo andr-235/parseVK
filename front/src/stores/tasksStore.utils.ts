@@ -260,8 +260,18 @@ export const deriveGroupStatus = (
     return 'success'
   }
 
-  if (hasObjectEntries(options.parsedData ?? null)) {
-    return 'success'
+  // Проверяем наличие финальных результатов парсинга (а не промежуточных данных о прогрессе)
+  const parsedData = options.parsedData ?? null
+  if (parsedData) {
+    const hasFinalResults =
+      'postsCount' in parsedData ||
+      'commentsCount' in parsedData ||
+      'posts' in parsedData ||
+      'comments' in parsedData
+
+    if (hasFinalResults) {
+      return 'success'
+    }
   }
 
   return initialStatus

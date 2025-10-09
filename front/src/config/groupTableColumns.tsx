@@ -1,4 +1,4 @@
-import Button from '../components/Button'
+import {Button} from '../components/ui/button'
 import type { TableColumn, Group } from '../types'
 
 const GROUP_TYPE_LABELS: Record<string, string> = {

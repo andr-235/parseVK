@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageTitle from '../components/PageTitle'
 import SearchInput from '../components/SearchInput'
-import Table from '../components/Table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import { useCommentsStore, useKeywordsStore } from '../stores'
 import { getCommentTableColumns } from '../config/commentTableColumns'
+import type { Comment } from '../types'
 
 function Comments() {
   const comments = useCommentsStore((state) => state.comments)
@@ -243,11 +251,36 @@ function Comments() {
       </section>
 
       <div className="overflow-hidden rounded-3xl border border-border bg-background-secondary shadow-soft-lg px-2 py-4 sm:px-6">
-        <Table
-          columns={getCommentTableColumns(keywords, toggleReadStatus)}
-          data={filteredComments}
-          emptyMessage={emptyMessage}
-        />
+        {filteredComments.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center text-text-secondary">
+            {emptyMessage}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {getCommentTableColumns(keywords, toggleReadStatus).map((column) => (
+                    <TableHead key={column.key} className={column.headerClassName}>
+                      {column.header}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredComments.map((comment, index) => (
+                  <TableRow key={comment.id}>
+                    {getCommentTableColumns(keywords, toggleReadStatus).map((column) => (
+                      <TableCell key={column.key} className={column.cellClassName}>
+                        {column.render ? column.render(comment as Comment, index) : comment[column.key as keyof Comment]}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
     </div>
   )

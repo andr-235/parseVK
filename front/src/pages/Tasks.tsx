@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import Table from '../components/Table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import TaskDetails from '../components/TaskDetails'
 import CreateParseTaskModal from '../components/CreateParseTaskModal'
 import { useTasksStore, useGroupsStore } from '../stores'
-import { handleRowClick } from '../utils/tableHelpers'
 import { getTaskTableColumns } from '../config/taskTableColumns'
 import ActiveTasksBanner from '../components/ActiveTasksBanner'
 import { isTaskActive } from '../utils/taskProgress'
@@ -13,6 +19,7 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Separator } from '../components/ui/separator'
 import { cn } from '../lib/utils'
+import type { Task } from '../types'
 
 type StatusFilter = 'all' | 'active' | 'pending' | 'completed' | 'failed'
 
@@ -354,17 +361,43 @@ function Tasks() {
         </CardHeader>
 
         <CardContent className="px-0">
-          <div
-            className="px-2 py-4 sm:px-6"
-            onClick={(e) => handleRowClick(e, filteredTasks, (id) => {
-              void handleTaskSelect(id)
-            })}
-          >
-            <Table
-              columns={getTaskTableColumns()}
-              data={filteredTasks}
-              emptyMessage={emptyMessage}
-            />
+          <div className="px-2 py-4 sm:px-6">
+            {filteredTasks.length === 0 ? (
+              <div className="flex min-h-[200px] items-center justify-center text-text-secondary">
+                {emptyMessage}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {getTaskTableColumns().map((column) => (
+                        <TableHead key={column.key} className={column.headerClassName}>
+                          {column.header}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTasks.map((task, index) => (
+                      <TableRow
+                        key={task.id}
+                        className="cursor-pointer"
+                        onClick={() => {
+                          void handleTaskSelect(task.id)
+                        }}
+                      >
+                        {getTaskTableColumns().map((column) => (
+                          <TableCell key={column.key} className={column.cellClassName}>
+                            {column.render ? column.render(task as Task, index) : String(task[column.key as keyof Task] ?? '')}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         </CardContent>
 

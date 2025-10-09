@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react'
 import PageTitle from '../components/PageTitle'
-import Table from '../components/Table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import KeywordInput from '../components/KeywordInput'
 import FileUpload from '../components/FileUpload'
 import { useKeywordsStore } from '../stores'
 import { getKeywordTableColumns } from '../config/keywordTableColumns'
+import type { Keyword } from '../types'
 
 function Keywords() {
   const keywords = useKeywordsStore((state) => state.keywords)
@@ -54,13 +62,35 @@ function Keywords() {
     <p className="rounded-2xl border border-dashed border-border bg-background-secondary/50 px-6 py-8 text-center text-sm text-text-secondary">
       Загрузка ключевых слов...
     </p>
+  ) : keywords.length === 0 ? (
+    <div className="flex min-h-[200px] items-center justify-center text-text-secondary">
+      Нет ключевых слов. Добавьте новое слово или загрузите из файла.
+    </div>
   ) : (
-    <Table
-      columns={getKeywordTableColumns(deleteKeyword)}
-      data={keywords}
-      searchTerm={keywordValue}
-      emptyMessage="Нет ключевых слов. Добавьте новое слово или загрузите из файла."
-    />
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {getKeywordTableColumns(deleteKeyword).map((column) => (
+              <TableHead key={column.key} className={column.headerClassName}>
+                {column.header}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {keywords.map((keyword, index) => (
+            <TableRow key={keyword.id}>
+              {getKeywordTableColumns(deleteKeyword).map((column) => (
+                <TableCell key={column.key} className={column.cellClassName}>
+                  {column.render ? column.render(keyword as Keyword, index) : keyword[column.key as keyof Keyword]}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 
   return (

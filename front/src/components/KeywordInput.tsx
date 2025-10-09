@@ -1,5 +1,5 @@
-import Input from './Input'
-import Button from './Button'
+import {Input} from './ui/input'
+import {Button} from './ui/button'
 
 interface KeywordInputProps {
   value: string
@@ -18,7 +18,7 @@ function KeywordInput({ value, onChange, onAdd, placeholder }: KeywordInputProps
       <Input
         value={value}
         onChange={onChange}
-        onEnter={handleAdd}
+        onKeyDown={handleAdd}
         placeholder={placeholder}
         className="sm:min-w-[260px] sm:flex-1"
       />
