@@ -28,19 +28,17 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen bg-background-primary text-text-primary transition-colors duration-300">
+      <div className="flex min-h-screen w-full bg-background-primary text-text-primary transition-colors duration-300">
         <Sidebar title="ВК Аналитик" />
-        <div className="flex flex-1 overflow-hidden">
-          <MainContent>
-            <Routes>
-              <Route path="/" element={<Navigate to="/tasks" replace />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/groups" element={<Groups />} />
-              <Route path="/comments" element={<Comments />} />
-              <Route path="/keywords" element={<Keywords />} />
-            </Routes>
-          </MainContent>
-        </div>
+        <MainContent>
+          <Routes>
+            <Route path="/" element={<Navigate to="/tasks" replace />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/groups" element={<Groups />} />
+            <Route path="/comments" element={<Comments />} />
+            <Route path="/keywords" element={<Keywords />} />
+          </Routes>
+        </MainContent>
         <Toaster
           position="top-right"
           toastOptions={{

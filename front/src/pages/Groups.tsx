@@ -1,6 +1,7 @@
 import { useState, useEffect, type ChangeEvent } from 'react'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
+import { Card } from '@/components/ui/card'
 import GroupsHero from './Groups/components/GroupsHero'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import GroupsTableCard from './Groups/components/GroupsTableCard'
@@ -53,16 +54,18 @@ function Groups() {
   }
 
   return (
-    <div className="flex flex-col gap-8 md:gap-10 px-4 sm:px-6 lg:px-8 pb-12 lg:pb-16">
+    <>
       <GroupsHero />
 
-      <GroupsActionsPanel
-        onAdd={handleAddGroup}
-        onUpload={handleFileUpload}
-        isLoading={isLoading}
-        url={url}
-        setUrl={setUrl}
-      />
+      <Card className="p-6">
+        <GroupsActionsPanel
+          onAdd={handleAddGroup}
+          onUpload={handleFileUpload}
+          isLoading={isLoading}
+          url={url}
+          setUrl={setUrl}
+        />
+      </Card>
 
       <GroupsTableCard
         groups={groups}
@@ -71,7 +74,7 @@ function Groups() {
         onDelete={deleteGroup}
         columns={getGroupTableColumns}
       />
-    </div>
+    </>
   )
 }
 
