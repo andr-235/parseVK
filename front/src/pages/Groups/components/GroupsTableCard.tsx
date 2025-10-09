@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import type { ReactNode } from 'react'
-import clsx from 'clsx'
 import Button from '../../../components/Button'
 import Table from '../../../components/Table'
 import type { Group, TableColumn } from '../../../types'
+import { cn } from '../../../lib/utils'
 
 type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn[]
 
@@ -104,11 +104,11 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
         <div className="flex min-w-[220px] flex-col items-end gap-3">
           <div className="flex w-full flex-wrap items-center justify-end gap-3">
             {isLoading ? (
-              <span className={clsx(metaBadgeClassName, 'bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]')}>
+              <span className={cn(metaBadgeClassName, 'bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]')}>
                 Загрузка…
               </span>
             ) : (
-              <span className={clsx(metaBadgeClassName, 'bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]')}>
+              <span className={cn(metaBadgeClassName, 'bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]')}>
                 {groups.length} {getCounterLabel(groups.length)}
               </span>
             )}

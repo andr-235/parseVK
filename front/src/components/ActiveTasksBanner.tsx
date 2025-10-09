@@ -3,15 +3,15 @@ import ProgressBar from './ProgressBar'
 import { getTaskStatusText } from '../utils/statusHelpers'
 import type { Task } from '../types'
 import { calculateTaskProgress } from '../utils/taskProgress'
-
-const STATUS_BADGE_BASE = 'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { Badge } from './ui/badge'
 
 const taskStatusClasses: Record<Task['status'], string> = {
-  pending: 'bg-accent-warning/20 text-accent-warning',
-  processing: 'bg-accent-primary/20 text-accent-primary',
-  running: 'bg-accent-primary/20 text-accent-primary',
-  completed: 'bg-accent-success/20 text-accent-success',
-  failed: 'bg-accent-danger/20 text-accent-danger',
+  pending: 'bg-accent-warning/15 text-accent-warning',
+  processing: 'bg-accent-primary/15 text-accent-primary',
+  running: 'bg-accent-primary/15 text-accent-primary',
+  completed: 'bg-accent-success/15 text-accent-success',
+  failed: 'bg-accent-danger/15 text-accent-danger'
 }
 
 interface ActiveTasksBannerProps {
@@ -108,108 +108,107 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
       : ''
 
   return (
-    <div className="rounded-3xl border border-border bg-background-secondary/80 p-6 shadow-soft-lg transition-colors duration-300">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-2">
-          <div className="text-xl font-semibold text-text-primary">Активные процессы парсинга</div>
-          <div className="text-sm leading-relaxed text-text-secondary">{subtitle}</div>
+    <Card className="border border-accent-primary/30 bg-background-secondary/90">
+      <CardHeader className="pb-0">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <CardTitle className="text-xl">Активные процессы парсинга</CardTitle>
+            <CardDescription>{subtitle}</CardDescription>
+          </div>
+          {(isCreating || hasActiveTasks) && indicatorText && (
+            <Badge className="gap-2 bg-accent-primary/15 text-accent-primary">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent-primary" aria-hidden />
+              {indicatorText}
+            </Badge>
+          )}
         </div>
-        {(isCreating || hasActiveTasks) && indicatorText && (
-          <div className="inline-flex items-center gap-2 rounded-full bg-accent-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-accent-primary">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent-primary" aria-hidden />
-            <span>{indicatorText}</span>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        <ProgressBar
+          current={summary.processed}
+          total={progressTotal}
+          label={aggregatedLabel}
+          showLabel
+          tone={aggregatedTone}
+          indeterminate={summary.total === 0 && summary.indeterminateCount > 0}
+        />
+
+        {hasActiveTasks ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {tasks.map((task) => {
+              const progress = calculateTaskProgress(task)
+              const hasTotals = progress.total > 0
+              const taskFallbackTotal = hasTotals
+                ? progress.total
+                : Math.max(progress.processed + progress.processing + progress.pending, progress.processed, 1)
+
+              const label = hasTotals
+                ? `Обработано ${formatNumber(progress.processed)} из ${formatNumber(progress.total)}`
+                : progress.processing > 0
+                  ? `В работе: ${formatNumber(progress.processing)}`
+                  : 'Ожидаем запуск обработки...'
+
+              const tone = progress.failed > 0
+                ? 'danger'
+                : task.status === 'completed'
+                  ? 'success'
+                  : 'primary'
+
+              return (
+                <Card
+                  key={task.id}
+                  className="border border-border/60 bg-background-primary/60 shadow-soft-sm"
+                >
+                  <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
+                    <CardTitle className="text-sm font-semibold leading-tight">
+                      {task.title ?? `Задача ${task.id}`}
+                    </CardTitle>
+                    <Badge className={taskStatusClasses[task.status]}>
+                      {getTaskStatusText(task.status)}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <ProgressBar
+                      current={progress.processed}
+                      total={taskFallbackTotal}
+                      size="small"
+                      showLabel
+                      label={label}
+                      tone={tone}
+                      indeterminate={!hasTotals}
+                    />
+                    <div className="flex flex-wrap gap-3 text-xs text-text-secondary">
+                      <span>
+                        Обработано: {formatNumber(progress.processed)}
+                        {hasTotals ? ` / ${formatNumber(progress.total)}` : ''}
+                      </span>
+                      {progress.processing > 0 && <span>В работе: {formatNumber(progress.processing)}</span>}
+                      {progress.pending > 0 && <span>В очереди: {formatNumber(progress.pending)}</span>}
+                      {progress.success > 0 && (
+                        <span className="font-semibold text-accent-success">
+                          Успешно: {formatNumber(progress.success)}
+                        </span>
+                      )}
+                      {progress.failed > 0 && (
+                        <span className="font-semibold text-accent-danger">
+                          Ошибок: {formatNumber(progress.failed)}
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="space-y-3 rounded-2xl border border-dashed border-border/70 bg-background-primary/40 p-6 text-center text-sm text-text-secondary">
+            <ProgressBar current={0} total={1} showLabel label="Подготавливаем задачу..." indeterminate />
+            <p>Мы запускаем задачу. Как только появится прогресс, он отобразится здесь автоматически.</p>
           </div>
         )}
-      </div>
-
-      <ProgressBar
-        className="mt-6"
-        current={summary.processed}
-        total={progressTotal}
-        label={aggregatedLabel}
-        showLabel
-        tone={aggregatedTone}
-        indeterminate={summary.total === 0 && summary.indeterminateCount > 0}
-      />
-
-      {hasActiveTasks ? (
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {tasks.map((task) => {
-            const progress = calculateTaskProgress(task)
-            const hasTotals = progress.total > 0
-            const taskFallbackTotal = hasTotals
-              ? progress.total
-              : Math.max(progress.processed + progress.processing + progress.pending, progress.processed, 1)
-
-            const label = hasTotals
-              ? `Обработано ${formatNumber(progress.processed)} из ${formatNumber(progress.total)}`
-              : progress.processing > 0
-                ? `В работе: ${formatNumber(progress.processing)}`
-                : 'Ожидаем запуск обработки...'
-
-            const tone = progress.failed > 0
-              ? 'danger'
-              : task.status === 'completed'
-                ? 'success'
-                : 'primary'
-
-            return (
-              <div
-                key={task.id}
-                className="flex flex-col gap-3 rounded-2xl border border-border bg-background-primary/50 p-4 shadow-soft-sm transition-colors duration-200 hover:border-accent-primary/40"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="text-sm font-semibold text-text-primary">
-                    {task.title ?? `Задача ${task.id}`}
-                  </span>
-                  <span className={`${STATUS_BADGE_BASE} ${taskStatusClasses[task.status]}`}>
-                    {getTaskStatusText(task.status)}
-                  </span>
-                </div>
-                <ProgressBar
-                  current={progress.processed}
-                  total={taskFallbackTotal}
-                  size="small"
-                  showLabel
-                  label={label}
-                  tone={tone}
-                  indeterminate={!hasTotals}
-                />
-                <div className="flex flex-wrap gap-3 text-xs text-text-secondary">
-                  <span>
-                    Обработано: {formatNumber(progress.processed)}
-                    {hasTotals ? ` / ${formatNumber(progress.total)}` : ''}
-                  </span>
-                  {progress.processing > 0 && <span>В работе: {formatNumber(progress.processing)}</span>}
-                  {progress.pending > 0 && <span>В очереди: {formatNumber(progress.pending)}</span>}
-                  {progress.success > 0 && (
-                    <span className="font-semibold text-accent-success">
-                      Успешно: {formatNumber(progress.success)}
-                    </span>
-                  )}
-                  {progress.failed > 0 && (
-                    <span className="font-semibold text-accent-danger">
-                      Ошибок: {formatNumber(progress.failed)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="mt-6 space-y-3 rounded-2xl border border-dashed border-border/70 bg-background-primary/30 p-6 text-center text-sm text-text-secondary">
-          <ProgressBar
-            current={0}
-            total={1}
-            showLabel
-            label="Подготавливаем задачу..."
-            indeterminate
-          />
-          <p>Мы запускаем задачу. Как только появится прогресс, он отобразится здесь автоматически.</p>
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
