@@ -2,8 +2,8 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useThemeStore } from './stores'
-import AppSidebar from './components/Sidebar'
-import { SidebarProvider, SidebarInset } from './components/ui/sidebar'
+import Sidebar from './components/Sidebar'
+import MainContent from './components/MainContent'
 import Tasks from './pages/Tasks'
 import Groups from './pages/Groups'
 import Comments from './pages/Comments'
@@ -28,7 +28,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="flex h-screen flex-col bg-background-primary text-text-primary transition-colors duration-300 lg:flex-row">
+      <div className="flex h-screen bg-background-primary text-text-primary transition-colors duration-300">
         <Sidebar title="ВК Аналитик" />
         <MainContent>
           <Routes>
@@ -38,7 +38,7 @@ function App() {
             <Route path="/comments" element={<Comments />} />
             <Route path="/keywords" element={<Keywords />} />
           </Routes>
-        </SidebarInset>
+        </MainContent>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -49,7 +49,7 @@ function App() {
             },
           }}
         />
-      </SidebarProvider>
+      </div>
     </BrowserRouter>
   )
 }
