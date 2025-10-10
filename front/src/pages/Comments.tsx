@@ -4,6 +4,7 @@ import CommentsFiltersPanel from './Comments/components/CommentsFiltersPanel'
 import CommentsTableCard from './Comments/components/CommentsTableCard'
 import { Card } from '@/components/ui/card'
 import CommentsHero from './Comments/components/CommentsHero'
+import { Separator } from '@/components/ui/separator'
 
 function Comments() {
   const comments = useCommentsStore((state) => state.comments)
@@ -115,6 +116,8 @@ function Comments() {
     <Card className="flex flex-col gap-8">
 
       <CommentsHero filteredCount={filteredComments.length} />
+
+      <Separator className="opacity-40" />
 
       <CommentsFiltersPanel
         searchTerm={searchTerm}

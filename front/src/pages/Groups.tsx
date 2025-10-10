@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator'
 import GroupsHero from './Groups/components/GroupsHero'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import GroupsTableCard from './Groups/components/GroupsTableCard'
+import { Card } from '@/components/ui/card'
 
 function Groups() {
   const groups = useGroupsStore((state) => state.groups)
@@ -54,7 +55,7 @@ function Groups() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <Card className="flex flex-col gap-8">
       <GroupsHero />
 
       <Separator className="opacity-40" />
@@ -74,7 +75,7 @@ function Groups() {
         onDelete={deleteGroup}
         columns={getGroupTableColumns}
       />
-    </div>
+    </Card>
   )
 }
 
