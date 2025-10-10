@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
-import { Card } from '../../../components/ui/card'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/card'
 import {
   Table,
   TableBody,
@@ -57,51 +57,12 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
 
   const clearDisabled = isLoading || !hasGroups
 
-  const renderContent = () => {
-    if (isLoading && !hasGroups) {
-      return <LoadingGroupsState />
-    }
-
-    if (!hasGroups) {
-      return <EmptyGroupsState />
-    }
-
-    return (
-      <Card className="relative w-full overflow-hidden rounded-[20px] p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {tableColumns.map((column) => (
-                  <TableHead key={column.key} className={column.headerClassName}>
-                    {column.header}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groups.map((group, index) => (
-                <TableRow key={group.id || index}>
-                  {tableColumns.map((column) => (
-                    <TableCell key={column.key} className={column.cellClassName}>
-                      {column.render ? column.render(group, index) : group[column.key as keyof Group]}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-    )
-  }
-
   return (
-    <section className="flex flex-col gap-8 rounded-[26px] border border-border bg-background-secondary p-6 shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] md:gap-10 md:p-8 dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Список групп">
-      <header className="flex flex-wrap items-start justify-between gap-6">
+    <Card className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Список групп">
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-6 space-y-0 p-6 md:p-8">
         <div className="flex min-w-[260px] flex-1 flex-col gap-2">
-          <h2 className="text-2xl font-bold text-text-primary">Список групп</h2>
-          <p className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">{subtitle}</p>
+          <CardTitle className="text-2xl font-bold text-text-primary">Список групп</CardTitle>
+          <CardDescription className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">{subtitle}</CardDescription>
         </div>
         <div className="flex min-w-[220px] flex-col items-end gap-3">
           <div className="flex w-full flex-wrap items-center justify-end gap-3">
@@ -124,10 +85,43 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
             </Button>
           </div>
         </div>
-      </header>
+      </CardHeader>
 
-      {renderContent()}
-    </section>
+      <CardContent className="p-6 pt-0 md:px-8 md:pb-8">
+        {isLoading && !hasGroups && <LoadingGroupsState />}
+
+        {!isLoading && !hasGroups && <EmptyGroupsState />}
+
+        {hasGroups && (
+          <Card className="relative w-full overflow-hidden rounded-[20px] p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {tableColumns.map((column) => (
+                      <TableHead key={column.key} className={column.headerClassName}>
+                        {column.header}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {groups.map((group, index) => (
+                    <TableRow key={group.id || index}>
+                      {tableColumns.map((column) => (
+                        <TableCell key={column.key} className={column.cellClassName}>
+                          {column.render ? column.render(group, index) : group[column.key as keyof Group]}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
