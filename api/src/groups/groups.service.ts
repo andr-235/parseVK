@@ -18,10 +18,7 @@ export class GroupsService {
   ) {}
 
   async saveGroup(identifier: string | number): Promise<IGroupResponse> {
-    const parsedIdentifier: string | number =
-      typeof identifier === 'string'
-        ? this.parseVkIdentifier(identifier)
-        : identifier;
+    const parsedIdentifier = this.normalizeIdentifier(identifier);
     const response = await this.vkService.getGroups(parsedIdentifier);
 
     if (!response?.groups || response.groups.length === 0) {
@@ -119,12 +116,12 @@ export class GroupsService {
     const seen = new Set<string>();
     const uniqueEntries: Array<{
       originalIdentifier: string;
-      parsedIdentifier: string;
+      parsedIdentifier: string | number;
     }> = [];
 
     for (const originalIdentifier of identifiers) {
-      const parsedIdentifier = this.parseVkIdentifier(originalIdentifier);
-      const normalizedKey = parsedIdentifier.toLowerCase();
+      const parsedIdentifier = this.normalizeIdentifier(originalIdentifier);
+      const normalizedKey = String(parsedIdentifier).toLowerCase();
 
       if (seen.has(normalizedKey)) {
         failed.push({
@@ -192,5 +189,11 @@ export class GroupsService {
       .filter((line) => line.length > 0);
 
     return this.bulkSaveGroups(identifiers);
+  }
+
+  private normalizeIdentifier(identifier: string | number): string | number {
+    return typeof identifier === 'string'
+      ? this.parseVkIdentifier(identifier)
+      : identifier;
   }
 }
