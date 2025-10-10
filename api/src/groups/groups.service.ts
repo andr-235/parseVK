@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import { IGroup } from '../vk/interfaces/group.interfaces';
@@ -26,59 +26,48 @@ export class GroupsService {
 
     if (!response?.groups || response.groups.length === 0) {
       this.logger.warn(`Группа ${parsedIdentifier} не найдена`);
-      throw new Error('Group not found');
+      throw new NotFoundException(`Group ${parsedIdentifier} not found`);
     }
 
     const groupData = response.groups[0] as IGroup;
 
     const group = await this.prisma.group.upsert({
       where: { vkId: groupData.id },
-      update: {
-        name: groupData.name,
-        screenName: groupData.screen_name,
-        isClosed: groupData.is_closed,
-        deactivated: groupData.deactivated,
-        type: groupData.type,
-        photo50: groupData.photo_50,
-        photo100: groupData.photo_100,
-        photo200: groupData.photo_200,
-        activity: groupData.activity,
-        ageLimits: groupData.age_limits,
-        description: groupData.description,
-        membersCount: groupData.members_count,
-        status: groupData.status,
-        verified: groupData.verified,
-        wall: groupData.wall,
-        addresses: groupData.addresses,
-        city: groupData.city,
-        counters: groupData.counters,
-      },
+      update: this.mapGroupData(groupData),
       create: {
         vkId: groupData.id,
-        name: groupData.name,
-        screenName: groupData.screen_name,
-        isClosed: groupData.is_closed,
-        deactivated: groupData.deactivated,
-        type: groupData.type,
-        photo50: groupData.photo_50,
-        photo100: groupData.photo_100,
-        photo200: groupData.photo_200,
-        activity: groupData.activity,
-        ageLimits: groupData.age_limits,
-        description: groupData.description,
-        membersCount: groupData.members_count,
-        status: groupData.status,
-        verified: groupData.verified,
-        wall: groupData.wall,
-        addresses: groupData.addresses,
-        city: groupData.city,
-        counters: groupData.counters,
+        ...this.mapGroupData(groupData),
       },
     });
 
     this.logger.log(`Группа ${groupData.id} сохранена в базе (id записи ${group.id})`);
 
     return group;
+  }
+
+  private mapGroupData(
+    groupData: IGroup,
+  ): Omit<IGroupResponse, 'id' | 'vkId' | 'createdAt' | 'updatedAt'> {
+    return {
+      name: groupData.name,
+      screenName: groupData.screen_name,
+      isClosed: groupData.is_closed,
+      deactivated: groupData.deactivated,
+      type: groupData.type,
+      photo50: groupData.photo_50,
+      photo100: groupData.photo_100,
+      photo200: groupData.photo_200,
+      activity: groupData.activity,
+      ageLimits: groupData.age_limits,
+      description: groupData.description,
+      membersCount: groupData.members_count,
+      status: groupData.status,
+      verified: groupData.verified,
+      wall: groupData.wall,
+      addresses: groupData.addresses,
+      city: groupData.city,
+      counters: groupData.counters,
+    };
   }
 
   async getAllGroups(): Promise<IGroupResponse[]> {
