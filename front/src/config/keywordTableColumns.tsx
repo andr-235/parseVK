@@ -1,7 +1,7 @@
 import {Button} from '../components/ui/button'
 import type { TableColumn, Keyword } from '../types'
 
-export const getKeywordTableColumns = (deleteKeyword: (id: number) => Promise<void>): TableColumn[] => [
+export const getKeywordTableColumns = (deleteKeyword: (id: number) => void): TableColumn[] => [
   {
     header: '№',
     key: 'index',

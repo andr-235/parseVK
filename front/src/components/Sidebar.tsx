@@ -156,7 +156,7 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col gap-6 px-6 pb-8">
+      <nav className="flex flex-1 flex-col gap-6 px-6">
         {/* Primary items */}
         <div>
           {!isCollapsed && (
@@ -225,14 +225,17 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
         </div>
       </nav>
 
-      {/* Toggle button */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-background-sidebar text-text-light transition-all duration-200 hover:bg-white/10"
-        aria-label="Toggle Sidebar"
-      >
-        <ChevronLeftIcon className={`transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`} />
-      </button>
+      {/* Footer with Toggle button */}
+      <div className={`flex items-center border-t border-white/10 px-6 py-4 ${isCollapsed ? 'justify-center px-2' : 'justify-end'}`}>
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-text-light transition-all duration-200 hover:bg-white/10 hover:border-white/20"
+          aria-label="Toggle Sidebar"
+          title={isCollapsed ? 'Развернуть' : 'Свернуть'}
+        >
+          <ChevronLeftIcon className={`h-4 w-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
     </aside>
   )
 }

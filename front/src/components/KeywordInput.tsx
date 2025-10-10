@@ -18,7 +18,6 @@ function KeywordInput({ value, onChange, onAdd, placeholder }: KeywordInputProps
       <Input
         value={value}
         onChange={onChange}
-        onKeyDown={handleAdd}
         placeholder={placeholder}
         className="sm:min-w-[260px] sm:flex-1"
       />

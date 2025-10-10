@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { APIError } from 'vk-io';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
@@ -42,6 +42,8 @@ type CommentEntity = {
 
 @Injectable()
 export class ParsingTaskRunner {
+  private readonly logger = new Logger(ParsingTaskRunner.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly vkService: VkService,
@@ -50,12 +52,19 @@ export class ParsingTaskRunner {
   async execute(job: ParsingTaskJobData): Promise<void> {
     const { taskId, scope, groupIds, postLimit } = job;
 
+    this.logger.log(
+      `Запуск парсинга задачи ${taskId}: scope=${scope}, количество групп=${groupIds.length}, лимит постов=${postLimit}`,
+    );
+
     const task = await this.prisma.task.findUnique({ where: { id: taskId } }) as PrismaTaskRecord | null;
     if (!task) {
+      this.logger.warn(`Задача ${taskId} не найдена в базе данных, парсинг пропущен`);
       return;
     }
 
     const groups = await this.safeResolveGroups(scope, groupIds);
+    this.logger.log(`Для задачи ${taskId} определено ${groups.length} групп для обработки`);
+
     if (!groups.length) {
       await this.prisma.task.update({
         where: { id: taskId },
@@ -69,7 +78,9 @@ export class ParsingTaskRunner {
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       });
-      throw new NotFoundException('Нет доступных групп для парсинга');
+      const error = new NotFoundException('Нет доступных групп для парсинга');
+      this.logger.warn(`Задача ${taskId} завершилась ошибкой: ${error.message}`);
+      throw error;
     }
 
     const totalItems = groups.length;
@@ -96,6 +107,10 @@ export class ParsingTaskRunner {
           status: 'running',
         } as Prisma.TaskUncheckedUpdateInput,
       });
+
+      this.logger.debug(
+        `Задача ${taskId}: обновление прогресса ${processedItems}/${totalItems} (${Math.round(progress * 100)}%)`,
+      );
     };
 
     try {
@@ -106,6 +121,7 @@ export class ParsingTaskRunner {
             skippedGroupVkIds.push(group.vkId);
             stats.groups = Math.max(0, stats.groups - 1);
           }
+          this.logger.warn(`Стена группы ${group.vkId} отключена, группа будет пропущена`);
           continue;
         }
 
@@ -120,11 +136,14 @@ export class ParsingTaskRunner {
               stats.groups = Math.max(0, stats.groups - 1);
             }
             await this.markGroupWallDisabled(group);
+            this.logger.warn(`Группа ${group.vkId} имеет отключенную стену (по данным API), группа будет пропущена`);
             continue;
           }
 
           throw error;
         }
+
+        this.logger.log(`Задача ${taskId}: получено ${posts.length} постов для группы ${group.vkId}`);
 
         for (const post of posts) {
           await this.savePost(post, group);
@@ -138,10 +157,16 @@ export class ParsingTaskRunner {
             const createdOrUpdated = await this.saveAuthors(newAuthorIds);
             stats.authors += createdOrUpdated;
             newAuthorIds.forEach((id) => processedAuthorIds.add(id));
+            this.logger.debug(
+              `Задача ${taskId}: обновлено ${createdOrUpdated} авторов после поста ${post.id} группы ${group.vkId}`,
+            );
           }
 
           if (comments.length) {
             stats.comments += await this.saveComments(comments);
+            this.logger.debug(
+              `Задача ${taskId}: сохранено ${comments.length} комментариев для поста ${post.id} группы ${group.vkId}`,
+            );
           }
         }
 
@@ -166,6 +191,10 @@ export class ParsingTaskRunner {
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       });
+
+      this.logger.log(
+        `Задача ${taskId} успешно завершена: группы=${stats.groups}, посты=${stats.posts}, комментарии=${stats.comments}, авторы=${stats.authors}`,
+      );
     } catch (error) {
       const skippedGroupsMessage = this.buildSkippedGroupsMessage(skippedGroupVkIds);
 
@@ -182,6 +211,11 @@ export class ParsingTaskRunner {
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       });
+
+      this.logger.error(
+        `Задача ${taskId} завершилась с ошибкой: ${error instanceof Error ? error.message : error}`,
+        error instanceof Error ? error.stack : undefined,
+      );
 
       throw error;
     }

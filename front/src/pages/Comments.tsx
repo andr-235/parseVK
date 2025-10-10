@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useCommentsStore, useKeywordsStore } from '../stores'
 import CommentsFiltersPanel from './Comments/components/CommentsFiltersPanel'
 import CommentsTableCard from './Comments/components/CommentsTableCard'
-import { Card } from '@/components/ui/card'
 import CommentsHero from './Comments/components/CommentsHero'
 import { Separator } from '@/components/ui/separator'
 
@@ -113,7 +112,7 @@ function Comments() {
   }, [fetchKeywords, keywords.length])
 
   return (
-    <Card className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8">
 
       <CommentsHero filteredCount={filteredComments.length} />
 
@@ -136,7 +135,7 @@ function Comments() {
         keywords={keywords}
         toggleReadStatus={toggleReadStatus}
       />
-    </Card>
+    </div>
   )
 }
 

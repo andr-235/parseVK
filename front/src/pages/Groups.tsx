@@ -1,11 +1,10 @@
 import { useState, useEffect, type ChangeEvent } from 'react'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
-import { Separator } from '@/components/ui/separator'
 import GroupsHero from './Groups/components/GroupsHero'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import GroupsTableCard from './Groups/components/GroupsTableCard'
-import { Card } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 function Groups() {
   const groups = useGroupsStore((state) => state.groups)
@@ -55,7 +54,7 @@ function Groups() {
   }
 
   return (
-    <Card className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8">
       <GroupsHero />
 
       <Separator className="opacity-40" />
@@ -75,7 +74,7 @@ function Groups() {
         onDelete={deleteGroup}
         columns={getGroupTableColumns}
       />
-    </Card>
+    </div>
   )
 }
 

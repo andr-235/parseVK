@@ -1,4 +1,5 @@
 import type { Keyword } from '../types'
+import { Badge } from '@/components/ui/badge'
 
 export function highlightKeywords(text: string, keywords: Keyword[]) {
   if (keywords.length === 0) return text
@@ -12,7 +13,7 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
       kw => kw.toLowerCase() === part.toLowerCase()
     )
     return isKeyword ? (
-      <span key={index} className="keyword-highlight">{part}</span>
+      <Badge key={index} variant="highlight" className="mx-0.5">{part}</Badge>
     ) : (
       part
     )
