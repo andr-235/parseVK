@@ -55,6 +55,65 @@ describe("VkService", () => {
         return { service, api };
     };
 
+    describe("getGroups", () => {
+        it("передает идентификаторы и поля и возвращает ответ без изменений", async () => {
+            const { service, api } = createService();
+
+            const responseMock = { groups: [{ id: 1 }], profiles: [] };
+            api.groups.getById.mockResolvedValue(responseMock);
+
+            const result = await service.getGroups(123);
+
+            expect(api.groups.getById).toHaveBeenCalledWith({
+                group_ids: [123],
+                fields: [
+                    "description",
+                    "members_count",
+                    "counters",
+                    "activity",
+                    "age_limits",
+                    "status",
+                    "verified",
+                    "wall",
+                    "addresses",
+                    "city",
+                ],
+            });
+            expect(result).toBe(responseMock);
+        });
+    });
+
+    describe("getPosts", () => {
+        it("возвращает пустые массивы для пустого списка постов", async () => {
+            const { service, api } = createService();
+
+            const result = await service.getPosts([]);
+
+            expect(api.wall.getById).not.toHaveBeenCalled();
+            expect(result).toEqual({ items: [], profiles: [], groups: [] });
+        });
+
+        it("запрашивает wall.getById с корректными идентификаторами и возвращает ответ", async () => {
+            const { service, api } = createService();
+
+            const responseMock = { items: [{ id: 1 }], profiles: [{ id: 2 }], groups: [{ id: 3 }] };
+            api.wall.getById.mockResolvedValue(responseMock);
+
+            const posts = [
+                { ownerId: 1, postId: 2 },
+                { ownerId: -3, postId: 4 },
+            ];
+
+            const result = await service.getPosts(posts);
+
+            expect(api.wall.getById).toHaveBeenCalledWith({
+                posts: ["1_2", "-3_4"],
+                extended: 1,
+            });
+            expect(result).toBe(responseMock);
+        });
+    });
+
     describe("getAuthors", () => {
         it("нормализует булевы флаги и опциональные поля", async () => {
             const { service, api } = createService();
