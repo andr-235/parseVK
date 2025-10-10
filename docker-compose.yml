@@ -15,6 +15,14 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "no"]
+
   api:
     build:
       context: .
@@ -26,11 +34,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/vk_api?schema=public}
-
       VK_TOKEN: ${VK_TOKEN:-vk1.a.MgXnY9V9Mbxs9nZ0WXQlL9cMOyO8co3kBZQZY8KpuDQpWxqEvgsJLLYO0K5z917B0sSdBUxGDy0d-p43-GvzjtDaB_aqkDWYeuHPikQ8uzyiZnHvP_CkIl47k8WP5TbIbaK_I55C8A2qVmg96YG2mWROCUwjkTqCpEmL8TTaFhZE5YvDi_Ma-7RjYBgyuF7lQdZsew2bb2iqa5JWvAwrgw}
-
 
   frontend:
     build:
