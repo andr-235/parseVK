@@ -126,6 +126,9 @@ export interface IParsingTaskSummary {
   groupsCount?: number
   successCount?: number
   failedCount?: number
+  totalItems?: number | string | null
+  processedItems?: number | string | null
+  progress?: number | string | null
   title?: string | null
   description?: string | IParsingTaskDescription | null
   stats?: IParsingTaskStats | null

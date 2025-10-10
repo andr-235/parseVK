@@ -35,16 +35,74 @@ export const mapSummaryToTask = (summary: IParsingTaskSummary): Task => {
 
   const statsFromSummary = mergeStats(summary.stats, description?.stats, description)
 
+  const totalItemsFromSummary = firstDefined(
+    toNumber(summary.totalItems),
+    toNumber((summary as UnknownRecord).totalItems),
+    toNumber((summary as UnknownRecord).total),
+    toNumber((summary as UnknownRecord).totalCount),
+    toNumber((summary as UnknownRecord).targetCount)
+  )
+
+  const processedItemsFromSummary = firstDefined(
+    toNumber(summary.processedItems),
+    toNumber((summary as UnknownRecord).processedItems),
+    toNumber((summary as UnknownRecord).processedCount),
+    toNumber((summary as UnknownRecord).handledCount),
+    toNumber(statsFromSummary.processed)
+  )
+
+  const progressFromSummary = firstDefined(
+    toNumber(summary.progress),
+    toNumber((summary as UnknownRecord).progress)
+  )
+
+  const processedFromProgress =
+    progressFromSummary != null && totalItemsFromSummary != null
+      ? Math.max(
+          Math.min(Math.round(totalItemsFromSummary * progressFromSummary), totalItemsFromSummary),
+          0
+        )
+      : undefined
+
+  const resolvedProcessedItems = firstDefined(
+    processedItemsFromSummary,
+    processedFromProgress
+  )
+
+  const normalizedProcessedItems =
+    resolvedProcessedItems != null ? Math.max(Math.min(resolvedProcessedItems, Number.MAX_SAFE_INTEGER), 0) : undefined
+
   const groupsCountValue = firstDefined(
     toNumber(summary.groupsCount),
     toNumber((summary as UnknownRecord).groupsCount),
     toNumber((summary as UnknownRecord).groupCount),
+    totalItemsFromSummary,
     statsFromSummary.groups,
     Array.isArray((summary as UnknownRecord).groupIds)
       ? ((summary as UnknownRecord).groupIds as unknown[]).length
       : undefined,
     Array.isArray(description?.groupIds) ? description.groupIds.length : undefined
   ) ?? 0
+
+  const groupIdsFromSummary = Array.isArray(summary.groupIds) ? summary.groupIds : null
+  const groupIdsFromDescription = Array.isArray(description?.groupIds) ? description.groupIds : null
+  const groupIdsFromRaw = Array.isArray((summary as UnknownRecord).groupIds)
+    ? ((summary as UnknownRecord).groupIds as unknown[])
+    : null
+  const resolvedGroupIdsRaw = groupIdsFromSummary ?? groupIdsFromDescription ?? groupIdsFromRaw
+
+  const normalizedGroupIds = Array.isArray(resolvedGroupIdsRaw)
+    ? resolvedGroupIdsRaw
+        .map((value) => {
+          if (typeof value === 'number' || typeof value === 'string') {
+            return normalizeId(value)
+          }
+          return null
+        })
+        .filter((value): value is number | string => value !== null)
+    : null
+
+  const groupIdsCount = normalizedGroupIds ? normalizedGroupIds.length : null
 
   const successCountValue = firstDefined(
     toNumber(summary.successCount),
@@ -93,7 +151,10 @@ export const mapSummaryToTask = (summary: IParsingTaskSummary): Task => {
 
   const normalizedStatusHint = normalizeTaskStatusValue(fallbackStatus)
 
-  const processedGroupsCount = Math.max((successCountValue ?? 0) + (failedCountValue ?? 0), 0)
+  const processedGroupsCount = Math.max(
+    normalizedProcessedItems ?? 0,
+    Math.max((successCountValue ?? 0) + (failedCountValue ?? 0), 0)
+  )
 
   const assumedProcessedGroups = (() => {
     if (processedGroupsCount > 0) {
@@ -111,15 +172,27 @@ export const mapSummaryToTask = (summary: IParsingTaskSummary): Task => {
     return processedGroupsCount
   })()
 
+  const totalGroupsForDerivation = firstDefined(
+    groupsCountValue,
+    totalItemsFromSummary,
+    statsFromSummary.groups,
+    groupIdsCount ?? undefined
+  )
+
   const derivedProcessingCount = firstDefined(
     processingCountFromStats,
-    groupsCountValue > 0 ? Math.max(groupsCountValue - assumedProcessedGroups, 0) : undefined
+    totalGroupsForDerivation != null && totalGroupsForDerivation > 0
+      ? Math.max(totalGroupsForDerivation - assumedProcessedGroups, 0)
+      : undefined
   )
 
   const derivedPendingCount = firstDefined(
     pendingCountFromStats,
-    groupsCountValue > 0
-      ? Math.max(groupsCountValue - assumedProcessedGroups - (derivedProcessingCount ?? 0), 0)
+    totalGroupsForDerivation != null && totalGroupsForDerivation > 0
+      ? Math.max(
+          totalGroupsForDerivation - assumedProcessedGroups - (derivedProcessingCount ?? 0),
+          0
+        )
       : undefined
   )
 
@@ -163,33 +236,19 @@ export const mapSummaryToTask = (summary: IParsingTaskSummary): Task => {
     description?.skippedGroupsMessage as string
   )
 
-  const groupIdsFromSummary = Array.isArray(summary.groupIds) ? summary.groupIds : null
-  const groupIdsFromDescription = Array.isArray(description?.groupIds) ? description.groupIds : null
-  const groupIdsFromRaw = Array.isArray((summary as UnknownRecord).groupIds)
-    ? ((summary as UnknownRecord).groupIds as unknown[])
-    : null
-  const resolvedGroupIdsRaw = groupIdsFromSummary ?? groupIdsFromDescription ?? groupIdsFromRaw
-
-  const normalizedGroupIds = Array.isArray(resolvedGroupIdsRaw)
-    ? resolvedGroupIdsRaw
-        .map((value) => {
-          if (typeof value === 'number' || typeof value === 'string') {
-            return normalizeId(value)
-          }
-          return null
-        })
-        .filter((value): value is number | string => value !== null)
-    : null
-
-  const groupIdsCount = normalizedGroupIds ? normalizedGroupIds.length : null
-
   const postLimitValue = firstDefined(
     toNumber(summary.postLimit),
     toNumber((summary as UnknownRecord).postLimit),
     toNumber(description?.postLimit)
   )
 
-  const baseTotalGroups = groupsCountValue || groupIdsCount || statsFromSummary.groups || null
+  const baseTotalGroups =
+    firstDefined(
+      groupsCountValue,
+      totalItemsFromSummary,
+      groupIdsCount ?? undefined,
+      statsFromSummary.groups
+    ) ?? null
 
   let normalizedFailedCount = failedCountValue ?? statsFromSummary.failed ?? null
   if (normalizedFailedCount != null && normalizedFailedCount < 0) {
@@ -216,14 +275,40 @@ export const mapSummaryToTask = (summary: IParsingTaskSummary): Task => {
     processingCount: derivedProcessingCount
   })
 
+  const totalForStats = firstDefined(
+    statsFromSummary.groups,
+    groupsCountValue,
+    totalItemsFromSummary,
+    groupIdsCount ?? undefined
+  )
+
+  const processedForStats = firstDefined(
+    statsFromSummary.processed,
+    normalizedProcessedItems,
+    processedGroupsCount
+  )
+
+  const pendingForStats = firstDefined(
+    statsFromSummary.pending,
+    derivedPendingCount,
+    totalForStats != null
+      ? Math.max(
+          totalForStats - Math.max(processedForStats ?? 0, 0) - Math.max(derivedProcessingCount ?? 0, 0),
+          0
+        )
+      : undefined
+  )
+
   const statsForTask = cleanStats({
     ...statsFromSummary,
-    groups: statsFromSummary.groups ?? groupsCountValue ?? groupIdsCount ?? undefined,
+    groups: statsFromSummary.groups ?? totalForStats ?? undefined,
     success: statsFromSummary.success ?? normalizedSuccessCount ?? undefined,
     failed: statsFromSummary.failed ?? normalizedFailedCount ?? undefined,
-    processing: statsFromSummary.processing ?? statsFromSummary.running ?? derivedProcessingCount ?? undefined,
+    processing:
+      statsFromSummary.processing ?? statsFromSummary.running ?? derivedProcessingCount ?? undefined,
     running: statsFromSummary.running ?? undefined,
-    pending: statsFromSummary.pending ?? derivedPendingCount ?? undefined
+    pending: pendingForStats ?? undefined,
+    processed: processedForStats ?? undefined
   })
 
   const task: Task = {
@@ -303,7 +388,56 @@ export const mapResultToTaskDetails = (result: IParsingTaskResult): { task: Task
         .filter((value): value is number | string => value !== null)
     : baseTask.groupIds ?? null
 
+  const groupIdsCount = Array.isArray(normalizedGroupIds)
+    ? normalizedGroupIds.length
+    : Array.isArray(baseTask.groupIds)
+      ? baseTask.groupIds.length
+      : null
+
   const statsSource = mergeStats(baseTask.stats, result.stats, description?.stats, description)
+  const statsSourceRecord = statsSource as UnknownRecord
+
+  const totalItemsFromResult = firstDefined(
+    toNumber(result.totalItems),
+    toNumber((result as UnknownRecord).totalItems),
+    toNumber((result as UnknownRecord).total),
+    toNumber((result as UnknownRecord).totalCount),
+    toNumber((result as UnknownRecord).targetCount),
+    toNumber(statsSourceRecord.totalItems),
+    toNumber(statsSourceRecord.total),
+    toNumber(statsSourceRecord.totalCount)
+  )
+
+  const processedItemsFromResult = firstDefined(
+    toNumber(result.processedItems),
+    toNumber((result as UnknownRecord).processedItems),
+    toNumber((result as UnknownRecord).processedCount),
+    toNumber((result as UnknownRecord).handledCount),
+    toNumber(statsSource.processed)
+  )
+
+  const progressFromResult = firstDefined(
+    toNumber(result.progress),
+    toNumber((result as UnknownRecord).progress)
+  )
+
+  const processedFromProgress =
+    progressFromResult != null && totalItemsFromResult != null
+      ? Math.max(
+          Math.min(Math.round(totalItemsFromResult * progressFromResult), totalItemsFromResult),
+          0
+        )
+      : undefined
+
+  const resolvedProcessedItems = firstDefined(
+    processedItemsFromResult,
+    processedFromProgress
+  )
+
+  const normalizedProcessedItems =
+    resolvedProcessedItems != null
+      ? Math.max(Math.min(resolvedProcessedItems, Number.MAX_SAFE_INTEGER), 0)
+      : undefined
 
   const rawGroups = extractGroups(
     result.groups,
@@ -539,7 +673,9 @@ export const mapResultToTaskDetails = (result: IParsingTaskResult): { task: Task
     toNumber(result.groupsCount),
     toNumber((result as UnknownRecord).groupsCount),
     toNumber((result as UnknownRecord).groupCount),
+    totalItemsFromResult,
     statsSource.groups,
+    groupIdsCount ?? undefined,
     groups.length ? groups.length : undefined,
     Array.isArray(description?.groupIds) ? description.groupIds.length : undefined,
     baseTask.groupsCount
@@ -576,35 +712,77 @@ export const mapResultToTaskDetails = (result: IParsingTaskResult): { task: Task
     pendingFromGroups
   )
 
-  const normalizedGroupsCount = typeof groupsCountValue === 'number'
-    ? groupsCountValue
-    : baseTask.groupsCount
+  const normalizedGroupsCountCandidate =
+    typeof groupsCountValue === 'number'
+      ? groupsCountValue
+      : firstDefined(totalItemsFromResult, groupIdsCount ?? undefined, statsSource.groups, baseTask.groupsCount)
+
+  const normalizedGroupsCount = Math.max(normalizedGroupsCountCandidate ?? 0, 0)
 
   const resolvedSuccessCount = successCountValue ?? baseTask.successCount ?? undefined
   const resolvedFailedCount = failedCountValue ?? baseTask.failedCount ?? undefined
-  const processedGroupsCount = (resolvedSuccessCount ?? 0) + (resolvedFailedCount ?? 0)
+  const processedGroupsCount = Math.max(
+    normalizedProcessedItems ?? 0,
+    Math.max((resolvedSuccessCount ?? 0) + (resolvedFailedCount ?? 0), 0)
+  )
 
-  const resolvedProcessingCount = processingCountValue ?? (
-    normalizedGroupsCount > 0
-      ? Math.max(normalizedGroupsCount - processedGroupsCount, 0)
+  const totalForDerivation = firstDefined(
+    typeof groupsCountValue === 'number' ? groupsCountValue : undefined,
+    totalItemsFromResult,
+    groupIdsCount ?? undefined,
+    statsSource.groups,
+    baseTask.groupsCount
+  )
+
+  const resolvedProcessingCount = firstDefined(
+    processingCountValue,
+    totalForDerivation != null && totalForDerivation > 0
+      ? Math.max(totalForDerivation - processedGroupsCount, 0)
       : undefined
   )
 
-  const resolvedPendingCount = pendingCountValue ?? (
-    normalizedGroupsCount > 0
-      ? Math.max(normalizedGroupsCount - processedGroupsCount - (resolvedProcessingCount ?? 0), 0)
+  const resolvedPendingCount = firstDefined(
+    pendingCountValue,
+    totalForDerivation != null && totalForDerivation > 0
+      ? Math.max(totalForDerivation - processedGroupsCount - (resolvedProcessingCount ?? 0), 0)
+      : undefined
+  )
+
+  const totalForStats = firstDefined(
+    statsSource.groups,
+    typeof groupsCountValue === 'number' ? groupsCountValue : undefined,
+    totalItemsFromResult,
+    groupIdsCount ?? undefined,
+    baseTask.groupsCount
+  )
+
+  const processedForStats = firstDefined(
+    statsSource.processed,
+    normalizedProcessedItems,
+    processedGroupsCount
+  )
+
+  const pendingForStats = firstDefined(
+    statsSource.pending,
+    pendingCountValue,
+    resolvedPendingCount,
+    totalForStats != null
+      ? Math.max(
+          totalForStats - Math.max(processedForStats ?? 0, 0) - Math.max(resolvedProcessingCount ?? 0, 0),
+          0
+        )
       : undefined
   )
 
   const statsForTask = cleanStats({
     ...statsSource,
-    groups:
-      statsSource.groups ?? (typeof groupsCountValue === 'number' ? groupsCountValue : normalizedGroupsCount),
+    groups: statsSource.groups ?? totalForStats ?? undefined,
     success: statsSource.success ?? successCountValue ?? undefined,
     failed: statsSource.failed ?? failedCountValue ?? undefined,
     processing: statsSource.processing ?? statsSource.running ?? resolvedProcessingCount ?? undefined,
     running: statsSource.running ?? undefined,
-    pending: statsSource.pending ?? resolvedPendingCount ?? undefined
+    pending: pendingForStats ?? undefined,
+    processed: processedForStats ?? undefined
   }) ?? baseTask.stats
 
   const derivedTaskStatus = deriveTaskStatus(baseTask.status, {
@@ -617,7 +795,7 @@ export const mapResultToTaskDetails = (result: IParsingTaskResult): { task: Task
   const task: Task = {
     ...baseTask,
     status: derivedTaskStatus,
-    groupsCount: normalizedGroupsCount,
+    groupsCount: totalForStats != null ? Math.max(totalForStats, 0) : normalizedGroupsCount,
     successCount:
       successCountValue != null
         ? successCountValue
