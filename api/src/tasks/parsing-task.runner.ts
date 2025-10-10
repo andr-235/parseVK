@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import type { IPost } from '../vk/interfaces/post.interfaces';
 import type { IComment } from '../vk/interfaces/comment.interfaces';
-import type { ParsingScope } from './dto/create-parsing-task.dto';
+import { ParsingScope } from './dto/create-parsing-task.dto';
 import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface';
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
 
@@ -33,8 +33,8 @@ type CommentEntity = {
   likesCount: number | null;
   parentsStack: number[] | null;
   threadCount: number | null;
-  threadItems: IComment[] | null;
-  attachments: unknown;
+  threadItems: CommentEntity[] | null;
+  attachments: unknown | null;
   replyToUser: number | null;
   replyToComment: number | null;
   isDeleted: boolean;
@@ -363,13 +363,12 @@ export class ParsingTaskRunner {
     const ids: number[] = [];
 
     for (const comment of comments) {
-      if (typeof comment.from_id === 'number') {
-        ids.push(comment.from_id);
+      if (typeof comment.fromId === 'number') {
+        ids.push(comment.fromId);
       }
 
-      if (comment.thread?.items?.length) {
-        const nested = this.collectAuthorIds(comment.thread.items as IComment[]);
-        ids.push(...nested);
+      if (comment.threadItems?.length) {
+        ids.push(...this.collectAuthorIds(comment.threadItems));
       }
     }
 
@@ -378,20 +377,22 @@ export class ParsingTaskRunner {
 
   private normalizeComment(comment: IComment): CommentEntity {
     return {
-      postId: comment.post_id,
-      ownerId: comment.owner_id,
-      vkCommentId: comment.id,
-      fromId: comment.from_id,
+      postId: comment.postId,
+      ownerId: comment.ownerId,
+      vkCommentId: comment.vkCommentId,
+      fromId: comment.fromId,
       text: comment.text,
-      publishedAt: new Date(comment.date * 1000),
-      likesCount: comment.likes?.count ?? null,
-      parentsStack: Array.isArray(comment.parents_stack) ? comment.parents_stack : null,
-      threadCount: comment.thread?.count ?? null,
-      threadItems: comment.thread?.items?.length ? (comment.thread.items as IComment[]) : null,
+      publishedAt: comment.publishedAt,
+      likesCount: comment.likesCount ?? null,
+      parentsStack: comment.parentsStack ?? null,
+      threadCount: comment.threadCount ?? null,
+      threadItems: comment.threadItems?.length
+        ? comment.threadItems.map((item) => this.normalizeComment(item))
+        : null,
       attachments: comment.attachments ?? null,
-      replyToUser: comment.reply_to_user ?? null,
-      replyToComment: comment.reply_to_comment ?? null,
-      isDeleted: comment.deleted === 1,
+      replyToUser: comment.replyToUser ?? null,
+      replyToComment: comment.replyToComment ?? null,
+      isDeleted: comment.isDeleted,
     };
   }
 
@@ -401,15 +402,20 @@ export class ParsingTaskRunner {
     for (const comment of comments) {
       const threadItemsJson: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue =
         comment.threadItems?.length
-          ? (comment.threadItems.map((item) => this.serializeComment(this.normalizeComment(item))) as Prisma.InputJsonValue)
+          ? (comment.threadItems.map((item) => this.serializeComment(item)) as Prisma.InputJsonValue)
           : Prisma.JsonNull;
 
       const attachmentsJson: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue | undefined =
-        comment.attachments === undefined
-          ? undefined
-          : comment.attachments === null
-            ? Prisma.JsonNull
+        comment.attachments === null
+          ? Prisma.JsonNull
+          : comment.attachments === undefined
+            ? undefined
             : (comment.attachments as Prisma.InputJsonValue);
+
+      const parentsStackJson: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue =
+        comment.parentsStack === null
+          ? Prisma.JsonNull
+          : (comment.parentsStack as Prisma.InputJsonValue);
 
       await this.prisma.comment.upsert({
         where: {
@@ -427,7 +433,7 @@ export class ParsingTaskRunner {
           text: comment.text,
           publishedAt: comment.publishedAt,
           likesCount: comment.likesCount,
-          parentsStack: comment.parentsStack,
+          parentsStack: parentsStackJson,
           threadCount: comment.threadCount,
           threadItems: threadItemsJson,
           attachments: attachmentsJson,
@@ -444,7 +450,7 @@ export class ParsingTaskRunner {
           text: comment.text,
           publishedAt: comment.publishedAt,
           likesCount: comment.likesCount,
-          parentsStack: comment.parentsStack,
+          parentsStack: parentsStackJson,
           threadCount: comment.threadCount,
           threadItems: threadItemsJson,
           attachments: attachmentsJson,
@@ -456,8 +462,9 @@ export class ParsingTaskRunner {
 
       saved += 1;
 
-      if (comment.threadItems?.length) {
-        saved += await this.saveComments(comment.threadItems.map((item) => this.normalizeComment(item)));
+      const threadItems = comment.threadItems;
+      if (threadItems?.length) {
+        saved += await this.saveComments(threadItems);
       }
     }
 
@@ -476,7 +483,7 @@ export class ParsingTaskRunner {
       parentsStack: comment.parentsStack ?? null,
       threadCount: comment.threadCount ?? null,
       threadItems: comment.threadItems?.length
-        ? comment.threadItems.map((item) => this.serializeComment(this.normalizeComment(item)))
+        ? comment.threadItems.map((item) => this.serializeComment(item))
         : null,
       attachments: comment.attachments ?? null,
       replyToUser: comment.replyToUser ?? null,
