@@ -1,5 +1,5 @@
 import type { ParsingScope } from '../dto/create-parsing-task.dto';
-import type { ParsingStats } from './parsing-task-result.interface';
+import type { ParsingStats } from './parsing-stats.interface';
 
 export type TaskStatus = 'pending' | 'running' | 'done' | 'failed';
 

@@ -40,10 +40,22 @@ describe('TasksController', () => {
   it('should delegate POST /parse to TasksService.createParsingTask', async () => {
     const dto = { scope: ParsingScope.ALL };
     const result: ParsingTaskResult = {
-      taskId: 1,
+      id: 1,
+      title: 'task',
+      status: 'pending',
+      completed: false,
+      totalItems: 0,
+      processedItems: 0,
+      progress: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       scope: ParsingScope.ALL,
+      groupIds: [],
       postLimit: 10,
-      stats: { groups: 1, posts: 0, comments: 0, authors: 0 },
+      stats: null,
+      error: null,
+      skippedGroupsMessage: null,
+      description: null,
     };
     tasksService.createParsingTask.mockResolvedValue(result);
 
