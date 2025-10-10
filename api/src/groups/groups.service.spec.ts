@@ -2,7 +2,12 @@ import { NotFoundException } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import type { PrismaService } from '../prisma.service';
 import type { VkService } from '../vk/vk.service';
-import type { IGroupResponse } from './interfaces/group.interface';
+import type {
+  IGroupResponse,
+  IDeleteResponse,
+} from './interfaces/group.interface';
+import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface';
+import type { IGroup } from '../vk/interfaces/group.interfaces';
 
 jest.mock('../vk/vk.service', () => ({
   VkService: jest.fn(),
@@ -12,6 +17,28 @@ describe('GroupsService', () => {
   let service: GroupsService;
   let prisma: PrismaService;
   let vkService: VkService;
+
+  const vkGroup = {
+    id: 123,
+    name: 'Test Group',
+    screen_name: 'test_group',
+    is_closed: 0,
+    deactivated: null,
+    type: 'group',
+    photo_50: '50.jpg',
+    photo_100: '100.jpg',
+    photo_200: '200.jpg',
+    activity: 'Testing',
+    age_limits: 18,
+    description: 'Description',
+    members_count: 42,
+    status: 'Active',
+    verified: 1,
+    wall: 1,
+    addresses: [],
+    city: { id: 1, title: 'City' },
+    counters: { members: 42 },
+  } as unknown as IGroup;
 
   beforeEach(() => {
     prisma = {
@@ -30,199 +57,176 @@ describe('GroupsService', () => {
     service = new GroupsService(prisma, vkService);
   });
 
-  it('должен выбрасывать NotFoundException, если группа не найдена', async () => {
-    (vkService.getGroups as jest.Mock).mockResolvedValue({ groups: [] });
+  describe('saveGroup', () => {
+    it('должен успешно сохранять и маппить данные группы', async () => {
+      (vkService.getGroups as jest.Mock).mockResolvedValue({ groups: [vkGroup] });
 
-    try {
-      await service.saveGroup('123');
-      fail('Ожидалось исключение NotFoundException');
-    } catch (error) {
-      expect(error).toBeInstanceOf(NotFoundException);
-      expect((error as NotFoundException).message).toBe(
-        'Group 123 not found',
+      const mappedData = {
+        name: vkGroup.name,
+        screenName: vkGroup.screen_name,
+        isClosed: vkGroup.is_closed,
+        deactivated: vkGroup.deactivated,
+        type: vkGroup.type,
+        photo50: vkGroup.photo_50,
+        photo100: vkGroup.photo_100,
+        photo200: vkGroup.photo_200,
+        activity: vkGroup.activity,
+        ageLimits: vkGroup.age_limits,
+        description: vkGroup.description,
+        membersCount: vkGroup.members_count,
+        status: vkGroup.status,
+        verified: vkGroup.verified,
+        wall: vkGroup.wall,
+        addresses: vkGroup.addresses,
+        city: vkGroup.city,
+        counters: vkGroup.counters,
+      } satisfies Partial<IGroupResponse>;
+
+      const savedGroup = { id: 1, vkId: vkGroup.id, ...mappedData } as IGroupResponse;
+      (prisma.group.upsert as jest.Mock).mockResolvedValue(savedGroup);
+
+      const result = await service.saveGroup('https://vk.com/club123');
+
+      expect(vkService.getGroups).toHaveBeenCalledWith('123');
+      expect(prisma.group.upsert).toHaveBeenCalledWith({
+        where: { vkId: vkGroup.id },
+        update: mappedData,
+        create: {
+          vkId: vkGroup.id,
+          ...mappedData,
+        },
+      });
+      expect(result).toBe(savedGroup);
+    });
+
+    it('должен выбрасывать NotFoundException, если группа не найдена', async () => {
+      (vkService.getGroups as jest.Mock).mockResolvedValue({ groups: [] });
+
+      await expect(service.saveGroup('123')).rejects.toThrow(
+        new NotFoundException('Group 123 not found'),
       );
-    }
+    });
   });
 
-  it('должен сохранять найденную группу и возвращать результат', async () => {
-    const groupData = {
-      id: 42,
-      name: 'Test group',
-      screen_name: 'test_group',
-      is_closed: 0,
-      deactivated: null,
-      type: 'group',
-      photo_50: '50.jpg',
-      photo_100: '100.jpg',
-      photo_200: '200.jpg',
-      activity: 'activity',
-      age_limits: 16,
-      description: 'desc',
-      members_count: 1000,
-      status: 'status',
-      verified: 1,
-      wall: 1,
-      addresses: [],
-      city: { id: 1 },
-      counters: { topics: 1 },
-    };
-
-    const expectedMapping = {
-      name: 'Test group',
-      screenName: 'test_group',
-      isClosed: 0,
-      deactivated: null,
-      type: 'group',
-      photo50: '50.jpg',
-      photo100: '100.jpg',
-      photo200: '200.jpg',
-      activity: 'activity',
-      ageLimits: 16,
-      description: 'desc',
-      membersCount: 1000,
-      status: 'status',
-      verified: 1,
-      wall: 1,
-      addresses: [],
-      city: { id: 1 },
-      counters: { topics: 1 },
-    };
-
-    const savedGroup = {
-      id: 1,
-      vkId: 42,
-      ...expectedMapping,
-      createdAt: new Date('2023-01-01T00:00:00Z'),
-      updatedAt: new Date('2023-01-01T00:00:00Z'),
-    };
-
-    (vkService.getGroups as jest.Mock).mockResolvedValue({
-      groups: [groupData],
-    });
-    (prisma.group.upsert as jest.Mock).mockResolvedValue(savedGroup);
-
-    const result = await service.saveGroup('https://vk.com/club42');
-
-    expect(vkService.getGroups).toHaveBeenCalledWith('42');
-    expect(prisma.group.upsert).toHaveBeenCalledWith({
-      where: { vkId: 42 },
-      update: expectedMapping,
-      create: { vkId: 42, ...expectedMapping },
-    });
-    expect(result).toEqual(savedGroup);
-  });
-
-  it('должен возвращать список всех групп', async () => {
-    const groups = [
-      {
-        id: 1,
-        vkId: 10,
-        name: 'Group 1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ];
-
+  it('должен возвращать все группы из базы', async () => {
+    const groups = [{ id: 1 }, { id: 2 }] as IGroupResponse[];
     (prisma.group.findMany as jest.Mock).mockResolvedValue(groups);
 
-    await expect(service.getAllGroups()).resolves.toBe(groups);
-    expect(prisma.group.findMany).toHaveBeenCalledWith({
-      orderBy: { updatedAt: 'desc' },
-    });
+    const result = await service.getAllGroups();
+
+    expect(prisma.group.findMany).toHaveBeenCalledWith({ orderBy: { updatedAt: 'desc' } });
+    expect(result).toBe(groups);
   });
 
   it('должен удалять группу по идентификатору', async () => {
-    const group = {
-      id: 1,
-      vkId: 10,
-      name: 'Group 1',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
+    const group = { id: 10 } as IGroupResponse;
     (prisma.group.delete as jest.Mock).mockResolvedValue(group);
 
-    await expect(service.deleteGroup(1)).resolves.toBe(group);
-    expect(prisma.group.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+    const result = await service.deleteGroup(10);
+
+    expect(prisma.group.delete).toHaveBeenCalledWith({ where: { id: 10 } });
+    expect(result).toBe(group);
   });
 
   it('должен удалять все группы', async () => {
-    const deleteResult = { count: 3 };
-    (prisma.group.deleteMany as jest.Mock).mockResolvedValue(deleteResult);
+    const response = { count: 3 } as unknown as IDeleteResponse;
+    (prisma.group.deleteMany as jest.Mock).mockResolvedValue(response);
 
-    await expect(service.deleteAllGroups()).resolves.toBe(deleteResult);
+    const result = await service.deleteAllGroups();
+
     expect(prisma.group.deleteMany).toHaveBeenCalledWith({});
+    expect(result).toBe(response);
   });
 
-  it('должен корректно обрабатывать массовое сохранение групп с дубликатами', async () => {
-    const now = new Date('2023-01-01T00:00:00Z');
-    let callIndex = 0;
+  describe('bulkSaveGroups', () => {
+    it('должен обрабатывать дубликаты, ошибки VK API и батчи', async () => {
+      const identifiers = [
+        'club1',
+        '1',
+        ...Array.from({ length: 10 }, (_, index) => `club${index + 2}`),
+        'errorGroup',
+      ];
 
-    const saveGroupSpy = jest
-      .spyOn(service, 'saveGroup')
-      .mockImplementation(async (identifier: string | number) => ({
-        id: ++callIndex,
-        vkId: Number(identifier),
-        name: `Group ${identifier}`,
-        createdAt: now,
-        updatedAt: now,
-      }) as unknown as IGroupResponse);
+      const setTimeoutSpy = jest
+        .spyOn(global, 'setTimeout')
+        .mockImplementation((callback: Parameters<typeof setTimeout>[0], timeout?: number) => {
+          if (typeof callback === 'function') {
+            (callback as (...args: unknown[]) => void)();
+          }
 
-    const result = await service.bulkSaveGroups([
-      'https://vk.com/club1',
-      'club1',
-      'club2',
-    ]);
+          return 0 as ReturnType<typeof setTimeout>;
+        });
 
-    expect(saveGroupSpy).toHaveBeenCalledTimes(2);
-    expect(result.total).toBe(3);
-    expect(result.successCount).toBe(2);
-    expect(result.failedCount).toBe(1);
-    expect(result.failed).toEqual([
-      {
-        identifier: 'club1',
-        errorMessage: 'Дубликат в списке идентификаторов',
-      },
-    ]);
-    expect(result.success).toEqual([
-      {
-        id: 1,
-        vkId: 1,
-        name: 'Group 1',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: 2,
-        vkId: 2,
-        name: 'Group 2',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]);
+      const saveGroupMock = jest
+        .spyOn(service as unknown as { saveGroup: (id: string | number) => Promise<IGroupResponse> }, 'saveGroup')
+        .mockImplementation(async (identifier: string | number) => {
+          if (identifier === 'errorGroup') {
+            throw new Error('VK error');
+          }
 
-    saveGroupSpy.mockRestore();
+          const numberId = Number(identifier);
+          const sanitizedId = Number.isNaN(numberId) ? 999 : numberId;
+
+          return {
+            id: sanitizedId,
+            vkId: sanitizedId,
+            name: 'Group',
+          } as unknown as IGroupResponse;
+        });
+
+      const result = await service.bulkSaveGroups(identifiers);
+
+      expect(saveGroupMock).toHaveBeenCalledTimes(12);
+      expect(result.successCount).toBe(11);
+      expect(result.failedCount).toBe(2);
+      expect(result.total).toBe(identifiers.length);
+      expect(result.failed).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            identifier: '1',
+            errorMessage: 'Дубликат в списке идентификаторов',
+          }),
+          expect.objectContaining({
+            identifier: 'errorGroup',
+            errorMessage: 'VK error',
+          }),
+        ]),
+      );
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 500);
+      setTimeoutSpy.mockRestore();
+      saveGroupMock.mockRestore();
+    });
   });
 
-  it('должен вызывать bulkSaveGroups при загрузке групп из файла', async () => {
+  it('должен читать файл и передавать идентификаторы в bulkSaveGroups', async () => {
     const bulkResult = {
       success: [],
       failed: [],
-      total: 0,
-      successCount: 0,
+      total: 2,
+      successCount: 2,
       failedCount: 0,
-    };
+    } satisfies IBulkSaveGroupsResult;
 
-    const bulkSpy = jest
-      .spyOn(service, 'bulkSaveGroups')
+    const bulkSaveSpy = jest
+      .spyOn(service as unknown as { bulkSaveGroups: (ids: string[]) => Promise<IBulkSaveGroupsResult> }, 'bulkSaveGroups')
       .mockResolvedValue(bulkResult);
 
-    await expect(
-      service.uploadGroupsFromFile('club1\n\nclub2\n'),
-    ).resolves.toBe(bulkResult);
+    const result = await service.uploadGroupsFromFile('club1\n\n club2 \n');
 
-    expect(bulkSpy).toHaveBeenCalledWith(['club1', 'club2']);
+    expect(bulkSaveSpy).toHaveBeenCalledWith(['club1', 'club2']);
+    expect(result).toBe(bulkResult);
+  });
 
-    bulkSpy.mockRestore();
+  it('должен корректно нормализовывать различные идентификаторы', () => {
+    const normalizeIdentifier = (service as unknown as { normalizeIdentifier: (value: string | number) => string | number })
+      .normalizeIdentifier.bind(service);
+
+    expect(normalizeIdentifier('https://vk.com/club123')).toBe('123');
+    expect(normalizeIdentifier('https://vk.com/public456')).toBe('456');
+    expect(normalizeIdentifier('https://vk.com/screen_name')).toBe('screen_name');
+    expect(normalizeIdentifier('club789')).toBe('789');
+    expect(normalizeIdentifier('public101')).toBe('101');
+    expect(normalizeIdentifier('  screen_name  ')).toBe('screen_name');
+    expect(normalizeIdentifier(555)).toBe(555);
   });
 });
