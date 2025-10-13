@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
+import type { CommentsListDto } from './dto/comments-list.dto';
+
+interface CommentsQueryOptions {
+  offset: number;
+  limit: number;
+}
 
 const authorSelect = {
   vkUserId: true,
@@ -40,17 +46,28 @@ export class CommentsService {
     };
   }
 
-  async getAllComments(): Promise<CommentWithAuthorDto[]> {
-    const comments = await this.prisma.comment.findMany({
-      orderBy: { publishedAt: 'desc' },
-      include: {
-        author: {
-          select: authorSelect,
+  async getComments({ offset, limit }: CommentsQueryOptions): Promise<CommentsListDto> {
+    const [comments, total] = await this.prisma.$transaction([
+      this.prisma.comment.findMany({
+        skip: offset,
+        take: limit,
+        orderBy: { publishedAt: 'desc' },
+        include: {
+          author: {
+            select: authorSelect,
+          },
         },
-      },
-    });
+      }),
+      this.prisma.comment.count(),
+    ]);
 
-    return comments.map((comment) => this.mapComment(comment));
+    const items = comments.map((comment) => this.mapComment(comment));
+
+    return {
+      items,
+      total,
+      hasMore: offset + items.length < total,
+    };
   }
 
   async setReadStatus(id: number, isRead: boolean): Promise<CommentWithAuthorDto> {

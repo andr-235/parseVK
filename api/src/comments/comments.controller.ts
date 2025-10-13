@@ -1,15 +1,37 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  DefaultValuePipe,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Query,
+} from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
+import type { CommentsListDto } from './dto/comments-list.dto';
 import { UpdateCommentReadDto } from './dto/update-comment-read.dto';
+
+const DEFAULT_LIMIT = 100;
+const MAX_LIMIT = 200;
 
 @Controller('comments')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Get()
-  async getComments(): Promise<CommentWithAuthorDto[]> {
-    return this.commentsService.getAllComments();
+  async getComments(
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe) limit: number,
+  ): Promise<CommentsListDto> {
+    const normalizedOffset = Math.max(offset, 0);
+    const normalizedLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
+
+    return this.commentsService.getComments({
+      offset: normalizedOffset,
+      limit: normalizedLimit,
+    });
   }
 
   @Patch(':id/read')

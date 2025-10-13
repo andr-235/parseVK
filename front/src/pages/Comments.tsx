@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useCommentsStore, useKeywordsStore } from '../stores'
 import CommentsFiltersPanel from './Comments/components/CommentsFiltersPanel'
 import CommentsTableCard from './Comments/components/CommentsTableCard'
@@ -9,6 +9,9 @@ function Comments() {
   const comments = useCommentsStore((state) => state.comments)
   const isLoading = useCommentsStore((state) => state.isLoading)
   const fetchComments = useCommentsStore((state) => state.fetchComments)
+  const isLoadingMore = useCommentsStore((state) => state.isLoadingMore)
+  const hasMore = useCommentsStore((state) => state.hasMore)
+  const totalCount = useCommentsStore((state) => state.totalCount)
   const toggleReadStatus = useCommentsStore((state) => state.toggleReadStatus)
   const keywords = useKeywordsStore((state) => state.keywords)
   const fetchKeywords = useKeywordsStore((state) => state.fetchKeywords)
@@ -85,36 +88,49 @@ function Comments() {
 
   const isFetchingRef = useRef(false)
 
-  useEffect(() => {
-    let isUnmounted = false
-
-    const load = async () => {
-      if (isUnmounted || isFetchingRef.current) {
+  const loadComments = useCallback(
+    async (reset: boolean) => {
+      if (isFetchingRef.current) {
         return
       }
 
       isFetchingRef.current = true
 
       try {
-        await fetchComments()
+        await fetchComments({ reset })
       } catch (error) {
         console.error('Failed to fetch comments', error)
       } finally {
         isFetchingRef.current = false
       }
+    },
+    [fetchComments],
+  )
+
+  useEffect(() => {
+    let isUnmounted = false
+
+    const runInitialLoad = async () => {
+      if (isUnmounted) {
+        return
+      }
+
+      await loadComments(true)
     }
 
-    void load()
+    void runInitialLoad()
 
     const intervalId = window.setInterval(() => {
-      void load()
+      if (!isUnmounted) {
+        void loadComments(true)
+      }
     }, 30000)
 
     return () => {
       isUnmounted = true
       window.clearInterval(intervalId)
     }
-  }, [fetchComments])
+  }, [loadComments])
 
   useEffect(() => {
     if (keywords.length === 0) {
@@ -129,6 +145,12 @@ function Comments() {
       void load()
     }
   }, [fetchKeywords, keywords.length])
+
+  const loadedCount = comments.length
+
+  const handleLoadMore = useCallback(() => {
+    void loadComments(false)
+  }, [loadComments])
 
   return (
     <div className="flex flex-col gap-8">
@@ -153,6 +175,11 @@ function Comments() {
         emptyMessage={emptyMessage}
         keywords={keywords}
         toggleReadStatus={toggleReadStatus}
+        onLoadMore={handleLoadMore}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
+        totalCount={totalCount}
+        loadedCount={loadedCount}
       />
     </div>
   )

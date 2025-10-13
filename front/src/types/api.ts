@@ -92,6 +92,12 @@ export interface ICommentResponse {
   isRead?: boolean
 }
 
+export interface IGetCommentsResponse {
+  items: ICommentResponse[]
+  total: number
+  hasMore: boolean
+}
+
 export interface IParsingTaskGroup {
   groupId: number | string
   groupName: string

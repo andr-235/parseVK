@@ -4,11 +4,11 @@ import { CommentsService } from './comments.service';
 
 describe('CommentsController', () => {
   let controller: CommentsController;
-  let commentsService: { getAllComments: jest.Mock; setReadStatus: jest.Mock };
+  let commentsService: { getComments: jest.Mock; setReadStatus: jest.Mock };
 
   beforeEach(async () => {
     commentsService = {
-      getAllComments: jest.fn(),
+      getComments: jest.fn(),
       setReadStatus: jest.fn(),
     };
 
@@ -26,11 +26,20 @@ describe('CommentsController', () => {
   });
 
   it('должен возвращать массив комментариев из сервиса', async () => {
-    const serviceResult = [{ id: 1 } as never];
-    commentsService.getAllComments.mockResolvedValue(serviceResult);
+    const serviceResult = { items: [{ id: 1 }], total: 1, hasMore: false } as never;
+    commentsService.getComments.mockResolvedValue(serviceResult);
 
-    await expect(controller.getComments()).resolves.toBe(serviceResult);
-    expect(commentsService.getAllComments).toHaveBeenCalled();
+    await expect(controller.getComments(0, 100)).resolves.toBe(serviceResult);
+    expect(commentsService.getComments).toHaveBeenCalledWith({ offset: 0, limit: 100 });
+  });
+
+  it('должен нормализовать отрицательные значения offset и ограничивать limit', async () => {
+    const serviceResult = { items: [], total: 0, hasMore: false } as never;
+    commentsService.getComments.mockResolvedValue(serviceResult);
+
+    await controller.getComments(-50, 1000);
+
+    expect(commentsService.getComments).toHaveBeenLastCalledWith({ offset: 0, limit: 200 });
   });
 
   it('должен обновлять статус прочтения комментария через сервис', async () => {

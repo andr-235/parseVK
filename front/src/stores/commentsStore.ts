@@ -3,6 +3,8 @@ import { commentsApi } from '../api/commentsApi'
 import type { ICommentResponse } from '../types/api'
 import type { CommentsState } from '../types/stores'
 
+const COMMENTS_PAGE_SIZE = 100
+
 const normalizeCreatedAt = (value: string | null): string => {
   if (!value) {
     return new Date().toISOString()
@@ -149,12 +151,32 @@ const resolveAuthorInfo = (comment: ICommentResponse): NormalizedAuthor => {
 export const useCommentsStore = create<CommentsState>((set, get) => ({
   comments: [],
   isLoading: false,
+  isLoadingMore: false,
+  hasMore: true,
+  totalCount: 0,
 
-  async fetchComments() {
-    set({ isLoading: true })
+  async fetchComments({ reset = false }: { reset?: boolean } = {}) {
+    const state = get()
+
+    if (reset ? state.isLoading : state.isLoadingMore || state.isLoading) {
+      return
+    }
+
+    if (!reset && !state.hasMore) {
+      return
+    }
+
+    const offset = reset ? 0 : state.comments.length
+
+    if (reset) {
+      set({ isLoading: true })
+    } else {
+      set({ isLoadingMore: true })
+    }
+
     try {
-      const response = await commentsApi.getComments()
-      const normalized = response.map((comment) => {
+      const response = await commentsApi.getComments({ offset, limit: COMMENTS_PAGE_SIZE })
+      const normalized = response.items.map((comment) => {
         const authorInfo = resolveAuthorInfo(comment)
 
         return {
@@ -171,13 +193,16 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         }
       })
 
-      set({
-        comments: normalized,
-        isLoading: false
-      })
+      set((prevState) => ({
+        comments: reset ? normalized : [...prevState.comments, ...normalized],
+        isLoading: false,
+        isLoadingMore: false,
+        hasMore: response.hasMore,
+        totalCount: response.total
+      }))
     } catch (error) {
       console.error('Failed to fetch comments', error)
-      set({ isLoading: false })
+      set({ isLoading: false, isLoadingMore: false })
       throw error
     }
   },

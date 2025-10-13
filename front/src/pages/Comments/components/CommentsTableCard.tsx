@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import type { Comment, Keyword } from '@/types'
 import LoadingCommentsState from './LoadingCommentsState'
 import EmptyCommentsState from './EmptyCommentsState'
@@ -11,6 +13,11 @@ interface CommentsTableCardProps {
   emptyMessage: string
   keywords: Keyword[]
   toggleReadStatus: (id: number) => Promise<void>
+  onLoadMore: () => void
+  hasMore: boolean
+  isLoadingMore: boolean
+  totalCount: number
+  loadedCount: number
 }
 
 function CommentsTableCard({
@@ -19,8 +26,14 @@ function CommentsTableCard({
   emptyMessage,
   keywords,
   toggleReadStatus,
+  onLoadMore,
+  hasMore,
+  isLoadingMore,
+  totalCount,
+  loadedCount,
 }: CommentsTableCardProps) {
   const hasComments = comments.length > 0
+  const totalAvailable = Math.max(totalCount, loadedCount)
 
   const subtitle = useMemo(() => {
     if (isLoading && !hasComments) {
@@ -54,16 +67,38 @@ function CommentsTableCard({
         {!isLoading && !hasComments && <EmptyCommentsState message={emptyMessage} />}
 
         {hasComments && (
-          <div className="flex flex-col gap-4">
-            {comments.map((comment, index) => (
-              <CommentCard
-                key={comment.id}
-                comment={comment}
-                index={index}
-                keywords={keywords}
-                toggleReadStatus={toggleReadStatus}
-              />
-            ))}
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
+              {comments.map((comment, index) => (
+                <CommentCard
+                  key={comment.id}
+                  comment={comment}
+                  index={index}
+                  keywords={keywords}
+                  toggleReadStatus={toggleReadStatus}
+                />
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-4 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-text-secondary">
+                Отображается {comments.length} комментариев. Загружено {loadedCount}
+                {totalAvailable > 0 ? ` из ${totalAvailable}` : ''}.
+              </p>
+
+              {hasMore && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex items-center gap-2 self-start sm:self-auto"
+                  onClick={onLoadMore}
+                  disabled={isLoading || isLoadingMore}
+                >
+                  {isLoadingMore && <Spinner className="size-4" aria-hidden="true" />}
+                  {isLoadingMore ? 'Загружаем…' : 'Загрузить ещё'}
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

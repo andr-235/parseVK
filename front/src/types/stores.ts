@@ -13,7 +13,10 @@ export interface NavigationState {
 export interface CommentsState {
   comments: Comment[]
   isLoading: boolean
-  fetchComments: () => Promise<void>
+  isLoadingMore: boolean
+  hasMore: boolean
+  totalCount: number
+  fetchComments: (options?: { reset?: boolean }) => Promise<void>
   toggleReadStatus: (id: number) => Promise<void>
 }
 
