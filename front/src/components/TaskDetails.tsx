@@ -1,8 +1,10 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { TaskDetails as TaskDetailsType } from '../types'
 import { getTaskStatusText, getGroupStatusText } from '../utils/statusHelpers'
 import { calculateTaskProgress } from '../utils/taskProgress'
 import ProgressBar from './ProgressBar'
+import { Button } from './ui/button'
+import { useTasksStore } from '../stores'
 
 interface TaskDetailsProps {
   task: TaskDetailsType | undefined
@@ -57,6 +59,26 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
   if (!task) return null
 
   const overallProgress = calculateTaskProgress(task)
+  const resumeTask = useTasksStore((state) => state.resumeTask)
+  const fetchTaskDetails = useTasksStore((state) => state.fetchTaskDetails)
+  const [isResuming, setIsResuming] = useState(false)
+  const canResume = task.status !== 'completed'
+
+  const handleResume = async () => {
+    if (!canResume || isResuming) {
+      return
+    }
+
+    setIsResuming(true)
+    try {
+      const success = await resumeTask(task.id)
+      if (success) {
+        void fetchTaskDetails(task.id)
+      }
+    } finally {
+      setIsResuming(false)
+    }
+  }
 
   const scopeLabel = (() => {
     if (!task.scope) {
@@ -340,14 +362,25 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
       >
         <header className="flex items-start justify-between gap-4 border-b border-border px-8 py-6">
           <h2 className="text-2xl font-semibold tracking-tight">Детали задачи #{task.id}</h2>
-          <button
-            type="button"
-            className="rounded-full bg-background-primary/40 p-2 text-2xl leading-none text-text-secondary transition-colors duration-200 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60"
-            onClick={onClose}
-            aria-label="Закрыть модальное окно"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="secondary"
+              disabled={isResuming || !canResume}
+              onClick={handleResume}
+              title={canResume ? undefined : 'Завершённую задачу возобновлять не требуется'}
+              type="button"
+            >
+              {isResuming ? 'Возобновление…' : 'Продолжить'}
+            </Button>
+            <button
+              type="button"
+              className="rounded-full bg-background-primary/40 p-2 text-2xl leading-none text-text-secondary transition-colors duration-200 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60"
+              onClick={onClose}
+              aria-label="Закрыть модальное окно"
+            >
+              ×
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto px-8 py-6">

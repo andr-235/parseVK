@@ -22,4 +22,9 @@ export class TasksController {
   async getTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<TaskDetail> {
     return this.tasksService.getTask(taskId);
   }
+
+  @Post(':taskId/resume')
+  async resumeTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<ParsingTaskResult> {
+    return this.tasksService.resumeTask(taskId);
+  }
 }

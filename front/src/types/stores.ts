@@ -57,4 +57,5 @@ export interface TasksState {
   createParseTask: (groupIds: Array<number | string>) => Promise<number | string | null>
   fetchTaskDetails: (taskId: number | string) => Promise<TaskDetails | null>
   getTaskDetails: (taskId: number | string) => TaskDetails | undefined
+  resumeTask: (taskId: number | string) => Promise<boolean>
 }

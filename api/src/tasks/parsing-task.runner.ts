@@ -13,6 +13,7 @@ import type {
   PrismaTaskRecord,
   TaskProcessingContext,
 } from './interfaces/parsing-task-runner.types';
+import type { ParsingStats } from './interfaces/parsing-stats.interface';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 import { normalizeComment } from '../common/utils/comment-normalizer';
 
@@ -60,7 +61,19 @@ export class ParsingTaskRunner {
       throw error;
     }
 
-    const context = this.createProcessingContext(groups.length, task.processedItems ?? 0);
+    const storedMetadata = this.extractStoredMetadata(task.description ?? null);
+    const context = this.createProcessingContext(
+      groups.length,
+      task.processedItems ?? 0,
+      storedMetadata.stats,
+      storedMetadata.skippedGroupIds,
+    );
+
+    if (context.processedGroups > 0) {
+      this.logger.log(
+        `Задача ${taskId}: возобновление обработки, уже обработано групп: ${context.processedGroups}/${context.totalGroups}`,
+      );
+    }
 
     try {
       await this.processGroups({
@@ -85,6 +98,7 @@ export class ParsingTaskRunner {
             postLimit,
             stats: context.stats,
             skippedGroupsMessage: skippedGroupsMessage ?? undefined,
+            skippedGroupIds: context.skippedGroupVkIds.length ? context.skippedGroupVkIds : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       });
@@ -106,6 +120,7 @@ export class ParsingTaskRunner {
             error: error instanceof Error ? error.message : String(error),
             skippedGroupsMessage: skippedGroupsMessage ?? undefined,
             stats: context.stats,
+            skippedGroupIds: context.skippedGroupVkIds.length ? context.skippedGroupVkIds : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       });
@@ -119,19 +134,30 @@ export class ParsingTaskRunner {
     }
   }
 
-  private createProcessingContext(totalGroups: number, processedGroups: number): TaskProcessingContext {
+  private createProcessingContext(
+    totalGroups: number,
+    processedGroups: number,
+    previousStats: ParsingStats | null,
+    skippedGroupIds: number[],
+  ): TaskProcessingContext {
     const clampedProcessed = Math.min(Math.max(processedGroups, 0), totalGroups);
+    const normalizedSkipped = Array.from(
+      new Set(skippedGroupIds.filter((value) => Number.isFinite(value))),
+    ) as number[];
+
+    const baseGroups = previousStats?.groups ?? Math.max(totalGroups - normalizedSkipped.length, 0);
+    const stats: ParsingStats = {
+      groups: Math.max(Math.min(baseGroups, totalGroups), 0),
+      posts: previousStats?.posts ?? 0,
+      comments: previousStats?.comments ?? 0,
+      authors: previousStats?.authors ?? 0,
+    };
 
     return {
       totalGroups,
       processedGroups: clampedProcessed,
-      stats: {
-        groups: totalGroups,
-        posts: 0,
-        comments: 0,
-        authors: 0,
-      },
-      skippedGroupVkIds: [],
+      stats,
+      skippedGroupVkIds: normalizedSkipped,
       processedAuthorIds: new Set<number>(),
     };
   }
@@ -144,7 +170,21 @@ export class ParsingTaskRunner {
   }): Promise<void> {
     const { groups, postLimit, context, taskId } = params;
 
-    for (const group of groups) {
+    const alreadyProcessed = Math.min(Math.max(context.processedGroups, 0), groups.length);
+    const remainingGroups = alreadyProcessed > 0 ? groups.slice(alreadyProcessed) : groups;
+
+    if (alreadyProcessed > 0) {
+      this.logger.log(
+        `Задача ${taskId}: пропускаем ${alreadyProcessed} обработанных ранее групп, продолжим с индекса ${alreadyProcessed + 1}`,
+      );
+    }
+
+    if (!remainingGroups.length) {
+      this.logger.log(`Задача ${taskId}: все группы уже были обработаны, дополнительная обработка не требуется`);
+      return;
+    }
+
+    for (const group of remainingGroups) {
       const shouldUpdateProgress = await this.processGroup({
         group,
         postLimit,
@@ -218,6 +258,104 @@ export class ParsingTaskRunner {
     }
 
     return true;
+  }
+
+  private extractStoredMetadata(description: string | null): { stats: ParsingStats | null; skippedGroupIds: number[] } {
+    if (!description) {
+      return { stats: null, skippedGroupIds: [] };
+    }
+
+    try {
+      const parsed = JSON.parse(description) as Record<string, unknown>;
+      if (!parsed || typeof parsed !== 'object') {
+        return { stats: null, skippedGroupIds: [] };
+      }
+
+      const stats = this.normalizeParsingStats(parsed['stats']);
+      const skippedGroupIds = this.normalizeSkippedGroupIds(parsed);
+
+      return {
+        stats,
+        skippedGroupIds,
+      };
+    } catch {
+      return { stats: null, skippedGroupIds: [] };
+    }
+  }
+
+  private normalizeParsingStats(value: unknown): ParsingStats | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const groups = this.toFiniteNumber(record['groups']);
+    const posts = this.toFiniteNumber(record['posts']);
+    const comments = this.toFiniteNumber(record['comments']);
+    const authors = this.toFiniteNumber(record['authors']);
+
+    if (groups == null && posts == null && comments == null && authors == null) {
+      return null;
+    }
+
+    return {
+      groups: groups ?? 0,
+      posts: posts ?? 0,
+      comments: comments ?? 0,
+      authors: authors ?? 0,
+    };
+  }
+
+  private normalizeSkippedGroupIds(data: Record<string, unknown>): number[] {
+    const skippedRaw = data['skippedGroupIds'];
+    const idsFromArray = Array.isArray(skippedRaw)
+      ? skippedRaw
+          .map((value) => this.parseGroupId(value))
+          .filter((value): value is number => value != null)
+      : [];
+
+    const message = data['skippedGroupsMessage'];
+    const idsFromMessage: number[] = typeof message === 'string'
+      ? this.extractGroupIdsFromMessage(message)
+      : [];
+
+    return Array.from(new Set([...idsFromArray, ...idsFromMessage]));
+  }
+
+  private extractGroupIdsFromMessage(message: string): number[] {
+    const matches = message.match(/\d+/g);
+    if (!matches) {
+      return [];
+    }
+
+    return matches
+      .map((token) => this.parseGroupId(token))
+      .filter((value): value is number => value != null);
+  }
+
+  private toFiniteNumber(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+
+    return null;
+  }
+
+  private parseGroupId(value: unknown): number | null {
+    const numeric = this.toFiniteNumber(value);
+    if (numeric == null) {
+      return null;
+    }
+
+    const truncated = Math.trunc(numeric);
+    return Number.isFinite(truncated) ? truncated : null;
   }
 
   private extractNewAuthorIds(authorIds: number[], processedAuthorIds: Set<number>): number[] {

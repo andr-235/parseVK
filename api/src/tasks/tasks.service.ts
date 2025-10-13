@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { CreateParsingTaskDto, ParsingScope } from './dto/create-parsing-task.dto';
@@ -15,6 +15,7 @@ type ParsedTaskDescription = {
   stats: ParsingStats | null;
   error: string | null;
   skippedGroupsMessage: string | null;
+  skippedGroupIds: number[];
 };
 
 type PrismaTaskRecord = {
@@ -88,6 +89,68 @@ export class TasksService {
     }
 
     return this.mapTaskToDetail(task);
+  }
+
+  async resumeTask(taskId: number): Promise<ParsingTaskResult> {
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    const status = this.parseTaskStatus(task.status);
+    if (status === 'done' || task.completed === true) {
+      throw new BadRequestException('Задача уже завершена');
+    }
+
+    const parsed = this.parseTaskDescription(task);
+    const scope = parsed.scope ?? (parsed.groupIds.length ? ParsingScope.SELECTED : ParsingScope.ALL);
+
+    const groupIds = scope === ParsingScope.ALL ? [] : Array.from(new Set(parsed.groupIds));
+    if (scope === ParsingScope.SELECTED && groupIds.length === 0) {
+      throw new BadRequestException('Не удалось определить группы для продолжения задачи');
+    }
+
+    const resolvedPostLimit = this.normalizePostLimit(parsed.postLimit);
+    const groups = await this.runner.resolveGroups(scope, groupIds);
+
+    if (!groups.length) {
+      throw new NotFoundException('Нет доступных групп для парсинга');
+    }
+
+    const totalItems = groups.length;
+    const processedItems = Math.min(task.processedItems ?? 0, totalItems);
+    const progress = totalItems > 0 ? Math.min(1, processedItems / totalItems) : 0;
+
+    const updatedTask = await this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        status: 'pending',
+        completed: false,
+        totalItems,
+        processedItems,
+        progress,
+        description: this.prepareResumeDescription(task.description, {
+          scope,
+          groupIds,
+          postLimit: resolvedPostLimit,
+          stats: parsed.stats,
+          skippedGroupsMessage: parsed.skippedGroupsMessage,
+          skippedGroupIds: parsed.skippedGroupIds,
+        }),
+      } as Prisma.TaskUncheckedUpdateInput,
+    }) as PrismaTaskRecord;
+
+    await this.parsingQueue.enqueue({
+      taskId: task.id,
+      scope,
+      groupIds,
+      postLimit: resolvedPostLimit,
+    });
+
+    return this.mapTaskToDetail(updatedTask);
   }
 
   private mapTaskToDetail(task: PrismaTaskRecord): TaskDetail {
@@ -168,6 +231,10 @@ export class TasksService {
         skippedGroupsMessage: typeof data.skippedGroupsMessage === 'string'
           ? data.skippedGroupsMessage
           : null,
+        skippedGroupIds: this.parseSkippedGroupIds(
+          data.skippedGroupIds,
+          typeof data.skippedGroupsMessage === 'string' ? data.skippedGroupsMessage : null,
+        ),
       };
     } catch {
       return empty;
@@ -182,6 +249,7 @@ export class TasksService {
       stats: null,
       error: null,
       skippedGroupsMessage: null,
+      skippedGroupIds: [],
     };
   }
 
@@ -205,6 +273,26 @@ export class TasksService {
     return value
       .map((item) => (typeof item === 'number' ? item : Number.isFinite(Number(item)) ? Number(item) : null))
       .filter((item): item is number => item !== null && !Number.isNaN(item));
+  }
+
+  private parseSkippedGroupIds(value: unknown, message: string | null): number[] {
+    const parsed = this.parseGroupIds(value);
+    if (parsed.length > 0) {
+      return parsed;
+    }
+
+    if (!message) {
+      return [];
+    }
+
+    const matches = message.match(/\d+/g);
+    if (!matches) {
+      return [];
+    }
+
+    return matches
+      .map((token) => Number.parseInt(token, 10))
+      .filter((item) => Number.isFinite(item));
   }
 
   private parsePostLimit(value: unknown): number | null {
@@ -246,5 +334,68 @@ export class TasksService {
     }
 
     return null;
+  }
+
+  private normalizePostLimit(value: number | null): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return 10;
+    }
+
+    const normalized = Math.trunc(value);
+    return Math.max(1, Math.min(normalized, 100));
+  }
+
+  private prepareResumeDescription(
+    current: string | null,
+    update: {
+      scope: ParsingScope;
+      groupIds: number[];
+      postLimit: number;
+      stats: ParsingStats | null;
+      skippedGroupsMessage: string | null;
+      skippedGroupIds: number[];
+    },
+  ): string {
+    let payload: Record<string, unknown> = {};
+
+    if (current) {
+      try {
+        const parsed = JSON.parse(current) as Record<string, unknown>;
+        if (parsed && typeof parsed === 'object') {
+          payload = { ...parsed };
+        }
+      } catch {
+        payload = {};
+      }
+    }
+
+    payload.scope = update.scope;
+    payload.groupIds = update.groupIds;
+    payload.postLimit = update.postLimit;
+
+    if (update.stats) {
+      payload.stats = update.stats;
+    } else {
+      delete payload.stats;
+    }
+
+    if (update.skippedGroupsMessage) {
+      payload.skippedGroupsMessage = update.skippedGroupsMessage;
+    } else {
+      delete payload.skippedGroupsMessage;
+    }
+
+    const uniqueSkippedIds = Array.from(new Set(update.skippedGroupIds));
+    if (uniqueSkippedIds.length) {
+      payload.skippedGroupIds = uniqueSkippedIds;
+    } else {
+      delete payload.skippedGroupIds;
+    }
+
+    if ('error' in payload) {
+      delete payload.error;
+    }
+
+    return JSON.stringify(payload);
   }
 }

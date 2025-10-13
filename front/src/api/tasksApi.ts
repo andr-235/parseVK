@@ -40,5 +40,18 @@ export const tasksApi = {
     }
 
     return response.json()
+  },
+
+  async resumeTask(taskId: number | string): Promise<IParsingTaskResult> {
+    const id = encodeURIComponent(String(taskId))
+    const response = await fetch(`${API_URL}/tasks/${id}/resume`, {
+      method: 'POST'
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to resume task')
+    }
+
+    return response.json()
   }
 }

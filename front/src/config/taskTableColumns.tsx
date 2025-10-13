@@ -1,5 +1,6 @@
-import { getTaskStatusText } from '../utils/statusHelpers'
 import ProgressBar from '../components/ProgressBar'
+import TaskActionsCell from '../pages/Tasks/components/TaskActionsCell'
+import { getTaskStatusText } from '../utils/statusHelpers'
 import { calculateTaskProgress } from '../utils/taskProgress'
 import type { TableColumn, Task } from '../types'
 
@@ -197,6 +198,11 @@ const columns: TableColumn[] = [
     header: 'Кол-во групп',
     key: 'groupsCount',
     render: (item: Task) => item.groupsCount
+  },
+  {
+    header: 'Действия',
+    key: 'actions',
+    render: (item: Task) => <TaskActionsCell task={item} />
   },
   {
     header: 'Результат',

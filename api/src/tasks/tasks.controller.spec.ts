@@ -17,12 +17,14 @@ describe('TasksController', () => {
     createParsingTask: jest.fn<Promise<ParsingTaskResult>, any>(),
     getTasks: jest.fn<Promise<TaskSummary[]>, any>(),
     getTask: jest.fn<Promise<TaskDetail>, any>(),
+    resumeTask: jest.fn<Promise<ParsingTaskResult>, any>(),
   };
 
   beforeEach(async () => {
     tasksService.createParsingTask.mockReset();
     tasksService.getTasks.mockReset();
     tasksService.getTask.mockReset();
+    tasksService.resumeTask.mockReset();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TasksController],
@@ -114,5 +116,32 @@ describe('TasksController', () => {
     await expect(controller.getTask(1)).resolves.toEqual(task);
     expect(tasksService.getTask).toHaveBeenCalledTimes(1);
     expect(tasksService.getTask).toHaveBeenCalledWith(1);
+  });
+
+  it('should delegate POST /:taskId/resume to TasksService.resumeTask', async () => {
+    const taskId = 12;
+    const result: ParsingTaskResult = {
+      id: taskId,
+      title: 'task',
+      status: 'pending',
+      completed: false,
+      totalItems: 3,
+      processedItems: 1,
+      progress: 0.33,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      scope: ParsingScope.SELECTED,
+      groupIds: [1, 2, 3],
+      postLimit: 10,
+      stats: { groups: 3, posts: 10, comments: 20, authors: 5 },
+      error: null,
+      skippedGroupsMessage: null,
+      description: '{}',
+    };
+    tasksService.resumeTask.mockResolvedValue(result);
+
+    await expect(controller.resumeTask(taskId)).resolves.toEqual(result);
+    expect(tasksService.resumeTask).toHaveBeenCalledTimes(1);
+    expect(tasksService.resumeTask).toHaveBeenCalledWith(taskId);
   });
 });

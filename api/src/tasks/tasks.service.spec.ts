@@ -4,7 +4,7 @@ jest.mock('vk-io', () => ({
   },
 }));
 
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { ParsingScope } from './dto/create-parsing-task.dto';
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
@@ -36,6 +36,7 @@ describe('TasksService', () => {
         create: jest.fn(),
         findMany: jest.fn(),
         findUnique: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -141,6 +142,169 @@ describe('TasksService', () => {
       prismaMock.task.findUnique.mockResolvedValue(null);
 
       await expect(service.getTask(123)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('resumeTask', () => {
+    it('enqueues task again and clears error data', async () => {
+      const stats: ParsingStats = { groups: 2, posts: 4, comments: 6, authors: 1 };
+      const task = createTaskRecord({
+        id: 15,
+        status: 'failed',
+        processedItems: 1,
+        totalItems: 3,
+        description: JSON.stringify({
+          scope: ParsingScope.SELECTED,
+          groupIds: [11, 12, 13],
+          postLimit: 20,
+          stats,
+          error: 'Network error',
+          skippedGroupsMessage: 'Пропущены группы с отключенной стеной: 999',
+          skippedGroupIds: [999],
+        }),
+      });
+
+      prismaMock.task.findUnique.mockResolvedValue(task);
+      runnerMock.resolveGroups.mockResolvedValue([
+        { id: 50, vkId: 500, name: 'Group A', wall: 1 },
+        { id: 51, vkId: 501, name: 'Group B', wall: 1 },
+        { id: 52, vkId: 502, name: 'Group C', wall: 1 },
+      ]);
+
+      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
+        ...task,
+        ...data,
+        updatedAt: new Date('2024-01-02T00:00:00Z'),
+      }));
+
+      const result = await service.resumeTask(task.id);
+
+      expect(prismaMock.task.update).toHaveBeenCalledWith({
+        where: { id: task.id },
+        data: expect.objectContaining({
+          status: 'pending',
+          completed: false,
+          processedItems: 1,
+          totalItems: 3,
+        }),
+      });
+
+      const updateCall = prismaMock.task.update.mock.calls[0][0];
+      const savedDescription = JSON.parse(updateCall.data.description);
+      expect(savedDescription.error).toBeUndefined();
+      expect(savedDescription.groupIds).toEqual([11, 12, 13]);
+      expect(savedDescription.skippedGroupIds).toEqual([999]);
+
+      expect(queueMock.enqueue).toHaveBeenCalledWith({
+        taskId: task.id,
+        scope: ParsingScope.SELECTED,
+        groupIds: [11, 12, 13],
+        postLimit: 20,
+      });
+
+      expect(result.status).toBe('pending');
+      expect(result.groupIds).toEqual([11, 12, 13]);
+    });
+
+    it('requeues task even if status is running', async () => {
+      const task = createTaskRecord({
+        id: 21,
+        status: 'running',
+        processedItems: 3,
+        totalItems: 10,
+      });
+      prismaMock.task.findUnique.mockResolvedValue(task);
+      runnerMock.resolveGroups.mockResolvedValue([
+        { id: 1, vkId: 100, name: 'Group', wall: 1 },
+        { id: 2, vkId: 200, name: 'Group 2', wall: 1 },
+      ]);
+      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
+        ...task,
+        ...data,
+      }));
+
+      await expect(service.resumeTask(task.id)).resolves.toEqual(
+        expect.objectContaining({
+          id: task.id,
+          status: 'pending',
+        }),
+      );
+
+      expect(prismaMock.task.update).toHaveBeenCalledWith({
+        where: { id: task.id },
+        data: expect.objectContaining({
+          status: 'pending',
+        }),
+      });
+      expect(queueMock.enqueue).toHaveBeenCalledWith({
+        taskId: task.id,
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 10,
+      });
+    });
+
+    it('allows resuming task in pending state', async () => {
+      const task = createTaskRecord({
+        id: 22,
+        status: 'pending',
+        processedItems: 0,
+        totalItems: 5,
+        description: JSON.stringify({
+          scope: ParsingScope.SELECTED,
+          groupIds: [10, 11],
+          postLimit: 15,
+        }),
+      });
+      prismaMock.task.findUnique.mockResolvedValue(task);
+      runnerMock.resolveGroups.mockResolvedValue([
+        { id: 10, vkId: 500, name: 'Group 10', wall: 1 },
+        { id: 11, vkId: 501, name: 'Group 11', wall: 1 },
+      ]);
+      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
+        ...task,
+        ...data,
+      }));
+
+      await expect(service.resumeTask(task.id)).resolves.toEqual(
+        expect.objectContaining({
+          id: task.id,
+          status: 'pending',
+        }),
+      );
+
+      expect(queueMock.enqueue).toHaveBeenCalledWith({
+        taskId: task.id,
+        scope: ParsingScope.SELECTED,
+        groupIds: [10, 11],
+        postLimit: 15,
+      });
+    });
+
+    it('throws when task already completed', async () => {
+      const task = createTaskRecord({ id: 2, status: 'done', completed: true });
+      prismaMock.task.findUnique.mockResolvedValue(task);
+
+      await expect(service.resumeTask(2)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('throws when no groups are available', async () => {
+      const task = createTaskRecord({
+        id: 3,
+        status: 'failed',
+        description: JSON.stringify({
+          scope: ParsingScope.ALL,
+          groupIds: [],
+          postLimit: 10,
+        }),
+      });
+
+      prismaMock.task.findUnique.mockResolvedValue(task);
+      runnerMock.resolveGroups.mockResolvedValue([]);
+
+      await expect(service.resumeTask(3)).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.task.update).not.toHaveBeenCalled();
+      expect(queueMock.enqueue).not.toHaveBeenCalled();
     });
   });
 });

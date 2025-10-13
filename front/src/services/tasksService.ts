@@ -31,5 +31,16 @@ export const tasksService = {
       toast.error('Не удалось создать задачу на парсинг')
       throw error
     }
+  },
+
+  async resumeTask(taskId: number | string): Promise<IParsingTaskResult> {
+    try {
+      const result = await tasksApi.resumeTask(taskId)
+      toast.success('Задача возобновлена')
+      return result
+    } catch (error) {
+      toast.error('Не удалось возобновить задачу')
+      throw error
+    }
   }
 }

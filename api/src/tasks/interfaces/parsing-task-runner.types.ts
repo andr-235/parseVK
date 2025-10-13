@@ -3,6 +3,7 @@ import type { ParsingStats } from './parsing-stats.interface';
 
 export type PrismaTaskRecord = {
   id: number;
+  description?: string | null;
   totalItems?: number | null;
   processedItems?: number | null;
   progress?: number | null;
