@@ -20,7 +20,7 @@ const toggleButtonClass = (active: boolean) =>
     'rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors duration-200',
     active
       ? 'border-transparent bg-accent-primary text-white shadow-soft-sm hover:bg-accent-primary/90'
-      : 'border-border bg-background-primary/40 text-text-secondary hover:bg-background-secondary/60',
+      : 'border-border bg-background-primary/40 text-text-secondary hover:bg-background-secondary/60 dark:border-white/10 dark:bg-white/5 dark:text-text-light/70 dark:hover:bg-white/10',
   )
 
 function CommentsFiltersPanel({

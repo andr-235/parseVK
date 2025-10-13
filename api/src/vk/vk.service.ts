@@ -33,7 +33,10 @@ export class VkService {
         if (!token) {
             throw new Error("VK_TOKEN environment variable is required");
         }
-        this.vk = new VK({ token });
+        const apiTimeout = this.resolveApiTimeout();
+        const vk = new VK({ token });
+        this.applyApiTimeout(vk, apiTimeout);
+        this.vk = vk;
     }
 
     async getGroups(id: string | number): Promise<{ groups: any[]; profiles: any[] }> {
@@ -355,7 +358,28 @@ export class VkService {
             isDeleted: Boolean(item.deleted),
         };
     }
+
+    private resolveApiTimeout(): number {
+        const fallback = 60_000; // VK API часто отвечает дольше стандартных 10 секунд.
+        return parsePositiveInteger(process.env.VK_API_TIMEOUT_MS, fallback);
+    }
+
+    private applyApiTimeout(vk: VK, timeout: number): void {
+        if (vk.api?.options) {
+            vk.api.options.apiTimeout = timeout;
+        }
+    }
 }
 
+function parsePositiveInteger(value: string | undefined, fallback: number): number {
+    if (!value) {
+        return fallback;
+    }
 
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+        return fallback;
+    }
 
+    return parsed;
+}
