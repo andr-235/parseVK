@@ -56,7 +56,7 @@ const formatDateTime = (value: string): string => {
 function CommentCard({ comment, index, keywords, toggleReadStatus }: CommentCardProps) {
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
-      <CardContent className="p-6">
+      <CardContent className="px-6 pb-6 pt-8 space-y-6">
         {/* Header с аватаром и мета-информацией */}
         <div className="flex items-start gap-4">
           {/* Аватар */}
@@ -120,11 +120,11 @@ function CommentCard({ comment, index, keywords, toggleReadStatus }: CommentCard
           </div>
         </div>
 
-        <Separator className="my-4" />
+        <Separator />
 
         {/* Текст комментария */}
-        <div className="mb-4">
-          <div className="flex items-start gap-2 text-text-secondary/60 mb-2">
+        <div className="space-y-3">
+          <div className="flex items-start gap-2 text-text-secondary/60">
             <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
             <span className="text-xs font-medium uppercase tracking-wide">Комментарий</span>
           </div>
@@ -133,10 +133,10 @@ function CommentCard({ comment, index, keywords, toggleReadStatus }: CommentCard
           </div>
         </div>
 
-        <Separator className="my-4" />
+        <Separator />
 
         {/* Действия */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             variant={comment.isRead ? 'outline' : 'default'}
             size="sm"

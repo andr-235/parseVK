@@ -155,7 +155,7 @@ function Comments() {
   return (
     <div className="flex flex-col gap-8">
 
-      <CommentsHero filteredCount={filteredComments.length} />
+      <CommentsHero filteredCount={totalCount} />
 
       <Separator className="opacity-40" />
 

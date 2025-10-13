@@ -129,7 +129,7 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   const tasksCount = useTasksStore((state) => state.tasks.length)
-  const commentsCount = useCommentsStore((state) => state.comments.length)
+  const commentsCount = useCommentsStore((state) => state.totalCount)
 
   const primaryItems = useMemo<SidebarItem[]>(() => {
     const formatCount = (count: number) => (count > 0 ? String(count) : undefined)
