@@ -11,7 +11,7 @@ interface CommentCardProps {
   comment: Comment
   index: number
   keywords: Keyword[]
-  toggleReadStatus: (id: number) => void
+  toggleReadStatus: (id: number) => Promise<void>
 }
 
 const getAuthorInitials = (name: string): string => {
@@ -140,7 +140,9 @@ function CommentCard({ comment, index, keywords, toggleReadStatus }: CommentCard
           <Button
             variant={comment.isRead ? 'outline' : 'default'}
             size="sm"
-            onClick={() => toggleReadStatus(comment.id)}
+            onClick={() => {
+              void toggleReadStatus(comment.id)
+            }}
             className="gap-2"
           >
             <CheckCircle2 className="h-4 w-4" />

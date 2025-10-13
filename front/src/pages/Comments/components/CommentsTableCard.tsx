@@ -10,7 +10,7 @@ interface CommentsTableCardProps {
   isLoading: boolean
   emptyMessage: string
   keywords: Keyword[]
-  toggleReadStatus: (id: number) => void
+  toggleReadStatus: (id: number) => Promise<void>
 }
 
 function CommentsTableCard({

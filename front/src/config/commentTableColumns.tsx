@@ -36,7 +36,7 @@ const formatDateTime = (value: string): string => {
 
 export const getCommentTableColumns = (
   keywords: Keyword[],
-  toggleReadStatus: (id: number) => void
+  toggleReadStatus: (id: number) => Promise<void>
 ): TableColumn[] => [
   {
     header: '№',
@@ -100,7 +100,9 @@ export const getCommentTableColumns = (
           className={`comment-action-btn ${
             item.isRead ? 'comment-action-btn--secondary' : 'comment-action-btn--primary'
           }`}
-          onClick={() => toggleReadStatus(item.id)}
+          onClick={() => {
+            void toggleReadStatus(item.id)
+          }}
         >
           {item.isRead ? 'Отметить непрочитанным' : 'Отметить прочитанным'}
         </button>

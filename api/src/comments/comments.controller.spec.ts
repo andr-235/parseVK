@@ -4,11 +4,12 @@ import { CommentsService } from './comments.service';
 
 describe('CommentsController', () => {
   let controller: CommentsController;
-  let commentsService: { getAllComments: jest.Mock };
+  let commentsService: { getAllComments: jest.Mock; setReadStatus: jest.Mock };
 
   beforeEach(async () => {
     commentsService = {
       getAllComments: jest.fn(),
+      setReadStatus: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -30,5 +31,13 @@ describe('CommentsController', () => {
 
     await expect(controller.getComments()).resolves.toBe(serviceResult);
     expect(commentsService.getAllComments).toHaveBeenCalled();
+  });
+
+  it('должен обновлять статус прочтения комментария через сервис', async () => {
+    const updatedComment = { id: 1, isRead: true } as never;
+    commentsService.setReadStatus.mockResolvedValue(updatedComment);
+
+    await expect(controller.updateReadStatus(1, { isRead: true })).resolves.toBe(updatedComment);
+    expect(commentsService.setReadStatus).toHaveBeenCalledWith(1, true);
   });
 });

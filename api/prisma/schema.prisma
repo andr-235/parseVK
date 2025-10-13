@@ -93,6 +93,7 @@ model Comment {
   authorVkId    Int?
   author        Author? @relation(fields: [authorVkId], references: [vkUserId], onDelete: SetNull)
   isDeleted      Boolean  @default(false)
+  isRead         Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   post           Post     @relation(fields: [ownerId, postId], references: [ownerId, vkPostId], onDelete: Cascade)
@@ -127,5 +128,4 @@ model Keyword {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
 

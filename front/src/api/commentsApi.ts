@@ -11,6 +11,19 @@ export const commentsApi = {
     }
 
     return response.json()
+  },
+
+  async updateReadStatus(id: number, isRead: boolean): Promise<ICommentResponse> {
+    const response = await fetch(`${API_URL}/comments/${id}/read`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isRead }),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to update comment read status')
+    }
+
+    return response.json()
   }
 }
-

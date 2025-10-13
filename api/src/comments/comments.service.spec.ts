@@ -3,12 +3,13 @@ import { PrismaService } from '../prisma.service';
 
 describe('CommentsService', () => {
   let service: CommentsService;
-  let prisma: { comment: { findMany: jest.Mock } };
+  let prisma: { comment: { findMany: jest.Mock; update: jest.Mock } };
 
   beforeEach(() => {
     prisma = {
       comment: {
         findMany: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -30,6 +31,7 @@ describe('CommentsService', () => {
           photo100: 'https://example.com/photo100.jpg',
           photo200Orig: null,
         },
+        isRead: true,
       },
       {
         id: 2,
@@ -37,6 +39,7 @@ describe('CommentsService', () => {
         publishedAt: new Date('2024-01-02T00:00:00.000Z'),
         authorVkId: null,
         author: null,
+        isRead: false,
       },
     ] as never;
 
@@ -68,6 +71,53 @@ describe('CommentsService', () => {
 
     expect(prisma.comment.findMany).toHaveBeenCalledWith({
       orderBy: { publishedAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            vkUserId: true,
+            firstName: true,
+            lastName: true,
+            photo50: true,
+            photo100: true,
+            photo200Orig: true,
+          },
+        },
+      },
+    });
+  });
+
+  it('должен обновлять статус прочтения комментария', async () => {
+    const comment = {
+      id: 1,
+      text: 'Комментарий',
+      publishedAt: new Date('2024-01-01T00:00:00.000Z'),
+      authorVkId: 100,
+      isRead: true,
+      author: {
+        vkUserId: 100,
+        firstName: 'Иван',
+        lastName: 'Иванов',
+        photo50: null,
+        photo100: 'https://example.com/photo100.jpg',
+        photo200Orig: null,
+      },
+    } as never;
+
+    prisma.comment.update.mockResolvedValue(comment);
+
+    await expect(service.setReadStatus(1, true)).resolves.toEqual({
+      ...comment,
+      author: {
+        vkUserId: 100,
+        firstName: 'Иван',
+        lastName: 'Иванов',
+        logo: 'https://example.com/photo100.jpg',
+      },
+    });
+
+    expect(prisma.comment.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { isRead: true },
       include: {
         author: {
           select: {

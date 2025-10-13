@@ -146,7 +146,7 @@ const resolveAuthorInfo = (comment: ICommentResponse): NormalizedAuthor => {
   return { name: 'Неизвестный автор', id: null, url: null, avatar }
 }
 
-export const useCommentsStore = create<CommentsState>((set) => ({
+export const useCommentsStore = create<CommentsState>((set, get) => ({
   comments: [],
   isLoading: false,
 
@@ -154,29 +154,26 @@ export const useCommentsStore = create<CommentsState>((set) => ({
     set({ isLoading: true })
     try {
       const response = await commentsApi.getComments()
-      set((state) => {
-        const readStatus = new Map(state.comments.map((comment) => [comment.id, comment.isRead]))
-        const normalized = response.map((comment) => {
-          const authorInfo = resolveAuthorInfo(comment)
-
-          return {
-            id: comment.id,
-            author: authorInfo.name,
-            authorId: authorInfo.id,
-            authorUrl: authorInfo.url,
-            authorAvatar: authorInfo.avatar,
-            commentUrl: buildCommentUrl(comment),
-            text: comment.text ?? '',
-            createdAt: normalizeCreatedAt(comment.createdAt),
-            publishedAt: comment.publishedAt ? normalizeCreatedAt(comment.publishedAt) : null,
-            isRead: readStatus.get(comment.id) ?? false
-          }
-        })
+      const normalized = response.map((comment) => {
+        const authorInfo = resolveAuthorInfo(comment)
 
         return {
-          comments: normalized,
-          isLoading: false
+          id: comment.id,
+          author: authorInfo.name,
+          authorId: authorInfo.id,
+          authorUrl: authorInfo.url,
+          authorAvatar: authorInfo.avatar,
+          commentUrl: buildCommentUrl(comment),
+          text: comment.text ?? '',
+          createdAt: normalizeCreatedAt(comment.createdAt),
+          publishedAt: comment.publishedAt ? normalizeCreatedAt(comment.publishedAt) : null,
+          isRead: comment.isRead ?? false
         }
+      })
+
+      set({
+        comments: normalized,
+        isLoading: false
       })
     } catch (error) {
       console.error('Failed to fetch comments', error)
@@ -185,9 +182,39 @@ export const useCommentsStore = create<CommentsState>((set) => ({
     }
   },
 
-  toggleReadStatus: (id) => set((state) => ({
-    comments: state.comments.map((comment) =>
-      comment.id === id ? { ...comment, isRead: !comment.isRead } : comment
-    )
-  }))
+  async toggleReadStatus(id) {
+    const currentComment = get().comments.find((comment) => comment.id === id)
+
+    if (!currentComment) {
+      console.warn(`Комментарий с id=${id} не найден в локальном сторе`)
+      return
+    }
+
+    const nextIsRead = !currentComment.isRead
+
+    set((state) => ({
+      comments: state.comments.map((comment) =>
+        comment.id === id ? { ...comment, isRead: nextIsRead } : comment
+      )
+    }))
+
+    try {
+      const updated = await commentsApi.updateReadStatus(id, nextIsRead)
+      set((state) => ({
+        comments: state.comments.map((comment) =>
+          comment.id === id
+            ? { ...comment, isRead: updated.isRead ?? nextIsRead }
+            : comment
+        )
+      }))
+    } catch (error) {
+      set((state) => ({
+        comments: state.comments.map((comment) =>
+          comment.id === id ? { ...comment, isRead: !nextIsRead } : comment
+        )
+      }))
+      console.error('Failed to update read status', error)
+      throw error
+    }
+  }
 }))
