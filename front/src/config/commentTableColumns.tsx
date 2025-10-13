@@ -37,7 +37,7 @@ const formatDateTime = (value: string): string => {
 export const getCommentTableColumns = (
   keywords: Keyword[],
   toggleReadStatus: (id: number) => Promise<void>
-): TableColumn[] => [
+): TableColumn<Comment>[] => [
   {
     header: '№',
     key: 'index',

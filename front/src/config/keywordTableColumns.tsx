@@ -1,7 +1,7 @@
 import {Button} from '../components/ui/button'
 import type { TableColumn, Keyword } from '../types'
 
-export const getKeywordTableColumns = (deleteKeyword: (id: number) => void): TableColumn[] => [
+export const getKeywordTableColumns = (deleteKeyword: (id: number) => void): TableColumn<Keyword>[] => [
   {
     header: '№',
     key: 'index',
@@ -11,7 +11,8 @@ export const getKeywordTableColumns = (deleteKeyword: (id: number) => void): Tab
   {
     header: 'Ключевое слово',
     key: 'word',
-    sortable: true
+    sortable: true,
+    sortValue: (item: Keyword) => item.word?.toLowerCase() ?? ''
   },
   {
     header: 'Действия',

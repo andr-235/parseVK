@@ -17,8 +17,8 @@ function Comments() {
   const keywords = useKeywordsStore((state) => state.keywords)
   const fetchKeywords = useKeywordsStore((state) => state.fetchKeywords)
   const addAuthorFromComment = useWatchlistStore((state) => state.addAuthorFromComment)
-  const [showOnlyKeywordComments, setShowOnlyKeywordComments] = useState(false)
-  const [readFilter, setReadFilter] = useState<'all' | 'unread' | 'read'>('all')
+  const [showOnlyKeywordComments, setShowOnlyKeywordComments] = useState(true)
+  const [readFilter, setReadFilter] = useState<'all' | 'unread' | 'read'>('unread')
   const [searchTerm, setSearchTerm] = useState('')
   const [pendingWatchlist, setPendingWatchlist] = useState<Record<number, boolean>>({})
 

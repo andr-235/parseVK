@@ -8,6 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from '../../../components/ui/table'
+import { TableSortButton } from '../../../components/ui/table-sort-button'
+import { useTableSorting } from '../../../hooks/useTableSorting'
 import type { Task } from '../../../types'
 import { getTaskTableColumns } from '../../../config/taskTableColumns'
 import { useTasksStore } from '../../../stores'
@@ -21,6 +23,7 @@ function TasksTableCard({ emptyMessage, onTaskSelect }: TasksTableCardProps) {
   const tasks = useTasksStore((state) => state.tasks)
   const hasTasks = tasks.length > 0
   const columns = getTaskTableColumns()
+  const { sortedItems: sortedTasks, sortState, requestSort } = useTableSorting(tasks, columns)
 
   return (
     <Card className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Список задач">
@@ -51,13 +54,22 @@ function TasksTableCard({ emptyMessage, onTaskSelect }: TasksTableCardProps) {
                   <TableRow>
                     {columns.map((column) => (
                       <TableHead key={column.key} className={column.headerClassName}>
-                        {column.header}
+                        {column.sortable ? (
+                          <TableSortButton
+                            direction={sortState?.key === column.key ? sortState.direction : null}
+                            onClick={() => requestSort(column.key)}
+                          >
+                            {column.header}
+                          </TableSortButton>
+                        ) : (
+                          column.header
+                        )}
                       </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tasks.map((task, index) => (
+                  {sortedTasks.map((task, index) => (
                     <TableRow
                       key={task.id}
                       className="cursor-pointer"

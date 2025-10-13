@@ -2,7 +2,8 @@ import type { JSX } from 'react'
 import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
-import { useCommentsStore, useTasksStore, useWatchlistStore } from '@/stores'
+import { cn } from '@/lib/utils'
+import { useCommentsStore, useTasksStore, useThemeStore, useWatchlistStore } from '@/stores'
 import ThemeToggle from './ThemeToggle'
 
 type SidebarItem = {
@@ -142,6 +143,7 @@ const ChevronLeftIcon = ({ className }: { className?: string }) => (
 
 export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const isDarkMode = useThemeStore((state) => state.isDarkMode)
 
   const tasksCount = useTasksStore((state) => state.tasks.length)
   const commentsCount = useCommentsStore((state) => state.totalCount)
@@ -166,12 +168,19 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
 
   return (
     <aside
-      className={`flex shrink-0 flex-col rounded-r-3xl border-none bg-gradient-to-b from-background-sidebar via-background-sidebar/95 to-background-sidebar/80 text-text-light shadow-soft-lg transition-all duration-300 ${
-        isCollapsed ? 'w-16' : 'w-72'
-      }`}
+      className={cn(
+        'flex shrink-0 flex-col rounded-r-3xl border-none bg-gradient-to-b from-background-sidebar via-background-sidebar/95 to-background-sidebar/80 shadow-soft-lg transition-all duration-300',
+        isCollapsed ? 'w-16' : 'w-72',
+        isDarkMode ? 'text-text-light' : 'text-text-primary'
+      )}
     >
       {/* Header */}
-      <div className={`flex items-start justify-between gap-3 px-6 pb-6 pt-8 ${isCollapsed ? 'flex-col items-center px-2 pb-2 pt-2' : ''}`}>
+      <div
+        className={cn(
+          'flex items-start justify-between gap-3 px-6 pb-6 pt-8',
+          isCollapsed && 'flex-col items-center px-2 pb-2 pt-2'
+        )}
+      >
         {!isCollapsed && (
           <div>
             <h2 className="text-xl font-semibold leading-tight">{title}</h2>
@@ -185,7 +194,14 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
         {/* Primary items */}
         <div>
           {!isCollapsed && (
-            <div className="mb-3 px-0 text-xs uppercase tracking-[0.35em] text-text-light/45">Навигация</div>
+            <div
+              className={cn(
+                'mb-3 px-0 text-xs uppercase tracking-[0.35em]',
+                isDarkMode ? 'text-text-light/45' : 'text-text-secondary/70'
+              )}
+            >
+              Навигация
+            </div>
           )}
           <ul className="space-y-1.5">
             {primaryItems.map((item) => (
@@ -193,25 +209,44 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
-                    `group flex items-center justify-between rounded-2xl border border-transparent px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:border-white/10 hover:bg-white/10 hover:text-white ${
-                      isActive ? 'bg-white/15 text-white shadow-soft-sm backdrop-blur-md' : 'text-text-light/70'
-                    } ${isCollapsed ? 'justify-center px-2' : ''}`
+                    cn(
+                      'group flex items-center justify-between rounded-2xl border border-transparent px-4 py-2.5 text-sm font-medium transition-all duration-200',
+                      isCollapsed && 'justify-center px-2',
+                      isDarkMode
+                        ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
+                        : 'hover:border-accent-primary/20 hover:bg-accent-primary/10 hover:text-accent-primary',
+                      isActive
+                        ? isDarkMode
+                          ? 'bg-white/15 text-white shadow-soft-sm backdrop-blur-md'
+                          : 'border-accent-primary/30 bg-accent-primary/15 text-accent-primary shadow-soft-sm'
+                        : isDarkMode
+                          ? 'text-text-light/70'
+                          : 'text-text-secondary'
+                    )
                   }
                 >
-                  <span className={`flex items-center ${isCollapsed ? '' : 'gap-3'}`}>
+                  <span className={cn('flex items-center', !isCollapsed && 'gap-3')}>
                     <span
-                      className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200 ${
+                      className={cn(
+                        'flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200',
                         item.label === 'Задачи'
                           ? 'bg-accent-primary/20 text-accent-primary'
-                          : 'bg-white/10 text-text-light/80 group-hover:text-white'
-                      }`}
+                          : isDarkMode
+                            ? 'bg-white/10 text-text-light/80 group-hover:text-white'
+                            : 'bg-accent-primary/10 text-accent-primary/70 group-hover:text-accent-primary'
+                      )}
                     >
                       {item.icon}
                     </span>
                     {!isCollapsed && <span>{item.label}</span>}
                   </span>
                   {!isCollapsed && item.badge && (
-                    <Badge className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold text-white/90 hover:bg-white/15">
+                    <Badge
+                      className={cn(
+                        'rounded-full px-2 py-0.5 text-xs font-semibold',
+                        isDarkMode ? 'bg-white/15 text-white/90' : 'bg-accent-primary/15 text-accent-primary'
+                      )}
+                    >
                       {item.badge}
                     </Badge>
                   )}
@@ -224,7 +259,14 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
         {/* Secondary items */}
         <div>
           {!isCollapsed && (
-            <div className="mb-3 px-0 text-xs uppercase tracking-[0.35em] text-text-light/45">Управление</div>
+            <div
+              className={cn(
+                'mb-3 px-0 text-xs uppercase tracking-[0.35em]',
+                isDarkMode ? 'text-text-light/45' : 'text-text-secondary/70'
+              )}
+            >
+              Управление
+            </div>
           )}
           <ul className="space-y-1.5">
             {secondaryItems.map((item) => (
@@ -232,13 +274,31 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
-                    `group flex items-center justify-between rounded-2xl border border-transparent px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:border-white/10 hover:bg-white/10 hover:text-white ${
-                      isActive ? 'bg-white/15 text-white shadow-soft-sm backdrop-blur-md' : 'text-text-light/70'
-                    } ${isCollapsed ? 'justify-center px-2' : ''}`
+                    cn(
+                      'group flex items-center justify-between rounded-2xl border border-transparent px-4 py-2.5 text-sm font-medium transition-all duration-200',
+                      isCollapsed && 'justify-center px-2',
+                      isDarkMode
+                        ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
+                        : 'hover:border-accent-primary/20 hover:bg-accent-primary/10 hover:text-accent-primary',
+                      isActive
+                        ? isDarkMode
+                          ? 'bg-white/15 text-white shadow-soft-sm backdrop-blur-md'
+                          : 'border-accent-primary/30 bg-accent-primary/15 text-accent-primary shadow-soft-sm'
+                        : isDarkMode
+                          ? 'text-text-light/70'
+                          : 'text-text-secondary'
+                    )
                   }
                 >
-                  <span className={`flex items-center ${isCollapsed ? '' : 'gap-3'}`}>
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-text-light/80 transition-colors duration-200 group-hover:text-white">
+                  <span className={cn('flex items-center', !isCollapsed && 'gap-3')}>
+                    <span
+                      className={cn(
+                        'flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200',
+                        isDarkMode
+                          ? 'bg-white/10 text-text-light/80 group-hover:text-white'
+                          : 'bg-accent-primary/10 text-accent-primary/70 group-hover:text-accent-primary'
+                      )}
+                    >
                       {item.icon}
                     </span>
                     {!isCollapsed && <span>{item.label}</span>}
@@ -251,14 +311,25 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
       </nav>
 
       {/* Footer with Toggle button */}
-      <div className={`flex items-center border-t border-white/10 px-6 py-4 ${isCollapsed ? 'justify-center px-2' : 'justify-end'}`}>
+      <div
+        className={cn(
+          'flex items-center border-t px-6 py-4',
+          isCollapsed ? 'justify-center px-2' : 'justify-end',
+          isDarkMode ? 'border-white/10' : 'border-border/80'
+        )}
+      >
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-text-light transition-all duration-200 hover:bg-white/10 hover:border-white/20"
+          className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200',
+            isDarkMode
+              ? 'border border-white/10 bg-white/5 text-text-light hover:border-white/20 hover:bg-white/10'
+              : 'border border-border bg-background-secondary text-text-primary hover:border-accent-primary/40 hover:bg-background-secondary/80'
+          )}
           aria-label="Toggle Sidebar"
           title={isCollapsed ? 'Развернуть' : 'Свернуть'}
         >
-          <ChevronLeftIcon className={`h-4 w-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`} />
+          <ChevronLeftIcon className={cn('h-4 w-4 transition-transform duration-200', isCollapsed && 'rotate-180')} />
         </button>
       </div>
     </aside>

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 export interface Keyword {
   id: number
   word: string
@@ -45,12 +47,28 @@ export interface Group {
   updatedAt: string
 }
 
-export interface TableColumn {
+export type TableSortDirection = 'asc' | 'desc'
+
+export type TableSortValue =
+  | string
+  | number
+  | boolean
+  | Date
+  | null
+  | undefined
+
+export interface TableSortState {
+  key: string
+  direction: TableSortDirection
+}
+
+export interface TableColumn<T = any> {
   header: string
   key: string
-  render?: (item: any, index: number) => React.ReactNode
+  render?: (item: T, index: number) => ReactNode
   sortable?: boolean
-  emptyValue?: React.ReactNode
+  sortValue?: (item: T) => TableSortValue
+  emptyValue?: ReactNode
   expandable?: boolean
   truncateAt?: number
   headerClassName?: string

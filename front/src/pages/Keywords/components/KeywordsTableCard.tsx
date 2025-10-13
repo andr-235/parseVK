@@ -9,11 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TableSortButton } from '@/components/ui/table-sort-button'
+import { useTableSorting } from '@/hooks/useTableSorting'
 import type { Keyword, TableColumn } from '@/types'
 import LoadingKeywordsState from './LoadingKeywordsState'
 import EmptyKeywordsState from './EmptyKeywordsState'
 
-type ColumnsFactory = (deleteKeyword: (id: number) => void) => TableColumn[]
+type ColumnsFactory = (deleteKeyword: (id: number) => void) => TableColumn<Keyword>[]
 
 interface KeywordsTableCardProps {
   keywords: Keyword[]
@@ -40,6 +42,7 @@ const getCounterLabel = (count: number) => {
 function KeywordsTableCard({ keywords, isLoading, onDelete, columns }: KeywordsTableCardProps) {
   const hasKeywords = keywords.length > 0
   const tableColumns = useMemo(() => columns(onDelete), [columns, onDelete])
+  const { sortedItems: sortedKeywords, sortState, requestSort } = useTableSorting(keywords, tableColumns)
 
   const subtitle = useMemo(() => {
     if (isLoading && !hasKeywords) {
@@ -86,13 +89,22 @@ function KeywordsTableCard({ keywords, isLoading, onDelete, columns }: KeywordsT
                   <TableRow>
                     {tableColumns.map((column) => (
                       <TableHead key={column.key} className={column.headerClassName}>
-                        {column.header}
+                        {column.sortable ? (
+                          <TableSortButton
+                            direction={sortState?.key === column.key ? sortState.direction : null}
+                            onClick={() => requestSort(column.key)}
+                          >
+                            {column.header}
+                          </TableSortButton>
+                        ) : (
+                          column.header
+                        )}
                       </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {keywords.map((keyword, index) => (
+                  {sortedKeywords.map((keyword, index) => (
                     <TableRow key={keyword.id || index}>
                       {tableColumns.map((column) => (
                         <TableCell key={column.key} className={column.cellClassName}>

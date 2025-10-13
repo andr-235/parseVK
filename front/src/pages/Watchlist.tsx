@@ -12,9 +12,11 @@ import {
   TableRow,
   TableCaption,
 } from '@/components/ui/table'
+import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Spinner } from '@/components/ui/spinner'
+import { useTableSorting } from '@/hooks/useTableSorting'
 import { useWatchlistStore } from '@/stores'
-import type { WatchlistAuthorCard, WatchlistComment } from '@/types'
+import type { TableColumn, WatchlistAuthorCard, WatchlistComment } from '@/types'
 
 const formatDateTime = (value: string | null | undefined): string => {
   if (!value) {
@@ -168,6 +170,148 @@ function Watchlist() {
     return `Список авторов «На карандаше». Проверка активности каждые ${polling} мин., лимит одновременно обновляемых авторов — ${settings.maxAuthors}.`
   }, [settings])
 
+  const authorColumns = useMemo<TableColumn<WatchlistAuthorCard>[]>(() => [
+    {
+      header: 'Автор',
+      key: 'author',
+      sortable: true,
+      sortValue: (item) => item.author?.fullName?.toLowerCase() ?? '',
+      render: (item) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-text-primary">{item.author.fullName}</span>
+          <a
+            href={item.author.profileUrl ?? undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-text-secondary hover:text-primary"
+          >
+            vk.com/{item.author.vkUserId}
+          </a>
+        </div>
+      ),
+    },
+    {
+      header: 'Статус',
+      key: 'status',
+      sortable: true,
+      sortValue: (item) => item.status,
+      render: (item) => (
+        <Badge variant="outline">{formatStatus(item.status)}</Badge>
+      ),
+    },
+    {
+      header: 'Найдено',
+      key: 'foundCommentsCount',
+      sortable: true,
+      sortValue: (item) => item.foundCommentsCount,
+      render: (item) => item.foundCommentsCount,
+    },
+    {
+      header: 'Всего',
+      key: 'totalComments',
+      sortable: true,
+      sortValue: (item) => item.totalComments,
+      render: (item) => item.totalComments,
+    },
+    {
+      header: 'Последняя активность',
+      key: 'lastActivityAt',
+      sortable: true,
+      sortValue: (item) => (item.lastActivityAt ? new Date(item.lastActivityAt) : null),
+      render: (item) => formatDateTime(item.lastActivityAt),
+    },
+    {
+      header: 'Последняя проверка',
+      key: 'lastCheckedAt',
+      sortable: true,
+      sortValue: (item) => (item.lastCheckedAt ? new Date(item.lastCheckedAt) : null),
+      render: (item) => formatDateTime(item.lastCheckedAt),
+    },
+    {
+      header: 'Действия',
+      key: 'actions',
+      sortable: false,
+      render: (item: WatchlistAuthorCard) => (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={(event) => {
+            event.stopPropagation()
+            handleSelectAuthor(item.id)
+          }}
+        >
+          Подробнее
+        </Button>
+      ),
+    },
+  ], [handleSelectAuthor])
+
+  const {
+    sortedItems: sortedAuthors,
+    sortState: authorSortState,
+    requestSort: requestAuthorSort,
+  } = useTableSorting(authors, authorColumns, {
+    initialKey: 'lastActivityAt',
+    initialDirection: 'desc',
+  })
+
+  const commentColumns = useMemo<TableColumn<WatchlistComment>[]>(() => [
+    {
+      header: 'Дата',
+      key: 'publishedAt',
+      sortable: true,
+      sortValue: (item) => {
+        const timestamp = item.publishedAt ?? item.createdAt
+        return timestamp ? new Date(timestamp) : null
+      },
+      render: (item) => formatDateTime(item.publishedAt ?? item.createdAt),
+    },
+    {
+      header: 'Источник',
+      key: 'source',
+      sortable: true,
+      sortValue: (item) => item.source,
+      render: (item) => formatCommentSource(item),
+    },
+    {
+      header: 'Комментарий',
+      key: 'text',
+      sortable: false,
+      cellClassName: 'max-w-xl whitespace-pre-wrap text-sm text-text-primary',
+      render: (item) => item.text || '—',
+    },
+    {
+      header: 'Ссылка',
+      key: 'commentUrl',
+      sortable: false,
+      render: (item) => (
+        item.commentUrl ? (
+          <a
+            href={item.commentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-primary hover:underline"
+          >
+            Открыть
+          </a>
+        ) : (
+          <span className="text-xs text-text-secondary">—</span>
+        )
+      ),
+    },
+  ], [])
+
+  const commentItems = currentAuthor?.comments.items ?? []
+  const {
+    sortedItems: sortedComments,
+    sortState: commentSortState,
+    requestSort: requestCommentSort,
+  } = useTableSorting(commentItems, commentColumns, {
+    initialKey: 'publishedAt',
+    initialDirection: 'desc',
+  })
+
   return (
     <div className="flex flex-col gap-8">
       <PageHeroCard
@@ -231,48 +375,37 @@ function Watchlist() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Автор</TableHead>
-                <TableHead>Статус</TableHead>
-                <TableHead>Найдено</TableHead>
-                <TableHead>Всего</TableHead>
-                <TableHead>Последняя активность</TableHead>
-                <TableHead>Последняя проверка</TableHead>
-                <TableHead>Действия</TableHead>
+                {authorColumns.map((column) => (
+                  <TableHead key={column.key} className={column.headerClassName}>
+                    {column.sortable ? (
+                      <TableSortButton
+                        direction={authorSortState?.key === column.key ? authorSortState.direction : null}
+                        onClick={() => requestAuthorSort(column.key)}
+                      >
+                        {column.header}
+                      </TableSortButton>
+                    ) : (
+                      column.header
+                    )}
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {authors.map((author) => (
-                <TableRow key={author.id} className="cursor-pointer hover:bg-muted/40" onClick={() => handleSelectAuthor(author.id)}>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-text-primary">{author.author.fullName}</span>
-                      <a
-                        href={author.author.profileUrl ?? undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-text-secondary hover:text-primary"
-                      >
-                        vk.com/{author.author.vkUserId}
-                      </a>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{formatStatus(author.status)}</Badge>
-                  </TableCell>
-                  <TableCell>{author.foundCommentsCount}</TableCell>
-                  <TableCell>{author.totalComments}</TableCell>
-                  <TableCell>{formatDateTime(author.lastActivityAt)}</TableCell>
-                  <TableCell>{formatDateTime(author.lastCheckedAt)}</TableCell>
-                  <TableCell>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => handleSelectAuthor(author.id)}>
-                      Подробнее
-                    </Button>
-                  </TableCell>
+              {sortedAuthors.map((author, index) => (
+                <TableRow key={author.id ?? index} className="cursor-pointer hover:bg-muted/40" onClick={() => handleSelectAuthor(author.id)}>
+                  {authorColumns.map((column) => (
+                    <TableCell key={column.key} className={column.cellClassName}>
+                      {column.render
+                        ? column.render(author, index)
+                        : (author as any)[column.key] ?? column.emptyValue ?? '—'}
+                    </TableCell>
+                  ))}
                 </TableRow>
               ))}
             </TableBody>
             <TableCaption>
-              Показано {authors.length} авторов из {totalAuthors}.
+              Показано {sortedAuthors.length} авторов из {totalAuthors}.
             </TableCaption>
           </Table>
         ) : null}
@@ -301,39 +434,37 @@ function Watchlist() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Дата</TableHead>
-                    <TableHead>Источник</TableHead>
-                    <TableHead>Комментарий</TableHead>
-                    <TableHead>Ссылка</TableHead>
+                    {commentColumns.map((column) => (
+                      <TableHead key={column.key} className={column.headerClassName}>
+                        {column.sortable ? (
+                          <TableSortButton
+                            direction={commentSortState?.key === column.key ? commentSortState.direction : null}
+                            onClick={() => requestCommentSort(column.key)}
+                          >
+                            {column.header}
+                          </TableSortButton>
+                        ) : (
+                          column.header
+                        )}
+                      </TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentAuthor.comments.items.map((comment) => (
-                    <TableRow key={comment.id}>
-                      <TableCell>{formatDateTime(comment.publishedAt ?? comment.createdAt)}</TableCell>
-                      <TableCell>{formatCommentSource(comment)}</TableCell>
-                      <TableCell className="max-w-xl whitespace-pre-wrap text-sm text-text-primary">
-                        {comment.text || '—'}
-                      </TableCell>
-                      <TableCell>
-                        {comment.commentUrl ? (
-                          <a
-                            href={comment.commentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline"
-                          >
-                            Открыть
-                          </a>
-                        ) : (
-                          <span className="text-xs text-text-secondary">—</span>
-                        )}
-                      </TableCell>
+                  {sortedComments.map((comment, index) => (
+                    <TableRow key={comment.id ?? index}>
+                      {commentColumns.map((column) => (
+                        <TableCell key={column.key} className={column.cellClassName}>
+                          {column.render
+                            ? column.render(comment, index)
+                            : (comment as any)[column.key] ?? column.emptyValue ?? '—'}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))}
                 </TableBody>
                 <TableCaption>
-                  Показано {currentAuthor.comments.items.length} комментариев из {currentAuthor.comments.total}.
+                  Показано {sortedComments.length} комментариев из {currentAuthor.comments.total}.
                 </TableCaption>
               </Table>
             ) : (

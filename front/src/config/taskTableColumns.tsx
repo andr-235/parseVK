@@ -65,16 +65,27 @@ const formatResult = (item: Task): string => {
   return '—'
 }
 
-const columns: TableColumn[] = [
+const STATUS_WEIGHTS: Record<Task['status'], number> = {
+  pending: 0,
+  processing: 1,
+  running: 2,
+  completed: 3,
+  failed: 4,
+}
+
+const columns: TableColumn<Task>[] = [
   {
     header: '№',
     key: 'index',
-    render: (_: Task, index: number) => index + 1
+    render: (_: Task, index: number) => index + 1,
+    sortable: false,
   },
   {
     header: 'Название',
     key: 'title',
-    render: (item: Task) => item.title ?? '—'
+    render: (item: Task) => item.title ?? '—',
+    sortable: true,
+    sortValue: (item: Task) => item.title?.toLowerCase() ?? '',
   },
   {
     header: 'Статус',
@@ -182,33 +193,56 @@ const columns: TableColumn[] = [
           )}
         </div>
       )
-    }
+    },
+    sortable: true,
+    sortValue: (item: Task) => STATUS_WEIGHTS[item.status] ?? Number.POSITIVE_INFINITY,
   },
   {
     header: 'Дата создания',
     key: 'createdAt',
-    render: (item: Task) => formatDate(item.createdAt)
+    render: (item: Task) => formatDate(item.createdAt),
+    sortable: true,
+    sortValue: (item: Task) => (item.createdAt ? new Date(item.createdAt) : null),
   },
   {
     header: 'Дата завершения',
     key: 'completedAt',
-    render: (item: Task) => formatDate(item.completedAt)
+    render: (item: Task) => formatDate(item.completedAt),
+    sortable: true,
+    sortValue: (item: Task) => (item.completedAt ? new Date(item.completedAt) : null),
   },
   {
     header: 'Кол-во групп',
     key: 'groupsCount',
-    render: (item: Task) => item.groupsCount
+    render: (item: Task) => item.groupsCount,
+    sortable: true,
+    sortValue: (item: Task) => (typeof item.groupsCount === 'number' ? item.groupsCount : null),
   },
   {
     header: 'Действия',
     key: 'actions',
-    render: (item: Task) => <TaskActionsCell task={item} />
+    render: (item: Task) => <TaskActionsCell task={item} />,
+    sortable: false,
   },
   {
     header: 'Результат',
     key: 'result',
-    render: formatResult
-  }
+    render: formatResult,
+    sortable: true,
+    sortValue: (item: Task) => {
+      const posts = toNumber(item.stats?.posts)
+      const comments = toNumber(item.stats?.comments)
+
+      if (posts != null || comments != null) {
+        const postsSafe = posts ?? 0
+        const commentsSafe = comments ?? 0
+        return postsSafe + commentsSafe / 1000
+      }
+
+      const progress = calculateTaskProgress(item)
+      return progress.success + progress.failed / 1000
+    },
+  },
 ]
 
-export const getTaskTableColumns = (): TableColumn[] => columns
+export const getTaskTableColumns = (): TableColumn<Task>[] => columns

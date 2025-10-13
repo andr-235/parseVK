@@ -10,11 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from '../../../components/ui/table'
+import { TableSortButton } from '../../../components/ui/table-sort-button'
+import { useTableSorting } from '../../../hooks/useTableSorting'
 import type { Group, TableColumn } from '../../../types'
 import LoadingGroupsState from './LoadingGroupsState'
 import EmptyGroupsState from './EmptyGroupsState'
 
-type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn[]
+type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn<Group>[]
 
 interface GroupsTableCardProps {
   groups: Group[]
@@ -42,6 +44,7 @@ const getCounterLabel = (count: number) => {
 function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: GroupsTableCardProps) {
   const hasGroups = groups.length > 0
   const tableColumns = useMemo(() => columns(onDelete), [columns, onDelete])
+  const { sortedItems: sortedGroups, sortState, requestSort } = useTableSorting(groups, tableColumns)
 
   const subtitle = useMemo(() => {
     if (isLoading && !hasGroups) {
@@ -100,13 +103,22 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
                   <TableRow>
                     {tableColumns.map((column) => (
                       <TableHead key={column.key} className={column.headerClassName}>
-                        {column.header}
+                        {column.sortable ? (
+                          <TableSortButton
+                            direction={sortState?.key === column.key ? sortState.direction : null}
+                            onClick={() => requestSort(column.key)}
+                          >
+                            {column.header}
+                          </TableSortButton>
+                        ) : (
+                          column.header
+                        )}
                       </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {groups.map((group, index) => (
+                  {sortedGroups.map((group, index) => (
                     <TableRow key={group.id || index}>
                       {tableColumns.map((column) => (
                         <TableCell key={column.key} className={column.cellClassName}>
