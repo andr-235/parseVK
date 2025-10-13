@@ -1,7 +1,8 @@
 import type { JSX } from 'react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
+import { useCommentsStore, useTasksStore } from '@/stores'
 import ThemeToggle from './ThemeToggle'
 
 type SidebarItem = {
@@ -127,12 +128,19 @@ const ChevronLeftIcon = ({ className }: { className?: string }) => (
 export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
 
-  const primaryItems: SidebarItem[] = [
-    { label: 'Задачи', path: '/tasks', icon: <TasksIcon />, badge: '8' },
-    { label: 'Группы', path: '/groups', icon: <GroupsIcon /> },
-    { label: 'Комментарии', path: '/comments', icon: <CommentsIcon />, badge: '3' },
-    { label: 'Ключевые слова', path: '/keywords', icon: <KeywordsIcon /> },
-  ]
+  const tasksCount = useTasksStore((state) => state.tasks.length)
+  const commentsCount = useCommentsStore((state) => state.comments.length)
+
+  const primaryItems = useMemo<SidebarItem[]>(() => {
+    const formatCount = (count: number) => (count > 0 ? String(count) : undefined)
+
+    return [
+      { label: 'Задачи', path: '/tasks', icon: <TasksIcon />, badge: formatCount(tasksCount) },
+      { label: 'Группы', path: '/groups', icon: <GroupsIcon /> },
+      { label: 'Комментарии', path: '/comments', icon: <CommentsIcon />, badge: formatCount(commentsCount) },
+      { label: 'Ключевые слова', path: '/keywords', icon: <KeywordsIcon /> },
+    ]
+  }, [tasksCount, commentsCount])
 
   const secondaryItems: SidebarItem[] = [
     { label: 'Отчёты', path: '/reports', icon: <ReportsIcon /> },
