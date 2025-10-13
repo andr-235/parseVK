@@ -89,6 +89,7 @@ export interface ICommentResponse {
   replyToComment?: number | string | null
   attachments?: unknown
   isDeleted?: boolean
+  isRead?: boolean
 }
 
 export interface IParsingTaskGroup {

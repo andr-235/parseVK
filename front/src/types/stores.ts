@@ -14,7 +14,7 @@ export interface CommentsState {
   comments: Comment[]
   isLoading: boolean
   fetchComments: () => Promise<void>
-  toggleReadStatus: (id: number) => void
+  toggleReadStatus: (id: number) => Promise<void>
 }
 
 // Keywords Store Types
