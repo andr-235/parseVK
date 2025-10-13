@@ -60,8 +60,10 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
 
   const overallProgress = calculateTaskProgress(task)
   const resumeTask = useTasksStore((state) => state.resumeTask)
+  const checkTask = useTasksStore((state) => state.checkTask)
   const fetchTaskDetails = useTasksStore((state) => state.fetchTaskDetails)
   const [isResuming, setIsResuming] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
   const canResume = task.status !== 'completed'
 
   const handleResume = async () => {
@@ -77,6 +79,22 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
       }
     } finally {
       setIsResuming(false)
+    }
+  }
+
+  const handleCheck = async () => {
+    if (isChecking) {
+      return
+    }
+
+    setIsChecking(true)
+    try {
+      const success = await checkTask(task.id)
+      if (success) {
+        void fetchTaskDetails(task.id)
+      }
+    } finally {
+      setIsChecking(false)
     }
   }
 
@@ -371,6 +389,14 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
               type="button"
             >
               {isResuming ? 'Возобновление…' : 'Продолжить'}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleCheck}
+              disabled={isChecking}
+              type="button"
+            >
+              {isChecking ? 'Проверяем…' : 'Проверить'}
             </Button>
             <button
               type="button"

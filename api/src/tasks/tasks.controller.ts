@@ -27,4 +27,9 @@ export class TasksController {
   async resumeTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<ParsingTaskResult> {
     return this.tasksService.resumeTask(taskId);
   }
+
+  @Post(':taskId/check')
+  async refreshTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<ParsingTaskResult> {
+    return this.tasksService.refreshTask(taskId);
+  }
 }

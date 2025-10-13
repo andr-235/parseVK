@@ -105,50 +105,76 @@ export class TasksService {
       throw new BadRequestException('Задача уже завершена');
     }
 
-    const parsed = this.parseTaskDescription(task);
-    const scope = parsed.scope ?? (parsed.groupIds.length ? ParsingScope.SELECTED : ParsingScope.ALL);
-
-    const groupIds = scope === ParsingScope.ALL ? [] : Array.from(new Set(parsed.groupIds));
-    if (scope === ParsingScope.SELECTED && groupIds.length === 0) {
-      throw new BadRequestException('Не удалось определить группы для продолжения задачи');
-    }
-
-    const resolvedPostLimit = this.normalizePostLimit(parsed.postLimit);
-    const groups = await this.runner.resolveGroups(scope, groupIds);
-
-    if (!groups.length) {
-      throw new NotFoundException('Нет доступных групп для парсинга');
-    }
-
-    const totalItems = groups.length;
-    const processedItems = Math.min(task.processedItems ?? 0, totalItems);
-    const progress = totalItems > 0 ? Math.min(1, processedItems / totalItems) : 0;
+    const context = await this.buildTaskResumeContext(task);
 
     const updatedTask = await this.prisma.task.update({
       where: { id: taskId },
       data: {
         status: 'pending',
         completed: false,
-        totalItems,
-        processedItems,
-        progress,
+        totalItems: context.totalItems,
+        processedItems: context.processedItems,
+        progress: context.progress,
         description: this.prepareResumeDescription(task.description, {
-          scope,
-          groupIds,
-          postLimit: resolvedPostLimit,
-          stats: parsed.stats,
-          skippedGroupsMessage: parsed.skippedGroupsMessage,
-          skippedGroupIds: parsed.skippedGroupIds,
+          scope: context.scope,
+          groupIds: context.groupIds,
+          postLimit: context.postLimit,
+          stats: context.parsed.stats,
+          skippedGroupsMessage: context.parsed.skippedGroupsMessage,
+          skippedGroupIds: context.parsed.skippedGroupIds,
         }),
       } as Prisma.TaskUncheckedUpdateInput,
     }) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
       taskId: task.id,
-      scope,
-      groupIds,
-      postLimit: resolvedPostLimit,
+      scope: context.scope,
+      groupIds: context.groupIds,
+      postLimit: context.postLimit,
     });
+
+    return this.mapTaskToDetail(updatedTask);
+  }
+
+  async refreshTask(taskId: number): Promise<ParsingTaskResult> {
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    const context = await this.buildTaskResumeContext(task);
+    const shouldComplete = context.totalItems > 0 && context.processedItems >= context.totalItems;
+
+    const updatedTask = await this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        status: shouldComplete ? 'done' : 'pending',
+        completed: shouldComplete,
+        totalItems: context.totalItems,
+        processedItems: context.processedItems,
+        progress: shouldComplete ? 1 : context.progress,
+        description: this.prepareResumeDescription(task.description, {
+          scope: context.scope,
+          groupIds: context.groupIds,
+          postLimit: context.postLimit,
+          stats: context.parsed.stats,
+          skippedGroupsMessage: context.parsed.skippedGroupsMessage,
+          skippedGroupIds: context.parsed.skippedGroupIds,
+        }),
+      } as Prisma.TaskUncheckedUpdateInput,
+    }) as PrismaTaskRecord;
+
+    if (!shouldComplete) {
+      await this.parsingQueue.enqueue({
+        taskId: task.id,
+        scope: context.scope,
+        groupIds: context.groupIds,
+        postLimit: context.postLimit,
+      });
+    }
 
     return this.mapTaskToDetail(updatedTask);
   }
@@ -397,5 +423,44 @@ export class TasksService {
     }
 
     return JSON.stringify(payload);
+  }
+
+  private async buildTaskResumeContext(task: PrismaTaskRecord): Promise<{
+    scope: ParsingScope;
+    groupIds: number[];
+    postLimit: number;
+    parsed: ParsedTaskDescription;
+    totalItems: number;
+    processedItems: number;
+    progress: number;
+  }> {
+    const parsed = this.parseTaskDescription(task);
+    const scope = parsed.scope ?? (parsed.groupIds.length ? ParsingScope.SELECTED : ParsingScope.ALL);
+
+    const groupIds = scope === ParsingScope.ALL ? [] : Array.from(new Set(parsed.groupIds));
+    if (scope === ParsingScope.SELECTED && groupIds.length === 0) {
+      throw new BadRequestException('Не удалось определить группы для продолжения задачи');
+    }
+
+    const postLimit = this.normalizePostLimit(parsed.postLimit);
+    const groups = await this.runner.resolveGroups(scope, groupIds);
+
+    if (!groups.length) {
+      throw new NotFoundException('Нет доступных групп для парсинга');
+    }
+
+    const totalItems = groups.length;
+    const processedItems = Math.min(task.processedItems ?? 0, totalItems);
+    const progress = totalItems > 0 ? Math.min(1, processedItems / totalItems) : 0;
+
+    return {
+      scope,
+      groupIds,
+      postLimit,
+      parsed,
+      totalItems,
+      processedItems,
+      progress,
+    };
   }
 }

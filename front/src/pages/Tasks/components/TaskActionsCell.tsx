@@ -10,10 +10,13 @@ interface TaskActionsCellProps {
 
 function TaskActionsCell({ task }: TaskActionsCellProps) {
   const resumeTask = useTasksStore((state) => state.resumeTask)
+  const checkTask = useTasksStore((state) => state.checkTask)
   const [isResuming, setIsResuming] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
 
   const canResume = task.status !== 'completed'
   const disabled = isResuming || !canResume
+  const checkDisabled = isChecking
 
   const handleResume = async (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
@@ -30,17 +33,43 @@ function TaskActionsCell({ task }: TaskActionsCellProps) {
     }
   }
 
+  const handleCheck = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+
+    if (checkDisabled) {
+      return
+    }
+
+    setIsChecking(true)
+    try {
+      await checkTask(task.id)
+    } finally {
+      setIsChecking(false)
+    }
+  }
+
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleResume}
-      disabled={disabled}
-      type="button"
-      title={!canResume ? 'Задача завершена' : undefined}
-    >
-      {isResuming ? 'Возобновление…' : 'Продолжить'}
-    </Button>
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleResume}
+        disabled={disabled}
+        type="button"
+        title={!canResume ? 'Задача завершена' : undefined}
+      >
+        {isResuming ? 'Возобновление…' : 'Продолжить'}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleCheck}
+        disabled={checkDisabled}
+        type="button"
+      >
+        {isChecking ? 'Проверяем…' : 'Проверить'}
+      </Button>
+    </div>
   )
 }
 

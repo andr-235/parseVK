@@ -172,6 +172,32 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
   },
 
   /**
+   * Проверяет состояние задачи и при необходимости повторно ставит её в очередь.
+   */
+  checkTask: async (taskId) => {
+    const normalizedId = normalizeId(taskId)
+
+    try {
+      const result = await tasksService.checkTask(normalizedId)
+      const { task, details } = mapResultToTaskDetails(result)
+
+      set((state) => {
+        const taskKey = toTaskKey(task.id)
+        const exists = Boolean(state.tasksById[taskKey])
+        upsertTaskEntity(state, task, exists ? {} : { position: 'start' })
+        ensureTaskDetailsStore(state)[taskKey] = details
+      })
+
+      return true
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[TasksStore] checkTask error:', error)
+      }
+      return false
+    }
+  },
+
+  /**
    * Загружает детали задачи и кэширует результат.
    */
   fetchTaskDetails: async (taskId) => {

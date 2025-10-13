@@ -58,4 +58,5 @@ export interface TasksState {
   fetchTaskDetails: (taskId: number | string) => Promise<TaskDetails | null>
   getTaskDetails: (taskId: number | string) => TaskDetails | undefined
   resumeTask: (taskId: number | string) => Promise<boolean>
+  checkTask: (taskId: number | string) => Promise<boolean>
 }

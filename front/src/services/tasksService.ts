@@ -42,5 +42,20 @@ export const tasksService = {
       toast.error('Не удалось возобновить задачу')
       throw error
     }
+  },
+
+  async checkTask(taskId: number | string): Promise<IParsingTaskResult> {
+    try {
+      const result = await tasksApi.checkTask(taskId)
+      if (result.status === 'done' || result.completed) {
+        toast.success('Задача отмечена как завершённая')
+      } else {
+        toast.success('Задача возвращена в очередь')
+      }
+      return result
+    } catch (error) {
+      toast.error('Не удалось проверить задачу')
+      throw error
+    }
   }
 }

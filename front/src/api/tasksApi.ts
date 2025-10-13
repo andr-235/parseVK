@@ -53,5 +53,18 @@ export const tasksApi = {
     }
 
     return response.json()
+  },
+
+  async checkTask(taskId: number | string): Promise<IParsingTaskResult> {
+    const id = encodeURIComponent(String(taskId))
+    const response = await fetch(`${API_URL}/tasks/${id}/check`, {
+      method: 'POST'
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to check task')
+    }
+
+    return response.json()
   }
 }

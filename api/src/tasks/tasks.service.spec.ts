@@ -307,4 +307,93 @@ describe('TasksService', () => {
       expect(queueMock.enqueue).not.toHaveBeenCalled();
     });
   });
+
+  describe('refreshTask', () => {
+    it('marks task as done when processed equals total and skips requeue', async () => {
+      const task = createTaskRecord({
+        id: 33,
+        status: 'running',
+        processedItems: 3,
+        totalItems: 3,
+        description: JSON.stringify({
+          scope: ParsingScope.SELECTED,
+          groupIds: [1, 2, 3],
+          postLimit: 10,
+        }),
+      });
+
+      prismaMock.task.findUnique.mockResolvedValue(task);
+      runnerMock.resolveGroups.mockResolvedValue([
+        { id: 1, vkId: 101, name: 'Group 1', wall: 1 },
+        { id: 2, vkId: 102, name: 'Group 2', wall: 1 },
+        { id: 3, vkId: 103, name: 'Group 3', wall: 1 },
+      ]);
+
+      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
+        ...task,
+        ...data,
+      }));
+
+      const result = await service.refreshTask(task.id);
+
+      expect(prismaMock.task.update).toHaveBeenCalledWith({
+        where: { id: task.id },
+        data: expect.objectContaining({
+          status: 'done',
+          completed: true,
+          progress: 1,
+          processedItems: 3,
+          totalItems: 3,
+        }),
+      });
+      expect(queueMock.enqueue).not.toHaveBeenCalled();
+      expect(result.status).toBe('done');
+      expect(result.completed).toBe(true);
+    });
+
+    it('requeues task when progress is incomplete', async () => {
+      const task = createTaskRecord({
+        id: 34,
+        status: 'running',
+        processedItems: 1,
+        totalItems: 3,
+        description: JSON.stringify({
+          scope: ParsingScope.ALL,
+          groupIds: [],
+          postLimit: 5,
+        }),
+      });
+
+      prismaMock.task.findUnique.mockResolvedValue(task);
+      runnerMock.resolveGroups.mockResolvedValue([
+        { id: 1, vkId: 201, name: 'Group 1', wall: 1 },
+        { id: 2, vkId: 202, name: 'Group 2', wall: 1 },
+        { id: 3, vkId: 203, name: 'Group 3', wall: 1 },
+      ]);
+
+      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
+        ...task,
+        ...data,
+      }));
+
+      const result = await service.refreshTask(task.id);
+
+      expect(prismaMock.task.update).toHaveBeenCalledWith({
+        where: { id: task.id },
+        data: expect.objectContaining({
+          status: 'pending',
+          completed: false,
+          processedItems: 1,
+          totalItems: 3,
+        }),
+      });
+      expect(queueMock.enqueue).toHaveBeenCalledWith({
+        taskId: task.id,
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 5,
+      });
+      expect(result.status).toBe('pending');
+    });
+  });
 });
