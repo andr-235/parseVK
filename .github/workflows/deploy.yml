@@ -1,0 +1,84 @@
+name: Deploy to Production Server
+
+# Триггеры запуска workflow
+on:
+  # Автоматический деплой при push в main ветку
+  push:
+    branches:
+      - main
+
+  # Ручной запуск через GitHub UI
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Debian Server
+    runs-on: ubuntu-latest
+
+    steps:
+      # Шаг 1: Получаем код из репозитория
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Шаг 2: Проверяем доступность сервера
+      - name: Check server connectivity
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            echo "Server is accessible"
+            echo "Current user: $(whoami)"
+            echo "Docker version: $(docker --version)"
+            echo "Docker Compose version: $(docker compose version)"
+
+      # Шаг 3: Деплой на сервер
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            # Переходим в директорию проекта
+            cd ${{ secrets.PROJECT_PATH }}
+
+            echo "=== Pulling latest changes from Git ==="
+            git fetch origin
+            git reset --hard origin/main
+
+            echo "=== Stopping containers ==="
+            docker compose down
+
+            echo "=== Removing old images ==="
+            docker image prune -af
+
+            echo "=== Building and starting containers ==="
+            docker compose up -d --build
+
+            echo "=== Waiting for services to start ==="
+            sleep 10
+
+            echo "=== Checking container status ==="
+            docker compose ps
+
+            echo "=== Checking API health ==="
+            curl -f http://localhost:3000/api/health || echo "API health check failed"
+
+            echo "=== Checking Frontend ==="
+            curl -f http://localhost:80 || echo "Frontend check failed"
+
+            echo "=== Deployment completed ==="
+
+      # Шаг 4: Уведомление об успехе/неудаче
+      - name: Deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+          fi
