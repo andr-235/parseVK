@@ -200,6 +200,165 @@ describe("VkService", () => {
         });
     });
 
+    describe("getAuthorCommentsForPost", () => {
+        it("возвращает только комментарии указанного автора и сохраняет вложенность", async () => {
+            const { service, api } = createService();
+
+            api.wall.getComments.mockResolvedValue({
+                count: 50,
+                current_level_count: 2,
+                can_post: 0,
+                show_reply_button: 0,
+                groups_can_post: 0,
+                items: [
+                    {
+                        id: 10,
+                        owner_id: 1,
+                        post_id: 2,
+                        from_id: 123,
+                        date: 1_700_000_500,
+                        text: "parent",
+                        thread: {
+                            count: 2,
+                            items: [
+                                {
+                                    id: 11,
+                                    owner_id: 1,
+                                    post_id: 2,
+                                    from_id: 999,
+                                    date: 1_700_000_600,
+                                    text: "other child",
+                                },
+                                {
+                                    id: 12,
+                                    owner_id: 1,
+                                    post_id: 2,
+                                    from_id: 123,
+                                    date: 1_700_000_700,
+                                    text: "child",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        id: 13,
+                        owner_id: 1,
+                        post_id: 2,
+                        from_id: 456,
+                        date: 1_700_000_800,
+                        text: "other",
+                    },
+                ],
+                profiles: [],
+                groups: [],
+            });
+
+            const result = await service.getAuthorCommentsForPost({
+                ownerId: 1,
+                postId: 2,
+                authorVkId: 123,
+                batchSize: 10,
+                maxPages: 1,
+                threadItemsCount: 5,
+            });
+
+            expect(api.wall.getComments).toHaveBeenCalledWith({
+                owner_id: 1,
+                post_id: 2,
+                need_likes: 0,
+                extended: 0,
+                count: 10,
+                offset: 0,
+                sort: "desc",
+                preview_length: undefined,
+                comment_id: undefined,
+                start_comment_id: undefined,
+                thread_items_count: 5,
+                fields: undefined,
+            });
+
+            expect(result).toEqual([
+                {
+                    vkCommentId: 10,
+                    ownerId: 1,
+                    postId: 2,
+                    fromId: 123,
+                    text: "parent",
+                    publishedAt: new Date(1_700_000_500 * 1000),
+                    likesCount: undefined,
+                    parentsStack: undefined,
+                    threadCount: 2,
+                    threadItems: [
+                        {
+                            vkCommentId: 12,
+                            ownerId: 1,
+                            postId: 2,
+                            fromId: 123,
+                            text: "child",
+                            publishedAt: new Date(1_700_000_700 * 1000),
+                            likesCount: undefined,
+                            parentsStack: undefined,
+                            threadCount: undefined,
+                            threadItems: undefined,
+                            attachments: undefined,
+                            replyToUser: undefined,
+                            replyToComment: undefined,
+                            isDeleted: false,
+                        },
+                    ],
+                    attachments: undefined,
+                    replyToUser: undefined,
+                    replyToComment: undefined,
+                    isDeleted: false,
+                },
+            ]);
+        });
+
+        it("останавливает пагинацию при достижении baseline", async () => {
+            const { service, api } = createService();
+
+            api.wall.getComments.mockResolvedValue({
+                count: 200,
+                current_level_count: 2,
+                can_post: 0,
+                show_reply_button: 0,
+                groups_can_post: 0,
+                items: [
+                    {
+                        id: 21,
+                        owner_id: 1,
+                        post_id: 2,
+                        from_id: 123,
+                        date: 1_700_000_100,
+                        text: "recent",
+                    },
+                    {
+                        id: 22,
+                        owner_id: 1,
+                        post_id: 2,
+                        from_id: 789,
+                        date: 1_700_000_050,
+                        text: "older",
+                    },
+                ],
+                profiles: [],
+                groups: [],
+            });
+
+            const result = await service.getAuthorCommentsForPost({
+                ownerId: 1,
+                postId: 2,
+                authorVkId: 123,
+                baseline: new Date(1_700_000_100 * 1000),
+                batchSize: 20,
+                maxPages: 3,
+            });
+
+            expect(api.wall.getComments).toHaveBeenCalledTimes(1);
+            expect(result).toEqual([]);
+        });
+    });
+
     describe("getComments", () => {
         it("преобразует вложенные треды и даты", async () => {
             const { service, api } = createService();

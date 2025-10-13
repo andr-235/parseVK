@@ -18,6 +18,8 @@ interface CommentsTableCardProps {
   isLoadingMore: boolean
   totalCount: number
   loadedCount: number
+  onAddToWatchlist?: (commentId: number) => void
+  watchlistPending?: Record<number, boolean>
 }
 
 function CommentsTableCard({
@@ -31,6 +33,8 @@ function CommentsTableCard({
   isLoadingMore,
   totalCount,
   loadedCount,
+  onAddToWatchlist,
+  watchlistPending,
 }: CommentsTableCardProps) {
   const hasComments = comments.length > 0
   const totalAvailable = Math.max(totalCount, loadedCount)
@@ -76,6 +80,8 @@ function CommentsTableCard({
                   index={index}
                   keywords={keywords}
                   toggleReadStatus={toggleReadStatus}
+                  onAddToWatchlist={onAddToWatchlist}
+                  isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
                 />
               ))}
             </div>

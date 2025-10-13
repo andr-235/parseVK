@@ -8,6 +8,7 @@ import Tasks from './pages/Tasks'
 import Groups from './pages/Groups'
 import Comments from './pages/Comments'
 import Keywords from './pages/Keywords'
+import Watchlist from './pages/Watchlist'
 
 function App() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode)
@@ -36,6 +37,7 @@ function App() {
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/groups" element={<Groups />} />
             <Route path="/comments" element={<Comments />} />
+            <Route path="/watchlist" element={<Watchlist />} />
             <Route path="/keywords" element={<Keywords />} />
           </Routes>
         </MainContent>

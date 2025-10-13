@@ -7,6 +7,7 @@ import { GroupsModule } from './groups/groups.module';
 import { KeywordsModule } from './keywords/keywords.module';
 import { TasksModule } from './tasks/tasks.module';
 import { CommentsModule } from './comments/comments.module';
+import { WatchlistModule } from './watchlist/watchlist.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CommentsModule } from './comments/comments.module';
     KeywordsModule,
     TasksModule,
     CommentsModule,
+    WatchlistModule,
   ],
   controllers: [AppController],
   providers: [AppService],

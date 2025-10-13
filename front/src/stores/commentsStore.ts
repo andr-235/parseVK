@@ -178,6 +178,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       const response = await commentsApi.getComments({ offset, limit: COMMENTS_PAGE_SIZE })
       const normalized = response.items.map((comment) => {
         const authorInfo = resolveAuthorInfo(comment)
+        const watchlistAuthorId = typeof comment.watchlistAuthorId === 'number' ? comment.watchlistAuthorId : null
 
         return {
           id: comment.id,
@@ -189,7 +190,9 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
           text: comment.text ?? '',
           createdAt: normalizeCreatedAt(comment.createdAt),
           publishedAt: comment.publishedAt ? normalizeCreatedAt(comment.publishedAt) : null,
-          isRead: comment.isRead ?? false
+          isRead: comment.isRead ?? false,
+          watchlistAuthorId,
+          isWatchlisted: Boolean(watchlistAuthorId)
         }
       })
 
@@ -241,5 +244,15 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       console.error('Failed to update read status', error)
       throw error
     }
+  },
+
+  markWatchlisted(commentId, watchlistAuthorId) {
+    set((state) => ({
+      comments: state.comments.map((comment) =>
+        comment.id === commentId
+          ? { ...comment, watchlistAuthorId, isWatchlisted: true }
+          : comment
+      )
+    }))
   }
 }))

@@ -200,11 +200,130 @@ export class VkService {
         }
     }
 
+    async getAuthorCommentsForPost(options: {
+        ownerId: number;
+        postId: number;
+        authorVkId: number;
+        baseline?: Date | null;
+        batchSize?: number;
+        maxPages?: number;
+        threadItemsCount?: number;
+    }): Promise<IComment[]> {
+        const {
+            ownerId,
+            postId,
+            authorVkId,
+            baseline = null,
+            batchSize = 100,
+            maxPages = 5,
+            threadItemsCount = 10,
+        } = options;
+
+        const baselineTimestamp = baseline ? baseline.getTime() : null;
+
+        let offset = 0;
+        let page = 0;
+        const collected: IComment[] = [];
+
+        while (page < maxPages) {
+            const response = await this.getComments({
+                ownerId,
+                postId,
+                count: batchSize,
+                offset,
+                sort: "desc",
+                needLikes: false,
+                extended: false,
+                threadItemsCount,
+            });
+
+            const items = response.items ?? [];
+
+            if (!items.length) {
+                break;
+            }
+
+            const filtered = this.filterCommentsByAuthor(items, authorVkId, baselineTimestamp);
+
+            if (filtered.length) {
+                collected.push(...filtered);
+            }
+
+            offset += items.length;
+            page += 1;
+
+            if (baselineTimestamp !== null) {
+                const oldest = this.findOldestTimestamp(items);
+
+                if (oldest !== null && oldest <= baselineTimestamp) {
+                    break;
+                }
+            }
+
+            if (offset >= (response.count ?? 0)) {
+                break;
+            }
+        }
+
+        return collected;
+    }
+
     private mapComments(
         items: Objects.WallWallComment[],
         defaults: { ownerId: number; postId: number },
     ): IComment[] {
         return items.map((item) => this.mapComment(item, defaults));
+    }
+
+    private filterCommentsByAuthor(
+        items: IComment[],
+        authorVkId: number,
+        baselineTimestamp: number | null,
+    ): IComment[] {
+        const result: IComment[] = [];
+
+        for (const item of items) {
+            const childItems = item.threadItems?.length
+                ? this.filterCommentsByAuthor(item.threadItems, authorVkId, baselineTimestamp)
+                : [];
+
+            const isAuthorComment = item.fromId === authorVkId;
+            const isAfterBaseline =
+                baselineTimestamp === null || item.publishedAt.getTime() > baselineTimestamp;
+
+            if (isAuthorComment && isAfterBaseline) {
+                result.push({
+                    ...item,
+                    threadItems: childItems.length ? childItems : undefined,
+                });
+            } else if (childItems.length) {
+                result.push(...childItems);
+            }
+        }
+
+        return result;
+    }
+
+    private findOldestTimestamp(comments: IComment[]): number | null {
+        let oldest: number | null = null;
+
+        for (const comment of comments) {
+            const timestamp = comment.publishedAt.getTime();
+
+            if (oldest === null || timestamp < oldest) {
+                oldest = timestamp;
+            }
+
+            if (comment.threadItems?.length) {
+                const nestedOldest = this.findOldestTimestamp(comment.threadItems);
+
+                if (nestedOldest !== null && (oldest === null || nestedOldest < oldest)) {
+                    oldest = nestedOldest;
+                }
+            }
+        }
+
+        return oldest;
     }
 
     private mapComment(

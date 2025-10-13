@@ -16,6 +16,8 @@ export interface Comment {
   createdAt: string
   publishedAt?: string | null
   isRead: boolean
+  watchlistAuthorId?: number | null
+  isWatchlisted: boolean
 }
 
 export interface Group {
@@ -99,4 +101,60 @@ export interface TaskDetails extends Task {
     currentIndex?: number | null
     remainingCount?: number | null
   }[]
+}
+
+export type WatchlistStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED'
+
+export interface WatchlistAuthorProfile {
+  vkUserId: number
+  firstName: string
+  lastName: string
+  fullName: string
+  avatar: string | null
+  profileUrl: string | null
+  screenName: string | null
+  domain: string | null
+}
+
+export interface WatchlistAuthorCard {
+  id: number
+  authorVkId: number
+  status: WatchlistStatus
+  lastCheckedAt: string | null
+  lastActivityAt: string | null
+  foundCommentsCount: number
+  totalComments: number
+  monitoringStartedAt: string
+  monitoringStoppedAt: string | null
+  settingsId: number
+  author: WatchlistAuthorProfile
+}
+
+export interface WatchlistComment {
+  id: number
+  ownerId: number
+  postId: number
+  vkCommentId: number
+  text: string | null
+  publishedAt: string | null
+  createdAt: string
+  source: 'TASK' | 'WATCHLIST'
+  commentUrl: string | null
+}
+
+export interface WatchlistAuthorDetails extends WatchlistAuthorCard {
+  comments: {
+    items: WatchlistComment[]
+    total: number
+    hasMore: boolean
+  }
+}
+
+export interface WatchlistSettings {
+  id: number
+  trackAllComments: boolean
+  pollIntervalMinutes: number
+  maxAuthors: number
+  createdAt: string
+  updatedAt: string
 }

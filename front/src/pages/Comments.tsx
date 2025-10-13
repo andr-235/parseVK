@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useCommentsStore, useKeywordsStore } from '../stores'
+import { useCommentsStore, useKeywordsStore, useWatchlistStore } from '../stores'
 import CommentsFiltersPanel from './Comments/components/CommentsFiltersPanel'
 import CommentsTableCard from './Comments/components/CommentsTableCard'
 import CommentsHero from './Comments/components/CommentsHero'
@@ -13,11 +13,14 @@ function Comments() {
   const hasMore = useCommentsStore((state) => state.hasMore)
   const totalCount = useCommentsStore((state) => state.totalCount)
   const toggleReadStatus = useCommentsStore((state) => state.toggleReadStatus)
+  const markWatchlisted = useCommentsStore((state) => state.markWatchlisted)
   const keywords = useKeywordsStore((state) => state.keywords)
   const fetchKeywords = useKeywordsStore((state) => state.fetchKeywords)
+  const addAuthorFromComment = useWatchlistStore((state) => state.addAuthorFromComment)
   const [showOnlyKeywordComments, setShowOnlyKeywordComments] = useState(false)
   const [readFilter, setReadFilter] = useState<'all' | 'unread' | 'read'>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [pendingWatchlist, setPendingWatchlist] = useState<Record<number, boolean>>({})
 
   const normalizedKeywords = useMemo(
     () =>
@@ -152,6 +155,26 @@ function Comments() {
     void loadComments(false)
   }, [loadComments])
 
+  const handleAddToWatchlist = useCallback(
+    async (commentId: number) => {
+      setPendingWatchlist((prev) => ({ ...prev, [commentId]: true }))
+
+      try {
+        const author = await addAuthorFromComment({ commentId })
+        markWatchlisted(commentId, author.id)
+      } catch (error) {
+        console.error('Не удалось добавить автора в список "На карандаше"', error)
+      } finally {
+        setPendingWatchlist((prev) => {
+          const next = { ...prev }
+          delete next[commentId]
+          return next
+        })
+      }
+    },
+    [addAuthorFromComment, markWatchlisted],
+  )
+
   return (
     <div className="flex flex-col gap-8">
 
@@ -180,6 +203,8 @@ function Comments() {
         isLoadingMore={isLoadingMore}
         totalCount={totalCount}
         loadedCount={loadedCount}
+        onAddToWatchlist={handleAddToWatchlist}
+        watchlistPending={pendingWatchlist}
       />
     </div>
   )

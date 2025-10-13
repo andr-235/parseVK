@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
-import { useCommentsStore, useTasksStore } from '@/stores'
+import { useCommentsStore, useTasksStore, useWatchlistStore } from '@/stores'
 import ThemeToggle from './ThemeToggle'
 
 type SidebarItem = {
@@ -79,6 +79,21 @@ const KeywordsIcon = () => (
   </svg>
 )
 
+const WatchlistIcon = () => (
+  <svg
+    className={iconClasses}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M15 12a3 3 0 1 0-6 0 3 3 0 0 0 6 0" />
+    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12" />
+  </svg>
+)
+
 const ReportsIcon = () => (
   <svg
     className={iconClasses}
@@ -130,6 +145,7 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
 
   const tasksCount = useTasksStore((state) => state.tasks.length)
   const commentsCount = useCommentsStore((state) => state.totalCount)
+  const watchlistCount = useWatchlistStore((state) => state.totalAuthors)
 
   const primaryItems = useMemo<SidebarItem[]>(() => {
     const formatCount = (count: number) => (count > 0 ? String(count) : undefined)
@@ -138,9 +154,10 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
       { label: 'Задачи', path: '/tasks', icon: <TasksIcon />, badge: formatCount(tasksCount) },
       { label: 'Группы', path: '/groups', icon: <GroupsIcon /> },
       { label: 'Комментарии', path: '/comments', icon: <CommentsIcon />, badge: formatCount(commentsCount) },
+      { label: 'На карандаше', path: '/watchlist', icon: <WatchlistIcon />, badge: formatCount(watchlistCount) },
       { label: 'Ключевые слова', path: '/keywords', icon: <KeywordsIcon /> },
     ]
-  }, [tasksCount, commentsCount])
+  }, [tasksCount, commentsCount, watchlistCount])
 
   const secondaryItems: SidebarItem[] = [
     { label: 'Отчёты', path: '/reports', icon: <ReportsIcon /> },

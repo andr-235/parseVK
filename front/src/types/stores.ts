@@ -18,6 +18,7 @@ export interface CommentsState {
   totalCount: number
   fetchComments: (options?: { reset?: boolean }) => Promise<void>
   toggleReadStatus: (id: number) => Promise<void>
+  markWatchlisted: (commentId: number, watchlistAuthorId: number) => void
 }
 
 // Keywords Store Types

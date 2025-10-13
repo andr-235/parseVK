@@ -14,6 +14,18 @@ datasource db {
 }
 
 
+enum CommentSource {
+  TASK
+  WATCHLIST
+}
+
+enum WatchlistStatus {
+  ACTIVE
+  PAUSED
+  STOPPED
+}
+
+
 model Task {
   id          Int      @id @default(autoincrement())
   title       String
@@ -94,12 +106,17 @@ model Comment {
   author        Author? @relation(fields: [authorVkId], references: [vkUserId], onDelete: SetNull)
   isDeleted      Boolean  @default(false)
   isRead         Boolean  @default(false)
+  source         CommentSource @default(TASK)
+  watchlistAuthorId Int?
+  watchlistAuthor   WatchlistAuthor? @relation(fields: [watchlistAuthorId], references: [id], onDelete: SetNull)
+  watchlistSource   WatchlistAuthor? @relation("WatchlistSourceComment")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   post           Post     @relation(fields: [ownerId, postId], references: [ownerId, vkPostId], onDelete: Cascade)
 
   @@index([postId])
   @@index([authorVkId])
+  @@index([watchlistAuthorId])
   @@unique([ownerId, vkCommentId])
 }
 
@@ -118,6 +135,7 @@ model Author {
   city            Json?
   country         Json?
   comments        Comment[]
+  watchlistAuthors WatchlistAuthor[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -129,3 +147,35 @@ model Keyword {
   updatedAt DateTime @updatedAt
 }
 
+model WatchlistSettings {
+  id                  Int               @id @default(autoincrement())
+  trackAllComments    Boolean           @default(false)
+  pollIntervalMinutes Int               @default(5)
+  maxAuthors          Int               @default(50)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  authors             WatchlistAuthor[]
+}
+
+model WatchlistAuthor {
+  id                   Int              @id @default(autoincrement())
+  authorVkId           Int
+  sourceCommentId      Int?             @unique
+  status               WatchlistStatus  @default(ACTIVE)
+  lastCheckedAt        DateTime?
+  lastActivityAt       DateTime?
+  foundCommentsCount   Int              @default(0)
+  monitoringStartedAt  DateTime         @default(now())
+  monitoringStoppedAt  DateTime?
+  settingsId           Int
+  settings             WatchlistSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+  author               Author           @relation(fields: [authorVkId], references: [vkUserId], onDelete: Cascade)
+  sourceComment        Comment?         @relation("WatchlistSourceComment", fields: [sourceCommentId], references: [id], onDelete: SetNull)
+  comments             Comment[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@unique([authorVkId, settingsId])
+  @@index([status])
+  @@index([settingsId])
+}

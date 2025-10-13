@@ -90,6 +90,8 @@ export interface ICommentResponse {
   attachments?: unknown
   isDeleted?: boolean
   isRead?: boolean
+  watchlistAuthorId?: number | null
+  source?: 'TASK' | 'WATCHLIST'
 }
 
 export interface IGetCommentsResponse {
@@ -151,4 +153,68 @@ export interface IParsingTaskSummary {
 export interface IParsingTaskResult extends IParsingTaskSummary {
   groups?: IParsingTaskGroup[] | null
   [key: string]: unknown
+}
+
+export interface IWatchlistAuthorProfileResponse {
+  vkUserId: number
+  firstName: string
+  lastName: string
+  fullName: string
+  avatar: string | null
+  screenName: string | null
+  domain: string | null
+  profileUrl: string | null
+}
+
+export type WatchlistStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED'
+
+export interface IWatchlistAuthorResponse {
+  id: number
+  authorVkId: number
+  status: WatchlistStatus
+  lastCheckedAt: string | null
+  lastActivityAt: string | null
+  foundCommentsCount: number
+  totalComments: number
+  monitoringStartedAt: string
+  monitoringStoppedAt: string | null
+  settingsId: number
+  author: IWatchlistAuthorProfileResponse
+}
+
+export interface IWatchlistAuthorListResponse {
+  items: IWatchlistAuthorResponse[]
+  total: number
+  hasMore: boolean
+}
+
+export interface IWatchlistCommentResponse {
+  id: number
+  ownerId: number
+  postId: number
+  vkCommentId: number
+  text: string | null
+  publishedAt: string | null
+  createdAt: string
+  source: 'TASK' | 'WATCHLIST'
+  commentUrl: string | null
+}
+
+export interface IWatchlistCommentsListResponse {
+  items: IWatchlistCommentResponse[]
+  total: number
+  hasMore: boolean
+}
+
+export interface IWatchlistAuthorDetailsResponse extends IWatchlistAuthorResponse {
+  comments: IWatchlistCommentsListResponse
+}
+
+export interface IWatchlistSettingsResponse {
+  id: number
+  trackAllComments: boolean
+  pollIntervalMinutes: number
+  maxAuthors: number
+  createdAt: string
+  updatedAt: string
 }

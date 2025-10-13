@@ -43,6 +43,7 @@ export class CommentsService {
             logo: author.photo200Orig ?? author.photo100 ?? author.photo50 ?? null,
           }
         : null,
+      isWatchlisted: commentData.watchlistAuthorId !== null,
     };
   }
 

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { APIError } from 'vk-io';
-import { Prisma } from '@prisma/client';
+import { CommentSource, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import type { IPost } from '../vk/interfaces/post.interfaces';
@@ -13,6 +13,8 @@ import type {
   PrismaTaskRecord,
   TaskProcessingContext,
 } from './interfaces/parsing-task-runner.types';
+import { AuthorActivityService } from '../common/services/author-activity.service';
+import { normalizeComment } from '../common/utils/comment-normalizer';
 
 @Injectable()
 export class ParsingTaskRunner {
@@ -21,6 +23,7 @@ export class ParsingTaskRunner {
   constructor(
     private readonly prisma: PrismaService,
     private readonly vkService: VkService,
+    private readonly authorActivityService: AuthorActivityService,
   ) {}
 
   async execute(job: ParsingTaskJobData): Promise<void> {
@@ -195,7 +198,7 @@ export class ParsingTaskRunner {
       const newAuthorIds = this.extractNewAuthorIds(authorIds, context.processedAuthorIds);
 
       if (newAuthorIds.length) {
-        const createdOrUpdated = await this.saveAuthors(newAuthorIds);
+        const createdOrUpdated = await this.authorActivityService.saveAuthors(newAuthorIds);
         context.stats.authors += createdOrUpdated;
         newAuthorIds.forEach((id) => context.processedAuthorIds.add(id));
         this.logger.debug(
@@ -204,7 +207,9 @@ export class ParsingTaskRunner {
       }
 
       if (comments.length) {
-        const savedCount = await this.saveComments(comments);
+        const savedCount = await this.authorActivityService.saveComments(comments, {
+          source: CommentSource.TASK,
+        });
         context.stats.comments += savedCount;
         this.logger.debug(
           `Задача ${taskId}: сохранено ${savedCount} комментариев для поста ${post.id} группы ${group.vkId}`,
@@ -389,7 +394,7 @@ export class ParsingTaskRunner {
         break;
       }
 
-      collected.push(...items.map((item) => this.normalizeComment(item)));
+      collected.push(...items.map((item) => normalizeComment(item)));
 
       const collectedIds = this.collectAuthorIds(items);
       collectedIds.forEach((id) => authorIds.add(id));
@@ -427,138 +432,4 @@ export class ParsingTaskRunner {
     return ids;
   }
 
-  private normalizeComment(comment: IComment): CommentEntity {
-    return {
-      postId: comment.postId,
-      ownerId: comment.ownerId,
-      vkCommentId: comment.vkCommentId,
-      fromId: comment.fromId,
-      text: comment.text,
-      publishedAt: comment.publishedAt,
-      likesCount: comment.likesCount ?? null,
-      parentsStack: comment.parentsStack ?? null,
-      threadCount: comment.threadCount ?? null,
-      threadItems: comment.threadItems?.length
-        ? comment.threadItems.map((item) => this.normalizeComment(item))
-        : null,
-      attachments: comment.attachments ?? null,
-      replyToUser: comment.replyToUser ?? null,
-      replyToComment: comment.replyToComment ?? null,
-      isDeleted: comment.isDeleted,
-    };
-  }
-
-  private async saveComments(comments: CommentEntity[]): Promise<number> {
-    let saved = 0;
-
-    for (const comment of comments) {
-      const threadItemsJson: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue =
-        comment.threadItems?.length
-          ? (comment.threadItems.map((item) => this.serializeComment(item)) as Prisma.InputJsonValue)
-          : Prisma.JsonNull;
-
-      const attachmentsJson: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue | undefined =
-        comment.attachments === null
-          ? Prisma.JsonNull
-          : comment.attachments === undefined
-            ? undefined
-            : (comment.attachments as Prisma.InputJsonValue);
-
-      const parentsStackJson: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue =
-        comment.parentsStack === null
-          ? Prisma.JsonNull
-          : (comment.parentsStack as Prisma.InputJsonValue);
-
-      const authorVkId = comment.fromId > 0 ? comment.fromId : null;
-      const upsertData = {
-        postId: comment.postId,
-        ownerId: comment.ownerId,
-        vkCommentId: comment.vkCommentId,
-        fromId: comment.fromId,
-        authorVkId,
-        text: comment.text,
-        publishedAt: comment.publishedAt,
-        likesCount: comment.likesCount,
-        parentsStack: parentsStackJson,
-        threadCount: comment.threadCount,
-        threadItems: threadItemsJson,
-        attachments: attachmentsJson,
-        replyToUser: comment.replyToUser,
-        replyToComment: comment.replyToComment,
-        isDeleted: comment.isDeleted,
-      };
-
-      await this.prisma.comment.upsert({
-        where: {
-          ownerId_vkCommentId: {
-            ownerId: comment.ownerId,
-            vkCommentId: comment.vkCommentId,
-          },
-        },
-        update: upsertData,
-        create: upsertData,
-      });
-
-      saved += 1;
-
-      const threadItems = comment.threadItems;
-      if (threadItems?.length) {
-        saved += await this.saveComments(threadItems);
-      }
-    }
-
-    return saved;
-  }
-
-  private serializeComment(comment: CommentEntity): Record<string, unknown> {
-    return {
-      vkCommentId: comment.vkCommentId,
-      ownerId: comment.ownerId,
-      postId: comment.postId,
-      fromId: comment.fromId,
-      text: comment.text,
-      publishedAt: comment.publishedAt.toISOString(),
-      likesCount: comment.likesCount ?? null,
-      parentsStack: comment.parentsStack ?? null,
-      threadCount: comment.threadCount ?? null,
-      threadItems: comment.threadItems?.length
-        ? comment.threadItems.map((item) => this.serializeComment(item))
-        : null,
-      attachments: comment.attachments ?? null,
-      replyToUser: comment.replyToUser ?? null,
-      replyToComment: comment.replyToComment ?? null,
-      isDeleted: comment.isDeleted,
-    };
-  }
-
-  private async saveAuthors(userIds: number[]): Promise<number> {
-    const authors = await this.vkService.getAuthors(userIds);
-
-    for (const author of authors) {
-      const upsertData = {
-        firstName: author.first_name,
-        lastName: author.last_name,
-        domain: author.domain,
-        screenName: author.screen_name,
-        isClosed: author.is_closed,
-        canAccessClosed: author.can_access_closed,
-        photo50: author.photo_50,
-        photo100: author.photo_100,
-        photo200Orig: author.photo_200_orig,
-        city: author.city,
-        country: author.country,
-      };
-
-      await this.prisma.author.upsert({
-        where: { vkUserId: author.id },
-        update: upsertData,
-        create: {
-          vkUserId: author.id,
-          ...upsertData,
-        },
-      });
-    }
-
-    return authors.length;
-  }
 }

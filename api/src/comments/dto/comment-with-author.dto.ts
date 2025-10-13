@@ -9,4 +9,5 @@ export interface CommentAuthorDto {
 
 export type CommentWithAuthorDto = Comment & {
   author: CommentAuthorDto | null;
+  isWatchlisted: boolean;
 };
