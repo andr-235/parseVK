@@ -1,9 +1,8 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { useKeywordsStore } from '../stores'
-import { getKeywordTableColumns } from '../config/keywordTableColumns'
 import KeywordsHero from './Keywords/components/KeywordsHero'
 import KeywordsActionsPanel from './Keywords/components/KeywordsActionsPanel'
-import KeywordsTableCard from './Keywords/components/KeywordsTableCard'
+import KeywordsCategoriesCard from './Keywords/components/KeywordsCategoriesCard'
 import { Separator } from '@/components/ui/separator'
 
 function Keywords() {
@@ -14,6 +13,7 @@ function Keywords() {
   const fetchKeywords = useKeywordsStore((state) => state.fetchKeywords)
   const isLoading = useKeywordsStore((state) => state.isLoading)
   const [keywordValue, setKeywordValue] = useState('')
+  const [categoryValue, setCategoryValue] = useState('')
 
   useEffect(() => {
     const loadKeywords = async () => {
@@ -28,7 +28,7 @@ function Keywords() {
   }, [fetchKeywords])
 
   const handleAddKeyword = async () => {
-    const isAdded = await addKeyword(keywordValue)
+    const isAdded = await addKeyword(keywordValue, categoryValue)
     if (isAdded) {
       setKeywordValue('')
     }
@@ -58,15 +58,16 @@ function Keywords() {
       <KeywordsActionsPanel
         keywordValue={keywordValue}
         setKeywordValue={setKeywordValue}
+        categoryValue={categoryValue}
+        setCategoryValue={setCategoryValue}
         onAdd={handleAddKeyword}
         onUpload={handleFileUpload}
       />
 
-      <KeywordsTableCard
+      <KeywordsCategoriesCard
         keywords={keywords}
         isLoading={isLoading}
         onDelete={deleteKeyword}
-        columns={getKeywordTableColumns}
       />
     </div>
   )

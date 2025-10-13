@@ -1,6 +1,7 @@
 export interface IKeywordResponse {
   id: number;
   word: string;
+  category: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,4 +16,6 @@ export interface IBulkAddResponse {
   total: number;
   successCount: number;
   failedCount: number;
+  createdCount: number;
+  updatedCount: number;
 }

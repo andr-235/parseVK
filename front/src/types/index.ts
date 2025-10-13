@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 export interface Keyword {
   id: number
   word: string
+  category?: string | null
   createdAt?: string
   updatedAt?: string
 }

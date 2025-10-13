@@ -3,11 +3,11 @@ import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '../typ
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export const keywordsApi = {
-  async addKeyword(word: string): Promise<IKeywordResponse> {
+  async addKeyword(word: string, category?: string | null): Promise<IKeywordResponse> {
     const response = await fetch(`${API_URL}/keywords/add`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ word })
+      body: JSON.stringify({ word, category })
     })
     if (!response.ok) throw new Error('Failed to add keyword')
     return response.json()

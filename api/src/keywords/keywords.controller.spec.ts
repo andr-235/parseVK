@@ -36,14 +36,14 @@ describe('KeywordsController', () => {
   });
 
   it('должен добавить ключевое слово через POST /add', async () => {
-    const dto = { word: 'test' };
-    const response = { id: 1, word: 'test', createdAt: new Date(), updatedAt: new Date() };
+    const dto = { word: 'test', category: 'Маркетинг' };
+    const response = { id: 1, word: 'test', category: 'Маркетинг', createdAt: new Date(), updatedAt: new Date() };
     keywordsService.addKeyword.mockResolvedValue(response);
 
     const result = await controller.addKeyword(dto as any);
 
     expect(result).toEqual(response);
-    expect(keywordsService.addKeyword).toHaveBeenCalledWith('test');
+    expect(keywordsService.addKeyword).toHaveBeenCalledWith('test', 'Маркетинг');
   });
 
   it('должен массово добавить ключевые слова через POST /bulk-add', async () => {
@@ -54,6 +54,8 @@ describe('KeywordsController', () => {
       total: 2,
       successCount: 0,
       failedCount: 0,
+      createdCount: 0,
+      updatedCount: 0,
     };
     keywordsService.bulkAddKeywords.mockResolvedValue(response);
 
@@ -74,6 +76,8 @@ describe('KeywordsController', () => {
       total: 2,
       successCount: 0,
       failedCount: 0,
+      createdCount: 0,
+      updatedCount: 0,
     };
     keywordsService.addKeywordsFromFile.mockResolvedValue(response);
 
@@ -92,8 +96,8 @@ describe('KeywordsController', () => {
 
   it('должен вернуть все ключевые слова через GET /', async () => {
     const response = [
-      { id: 1, word: 'one', createdAt: new Date(), updatedAt: new Date() },
-      { id: 2, word: 'two', createdAt: new Date(), updatedAt: new Date() },
+      { id: 1, word: 'one', category: null, createdAt: new Date(), updatedAt: new Date() },
+      { id: 2, word: 'two', category: 'Продажи', createdAt: new Date(), updatedAt: new Date() },
     ];
     keywordsService.getAllKeywords.mockResolvedValue(response);
 
@@ -114,7 +118,7 @@ describe('KeywordsController', () => {
   });
 
   it('должен удалить ключевое слово по id через DELETE /:id', async () => {
-    const response = { id: 1, word: 'one', createdAt: new Date(), updatedAt: new Date() };
+    const response = { id: 1, word: 'one', category: null, createdAt: new Date(), updatedAt: new Date() };
     keywordsService.deleteKeyword.mockResolvedValue(response);
 
     const result = await controller.deleteKeyword('1');

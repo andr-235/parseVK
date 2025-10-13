@@ -18,15 +18,28 @@ export const useKeywordsStore = create<KeywordsState>((set, get) => ({
     }
   },
 
-  async addKeyword(word) {
+  async addKeyword(word, category) {
     const trimmed = word.trim()
+    const trimmedCategory = category?.trim() ?? ''
     if (!trimmed) {
       return false
     }
 
     try {
-      const keyword = await keywordsApi.addKeyword(trimmed)
-      set((state) => ({ keywords: [...state.keywords, keyword] }))
+      const keyword = await keywordsApi.addKeyword(trimmed, trimmedCategory ? trimmedCategory : null)
+      set((state) => {
+        const existingIndex = state.keywords.findIndex(
+          (existing) => existing.id === keyword.id || existing.word === keyword.word
+        )
+
+        if (existingIndex >= 0) {
+          const nextKeywords = [...state.keywords]
+          nextKeywords[existingIndex] = keyword
+          return { keywords: nextKeywords }
+        }
+
+        return { keywords: [...state.keywords, keyword] }
+      })
       return true
     } catch (error) {
       console.error('Failed to add keyword', error)

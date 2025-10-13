@@ -32,13 +32,19 @@ export interface IDeleteResponse {
 export interface IKeywordResponse {
   id: number
   word: string
+  category?: string | null
   createdAt?: string
   updatedAt?: string
 }
 
 export interface IBulkAddResponse {
+  success: IKeywordResponse[]
+  failed: { word: string; error: string }[]
+  total: number
   successCount: number
-  failed: { word?: string; error: string }[]
+  failedCount: number
+  createdCount: number
+  updatedCount: number
 }
 
 export interface ICommentAuthorResponse {

@@ -26,7 +26,7 @@ export interface KeywordsState {
   keywords: Keyword[]
   isLoading: boolean
   fetchKeywords: () => Promise<void>
-  addKeyword: (word: string) => Promise<boolean>
+  addKeyword: (word: string, category?: string) => Promise<boolean>
   deleteKeyword: (id: number) => Promise<void>
   loadFromFile: (file: File) => Promise<IBulkAddResponse>
   deleteAllKeywords: () => Promise<void>
