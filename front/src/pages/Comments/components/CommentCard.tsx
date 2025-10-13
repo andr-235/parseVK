@@ -5,13 +5,16 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import type { Comment, Keyword } from '@/types'
 import { highlightKeywords } from '@/utils/highlightKeywords'
-import { CheckCircle2, ExternalLink, MessageSquare } from 'lucide-react'
+import { CheckCircle2, ExternalLink, MessageSquare, BookmarkPlus } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 interface CommentCardProps {
   comment: Comment
   index: number
   keywords: Keyword[]
   toggleReadStatus: (id: number) => Promise<void>
+  onAddToWatchlist?: (commentId: number) => void
+  isWatchlistLoading?: boolean
 }
 
 const getAuthorInitials = (name: string): string => {
@@ -53,7 +56,7 @@ const formatDateTime = (value: string): string => {
   })
 }
 
-function CommentCard({ comment, index, keywords, toggleReadStatus }: CommentCardProps) {
+function CommentCard({ comment, index, keywords, toggleReadStatus, onAddToWatchlist, isWatchlistLoading }: CommentCardProps) {
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
       <CardContent className="px-6 pb-6 pt-8 space-y-6">
@@ -149,15 +152,42 @@ function CommentCard({ comment, index, keywords, toggleReadStatus }: CommentCard
             {comment.isRead ? 'Отметить непрочитанным' : 'Отметить прочитанным'}
           </Button>
 
+          {onAddToWatchlist && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={comment.isWatchlisted || Boolean(isWatchlistLoading)}
+              onClick={() => {
+                if (!comment.isWatchlisted) {
+                  onAddToWatchlist(comment.id)
+                }
+              }}
+            >
+              {isWatchlistLoading ? (
+                <Spinner className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <BookmarkPlus className="h-4 w-4" />
+              )}
+              {comment.isWatchlisted ? 'В списке' : 'На карандаше'}
+            </Button>
+          )}
+
           {comment.commentUrl && (
             <Button
               variant="outline"
               size="sm"
-              //onClick={() => window.open(comment.commentUrl, '_blank', 'noopener,noreferrer')}
+              asChild
               className="gap-2"
             >
-              <ExternalLink className="h-4 w-4" />
-              Открыть в VK
+              <a
+                href={comment.commentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Открыть в VK
+              </a>
             </Button>
           )}
         </div>
