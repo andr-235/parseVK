@@ -85,6 +85,18 @@ function Tasks() {
     }
   }, [hasActiveTasks, fetchTasks, fetchTaskDetails, selectedTaskId])
 
+  useEffect(() => {
+    if (selectedTaskId == null) {
+      return
+    }
+
+    const exists = tasks.some((task) => String(task.id) === String(selectedTaskId))
+
+    if (!exists) {
+      setSelectedTaskId(null)
+    }
+  }, [tasks, selectedTaskId])
+
   const handleOpenCreateModal = () => {
     if (areGroupsLoading) {
       return

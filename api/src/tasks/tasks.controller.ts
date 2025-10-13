@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateParsingTaskDto } from './dto/create-parsing-task.dto';
 import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface';
@@ -31,5 +31,10 @@ export class TasksController {
   @Post(':taskId/check')
   async refreshTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<ParsingTaskResult> {
     return this.tasksService.refreshTask(taskId);
+  }
+
+  @Delete(':taskId')
+  async deleteTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<void> {
+    await this.tasksService.deleteTask(taskId);
   }
 }

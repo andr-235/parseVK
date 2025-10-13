@@ -198,6 +198,35 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
   },
 
   /**
+   * Удаляет задачу и очищает локальное состояние.
+   */
+  deleteTask: async (taskId) => {
+    const normalizedId = normalizeId(taskId)
+
+    try {
+      await tasksService.deleteTask(normalizedId)
+
+      set((state) => {
+        const key = toTaskKey(normalizedId)
+        state.taskIds = state.taskIds.filter((id) => toTaskKey(id) !== key)
+        delete state.tasksById[key]
+        state.tasks = rebuildTaskList(state.taskIds, state.tasksById)
+
+        if (state.taskDetails && typeof state.taskDetails === 'object') {
+          delete state.taskDetails[key]
+        }
+      })
+
+      return true
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[TasksStore] deleteTask error:', error)
+      }
+      return false
+    }
+  },
+
+  /**
    * Загружает детали задачи и кэширует результат.
    */
   fetchTaskDetails: async (taskId) => {

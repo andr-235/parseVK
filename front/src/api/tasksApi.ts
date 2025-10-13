@@ -66,5 +66,16 @@ export const tasksApi = {
     }
 
     return response.json()
+  },
+
+  async deleteTask(taskId: number | string): Promise<void> {
+    const id = encodeURIComponent(String(taskId))
+    const response = await fetch(`${API_URL}/tasks/${id}`, {
+      method: 'DELETE'
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to delete task')
+    }
   }
 }

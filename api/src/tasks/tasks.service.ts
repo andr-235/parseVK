@@ -179,6 +179,22 @@ export class TasksService {
     return this.mapTaskToDetail(updatedTask);
   }
 
+  async deleteTask(taskId: number): Promise<void> {
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    await this.parsingQueue.remove(taskId);
+
+    await this.prisma.task.delete({
+      where: { id: taskId },
+    });
+  }
+
   private mapTaskToDetail(task: PrismaTaskRecord): TaskDetail {
     return {
       ...this.mapTaskToSummary(task),

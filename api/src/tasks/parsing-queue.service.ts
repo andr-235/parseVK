@@ -20,6 +20,18 @@ export class ParsingQueueService {
     this.schedule();
   }
 
+  async remove(taskId: number): Promise<void> {
+    if (!this.queue.length) {
+      return;
+    }
+
+    for (let index = this.queue.length - 1; index >= 0; index -= 1) {
+      if (this.queue[index]?.taskId === taskId) {
+        this.queue.splice(index, 1);
+      }
+    }
+  }
+
   private schedule(): void {
     if (!this.processing) {
       this.processing = true;

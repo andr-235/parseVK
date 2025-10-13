@@ -57,5 +57,15 @@ export const tasksService = {
       toast.error('Не удалось проверить задачу')
       throw error
     }
+  },
+
+  async deleteTask(taskId: number | string): Promise<void> {
+    try {
+      await tasksApi.deleteTask(taskId)
+      toast.success('Задача удалена')
+    } catch (error) {
+      toast.error('Не удалось удалить задачу')
+      throw error
+    }
   }
 }
