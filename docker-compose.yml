@@ -49,7 +49,7 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_DEV_MODE: ${VITE_DEV_MODE:-false}
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - api
 
