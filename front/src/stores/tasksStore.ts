@@ -16,6 +16,7 @@ import {
   toTaskKey,
   upsertTaskEntity
 } from './tasksStore.utils'
+import { isTaskActive } from '../utils/taskProgress'
 import type { PersistedTasksState, Task, TaskIdentifier, TaskStatus, TasksStore } from './tasksStore.types'
 
 const persistOptions: PersistOptions<TasksStore, PersistedTasksState> = {
@@ -153,12 +154,13 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
     const normalizedId = normalizeId(taskId)
     const cacheKey = toTaskKey(normalizedId)
     const cached = get().taskDetails[cacheKey]
-    if (cached) {
+    const shouldSkipFetch = cached && !isTaskActive(cached)
+    if (shouldSkipFetch) {
       return cached
     }
 
     try {
-      const result = await tasksService.fetchTaskDetails(taskId)
+      const result = await tasksService.fetchTaskDetails(normalizedId)
 
       const { task, details } = mapResultToTaskDetails(result)
       const exists = Boolean(get().tasksById[toTaskKey(task.id)])
@@ -173,7 +175,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
       if (import.meta.env.DEV) {
         console.error('[TasksStore] fetchTaskDetails error:', error)
       }
-      return null
+      return cached ?? null
     }
   },
 

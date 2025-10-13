@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCommentsStore, useKeywordsStore } from '../stores'
 import CommentsFiltersPanel from './Comments/components/CommentsFiltersPanel'
 import CommentsTableCard from './Comments/components/CommentsTableCard'
@@ -83,19 +83,38 @@ function Comments() {
     return 'Нет комментариев'
   }, [isLoading, readFilter, showOnlyKeywordComments, searchTerm])
 
+  const isFetchingRef = useRef(false)
+
   useEffect(() => {
-    if (comments.length === 0) {
-      const load = async () => {
-        try {
-          await fetchComments()
-        } catch (error) {
-          console.error('Failed to fetch comments', error)
-        }
+    let isUnmounted = false
+
+    const load = async () => {
+      if (isUnmounted || isFetchingRef.current) {
+        return
       }
 
-      void load()
+      isFetchingRef.current = true
+
+      try {
+        await fetchComments()
+      } catch (error) {
+        console.error('Failed to fetch comments', error)
+      } finally {
+        isFetchingRef.current = false
+      }
     }
-  }, [comments.length, fetchComments])
+
+    void load()
+
+    const intervalId = window.setInterval(() => {
+      void load()
+    }, 30000)
+
+    return () => {
+      isUnmounted = true
+      window.clearInterval(intervalId)
+    }
+  }, [fetchComments])
 
   useEffect(() => {
     if (keywords.length === 0) {

@@ -141,6 +141,10 @@ export const mapSummaryToTask = (summary: IParsingTaskSummary): Task => {
 
   let fallbackStatus: unknown = rawStatus
 
+  if (description?.error && typeof description.error === 'string' && description.error.trim().length > 0) {
+    fallbackStatus = 'failed'
+  }
+
   if (!fallbackStatus && typeof summary.completed === 'boolean') {
     fallbackStatus = summary.completed ? 'completed' : 'pending'
   }
