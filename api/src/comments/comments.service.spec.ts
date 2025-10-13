@@ -30,6 +30,7 @@ describe('CommentsService', () => {
         text: 'Комментарий с автором',
         publishedAt: new Date('2024-01-01T00:00:00.000Z'),
         authorVkId: 100,
+        watchlistAuthorId: 42,
         author: {
           vkUserId: 100,
           firstName: 'Иван',
@@ -45,6 +46,7 @@ describe('CommentsService', () => {
         text: 'Комментарий без автора',
         publishedAt: new Date('2024-01-02T00:00:00.000Z'),
         authorVkId: null,
+        watchlistAuthorId: null,
         author: null,
         isRead: false,
       },
@@ -65,10 +67,12 @@ describe('CommentsService', () => {
             lastName: 'Иванов',
             logo: 'https://example.com/photo100.jpg',
           },
+          isWatchlisted: true,
         },
         {
           ...commentsFromPrisma[1],
           author: null,
+          isWatchlisted: false,
         },
       ],
       total: commentsFromPrisma.length,
@@ -103,13 +107,17 @@ describe('CommentsService', () => {
   });
 
   it('должен корректно выставлять hasMore при неполной странице', async () => {
-    prisma.comment.findMany.mockResolvedValue([{ id: 1, author: null } as never]);
+    prisma.comment.findMany.mockResolvedValue([{
+      id: 1,
+      author: null,
+      watchlistAuthorId: null,
+    } as never]);
     prisma.comment.count.mockResolvedValue(5);
 
     const result = await service.getComments({ offset: 0, limit: 1 });
 
     expect(result).toEqual({
-      items: [{ id: 1, author: null }],
+      items: [{ id: 1, author: null, watchlistAuthorId: null, isWatchlisted: false }],
       total: 5,
       hasMore: true,
     });
@@ -122,6 +130,7 @@ describe('CommentsService', () => {
       publishedAt: new Date('2024-01-01T00:00:00.000Z'),
       authorVkId: 100,
       isRead: true,
+      watchlistAuthorId: null,
       author: {
         vkUserId: 100,
         firstName: 'Иван',
@@ -142,6 +151,7 @@ describe('CommentsService', () => {
         lastName: 'Иванов',
         logo: 'https://example.com/photo100.jpg',
       },
+      isWatchlisted: false,
     });
 
     expect(prisma.comment.update).toHaveBeenCalledWith({

@@ -31,10 +31,15 @@ export class CommentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private mapComment(comment: CommentWithOptionalAuthor): CommentWithAuthorDto {
-    const { author, ...commentData } = comment;
+    const {
+      author,
+      watchlistAuthorId,
+      ...commentData
+    } = comment;
 
     return {
       ...commentData,
+      watchlistAuthorId: watchlistAuthorId ?? null,
       author: author
         ? {
             vkUserId: author.vkUserId,
@@ -43,7 +48,7 @@ export class CommentsService {
             logo: author.photo200Orig ?? author.photo100 ?? author.photo50 ?? null,
           }
         : null,
-      isWatchlisted: commentData.watchlistAuthorId !== null,
+      isWatchlisted: watchlistAuthorId != null,
     };
   }
 
