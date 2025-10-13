@@ -7,38 +7,12 @@ import type { IPost } from '../vk/interfaces/post.interfaces';
 import type { IComment } from '../vk/interfaces/comment.interfaces';
 import { ParsingScope } from './dto/create-parsing-task.dto';
 import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface';
-import type { ParsingStats } from './interfaces/parsing-stats.interface';
-
-type PrismaTaskRecord = {
-  id: number;
-  totalItems?: number | null;
-  processedItems?: number | null;
-  progress?: number | null;
-};
-
-type PrismaGroupRecord = {
-  id: number;
-  vkId: number;
-  name: string;
-  wall: number | null;
-};
-
-type CommentEntity = {
-  postId: number;
-  ownerId: number;
-  vkCommentId: number;
-  fromId: number;
-  text: string;
-  publishedAt: Date;
-  likesCount: number | null;
-  parentsStack: number[] | null;
-  threadCount: number | null;
-  threadItems: CommentEntity[] | null;
-  attachments: unknown | null;
-  replyToUser: number | null;
-  replyToComment: number | null;
-  isDeleted: boolean;
-};
+import type {
+  CommentEntity,
+  PrismaGroupRecord,
+  PrismaTaskRecord,
+  TaskProcessingContext,
+} from './interfaces/parsing-task-runner.types';
 
 @Injectable()
 export class ParsingTaskRunner {
@@ -83,120 +57,40 @@ export class ParsingTaskRunner {
       throw error;
     }
 
-    const totalItems = groups.length;
-    const stats: ParsingStats = {
-      groups: groups.length,
-      posts: 0,
-      comments: 0,
-      authors: 0,
-    };
-
-    const skippedGroupVkIds: number[] = [];
-    const processedAuthorIds = new Set<number>();
-    let processedItems = task.processedItems ?? 0;
-
-    const updateTaskProgress = async (handledCount: number): Promise<void> => {
-      processedItems = Math.min(processedItems + handledCount, totalItems);
-      const progress = totalItems > 0 ? Math.min(1, processedItems / totalItems) : 0;
-
-      await this.prisma.task.update({
-        where: { id: taskId },
-        data: {
-          processedItems,
-          progress,
-          status: 'running',
-        } as Prisma.TaskUncheckedUpdateInput,
-      });
-
-      this.logger.debug(
-        `Задача ${taskId}: обновление прогресса ${processedItems}/${totalItems} (${Math.round(progress * 100)}%)`,
-      );
-    };
+    const context = this.createProcessingContext(groups.length, task.processedItems ?? 0);
 
     try {
-      for (const group of groups) {
-        const ownerId = this.toGroupOwnerId(group.vkId);
-        if (this.isGroupWallDisabled(group)) {
-          if (!skippedGroupVkIds.includes(group.vkId)) {
-            skippedGroupVkIds.push(group.vkId);
-            stats.groups = Math.max(0, stats.groups - 1);
-          }
-          this.logger.warn(`Стена группы ${group.vkId} отключена, группа будет пропущена`);
-          continue;
-        }
+      await this.processGroups({
+        groups,
+        postLimit,
+        context,
+        taskId,
+      });
 
-        let posts: IPost[];
-
-        try {
-          posts = await this.vkService.getGroupRecentPosts({ ownerId, count: postLimit });
-        } catch (error) {
-          if (this.isWallDisabledApiError(error)) {
-            if (!skippedGroupVkIds.includes(group.vkId)) {
-              skippedGroupVkIds.push(group.vkId);
-              stats.groups = Math.max(0, stats.groups - 1);
-            }
-            await this.markGroupWallDisabled(group);
-            this.logger.warn(`Группа ${group.vkId} имеет отключенную стену (по данным API), группа будет пропущена`);
-            continue;
-          }
-
-          throw error;
-        }
-
-        this.logger.log(`Задача ${taskId}: получено ${posts.length} постов для группы ${group.vkId}`);
-
-        for (const post of posts) {
-          await this.savePost(post, group);
-          stats.posts += 1;
-
-          const { comments, authorIds } = await this.fetchAllComments(ownerId, post.id);
-
-          const newAuthorIds = authorIds.filter((id) => id > 0 && !processedAuthorIds.has(id));
-
-          if (newAuthorIds.length) {
-            const createdOrUpdated = await this.saveAuthors(newAuthorIds);
-            stats.authors += createdOrUpdated;
-            newAuthorIds.forEach((id) => processedAuthorIds.add(id));
-            this.logger.debug(
-              `Задача ${taskId}: обновлено ${createdOrUpdated} авторов после поста ${post.id} группы ${group.vkId}`,
-            );
-          }
-
-          if (comments.length) {
-            stats.comments += await this.saveComments(comments);
-            this.logger.debug(
-              `Задача ${taskId}: сохранено ${comments.length} комментариев для поста ${post.id} группы ${group.vkId}`,
-            );
-          }
-        }
-
-        await updateTaskProgress(1);
-      }
-
-      const skippedGroupsMessage = this.buildSkippedGroupsMessage(skippedGroupVkIds);
+      const skippedGroupsMessage = this.buildSkippedGroupsMessage(context.skippedGroupVkIds);
 
       await this.prisma.task.update({
         where: { id: taskId },
         data: {
           completed: true,
-          processedItems: totalItems,
+          processedItems: context.totalGroups,
           progress: 1,
           status: 'done',
           description: JSON.stringify({
             scope,
             groupIds,
             postLimit,
-            stats,
+            stats: context.stats,
             skippedGroupsMessage: skippedGroupsMessage ?? undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       });
 
       this.logger.log(
-        `Задача ${taskId} успешно завершена: группы=${stats.groups}, посты=${stats.posts}, комментарии=${stats.comments}, авторы=${stats.authors}`,
+        `Задача ${taskId} успешно завершена: группы=${context.stats.groups}, посты=${context.stats.posts}, комментарии=${context.stats.comments}, авторы=${context.stats.authors}`,
       );
     } catch (error) {
-      const skippedGroupsMessage = this.buildSkippedGroupsMessage(skippedGroupVkIds);
+      const skippedGroupsMessage = this.buildSkippedGroupsMessage(context.skippedGroupVkIds);
 
       await this.prisma.task.update({
         where: { id: taskId },
@@ -208,6 +102,7 @@ export class ParsingTaskRunner {
             postLimit,
             error: error instanceof Error ? error.message : String(error),
             skippedGroupsMessage: skippedGroupsMessage ?? undefined,
+            stats: context.stats,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       });
@@ -219,6 +114,136 @@ export class ParsingTaskRunner {
 
       throw error;
     }
+  }
+
+  private createProcessingContext(totalGroups: number, processedGroups: number): TaskProcessingContext {
+    const clampedProcessed = Math.min(Math.max(processedGroups, 0), totalGroups);
+
+    return {
+      totalGroups,
+      processedGroups: clampedProcessed,
+      stats: {
+        groups: totalGroups,
+        posts: 0,
+        comments: 0,
+        authors: 0,
+      },
+      skippedGroupVkIds: [],
+      processedAuthorIds: new Set<number>(),
+    };
+  }
+
+  private async processGroups(params: {
+    groups: PrismaGroupRecord[];
+    postLimit: number;
+    context: TaskProcessingContext;
+    taskId: number;
+  }): Promise<void> {
+    const { groups, postLimit, context, taskId } = params;
+
+    for (const group of groups) {
+      const shouldUpdateProgress = await this.processGroup({
+        group,
+        postLimit,
+        context,
+        taskId,
+      });
+
+      if (shouldUpdateProgress) {
+        await this.updateTaskProgress(taskId, context, 1);
+      }
+    }
+  }
+
+  private async processGroup(params: {
+    group: PrismaGroupRecord;
+    postLimit: number;
+    context: TaskProcessingContext;
+    taskId: number;
+  }): Promise<boolean> {
+    const { group, postLimit, context, taskId } = params;
+    const ownerId = this.toGroupOwnerId(group.vkId);
+
+    if (this.isGroupWallDisabled(group)) {
+      this.handleSkippedGroup(context, group);
+      this.logger.warn(`Стена группы ${group.vkId} отключена, группа будет пропущена`);
+      return false;
+    }
+
+    let posts: IPost[];
+
+    try {
+      posts = await this.vkService.getGroupRecentPosts({ ownerId, count: postLimit });
+    } catch (error) {
+      if (this.isWallDisabledApiError(error)) {
+        this.handleSkippedGroup(context, group);
+        await this.markGroupWallDisabled(group);
+        this.logger.warn(`Группа ${group.vkId} имеет отключенную стену (по данным API), группа будет пропущена`);
+        return false;
+      }
+
+      throw error;
+    }
+
+    this.logger.log(`Задача ${taskId}: получено ${posts.length} постов для группы ${group.vkId}`);
+
+    for (const post of posts) {
+      await this.savePost(post, group);
+      context.stats.posts += 1;
+
+      const { comments, authorIds } = await this.fetchAllComments(ownerId, post.id);
+      const newAuthorIds = this.extractNewAuthorIds(authorIds, context.processedAuthorIds);
+
+      if (newAuthorIds.length) {
+        const createdOrUpdated = await this.saveAuthors(newAuthorIds);
+        context.stats.authors += createdOrUpdated;
+        newAuthorIds.forEach((id) => context.processedAuthorIds.add(id));
+        this.logger.debug(
+          `Задача ${taskId}: обновлено ${createdOrUpdated} авторов после поста ${post.id} группы ${group.vkId}`,
+        );
+      }
+
+      if (comments.length) {
+        const savedCount = await this.saveComments(comments);
+        context.stats.comments += savedCount;
+        this.logger.debug(
+          `Задача ${taskId}: сохранено ${savedCount} комментариев для поста ${post.id} группы ${group.vkId}`,
+        );
+      }
+    }
+
+    return true;
+  }
+
+  private extractNewAuthorIds(authorIds: number[], processedAuthorIds: Set<number>): number[] {
+    return authorIds.filter((id) => id > 0 && !processedAuthorIds.has(id));
+  }
+
+  private handleSkippedGroup(context: TaskProcessingContext, group: PrismaGroupRecord): void {
+    if (!context.skippedGroupVkIds.includes(group.vkId)) {
+      context.skippedGroupVkIds.push(group.vkId);
+      context.stats.groups = Math.max(0, context.stats.groups - 1);
+    }
+  }
+
+  private async updateTaskProgress(taskId: number, context: TaskProcessingContext, handledCount: number): Promise<void> {
+    context.processedGroups = Math.min(context.processedGroups + handledCount, context.totalGroups);
+    const progress = context.totalGroups > 0
+      ? Math.min(1, context.processedGroups / context.totalGroups)
+      : 0;
+
+    await this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        processedItems: context.processedGroups,
+        progress,
+        status: 'running',
+      } as Prisma.TaskUncheckedUpdateInput,
+    });
+
+    this.logger.debug(
+      `Задача ${taskId}: обновление прогресса ${context.processedGroups}/${context.totalGroups} (${Math.round(progress * 100)}%)`,
+    );
   }
 
   async resolveGroups(scope: ParsingScope, groupIds: number[]): Promise<PrismaGroupRecord[]> {
@@ -313,6 +338,17 @@ export class ParsingTaskRunner {
 
   private async savePost(post: IPost, group: PrismaGroupRecord): Promise<void> {
     const postedAt = new Date(post.date * 1000);
+    const upsertData = {
+      groupId: group.id,
+      fromId: post.from_id,
+      postedAt,
+      text: post.text,
+      commentsCount: post.comments.count,
+      commentsCanPost: post.comments.can_post,
+      commentsGroupsCanPost: post.comments.groups_can_post,
+      commentsCanClose: post.comments.can_close,
+      commentsCanOpen: post.comments.can_open,
+    };
 
     await this.prisma.post.upsert({
       where: {
@@ -321,29 +357,11 @@ export class ParsingTaskRunner {
           vkPostId: post.id,
         },
       },
-      update: {
-        groupId: group.id,
-        fromId: post.from_id,
-        postedAt,
-        text: post.text,
-        commentsCount: post.comments.count,
-        commentsCanPost: post.comments.can_post,
-        commentsGroupsCanPost: post.comments.groups_can_post,
-        commentsCanClose: post.comments.can_close,
-        commentsCanOpen: post.comments.can_open,
-      },
+      update: upsertData,
       create: {
         ownerId: post.owner_id,
         vkPostId: post.id,
-        fromId: post.from_id,
-        groupId: group.id,
-        postedAt,
-        text: post.text,
-        commentsCount: post.comments.count,
-        commentsCanPost: post.comments.can_post,
-        commentsGroupsCanPost: post.comments.groups_can_post,
-        commentsCanClose: post.comments.can_close,
-        commentsCanOpen: post.comments.can_open,
+        ...upsertData,
       },
     });
   }
@@ -451,6 +469,25 @@ export class ParsingTaskRunner {
           ? Prisma.JsonNull
           : (comment.parentsStack as Prisma.InputJsonValue);
 
+      const authorVkId = comment.fromId > 0 ? comment.fromId : null;
+      const upsertData = {
+        postId: comment.postId,
+        ownerId: comment.ownerId,
+        vkCommentId: comment.vkCommentId,
+        fromId: comment.fromId,
+        authorVkId,
+        text: comment.text,
+        publishedAt: comment.publishedAt,
+        likesCount: comment.likesCount,
+        parentsStack: parentsStackJson,
+        threadCount: comment.threadCount,
+        threadItems: threadItemsJson,
+        attachments: attachmentsJson,
+        replyToUser: comment.replyToUser,
+        replyToComment: comment.replyToComment,
+        isDeleted: comment.isDeleted,
+      };
+
       await this.prisma.comment.upsert({
         where: {
           ownerId_vkCommentId: {
@@ -458,40 +495,8 @@ export class ParsingTaskRunner {
             vkCommentId: comment.vkCommentId,
           },
         },
-        update: {
-          postId: comment.postId,
-          ownerId: comment.ownerId,
-          vkCommentId: comment.vkCommentId,
-          fromId: comment.fromId,
-          authorVkId: comment.fromId > 0 ? comment.fromId : null,
-          text: comment.text,
-          publishedAt: comment.publishedAt,
-          likesCount: comment.likesCount,
-          parentsStack: parentsStackJson,
-          threadCount: comment.threadCount,
-          threadItems: threadItemsJson,
-          attachments: attachmentsJson,
-          replyToUser: comment.replyToUser,
-          replyToComment: comment.replyToComment,
-          isDeleted: comment.isDeleted,
-        },
-        create: {
-          postId: comment.postId,
-          ownerId: comment.ownerId,
-          vkCommentId: comment.vkCommentId,
-          fromId: comment.fromId,
-          authorVkId: comment.fromId > 0 ? comment.fromId : null,
-          text: comment.text,
-          publishedAt: comment.publishedAt,
-          likesCount: comment.likesCount,
-          parentsStack: parentsStackJson,
-          threadCount: comment.threadCount,
-          threadItems: threadItemsJson,
-          attachments: attachmentsJson,
-          replyToUser: comment.replyToUser,
-          replyToComment: comment.replyToComment,
-          isDeleted: comment.isDeleted,
-        },
+        update: upsertData,
+        create: upsertData,
       });
 
       saved += 1;
@@ -530,34 +535,26 @@ export class ParsingTaskRunner {
     const authors = await this.vkService.getAuthors(userIds);
 
     for (const author of authors) {
+      const upsertData = {
+        firstName: author.first_name,
+        lastName: author.last_name,
+        domain: author.domain,
+        screenName: author.screen_name,
+        isClosed: author.is_closed,
+        canAccessClosed: author.can_access_closed,
+        photo50: author.photo_50,
+        photo100: author.photo_100,
+        photo200Orig: author.photo_200_orig,
+        city: author.city,
+        country: author.country,
+      };
+
       await this.prisma.author.upsert({
         where: { vkUserId: author.id },
-        update: {
-          firstName: author.first_name,
-          lastName: author.last_name,
-          domain: author.domain,
-          screenName: author.screen_name,
-          isClosed: author.is_closed,
-          canAccessClosed: author.can_access_closed,
-          photo50: author.photo_50,
-          photo100: author.photo_100,
-          photo200Orig: author.photo_200_orig,
-          city: author.city,
-          country: author.country,
-        },
+        update: upsertData,
         create: {
           vkUserId: author.id,
-          firstName: author.first_name,
-          lastName: author.last_name,
-          domain: author.domain,
-          screenName: author.screen_name,
-          isClosed: author.is_closed,
-          canAccessClosed: author.can_access_closed,
-          photo50: author.photo_50,
-          photo100: author.photo_100,
-          photo200Orig: author.photo_200_orig,
-          city: author.city,
-          country: author.country,
+          ...upsertData,
         },
       });
     }
