@@ -98,9 +98,6 @@ function GroupsTableCard({
               )}
             </div>
             <div className="flex flex-wrap justify-end gap-3">
-              <Button className="min-w-[160px]" variant="secondary" disabled>
-                Фильтры (скоро)
-              </Button>
               <Button className="min-w-[180px]" variant="destructive" onClick={onClear} disabled={clearDisabled}>
                 Очистить список
               </Button>
