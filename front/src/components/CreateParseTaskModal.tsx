@@ -129,10 +129,13 @@ function CreateParseTaskModal({ isOpen, groups, isLoading, onClose, onSubmit }: 
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-primary/10 text-2xl font-bold text-accent-primary">
                 {selectedIds.size}
               </div>
-              <div className="space-y-1">
-                <span className="text-sm font-semibold uppercase tracking-wide text-text-secondary">Выбрано групп</span> 
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary/80">
+                  Выбрано групп
+                </span>
                 <span className="text-sm text-text-secondary">
-                  из {groups.length} доступных • найдено {filteredGroups.length}
+                  из <span className="font-medium text-text-primary">{groups.length}</span> доступных • найдено{' '}
+                  <span className="font-medium text-text-primary">{filteredGroups.length}</span>
                 </span>
               </div>
             </div>
