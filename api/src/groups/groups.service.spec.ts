@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import type { PrismaService } from '../prisma.service';
 import type { VkService } from '../vk/vk.service';
@@ -52,6 +52,7 @@ describe('GroupsService', () => {
 
     vkService = {
       getGroups: jest.fn(),
+      searchGroupsByRegion: jest.fn(),
     } as unknown as VkService;
 
     service = new GroupsService(prisma, vkService);
@@ -253,5 +254,82 @@ describe('GroupsService', () => {
     expect(normalizeIdentifier('public101')).toBe('101');
     expect(normalizeIdentifier('  screen_name  ')).toBe('screen_name');
     expect(normalizeIdentifier(555)).toBe(555);
+  });
+
+  describe('searchRegionGroups', () => {
+    const createGroup = (overrides: Partial<IGroup>): IGroup => ({
+      id: 0,
+      name: 'Группа',
+      ...overrides,
+    });
+
+    it('должен возвращать разбивку по наличию в БД без ограничения missing', async () => {
+      const vkGroups: IGroup[] = [
+        createGroup({ id: 10, name: 'Есть в БД' }),
+        createGroup({ id: 20, name: 'Нет в БД #1' }),
+        createGroup({ id: 30, name: 'Нет в БД #2' }),
+      ];
+
+      (vkService.searchGroupsByRegion as jest.Mock).mockResolvedValue(vkGroups);
+      (prisma.group.findMany as jest.Mock).mockResolvedValue([
+        { id: 1, vkId: 10 },
+      ]);
+
+      const result = await service.searchRegionGroups();
+
+      expect(vkService.searchGroupsByRegion).toHaveBeenCalledWith({});
+      expect(prisma.group.findMany).toHaveBeenCalledWith({
+        where: {
+          vkId: {
+            in: [10, 20, 30],
+          },
+        },
+      });
+
+      expect(result.total).toBe(3);
+      expect(result.existsInDb).toHaveLength(1);
+      expect(result.existsInDb[0].id).toBe(10);
+      expect(result.missing).toHaveLength(2);
+      expect(result.missing.map((item) => item.id)).toEqual([20, 30]);
+      expect(result.groups).toEqual([
+        expect.objectContaining({ id: 10, existsInDb: true }),
+        expect.objectContaining({ id: 20, existsInDb: false }),
+        expect.objectContaining({ id: 30, existsInDb: false }),
+      ]);
+    });
+
+    it('должен возвращать пустой результат, если VK не нашёл группы', async () => {
+      (vkService.searchGroupsByRegion as jest.Mock).mockResolvedValue([]);
+
+      const result = await service.searchRegionGroups();
+
+      expect(result).toEqual({
+        total: 0,
+        groups: [],
+        existsInDb: [],
+        missing: [],
+      });
+      expect(prisma.group.findMany).not.toHaveBeenCalled();
+    });
+
+    it('должен пробрасывать NotFoundException при отсутствии региона', async () => {
+      (vkService.searchGroupsByRegion as jest.Mock).mockRejectedValue(
+        new Error('REGION_NOT_FOUND'),
+      );
+
+      await expect(
+        service.searchRegionGroups(),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('должен оборачивать прочие ошибки во внутреннее исключение', async () => {
+      (vkService.searchGroupsByRegion as jest.Mock).mockRejectedValue(
+        new Error('VK error'),
+      );
+
+      await expect(
+        service.searchRegionGroups(),
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+    });
   });
 });

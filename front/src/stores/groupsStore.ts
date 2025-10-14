@@ -1,10 +1,19 @@
 import { create } from 'zustand'
 import type { GroupsState } from '../types/stores'
+import type { IRegionGroupSearchItem } from '../types/api'
 import { groupsService } from '../services/groupsService'
 
 export const useGroupsStore = create<GroupsState>((set, get) => ({
   groups: [],
   isLoading: false,
+  regionSearch: {
+    total: 0,
+    items: [],
+    missing: [],
+    existsInDb: [],
+    isLoading: false,
+    error: null
+  },
 
   fetchGroups: async () => {
     set({ isLoading: true })
@@ -64,5 +73,109 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
       set({ isLoading: false })
       throw error
     }
+  },
+
+  resetRegionSearch: () => {
+    set((state) => ({
+      regionSearch: {
+        ...state.regionSearch,
+        total: 0,
+        items: [],
+        missing: [],
+        existsInDb: [],
+        isLoading: false,
+        error: null
+      }
+    }))
+  },
+
+  searchRegionGroups: async () => {
+    const { regionSearch } = get()
+    set({
+      regionSearch: {
+        ...regionSearch,
+        isLoading: true,
+        error: null
+      }
+    })
+
+    try {
+      const response = await groupsService.searchRegionGroups()
+
+      set((state) => ({
+        regionSearch: {
+          ...state.regionSearch,
+          total: response.total,
+          items: response.groups,
+          missing: response.missing,
+          existsInDb: response.existsInDb,
+          isLoading: false,
+          error: null
+        }
+      }))
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Не удалось выполнить поиск групп'
+
+      set((state) => ({
+        regionSearch: {
+          ...state.regionSearch,
+          isLoading: false,
+          error: errorMessage
+        }
+      }))
+
+      throw error
+    }
+  },
+
+  addGroupFromRegionSearch: async (group: IRegionGroupSearchItem) => {
+    const identifier = group.screen_name
+      ? `https://vk.com/${group.screen_name}`
+      : `club${group.id}`
+
+    const success = await get().addGroup(identifier, group.description ?? '')
+
+    if (!success) {
+      return false
+    }
+
+    set((state) => {
+      const updatedItems = state.regionSearch.items.map((item) =>
+        item.id === group.id ? { ...item, existsInDb: true } : item
+      )
+
+      const updatedMissing = state.regionSearch.missing.filter(
+        (item) => item.id !== group.id
+      )
+
+      const alreadyInDb = state.regionSearch.existsInDb.some(
+        (item) => item.id === group.id
+      )
+
+      const updatedExistsInDb = alreadyInDb
+        ? state.regionSearch.existsInDb
+        : [...state.regionSearch.existsInDb, { ...group, existsInDb: true }]
+
+      return {
+        regionSearch: {
+          ...state.regionSearch,
+          items: updatedItems,
+          missing: updatedMissing,
+          existsInDb: updatedExistsInDb
+        }
+      }
+    })
+
+    return true
+  },
+
+  removeRegionSearchGroup: (vkGroupId) => {
+    set((state) => ({
+      regionSearch: {
+        ...state.regionSearch,
+        missing: state.regionSearch.missing.filter((item) => item.id !== vkGroupId)
+      }
+    }))
   }
 }))

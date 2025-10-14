@@ -18,11 +18,41 @@ export interface IGroupResponse {
   status?: string
   verified?: number
   wall?: number
-  addresses?: any
-  city?: any
-  counters?: any
+  addresses?: Record<string, unknown> | null
+  city?: { id?: number; title?: string; name?: string } | string | null
+  counters?: Record<string, unknown> | null
   createdAt: string
   updatedAt: string
+}
+
+export interface IRegionGroupSearchItem {
+  id: number
+  name: string
+  screen_name?: string
+  is_closed?: number
+  deactivated?: string
+  type?: string
+  photo_50?: string
+  photo_100?: string
+  photo_200?: string
+  activity?: string
+  age_limits?: number
+  description?: string
+  members_count?: number
+  status?: string
+  verified?: number
+  wall?: number
+  addresses?: Record<string, unknown> | null
+  city?: { id?: number; title?: string; name?: string } | string | null
+  counters?: Record<string, unknown> | null
+  existsInDb: boolean
+}
+
+export interface IRegionGroupSearchResponse {
+  total: number
+  groups: IRegionGroupSearchItem[]
+  existsInDb: IRegionGroupSearchItem[]
+  missing: IRegionGroupSearchItem[]
 }
 
 export interface IDeleteResponse {

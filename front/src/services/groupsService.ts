@@ -1,5 +1,6 @@
 import { groupsApi } from '../api/groupsApi'
 import type { Group } from '../types'
+import type { IRegionGroupSearchResponse } from '../types/api'
 import type { SaveGroupDto } from '../dto'
 import toast from 'react-hot-toast'
 
@@ -72,5 +73,14 @@ export const groupsService = {
       throw error
     }
   },
+
+  async searchRegionGroups(): Promise<IRegionGroupSearchResponse> {
+    try {
+      return await groupsApi.searchRegionGroups()
+    } catch (error) {
+      toast.error('Ошибка поиска групп по региону')
+      throw error
+    }
+  }
 
 }

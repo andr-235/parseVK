@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import { IGroup } from '../vk/interfaces/group.interfaces';
@@ -7,6 +12,10 @@ import {
   IBulkSaveGroupError,
   IBulkSaveGroupsResult,
 } from './interfaces/group-bulk.interface';
+import {
+  IRegionGroupSearchItem,
+  IRegionGroupSearchResponse,
+} from './interfaces/group-search.interface';
 
 @Injectable()
 export class GroupsService {
@@ -197,5 +206,69 @@ export class GroupsService {
     return typeof identifier === 'string'
       ? this.parseVkIdentifier(identifier)
       : identifier;
+  }
+
+  async searchRegionGroups(): Promise<IRegionGroupSearchResponse> {
+    try {
+      this.logger.log('Запуск поиска групп по региону "Еврейская автономная область"');
+      const groups = await this.vkService.searchGroupsByRegion({});
+
+      if (!groups.length) {
+        this.logger.log('VK API не вернул групп для заданного региона');
+        return {
+          total: 0,
+          groups: [],
+          existsInDb: [],
+          missing: [],
+        };
+      }
+
+      const vkIds = groups.map((group) => group.id);
+      const existing = await this.prisma.group.findMany({
+        where: {
+          vkId: {
+            in: vkIds,
+          },
+        },
+      });
+
+      const existingIds = new Set(existing.map((group) => group.vkId));
+
+      const items: IRegionGroupSearchItem[] = groups.map((group) => ({
+        ...group,
+        existsInDb: existingIds.has(group.id),
+      }));
+
+      const existsInDb = items.filter((item) => item.existsInDb);
+      const missing = items.filter((item) => !item.existsInDb);
+
+      this.logger.log(
+        `Поиск завершён: всего в VK ${items.length}, в базе ${existsInDb.length}, уникальных к добавлению ${missing.length}`,
+      );
+
+      return {
+        total: items.length,
+        groups: items,
+        existsInDb,
+        missing,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.message === 'REGION_NOT_FOUND') {
+        this.logger.warn(
+          'Попытка поиска по отсутствующему региону "Еврейская автономная область"',
+        );
+        throw new NotFoundException(
+          'Регион "Еврейская автономная область" не найден в VK',
+        );
+      }
+
+      this.logger.error(
+        'Не удалось выполнить поиск групп по региону',
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new InternalServerErrorException(
+        'Не удалось выполнить поиск групп по региону',
+      );
+    }
   }
 }

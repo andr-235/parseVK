@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { ReactNode } from 'react'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
 import SearchInput from '../../../components/SearchInput'
@@ -77,6 +78,18 @@ function GroupsTableCard({
     ? `${groups.length} из ${totalCount} ${getCounterLabel(totalCount)}`
     : `${totalCount} ${getCounterLabel(totalCount)}`
 
+  const getDefaultCellContent = (value: Group[keyof Group], column: TableColumn<Group>): ReactNode => {
+    if (value === null || value === undefined || value === '') {
+      return column.emptyValue ?? '-'
+    }
+
+    if (typeof value === 'object') {
+      return column.emptyValue ?? '-'
+    }
+
+    return value
+  }
+
   return (
     <Card className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Список групп">
       <CardHeader className="flex flex-col gap-6 space-y-0 p-6 pb-4 md:p-8 md:pb-6">
@@ -152,7 +165,9 @@ function GroupsTableCard({
                     <TableRow key={group.id || index}>
                       {tableColumns.map((column) => (
                         <TableCell key={column.key} className={column.cellClassName}>
-                          {column.render ? column.render(group, index) : group[column.key as keyof Group]}
+                          {column.render
+                            ? column.render(group, index)
+                            : getDefaultCellContent(group[column.key as keyof Group], column)}
                         </TableCell>
                       ))}
                     </TableRow>

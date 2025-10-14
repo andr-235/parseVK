@@ -8,5 +8,6 @@ import { PrismaService } from '../prisma.service';
   imports: [VkModule],
   controllers: [GroupsController],
   providers: [GroupsService, PrismaService],
+  exports: [GroupsService],
 })
 export class GroupsModule {}

@@ -4,7 +4,9 @@ import { getGroupTableColumns } from '../config/groupTableColumns'
 import GroupsHero from './Groups/components/GroupsHero'
 import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import GroupsTableCard from './Groups/components/GroupsTableCard'
+import RegionGroupsSearchCard from './Groups/components/RegionGroupsSearchCard'
 import { Separator } from '@/components/ui/separator'
+import type { IRegionGroupSearchItem } from '../types/api'
 
 function Groups() {
   const groups = useGroupsStore((state) => state.groups)
@@ -14,6 +16,11 @@ function Groups() {
   const deleteGroup = useGroupsStore((state) => state.deleteGroup)
   const loadFromFile = useGroupsStore((state) => state.loadFromFile)
   const deleteAllGroups = useGroupsStore((state) => state.deleteAllGroups)
+  const regionSearch = useGroupsStore((state) => state.regionSearch)
+  const searchRegionGroups = useGroupsStore((state) => state.searchRegionGroups)
+  const addGroupFromRegionSearch = useGroupsStore((state) => state.addGroupFromRegionSearch)
+  const removeRegionSearchGroup = useGroupsStore((state) => state.removeRegionSearchGroup)
+  const resetRegionSearch = useGroupsStore((state) => state.resetRegionSearch)
   const [url, setUrl] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -69,6 +76,22 @@ function Groups() {
     }
   }
 
+  const handleRegionSearch = async () => {
+    try {
+      await searchRegionGroups()
+    } catch {
+      // Ошибка обработана в сервисе/toast
+    }
+  }
+
+  const handleAddRegionGroup = async (group: IRegionGroupSearchItem) => {
+    await addGroupFromRegionSearch(group)
+  }
+
+  const handleRemoveRegionGroup = (vkGroupId: number) => {
+    removeRegionSearchGroup(vkGroupId)
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <GroupsHero />
@@ -81,6 +104,17 @@ function Groups() {
         isLoading={isLoading}
         url={url}
         setUrl={setUrl}
+      />
+
+      <RegionGroupsSearchCard
+        total={regionSearch.total}
+        results={regionSearch.missing}
+        isLoading={regionSearch.isLoading}
+        error={regionSearch.error}
+        onSearch={handleRegionSearch}
+        onAddGroup={handleAddRegionGroup}
+        onRemoveGroup={handleRemoveRegionGroup}
+        onReset={resetRegionSearch}
       />
 
       <GroupsTableCard

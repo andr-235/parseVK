@@ -1,5 +1,8 @@
 import type { Comment, Keyword, Group, Task, TaskDetails } from './index'
-import type { IBulkAddResponse } from './api'
+import type {
+  IBulkAddResponse,
+  IRegionGroupSearchItem
+} from './api'
 
 // Navigation Store Types
 export type Page = 'tasks' | 'groups' | 'comments' | 'keywords'
@@ -35,14 +38,28 @@ export interface KeywordsState {
 }
 
 // Groups Store Types
+export interface RegionGroupsSearchState {
+  total: number
+  items: IRegionGroupSearchItem[]
+  missing: IRegionGroupSearchItem[]
+  existsInDb: IRegionGroupSearchItem[]
+  isLoading: boolean
+  error: string | null
+}
+
 export interface GroupsState {
   groups: Group[]
   isLoading: boolean
   fetchGroups: () => Promise<void>
-  addGroup: (url: string) => Promise<boolean>
+  addGroup: (url: string, description?: string) => Promise<boolean>
   deleteGroup: (id: number) => Promise<void>
   loadFromFile: (file: File) => Promise<{ saved: number; errors: string[] }>
   deleteAllGroups: () => Promise<void>
+  regionSearch: RegionGroupsSearchState
+  searchRegionGroups: () => Promise<void>
+  addGroupFromRegionSearch: (group: IRegionGroupSearchItem) => Promise<boolean>
+  removeRegionSearchGroup: (vkGroupId: number) => void
+  resetRegionSearch: () => void
 }
 
 // Tasks Store Types

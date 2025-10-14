@@ -13,11 +13,11 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js",
+    "test:watch": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --watch",
+    "test:cov": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --coverage",
+    "test:debug": "node --inspect-brk -r ./jest-shims/register.js -r tsconfig-paths/register -r ts-node/register ./node_modules/jest/bin/jest.js --runInBand",
+    "test:e2e": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
@@ -74,7 +74,15 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": "<rootDir>/../jest-shims/ts-transform.js"
+    },
+    "moduleNameMapper": {
+      "^vk-io$": "<rootDir>/../jest-shims/node_modules/vk-io/index.js",
+      "^@prisma/client$": "<rootDir>/../jest-shims/node_modules/@prisma/client/index.js",
+      "^@nestjs/cache-manager$": "<rootDir>/../jest-shims/node_modules/@nestjs/cache-manager/index.js",
+      "^@nestjs/bullmq$": "<rootDir>/../jest-shims/node_modules/@nestjs/bullmq/index.js",
+      "^bullmq$": "<rootDir>/../jest-shims/node_modules/bullmq/index.js",
+      "^libphonenumber-js/max$": "<rootDir>/../jest-shims/node_modules/libphonenumber-js/max.js"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

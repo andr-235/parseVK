@@ -6,6 +6,7 @@ import type { Objects, Params, Responses } from 'vk-io';
 import type { IAuthor } from './interfaces/author.interfaces';
 import type { IComment } from './interfaces/comment.interfaces';
 import type { IPost } from './interfaces/post.interfaces';
+import type { IGroup } from './interfaces/group.interfaces';
 import {
   buildGroupCacheKey,
   buildUsersCacheKey,
@@ -216,6 +217,150 @@ export class VkService {
 
     // Сохраняем в кэш
     await this.cacheManager.set(cacheKey, result, CACHE_TTL.VK_POST * 1000);
+
+    return result;
+  }
+
+  async searchGroupsByRegion({
+    query,
+  }: {
+    query?: string;
+  }): Promise<IGroup[]> {
+    this.logger.log(
+      `Начат поиск групп в регионе "Еврейская автономная область"${
+        query && query.trim().length > 0 ? ` с фильтром "${query.trim()}"` : ' без фильтра'
+      }`,
+    );
+    const regionTitle = 'Еврейская автономная область';
+    const normalizedQuery = query?.trim() ?? '';
+    const searchQuery = normalizedQuery.length > 0 ? normalizedQuery : ' ';
+
+    try {
+      const regionsResponse = await this.vk.api.database.getRegions({
+        country_id: 1,
+        q: regionTitle,
+        need_all: 1,
+        count: 1000,
+      });
+
+      const region = regionsResponse.items?.find(
+        (item) => item.title === regionTitle,
+      );
+
+      if (!region) {
+        this.logger.warn(`Регион "${regionTitle}" не найден в VK API`);
+        throw new Error('REGION_NOT_FOUND');
+      }
+
+      const cityIds = await this.collectRegionCityIds(region.id);
+      this.logger.log(
+        `Для региона "${regionTitle}" найдено ${cityIds.length} городов`,
+      );
+
+      if (!cityIds.length) {
+        this.logger.warn(
+          `Для региона "${regionTitle}" не найдены города в VK API`,
+        );
+        return [];
+      }
+
+      const uniqueGroups = new Map<number, IGroup>();
+      const pageSize = 200;
+
+      for (const cityId of cityIds) {
+        let offset = 0;
+
+        while (true) {
+          const response = await this.vk.api.groups.search({
+            q: searchQuery,
+            country_id: 1,
+            city_id: cityId,
+            count: pageSize,
+            offset,
+          });
+
+          const items = (response.items ?? []) as IGroup[];
+
+          if (!items.length) {
+            this.logger.debug(
+              `Город ${cityId}: достигнут конец выдачи на смещении ${offset}`,
+            );
+            break;
+          }
+
+          for (const item of items) {
+            uniqueGroups.set(item.id, item);
+          }
+
+          offset += items.length;
+
+          const total = response.count ?? 0;
+          if (offset >= total || items.length < pageSize) {
+            break;
+          }
+        }
+      }
+
+      this.logger.log(
+        `Поиск по региону завершён, найдено уникальных групп: ${uniqueGroups.size}`,
+      );
+
+      return Array.from(uniqueGroups.values());
+    } catch (error) {
+      if (error instanceof APIError) {
+        this.logger.error(
+          `VK API error during regional group search: ${error.message}`,
+        );
+      } else if (error instanceof Error && error.message === 'REGION_NOT_FOUND') {
+        throw error;
+      } else {
+        this.logger.error(
+          'Не удалось выполнить поиск групп по региону',
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw new Error('UNKNOWN_VK_ERROR');
+    }
+  }
+
+  private async collectRegionCityIds(regionId: number): Promise<number[]> {
+    const pageSize = 1000;
+    const result: number[] = [];
+    let offset = 0;
+
+    while (true) {
+      const response = await this.vk.api.database.getCities({
+        country_id: 1,
+        region_id: regionId,
+        need_all: 1,
+        count: pageSize,
+        offset,
+      });
+
+      const items = response.items ?? [];
+
+      if (!items.length) {
+        break;
+      }
+
+      for (const item of items) {
+        if (typeof item.id === 'number') {
+          result.push(item.id);
+        }
+      }
+
+      offset += items.length;
+
+      const total = response.count ?? 0;
+      if (offset >= total || items.length < pageSize) {
+        break;
+      }
+    }
 
     return result;
   }

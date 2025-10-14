@@ -1,4 +1,8 @@
-import type { IGroupResponse, IDeleteResponse } from '../types/api'
+import type {
+  IGroupResponse,
+  IDeleteResponse,
+  IRegionGroupSearchResponse
+} from '../types/api'
 import type { SaveGroupDto } from '../dto'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -61,6 +65,16 @@ export const groupsApi = {
       method: 'DELETE'
     })
     if (!response.ok) throw new Error('Failed to delete group')
+    return response.json()
+  },
+
+  async searchRegionGroups(): Promise<IRegionGroupSearchResponse> {
+    const response = await fetch(`${API_URL}/groups/search/region`)
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || 'Failed to search region groups')
+    }
+
     return response.json()
   }
 }

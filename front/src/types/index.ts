@@ -41,9 +41,9 @@ export interface Group {
   status?: string
   verified?: number
   wall?: number
-  addresses?: any
-  city?: any
-  counters?: any
+  addresses?: Record<string, unknown> | null
+  city?: { id?: number; title?: string; name?: string } | string | null
+  counters?: Record<string, unknown> | null
   createdAt: string
   updatedAt: string
 }
