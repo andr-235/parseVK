@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
+import SearchInput from '../../../components/SearchInput'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/card'
 import {
   Table,
@@ -20,10 +21,13 @@ type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn<Group>[
 
 interface GroupsTableCardProps {
   groups: Group[]
+  totalCount: number
   isLoading: boolean
   onClear: () => void | Promise<void>
   onDelete: (id: number) => void
   columns: ColumnsFactory
+  searchTerm: string
+  onSearchChange: (value: string) => void
 }
 
 const getCounterLabel = (count: number) => {
@@ -41,8 +45,18 @@ const getCounterLabel = (count: number) => {
   return 'групп'
 }
 
-function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: GroupsTableCardProps) {
-  const hasGroups = groups.length > 0
+function GroupsTableCard({
+  groups,
+  totalCount,
+  isLoading,
+  onClear,
+  onDelete,
+  columns,
+  searchTerm,
+  onSearchChange,
+}: GroupsTableCardProps) {
+  const hasGroups = totalCount > 0
+  const hasFilteredGroups = groups.length > 0
   const tableColumns = useMemo(() => columns(onDelete), [columns, onDelete])
   const { sortedItems: sortedGroups, sortState, requestSort } = useTableSorting(groups, tableColumns)
 
@@ -59,6 +73,9 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
   }, [hasGroups, isLoading])
 
   const clearDisabled = isLoading || !hasGroups
+  const badgeText = searchTerm.trim()
+    ? `${groups.length} из ${totalCount} ${getCounterLabel(totalCount)}`
+    : `${totalCount} ${getCounterLabel(totalCount)}`
 
   return (
     <Card className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Список групп">
@@ -68,6 +85,13 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
           <CardDescription className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">{subtitle}</CardDescription>
         </div>
         <div className="flex min-w-[220px] flex-col items-end gap-3">
+          <div className="w-full min-w-[220px]">
+            <SearchInput
+              value={searchTerm}
+              onChange={onSearchChange}
+              placeholder="Поиск по названию, домену или VK ID"
+            />
+          </div>
           <div className="flex w-full flex-wrap items-center justify-end gap-3">
             {isLoading ? (
               <Badge variant="secondary" className="bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]">
@@ -75,7 +99,7 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
               </Badge>
             ) : (
               <Badge variant="secondary" className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]">
-                {groups.length} {getCounterLabel(groups.length)}
+                {badgeText}
               </Badge>
             )}
           </div>
@@ -95,7 +119,13 @@ function GroupsTableCard({ groups, isLoading, onClear, onDelete, columns }: Grou
 
         {!isLoading && !hasGroups && <EmptyGroupsState />}
 
-        {hasGroups && (
+        {hasGroups && !isLoading && !hasFilteredGroups && (
+          <div className="rounded-[20px] border border-dashed border-border bg-background-primary/40 p-8 text-center text-sm text-text-secondary dark:border-white/10 dark:bg-white/5 dark:text-text-light/70">
+            По вашему запросу ничего не найдено. Проверьте правильность VK ID или названия сообщества.
+          </div>
+        )}
+
+        {hasFilteredGroups && (
           <Card className="relative w-full overflow-hidden rounded-[20px] p-0">
             <div className="overflow-x-auto">
               <Table>

@@ -1,4 +1,4 @@
-import { useState, useEffect, type ChangeEvent } from 'react'
+import { useState, useEffect, useMemo, type ChangeEvent } from 'react'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
 import GroupsHero from './Groups/components/GroupsHero'
@@ -15,9 +15,25 @@ function Groups() {
   const loadFromFile = useGroupsStore((state) => state.loadFromFile)
   const deleteAllGroups = useGroupsStore((state) => state.deleteAllGroups)
   const [url, setUrl] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
 
   const groupsCount = groups.length
   const hasGroups = groupsCount > 0
+
+  const filteredGroups = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+
+    if (!normalizedSearch) {
+      return groups
+    }
+
+    return groups.filter((group) => {
+      const nameMatch = group.name?.toLowerCase().includes(normalizedSearch)
+      const screenNameMatch = group.screenName?.toLowerCase().includes(normalizedSearch)
+      const vkIdMatch = String(group.vkId ?? '').includes(normalizedSearch)
+      return Boolean(nameMatch || screenNameMatch || vkIdMatch)
+    })
+  }, [groups, searchTerm])
 
   useEffect(() => {
     fetchGroups()
@@ -68,8 +84,11 @@ function Groups() {
       />
 
       <GroupsTableCard
-        groups={groups}
+        groups={filteredGroups}
+        totalCount={groupsCount}
         isLoading={isLoading}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
         onClear={handleDeleteAllGroups}
         onDelete={deleteGroup}
         columns={getGroupTableColumns}
