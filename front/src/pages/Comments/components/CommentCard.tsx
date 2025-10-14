@@ -11,10 +11,10 @@ import { Spinner } from '@/components/ui/spinner'
 interface CommentCardProps {
   comment: Comment
   index: number
-  keywords: Keyword[]
   toggleReadStatus: (id: number) => Promise<void>
   onAddToWatchlist?: (commentId: number) => void
   isWatchlistLoading?: boolean
+  matchedKeywords?: Keyword[]
 }
 
 const getAuthorInitials = (name: string): string => {
@@ -56,7 +56,18 @@ const formatDateTime = (value: string): string => {
   })
 }
 
-function CommentCard({ comment, index, keywords, toggleReadStatus, onAddToWatchlist, isWatchlistLoading }: CommentCardProps) {
+function CommentCard({
+  comment,
+  index,
+  toggleReadStatus,
+  onAddToWatchlist,
+  isWatchlistLoading,
+  matchedKeywords,
+}: CommentCardProps) {
+  const uniqueMatchedKeywords = (matchedKeywords ?? []).filter(
+    (keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index,
+  )
+
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
       <CardContent className="px-6 pb-6 pt-8 space-y-6">
@@ -132,7 +143,7 @@ function CommentCard({ comment, index, keywords, toggleReadStatus, onAddToWatchl
             <span className="text-xs font-medium uppercase tracking-wide">Комментарий</span>
           </div>
           <div className="text-[15px] leading-relaxed text-text-primary whitespace-pre-wrap break-words pl-6">
-            {highlightKeywords(comment.text, keywords)}
+            {highlightKeywords(comment.text, uniqueMatchedKeywords)}
           </div>
         </div>
 

@@ -1,55 +1,165 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { Badge } from '@/components/ui/badge'
 import type { Comment, Keyword } from '@/types'
 import LoadingCommentsState from './LoadingCommentsState'
 import EmptyCommentsState from './EmptyCommentsState'
 import CommentCard from './CommentCard'
+import { ChevronDown, ChevronUp } from 'lucide-react'
+
+interface CategorizedComment {
+  comment: Comment
+  matchedKeywords: Keyword[]
+}
+
+interface CategorizedGroup {
+  category: string
+  comments: CategorizedComment[]
+}
 
 interface CommentsTableCardProps {
-  comments: Comment[]
+  groupedComments: CategorizedGroup[]
+  commentsWithoutKeywords: Comment[]
+  commentIndexMap: Map<number, number>
   isLoading: boolean
   emptyMessage: string
-  keywords: Keyword[]
   toggleReadStatus: (id: number) => Promise<void>
   onLoadMore: () => void
   hasMore: boolean
   isLoadingMore: boolean
   totalCount: number
   loadedCount: number
+  visibleCount: number
+  showOnlyKeywordComments: boolean
+  hasDefinedKeywords: boolean
   onAddToWatchlist?: (commentId: number) => void
   watchlistPending?: Record<number, boolean>
+  keywordCommentsTotal: number
+}
+
+const getCommentLabel = (count: number) => {
+  const remainder10 = count % 10
+  const remainder100 = count % 100
+
+  if (remainder10 === 1 && remainder100 !== 11) {
+    return 'комментарий'
+  }
+
+  if (remainder10 >= 2 && remainder10 <= 4 && (remainder100 < 12 || remainder100 > 14)) {
+    return 'комментария'
+  }
+
+  return 'комментариев'
+}
+
+const getCategoryLabel = (count: number) => {
+  const remainder10 = count % 10
+  const remainder100 = count % 100
+
+  if (remainder10 === 1 && remainder100 !== 11) {
+    return 'категория'
+  }
+
+  if (remainder10 >= 2 && remainder10 <= 4 && (remainder100 < 12 || remainder100 > 14)) {
+    return 'категории'
+  }
+
+  return 'категорий'
 }
 
 function CommentsTableCard({
-  comments,
+  groupedComments,
+  commentsWithoutKeywords,
+  commentIndexMap,
   isLoading,
   emptyMessage,
-  keywords,
   toggleReadStatus,
   onLoadMore,
   hasMore,
   isLoadingMore,
   totalCount,
   loadedCount,
+  visibleCount,
+  showOnlyKeywordComments,
+  hasDefinedKeywords,
   onAddToWatchlist,
   watchlistPending,
+  keywordCommentsTotal,
 }: CommentsTableCardProps) {
-  const hasComments = comments.length > 0
+  const hasComments = visibleCount > 0
   const totalAvailable = Math.max(totalCount, loadedCount)
+  const keywordGroups = useMemo(
+    () => groupedComments.filter((group) => group.comments.length > 0),
+    [groupedComments],
+  )
+  const hasKeywordGroups = keywordGroups.length > 0
+  const hasCommentsWithoutKeywords = commentsWithoutKeywords.length > 0
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    setExpandedCategories((previous) => {
+      const next: Record<string, boolean> = {}
+      let changed = false
+
+      keywordGroups.forEach((group) => {
+        const prevValue = previous[group.category]
+        if (prevValue === undefined) {
+          changed = true
+        }
+        next[group.category] = prevValue ?? true
+      })
+
+      if (!changed) {
+        const prevKeys = Object.keys(previous)
+        if (prevKeys.length !== keywordGroups.length) {
+          changed = true
+        } else {
+          for (const key of prevKeys) {
+            if (!(key in next)) {
+              changed = true
+              break
+            }
+          }
+        }
+      }
+
+      return changed ? next : previous
+    })
+  }, [keywordGroups])
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((previous) => ({
+      ...previous,
+      [category]: !(previous[category] ?? true),
+    }))
+  }
+
+  const keywordCommentCount = keywordCommentsTotal
+  const totalCategories = keywordGroups.length
+  const loadedSuffix =
+    totalAvailable > 0 ? ` из ${totalAvailable}` : ''
 
   const subtitle = useMemo(() => {
     if (isLoading && !hasComments) {
       return 'Мы подготавливаем данные и проверяем их перед отображением.'
     }
 
-    if (hasComments) {
-      return 'Ниже отображаются комментарии из добавленных групп. Вы можете отметить их как прочитанные или искать по ключевым словам.'
+    if (hasKeywordGroups) {
+      return 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте фильтры, чтобы сосредоточиться на нужных темах.'
+    }
+
+    if (hasCommentsWithoutKeywords && !hasDefinedKeywords) {
+      return 'Ключевые слова пока не заданы — все найденные комментарии находятся в разделе «Без ключевых слов».'
+    }
+
+    if (hasComments && !showOnlyKeywordComments && hasCommentsWithoutKeywords) {
+      return 'Комментарии без совпадений с ключевыми словами отображаются в отдельном блоке.'
     }
 
     return 'После добавления групп и запуска парсинга комментарии появятся в списке.'
-  }, [hasComments, isLoading])
+  }, [hasComments, hasCommentsWithoutKeywords, hasDefinedKeywords, hasKeywordGroups, isLoading, showOnlyKeywordComments])
 
   return (
     <Card
@@ -63,6 +173,22 @@ function CommentsTableCard({
             {subtitle}
           </CardDescription>
         </div>
+        <div className="flex min-w-[220px] flex-col items-end gap-3">
+          {isLoading ? (
+            <Badge variant="secondary" className="bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]">
+              Загрузка…
+            </Badge>
+          ) : (
+            <div className="flex flex-col items-end gap-2">
+              <Badge variant="secondary" className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]">
+                {keywordCommentCount} {getCommentLabel(keywordCommentCount)} с ключевыми словами
+              </Badge>
+              <Badge variant="outline" className="border-dashed border-border/60 text-text-secondary">
+                {totalCategories} {getCategoryLabel(totalCategories)}
+              </Badge>
+            </div>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="p-6 pt-0 md:px-8 md:pb-8">
@@ -72,24 +198,94 @@ function CommentsTableCard({
 
         {hasComments && (
           <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-4">
-              {comments.map((comment, index) => (
-                <CommentCard
-                  key={comment.id}
-                  comment={comment}
-                  index={index}
-                  keywords={keywords}
-                  toggleReadStatus={toggleReadStatus}
-                  onAddToWatchlist={onAddToWatchlist}
-                  isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
-                />
-              ))}
-            </div>
+            {hasKeywordGroups && (
+              <div className="flex flex-col gap-4">
+                {keywordGroups.map((group) => {
+                  const isExpanded = expandedCategories[group.category] ?? true
+
+                  return (
+                    <section
+                      key={group.category}
+                      className={`rounded-3xl border bg-background p-5 transition-colors ${isExpanded ? 'border-primary/70 shadow-lg shadow-primary/10' : 'border-border/60 hover:border-primary/60'}`}
+                    >
+                      <header className="pb-4">
+                        <button
+                          type="button"
+                          onClick={() => toggleCategory(group.category)}
+                          aria-expanded={isExpanded}
+                          className="flex w-full items-center justify-between gap-4 text-left"
+                        >
+                          <div className="flex flex-col gap-1">
+                            <span className="text-lg font-semibold text-text-primary">{group.category}</span>
+                            <span className="text-sm text-text-secondary">
+                              {group.comments.length} {getCommentLabel(group.comments.length)}
+                            </span>
+                          </div>
+                          <span className="text-text-secondary">
+                            {isExpanded ? <ChevronUp className="size-5" aria-hidden /> : <ChevronDown className="size-5" aria-hidden />}
+                          </span>
+                        </button>
+                      </header>
+
+                      {isExpanded && (
+                        <div className="flex flex-col gap-4">
+                          {group.comments.map(({ comment, matchedKeywords }) => {
+                            const commentIndex = commentIndexMap.get(comment.id) ?? 0
+
+                            return (
+                              <CommentCard
+                                key={`${group.category}-${comment.id}-${commentIndex}`}
+                                comment={comment}
+                                index={commentIndex}
+                                matchedKeywords={matchedKeywords}
+                                toggleReadStatus={toggleReadStatus}
+                                onAddToWatchlist={onAddToWatchlist}
+                                isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
+                              />
+                            )
+                          })}
+                        </div>
+                      )}
+                    </section>
+                  )
+                })}
+              </div>
+            )}
+
+            {(!showOnlyKeywordComments || !hasDefinedKeywords) && hasCommentsWithoutKeywords && (
+              <div className="flex flex-col gap-4">
+                <section className="rounded-3xl border border-border/60 bg-background p-5">
+                  <header className="flex flex-col gap-2 pb-4">
+                    <h3 className="text-lg font-semibold text-text-primary">Без ключевых слов</h3>
+                    <p className="text-sm text-text-secondary">
+                      {commentsWithoutKeywords.length} {getCommentLabel(commentsWithoutKeywords.length)}
+                    </p>
+                  </header>
+                  <div className="flex flex-col gap-4">
+                    {commentsWithoutKeywords.map((comment) => {
+                      const commentIndex = commentIndexMap.get(comment.id) ?? 0
+
+                      return (
+                        <CommentCard
+                          key={`without-keywords-${comment.id}-${commentIndex}`}
+                          comment={comment}
+                          index={commentIndex}
+                          matchedKeywords={[]}
+                          toggleReadStatus={toggleReadStatus}
+                          onAddToWatchlist={onAddToWatchlist}
+                          isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
+                        />
+                      )
+                    })}
+                  </div>
+                </section>
+              </div>
+            )}
 
             <div className="flex flex-col gap-4 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-text-secondary">
-                Отображается {comments.length} комментариев. Загружено {loadedCount}
-                {totalAvailable > 0 ? ` из ${totalAvailable}` : ''}.
+                Отображается {visibleCount} {getCommentLabel(visibleCount)}. Загружено {loadedCount} {getCommentLabel(loadedCount)}
+                {loadedSuffix}.
               </p>
 
               {hasMore && (

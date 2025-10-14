@@ -155,7 +155,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
   hasMore: true,
   totalCount: 0,
 
-  async fetchComments({ reset = false }: { reset?: boolean } = {}) {
+  async fetchComments({ reset = false, limit }: { reset?: boolean; limit?: number } = {}) {
     const state = get()
 
     if (reset ? state.isLoading : state.isLoadingMore || state.isLoading) {
@@ -167,6 +167,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }
 
     const offset = reset ? 0 : state.comments.length
+    const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
 
     if (reset) {
       set({ isLoading: true })
@@ -175,7 +176,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }
 
     try {
-      const response = await commentsApi.getComments({ offset, limit: COMMENTS_PAGE_SIZE })
+      const response = await commentsApi.getComments({ offset, limit: pageSize })
       const normalized = response.items.map((comment) => {
         const authorInfo = resolveAuthorInfo(comment)
         const watchlistAuthorId = typeof comment.watchlistAuthorId === 'number' ? comment.watchlistAuthorId : null

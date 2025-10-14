@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**parseVK** is a VK (VKontakte) analytics application for parsing and analyzing VK group comments. The system consists of three main services:
+**parseVK** is a VK (VKontakte) analytics application for parsing and analyzing VK group comments. The system consists of four main services:
 
 - **API** (Backend): NestJS application that interfaces with VK API and manages parsing tasks
 - **Frontend**: React/Vite application with Zustand state management
 - **Database**: PostgreSQL with Prisma ORM
+- **Redis**: In-memory data store for caching and background job management
 
-The application allows users to create parsing tasks to collect posts and comments from VK groups, track authors, and search for keywords in comments.
+The application allows users to create parsing tasks to collect posts and comments from VK groups, track authors, search for keywords in comments, and monitor specific authors' activity through the "Watchlist" (На карандаше) feature.
 
 ## Development Commands
 
@@ -82,10 +83,14 @@ npm run format:check       # Check formatting without changes
 - `TasksModule` - Parsing task orchestration and progress tracking
 - `CommentsModule` - Comments retrieval and filtering
 - `KeywordsModule` - Keyword management for comment search
+- `WatchlistModule` - Author monitoring system ("На карандаше" feature)
 
 **Key Services:**
 - `VkService` ([src/vk/vk.service.ts](api/src/vk/vk.service.ts)) - Wraps vk-io library for VK API calls (groups, posts, comments, users)
 - `TasksService` ([src/tasks/tasks.service.ts](api/src/tasks/tasks.service.ts)) - Manages parsing tasks: creates tasks, fetches posts/comments from groups, tracks progress, handles errors (e.g., disabled walls)
+- `WatchlistService` ([src/watchlist/watchlist.service.ts](api/src/watchlist/watchlist.service.ts)) - Manages watchlist authors: CRUD operations, periodic monitoring, comment collection
+- `WatchlistMonitorService` ([src/watchlist/watchlist.monitor.service.ts](api/src/watchlist/watchlist.monitor.service.ts)) - Background service that runs every 60 seconds to refresh active watchlist authors
+- `AuthorActivityService` ([src/common/services/author-activity.service.ts](api/src/common/services/author-activity.service.ts)) - Shared service for saving authors and comments from both tasks and watchlist
 - `PrismaService` ([src/prisma.service.ts](api/src/prisma.service.ts)) - Database client initialization
 
 **Task Processing Flow:**
@@ -96,13 +101,24 @@ npm run format:check       # Check formatting without changes
 5. Task completes with `done` status and statistics (groups, posts, comments, authors)
 6. Errors change status to `failed` with error message stored in description
 
+**Watchlist Monitoring Flow:**
+1. User adds author to watchlist via comment card or by VK user ID
+2. `WatchlistService.createAuthor()` fetches author info, creates `WatchlistAuthor` record with `ACTIVE` status
+3. `WatchlistMonitorService` runs every 60 seconds, triggers `WatchlistService.refreshActiveAuthors()`
+4. Refresh checks poll interval from settings (default: 5 minutes) to throttle actual VK API calls
+5. For each active author (up to `maxAuthors` limit): fetch comments from tracked posts, save new comments with `source: WATCHLIST`
+6. Update author's `lastCheckedAt`, `lastActivityAt`, `foundCommentsCount` fields
+7. If `trackAllComments` is disabled, only update check timestamps without fetching comments
+
 **Database Schema (Prisma):**
 - `Task` - Parsing tasks with progress tracking
 - `Group` - VK groups with metadata (membersCount, wall status, etc.)
 - `Post` - VK posts linked to groups
-- `Comment` - VK comments with nested thread support, linked to posts and authors
+- `Comment` - VK comments with nested thread support, linked to posts and authors. Has `source` field (TASK | WATCHLIST) and optional `watchlistAuthorId` reference
 - `Author` - VK users who wrote comments
 - `Keyword` - Keywords for comment filtering
+- `WatchlistAuthor` - Authors being monitored, tracks status (ACTIVE | PAUSED | STOPPED), check timestamps, and comment counts
+- `WatchlistSettings` - Global watchlist configuration (poll interval, max authors, track all comments flag)
 
 **API Routing:**
 - All endpoints prefixed with `/api` (configured in main.ts)
@@ -116,6 +132,7 @@ npm run format:check       # Check formatting without changes
 - `groupsStore` ([stores/groupsStore.ts](front/src/stores/groupsStore.ts)) - VK groups management
 - `commentsStore` ([stores/commentsStore.ts](front/src/stores/commentsStore.ts)) - Comments data with keyword filtering
 - `keywordsStore` ([stores/keywordsStore.ts](front/src/stores/keywordsStore.ts)) - Keyword management
+- `watchlistStore` ([stores/watchlistStore.ts](front/src/stores/watchlistStore.ts)) - Watchlist authors management, author details with paginated comments, settings
 - `themeStore` ([stores/themeStore.ts](front/src/stores/themeStore.ts)) - Dark/light theme toggle
 - `navigationStore` ([stores/navigationStore.ts](front/src/stores/navigationStore.ts)) - Sidebar navigation state
 
@@ -126,6 +143,7 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 - `/groups` - Group management (add, bulk upload, view)
 - `/comments` - Comments view with keyword highlighting
 - `/keywords` - Keyword management
+- `/watchlist` - Watchlist authors management and activity monitoring
 
 **Key Components:**
 - `CreateParseTaskModal` - Modal for creating parsing tasks with group selection
@@ -147,8 +165,8 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 **Key VK API Operations:**
 - `groups.getById` - Fetch group metadata
 - `wall.get` - Fetch group posts with filters
-- `wall.getComments` - Fetch comments with thread support (recursive)
-- `users.get` - Fetch user/author information
+- `wall.getComments` - Fetch comments with thread support (recursive). Extended version `getAuthorCommentsForPost` used by watchlist to filter by specific author VK ID
+- `users.get` - Fetch user/author information (batch fetching supported)
 
 **Error Handling:**
 - API Error 15 (Access denied) handled for disabled group walls
@@ -161,12 +179,21 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 - `VK_TOKEN` - VK API access token (required)
 - `PORT` - API server port (default: 3000)
 
+**Redis:**
+- Redis runs on default port 6379 (configured in docker-compose.yml)
+- No authentication required in development environment
+
 **Frontend:**
 - `VITE_APP_TITLE` - Application title
 - `VITE_API_URL` - API base URL (default: /api)
 - `VITE_DEV_MODE` - Development mode flag
 
 ## Important Implementation Details
+
+### Comment Source Tracking
+- Comments have `source` field with enum values: `TASK` (collected via parsing tasks) or `WATCHLIST` (collected via author monitoring)
+- Comments from watchlist have `watchlistAuthorId` reference linking to the monitored author record
+- This allows distinguishing between bulk-collected comments and targeted author monitoring
 
 ### Task Progress Tracking
 - Tasks use normalized state pattern with `taskIds` array and `tasksById` map
@@ -191,6 +218,18 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 ### Bulk Operations
 - Groups support bulk upload via CSV/JSON
 - Keywords support bulk add via textarea (one per line)
+
+### Watchlist Feature (Author Monitoring)
+- Users can add authors to watchlist from comment cards or by VK user ID
+- Background monitoring via `WatchlistMonitorService` runs every 60 seconds
+- Poll interval (default 5 min) configured in `WatchlistSettings` to throttle VK API calls
+- Three monitoring statuses: ACTIVE (being monitored), PAUSED (temporarily disabled), STOPPED (permanently disabled)
+- Tracks up to `maxAuthors` (default 50) active authors per refresh cycle
+- Two modes: `trackAllComments: true` fetches new comments; `false` only updates check timestamps
+- Monitors posts where author has previously commented (up to 20 most recent posts)
+- Deduplicates comments using `ownerId + vkCommentId` composite key
+- Updates `lastCheckedAt`, `lastActivityAt`, and `foundCommentsCount` for each author
+- Shared `AuthorActivityService` used by both task parsing and watchlist monitoring to avoid code duplication
 
 ## Database Migrations
 
@@ -217,6 +256,25 @@ When modifying the Prisma schema:
 3. Add navigation item in `Sidebar.tsx`
 4. Create store if needed in `front/src/stores/`
 5. Create API service in `front/src/api/`
+
+### Adding an Author to Watchlist
+1. User clicks "Add to Watchlist" button on comment card (provides `commentId`)
+2. OR user provides VK user ID directly (provides `authorVkId`)
+3. Backend validates comment/author exists
+4. If from comment: extract `authorVkId` from comment, link via `sourceCommentId`
+5. Check for duplicates using `authorVkId + settingsId` unique constraint
+6. Fetch author info from VK API via `AuthorActivityService.saveAuthors()`
+7. Create `WatchlistAuthor` record with status ACTIVE
+8. Update source comment with `watchlistAuthorId` and `source: WATCHLIST` if applicable
+9. Background monitoring automatically picks up new active author on next cycle
+
+### Modifying Watchlist Monitoring Behavior
+- Settings stored in `WatchlistSettings` table (singleton record with id=1)
+- `pollIntervalMinutes` - how often to actually fetch from VK API (default: 5)
+- `maxAuthors` - limit of authors to process per refresh cycle (default: 50)
+- `trackAllComments` - if false, only update timestamps without fetching comments
+- Update via PATCH `/api/watchlist/settings` endpoint
+- Monitor interval is fixed at 60 seconds in `WatchlistMonitorService`
 
 ### Debugging Parsing Tasks
 - Check task status in Tasks page
