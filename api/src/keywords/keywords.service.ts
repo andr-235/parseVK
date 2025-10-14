@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { IKeywordResponse, IDeleteResponse, IBulkAddResponse } from './interfaces/keyword.interface';
+import {
+  IKeywordResponse,
+  IDeleteResponse,
+  IBulkAddResponse,
+} from './interfaces/keyword.interface';
 
 @Injectable()
 export class KeywordsService {
@@ -12,24 +16,28 @@ export class KeywordsService {
 
     return this.prisma.keyword.upsert({
       where: { word: normalizedWord },
-      update: normalizedCategory !== null ? { category: normalizedCategory } : {},
+      update:
+        normalizedCategory !== null ? { category: normalizedCategory } : {},
       create: { word: normalizedWord, category: normalizedCategory },
     });
   }
 
   async bulkAddKeywords(words: string[]): Promise<IBulkAddResponse> {
-    const entries = words.map(word => ({ word }));
+    const entries = words.map((word) => ({ word }));
     return this.bulkAddKeywordEntries(entries);
   }
 
   async addKeywordsFromFile(fileContent: string): Promise<IBulkAddResponse> {
     const entries = fileContent
       .split('\n')
-      .map(line => line.replace(/\r/g, '').trim())
-      .filter(line => line.length > 0)
-      .map(line => {
+      .map((line) => line.replace(/\r/g, '').trim())
+      .filter((line) => line.length > 0)
+      .map((line) => {
         const separator = line.includes(';') ? ';' : ',';
-        const parts = line.split(separator).map(part => part.trim()).filter(Boolean);
+        const parts = line
+          .split(separator)
+          .map((part) => part.trim())
+          .filter(Boolean);
 
         if (parts.length === 0) {
           return null;
@@ -41,19 +49,23 @@ export class KeywordsService {
 
         return { word: parts[0], category: parts[1] };
       })
-      .filter((entry): entry is { word: string; category?: string } => entry !== null);
+      .filter(
+        (entry): entry is { word: string; category?: string } => entry !== null,
+      );
 
     return this.bulkAddKeywordEntries(entries);
   }
 
-  private async bulkAddKeywordEntries(entries: { word: string; category?: string | null }[]): Promise<IBulkAddResponse> {
+  private async bulkAddKeywordEntries(
+    entries: { word: string; category?: string | null }[],
+  ): Promise<IBulkAddResponse> {
     const success: IKeywordResponse[] = [];
     const failed: { word: string; error: string }[] = [];
 
     const normalizedWords = Array.from(
       new Set(
         entries
-          .map(entry => entry.word?.trim().toLowerCase())
+          .map((entry) => entry.word?.trim().toLowerCase())
           .filter((word): word is string => Boolean(word)),
       ),
     );
@@ -64,7 +76,9 @@ export class KeywordsService {
         })) ?? [])
       : [];
 
-    const existedBeforeImport = new Set(existingKeywords.map(keyword => keyword.word));
+    const existedBeforeImport = new Set(
+      existingKeywords.map((keyword) => keyword.word),
+    );
     const processedInBatch = new Set<string>();
 
     let createdCount = 0;
@@ -77,7 +91,10 @@ export class KeywordsService {
         const keyword = await this.addKeyword(word, category ?? undefined);
         success.push(keyword);
 
-        if (existedBeforeImport.has(normalizedWord) || processedInBatch.has(normalizedWord)) {
+        if (
+          existedBeforeImport.has(normalizedWord) ||
+          processedInBatch.has(normalizedWord)
+        ) {
           updatedCount += 1;
         } else {
           createdCount += 1;

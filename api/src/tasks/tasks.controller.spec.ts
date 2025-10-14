@@ -63,7 +63,9 @@ describe('TasksController', () => {
     };
     tasksService.createParsingTask.mockResolvedValue(result);
 
-    await expect(controller.createParsingTask(dto as any)).resolves.toEqual(result);
+    await expect(controller.createParsingTask(dto as any)).resolves.toEqual(
+      result,
+    );
     expect(tasksService.createParsingTask).toHaveBeenCalledTimes(1);
     expect(tasksService.createParsingTask).toHaveBeenCalledWith(dto);
   });

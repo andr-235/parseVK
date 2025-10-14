@@ -1,4 +1,12 @@
-import { ArrayMinSize, IsArray, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 
 export enum ParsingScope {
   ALL = 'all',

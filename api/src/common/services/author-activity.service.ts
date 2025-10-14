@@ -54,8 +54,12 @@ export class AuthorActivityService {
         photo50: author.photo_50 ?? null,
         photo100: author.photo_100 ?? null,
         photo200Orig: author.photo_200_orig ?? null,
-        city: author.city ? (author.city as Prisma.InputJsonValue) : Prisma.JsonNull,
-        country: author.country ? (author.country as Prisma.InputJsonValue) : Prisma.JsonNull,
+        city: author.city
+          ? (author.city as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        country: author.country
+          ? (author.country as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
       };
 
       await this.prisma.author.upsert({
@@ -68,7 +72,10 @@ export class AuthorActivityService {
     return authors.length;
   }
 
-  async saveComments(comments: CommentEntity[], options: SaveCommentsOptions): Promise<number> {
+  async saveComments(
+    comments: CommentEntity[],
+    options: SaveCommentsOptions,
+  ): Promise<number> {
     if (!comments.length) {
       return 0;
     }
@@ -82,20 +89,31 @@ export class AuthorActivityService {
     return saved;
   }
 
-  private async saveComment(comment: CommentEntity, options: SaveCommentsOptions): Promise<number> {
-    const threadItemsJson: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue =
-      comment.threadItems?.length
-        ? (comment.threadItems.map((item) => this.serializeComment(item)) as Prisma.InputJsonValue)
-        : Prisma.JsonNull;
+  private async saveComment(
+    comment: CommentEntity,
+    options: SaveCommentsOptions,
+  ): Promise<number> {
+    const threadItemsJson:
+      | Prisma.NullableJsonNullValueInput
+      | Prisma.InputJsonValue = comment.threadItems?.length
+      ? (comment.threadItems.map((item) =>
+          this.serializeComment(item),
+        ) as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
 
-    const attachmentsJson: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue | undefined =
+    const attachmentsJson:
+      | Prisma.NullableJsonNullValueInput
+      | Prisma.InputJsonValue
+      | undefined =
       comment.attachments === null
         ? Prisma.JsonNull
         : comment.attachments === undefined
           ? undefined
           : (comment.attachments as Prisma.InputJsonValue);
 
-    const parentsStackJson: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue =
+    const parentsStackJson:
+      | Prisma.NullableJsonNullValueInput
+      | Prisma.InputJsonValue =
       comment.parentsStack === null
         ? Prisma.JsonNull
         : (comment.parentsStack as Prisma.InputJsonValue);

@@ -9,6 +9,11 @@ import { WatchlistMonitorService } from './watchlist.monitor.service';
 @Module({
   imports: [VkModule],
   controllers: [WatchlistController],
-  providers: [WatchlistService, PrismaService, AuthorActivityService, WatchlistMonitorService],
+  providers: [
+    WatchlistService,
+    PrismaService,
+    AuthorActivityService,
+    WatchlistMonitorService,
+  ],
 })
 export class WatchlistModule {}

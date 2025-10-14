@@ -5,13 +5,21 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, WatchlistStatus, type WatchlistSettings, CommentSource } from '@prisma/client';
+import {
+  Prisma,
+  WatchlistStatus,
+  type WatchlistSettings,
+  CommentSource,
+} from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 import { VkService } from '../vk/vk.service';
 import { normalizeComment } from '../common/utils/comment-normalizer';
 import type { CommentEntity } from '../common/types/comment-entity.type';
-import { composeCommentKey, walkCommentTree } from './utils/watchlist-comment.utils';
+import {
+  composeCommentKey,
+  walkCommentTree,
+} from './utils/watchlist-comment.utils';
 import type {
   WatchlistAuthorCardDto,
   WatchlistAuthorDetailsDto,
@@ -49,10 +57,15 @@ export class WatchlistService {
     private readonly vkService: VkService,
   ) {}
 
-  async getAuthors(params: { offset?: number; limit?: number } = {}): Promise<WatchlistAuthorListDto> {
+  async getAuthors(
+    params: { offset?: number; limit?: number } = {},
+  ): Promise<WatchlistAuthorListDto> {
     const settings = await this.ensureSettings();
     const offset = Math.max(params.offset ?? 0, 0);
-    const limit = Math.min(Math.max(params.limit ?? WATCHLIST_PAGE_SIZE, 1), 200);
+    const limit = Math.min(
+      Math.max(params.limit ?? WATCHLIST_PAGE_SIZE, 1),
+      200,
+    );
 
     const [records, total] = await this.prisma.$transaction([
       this.prisma.watchlistAuthor.findMany({
@@ -69,9 +82,13 @@ export class WatchlistService {
       this.prisma.watchlistAuthor.count({ where: { settingsId: settings.id } }),
     ]);
 
-    const commentCounts = await this.collectCommentCounts(records.map((record) => record.id));
+    const commentCounts = await this.collectCommentCounts(
+      records.map((record) => record.id),
+    );
 
-    const items = records.map((record) => this.mapAuthor(record, commentCounts.get(record.id) ?? 0));
+    const items = records.map((record) =>
+      this.mapAuthor(record, commentCounts.get(record.id) ?? 0),
+    );
 
     return {
       items,
@@ -80,7 +97,10 @@ export class WatchlistService {
     };
   }
 
-  async getAuthorDetails(id: number, params: { offset?: number; limit?: number } = {}): Promise<WatchlistAuthorDetailsDto> {
+  async getAuthorDetails(
+    id: number,
+    params: { offset?: number; limit?: number } = {},
+  ): Promise<WatchlistAuthorDetailsDto> {
     const record = await this.prisma.watchlistAuthor.findUnique({
       where: { id },
       include: { author: true, settings: true },
@@ -91,7 +111,10 @@ export class WatchlistService {
     }
 
     const offset = Math.max(params.offset ?? 0, 0);
-    const limit = Math.min(Math.max(params.limit ?? WATCHLIST_PAGE_SIZE, 1), 200);
+    const limit = Math.min(
+      Math.max(params.limit ?? WATCHLIST_PAGE_SIZE, 1),
+      200,
+    );
 
     const [comments, total] = await this.prisma.$transaction([
       this.prisma.comment.findMany({
@@ -112,7 +135,11 @@ export class WatchlistService {
       publishedAt: comment.publishedAt?.toISOString() ?? null,
       createdAt: comment.createdAt.toISOString(),
       source: comment.source,
-      commentUrl: this.buildCommentUrl(comment.ownerId, comment.postId, comment.vkCommentId),
+      commentUrl: this.buildCommentUrl(
+        comment.ownerId,
+        comment.postId,
+        comment.vkCommentId,
+      ),
     }));
 
     const commentsList: WatchlistCommentsListDto = {
@@ -127,8 +154,13 @@ export class WatchlistService {
     };
   }
 
-  async createAuthor(dto: CreateWatchlistAuthorDto): Promise<WatchlistAuthorCardDto> {
-    if (typeof dto.commentId !== 'number' && typeof dto.authorVkId !== 'number') {
+  async createAuthor(
+    dto: CreateWatchlistAuthorDto,
+  ): Promise<WatchlistAuthorCardDto> {
+    if (
+      typeof dto.commentId !== 'number' &&
+      typeof dto.authorVkId !== 'number'
+    ) {
       throw new BadRequestException('Нужно указать commentId или authorVkId');
     }
 
@@ -147,15 +179,20 @@ export class WatchlistService {
       }
 
       sourceCommentId = comment.id;
-      authorVkId = comment.authorVkId ?? (comment.fromId > 0 ? comment.fromId : null);
+      authorVkId =
+        comment.authorVkId ?? (comment.fromId > 0 ? comment.fromId : null);
 
       if (!authorVkId) {
-        throw new BadRequestException('Не удалось определить автора по указанному комментарию');
+        throw new BadRequestException(
+          'Не удалось определить автора по указанному комментарию',
+        );
       }
     }
 
     if (!authorVkId || authorVkId <= 0) {
-      throw new BadRequestException('Идентификатор автора должен быть положительным числом');
+      throw new BadRequestException(
+        'Идентификатор автора должен быть положительным числом',
+      );
     }
 
     const existing = await this.prisma.watchlistAuthor.findUnique({
@@ -168,7 +205,9 @@ export class WatchlistService {
     });
 
     if (existing) {
-      throw new ConflictException('Автор уже находится в списке "На карандаше"');
+      throw new ConflictException(
+        'Автор уже находится в списке "На карандаше"',
+      );
     }
 
     await this.authorActivityService.saveAuthors([authorVkId]);
@@ -196,14 +235,19 @@ export class WatchlistService {
       });
     }
 
-    const commentsCount = await this.prisma.comment.count({ where: { watchlistAuthorId: record.id } });
+    const commentsCount = await this.prisma.comment.count({
+      where: { watchlistAuthorId: record.id },
+    });
 
     this.logger.log(`Добавлен автор ${authorVkId} в список "На карандаше"`);
 
     return this.mapAuthor(record, commentsCount);
   }
 
-  async updateAuthor(id: number, dto: UpdateWatchlistAuthorDto): Promise<WatchlistAuthorCardDto> {
+  async updateAuthor(
+    id: number,
+    dto: UpdateWatchlistAuthorDto,
+  ): Promise<WatchlistAuthorCardDto> {
     const record = await this.prisma.watchlistAuthor.findUnique({
       where: { id },
       include: { author: true, settings: true },
@@ -226,7 +270,9 @@ export class WatchlistService {
     }
 
     if (Object.keys(data).length === 0) {
-      const commentsCount = await this.prisma.comment.count({ where: { watchlistAuthorId: id } });
+      const commentsCount = await this.prisma.comment.count({
+        where: { watchlistAuthorId: id },
+      });
       return this.mapAuthor(record, commentsCount);
     }
 
@@ -236,7 +282,9 @@ export class WatchlistService {
       include: { author: true, settings: true },
     });
 
-    const commentsCount = await this.prisma.comment.count({ where: { watchlistAuthorId: id } });
+    const commentsCount = await this.prisma.comment.count({
+      where: { watchlistAuthorId: id },
+    });
 
     return this.mapAuthor(updated, commentsCount);
   }
@@ -246,7 +294,9 @@ export class WatchlistService {
     return this.mapSettings(settings);
   }
 
-  async updateSettings(dto: UpdateWatchlistSettingsDto): Promise<WatchlistSettingsDto> {
+  async updateSettings(
+    dto: UpdateWatchlistSettingsDto,
+  ): Promise<WatchlistSettingsDto> {
     const settings = await this.ensureSettings();
 
     const data: Prisma.WatchlistSettingsUpdateInput = {};
@@ -285,10 +335,7 @@ export class WatchlistService {
     const activeAuthors = await this.prisma.watchlistAuthor.findMany({
       where: { settingsId: settings.id, status: WatchlistStatus.ACTIVE },
       include: { author: true, settings: true },
-      orderBy: [
-        { lastCheckedAt: 'asc' },
-        { updatedAt: 'asc' },
-      ],
+      orderBy: [{ lastCheckedAt: 'asc' }, { updatedAt: 'asc' }],
       take: Math.max(settings.maxAuthors, 1),
     });
 
@@ -296,7 +343,9 @@ export class WatchlistService {
       return;
     }
 
-    await this.authorActivityService.saveAuthors(activeAuthors.map((author) => author.authorVkId));
+    await this.authorActivityService.saveAuthors(
+      activeAuthors.map((author) => author.authorVkId),
+    );
 
     if (!settings.trackAllComments) {
       const timestamp = new Date();
@@ -304,7 +353,9 @@ export class WatchlistService {
         where: { id: { in: activeAuthors.map((author) => author.id) } },
         data: { lastCheckedAt: timestamp },
       });
-      this.logger.debug('Мониторинг всех комментариев отключен, обновлены только метки проверки авторов');
+      this.logger.debug(
+        'Мониторинг всех комментариев отключен, обновлены только метки проверки авторов',
+      );
       return;
     }
 
@@ -320,7 +371,9 @@ export class WatchlistService {
     );
   }
 
-  private async refreshAuthorRecord(record: WatchlistAuthorWithRelations): Promise<number> {
+  private async refreshAuthorRecord(
+    record: WatchlistAuthorWithRelations,
+  ): Promise<number> {
     const checkTimestamp = new Date();
     const updateData: Prisma.WatchlistAuthorUpdateInput = {
       lastCheckedAt: checkTimestamp,
@@ -358,12 +411,17 @@ export class WatchlistService {
         updateData.foundCommentsCount = { increment: newComments };
       }
 
-      if (latestActivity && (!record.lastActivityAt || latestActivity > record.lastActivityAt)) {
+      if (
+        latestActivity &&
+        (!record.lastActivityAt || latestActivity > record.lastActivityAt)
+      ) {
         updateData.lastActivityAt = latestActivity;
       }
 
       if (newComments > 0) {
-        this.logger.log(`Мониторинг автора ${record.authorVkId}: найдено ${newComments} новых комментариев`);
+        this.logger.log(
+          `Мониторинг автора ${record.authorVkId}: найдено ${newComments} новых комментариев`,
+        );
       }
     } catch (error) {
       this.logger.error(
@@ -439,7 +497,10 @@ export class WatchlistService {
       take: 20,
     });
 
-    const posts = grouped.map((item) => ({ ownerId: item.ownerId, postId: item.postId }));
+    const posts = grouped.map((item) => ({
+      ownerId: item.ownerId,
+      postId: item.postId,
+    }));
 
     if (!posts.length && record.sourceCommentId) {
       const source = await this.prisma.comment.findUnique({
@@ -455,7 +516,9 @@ export class WatchlistService {
     return posts;
   }
 
-  private async loadExistingCommentKeys(record: WatchlistAuthorWithRelations): Promise<Set<string>> {
+  private async loadExistingCommentKeys(
+    record: WatchlistAuthorWithRelations,
+  ): Promise<Set<string>> {
     const existing = await this.prisma.comment.findMany({
       where: {
         OR: [
@@ -524,7 +587,9 @@ export class WatchlistService {
     return settings;
   }
 
-  private async collectCommentCounts(authorIds: number[]): Promise<Map<number, number>> {
+  private async collectCommentCounts(
+    authorIds: number[],
+  ): Promise<Map<number, number>> {
     const map = new Map<number, number>();
 
     if (!authorIds.length) {
@@ -546,31 +611,45 @@ export class WatchlistService {
     return map;
   }
 
-  private mapAuthor(record: WatchlistAuthorWithRelations, commentsCount: number): WatchlistAuthorCardDto {
+  private mapAuthor(
+    record: WatchlistAuthorWithRelations,
+    commentsCount: number,
+  ): WatchlistAuthorCardDto {
     const profile = this.mapProfile(record);
 
     return {
       id: record.id,
       authorVkId: record.authorVkId,
       status: record.status,
-      lastCheckedAt: record.lastCheckedAt ? record.lastCheckedAt.toISOString() : null,
-      lastActivityAt: record.lastActivityAt ? record.lastActivityAt.toISOString() : null,
+      lastCheckedAt: record.lastCheckedAt
+        ? record.lastCheckedAt.toISOString()
+        : null,
+      lastActivityAt: record.lastActivityAt
+        ? record.lastActivityAt.toISOString()
+        : null,
       foundCommentsCount: record.foundCommentsCount,
       totalComments: commentsCount,
       monitoringStartedAt: record.monitoringStartedAt.toISOString(),
-      monitoringStoppedAt: record.monitoringStoppedAt ? record.monitoringStoppedAt.toISOString() : null,
+      monitoringStoppedAt: record.monitoringStoppedAt
+        ? record.monitoringStoppedAt.toISOString()
+        : null,
       settingsId: record.settingsId,
       author: profile,
     };
   }
 
-  private mapProfile(record: WatchlistAuthorWithRelations): WatchlistAuthorProfileDto {
+  private mapProfile(
+    record: WatchlistAuthorWithRelations,
+  ): WatchlistAuthorProfileDto {
     const author = record.author;
 
     const firstName = author?.firstName ?? '';
     const lastName = author?.lastName ?? '';
-    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() || `id${record.authorVkId}`;
-    const avatar = author?.photo200Orig ?? author?.photo100 ?? author?.photo50 ?? null;
+    const fullName =
+      [firstName, lastName].filter(Boolean).join(' ').trim() ||
+      `id${record.authorVkId}`;
+    const avatar =
+      author?.photo200Orig ?? author?.photo100 ?? author?.photo50 ?? null;
     const screenName = author?.screenName ?? null;
     const domain = author?.domain ?? null;
 
@@ -592,7 +671,11 @@ export class WatchlistService {
     };
   }
 
-  private buildCommentUrl(ownerId: number, postId: number, vkCommentId: number | null): string | null {
+  private buildCommentUrl(
+    ownerId: number,
+    postId: number,
+    vkCommentId: number | null,
+  ): string | null {
     if (!ownerId || !postId) {
       return null;
     }

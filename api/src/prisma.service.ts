@@ -3,13 +3,18 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor(private readonly configService: ConfigService) {
     const databaseUrl = configService.get<string>('DATABASE_URL');
     console.log('DATABASE_URL:', databaseUrl);
 
     if (!databaseUrl) {
-      throw new Error('DATABASE_URL is not defined. Please set it in your environment variables.');
+      throw new Error(
+        'DATABASE_URL is not defined. Please set it in your environment variables.',
+      );
     }
 
     super({

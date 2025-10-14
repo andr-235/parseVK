@@ -28,22 +28,31 @@ describe('KeywordsController', () => {
     }).compile();
 
     controller = module.get<KeywordsController>(KeywordsController);
-    keywordsService = module.get<KeywordsService>(KeywordsService) as unknown as ReturnType<
-      typeof mockKeywordsService
-    >;
+    keywordsService = module.get<KeywordsService>(
+      KeywordsService,
+    ) as unknown as ReturnType<typeof mockKeywordsService>;
 
     jest.clearAllMocks();
   });
 
   it('должен добавить ключевое слово через POST /add', async () => {
     const dto = { word: 'test', category: 'Маркетинг' };
-    const response = { id: 1, word: 'test', category: 'Маркетинг', createdAt: new Date(), updatedAt: new Date() };
+    const response = {
+      id: 1,
+      word: 'test',
+      category: 'Маркетинг',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     keywordsService.addKeyword.mockResolvedValue(response);
 
     const result = await controller.addKeyword(dto as any);
 
     expect(result).toEqual(response);
-    expect(keywordsService.addKeyword).toHaveBeenCalledWith('test', 'Маркетинг');
+    expect(keywordsService.addKeyword).toHaveBeenCalledWith(
+      'test',
+      'Маркетинг',
+    );
   });
 
   it('должен массово добавить ключевые слова через POST /bulk-add', async () => {
@@ -62,7 +71,10 @@ describe('KeywordsController', () => {
     const result = await controller.bulkAddKeywords(dto as any);
 
     expect(result).toEqual(response);
-    expect(keywordsService.bulkAddKeywords).toHaveBeenCalledWith(['one', 'two']);
+    expect(keywordsService.bulkAddKeywords).toHaveBeenCalledWith([
+      'one',
+      'two',
+    ]);
   });
 
   it('должен загрузить ключевые слова из файла через POST /upload', async () => {
@@ -84,20 +96,34 @@ describe('KeywordsController', () => {
     const result = await controller.uploadKeywords(file);
 
     expect(result).toEqual(response);
-    expect(keywordsService.addKeywordsFromFile).toHaveBeenCalledWith(fileContent);
+    expect(keywordsService.addKeywordsFromFile).toHaveBeenCalledWith(
+      fileContent,
+    );
   });
 
   it('должен выбросить ошибку, если файл не передан в POST /upload', async () => {
-    await expect(controller.uploadKeywords(undefined as unknown as Express.Multer.File)).rejects.toThrow(
-      BadRequestException,
-    );
+    await expect(
+      controller.uploadKeywords(undefined as unknown as Express.Multer.File),
+    ).rejects.toThrow(BadRequestException);
     expect(keywordsService.addKeywordsFromFile).not.toHaveBeenCalled();
   });
 
   it('должен вернуть все ключевые слова через GET /', async () => {
     const response = [
-      { id: 1, word: 'one', category: null, createdAt: new Date(), updatedAt: new Date() },
-      { id: 2, word: 'two', category: 'Продажи', createdAt: new Date(), updatedAt: new Date() },
+      {
+        id: 1,
+        word: 'one',
+        category: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 2,
+        word: 'two',
+        category: 'Продажи',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     ];
     keywordsService.getAllKeywords.mockResolvedValue(response);
 
@@ -118,7 +144,13 @@ describe('KeywordsController', () => {
   });
 
   it('должен удалить ключевое слово по id через DELETE /:id', async () => {
-    const response = { id: 1, word: 'one', category: null, createdAt: new Date(), updatedAt: new Date() };
+    const response = {
+      id: 1,
+      word: 'one',
+      category: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     keywordsService.deleteKeyword.mockResolvedValue(response);
 
     const result = await controller.deleteKeyword('1');

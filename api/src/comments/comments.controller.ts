@@ -23,7 +23,8 @@ export class CommentsController {
   @Get()
   async getComments(
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
-    @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe)
+    limit: number,
   ): Promise<CommentsListDto> {
     const normalizedOffset = Math.max(offset, 0);
     const normalizedLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);

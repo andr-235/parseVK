@@ -1,9 +1,20 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
-import { CreateParsingTaskDto, ParsingScope } from './dto/create-parsing-task.dto';
+import {
+  CreateParsingTaskDto,
+  ParsingScope,
+} from './dto/create-parsing-task.dto';
 import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface';
-import type { TaskDetail, TaskSummary, TaskStatus } from './interfaces/task.interface';
+import type {
+  TaskDetail,
+  TaskSummary,
+  TaskStatus,
+} from './interfaces/task.interface';
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
 import { ParsingTaskRunner } from './parsing-task.runner';
 import { ParsingQueueService } from './parsing-queue.service';
@@ -39,8 +50,12 @@ export class TasksService {
     private readonly parsingQueue: ParsingQueueService,
   ) {}
 
-  async createParsingTask(dto: CreateParsingTaskDto): Promise<ParsingTaskResult> {
-    const scope = dto.scope ?? (dto.groupIds?.length ? ParsingScope.SELECTED : ParsingScope.ALL);
+  async createParsingTask(
+    dto: CreateParsingTaskDto,
+  ): Promise<ParsingTaskResult> {
+    const scope =
+      dto.scope ??
+      (dto.groupIds?.length ? ParsingScope.SELECTED : ParsingScope.ALL);
     const postLimit = dto.postLimit ?? 10;
     const groupIds = dto.groupIds ?? [];
 
@@ -51,7 +66,7 @@ export class TasksService {
 
     const totalItems = groups.length;
 
-    const task = await this.prisma.task.create({
+    const task = (await this.prisma.task.create({
       data: {
         title: this.runner.buildTaskTitle(scope, groups),
         description: JSON.stringify({ scope, groupIds, postLimit }),
@@ -60,7 +75,7 @@ export class TasksService {
         progress: 0,
         status: 'pending',
       } as Prisma.TaskUncheckedCreateInput,
-    }) as PrismaTaskRecord;
+    })) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
       taskId: task.id,
@@ -107,7 +122,7 @@ export class TasksService {
 
     const context = await this.buildTaskResumeContext(task);
 
-    const updatedTask = await this.prisma.task.update({
+    const updatedTask = (await this.prisma.task.update({
       where: { id: taskId },
       data: {
         status: 'pending',
@@ -124,7 +139,7 @@ export class TasksService {
           skippedGroupIds: context.parsed.skippedGroupIds,
         }),
       } as Prisma.TaskUncheckedUpdateInput,
-    }) as PrismaTaskRecord;
+    })) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
       taskId: task.id,
@@ -146,9 +161,10 @@ export class TasksService {
     }
 
     const context = await this.buildTaskResumeContext(task);
-    const shouldComplete = context.totalItems > 0 && context.processedItems >= context.totalItems;
+    const shouldComplete =
+      context.totalItems > 0 && context.processedItems >= context.totalItems;
 
-    const updatedTask = await this.prisma.task.update({
+    const updatedTask = (await this.prisma.task.update({
       where: { id: taskId },
       data: {
         status: shouldComplete ? 'done' : 'pending',
@@ -165,7 +181,7 @@ export class TasksService {
           skippedGroupIds: context.parsed.skippedGroupIds,
         }),
       } as Prisma.TaskUncheckedUpdateInput,
-    }) as PrismaTaskRecord;
+    })) as PrismaTaskRecord;
 
     if (!shouldComplete) {
       await this.parsingQueue.enqueue({
@@ -208,7 +224,8 @@ export class TasksService {
     const processedItems = task.processedItems ?? 0;
     const completed = task.completed ?? false;
     const progress = task.progress ?? (completed ? 1 : 0);
-    const status = this.parseTaskStatus(task.status) ?? this.resolveTaskStatus(task, parsed);
+    const status =
+      this.parseTaskStatus(task.status) ?? this.resolveTaskStatus(task, parsed);
     return {
       id: task.id,
       title: task.title,
@@ -237,7 +254,10 @@ export class TasksService {
     return allowed.includes(value as TaskStatus) ? (value as TaskStatus) : null;
   }
 
-  private resolveTaskStatus(task: PrismaTaskRecord, parsed: ParsedTaskDescription): TaskStatus {
+  private resolveTaskStatus(
+    task: PrismaTaskRecord,
+    parsed: ParsedTaskDescription,
+  ): TaskStatus {
     if (task.completed === true) {
       return 'done';
     }
@@ -270,12 +290,15 @@ export class TasksService {
         postLimit: this.parsePostLimit(data.postLimit),
         stats: this.parseStats(data.stats),
         error: typeof data.error === 'string' ? data.error : null,
-        skippedGroupsMessage: typeof data.skippedGroupsMessage === 'string'
-          ? data.skippedGroupsMessage
-          : null,
+        skippedGroupsMessage:
+          typeof data.skippedGroupsMessage === 'string'
+            ? data.skippedGroupsMessage
+            : null,
         skippedGroupIds: this.parseSkippedGroupIds(
           data.skippedGroupIds,
-          typeof data.skippedGroupsMessage === 'string' ? data.skippedGroupsMessage : null,
+          typeof data.skippedGroupsMessage === 'string'
+            ? data.skippedGroupsMessage
+            : null,
         ),
       };
     } catch {
@@ -313,11 +336,20 @@ export class TasksService {
     }
 
     return value
-      .map((item) => (typeof item === 'number' ? item : Number.isFinite(Number(item)) ? Number(item) : null))
+      .map((item) =>
+        typeof item === 'number'
+          ? item
+          : Number.isFinite(Number(item))
+            ? Number(item)
+            : null,
+      )
       .filter((item): item is number => item !== null && !Number.isNaN(item));
   }
 
-  private parseSkippedGroupIds(value: unknown, message: string | null): number[] {
+  private parseSkippedGroupIds(
+    value: unknown,
+    message: string | null,
+  ): number[] {
     const parsed = this.parseGroupIds(value);
     if (parsed.length > 0) {
       return parsed;
@@ -451,11 +483,16 @@ export class TasksService {
     progress: number;
   }> {
     const parsed = this.parseTaskDescription(task);
-    const scope = parsed.scope ?? (parsed.groupIds.length ? ParsingScope.SELECTED : ParsingScope.ALL);
+    const scope =
+      parsed.scope ??
+      (parsed.groupIds.length ? ParsingScope.SELECTED : ParsingScope.ALL);
 
-    const groupIds = scope === ParsingScope.ALL ? [] : Array.from(new Set(parsed.groupIds));
+    const groupIds =
+      scope === ParsingScope.ALL ? [] : Array.from(new Set(parsed.groupIds));
     if (scope === ParsingScope.SELECTED && groupIds.length === 0) {
-      throw new BadRequestException('Не удалось определить группы для продолжения задачи');
+      throw new BadRequestException(
+        'Не удалось определить группы для продолжения задачи',
+      );
     }
 
     const postLimit = this.normalizePostLimit(parsed.postLimit);
@@ -467,7 +504,8 @@ export class TasksService {
 
     const totalItems = groups.length;
     const processedItems = Math.min(task.processedItems ?? 0, totalItems);
-    const progress = totalItems > 0 ? Math.min(1, processedItems / totalItems) : 0;
+    const progress =
+      totalItems > 0 ? Math.min(1, processedItems / totalItems) : 0;
 
     return {
       scope,

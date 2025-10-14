@@ -8,10 +8,14 @@ import { ParsingQueueService } from './parsing-queue.service';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 
 @Module({
-  imports: [
-    VkModule,
-  ],
+  imports: [VkModule],
   controllers: [TasksController],
-  providers: [TasksService, PrismaService, ParsingTaskRunner, ParsingQueueService, AuthorActivityService],
+  providers: [
+    TasksService,
+    PrismaService,
+    ParsingTaskRunner,
+    ParsingQueueService,
+    AuthorActivityService,
+  ],
 })
 export class TasksModule {}

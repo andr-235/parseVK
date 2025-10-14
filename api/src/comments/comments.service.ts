@@ -31,11 +31,7 @@ export class CommentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private mapComment(comment: CommentWithOptionalAuthor): CommentWithAuthorDto {
-    const {
-      author,
-      watchlistAuthorId,
-      ...commentData
-    } = comment;
+    const { author, watchlistAuthorId, ...commentData } = comment;
 
     return {
       ...commentData,
@@ -45,14 +41,18 @@ export class CommentsService {
             vkUserId: author.vkUserId,
             firstName: author.firstName,
             lastName: author.lastName,
-            logo: author.photo200Orig ?? author.photo100 ?? author.photo50 ?? null,
+            logo:
+              author.photo200Orig ?? author.photo100 ?? author.photo50 ?? null,
           }
         : null,
       isWatchlisted: watchlistAuthorId != null,
     };
   }
 
-  async getComments({ offset, limit }: CommentsQueryOptions): Promise<CommentsListDto> {
+  async getComments({
+    offset,
+    limit,
+  }: CommentsQueryOptions): Promise<CommentsListDto> {
     const [comments, total] = await this.prisma.$transaction([
       this.prisma.comment.findMany({
         skip: offset,
@@ -76,7 +76,10 @@ export class CommentsService {
     };
   }
 
-  async setReadStatus(id: number, isRead: boolean): Promise<CommentWithAuthorDto> {
+  async setReadStatus(
+    id: number,
+    isRead: boolean,
+  ): Promise<CommentWithAuthorDto> {
     const comment = await this.prisma.comment.update({
       where: { id },
       data: { isRead },

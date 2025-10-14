@@ -73,7 +73,13 @@ describe('GroupsController (HTTP)', () => {
   });
 
   it('должен успешно загружать группы из файла через /groups/upload', async () => {
-    const result = { success: [], failed: [], total: 2, successCount: 2, failedCount: 0 };
+    const result = {
+      success: [],
+      failed: [],
+      total: 2,
+      successCount: 2,
+      failedCount: 0,
+    };
     groupsService.uploadGroupsFromFile.mockResolvedValue(result);
 
     await request(app.getHttpServer())
@@ -82,7 +88,9 @@ describe('GroupsController (HTTP)', () => {
       .expect(201)
       .expect(result);
 
-    expect(groupsService.uploadGroupsFromFile).toHaveBeenCalledWith('club1\nclub2');
+    expect(groupsService.uploadGroupsFromFile).toHaveBeenCalledWith(
+      'club1\nclub2',
+    );
   });
 
   it('должен успешно возвращать все группы через GET /groups', async () => {

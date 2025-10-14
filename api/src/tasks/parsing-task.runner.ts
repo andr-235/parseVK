@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { APIError } from 'vk-io';
 import { CommentSource, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
@@ -34,14 +39,20 @@ export class ParsingTaskRunner {
       `Запуск парсинга задачи ${taskId}: scope=${scope}, количество групп=${groupIds.length}, лимит постов=${postLimit}`,
     );
 
-    const task = await this.prisma.task.findUnique({ where: { id: taskId } }) as PrismaTaskRecord | null;
+    const task = (await this.prisma.task.findUnique({
+      where: { id: taskId },
+    })) as PrismaTaskRecord | null;
     if (!task) {
-      this.logger.warn(`Задача ${taskId} не найдена в базе данных, парсинг пропущен`);
+      this.logger.warn(
+        `Задача ${taskId} не найдена в базе данных, парсинг пропущен`,
+      );
       return;
     }
 
     const groups = await this.safeResolveGroups(scope, groupIds);
-    this.logger.log(`Для задачи ${taskId} определено ${groups.length} групп для обработки`);
+    this.logger.log(
+      `Для задачи ${taskId} определено ${groups.length} групп для обработки`,
+    );
 
     if (!groups.length) {
       await this.prisma.task.update({
@@ -57,7 +68,9 @@ export class ParsingTaskRunner {
         } as Prisma.TaskUncheckedUpdateInput,
       });
       const error = new NotFoundException('Нет доступных групп для парсинга');
-      this.logger.warn(`Задача ${taskId} завершилась ошибкой: ${error.message}`);
+      this.logger.warn(
+        `Задача ${taskId} завершилась ошибкой: ${error.message}`,
+      );
       throw error;
     }
 
@@ -83,7 +96,9 @@ export class ParsingTaskRunner {
         taskId,
       });
 
-      const skippedGroupsMessage = this.buildSkippedGroupsMessage(context.skippedGroupVkIds);
+      const skippedGroupsMessage = this.buildSkippedGroupsMessage(
+        context.skippedGroupVkIds,
+      );
 
       await this.prisma.task.update({
         where: { id: taskId },
@@ -98,7 +113,9 @@ export class ParsingTaskRunner {
             postLimit,
             stats: context.stats,
             skippedGroupsMessage: skippedGroupsMessage ?? undefined,
-            skippedGroupIds: context.skippedGroupVkIds.length ? context.skippedGroupVkIds : undefined,
+            skippedGroupIds: context.skippedGroupVkIds.length
+              ? context.skippedGroupVkIds
+              : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       });
@@ -107,7 +124,9 @@ export class ParsingTaskRunner {
         `Задача ${taskId} успешно завершена: группы=${context.stats.groups}, посты=${context.stats.posts}, комментарии=${context.stats.comments}, авторы=${context.stats.authors}`,
       );
     } catch (error) {
-      const skippedGroupsMessage = this.buildSkippedGroupsMessage(context.skippedGroupVkIds);
+      const skippedGroupsMessage = this.buildSkippedGroupsMessage(
+        context.skippedGroupVkIds,
+      );
 
       await this.prisma.task.update({
         where: { id: taskId },
@@ -120,7 +139,9 @@ export class ParsingTaskRunner {
             error: error instanceof Error ? error.message : String(error),
             skippedGroupsMessage: skippedGroupsMessage ?? undefined,
             stats: context.stats,
-            skippedGroupIds: context.skippedGroupVkIds.length ? context.skippedGroupVkIds : undefined,
+            skippedGroupIds: context.skippedGroupVkIds.length
+              ? context.skippedGroupVkIds
+              : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       });
@@ -140,12 +161,17 @@ export class ParsingTaskRunner {
     previousStats: ParsingStats | null,
     skippedGroupIds: number[],
   ): TaskProcessingContext {
-    const clampedProcessed = Math.min(Math.max(processedGroups, 0), totalGroups);
+    const clampedProcessed = Math.min(
+      Math.max(processedGroups, 0),
+      totalGroups,
+    );
     const normalizedSkipped = Array.from(
       new Set(skippedGroupIds.filter((value) => Number.isFinite(value))),
-    ) as number[];
+    );
 
-    const baseGroups = previousStats?.groups ?? Math.max(totalGroups - normalizedSkipped.length, 0);
+    const baseGroups =
+      previousStats?.groups ??
+      Math.max(totalGroups - normalizedSkipped.length, 0);
     const stats: ParsingStats = {
       groups: Math.max(Math.min(baseGroups, totalGroups), 0),
       posts: previousStats?.posts ?? 0,
@@ -170,8 +196,12 @@ export class ParsingTaskRunner {
   }): Promise<void> {
     const { groups, postLimit, context, taskId } = params;
 
-    const alreadyProcessed = Math.min(Math.max(context.processedGroups, 0), groups.length);
-    const remainingGroups = alreadyProcessed > 0 ? groups.slice(alreadyProcessed) : groups;
+    const alreadyProcessed = Math.min(
+      Math.max(context.processedGroups, 0),
+      groups.length,
+    );
+    const remainingGroups =
+      alreadyProcessed > 0 ? groups.slice(alreadyProcessed) : groups;
 
     if (alreadyProcessed > 0) {
       this.logger.log(
@@ -180,7 +210,9 @@ export class ParsingTaskRunner {
     }
 
     if (!remainingGroups.length) {
-      this.logger.log(`Задача ${taskId}: все группы уже были обработаны, дополнительная обработка не требуется`);
+      this.logger.log(
+        `Задача ${taskId}: все группы уже были обработаны, дополнительная обработка не требуется`,
+      );
       return;
     }
 
@@ -209,36 +241,52 @@ export class ParsingTaskRunner {
 
     if (this.isGroupWallDisabled(group)) {
       this.handleSkippedGroup(context, group);
-      this.logger.warn(`Стена группы ${group.vkId} отключена, группа будет пропущена`);
+      this.logger.warn(
+        `Стена группы ${group.vkId} отключена, группа будет пропущена`,
+      );
       return false;
     }
 
     let posts: IPost[];
 
     try {
-      posts = await this.vkService.getGroupRecentPosts({ ownerId, count: postLimit });
+      posts = await this.vkService.getGroupRecentPosts({
+        ownerId,
+        count: postLimit,
+      });
     } catch (error) {
       if (this.isWallDisabledApiError(error)) {
         this.handleSkippedGroup(context, group);
         await this.markGroupWallDisabled(group);
-        this.logger.warn(`Группа ${group.vkId} имеет отключенную стену (по данным API), группа будет пропущена`);
+        this.logger.warn(
+          `Группа ${group.vkId} имеет отключенную стену (по данным API), группа будет пропущена`,
+        );
         return false;
       }
 
       throw error;
     }
 
-    this.logger.log(`Задача ${taskId}: получено ${posts.length} постов для группы ${group.vkId}`);
+    this.logger.log(
+      `Задача ${taskId}: получено ${posts.length} постов для группы ${group.vkId}`,
+    );
 
     for (const post of posts) {
       await this.savePost(post, group);
       context.stats.posts += 1;
 
-      const { comments, authorIds } = await this.fetchAllComments(ownerId, post.id);
-      const newAuthorIds = this.extractNewAuthorIds(authorIds, context.processedAuthorIds);
+      const { comments, authorIds } = await this.fetchAllComments(
+        ownerId,
+        post.id,
+      );
+      const newAuthorIds = this.extractNewAuthorIds(
+        authorIds,
+        context.processedAuthorIds,
+      );
 
       if (newAuthorIds.length) {
-        const createdOrUpdated = await this.authorActivityService.saveAuthors(newAuthorIds);
+        const createdOrUpdated =
+          await this.authorActivityService.saveAuthors(newAuthorIds);
         context.stats.authors += createdOrUpdated;
         newAuthorIds.forEach((id) => context.processedAuthorIds.add(id));
         this.logger.debug(
@@ -247,9 +295,12 @@ export class ParsingTaskRunner {
       }
 
       if (comments.length) {
-        const savedCount = await this.authorActivityService.saveComments(comments, {
-          source: CommentSource.TASK,
-        });
+        const savedCount = await this.authorActivityService.saveComments(
+          comments,
+          {
+            source: CommentSource.TASK,
+          },
+        );
         context.stats.comments += savedCount;
         this.logger.debug(
           `Задача ${taskId}: сохранено ${savedCount} комментариев для поста ${post.id} группы ${group.vkId}`,
@@ -260,7 +311,10 @@ export class ParsingTaskRunner {
     return true;
   }
 
-  private extractStoredMetadata(description: string | null): { stats: ParsingStats | null; skippedGroupIds: number[] } {
+  private extractStoredMetadata(description: string | null): {
+    stats: ParsingStats | null;
+    skippedGroupIds: number[];
+  } {
     if (!description) {
       return { stats: null, skippedGroupIds: [] };
     }
@@ -294,7 +348,12 @@ export class ParsingTaskRunner {
     const comments = this.toFiniteNumber(record['comments']);
     const authors = this.toFiniteNumber(record['authors']);
 
-    if (groups == null && posts == null && comments == null && authors == null) {
+    if (
+      groups == null &&
+      posts == null &&
+      comments == null &&
+      authors == null
+    ) {
       return null;
     }
 
@@ -315,9 +374,10 @@ export class ParsingTaskRunner {
       : [];
 
     const message = data['skippedGroupsMessage'];
-    const idsFromMessage: number[] = typeof message === 'string'
-      ? this.extractGroupIdsFromMessage(message)
-      : [];
+    const idsFromMessage: number[] =
+      typeof message === 'string'
+        ? this.extractGroupIdsFromMessage(message)
+        : [];
 
     return Array.from(new Set([...idsFromArray, ...idsFromMessage]));
   }
@@ -358,22 +418,36 @@ export class ParsingTaskRunner {
     return Number.isFinite(truncated) ? truncated : null;
   }
 
-  private extractNewAuthorIds(authorIds: number[], processedAuthorIds: Set<number>): number[] {
+  private extractNewAuthorIds(
+    authorIds: number[],
+    processedAuthorIds: Set<number>,
+  ): number[] {
     return authorIds.filter((id) => id > 0 && !processedAuthorIds.has(id));
   }
 
-  private handleSkippedGroup(context: TaskProcessingContext, group: PrismaGroupRecord): void {
+  private handleSkippedGroup(
+    context: TaskProcessingContext,
+    group: PrismaGroupRecord,
+  ): void {
     if (!context.skippedGroupVkIds.includes(group.vkId)) {
       context.skippedGroupVkIds.push(group.vkId);
       context.stats.groups = Math.max(0, context.stats.groups - 1);
     }
   }
 
-  private async updateTaskProgress(taskId: number, context: TaskProcessingContext, handledCount: number): Promise<void> {
-    context.processedGroups = Math.min(context.processedGroups + handledCount, context.totalGroups);
-    const progress = context.totalGroups > 0
-      ? Math.min(1, context.processedGroups / context.totalGroups)
-      : 0;
+  private async updateTaskProgress(
+    taskId: number,
+    context: TaskProcessingContext,
+    handledCount: number,
+  ): Promise<void> {
+    context.processedGroups = Math.min(
+      context.processedGroups + handledCount,
+      context.totalGroups,
+    );
+    const progress =
+      context.totalGroups > 0
+        ? Math.min(1, context.processedGroups / context.totalGroups)
+        : 0;
 
     await this.prisma.task.update({
       where: { id: taskId },
@@ -389,7 +463,10 @@ export class ParsingTaskRunner {
     );
   }
 
-  async resolveGroups(scope: ParsingScope, groupIds: number[]): Promise<PrismaGroupRecord[]> {
+  async resolveGroups(
+    scope: ParsingScope,
+    groupIds: number[],
+  ): Promise<PrismaGroupRecord[]> {
     return this.doResolveGroups(scope, groupIds);
   }
 
@@ -405,11 +482,17 @@ export class ParsingTaskRunner {
     return `Парсинг выбранных групп (${groups.length})`;
   }
 
-  private async safeResolveGroups(scope: ParsingScope, groupIds: number[]): Promise<PrismaGroupRecord[]> {
+  private async safeResolveGroups(
+    scope: ParsingScope,
+    groupIds: number[],
+  ): Promise<PrismaGroupRecord[]> {
     try {
       return await this.doResolveGroups(scope, groupIds);
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         return [];
       }
 
@@ -417,7 +500,10 @@ export class ParsingTaskRunner {
     }
   }
 
-  private async doResolveGroups(scope: ParsingScope, groupIds: number[]): Promise<PrismaGroupRecord[]> {
+  private async doResolveGroups(
+    scope: ParsingScope,
+    groupIds: number[],
+  ): Promise<PrismaGroupRecord[]> {
     if (scope === ParsingScope.ALL) {
       const groups = await this.prisma.group.findMany({
         orderBy: { updatedAt: 'desc' },
@@ -427,12 +513,14 @@ export class ParsingTaskRunner {
     }
 
     if (!groupIds?.length) {
-      throw new BadRequestException('Необходимо указать идентификаторы групп для парсинга');
+      throw new BadRequestException(
+        'Необходимо указать идентификаторы групп для парсинга',
+      );
     }
 
-    const groups = await this.prisma.group.findMany({
+    const groups = (await this.prisma.group.findMany({
       where: { id: { in: groupIds } },
-    }) as PrismaGroupRecord[];
+    })) as PrismaGroupRecord[];
 
     if (groups.length !== groupIds.length) {
       const foundIds = new Set(groups.map((group) => group.id));
@@ -509,7 +597,10 @@ export class ParsingTaskRunner {
     });
   }
 
-  private async fetchAllComments(ownerId: number, postId: number): Promise<{ comments: CommentEntity[]; authorIds: number[]; }> {
+  private async fetchAllComments(
+    ownerId: number,
+    postId: number,
+  ): Promise<{ comments: CommentEntity[]; authorIds: number[] }> {
     const batchSize = 100;
     let offset = 0;
     const collected: CommentEntity[] = [];
@@ -569,5 +660,4 @@ export class ParsingTaskRunner {
 
     return ids;
   }
-
 }

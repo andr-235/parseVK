@@ -13,7 +13,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 enum CommentSource {
   TASK
   WATCHLIST
@@ -25,119 +24,137 @@ enum WatchlistStatus {
   STOPPED
 }
 
-
 model Task {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  completed   Boolean  @default(false)
-  totalItems      Int      @default(0)
-  processedItems  Int      @default(0)
-  progress        Float    @default(0)
-  status          String   @default("pending")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  title          String
+  description    String?
+  completed      Boolean  @default(false)
+  totalItems     Int      @default(0)
+  processedItems Int      @default(0)
+  progress       Float    @default(0)
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, createdAt(sort: Desc)]) // для выборки активных задач с сортировкой
+  @@index([createdAt(sort: Desc)]) // для списка задач
+  @@index([completed]) // для фильтрации завершенных
 }
 
 model Group {
-  id                    Int       @id @default(autoincrement())
-  vkId                  Int       @unique
-  name                  String
-  screenName            String?
-  isClosed              Int?
-  deactivated           String?
-  type                  String?
-  photo50               String?
-  photo100              String?
-  photo200              String?
-  activity              String?
-  ageLimits             Int?
-  description           String?   @db.Text
-  membersCount          Int?
-  status                String?
-  verified              Int?
-  wall                  Int?
-  addresses             Json?
-  city                  Json?
-  counters              Json?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  posts                 Post[]
+  id           Int      @id @default(autoincrement())
+  vkId         Int      @unique
+  name         String
+  screenName   String?
+  isClosed     Int?
+  deactivated  String?
+  type         String?
+  photo50      String?
+  photo100     String?
+  photo200     String?
+  activity     String?
+  ageLimits    Int?
+  description  String?  @db.Text
+  membersCount Int?
+  status       String?
+  verified     Int?
+  wall         Int?
+  addresses    Json?
+  city         Json?
+  counters     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  posts        Post[]
+
+  @@index([wall]) // для поиска групп с enabled/disabled wall
+  @@index([membersCount(sort: Desc)]) // для сортировки по популярности
 }
 
 model Post {
-  id                     Int       @id @default(autoincrement())
-  ownerId                Int
-  vkPostId               Int
-  fromId                 Int
-  postedAt               DateTime
-  text                   String    @db.Text
-  commentsCount          Int
-  commentsCanPost        Int
-  commentsGroupsCanPost  Boolean
-  commentsCanClose       Boolean
-  commentsCanOpen        Boolean
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-  groupId                Int?
-  group                  Group?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  comments               Comment[]
+  id                    Int       @id @default(autoincrement())
+  ownerId               Int
+  vkPostId              Int
+  fromId                Int
+  postedAt              DateTime
+  text                  String    @db.Text
+  commentsCount         Int
+  commentsCanPost       Int
+  commentsGroupsCanPost Boolean
+  commentsCanClose      Boolean
+  commentsCanOpen       Boolean
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  groupId               Int?
+  group                 Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  comments              Comment[]
 
   @@unique([ownerId, vkPostId])
+  @@index([groupId, postedAt(sort: Desc)]) // для выборки постов группы
+  @@index([postedAt(sort: Desc)]) // для сортировки по времени
+  @@index([ownerId]) // для поиска по владельцу
 }
 
-
 model Comment {
-  id             Int      @id @default(autoincrement())
-  postId         Int
-  ownerId        Int
-  vkCommentId    Int
-  fromId         Int
-  text           String   @db.Text
-  publishedAt    DateTime
-  likesCount     Int?
-  parentsStack   Json?
-  threadCount    Int?
-  threadItems    Json?
-  attachments    Json?
-  replyToUser    Int?
-  replyToComment Int?
-  authorVkId    Int?
-  author        Author? @relation(fields: [authorVkId], references: [vkUserId], onDelete: SetNull)
-  isDeleted      Boolean  @default(false)
-  isRead         Boolean  @default(false)
-  source         CommentSource @default(TASK)
+  id                Int              @id @default(autoincrement())
+  postId            Int
+  ownerId           Int
+  vkCommentId       Int
+  fromId            Int
+  text              String           @db.Text
+  publishedAt       DateTime
+  likesCount        Int?
+  parentsStack      Json?
+  threadCount       Int?
+  threadItems       Json?
+  attachments       Json?
+  replyToUser       Int?
+  replyToComment    Int?
+  authorVkId        Int?
+  author            Author?          @relation(fields: [authorVkId], references: [vkUserId], onDelete: SetNull)
+  isDeleted         Boolean          @default(false)
+  isRead            Boolean          @default(false)
+  source            CommentSource    @default(TASK)
   watchlistAuthorId Int?
   watchlistAuthor   WatchlistAuthor? @relation(fields: [watchlistAuthorId], references: [id], onDelete: SetNull)
   watchlistSource   WatchlistAuthor? @relation("WatchlistSourceComment")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  post           Post     @relation(fields: [ownerId, postId], references: [ownerId, vkPostId], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  post              Post             @relation(fields: [ownerId, postId], references: [ownerId, vkPostId], onDelete: Cascade)
 
+  @@unique([ownerId, vkCommentId])
   @@index([postId])
   @@index([authorVkId])
   @@index([watchlistAuthorId])
-  @@unique([ownerId, vkCommentId])
+  @@index([publishedAt(sort: Desc)]) // для сортировки по времени публикации
+  @@index([source]) // для фильтрации TASK/WATCHLIST
+  @@index([isRead]) // для фильтра прочитанных
+  @@index([postId, authorVkId]) // для поиска комментариев автора в посте
+  @@index([authorVkId, publishedAt(sort: Desc)]) // для истории активности автора
+  @@index([watchlistAuthorId, publishedAt(sort: Desc)]) // для комментариев watchlist
 }
 
 model Author {
-  id              Int      @id @default(autoincrement())
-  vkUserId        Int      @unique
-  firstName       String
-  lastName        String
-  domain          String?
-  screenName      String?
-  isClosed        Boolean?
-  canAccessClosed Boolean?
-  photo50         String?
-  photo100        String?
-  photo200Orig    String?
-  city            Json?
-  country         Json?
-  comments        Comment[]
+  id               Int               @id @default(autoincrement())
+  vkUserId         Int               @unique
+  firstName        String
+  lastName         String
+  domain           String?
+  screenName       String?
+  isClosed         Boolean?
+  canAccessClosed  Boolean?
+  photo50          String?
+  photo100         String?
+  photo200Orig     String?
+  city             Json?
+  country          Json?
+  comments         Comment[]
   watchlistAuthors WatchlistAuthor[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([firstName, lastName]) // для поиска по имени
+  @@index([screenName]) // для поиска по никнейму
+  @@index([domain]) // для поиска по домену
 }
 
 model Keyword {
@@ -159,22 +176,22 @@ model WatchlistSettings {
 }
 
 model WatchlistAuthor {
-  id                   Int              @id @default(autoincrement())
-  authorVkId           Int
-  sourceCommentId      Int?             @unique
-  status               WatchlistStatus  @default(ACTIVE)
-  lastCheckedAt        DateTime?
-  lastActivityAt       DateTime?
-  foundCommentsCount   Int              @default(0)
-  monitoringStartedAt  DateTime         @default(now())
-  monitoringStoppedAt  DateTime?
-  settingsId           Int
-  settings             WatchlistSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
-  author               Author           @relation(fields: [authorVkId], references: [vkUserId], onDelete: Cascade)
-  sourceComment        Comment?         @relation("WatchlistSourceComment", fields: [sourceCommentId], references: [id], onDelete: SetNull)
-  comments             Comment[]
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  id                  Int               @id @default(autoincrement())
+  authorVkId          Int
+  sourceCommentId     Int?              @unique
+  status              WatchlistStatus   @default(ACTIVE)
+  lastCheckedAt       DateTime?
+  lastActivityAt      DateTime?
+  foundCommentsCount  Int               @default(0)
+  monitoringStartedAt DateTime          @default(now())
+  monitoringStoppedAt DateTime?
+  settingsId          Int
+  settings            WatchlistSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+  author              Author            @relation(fields: [authorVkId], references: [vkUserId], onDelete: Cascade)
+  sourceComment       Comment?          @relation("WatchlistSourceComment", fields: [sourceCommentId], references: [id], onDelete: SetNull)
+  comments            Comment[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   @@unique([authorVkId, settingsId])
   @@index([status])

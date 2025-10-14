@@ -23,8 +23,12 @@ describe('ParsingQueueService', () => {
 
     service = new ParsingQueueService(runnerMock as any, prismaMock as any);
 
-    loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    loggerWarnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    loggerErrorSpy = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    loggerWarnSpy = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -36,7 +40,12 @@ describe('ParsingQueueService', () => {
   it('marks task as running and executes job when enqueued', async () => {
     runnerMock.execute.mockResolvedValue(undefined);
 
-    const job: ParsingTaskJobData = { taskId: 1, scope: 'all' as any, groupIds: [], postLimit: 10 };
+    const job: ParsingTaskJobData = {
+      taskId: 1,
+      scope: 'all' as any,
+      groupIds: [],
+      postLimit: 10,
+    };
 
     await service.enqueue(job);
     await flushQueue();
@@ -56,8 +65,18 @@ describe('ParsingQueueService', () => {
       .mockRejectedValueOnce(new Error('fail'))
       .mockResolvedValueOnce(undefined);
 
-    const firstJob: ParsingTaskJobData = { taskId: 10, scope: 'all' as any, groupIds: [], postLimit: 5 };
-    const secondJob: ParsingTaskJobData = { taskId: 11, scope: 'all' as any, groupIds: [], postLimit: 5 };
+    const firstJob: ParsingTaskJobData = {
+      taskId: 10,
+      scope: 'all' as any,
+      groupIds: [],
+      postLimit: 5,
+    };
+    const secondJob: ParsingTaskJobData = {
+      taskId: 11,
+      scope: 'all' as any,
+      groupIds: [],
+      postLimit: 5,
+    };
 
     await service.enqueue(firstJob);
     await service.enqueue(secondJob);

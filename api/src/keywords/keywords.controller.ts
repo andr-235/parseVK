@@ -13,7 +13,11 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { KeywordsService } from './keywords.service';
 import { AddKeywordDto } from './dto/add-keyword.dto';
 import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto';
-import { IKeywordResponse, IDeleteResponse, IBulkAddResponse } from './interfaces/keyword.interface';
+import {
+  IKeywordResponse,
+  IDeleteResponse,
+  IBulkAddResponse,
+} from './interfaces/keyword.interface';
 
 @Controller('keywords')
 export class KeywordsController {
@@ -25,13 +29,17 @@ export class KeywordsController {
   }
 
   @Post('bulk-add')
-  async bulkAddKeywords(@Body() dto: BulkAddKeywordsDto): Promise<IBulkAddResponse> {
+  async bulkAddKeywords(
+    @Body() dto: BulkAddKeywordsDto,
+  ): Promise<IBulkAddResponse> {
     return this.keywordsService.bulkAddKeywords(dto.words);
   }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadKeywords(@UploadedFile() file: Express.Multer.File): Promise<IBulkAddResponse> {
+  async uploadKeywords(
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<IBulkAddResponse> {
     if (!file) {
       throw new BadRequestException('File is required');
     }

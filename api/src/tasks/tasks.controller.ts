@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateParsingTaskDto } from './dto/create-parsing-task.dto';
 import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface';
@@ -9,7 +17,9 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post('parse')
-  async createParsingTask(@Body() dto: CreateParsingTaskDto): Promise<ParsingTaskResult> {
+  async createParsingTask(
+    @Body() dto: CreateParsingTaskDto,
+  ): Promise<ParsingTaskResult> {
     return this.tasksService.createParsingTask(dto);
   }
 
@@ -19,22 +29,30 @@ export class TasksController {
   }
 
   @Get(':taskId')
-  async getTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<TaskDetail> {
+  async getTask(
+    @Param('taskId', ParseIntPipe) taskId: number,
+  ): Promise<TaskDetail> {
     return this.tasksService.getTask(taskId);
   }
 
   @Post(':taskId/resume')
-  async resumeTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<ParsingTaskResult> {
+  async resumeTask(
+    @Param('taskId', ParseIntPipe) taskId: number,
+  ): Promise<ParsingTaskResult> {
     return this.tasksService.resumeTask(taskId);
   }
 
   @Post(':taskId/check')
-  async refreshTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<ParsingTaskResult> {
+  async refreshTask(
+    @Param('taskId', ParseIntPipe) taskId: number,
+  ): Promise<ParsingTaskResult> {
     return this.tasksService.refreshTask(taskId);
   }
 
   @Delete(':taskId')
-  async deleteTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<void> {
+  async deleteTask(
+    @Param('taskId', ParseIntPipe) taskId: number,
+  ): Promise<void> {
     await this.tasksService.deleteTask(taskId);
   }
 }

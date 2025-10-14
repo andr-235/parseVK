@@ -37,7 +37,9 @@ export class GroupsService {
       },
     });
 
-    this.logger.log(`Группа ${groupData.id} сохранена в базе (id записи ${group.id})`);
+    this.logger.log(
+      `Группа ${groupData.id} сохранена в базе (id записи ${group.id})`,
+    );
 
     return group;
   }

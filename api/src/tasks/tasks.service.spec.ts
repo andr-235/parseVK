@@ -19,7 +19,11 @@ describe('TasksService', () => {
   const createTaskRecord = (overrides: Partial<any> = {}) => ({
     id: 1,
     title: 'task',
-    description: JSON.stringify({ scope: ParsingScope.ALL, groupIds: [], postLimit: 10 }),
+    description: JSON.stringify({
+      scope: ParsingScope.ALL,
+      groupIds: [],
+      postLimit: 10,
+    }),
     completed: false,
     totalItems: 0,
     processedItems: 0,
@@ -62,7 +66,11 @@ describe('TasksService', () => {
         id: 42,
         title: 'title',
         totalItems: groups.length,
-        description: JSON.stringify({ scope: ParsingScope.ALL, groupIds: [], postLimit: 5 }),
+        description: JSON.stringify({
+          scope: ParsingScope.ALL,
+          groupIds: [],
+          postLimit: 5,
+        }),
       });
       prismaMock.task.create.mockResolvedValue(createdTask);
 
@@ -88,7 +96,9 @@ describe('TasksService', () => {
     it('throws when groups are not available', async () => {
       runnerMock.resolveGroups.mockResolvedValue([]);
 
-      await expect(service.createParsingTask({})).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.createParsingTask({})).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
       expect(prismaMock.task.create).not.toHaveBeenCalled();
       expect(queueMock.enqueue).not.toHaveBeenCalled();
     });
@@ -96,7 +106,12 @@ describe('TasksService', () => {
 
   describe('getTasks', () => {
     it('maps task summaries using stored description', async () => {
-      const stats: ParsingStats = { groups: 1, posts: 2, comments: 3, authors: 4 };
+      const stats: ParsingStats = {
+        groups: 1,
+        posts: 2,
+        comments: 3,
+        authors: 4,
+      };
       const tasks = [
         createTaskRecord({
           id: 5,
@@ -141,13 +156,20 @@ describe('TasksService', () => {
     it('throws when task does not exist', async () => {
       prismaMock.task.findUnique.mockResolvedValue(null);
 
-      await expect(service.getTask(123)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.getTask(123)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
   describe('resumeTask', () => {
     it('enqueues task again and clears error data', async () => {
-      const stats: ParsingStats = { groups: 2, posts: 4, comments: 6, authors: 1 };
+      const stats: ParsingStats = {
+        groups: 2,
+        posts: 4,
+        comments: 6,
+        authors: 1,
+      };
       const task = createTaskRecord({
         id: 15,
         status: 'failed',
@@ -285,7 +307,9 @@ describe('TasksService', () => {
       const task = createTaskRecord({ id: 2, status: 'done', completed: true });
       prismaMock.task.findUnique.mockResolvedValue(task);
 
-      await expect(service.resumeTask(2)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.resumeTask(2)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
 
     it('throws when no groups are available', async () => {
@@ -302,7 +326,9 @@ describe('TasksService', () => {
       prismaMock.task.findUnique.mockResolvedValue(task);
       runnerMock.resolveGroups.mockResolvedValue([]);
 
-      await expect(service.resumeTask(3)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.resumeTask(3)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
       expect(prismaMock.task.update).not.toHaveBeenCalled();
       expect(queueMock.enqueue).not.toHaveBeenCalled();
     });

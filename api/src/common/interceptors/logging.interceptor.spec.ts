@@ -43,7 +43,9 @@ describe('LoggingInterceptor', () => {
     } as unknown as ExecutionContext;
 
     logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation(jest.fn());
-    errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(jest.fn());
+    errorSpy = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(jest.fn());
   });
 
   afterEach(() => {
@@ -57,7 +59,9 @@ describe('LoggingInterceptor', () => {
 
     jest.spyOn(Date, 'now').mockReturnValueOnce(100).mockReturnValue(200);
 
-    const result = await lastValueFrom(interceptor.intercept(context, callHandler));
+    const result = await lastValueFrom(
+      interceptor.intercept(context, callHandler),
+    );
 
     expect(result).toBe('ok');
     expect(logSpy).toHaveBeenNthCalledWith(

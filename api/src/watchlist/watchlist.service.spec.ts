@@ -1,5 +1,9 @@
 import { WatchlistService } from './watchlist.service';
-import { WatchlistStatus, CommentSource, type WatchlistSettings } from '@prisma/client';
+import {
+  WatchlistStatus,
+  CommentSource,
+  type WatchlistSettings,
+} from '@prisma/client';
 import type { PrismaService } from '../prisma.service';
 import type { AuthorActivityService } from '../common/services/author-activity.service';
 import type { VkService } from '../vk/vk.service';
@@ -27,7 +31,9 @@ jest.mock('@prisma/client', () => {
 });
 
 describe('WatchlistService', () => {
-  const createSettings = (overrides: Partial<WatchlistSettings> = {}): WatchlistSettings => ({
+  const createSettings = (
+    overrides: Partial<WatchlistSettings> = {},
+  ): WatchlistSettings => ({
     id: 1,
     trackAllComments: true,
     pollIntervalMinutes: 5,
@@ -39,11 +45,18 @@ describe('WatchlistService', () => {
 
   let prisma: {
     watchlistSettings: { upsert: jest.Mock; update: jest.Mock };
-    watchlistAuthor: { findMany: jest.Mock; updateMany: jest.Mock; update: jest.Mock };
+    watchlistAuthor: {
+      findMany: jest.Mock;
+      updateMany: jest.Mock;
+      update: jest.Mock;
+    };
     comment: { groupBy: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock };
     $transaction: jest.Mock;
   };
-  let authorActivityService: { saveAuthors: jest.Mock; saveComments: jest.Mock };
+  let authorActivityService: {
+    saveAuthors: jest.Mock;
+    saveComments: jest.Mock;
+  };
   let vkService: { getAuthorCommentsForPost: jest.Mock };
   let service: WatchlistService;
 
@@ -63,7 +76,9 @@ describe('WatchlistService', () => {
         findMany: jest.fn(),
         findUnique: jest.fn(),
       },
-      $transaction: jest.fn(async (operations: Array<Promise<unknown>>) => Promise.all(operations)),
+      $transaction: jest.fn(async (operations: Array<Promise<unknown>>) =>
+        Promise.all(operations),
+      ),
     };
 
     authorActivityService = {
@@ -196,9 +211,11 @@ describe('WatchlistService', () => {
     vkService.getAuthorCommentsForPost.mockResolvedValue(fetchedComments);
     authorActivityService.saveComments.mockResolvedValue(undefined);
 
-    const result = await (service as unknown as { refreshAuthorRecord: (value: typeof record) => Promise<number> }).refreshAuthorRecord(
-      record,
-    );
+    const result = await (
+      service as unknown as {
+        refreshAuthorRecord: (value: typeof record) => Promise<number>;
+      }
+    ).refreshAuthorRecord(record);
 
     expect(result).toBe(2);
     expect(vkService.getAuthorCommentsForPost).toHaveBeenCalledWith({

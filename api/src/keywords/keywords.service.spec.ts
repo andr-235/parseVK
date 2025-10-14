@@ -67,7 +67,9 @@ describe('KeywordsService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const addKeywordSpy = jest.spyOn(service, 'addKeyword').mockResolvedValue(keyword);
+    const addKeywordSpy = jest
+      .spyOn(service, 'addKeyword')
+      .mockResolvedValue(keyword);
 
     const result = await service.bulkAddKeywords(['one']);
 
@@ -108,12 +110,18 @@ describe('KeywordsService', () => {
     };
     const updatedKeyword = { ...existingKeyword, category: 'Маркетинг' };
 
-    (prismaMock.keyword.findMany as jest.Mock).mockResolvedValue([existingKeyword]);
+    (prismaMock.keyword.findMany as jest.Mock).mockResolvedValue([
+      existingKeyword,
+    ]);
     jest.spyOn(service, 'addKeyword').mockResolvedValue(updatedKeyword);
 
-    const result = await (service as unknown as { bulkAddKeywordEntries: (entries: { word: string; category?: string }[]) => Promise<IBulkAddResponse> }).bulkAddKeywordEntries([
-      { word: 'one', category: 'Маркетинг' },
-    ]);
+    const result = await (
+      service as unknown as {
+        bulkAddKeywordEntries: (
+          entries: { word: string; category?: string }[],
+        ) => Promise<IBulkAddResponse>;
+      }
+    ).bulkAddKeywordEntries([{ word: 'one', category: 'Маркетинг' }]);
 
     expect(result).toEqual({
       success: [updatedKeyword],
@@ -129,8 +137,23 @@ describe('KeywordsService', () => {
   it('должен разбирать текстовый файл и сохранять категории из него', async () => {
     const fileContent = 'first\ncategory; second\nthird, marketing\n';
     const bulkSpy = jest
-      .spyOn(service as unknown as { bulkAddKeywordEntries: (entries: unknown[]) => Promise<IBulkAddResponse> }, 'bulkAddKeywordEntries')
-      .mockResolvedValue({ success: [], failed: [], total: 0, successCount: 0, failedCount: 0, createdCount: 0, updatedCount: 0 });
+      .spyOn(
+        service as unknown as {
+          bulkAddKeywordEntries: (
+            entries: unknown[],
+          ) => Promise<IBulkAddResponse>;
+        },
+        'bulkAddKeywordEntries',
+      )
+      .mockResolvedValue({
+        success: [],
+        failed: [],
+        total: 0,
+        successCount: 0,
+        failedCount: 0,
+        createdCount: 0,
+        updatedCount: 0,
+      });
 
     await service.addKeywordsFromFile(fileContent);
 
@@ -153,7 +176,9 @@ describe('KeywordsService', () => {
 
     const result = await service.deleteKeyword(1);
 
-    expect(prismaMock.keyword.delete).toHaveBeenCalledWith({ where: { id: 1 } });
+    expect(prismaMock.keyword.delete).toHaveBeenCalledWith({
+      where: { id: 1 },
+    });
     expect(result).toEqual(keyword);
   });
 

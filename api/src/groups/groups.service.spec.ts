@@ -59,7 +59,9 @@ describe('GroupsService', () => {
 
   describe('saveGroup', () => {
     it('должен успешно сохранять и маппить данные группы', async () => {
-      (vkService.getGroups as jest.Mock).mockResolvedValue({ groups: [vkGroup] });
+      (vkService.getGroups as jest.Mock).mockResolvedValue({
+        groups: [vkGroup],
+      });
 
       const mappedData = {
         name: vkGroup.name,
@@ -82,7 +84,11 @@ describe('GroupsService', () => {
         counters: vkGroup.counters,
       } satisfies Partial<IGroupResponse>;
 
-      const savedGroup = { id: 1, vkId: vkGroup.id, ...mappedData } as IGroupResponse;
+      const savedGroup = {
+        id: 1,
+        vkId: vkGroup.id,
+        ...mappedData,
+      } as IGroupResponse;
       (prisma.group.upsert as jest.Mock).mockResolvedValue(savedGroup);
 
       const result = await service.saveGroup('https://vk.com/club123');
@@ -114,7 +120,9 @@ describe('GroupsService', () => {
 
     const result = await service.getAllGroups();
 
-    expect(prisma.group.findMany).toHaveBeenCalledWith({ orderBy: { updatedAt: 'desc' } });
+    expect(prisma.group.findMany).toHaveBeenCalledWith({
+      orderBy: { updatedAt: 'desc' },
+    });
     expect(result).toBe(groups);
   });
 
@@ -149,16 +157,23 @@ describe('GroupsService', () => {
 
       const setTimeoutSpy = jest
         .spyOn(global, 'setTimeout')
-        .mockImplementation((callback: Parameters<typeof setTimeout>[0], timeout?: number) => {
-          if (typeof callback === 'function') {
-            (callback as (...args: unknown[]) => void)();
-          }
+        .mockImplementation(
+          (callback: Parameters<typeof setTimeout>[0], timeout?: number) => {
+            if (typeof callback === 'function') {
+              (callback as (...args: unknown[]) => void)();
+            }
 
-          return 0 as ReturnType<typeof setTimeout>;
-        });
+            return 0 as ReturnType<typeof setTimeout>;
+          },
+        );
 
       const saveGroupMock = jest
-        .spyOn(service as unknown as { saveGroup: (id: string | number) => Promise<IGroupResponse> }, 'saveGroup')
+        .spyOn(
+          service as unknown as {
+            saveGroup: (id: string | number) => Promise<IGroupResponse>;
+          },
+          'saveGroup',
+        )
         .mockImplementation(async (identifier: string | number) => {
           if (identifier === 'errorGroup') {
             throw new Error('VK error');
@@ -208,7 +223,12 @@ describe('GroupsService', () => {
     } satisfies IBulkSaveGroupsResult;
 
     const bulkSaveSpy = jest
-      .spyOn(service as unknown as { bulkSaveGroups: (ids: string[]) => Promise<IBulkSaveGroupsResult> }, 'bulkSaveGroups')
+      .spyOn(
+        service as unknown as {
+          bulkSaveGroups: (ids: string[]) => Promise<IBulkSaveGroupsResult>;
+        },
+        'bulkSaveGroups',
+      )
       .mockResolvedValue(bulkResult);
 
     const result = await service.uploadGroupsFromFile('club1\n\n club2 \n');
@@ -218,12 +238,17 @@ describe('GroupsService', () => {
   });
 
   it('должен корректно нормализовывать различные идентификаторы', () => {
-    const normalizeIdentifier = (service as unknown as { normalizeIdentifier: (value: string | number) => string | number })
-      .normalizeIdentifier.bind(service);
+    const normalizeIdentifier = (
+      service as unknown as {
+        normalizeIdentifier: (value: string | number) => string | number;
+      }
+    ).normalizeIdentifier.bind(service);
 
     expect(normalizeIdentifier('https://vk.com/club123')).toBe('123');
     expect(normalizeIdentifier('https://vk.com/public456')).toBe('456');
-    expect(normalizeIdentifier('https://vk.com/screen_name')).toBe('screen_name');
+    expect(normalizeIdentifier('https://vk.com/screen_name')).toBe(
+      'screen_name',
+    );
     expect(normalizeIdentifier('club789')).toBe('789');
     expect(normalizeIdentifier('public101')).toBe('101');
     expect(normalizeIdentifier('  screen_name  ')).toBe('screen_name');

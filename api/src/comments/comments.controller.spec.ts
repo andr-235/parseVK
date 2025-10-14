@@ -26,11 +26,18 @@ describe('CommentsController', () => {
   });
 
   it('должен возвращать массив комментариев из сервиса', async () => {
-    const serviceResult = { items: [{ id: 1 }], total: 1, hasMore: false } as never;
+    const serviceResult = {
+      items: [{ id: 1 }],
+      total: 1,
+      hasMore: false,
+    } as never;
     commentsService.getComments.mockResolvedValue(serviceResult);
 
     await expect(controller.getComments(0, 100)).resolves.toBe(serviceResult);
-    expect(commentsService.getComments).toHaveBeenCalledWith({ offset: 0, limit: 100 });
+    expect(commentsService.getComments).toHaveBeenCalledWith({
+      offset: 0,
+      limit: 100,
+    });
   });
 
   it('должен нормализовать отрицательные значения offset и ограничивать limit', async () => {
@@ -39,14 +46,19 @@ describe('CommentsController', () => {
 
     await controller.getComments(-50, 1000);
 
-    expect(commentsService.getComments).toHaveBeenLastCalledWith({ offset: 0, limit: 200 });
+    expect(commentsService.getComments).toHaveBeenLastCalledWith({
+      offset: 0,
+      limit: 200,
+    });
   });
 
   it('должен обновлять статус прочтения комментария через сервис', async () => {
     const updatedComment = { id: 1, isRead: true } as never;
     commentsService.setReadStatus.mockResolvedValue(updatedComment);
 
-    await expect(controller.updateReadStatus(1, { isRead: true })).resolves.toBe(updatedComment);
+    await expect(
+      controller.updateReadStatus(1, { isRead: true }),
+    ).resolves.toBe(updatedComment);
     expect(commentsService.setReadStatus).toHaveBeenCalledWith(1, true);
   });
 });

@@ -30,16 +30,22 @@ export class WatchlistController {
   @Get('authors')
   async listAuthors(
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
-    @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe)
+    limit: number,
   ): Promise<WatchlistAuthorListDto> {
     const normalizedOffset = Math.max(offset, 0);
     const normalizedLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
 
-    return this.watchlistService.getAuthors({ offset: normalizedOffset, limit: normalizedLimit });
+    return this.watchlistService.getAuthors({
+      offset: normalizedOffset,
+      limit: normalizedLimit,
+    });
   }
 
   @Post('authors')
-  async createAuthor(@Body() dto: CreateWatchlistAuthorDto): Promise<WatchlistAuthorCardDto> {
+  async createAuthor(
+    @Body() dto: CreateWatchlistAuthorDto,
+  ): Promise<WatchlistAuthorCardDto> {
     return this.watchlistService.createAuthor(dto);
   }
 
@@ -47,7 +53,8 @@ export class WatchlistController {
   async getAuthorDetails(
     @Param('id', ParseIntPipe) id: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
-    @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe)
+    limit: number,
   ): Promise<WatchlistAuthorDetailsDto> {
     const normalizedOffset = Math.max(offset, 0);
     const normalizedLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
@@ -72,7 +79,9 @@ export class WatchlistController {
   }
 
   @Patch('settings')
-  async updateSettings(@Body() dto: UpdateWatchlistSettingsDto): Promise<WatchlistSettingsDto> {
+  async updateSettings(
+    @Body() dto: UpdateWatchlistSettingsDto,
+  ): Promise<WatchlistSettingsDto> {
     return this.watchlistService.updateSettings(dto);
   }
 }

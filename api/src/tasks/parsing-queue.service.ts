@@ -52,13 +52,18 @@ export class ParsingQueueService {
       await this.runner.execute(job);
     } catch (error) {
       await this.markStatus(job.taskId, 'failed');
-      this.logger.error(`Не удалось обработать задание ${job.taskId}: ${error instanceof Error ? error.message : error}`);
+      this.logger.error(
+        `Не удалось обработать задание ${job.taskId}: ${error instanceof Error ? error.message : error}`,
+      );
     } finally {
       await this.processNext();
     }
   }
 
-  private async markStatus(taskId: number, status: 'running' | 'failed'): Promise<void> {
+  private async markStatus(
+    taskId: number,
+    status: 'running' | 'failed',
+  ): Promise<void> {
     try {
       await this.prisma.task.update({
         where: { id: taskId },

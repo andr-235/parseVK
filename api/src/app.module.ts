@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { CacheModule } from './common/cache/cache.module';
 import { VkModule } from './vk/vk.module';
 import { GroupsModule } from './groups/groups.module';
 import { KeywordsModule } from './keywords/keywords.module';
@@ -15,6 +16,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
       isGlobal: true,
       envFilePath: undefined,
     }),
+    CacheModule,
     VkModule,
     GroupsModule,
     KeywordsModule,

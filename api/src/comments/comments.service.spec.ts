@@ -107,17 +107,21 @@ describe('CommentsService', () => {
   });
 
   it('должен корректно выставлять hasMore при неполной странице', async () => {
-    prisma.comment.findMany.mockResolvedValue([{
-      id: 1,
-      author: null,
-      watchlistAuthorId: null,
-    } as never]);
+    prisma.comment.findMany.mockResolvedValue([
+      {
+        id: 1,
+        author: null,
+        watchlistAuthorId: null,
+      } as never,
+    ]);
     prisma.comment.count.mockResolvedValue(5);
 
     const result = await service.getComments({ offset: 0, limit: 1 });
 
     expect(result).toEqual({
-      items: [{ id: 1, author: null, watchlistAuthorId: null, isWatchlisted: false }],
+      items: [
+        { id: 1, author: null, watchlistAuthorId: null, isWatchlisted: false },
+      ],
       total: 5,
       hasMore: true,
     });
