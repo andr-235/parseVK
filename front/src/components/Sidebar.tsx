@@ -181,11 +181,19 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
           isCollapsed && 'flex-col items-center px-2 pb-2 pt-2'
         )}
       >
-        {!isCollapsed && (
-          <div>
-            <h2 className="text-xl font-semibold leading-tight">{title}</h2>
-          </div>
-        )}
+        <div
+          className={cn(
+            'flex items-center gap-3 transition-all',
+            isCollapsed ? 'justify-center' : ''
+          )}
+        >
+          <img
+            src="/favicon-64x64.png"
+            alt="ParseVK логотип"
+            className={cn('h-10 w-10 shrink-0 rounded-xl object-contain', isCollapsed && 'h-9 w-9')}
+          />
+          {!isCollapsed && <h2 className="text-xl font-semibold leading-tight">{title}</h2>}
+        </div>
         <ThemeToggle />
       </div>
 
