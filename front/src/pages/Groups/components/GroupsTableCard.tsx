@@ -79,38 +79,41 @@ function GroupsTableCard({
 
   return (
     <Card className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Список групп">
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-6 space-y-0 p-6 md:p-8">
-        <div className="flex min-w-[260px] flex-1 flex-col gap-2">
-          <CardTitle className="text-2xl font-bold text-text-primary">Список групп</CardTitle>
-          <CardDescription className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">{subtitle}</CardDescription>
+      <CardHeader className="flex flex-col gap-6 space-y-0 p-6 pb-4 md:p-8 md:pb-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-[260px] flex-1 flex-col gap-2">
+            <CardTitle className="text-2xl font-bold text-text-primary">Список групп</CardTitle>
+            <CardDescription className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">{subtitle}</CardDescription>
+          </div>
+          <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center">
+            <div className="flex flex-wrap justify-end gap-3">
+              {isLoading ? (
+                <Badge variant="secondary" className="bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]">
+                  Загрузка…
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]">
+                  {badgeText}
+                </Badge>
+              )}
+            </div>
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button className="min-w-[160px]" variant="secondary" disabled>
+                Фильтры (скоро)
+              </Button>
+              <Button className="min-w-[180px]" variant="destructive" onClick={onClear} disabled={clearDisabled}>
+                Очистить список
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex min-w-[220px] flex-col items-end gap-3">
-          <div className="w-full min-w-[220px]">
-            <SearchInput
-              value={searchTerm}
-              onChange={onSearchChange}
-              placeholder="Поиск по названию, домену или VK ID"
-            />
-          </div>
-          <div className="flex w-full flex-wrap items-center justify-end gap-3">
-            {isLoading ? (
-              <Badge variant="secondary" className="bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]">
-                Загрузка…
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]">
-                {badgeText}
-              </Badge>
-            )}
-          </div>
-          <div className="flex flex-wrap justify-end gap-3">
-            <Button className="min-w-[160px]" variant="secondary" disabled>
-              Фильтры (скоро)
-            </Button>
-            <Button className="min-w-[180px]" variant="destructive" onClick={onClear} disabled={clearDisabled}>
-              Очистить список
-            </Button>
-          </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium uppercase tracking-wide text-text-secondary/80">Поиск по сообществам</span>
+          <SearchInput
+            value={searchTerm}
+            onChange={onSearchChange}
+            placeholder="Введите название, домен или VK ID"
+          />
         </div>
       </CardHeader>
 
