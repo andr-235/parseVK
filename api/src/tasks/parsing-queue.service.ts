@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface';
 import { ParsingTaskRunner } from './parsing-task.runner';
+import { TasksGateway } from './tasks.gateway';
 
 @Injectable()
 export class ParsingQueueService {
@@ -13,6 +14,7 @@ export class ParsingQueueService {
   constructor(
     private readonly runner: ParsingTaskRunner,
     private readonly prisma: PrismaService,
+    private readonly tasksGateway: TasksGateway,
   ) {}
 
   async enqueue(job: ParsingTaskJobData): Promise<void> {
@@ -65,10 +67,23 @@ export class ParsingQueueService {
     status: 'running' | 'failed',
   ): Promise<void> {
     try {
-      await this.prisma.task.update({
+      const updatedTask = await this.prisma.task.update({
         where: { id: taskId },
         data: { status } as Prisma.TaskUncheckedUpdateInput,
       });
+
+      const payload = {
+        id: taskId,
+        status,
+        completed: status === 'failed' ? false : updatedTask.completed ?? false,
+        totalItems: updatedTask.totalItems ?? null,
+        processedItems: updatedTask.processedItems ?? null,
+        progress: updatedTask.progress ?? null,
+        description: updatedTask.description ?? null,
+      } as const;
+
+      this.tasksGateway.broadcastStatus(payload);
+      this.tasksGateway.broadcastProgress(payload);
     } catch (error) {
       this.logger.warn(
         `Не удалось обновить статус задачи ${taskId} на ${status}: ${error instanceof Error ? error.message : error}`,

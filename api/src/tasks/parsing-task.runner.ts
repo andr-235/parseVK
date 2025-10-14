@@ -21,6 +21,7 @@ import type {
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 import { normalizeComment } from '../common/utils/comment-normalizer';
+import { TasksGateway } from './tasks.gateway';
 
 @Injectable()
 export class ParsingTaskRunner {
@@ -30,6 +31,7 @@ export class ParsingTaskRunner {
     private readonly prisma: PrismaService,
     private readonly vkService: VkService,
     private readonly authorActivityService: AuthorActivityService,
+    private readonly tasksGateway: TasksGateway,
   ) {}
 
   async execute(job: ParsingTaskJobData): Promise<void> {
@@ -55,7 +57,7 @@ export class ParsingTaskRunner {
     );
 
     if (!groups.length) {
-      await this.prisma.task.update({
+      const updatedTask = await this.prisma.task.update({
         where: { id: taskId },
         data: {
           status: 'failed',
@@ -66,6 +68,32 @@ export class ParsingTaskRunner {
             error: 'Нет доступных групп для парсинга',
           }),
         } as Prisma.TaskUncheckedUpdateInput,
+      }) as PrismaTaskRecord;
+      this.tasksGateway.broadcastStatus({
+        id: taskId,
+        status: 'failed',
+        completed: false,
+        totalItems: updatedTask.totalItems ?? groupIds.length,
+        processedItems: updatedTask.processedItems ?? 0,
+        progress: updatedTask.progress ?? 0,
+        scope,
+        groupIds,
+        postLimit,
+        description: updatedTask.description ?? null,
+        error: 'Нет доступных групп для парсинга',
+      });
+      this.tasksGateway.broadcastProgress({
+        id: taskId,
+        status: 'failed',
+        completed: false,
+        totalItems: updatedTask.totalItems ?? groupIds.length,
+        processedItems: updatedTask.processedItems ?? 0,
+        progress: updatedTask.progress ?? 0,
+        scope,
+        groupIds,
+        postLimit,
+        description: updatedTask.description ?? null,
+        error: 'Нет доступных групп для парсинга',
       });
       const error = new NotFoundException('Нет доступных групп для парсинга');
       this.logger.warn(
@@ -100,7 +128,7 @@ export class ParsingTaskRunner {
         context.skippedGroupVkIds,
       );
 
-      await this.prisma.task.update({
+      const updatedTask = await this.prisma.task.update({
         where: { id: taskId },
         data: {
           completed: true,
@@ -118,6 +146,36 @@ export class ParsingTaskRunner {
               : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
+      }) as PrismaTaskRecord;
+
+      this.tasksGateway.broadcastProgress({
+        id: taskId,
+        status: 'done',
+        completed: true,
+        totalItems: updatedTask.totalItems ?? context.totalGroups,
+        processedItems: updatedTask.processedItems ?? context.totalGroups,
+        progress: updatedTask.progress ?? 1,
+        stats: context.stats,
+        scope,
+        groupIds,
+        postLimit,
+        skippedGroupsMessage: skippedGroupsMessage ?? null,
+        description: updatedTask.description ?? null,
+      });
+
+      this.tasksGateway.broadcastStatus({
+        id: taskId,
+        status: 'done',
+        completed: true,
+        totalItems: updatedTask.totalItems ?? context.totalGroups,
+        processedItems: updatedTask.processedItems ?? context.totalGroups,
+        progress: updatedTask.progress ?? 1,
+        stats: context.stats,
+        scope,
+        groupIds,
+        postLimit,
+        skippedGroupsMessage: skippedGroupsMessage ?? null,
+        description: updatedTask.description ?? null,
       });
 
       this.logger.log(
@@ -128,7 +186,7 @@ export class ParsingTaskRunner {
         context.skippedGroupVkIds,
       );
 
-      await this.prisma.task.update({
+      const updatedTask = await this.prisma.task.update({
         where: { id: taskId },
         data: {
           status: 'failed',
@@ -144,6 +202,40 @@ export class ParsingTaskRunner {
               : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
+      }) as PrismaTaskRecord;
+
+      const normalizedError = error instanceof Error ? error.message : String(error);
+
+      this.tasksGateway.broadcastProgress({
+        id: taskId,
+        status: 'failed',
+        completed: false,
+        totalItems: updatedTask.totalItems ?? context.totalGroups,
+        processedItems: updatedTask.processedItems ?? context.processedGroups,
+        progress: updatedTask.progress ?? (context.totalGroups > 0 ? context.processedGroups / context.totalGroups : 0),
+        stats: context.stats,
+        scope,
+        groupIds,
+        postLimit,
+        skippedGroupsMessage: skippedGroupsMessage ?? null,
+        description: updatedTask.description ?? null,
+        error: normalizedError,
+      });
+
+      this.tasksGateway.broadcastStatus({
+        id: taskId,
+        status: 'failed',
+        completed: false,
+        totalItems: updatedTask.totalItems ?? context.totalGroups,
+        processedItems: updatedTask.processedItems ?? context.processedGroups,
+        progress: updatedTask.progress ?? (context.totalGroups > 0 ? context.processedGroups / context.totalGroups : 0),
+        stats: context.stats,
+        scope,
+        groupIds,
+        postLimit,
+        skippedGroupsMessage: skippedGroupsMessage ?? null,
+        description: updatedTask.description ?? null,
+        error: normalizedError,
       });
 
       this.logger.error(
@@ -449,13 +541,23 @@ export class ParsingTaskRunner {
         ? Math.min(1, context.processedGroups / context.totalGroups)
         : 0;
 
-    await this.prisma.task.update({
+    const updatedTask = await this.prisma.task.update({
       where: { id: taskId },
       data: {
         processedItems: context.processedGroups,
         progress,
         status: 'running',
       } as Prisma.TaskUncheckedUpdateInput,
+    }) as PrismaTaskRecord;
+
+    this.tasksGateway.broadcastProgress({
+      id: taskId,
+      status: 'running',
+      completed: false,
+      totalItems: updatedTask.totalItems ?? context.totalGroups,
+      processedItems: updatedTask.processedItems ?? context.processedGroups,
+      progress: updatedTask.progress ?? progress,
+      stats: context.stats,
     });
 
     this.logger.debug(
