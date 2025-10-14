@@ -213,7 +213,23 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
   const { onConnect, onDisconnect, onConnectError } = options ?? {}
 
   useEffect(() => {
-    const baseUrl = import.meta.env.VITE_API_WS_URL
+    const resolveBaseUrl = (): string | null => {
+      const raw = import.meta.env.VITE_API_WS_URL
+      const trimmed = typeof raw === 'string' ? raw.trim() : ''
+
+      if (trimmed === '' || trimmed.toLowerCase() === 'auto') {
+        if (typeof window === 'undefined') {
+          return null
+        }
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+        return `${protocol}//${window.location.host}`
+      }
+
+      return trimmed
+    }
+
+    const baseUrl = resolveBaseUrl()
     if (!baseUrl) {
       if (import.meta.env.DEV) {
         console.warn('[useTasksSocket] VITE_API_WS_URL is not defined, skipping websocket connection')
@@ -222,7 +238,9 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
       return
     }
 
-    const socket: Socket<TaskServerEvents, TaskClientEvents> = io(`${baseUrl}/tasks`, {
+    const namespaceUrl = baseUrl.endsWith('/') ? `${baseUrl}tasks` : `${baseUrl}/tasks`
+
+    const socket: Socket<TaskServerEvents, TaskClientEvents> = io(namespaceUrl, {
       transports: ['websocket'],
     })
 
