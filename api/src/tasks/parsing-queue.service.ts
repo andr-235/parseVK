@@ -1,93 +1,68 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma.service';
 import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface';
-import { ParsingTaskRunner } from './parsing-task.runner';
-import { TasksGateway } from './tasks.gateway';
+import { ParsingQueueProducer } from './queues/parsing.queue';
 
+/**
+ * Сервис-обертка над BullMQ очередью парсинга
+ *
+ * Предоставляет простой API для добавления и удаления задач.
+ * Реальная обработка происходит в ParsingProcessor.
+ *
+ * МИГРАЦИЯ: Ранее использовалась in-memory очередь с последовательной обработкой.
+ * Теперь используется BullMQ с параллельной обработкой (concurrency=2).
+ */
 @Injectable()
 export class ParsingQueueService {
   private readonly logger = new Logger(ParsingQueueService.name);
-  private readonly queue: ParsingTaskJobData[] = [];
-  private processing = false;
 
-  constructor(
-    private readonly runner: ParsingTaskRunner,
-    private readonly prisma: PrismaService,
-    private readonly tasksGateway: TasksGateway,
-  ) {}
+  constructor(private readonly producer: ParsingQueueProducer) {}
 
+  /**
+   * Добавить задачу в очередь
+   *
+   * Задача будет обработана ParsingProcessor с учетом:
+   * - VK API rate limits (через vk-io)
+   * - BullMQ concurrency (максимум 2 задачи параллельно)
+   * - Автоматический retry при ошибках (3 попытки)
+   */
   async enqueue(job: ParsingTaskJobData): Promise<void> {
-    this.queue.push(job);
-    this.schedule();
+    await this.producer.enqueue(job);
+    this.logger.log(
+      `Задача ${job.taskId} добавлена в очередь (scope: ${job.scope}, groups: ${job.groupIds.length})`,
+    );
   }
 
+  /**
+   * Удалить задачу из очереди
+   *
+   * Удаляет задачу из waiting/active/delayed состояний.
+   * Если задача уже выполняется, она будет прервана.
+   */
   async remove(taskId: number): Promise<void> {
-    if (!this.queue.length) {
-      return;
-    }
-
-    for (let index = this.queue.length - 1; index >= 0; index -= 1) {
-      if (this.queue[index]?.taskId === taskId) {
-        this.queue.splice(index, 1);
-      }
-    }
+    await this.producer.remove(taskId);
+    this.logger.log(`Задача ${taskId} удалена из очереди`);
   }
 
-  private schedule(): void {
-    if (!this.processing) {
-      this.processing = true;
-      void this.processNext();
-    }
+  /**
+   * Получить статистику очереди
+   */
+  async getStats() {
+    return this.producer.getStats();
   }
 
-  private async processNext(): Promise<void> {
-    const job = this.queue.shift();
-
-    if (!job) {
-      this.processing = false;
-      return;
-    }
-
-    try {
-      await this.markStatus(job.taskId, 'running');
-      await this.runner.execute(job);
-    } catch (error) {
-      await this.markStatus(job.taskId, 'failed');
-      this.logger.error(
-        `Не удалось обработать задание ${job.taskId}: ${error instanceof Error ? error.message : error}`,
-      );
-    } finally {
-      await this.processNext();
-    }
+  /**
+   * Pause очередь (для тестирования/maintenance)
+   */
+  async pause(): Promise<void> {
+    await this.producer.pause();
+    this.logger.warn('Очередь парсинга приостановлена');
   }
 
-  private async markStatus(
-    taskId: number,
-    status: 'running' | 'failed',
-  ): Promise<void> {
-    try {
-      const updatedTask = await this.prisma.task.update({
-        where: { id: taskId },
-        data: { status } as Prisma.TaskUncheckedUpdateInput,
-      });
-
-      const payload = {
-        id: taskId,
-        status,
-        completed: status === 'failed' ? false : updatedTask.completed ?? false,
-        totalItems: updatedTask.totalItems ?? null,
-        processedItems: updatedTask.processedItems ?? null,
-        progress: updatedTask.progress ?? null,
-        description: updatedTask.description ?? null,
-      } as const;
-
-      this.tasksGateway.broadcastStatus(payload);
-      this.tasksGateway.broadcastProgress(payload);
-    } catch (error) {
-      this.logger.warn(
-        `Не удалось обновить статус задачи ${taskId} на ${status}: ${error instanceof Error ? error.message : error}`,
-      );
-    }
+  /**
+   * Resume очередь
+   */
+  async resume(): Promise<void> {
+    await this.producer.resume();
+    this.logger.log('Очередь парсинга возобновлена');
   }
 }

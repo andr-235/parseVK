@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -18,6 +19,7 @@ import type {
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
 import { ParsingTaskRunner } from './parsing-task.runner';
 import { ParsingQueueService } from './parsing-queue.service';
+import { TaskCancellationService } from './task-cancellation.service';
 
 type ParsedTaskDescription = {
   scope: ParsingScope | null;
@@ -44,10 +46,13 @@ type PrismaTaskRecord = {
 
 @Injectable()
 export class TasksService {
+  private readonly logger = new Logger(TasksService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly runner: ParsingTaskRunner,
     private readonly parsingQueue: ParsingQueueService,
+    private readonly cancellationService: TaskCancellationService,
   ) {}
 
   async createParsingTask(
@@ -204,11 +209,34 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
-    await this.parsingQueue.remove(taskId);
+    this.cancellationService.requestCancel(taskId);
+
+    let shouldClearCancellation = true;
+
+    try {
+      await this.parsingQueue.remove(taskId);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes('locked by another worker')
+      ) {
+        shouldClearCancellation = false;
+        this.logger.warn(
+          `Не удалось удалить задачу ${taskId} из очереди: ${error.message}. Работающее задание будет остановлено`,
+        );
+      } else {
+        this.cancellationService.clear(taskId);
+        throw error;
+      }
+    }
 
     await this.prisma.task.delete({
       where: { id: taskId },
     });
+
+    if (shouldClearCancellation) {
+      this.cancellationService.clear(taskId);
+    }
   }
 
   private mapTaskToDetail(task: PrismaTaskRecord): TaskDetail {

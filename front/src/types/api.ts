@@ -106,6 +106,13 @@ export interface IGetCommentsResponse {
   hasMore: boolean
 }
 
+export interface IGetCommentsCursorResponse {
+  items: ICommentResponse[]
+  nextCursor: string | null
+  hasMore: boolean
+  total: number
+}
+
 export interface IParsingTaskGroup {
   groupId: number | string
   groupName: string

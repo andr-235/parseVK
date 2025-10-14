@@ -1,4 +1,4 @@
-import type { ICommentResponse, IGetCommentsResponse } from '../types/api'
+import type { ICommentResponse, IGetCommentsResponse, IGetCommentsCursorResponse } from '../types/api'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -20,6 +20,35 @@ export const commentsApi = {
 
     if (!response.ok) {
       throw new Error('Failed to fetch comments')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Cursor-based pagination (рекомендуется для больших списков)
+   *
+   * Преимущества:
+   * - Быстрее на больших offset'ах
+   * - Нет проблемы "missing rows" при добавлении новых данных
+   */
+  async getCommentsCursor(params?: { cursor?: string; limit?: number }): Promise<IGetCommentsCursorResponse> {
+    const searchParams = new URLSearchParams()
+
+    if (params?.cursor) {
+      searchParams.set('cursor', params.cursor)
+    }
+
+    if (typeof params?.limit === 'number') {
+      searchParams.set('limit', String(params.limit))
+    }
+
+    const query = searchParams.toString()
+    const url = query ? `${API_URL}/comments/cursor?${query}` : `${API_URL}/comments/cursor`
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch comments with cursor')
     }
 
     return response.json()

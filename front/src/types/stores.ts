@@ -16,7 +16,9 @@ export interface CommentsState {
   isLoadingMore: boolean
   hasMore: boolean
   totalCount: number
+  nextCursor: string | null
   fetchComments: (options?: { reset?: boolean; limit?: number }) => Promise<void>
+  fetchCommentsCursor: (options?: { reset?: boolean; limit?: number }) => Promise<void>
   toggleReadStatus: (id: number) => Promise<void>
   markWatchlisted: (commentId: number, watchlistAuthorId: number) => void
 }

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma.service';
@@ -7,10 +8,42 @@ import { ParsingTaskRunner } from './parsing-task.runner';
 import { ParsingQueueService } from './parsing-queue.service';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 import { TasksGateway } from './tasks.gateway';
+import { ParsingQueueProducer } from './queues/parsing.queue';
+import { ParsingProcessor } from './queues/parsing.processor';
+import {
+  PARSING_QUEUE,
+  PARSING_RATE_LIMITER,
+} from './queues/parsing.constants';
+import { TaskCancellationService } from './task-cancellation.service';
 
 @Module({
-  imports: [VkModule],
+  imports: [
+    VkModule,
+    BullModule.registerQueue({
+      name: PARSING_QUEUE,
+      defaultJobOptions: {
+        removeOnComplete: {
+          age: 24 * 60 * 60, // 24 часа
+          count: 100,
+        },
+        removeOnFail: {
+          age: 7 * 24 * 60 * 60, // 7 дней
+        },
+      },
+    }),
+  ],
   controllers: [TasksController],
-  providers: [TasksService, PrismaService, ParsingTaskRunner, ParsingQueueService, AuthorActivityService, TasksGateway],
+  providers: [
+    TasksService,
+    PrismaService,
+    ParsingTaskRunner,
+    ParsingQueueService,
+    AuthorActivityService,
+    TasksGateway,
+    ParsingQueueProducer,
+    ParsingProcessor,
+    TaskCancellationService,
+  ],
+  exports: [ParsingQueueService],
 })
 export class TasksModule {}

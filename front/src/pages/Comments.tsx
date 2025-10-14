@@ -11,7 +11,7 @@ const DEFAULT_CATEGORY = 'Без категории'
 function Comments() {
   const comments = useCommentsStore((state) => state.comments)
   const isLoading = useCommentsStore((state) => state.isLoading)
-  const fetchComments = useCommentsStore((state) => state.fetchComments)
+  const fetchCommentsCursor = useCommentsStore((state) => state.fetchCommentsCursor)
   const isLoadingMore = useCommentsStore((state) => state.isLoadingMore)
   const hasMore = useCommentsStore((state) => state.hasMore)
   const totalCount = useCommentsStore((state) => state.totalCount)
@@ -24,7 +24,6 @@ function Comments() {
   const [readFilter, setReadFilter] = useState<'all' | 'unread' | 'read'>('unread')
   const [searchTerm, setSearchTerm] = useState('')
   const [pendingWatchlist, setPendingWatchlist] = useState<Record<number, boolean>>({})
-  const [hasForcedFullLoad, setHasForcedFullLoad] = useState(false)
 
   const keywordsWithMeta = useMemo(
     () =>
@@ -221,14 +220,14 @@ function Comments() {
       isFetchingRef.current = true
 
       try {
-        await fetchComments({ reset, limit: overrideLimit })
+        await fetchCommentsCursor({ reset, limit: overrideLimit })
       } catch (error) {
         console.error('Failed to fetch comments', error)
       } finally {
         isFetchingRef.current = false
       }
     },
-    [fetchComments],
+    [fetchCommentsCursor],
   )
 
   const didInitialLoadRef = useRef(false)
@@ -236,28 +235,20 @@ function Comments() {
   useEffect(() => {
     let isUnmounted = false
 
-    const determineLimit = () => {
-      if (showOnlyKeywordComments && hasDefinedKeywords && totalCount > 0) {
-        return totalCount
-      }
-
-      return undefined
-    }
-
     const runInitialLoad = async () => {
       if (isUnmounted || didInitialLoadRef.current) {
         return
       }
 
       didInitialLoadRef.current = true
-      await loadComments(true, determineLimit())
+      await loadComments(true)
     }
 
     void runInitialLoad()
 
     const intervalId = window.setInterval(() => {
       if (!isUnmounted) {
-        void loadComments(true, determineLimit())
+        void loadComments(true)
       }
     }, 30000)
 
@@ -265,57 +256,7 @@ function Comments() {
       isUnmounted = true
       window.clearInterval(intervalId)
     }
-  }, [hasDefinedKeywords, loadComments, showOnlyKeywordComments, totalCount])
-
-  useEffect(() => {
-    if (!showOnlyKeywordComments || !hasDefinedKeywords) {
-      if (hasForcedFullLoad) {
-        setHasForcedFullLoad(false)
-      }
-      return
-    }
-
-    if (isLoading || isLoadingMore) {
-      return
-    }
-
-    if (totalCount === 0) {
-      return
-    }
-
-    if (comments.length >= totalCount) {
-      if (hasForcedFullLoad) {
-        setHasForcedFullLoad(false)
-      }
-      return
-    }
-
-    if (hasForcedFullLoad) {
-      return
-    }
-
-    setHasForcedFullLoad(true)
-
-    const loadAll = async () => {
-      try {
-        await loadComments(true, totalCount)
-      } catch (error) {
-        console.error('Failed to load all comments for keyword view', error)
-        setHasForcedFullLoad(false)
-      }
-    }
-
-    void loadAll()
-  }, [
-    comments.length,
-    hasDefinedKeywords,
-    hasForcedFullLoad,
-    isLoading,
-    isLoadingMore,
-    loadComments,
-    showOnlyKeywordComments,
-    totalCount,
-  ])
+  }, [loadComments])
 
   useEffect(() => {
     if (keywords.length === 0) {

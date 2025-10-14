@@ -154,6 +154,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
   isLoadingMore: false,
   hasMore: true,
   totalCount: 0,
+  nextCursor: null,
 
   async fetchComments({ reset = false, limit }: { reset?: boolean; limit?: number } = {}) {
     const state = get()
@@ -206,6 +207,71 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       }))
     } catch (error) {
       console.error('Failed to fetch comments', error)
+      set({ isLoading: false, isLoadingMore: false })
+      throw error
+    }
+  },
+
+  /**
+   * Cursor-based pagination (рекомендуется для больших списков)
+   *
+   * Преимущества:
+   * - Быстрее на больших offset'ах (использует индекс)
+   * - Нет проблемы "missing rows" при добавлении новых данных
+   * - Стабильная пагинация при обновлениях данных
+   */
+  async fetchCommentsCursor({ reset = false, limit }: { reset?: boolean; limit?: number } = {}) {
+    const state = get()
+
+    if (reset ? state.isLoading : state.isLoadingMore || state.isLoading) {
+      return
+    }
+
+    if (!reset && !state.hasMore) {
+      return
+    }
+
+    const cursor = reset ? undefined : state.nextCursor ?? undefined
+    const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
+
+    if (reset) {
+      set({ isLoading: true })
+    } else {
+      set({ isLoadingMore: true })
+    }
+
+    try {
+      const response = await commentsApi.getCommentsCursor({ cursor, limit: pageSize })
+      const normalized = response.items.map((comment) => {
+        const authorInfo = resolveAuthorInfo(comment)
+        const watchlistAuthorId = typeof comment.watchlistAuthorId === 'number' ? comment.watchlistAuthorId : null
+
+        return {
+          id: comment.id,
+          author: authorInfo.name,
+          authorId: authorInfo.id,
+          authorUrl: authorInfo.url,
+          authorAvatar: authorInfo.avatar,
+          commentUrl: buildCommentUrl(comment),
+          text: comment.text ?? '',
+          createdAt: normalizeCreatedAt(comment.createdAt),
+          publishedAt: comment.publishedAt ? normalizeCreatedAt(comment.publishedAt) : null,
+          isRead: comment.isRead ?? false,
+          watchlistAuthorId,
+          isWatchlisted: Boolean(watchlistAuthorId)
+        }
+      })
+
+      set((prevState) => ({
+        comments: reset ? normalized : [...prevState.comments, ...normalized],
+        isLoading: false,
+        isLoadingMore: false,
+        hasMore: response.hasMore,
+        totalCount: response.total,
+        nextCursor: response.nextCursor
+      }))
+    } catch (error) {
+      console.error('Failed to fetch comments with cursor', error)
       set({ isLoading: false, isLoadingMore: false })
       throw error
     }

@@ -22,6 +22,8 @@ import type { ParsingStats } from './interfaces/parsing-stats.interface';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 import { normalizeComment } from '../common/utils/comment-normalizer';
 import { TasksGateway } from './tasks.gateway';
+import { TaskCancellationService } from './task-cancellation.service';
+import { TaskCancelledError } from './errors/task-cancelled.error';
 
 @Injectable()
 export class ParsingTaskRunner {
@@ -32,6 +34,7 @@ export class ParsingTaskRunner {
     private readonly vkService: VkService,
     private readonly authorActivityService: AuthorActivityService,
     private readonly tasksGateway: TasksGateway,
+    private readonly cancellationService: TaskCancellationService,
   ) {}
 
   async execute(job: ParsingTaskJobData): Promise<void> {
@@ -40,6 +43,8 @@ export class ParsingTaskRunner {
     this.logger.log(
       `Запуск парсинга задачи ${taskId}: scope=${scope}, количество групп=${groupIds.length}, лимит постов=${postLimit}`,
     );
+
+    this.cancellationService.throwIfCancelled(taskId);
 
     const task = (await this.prisma.task.findUnique({
       where: { id: taskId },
@@ -57,7 +62,7 @@ export class ParsingTaskRunner {
     );
 
     if (!groups.length) {
-      const updatedTask = await this.prisma.task.update({
+      const updatedTask = (await this.prisma.task.update({
         where: { id: taskId },
         data: {
           status: 'failed',
@@ -68,7 +73,7 @@ export class ParsingTaskRunner {
             error: 'Нет доступных групп для парсинга',
           }),
         } as Prisma.TaskUncheckedUpdateInput,
-      }) as PrismaTaskRecord;
+      })) as PrismaTaskRecord;
       this.tasksGateway.broadcastStatus({
         id: taskId,
         status: 'failed',
@@ -128,7 +133,7 @@ export class ParsingTaskRunner {
         context.skippedGroupVkIds,
       );
 
-      const updatedTask = await this.prisma.task.update({
+      const updatedTask = (await this.prisma.task.update({
         where: { id: taskId },
         data: {
           completed: true,
@@ -146,7 +151,7 @@ export class ParsingTaskRunner {
               : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
-      }) as PrismaTaskRecord;
+      })) as PrismaTaskRecord;
 
       this.tasksGateway.broadcastProgress({
         id: taskId,
@@ -182,11 +187,16 @@ export class ParsingTaskRunner {
         `Задача ${taskId} успешно завершена: группы=${context.stats.groups}, посты=${context.stats.posts}, комментарии=${context.stats.comments}, авторы=${context.stats.authors}`,
       );
     } catch (error) {
+      if (error instanceof TaskCancelledError) {
+        this.logger.warn(`Задача ${taskId} отменена пользователем`);
+        throw error;
+      }
+
       const skippedGroupsMessage = this.buildSkippedGroupsMessage(
         context.skippedGroupVkIds,
       );
 
-      const updatedTask = await this.prisma.task.update({
+      const updatedTask = (await this.prisma.task.update({
         where: { id: taskId },
         data: {
           status: 'failed',
@@ -202,9 +212,10 @@ export class ParsingTaskRunner {
               : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
-      }) as PrismaTaskRecord;
+      })) as PrismaTaskRecord;
 
-      const normalizedError = error instanceof Error ? error.message : String(error);
+      const normalizedError =
+        error instanceof Error ? error.message : String(error);
 
       this.tasksGateway.broadcastProgress({
         id: taskId,
@@ -212,7 +223,11 @@ export class ParsingTaskRunner {
         completed: false,
         totalItems: updatedTask.totalItems ?? context.totalGroups,
         processedItems: updatedTask.processedItems ?? context.processedGroups,
-        progress: updatedTask.progress ?? (context.totalGroups > 0 ? context.processedGroups / context.totalGroups : 0),
+        progress:
+          updatedTask.progress ??
+          (context.totalGroups > 0
+            ? context.processedGroups / context.totalGroups
+            : 0),
         stats: context.stats,
         scope,
         groupIds,
@@ -228,7 +243,11 @@ export class ParsingTaskRunner {
         completed: false,
         totalItems: updatedTask.totalItems ?? context.totalGroups,
         processedItems: updatedTask.processedItems ?? context.processedGroups,
-        progress: updatedTask.progress ?? (context.totalGroups > 0 ? context.processedGroups / context.totalGroups : 0),
+        progress:
+          updatedTask.progress ??
+          (context.totalGroups > 0
+            ? context.processedGroups / context.totalGroups
+            : 0),
         stats: context.stats,
         scope,
         groupIds,
@@ -244,6 +263,8 @@ export class ParsingTaskRunner {
       );
 
       throw error;
+    } finally {
+      this.cancellationService.clear(taskId);
     }
   }
 
@@ -288,6 +309,8 @@ export class ParsingTaskRunner {
   }): Promise<void> {
     const { groups, postLimit, context, taskId } = params;
 
+    this.cancellationService.throwIfCancelled(taskId);
+
     const alreadyProcessed = Math.min(
       Math.max(context.processedGroups, 0),
       groups.length,
@@ -309,6 +332,8 @@ export class ParsingTaskRunner {
     }
 
     for (const group of remainingGroups) {
+      this.cancellationService.throwIfCancelled(taskId);
+
       const shouldUpdateProgress = await this.processGroup({
         group,
         postLimit,
@@ -330,6 +355,8 @@ export class ParsingTaskRunner {
   }): Promise<boolean> {
     const { group, postLimit, context, taskId } = params;
     const ownerId = this.toGroupOwnerId(group.vkId);
+
+    this.cancellationService.throwIfCancelled(taskId);
 
     if (this.isGroupWallDisabled(group)) {
       this.handleSkippedGroup(context, group);
@@ -364,12 +391,15 @@ export class ParsingTaskRunner {
     );
 
     for (const post of posts) {
+      this.cancellationService.throwIfCancelled(taskId);
+
       await this.savePost(post, group);
       context.stats.posts += 1;
 
       const { comments, authorIds } = await this.fetchAllComments(
         ownerId,
         post.id,
+        taskId,
       );
       const newAuthorIds = this.extractNewAuthorIds(
         authorIds,
@@ -377,6 +407,8 @@ export class ParsingTaskRunner {
       );
 
       if (newAuthorIds.length) {
+        this.cancellationService.throwIfCancelled(taskId);
+
         const createdOrUpdated =
           await this.authorActivityService.saveAuthors(newAuthorIds);
         context.stats.authors += createdOrUpdated;
@@ -387,6 +419,8 @@ export class ParsingTaskRunner {
       }
 
       if (comments.length) {
+        this.cancellationService.throwIfCancelled(taskId);
+
         const savedCount = await this.authorActivityService.saveComments(
           comments,
           {
@@ -541,14 +575,30 @@ export class ParsingTaskRunner {
         ? Math.min(1, context.processedGroups / context.totalGroups)
         : 0;
 
-    const updatedTask = await this.prisma.task.update({
-      where: { id: taskId },
-      data: {
-        processedItems: context.processedGroups,
-        progress,
-        status: 'running',
-      } as Prisma.TaskUncheckedUpdateInput,
-    }) as PrismaTaskRecord;
+    this.cancellationService.throwIfCancelled(taskId);
+
+    let updatedTask: PrismaTaskRecord;
+
+    try {
+      updatedTask = (await this.prisma.task.update({
+        where: { id: taskId },
+        data: {
+          processedItems: context.processedGroups,
+          progress,
+          status: 'running',
+        } as Prisma.TaskUncheckedUpdateInput,
+      })) as PrismaTaskRecord;
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025' &&
+        this.cancellationService.isCancelled(taskId)
+      ) {
+        throw new TaskCancelledError(taskId);
+      }
+
+      throw error;
+    }
 
     this.tasksGateway.broadcastProgress({
       id: taskId,
@@ -702,6 +752,7 @@ export class ParsingTaskRunner {
   private async fetchAllComments(
     ownerId: number,
     postId: number,
+    taskId: number,
   ): Promise<{ comments: CommentEntity[]; authorIds: number[] }> {
     const batchSize = 100;
     let offset = 0;
@@ -709,6 +760,8 @@ export class ParsingTaskRunner {
     const authorIds = new Set<number>();
 
     while (true) {
+      this.cancellationService.throwIfCancelled(taskId);
+
       const response = await this.vkService.getComments({
         ownerId,
         postId,

@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/cache-manager": "^3.0.1",
     "@nestjs/common": "^11.1.6",
     "@nestjs/config": "^4.0.2",
@@ -28,6 +29,7 @@
     "@nestjs/platform-socket.io": "^11.1.6",
     "@nestjs/websockets": "^11.1.6",
     "@prisma/client": "^6.16.3",
+    "bullmq": "^5.61.0",
     "cache-manager": "^7.2.4",
     "cache-manager-redis-yet": "^5.1.5",
     "class-validator": "^0.14.2",

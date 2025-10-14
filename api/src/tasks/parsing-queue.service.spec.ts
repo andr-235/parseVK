@@ -1,104 +1,93 @@
-jest.mock('vk-io', () => ({
-  APIError: class MockApiError extends Error {
-    code = 0;
-  },
-}));
-
-import { Logger } from '@nestjs/common';
 import { ParsingQueueService } from './parsing-queue.service';
 import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface';
-
-const flushQueue = () => new Promise((resolve) => setImmediate(resolve));
+import { ParsingQueueProducer } from './queues/parsing.queue';
 
 describe('ParsingQueueService', () => {
   let service: ParsingQueueService;
-  let runnerMock: { execute: jest.Mock };
-  let prismaMock: { task: { update: jest.Mock } };
-  let loggerErrorSpy: jest.SpyInstance;
-  let loggerWarnSpy: jest.SpyInstance;
+  let producerMock: jest.Mocked<ParsingQueueProducer>;
 
   beforeEach(() => {
-    runnerMock = { execute: jest.fn() };
-    prismaMock = { task: { update: jest.fn().mockResolvedValue(undefined) } };
+    producerMock = {
+      enqueue: jest.fn().mockResolvedValue(undefined),
+      remove: jest.fn().mockResolvedValue(undefined),
+      getStats: jest.fn().mockResolvedValue({
+        waiting: 0,
+        active: 0,
+        completed: 0,
+        failed: 0,
+        delayed: 0,
+        total: 0,
+      }),
+      pause: jest.fn().mockResolvedValue(undefined),
+      resume: jest.fn().mockResolvedValue(undefined),
+      clear: jest.fn().mockResolvedValue(undefined),
+    } as any;
 
-    service = new ParsingQueueService(runnerMock as any, prismaMock as any);
-
-    loggerErrorSpy = jest
-      .spyOn(Logger.prototype, 'error')
-      .mockImplementation(() => undefined);
-    loggerWarnSpy = jest
-      .spyOn(Logger.prototype, 'warn')
-      .mockImplementation(() => undefined);
+    service = new ParsingQueueService(producerMock);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
-    loggerErrorSpy.mockRestore();
-    loggerWarnSpy.mockRestore();
   });
 
-  it('marks task as running and executes job when enqueued', async () => {
-    runnerMock.execute.mockResolvedValue(undefined);
+  describe('enqueue', () => {
+    it('должен добавлять задачу в очередь через producer', async () => {
+      const job: ParsingTaskJobData = {
+        taskId: 1,
+        scope: 'all' as any,
+        groupIds: [],
+        postLimit: 10,
+      };
 
-    const job: ParsingTaskJobData = {
-      taskId: 1,
-      scope: 'all' as any,
-      groupIds: [],
-      postLimit: 10,
-    };
+      await service.enqueue(job);
 
-    await service.enqueue(job);
-    await flushQueue();
-    await flushQueue();
-
-    expect(prismaMock.task.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: expect.objectContaining({ status: 'running' }),
+      expect(producerMock.enqueue).toHaveBeenCalledWith(job);
+      expect(producerMock.enqueue).toHaveBeenCalledTimes(1);
     });
-    expect(runnerMock.execute).toHaveBeenCalledWith(job);
-    expect(loggerWarnSpy).not.toHaveBeenCalled();
-    expect(loggerErrorSpy).not.toHaveBeenCalled();
   });
 
-  it('marks task as failed and continues with next jobs when execution throws', async () => {
-    runnerMock.execute
-      .mockRejectedValueOnce(new Error('fail'))
-      .mockResolvedValueOnce(undefined);
+  describe('remove', () => {
+    it('должен удалять задачу из очереди через producer', async () => {
+      const taskId = 42;
 
-    const firstJob: ParsingTaskJobData = {
-      taskId: 10,
-      scope: 'all' as any,
-      groupIds: [],
-      postLimit: 5,
-    };
-    const secondJob: ParsingTaskJobData = {
-      taskId: 11,
-      scope: 'all' as any,
-      groupIds: [],
-      postLimit: 5,
-    };
+      await service.remove(taskId);
 
-    await service.enqueue(firstJob);
-    await service.enqueue(secondJob);
-    await flushQueue();
-    await flushQueue();
-    await flushQueue();
+      expect(producerMock.remove).toHaveBeenCalledWith(taskId);
+      expect(producerMock.remove).toHaveBeenCalledTimes(1);
+    });
+  });
 
-    expect(prismaMock.task.update).toHaveBeenNthCalledWith(1, {
-      where: { id: 10 },
-      data: expect.objectContaining({ status: 'running' }),
+  describe('getStats', () => {
+    it('должен возвращать статистику очереди', async () => {
+      const mockStats = {
+        waiting: 5,
+        active: 2,
+        completed: 100,
+        failed: 3,
+        delayed: 1,
+        total: 111,
+      };
+
+      producerMock.getStats.mockResolvedValue(mockStats);
+
+      const stats = await service.getStats();
+
+      expect(stats).toEqual(mockStats);
+      expect(producerMock.getStats).toHaveBeenCalledTimes(1);
     });
-    expect(prismaMock.task.update).toHaveBeenNthCalledWith(2, {
-      where: { id: 10 },
-      data: expect.objectContaining({ status: 'failed' }),
+  });
+
+  describe('pause/resume', () => {
+    it('должен приостанавливать очередь', async () => {
+      await service.pause();
+
+      expect(producerMock.pause).toHaveBeenCalledTimes(1);
     });
-    expect(prismaMock.task.update).toHaveBeenNthCalledWith(3, {
-      where: { id: 11 },
-      data: expect.objectContaining({ status: 'running' }),
+
+    it('должен возобновлять очередь', async () => {
+      await service.resume();
+
+      expect(producerMock.resume).toHaveBeenCalledTimes(1);
     });
-    expect(runnerMock.execute).toHaveBeenCalledTimes(2);
-    expect(runnerMock.execute).toHaveBeenNthCalledWith(1, firstJob);
-    expect(runnerMock.execute).toHaveBeenNthCalledWith(2, secondJob);
-    expect(loggerErrorSpy).toHaveBeenCalled();
   });
 });
