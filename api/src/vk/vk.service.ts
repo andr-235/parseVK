@@ -305,7 +305,13 @@ export class VkService {
         `Поиск по региону завершён, найдено уникальных групп: ${uniqueGroups.size}`,
       );
 
-      return Array.from(uniqueGroups.values());
+      if (uniqueGroups.size === 0) {
+        return [];
+      }
+
+      const enrichedGroups = await this.enrichGroupsWithDetails(uniqueGroups);
+
+      return enrichedGroups;
     } catch (error) {
       if (error instanceof APIError) {
         this.logger.error(
@@ -326,6 +332,60 @@ export class VkService {
 
       throw new Error('UNKNOWN_VK_ERROR');
     }
+  }
+
+  private async enrichGroupsWithDetails(
+    groups: Map<number, IGroup>,
+  ): Promise<IGroup[]> {
+    const ids = Array.from(groups.keys());
+    if (!ids.length) {
+      return [];
+    }
+
+    const chunkSize = 400;
+    const fields: Params.GroupsGetByIdParams['fields'] = [
+      'members_count',
+      'city',
+      'activity',
+      'status',
+      'verified',
+      'description',
+      'addresses',
+      'contacts',
+      'site',
+    ];
+
+    const enriched = new Map<number, IGroup>(groups);
+
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      try {
+        const detailsResponse = await this.vk.api.groups.getById({
+          group_ids: chunk.map(String),
+          fields,
+        });
+        const detailsArray = Array.isArray(detailsResponse)
+          ? detailsResponse
+          : (detailsResponse as Responses.GroupsGetByIdObjectResponse).groups ?? [];
+        const details = detailsArray as Objects.GroupsGroupFull[];
+
+        details.forEach((detail) => {
+          const base = enriched.get(detail.id);
+          const merged: IGroup = {
+            ...(base ?? {}),
+            ...(detail as unknown as IGroup),
+          };
+          enriched.set(detail.id, merged);
+        });
+      } catch (error) {
+        this.logger.error(
+          `Не удалось загрузить подробности для групп: ${chunk.join(', ')}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    }
+
+    return Array.from(enriched.values());
   }
 
   private async collectRegionCityIds(regionId: number): Promise<number[]> {

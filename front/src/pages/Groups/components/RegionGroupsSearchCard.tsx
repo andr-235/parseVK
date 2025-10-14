@@ -162,16 +162,19 @@ function RegionGroupsSearchCard({
               {results.map((group) => (
                 <TableRow key={group.id}>
                   <TableCell className="max-w-[260px]">
-                    <div className="flex flex-col">
+                    <a
+                      href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col rounded-md outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
                       <span className="font-medium leading-tight">
                         {group.name}
                       </span>
-                      {group.screen_name && (
-                        <span className="text-xs text-muted-foreground">
-                          vk.com/{group.screen_name}
-                        </span>
-                      )}
-                    </div>
+                      <span className="text-xs text-muted-foreground">
+                        vk.com/{group.screen_name ?? `club${group.id}`}
+                      </span>
+                    </a>
                   </TableCell>
                   <TableCell>{renderMembersCount(group)}</TableCell>
                   <TableCell>{formatCityTitle(group)}</TableCell>
