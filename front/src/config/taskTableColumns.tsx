@@ -1,5 +1,6 @@
 import ProgressBar from '../components/ProgressBar'
 import TaskActionsCell from '../pages/Tasks/components/TaskActionsCell'
+import { cn } from '../lib/utils'
 import { getTaskStatusText } from '../utils/statusHelpers'
 import { calculateTaskProgress } from '../utils/taskProgress'
 import type { TableColumn, Task } from '../types'
@@ -71,6 +72,14 @@ const STATUS_WEIGHTS: Record<Task['status'], number> = {
   running: 2,
   completed: 3,
   failed: 4,
+}
+
+const STATUS_BADGE_STYLES: Record<Task['status'], string> = {
+  pending: 'bg-amber-500/20 text-amber-500 ring-1 ring-inset ring-amber-500/30',
+  processing: 'bg-indigo-500/20 text-indigo-500 ring-1 ring-inset ring-indigo-500/30',
+  running: 'bg-sky-500/20 text-sky-500 ring-1 ring-inset ring-sky-500/30',
+  completed: 'bg-emerald-500/20 text-emerald-500 ring-1 ring-inset ring-emerald-500/30',
+  failed: 'bg-rose-500/20 text-rose-400 ring-1 ring-inset ring-rose-500/30',
 }
 
 const columns: TableColumn<Task>[] = [
@@ -158,8 +167,13 @@ const columns: TableColumn<Task>[] = [
           : 'primary'
 
       return (
-        <div className="task-status-cell">
-          <span className={`status-badge status-${item.status}`}>
+        <div className="flex w-full flex-col gap-3 text-sm text-text-secondary">
+          <span
+            className={cn(
+              'inline-flex items-center self-start rounded-full px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em]',
+              STATUS_BADGE_STYLES[item.status] ?? 'bg-muted text-text-secondary ring-1 ring-inset ring-border/60'
+            )}
+          >
             {getTaskStatusText(item.status)}
           </span>
           {total > 0 && (
@@ -169,21 +183,27 @@ const columns: TableColumn<Task>[] = [
               size="small"
               showLabel={false}
               tone={progressTone}
-              className="task-status-progress"
+              className="mt-1"
             />
           )}
           {hasMeta && (
-            <div className="task-status-meta">
-              {scopeLabel && <span>{scopeLabel}</span>}
-              {postLimitValue !== null && <span>{`Лимит постов: ${postLimitValue}`}</span>}
-              {total > 0 && <span>{`Обработано: ${processedCount}/${total}`}</span>}
-              {processingCount > 0 && <span>{`В работе: ${processingCount}`}</span>}
-              {pendingCount > 0 && <span>{`В очереди: ${pendingCount}`}</span>}
-              <span className={successCount > 0 ? 'success-text' : undefined}>{`Успешно: ${successCount}`}</span>
-              {failedCount > 0 && <span className="error-text">{`Ошибок: ${failedCount}`}</span>}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-relaxed text-text-secondary">
+              {scopeLabel && <span className="whitespace-nowrap">{scopeLabel}</span>}
+              {postLimitValue !== null && (
+                <span className="whitespace-nowrap">{`Лимит постов: ${postLimitValue}`}</span>
+              )}
+              {total > 0 && <span className="whitespace-nowrap">{`Обработано: ${processedCount}/${total}`}</span>}
+              {processingCount > 0 && <span className="whitespace-nowrap">{`В работе: ${processingCount}`}</span>}
+              {pendingCount > 0 && <span className="whitespace-nowrap">{`В очереди: ${pendingCount}`}</span>}
+              <span className={cn('whitespace-nowrap font-medium', successCount > 0 && 'text-emerald-500')}>
+                {`Успешно: ${successCount}`}
+              </span>
+              {failedCount > 0 && (
+                <span className="whitespace-nowrap font-medium text-rose-500">{`Ошибок: ${failedCount}`}</span>
+              )}
               {hasSkipped && skippedLabel && (
                 <span
-                  className="task-status-meta__note warning-text"
+                  className="max-w-full text-amber-500"
                   title={skippedPreviewRaw}
                 >
                   {`Пропущены: ${skippedLabel}`}
