@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import TaskDetails from '../components/TaskDetails'
 import CreateParseTaskModal from '../components/CreateParseTaskModal'
@@ -25,41 +25,8 @@ function Tasks() {
 
   const [selectedTaskId, setSelectedTaskId] = useState<number | string | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [isSocketConnected, setIsSocketConnected] = useState(false)
-  const fallbackIntervalRef = useRef<number | null>(null)
-  const selectedTaskIdRef = useRef<number | string | null>(selectedTaskId)
 
   const activeTasks = useMemo(() => tasks.filter(isTaskActive), [tasks])
-  const hasActiveTasks = activeTasks.length > 0
-
-  const stopFallbackPolling = useCallback(() => {
-    if (fallbackIntervalRef.current != null) {
-      window.clearInterval(fallbackIntervalRef.current)
-      fallbackIntervalRef.current = null
-    }
-  }, [])
-
-  const runFallbackFetch = useCallback(() => {
-    void fetchTasks()
-    const currentSelected = selectedTaskIdRef.current
-    if (currentSelected != null) {
-      void fetchTaskDetails(currentSelected)
-    }
-  }, [fetchTasks, fetchTaskDetails])
-
-  const ensureFallbackPolling = useCallback(() => {
-    if (!hasActiveTasks) {
-      return
-    }
-
-    runFallbackFetch()
-
-    if (fallbackIntervalRef.current == null) {
-      fallbackIntervalRef.current = window.setInterval(() => {
-        runFallbackFetch()
-      }, 8000)
-    }
-  }, [hasActiveTasks, runFallbackFetch])
 
   const latestTaskDate = useMemo(() => {
     const timestamps = tasks
@@ -101,39 +68,7 @@ function Tasks() {
     void fetchGroups()
   }, [fetchGroups])
 
-  useEffect(() => {
-    selectedTaskIdRef.current = selectedTaskId
-  }, [selectedTaskId])
-
-  useEffect(() => {
-    if (!hasActiveTasks) {
-      stopFallbackPolling()
-      return
-    }
-
-    if (!isSocketConnected) {
-      ensureFallbackPolling()
-    }
-  }, [hasActiveTasks, ensureFallbackPolling, isSocketConnected, stopFallbackPolling])
-
-  useEffect(() => () => stopFallbackPolling(), [stopFallbackPolling])
-
-  const handleSocketConnect = useCallback(() => {
-    setIsSocketConnected(true)
-    stopFallbackPolling()
-    runFallbackFetch()
-  }, [runFallbackFetch, stopFallbackPolling])
-
-  const handleSocketDisconnect = useCallback(() => {
-    setIsSocketConnected(false)
-    ensureFallbackPolling()
-  }, [ensureFallbackPolling])
-
-  useTasksSocket({
-    onConnect: handleSocketConnect,
-    onDisconnect: handleSocketDisconnect,
-    onConnectError: handleSocketDisconnect
-  })
+  useTasksSocket()
 
   useEffect(() => {
     if (selectedTaskId == null) {
