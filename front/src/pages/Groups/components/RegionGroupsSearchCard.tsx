@@ -36,18 +36,68 @@ function RegionGroupsSearchCard({
   onRemoveGroup,
   onReset
 }: RegionGroupsSearchCardProps) {
+  const formatCityTitle = (group: IRegionGroupSearchItem): string => {
+    const city = group.city
+
+    if (!city) {
+      return '—'
+    }
+
+    if (typeof city === 'string') {
+      return city
+    }
+
+    if (typeof city === 'object' && city !== null) {
+      if ('title' in city && typeof city.title === 'string') {
+        return city.title
+      }
+
+      if ('name' in city && typeof city.name === 'string') {
+        return city.name
+      }
+    }
+
+    return '—'
+  }
+
+  const renderMembersCount = (group: IRegionGroupSearchItem) => {
+    if (typeof group.members_count === 'number') {
+      return group.members_count.toLocaleString('ru-RU')
+    }
+
+    return '—'
+  }
+
   const columns = useMemo<TableColumn<IRegionGroupSearchItem>[]>(() => [
     {
       key: 'name',
       header: 'Название',
       sortable: true,
       sortValue: (item) => item.name?.toLowerCase() ?? '',
+      render: (group) => (
+        <a
+          href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-col rounded-md outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <span className="font-medium leading-tight">
+            {group.name}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            vk.com/{group.screen_name ?? `club${group.id}`}
+          </span>
+        </a>
+      ),
     },
     {
       key: 'members_count',
       header: 'Участники',
       sortable: true,
       sortValue: (item) => item.members_count ?? null,
+      render: (group) => renderMembersCount(group),
+      headerClassName: 'w-[140px]',
+      cellClassName: 'w-[140px]',
     },
     {
       key: 'city',
@@ -71,6 +121,9 @@ function RegionGroupsSearchCard({
         }
         return ''
       },
+      render: (group) => formatCityTitle(group),
+      headerClassName: 'w-[180px]',
+      cellClassName: 'w-[180px]',
     },
   ], [])
 
@@ -106,37 +159,6 @@ function RegionGroupsSearchCard({
     }
   }
 
-  const formatCityTitle = (group: IRegionGroupSearchItem): string => {
-    const city = group.city
-
-    if (!city) {
-      return '—'
-    }
-
-    if (typeof city === 'string') {
-      return city
-    }
-
-    if (typeof city === 'object' && city !== null) {
-      if ('title' in city && typeof city.title === 'string') {
-        return city.title
-      }
-
-      if ('name' in city && typeof city.name === 'string') {
-        return city.name
-      }
-    }
-
-    return '—'
-  }
-
-  const renderMembersCount = (group: IRegionGroupSearchItem) => {
-    if (typeof group.members_count === 'number') {
-      return group.members_count.toLocaleString('ru-RU')
-    }
-
-    return '—'
-  }
 
   return (
     <SectionCard
@@ -203,7 +225,7 @@ function RegionGroupsSearchCard({
             <TableHeader>
               <TableRow>
                 {columns.map((column) => (
-                  <TableHead key={column.key}>
+                  <TableHead key={column.key} className={column.headerClassName}>
                     {column.sortable === false ? (
                       column.header
                     ) : (
@@ -220,25 +242,13 @@ function RegionGroupsSearchCard({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedResults.map((group) => (
+              {sortedResults.map((group, index) => (
                 <TableRow key={group.id}>
-                  <TableCell className="max-w-[260px]">
-                    <a
-                      href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex flex-col rounded-md outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    >
-                      <span className="font-medium leading-tight">
-                        {group.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        vk.com/{group.screen_name ?? `club${group.id}`}
-                      </span>
-                    </a>
-                  </TableCell>
-                  <TableCell>{renderMembersCount(group)}</TableCell>
-                  <TableCell>{formatCityTitle(group)}</TableCell>
+                  {columns.map((column) => (
+                    <TableCell key={column.key} className={column.cellClassName}>
+                      {column.render ? column.render(group, index) : '—'}
+                    </TableCell>
+                  ))}
                   <TableCell className="flex justify-end gap-2">
                     <Button
                       size="sm"
