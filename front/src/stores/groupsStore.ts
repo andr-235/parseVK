@@ -1,7 +1,38 @@
 import { create } from 'zustand'
+import toast from 'react-hot-toast'
 import type { GroupsState } from '../types/stores'
 import type { IRegionGroupSearchItem } from '../types/api'
 import { groupsService } from '../services/groupsService'
+
+const updateRegionSearchAfterGroupAdded = (
+  regionSearch: GroupsState['regionSearch'],
+  group: IRegionGroupSearchItem,
+) => {
+  const normalizedGroup = { ...group, existsInDb: true }
+
+  const updatedItems = regionSearch.items.map((item) =>
+    item.id === group.id ? normalizedGroup : item
+  )
+
+  const updatedMissing = regionSearch.missing.filter(
+    (item) => item.id !== group.id
+  )
+
+  const alreadyInDb = regionSearch.existsInDb.some(
+    (item) => item.id === group.id
+  )
+
+  const updatedExistsInDb = alreadyInDb
+    ? regionSearch.existsInDb
+    : [...regionSearch.existsInDb, normalizedGroup]
+
+  return {
+    ...regionSearch,
+    items: updatedItems,
+    missing: updatedMissing,
+    existsInDb: updatedExistsInDb,
+  }
+}
 
 export const useGroupsStore = create<GroupsState>((set, get) => ({
   groups: [],
@@ -25,9 +56,9 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     }
   },
 
-  addGroup: async (name, description = '') => {
+  addGroup: async (name, description = '', options?: { silent?: boolean }) => {
     try {
-      const group = await groupsService.addGroup(name, description)
+      const group = await groupsService.addGroup(name, description, options)
       if (group) {
         set((state) => {
           const existingIndex = state.groups.findIndex((item) => item.id === group.id)
@@ -140,34 +171,56 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
       return false
     }
 
-    set((state) => {
-      const updatedItems = state.regionSearch.items.map((item) =>
-        item.id === group.id ? { ...item, existsInDb: true } : item
-      )
-
-      const updatedMissing = state.regionSearch.missing.filter(
-        (item) => item.id !== group.id
-      )
-
-      const alreadyInDb = state.regionSearch.existsInDb.some(
-        (item) => item.id === group.id
-      )
-
-      const updatedExistsInDb = alreadyInDb
-        ? state.regionSearch.existsInDb
-        : [...state.regionSearch.existsInDb, { ...group, existsInDb: true }]
-
-      return {
-        regionSearch: {
-          ...state.regionSearch,
-          items: updatedItems,
-          missing: updatedMissing,
-          existsInDb: updatedExistsInDb
-        }
-      }
-    })
+    set((state) => ({
+      regionSearch: updateRegionSearchAfterGroupAdded(state.regionSearch, group)
+    }))
 
     return true
+  },
+
+  addSelectedRegionSearchGroups: async (groups: IRegionGroupSearchItem[]) => {
+    const uniqueGroupsMap = new Map<number, IRegionGroupSearchItem>()
+    groups.forEach((group) => {
+      uniqueGroupsMap.set(group.id, group)
+    })
+    const groupsToProcess = Array.from(uniqueGroupsMap.values())
+    if (!groupsToProcess.length) {
+      return { successCount: 0, failedIds: [] as number[] }
+    }
+
+    const failedIds: number[] = []
+    let successCount = 0
+
+    for (const group of groupsToProcess) {
+      const identifier = group.screen_name
+        ? `https://vk.com/${group.screen_name}`
+        : `club${group.id}`
+
+      const success = await get().addGroup(identifier, group.description ?? '', { silent: true })
+
+      if (!success) {
+        failedIds.push(group.id)
+        continue
+      }
+
+      successCount += 1
+      set((state) => ({
+        regionSearch: updateRegionSearchAfterGroupAdded(state.regionSearch, group)
+      }))
+    }
+
+    if (successCount > 0) {
+      toast.success(`Добавлено групп: ${successCount}`)
+    }
+
+    if (failedIds.length > 0) {
+      toast.error(`Не удалось добавить групп: ${failedIds.length}`)
+    }
+
+    return {
+      successCount,
+      failedIds
+    }
   },
 
   removeRegionSearchGroup: (vkGroupId) => {

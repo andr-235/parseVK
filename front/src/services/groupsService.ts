@@ -15,19 +15,27 @@ export const groupsService = {
     }
   },
 
-  async addGroup(name: string, description?: string): Promise<Group | null> {
+  async addGroup(
+    name: string,
+    description = '',
+    options?: { silent?: boolean }
+  ): Promise<Group | null> {
     if (!name.trim()) return null
 
     try {
       const dto: SaveGroupDto = { identifier: name.trim() }
-      if (description) {
+      if (description.trim()) {
         dto.description = description.trim()
       }
       const response = await groupsApi.saveGroup(dto)
-      toast.success('Группа добавлена')
+      if (!options?.silent) {
+        toast.success('Группа добавлена')
+      }
       return response
     } catch (error) {
-      toast.error('Ошибка при добавлении группы')
+      if (!options?.silent) {
+        toast.error('Ошибка при добавлении группы')
+      }
       throw error
     }
   },

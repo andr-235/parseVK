@@ -51,13 +51,17 @@ export interface GroupsState {
   groups: Group[]
   isLoading: boolean
   fetchGroups: () => Promise<void>
-  addGroup: (url: string, description?: string) => Promise<boolean>
+  addGroup: (url: string, description?: string, options?: { silent?: boolean }) => Promise<boolean>
   deleteGroup: (id: number) => Promise<void>
   loadFromFile: (file: File) => Promise<{ saved: number; errors: string[] }>
   deleteAllGroups: () => Promise<void>
   regionSearch: RegionGroupsSearchState
   searchRegionGroups: () => Promise<void>
   addGroupFromRegionSearch: (group: IRegionGroupSearchItem) => Promise<boolean>
+  addSelectedRegionSearchGroups: (groups: IRegionGroupSearchItem[]) => Promise<{
+    successCount: number
+    failedIds: number[]
+  }>
   removeRegionSearchGroup: (vkGroupId: number) => void
   resetRegionSearch: () => void
 }

@@ -19,6 +19,7 @@ function Groups() {
   const regionSearch = useGroupsStore((state) => state.regionSearch)
   const searchRegionGroups = useGroupsStore((state) => state.searchRegionGroups)
   const addGroupFromRegionSearch = useGroupsStore((state) => state.addGroupFromRegionSearch)
+  const addSelectedRegionGroups = useGroupsStore((state) => state.addSelectedRegionSearchGroups)
   const removeRegionSearchGroup = useGroupsStore((state) => state.removeRegionSearchGroup)
   const resetRegionSearch = useGroupsStore((state) => state.resetRegionSearch)
   const [url, setUrl] = useState('')
@@ -85,7 +86,11 @@ function Groups() {
   }
 
   const handleAddRegionGroup = async (group: IRegionGroupSearchItem) => {
-    await addGroupFromRegionSearch(group)
+    return await addGroupFromRegionSearch(group)
+  }
+
+  const handleAddSelectedRegionGroups = async (groups: IRegionGroupSearchItem[]) => {
+    return await addSelectedRegionGroups(groups)
   }
 
   const handleRemoveRegionGroup = (vkGroupId: number) => {
@@ -113,6 +118,7 @@ function Groups() {
         error={regionSearch.error}
         onSearch={handleRegionSearch}
         onAddGroup={handleAddRegionGroup}
+        onAddSelected={handleAddSelectedRegionGroups}
         onRemoveGroup={handleRemoveRegionGroup}
         onReset={resetRegionSearch}
       />

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import type { IRegionGroupSearchItem } from '../../../types/api'
 import SectionCard from '../../../components/SectionCard'
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,8 @@ interface RegionGroupsSearchCardProps {
   isLoading: boolean
   error: string | null
   onSearch: () => Promise<void> | void
-  onAddGroup: (group: IRegionGroupSearchItem) => Promise<void> | void
+  onAddGroup: (group: IRegionGroupSearchItem) => Promise<boolean> | boolean
+  onAddSelected: (groups: IRegionGroupSearchItem[]) => Promise<{ successCount: number; failedIds: number[] }>
   onRemoveGroup: (vkGroupId: number) => void
   onReset?: () => void
 }
@@ -33,6 +34,7 @@ function RegionGroupsSearchCard({
   error,
   onSearch,
   onAddGroup,
+  onAddSelected,
   onRemoveGroup,
   onReset
 }: RegionGroupsSearchCardProps) {
@@ -127,6 +129,10 @@ function RegionGroupsSearchCard({
     },
   ], [])
 
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [isBulkAdding, setIsBulkAdding] = useState(false)
+  const selectAllRef = useRef<HTMLInputElement | null>(null)
+
   const {
     sortedItems: sortedResults,
     sortState,
@@ -136,8 +142,25 @@ function RegionGroupsSearchCard({
     initialDirection: 'desc',
   })
 
+  useEffect(() => {
+    setSelectedIds((prev) =>
+      prev.filter((id) => results.some((group) => group.id === id))
+    )
+  }, [results])
+
+  const isAllSelected =
+    sortedResults.length > 0 && selectedIds.length === sortedResults.length
+  const hasSelection = selectedIds.length > 0
+  const isSelectionPartial = hasSelection && !isAllSelected
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = isSelectionPartial
+    }
+  }, [isSelectionPartial])
+
   const hasResults = sortedResults.length > 0
-  const canSearch = !isLoading
+  const canSearch = !isLoading && !isBulkAdding
   const description = useMemo(
     () =>
       'Поиск групп в регионе «Еврейская автономная область». '
@@ -156,9 +179,58 @@ function RegionGroupsSearchCard({
   const handleResetClick = () => {
     if (!isLoading) {
       onReset?.()
+      setSelectedIds([])
     }
   }
 
+  const toggleSelectAll = (checked: boolean) => {
+    if (!hasResults) {
+      setSelectedIds([])
+      return
+    }
+
+    if (checked) {
+      setSelectedIds(sortedResults.map((group) => group.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const toggleSelection = (groupId: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(groupId)
+        ? prev.filter((id) => id !== groupId)
+        : [...prev, groupId]
+    )
+  }
+
+  const handleAddSelected = async () => {
+    const groupsToAdd = results.filter((group) => selectedIds.includes(group.id))
+    if (!groupsToAdd.length) {
+      return
+    }
+
+    setIsBulkAdding(true)
+    try {
+      const result = await onAddSelected(groupsToAdd)
+      const failedIds = result?.failedIds ?? []
+      setSelectedIds(failedIds)
+    } finally {
+      setIsBulkAdding(false)
+    }
+  }
+
+  const handleAddSingleGroup = async (group: IRegionGroupSearchItem) => {
+    const success = await onAddGroup(group)
+    if (success) {
+      setSelectedIds((prev) => prev.filter((id) => id !== group.id))
+    }
+  }
+
+  const handleRemoveSingleGroup = (groupId: number) => {
+    setSelectedIds((prev) => prev.filter((id) => id !== groupId))
+    onRemoveGroup(groupId)
+  }
 
   return (
     <SectionCard
@@ -171,6 +243,16 @@ function RegionGroupsSearchCard({
         <Button onClick={handleSearchClick} disabled={!canSearch} className="sm:w-auto">
           {isLoading && <Spinner className="mr-2" />}
           Загрузить группы региона
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={isLoading || isBulkAdding || !hasSelection}
+          onClick={handleAddSelected}
+          className="sm:w-auto"
+        >
+          {(isBulkAdding) && <Spinner className="mr-2" />}
+          Добавить выбранные
         </Button>
         {(total > 0 || hasResults) && (
           <Button
@@ -224,6 +306,17 @@ function RegionGroupsSearchCard({
           <Table className="mt-4">
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12 text-center">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    checked={isAllSelected}
+                    disabled={!hasResults || isLoading}
+                    onChange={(event) => toggleSelectAll(event.target.checked)}
+                    className="size-4 cursor-pointer"
+                    aria-label={isAllSelected ? 'Снять выделение со всех' : 'Выделить все группы'}
+                  />
+                </TableHead>
                 {columns.map((column) => (
                   <TableHead key={column.key} className={column.headerClassName}>
                     {column.sortable === false ? (
@@ -244,6 +337,15 @@ function RegionGroupsSearchCard({
             <TableBody>
               {sortedResults.map((group, index) => (
                 <TableRow key={group.id}>
+                  <TableCell className="w-12 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(group.id)}
+                      onChange={() => toggleSelection(group.id)}
+                      className="size-4 cursor-pointer"
+                      aria-label={selectedIds.includes(group.id) ? 'Снять выделение' : 'Выделить группу'}
+                    />
+                  </TableCell>
                   {columns.map((column) => (
                     <TableCell key={column.key} className={column.cellClassName}>
                       {column.render ? column.render(group, index) : '—'}
@@ -253,15 +355,17 @@ function RegionGroupsSearchCard({
                     <Button
                       size="sm"
                       onClick={() => {
-                        void onAddGroup(group)
+                        void handleAddSingleGroup(group)
                       }}
+                      disabled={isBulkAdding}
                     >
                       Добавить в БД
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onRemoveGroup(group.id)}
+                      onClick={() => handleRemoveSingleGroup(group.id)}
+                      disabled={isBulkAdding}
                     >
                       Убрать из списка
                     </Button>
