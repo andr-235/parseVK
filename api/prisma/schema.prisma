@@ -138,15 +138,50 @@ model Author {
   vkUserId         Int               @unique
   firstName        String
   lastName         String
+  deactivated      String?
   domain           String?
   screenName       String?
   isClosed         Boolean?
   canAccessClosed  Boolean?
   photo50          String?
   photo100         String?
+  photo200         String?
   photo200Orig     String?
+  photo400Orig     String?
+  photoMax         String?
+  photoMaxOrig     String?
+  photoId          String?
   city             Json?
   country          Json?
+  about            String?
+  activities       String?
+  bdate            String?
+  books            String?
+  career           Json?
+  connections      Json?
+  contacts         Json?
+  counters         Json?
+  education        Json?
+  followersCount   Int?
+  homeTown         String?
+  interests        String?
+  lastSeen         Json?
+  maidenName       String?
+  military         Json?
+  movies           String?
+  music            String?
+  nickname         String?
+  occupation       Json?
+  personal         Json?
+  relatives        Json?
+  relation         Int?
+  schools          Json?
+  sex              Int?
+  site             String?
+  status           String?
+  timezone         Int?
+  tv               String?
+  universities     Json?
   comments         Comment[]
   watchlistAuthors WatchlistAuthor[]
   createdAt        DateTime          @default(now())

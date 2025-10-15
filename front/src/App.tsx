@@ -9,6 +9,7 @@ import Groups from './pages/Groups'
 import Comments from './pages/Comments'
 import Keywords from './pages/Keywords'
 import Watchlist from './pages/Watchlist'
+import Authors from './pages/Authors'
 
 function App() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode)
@@ -39,6 +40,7 @@ function App() {
             <Route path="/comments" element={<Comments />} />
             <Route path="/watchlist" element={<Watchlist />} />
             <Route path="/keywords" element={<Keywords />} />
+            <Route path="/authors" element={<Authors />} />
           </Routes>
         </MainContent>
         <Toaster

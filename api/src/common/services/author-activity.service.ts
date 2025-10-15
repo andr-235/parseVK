@@ -9,12 +9,64 @@ interface SaveCommentsOptions {
   watchlistAuthorId?: number | null;
 }
 
+const toUpdateJsonValue = (
+  value: unknown,
+):
+  | Prisma.NullableJsonNullValueInput
+  | Prisma.InputJsonValue
+  | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return Prisma.JsonNull;
+  }
+  return value as Prisma.InputJsonValue;
+};
+
+const toCreateJsonValue = (
+  value: unknown,
+): Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue => {
+  if (value === undefined || value === null) {
+    return Prisma.JsonNull;
+  }
+  return value as Prisma.InputJsonValue;
+};
+
 @Injectable()
 export class AuthorActivityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly vkService: VkService,
   ) {}
+
+  async refreshAllAuthors(batchSize = 500): Promise<number> {
+    const existingAuthors = await this.prisma.author.findMany({
+      select: { vkUserId: true },
+      where: { vkUserId: { gt: 0 } },
+      orderBy: { vkUserId: 'asc' },
+    });
+
+    if (!existingAuthors.length) {
+      return 0;
+    }
+
+    let totalUpdated = 0;
+
+    for (let index = 0; index < existingAuthors.length; index += batchSize) {
+      const chunk = existingAuthors
+        .slice(index, index + batchSize)
+        .map((author) => author.vkUserId);
+
+      if (!chunk.length) {
+        continue;
+      }
+
+      totalUpdated += await this.saveAuthors(chunk);
+    }
+
+    return totalUpdated;
+  }
 
   async saveAuthors(userIds: number[]): Promise<number> {
     if (!userIds.length) {
@@ -32,34 +84,100 @@ export class AuthorActivityService {
       const updateData: Prisma.AuthorUncheckedUpdateInput = {
         firstName: author.first_name,
         lastName: author.last_name,
+        deactivated: author.deactivated,
         domain: author.domain,
         screenName: author.screen_name,
         isClosed: author.is_closed,
         canAccessClosed: author.can_access_closed,
         photo50: author.photo_50,
         photo100: author.photo_100,
+        photo200: author.photo_200,
         photo200Orig: author.photo_200_orig,
-        city: author.city as Prisma.InputJsonValue | undefined,
-        country: author.country as Prisma.InputJsonValue | undefined,
+        photo400Orig: author.photo_400_orig,
+        photoMax: author.photo_max,
+        photoMaxOrig: author.photo_max_orig,
+        photoId: author.photo_id,
+        city: toUpdateJsonValue(author.city),
+        country: toUpdateJsonValue(author.country),
+        about: author.about ?? null,
+        activities: author.activities ?? null,
+        bdate: author.bdate ?? null,
+        books: author.books ?? null,
+        career: toUpdateJsonValue(author.career),
+        connections: toUpdateJsonValue(author.connections),
+        contacts: toUpdateJsonValue(author.contacts),
+        counters: toUpdateJsonValue(author.counters),
+        education: toUpdateJsonValue(author.education),
+        followersCount: author.followers_count ?? null,
+        homeTown: author.home_town ?? null,
+        interests: author.interests ?? null,
+        lastSeen: toUpdateJsonValue(author.last_seen),
+        maidenName: author.maiden_name ?? null,
+        military: toUpdateJsonValue(author.military),
+        movies: author.movies ?? null,
+        music: author.music ?? null,
+        nickname: author.nickname ?? null,
+        occupation: toUpdateJsonValue(author.occupation),
+        personal: toUpdateJsonValue(author.personal),
+        relatives: toUpdateJsonValue(author.relatives),
+        relation: author.relation ?? null,
+        schools: toUpdateJsonValue(author.schools),
+        sex: author.sex ?? null,
+        site: author.site ?? null,
+        status: author.status ?? null,
+        timezone: author.timezone ?? null,
+        tv: author.tv ?? null,
+        universities: toUpdateJsonValue(author.universities),
       };
 
       const createData: Prisma.AuthorUncheckedCreateInput = {
         vkUserId: author.id,
         firstName: author.first_name,
         lastName: author.last_name,
+        deactivated: author.deactivated ?? null,
         domain: author.domain ?? null,
         screenName: author.screen_name ?? null,
         isClosed: author.is_closed ?? null,
         canAccessClosed: author.can_access_closed ?? null,
         photo50: author.photo_50 ?? null,
         photo100: author.photo_100 ?? null,
+        photo200: author.photo_200 ?? null,
         photo200Orig: author.photo_200_orig ?? null,
-        city: author.city
-          ? (author.city as Prisma.InputJsonValue)
-          : Prisma.JsonNull,
-        country: author.country
-          ? (author.country as Prisma.InputJsonValue)
-          : Prisma.JsonNull,
+        photo400Orig: author.photo_400_orig ?? null,
+        photoMax: author.photo_max ?? null,
+        photoMaxOrig: author.photo_max_orig ?? null,
+        photoId: author.photo_id ?? null,
+        city: toCreateJsonValue(author.city),
+        country: toCreateJsonValue(author.country),
+        about: author.about ?? null,
+        activities: author.activities ?? null,
+        bdate: author.bdate ?? null,
+        books: author.books ?? null,
+        career: toCreateJsonValue(author.career),
+        connections: toCreateJsonValue(author.connections),
+        contacts: toCreateJsonValue(author.contacts),
+        counters: toCreateJsonValue(author.counters),
+        education: toCreateJsonValue(author.education),
+        followersCount: author.followers_count ?? null,
+        homeTown: author.home_town ?? null,
+        interests: author.interests ?? null,
+        lastSeen: toCreateJsonValue(author.last_seen),
+        maidenName: author.maiden_name ?? null,
+        military: toCreateJsonValue(author.military),
+        movies: author.movies ?? null,
+        music: author.music ?? null,
+        nickname: author.nickname ?? null,
+        occupation: toCreateJsonValue(author.occupation),
+        personal: toCreateJsonValue(author.personal),
+        relatives: toCreateJsonValue(author.relatives),
+        relation: author.relation ?? null,
+        schools: toCreateJsonValue(author.schools),
+        sex: author.sex ?? null,
+        site: author.site ?? null,
+        status: author.status ?? null,
+        timezone: author.timezone ?? null,
+        tv: author.tv ?? null,
+        universities: toCreateJsonValue(author.universities),
       };
 
       await this.prisma.author.upsert({

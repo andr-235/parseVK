@@ -1,11 +1,11 @@
-import type { Comment, Keyword, Group, Task, TaskDetails } from './index'
+import type { AuthorCard, Comment, Keyword, Group, Task, TaskDetails } from './index'
 import type {
   IBulkAddResponse,
   IRegionGroupSearchItem
 } from './api'
 
 // Navigation Store Types
-export type Page = 'tasks' | 'groups' | 'comments' | 'keywords'
+export type Page = 'tasks' | 'groups' | 'comments' | 'keywords' | 'watchlist' | 'authors'
 
 export interface NavigationState {
   currentPage: Page
@@ -83,4 +83,19 @@ export interface TasksState {
   resumeTask: (taskId: number | string) => Promise<boolean>
   checkTask: (taskId: number | string) => Promise<boolean>
   deleteTask: (taskId: number | string) => Promise<boolean>
+}
+
+export interface AuthorsState {
+  authors: AuthorCard[]
+  total: number
+  hasMore: boolean
+  isLoading: boolean
+  isLoadingMore: boolean
+  isRefreshing: boolean
+  search: string
+  pageSize: number
+  fetchAuthors: (options?: { search?: string; reset?: boolean }) => Promise<void>
+  loadMore: () => Promise<void>
+  setSearch: (value: string) => void
+  refreshAuthors: () => Promise<void>
 }

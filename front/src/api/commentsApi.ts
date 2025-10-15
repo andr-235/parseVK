@@ -1,6 +1,5 @@
+import { API_URL } from './config'
 import type { ICommentResponse, IGetCommentsResponse, IGetCommentsCursorResponse } from '../types/api'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export const commentsApi = {
   async getComments(params?: { offset?: number; limit?: number }): Promise<IGetCommentsResponse> {

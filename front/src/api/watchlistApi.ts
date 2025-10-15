@@ -1,3 +1,4 @@
+import { API_URL } from './config'
 import type {
   IWatchlistAuthorDetailsResponse,
   IWatchlistAuthorListResponse,
@@ -5,8 +6,6 @@ import type {
   IWatchlistSettingsResponse,
   WatchlistStatus,
 } from '../types/api'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 interface ListParams {
   offset?: number

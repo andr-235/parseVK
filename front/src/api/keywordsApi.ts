@@ -1,6 +1,5 @@
+import { API_URL } from './config'
 import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '../types/api'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export const keywordsApi = {
   async addKeyword(word: string, category?: string | null): Promise<IKeywordResponse> {

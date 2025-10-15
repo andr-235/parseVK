@@ -1,7 +1,6 @@
+import { API_URL } from './config'
 import type { CreateParsingTaskDto } from '../dto'
 import type { IParsingTaskResult, IParsingTaskSummary } from '../types/api'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export const tasksApi = {
   async createParsingTask(dto: CreateParsingTaskDto): Promise<IParsingTaskResult> {

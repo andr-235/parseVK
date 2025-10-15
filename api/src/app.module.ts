@@ -10,6 +10,7 @@ import { KeywordsModule } from './keywords/keywords.module';
 import { TasksModule } from './tasks/tasks.module';
 import { CommentsModule } from './comments/comments.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
+import { AuthorsModule } from './authors/authors.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
     TasksModule,
     CommentsModule,
     WatchlistModule,
+    AuthorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,23 +1,25 @@
 import { ConfigService } from '@nestjs/config';
+import { __setPrismaMocks } from '@prisma/client';
 import { PrismaService } from './prisma.service';
 
 const connectMock = jest.fn();
 const disconnectMock = jest.fn();
 const prismaClientConstructor = jest.fn();
 
-jest.mock('@prisma/client', () => ({
-  PrismaClient: function (this: any, config: unknown) {
-    prismaClientConstructor(config);
-    this.$connect = connectMock;
-    this.$disconnect = disconnectMock;
-  },
-}));
-
 describe('PrismaService', () => {
   beforeEach(() => {
     connectMock.mockClear();
     disconnectMock.mockClear();
     prismaClientConstructor.mockClear();
+    __setPrismaMocks({
+      constructor: prismaClientConstructor,
+      connect: connectMock,
+      disconnect: disconnectMock,
+    });
+  });
+
+  afterEach(() => {
+    __setPrismaMocks();
   });
 
   it('должен пробрасывать конфигурацию в super и инициировать подключение', async () => {

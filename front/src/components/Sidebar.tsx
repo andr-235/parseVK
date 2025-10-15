@@ -3,7 +3,13 @@ import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { useCommentsStore, useTasksStore, useThemeStore, useWatchlistStore } from '@/stores'
+import {
+  useAuthorsStore,
+  useCommentsStore,
+  useTasksStore,
+  useThemeStore,
+  useWatchlistStore,
+} from '@/stores'
 import ThemeToggle from './ThemeToggle'
 
 type SidebarItem = {
@@ -62,6 +68,21 @@ const CommentsIcon = () => (
     strokeLinejoin="round"
   >
     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
+  </svg>
+)
+
+const AuthorsIcon = () => (
+  <svg
+    className={iconClasses}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+    <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
   </svg>
 )
 
@@ -148,6 +169,7 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
   const tasksCount = useTasksStore((state) => state.tasks.length)
   const commentsCount = useCommentsStore((state) => state.totalCount)
   const watchlistCount = useWatchlistStore((state) => state.totalAuthors)
+  const authorsTotal = useAuthorsStore((state) => state.total)
 
   const primaryItems = useMemo<SidebarItem[]>(() => {
     const formatCount = (count: number) => (count > 0 ? String(count) : undefined)
@@ -156,10 +178,11 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
       { label: 'Задачи', path: '/tasks', icon: <TasksIcon />, badge: formatCount(tasksCount) },
       { label: 'Группы', path: '/groups', icon: <GroupsIcon /> },
       { label: 'Комментарии', path: '/comments', icon: <CommentsIcon />, badge: formatCount(commentsCount) },
+      { label: 'Авторы', path: '/authors', icon: <AuthorsIcon />, badge: formatCount(authorsTotal) },
       { label: 'На карандаше', path: '/watchlist', icon: <WatchlistIcon />, badge: formatCount(watchlistCount) },
       { label: 'Ключевые слова', path: '/keywords', icon: <KeywordsIcon /> },
     ]
-  }, [tasksCount, commentsCount, watchlistCount])
+  }, [tasksCount, commentsCount, watchlistCount, authorsTotal])
 
   const secondaryItems: SidebarItem[] = [
     { label: 'Отчёты', path: '/reports', icon: <ReportsIcon /> },

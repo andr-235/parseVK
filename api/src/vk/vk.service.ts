@@ -126,19 +126,61 @@ export class VkService {
     this.logger.debug(`Cache MISS: ${cacheKey}`);
 
     const fields: Params.UsersGetParams['fields'] = [
-      'photo_50',
-      'photo_100',
-      'photo_200_orig',
+      'about',
+      'activities',
+      'bdate',
+      'books',
+      'career',
       'city',
+      'connections',
+      'contacts',
+      'counters',
       'country',
       'domain',
+      'education',
+      'followers_count',
+      'home_town',
+      'interests',
+      'last_seen',
+      'maiden_name',
+      'military',
+      'movies',
+      'music',
+      'nickname',
+      'occupation',
+      'personal',
+      'photo_50',
+      'photo_100',
+      'photo_200',
+      'photo_200_orig',
+      'photo_400_orig',
+      'photo_id',
+      'photo_max',
+      'photo_max_orig',
+      'relation',
+      'relatives',
+      'schools',
       'screen_name',
+      'sex',
+      'site',
+      'status',
+      'timezone',
+      'tv',
+      'universities',
     ];
 
-    const users = await this.vk.api.users.get({
-      user_ids: userIds.map(String),
-      fields,
-    });
+    // VK API возвращает counters и military только при запросе одного пользователя
+    // Поэтому делаем отдельный запрос для каждого пользователя
+    const users: Responses.UsersGetResponse = [];
+    for (const userId of userIds) {
+      const response = await this.vk.api.users.get({
+        user_ids: [String(userId)],
+        fields,
+      });
+      if (response.length > 0) {
+        users.push(response[0]);
+      }
+    }
 
     const normalizeBoolean = (value?: boolean | number | null) => {
       if (typeof value === 'number') {
@@ -151,15 +193,55 @@ export class VkService {
       id: user.id,
       first_name: user.first_name ?? '',
       last_name: user.last_name ?? '',
+      deactivated: user.deactivated ?? undefined,
       is_closed: normalizeBoolean(user.is_closed),
       can_access_closed: normalizeBoolean(user.can_access_closed),
       domain: user.domain ?? undefined,
       screen_name: user.screen_name ?? undefined,
       photo_50: user.photo_50 ?? undefined,
       photo_100: user.photo_100 ?? undefined,
+      photo_200: user.photo_200 ?? undefined,
       photo_200_orig: user.photo_200_orig ?? undefined,
+      photo_400_orig: user.photo_400_orig ?? undefined,
+      photo_max: user.photo_max ?? undefined,
+      photo_max_orig: user.photo_max_orig ?? undefined,
+      photo_id: user.photo_id ?? undefined,
       city: user.city ?? undefined,
       country: user.country ?? undefined,
+      about: user.about ?? undefined,
+      activities: user.activities ?? undefined,
+      bdate: user.bdate ?? undefined,
+      books: user.books ?? undefined,
+      career: user.career ?? undefined,
+      connections: user.connections ?? undefined,
+      contacts: user.contacts ?? undefined,
+      counters: user.counters ?? undefined,
+      education: user.education ?? undefined,
+      followers_count:
+        typeof user.followers_count === 'number'
+          ? user.followers_count
+          : undefined,
+      home_town: user.home_town ?? undefined,
+      interests: user.interests ?? undefined,
+      last_seen: user.last_seen ?? undefined,
+      maiden_name: user.maiden_name ?? undefined,
+      military: user.military ?? undefined,
+      movies: user.movies ?? undefined,
+      music: user.music ?? undefined,
+      nickname: user.nickname ?? undefined,
+      occupation: user.occupation ?? undefined,
+      personal: user.personal ?? undefined,
+      relatives: user.relatives ?? undefined,
+      relation:
+        typeof user.relation === 'number' ? user.relation : undefined,
+      schools: user.schools ?? undefined,
+      sex: typeof user.sex === 'number' ? user.sex : undefined,
+      site: user.site ?? undefined,
+      status: user.status ?? undefined,
+      timezone:
+        typeof user.timezone === 'number' ? user.timezone : undefined,
+      tv: user.tv ?? undefined,
+      universities: user.universities ?? undefined,
     }));
 
     // Сохраняем в кэш

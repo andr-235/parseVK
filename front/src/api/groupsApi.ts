@@ -1,11 +1,10 @@
+import { API_URL } from './config'
 import type {
   IGroupResponse,
   IDeleteResponse,
   IRegionGroupSearchResponse
 } from '../types/api'
 import type { SaveGroupDto } from '../dto'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export const groupsApi = {
   async saveGroup(dto: SaveGroupDto): Promise<IGroupResponse> {

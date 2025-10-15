@@ -198,6 +198,82 @@ export interface IParsingTaskResult extends IParsingTaskSummary {
   [key: string]: unknown
 }
 
+export interface AuthorLocationResponse {
+  id?: number
+  title?: string
+}
+
+export interface AuthorLastSeenResponse {
+  time?: number | null
+  platform?: number | null
+}
+
+export interface AuthorProfileResponse {
+  id: number
+  vkUserId: number
+  firstName: string
+  lastName: string
+  fullName: string
+  deactivated: string | null
+  isClosed: boolean | null
+  domain: string | null
+  screenName: string | null
+  avatar: string | null
+  profileUrl: string
+}
+
+export interface AuthorStatsResponse {
+  followersCount: number | null
+  counters: Record<string, number | null> | null
+}
+
+export interface AuthorDetailsResponse {
+  about: string | null
+  activities: string | null
+  interests: string | null
+  music: string | null
+  movies: string | null
+  books: string | null
+  tv: string | null
+  status: string | null
+  site: string | null
+  bdate: string | null
+  homeTown: string | null
+  nickname: string | null
+  maidenName: string | null
+  relation: number | null
+  sex: number | null
+  timezone: number | null
+  education: Record<string, unknown> | null
+  occupation: Record<string, unknown> | null
+  personal: Record<string, unknown> | null
+  career: Array<Record<string, unknown>> | null
+  military: Array<Record<string, unknown>> | null
+  relatives: Array<Record<string, unknown>> | null
+  schools: Array<Record<string, unknown>> | null
+  universities: Array<Record<string, unknown>> | null
+  contacts: Record<string, string> | null
+  connections: Record<string, string> | null
+  lastSeen: AuthorLastSeenResponse | null
+  city: AuthorLocationResponse | null
+  country: AuthorLocationResponse | null
+}
+
+export interface AuthorCardResponse {
+  id: number
+  createdAt: string
+  updatedAt: string
+  profile: AuthorProfileResponse
+  stats: AuthorStatsResponse
+  details: AuthorDetailsResponse
+}
+
+export interface AuthorsListResponse {
+  items: AuthorCardResponse[]
+  total: number
+  hasMore: boolean
+}
+
 export interface IWatchlistAuthorProfileResponse {
   vkUserId: number
   firstName: string
