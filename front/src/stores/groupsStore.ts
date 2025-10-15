@@ -189,7 +189,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     }
 
     const failedIds: number[] = []
-    let successCount = 0
+    const successfulGroups: IRegionGroupSearchItem[] = []
 
     for (const group of groupsToProcess) {
       const identifier = group.screen_name
@@ -203,14 +203,17 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         continue
       }
 
-      successCount += 1
-      set((state) => ({
-        regionSearch: updateRegionSearchAfterGroupAdded(state.regionSearch, group)
-      }))
+      successfulGroups.push(group)
     }
 
-    if (successCount > 0) {
-      toast.success(`Добавлено групп: ${successCount}`)
+    if (successfulGroups.length > 0) {
+      set((state) => ({
+        regionSearch: successfulGroups.reduce(
+          (acc, group) => updateRegionSearchAfterGroupAdded(acc, group),
+          state.regionSearch
+        )
+      }))
+      toast.success(`Добавлено групп: ${successfulGroups.length}`)
     }
 
     if (failedIds.length > 0) {
@@ -218,7 +221,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     }
 
     return {
-      successCount,
+      successCount: successfulGroups.length,
       failedIds
     }
   },

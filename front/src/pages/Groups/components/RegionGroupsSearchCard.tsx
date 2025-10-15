@@ -148,9 +148,11 @@ function RegionGroupsSearchCard({
     )
   }, [results])
 
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds])
+
   const isAllSelected =
-    sortedResults.length > 0 && selectedIds.length === sortedResults.length
-  const hasSelection = selectedIds.length > 0
+    sortedResults.length > 0 && selectedIdSet.size === sortedResults.length
+  const hasSelection = selectedIdSet.size > 0
   const isSelectionPartial = hasSelection && !isAllSelected
 
   useEffect(() => {
@@ -198,7 +200,7 @@ function RegionGroupsSearchCard({
 
   const toggleSelection = (groupId: number) => {
     setSelectedIds((prev) =>
-      prev.includes(groupId)
+      selectedIdSet.has(groupId)
         ? prev.filter((id) => id !== groupId)
         : [...prev, groupId]
     )
@@ -340,7 +342,7 @@ function RegionGroupsSearchCard({
                   <TableCell className="w-12 text-center">
                     <input
                       type="checkbox"
-                      checked={selectedIds.includes(group.id)}
+                    checked={selectedIdSet.has(group.id)}
                       onChange={() => toggleSelection(group.id)}
                       className="size-4 cursor-pointer"
                       aria-label={selectedIds.includes(group.id) ? 'Снять выделение' : 'Выделить группу'}
