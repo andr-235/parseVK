@@ -48,7 +48,13 @@ describe('OllamaService', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    process.env = { ...originalEnv, OLLAMA_RETRY_DELAY_MS: '0', OLLAMA_TIMEOUT_MS: '5000', OLLAMA_MAX_RETRIES: '3' };
+    process.env = {
+      ...originalEnv,
+      OLLAMA_RETRY_DELAY_MS: '0',
+      OLLAMA_TIMEOUT_MS: '5000',
+      OLLAMA_MAX_RETRIES: '3',
+      OLLAMA_API_URL: undefined,
+    };
 
     Object.defineProperty(global, 'fetch', {
       value: jest.fn(),
@@ -112,5 +118,45 @@ describe('OllamaService', () => {
       'Запрос к Ollama API: 500 Internal Server Error',
     );
     expect(global.fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it('переключается на следующий хост при ошибке соединения', async () => {
+    const imageResponse = createImageResponse();
+    const ollamaResponse = createOllamaResponse();
+
+    process.env.OLLAMA_API_URL = 'http://primary:11434 http://secondary:11434';
+    process.env.OLLAMA_MAX_RETRIES = '1';
+
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce(imageResponse)
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(ollamaResponse);
+
+    const service = new OllamaService();
+    const result = await service.analyzeImage({ imageUrl: 'https://example.com/image.jpg' });
+
+    expect(result).toEqual(sampleAnalysis);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect((global.fetch as jest.Mock).mock.calls[1][0]).toBe('http://primary:11434/api/generate');
+    expect((global.fetch as jest.Mock).mock.calls[2][0]).toBe('http://secondary:11434/api/generate');
+  });
+
+  it('сообщает о недоступности всех хостов', async () => {
+    const imageResponse = createImageResponse();
+
+    process.env.OLLAMA_API_URL = 'http://primary:11434,http://secondary:11434';
+    process.env.OLLAMA_MAX_RETRIES = '1';
+
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce(imageResponse)
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockRejectedValueOnce(new TypeError('fetch failed'));
+
+    const service = new OllamaService();
+
+    await expect(service.analyzeImage({ imageUrl: 'https://example.com/image.jpg' })).rejects.toThrow(
+      'Запрос к Ollama API: все хосты недоступны (http://primary:11434, http://secondary:11434). Последняя ошибка: fetch failed',
+    );
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 });

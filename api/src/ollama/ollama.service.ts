@@ -13,10 +13,21 @@ class HttpError extends Error {
   }
 }
 
+class OperationError extends Error {
+  constructor(
+    readonly description: string,
+    readonly originalError: unknown,
+    details: string,
+  ) {
+    super(`${description}: ${details}`);
+    this.name = 'OperationError';
+  }
+}
+
 @Injectable()
 export class OllamaService {
   private readonly logger = new Logger(OllamaService.name);
-  private readonly apiUrl: string;
+  private readonly apiUrls: string[];
   private readonly model: string;
   private readonly maxRetries: number;
   private readonly requestTimeoutMs: number;
@@ -24,7 +35,7 @@ export class OllamaService {
   private readonly imageUserAgent: string;
 
   constructor() {
-    this.apiUrl = process.env.OLLAMA_API_URL || 'http://ollama:11434';
+    this.apiUrls = this.parseApiUrls(process.env.OLLAMA_API_URL);
     this.model = process.env.OLLAMA_MODEL || 'gemma3:12b';
     this.maxRetries = this.parseNumber(process.env.OLLAMA_MAX_RETRIES, 3, 1);
     this.requestTimeoutMs = this.parseNumber(process.env.OLLAMA_TIMEOUT_MS, 30_000, 1);
@@ -44,16 +55,7 @@ export class OllamaService {
       format: 'json',
     };
 
-    const data = await this.fetchWithRetry<OllamaGenerateResponse>(
-      `${this.apiUrl}/api/generate`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      },
-      'Запрос к Ollama API',
-      async (response) => (await response.json()) as OllamaGenerateResponse,
-    );
+    const data = await this.callOllamaWithFallback(payload);
 
     try {
       const parsed = JSON.parse(data.response) as OllamaAnalysisResponse;
@@ -62,6 +64,64 @@ export class OllamaService {
       this.logger.error('Не удалось распарсить ответ Ollama как JSON', error instanceof Error ? error.stack : String(error));
       throw new Error('Некорректный формат ответа от модели');
     }
+  }
+
+  private async callOllamaWithFallback(payload: OllamaGenerateRequest): Promise<OllamaGenerateResponse> {
+    const description = 'Запрос к Ollama API';
+    const connectivityErrors: OperationError[] = [];
+    let failure: unknown;
+
+    for (let index = 0; index < this.apiUrls.length; index += 1) {
+      const baseUrl = this.apiUrls[index];
+      const endpoint = this.buildGenerateUrl(baseUrl);
+
+      try {
+        return await this.fetchWithRetry<OllamaGenerateResponse>(
+          endpoint,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          },
+          description,
+          async (response) => (await response.json()) as OllamaGenerateResponse,
+        );
+      } catch (error) {
+        const hasAlternativeHost = index < this.apiUrls.length - 1;
+
+        if (
+          hasAlternativeHost &&
+          error instanceof OperationError &&
+          this.isRetryableError(error.originalError)
+        ) {
+          connectivityErrors.push(error);
+
+          this.logger.warn(
+            `${description}: хост ${baseUrl} недоступен (${this.describeError(error.originalError)}), пробуем следующий`,
+          );
+
+          continue;
+        }
+
+        failure = error;
+        break;
+      }
+    }
+
+    if (connectivityErrors.length) {
+      const lastConnectivityError = connectivityErrors[connectivityErrors.length - 1]?.originalError;
+      const primaryError =
+        failure instanceof OperationError ? failure.originalError : failure ?? lastConnectivityError;
+      const hostList = this.apiUrls.join(', ');
+      const details = `все хосты недоступны (${hostList}). Последняя ошибка: ${this.describeError(primaryError)}`;
+      throw this.createOperationError(description, primaryError ?? new Error('все хосты недоступны'), details);
+    }
+
+    if (failure) {
+      throw failure;
+    }
+
+    throw this.createOperationError(description, new Error('не заданы адреса Ollama API'));
   }
 
   private buildAnalysisPrompt(customPrompt?: string): string {
@@ -209,9 +269,9 @@ Return ONLY the JSON object, no additional text.`;
     return String(error);
   }
 
-  private createOperationError(description: string, error: unknown): Error {
-    const details = this.describeError(error);
-    return new Error(`${description}: ${details}`);
+  private createOperationError(description: string, error: unknown, detailsOverride?: string): OperationError {
+    const details = detailsOverride ?? this.describeError(error);
+    return new OperationError(description, error, details);
   }
 
   private async delay(attempt: number): Promise<void> {
@@ -222,6 +282,39 @@ Return ONLY the JSON object, no additional text.`;
     }
 
     await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  private parseApiUrls(raw: string | undefined): string[] {
+    const fallback = 'http://ollama:11434';
+
+    if (!raw?.trim()) {
+      return [fallback];
+    }
+
+    const urls = raw
+      .split(/[\s,]+/)
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map((value) => this.normalizeBaseUrl(value));
+
+    const unique = Array.from(new Set(urls));
+
+    return unique.length > 0 ? unique : [fallback];
+  }
+
+  private normalizeBaseUrl(value: string): string {
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      return trimmed;
+    }
+
+    return trimmed.replace(/\/+$/, '');
+  }
+
+  private buildGenerateUrl(baseUrl: string): string {
+    const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    return new URL('api/generate', normalizedBase).toString();
   }
 
   private parseNumber(raw: string | undefined, defaultValue: number, minValue: number): number {
