@@ -59,6 +59,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/vk_api?schema=public}
       VK_TOKEN: ${VK_TOKEN:-vk1.a.MgXnY9V9Mbxs9nZ0WXQlL9cMOyO8co3kBZQZY8KpuDQpWxqEvgsJLLYO0K5z917B0sSdBUxGDy0d-p43-GvzjtDaB_aqkDWYeuHPikQ8uzyiZnHvP_CkIl47k8WP5TbIbaK_I55C8A2qVmg96YG2mWROCUwjkTqCpEmL8TTaFhZE5YvDi_Ma-7RjYBgyuF7lQdZsew2bb2iqa5JWvAwrgw}
       OLLAMA_API_URL: ${OLLAMA_API_URL:-http://172.17.0.1:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:4b}
+      OLLAMA_TIMEOUT_MS: ${OLLAMA_TIMEOUT_MS:-45000}
 
   frontend:
     build:
