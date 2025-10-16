@@ -4,6 +4,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CacheModule } from './common/cache/cache.module';
+import { CommonModule } from './common/common.module';
 import { VkModule } from './vk/vk.module';
 import { GroupsModule } from './groups/groups.module';
 import { KeywordsModule } from './keywords/keywords.module';
@@ -28,6 +29,7 @@ import { AuthorsModule } from './authors/authors.module';
       },
     }),
     CacheModule,
+    CommonModule,
     VkModule,
     GroupsModule,
     KeywordsModule,

@@ -2,8 +2,8 @@ FROM postgres:15-alpine
 
 RUN apk add --no-cache bash tzdata
 
-COPY backup.sh /usr/local/bin/backup.sh
-COPY entrypoint.sh /usr/local/bin/db-backup-entrypoint.sh
+COPY docker/db-backup/backup.sh /usr/local/bin/backup.sh
+COPY docker/db-backup/entrypoint.sh /usr/local/bin/db-backup-entrypoint.sh
 
 RUN chmod +x /usr/local/bin/backup.sh /usr/local/bin/db-backup-entrypoint.sh
 

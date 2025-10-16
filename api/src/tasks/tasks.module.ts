@@ -3,10 +3,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma.service';
-import { VkModule } from '../vk/vk.module';
 import { ParsingTaskRunner } from './parsing-task.runner';
 import { ParsingQueueService } from './parsing-queue.service';
-import { AuthorActivityService } from '../common/services/author-activity.service';
 import { TasksGateway } from './tasks.gateway';
 import { ParsingQueueProducer } from './queues/parsing.queue';
 import { ParsingProcessor } from './queues/parsing.processor';
@@ -15,10 +13,11 @@ import {
   PARSING_RATE_LIMITER,
 } from './queues/parsing.constants';
 import { TaskCancellationService } from './task-cancellation.service';
+import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
-    VkModule,
+    CommonModule,
     BullModule.registerQueue({
       name: PARSING_QUEUE,
       defaultJobOptions: {
@@ -38,7 +37,6 @@ import { TaskCancellationService } from './task-cancellation.service';
     PrismaService,
     ParsingTaskRunner,
     ParsingQueueService,
-    AuthorActivityService,
     TasksGateway,
     ParsingQueueProducer,
     ParsingProcessor,

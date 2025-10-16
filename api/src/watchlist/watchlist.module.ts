@@ -2,18 +2,16 @@ import { Module } from '@nestjs/common';
 import { WatchlistController } from './watchlist.controller';
 import { WatchlistService } from './watchlist.service';
 import { PrismaService } from '../prisma.service';
-import { AuthorActivityService } from '../common/services/author-activity.service';
-import { VkModule } from '../vk/vk.module';
 import { WatchlistMonitorService } from './watchlist.monitor.service';
 import { PhotoAnalysisModule } from '../photo-analysis/photo-analysis.module';
+import { CommonModule } from '../common/common.module';
 
 @Module({
-  imports: [VkModule, PhotoAnalysisModule],
+  imports: [PhotoAnalysisModule, CommonModule],
   controllers: [WatchlistController],
   providers: [
     WatchlistService,
     PrismaService,
-    AuthorActivityService,
     WatchlistMonitorService,
   ],
 })
