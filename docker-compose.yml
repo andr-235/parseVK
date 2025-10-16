@@ -8,7 +8,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: vk_api
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /opt/parseVK/postgres_data:/var/lib/postgresql/data
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d vk_api"]
       interval: 10s
