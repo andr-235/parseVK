@@ -557,12 +557,27 @@ docker compose logs -f --tail=50
 
 ### 9.4. Резервное копирование БД
 
-```bash
-# Создаем бэкап
-docker exec postgres_db pg_dump -U postgres vk_api > backup_$(date +%Y%m%d_%H%M%S).sql
+Контейнер `db_backup` автоматически сохраняет дамп PostgreSQL каждый день в 03:00 и хранит копии за последние 7 дней. Файлы попадают в volume `parsevk_postgres_backups` в формате `vk_api_ГГГГММДД_ЧЧММСС.sql.gz`.
 
-# Восстановление из бэкапа
-docker exec -i postgres_db psql -U postgres vk_api < backup_20231215_120000.sql
+**Параметры по умолчанию** можно изменить через переменные окружения в `docker-compose.yml`:
+- `BACKUP_SCHEDULE` — расписание cron (например, `"0 */6 * * *"` для бэкапа каждые 6 часов).
+- `BACKUP_KEEP_DAYS` — сколько дней хранить файлы.
+- `BACKUP_DIR` — путь внутри контейнера (оставьте `/backups`, чтобы не менять volume).
+
+**Ручное создание бэкапа:**
+
+```bash
+docker compose run --rm db_backup /usr/local/bin/backup.sh
+```
+
+**Восстановление из бэкапа:**
+
+```bash
+# выбираем нужный файл
+docker run --rm -v parsevk_postgres_backups:/backups alpine ls /backups
+
+# восстанавливаем
+gunzip -c /path/to/vk_api_20240101_030000.sql.gz | docker exec -i postgres_db sh -c "PGPASSWORD=postgres psql -U postgres vk_api"
 ```
 
 ### 9.5. Очистка Docker
