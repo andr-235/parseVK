@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma.service';
+import { VkModule } from '../vk/vk.module';
 import { ParsingTaskRunner } from './parsing-task.runner';
 import { ParsingQueueService } from './parsing-queue.service';
 import { TasksGateway } from './tasks.gateway';
@@ -17,6 +18,7 @@ import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
+    VkModule,
     CommonModule,
     BullModule.registerQueue({
       name: PARSING_QUEUE,
