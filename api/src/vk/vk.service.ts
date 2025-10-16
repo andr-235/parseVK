@@ -37,6 +37,23 @@ export type GetCommentsResponse = Omit<
   items: IComment[];
 };
 
+export interface VkPhotoSize {
+  type: string;
+  url: string;
+  width: number;
+  height: number;
+}
+
+export interface VkPhoto {
+  id: number;
+  owner_id: number;
+  photo_id: string;
+  album_id: number;
+  date: number;
+  text?: string;
+  sizes: VkPhotoSize[];
+}
+
 @Injectable()
 export class VkService {
   private readonly vk: VK;
@@ -248,6 +265,65 @@ export class VkService {
     await this.cacheManager.set(cacheKey, result, CACHE_TTL.VK_USER * 1000);
 
     return result;
+  }
+
+  async getUserPhotos(options: {
+    userId: number;
+    count?: number;
+    offset?: number;
+  }): Promise<VkPhoto[]> {
+    const { userId, count = 100, offset = 0 } = options;
+
+    try {
+      const response = await this.vk.api.photos.getAll({
+        owner_id: userId,
+        count: Math.min(Math.max(count, 1), 200),
+        offset,
+        extended: 0,
+        photo_sizes: 1,
+      });
+
+      const items = response.items ?? [];
+
+      return items.map((photo) => ({
+        id: photo.id,
+        owner_id: photo.owner_id,
+        photo_id: `${photo.owner_id}_${photo.id}`,
+        album_id: photo.album_id,
+        date: photo.date,
+        text: photo.text ?? undefined,
+        sizes: (photo.sizes ?? []).map((size) => ({
+          type: size.type,
+          url: size.url,
+          width: size.width ?? 0,
+          height: size.height ?? 0,
+        })),
+      }));
+    } catch (error) {
+      if (error instanceof APIError) {
+        this.logger.error(
+          `VK API error fetching photos for user ${userId}: ${error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  getMaxPhotoSize(sizes: VkPhoto['sizes']): string | null {
+    if (!sizes?.length) {
+      return null;
+    }
+
+    const priority = ['w', 'z', 'y', 'x', 'm', 's'];
+
+    for (const type of priority) {
+      const size = sizes.find((item) => item.type === type && Boolean(item.url));
+      if (size?.url) {
+        return size.url;
+      }
+    }
+
+    return sizes[0]?.url ?? null;
   }
 
   async getGroupRecentPosts(options: {

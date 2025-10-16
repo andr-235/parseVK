@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { PhotoAnalysisSummary } from './photoAnalysis'
 
 export interface Keyword {
   id: number
@@ -147,6 +148,7 @@ export interface WatchlistAuthorCard {
   monitoringStoppedAt: string | null
   settingsId: number
   author: WatchlistAuthorProfile
+  analysisSummary: PhotoAnalysisSummary
 }
 
 export interface WatchlistComment {
@@ -178,72 +180,16 @@ export interface WatchlistSettings {
   updatedAt: string
 }
 
-export interface AuthorProfile {
-  id: number
-  vkUserId: number
-  firstName: string
-  lastName: string
-  fullName: string
-  deactivated: string | null
-  isClosed: boolean | null
-  domain: string | null
-  screenName: string | null
-  avatar: string | null
-  profileUrl: string
-}
+export type {
+  SuspicionLevel,
+  PhotoAnalysis,
+  PhotoAnalysisSummary,
+  PhotoAnalysisSummaryCategory,
+  PhotoAnalysisSummaryLevel,
+  PhotoAnalysisResponse,
+  AnalyzePhotosOptions,
+} from './photoAnalysis'
 
-export interface AuthorStats {
-  followersCount: number | null
-  counters: Record<string, number | null> | null
-}
+export { createEmptyPhotoAnalysisSummary } from './photoAnalysis'
 
-export interface AuthorLocation {
-  id?: number
-  title?: string
-}
-
-export interface AuthorLastSeen {
-  time?: number | null
-  platform?: number | null
-}
-
-export interface AuthorDetails {
-  about: string | null
-  activities: string | null
-  interests: string | null
-  music: string | null
-  movies: string | null
-  books: string | null
-  tv: string | null
-  status: string | null
-  site: string | null
-  bdate: string | null
-  homeTown: string | null
-  nickname: string | null
-  maidenName: string | null
-  relation: number | null
-  sex: number | null
-  timezone: number | null
-  education: Record<string, unknown> | null
-  occupation: Record<string, unknown> | null
-  personal: Record<string, unknown> | null
-  career: Array<Record<string, unknown>> | null
-  military: Array<Record<string, unknown>> | null
-  relatives: Array<Record<string, unknown>> | null
-  schools: Array<Record<string, unknown>> | null
-  universities: Array<Record<string, unknown>> | null
-  contacts: Record<string, string> | null
-  connections: Record<string, string> | null
-  lastSeen: AuthorLastSeen | null
-  city: AuthorLocation | null
-  country: AuthorLocation | null
-}
-
-export interface AuthorCard {
-  id: number
-  createdAt: string
-  updatedAt: string
-  profile: AuthorProfile
-  stats: AuthorStats
-  details: AuthorDetails
-}
+export type { AuthorCard, AuthorDetails, AuthorListResponse } from './authors'

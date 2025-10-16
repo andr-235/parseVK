@@ -14,6 +14,8 @@ import {
 import { PrismaService } from '../prisma.service';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 import { VkService } from '../vk/vk.service';
+import { PhotoAnalysisService } from '../photo-analysis/photo-analysis.service';
+import type { PhotoAnalysisSummaryDto } from '../photo-analysis/dto/photo-analysis-response.dto';
 import { normalizeComment } from '../common/utils/comment-normalizer';
 import type { CommentEntity } from '../common/types/comment-entity.type';
 import {
@@ -55,6 +57,7 @@ export class WatchlistService {
     private readonly prisma: PrismaService,
     private readonly authorActivityService: AuthorActivityService,
     private readonly vkService: VkService,
+    private readonly photoAnalysisService: PhotoAnalysisService,
   ) {}
 
   async getAuthors(
@@ -85,9 +88,14 @@ export class WatchlistService {
     const commentCounts = await this.collectCommentCounts(
       records.map((record) => record.id),
     );
+    const summaryMap = await this.collectAnalysisSummaries(records);
 
     const items = records.map((record) =>
-      this.mapAuthor(record, commentCounts.get(record.id) ?? 0),
+      this.mapAuthor(
+        record,
+        commentCounts.get(record.id) ?? 0,
+        this.resolveSummary(record, summaryMap),
+      ),
     );
 
     return {
@@ -148,8 +156,10 @@ export class WatchlistService {
       hasMore: offset + commentDtos.length < total,
     };
 
+    const summaryMap = await this.collectAnalysisSummaries([record]);
+
     return {
-      ...this.mapAuthor(record, total),
+      ...this.mapAuthor(record, total, this.resolveSummary(record, summaryMap)),
       comments: commentsList,
     };
   }
@@ -241,7 +251,13 @@ export class WatchlistService {
 
     this.logger.log(`Добавлен автор ${authorVkId} в список "На карандаше"`);
 
-    return this.mapAuthor(record, commentsCount);
+    const summaryMap = await this.collectAnalysisSummaries([record]);
+
+    return this.mapAuthor(
+      record,
+      commentsCount,
+      this.resolveSummary(record, summaryMap),
+    );
   }
 
   async updateAuthor(
@@ -273,7 +289,12 @@ export class WatchlistService {
       const commentsCount = await this.prisma.comment.count({
         where: { watchlistAuthorId: id },
       });
-      return this.mapAuthor(record, commentsCount);
+      const summaryMap = await this.collectAnalysisSummaries([record]);
+      return this.mapAuthor(
+        record,
+        commentsCount,
+        this.resolveSummary(record, summaryMap),
+      );
     }
 
     const updated = await this.prisma.watchlistAuthor.update({
@@ -286,7 +307,13 @@ export class WatchlistService {
       where: { watchlistAuthorId: id },
     });
 
-    return this.mapAuthor(updated, commentsCount);
+    const summaryMap = await this.collectAnalysisSummaries([updated]);
+
+    return this.mapAuthor(
+      updated,
+      commentsCount,
+      this.resolveSummary(updated, summaryMap),
+    );
   }
 
   async getSettings(): Promise<WatchlistSettingsDto> {
@@ -611,9 +638,59 @@ export class WatchlistService {
     return map;
   }
 
+  private async collectAnalysisSummaries(
+    records: WatchlistAuthorWithRelations[],
+  ): Promise<Map<number, PhotoAnalysisSummaryDto>> {
+    const authorIds = Array.from(
+      new Set(
+        records
+          .map((record) => record.author?.id)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    );
+
+    if (!authorIds.length) {
+      return new Map();
+    }
+
+    return this.photoAnalysisService.getSummariesByAuthorIds(authorIds);
+  }
+
+  private resolveSummary(
+    record: WatchlistAuthorWithRelations,
+    summaryMap: Map<number, PhotoAnalysisSummaryDto>,
+  ): PhotoAnalysisSummaryDto {
+    const authorId = record.author?.id;
+
+    if (typeof authorId !== 'number') {
+      return this.cloneSummary(this.photoAnalysisService.getEmptySummary());
+    }
+
+    const summary = summaryMap.get(authorId);
+
+    if (!summary) {
+      return this.cloneSummary(this.photoAnalysisService.getEmptySummary());
+    }
+
+    return this.cloneSummary(summary);
+  }
+
+  private cloneSummary(
+    summary: PhotoAnalysisSummaryDto,
+  ): PhotoAnalysisSummaryDto {
+    return {
+      total: summary.total,
+      suspicious: summary.suspicious,
+      lastAnalyzedAt: summary.lastAnalyzedAt,
+      categories: summary.categories.map((item) => ({ ...item })),
+      levels: summary.levels.map((item) => ({ ...item })),
+    };
+  }
+
   private mapAuthor(
     record: WatchlistAuthorWithRelations,
     commentsCount: number,
+    summary: PhotoAnalysisSummaryDto,
   ): WatchlistAuthorCardDto {
     const profile = this.mapProfile(record);
 
@@ -635,6 +712,7 @@ export class WatchlistService {
         : null,
       settingsId: record.settingsId,
       author: profile,
+      analysisSummary: summary,
     };
   }
 

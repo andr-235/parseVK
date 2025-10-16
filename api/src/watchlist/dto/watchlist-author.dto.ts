@@ -1,4 +1,5 @@
 import type { CommentSource, WatchlistStatus } from '@prisma/client';
+import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
 
 export interface WatchlistAuthorProfileDto {
   vkUserId: number;
@@ -23,6 +24,7 @@ export interface WatchlistAuthorCardDto {
   monitoringStoppedAt: string | null;
   settingsId: number;
   author: WatchlistAuthorProfileDto;
+  analysisSummary: PhotoAnalysisSummaryDto;
 }
 
 export interface WatchlistAuthorListDto {

@@ -12,7 +12,17 @@ import type {
   WatchlistComment,
   WatchlistSettings,
   WatchlistStatus,
+  PhotoAnalysisSummary,
 } from '../types'
+import { createEmptyPhotoAnalysisSummary } from '../types'
+
+const cloneSummary = (summary: PhotoAnalysisSummary): PhotoAnalysisSummary => ({
+  total: summary.total,
+  suspicious: summary.suspicious,
+  lastAnalyzedAt: summary.lastAnalyzedAt,
+  categories: summary.categories.map((item) => ({ ...item })),
+  levels: summary.levels.map((item) => ({ ...item })),
+})
 
 const mapAuthor = (author: IWatchlistAuthorResponse): WatchlistAuthorCard => ({
   id: author.id,
@@ -35,6 +45,9 @@ const mapAuthor = (author: IWatchlistAuthorResponse): WatchlistAuthorCard => ({
     screenName: author.author.screenName,
     domain: author.author.domain,
   },
+  analysisSummary: cloneSummary(
+    author.analysisSummary ?? createEmptyPhotoAnalysisSummary(),
+  ),
 })
 
 const mapComment = (comment: IWatchlistCommentResponse): WatchlistComment => ({

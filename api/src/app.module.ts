@@ -10,6 +10,8 @@ import { KeywordsModule } from './keywords/keywords.module';
 import { TasksModule } from './tasks/tasks.module';
 import { CommentsModule } from './comments/comments.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
+import { OllamaModule } from './ollama/ollama.module';
+import { PhotoAnalysisModule } from './photo-analysis/photo-analysis.module';
 import { AuthorsModule } from './authors/authors.module';
 
 @Module({
@@ -32,6 +34,8 @@ import { AuthorsModule } from './authors/authors.module';
     TasksModule,
     CommentsModule,
     WatchlistModule,
+    OllamaModule,
+    PhotoAnalysisModule,
     AuthorsModule,
   ],
   controllers: [AppController],

@@ -5,9 +5,10 @@ import { PrismaService } from '../prisma.service';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 import { VkModule } from '../vk/vk.module';
 import { WatchlistMonitorService } from './watchlist.monitor.service';
+import { PhotoAnalysisModule } from '../photo-analysis/photo-analysis.module';
 
 @Module({
-  imports: [VkModule],
+  imports: [VkModule, PhotoAnalysisModule],
   controllers: [WatchlistController],
   providers: [
     WatchlistService,

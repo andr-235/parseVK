@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import PageHeroCard from '@/components/PageHeroCard'
@@ -16,7 +17,12 @@ import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Spinner } from '@/components/ui/spinner'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import { useWatchlistStore } from '@/stores'
-import type { TableColumn, WatchlistAuthorCard, WatchlistComment } from '@/types'
+import type {
+  TableColumn,
+  WatchlistAuthorCard,
+  WatchlistComment,
+  PhotoAnalysisSummaryCategory,
+} from '@/types'
 
 const formatDateTime = (value: string | null | undefined): string => {
   if (!value) {
@@ -74,6 +80,7 @@ function Watchlist() {
   const isUpdatingSettings = useWatchlistStore((state) => state.isUpdatingSettings)
 
   const [selectedAuthorId, setSelectedAuthorId] = useState<number | null>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const load = async () => {
@@ -200,6 +207,42 @@ function Watchlist() {
       ),
     },
     {
+      header: 'Анализ фото',
+      key: 'analysisSummary',
+      sortable: true,
+      sortValue: (item) => item.analysisSummary?.suspicious ?? 0,
+      cellClassName: 'max-w-xs',
+      render: (item) => {
+        const summary = item.analysisSummary
+        const lastAnalyzed = summary.lastAnalyzedAt
+          ? formatDateTime(summary.lastAnalyzedAt)
+          : '—'
+
+        return (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-1">
+              {summary.categories.map((category: PhotoAnalysisSummaryCategory) => (
+                <Badge
+                  key={category.name}
+                  variant={category.count > 0 ? 'destructive' : 'outline'}
+                  className={
+                    category.count > 0
+                      ? 'border-destructive/40 bg-destructive/10 text-destructive text-xs font-medium'
+                      : 'border-border/60 text-xs text-text-secondary'
+                  }
+                >
+                  {category.name}: {category.count}
+                </Badge>
+              ))}
+            </div>
+            <span className="text-xs text-text-secondary">
+              Подозрительных: {summary.suspicious} · Последний анализ: {lastAnalyzed}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
       header: 'Найдено',
       key: 'foundCommentsCount',
       sortable: true,
@@ -232,20 +275,38 @@ function Watchlist() {
       key: 'actions',
       sortable: false,
       render: (item: WatchlistAuthorCard) => (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={(event) => {
-            event.stopPropagation()
-            handleSelectAuthor(item.id)
-          }}
-        >
-          Подробнее
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={(event) => {
+              event.stopPropagation()
+              handleSelectAuthor(item.id)
+            }}
+          >
+            Подробнее
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={(event) => {
+              event.stopPropagation()
+              navigate(`/authors/${item.author.vkUserId}/analysis`, {
+                state: {
+                  author: item.author,
+                  summary: item.analysisSummary,
+                },
+              })
+            }}
+          >
+            Анализ фото
+          </Button>
+        </div>
       ),
     },
-  ], [handleSelectAuthor])
+  ], [handleSelectAuthor, navigate])
 
   const {
     sortedItems: sortedAuthors,

@@ -24,6 +24,13 @@ enum WatchlistStatus {
   STOPPED
 }
 
+enum SuspicionLevel {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model Task {
   id             Int      @id @default(autoincrement())
   title          String
@@ -184,12 +191,35 @@ model Author {
   universities     Json?
   comments         Comment[]
   watchlistAuthors WatchlistAuthor[]
+  photoAnalyses    PhotoAnalysis[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
   @@index([firstName, lastName]) // для поиска по имени
   @@index([screenName]) // для поиска по никнейму
   @@index([domain]) // для поиска по домену
+}
+
+model PhotoAnalysis {
+  id             Int            @id @default(autoincrement())
+  authorId       Int
+  author         Author         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  photoUrl       String
+  photoVkId      String
+  analysisResult String         @db.Text
+  hasSuspicious  Boolean        @default(false)
+  suspicionLevel SuspicionLevel @default(NONE)
+  categories     String[]
+  confidence     Float?
+  explanation    String?        @db.Text
+  analyzedAt     DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([authorId, photoVkId])
+  @@index([authorId, hasSuspicious])
+  @@index([suspicionLevel])
+  @@index([analyzedAt(sort: Desc)])
 }
 
 model Keyword {

@@ -1,4 +1,4 @@
-import type { TaskStatus } from './index'
+import type { PhotoAnalysisSummary, TaskStatus } from './index'
 
 export interface IGroupResponse {
   id: number
@@ -198,80 +198,36 @@ export interface IParsingTaskResult extends IParsingTaskSummary {
   [key: string]: unknown
 }
 
-export interface AuthorLocationResponse {
-  id?: number
-  title?: string
-}
-
-export interface AuthorLastSeenResponse {
-  time?: number | null
-  platform?: number | null
-}
-
-export interface AuthorProfileResponse {
+export interface AuthorCardResponse {
   id: number
   vkUserId: number
   firstName: string
   lastName: string
   fullName: string
-  deactivated: string | null
-  isClosed: boolean | null
+  photo50: string | null
+  photo100: string | null
+  photo200: string | null
   domain: string | null
   screenName: string | null
-  avatar: string | null
-  profileUrl: string
+  profileUrl: string | null
+  summary: PhotoAnalysisSummary
 }
 
-export interface AuthorStatsResponse {
-  followersCount: number | null
-  counters: Record<string, number | null> | null
-}
-
-export interface AuthorDetailsResponse {
-  about: string | null
-  activities: string | null
-  interests: string | null
-  music: string | null
-  movies: string | null
-  books: string | null
-  tv: string | null
-  status: string | null
-  site: string | null
-  bdate: string | null
-  homeTown: string | null
-  nickname: string | null
-  maidenName: string | null
-  relation: number | null
-  sex: number | null
-  timezone: number | null
-  education: Record<string, unknown> | null
-  occupation: Record<string, unknown> | null
-  personal: Record<string, unknown> | null
-  career: Array<Record<string, unknown>> | null
-  military: Array<Record<string, unknown>> | null
-  relatives: Array<Record<string, unknown>> | null
-  schools: Array<Record<string, unknown>> | null
-  universities: Array<Record<string, unknown>> | null
-  contacts: Record<string, string> | null
-  connections: Record<string, string> | null
-  lastSeen: AuthorLastSeenResponse | null
-  city: AuthorLocationResponse | null
-  country: AuthorLocationResponse | null
-}
-
-export interface AuthorCardResponse {
-  id: number
+export interface AuthorDetailsResponse extends AuthorCardResponse {
+  city: Record<string, unknown> | null
+  country: Record<string, unknown> | null
   createdAt: string
   updatedAt: string
-  profile: AuthorProfileResponse
-  stats: AuthorStatsResponse
-  details: AuthorDetailsResponse
 }
 
 export interface AuthorsListResponse {
   items: AuthorCardResponse[]
   total: number
   hasMore: boolean
+}
+
+export interface RefreshAuthorsResponse {
+  updated: number
 }
 
 export interface IWatchlistAuthorProfileResponse {
@@ -299,6 +255,7 @@ export interface IWatchlistAuthorResponse {
   monitoringStoppedAt: string | null
   settingsId: number
   author: IWatchlistAuthorProfileResponse
+  analysisSummary: PhotoAnalysisSummary
 }
 
 export interface IWatchlistAuthorListResponse {
