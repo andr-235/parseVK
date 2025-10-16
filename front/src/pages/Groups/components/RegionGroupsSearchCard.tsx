@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { IRegionGroupSearchItem } from '../../../types/api'
 import SectionCard from '../../../components/SectionCard'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,66 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Spinner } from '@/components/ui/spinner'
+
+interface RegionGroupRowProps {
+  group: IRegionGroupSearchItem
+  columns: TableColumn<IRegionGroupSearchItem>[]
+  isSelected: boolean
+  isBulkAdding: boolean
+  rowIndex: number
+  onToggleSelection: (groupId: number) => void
+  onAddGroup: (group: IRegionGroupSearchItem) => void | Promise<void>
+  onRemoveGroup: (groupId: number) => void
+}
+
+const RegionGroupRow = memo(function RegionGroupRow({
+  group,
+  columns,
+  isSelected,
+  isBulkAdding,
+  rowIndex,
+  onToggleSelection,
+  onAddGroup,
+  onRemoveGroup,
+}: RegionGroupRowProps) {
+  return (
+    <TableRow>
+      <TableCell className="w-12 text-center">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggleSelection(group.id)}
+          className="size-4 cursor-pointer"
+          aria-label={isSelected ? 'Снять выделение' : 'Выделить группу'}
+        />
+      </TableCell>
+      {columns.map((column) => (
+        <TableCell key={column.key} className={column.cellClassName}>
+          {column.render ? column.render(group, rowIndex) : '—'}
+        </TableCell>
+      ))}
+      <TableCell className="flex justify-end gap-2">
+        <Button
+          size="sm"
+          onClick={() => {
+            void onAddGroup(group)
+          }}
+          disabled={isBulkAdding}
+        >
+          Добавить в БД
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onRemoveGroup(group.id)}
+          disabled={isBulkAdding}
+        >
+          Убрать из списка
+        </Button>
+      </TableCell>
+    </TableRow>
+  )
+})
 
 interface RegionGroupsSearchCardProps {
   total: number
@@ -163,11 +223,36 @@ function RegionGroupsSearchCard({
     })
   }, [results])
 
+  const resultsMap = useMemo(() => {
+    const map = new Map<number, IRegionGroupSearchItem>()
+    results.forEach((group) => {
+      map.set(group.id, group)
+    })
+    return map
+  }, [results])
+
   const isAllSelected =
     sortedResults.length > 0
     && sortedResults.every((group) => selectedIds.has(group.id))
   const hasSelection = selectedIds.size > 0
   const isSelectionPartial = hasSelection && !isAllSelected
+  const selectionSize = selectedIds.size
+
+  const selectedGroups = useMemo(() => {
+    if (!hasSelection) {
+      return []
+    }
+
+    const items: IRegionGroupSearchItem[] = []
+    selectedIds.forEach((id) => {
+      const group = resultsMap.get(id)
+      if (group) {
+        items.push(group)
+      }
+    })
+
+    return items
+  }, [hasSelection, resultsMap, selectedIds])
 
   useEffect(() => {
     if (selectAllRef.current) {
@@ -199,26 +284,24 @@ function RegionGroupsSearchCard({
     }
   }
 
-  const toggleSelectAll = (checked: boolean) => {
+  const toggleSelectAll = useCallback((checked: boolean) => {
     if (!hasResults) {
       setSelectedIds(new Set<number>())
       return
     }
 
     if (checked) {
-      setSelectedIds(() => {
-        const next = new Set<number>()
-        sortedResults.forEach((group) => {
-          next.add(group.id)
-        })
-        return next
+      const next = new Set<number>()
+      sortedResults.forEach((group) => {
+        next.add(group.id)
       })
+      setSelectedIds(next)
     } else {
       setSelectedIds(new Set<number>())
     }
-  }
+  }, [hasResults, sortedResults])
 
-  const toggleSelection = (groupId: number) => {
+  const toggleSelection = useCallback((groupId: number) => {
     setSelectedIds((prev) => {
       const next = new Set<number>(prev)
       if (next.has(groupId)) {
@@ -228,12 +311,10 @@ function RegionGroupsSearchCard({
       }
       return next
     })
-  }
+  }, [])
 
-  const handleAddGroups = async () => {
-    const groupsToAdd = hasSelection
-      ? results.filter((group) => selectedIds.has(group.id))
-      : results
+  const handleAddGroups = useCallback(async () => {
+    const groupsToAdd = hasSelection ? selectedGroups : results
 
     if (!groupsToAdd.length) {
       return
@@ -253,9 +334,9 @@ function RegionGroupsSearchCard({
     } finally {
       setIsBulkAdding(false)
     }
-  }
+  }, [hasSelection, onAddSelected, results, selectedGroups])
 
-  const handleAddSingleGroup = async (group: IRegionGroupSearchItem) => {
+  const handleAddSingleGroup = useCallback(async (group: IRegionGroupSearchItem) => {
     const success = await onAddGroup(group)
     if (success) {
       setSelectedIds((prev) => {
@@ -268,9 +349,9 @@ function RegionGroupsSearchCard({
         return next
       })
     }
-  }
+  }, [onAddGroup])
 
-  const handleRemoveSingleGroup = (groupId: number) => {
+  const handleRemoveSingleGroup = useCallback((groupId: number) => {
     setSelectedIds((prev) => {
       if (!prev.has(groupId)) {
         return prev
@@ -281,7 +362,7 @@ function RegionGroupsSearchCard({
       return next
     })
     onRemoveGroup(groupId)
-  }
+  }, [onRemoveGroup])
 
   return (
     <SectionCard
@@ -303,7 +384,7 @@ function RegionGroupsSearchCard({
           className="sm:w-auto"
         >
           {isBulkAdding && <Spinner className="mr-2" />}
-          {hasSelection ? 'Добавить выделенное' : 'Добавить все'}
+          {hasSelection ? `Добавить выделенное (${selectionSize})` : 'Добавить все'}
         </Button>
         {(total > 0 || hasResults) && (
           <Button
@@ -387,41 +468,17 @@ function RegionGroupsSearchCard({
             </TableHeader>
             <TableBody>
               {sortedResults.map((group, index) => (
-                <TableRow key={group.id}>
-                  <TableCell className="w-12 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(group.id)}
-                      onChange={() => toggleSelection(group.id)}
-                      className="size-4 cursor-pointer"
-                      aria-label={selectedIds.has(group.id) ? 'Снять выделение' : 'Выделить группу'}
-                    />
-                  </TableCell>
-                  {columns.map((column) => (
-                    <TableCell key={column.key} className={column.cellClassName}>
-                      {column.render ? column.render(group, index) : '—'}
-                    </TableCell>
-                  ))}
-                  <TableCell className="flex justify-end gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        void handleAddSingleGroup(group)
-                      }}
-                      disabled={isBulkAdding}
-                    >
-                      Добавить в БД
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRemoveSingleGroup(group.id)}
-                      disabled={isBulkAdding}
-                    >
-                      Убрать из списка
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <RegionGroupRow
+                  key={group.id}
+                  group={group}
+                  columns={columns}
+                  isSelected={selectedIds.has(group.id)}
+                  isBulkAdding={isBulkAdding}
+                  rowIndex={index}
+                  onToggleSelection={toggleSelection}
+                  onAddGroup={handleAddSingleGroup}
+                  onRemoveGroup={handleRemoveSingleGroup}
+                />
               ))}
             </TableBody>
           </Table>
