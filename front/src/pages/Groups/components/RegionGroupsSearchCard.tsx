@@ -129,7 +129,7 @@ function RegionGroupsSearchCard({
     },
   ], [])
 
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set<number>())
   const [isBulkAdding, setIsBulkAdding] = useState(false)
   const selectAllRef = useRef<HTMLInputElement | null>(null)
 
@@ -143,16 +143,30 @@ function RegionGroupsSearchCard({
   })
 
   useEffect(() => {
-    setSelectedIds((prev) =>
-      prev.filter((id) => results.some((group) => group.id === id))
-    )
+    setSelectedIds((prev) => {
+      if (prev.size === 0) {
+        return prev
+      }
+
+      const next = new Set<number>()
+      for (const group of results) {
+        if (prev.has(group.id)) {
+          next.add(group.id)
+        }
+      }
+
+      if (next.size === prev.size) {
+        return prev
+      }
+
+      return next
+    })
   }, [results])
 
-  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds])
-
   const isAllSelected =
-    sortedResults.length > 0 && selectedIdSet.size === sortedResults.length
-  const hasSelection = selectedIdSet.size > 0
+    sortedResults.length > 0
+    && sortedResults.every((group) => selectedIds.has(group.id))
+  const hasSelection = selectedIds.size > 0
   const isSelectionPartial = hasSelection && !isAllSelected
 
   useEffect(() => {
@@ -181,33 +195,46 @@ function RegionGroupsSearchCard({
   const handleResetClick = () => {
     if (!isLoading) {
       onReset?.()
-      setSelectedIds([])
+      setSelectedIds(new Set<number>())
     }
   }
 
   const toggleSelectAll = (checked: boolean) => {
     if (!hasResults) {
-      setSelectedIds([])
+      setSelectedIds(new Set<number>())
       return
     }
 
     if (checked) {
-      setSelectedIds(sortedResults.map((group) => group.id))
+      setSelectedIds(() => {
+        const next = new Set<number>()
+        sortedResults.forEach((group) => {
+          next.add(group.id)
+        })
+        return next
+      })
     } else {
-      setSelectedIds([])
+      setSelectedIds(new Set<number>())
     }
   }
 
   const toggleSelection = (groupId: number) => {
-    setSelectedIds((prev) =>
-      selectedIdSet.has(groupId)
-        ? prev.filter((id) => id !== groupId)
-        : [...prev, groupId]
-    )
+    setSelectedIds((prev) => {
+      const next = new Set<number>(prev)
+      if (next.has(groupId)) {
+        next.delete(groupId)
+      } else {
+        next.add(groupId)
+      }
+      return next
+    })
   }
 
-  const handleAddSelected = async () => {
-    const groupsToAdd = results.filter((group) => selectedIds.includes(group.id))
+  const handleAddGroups = async () => {
+    const groupsToAdd = hasSelection
+      ? results.filter((group) => selectedIds.has(group.id))
+      : results
+
     if (!groupsToAdd.length) {
       return
     }
@@ -216,7 +243,13 @@ function RegionGroupsSearchCard({
     try {
       const result = await onAddSelected(groupsToAdd)
       const failedIds = result?.failedIds ?? []
-      setSelectedIds(failedIds)
+      setSelectedIds(() => {
+        if (!failedIds.length) {
+          return new Set<number>()
+        }
+
+        return new Set<number>(failedIds)
+      })
     } finally {
       setIsBulkAdding(false)
     }
@@ -225,12 +258,28 @@ function RegionGroupsSearchCard({
   const handleAddSingleGroup = async (group: IRegionGroupSearchItem) => {
     const success = await onAddGroup(group)
     if (success) {
-      setSelectedIds((prev) => prev.filter((id) => id !== group.id))
+      setSelectedIds((prev) => {
+        if (!prev.has(group.id)) {
+          return prev
+        }
+
+        const next = new Set<number>(prev)
+        next.delete(group.id)
+        return next
+      })
     }
   }
 
   const handleRemoveSingleGroup = (groupId: number) => {
-    setSelectedIds((prev) => prev.filter((id) => id !== groupId))
+    setSelectedIds((prev) => {
+      if (!prev.has(groupId)) {
+        return prev
+      }
+
+      const next = new Set<number>(prev)
+      next.delete(groupId)
+      return next
+    })
     onRemoveGroup(groupId)
   }
 
@@ -249,12 +298,12 @@ function RegionGroupsSearchCard({
         <Button
           type="button"
           variant="secondary"
-          disabled={isLoading || isBulkAdding || !hasSelection}
-          onClick={handleAddSelected}
+          disabled={isLoading || isBulkAdding || !hasResults}
+          onClick={handleAddGroups}
           className="sm:w-auto"
         >
-          {(isBulkAdding) && <Spinner className="mr-2" />}
-          Добавить выбранные
+          {isBulkAdding && <Spinner className="mr-2" />}
+          {hasSelection ? 'Добавить выделенное' : 'Добавить все'}
         </Button>
         {(total > 0 || hasResults) && (
           <Button
@@ -342,10 +391,10 @@ function RegionGroupsSearchCard({
                   <TableCell className="w-12 text-center">
                     <input
                       type="checkbox"
-                    checked={selectedIdSet.has(group.id)}
+                      checked={selectedIds.has(group.id)}
                       onChange={() => toggleSelection(group.id)}
                       className="size-4 cursor-pointer"
-                      aria-label={selectedIds.includes(group.id) ? 'Снять выделение' : 'Выделить группу'}
+                      aria-label={selectedIds.has(group.id) ? 'Снять выделение' : 'Выделить группу'}
                     />
                   </TableCell>
                   {columns.map((column) => (
