@@ -1,4 +1,13 @@
-import type { AuthorCard, Comment, Keyword, Group, Task, TaskDetails } from './index'
+import type {
+  AuthorCard,
+  AuthorSortField,
+  AuthorSortOrder,
+  Comment,
+  Keyword,
+  Group,
+  Task,
+  TaskDetails,
+} from './index'
 import type {
   IBulkAddResponse,
   IRegionGroupSearchItem
@@ -95,10 +104,13 @@ export interface AuthorsState {
   search: string
   statusFilter: 'all' | 'verified' | 'unverified'
   pageSize: number
+  sortBy: AuthorSortField | null
+  sortOrder: AuthorSortOrder
   fetchAuthors: (options?: { search?: string; reset?: boolean }) => Promise<void>
   loadMore: () => Promise<void>
   setSearch: (value: string) => void
   setStatusFilter: (value: 'all' | 'verified' | 'unverified') => void
+  setSort: (value: AuthorSortField) => void
   markAuthorVerified: (vkUserId: number, verifiedAt: string | null) => void
   refreshAuthors: () => Promise<void>
 }

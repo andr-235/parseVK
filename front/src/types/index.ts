@@ -192,4 +192,10 @@ export type {
 
 export { createEmptyPhotoAnalysisSummary } from './photoAnalysis'
 
-export type { AuthorCard, AuthorDetails, AuthorListResponse } from './authors'
+export type {
+  AuthorCard,
+  AuthorDetails,
+  AuthorListResponse,
+  AuthorSortField,
+  AuthorSortOrder,
+} from './authors'

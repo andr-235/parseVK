@@ -12,12 +12,16 @@ export class AuthorsController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Query('search') search?: string,
     @Query('verified') verified?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
   ): Promise<AuthorListDto> {
     return this.authorsService.listAuthors({
       offset,
       limit,
       search,
       verified: this.parseVerifiedQuery(verified),
+      sortBy: sortBy ?? null,
+      sortOrder: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : null,
     });
   }
 

@@ -190,6 +190,11 @@ function CommentCard({
               size="sm"
               asChild
               className="gap-2"
+              onClick={() => {
+                if (!comment.isRead) {
+                  void toggleReadStatus(comment.id)
+                }
+              }}
             >
               <a
                 href={comment.commentUrl}

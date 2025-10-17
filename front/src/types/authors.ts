@@ -35,3 +35,16 @@ export interface AuthorListResponse {
   total: number
   hasMore: boolean
 }
+
+export type AuthorSortField =
+  | 'fullName'
+  | 'photosCount'
+  | 'audiosCount'
+  | 'videosCount'
+  | 'friendsCount'
+  | 'followersCount'
+  | 'lastSeenAt'
+  | 'verifiedAt'
+  | 'updatedAt'
+
+export type AuthorSortOrder = 'asc' | 'desc'

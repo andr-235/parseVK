@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { authorsService } from '../services/authorsService'
+import type { AuthorSortField } from '../types'
 import type { AuthorsState } from '../types/stores'
 
 const DEFAULT_PAGE_SIZE = 24
@@ -14,6 +15,8 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
   search: '',
   statusFilter: 'unverified',
   pageSize: DEFAULT_PAGE_SIZE,
+  sortBy: null,
+  sortOrder: 'desc',
 
   fetchAuthors: async (options = {}) => {
     const { search, reset } = options as { search?: string; reset?: boolean }
@@ -41,6 +44,8 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
           state.statusFilter === 'all'
             ? undefined
             : state.statusFilter === 'verified',
+        sortBy: state.sortBy ?? undefined,
+        sortOrder: state.sortBy ? state.sortOrder : undefined,
       })
 
       set((prev) => ({
@@ -77,6 +82,37 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
       isLoading: true,
       isLoadingMore: false,
     }))
+  },
+
+  setSort: (field: AuthorSortField) => {
+    const state = get()
+    const isSameField = state.sortBy === field
+
+    let nextSortBy: AuthorsState['sortBy']
+    let nextSortOrder: AuthorsState['sortOrder']
+
+    if (!isSameField) {
+      nextSortBy = field
+      nextSortOrder = 'desc'
+    } else if (state.sortOrder === 'desc') {
+      nextSortBy = field
+      nextSortOrder = 'asc'
+    } else {
+      nextSortBy = null
+      nextSortOrder = 'desc'
+    }
+
+    set(() => ({
+      sortBy: nextSortBy,
+      sortOrder: nextSortOrder,
+      authors: [],
+      total: 0,
+      hasMore: false,
+      isLoading: true,
+      isLoadingMore: false,
+    }))
+
+    void get().fetchAuthors({ reset: true })
   },
 
   markAuthorVerified: (vkUserId, verifiedAt) => {

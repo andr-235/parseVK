@@ -7,15 +7,42 @@ import type { AuthorCardDto, AuthorDetailsDto, AuthorListDto } from './dto/autho
 import type { PhotoAnalysisSummaryDto } from '../photo-analysis/dto/photo-analysis-response.dto';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 
+type AuthorSortField =
+  | 'fullName'
+  | 'photosCount'
+  | 'audiosCount'
+  | 'videosCount'
+  | 'friendsCount'
+  | 'followersCount'
+  | 'lastSeenAt'
+  | 'verifiedAt'
+  | 'updatedAt';
+
+type AuthorSortDirection = 'asc' | 'desc';
+
 interface ListAuthorsOptions {
   offset?: number;
   limit?: number;
   search?: string | null;
   verified?: boolean;
+  sortBy?: AuthorSortField | string | null;
+  sortOrder?: AuthorSortDirection | string | null;
 }
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+
+interface ResolvedAuthorSort {
+  field: AuthorSortField;
+  order: AuthorSortDirection;
+}
+
+interface QueryAuthorsOptions {
+  sqlConditions: Prisma.Sql[];
+  offset: number;
+  limit: number;
+  sort: ResolvedAuthorSort;
+}
 
 @Injectable()
 export class AuthorsService {
@@ -29,41 +56,16 @@ export class AuthorsService {
     const offset = Math.max(options.offset ?? 0, 0);
     const limit = Math.min(Math.max(options.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
     const search = options.search?.trim();
-    const filters: Prisma.AuthorWhereInput[] = [];
-
-    if (search) {
-      const numericId = Number.parseInt(search, 10);
-      const orFilters: Prisma.AuthorWhereInput[] = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { domain: { contains: search, mode: 'insensitive' } },
-        { screenName: { contains: search, mode: 'insensitive' } },
-      ];
-
-      if (!Number.isNaN(numericId)) {
-        orFilters.push({ vkUserId: numericId });
-      }
-
-      filters.push({ OR: orFilters });
-    }
-
-    if (options.verified === true) {
-      filters.push({ verifiedAt: { not: null } });
-    } else if (options.verified === false) {
-      filters.push({ verifiedAt: null });
-    }
-
-    const where = filters.length ? { AND: filters } : undefined;
-    const orderBy: Prisma.AuthorOrderByWithRelationInput =
-      options.verified === true ? { verifiedAt: 'desc' } : { updatedAt: 'desc' };
+    const sort = this.resolveSort(options.sortBy, options.sortOrder, options.verified);
+    const { where, sqlConditions } = this.buildFilters(search, options.verified);
 
     const [total, authors] = await Promise.all([
       this.prisma.author.count({ where }),
-      this.prisma.author.findMany({
-        where,
-        orderBy,
-        skip: offset,
-        take: limit,
+      this.queryAuthors({
+        sqlConditions,
+        offset,
+        limit,
+        sort,
       }),
     ]);
 
@@ -79,6 +81,289 @@ export class AuthorsService {
       total,
       hasMore: offset + limit < total,
     };
+  }
+
+  private static readonly SORTABLE_FIELDS: ReadonlySet<AuthorSortField> = new Set<AuthorSortField>([
+    'fullName',
+    'photosCount',
+    'audiosCount',
+    'videosCount',
+    'friendsCount',
+    'followersCount',
+    'lastSeenAt',
+    'verifiedAt',
+    'updatedAt',
+  ]);
+
+  private async queryAuthors(options: QueryAuthorsOptions): Promise<AuthorModel[]> {
+    const whereClause = options.sqlConditions.length
+      ? Prisma.sql`WHERE ${Prisma.join(options.sqlConditions, ' AND ')}`
+      : Prisma.sql``;
+
+    const orderClause = this.buildOrderClause(options.sort);
+
+    const query = Prisma.sql`
+      SELECT *
+      FROM "Author"
+      ${whereClause}
+      ORDER BY ${orderClause}
+      OFFSET ${options.offset}
+      LIMIT ${options.limit}
+    `;
+
+    return this.prisma.$queryRaw<AuthorModel[]>(query);
+  }
+
+  private buildFilters(
+    search: string | null | undefined,
+    verified?: boolean,
+  ): { where?: Prisma.AuthorWhereInput; sqlConditions: Prisma.Sql[] } {
+    const filters: Prisma.AuthorWhereInput[] = [];
+    const sqlConditions: Prisma.Sql[] = [];
+
+    if (search) {
+      const numericId = Number.parseInt(search, 10);
+      const orFilters: Prisma.AuthorWhereInput[] = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { domain: { contains: search, mode: 'insensitive' } },
+        { screenName: { contains: search, mode: 'insensitive' } },
+      ];
+
+      const searchTerm = `%${search.toLowerCase()}%`;
+      const searchSqlParts: Prisma.Sql[] = [
+        Prisma.sql`LOWER("Author"."firstName") LIKE ${searchTerm}`,
+        Prisma.sql`LOWER("Author"."lastName") LIKE ${searchTerm}`,
+        Prisma.sql`LOWER("Author"."domain") LIKE ${searchTerm}`,
+        Prisma.sql`LOWER("Author"."screenName") LIKE ${searchTerm}`,
+      ];
+
+      if (!Number.isNaN(numericId)) {
+        orFilters.push({ vkUserId: numericId });
+        searchSqlParts.push(Prisma.sql`"Author"."vkUserId" = ${numericId}`);
+      }
+
+      filters.push({ OR: orFilters });
+      sqlConditions.push(Prisma.sql`(${Prisma.join(searchSqlParts, ' OR ')})`);
+    }
+
+    if (verified === true) {
+      filters.push({ verifiedAt: { not: null } });
+      sqlConditions.push(Prisma.sql`"Author"."verifiedAt" IS NOT NULL`);
+    } else if (verified === false) {
+      filters.push({ verifiedAt: null });
+      sqlConditions.push(Prisma.sql`"Author"."verifiedAt" IS NULL`);
+    }
+
+    const where = filters.length ? { AND: filters } : undefined;
+
+    return {
+      where,
+      sqlConditions,
+    };
+  }
+
+  private resolveSort(
+    sortBy: AuthorSortField | string | null | undefined,
+    sortOrder: AuthorSortDirection | string | null | undefined,
+    verified?: boolean,
+  ): ResolvedAuthorSort {
+    const normalizedField = this.normalizeSortField(sortBy);
+    const normalizedOrder: AuthorSortDirection =
+      sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc';
+
+    if (normalizedField) {
+      return {
+        field: normalizedField,
+        order: normalizedOrder,
+      };
+    }
+
+    if (verified === true) {
+      return {
+        field: 'verifiedAt',
+        order: 'desc',
+      };
+    }
+
+    return {
+      field: 'updatedAt',
+      order: 'desc',
+    };
+  }
+
+  private normalizeSortField(value: AuthorSortField | string | null | undefined): AuthorSortField | null {
+    if (!value) {
+      return null;
+    }
+
+    if (AuthorsService.SORTABLE_FIELDS.has(value as AuthorSortField)) {
+      return value as AuthorSortField;
+    }
+
+    return null;
+  }
+
+  private buildOrderClause(sort: ResolvedAuthorSort): Prisma.Sql {
+    const expressions: Prisma.Sql[] = [];
+
+    switch (sort.field) {
+      case 'fullName':
+        expressions.push(this.applyDirection(Prisma.sql`LOWER("Author"."lastName")`, sort.order));
+        expressions.push(this.applyDirection(Prisma.sql`LOWER("Author"."firstName")`, sort.order));
+        expressions.push(this.applyDirection(Prisma.sql`"Author"."vkUserId"`, sort.order));
+        break;
+      case 'photosCount':
+        expressions.push(
+          this.applyDirection(this.buildCounterValueExpression(['photos', 'photos_count']), sort.order, {
+            nullsLast: true,
+          }),
+        );
+        break;
+      case 'audiosCount':
+        expressions.push(
+          this.applyDirection(this.buildCounterValueExpression(['audios', 'audio']), sort.order, {
+            nullsLast: true,
+          }),
+        );
+        break;
+      case 'videosCount':
+        expressions.push(
+          this.applyDirection(this.buildCounterValueExpression(['videos', 'video']), sort.order, {
+            nullsLast: true,
+          }),
+        );
+        break;
+      case 'friendsCount':
+        expressions.push(
+          this.applyDirection(this.buildCounterValueExpression(['friends']), sort.order, {
+            nullsLast: true,
+          }),
+        );
+        break;
+      case 'followersCount':
+        expressions.push(
+          this.applyDirection(this.buildFollowersValueExpression(), sort.order, {
+            nullsLast: true,
+          }),
+        );
+        break;
+      case 'lastSeenAt':
+        expressions.push(
+          this.applyDirection(this.buildLastSeenValueExpression(), sort.order, {
+            nullsLast: true,
+          }),
+        );
+        break;
+      case 'verifiedAt':
+        expressions.push(
+          this.applyDirection(Prisma.sql`"Author"."verifiedAt"`, sort.order, {
+            nullsLast: true,
+          }),
+        );
+        break;
+      case 'updatedAt':
+      default:
+        expressions.push(this.applyDirection(Prisma.sql`"Author"."updatedAt"`, sort.order));
+        break;
+    }
+
+    expressions.push(Prisma.sql`"Author"."updatedAt" DESC`);
+    expressions.push(Prisma.sql`"Author"."id" DESC`);
+
+    return Prisma.join(expressions, ', ');
+  }
+
+  private applyDirection(
+    expression: Prisma.Sql,
+    order: AuthorSortDirection,
+    options: { nullsLast?: boolean } = {},
+  ): Prisma.Sql {
+    const direction = order === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+    const nulls = options.nullsLast ? Prisma.sql` NULLS LAST` : Prisma.sql``;
+    return Prisma.sql`${expression} ${direction}${nulls}`;
+  }
+
+  private buildCounterValueExpression(keys: string[]): Prisma.Sql {
+    const parts = keys.map(
+      (key) => Prisma.sql`
+        CASE
+          WHEN jsonb_typeof("Author"."counters") = 'object'
+            AND ("Author"."counters"->>${Prisma.raw(`'${key}'`)}) ~ '^-?\\d+$'
+          THEN ("Author"."counters"->>${Prisma.raw(`'${key}'`)})::numeric
+          ELSE NULL
+        END
+      `,
+    );
+
+    if (parts.length === 1) {
+      return parts[0];
+    }
+
+    return Prisma.sql`COALESCE(${Prisma.join(parts, ', ')})`;
+  }
+
+  private buildFollowersValueExpression(): Prisma.Sql {
+    const directValue = Prisma.sql`
+      CASE
+        WHEN "Author"."followersCount" IS NOT NULL
+        THEN "Author"."followersCount"::numeric
+        ELSE NULL
+      END
+    `;
+
+    const countersValue = this.buildCounterValueExpression(['followers', 'subscribers']);
+
+    return Prisma.sql`COALESCE(${directValue}, ${countersValue})`;
+  }
+
+  private buildLastSeenValueExpression(): Prisma.Sql {
+    const trimmedValue = Prisma.sql`NULLIF(trim('"' FROM "Author"."lastSeen"::text), '')`;
+
+    const numericFromRoot = this.buildUnixMillisExpression(trimmedValue);
+
+    const stringCase = Prisma.sql`
+      CASE
+        WHEN ${trimmedValue} ~ '^-?\\d+$' THEN ${this.buildUnixMillisExpression(trimmedValue)}
+        WHEN ${trimmedValue} ~ '^\\d{4}-\\d{2}-\\d{2}'
+          THEN FLOOR(EXTRACT(EPOCH FROM (${trimmedValue})::timestamptz) * 1000)
+        ELSE NULL
+      END
+    `;
+
+    const timeFromObject = this.buildUnixMillisExpression(Prisma.sql`"Author"."lastSeen"->>'time'`);
+    const dateFromObject = Prisma.sql`
+      CASE
+        WHEN ("Author"."lastSeen"->>'date') ~ '^\\d{4}-\\d{2}-\\d{2}'
+        THEN FLOOR(EXTRACT(EPOCH FROM ("Author"."lastSeen"->>'date')::timestamptz) * 1000)
+        ELSE NULL
+      END
+    `;
+
+    return Prisma.sql`
+      CASE
+        WHEN "Author"."lastSeen" IS NULL THEN NULL
+        WHEN jsonb_typeof("Author"."lastSeen") = 'number' THEN ${numericFromRoot}
+        WHEN jsonb_typeof("Author"."lastSeen") = 'string' THEN ${stringCase}
+        WHEN jsonb_typeof("Author"."lastSeen") = 'object'
+          THEN COALESCE(${timeFromObject}, ${dateFromObject})
+        ELSE NULL
+      END
+    `;
+  }
+
+  private buildUnixMillisExpression(value: Prisma.Sql): Prisma.Sql {
+    return Prisma.sql`
+      CASE
+        WHEN ${value} IS NULL THEN NULL
+        WHEN ${value} ~ '^-?\\d+$' THEN
+          CASE
+            WHEN (${value})::numeric > 10000000000 THEN (${value})::numeric
+            ELSE (${value})::numeric * 1000
+          END
+        ELSE NULL
+      END
+    `;
   }
 
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetailsDto> {

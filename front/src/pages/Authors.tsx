@@ -15,9 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Spinner } from '@/components/ui/spinner'
 import { useAuthorsStore } from '@/stores'
-import type { AuthorCard } from '@/types'
+import type { AuthorCard, AuthorSortField } from '@/types'
 
 const STATUS_FILTER_OPTIONS: Array<{
   label: string
@@ -99,6 +100,9 @@ function Authors() {
   const setStoreSearch = useAuthorsStore((state) => state.setSearch)
   const statusFilter = useAuthorsStore((state) => state.statusFilter)
   const setStatusFilter = useAuthorsStore((state) => state.setStatusFilter)
+  const sortBy = useAuthorsStore((state) => state.sortBy)
+  const sortOrder = useAuthorsStore((state) => state.sortOrder)
+  const setSort = useAuthorsStore((state) => state.setSort)
 
   const [searchValue, setSearchValue] = useState(storeSearch)
   const isInitialSearch = useRef(true)
@@ -161,6 +165,18 @@ function Authors() {
       console.error('Не удалось обновить таблицу авторов', error)
     })
   }, [refreshAuthors])
+
+  const handleSortChange = useCallback(
+    (field: AuthorSortField) => {
+      setSort(field)
+    },
+    [setSort],
+  )
+
+  const resolveSortDirection = useCallback(
+    (field: AuthorSortField) => (sortBy === field ? sortOrder : null),
+    [sortBy, sortOrder],
+  )
 
   const handleOpenAnalysis = useCallback(
     (author: AuthorCard) => {
@@ -269,14 +285,71 @@ function Authors() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Автор</TableHead>
-              <TableHead>Фото</TableHead>
-              <TableHead>Аудио</TableHead>
-              <TableHead>Видео</TableHead>
-              <TableHead>Друзья</TableHead>
-              <TableHead>Подписчики</TableHead>
-              <TableHead>Дата входа</TableHead>
-              <TableHead>Дата проверки</TableHead>
+              <TableHead>
+                <TableSortButton
+                  onClick={() => handleSortChange('fullName')}
+                  direction={resolveSortDirection('fullName')}
+                  className="justify-start"
+                >
+                  Автор
+                </TableSortButton>
+              </TableHead>
+              <TableHead>
+                <TableSortButton
+                  onClick={() => handleSortChange('photosCount')}
+                  direction={resolveSortDirection('photosCount')}
+                >
+                  Фото
+                </TableSortButton>
+              </TableHead>
+              <TableHead>
+                <TableSortButton
+                  onClick={() => handleSortChange('audiosCount')}
+                  direction={resolveSortDirection('audiosCount')}
+                >
+                  Аудио
+                </TableSortButton>
+              </TableHead>
+              <TableHead>
+                <TableSortButton
+                  onClick={() => handleSortChange('videosCount')}
+                  direction={resolveSortDirection('videosCount')}
+                >
+                  Видео
+                </TableSortButton>
+              </TableHead>
+              <TableHead>
+                <TableSortButton
+                  onClick={() => handleSortChange('friendsCount')}
+                  direction={resolveSortDirection('friendsCount')}
+                >
+                  Друзья
+                </TableSortButton>
+              </TableHead>
+              <TableHead>
+                <TableSortButton
+                  onClick={() => handleSortChange('followersCount')}
+                  direction={resolveSortDirection('followersCount')}
+                >
+                  Подписчики
+                </TableSortButton>
+              </TableHead>
+              <TableHead>
+                <TableSortButton
+                  onClick={() => handleSortChange('lastSeenAt')}
+                  direction={resolveSortDirection('lastSeenAt')}
+                >
+                  Дата входа
+                </TableSortButton>
+              </TableHead>
+              <TableHead>
+                <TableSortButton
+                  onClick={() => handleSortChange('verifiedAt')}
+                  direction={resolveSortDirection('verifiedAt')}
+                >
+                  Дата проверки
+                </TableSortButton>
+              </TableHead>
               <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
@@ -327,7 +400,7 @@ function Authors() {
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <span className="font-medium text-text-primary">
-                        {formatMetricValue(author.summary.total)}
+                        {formatMetricValue(author.photosCount)}
                       </span>
                       <span className="text-xs text-text-secondary">
                         Подозрительные: {formatMetricValue(author.summary.suspicious)}

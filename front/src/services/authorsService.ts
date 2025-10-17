@@ -5,6 +5,8 @@ import type {
   AuthorCard,
   AuthorDetails,
   AuthorListResponse,
+  AuthorSortField,
+  AuthorSortOrder,
   PhotoAnalysisSummary,
 } from '../types'
 import type {
@@ -75,6 +77,8 @@ export const authorsService = {
     limit?: number
     search?: string
     verified?: boolean
+    sortBy?: AuthorSortField
+    sortOrder?: AuthorSortOrder
   } = {}): Promise<AuthorListResponse> {
     try {
       const response = await authorsApi.fetchAuthors(params)

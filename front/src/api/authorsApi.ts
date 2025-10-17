@@ -11,6 +11,8 @@ export const authorsApi = {
     limit?: number
     search?: string
     verified?: boolean
+    sortBy?: string
+    sortOrder?: 'asc' | 'desc'
   } = {}): Promise<AuthorsListResponse> {
     const searchParams = new URLSearchParams()
 
@@ -28,6 +30,14 @@ export const authorsApi = {
 
     if (typeof params.verified === 'boolean') {
       searchParams.set('verified', String(params.verified))
+    }
+
+    if (params.sortBy) {
+      searchParams.set('sortBy', params.sortBy)
+    }
+
+    if (params.sortOrder) {
+      searchParams.set('sortOrder', params.sortOrder)
     }
 
     const query = searchParams.toString()
