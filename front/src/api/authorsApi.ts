@@ -10,6 +10,7 @@ export const authorsApi = {
     offset?: number
     limit?: number
     search?: string
+    verified?: boolean
   } = {}): Promise<AuthorsListResponse> {
     const searchParams = new URLSearchParams()
 
@@ -23,6 +24,10 @@ export const authorsApi = {
 
     if (params.search) {
       searchParams.set('search', params.search)
+    }
+
+    if (typeof params.verified === 'boolean') {
+      searchParams.set('verified', String(params.verified))
     }
 
     const query = searchParams.toString()

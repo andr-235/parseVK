@@ -13,6 +13,14 @@ export interface AuthorCard {
   screenName: string | null
   profileUrl: string | null
   summary: PhotoAnalysisSummary
+  photosCount: number | null
+  audiosCount: number | null
+  videosCount: number | null
+  friendsCount: number | null
+  followersCount: number | null
+  lastSeenAt: string | null
+  verifiedAt: string | null
+  isVerified: boolean
 }
 
 export interface AuthorDetails extends AuthorCard {

@@ -12,6 +12,7 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
   isLoadingMore: false,
   isRefreshing: false,
   search: '',
+  statusFilter: 'unverified',
   pageSize: DEFAULT_PAGE_SIZE,
 
   fetchAuthors: async (options = {}) => {
@@ -36,6 +37,10 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
         offset,
         limit: state.pageSize,
         search: trimmedSearch || undefined,
+        verified:
+          state.statusFilter === 'all'
+            ? undefined
+            : state.statusFilter === 'verified',
       })
 
       set((prev) => ({
@@ -61,6 +66,49 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
 
   setSearch: (value: string) => {
     set({ search: value })
+  },
+
+  setStatusFilter: (value) => {
+    set(() => ({
+      statusFilter: value,
+      authors: [],
+      total: 0,
+      hasMore: false,
+      isLoading: true,
+      isLoadingMore: false,
+    }))
+  },
+
+  markAuthorVerified: (vkUserId, verifiedAt) => {
+    set((state) => {
+      const index = state.authors.findIndex((item) => item.vkUserId === vkUserId)
+
+      if (index === -1) {
+        return {}
+      }
+
+      const resolvedVerifiedAt = verifiedAt ?? new Date().toISOString()
+
+      if (state.statusFilter === 'unverified') {
+        const nextAuthors = state.authors.filter((item) => item.vkUserId !== vkUserId)
+        const nextTotal = state.total > 0 ? state.total - 1 : 0
+
+        return {
+          authors: nextAuthors,
+          total: nextTotal,
+        }
+      }
+
+      const nextAuthors = state.authors.map((item, itemIndex) =>
+        itemIndex === index
+          ? { ...item, isVerified: true, verifiedAt: resolvedVerifiedAt }
+          : item
+      )
+
+      return {
+        authors: nextAuthors,
+      }
+    })
   },
 
   refreshAuthors: async () => {

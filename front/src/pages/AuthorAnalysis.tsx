@@ -9,7 +9,7 @@ import SectionCard from '@/components/SectionCard'
 import { SuspicionLevelBadge } from '@/components/SuspicionLevelBadge'
 import { PhotoAnalysisCard } from '@/components/PhotoAnalysisCard'
 import { authorsService } from '@/services/authorsService'
-import { usePhotoAnalysisStore } from '@/stores'
+import { usePhotoAnalysisStore, useAuthorsStore } from '@/stores'
 import type { AuthorDetails, PhotoAnalysisSummary } from '@/types'
 import { createEmptyPhotoAnalysisSummary } from '@/types'
 
@@ -20,6 +20,26 @@ const categoryLabels: Record<string, string> = {
   nsfw: 'NSFW',
   extremism: 'Экстремизм',
   'hate speech': 'Разжигание ненависти',
+}
+
+const formatDateTime = (value: string | null | undefined): string => {
+  if (!value) {
+    return 'Нет данных'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Нет данных'
+  }
+
+  return date.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function AuthorAnalysis() {
@@ -59,6 +79,7 @@ function AuthorAnalysis() {
   const deleteResults = usePhotoAnalysisStore((state) => state.deleteResults)
   const setFilter = usePhotoAnalysisStore((state) => state.setFilter)
   const clear = usePhotoAnalysisStore((state) => state.clear)
+  const markAuthorVerified = useAuthorsStore((state) => state.markAuthorVerified)
 
   useEffect(() => {
     if (!locationState?.author || author) {
@@ -80,6 +101,14 @@ function AuthorAnalysis() {
       screenName: stateAuthor.screenName ?? null,
       profileUrl: stateAuthor.profileUrl ?? null,
       summary: summary ?? createEmptyPhotoAnalysisSummary(),
+      photosCount: null,
+      audiosCount: null,
+      videosCount: null,
+      friendsCount: null,
+      followersCount: null,
+      lastSeenAt: null,
+      verifiedAt: null,
+      isVerified: false,
       city: null,
       country: null,
       createdAt: '',
@@ -134,20 +163,22 @@ function AuthorAnalysis() {
     clear()
   }, [clear])
 
+  useEffect(() => {
+    if (!author?.vkUserId || !author.verifiedAt) {
+      return
+    }
+
+    markAuthorVerified(author.vkUserId, author.verifiedAt)
+  }, [author?.vkUserId, author?.verifiedAt, markAuthorVerified])
+
   const heroFooter = useMemo(() => {
     if (!summary) {
       return null
     }
 
-    const lastAnalyzed = summary.lastAnalyzedAt
-      ? new Date(summary.lastAnalyzedAt).toLocaleString('ru-RU', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : 'Нет данных'
+    const lastAnalyzed = formatDateTime(summary.lastAnalyzedAt)
+    const verifiedAt = formatDateTime(author?.verifiedAt)
+    const lastSeen = formatDateTime(author?.lastSeenAt)
 
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -160,9 +191,15 @@ function AuthorAnalysis() {
         <Badge variant="outline" className="border-border/50">
           Последний анализ: {lastAnalyzed}
         </Badge>
+        <Badge variant="outline" className="border-border/50">
+          Последний вход: {lastSeen}
+        </Badge>
+        <Badge variant="outline" className="border-border/50">
+          Проверен: {verifiedAt}
+        </Badge>
       </div>
     )
-  }, [summary])
+  }, [author?.lastSeenAt, author?.verifiedAt, summary])
 
   const handleAnalyze = async (force = false) => {
     if (!isValidAuthor) {

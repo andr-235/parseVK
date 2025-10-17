@@ -51,6 +51,14 @@ const mapAuthorCard = (author: AuthorCardResponse): AuthorCard => ({
   screenName: author.screenName ?? null,
   profileUrl: author.profileUrl ?? null,
   summary: normalizeSummary(author.summary),
+  photosCount: author.photosCount ?? null,
+  audiosCount: author.audiosCount ?? null,
+  videosCount: author.videosCount ?? null,
+  friendsCount: author.friendsCount ?? null,
+  followersCount: author.followersCount ?? null,
+  lastSeenAt: author.lastSeenAt ?? null,
+  verifiedAt: author.verifiedAt ?? null,
+  isVerified: Boolean(author.isVerified),
 })
 
 const mapAuthorDetails = (author: AuthorDetailsResponse): AuthorDetails => ({
@@ -66,6 +74,7 @@ export const authorsService = {
     offset?: number
     limit?: number
     search?: string
+    verified?: boolean
   } = {}): Promise<AuthorListResponse> {
     try {
       const response = await authorsApi.fetchAuthors(params)

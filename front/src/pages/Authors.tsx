@@ -1,12 +1,89 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
 import SearchInput from '@/components/SearchInput'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Spinner } from '@/components/ui/spinner'
 import { useAuthorsStore } from '@/stores'
-import AuthorCard from './Authors/components/AuthorCard'
+import type { AuthorCard } from '@/types'
+
+const STATUS_FILTER_OPTIONS: Array<{
+  label: string
+  value: 'unverified' | 'verified' | 'all'
+}> = [
+  { label: 'Непроверенные', value: 'unverified' },
+  { label: 'Проверенные', value: 'verified' },
+  { label: 'Все', value: 'all' },
+]
+
+const STATUS_FILTER_LABELS: Record<'unverified' | 'verified' | 'all', string> = {
+  unverified: 'Фильтр: непроверенные',
+  verified: 'Фильтр: проверенные',
+  all: 'Фильтр: все авторы',
+}
+
+const numberFormatter = new Intl.NumberFormat('ru-RU')
+
+const formatMetricValue = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) {
+    return '—'
+  }
+
+  return numberFormatter.format(value)
+}
+
+const formatDateTimeCell = (value: string | null | undefined): string => {
+  if (!value) {
+    return '—'
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return '—'
+  }
+
+  return date.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const getInitials = (firstName: string, lastName: string): string => {
+  const first = firstName?.[0] ?? ''
+  const last = lastName?.[0] ?? ''
+  return `${first}${last}`.toUpperCase() || 'VK'
+}
+
+const resolveProfileUrl = (author: AuthorCard): string => {
+  if (author.profileUrl) {
+    return author.profileUrl
+  }
+
+  if (author.domain) {
+    return `https://vk.com/${author.domain}`
+  }
+
+  if (author.screenName) {
+    return `https://vk.com/${author.screenName}`
+  }
+
+  return `https://vk.com/id${author.vkUserId}`
+}
 
 function Authors() {
   const authors = useAuthorsStore((state) => state.authors)
@@ -20,9 +97,12 @@ function Authors() {
   const refreshAuthors = useAuthorsStore((state) => state.refreshAuthors)
   const storeSearch = useAuthorsStore((state) => state.search)
   const setStoreSearch = useAuthorsStore((state) => state.setSearch)
+  const statusFilter = useAuthorsStore((state) => state.statusFilter)
+  const setStatusFilter = useAuthorsStore((state) => state.setStatusFilter)
 
   const [searchValue, setSearchValue] = useState(storeSearch)
   const isInitialSearch = useRef(true)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const load = async () => {
@@ -34,7 +114,7 @@ function Authors() {
     }
 
     void load()
-  }, [fetchAuthors])
+  }, [fetchAuthors, statusFilter])
 
   useEffect(() => {
     setStoreSearch(searchValue)
@@ -59,22 +139,59 @@ function Authors() {
     setSearchValue(value)
   }, [])
 
+  const handleStatusFilterChange = useCallback(
+    (value: 'unverified' | 'verified' | 'all') => {
+      if (value === statusFilter) {
+        return
+      }
+
+      setStatusFilter(value)
+    },
+    [setStatusFilter, statusFilter]
+  )
+
   const handleLoadMore = useCallback(() => {
     loadMore().catch((error) => {
-      console.error('Не удалось загрузить дополнительные карточки авторов', error)
+      console.error('Не удалось загрузить дополнительные записи авторов', error)
     })
   }, [loadMore])
 
   const handleRefresh = useCallback(() => {
     refreshAuthors().catch((error) => {
-      console.error('Не удалось обновить карточки авторов', error)
+      console.error('Не удалось обновить таблицу авторов', error)
     })
   }, [refreshAuthors])
 
+  const handleOpenAnalysis = useCallback(
+    (author: AuthorCard) => {
+      const profileUrl = resolveProfileUrl(author)
+      const avatar = author.photo200 ?? author.photo100 ?? author.photo50 ?? null
+
+      navigate(`/authors/${author.vkUserId}/analysis`, {
+        state: {
+          author: {
+            vkUserId: author.vkUserId,
+            firstName: author.firstName,
+            lastName: author.lastName,
+            fullName: author.fullName,
+            avatar,
+            profileUrl,
+            screenName: author.screenName,
+            domain: author.domain,
+          },
+          summary: author.summary,
+        },
+      })
+    },
+    [navigate]
+  )
+
   const displayedCount = useMemo(() => authors.length, [authors])
 
-  const heroFooter = useMemo(
-    () => (
+  const heroFooter = useMemo(() => {
+    const filterLabel = STATUS_FILTER_LABELS[statusFilter]
+
+    return (
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="outline" className="border-accent-primary/30 bg-accent-primary/10 text-accent-primary">
           В базе: {total}
@@ -82,32 +199,54 @@ function Authors() {
         <Badge variant="secondary" className="text-text-primary">
           Показано: {displayedCount}
         </Badge>
+        <Badge variant="outline" className="border-border/50 text-text-secondary">
+          {filterLabel}
+        </Badge>
       </div>
-    ),
-    [total, displayedCount]
-  )
+    )
+  }, [total, displayedCount, statusFilter])
 
   const showEmptyState = !isLoading && authors.length === 0
+  const emptyTitle = statusFilter === 'unverified' ? 'Нет авторов для проверки' : 'Авторы не найдены'
+  const emptyDescription = statusFilter === 'unverified'
+    ? 'Все найденные авторы уже отмечены как проверенные. Попробуйте сменить фильтр или обновить данные.'
+    : 'Попробуйте изменить фильтр или уточнить поисковый запрос.'
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeroCard
         title="Авторы ВКонтакте"
-        description="Карточки авторов, сохранённых после парсинга комментариев и работы мониторинга. Здесь можно быстро посмотреть ключевые данные профиля, контакты и статистику."
+        description="Таблица авторов, сохранённых после парсинга и мониторинга. Видно ключевые метрики профиля и активность."
         footer={heroFooter}
       />
 
       <SectionCard
-        title="Карточки авторов"
-        description="Поиск поддерживает имя, фамилию, короткий адрес и числовой идентификатор VK."
+        title="Сводка по авторам"
+        description="Поиск поддерживает имя, фамилию, короткий адрес и числовой идентификатор VK. Метрики собираются из последнего обновления профиля."
         headerActions={
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="w-full sm:w-72">
-              <SearchInput
-                value={searchValue}
-                onChange={handleSearchChange}
-                placeholder="Поиск по имени, домену или ID"
-              />
+          <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="w-full sm:w-72">
+                <SearchInput
+                  value={searchValue}
+                  onChange={handleSearchChange}
+                  placeholder="Поиск по имени, домену или ID"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {STATUS_FILTER_OPTIONS.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    size="sm"
+                    variant={statusFilter === option.value ? 'default' : 'outline'}
+                    onClick={() => handleStatusFilterChange(option.value)}
+                    disabled={statusFilter === option.value}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
             <Button
               onClick={handleRefresh}
@@ -127,28 +266,104 @@ function Authors() {
         }
         contentClassName="space-y-6"
       >
-        {isLoading && authors.length === 0 ? (
-          <div className="flex w-full justify-center py-10">
-            <Spinner className="h-6 w-6" />
-          </div>
-        ) : null}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Автор</TableHead>
+              <TableHead>Фото</TableHead>
+              <TableHead>Аудио</TableHead>
+              <TableHead>Видео</TableHead>
+              <TableHead>Друзья</TableHead>
+              <TableHead>Подписчики</TableHead>
+              <TableHead>Дата входа</TableHead>
+              <TableHead>Дата проверки</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading && authors.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9}>
+                  <div className="flex w-full justify-center py-10">
+                    <Spinner className="h-6 w-6" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : null}
 
-        {showEmptyState && (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border/60 bg-background-primary/40 px-6 py-12 text-center text-text-secondary">
-            <p className="text-lg font-medium text-text-primary">Авторы не найдены</p>
-            <p className="max-w-md text-sm">
-              Попробуйте изменить поисковый запрос или проверьте, что парсер успел сохранить авторов из выбранных задач.
-            </p>
-          </div>
-        )}
+            {authors.map((author) => {
+              const profileUrl = resolveProfileUrl(author)
+              const avatarUrl = author.photo200 ?? author.photo100 ?? author.photo50 ?? undefined
 
-        {authors.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {authors.map((author) => (
-              <AuthorCard key={author.id} author={author} />
-            ))}
-          </div>
-        )}
+              return (
+                <TableRow key={author.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-11 w-11 border border-border/20">
+                        {avatarUrl ? (
+                          <AvatarImage src={avatarUrl} alt={author.fullName} />
+                        ) : (
+                          <AvatarFallback>{getInitials(author.firstName, author.lastName)}</AvatarFallback>
+                        )}
+                      </Avatar>
+
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-text-primary">{author.fullName}</span>
+                        <span className="text-xs text-text-secondary">
+                          {author.screenName ? `@${author.screenName}` : `id${author.vkUserId}`}
+                        </span>
+                        <a
+                          href={profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-accent-primary hover:underline"
+                        >
+                          Открыть профиль
+                        </a>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-text-primary">
+                        {formatMetricValue(author.summary.total)}
+                      </span>
+                      <span className="text-xs text-text-secondary">
+                        Подозрительные: {formatMetricValue(author.summary.suspicious)}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{formatMetricValue(author.audiosCount)}</TableCell>
+                  <TableCell>{formatMetricValue(author.videosCount)}</TableCell>
+                  <TableCell>{formatMetricValue(author.friendsCount)}</TableCell>
+                  <TableCell>{formatMetricValue(author.followersCount)}</TableCell>
+                  <TableCell>{formatDateTimeCell(author.lastSeenAt)}</TableCell>
+                  <TableCell>{formatDateTimeCell(author.verifiedAt)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="outline" onClick={() => handleOpenAnalysis(author)}>
+                      Анализ
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+
+            {showEmptyState ? (
+              <TableRow>
+                <TableCell colSpan={9}>
+                  <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border/60 bg-background-primary/40 px-6 py-12 text-center text-text-secondary">
+                    <p className="text-lg font-medium text-text-primary">{emptyTitle}</p>
+                    <p className="max-w-md text-sm">{emptyDescription}</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+          <TableCaption>
+            Нажмите «Анализ», чтобы перейти на подробную страницу автора и пометить его как проверенного.
+          </TableCaption>
+        </Table>
 
         {hasMore && (
           <div className="flex justify-center pt-2">

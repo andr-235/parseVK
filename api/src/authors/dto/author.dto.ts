@@ -13,6 +13,14 @@ export class AuthorCardDto {
   screenName!: string | null;
   profileUrl!: string | null;
   summary!: PhotoAnalysisSummaryDto;
+  photosCount!: number | null;
+  audiosCount!: number | null;
+  videosCount!: number | null;
+  friendsCount!: number | null;
+  followersCount!: number | null;
+  lastSeenAt!: string | null;
+  verifiedAt!: string | null;
+  isVerified!: boolean;
 }
 
 export class AuthorDetailsDto extends AuthorCardDto {

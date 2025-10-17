@@ -194,6 +194,7 @@ model Author {
   photoAnalyses    PhotoAnalysis[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  verifiedAt       DateTime?
 
   @@index([firstName, lastName]) // для поиска по имени
   @@index([screenName]) // для поиска по никнейму

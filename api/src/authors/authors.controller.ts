@@ -11,8 +11,14 @@ export class AuthorsController {
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Query('search') search?: string,
+    @Query('verified') verified?: string,
   ): Promise<AuthorListDto> {
-    return this.authorsService.listAuthors({ offset, limit, search });
+    return this.authorsService.listAuthors({
+      offset,
+      limit,
+      search,
+      verified: this.parseVerifiedQuery(verified),
+    });
   }
 
   @Get(':vkUserId')
@@ -26,5 +32,21 @@ export class AuthorsController {
   async refreshAuthors(): Promise<{ updated: number }> {
     const updated = await this.authorsService.refreshAuthors();
     return { updated };
+  }
+
+  private parseVerifiedQuery(value?: string): boolean | undefined {
+    if (value === undefined || value === null || value === '' || value === 'all') {
+      return undefined;
+    }
+
+    if (value === 'true') {
+      return true;
+    }
+
+    if (value === 'false') {
+      return false;
+    }
+
+    return undefined;
   }
 }

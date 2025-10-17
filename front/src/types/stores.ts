@@ -93,9 +93,12 @@ export interface AuthorsState {
   isLoadingMore: boolean
   isRefreshing: boolean
   search: string
+  statusFilter: 'all' | 'verified' | 'unverified'
   pageSize: number
   fetchAuthors: (options?: { search?: string; reset?: boolean }) => Promise<void>
   loadMore: () => Promise<void>
   setSearch: (value: string) => void
+  setStatusFilter: (value: 'all' | 'verified' | 'unverified') => void
+  markAuthorVerified: (vkUserId: number, verifiedAt: string | null) => void
   refreshAuthors: () => Promise<void>
 }
