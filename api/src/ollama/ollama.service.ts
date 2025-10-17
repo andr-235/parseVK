@@ -44,8 +44,15 @@ export class OllamaService {
   }
 
   async analyzeImage(request: OllamaAnalysisRequest): Promise<OllamaAnalysisResponse> {
+    const startTime = Date.now();
+    this.logger.log(`Начало анализа изображения: ${request.imageUrl}`);
+
     const imageBase64 = await this.fetchImageAsBase64(request.imageUrl);
+    const imageSizeKb = Math.round((imageBase64.length * 0.75) / 1024);
+    this.logger.log(`Изображение загружено и закодировано в base64, размер: ${imageSizeKb} KB`);
+
     const prompt = this.buildAnalysisPrompt(request.prompt);
+    this.logger.debug(`Используется модель: ${this.model}, длина промпта: ${prompt.length} символов`);
 
     const payload: OllamaGenerateRequest = {
       model: this.model,
@@ -55,13 +62,25 @@ export class OllamaService {
       format: 'json',
     };
 
+    const ollamaStartTime = Date.now();
     const data = await this.callOllamaWithFallback(payload);
+    const ollamaElapsed = Date.now() - ollamaStartTime;
+    this.logger.log(`Получен ответ от Ollama за ${ollamaElapsed}ms`);
 
     try {
       const parsed = JSON.parse(data.response) as OllamaAnalysisResponse;
+      const totalElapsed = Date.now() - startTime;
+      this.logger.log(
+        `Анализ изображения завершен успешно за ${totalElapsed}ms. ` +
+        `Результат: suspicious=${parsed.hasSuspicious}, level=${parsed.suspicionLevel}, ` +
+        `confidence=${parsed.confidence}, categories=[${(parsed.categories ?? []).join(', ')}]`
+      );
       return parsed;
     } catch (error) {
-      this.logger.error('Не удалось распарсить ответ Ollama как JSON', error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `Не удалось распарсить ответ Ollama как JSON. Сырой ответ (первые 500 символов): ${data.response.substring(0, 500)}`,
+        error instanceof Error ? error.stack : String(error)
+      );
       throw new Error('Некорректный формат ответа от модели');
     }
   }
@@ -71,12 +90,16 @@ export class OllamaService {
     const connectivityErrors: OperationError[] = [];
     let failure: unknown;
 
+    this.logger.debug(`Отправка запроса к Ollama, доступно хостов: ${this.apiUrls.length}, модель: ${payload.model}`);
+
     for (let index = 0; index < this.apiUrls.length; index += 1) {
       const baseUrl = this.apiUrls[index];
       const endpoint = this.buildGenerateUrl(baseUrl);
 
+      this.logger.debug(`Попытка ${index + 1}/${this.apiUrls.length}: обращение к хосту ${baseUrl}`);
+
       try {
-        return await this.fetchWithRetry<OllamaGenerateResponse>(
+        const result = await this.fetchWithRetry<OllamaGenerateResponse>(
           endpoint,
           {
             method: 'POST',
@@ -86,6 +109,9 @@ export class OllamaService {
           description,
           async (response) => (await response.json()) as OllamaGenerateResponse,
         );
+
+        this.logger.log(`Успешно получен ответ от хоста ${baseUrl} (попытка ${index + 1}/${this.apiUrls.length})`);
+        return result;
       } catch (error) {
         const hasAlternativeHost = index < this.apiUrls.length - 1;
 
@@ -97,7 +123,7 @@ export class OllamaService {
           connectivityErrors.push(error);
 
           this.logger.warn(
-            `${description}: хост ${baseUrl} недоступен (${this.describeError(error.originalError)}), пробуем следующий`,
+            `${description}: хост ${baseUrl} недоступен (${this.describeError(error.originalError)}), пробуем следующий хост (${index + 2}/${this.apiUrls.length})`,
           );
 
           continue;
@@ -161,6 +187,9 @@ Return ONLY the JSON object, no additional text.`;
   }
 
   private async fetchImageAsBase64(imageUrl: string): Promise<string> {
+    this.logger.debug(`Загрузка изображения: ${imageUrl}`);
+    const startTime = Date.now();
+
     const arrayBuffer = await this.fetchWithRetry<ArrayBuffer>(
       imageUrl,
       {
@@ -173,6 +202,10 @@ Return ONLY the JSON object, no additional text.`;
       async (response) => await response.arrayBuffer(),
       (status) => status === 429 || status >= 500,
     );
+
+    const elapsed = Date.now() - startTime;
+    const sizeKb = Math.round(arrayBuffer.byteLength / 1024);
+    this.logger.debug(`Изображение загружено за ${elapsed}ms, размер: ${sizeKb} KB`);
 
     return Buffer.from(arrayBuffer).toString('base64');
   }

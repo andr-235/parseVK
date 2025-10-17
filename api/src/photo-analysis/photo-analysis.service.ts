@@ -29,8 +29,14 @@ export class PhotoAnalysisService {
     vkUserId: number,
     options?: AnalyzePhotosDto,
   ): Promise<PhotoAnalysisListDto> {
+    const startTime = Date.now();
     const { limit = 50, force = false } = options ?? {};
     const normalizedLimit = Math.min(Math.max(limit, 1), MAX_PHOTO_LIMIT);
+
+    this.logger.log(
+      `Начало анализа фото для пользователя vkUserId=${vkUserId}, limit=${normalizedLimit}, force=${force}`,
+    );
+
     const author = await this.findAuthorOrThrow(vkUserId);
 
     const photos = await this.vkService.getUserPhotos({
@@ -42,11 +48,17 @@ export class PhotoAnalysisService {
       `Получено ${photos.length} фото автора ${author.id} (vkUserId=${author.vkUserId}) для анализа`,
     );
 
+    let successCount = 0;
+    let errorCount = 0;
+    let skippedCount = 0;
+    let noUrlCount = 0;
+
     for (const photo of photos) {
       const photoUrl = this.vkService.getMaxPhotoSize(photo.sizes);
 
       if (!photoUrl) {
         this.logger.warn(`Не найден URL изображения для фото ${photo.photo_id}`);
+        noUrlCount++;
         continue;
       }
 
@@ -62,6 +74,7 @@ export class PhotoAnalysisService {
 
         if (existing) {
           this.logger.debug(`Фото ${photo.photo_id} уже проанализировано, пропускаем`);
+          skippedCount++;
           continue;
         }
       }
@@ -78,16 +91,26 @@ export class PhotoAnalysisService {
           analysis,
         });
 
+        successCount++;
         this.logger.log(
-          `Фото ${photo.photo_id} проанализировано, уровень: ${analysis.suspicionLevel}`,
+          `Фото ${photo.photo_id} проанализировано успешно (${successCount}/${photos.length - skippedCount - noUrlCount}), уровень: ${analysis.suspicionLevel}`,
         );
       } catch (error) {
+        errorCount++;
         this.logger.error(
-          `Ошибка анализа фото ${photo.photo_id}`,
+          `Ошибка анализа фото ${photo.photo_id} (${errorCount} ошибок)`,
           error instanceof Error ? error.stack : String(error),
         );
       }
     }
+
+    const totalElapsed = Date.now() - startTime;
+    const totalElapsedSec = (totalElapsed / 1000).toFixed(2);
+
+    this.logger.log(
+      `Анализ фото завершен за ${totalElapsedSec}s. ` +
+      `Статистика: успешно=${successCount}, ошибок=${errorCount}, пропущено=${skippedCount}, без URL=${noUrlCount}, всего фото=${photos.length}`,
+    );
 
     return this.listByVkUser(vkUserId);
   }

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   Param,
   ParseIntPipe,
   Post,
@@ -16,6 +17,8 @@ import type {
 
 @Controller('photo-analysis')
 export class PhotoAnalysisController {
+  private readonly logger = new Logger(PhotoAnalysisController.name);
+
   constructor(private readonly photoAnalysisService: PhotoAnalysisService) {}
 
   @Post('vk/:vkUserId/analyze')
@@ -23,6 +26,9 @@ export class PhotoAnalysisController {
     @Param('vkUserId', ParseIntPipe) vkUserId: number,
     @Body() dto: AnalyzePhotosDto,
   ): Promise<PhotoAnalysisListDto> {
+    this.logger.log(
+      `POST /photo-analysis/vk/${vkUserId}/analyze - запрос на анализ фото, параметры: ${JSON.stringify(dto)}`,
+    );
     return this.photoAnalysisService.analyzeByVkUser(vkUserId, dto);
   }
 
@@ -30,6 +36,7 @@ export class PhotoAnalysisController {
   async listAuthorAnalyses(
     @Param('vkUserId', ParseIntPipe) vkUserId: number,
   ): Promise<PhotoAnalysisListDto> {
+    this.logger.log(`GET /photo-analysis/vk/${vkUserId} - запрос списка анализов`);
     return this.photoAnalysisService.listByVkUser(vkUserId);
   }
 
@@ -37,6 +44,7 @@ export class PhotoAnalysisController {
   async listSuspiciousAnalyses(
     @Param('vkUserId', ParseIntPipe) vkUserId: number,
   ): Promise<PhotoAnalysisListDto> {
+    this.logger.log(`GET /photo-analysis/vk/${vkUserId}/suspicious - запрос подозрительных анализов`);
     return this.photoAnalysisService.listSuspiciousByVkUser(vkUserId);
   }
 
@@ -44,6 +52,7 @@ export class PhotoAnalysisController {
   async getSummary(
     @Param('vkUserId', ParseIntPipe) vkUserId: number,
   ): Promise<PhotoAnalysisSummaryDto> {
+    this.logger.log(`GET /photo-analysis/vk/${vkUserId}/summary - запрос сводки анализов`);
     return this.photoAnalysisService.getSummaryByVkUser(vkUserId);
   }
 
@@ -51,7 +60,9 @@ export class PhotoAnalysisController {
   async deleteAnalyses(
     @Param('vkUserId', ParseIntPipe) vkUserId: number,
   ): Promise<{ message: string }> {
+    this.logger.log(`DELETE /photo-analysis/vk/${vkUserId} - запрос на удаление анализов`);
     await this.photoAnalysisService.deleteByVkUser(vkUserId);
+    this.logger.log(`DELETE /photo-analysis/vk/${vkUserId} - анализы успешно удалены`);
     return { message: 'Результаты анализа успешно удалены' };
   }
 }
