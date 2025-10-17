@@ -285,22 +285,51 @@ export class AuthorsService {
   }
 
   private buildCounterValueExpression(keys: string[]): Prisma.Sql {
-    const parts = keys.map(
-      (key) => Prisma.sql`
-        CASE
-          WHEN jsonb_typeof("Author"."counters") = 'object'
-            AND ("Author"."counters"->>${Prisma.raw(`'${key}'`)}) ~ '^-?\\d+$'
-          THEN ("Author"."counters"->>${Prisma.raw(`'${key}'`)})::numeric
-          ELSE NULL
-        END
-      `,
-    );
+    const expressions = keys.map((key) => this.buildCounterValueExpressionForKey(key));
 
-    if (parts.length === 1) {
-      return parts[0];
+    if (expressions.length === 1) {
+      return expressions[0];
     }
 
-    return Prisma.sql`COALESCE(${Prisma.join(parts, ', ')})`;
+    return Prisma.sql`COALESCE(${Prisma.join(expressions, ', ')})`;
+  }
+
+  private buildCounterValueExpressionForKey(key: string): Prisma.Sql {
+    const keyLiteral = Prisma.raw(`'${key}'`);
+
+    const numericPath = Prisma.sql`
+      jsonb_path_query_first(
+        "Author"."counters"->${keyLiteral},
+        '$.** ? (@.type() == "number")'
+      )
+    `;
+
+    const stringPath = Prisma.sql`
+      jsonb_path_query_first(
+        "Author"."counters"->${keyLiteral},
+        '$.** ? (@.type() == "string" && @ like_regex "^-?\\\\d+$")'
+      )
+    `;
+
+    return Prisma.sql`
+      CASE
+        WHEN jsonb_typeof("Author"."counters"->${keyLiteral}) = 'number'
+          THEN ("Author"."counters"->>${keyLiteral})::numeric
+        WHEN jsonb_typeof("Author"."counters"->${keyLiteral}) = 'string'
+          AND ("Author"."counters"->>${keyLiteral}) ~ '^-?\\d+$'
+          THEN ("Author"."counters"->>${keyLiteral})::numeric
+        WHEN jsonb_typeof("Author"."counters"->${keyLiteral}) = 'object'
+          THEN COALESCE(
+            (${numericPath})::text::numeric,
+            CASE
+              WHEN ${stringPath} IS NOT NULL
+              THEN NULLIF(TRIM(BOTH '"' FROM (${stringPath})::text), '')::numeric
+              ELSE NULL
+            END
+          )
+        ELSE NULL
+      END
+    `;
   }
 
   private buildFollowersValueExpression(): Prisma.Sql {
@@ -438,6 +467,10 @@ export class AuthorsService {
   ): AuthorCardDto {
     const normalizedSummary = this.cloneSummary(summary);
     const counters = this.extractCounters(author.counters);
+    const summaryPhotos = Number.isFinite(normalizedSummary.total)
+      ? normalizedSummary.total
+      : null;
+    const photosCount = counters.photos ?? (summaryPhotos ?? null);
     const followers = author.followersCount ?? counters.followers ?? null;
 
     return {
@@ -453,7 +486,7 @@ export class AuthorsService {
       screenName: author.screenName ?? null,
       profileUrl: this.buildProfileUrl(author),
       summary: normalizedSummary,
-      photosCount: counters.photos,
+      photosCount,
       audiosCount: counters.audios,
       videosCount: counters.videos,
       friendsCount: counters.friends,
@@ -492,15 +525,58 @@ export class AuthorsService {
     };
   }
 
-  private parseCounterValue(value: unknown): number | null {
+  private parseCounterValue(value: unknown, depth = 0): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
     if (typeof value === 'number' && Number.isFinite(value)) {
       return value;
     }
 
     if (typeof value === 'string') {
-      const numeric = Number.parseInt(value, 10);
+      const trimmed = value.trim();
+      if (trimmed.length === 0) {
+        return null;
+      }
+      const numeric = Number.parseInt(trimmed, 10);
       if (!Number.isNaN(numeric)) {
         return numeric;
+      }
+    }
+
+    if (depth >= 4) {
+      return null;
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const resolved = this.parseCounterValue(item, depth + 1);
+        if (resolved !== null) {
+          return resolved;
+        }
+      }
+      return null;
+    }
+
+    if (typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      const preferredKeys = ['count', 'value', 'total', 'amount', 'items', 'length', 'quantity', 'num'];
+
+      for (const key of preferredKeys) {
+        if (Object.prototype.hasOwnProperty.call(record, key)) {
+          const resolved = this.parseCounterValue(record[key], depth + 1);
+          if (resolved !== null) {
+            return resolved;
+          }
+        }
+      }
+
+      for (const nestedValue of Object.values(record)) {
+        const resolved = this.parseCounterValue(nestedValue, depth + 1);
+        if (resolved !== null) {
+          return resolved;
+        }
       }
     }
 

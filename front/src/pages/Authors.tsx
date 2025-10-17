@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
 import SearchInput from '@/components/SearchInput'
@@ -106,7 +105,6 @@ function Authors() {
 
   const [searchValue, setSearchValue] = useState(storeSearch)
   const isInitialSearch = useRef(true)
-  const navigate = useNavigate()
 
   useEffect(() => {
     const load = async () => {
@@ -176,30 +174,6 @@ function Authors() {
   const resolveSortDirection = useCallback(
     (field: AuthorSortField) => (sortBy === field ? sortOrder : null),
     [sortBy, sortOrder],
-  )
-
-  const handleOpenAnalysis = useCallback(
-    (author: AuthorCard) => {
-      const profileUrl = resolveProfileUrl(author)
-      const avatar = author.photo200 ?? author.photo100 ?? author.photo50 ?? null
-
-      navigate(`/authors/${author.vkUserId}/analysis`, {
-        state: {
-          author: {
-            vkUserId: author.vkUserId,
-            firstName: author.firstName,
-            lastName: author.lastName,
-            fullName: author.fullName,
-            avatar,
-            profileUrl,
-            screenName: author.screenName,
-            domain: author.domain,
-          },
-          summary: author.summary,
-        },
-      })
-    },
-    [navigate]
   )
 
   const displayedCount = useMemo(() => authors.length, [authors])
@@ -414,8 +388,8 @@ function Authors() {
                   <TableCell>{formatDateTimeCell(author.lastSeenAt)}</TableCell>
                   <TableCell>{formatDateTimeCell(author.verifiedAt)}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="outline" onClick={() => handleOpenAnalysis(author)}>
-                      Анализ
+                    <Button size="sm" variant="outline" disabled aria-disabled>
+                      В разработке
                     </Button>
                   </TableCell>
                 </TableRow>
