@@ -1,5 +1,6 @@
 import { TaskAutomationService } from './task-automation.service'
 import { ParsingScope } from '../dto/create-parsing-task.dto'
+import type { SchedulerRegistry } from '@nestjs/schedule'
 
 const buildSettings = () => ({
   id: 1,
@@ -29,6 +30,15 @@ const buildCompletedTask = (overrides?: Partial<Record<string, unknown>>) => ({
 describe('TaskAutomationService', () => {
   let prisma: any
   let tasksService: any
+  let schedulerRegistry: SchedulerRegistry
+  let schedulerMock: {
+    addCronJob: jest.Mock
+    getCronJob: jest.Mock
+    deleteCronJob: jest.Mock
+    addTimeout: jest.Mock
+    getTimeout: jest.Mock
+    deleteTimeout: jest.Mock
+  }
   let service: TaskAutomationService
 
   beforeEach(() => {
@@ -48,7 +58,22 @@ describe('TaskAutomationService', () => {
       createParsingTask: jest.fn(),
     }
 
-    service = new TaskAutomationService(prisma, tasksService)
+    schedulerMock = {
+      addCronJob: jest.fn(),
+      getCronJob: jest.fn(() => {
+        throw new Error('Cron job does not exist')
+      }),
+      deleteCronJob: jest.fn(),
+      addTimeout: jest.fn(),
+      getTimeout: jest.fn(() => {
+        throw new Error('Timeout does not exist')
+      }),
+      deleteTimeout: jest.fn(),
+    }
+
+    schedulerRegistry = schedulerMock as unknown as SchedulerRegistry
+
+    service = new TaskAutomationService(prisma, tasksService, schedulerRegistry)
   })
 
   afterEach(() => {
@@ -149,9 +174,7 @@ describe('TaskAutomationService', () => {
     const settings = buildSettings()
     prisma.taskAutomationSettings.findFirst.mockResolvedValue(settings)
     prisma.task.count.mockResolvedValue(1)
-    const scheduleRetrySpy = jest
-      .spyOn(service as any, 'scheduleRetry')
-      .mockImplementation(() => {})
+    const scheduleRetrySpy = jest.spyOn(service as any, 'scheduleRetry')
 
     const result = await (service as any).executeAutomation('timer')
 
@@ -160,6 +183,7 @@ describe('TaskAutomationService', () => {
     expect(tasksService.createParsingTask).not.toHaveBeenCalled()
     expect(prisma.taskAutomationSettings.update).not.toHaveBeenCalled()
     expect(scheduleRetrySpy).toHaveBeenCalledTimes(1)
+    expect(schedulerMock.addTimeout).toHaveBeenCalledTimes(1)
   })
 })
 

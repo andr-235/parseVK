@@ -1,4 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
+import { SchedulerRegistry } from '@nestjs/schedule'
+import { CronJob } from 'cron'
 import { PrismaService } from '../../prisma.service'
 import { TasksService } from '../tasks.service'
 import { ParsingScope } from '../dto/create-parsing-task.dto'
@@ -15,13 +17,15 @@ const DEFAULT_POST_LIMIT = 10
 @Injectable()
 export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TaskAutomationService.name)
-  private nextRunTimer: NodeJS.Timeout | null = null
+  private readonly nextRunJobName = 'task-automation-next-run'
+  private readonly retryTimeoutName = 'task-automation-retry'
   private nextRunAt: Date | null = null
   private isExecuting = false
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tasksService: TasksService
+    private readonly tasksService: TasksService,
+    private readonly schedulerRegistry: SchedulerRegistry
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -30,7 +34,8 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    this.clearTimer()
+    this.clearScheduledRunJob()
+    this.clearRetryTimeout()
   }
 
   async getSettings(): Promise<TaskAutomationSettingsResponse> {
@@ -262,7 +267,8 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   ): Promise<Date | null> {
     const record = settings ?? (await this.getOrCreateSettings())
 
-    this.clearTimer()
+    this.clearRetryTimeout()
+    this.clearScheduledRunJob()
 
     if (!record.enabled) {
       this.nextRunAt = null
@@ -270,39 +276,83 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     }
 
     const nextRun = this.calculateNextRunDate(record)
-    const delay = Math.max(nextRun.getTime() - Date.now(), 1_000)
 
     this.nextRunAt = nextRun
-    this.nextRunTimer = setTimeout(() => {
-      void this.executeAutomation('timer')
-    }, delay)
 
-    if (typeof this.nextRunTimer.unref === 'function') {
-      this.nextRunTimer.unref()
-    }
+    const job = new CronJob({
+      cronTime: nextRun,
+      onTick: () => {
+        void this.executeAutomation('timer')
+      },
+      onComplete: () => {
+        this.clearScheduledRunJob()
+      },
+      start: false,
+      timeZone: 'UTC',
+      unrefTimeout: true,
+    })
+
+    this.schedulerRegistry.addCronJob(this.nextRunJobName, job)
+    job.start()
 
     return nextRun
   }
 
   private scheduleRetry(): void {
-    this.clearTimer()
+    this.clearScheduledRunJob()
+    this.clearRetryTimeout()
 
     const retryAt = new Date(Date.now() + RETRY_DELAY_MS)
     this.nextRunAt = retryAt
-    this.nextRunTimer = setTimeout(() => {
+
+    const timeout = setTimeout(() => {
+      try {
+        this.schedulerRegistry.deleteTimeout(this.retryTimeoutName)
+      } catch (error) {
+        // проигнорируем отсутствие таймаута в реестре
+      }
       void this.executeAutomation('retry')
     }, RETRY_DELAY_MS)
 
-    if (typeof this.nextRunTimer.unref === 'function') {
-      this.nextRunTimer.unref()
+    if (typeof timeout.unref === 'function') {
+      timeout.unref()
+    }
+
+    this.schedulerRegistry.addTimeout(this.retryTimeoutName, timeout)
+  }
+
+  private clearScheduledRunJob(): void {
+    try {
+      const job = this.schedulerRegistry.getCronJob(this.nextRunJobName)
+      job.stop()
+      this.schedulerRegistry.deleteCronJob(this.nextRunJobName)
+    } catch (error) {
+      this.handleSchedulerNotFound(error)
     }
   }
 
-  private clearTimer(): void {
-    if (this.nextRunTimer) {
-      clearTimeout(this.nextRunTimer)
-      this.nextRunTimer = null
+  private clearRetryTimeout(): void {
+    try {
+      const timeout = this.schedulerRegistry.getTimeout(this.retryTimeoutName)
+      clearTimeout(timeout)
+      this.schedulerRegistry.deleteTimeout(this.retryTimeoutName)
+    } catch (error) {
+      this.handleSchedulerNotFound(error)
     }
+  }
+
+  private handleSchedulerNotFound(error: unknown): void {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase()
+      if (
+        message.includes('does not exist') ||
+        message.includes('doesn') ||
+        message.includes('not found')
+      ) {
+        return
+      }
+    }
+    throw error
   }
 
   private async findLastCompletedTask() {
