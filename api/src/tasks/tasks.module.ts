@@ -15,6 +15,8 @@ import {
 } from './queues/parsing.constants';
 import { TaskCancellationService } from './task-cancellation.service';
 import { CommonModule } from '../common/common.module';
+import { TaskAutomationService } from './automation/task-automation.service';
+import { TaskAutomationController } from './automation/task-automation.controller';
 
 @Module({
   imports: [
@@ -33,7 +35,7 @@ import { CommonModule } from '../common/common.module';
       },
     }),
   ],
-  controllers: [TasksController],
+  controllers: [TasksController, TaskAutomationController],
   providers: [
     TasksService,
     PrismaService,
@@ -43,6 +45,7 @@ import { CommonModule } from '../common/common.module';
     ParsingQueueProducer,
     ParsingProcessor,
     TaskCancellationService,
+    TaskAutomationService,
   ],
   exports: [ParsingQueueService],
 })

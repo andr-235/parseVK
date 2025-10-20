@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import TaskDetails from '../components/TaskDetails'
 import CreateParseTaskModal from '../components/CreateParseTaskModal'
-import { useTasksStore, useGroupsStore } from '../stores'
+import { useTasksStore, useGroupsStore, useTaskAutomationStore } from '../stores'
 import ActiveTasksBanner from '../components/ActiveTasksBanner'
 import { isTaskActive } from '../utils/taskProgress'
 import { Separator } from '../components/ui/separator'
@@ -23,8 +24,16 @@ function Tasks() {
   const fetchGroups = useGroupsStore((state) => state.fetchGroups)
   const areGroupsLoading = useGroupsStore((state) => state.isLoading)
 
+  const automationSettings = useTaskAutomationStore((state) => state.settings)
+  const fetchAutomationSettings = useTaskAutomationStore((state) => state.fetchSettings)
+  const runAutomation = useTaskAutomationStore((state) => state.runNow)
+  const isAutomationLoading = useTaskAutomationStore((state) => state.isLoading)
+  const isAutomationTriggering = useTaskAutomationStore((state) => state.isTriggering)
+
   const [selectedTaskId, setSelectedTaskId] = useState<number | string | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+
+  const navigate = useNavigate()
 
   const activeTasks = useMemo(() => tasks.filter(isTaskActive), [tasks])
 
@@ -67,6 +76,10 @@ function Tasks() {
   useEffect(() => {
     void fetchGroups()
   }, [fetchGroups])
+
+  useEffect(() => {
+    void fetchAutomationSettings()
+  }, [fetchAutomationSettings])
 
   useTasksSocket()
 
@@ -119,6 +132,14 @@ function Tasks() {
     }
   }
 
+  const handleOpenAutomationSettings = () => {
+    navigate('/settings')
+  }
+
+  const handleAutomationRun = async () => {
+    await runAutomation()
+  }
+
   const emptyMessage = isLoading
     ? 'Загрузка задач...'
     : 'Нет задач. Создайте новую задачу на парсинг групп.'
@@ -131,6 +152,11 @@ function Tasks() {
         areGroupsLoading={areGroupsLoading}
         hasGroups={groups.length > 0}
         formattedLastUpdated={formattedLastUpdated}
+        automation={automationSettings}
+        onAutomationRun={handleAutomationRun}
+        onOpenAutomationSettings={handleOpenAutomationSettings}
+        isAutomationLoading={isAutomationLoading}
+        isAutomationTriggering={isAutomationTriggering}
       />
 
       <Separator className="opacity-40" />

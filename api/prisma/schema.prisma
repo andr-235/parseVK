@@ -48,6 +48,17 @@ model Task {
   @@index([completed]) // для фильтрации завершенных
 }
 
+model TaskAutomationSettings {
+  id        Int      @id @default(autoincrement())
+  enabled   Boolean  @default(false)
+  runHour   Int      @default(3)
+  runMinute Int      @default(0)
+  postLimit Int      @default(10)
+  lastRunAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Group {
   id           Int      @id @default(autoincrement())
   vkId         Int      @unique

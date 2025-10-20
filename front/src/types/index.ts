@@ -123,6 +123,16 @@ export interface TaskDetails extends Task {
   }[]
 }
 
+export interface TaskAutomationSettings {
+  enabled: boolean
+  runHour: number
+  runMinute: number
+  postLimit: number
+  lastRunAt: string | null
+  nextRunAt: string | null
+  isRunning: boolean
+}
+
 export type WatchlistStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED'
 
 export interface WatchlistAuthorProfile {

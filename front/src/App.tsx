@@ -11,6 +11,7 @@ import Keywords from './pages/Keywords'
 import Watchlist from './pages/Watchlist'
 import AuthorAnalysis from './pages/AuthorAnalysis'
 import Authors from './pages/Authors'
+import Settings from './pages/Settings'
 
 function App() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode)
@@ -43,6 +44,7 @@ function App() {
             <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysis />} />
             <Route path="/keywords" element={<Keywords />} />
             <Route path="/authors" element={<Authors />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </MainContent>
         <Toaster

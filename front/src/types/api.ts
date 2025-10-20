@@ -198,6 +198,22 @@ export interface IParsingTaskResult extends IParsingTaskSummary {
   [key: string]: unknown
 }
 
+export interface ITaskAutomationSettings {
+  enabled: boolean
+  runHour: number
+  runMinute: number
+  postLimit: number
+  lastRunAt: string | null
+  nextRunAt: string | null
+  isRunning: boolean
+}
+
+export interface ITaskAutomationRunResponse {
+  started: boolean
+  reason: string | null
+  settings: ITaskAutomationSettings
+}
+
 export interface AuthorCardResponse {
   id: number
   vkUserId: number
