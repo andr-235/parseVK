@@ -279,20 +279,23 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
 
     this.nextRunAt = nextRun
 
-    const job = new CronJob({
-      cronTime: nextRun,
-      onTick: () => {
+    const job = new CronJob(
+      nextRun,
+      () => {
         void this.executeAutomation('timer')
       },
-      onComplete: () => {
+      () => {
         this.clearScheduledRunJob()
       },
-      start: false,
-      timeZone: 'UTC',
-      unrefTimeout: true,
-    })
+      false,
+      'UTC',
+      undefined,
+      undefined,
+      undefined,
+      true,
+    )
 
-    this.schedulerRegistry.addCronJob(this.nextRunJobName, job)
+    this.schedulerRegistry.addCronJob(this.nextRunJobName, job as unknown as any)
     job.start()
 
     return nextRun
