@@ -203,6 +203,7 @@ export interface ITaskAutomationSettings {
   runHour: number
   runMinute: number
   postLimit: number
+  timezoneOffsetMinutes: number
   lastRunAt: string | null
   nextRunAt: string | null
   isRunning: boolean

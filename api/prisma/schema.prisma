@@ -54,6 +54,7 @@ model TaskAutomationSettings {
   runHour   Int      @default(3)
   runMinute Int      @default(0)
   postLimit Int      @default(10)
+  timezoneOffsetMinutes Int @default(0)
   lastRunAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

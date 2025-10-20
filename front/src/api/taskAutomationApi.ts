@@ -9,6 +9,7 @@ export interface UpdateTaskAutomationSettingsRequest {
   runHour: number
   runMinute: number
   postLimit: number
+  timezoneOffsetMinutes: number
 }
 
 export const taskAutomationApi = {

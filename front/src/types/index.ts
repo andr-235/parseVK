@@ -128,6 +128,7 @@ export interface TaskAutomationSettings {
   runHour: number
   runMinute: number
   postLimit: number
+  timezoneOffsetMinutes: number
   lastRunAt: string | null
   nextRunAt: string | null
   isRunning: boolean

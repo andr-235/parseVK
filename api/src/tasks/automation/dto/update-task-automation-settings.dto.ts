@@ -18,4 +18,9 @@ export class UpdateTaskAutomationSettingsDto {
   @Min(1)
   @Max(100)
   postLimit!: number
+
+  @IsInt()
+  @Min(-720)
+  @Max(840)
+  timezoneOffsetMinutes!: number
 }

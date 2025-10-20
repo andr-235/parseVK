@@ -52,6 +52,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
         runHour: dto.runHour,
         runMinute: dto.runMinute,
         postLimit: dto.postLimit,
+        timezoneOffsetMinutes: dto.timezoneOffsetMinutes,
       },
     })) as TaskAutomationSettings
 
@@ -190,6 +191,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
         runHour: 3,
         runMinute: 0,
         postLimit: 10,
+        timezoneOffsetMinutes: 0,
       },
     })
   }
@@ -207,6 +209,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
         runHour: 3,
         runMinute: 0,
         postLimit: 10,
+        timezoneOffsetMinutes: 0,
       },
     })) as TaskAutomationSettings
 
@@ -222,8 +225,14 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       runHour: record.runHour,
       runMinute: record.runMinute,
       postLimit: record.postLimit,
-      lastRunAt: record.lastRunAt ? this.toLocalISOString(record.lastRunAt) : null,
-      nextRunAt: record.enabled && nextRunAt ? this.toLocalISOString(nextRunAt) : null,
+      timezoneOffsetMinutes: record.timezoneOffsetMinutes,
+      lastRunAt: record.lastRunAt
+        ? this.formatWithOffset(record.lastRunAt, record.timezoneOffsetMinutes)
+        : null,
+      nextRunAt:
+        record.enabled && nextRunAt
+          ? this.formatWithOffset(nextRunAt, record.timezoneOffsetMinutes)
+          : null,
       isRunning: this.isExecuting,
     }
   }
@@ -231,11 +240,18 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   private calculateNextRunDate(settings: TaskAutomationSettings): Date {
     const now = new Date()
     const next = new Date(now)
-    next.setSeconds(0, 0)
-    next.setHours(settings.runHour, settings.runMinute, 0, 0)
+    next.setUTCSeconds(0, 0)
+
+    const offset = settings.timezoneOffsetMinutes ?? 0
+    const runLocalMinutes = settings.runHour * 60 + settings.runMinute
+    const runUtcTotalMinutes = this.normalizeMinutes(runLocalMinutes + offset)
+    const runUtcHour = Math.floor(runUtcTotalMinutes / 60)
+    const runUtcMinute = runUtcTotalMinutes % 60
+
+    next.setUTCHours(runUtcHour, runUtcMinute, 0, 0)
 
     if (next <= now) {
-      next.setDate(next.getDate() + 1)
+      next.setUTCDate(next.getUTCDate() + 1)
     }
 
     return next
@@ -322,19 +338,28 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private toLocalISOString(date: Date): string {
-    const year = date.getFullYear()
-    const month = this.pad(date.getMonth() + 1)
-    const day = this.pad(date.getDate())
-    const hours = this.pad(date.getHours())
-    const minutes = this.pad(date.getMinutes())
-    const seconds = this.pad(date.getSeconds())
-    const millis = `${date.getMilliseconds()}`.padStart(3, '0')
+  private formatWithOffset(date: Date, timezoneOffsetMinutes: number): string {
+    const localTimestamp = date.getTime() - timezoneOffsetMinutes * 60_000
+    const localDate = new Date(localTimestamp)
+
+    const year = localDate.getUTCFullYear()
+    const month = this.pad(localDate.getUTCMonth() + 1)
+    const day = this.pad(localDate.getUTCDate())
+    const hours = this.pad(localDate.getUTCHours())
+    const minutes = this.pad(localDate.getUTCMinutes())
+    const seconds = this.pad(localDate.getUTCSeconds())
+    const millis = `${localDate.getUTCMilliseconds()}`.padStart(3, '0')
 
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${millis}`
   }
 
   private pad(value: number): string {
     return value < 10 ? `0${value}` : `${value}`
+  }
+
+  private normalizeMinutes(value: number): number {
+    const minutesInDay = 24 * 60
+    const normalized = value % minutesInDay
+    return normalized < 0 ? normalized + minutesInDay : normalized
   }
 }

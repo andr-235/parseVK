@@ -114,6 +114,7 @@ function Settings() {
       runHour: Number.isFinite(runHour) ? Math.max(0, Math.min(23, runHour)) : 0,
       runMinute: Number.isFinite(runMinute) ? Math.max(0, Math.min(59, runMinute)) : 0,
       postLimit: formState.postLimit,
+      timezoneOffsetMinutes: new Date().getTimezoneOffset(),
     })
   }
 

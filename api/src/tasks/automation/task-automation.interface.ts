@@ -4,6 +4,7 @@ export interface TaskAutomationSettings {
   runHour: number
   runMinute: number
   postLimit: number
+  timezoneOffsetMinutes: number
   lastRunAt: Date | null
   createdAt: Date
   updatedAt: Date
@@ -14,6 +15,7 @@ export interface TaskAutomationSettingsResponse {
   runHour: number
   runMinute: number
   postLimit: number
+  timezoneOffsetMinutes: number
   lastRunAt: string | null
   nextRunAt: string | null
   isRunning: boolean

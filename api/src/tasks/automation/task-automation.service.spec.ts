@@ -7,6 +7,7 @@ const buildSettings = () => ({
   runHour: 3,
   runMinute: 0,
   postLimit: 15,
+  timezoneOffsetMinutes: -600,
   lastRunAt: null as Date | null,
   createdAt: new Date('2025-01-01T00:00:00.000Z'),
   updatedAt: new Date('2025-01-01T00:00:00.000Z'),
@@ -64,7 +65,7 @@ describe('TaskAutomationService', () => {
     await service.onModuleInit()
 
     expect(prisma.taskAutomationSettings.create).toHaveBeenCalledWith({
-      data: { enabled: false, runHour: 3, runMinute: 0, postLimit: 10 },
+      data: { enabled: false, runHour: 3, runMinute: 0, postLimit: 10, timezoneOffsetMinutes: 0 },
     })
     expect(scheduleNextRunSpy).toHaveBeenCalledTimes(1)
   })
@@ -101,8 +102,9 @@ describe('TaskAutomationService', () => {
     expect(result.started).toBe(true)
     expect(result.reason).toBeNull()
     expect(result.settings.lastRunAt).toBe(
-      toLocalISOString(storedSettings.lastRunAt as Date),
+      formatWithOffset(storedSettings.lastRunAt as Date, storedSettings.timezoneOffsetMinutes),
     )
+    expect(result.settings.timezoneOffsetMinutes).toBe(storedSettings.timezoneOffsetMinutes)
   })
 
   it('возвращает предупреждение, если нет завершённых задач', async () => {
@@ -161,8 +163,10 @@ describe('TaskAutomationService', () => {
   })
 })
 
-function toLocalISOString(date: Date): string {
+function formatWithOffset(date: Date, timezoneOffsetMinutes: number): string {
+  const localTimestamp = date.getTime() - timezoneOffsetMinutes * 60_000
+  const localDate = new Date(localTimestamp)
   const pad = (value: number) => (value < 10 ? `0${value}` : `${value}`)
-  const millis = `${date.getMilliseconds()}`.padStart(3, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${millis}`
+  const millis = `${localDate.getUTCMilliseconds()}`.padStart(3, '0')
+  return `${localDate.getUTCFullYear()}-${pad(localDate.getUTCMonth() + 1)}-${pad(localDate.getUTCDate())}T${pad(localDate.getUTCHours())}:${pad(localDate.getUTCMinutes())}:${pad(localDate.getUTCSeconds())}.${millis}`
 }
