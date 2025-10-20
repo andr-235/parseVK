@@ -101,7 +101,7 @@ describe('TaskAutomationService', () => {
     expect(result.started).toBe(true)
     expect(result.reason).toBeNull()
     expect(result.settings.lastRunAt).toBe(
-      storedSettings.lastRunAt?.toISOString(),
+      toLocalISOString(storedSettings.lastRunAt as Date),
     )
   })
 
@@ -160,3 +160,9 @@ describe('TaskAutomationService', () => {
     expect(scheduleRetrySpy).toHaveBeenCalledTimes(1)
   })
 })
+
+function toLocalISOString(date: Date): string {
+  const pad = (value: number) => (value < 10 ? `0${value}` : `${value}`)
+  const millis = `${date.getMilliseconds()}`.padStart(3, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${millis}`
+}

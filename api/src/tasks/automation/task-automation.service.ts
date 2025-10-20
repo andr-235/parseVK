@@ -222,8 +222,8 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       runHour: record.runHour,
       runMinute: record.runMinute,
       postLimit: record.postLimit,
-      lastRunAt: record.lastRunAt ? record.lastRunAt.toISOString() : null,
-      nextRunAt: record.enabled && nextRunAt ? nextRunAt.toISOString() : null,
+      lastRunAt: record.lastRunAt ? this.toLocalISOString(record.lastRunAt) : null,
+      nextRunAt: record.enabled && nextRunAt ? this.toLocalISOString(nextRunAt) : null,
       isRunning: this.isExecuting,
     }
   }
@@ -320,5 +320,21 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Не удалось разобрать описание последней задачи', error as Error)
       return null
     }
+  }
+
+  private toLocalISOString(date: Date): string {
+    const year = date.getFullYear()
+    const month = this.pad(date.getMonth() + 1)
+    const day = this.pad(date.getDate())
+    const hours = this.pad(date.getHours())
+    const minutes = this.pad(date.getMinutes())
+    const seconds = this.pad(date.getSeconds())
+    const millis = `${date.getMilliseconds()}`.padStart(3, '0')
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${millis}`
+  }
+
+  private pad(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`
   }
 }
