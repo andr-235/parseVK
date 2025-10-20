@@ -10,6 +10,7 @@ import type {
 import { UpdateTaskAutomationSettingsDto } from './dto/update-task-automation-settings.dto'
 
 const RETRY_DELAY_MS = 60 * 60 * 1000 // 1 час
+const DEFAULT_POST_LIMIT = 10
 
 @Injectable()
 export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
@@ -54,9 +55,9 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       },
     })) as TaskAutomationSettings
 
-    await this.scheduleNextRun(updated)
+    const nextRun = await this.scheduleNextRun(updated)
 
-    return this.mapToResponse(updated)
+    return this.mapToResponse(updated, nextRun ?? null)
   }
 
   async triggerManualRun(): Promise<TaskAutomationRunResponse> {
@@ -102,9 +103,32 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
         }
       }
 
+      const lastCompleted = await this.findLastCompletedTask()
+
+      if (!lastCompleted) {
+        this.logger.warn('Не найдено завершённых задач для автозапуска')
+        await this.scheduleNextRun()
+        return {
+          started: false,
+          reason: 'Нет завершённых задач для повторного запуска',
+        }
+      }
+
+      const taskConfig = this.extractTaskConfig(lastCompleted)
+
+      if (!taskConfig) {
+        this.logger.error('Не удалось определить параметры последней задачи для автозапуска')
+        await this.scheduleNextRun()
+        return {
+          started: false,
+          reason: 'Последняя задача не содержит параметров для повторного запуска',
+        }
+      }
+
       await this.tasksService.createParsingTask({
-        scope: ParsingScope.ALL,
-        postLimit: settings.postLimit,
+        scope: taskConfig.scope,
+        groupIds: taskConfig.groupIds,
+        postLimit: settings.postLimit ?? taskConfig.postLimit ?? DEFAULT_POST_LIMIT,
       })
 
       await this.prisma.taskAutomationSettings.update({
@@ -219,14 +243,14 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
 
   private async scheduleNextRun(
     settings?: TaskAutomationSettings,
-  ): Promise<void> {
+  ): Promise<Date | null> {
     const record = settings ?? (await this.getOrCreateSettings())
 
     this.clearTimer()
 
     if (!record.enabled) {
       this.nextRunAt = null
-      return
+      return null
     }
 
     const nextRun = this.calculateNextRunDate(record)
@@ -240,6 +264,8 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     if (typeof this.nextRunTimer.unref === 'function') {
       this.nextRunTimer.unref()
     }
+
+    return nextRun
   }
 
   private scheduleRetry(): void {
@@ -260,6 +286,39 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     if (this.nextRunTimer) {
       clearTimeout(this.nextRunTimer)
       this.nextRunTimer = null
+    }
+  }
+
+  private async findLastCompletedTask() {
+    return this.prisma.task.findFirst({
+      where: {
+        completed: true,
+        status: 'done',
+      },
+      orderBy: { updatedAt: 'desc' },
+    })
+  }
+
+  private extractTaskConfig(task: { description: string | null }) {
+    if (!task.description) {
+      return null
+    }
+
+    try {
+      const parsed = JSON.parse(task.description) as {
+        scope?: ParsingScope
+        groupIds?: number[]
+        postLimit?: number
+      }
+
+      return {
+        scope: parsed.scope ?? ParsingScope.ALL,
+        groupIds: Array.isArray(parsed.groupIds) ? parsed.groupIds : [],
+        postLimit: typeof parsed.postLimit === 'number' ? parsed.postLimit : undefined,
+      }
+    } catch (error) {
+      this.logger.error('Не удалось разобрать описание последней задачи', error as Error)
+      return null
     }
   }
 }

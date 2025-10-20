@@ -6,10 +6,23 @@ const buildSettings = () => ({
   enabled: true,
   runHour: 3,
   runMinute: 0,
-  postLimit: 10,
+  postLimit: 15,
   lastRunAt: null as Date | null,
   createdAt: new Date('2025-01-01T00:00:00.000Z'),
   updatedAt: new Date('2025-01-01T00:00:00.000Z'),
+})
+
+const buildCompletedTask = (overrides?: Partial<Record<string, unknown>>) => ({
+  id: 42,
+  status: 'done',
+  completed: true,
+  description: JSON.stringify({
+    scope: ParsingScope.SELECTED,
+    groupIds: [1, 2, 3],
+    postLimit: 7,
+  }),
+  updatedAt: new Date('2025-01-02T00:00:00.000Z'),
+  ...overrides,
 })
 
 describe('TaskAutomationService', () => {
@@ -26,6 +39,7 @@ describe('TaskAutomationService', () => {
       },
       task: {
         count: jest.fn(),
+        findFirst: jest.fn(),
       },
     }
 
@@ -45,7 +59,7 @@ describe('TaskAutomationService', () => {
     prisma.taskAutomationSettings.create.mockResolvedValue(buildSettings())
     const scheduleNextRunSpy = jest
       .spyOn(service as any, 'scheduleNextRun')
-      .mockResolvedValue(undefined)
+      .mockResolvedValue(null)
 
     await service.onModuleInit()
 
@@ -55,7 +69,7 @@ describe('TaskAutomationService', () => {
     expect(scheduleNextRunSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('выполняет ручной запуск и обновляет отметку времени', async () => {
+  it('перезапускает последнюю завершённую задачу и обновляет отметку времени', async () => {
     let storedSettings = buildSettings()
     prisma.taskAutomationSettings.findFirst.mockImplementation(() =>
       Promise.resolve(storedSettings),
@@ -65,15 +79,17 @@ describe('TaskAutomationService', () => {
       return Promise.resolve(storedSettings)
     })
     prisma.task.count.mockResolvedValue(0)
+    prisma.task.findFirst.mockResolvedValue(buildCompletedTask())
     tasksService.createParsingTask.mockResolvedValue(undefined)
     const scheduleNextRunSpy = jest
       .spyOn(service as any, 'scheduleNextRun')
-      .mockResolvedValue(undefined)
+      .mockResolvedValue(new Date('2025-01-03T03:00:00.000Z'))
 
     const result = await service.triggerManualRun()
 
     expect(tasksService.createParsingTask).toHaveBeenCalledWith({
-      scope: ParsingScope.ALL,
+      scope: ParsingScope.SELECTED,
+      groupIds: [1, 2, 3],
       postLimit: storedSettings.postLimit,
     })
     expect(prisma.taskAutomationSettings.update).toHaveBeenCalledWith({
@@ -87,6 +103,44 @@ describe('TaskAutomationService', () => {
     expect(result.settings.lastRunAt).toBe(
       storedSettings.lastRunAt?.toISOString(),
     )
+  })
+
+  it('возвращает предупреждение, если нет завершённых задач', async () => {
+    const settings = buildSettings()
+    prisma.taskAutomationSettings.findFirst.mockResolvedValue(settings)
+    prisma.task.count.mockResolvedValue(0)
+    prisma.task.findFirst.mockResolvedValue(null)
+    const scheduleNextRunSpy = jest
+      .spyOn(service as any, 'scheduleNextRun')
+      .mockResolvedValue(new Date('2025-01-02T03:00:00.000Z'))
+
+    const result = await (service as any).executeAutomation('timer')
+
+    expect(result.started).toBe(false)
+    expect(result.reason).toBe('Нет завершённых задач для повторного запуска')
+    expect(tasksService.createParsingTask).not.toHaveBeenCalled()
+    expect(scheduleNextRunSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('возвращает предупреждение, если описание завершённой задачи некорректно', async () => {
+    const settings = buildSettings()
+    prisma.taskAutomationSettings.findFirst.mockResolvedValue(settings)
+    prisma.task.count.mockResolvedValue(0)
+    prisma.task.findFirst.mockResolvedValue(
+      buildCompletedTask({ description: 'not-a-json' }),
+    )
+    const scheduleNextRunSpy = jest
+      .spyOn(service as any, 'scheduleNextRun')
+      .mockResolvedValue(new Date('2025-01-02T03:00:00.000Z'))
+
+    const result = await (service as any).executeAutomation('timer')
+
+    expect(result.started).toBe(false)
+    expect(result.reason).toBe(
+      'Последняя задача не содержит параметров для повторного запуска',
+    )
+    expect(tasksService.createParsingTask).not.toHaveBeenCalled()
+    expect(scheduleNextRunSpy).toHaveBeenCalledTimes(1)
   })
 
   it('перепланирует запуск при наличии активных задач', async () => {
