@@ -7,6 +7,7 @@ ARG VITE_APP_TITLE
 ARG VITE_API_URL
 ARG VITE_DEV_MODE
 ARG VITE_API_WS_URL
+ARG NPM_REGISTRY=https://registry.npmjs.org/
 
 ENV VITE_APP_TITLE=${VITE_APP_TITLE}
 ENV VITE_API_URL=${VITE_API_URL}
@@ -15,7 +16,12 @@ ENV VITE_API_WS_URL=${VITE_API_WS_URL}
 
 COPY front/package*.json ./
 
-RUN npm ci
+RUN npm config set registry ${NPM_REGISTRY} \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm config set fetch-timeout 600000 \
+    && npm ci --no-audit --prefer-offline
 
 COPY front/ ./
 

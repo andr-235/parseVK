@@ -350,7 +350,8 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       if (
         message.includes('does not exist') ||
         message.includes('doesn') ||
-        message.includes('not found')
+        message.includes('not found') ||
+        message.includes('check that you created one')
       ) {
         return
       }
