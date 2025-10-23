@@ -6,6 +6,7 @@ WORKDIR /app
 ARG DATABASE_URL
 ARG NPM_REGISTRY=https://registry.npmjs.org/
 ENV DATABASE_URL=${DATABASE_URL}
+ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
 
 COPY api/package*.json ./
 
@@ -30,6 +31,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
+ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
 
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
