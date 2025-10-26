@@ -185,6 +185,19 @@ describe('TaskAutomationService', () => {
     expect(scheduleRetrySpy).toHaveBeenCalledTimes(1)
     expect(schedulerMock.addTimeout).toHaveBeenCalledTimes(1)
   })
+
+  it('останавливает запланированный cron job без повторного вызова', () => {
+    const stopMock = jest.fn()
+    schedulerMock.getCronJob.mockReturnValueOnce({
+      running: true,
+      stop: stopMock,
+    })
+
+    ;(service as any).clearScheduledRunJob()
+
+    expect(stopMock).toHaveBeenCalledTimes(1)
+    expect(schedulerMock.deleteCronJob).toHaveBeenCalledWith('task-automation-next-run')
+  })
 })
 
 function formatWithOffset(date: Date, timezoneOffsetMinutes: number): string {

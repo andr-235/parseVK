@@ -284,9 +284,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       () => {
         void this.executeAutomation('timer')
       },
-      () => {
-        this.clearScheduledRunJob()
-      },
+      undefined,
       false,
       'UTC',
       undefined,
@@ -327,7 +325,9 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   private clearScheduledRunJob(): void {
     try {
       const job = this.schedulerRegistry.getCronJob(this.nextRunJobName)
-      job.stop()
+      if (job.running) {
+        job.stop()
+      }
       this.schedulerRegistry.deleteCronJob(this.nextRunJobName)
     } catch (error) {
       this.handleSchedulerNotFound(error)
