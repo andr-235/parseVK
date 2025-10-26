@@ -325,9 +325,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   private clearScheduledRunJob(): void {
     try {
       const job = this.schedulerRegistry.getCronJob(this.nextRunJobName)
-      if (job.running) {
-        job.stop()
-      }
+      job.stop()
       this.schedulerRegistry.deleteCronJob(this.nextRunJobName)
     } catch (error) {
       this.handleSchedulerNotFound(error)
