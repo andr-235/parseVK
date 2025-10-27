@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
 import SearchInput from '@/components/SearchInput'
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/table'
 import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Spinner } from '@/components/ui/spinner'
-import { useAuthorsStore } from '@/stores'
+import { useAuthorsStore, usePhotoAnalysisStore } from '@/stores'
 import type { AuthorCard, AuthorSortField } from '@/types'
 
 const STATUS_FILTER_OPTIONS: Array<{
@@ -102,6 +103,10 @@ function Authors() {
   const sortBy = useAuthorsStore((state) => state.sortBy)
   const sortOrder = useAuthorsStore((state) => state.sortOrder)
   const setSort = useAuthorsStore((state) => state.setSort)
+  const analyzeAuthor = usePhotoAnalysisStore((state) => state.analyzeAuthor)
+  const isAnalyzing = usePhotoAnalysisStore((state) => state.isAnalyzing)
+
+  const [analyzingVkUserId, setAnalyzingVkUserId] = useState<number | null>(null)
 
   const [searchValue, setSearchValue] = useState(storeSearch)
   const isInitialSearch = useRef(true)
@@ -163,6 +168,68 @@ function Authors() {
       console.error('Не удалось обновить таблицу авторов', error)
     })
   }, [refreshAuthors])
+
+  const handleAnalyzePhotos = useCallback(
+    async (author: AuthorCard) => {
+      if (isAnalyzing) {
+        return
+      }
+
+      setAnalyzingVkUserId(author.vkUserId)
+
+      const totalPhotos = typeof author.photosCount === 'number' ? author.photosCount : null
+      let analyzedTotal = author.summary.total
+
+      try {
+        if (totalPhotos !== null && analyzedTotal >= totalPhotos) {
+          toast.success('Все фото уже были проанализированы ранее')
+          return
+        }
+
+        while (true) {
+          const remaining = totalPhotos !== null ? Math.max(totalPhotos - analyzedTotal, 0) : null
+          if (remaining !== null && remaining === 0) {
+            break
+          }
+
+          const batchLimit = remaining !== null ? Math.max(Math.min(remaining, 50), 1) : 50
+          const response = await analyzeAuthor(author.vkUserId, { limit: batchLimit })
+          const newTotal = response.total
+          const processedInBatch = newTotal - analyzedTotal
+
+          if (processedInBatch <= 0) {
+            break
+          }
+
+          analyzedTotal = newTotal
+
+          if (totalPhotos !== null && analyzedTotal >= totalPhotos) {
+            break
+          }
+
+          if (processedInBatch < batchLimit) {
+            break
+          }
+        }
+
+        try {
+          await fetchAuthors({ reset: true })
+        } catch (updateError) {
+          console.error('Не удалось обновить данные автора после анализа', updateError)
+          toast.error('Не удалось обновить данные автора после анализа')
+        }
+        toast.success('Анализ фотографий выполнен')
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Не удалось выполнить анализ фотографий автора'
+        toast.error(message)
+        console.error('Ошибка анализа фотографий автора', error)
+      } finally {
+        setAnalyzingVkUserId(null)
+      }
+    },
+    [analyzeAuthor, fetchAuthors, isAnalyzing],
+  )
 
   const handleSortChange = useCallback(
     (field: AuthorSortField) => {
@@ -388,8 +455,20 @@ function Authors() {
                   <TableCell>{formatDateTimeCell(author.lastSeenAt)}</TableCell>
                   <TableCell>{formatDateTimeCell(author.verifiedAt)}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="outline" disabled aria-disabled>
-                      В разработке
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAnalyzePhotos(author)}
+                      disabled={isAnalyzing && analyzingVkUserId === author.vkUserId}
+                    >
+                      {isAnalyzing && analyzingVkUserId === author.vkUserId ? (
+                        <span className="flex items-center gap-2">
+                          <Spinner className="h-4 w-4" />
+                          Анализ...
+                        </span>
+                      ) : (
+                        'Анализ фото'
+                      )}
                     </Button>
                   </TableCell>
                 </TableRow>
