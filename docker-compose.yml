@@ -82,5 +82,3 @@ volumes:
     name: parsevk_postgres_data
   postgres_backups:
     name: parsevk_postgres_backups
-  ollama_models:
-    name: parsevk_ollama_models

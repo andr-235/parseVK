@@ -33,7 +33,7 @@ const PhotoAnalysisCardComponent = ({ analysis }: PhotoAnalysisCardProps) => {
 
   const confidencePercent =
     typeof analysis.confidence === 'number'
-      ? Math.round(analysis.confidence * 100)
+      ? Math.round(analysis.confidence)
       : null
 
   const vkPhotoUrl = useMemo(
