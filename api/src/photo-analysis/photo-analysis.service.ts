@@ -1,7 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SuspicionLevel as PrismaSuspicionLevel } from '@prisma/client';
-import type { Dispatcher } from 'undici';
-import { Agent as UndiciAgent } from 'undici';
+import { Agent as HttpsAgent } from 'node:https';
 import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import type { AnalyzePhotosDto } from './dto/analyze-photos.dto';
@@ -31,7 +30,7 @@ interface ModerationResult {
   rawResponse: unknown;
 }
 
-type FetchOptions = RequestInit & { dispatcher?: Dispatcher };
+type FetchOptions = RequestInit & { agent?: HttpsAgent };
 
 @Injectable()
 export class PhotoAnalysisService {
@@ -357,10 +356,10 @@ export class PhotoAnalysisService {
         ? allowSelfSignedEnv.toLowerCase() === 'true'
         : webhookUrl === DEFAULT_IMAGE_MODERATION_WEBHOOK_URL;
 
-    let dispatcher: Dispatcher | undefined;
+    let agent: HttpsAgent | undefined;
 
     if (webhookUrl.startsWith('https://') && allowSelfSigned) {
-      dispatcher = new UndiciAgent({ connect: { rejectUnauthorized: false } });
+      agent = new HttpsAgent({ rejectUnauthorized: false });
     }
 
     const options: FetchOptions = {
@@ -371,27 +370,11 @@ export class PhotoAnalysisService {
       body: JSON.stringify({ imageUrls }),
     };
 
-    if (dispatcher) {
-      options.dispatcher = dispatcher;
+    if (agent) {
+      options.agent = agent;
     }
 
-    let response: Response;
-
-    try {
-      response = await fetch(webhookUrl, options);
-    } catch (error) {
-      throw new Error('Сервис модерации недоступен', { cause: error as Error });
-    } finally {
-      if (dispatcher) {
-        try {
-          await dispatcher.close();
-        } catch (closeError) {
-          this.logger.warn(
-            `Не удалось корректно закрыть агент модерации: ${closeError instanceof Error ? closeError.message : closeError}`,
-          );
-        }
-      }
-    }
+    const response = await fetch(webhookUrl, options);
 
     if (!response.ok) {
       throw new Error(`Сервис модерации вернул статус ${response.status}: ${response.statusText}`);
