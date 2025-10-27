@@ -1,8 +1,9 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SuspicionLevel as PrismaSuspicionLevel } from '@prisma/client';
+import type { Dispatcher } from 'undici';
+import { Agent as UndiciAgent } from 'undici';
 import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
-import { OllamaService } from '../ollama/ollama.service';
 import type { AnalyzePhotosDto } from './dto/analyze-photos.dto';
 import type {
   PhotoAnalysisItemDto,
@@ -10,10 +11,27 @@ import type {
   PhotoAnalysisSummaryDto,
   PhotoSuspicionLevel,
 } from './dto/photo-analysis-response.dto';
-import type { OllamaAnalysisResponse } from '../ollama/interfaces/analysis.interface';
 
 const MAX_PHOTO_LIMIT = 200;
+const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL = 'https://192.168.88.12/webhook/image-moderation';
 const KNOWN_CATEGORIES = ['violence', 'drugs', 'weapons', 'nsfw', 'extremism', 'hate speech'] as const;
+
+interface PhotoForModeration {
+  photoVkId: string;
+  url: string;
+}
+
+interface ModerationResult {
+  photoVkId: string;
+  photoUrl: string;
+  hasSuspicious: boolean;
+  categories: string[];
+  explanation: string | null;
+  confidence: number | null;
+  rawResponse: unknown;
+}
+
+type FetchOptions = RequestInit & { dispatcher?: Dispatcher };
 
 @Injectable()
 export class PhotoAnalysisService {
@@ -22,7 +40,6 @@ export class PhotoAnalysisService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly vkService: VkService,
-    private readonly ollamaService: OllamaService,
   ) {}
 
   async analyzeByVkUser(
@@ -53,6 +70,8 @@ export class PhotoAnalysisService {
     let skippedCount = 0;
     let noUrlCount = 0;
 
+    const photosForModeration: PhotoForModeration[] = [];
+
     for (const photo of photos) {
       const photoUrl = this.vkService.getMaxPhotoSize(photo.sizes);
 
@@ -62,43 +81,92 @@ export class PhotoAnalysisService {
         continue;
       }
 
-      if (!force) {
-        const existing = await this.prisma.photoAnalysis.findUnique({
-          where: {
-            authorId_photoVkId: {
-              authorId: author.id,
-              photoVkId: photo.photo_id,
-            },
-          },
-        });
+      photosForModeration.push({
+        photoVkId: String(photo.photo_id),
+        url: photoUrl,
+      });
+    }
 
-        if (existing) {
-          this.logger.debug(`Фото ${photo.photo_id} уже проанализировано, пропускаем`);
+    let photosToAnalyze = photosForModeration;
+
+    if (!force && photosForModeration.length > 0) {
+      const existing = await this.prisma.photoAnalysis.findMany({
+        where: {
+          authorId: author.id,
+          photoVkId: { in: photosForModeration.map((item) => item.photoVkId) },
+        },
+        select: { photoVkId: true },
+      });
+
+      const processed = new Set(existing.map((item) => item.photoVkId));
+      photosToAnalyze = photosForModeration.filter((item) => {
+        const alreadyProcessed = processed.has(item.photoVkId);
+
+        if (alreadyProcessed) {
           skippedCount++;
-          continue;
         }
-      }
+
+        return !alreadyProcessed;
+      });
+    }
+
+    if (!photosToAnalyze.length) {
+      this.logger.log('Нет новых фото для анализа — запрос к модерации не выполнялся');
+
+      const totalElapsedEmpty = Date.now() - startTime;
+      const totalElapsedEmptySec = (totalElapsedEmpty / 1000).toFixed(2);
+      this.logger.log(
+        `Анализ фото завершен за ${totalElapsedEmptySec}s. Статистика: успешно=${successCount}, ошибок=${errorCount}, пропущено=${skippedCount}, без URL=${noUrlCount}, всего фото=${photos.length}`,
+      );
+
+      return this.listByVkUser(vkUserId);
+    }
+
+    let rawResults: unknown[] = [];
+
+    try {
+      rawResults = await this.requestModeration(photosToAnalyze.map((item) => item.url));
+    } catch (error) {
+      errorCount = photosToAnalyze.length;
+      this.logger.error(
+        'Не удалось получить ответ модерации изображений',
+        error instanceof Error ? error.stack : String(error),
+      );
+
+      const totalElapsedFailure = Date.now() - startTime;
+      const totalElapsedFailureSec = (totalElapsedFailure / 1000).toFixed(2);
+      this.logger.log(
+        `Анализ фото завершен за ${totalElapsedFailureSec}s. Статистика: успешно=${successCount}, ошибок=${errorCount}, пропущено=${skippedCount}, без URL=${noUrlCount}, всего фото=${photos.length}`,
+      );
+
+      return this.listByVkUser(vkUserId);
+    }
+
+    if (rawResults.length !== photosToAnalyze.length) {
+      this.logger.warn(
+        `Количество результатов модерации (${rawResults.length}) не совпадает с количеством запросов (${photosToAnalyze.length})`,
+      );
+    }
+
+    for (let index = 0; index < photosToAnalyze.length; index += 1) {
+      const photoInfo = photosToAnalyze[index];
+      const raw = rawResults[index];
 
       try {
-        const analysis = await this.ollamaService.analyzeImage({
-          imageUrl: photoUrl,
-        });
-
-        await this.saveAnalysis({
+        const moderation = this.mapModerationResult(photoInfo, raw);
+        const suspicionLevel = await this.saveAnalysis({
           authorId: author.id,
-          photoId: photo.photo_id,
-          photoUrl,
-          analysis,
+          result: moderation,
         });
 
         successCount++;
         this.logger.log(
-          `Фото ${photo.photo_id} проанализировано успешно (${successCount}/${photos.length - skippedCount - noUrlCount}), уровень: ${analysis.suspicionLevel}`,
+          `Фото ${photoInfo.photoVkId} проанализировано успешно (${successCount}/${photosToAnalyze.length}), уровень: ${suspicionLevel}`,
         );
       } catch (error) {
         errorCount++;
         this.logger.error(
-          `Ошибка анализа фото ${photo.photo_id} (${errorCount} ошибок)`,
+          `Ошибка анализа фото ${photoInfo.photoVkId} (${errorCount} ошибок)`,
           error instanceof Error ? error.stack : String(error),
         );
       }
@@ -216,48 +284,42 @@ export class PhotoAnalysisService {
 
   private async saveAnalysis(params: {
     authorId: number;
-    photoId: string;
-    photoUrl: string;
-    analysis: OllamaAnalysisResponse;
-  }): Promise<void> {
-    const suspicionLevel = this.mapSuspicionLevel(params.analysis.suspicionLevel);
-    const categories = (params.analysis.categories ?? [])
-      .map((category) => category.trim())
-      .filter((category) => category.length > 0);
+    result: ModerationResult;
+  }): Promise<PrismaSuspicionLevel> {
+    const suspicionLevel = this.determineSuspicionLevel(params.result.hasSuspicious, params.result.confidence);
+    const categories = Array.from(new Set(params.result.categories.map((category) => category.trim()).filter(Boolean)));
 
     await this.prisma.photoAnalysis.upsert({
       where: {
         authorId_photoVkId: {
           authorId: params.authorId,
-          photoVkId: params.photoId,
+          photoVkId: params.result.photoVkId,
         },
       },
       update: {
-        photoUrl: params.photoUrl,
-        analysisResult: JSON.stringify(params.analysis),
-        hasSuspicious: Boolean(params.analysis.hasSuspicious),
+        photoUrl: params.result.photoUrl,
+        analysisResult: JSON.stringify(params.result.rawResponse ?? null),
+        hasSuspicious: params.result.hasSuspicious,
         suspicionLevel,
         categories,
-        confidence: typeof params.analysis.confidence === 'number'
-          ? params.analysis.confidence
-          : null,
-        explanation: params.analysis.explanation ?? null,
+        confidence: typeof params.result.confidence === 'number' ? params.result.confidence : null,
+        explanation: params.result.explanation,
         analyzedAt: new Date(),
       },
       create: {
         authorId: params.authorId,
-        photoUrl: params.photoUrl,
-        photoVkId: params.photoId,
-        analysisResult: JSON.stringify(params.analysis),
-        hasSuspicious: Boolean(params.analysis.hasSuspicious),
+        photoUrl: params.result.photoUrl,
+        photoVkId: params.result.photoVkId,
+        analysisResult: JSON.stringify(params.result.rawResponse ?? null),
+        hasSuspicious: params.result.hasSuspicious,
         suspicionLevel,
         categories,
-        confidence: typeof params.analysis.confidence === 'number'
-          ? params.analysis.confidence
-          : null,
-        explanation: params.analysis.explanation ?? null,
+        confidence: typeof params.result.confidence === 'number' ? params.result.confidence : null,
+        explanation: params.result.explanation,
       },
     });
+
+    return suspicionLevel;
   }
 
   private mapPhotoAnalysis(analysis: {
@@ -286,14 +348,183 @@ export class PhotoAnalysisService {
     };
   }
 
-  private mapSuspicionLevel(level: string | undefined): PrismaSuspicionLevel {
-    const normalized = (level ?? 'NONE').toUpperCase() as keyof typeof PrismaSuspicionLevel;
+  private async requestModeration(imageUrls: string[]): Promise<unknown[]> {
+    const webhookUrl =
+      process.env.IMAGE_MODERATION_WEBHOOK_URL ?? DEFAULT_IMAGE_MODERATION_WEBHOOK_URL;
+    const allowSelfSignedEnv = process.env.IMAGE_MODERATION_ALLOW_SELF_SIGNED;
+    const allowSelfSigned =
+      typeof allowSelfSignedEnv === 'string'
+        ? allowSelfSignedEnv.toLowerCase() === 'true'
+        : webhookUrl === DEFAULT_IMAGE_MODERATION_WEBHOOK_URL;
 
-    if (Object.prototype.hasOwnProperty.call(PrismaSuspicionLevel, normalized)) {
-      return PrismaSuspicionLevel[normalized];
+    let dispatcher: Dispatcher | undefined;
+
+    if (webhookUrl.startsWith('https://') && allowSelfSigned) {
+      dispatcher = new UndiciAgent({ connect: { rejectUnauthorized: false } });
     }
 
-    return PrismaSuspicionLevel.NONE;
+    const options: FetchOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ imageUrls }),
+    };
+
+    if (dispatcher) {
+      options.dispatcher = dispatcher;
+    }
+
+    let response: Response;
+
+    try {
+      response = await fetch(webhookUrl, options);
+    } catch (error) {
+      throw new Error('Сервис модерации недоступен', { cause: error as Error });
+    } finally {
+      if (dispatcher) {
+        try {
+          await dispatcher.close();
+        } catch (closeError) {
+          this.logger.warn(
+            `Не удалось корректно закрыть агент модерации: ${closeError instanceof Error ? closeError.message : closeError}`,
+          );
+        }
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(`Сервис модерации вернул статус ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data || typeof data !== 'object' || !Array.isArray((data as { results?: unknown[] }).results)) {
+      throw new Error('Ответ сервиса модерации не содержит массива results');
+    }
+
+    return ((data as { results?: unknown[] }).results as unknown[]) ?? [];
+  }
+
+  private mapModerationResult(photo: PhotoForModeration, raw: unknown): ModerationResult {
+    if (!raw || typeof raw !== 'object') {
+      throw new Error(`Некорректный ответ модерации для фото ${photo.photoVkId}`);
+    }
+
+    const payload = raw as Record<string, unknown>;
+
+    const categories: string[] = [];
+    this.collectCategory(categories, payload.category);
+    this.collectCategory(categories, payload.subcategory);
+
+    const explanation =
+      typeof payload.description === 'string' && payload.description.trim().length > 0
+        ? payload.description.trim()
+        : null;
+
+    const confidence = this.extractConfidence(payload);
+    const hasSuspicious = Boolean(payload.is_illegal);
+
+    return {
+      photoVkId: photo.photoVkId,
+      photoUrl: photo.url,
+      hasSuspicious,
+      categories,
+      explanation,
+      confidence,
+      rawResponse: raw,
+    };
+  }
+
+  private collectCategory(target: string[], value: unknown): void {
+    if (!value) {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => this.collectCategory(target, item));
+      return;
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim();
+
+      if (normalized.length > 0) {
+        target.push(normalized);
+      }
+    }
+  }
+
+  private extractConfidence(payload: Record<string, unknown>): number | null {
+    const pct = this.toNumber(payload.confidencePct);
+
+    if (pct !== null) {
+      return this.normalizeConfidence(pct);
+    }
+
+    const rawConfidence = this.toNumber(payload.confidence);
+
+    if (rawConfidence === null) {
+      return null;
+    }
+
+    if (rawConfidence <= 1) {
+      return this.normalizeConfidence(rawConfidence * 100);
+    }
+
+    return this.normalizeConfidence(rawConfidence);
+  }
+
+  private toNumber(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value);
+
+      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+
+    return null;
+  }
+
+  private normalizeConfidence(value: number): number {
+    if (!Number.isFinite(value)) {
+      return value;
+    }
+
+    if (value < 0) {
+      return 0;
+    }
+
+    if (value > 100) {
+      return 100;
+    }
+
+    return Number(value.toFixed(2));
+  }
+
+  private determineSuspicionLevel(hasSuspicious: boolean, confidence: number | null | undefined): PrismaSuspicionLevel {
+    if (!hasSuspicious) {
+      return PrismaSuspicionLevel.NONE;
+    }
+
+    if (typeof confidence === 'number') {
+      if (confidence >= 90) {
+        return PrismaSuspicionLevel.HIGH;
+      }
+
+      if (confidence >= 70) {
+        return PrismaSuspicionLevel.MEDIUM;
+      }
+
+      return PrismaSuspicionLevel.LOW;
+    }
+
+    return PrismaSuspicionLevel.LOW;
   }
 
   private buildSummary(items: PhotoAnalysisItemDto[]): PhotoAnalysisSummaryDto {
