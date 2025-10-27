@@ -64,7 +64,7 @@ export interface TableSortState {
   direction: TableSortDirection
 }
 
-export interface TableColumn<T = any> {
+export interface TableColumn<T = unknown> {
   header: string
   key: string
   render?: (item: T, index: number) => ReactNode

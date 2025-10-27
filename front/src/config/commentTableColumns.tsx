@@ -1,3 +1,4 @@
+import { Button } from '../components/ui/button'
 import { highlightKeywords } from '../utils/highlightKeywords'
 import type { TableColumn, Comment, Keyword } from '../types'
 
@@ -94,21 +95,23 @@ export const getCommentTableColumns = (
     header: 'Действия',
     key: 'actions',
     render: (item: Comment) => (
-      <div className="comment-actions table-actions">
-        <button
+      <div className="comment-actions table-actions flex flex-wrap gap-2">
+        <Button
           type="button"
-          className={`comment-action-btn ${
-            item.isRead ? 'comment-action-btn--secondary' : 'comment-action-btn--primary'
-          }`}
+          size="sm"
+          variant={item.isRead ? 'secondary' : 'default'}
+          className="min-w-[220px]"
           onClick={() => {
             void toggleReadStatus(item.id)
           }}
         >
           {item.isRead ? 'Отметить непрочитанным' : 'Отметить прочитанным'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="comment-action-btn comment-action-btn--outline"
+          size="sm"
+          variant="outline"
+          className="min-w-[140px]"
           onClick={() => {
             if (!item.commentUrl) {
               return
@@ -119,7 +122,7 @@ export const getCommentTableColumns = (
           disabled={!item.commentUrl}
         >
           Открыть в VK
-        </button>
+        </Button>
       </div>
     )
   }

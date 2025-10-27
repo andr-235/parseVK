@@ -79,12 +79,39 @@ const buildColumnMap = <T,>(columns: TableColumn<T>[]): SortableColumnMap<T> => 
   return map
 }
 
+const isTableSortValue = (value: unknown): value is TableSortValue => {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return true
+  }
+
+  return value instanceof Date
+}
+
+const extractValueFromItem = <T,>(item: T, key: string): TableSortValue | undefined => {
+  if (item && typeof item === 'object') {
+    const record = item as Record<string, unknown>
+    const candidate = record[key]
+
+    if (isTableSortValue(candidate)) {
+      return candidate
+    }
+  }
+
+  return undefined
+}
+
 const deriveSortValue = <T,>(
   item: T,
   column: TableColumn<T>,
 ): ComparableValue => {
-  const raw = column.sortValue ? column.sortValue(item) : (item as any)[column.key]
-  return normalizeSortValue(raw)
+  const raw = column.sortValue ? column.sortValue(item) : extractValueFromItem(item, column.key)
+  return normalizeSortValue(raw ?? null)
 }
 
 export function useTableSorting<T>(

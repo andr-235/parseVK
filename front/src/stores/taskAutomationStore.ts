@@ -34,6 +34,7 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
           set({ settings, isLoading: false })
           return settings
         } catch (error) {
+          console.error('Failed to fetch task automation settings', error)
           set({ isLoading: false })
           return null
         }
@@ -47,6 +48,7 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
           set({ settings, isUpdating: false })
           return true
         } catch (error) {
+          console.error('Failed to update task automation settings', error)
           set({ isUpdating: false })
           return false
         }
@@ -64,6 +66,7 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
           set({ settings: response.settings, isTriggering: false })
           return response.started
         } catch (error) {
+          console.error('Failed to trigger task automation', error)
           set({ isTriggering: false })
           return false
         }

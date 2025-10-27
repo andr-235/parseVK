@@ -64,6 +64,28 @@ const formatCommentSource = (comment: WatchlistComment): string => {
   return 'Задачи'
 }
 
+const getPrimitiveColumnValue = (
+  item: unknown,
+  key: string,
+): string | number | boolean | null => {
+  if (!item || typeof item !== 'object') {
+    return null
+  }
+
+  const record = item as Record<string, unknown>
+  const value = record[key]
+
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+
+  return null
+}
+
 function Watchlist() {
   const authors = useWatchlistStore((state) => state.authors)
   const totalAuthors = useWatchlistStore((state) => state.totalAuthors)
@@ -459,7 +481,7 @@ function Watchlist() {
                     <TableCell key={column.key} className={column.cellClassName}>
                       {column.render
                         ? column.render(author, index)
-                        : (author as any)[column.key] ?? column.emptyValue ?? '—'}
+                        : getPrimitiveColumnValue(author, column.key) ?? column.emptyValue ?? '—'}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -518,7 +540,7 @@ function Watchlist() {
                         <TableCell key={column.key} className={column.cellClassName}>
                           {column.render
                             ? column.render(comment, index)
-                            : (comment as any)[column.key] ?? column.emptyValue ?? '—'}
+                            : getPrimitiveColumnValue(comment, column.key) ?? column.emptyValue ?? '—'}
                         </TableCell>
                       ))}
                     </TableRow>

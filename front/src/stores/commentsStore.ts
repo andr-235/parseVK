@@ -97,7 +97,7 @@ const resolveAuthorInfo = (comment: ICommentResponse): NormalizedAuthor => {
     return null
   }
 
-  let avatar = pickImageUrl([
+  const avatar = pickImageUrl([
     'logo',
     'avatar',
     'photo',
