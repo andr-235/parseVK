@@ -14,9 +14,9 @@ import type {
 
 const MAX_PHOTO_LIMIT = 200;
 const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL = 'https://192.168.88.12/webhook/image-moderation';
-const DEFAULT_IMAGE_MODERATION_TIMEOUT_MS = 15000;
-const DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS = 2000;
-const MAX_IMAGE_MODERATION_TIMEOUT_MS = 120000;
+const DEFAULT_IMAGE_MODERATION_TIMEOUT_BASE_MS = 15000;
+const DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS = 3000;
+const DEFAULT_IMAGE_MODERATION_MAX_TIMEOUT_MS = 180000;
 const KNOWN_CATEGORIES = ['violence', 'drugs', 'weapons', 'nsfw', 'extremism', 'hate speech'] as const;
 
 interface PhotoForModeration {
@@ -392,6 +392,11 @@ export class PhotoAnalysisService {
     const isHttps = targetUrl.protocol === 'https:';
     const requestFn = isHttps ? httpsRequest : httpRequest;
     const timeoutMs = this.resolveModerationTimeout(params.imageCount);
+    const timeoutLabel = timeoutMs === 0 ? 'без ограничения' : `${timeoutMs}мс`;
+
+    this.logger.debug(
+      `Запрос к модерации: изображений=${params.imageCount}, таймаут=${timeoutLabel}, url=${targetUrl.origin}`,
+    );
 
     const options: HttpsRequestOptions = {
       method: 'POST',
@@ -451,14 +456,20 @@ export class PhotoAnalysisService {
   private resolveModerationTimeout(imageCount: number): number {
     const timeoutEnv = process.env.IMAGE_MODERATION_TIMEOUT_MS;
 
-    if (!timeoutEnv) {
+    if (!timeoutEnv || timeoutEnv.trim().length === 0) {
       return this.calculateDefaultModerationTimeout(imageCount);
+    }
+
+    const normalized = timeoutEnv.trim().toLowerCase();
+
+    if (['0', 'off', 'none', 'no', 'disable', 'disabled', 'infinite', 'infinity', 'unlimited'].includes(normalized)) {
+      return 0;
     }
 
     const parsed = Number(timeoutEnv);
 
     if (Number.isFinite(parsed) && parsed > 0) {
-      return parsed;
+      return Math.floor(parsed);
     }
 
     const fallbackTimeout = this.calculateDefaultModerationTimeout(imageCount);
@@ -470,12 +481,82 @@ export class PhotoAnalysisService {
   }
 
   private calculateDefaultModerationTimeout(imageCount: number): number {
+    const { base, perImage, max } = this.resolveModerationTimeoutConfig();
     const normalizedCount = Number.isFinite(imageCount) && imageCount > 0 ? Math.floor(imageCount) : 1;
-    const dynamicTimeout =
-      DEFAULT_IMAGE_MODERATION_TIMEOUT_MS +
-      Math.max(0, normalizedCount - 1) * DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS;
+    const dynamicTimeout = base + Math.max(0, normalizedCount - 1) * perImage;
 
-    return Math.min(dynamicTimeout, MAX_IMAGE_MODERATION_TIMEOUT_MS);
+    if (max === null) {
+      return dynamicTimeout;
+    }
+
+    return Math.min(dynamicTimeout, max);
+  }
+
+  private resolveModerationTimeoutConfig(): {
+    base: number;
+    perImage: number;
+    max: number | null;
+  } {
+    const base = this.parsePositiveTimeoutEnv(
+      'IMAGE_MODERATION_BASE_TIMEOUT_MS',
+      DEFAULT_IMAGE_MODERATION_TIMEOUT_BASE_MS,
+    );
+    const perImage = this.parsePositiveTimeoutEnv(
+      'IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS',
+      DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS,
+    );
+    const max = this.parseMaxTimeoutEnv(
+      'IMAGE_MODERATION_TIMEOUT_MAX_MS',
+      DEFAULT_IMAGE_MODERATION_MAX_TIMEOUT_MS,
+    );
+
+    return { base, perImage, max };
+  }
+
+  private parsePositiveTimeoutEnv(envName: string, fallback: number): number {
+    const raw = process.env[envName];
+
+    if (typeof raw !== 'string' || raw.trim().length === 0) {
+      return fallback;
+    }
+
+    const value = Number(raw);
+
+    if (Number.isFinite(value) && value > 0) {
+      return Math.floor(value);
+    }
+
+    this.logger.warn(
+      `Некорректное значение ${envName}: ${raw}. Используется значение по умолчанию ${fallback}мс`,
+    );
+
+    return fallback;
+  }
+
+  private parseMaxTimeoutEnv(envName: string, fallback: number): number | null {
+    const raw = process.env[envName];
+
+    if (typeof raw !== 'string' || raw.trim().length === 0) {
+      return fallback;
+    }
+
+    const normalized = raw.trim().toLowerCase();
+
+    if (['0', 'off', 'none', 'no', 'disable', 'disabled', 'infinite', 'infinity', 'unlimited'].includes(normalized)) {
+      return null;
+    }
+
+    const value = Number(raw);
+
+    if (Number.isFinite(value) && value > 0) {
+      return Math.floor(value);
+    }
+
+    this.logger.warn(
+      `Некорректное значение ${envName}: ${raw}. Используется значение по умолчанию ${fallback}мс`,
+    );
+
+    return fallback;
   }
 
   private mapModerationResult(photo: PhotoForModeration, raw: unknown): ModerationResult {
