@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios, { type AxiosInstance } from 'axios';
-import { load, type CheerioAPI, type Cheerio } from 'cheerio';
+import { load, type CheerioAPI, type Cheerio as CheerioCollection } from 'cheerio';
 import { RealEstateRepository } from './real-estate.repository';
 import { RealEstateSource } from './dto/real-estate-source.enum';
 import type { RealEstateScrapeOptionsDto } from './dto/real-estate-scrape-options.dto';
@@ -170,7 +170,7 @@ export class RealEstateScraperService {
     const listings: RealEstateListingDto[] = [];
 
     api('div[data-marker="item"]').each((_, element) => {
-      const container = api(element as unknown as Cheerio);
+      const container = api(element);
       const externalId =
         container.attr('data-item-id') ??
         container.attr('data-id') ??
@@ -180,9 +180,7 @@ export class RealEstateScraperService {
         return;
       }
 
-      const titleElement = container
-        .find('[data-marker="item-title"]')
-        .first();
+      const titleElement = container.find('[data-marker="item-title"]').first();
       const title = this.extractText(titleElement);
 
       if (!title) {
@@ -244,7 +242,7 @@ export class RealEstateScraperService {
     const listings: RealEstateListingDto[] = [];
 
     api('article[data-id]').each((_, element) => {
-      const container = api(element as unknown as Cheerio);
+      const container = api(element);
       const externalId = container.attr('data-id');
 
       if (!externalId) {
@@ -343,8 +341,8 @@ export class RealEstateScraperService {
     return digits ? Number(digits) : null;
   }
 
-  private extractText(element: Cheerio): string | null {
-    if (!element || element.length === 0) {
+  private extractText(element: CheerioCollection<any>): string | null {
+    if (element.length === 0) {
       return null;
     }
 
