@@ -42,3 +42,39 @@ export interface RealEstateListingsResponse {
   summary?: RealEstateSummary | null
   generatedAt?: string | null
 }
+
+export interface RealEstateScheduleSettings {
+  enabled: boolean
+  runHour: number
+  runMinute: number
+  timezoneOffsetMinutes: number
+  lastRunAt: string | null
+  nextRunAt: string | null
+  isRunning: boolean
+}
+
+export interface RealEstateScheduleUpdatePayload {
+  enabled: boolean
+  runHour: number
+  runMinute: number
+  timezoneOffsetMinutes: number
+}
+
+export interface RealEstateSyncResult {
+  source: RealEstateListingSource
+  scrapedCount: number
+  created: Array<Record<string, unknown>>
+  updated: Array<Record<string, unknown>>
+}
+
+export interface RealEstateDailyCollectResult {
+  avito: RealEstateSyncResult
+  youla: RealEstateSyncResult
+}
+
+export interface RealEstateManualRunResponse {
+  started: boolean
+  reason: string | null
+  settings: RealEstateScheduleSettings
+  summary?: RealEstateDailyCollectResult | null
+}

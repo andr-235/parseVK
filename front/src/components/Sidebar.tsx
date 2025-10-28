@@ -133,6 +133,21 @@ const ReportsIcon = () => (
   </svg>
 )
 
+const RealEstateIcon = () => (
+  <svg
+    className={iconClasses}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 11.5 12 5l9 6.5" />
+    <path d="M5 10.5V19a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-8.5" />
+  </svg>
+)
+
 const SettingsIcon = () => (
   <svg
     className={iconClasses}
@@ -176,6 +191,7 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
 
     return [
       { label: 'Задачи', path: '/tasks', icon: <TasksIcon />, badge: formatCount(tasksCount) },
+      { label: 'Парсинг недвижимости', path: '/real-estate/parsing', icon: <RealEstateIcon /> },
       { label: 'Группы', path: '/groups', icon: <GroupsIcon /> },
       { label: 'Комментарии', path: '/comments', icon: <CommentsIcon />, badge: formatCount(commentsCount) },
       { label: 'Авторы', path: '/authors', icon: <AuthorsIcon />, badge: formatCount(authorsTotal) },
