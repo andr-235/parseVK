@@ -4,6 +4,7 @@ import { request as httpRequest } from 'node:http';
 import { request as httpsRequest, type RequestOptions as HttpsRequestOptions } from 'node:https';
 import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
+import type { VkPhoto } from '../vk/vk.service';
 import type { AnalyzePhotosDto } from './dto/analyze-photos.dto';
 import type {
   PhotoAnalysisItemDto,
@@ -13,11 +14,7 @@ import type {
 } from './dto/photo-analysis-response.dto';
 
 const MAX_PHOTO_LIMIT = 200;
-const MODERATION_BATCH_SIZE = 10;
 const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL = 'https://192.168.88.12/webhook/image-moderation';
-const DEFAULT_IMAGE_MODERATION_TIMEOUT_BASE_MS = 0;
-const DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS = 0;
-const DEFAULT_IMAGE_MODERATION_MAX_TIMEOUT_MS: number | null = null;
 const KNOWN_CATEGORIES = ['violence', 'drugs', 'weapons', 'nsfw', 'extremism', 'hate speech'] as const;
 
 interface PhotoForModeration {
@@ -49,20 +46,21 @@ export class PhotoAnalysisService {
     options?: AnalyzePhotosDto,
   ): Promise<PhotoAnalysisListDto> {
     const startTime = Date.now();
-    const { limit = 50, force = false, offset = 0 } = options ?? {};
-    const normalizedLimit = Math.min(Math.max(limit, 1), MAX_PHOTO_LIMIT);
+    const { limit, force = false, offset = 0 } = options ?? {};
+    const normalizedLimit =
+      typeof limit === 'number' ? Math.min(Math.max(limit, 1), MAX_PHOTO_LIMIT) : null;
     const normalizedOffset = Math.max(offset, 0);
 
     this.logger.log(
-      `Начало анализа фото для пользователя vkUserId=${vkUserId}, limit=${normalizedLimit}, offset=${normalizedOffset}, force=${force}`,
+      `Начало анализа фото для пользователя vkUserId=${vkUserId}, limit=${normalizedLimit ?? 'all'}, offset=${normalizedOffset}, force=${force}`,
     );
 
     const author = await this.findAuthorOrThrow(vkUserId);
 
-    const photos = await this.vkService.getUserPhotos({
+    const photos = await this.loadAllUserPhotos({
       userId: author.vkUserId,
-      count: normalizedLimit,
       offset: normalizedOffset,
+      limit: normalizedLimit ?? undefined,
     });
 
     this.logger.log(
@@ -127,36 +125,34 @@ export class PhotoAnalysisService {
       return this.listByVkUser(vkUserId);
     }
 
-    for (let start = 0; start < photosToAnalyze.length; start += MODERATION_BATCH_SIZE) {
-      const batch = photosToAnalyze.slice(start, start + MODERATION_BATCH_SIZE);
-      let batchResults: unknown[] = [];
+    let moderationResults: unknown[] = [];
+    let moderationRequestFailed = false;
 
-      try {
-        batchResults = await this.requestModeration(batch.map((item) => item.url));
-      } catch (error) {
-        errorCount += batch.length;
-        this.logger.error(
-          `Не удалось получить ответ модерации для батча ${start / MODERATION_BATCH_SIZE + 1} (offset=${normalizedOffset + start}, size=${batch.length})`,
-          error instanceof Error ? error.stack : String(error),
-        );
-        continue;
-      }
+    try {
+      moderationResults = await this.requestModeration(photosToAnalyze.map((item) => item.url));
+    } catch (error) {
+      moderationRequestFailed = true;
+      errorCount += photosToAnalyze.length;
+      this.logger.error(
+        `Не удалось получить ответ модерации для пользователя ${author.id} (vkUserId=${author.vkUserId})`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
 
-      if (batchResults.length !== batch.length) {
+    if (!moderationRequestFailed) {
+      if (moderationResults.length !== photosToAnalyze.length) {
         this.logger.warn(
-          `Количество результатов модерации (${batchResults.length}) не совпадает с количеством запросов (${batch.length}) для батча ${start / MODERATION_BATCH_SIZE + 1}`,
+          `Количество результатов модерации (${moderationResults.length}) не совпадает с количеством запросов (${photosToAnalyze.length})`,
         );
       }
 
-      for (let index = 0; index < batch.length; index += 1) {
-        const photoInfo = batch[index];
-        const raw = batchResults[index];
+      for (let index = 0; index < photosToAnalyze.length; index += 1) {
+        const photoInfo = photosToAnalyze[index];
+        const raw = moderationResults[index];
 
         if (raw === undefined) {
           errorCount++;
-          this.logger.warn(
-            `Отсутствует результат модерации для фото ${photoInfo.photoVkId} в батче ${start / MODERATION_BATCH_SIZE + 1}`,
-          );
+          this.logger.warn(`Отсутствует результат модерации для фото ${photoInfo.photoVkId}`);
           continue;
         }
 
@@ -373,6 +369,44 @@ export class PhotoAnalysisService {
     };
   }
 
+  private async loadAllUserPhotos(params: {
+    userId: number;
+    offset?: number;
+    limit?: number;
+  }): Promise<VkPhoto[]> {
+    const { userId, offset = 0, limit } = params;
+    const photos: VkPhoto[] = [];
+    const batchSize = MAX_PHOTO_LIMIT;
+    let currentOffset = Math.max(offset, 0);
+
+    while (!limit || photos.length < limit) {
+      const remaining = limit ? Math.min(limit - photos.length, batchSize) : batchSize;
+
+      if (remaining <= 0) {
+        break;
+      }
+
+      const chunk = await this.vkService.getUserPhotos({
+        userId,
+        count: remaining,
+        offset: currentOffset,
+      });
+
+      if (!chunk.length) {
+        break;
+      }
+
+      photos.push(...chunk);
+      currentOffset += chunk.length;
+
+      if (chunk.length < remaining) {
+        break;
+      }
+    }
+
+    return photos;
+  }
+
   private async requestModeration(imageUrls: string[]): Promise<unknown[]> {
     const webhookUrl =
       process.env.IMAGE_MODERATION_WEBHOOK_URL ?? DEFAULT_IMAGE_MODERATION_WEBHOOK_URL;
@@ -477,112 +511,36 @@ export class PhotoAnalysisService {
     });
   }
 
-  private resolveModerationTimeout(imageCount: number): number {
+  private resolveModerationTimeout(_imageCount: number): number {
     const timeoutEnv = process.env.IMAGE_MODERATION_TIMEOUT_MS;
 
-    if (!timeoutEnv || timeoutEnv.trim().length === 0) {
-      return this.calculateDefaultModerationTimeout(imageCount);
+    if (timeoutEnv && timeoutEnv.trim().length > 0) {
+      const normalized = timeoutEnv.trim().toLowerCase();
+
+      if (!['0', 'off', 'none', 'no', 'disable', 'disabled', 'infinite', 'infinity', 'unlimited'].includes(normalized)) {
+        this.logger.warn(
+          `Параметр IMAGE_MODERATION_TIMEOUT_MS=${timeoutEnv} игнорируется: ожидание ответа модерации без ограничения времени`,
+        );
+      }
     }
 
-    const normalized = timeoutEnv.trim().toLowerCase();
-
-    if (['0', 'off', 'none', 'no', 'disable', 'disabled', 'infinite', 'infinity', 'unlimited'].includes(normalized)) {
-      return 0;
-    }
-
-    const parsed = Number(timeoutEnv);
-
-    if (Number.isFinite(parsed) && parsed > 0) {
-      return Math.floor(parsed);
-    }
-
-    const fallbackTimeout = this.calculateDefaultModerationTimeout(imageCount);
-    this.logger.warn(
-      `Некорректное значение IMAGE_MODERATION_TIMEOUT_MS: ${timeoutEnv}. Используется значение по умолчанию ${fallbackTimeout}мс`,
-    );
-
-    return fallbackTimeout;
-  }
-
-  private calculateDefaultModerationTimeout(imageCount: number): number {
-    const { base, perImage, max } = this.resolveModerationTimeoutConfig();
-    const normalizedCount = Number.isFinite(imageCount) && imageCount > 0 ? Math.floor(imageCount) : 1;
-    const dynamicTimeout = base + Math.max(0, normalizedCount - 1) * perImage;
-
-    if (max === null) {
-      return dynamicTimeout;
-    }
-
-    return Math.min(dynamicTimeout, max);
-  }
-
-  private resolveModerationTimeoutConfig(): {
-    base: number;
-    perImage: number;
-    max: number | null;
-  } {
-    const base = this.parsePositiveTimeoutEnv(
+    const additionalTimeoutVars = [
       'IMAGE_MODERATION_BASE_TIMEOUT_MS',
-      DEFAULT_IMAGE_MODERATION_TIMEOUT_BASE_MS,
-    );
-    const perImage = this.parsePositiveTimeoutEnv(
       'IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS',
-      DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS,
-    );
-    const max = this.parseMaxTimeoutEnv(
       'IMAGE_MODERATION_TIMEOUT_MAX_MS',
-      DEFAULT_IMAGE_MODERATION_MAX_TIMEOUT_MS,
-    );
+    ];
 
-    return { base, perImage, max };
-  }
+    for (const envName of additionalTimeoutVars) {
+      const raw = process.env[envName];
 
-  private parsePositiveTimeoutEnv(envName: string, fallback: number): number {
-    const raw = process.env[envName];
-
-    if (typeof raw !== 'string' || raw.trim().length === 0) {
-      return fallback;
+      if (typeof raw === 'string' && raw.trim().length > 0) {
+        this.logger.warn(
+          `Параметр ${envName}=${raw} игнорируется: ожидание ответа модерации без ограничения времени`,
+        );
+      }
     }
 
-    const value = Number(raw);
-
-    if (Number.isFinite(value) && value > 0) {
-      return Math.floor(value);
-    }
-
-    this.logger.warn(
-      `Некорректное значение ${envName}: ${raw}. Используется значение по умолчанию ${fallback}мс`,
-    );
-
-    return fallback;
-  }
-
-  private parseMaxTimeoutEnv(envName: string, fallback: number | null): number | null {
-    const raw = process.env[envName];
-
-    if (typeof raw !== 'string' || raw.trim().length === 0) {
-      return fallback;
-    }
-
-    const normalized = raw.trim().toLowerCase();
-
-    if (['0', 'off', 'none', 'no', 'disable', 'disabled', 'infinite', 'infinity', 'unlimited'].includes(normalized)) {
-      return null;
-    }
-
-    const value = Number(raw);
-
-    if (Number.isFinite(value) && value > 0) {
-      return Math.floor(value);
-    }
-
-    const fallbackLabel = fallback === null ? 'без ограничения' : `${fallback}мс`;
-
-    this.logger.warn(
-      `Некорректное значение ${envName}: ${raw}. Используется значение по умолчанию ${fallbackLabel}`,
-    );
-
-    return fallback;
+    return 0;
   }
 
   private mapModerationResult(photo: PhotoForModeration, raw: unknown): ModerationResult {
