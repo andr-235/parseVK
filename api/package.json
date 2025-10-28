@@ -30,6 +30,8 @@
     "@nestjs/websockets": "^11.1.6",
     "@nestjs/schedule": "^6.0.1",
     "@prisma/client": "^6.16.3",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
     "cron": "^2.4.4",
     "bullmq": "^5.61.0",
     "cache-manager": "^7.2.4",
@@ -84,7 +86,9 @@
       "^@nestjs/cache-manager$": "<rootDir>/../jest-shims/node_modules/@nestjs/cache-manager/index.js",
       "^@nestjs/bullmq$": "<rootDir>/../jest-shims/node_modules/@nestjs/bullmq/index.js",
       "^bullmq$": "<rootDir>/../jest-shims/node_modules/bullmq/index.js",
-      "^libphonenumber-js/max$": "<rootDir>/../jest-shims/node_modules/libphonenumber-js/max.js"
+      "^libphonenumber-js/max$": "<rootDir>/../jest-shims/node_modules/libphonenumber-js/max.js",
+      "^axios$": "<rootDir>/../jest-shims/node_modules/axios",
+      "^cheerio$": "<rootDir>/../jest-shims/node_modules/cheerio"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

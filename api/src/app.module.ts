@@ -13,6 +13,7 @@ import { CommentsModule } from './comments/comments.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 import { PhotoAnalysisModule } from './photo-analysis/photo-analysis.module';
 import { AuthorsModule } from './authors/authors.module';
+import { RealEstateModule } from './real-estate/real-estate.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AuthorsModule } from './authors/authors.module';
     WatchlistModule,
     PhotoAnalysisModule,
     AuthorsModule,
+    RealEstateModule,
   ],
   controllers: [AppController],
   providers: [AppService],

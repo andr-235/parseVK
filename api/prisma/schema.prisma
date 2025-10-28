@@ -31,6 +31,11 @@ enum SuspicionLevel {
   HIGH
 }
 
+enum RealEstateSource {
+  AVITO
+  YOULA
+}
+
 model Task {
   id             Int      @id @default(autoincrement())
   title          String
@@ -276,32 +281,24 @@ model WatchlistAuthor {
   @@index([settingsId])
 }
 
-model ListingSource {
-  id        Int                   @id @default(autoincrement())
-  name      String                @unique
-  baseUrl   String?
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
-  listings  RealEstateListing[]
-}
-
 model RealEstateListing {
-  id              Int           @id @default(autoincrement())
-  sourceId        Int
-  externalId      String
-  title           String
-  price           Int?
-  address         String?
-  url             String
-  propertyDetails Json?
-  contentHash     String
-  publishedAt     DateTime?
-  checkedAt       DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  source          ListingSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  id           Int               @id @default(autoincrement())
+  source       RealEstateSource
+  externalId   String
+  title        String
+  url          String
+  price        Int?
+  priceText    String?
+  address      String?
+  description  String?
+  previewImage String?
+  metadata     Json?
+  publishedAt  DateTime
+  firstSeenAt  DateTime          @default(now())
+  lastSeenAt   DateTime          @default(now())
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
-  @@unique([sourceId, externalId])
-  @@index([contentHash])
-  @@index([publishedAt(sort: Desc)])
+  @@unique([source, externalId])
+  @@index([source, publishedAt(sort: Desc)])
 }
