@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CacheModule } from './common/cache/cache.module';
@@ -21,6 +22,7 @@ import { RealEstateModule } from './real-estate/real-estate.module';
       isGlobal: true,
       envFilePath: undefined,
     }),
+    ScheduleModule.forRoot(),
     // BullMQ глобальная конфигурация
     BullModule.forRoot({
       connection: {

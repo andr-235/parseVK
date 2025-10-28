@@ -1,0 +1,21 @@
+import { IsBoolean, IsInt, Max, Min } from 'class-validator';
+
+export class UpdateRealEstateScheduleSettingsDto {
+  @IsBoolean()
+  enabled!: boolean;
+
+  @IsInt()
+  @Min(0)
+  @Max(23)
+  runHour!: number;
+
+  @IsInt()
+  @Min(0)
+  @Max(59)
+  runMinute!: number;
+
+  @IsInt()
+  @Min(-720)
+  @Max(840)
+  timezoneOffsetMinutes!: number;
+}

@@ -6,6 +6,7 @@ import { RealEstateSource } from './dto/real-estate-source.enum';
 import type { RealEstateScrapeOptionsDto } from './dto/real-estate-scrape-options.dto';
 import type { RealEstateListingDto } from './dto/real-estate-listing.dto';
 import type { RealEstateSyncResultDto } from './dto/real-estate-sync-result.dto';
+import type { RealEstateDailyCollectResultDto } from './dto/real-estate-daily-collect-result.dto';
 
 const DEFAULT_AVITO_URL = 'https://www.avito.ru/rossiya/nedvizhimost';
 const DEFAULT_YOULA_URL =
@@ -42,6 +43,17 @@ export class RealEstateScraperService {
       },
       timeout: 10000,
     });
+  }
+
+  async collectDailyListings(options: {
+    publishedAfter?: Date;
+  } = {}): Promise<RealEstateDailyCollectResultDto> {
+    const { publishedAfter } = options;
+
+    const avito = await this.scrapeAvito({ publishedAfter });
+    const youla = await this.scrapeYoula({ publishedAfter });
+
+    return { avito, youla };
   }
 
   async scrapeAvito(

@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
-import { ScheduleModule } from '@nestjs/schedule';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma.service';
@@ -21,7 +20,6 @@ import { TaskAutomationController } from './automation/task-automation.controlle
 
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
     VkModule,
     CommonModule,
     BullModule.registerQueue({
