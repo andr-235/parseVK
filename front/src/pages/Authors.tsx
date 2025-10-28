@@ -208,36 +208,49 @@ function Authors() {
 
       setAnalyzingVkUserId(author.vkUserId)
 
-      const totalPhotos = typeof author.photosCount === 'number' ? author.photosCount : null
+      const batchSize = 10
+      const totalPhotos = typeof author.photosCount === 'number' && author.photosCount > 0
+        ? Math.min(author.photosCount, 200)
+        : 200
+      const maxBatches = Math.max(Math.ceil(totalPhotos / batchSize), 1)
       let analyzedTotal = author.summary.total
       let lastSummary = author.summary
-      let hasMadeRequest = false
+      let offset = 0
+      let batchesAttempted = 0
 
       try {
-        while (true) {
-          const remaining = totalPhotos !== null ? Math.max(totalPhotos - analyzedTotal, 0) : null
-          if (remaining !== null && remaining === 0 && hasMadeRequest) {
+        while (batchesAttempted < maxBatches) {
+          const remaining = totalPhotos - offset
+
+          if (remaining <= 0 && batchesAttempted > 0) {
             break
           }
 
-          const batchLimit = remaining !== null ? Math.max(Math.min(remaining, 50), 1) : 50
-          const response = await analyzeAuthor(author.vkUserId, { limit: batchLimit })
-          hasMadeRequest = true
+          const batchLimit = Math.max(
+            Math.min(remaining > 0 ? remaining : batchSize, batchSize),
+            1,
+          )
+
+          const response = await analyzeAuthor(author.vkUserId, {
+            limit: batchLimit,
+            offset,
+          })
+          batchesAttempted += 1
           lastSummary = response.summary
-          const newTotal = response.total
+          const newTotal = response.analyzedCount
           const processedInBatch = newTotal - analyzedTotal
 
+          offset += batchLimit
           if (processedInBatch <= 0) {
+            if (offset < totalPhotos) {
+              continue
+            }
             break
           }
 
           analyzedTotal = newTotal
 
-          if (totalPhotos !== null && analyzedTotal >= totalPhotos) {
-            break
-          }
-
-          if (processedInBatch < batchLimit) {
+          if (offset >= totalPhotos) {
             break
           }
         }

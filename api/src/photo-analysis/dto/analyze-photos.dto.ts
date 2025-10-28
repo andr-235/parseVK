@@ -10,4 +10,9 @@ export class AnalyzePhotosDto {
   @IsOptional()
   @IsBoolean()
   force?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  offset?: number;
 }

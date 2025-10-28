@@ -206,8 +206,53 @@ function AuthorAnalysis() {
       return
     }
 
+    const batchSize = 10
+    const totalPhotos = typeof author?.photosCount === 'number' && author.photosCount > 0
+      ? Math.min(author.photosCount, 200)
+      : 200
+    const maxBatches = Math.max(Math.ceil(totalPhotos / batchSize), 1)
+    let offset = 0
+    let batchesAttempted = 0
+    let previousAnalyzed = summary?.total ?? 0
+
     try {
-      await analyzeAuthor(vkUserId, { limit: 50, force })
+      while (batchesAttempted < maxBatches) {
+        const remaining = totalPhotos - offset
+
+        if (remaining <= 0 && batchesAttempted > 0) {
+          break
+        }
+
+        const batchLimit = Math.max(
+          Math.min(remaining > 0 ? remaining : batchSize, batchSize),
+          1,
+        )
+
+        const response = await analyzeAuthor(vkUserId, {
+          limit: batchLimit,
+          offset,
+          force,
+        })
+        batchesAttempted += 1
+
+        const newAnalyzedTotal = response.analyzedCount
+        const processedInBatch = newAnalyzedTotal - previousAnalyzed
+        previousAnalyzed = newAnalyzedTotal
+
+        offset += batchLimit
+
+        if (processedInBatch <= 0) {
+          if (offset < totalPhotos) {
+            continue
+          }
+          break
+        }
+
+        if (offset >= totalPhotos) {
+          break
+        }
+      }
+
       toast.success(force ? 'Повторный анализ завершён' : 'Анализ фотографий выполнен')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Не удалось проанализировать фотографии'

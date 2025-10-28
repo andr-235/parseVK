@@ -13,6 +13,7 @@ import type {
 } from './dto/photo-analysis-response.dto';
 
 const MAX_PHOTO_LIMIT = 200;
+const MODERATION_BATCH_SIZE = 10;
 const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL = 'https://192.168.88.12/webhook/image-moderation';
 const DEFAULT_IMAGE_MODERATION_TIMEOUT_BASE_MS = 0;
 const DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS = 0;
@@ -48,11 +49,12 @@ export class PhotoAnalysisService {
     options?: AnalyzePhotosDto,
   ): Promise<PhotoAnalysisListDto> {
     const startTime = Date.now();
-    const { limit = 50, force = false } = options ?? {};
+    const { limit = 50, force = false, offset = 0 } = options ?? {};
     const normalizedLimit = Math.min(Math.max(limit, 1), MAX_PHOTO_LIMIT);
+    const normalizedOffset = Math.max(offset, 0);
 
     this.logger.log(
-      `Начало анализа фото для пользователя vkUserId=${vkUserId}, limit=${normalizedLimit}, force=${force}`,
+      `Начало анализа фото для пользователя vkUserId=${vkUserId}, limit=${normalizedLimit}, offset=${normalizedOffset}, force=${force}`,
     );
 
     const author = await this.findAuthorOrThrow(vkUserId);
@@ -60,6 +62,7 @@ export class PhotoAnalysisService {
     const photos = await this.vkService.getUserPhotos({
       userId: author.vkUserId,
       count: normalizedLimit,
+      offset: normalizedOffset,
     });
 
     this.logger.log(
@@ -124,54 +127,58 @@ export class PhotoAnalysisService {
       return this.listByVkUser(vkUserId);
     }
 
-    let rawResults: unknown[] = [];
-
-    try {
-      rawResults = await this.requestModeration(photosToAnalyze.map((item) => item.url));
-    } catch (error) {
-      errorCount = photosToAnalyze.length;
-      this.logger.error(
-        'Не удалось получить ответ модерации изображений',
-        error instanceof Error ? error.stack : String(error),
-      );
-
-      const totalElapsedFailure = Date.now() - startTime;
-      const totalElapsedFailureSec = (totalElapsedFailure / 1000).toFixed(2);
-      this.logger.log(
-        `Анализ фото завершен за ${totalElapsedFailureSec}s. Статистика: успешно=${successCount}, ошибок=${errorCount}, пропущено=${skippedCount}, без URL=${noUrlCount}, всего фото=${photos.length}`,
-      );
-
-      await this.markAuthorVerified(author.id);
-      return this.listByVkUser(vkUserId);
-    }
-
-    if (rawResults.length !== photosToAnalyze.length) {
-      this.logger.warn(
-        `Количество результатов модерации (${rawResults.length}) не совпадает с количеством запросов (${photosToAnalyze.length})`,
-      );
-    }
-
-    for (let index = 0; index < photosToAnalyze.length; index += 1) {
-      const photoInfo = photosToAnalyze[index];
-      const raw = rawResults[index];
+    for (let start = 0; start < photosToAnalyze.length; start += MODERATION_BATCH_SIZE) {
+      const batch = photosToAnalyze.slice(start, start + MODERATION_BATCH_SIZE);
+      let batchResults: unknown[] = [];
 
       try {
-        const moderation = this.mapModerationResult(photoInfo, raw);
-        const suspicionLevel = await this.saveAnalysis({
-          authorId: author.id,
-          result: moderation,
-        });
-
-        successCount++;
-        this.logger.log(
-          `Фото ${photoInfo.photoVkId} проанализировано успешно (${successCount}/${photosToAnalyze.length}), уровень: ${suspicionLevel}`,
-        );
+        batchResults = await this.requestModeration(batch.map((item) => item.url));
       } catch (error) {
-        errorCount++;
+        errorCount += batch.length;
         this.logger.error(
-          `Ошибка анализа фото ${photoInfo.photoVkId} (${errorCount} ошибок)`,
+          `Не удалось получить ответ модерации для батча ${start / MODERATION_BATCH_SIZE + 1} (offset=${normalizedOffset + start}, size=${batch.length})`,
           error instanceof Error ? error.stack : String(error),
         );
+        continue;
+      }
+
+      if (batchResults.length !== batch.length) {
+        this.logger.warn(
+          `Количество результатов модерации (${batchResults.length}) не совпадает с количеством запросов (${batch.length}) для батча ${start / MODERATION_BATCH_SIZE + 1}`,
+        );
+      }
+
+      for (let index = 0; index < batch.length; index += 1) {
+        const photoInfo = batch[index];
+        const raw = batchResults[index];
+
+        if (raw === undefined) {
+          errorCount++;
+          this.logger.warn(
+            `Отсутствует результат модерации для фото ${photoInfo.photoVkId} в батче ${start / MODERATION_BATCH_SIZE + 1}`,
+          );
+          continue;
+        }
+
+        try {
+          const moderation = this.mapModerationResult(photoInfo, raw);
+          const suspicionLevel = await this.saveAnalysis({
+            authorId: author.id,
+            result: moderation,
+          });
+
+          successCount++;
+          const totalProcessed = successCount + errorCount;
+          this.logger.log(
+            `Фото ${photoInfo.photoVkId} проанализировано успешно (${totalProcessed}/${photosToAnalyze.length}), уровень: ${suspicionLevel}`,
+          );
+        } catch (error) {
+          errorCount++;
+          this.logger.error(
+            `Ошибка анализа фото ${photoInfo.photoVkId} (${errorCount} ошибок)`,
+            error instanceof Error ? error.stack : String(error),
+          );
+        }
       }
     }
 

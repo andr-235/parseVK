@@ -57,4 +57,5 @@ export interface PhotoAnalysisResponse {
 export interface AnalyzePhotosOptions {
   limit?: number
   force?: boolean
+  offset?: number
 }
