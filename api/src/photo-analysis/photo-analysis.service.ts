@@ -120,6 +120,7 @@ export class PhotoAnalysisService {
         `Анализ фото завершен за ${totalElapsedEmptySec}s. Статистика: успешно=${successCount}, ошибок=${errorCount}, пропущено=${skippedCount}, без URL=${noUrlCount}, всего фото=${photos.length}`,
       );
 
+      await this.markAuthorVerified(author.id);
       return this.listByVkUser(vkUserId);
     }
 
@@ -140,6 +141,7 @@ export class PhotoAnalysisService {
         `Анализ фото завершен за ${totalElapsedFailureSec}s. Статистика: успешно=${successCount}, ошибок=${errorCount}, пропущено=${skippedCount}, без URL=${noUrlCount}, всего фото=${photos.length}`,
       );
 
+      await this.markAuthorVerified(author.id);
       return this.listByVkUser(vkUserId);
     }
 
@@ -181,6 +183,7 @@ export class PhotoAnalysisService {
       `Статистика: успешно=${successCount}, ошибок=${errorCount}, пропущено=${skippedCount}, без URL=${noUrlCount}, всего фото=${photos.length}`,
     );
 
+    await this.markAuthorVerified(author.id);
     return this.listByVkUser(vkUserId);
   }
 
@@ -281,6 +284,20 @@ export class PhotoAnalysisService {
     }
 
     return author;
+  }
+
+  private async markAuthorVerified(authorId: number): Promise<void> {
+    try {
+      await this.prisma.author.update({
+        where: { id: authorId },
+        data: { verifiedAt: new Date() },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Не удалось обновить дату проверки автора ${authorId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   private async saveAnalysis(params: {

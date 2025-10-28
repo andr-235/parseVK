@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
@@ -106,6 +107,7 @@ function Authors() {
   const analyzeAuthor = usePhotoAnalysisStore((state) => state.analyzeAuthor)
   const isAnalyzing = usePhotoAnalysisStore((state) => state.isAnalyzing)
 
+  const navigate = useNavigate()
   const [analyzingVkUserId, setAnalyzingVkUserId] = useState<number | null>(null)
 
   const [searchValue, setSearchValue] = useState(storeSearch)
@@ -179,21 +181,20 @@ function Authors() {
 
       const totalPhotos = typeof author.photosCount === 'number' ? author.photosCount : null
       let analyzedTotal = author.summary.total
+      let lastSummary = author.summary
+      let hasMadeRequest = false
 
       try {
-        if (totalPhotos !== null && analyzedTotal >= totalPhotos) {
-          toast.success('Все фото уже были проанализированы ранее')
-          return
-        }
-
         while (true) {
           const remaining = totalPhotos !== null ? Math.max(totalPhotos - analyzedTotal, 0) : null
-          if (remaining !== null && remaining === 0) {
+          if (remaining !== null && remaining === 0 && hasMadeRequest) {
             break
           }
 
           const batchLimit = remaining !== null ? Math.max(Math.min(remaining, 50), 1) : 50
           const response = await analyzeAuthor(author.vkUserId, { limit: batchLimit })
+          hasMadeRequest = true
+          lastSummary = response.summary
           const newTotal = response.total
           const processedInBatch = newTotal - analyzedTotal
 
@@ -218,6 +219,25 @@ function Authors() {
           console.error('Не удалось обновить данные автора после анализа', updateError)
           toast.error('Не удалось обновить данные автора после анализа')
         }
+
+        const avatar = author.photo200 ?? author.photo100 ?? author.photo50 ?? null
+
+        navigate(`/authors/${author.vkUserId}/analysis`, {
+          state: {
+            author: {
+              vkUserId: author.vkUserId,
+              firstName: author.firstName,
+              lastName: author.lastName,
+              fullName: author.fullName,
+              avatar,
+              profileUrl: resolveProfileUrl(author),
+              screenName: author.screenName,
+              domain: author.domain,
+            },
+            summary: lastSummary,
+          },
+        })
+
         toast.success('Анализ фотографий выполнен')
       } catch (error) {
         const message =
@@ -228,7 +248,7 @@ function Authors() {
         setAnalyzingVkUserId(null)
       }
     },
-    [analyzeAuthor, fetchAuthors, isAnalyzing],
+    [analyzeAuthor, fetchAuthors, isAnalyzing, navigate],
   )
 
   const handleSortChange = useCallback(
