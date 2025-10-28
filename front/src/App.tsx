@@ -13,6 +13,7 @@ import AuthorAnalysis from './pages/AuthorAnalysis'
 import Authors from './pages/Authors'
 import Settings from './pages/Settings'
 import RealEstateReports from './pages/RealEstateReports'
+import TasksSyncProvider from './providers/TasksSyncProvider'
 
 function App() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode)
@@ -33,6 +34,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <TasksSyncProvider />
       <div className="flex min-h-screen w-full bg-background-primary text-text-primary transition-colors duration-300">
         <Sidebar title="ВК Аналитик" />
         <MainContent>

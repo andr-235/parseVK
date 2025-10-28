@@ -9,7 +9,6 @@ import { isTaskActive } from '../utils/taskProgress'
 import { Separator } from '../components/ui/separator'
 import TasksHero from './Tasks/components/TasksHero'
 import TasksTableCard from './Tasks/components/TasksTableCard'
-import { useTasksSocket } from '../hooks/useTasksSocket'
 
 function Tasks() {
   const tasks = useTasksStore((state) => state.tasks)
@@ -80,8 +79,6 @@ function Tasks() {
   useEffect(() => {
     void fetchAutomationSettings()
   }, [fetchAutomationSettings])
-
-  useTasksSocket()
 
   useEffect(() => {
     if (selectedTaskId == null) {

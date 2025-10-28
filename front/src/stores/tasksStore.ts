@@ -5,14 +5,15 @@ import type { PersistOptions } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 
 import { tasksService } from '../services/tasksService'
-import { mapResultToTaskDetails, mapSummaryToTask } from './tasksStore.mappers'
+import { queryClient } from '../lib/queryClient'
+import { queryKeys } from '../queries/queryKeys'
+import { mapResultToTaskDetails } from './tasksStore.mappers'
 import {
   ensureGroupsLoaded,
   ensureTaskDetailsStore,
   isPlainObject,
   normalizeId,
   rebuildTaskList,
-  replaceTasksCollection,
   toTaskKey,
   upsertTaskEntity
 } from './tasksStore.utils'
@@ -68,34 +69,15 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
    * Загружает список задач и синхронизирует нормализованное состояние.
    */
   fetchTasks: async () => {
-    set((state) => {
-      state.isLoading = true
-    })
-
     try {
-      const summaries = await tasksService.fetchTasks()
-
-      const mappedTasks = summaries.map((item, index) => {
-        const mapped = mapSummaryToTask(item)
-
-        if (import.meta.env.DEV) {
-          console.debug('[TasksStore] mapped summary', index, { input: item, output: mapped })
-        }
-
-        return mapped
-      })
-
-      set((state) => {
-        state.isLoading = false
-        replaceTasksCollection(state, mappedTasks)
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.tasks,
+        refetchType: 'active'
       })
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.error('[TasksStore] fetchTasks error:', error)
+        console.error('[TasksStore] fetchTasks refetch error:', error)
       }
-      set((state) => {
-        state.isLoading = false
-      })
     }
   },
 
@@ -131,6 +113,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
         upsertTaskEntity(state, task, { position: 'start' })
         ensureTaskDetailsStore(state)[toTaskKey(task.id)] = details
       })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks, refetchType: 'active' })
 
       return task.id
     } catch (error) {
@@ -161,6 +144,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
         upsertTaskEntity(state, task, exists ? {} : { position: 'start' })
         ensureTaskDetailsStore(state)[taskKey] = details
       })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks, refetchType: 'active' })
 
       return true
     } catch (error) {
@@ -187,6 +171,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
         upsertTaskEntity(state, task, exists ? {} : { position: 'start' })
         ensureTaskDetailsStore(state)[taskKey] = details
       })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks, refetchType: 'active' })
 
       return true
     } catch (error) {
@@ -216,6 +201,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
           delete state.taskDetails[key]
         }
       })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks, refetchType: 'active' })
 
       return true
     } catch (error) {

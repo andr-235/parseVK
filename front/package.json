@@ -12,6 +12,9 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
+    "@tanstack/query-sync-storage-persister": "^5.62.10",
+    "@tanstack/react-query": "^5.62.10",
+    "@tanstack/react-query-persist-client": "^5.62.10",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",
