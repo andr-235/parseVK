@@ -94,6 +94,13 @@ export const useRealEstateStore = create<RealEstateState>((set, get) => ({
       await realEstateService.downloadReport(filters, {
         format: options?.format,
       })
+      return
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[realEstateStore] downloadReport error', error)
+      }
+
+      return
     } finally {
       set({ isExporting: false })
     }

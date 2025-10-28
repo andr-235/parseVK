@@ -285,8 +285,8 @@ function RealEstateReports() {
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
-              onClick={() => {
-                void downloadReport({ format: reportFormat })
+              onClick={async () => {
+                await downloadReport({ format: reportFormat })
               }}
               disabled={isExporting || listings.length === 0}
             >
