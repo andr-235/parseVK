@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SuspicionLevel as PrismaSuspicionLevel } from '@prisma/client';
-import { Agent as HttpsAgent } from 'node:https';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest, type RequestOptions as HttpsRequestOptions } from 'node:https';
 import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import type { AnalyzePhotosDto } from './dto/analyze-photos.dto';
@@ -13,6 +14,7 @@ import type {
 
 const MAX_PHOTO_LIMIT = 200;
 const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL = 'https://192.168.88.12/webhook/image-moderation';
+const DEFAULT_IMAGE_MODERATION_TIMEOUT_MS = 15000;
 const KNOWN_CATEGORIES = ['violence', 'drugs', 'weapons', 'nsfw', 'extremism', 'hate speech'] as const;
 
 interface PhotoForModeration {
@@ -29,8 +31,6 @@ interface ModerationResult {
   confidence: number | null;
   rawResponse: unknown;
 }
-
-type FetchOptions = RequestInit & { agent?: HttpsAgent };
 
 @Injectable()
 export class PhotoAnalysisService {
@@ -356,37 +356,112 @@ export class PhotoAnalysisService {
         ? allowSelfSignedEnv.toLowerCase() === 'true'
         : webhookUrl === DEFAULT_IMAGE_MODERATION_WEBHOOK_URL;
 
-    let agent: HttpsAgent | undefined;
+    const payload = JSON.stringify({ imageUrls });
 
-    if (webhookUrl.startsWith('https://') && allowSelfSigned) {
-      agent = new HttpsAgent({ rejectUnauthorized: false });
+    const rawResponse = await this.sendModerationRequest({
+      url: webhookUrl,
+      payload,
+      allowSelfSigned,
+    });
+
+    let data: unknown;
+
+    try {
+      data = rawResponse.length ? JSON.parse(rawResponse) : null;
+    } catch (error) {
+      throw new Error('Сервис модерации вернул некорректный JSON');
     }
-
-    const options: FetchOptions = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ imageUrls }),
-    };
-
-    if (agent) {
-      options.agent = agent;
-    }
-
-    const response = await fetch(webhookUrl, options);
-
-    if (!response.ok) {
-      throw new Error(`Сервис модерации вернул статус ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
 
     if (!data || typeof data !== 'object' || !Array.isArray((data as { results?: unknown[] }).results)) {
       throw new Error('Ответ сервиса модерации не содержит массива results');
     }
 
     return ((data as { results?: unknown[] }).results as unknown[]) ?? [];
+  }
+
+  private async sendModerationRequest(params: {
+    url: string;
+    payload: string;
+    allowSelfSigned: boolean;
+  }): Promise<string> {
+    const targetUrl = new URL(params.url);
+    const isHttps = targetUrl.protocol === 'https:';
+    const requestFn = isHttps ? httpsRequest : httpRequest;
+    const timeoutMs = this.resolveModerationTimeout();
+
+    const options: HttpsRequestOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': String(Buffer.byteLength(params.payload)),
+      },
+    };
+
+    if (isHttps && params.allowSelfSigned) {
+      options.rejectUnauthorized = false;
+    }
+
+    return new Promise<string>((resolve, reject) => {
+      const request = requestFn(targetUrl, options, (response) => {
+        let responseBody = '';
+
+        response.setEncoding('utf8');
+        response.on('data', (chunk: string) => {
+          responseBody += chunk;
+        });
+        response.on('end', () => {
+          const statusCode = response.statusCode ?? 0;
+          const statusMessage = response.statusMessage ?? '';
+
+          if (statusCode < 200 || statusCode >= 300) {
+            reject(
+              new Error(
+                `Сервис модерации вернул статус ${statusCode}: ${statusMessage || 'Неизвестная ошибка'}`,
+              ),
+            );
+            return;
+          }
+
+          resolve(responseBody);
+        });
+        response.on('error', (error) => {
+          reject(new Error(`Ошибка чтения ответа сервиса модерации: ${error instanceof Error ? error.message : String(error)}`));
+        });
+      });
+
+      request.on('error', (error) => {
+        reject(new Error(`Ошибка при запросе к сервису модерации: ${error.message}`));
+      });
+
+      if (timeoutMs > 0 && Number.isFinite(timeoutMs)) {
+        request.setTimeout(timeoutMs, () => {
+          request.destroy(new Error(`Сервис модерации не ответил за ${timeoutMs}мс`));
+        });
+      }
+
+      request.write(params.payload);
+      request.end();
+    });
+  }
+
+  private resolveModerationTimeout(): number {
+    const timeoutEnv = process.env.IMAGE_MODERATION_TIMEOUT_MS;
+
+    if (!timeoutEnv) {
+      return DEFAULT_IMAGE_MODERATION_TIMEOUT_MS;
+    }
+
+    const parsed = Number(timeoutEnv);
+
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+
+    this.logger.warn(
+      `Некорректное значение IMAGE_MODERATION_TIMEOUT_MS: ${timeoutEnv}. Используется значение по умолчанию ${DEFAULT_IMAGE_MODERATION_TIMEOUT_MS}мс`,
+    );
+
+    return DEFAULT_IMAGE_MODERATION_TIMEOUT_MS;
   }
 
   private mapModerationResult(photo: PhotoForModeration, raw: unknown): ModerationResult {
