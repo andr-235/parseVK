@@ -275,3 +275,33 @@ model WatchlistAuthor {
   @@index([status])
   @@index([settingsId])
 }
+
+model ListingSource {
+  id        Int                   @id @default(autoincrement())
+  name      String                @unique
+  baseUrl   String?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  listings  RealEstateListing[]
+}
+
+model RealEstateListing {
+  id              Int           @id @default(autoincrement())
+  sourceId        Int
+  externalId      String
+  title           String
+  price           Int?
+  address         String?
+  url             String
+  propertyDetails Json?
+  contentHash     String
+  publishedAt     DateTime?
+  checkedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  source          ListingSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, externalId])
+  @@index([contentHash])
+  @@index([publishedAt(sort: Desc)])
+}
