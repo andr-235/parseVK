@@ -15,6 +15,8 @@ import type {
 const MAX_PHOTO_LIMIT = 200;
 const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL = 'https://192.168.88.12/webhook/image-moderation';
 const DEFAULT_IMAGE_MODERATION_TIMEOUT_MS = 15000;
+const DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS = 2000;
+const MAX_IMAGE_MODERATION_TIMEOUT_MS = 120000;
 const KNOWN_CATEGORIES = ['violence', 'drugs', 'weapons', 'nsfw', 'extremism', 'hate speech'] as const;
 
 interface PhotoForModeration {
@@ -362,6 +364,7 @@ export class PhotoAnalysisService {
       url: webhookUrl,
       payload,
       allowSelfSigned,
+      imageCount: imageUrls.length,
     });
 
     let data: unknown;
@@ -383,11 +386,12 @@ export class PhotoAnalysisService {
     url: string;
     payload: string;
     allowSelfSigned: boolean;
+    imageCount: number;
   }): Promise<string> {
     const targetUrl = new URL(params.url);
     const isHttps = targetUrl.protocol === 'https:';
     const requestFn = isHttps ? httpsRequest : httpRequest;
-    const timeoutMs = this.resolveModerationTimeout();
+    const timeoutMs = this.resolveModerationTimeout(params.imageCount);
 
     const options: HttpsRequestOptions = {
       method: 'POST',
@@ -444,11 +448,11 @@ export class PhotoAnalysisService {
     });
   }
 
-  private resolveModerationTimeout(): number {
+  private resolveModerationTimeout(imageCount: number): number {
     const timeoutEnv = process.env.IMAGE_MODERATION_TIMEOUT_MS;
 
     if (!timeoutEnv) {
-      return DEFAULT_IMAGE_MODERATION_TIMEOUT_MS;
+      return this.calculateDefaultModerationTimeout(imageCount);
     }
 
     const parsed = Number(timeoutEnv);
@@ -457,11 +461,21 @@ export class PhotoAnalysisService {
       return parsed;
     }
 
+    const fallbackTimeout = this.calculateDefaultModerationTimeout(imageCount);
     this.logger.warn(
-      `Некорректное значение IMAGE_MODERATION_TIMEOUT_MS: ${timeoutEnv}. Используется значение по умолчанию ${DEFAULT_IMAGE_MODERATION_TIMEOUT_MS}мс`,
+      `Некорректное значение IMAGE_MODERATION_TIMEOUT_MS: ${timeoutEnv}. Используется значение по умолчанию ${fallbackTimeout}мс`,
     );
 
-    return DEFAULT_IMAGE_MODERATION_TIMEOUT_MS;
+    return fallbackTimeout;
+  }
+
+  private calculateDefaultModerationTimeout(imageCount: number): number {
+    const normalizedCount = Number.isFinite(imageCount) && imageCount > 0 ? Math.floor(imageCount) : 1;
+    const dynamicTimeout =
+      DEFAULT_IMAGE_MODERATION_TIMEOUT_MS +
+      Math.max(0, normalizedCount - 1) * DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS;
+
+    return Math.min(dynamicTimeout, MAX_IMAGE_MODERATION_TIMEOUT_MS);
   }
 
   private mapModerationResult(photo: PhotoForModeration, raw: unknown): ModerationResult {
