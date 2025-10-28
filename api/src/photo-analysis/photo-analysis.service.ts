@@ -14,9 +14,9 @@ import type {
 
 const MAX_PHOTO_LIMIT = 200;
 const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL = 'https://192.168.88.12/webhook/image-moderation';
-const DEFAULT_IMAGE_MODERATION_TIMEOUT_BASE_MS = 15000;
-const DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS = 3000;
-const DEFAULT_IMAGE_MODERATION_MAX_TIMEOUT_MS = 180000;
+const DEFAULT_IMAGE_MODERATION_TIMEOUT_BASE_MS = 0;
+const DEFAULT_IMAGE_MODERATION_TIMEOUT_PER_IMAGE_MS = 0;
+const DEFAULT_IMAGE_MODERATION_MAX_TIMEOUT_MS: number | null = null;
 const KNOWN_CATEGORIES = ['violence', 'drugs', 'weapons', 'nsfw', 'extremism', 'hate speech'] as const;
 
 interface PhotoForModeration {
@@ -533,7 +533,7 @@ export class PhotoAnalysisService {
     return fallback;
   }
 
-  private parseMaxTimeoutEnv(envName: string, fallback: number): number | null {
+  private parseMaxTimeoutEnv(envName: string, fallback: number | null): number | null {
     const raw = process.env[envName];
 
     if (typeof raw !== 'string' || raw.trim().length === 0) {
@@ -552,8 +552,10 @@ export class PhotoAnalysisService {
       return Math.floor(value);
     }
 
+    const fallbackLabel = fallback === null ? 'без ограничения' : `${fallback}мс`;
+
     this.logger.warn(
-      `Некорректное значение ${envName}: ${raw}. Используется значение по умолчанию ${fallback}мс`,
+      `Некорректное значение ${envName}: ${raw}. Используется значение по умолчанию ${fallbackLabel}`,
     );
 
     return fallback;
