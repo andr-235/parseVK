@@ -19,7 +19,7 @@ import {
 import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Spinner } from '@/components/ui/spinner'
 import { useAuthorsStore, usePhotoAnalysisStore } from '@/stores'
-import type { AuthorCard, AuthorSortField } from '@/types'
+import type { AuthorCard, AuthorSortField, PhotoAnalysisSummary } from '@/types'
 
 const STATUS_FILTER_OPTIONS: Array<{
   label: string
@@ -108,6 +108,35 @@ function Authors() {
   const isAnalyzing = usePhotoAnalysisStore((state) => state.isAnalyzing)
 
   const navigate = useNavigate()
+  const navigateToAuthorDetails = useCallback(
+    (author: AuthorCard, summary: PhotoAnalysisSummary) => {
+      const avatar = author.photo200 ?? author.photo100 ?? author.photo50 ?? null
+
+      navigate(`/authors/${author.vkUserId}/analysis`, {
+        state: {
+          author: {
+            vkUserId: author.vkUserId,
+            firstName: author.firstName,
+            lastName: author.lastName,
+            fullName: author.fullName,
+            avatar,
+            profileUrl: resolveProfileUrl(author),
+            screenName: author.screenName,
+            domain: author.domain,
+          },
+          summary,
+        },
+      })
+    },
+    [navigate],
+  )
+
+  const handleOpenDetails = useCallback(
+    (author: AuthorCard) => {
+      navigateToAuthorDetails(author, author.summary)
+    },
+    [navigateToAuthorDetails],
+  )
   const [analyzingVkUserId, setAnalyzingVkUserId] = useState<number | null>(null)
 
   const [searchValue, setSearchValue] = useState(storeSearch)
@@ -220,24 +249,7 @@ function Authors() {
           toast.error('Не удалось обновить данные автора после анализа')
         }
 
-        const avatar = author.photo200 ?? author.photo100 ?? author.photo50 ?? null
-
-        navigate(`/authors/${author.vkUserId}/analysis`, {
-          state: {
-            author: {
-              vkUserId: author.vkUserId,
-              firstName: author.firstName,
-              lastName: author.lastName,
-              fullName: author.fullName,
-              avatar,
-              profileUrl: resolveProfileUrl(author),
-              screenName: author.screenName,
-              domain: author.domain,
-            },
-            summary: lastSummary,
-          },
-        })
-
+        navigateToAuthorDetails(author, lastSummary)
         toast.success('Анализ фотографий выполнен')
       } catch (error) {
         const message =
@@ -248,7 +260,7 @@ function Authors() {
         setAnalyzingVkUserId(null)
       }
     },
-    [analyzeAuthor, fetchAuthors, isAnalyzing, navigate],
+    [analyzeAuthor, fetchAuthors, isAnalyzing, navigateToAuthorDetails],
   )
 
   const handleSortChange = useCallback(
@@ -475,21 +487,30 @@ function Authors() {
                   <TableCell>{formatDateTimeCell(author.lastSeenAt)}</TableCell>
                   <TableCell>{formatDateTimeCell(author.verifiedAt)}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAnalyzePhotos(author)}
-                      disabled={isAnalyzing && analyzingVkUserId === author.vkUserId}
-                    >
-                      {isAnalyzing && analyzingVkUserId === author.vkUserId ? (
-                        <span className="flex items-center gap-2">
-                          <Spinner className="h-4 w-4" />
-                          Анализ...
-                        </span>
-                      ) : (
-                        'Анализ фото'
-                      )}
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleOpenDetails(author)}
+                      >
+                        Открыть детали
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAnalyzePhotos(author)}
+                        disabled={isAnalyzing && analyzingVkUserId === author.vkUserId}
+                      >
+                        {isAnalyzing && analyzingVkUserId === author.vkUserId ? (
+                          <span className="flex items-center gap-2">
+                            <Spinner className="h-4 w-4" />
+                            Анализ...
+                          </span>
+                        ) : (
+                          'Анализ фото'
+                        )}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               )
