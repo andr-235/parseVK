@@ -5,8 +5,6 @@ import { CookieJar } from 'tough-cookie';
 import type { Cookie } from 'tough-cookie';
 import type { Browser, Page } from 'puppeteer';
 type PuppeteerCookieParam = Parameters<Page['setCookie']>[0];
-type PuppeteerModule = typeof import('puppeteer');
-type PuppeteerLaunchOptions = Parameters<PuppeteerModule['launch']>[0];
 import { RealEstateRepository } from './real-estate.repository';
 import { RealEstateSource } from './dto/real-estate-source.enum';
 import type { RealEstateScrapeOptionsDto } from './dto/real-estate-scrape-options.dto';
@@ -60,6 +58,16 @@ const HEADLESS_LAUNCH_ARGS = [
   '--disable-software-rasterizer',
   '--no-first-run',
 ] as const;
+interface PuppeteerLike {
+  executablePath?: () => string;
+}
+interface HeadlessLaunchOptions {
+  headless?: boolean;
+  args?: string[];
+  defaultViewport?: { width: number; height: number };
+  dumpio?: boolean;
+  executablePath?: string;
+}
 
 interface RateLimitContext {
   url: string;
@@ -796,8 +804,9 @@ export class RealEstateScraperService implements OnModuleDestroy {
   private async launchHeadlessBrowser(): Promise<Browser> {
     try {
       const puppeteer = await import('puppeteer');
+      const executablePath = this.resolveHeadlessExecutablePath(puppeteer);
       const browser = await puppeteer.launch(
-        this.buildHeadlessLaunchOptions(puppeteer),
+        this.buildHeadlessLaunchOptions(executablePath),
       );
 
       browser.once('disconnected', () => {
@@ -816,11 +825,10 @@ export class RealEstateScraperService implements OnModuleDestroy {
   }
 
   private buildHeadlessLaunchOptions(
-    puppeteerModule: PuppeteerModule,
-  ): PuppeteerLaunchOptions {
-    const executablePath = this.resolveHeadlessExecutablePath(puppeteerModule);
-    const options: PuppeteerLaunchOptions = {
-      headless: 'new',
+    executablePath?: string,
+  ): HeadlessLaunchOptions {
+    const options: HeadlessLaunchOptions = {
+      headless: true,
       args: [...HEADLESS_LAUNCH_ARGS],
       defaultViewport: { ...HEADLESS_DEFAULT_VIEWPORT },
     };
@@ -837,7 +845,7 @@ export class RealEstateScraperService implements OnModuleDestroy {
   }
 
   private resolveHeadlessExecutablePath(
-    puppeteerModule: PuppeteerModule,
+    puppeteerModule: PuppeteerLike,
   ): string | undefined {
     const envPath =
       process.env.PUPPETEER_EXECUTABLE_PATH ?? process.env.CHROME_BIN ?? null;
