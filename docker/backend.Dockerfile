@@ -38,9 +38,15 @@ ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
 ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chrome
+ENV CHROME_BIN=/usr/bin/chrome
 
 RUN set -eux; \
-    apk add --no-cache chromium; \
+    apk add --no-cache \
+      chromium \
+      nss \
+      freetype \
+      harfbuzz \
+      ttf-freefont; \
     CHROMIUM_BIN="$(command -v chromium-browser || true)"; \
     if [ -z "$CHROMIUM_BIN" ]; then \
       CHROMIUM_BIN="$(command -v chromium || true)"; \

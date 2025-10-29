@@ -5,6 +5,8 @@ import { CookieJar } from 'tough-cookie';
 import type { Cookie } from 'tough-cookie';
 import type { Browser, Page } from 'puppeteer';
 type PuppeteerCookieParam = Parameters<Page['setCookie']>[0];
+type PuppeteerModule = typeof import('puppeteer');
+type PuppeteerLaunchOptions = Parameters<PuppeteerModule['launch']>[0];
 import { RealEstateRepository } from './real-estate.repository';
 import { RealEstateSource } from './dto/real-estate-source.enum';
 import type { RealEstateScrapeOptionsDto } from './dto/real-estate-scrape-options.dto';
@@ -42,6 +44,22 @@ const DEFAULT_USER_AGENT =
 const HEADLESS_ALLOWED_HOSTS = new Set(['youla.ru']);
 const HEADLESS_NAVIGATION_TIMEOUT_MS = 45000;
 const HEADLESS_WAIT_AFTER_LOAD_MS = 800;
+const HEADLESS_DEFAULT_VIEWPORT = { width: 1280, height: 720 } as const;
+const HEADLESS_LAUNCH_ARGS = [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-dev-shm-usage',
+  '--no-zygote',
+  '--disable-gpu',
+  '--disable-extensions',
+  '--disable-background-networking',
+  '--disable-default-apps',
+  '--disable-sync',
+  '--metrics-recording-only',
+  '--mute-audio',
+  '--disable-software-rasterizer',
+  '--no-first-run',
+] as const;
 
 interface RateLimitContext {
   url: string;
@@ -778,20 +796,9 @@ export class RealEstateScraperService implements OnModuleDestroy {
   private async launchHeadlessBrowser(): Promise<Browser> {
     try {
       const puppeteer = await import('puppeteer');
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--single-process',
-        ],
-        defaultViewport: {
-          width: 1280,
-          height: 720,
-        },
-      });
+      const browser = await puppeteer.launch(
+        this.buildHeadlessLaunchOptions(puppeteer),
+      );
 
       browser.once('disconnected', () => {
         this.headlessBrowser = null;
@@ -802,10 +809,63 @@ export class RealEstateScraperService implements OnModuleDestroy {
     } catch (error) {
       this.headlessBrowserPromise = null;
       this.logger.error(
-        `Не удалось запустить headless браузер: ${(error as Error).message}`,
+        `Не удалось запустить headless браузер (${this.getHeadlessExecutableHint()}): ${(error as Error).message}`,
       );
       throw error;
     }
+  }
+
+  private buildHeadlessLaunchOptions(
+    puppeteerModule: PuppeteerModule,
+  ): PuppeteerLaunchOptions {
+    const executablePath = this.resolveHeadlessExecutablePath(puppeteerModule);
+    const options: PuppeteerLaunchOptions = {
+      headless: 'new',
+      args: [...HEADLESS_LAUNCH_ARGS],
+      defaultViewport: { ...HEADLESS_DEFAULT_VIEWPORT },
+    };
+
+    if (process.env.PUPPETEER_DUMPIO === '1') {
+      options.dumpio = true;
+    }
+
+    if (executablePath) {
+      options.executablePath = executablePath;
+    }
+
+    return options;
+  }
+
+  private resolveHeadlessExecutablePath(
+    puppeteerModule: PuppeteerModule,
+  ): string | undefined {
+    const envPath =
+      process.env.PUPPETEER_EXECUTABLE_PATH ?? process.env.CHROME_BIN ?? null;
+
+    if (envPath) {
+      return envPath;
+    }
+
+    if (typeof puppeteerModule.executablePath === 'function') {
+      try {
+        const resolved = puppeteerModule.executablePath();
+        return resolved || undefined;
+      } catch (error) {
+        this.logger.warn(
+          `Не удалось определить путь к Chromium через Puppeteer: ${(error as Error).message}`,
+        );
+      }
+    }
+
+    return undefined;
+  }
+
+  private getHeadlessExecutableHint(): string {
+    return (
+      process.env.PUPPETEER_EXECUTABLE_PATH ??
+      process.env.CHROME_BIN ??
+      'auto-detect'
+    );
   }
 
   private async closeHeadlessBrowser(): Promise<void> {
