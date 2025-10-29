@@ -4,13 +4,23 @@ import { load, type CheerioAPI, type Cheerio as CheerioCollection } from 'cheeri
 import { RealEstateRepository } from './real-estate.repository';
 import { RealEstateSource } from './dto/real-estate-source.enum';
 import type { RealEstateScrapeOptionsDto } from './dto/real-estate-scrape-options.dto';
-import type { RealEstateListingDto } from './dto/real-estate-listing.dto';
+import type {
+  RealEstateListingDto,
+  RealEstateListingEntity,
+} from './dto/real-estate-listing.dto';
 import type { RealEstateSyncResultDto } from './dto/real-estate-sync-result.dto';
 import type { RealEstateDailyCollectResultDto } from './dto/real-estate-daily-collect-result.dto';
 
-const DEFAULT_AVITO_URL = 'https://www.avito.ru/rossiya/nedvizhimost';
-const DEFAULT_YOULA_URL =
-  'https://youla.ru/moskva/nedvizhimost/prodazha-kvartir';
+const DEFAULT_AVITO_URL =
+  'https://www.avito.ru/birobidzhan/kvartiry/sdam-ASgBAgICAUSSA8gQ';
+const DEFAULT_YOULA_URLS = [
+  'https://youla.ru/birobidzhan/nedvijimost/arenda-kvartiri',
+  'https://youla.ru/birobidzhan/nedvijimost/arenda-komnati',
+  'https://youla.ru/birobidzhan/nedvijimost/arenda-doma',
+  'https://youla.ru/birobidzhan/nedvijimost/arenda-kvartiri-posutochno',
+  'https://youla.ru/birobidzhan/nedvijimost/arenda-komnati-posutochno',
+  'https://youla.ru/birobidzhan/nedvijimost/arenda-doma-posutochno',
+];
 const DEFAULT_MAX_PAGES = 5;
 const DEFAULT_REQUEST_DELAY_MS = 350;
 const FETCH_MAX_RETRIES = 4;
@@ -86,16 +96,51 @@ export class RealEstateScraperService {
   async scrapeYoula(
     options: RealEstateScrapeOptionsDto = {},
   ): Promise<RealEstateSyncResultDto> {
-    const config: ScrapeConfig = {
-      source: RealEstateSource.YOULA,
-      baseUrl: options.baseUrl ?? DEFAULT_YOULA_URL,
-      pageParam: 'page',
-      nextPageSelector: 'a[data-test-pagination-link="next"]',
-      options,
-      parser: (api, pageUrl) => this.parseYoulaPage(api, pageUrl),
+    const baseUrls =
+      options.baseUrl !== undefined ? [options.baseUrl] : DEFAULT_YOULA_URLS;
+    const created: RealEstateListingEntity[] = [];
+    const updated: RealEstateListingEntity[] = [];
+    const createdIds = new Set<number>();
+    const updatedIds = new Set<number>();
+    let scrapedCount = 0;
+
+    const addUnique = (
+      entities: RealEstateListingEntity[],
+      target: RealEstateListingEntity[],
+      seen: Set<number>,
+    ) => {
+      for (const entity of entities) {
+        if (seen.has(entity.id)) {
+          continue;
+        }
+
+        seen.add(entity.id);
+        target.push(entity);
+      }
     };
 
-    return this.scrapeSource(config);
+    for (const baseUrl of baseUrls) {
+      const config: ScrapeConfig = {
+        source: RealEstateSource.YOULA,
+        baseUrl,
+        pageParam: 'page',
+        nextPageSelector: 'a[data-test-pagination-link="next"]',
+        options,
+        parser: (api, pageUrl) => this.parseYoulaPage(api, pageUrl),
+      };
+
+      const result = await this.scrapeSource(config);
+      scrapedCount += result.scrapedCount;
+      addUnique(result.created, created, createdIds);
+      addUnique(result.updated, updated, updatedIds);
+    }
+
+    return {
+      source: RealEstateSource.YOULA,
+      scrapedCount,
+      created,
+      updated,
+    };
   }
 
   private async scrapeSource({
