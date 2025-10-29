@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
+import axios, {
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type AxiosError,
+} from 'axios';
 import { load, type CheerioAPI, type Cheerio as CheerioCollection } from 'cheerio';
 import { RealEstateRepository } from './real-estate.repository';
 import { RealEstateSource } from './dto/real-estate-source.enum';
@@ -31,6 +35,7 @@ const FETCH_MAX_RETRIES = 4;
 const RATE_LIMIT_BASE_DELAY_MS = 1500;
 const RATE_LIMIT_STATUS_CODES = new Set([403, 429]);
 const CAPTCHA_MARKERS = ['\u0434\u043e\u0441\u0442\u0443\u043f \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d', 'h-captcha', 'captcha'];
+const NETWORK_ERROR_CODES = new Set(['ECONNRESET', 'ECONNABORTED', 'ETIMEDOUT', 'EPIPE']);
 
 interface RateLimitContext {
   url: string;
@@ -426,22 +431,40 @@ export class RealEstateScraperService {
           throw error;
         }
 
-        const status = error.response?.status;
+        const axiosError = error as AxiosError;
+        const status = axiosError.response?.status;
+        const code = (axiosError as { code?: string }).code;
+
+        if (code && NETWORK_ERROR_CODES.has(code)) {
+          const retryDelay = this.calculateRateLimitDelay(attempt);
+          this.logger.warn(
+            `${this.getHostname(url)}: сетевой сбой ${code}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${retryDelay} мс перед повтором`,
+          );
+
+          if (attempt === FETCH_MAX_RETRIES) {
+            throw new Error(
+              `Не удалось загрузить страницу ${url}: соединение прерывается (${code})`,
+            );
+          }
+
+          await this.delay(retryDelay);
+          continue;
+        }
 
         if (
           status === 404 &&
-          typeof error.response?.data === 'string' &&
-          error.response.data.trim().length > 0
+          typeof axiosError.response?.data === 'string' &&
+          axiosError.response.data.trim().length > 0
         ) {
           this.logger.warn(
             `Получен статус 404 от ${url}, продолжаю обработку тела ответа`,
           );
-          return error.response.data;
+          return axiosError.response.data;
         }
 
         if (status && RATE_LIMIT_STATUS_CODES.has(status)) {
           const retryAfterHeader =
-            (error.response as {
+            (axiosError.response as {
               headers?: Record<string, string | string[] | undefined>;
             })?.headers?.['retry-after'];
           const delayMs =
@@ -469,10 +492,10 @@ export class RealEstateScraperService {
         }
 
         this.logger.warn(
-          `Не удалось загрузить страницу ${url}: ${error.message}`,
+          `Не удалось загрузить страницу ${url}: ${axiosError.message}`,
         );
 
-        throw error;
+        throw axiosError;
       }
     }
 
