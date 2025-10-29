@@ -13,6 +13,17 @@ const DEFAULT_YOULA_URL =
   'https://youla.ru/moskva/nedvizhimost/prodazha-kvartir';
 const DEFAULT_MAX_PAGES = 5;
 const DEFAULT_REQUEST_DELAY_MS = 350;
+const FETCH_MAX_RETRIES = 4;
+const RATE_LIMIT_BASE_DELAY_MS = 1500;
+const RATE_LIMIT_STATUS_CODES = new Set([403, 429]);
+const CAPTCHA_MARKERS = ['\u0434\u043e\u0441\u0442\u0443\u043f \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d', 'h-captcha', 'captcha'];
+
+class RateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RateLimitError';
+  }
+}
 
 interface FilteredListingsResult {
   accepted: RealEstateListingDto[];
@@ -40,6 +51,7 @@ export class RealEstateScraperService {
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
           '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
       },
       timeout: 10000,
     });
@@ -103,7 +115,21 @@ export class RealEstateScraperService {
 
     for (let page = 1; page <= maxPages; page += 1) {
       const pageUrl = this.buildPagedUrl(baseUrl, pageParam, page);
-      const html = await this.fetchPage(pageUrl);
+      let html: string;
+
+      try {
+        html = await this.fetchPage(pageUrl);
+      } catch (error) {
+        if (error instanceof RateLimitError) {
+          this.logger.warn(
+            `Получен ответ об ограничении при обращении к ${pageUrl}, дальнейшие запросы прерваны`,
+          );
+          break;
+        }
+
+        throw error;
+      }
+
       const api = load(html);
       const parsedListings = parser(api, pageUrl);
       const { accepted, shouldStop } = this.filterByDate(
@@ -303,18 +329,63 @@ export class RealEstateScraperService {
   }
 
   private async fetchPage(url: string): Promise<string> {
-    try {
-      const response = await this.http.get<string>(url);
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError?.(error)) {
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= FETCH_MAX_RETRIES; attempt += 1) {
+      try {
+        const response = await this.http.get<string>(url);
+        const html = response.data;
+
+        if (this.containsCaptcha(html)) {
+          throw new RateLimitError(
+            `Avito вернул страницу с капчей при запросе ${url}`,
+          );
+        }
+
+        return html;
+      } catch (error) {
+        lastError = error;
+
+        if (!axios.isAxiosError(error)) {
+          throw error;
+        }
+
+        const status = error.response?.status;
+
+        if (status && RATE_LIMIT_STATUS_CODES.has(status)) {
+          const retryAfterHeader =
+            (error.response as {
+              headers?: Record<string, string | string[] | undefined>;
+            })?.headers?.['retry-after'];
+          const delayMs =
+            this.extractRetryAfterMs(retryAfterHeader) ??
+            this.calculateRateLimitDelay(attempt);
+
+          this.logger.warn(
+            `Avito ответил статусом ${status} для ${url}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${delayMs} мс перед повтором`,
+          );
+
+          if (attempt === FETCH_MAX_RETRIES) {
+            throw new RateLimitError(
+              `Не удалось загрузить страницу ${url} из-за ограничения по запросам`,
+            );
+          }
+
+          await this.delay(delayMs);
+          continue;
+        }
+
         this.logger.warn(
           `Не удалось загрузить страницу ${url}: ${error.message}`,
         );
-      }
 
-      throw error;
+        throw error;
+      }
     }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error(`Не удалось загрузить страницу ${url}`);
   }
 
   private buildPagedUrl(baseUrl: string, pageParam: string, page: number): string {
@@ -395,6 +466,33 @@ export class RealEstateScraperService {
     } catch (error) {
       return href;
     }
+  }
+
+  private containsCaptcha(html: string): boolean {
+    const lower = html.toLowerCase();
+    return CAPTCHA_MARKERS.some((marker) => lower.includes(marker));
+  }
+
+  private calculateRateLimitDelay(attempt: number): number {
+    const multiplier = Math.max(attempt, 1);
+    return RATE_LIMIT_BASE_DELAY_MS * multiplier;
+  }
+
+  private extractRetryAfterMs(
+    value: string | string[] | undefined,
+  ): number | null {
+    if (!value) {
+      return null;
+    }
+
+    const raw = Array.isArray(value) ? value[0] : value;
+    const seconds = Number.parseInt(raw, 10);
+
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      return null;
+    }
+
+    return seconds * 1000;
   }
 
   private async delay(ms: number): Promise<void> {
