@@ -342,6 +342,12 @@ export class RealEstateScraperService {
           );
         }
 
+        if (response.status === 404) {
+          this.logger.warn(
+            `Получен статус 404 от ${url}, продолжаю обработку тела ответа`,
+          );
+        }
+
         return html;
       } catch (error) {
         lastError = error;
@@ -351,6 +357,17 @@ export class RealEstateScraperService {
         }
 
         const status = error.response?.status;
+
+        if (
+          status === 404 &&
+          typeof error.response?.data === 'string' &&
+          error.response.data.trim().length > 0
+        ) {
+          this.logger.warn(
+            `Получен статус 404 от ${url}, продолжаю обработку тела ответа`,
+          );
+          return error.response.data;
+        }
 
         if (status && RATE_LIMIT_STATUS_CODES.has(status)) {
           const retryAfterHeader =
