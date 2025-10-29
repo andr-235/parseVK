@@ -4,10 +4,6 @@ import { RealEstateSource } from '../dto/real-estate-source.enum';
 import type { RealEstateListingEntity } from '../dto/real-estate-listing.dto';
 
 describe('RealEstateScraperService', () => {
-  const gotModule = require('got') as {
-    __setGetHandler: (handler: jest.Mock) => void;
-  };
-
   const createEntity = (
     source: RealEstateSource,
     externalId: string,
@@ -32,22 +28,25 @@ describe('RealEstateScraperService', () => {
     ...overrides,
   });
 
-  let httpGetMock: jest.Mock;
   let repository: { syncListings: jest.Mock };
   let service: RealEstateScraperService;
+  let fetchPageSpy: jest.SpyInstance<Promise<string>, [string]>;
 
   beforeEach(() => {
-    httpGetMock = jest.fn();
-    gotModule.__setGetHandler(httpGetMock);
     repository = {
       syncListings: jest.fn().mockResolvedValue({ created: [], updated: [] }),
     };
     service = new RealEstateScraperService(
       repository as unknown as RealEstateRepository,
     );
+    fetchPageSpy = jest.spyOn(
+      service as unknown as { fetchPage: (url: string) => Promise<string> },
+      'fetchPage',
+    );
   });
 
   afterEach(() => {
+    fetchPageSpy.mockRestore();
     jest.clearAllMocks();
   });
 
@@ -93,16 +92,8 @@ describe('RealEstateScraperService', () => {
       </html>
     `;
 
-    httpGetMock.mockResolvedValueOnce({
-      body: avitoPage1,
-      statusCode: 200,
-      headers: {},
-    });
-    httpGetMock.mockResolvedValueOnce({
-      body: avitoPage2,
-      statusCode: 200,
-      headers: {},
-    });
+    fetchPageSpy.mockResolvedValueOnce(avitoPage1);
+    fetchPageSpy.mockResolvedValueOnce(avitoPage2);
 
     const createdRecord = createEntity(RealEstateSource.AVITO, 'avito-1', {
       title: 'Квартира у метро',
@@ -127,15 +118,13 @@ describe('RealEstateScraperService', () => {
       requestDelayMs: 0,
     });
 
-    expect(httpGetMock).toHaveBeenNthCalledWith(
+    expect(fetchPageSpy).toHaveBeenNthCalledWith(
       1,
       'https://example.com/avito',
-      {},
     );
-    expect(httpGetMock).toHaveBeenNthCalledWith(
+    expect(fetchPageSpy).toHaveBeenNthCalledWith(
       2,
       'https://example.com/avito?p=2',
-      {},
     );
 
     expect(repository.syncListings).toHaveBeenCalledTimes(1);
@@ -197,16 +186,8 @@ describe('RealEstateScraperService', () => {
       </html>
     `;
 
-    httpGetMock.mockResolvedValueOnce({
-      body: youlaPage1,
-      statusCode: 200,
-      headers: {},
-    });
-    httpGetMock.mockResolvedValueOnce({
-      body: youlaPage2,
-      statusCode: 200,
-      headers: {},
-    });
+    fetchPageSpy.mockResolvedValueOnce(youlaPage1);
+    fetchPageSpy.mockResolvedValueOnce(youlaPage2);
 
     const updatedRecord = createEntity(RealEstateSource.YOULA, 'youla-1', {
       title: 'Студия рядом с метро',
@@ -230,15 +211,13 @@ describe('RealEstateScraperService', () => {
       requestDelayMs: 0,
     });
 
-    expect(httpGetMock).toHaveBeenNthCalledWith(
+    expect(fetchPageSpy).toHaveBeenNthCalledWith(
       1,
       'https://youla.example/kvartiry',
-      {},
     );
-    expect(httpGetMock).toHaveBeenNthCalledWith(
+    expect(fetchPageSpy).toHaveBeenNthCalledWith(
       2,
       'https://youla.example/kvartiry?page=2',
-      {},
     );
 
     const [sourceArg, listingsArg] = repository.syncListings.mock.calls[0];
