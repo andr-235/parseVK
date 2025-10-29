@@ -69,6 +69,7 @@ const REQUEST_DELAY_JITTER_RATIO = 0.35;
 const CAPTCHA_BACKOFF_MULTIPLIER = 2;
 const HEADLESS_ALLOWED_HOSTS = new Set(['youla.ru', 'www.avito.ru', 'avito.ru']);
 const HEADLESS_NAVIGATION_TIMEOUT_MS = 45000;
+const HEADLESS_WAIT_UNTIL = 'domcontentloaded' as const;
 const HEADLESS_WAIT_AFTER_LOAD_MS = 800;
 const HEADLESS_DEFAULT_VIEWPORT = { width: 1280, height: 720 } as const;
 const HEADLESS_LAUNCH_ARGS = [
@@ -751,7 +752,7 @@ export class RealEstateScraperService implements OnModuleDestroy {
       await this.applyCookiesToPage(page, url);
 
       const response = await page.goto(url, {
-        waitUntil: 'networkidle2',
+        waitUntil: HEADLESS_WAIT_UNTIL,
         timeout: HEADLESS_NAVIGATION_TIMEOUT_MS,
       });
 
@@ -795,11 +796,26 @@ export class RealEstateScraperService implements OnModuleDestroy {
 
       return html;
     } catch (error) {
-      if (!(error instanceof RateLimitError)) {
+      if (error instanceof RateLimitError) {
+        throw error;
+      }
+
+      const errorMessage = (error as Error).message;
+
+      if ((error as Error).name === 'TimeoutError') {
         this.logger.warn(
-          `Не удалось получить страницу ${url} через headless браузер: ${(error as Error).message}`,
+          `Не удалось получить страницу ${url} через headless браузер: ${errorMessage}`,
+        );
+
+        throw new RateLimitError(
+          `Не удалось загрузить страницу ${url} через headless браузер`,
+          { url, type: 'status' },
         );
       }
+
+      this.logger.warn(
+        `Не удалось получить страницу ${url} через headless браузер: ${errorMessage}`,
+      );
 
       throw error;
     } finally {
