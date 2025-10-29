@@ -143,35 +143,20 @@ function Authors() {
   const isInitialSearch = useRef(true)
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        await fetchAuthors({ reset: true })
-      } catch (error) {
-        console.error('Не удалось загрузить список авторов', error)
-      }
-    }
-
-    void load()
-  }, [fetchAuthors, statusFilter])
-
-  useEffect(() => {
-    setStoreSearch(searchValue)
-
     if (isInitialSearch.current) {
       isInitialSearch.current = false
+      setStoreSearch(searchValue)
       return
     }
 
     const timeoutId = window.setTimeout(() => {
-      fetchAuthors({ search: searchValue, reset: true }).catch((error) => {
-        console.error('Не удалось выполнить поиск авторов', error)
-      })
+      setStoreSearch(searchValue)
     }, 400)
 
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [searchValue, fetchAuthors, setStoreSearch])
+  }, [searchValue, setStoreSearch])
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchValue(value)

@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+import { queryClient } from '@/lib/queryClient'
+import { queryKeys } from '@/queries/queryKeys'
 import type { TaskAutomationSettings } from '../types'
 import { taskAutomationService } from '../services/taskAutomationService'
 import type { UpdateTaskAutomationSettingsRequest } from '../api/taskAutomationApi'
@@ -30,13 +32,17 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
         set({ isLoading: true })
 
         try {
-          const settings = await taskAutomationService.fetchSettings()
-          set({ settings, isLoading: false })
+          const settings = await queryClient.ensureQueryData({
+            queryKey: queryKeys.taskAutomation,
+            queryFn: taskAutomationService.fetchSettings,
+          })
+          set({ settings })
           return settings
         } catch (error) {
           console.error('Failed to fetch task automation settings', error)
-          set({ isLoading: false })
           return null
+        } finally {
+          set({ isLoading: false })
         }
       },
 
@@ -46,6 +52,7 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
         try {
           const settings = await taskAutomationService.updateSettings(payload)
           set({ settings, isUpdating: false })
+          void queryClient.invalidateQueries({ queryKey: queryKeys.taskAutomation, refetchType: 'active' })
           return true
         } catch (error) {
           console.error('Failed to update task automation settings', error)
@@ -64,6 +71,7 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
         try {
           const response = await taskAutomationService.runAutomation()
           set({ settings: response.settings, isTriggering: false })
+          void queryClient.invalidateQueries({ queryKey: queryKeys.taskAutomation, refetchType: 'active' })
           return response.started
         } catch (error) {
           console.error('Failed to trigger task automation', error)

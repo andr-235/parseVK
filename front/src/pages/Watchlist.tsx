@@ -97,30 +97,11 @@ function Watchlist() {
   const isLoadingAuthorDetails = useWatchlistStore((state) => state.isLoadingAuthorDetails)
   const fetchAuthorDetails = useWatchlistStore((state) => state.fetchAuthorDetails)
   const settings = useWatchlistStore((state) => state.settings)
-  const fetchSettings = useWatchlistStore((state) => state.fetchSettings)
   const updateSettings = useWatchlistStore((state) => state.updateSettings)
   const isUpdatingSettings = useWatchlistStore((state) => state.isUpdatingSettings)
 
   const [selectedAuthorId, setSelectedAuthorId] = useState<number | null>(null)
   const navigate = useNavigate()
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        await fetchAuthors({ reset: true })
-      } catch (error) {
-        console.error('Не удалось загрузить список авторов', error)
-      }
-
-      try {
-        await fetchSettings()
-      } catch (error) {
-        console.error('Не удалось загрузить настройки мониторинга', error)
-      }
-    }
-
-    void load()
-  }, [fetchAuthors, fetchSettings])
 
   useEffect(() => {
     if (selectedAuthorId === null) {

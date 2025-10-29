@@ -1,20 +1,22 @@
 import { create } from 'zustand'
 import { keywordsApi } from '../api/keywordsApi'
+import { queryClient } from '@/lib/queryClient'
+import { queryKeys } from '@/queries/queryKeys'
 import type { KeywordsState } from '../types/stores'
 
-export const useKeywordsStore = create<KeywordsState>((set, get) => ({
+export const useKeywordsStore = create<KeywordsState>((set) => ({
   keywords: [],
   isLoading: false,
 
   async fetchKeywords() {
     set({ isLoading: true })
     try {
-      const keywords = await keywordsApi.getAllKeywords()
-      set({ keywords, isLoading: false })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
     } catch (error) {
       console.error('Failed to fetch keywords', error)
-      set({ isLoading: false })
       throw error
+    } finally {
+      set({ isLoading: queryClient.isFetching({ queryKey: queryKeys.keywords }) > 0 })
     }
   },
 
@@ -40,6 +42,7 @@ export const useKeywordsStore = create<KeywordsState>((set, get) => ({
 
         return { keywords: [...state.keywords, keyword] }
       })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
       return true
     } catch (error) {
       console.error('Failed to add keyword', error)
@@ -51,6 +54,7 @@ export const useKeywordsStore = create<KeywordsState>((set, get) => ({
     try {
       await keywordsApi.deleteKeyword(id)
       set((state) => ({ keywords: state.keywords.filter((kw) => kw.id !== id) }))
+      void queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
     } catch (error) {
       console.error('Failed to delete keyword', error)
       throw error
@@ -60,7 +64,7 @@ export const useKeywordsStore = create<KeywordsState>((set, get) => ({
   async loadFromFile(file) {
     try {
       const response = await keywordsApi.uploadKeywords(file)
-      await get().fetchKeywords()
+      await queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
       return response
     } catch (error) {
       console.error('Failed to load keywords from file', error)
@@ -72,11 +76,10 @@ export const useKeywordsStore = create<KeywordsState>((set, get) => ({
     try {
       await keywordsApi.deleteAllKeywords()
       set({ keywords: [] })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
     } catch (error) {
       console.error('Failed to delete all keywords', error)
       throw error
     }
   }
 }))
-
-

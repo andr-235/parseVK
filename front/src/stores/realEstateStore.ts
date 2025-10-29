@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 
+import { queryClient } from '@/lib/queryClient'
+import { queryKeys } from '@/queries/queryKeys'
 import { realEstateService } from '@/services/realEstateService'
 import type {
   RealEstateFilters,
@@ -16,7 +18,7 @@ interface RealEstateState {
   isLoading: boolean
   isExporting: boolean
   lastGeneratedAt: string | null
-  setFilters: (partial: Partial<RealEstateFilters>) => void
+  setFilters: (partial: Partial<RealEstateFilters>, options?: { refetch?: boolean }) => void
   toggleSource: (source: RealEstateListingSource) => void
   fetchListings: () => Promise<void>
   downloadReport: (options?: { format?: RealEstateReportFormat }) => Promise<void>
@@ -36,13 +38,18 @@ export const useRealEstateStore = create<RealEstateState>((set, get) => ({
   isExporting: false,
   lastGeneratedAt: null,
 
-  setFilters: (partial) => {
+  setFilters: (partial, options) => {
     set((state) => ({
       filters: {
         ...state.filters,
         ...partial,
       },
     }))
+
+    if (options?.refetch !== false) {
+      const filters = get().filters
+      void queryClient.invalidateQueries({ queryKey: queryKeys.realEstate(filters), refetchType: 'active' })
+    }
   },
 
   toggleSource: (source) => {
@@ -59,6 +66,9 @@ export const useRealEstateStore = create<RealEstateState>((set, get) => ({
         },
       }
     })
+
+    const filters = get().filters
+    void queryClient.invalidateQueries({ queryKey: queryKeys.realEstate(filters), refetchType: 'active' })
   },
 
   fetchListings: async () => {
@@ -67,12 +77,9 @@ export const useRealEstateStore = create<RealEstateState>((set, get) => ({
     set({ isLoading: true })
 
     try {
-      const response = await realEstateService.fetchListings(filters)
-
-      set({
-        listings: response.items,
-        summary: response.summary ?? null,
-        lastGeneratedAt: response.generatedAt ?? null,
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.realEstate(filters),
+        refetchType: 'active',
       })
     } catch (error) {
       set({
@@ -81,7 +88,7 @@ export const useRealEstateStore = create<RealEstateState>((set, get) => ({
       })
       throw error
     } finally {
-      set({ isLoading: false })
+      set({ isLoading: queryClient.isFetching({ queryKey: queryKeys.realEstate(get().filters) }) > 0 })
     }
   },
 

@@ -64,6 +64,7 @@ export interface RegionGroupsSearchState {
 export interface GroupsState {
   groups: Group[]
   isLoading: boolean
+  isProcessing: boolean
   fetchGroups: () => Promise<void>
   addGroup: (url: string, description?: string, options?: { silent?: boolean }) => Promise<boolean>
   deleteGroup: (id: number) => Promise<void>

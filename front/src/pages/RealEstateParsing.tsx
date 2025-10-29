@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import toast from 'react-hot-toast'
 
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
-import CreateParseTaskModal from '@/components/CreateParseTaskModal'
 import RealEstateScheduleModal from '@/components/RealEstateScheduleModal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ButtonGroup } from '@/components/ui/button-group'
-import { useGroupsStore, useRealEstateScheduleStore, useTasksStore } from '@/stores'
+import { useRealEstateScheduleStore } from '@/stores'
 import type { RealEstateScheduleSettings } from '@/types/realEstate'
 
 const formatDateTime = (value: string | null | undefined): string => {
@@ -39,18 +37,14 @@ const formatTime = (settings: RealEstateScheduleSettings | null): string => {
   return `${hours}:${minutes}`
 }
 
-type ParsingSource = 'VK' | 'AVITO' | 'YOULA'
+type ParsingSource = 'AVITO' | 'YOULA'
 
 const sourceOptions: Array<{ label: string; value: ParsingSource; description: string }> = [
   {
-    value: 'VK',
-    label: 'ВКонтакте',
-    description: 'Задачи на парсинг выбранных сообществ с публикациями и комментариями.',
-  },
-  {
     value: 'AVITO',
     label: 'Авито',
-    description: 'Ежедневный сбор объявлений о недвижимости с фильтрами и автоматическим расписанием.',
+    description:
+      'Ежедневный сбор объявлений о недвижимости с фильтрами и автоматическим расписанием.',
   },
   {
     value: 'YOULA',
@@ -61,15 +55,7 @@ const sourceOptions: Array<{ label: string; value: ParsingSource; description: s
 
 function RealEstateParsing() {
   const [selectedSource, setSelectedSource] = useState<ParsingSource>('AVITO')
-  const [isVkModalOpen, setIsVkModalOpen] = useState(false)
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
-
-  const groups = useGroupsStore((state) => state.groups)
-  const fetchGroups = useGroupsStore((state) => state.fetchGroups)
-  const areGroupsLoading = useGroupsStore((state) => state.isLoading)
-
-  const createParseTask = useTasksStore((state) => state.createParseTask)
-  const isCreatingTask = useTasksStore((state) => state.isCreating)
 
   const scheduleSettings = useRealEstateScheduleStore((state) => state.settings)
   const scheduleSummary = useRealEstateScheduleStore((state) => state.summary)
@@ -81,19 +67,19 @@ function RealEstateParsing() {
   const isScheduleRunning = useRealEstateScheduleStore((state) => state.isRunning)
 
   useEffect(() => {
-    if (!groups.length && !areGroupsLoading) {
-      void fetchGroups()
-    }
-  }, [groups.length, areGroupsLoading, fetchGroups])
-
-  useEffect(() => {
     if (!scheduleSettings && !isScheduleLoading) {
       void fetchScheduleSettings()
     }
   }, [scheduleSettings, isScheduleLoading, fetchScheduleSettings])
 
-  const lastRun = useMemo(() => formatDateTime(scheduleSettings?.lastRunAt), [scheduleSettings?.lastRunAt])
-  const nextRun = useMemo(() => formatDateTime(scheduleSettings?.nextRunAt), [scheduleSettings?.nextRunAt])
+  const lastRun = useMemo(
+    () => formatDateTime(scheduleSettings?.lastRunAt),
+    [scheduleSettings?.lastRunAt]
+  )
+  const nextRun = useMemo(
+    () => formatDateTime(scheduleSettings?.nextRunAt),
+    [scheduleSettings?.nextRunAt]
+  )
   const scheduleTime = useMemo(() => formatTime(scheduleSettings), [scheduleSettings])
   const isScheduleEnabled = Boolean(scheduleSettings?.enabled)
 
@@ -115,28 +101,6 @@ function RealEstateParsing() {
     setSelectedSource(value)
   }
 
-  const handleOpenVkModal = () => {
-    if (areGroupsLoading) {
-      return
-    }
-
-    if (groups.length === 0) {
-      toast.error('Нет групп для парсинга. Добавьте сообщества в разделе "Группы".')
-      return
-    }
-
-    setIsVkModalOpen(true)
-  }
-
-  const handleCreateVkTask = async (groupIds: Array<number | string>) => {
-    if (groupIds.length === 0) {
-      toast.error('Выберите хотя бы одну группу для парсинга')
-      return
-    }
-
-    await createParseTask(groupIds)
-  }
-
   const handleOpenScheduleModal = () => {
     if (!scheduleSettings && !isScheduleLoading) {
       void fetchScheduleSettings()
@@ -148,48 +112,40 @@ function RealEstateParsing() {
     await runScheduleNow()
   }
 
-  const heroActions = selectedSource === 'VK'
-    ? (
-        <Button onClick={handleOpenVkModal} disabled={areGroupsLoading || isCreatingTask}>
-          {isCreatingTask ? 'Создание...' : 'Создать задачу'}
-        </Button>
-      )
-    : (
-        <div className="flex flex-col gap-3 md:flex-row">
-          <Button
-            variant="outline"
-            onClick={handleRunSchedule}
-            disabled={isScheduleRunning || scheduleSettings?.isRunning}
-          >
-            {isScheduleRunning || scheduleSettings?.isRunning ? 'Запуск...' : 'Запустить сейчас'}
-          </Button>
-          <Button onClick={handleOpenScheduleModal} disabled={isScheduleLoading}>
-            Настроить расписание
-          </Button>
-        </div>
-      )
+  const heroActions = (
+    <div className="flex flex-col gap-3 md:flex-row">
+      <Button
+        variant="outline"
+        onClick={handleRunSchedule}
+        disabled={isScheduleRunning || scheduleSettings?.isRunning}
+      >
+        {isScheduleRunning || scheduleSettings?.isRunning ? 'Запуск...' : 'Запустить сейчас'}
+      </Button>
+      <Button onClick={handleOpenScheduleModal} disabled={isScheduleLoading}>
+        Настроить расписание
+      </Button>
+    </div>
+  )
 
-  const heroFooter = selectedSource === 'VK'
-    ? null
-    : (
-        <div className="flex flex-wrap items-center gap-4 text-sm text-text-secondary">
-          <span>
-            Следующий запуск: <span className="font-medium text-text-primary">{nextRun}</span>
-          </span>
-          <span>
-            Последний запуск: <span className="font-medium text-text-primary">{lastRun}</span>
-          </span>
-          <span>
-            Время запуска: <span className="font-medium text-text-primary">{scheduleTime}</span>
-          </span>
-        </div>
-      )
+  const heroFooter = (
+    <div className="flex flex-wrap items-center gap-4 text-sm text-text-secondary">
+      <span>
+        Следующий запуск: <span className="font-medium text-text-primary">{nextRun}</span>
+      </span>
+      <span>
+        Последний запуск: <span className="font-medium text-text-primary">{lastRun}</span>
+      </span>
+      <span>
+        Время запуска: <span className="font-medium text-text-primary">{scheduleTime}</span>
+      </span>
+    </div>
+  )
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeroCard
         title="Парсинг данных"
-        description="Управляйте сбором информации из ВКонтакте, Авито и Юлы: создавайте задачи вручную или настраивайте автоматическое расписание."
+        description="Управляйте сбором объявлений из Авито и Юлы: запускайте сбор вручную или настраивайте автоматическое расписание."
         actions={heroActions}
         footer={heroFooter}
       />
@@ -215,132 +171,114 @@ function RealEstateParsing() {
         </p>
       </SectionCard>
 
-      {selectedSource === 'VK' ? (
-        <SectionCard
-          title="Парсинг сообществ ВКонтакте"
-          description="Выберите группы из списка и запустите задачу на парсинг постов и комментариев."
-          headerActions={(
-            <Button onClick={handleOpenVkModal} disabled={areGroupsLoading || isCreatingTask}>
-              {isCreatingTask ? 'Создание...' : 'Создать задачу'}
+      <SectionCard
+        title={selectedSource === 'AVITO' ? 'Расписание парсинга Авито' : 'Расписание парсинга Юлы'}
+        description="Настройте ежедневный запуск и отслеживайте статус последних сборов."
+        headerActions={
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Badge
+              variant={isScheduleEnabled ? 'secondary' : 'outline'}
+              className={isScheduleEnabled ? 'bg-accent-primary/20 text-accent-primary' : undefined}
+            >
+              {isScheduleEnabled ? 'Расписание активно' : 'Расписание выключено'}
+            </Badge>
+            <Button
+              variant="outline"
+              onClick={handleOpenScheduleModal}
+              disabled={isScheduleLoading}
+            >
+              Настроить
             </Button>
-          )}
-          contentClassName="space-y-4"
-        >
-          <p className="text-sm text-text-secondary">
-            Добавьте сообщества в разделе «Группы», затем сформируйте задачу. Каждая задача отслеживает прогресс и выводится на странице «Задачи».
-          </p>
-          <div className="rounded-2xl border border-dashed border-border/60 bg-background-primary/40 p-4 text-sm text-text-secondary">
-            {areGroupsLoading
-              ? 'Загружаем список групп...'
-              : groups.length > 0
-                ? `Доступно сообществ: ${groups.length.toLocaleString('ru-RU')}`
-                : 'Список групп пуст. Добавьте хотя бы одну группу перед запуском задачи.'}
           </div>
-        </SectionCard>
-      ) : (
-        <>
-          <SectionCard
-            title={selectedSource === 'AVITO' ? 'Расписание парсинга Авито' : 'Расписание парсинга Юлы'}
-            description="Настройте ежедневный запуск и отслеживайте статус последних сборов."
-            headerActions={(
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Badge
-                  variant={isScheduleEnabled ? 'secondary' : 'outline'}
-                  className={isScheduleEnabled ? 'bg-accent-primary/20 text-accent-primary' : undefined}
+        }
+        contentClassName="space-y-4"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-background-primary/40 p-4 shadow-soft-sm">
+            <p className="text-sm text-text-secondary">
+              Время запуска: <span className="font-medium text-text-primary">{scheduleTime}</span>
+            </p>
+            <p className="text-sm text-text-secondary">
+              Следующий запуск: <span className="font-medium text-text-primary">{nextRun}</span>
+            </p>
+            <p className="text-sm text-text-secondary">
+              Последний запуск: <span className="font-medium text-text-primary">{lastRun}</span>
+            </p>
+            <p className="text-sm text-text-secondary">
+              Текущее состояние:{' '}
+              <span className="font-medium text-text-primary">
+                {isScheduleRunning || scheduleSettings?.isRunning
+                  ? 'Выполняется'
+                  : isScheduleEnabled
+                    ? 'Ожидает запуска'
+                    : 'Выключено'}
+              </span>
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background-primary/40 p-4 shadow-soft-sm">
+            <p className="text-sm text-text-secondary">
+              Источники в запуске:{' '}
+              <span className="font-medium text-text-primary">Авито и Юла</span>
+            </p>
+            <p className="text-sm text-text-secondary">
+              Новых объявлений за последнюю итерацию:{' '}
+              <span className="font-medium text-text-primary">{totalCreated}</span>
+            </p>
+            <p className="text-sm text-text-secondary">
+              Обновлено объявлений:{' '}
+              <span className="font-medium text-text-primary">{totalUpdated}</span>
+            </p>
+            <Button
+              className="mt-4 w-full"
+              onClick={handleRunSchedule}
+              disabled={isScheduleRunning || scheduleSettings?.isRunning}
+            >
+              {isScheduleRunning || scheduleSettings?.isRunning ? 'Запуск...' : 'Запустить сейчас'}
+            </Button>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Итоги последнего запуска"
+        description="Краткая статистика по источникам за последний ручной или автоматический запуск."
+        contentClassName="space-y-4"
+      >
+        {scheduleSummary ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {[
+              { label: 'Авито', key: 'avito' as const },
+              { label: 'Юла', key: 'youla' as const },
+            ].map((item) => {
+              const result = scheduleSummary[item.key]
+              return (
+                <div
+                  key={item.key}
+                  className="rounded-2xl border border-border bg-background-primary/40 p-4 shadow-soft-sm"
                 >
-                  {isScheduleEnabled ? 'Расписание активно' : 'Расписание выключено'}
-                </Badge>
-                <Button variant="outline" onClick={handleOpenScheduleModal} disabled={isScheduleLoading}>
-                  Настроить
-                </Button>
-              </div>
-            )}
-            contentClassName="space-y-4"
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-sm text-text-secondary">
-                  Время запуска: <span className="font-medium text-text-primary">{scheduleTime}</span>
-                </p>
-                <p className="text-sm text-text-secondary">
-                  Следующий запуск: <span className="font-medium text-text-primary">{nextRun}</span>
-                </p>
-                <p className="text-sm text-text-secondary">
-                  Последний запуск: <span className="font-medium text-text-primary">{lastRun}</span>
-                </p>
-                <p className="text-sm text-text-secondary">
-                  Текущее состояние:{' '}
-                  <span className="font-medium text-text-primary">
-                    {isScheduleRunning || scheduleSettings?.isRunning ? 'Выполняется' : isScheduleEnabled ? 'Ожидает запуска' : 'Выключено'}
-                  </span>
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-sm text-text-secondary">
-                  Источники в запуске: <span className="font-medium text-text-primary">Авито и Юла</span>
-                </p>
-                <p className="text-sm text-text-secondary">
-                  Новых объявлений за последнюю итерацию: <span className="font-medium text-text-primary">{totalCreated}</span>
-                </p>
-                <p className="text-sm text-text-secondary">
-                  Обновлено объявлений: <span className="font-medium text-text-primary">{totalUpdated}</span>
-                </p>
-                <Button
-                  className="mt-4 w-full"
-                  onClick={handleRunSchedule}
-                  disabled={isScheduleRunning || scheduleSettings?.isRunning}
-                >
-                  {isScheduleRunning || scheduleSettings?.isRunning ? 'Запуск...' : 'Запустить сейчас'}
-                </Button>
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Итоги последнего запуска"
-            description="Краткая статистика по источникам за последний ручной или автоматический запуск."
-            contentClassName="space-y-4"
-          >
-            {scheduleSummary ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {([
-                  { label: 'Авито', key: 'avito' as const },
-                  { label: 'Юла', key: 'youla' as const },
-                ]).map((item) => {
-                  const result = scheduleSummary[item.key]
-                  return (
-                    <div key={item.key} className="rounded-2xl border border-border bg-background-primary/40 p-4 shadow-soft-sm">
-                      <h3 className="text-base font-semibold text-text-primary">{item.label}</h3>
-                      <p className="text-sm text-text-secondary">
-                        Просканировано страниц: <span className="font-medium text-text-primary">{result.scrapedCount}</span>
-                      </p>
-                      <p className="text-sm text-text-secondary">
-                        Новых объявлений: <span className="font-medium text-text-primary">{result.created.length}</span>
-                      </p>
-                      <p className="text-sm text-text-secondary">
-                        Обновлено объявлений: <span className="font-medium text-text-primary">{result.updated.length}</span>
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-border/60 bg-background-primary/30 p-6 text-sm text-text-secondary">
-                Результаты появятся после первого запуска парсинга.
-              </div>
-            )}
-          </SectionCard>
-        </>
-      )}
-
-      <CreateParseTaskModal
-        isOpen={isVkModalOpen}
-        groups={groups}
-        isLoading={isCreatingTask}
-        onClose={() => setIsVkModalOpen(false)}
-        onSubmit={handleCreateVkTask}
-      />
-
+                  <h3 className="text-base font-semibold text-text-primary">{item.label}</h3>
+                  <p className="text-sm text-text-secondary">
+                    Просканировано страниц:{' '}
+                    <span className="font-medium text-text-primary">{result.scrapedCount}</span>
+                  </p>
+                  <p className="text-sm text-text-secondary">
+                    Новых объявлений:{' '}
+                    <span className="font-medium text-text-primary">{result.created.length}</span>
+                  </p>
+                  <p className="text-sm text-text-secondary">
+                    Обновлено объявлений:{' '}
+                    <span className="font-medium text-text-primary">{result.updated.length}</span>
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border/60 bg-background-primary/30 p-6 text-sm text-text-secondary">
+            Результаты появятся после первого запуска парсинга.
+          </div>
+        )}
+      </SectionCard>
       <RealEstateScheduleModal
         isOpen={isScheduleModalOpen}
         settings={scheduleSettings}

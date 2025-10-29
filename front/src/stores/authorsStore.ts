@@ -1,9 +1,19 @@
 import { create } from 'zustand'
 import { authorsService } from '../services/authorsService'
-import type { AuthorSortField } from '../types'
+import type { AuthorListResponse, AuthorSortField } from '../types'
 import type { AuthorsState } from '../types/stores'
+import { queryClient } from '@/lib/queryClient'
+import { queryKeys, type AuthorsQueryParams } from '@/queries/queryKeys'
 
 const DEFAULT_PAGE_SIZE = 24
+
+const buildAuthorsQueryParams = (state: AuthorsState, search: string): AuthorsQueryParams => ({
+  status: state.statusFilter,
+  search,
+  sortBy: state.sortBy,
+  sortOrder: state.sortBy ? state.sortOrder : 'desc',
+  pageSize: state.pageSize,
+})
 
 export const useAuthorsStore = create<AuthorsState>((set, get) => ({
   authors: [],
@@ -26,14 +36,33 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
     const shouldReset = reset === true || search !== undefined
     const offset = shouldReset ? 0 : state.authors.length
 
+    const queryParams = buildAuthorsQueryParams(state, trimmedSearch)
+    const queryKey = queryKeys.authors.list(queryParams)
+
     if (shouldReset) {
-      set({ isLoading: true })
-    } else {
-      if (!state.hasMore || state.isLoadingMore) {
-        return
+      set({
+        isLoading: true,
+        search: trimmedSearch,
+      })
+
+      try {
+        await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
+      } finally {
+        const isFetching = queryClient.isFetching({ queryKey }) > 0
+        set((current) => ({
+          ...current,
+          isLoading: isFetching,
+          isLoadingMore: false,
+        }))
       }
-      set({ isLoadingMore: true })
+      return
     }
+
+    if (!state.hasMore || state.isLoadingMore) {
+      return
+    }
+
+    set({ isLoadingMore: true, search: trimmedSearch })
 
     try {
       const response = await authorsService.fetchAuthors({
@@ -56,6 +85,24 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
         isLoadingMore: false,
         search: trimmedSearch,
       }))
+
+      queryClient.setQueryData<AuthorListResponse>(queryKey, (prevData) => {
+        if (!prevData || offset === 0) {
+          return response
+        }
+
+        const existingIds = new Set(prevData.items.map((item) => item.id))
+        const mergedItems = [
+          ...prevData.items,
+          ...response.items.filter((item) => !existingIds.has(item.id)),
+        ]
+
+        return {
+          items: mergedItems,
+          total: response.total,
+          hasMore: response.hasMore,
+        }
+      })
     } catch (error) {
       set({
         isLoading: false,
@@ -111,8 +158,6 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
       isLoading: true,
       isLoadingMore: false,
     }))
-
-    void get().fetchAuthors({ reset: true })
   },
 
   markAuthorVerified: (vkUserId, verifiedAt) => {
@@ -157,7 +202,10 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
 
     try {
       await authorsService.refreshAuthors()
-      await get().fetchAuthors({ reset: true })
+      const stateAfterRefresh = get()
+      const params = buildAuthorsQueryParams(stateAfterRefresh, stateAfterRefresh.search.trim())
+      const queryKey = queryKeys.authors.list(params)
+      await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
     } finally {
       set({ isRefreshing: false })
     }

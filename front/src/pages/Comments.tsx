@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCommentsStore, useKeywordsStore, useWatchlistStore } from '../stores'
 import CommentsFiltersPanel from './Comments/components/CommentsFiltersPanel'
 import CommentsTableCard from './Comments/components/CommentsTableCard'
@@ -209,55 +209,6 @@ function Comments() {
     return 'Нет комментариев'
   }, [isLoading, readFilter, showOnlyKeywordComments, searchTerm])
 
-  const isFetchingRef = useRef(false)
-
-  const loadComments = useCallback(
-    async (reset: boolean, overrideLimit?: number) => {
-      if (isFetchingRef.current) {
-        return
-      }
-
-      isFetchingRef.current = true
-
-      try {
-        await fetchCommentsCursor({ reset, limit: overrideLimit })
-      } catch (error) {
-        console.error('Failed to fetch comments', error)
-      } finally {
-        isFetchingRef.current = false
-      }
-    },
-    [fetchCommentsCursor],
-  )
-
-  const didInitialLoadRef = useRef(false)
-
-  useEffect(() => {
-    let isUnmounted = false
-
-    const runInitialLoad = async () => {
-      if (isUnmounted || didInitialLoadRef.current) {
-        return
-      }
-
-      didInitialLoadRef.current = true
-      await loadComments(true)
-    }
-
-    void runInitialLoad()
-
-    const intervalId = window.setInterval(() => {
-      if (!isUnmounted) {
-        void loadComments(true)
-      }
-    }, 30000)
-
-    return () => {
-      isUnmounted = true
-      window.clearInterval(intervalId)
-    }
-  }, [loadComments])
-
   useEffect(() => {
     if (keywords.length === 0) {
       const load = async () => {
@@ -275,8 +226,10 @@ function Comments() {
   const loadedCount = comments.length
 
   const handleLoadMore = useCallback(() => {
-    void loadComments(false)
-  }, [loadComments])
+    fetchCommentsCursor({ reset: false }).catch((error) => {
+      console.error('Failed to load more comments', error)
+    })
+  }, [fetchCommentsCursor])
 
   const handleAddToWatchlist = useCallback(
     async (commentId: number) => {

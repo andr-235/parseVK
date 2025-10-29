@@ -1,84 +1,20 @@
 import { create } from 'zustand'
 import { watchlistApi } from '../api/watchlistApi'
-import type {
-  IWatchlistAuthorDetailsResponse,
-  IWatchlistAuthorResponse,
-  IWatchlistCommentResponse,
-  IWatchlistSettingsResponse,
-} from '../types/api'
-import type {
-  WatchlistAuthorCard,
-  WatchlistAuthorDetails,
-  WatchlistComment,
-  WatchlistSettings,
-  WatchlistStatus,
-  PhotoAnalysisSummary,
-} from '../types'
-import { createEmptyPhotoAnalysisSummary } from '../types'
+import type { WatchlistAuthorCard, WatchlistAuthorDetails, WatchlistSettings, WatchlistStatus } from '../types'
+import {
+  WATCHLIST_PAGE_SIZE,
+  mapWatchlistAuthor,
+  mapWatchlistDetails,
+  mapWatchlistSettings,
+} from './watchlistStore.utils'
+import { queryClient } from '@/lib/queryClient'
+import { queryKeys } from '@/queries/queryKeys'
 
-const cloneSummary = (summary: PhotoAnalysisSummary): PhotoAnalysisSummary => ({
-  total: summary.total,
-  suspicious: summary.suspicious,
-  lastAnalyzedAt: summary.lastAnalyzedAt,
-  categories: summary.categories.map((item) => ({ ...item })),
-  levels: summary.levels.map((item) => ({ ...item })),
-})
-
-const mapAuthor = (author: IWatchlistAuthorResponse): WatchlistAuthorCard => ({
-  id: author.id,
-  authorVkId: author.authorVkId,
-  status: author.status,
-  lastCheckedAt: author.lastCheckedAt,
-  lastActivityAt: author.lastActivityAt,
-  foundCommentsCount: author.foundCommentsCount,
-  totalComments: author.totalComments,
-  monitoringStartedAt: author.monitoringStartedAt,
-  monitoringStoppedAt: author.monitoringStoppedAt,
-  settingsId: author.settingsId,
-  author: {
-    vkUserId: author.author.vkUserId,
-    firstName: author.author.firstName,
-    lastName: author.author.lastName,
-    fullName: author.author.fullName,
-    avatar: author.author.avatar,
-    profileUrl: author.author.profileUrl,
-    screenName: author.author.screenName,
-    domain: author.author.domain,
-  },
-  analysisSummary: cloneSummary(
-    author.analysisSummary ?? createEmptyPhotoAnalysisSummary(),
-  ),
-})
-
-const mapComment = (comment: IWatchlistCommentResponse): WatchlistComment => ({
-  id: comment.id,
-  ownerId: comment.ownerId,
-  postId: comment.postId,
-  vkCommentId: comment.vkCommentId,
-  text: comment.text,
-  publishedAt: comment.publishedAt,
-  createdAt: comment.createdAt,
-  source: comment.source,
-  commentUrl: comment.commentUrl,
-})
-
-const mapDetails = (details: IWatchlistAuthorDetailsResponse): WatchlistAuthorDetails => ({
-  ...mapAuthor(details),
-  comments: {
-    items: details.comments.items.map(mapComment),
-    total: details.comments.total,
-    hasMore: details.comments.hasMore,
-  },
-})
-
-const mapSettings = (settings: IWatchlistSettingsResponse): WatchlistSettings => ({
-  id: settings.id,
-  trackAllComments: settings.trackAllComments,
-  pollIntervalMinutes: settings.pollIntervalMinutes,
-  maxAuthors: settings.maxAuthors,
-  createdAt: settings.createdAt,
-  updatedAt: settings.updatedAt,
-})
+type WatchlistAuthorsQueryData = {
+  items: WatchlistAuthorCard[]
+  total: number
+  hasMore: boolean
+}
 
 interface WatchlistState {
   authors: WatchlistAuthorCard[]
@@ -128,6 +64,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     }
 
     const offset = reset ? 0 : state.authors.length
+    const pageSize = typeof limit === 'number' && limit > 0 ? limit : WATCHLIST_PAGE_SIZE
 
     if (!reset && !state.hasMoreAuthors) {
       return
@@ -140,16 +77,34 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     }
 
     try {
-      const response = await watchlistApi.getAuthors({ offset, limit })
-      const mapped = response.items.map(mapAuthor)
+      const response = await watchlistApi.getAuthors({ offset, limit: pageSize })
+      const mapped = response.items.map(mapWatchlistAuthor)
 
       set((prev) => ({
-        authors: reset ? mapped : [...prev.authors, ...mapped.filter((author) => !prev.authors.some((existing) => existing.id === author.id))],
+        authors: reset
+          ? mapped
+          : [
+              ...prev.authors,
+              ...mapped.filter((author) => !prev.authors.some((existing) => existing.id === author.id)),
+            ],
         totalAuthors: response.total,
         hasMoreAuthors: response.hasMore,
         isLoadingAuthors: false,
         isLoadingMoreAuthors: false,
         error: null,
+      }))
+
+      queryClient.setQueryData<WatchlistAuthorsQueryData>(queryKeys.watchlist.authors, (prevData) => ({
+        items: reset
+          ? mapped
+          : [
+              ...(prevData?.items ?? []),
+              ...mapped.filter(
+                (author) => !(prevData?.items ?? []).some((existing) => existing.id === author.id),
+              ),
+            ],
+        total: response.total,
+        hasMore: response.hasMore,
       }))
     } catch (error) {
       console.error('Не удалось загрузить список авторов "На карандаше"', error)
@@ -163,7 +118,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
 
     try {
       const response = await watchlistApi.getAuthorDetails(id, options)
-      const mapped = mapDetails(response)
+      const mapped = mapWatchlistDetails(response)
 
       set({ selectedAuthor: mapped, isLoadingAuthorDetails: false, error: null })
     } catch (error) {
@@ -182,7 +137,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
 
     try {
       const response = await watchlistApi.createAuthor(payload)
-      const mapped = mapAuthor(response)
+      const mapped = mapWatchlistAuthor(response)
 
       set((prev) => ({
         authors: [mapped, ...prev.authors.filter((author) => author.id !== mapped.id)],
@@ -190,6 +145,16 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         isCreatingAuthor: false,
         error: null,
       }))
+
+      queryClient.setQueryData<WatchlistAuthorsQueryData>(queryKeys.watchlist.authors, (prevData) => {
+        const existing = prevData?.items ?? []
+        const filtered = existing.filter((item) => item.id !== mapped.id)
+        return {
+          items: [mapped, ...filtered],
+          total: (prevData?.total ?? 0) + (existing.some((item) => item.id === mapped.id) ? 0 : 1),
+          hasMore: prevData?.hasMore ?? false,
+        }
+      })
 
       return mapped
     } catch (error) {
@@ -202,7 +167,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
   async updateAuthorStatus(id, status) {
     try {
       const response = await watchlistApi.updateAuthor(id, { status })
-      const mapped = mapAuthor(response)
+      const mapped = mapWatchlistAuthor(response)
 
       set((prev) => ({
         authors: prev.authors.map((author) => (author.id === id ? mapped : author)),
@@ -215,6 +180,12 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
               }
             : prev.selectedAuthor,
         error: null,
+      }))
+
+      queryClient.setQueryData<WatchlistAuthorsQueryData>(queryKeys.watchlist.authors, (prevData) => ({
+        items: (prevData?.items ?? []).map((author) => (author.id === id ? mapped : author)),
+        total: prevData?.total ?? 0,
+        hasMore: prevData?.hasMore ?? false,
       }))
 
       return mapped
@@ -230,7 +201,9 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
 
     try {
       const response = await watchlistApi.getSettings()
-      set({ settings: mapSettings(response), isLoadingSettings: false, error: null })
+      const mapped = mapWatchlistSettings(response)
+      set({ settings: mapped, isLoadingSettings: false, error: null })
+      queryClient.setQueryData(queryKeys.watchlist.settings, mapped)
     } catch (error) {
       console.error('Не удалось загрузить настройки мониторинга', error)
       set({ isLoadingSettings: false, error: 'Не удалось загрузить настройки мониторинга' })
@@ -243,8 +216,9 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
 
     try {
       const response = await watchlistApi.updateSettings(payload)
-      const mapped = mapSettings(response)
+      const mapped = mapWatchlistSettings(response)
       set({ settings: mapped, isUpdatingSettings: false, error: null })
+      queryClient.setQueryData(queryKeys.watchlist.settings, mapped)
       return mapped
     } catch (error) {
       console.error('Не удалось обновить настройки мониторинга', error)

@@ -13,7 +13,7 @@ import AuthorAnalysis from './pages/AuthorAnalysis'
 import Authors from './pages/Authors'
 import Settings from './pages/Settings'
 import RealEstateReports from './pages/RealEstateReports'
-import TasksSyncProvider from './providers/TasksSyncProvider'
+import AppSyncProvider from './providers/AppSyncProvider'
 import RealEstateParsing from './pages/RealEstateParsing'
 
 function App() {
@@ -35,7 +35,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <TasksSyncProvider />
+      <AppSyncProvider />
       <div className="flex min-h-screen w-full bg-background-primary text-text-primary transition-colors duration-300">
         <Sidebar title="ВК Аналитик" />
         <MainContent>
