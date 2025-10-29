@@ -17,7 +17,8 @@
     "test:watch": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --watch",
     "test:cov": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --coverage",
     "test:debug": "node --inspect-brk -r ./jest-shims/register.js -r tsconfig-paths/register -r ts-node/register ./node_modules/jest/bin/jest.js --runInBand",
-    "test:e2e": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json"
+    "test:e2e": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
+    "scrape:real-estate": "ts-node ./src/scripts/run-real-estate-scraper.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
