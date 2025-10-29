@@ -22,7 +22,7 @@ const DEFAULT_YOULA_URLS = [
   'https://youla.ru/birobidzhan/nedvijimost/arenda-doma-posutochno',
 ];
 const DEFAULT_MAX_PAGES = 5;
-const DEFAULT_REQUEST_DELAY_MS = 350;
+const DEFAULT_REQUEST_DELAY_MS = 800;
 const YOULA_COOKIE_HEADER =
   'location=%7B%22isConfirmed%22%3Atrue%2C%22city%22%3A%7B%22coords%22%3A%7B%22latitude%22%3A48.788167%2C%22longitude%22%3A132.928807%7D%7D%7D; youla_uid=68ff4ad9614f9; ym_uid=176106063072727213; ym_d=17610606370; sessid=sd4q0dt8odJqrIun4shigo2ri;';
 const AVITO_COOKIE_HEADER =
@@ -77,7 +77,7 @@ export class RealEstateScraperService {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
       },
-      timeout: 10000,
+      timeout: 20000,
     });
   }
 
