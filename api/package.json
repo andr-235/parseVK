@@ -38,6 +38,7 @@
     "cron": "^2.4.4",
     "got": "^14.6.1",
     "ioredis": "^5.4.1",
+    "puppeteer": "^23.11.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "tough-cookie": "^6.0.0",

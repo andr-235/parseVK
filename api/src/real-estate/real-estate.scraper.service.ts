@@ -1,7 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import got, { type Got } from 'got';
 import { load, type CheerioAPI, type Cheerio as CheerioCollection } from 'cheerio';
 import { CookieJar } from 'tough-cookie';
+import type { Cookie } from 'tough-cookie';
+import type { Browser, Page } from 'puppeteer';
+type PuppeteerCookieParam = Parameters<Page['setCookie']>[0];
 import { RealEstateRepository } from './real-estate.repository';
 import { RealEstateSource } from './dto/real-estate-source.enum';
 import type { RealEstateScrapeOptionsDto } from './dto/real-estate-scrape-options.dto';
@@ -33,6 +36,12 @@ const RATE_LIMIT_BASE_DELAY_MS = 1500;
 const RATE_LIMIT_STATUS_CODES = new Set([403, 429]);
 const CAPTCHA_MARKERS = ['\u0434\u043e\u0441\u0442\u0443\u043f \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d', 'h-captcha', 'captcha'];
 const NETWORK_ERROR_CODES = new Set(['ECONNRESET', 'ECONNABORTED', 'ETIMEDOUT', 'EPIPE']);
+const DEFAULT_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+  '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const HEADLESS_ALLOWED_HOSTS = new Set(['youla.ru']);
+const HEADLESS_NAVIGATION_TIMEOUT_MS = 45000;
+const HEADLESS_WAIT_AFTER_LOAD_MS = 800;
 
 interface RateLimitContext {
   url: string;
@@ -66,21 +75,22 @@ interface ScrapeConfig {
 }
 
 @Injectable()
-export class RealEstateScraperService {
+export class RealEstateScraperService implements OnModuleDestroy {
   private readonly logger = new Logger(RealEstateScraperService.name);
+  private readonly cookieJar: CookieJar;
   private readonly http: Got;
+  private headlessBrowser: Browser | null = null;
+  private headlessBrowserPromise: Promise<Browser> | null = null;
 
   constructor(private readonly repository: RealEstateRepository) {
-    const cookieJar = new CookieJar();
-    this.seedCookieJar(cookieJar, 'https://www.avito.ru', AVITO_COOKIE_HEADER);
-    this.seedCookieJar(cookieJar, 'https://youla.ru', YOULA_COOKIE_HEADER);
+    this.cookieJar = new CookieJar();
+    this.seedCookieJar(this.cookieJar, 'https://www.avito.ru', AVITO_COOKIE_HEADER);
+    this.seedCookieJar(this.cookieJar, 'https://youla.ru', YOULA_COOKIE_HEADER);
 
     this.http = got.extend({
-      cookieJar,
+      cookieJar: this.cookieJar,
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-          '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': DEFAULT_USER_AGENT,
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
       },
@@ -426,6 +436,13 @@ export class RealEstateScraperService {
         const html = response.body;
 
         if (this.containsCaptcha(html)) {
+          if (this.canUseHeadlessFallback(url)) {
+            this.logger.warn(
+              `Получена капча при запросе ${url}, переключаюсь на headless браузер`,
+            );
+            return await this.fetchWithHeadlessBrowser(url);
+          }
+
           throw new RateLimitError(
             `Получена капча при запросе ${url}`,
             { url, type: 'captcha' },
@@ -437,6 +454,13 @@ export class RealEstateScraperService {
             `Получен статус 404 от ${url}, продолжаю обработку тела ответа`,
           );
           return html;
+        }
+
+        if (status === 403 && this.canUseHeadlessFallback(url)) {
+          this.logger.warn(
+            `${this.getHostname(url)} вернул статус 403, пробую загрузку через headless браузер`,
+          );
+          return await this.fetchWithHeadlessBrowser(url);
         }
 
         if (status && RATE_LIMIT_STATUS_CODES.has(status)) {
@@ -595,6 +619,210 @@ export class RealEstateScraperService {
       return new URL(url).hostname;
     } catch (error) {
       return url;
+    }
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.closeHeadlessBrowser();
+  }
+
+  private canUseHeadlessFallback(url: string): boolean {
+    const hostname = this.getHostname(url).toLowerCase();
+
+    if (!hostname) {
+      return false;
+    }
+
+    if (HEADLESS_ALLOWED_HOSTS.has(hostname)) {
+      return true;
+    }
+
+    if (hostname.startsWith('www.')) {
+      return HEADLESS_ALLOWED_HOSTS.has(hostname.slice(4));
+    }
+
+    return false;
+  }
+
+  private async fetchWithHeadlessBrowser(url: string): Promise<string> {
+    const browser = await this.getHeadlessBrowser();
+    const page = await browser.newPage();
+
+    try {
+      await page.setUserAgent(DEFAULT_USER_AGENT);
+      const headerOptions = this.buildRequestOptions(url).headers ?? {};
+      const headers: Record<string, string> = {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Upgrade-Insecure-Requests': '1',
+        ...headerOptions,
+      };
+
+      await page.setExtraHTTPHeaders(headers);
+      await this.applyCookiesToPage(page, url);
+
+      const response = await page.goto(url, {
+        waitUntil: 'networkidle2',
+        timeout: HEADLESS_NAVIGATION_TIMEOUT_MS,
+      });
+
+      if (!response) {
+        throw new Error(
+          `Не удалось загрузить страницу ${url} через headless браузер: ответ отсутствует`,
+        );
+      }
+
+      const status = response.status();
+
+      if (RATE_LIMIT_STATUS_CODES.has(status)) {
+        throw new RateLimitError(
+          `Не удалось загрузить страницу ${url} через headless браузер из-за ограничения по запросам`,
+          {
+            url,
+            status,
+            type: 'status',
+          },
+        );
+      }
+
+      if (status >= 400) {
+        throw new Error(
+          `Не удалось загрузить страницу ${url} через headless браузер: HTTP ${status}`,
+        );
+      }
+
+      if (HEADLESS_WAIT_AFTER_LOAD_MS > 0) {
+        await this.delay(HEADLESS_WAIT_AFTER_LOAD_MS);
+      }
+
+      const html = await page.content();
+
+      if (this.containsCaptcha(html)) {
+        throw new RateLimitError(
+          `Получена капча при запросе ${url} (headless)`,
+          { url, type: 'captcha' },
+        );
+      }
+
+      return html;
+    } catch (error) {
+      if (!(error instanceof RateLimitError)) {
+        this.logger.warn(
+          `Не удалось получить страницу ${url} через headless браузер: ${(error as Error).message}`,
+        );
+      }
+
+      throw error;
+    } finally {
+      await page.close();
+    }
+  }
+
+  private async applyCookiesToPage(page: Page, url: string): Promise<void> {
+    const cookies = this.getCookiesForUrl(url);
+
+    if (!cookies.length) {
+      return;
+    }
+
+    const hostname = this.getHostname(url);
+
+    const formatted: PuppeteerCookieParam[] = [];
+
+    for (const cookie of cookies) {
+      const domain = cookie.domain
+        ? cookie.domain.replace(/^\./, '')
+        : hostname;
+
+      if (!domain) {
+        continue;
+      }
+
+      formatted.push({
+        name: cookie.key,
+        value: cookie.value,
+        domain,
+        path: cookie.path ?? '/',
+      });
+    }
+
+    if (formatted.length > 0) {
+      await page.setCookie(...formatted);
+    }
+  }
+
+  private getCookiesForUrl(url: string): Cookie[] {
+    try {
+      return this.cookieJar.getCookiesSync(url);
+    } catch (error) {
+      this.logger.warn(
+        `Не удалось прочитать cookies для ${url}: ${(error as Error).message}`,
+      );
+      return [];
+    }
+  }
+
+  private async getHeadlessBrowser(): Promise<Browser> {
+    if (this.headlessBrowser) {
+      return this.headlessBrowser;
+    }
+
+    if (!this.headlessBrowserPromise) {
+      this.headlessBrowserPromise = this.launchHeadlessBrowser();
+    }
+
+    this.headlessBrowser = await this.headlessBrowserPromise;
+    return this.headlessBrowser;
+  }
+
+  private async launchHeadlessBrowser(): Promise<Browser> {
+    try {
+      const puppeteer = await import('puppeteer');
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process',
+        ],
+        defaultViewport: {
+          width: 1280,
+          height: 720,
+        },
+      });
+
+      browser.once('disconnected', () => {
+        this.headlessBrowser = null;
+        this.headlessBrowserPromise = null;
+      });
+
+      return browser;
+    } catch (error) {
+      this.headlessBrowserPromise = null;
+      this.logger.error(
+        `Не удалось запустить headless браузер: ${(error as Error).message}`,
+      );
+      throw error;
+    }
+  }
+
+  private async closeHeadlessBrowser(): Promise<void> {
+    if (!this.headlessBrowser) {
+      this.headlessBrowserPromise = null;
+      return;
+    }
+
+    try {
+      await this.headlessBrowser.close();
+    } catch (error) {
+      this.logger.warn(
+        `Не удалось корректно закрыть headless браузер: ${(error as Error).message}`,
+      );
+    } finally {
+      this.headlessBrowser = null;
+      this.headlessBrowserPromise = null;
     }
   }
 
