@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { randomBytes, randomUUID } from 'node:crypto';
 import got, { type Got } from 'got';
 import { load, type CheerioAPI, type Cheerio as CheerioCollection } from 'cheerio';
 import { CookieJar } from 'tough-cookie';
@@ -26,20 +27,47 @@ const DEFAULT_YOULA_URLS = [
   'https://youla.ru/birobidzhan/nedvijimost/arenda-doma-posutochno',
 ];
 const DEFAULT_MAX_PAGES = 5;
-const DEFAULT_REQUEST_DELAY_MS = 800;
-const YOULA_COOKIE_HEADER =
-  'location=%7B%22isConfirmed%22%3Atrue%2C%22city%22%3A%7B%22coords%22%3A%7B%22latitude%22%3A48.788167%2C%22longitude%22%3A132.928807%7D%7D%7D; youla_uid=68ff4ad9614f9; ym_uid=176106063072727213; ym_d=17610606370; sessid=sd4q0dt8odJqrIun4shigo2ri;';
-const AVITO_COOKIE_HEADER =
-  'srv_id=Zto1KLGUaSkSvynG.Gwc2jhg4529UAnbdT1JurQ_hZLlNR6mbUCmZ1dW5U3vYEY6PFTQNABSKQCinOcAgn9ex.ojuFyto1xUnn0Sbir5O0J2e0PKAgHSJfMc_KBGIivvY=.web; gMltIuegZN2COuSe=EOFGWsm50bhh17prLqaIgdir1V0kgrvN; u=37bj1el5.1muygv3.pjrustwddu0; cookie_consent_shown=1; _ym_uid=1761551333939275276; _ym_d=1761551333; __ai_fp_uuid=671ac58dfe4a6a27%3A1; uxs_uid=650e5100-b309-11f0-9546-db3a646b149b; _gcl_au=1.1.1434067768.1761551339; __upin=vDbLIZFNGqzoxq6NgS+74Q; ma_id_api=05kOiZqz76D1E/6njqV8/njpZitiJphTQQVzmwlRcbm0z7t6AukbX5fQSP06fR+jQ20WjBjmXzkmcsXAlLbLLhme8j8Xt7G352MTYvB2y1WIOto5Gscocbh8gw/th9WOQOL67rLPqOIMJr/RzhMq/VJygC0sA9GRMeUo72c0ew9O+eJyDZ1uTL9pdRzbR+twQnWQX93Kw2HTQStDKn7EKMWdldEoy3NofqQOL6Qbn/cXrPmaBTJv0+82wTJLCvVtVbd7vyl8MAXkDRZjFmfa45EHmw5/29vO3Dt/WcFbw9EQD6qsg/ztMa+g/OqekbORMNszHYnYeC7Oa7MeYBHR7g==; ma_id=9474128101761551336203; _buzz_aidata=JTdCJTIydWZwJTIyJTNBJTIydkRiTElaRk5HcXpveHE2TmdTJTJCNzRRJTIyJTJDJTIyYnJvd3NlclZlcnNpb24lMjIlM0ElMjIyNS44JTIyJTJDJTIydHNDcmVhdGVkJTIyJTNBMTc2MTU1MTMzOTYyNSU3RA==; _buzz_mtsa=JTdCJTIydWZwJTIyJTNBJTIyNWNhZGVkNWNkMTBmN2Q1NzlkZTFkNWIxODlkZDhkN2MlMjIlMkMlMjJicm93c2VyVmVyc2lvbiUyMiUzQSUyMjI1LjglMjIlMkMlMjJ0c0NyZWF0ZWQlMjIlM0ExNzYxNTUxMzM5NjQ3JTdE; _ga=GA1.1.1879617030.1761551345; tmr_lvid=8d69466eb5edf5a8c941674d7c5c6961; tmr_lvidTS=1761551345906; adrcid=AOLR1h7TEA5MbvWKILGMlWA; buyer_location_id=626740; __zzatw-avito=MDA0dBA=Fz2+aQ==; cfidsw-avito=Fx6bfWGqcrA3xX5Ouk+ZzH23eUfspRmgLKH9EExuvcO1rL36W8AiYv66AyiBx72Ic4E45UU9sYhHdCSwg0hI0Q2S6wRF0aluvSch1VqmW2jMoxNuGma4eGoBBFMB6IlxnQtq36dKWY+JCmiTFOTQyIsN; ma_cid=1761603649403483045; SEARCH_HISTORY_IDS=1; v=1761697931; _ym_isad=1; utm_source_ad=avito_banner; csprefid=a7bd4a0a-be10-4416-90c6-b5c6e26b1c0a';
+const DEFAULT_REQUEST_DELAY_MS = 1200;
+const YOULA_LOCATION_COOKIE =
+  'location=%7B%22isConfirmed%22%3Atrue%2C%22city%22%3A%7B%22coords%22%3A%7B%22latitude%22%3A48.788167%2C%22longitude%22%3A132.928807%7D%7D%7D';
+const AVITO_BUYER_LOCATION_ID = '626740';
 const FETCH_MAX_RETRIES = 4;
 const RATE_LIMIT_BASE_DELAY_MS = 1500;
 const RATE_LIMIT_STATUS_CODES = new Set([403, 429]);
 const CAPTCHA_MARKERS = ['\u0434\u043e\u0441\u0442\u0443\u043f \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d', 'h-captcha', 'captcha'];
 const NETWORK_ERROR_CODES = new Set(['ECONNRESET', 'ECONNABORTED', 'ETIMEDOUT', 'EPIPE']);
-const DEFAULT_USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-const HEADLESS_ALLOWED_HOSTS = new Set(['youla.ru']);
+interface UserAgentProfile {
+  name: string;
+  userAgent: string;
+  secChUa: string;
+  secChUaMobile: string;
+  secChUaPlatform: string;
+}
+
+const USER_AGENT_PROFILES: readonly UserAgentProfile[] = [
+  {
+    name: 'yabrowser-linux',
+    userAgent:
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36',
+    secChUa:
+      '"Not.A/Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8"',
+    secChUaMobile: '?0',
+    secChUaPlatform: '"Linux"',
+  },
+  {
+    name: 'chrome-windows',
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+    secChUa:
+      '"Not.A/Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
+    secChUaMobile: '?0',
+    secChUaPlatform: '"Windows"',
+  },
+] as const;
+
+const REQUEST_DELAY_JITTER_RATIO = 0.35;
+const CAPTCHA_BACKOFF_MULTIPLIER = 2;
+const HEADLESS_ALLOWED_HOSTS = new Set(['youla.ru', 'www.avito.ru', 'avito.ru']);
 const HEADLESS_NAVIGATION_TIMEOUT_MS = 45000;
 const HEADLESS_WAIT_AFTER_LOAD_MS = 800;
 const HEADLESS_DEFAULT_VIEWPORT = { width: 1280, height: 720 } as const;
@@ -103,31 +131,16 @@ interface ScrapeConfig {
 @Injectable()
 export class RealEstateScraperService implements OnModuleDestroy {
   private readonly logger = new Logger(RealEstateScraperService.name);
-  private readonly cookieJar: CookieJar;
-  private readonly http: Got;
+  private userAgentProfile: UserAgentProfile;
+  private cookieJar: CookieJar;
+  private http: Got;
   private headlessBrowser: Browser | null = null;
   private headlessBrowserPromise: Promise<Browser> | null = null;
 
   constructor(private readonly repository: RealEstateRepository) {
-    this.cookieJar = new CookieJar();
-    this.seedCookieJar(this.cookieJar, 'https://www.avito.ru', AVITO_COOKIE_HEADER);
-    this.seedCookieJar(this.cookieJar, 'https://youla.ru', YOULA_COOKIE_HEADER);
-
-    this.http = got.extend({
-      cookieJar: this.cookieJar,
-      headers: {
-        'User-Agent': DEFAULT_USER_AGENT,
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-      },
-      timeout: { request: 20000 },
-      http2: false,
-      followRedirect: true,
-      decompress: true,
-      retry: { limit: 0 },
-      responseType: 'text',
-      throwHttpErrors: false,
-    });
+    this.userAgentProfile = this.pickUserAgentProfile();
+    this.cookieJar = this.createSeededCookieJar();
+    this.http = this.createHttpClient(this.userAgentProfile, this.cookieJar);
   }
 
   async collectDailyListings(options: {
@@ -277,7 +290,7 @@ export class RealEstateScraperService implements OnModuleDestroy {
       }
 
       if (page < maxPages && delayMs > 0) {
-        await this.delay(delayMs);
+        await this.delay(this.applyJitter(delayMs));
       }
     }
 
@@ -453,11 +466,15 @@ export class RealEstateScraperService implements OnModuleDestroy {
   }
 
   private async fetchPage(url: string): Promise<string> {
+    const hostname = this.getHostname(url);
     let lastError: unknown = null;
 
     for (let attempt = 1; attempt <= FETCH_MAX_RETRIES; attempt += 1) {
       try {
-        const response = await this.http.get<string>(url, this.buildRequestOptions(url));
+        const response = await this.http.get<string>(
+          url,
+          this.buildRequestOptions(url),
+        );
         const status = response.statusCode ?? 0;
         const html = response.body;
 
@@ -469,13 +486,35 @@ export class RealEstateScraperService implements OnModuleDestroy {
             return await this.fetchWithHeadlessBrowser(url);
           }
 
-          throw new RateLimitError(
-            `Получена капча при запросе ${url}`,
-            { url, type: 'captcha' },
+          const cooldown = this.applyJitter(
+            this.calculateRateLimitDelay(attempt) * CAPTCHA_BACKOFF_MULTIPLIER,
           );
+
+          this.logger.warn(
+            `${hostname}: получена капча. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${cooldown} мс перед повтором`,
+          );
+
+          if (attempt === FETCH_MAX_RETRIES) {
+            throw new RateLimitError(
+              `Получена капча при запросе ${url}`,
+              {
+                url,
+                attempt,
+                type: 'captcha',
+              },
+            );
+          }
+
+          this.rotateIdentity(hostname, 'captcha');
+          await this.delay(cooldown);
+          continue;
         }
 
-        if (status === 404 && typeof html === 'string' && html.trim().length > 0) {
+        if (
+          status === 404 &&
+          typeof html === 'string' &&
+          html.trim().length > 0
+        ) {
           this.logger.warn(
             `Получен статус 404 от ${url}, продолжаю обработку тела ответа`,
           );
@@ -484,19 +523,20 @@ export class RealEstateScraperService implements OnModuleDestroy {
 
         if (status === 403 && this.canUseHeadlessFallback(url)) {
           this.logger.warn(
-            `${this.getHostname(url)} вернул статус 403, пробую загрузку через headless браузер`,
+            `${hostname} вернул статус 403, пробую загрузку через headless браузер`,
           );
           return await this.fetchWithHeadlessBrowser(url);
         }
 
         if (status && RATE_LIMIT_STATUS_CODES.has(status)) {
           const retryAfterHeader = response.headers?.['retry-after'];
-          const delayMs =
+          const baseDelay =
             this.extractRetryAfterMs(retryAfterHeader) ??
             this.calculateRateLimitDelay(attempt);
+          const delayMs = this.applyJitter(baseDelay);
 
           this.logger.warn(
-            `${this.getHostname(url)} ответил статусом ${status}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${delayMs} мс перед повтором`,
+            `${hostname}: ограничение по запросам (статус ${status}). Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${delayMs} мс перед повтором`,
           );
 
           if (attempt === FETCH_MAX_RETRIES) {
@@ -511,6 +551,7 @@ export class RealEstateScraperService implements OnModuleDestroy {
             );
           }
 
+          this.rotateIdentity(hostname, 'status');
           await this.delay(delayMs);
           continue;
         }
@@ -526,15 +567,37 @@ export class RealEstateScraperService implements OnModuleDestroy {
         lastError = error;
 
         if (error instanceof RateLimitError) {
-          throw error;
+          if (attempt === FETCH_MAX_RETRIES) {
+            throw error;
+          }
+
+          const isCaptcha = error.context.type === 'captcha';
+          const baseDelay = this.calculateRateLimitDelay(attempt);
+          const delayMs = this.applyJitter(
+            isCaptcha ? baseDelay * CAPTCHA_BACKOFF_MULTIPLIER : baseDelay,
+          );
+
+          this.logger.warn(
+            `${hostname}: ${
+              isCaptcha
+                ? 'получена капча (headless)'
+                : `ограничение по статусу ${error.context.status ?? 'unknown'}`
+            }. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${delayMs} мс перед повтором`,
+          );
+
+          this.rotateIdentity(hostname, isCaptcha ? 'captcha' : 'status');
+          await this.delay(delayMs);
+          continue;
         }
 
         const code = this.extractErrorCode(error);
 
         if (code && NETWORK_ERROR_CODES.has(code)) {
-          const retryDelay = this.calculateRateLimitDelay(attempt);
+          const retryDelay = this.applyJitter(
+            this.calculateRateLimitDelay(attempt),
+          );
           this.logger.warn(
-            `${this.getHostname(url)}: сетевой сбой ${code}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${retryDelay} мс перед повтором`,
+            `${hostname}: сетевой сбой ${code}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${retryDelay} мс перед повтором`,
           );
 
           if (attempt === FETCH_MAX_RETRIES) {
@@ -675,7 +738,7 @@ export class RealEstateScraperService implements OnModuleDestroy {
     const page = await browser.newPage();
 
     try {
-      await page.setUserAgent(DEFAULT_USER_AGENT);
+      await page.setUserAgent(this.userAgentProfile.userAgent);
       const headerOptions = this.buildRequestOptions(url).headers ?? {};
       const headers: Record<string, string> = {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -894,19 +957,27 @@ export class RealEstateScraperService implements OnModuleDestroy {
     }
   }
 
+  private buildIdentityHeaders(): Record<string, string> {
+    return {
+      'User-Agent': this.userAgentProfile.userAgent,
+      'Sec-CH-UA': this.userAgentProfile.secChUa,
+      'Sec-CH-UA-Mobile': this.userAgentProfile.secChUaMobile,
+      'Sec-CH-UA-Platform': this.userAgentProfile.secChUaPlatform,
+    };
+  }
+
   private buildRequestOptions(
     url: string,
   ): { headers?: Record<string, string> } {
     const hostname = this.getHostname(url);
 
+    const baseHeaders = this.buildIdentityHeaders();
+
     if (hostname === 'youla.ru') {
       return {
         headers: {
+          ...baseHeaders,
           Referer: 'https://youla.ru/',
-          'Sec-CH-UA':
-            '"Not.A/Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8"',
-          'Sec-CH-UA-Mobile': '?0',
-          'Sec-CH-UA-Platform': '"Linux"',
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
           'Sec-Fetch-Site': 'same-origin',
@@ -916,15 +987,12 @@ export class RealEstateScraperService implements OnModuleDestroy {
       };
     }
 
-    if (hostname === 'www.avito.ru') {
+    if (hostname === 'www.avito.ru' || hostname === 'avito.ru') {
       return {
         headers: {
+          ...baseHeaders,
           Referer:
             'https://www.avito.ru/birobidzhan/nedvizhimost?localPriority=0',
-          'Sec-CH-UA':
-            '"Not)A;Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8", "Yowser";v="2.5"',
-          'Sec-CH-UA-Mobile': '?0',
-          'Sec-CH-UA-Platform': '"Linux"',
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
           'Sec-Fetch-Site': 'same-origin',
@@ -972,6 +1040,123 @@ export class RealEstateScraperService implements OnModuleDestroy {
     });
   }
 
+  private applyJitter(value: number): number {
+    if (value <= 0) {
+      return 0;
+    }
+
+    const ratio = Math.max(Math.min(REQUEST_DELAY_JITTER_RATIO, 1), 0);
+
+    if (ratio === 0) {
+      return Math.floor(value);
+    }
+
+    const spread = value * ratio;
+    const min = Math.max(0, value - spread);
+    const max = value + spread;
+    return Math.floor(min + Math.random() * (max - min));
+  }
+
+  private createSeededCookieJar(): CookieJar {
+    const jar = new CookieJar();
+    this.seedCookieJar(jar, 'https://www.avito.ru', this.buildAvitoCookieHeader());
+    this.seedCookieJar(jar, 'https://youla.ru', this.buildYoulaCookieHeader());
+    return jar;
+  }
+
+  private buildYoulaCookieHeader(): string {
+    const youlaUid = this.generateHexString(12);
+    const ymUid = this.generateNumericString(15);
+    const ymDate = Math.floor(Date.now() / 1000).toString();
+    const sessionId = this.generateAlphaNumericString(24);
+
+    return [
+      YOULA_LOCATION_COOKIE,
+      `youla_uid=${youlaUid}`,
+      `ym_uid=${ymUid}`,
+      `ym_d=${ymDate}`,
+      `sessid=${sessionId}`,
+    ].join('; ');
+  }
+
+  private buildAvitoCookieHeader(): string {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const ymUid = this.generateNumericString(16);
+    const uxsUid = randomUUID();
+    const sessionId = this.generateHexString(32);
+
+    return [
+      'cookie_consent_shown=1',
+      `_ym_uid=${ymUid}`,
+      `_ym_d=${timestamp}`,
+      `_ym_isad=1`,
+      `uxs_uid=${uxsUid}`,
+      `u=${sessionId}`,
+      `buyer_location_id=${AVITO_BUYER_LOCATION_ID}`,
+      `SEARCH_HISTORY_IDS=1`,
+      `v=${timestamp}`,
+    ].join('; ');
+  }
+
+  private createHttpClient(
+    profile: UserAgentProfile,
+    jar: CookieJar,
+  ): Got {
+    return got.extend({
+      cookieJar: jar,
+      headers: {
+        'User-Agent': profile.userAgent,
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+      },
+      timeout: { request: 20000 },
+      http2: false,
+      followRedirect: true,
+      decompress: true,
+      retry: { limit: 0 },
+      responseType: 'text',
+      throwHttpErrors: false,
+    });
+  }
+
+  private pickUserAgentProfile(
+    exclude?: UserAgentProfile,
+  ): UserAgentProfile {
+    if (USER_AGENT_PROFILES.length === 1) {
+      return USER_AGENT_PROFILES[0];
+    }
+
+    const candidates = exclude
+      ? USER_AGENT_PROFILES.filter(
+          (profile) => profile.name !== exclude.name,
+        )
+      : [...USER_AGENT_PROFILES];
+
+    if (!candidates.length) {
+      return USER_AGENT_PROFILES[0];
+    }
+
+    const index = Math.floor(Math.random() * candidates.length);
+    return candidates[index];
+  }
+
+  private rotateIdentity(
+    hostname: string,
+    reason: 'captcha' | 'status',
+  ): void {
+    const previousProfile = this.userAgentProfile;
+    this.userAgentProfile = this.pickUserAgentProfile(previousProfile);
+    this.cookieJar = this.createSeededCookieJar();
+    this.http = this.createHttpClient(this.userAgentProfile, this.cookieJar);
+
+    this.logger.warn(
+      `${hostname}: сбрасываю сессию из-за ${
+        reason === 'captcha' ? 'капчи' : 'ограничения'
+      }, новый user-agent ${this.userAgentProfile.name}`,
+    );
+  }
+
   private seedCookieJar(jar: CookieJar, origin: string, cookieHeader: string): void {
     if (!cookieHeader) {
       return;
@@ -994,6 +1179,33 @@ export class RealEstateScraperService implements OnModuleDestroy {
         );
       }
     }
+  }
+
+  private generateHexString(length: number): string {
+    const byteLength = Math.ceil(length / 2);
+    return randomBytes(byteLength).toString('hex').slice(0, length);
+  }
+
+  private generateAlphaNumericString(length: number): string {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+
+    for (let index = 0; index < length; index += 1) {
+      const randomIndex = Math.floor(Math.random() * alphabet.length);
+      result += alphabet[randomIndex];
+    }
+
+    return result;
+  }
+
+  private generateNumericString(length: number): string {
+    let result = '';
+
+    for (let index = 0; index < length; index += 1) {
+      result += Math.floor(Math.random() * 10).toString();
+    }
+
+    return result;
   }
 
   private extractErrorCode(error: unknown): string | null {
