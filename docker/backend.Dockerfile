@@ -9,7 +9,7 @@ ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
 
 COPY api/package*.json ./
 
-RUN npm install --no-audit
+RUN --network=host npm ci --no-audit
 
 COPY api/ ./
 
