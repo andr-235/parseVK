@@ -8,6 +8,7 @@ ARG NPM_REGISTRY=https://registry.npmmirror.com/
 ENV DATABASE_URL=${DATABASE_URL}
 ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
 ENV npm_config_registry=${NPM_REGISTRY}
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 COPY api/package*.json ./
 
@@ -35,6 +36,21 @@ ARG NPM_REGISTRY=https://registry.npmmirror.com/
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
 ENV npm_config_registry=${NPM_REGISTRY}
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chrome
+
+RUN set -eux; \
+    apk add --no-cache chromium; \
+    CHROMIUM_BIN="$(command -v chromium-browser || true)"; \
+    if [ -z "$CHROMIUM_BIN" ]; then \
+      CHROMIUM_BIN="$(command -v chromium || true)"; \
+    fi; \
+    if [ -z "$CHROMIUM_BIN" ]; then \
+      echo "Chromium binary not found after installation" >&2; \
+      exit 1; \
+    fi; \
+    ln -sf "$CHROMIUM_BIN" /usr/bin/chrome; \
+    ln -sf "$CHROMIUM_BIN" /usr/bin/google-chrome
 
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
