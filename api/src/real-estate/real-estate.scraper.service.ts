@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import axios, { type AxiosInstance } from 'axios';
+import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { load, type CheerioAPI, type Cheerio as CheerioCollection } from 'cheerio';
 import { RealEstateRepository } from './real-estate.repository';
 import { RealEstateSource } from './dto/real-estate-source.enum';
@@ -23,15 +23,29 @@ const DEFAULT_YOULA_URLS = [
 ];
 const DEFAULT_MAX_PAGES = 5;
 const DEFAULT_REQUEST_DELAY_MS = 350;
+const YOULA_COOKIE_HEADER =
+  'location=%7B%22isConfirmed%22%3Atrue%2C%22city%22%3A%7B%22coords%22%3A%7B%22latitude%22%3A48.788167%2C%22longitude%22%3A132.928807%7D%7D%7D; youla_uid=68ff4ad9614f9; ym_uid=176106063072727213; ym_d=17610606370; sessid=sd4q0dt8odJqrIun4shigo2ri;';
+const AVITO_COOKIE_HEADER =
+  'srv_id=Zto1KLGUaSkSvynG.Gwc2jhg4529UAnbdT1JurQ_hZLlNR6mbUCmZ1dW5U3vYEY6PFTQNABSKQCinOcAgn9ex.ojuFyto1xUnn0Sbir5O0J2e0PKAgHSJfMc_KBGIivvY=.web; gMltIuegZN2COuSe=EOFGWsm50bhh17prLqaIgdir1V0kgrvN; u=37bj1el5.1muygv3.pjrustwddu0; cookie_consent_shown=1; _ym_uid=1761551333939275276; _ym_d=1761551333; __ai_fp_uuid=671ac58dfe4a6a27%3A1; uxs_uid=650e5100-b309-11f0-9546-db3a646b149b; _gcl_au=1.1.1434067768.1761551339; __upin=vDbLIZFNGqzoxq6NgS+74Q; ma_id_api=05kOiZqz76D1E/6njqV8/njpZitiJphTQQVzmwlRcbm0z7t6AukbX5fQSP06fR+jQ20WjBjmXzkmcsXAlLbLLhme8j8Xt7G352MTYvB2y1WIOto5Gscocbh8gw/th9WOQOL67rLPqOIMJr/RzhMq/VJygC0sA9GRMeUo72c0ew9O+eJyDZ1uTL9pdRzbR+twQnWQX93Kw2HTQStDKn7EKMWdldEoy3NofqQOL6Qbn/cXrPmaBTJv0+82wTJLCvVtVbd7vyl8MAXkDRZjFmfa45EHmw5/29vO3Dt/WcFbw9EQD6qsg/ztMa+g/OqekbORMNszHYnYeC7Oa7MeYBHR7g==; ma_id=9474128101761551336203; _buzz_aidata=JTdCJTIydWZwJTIyJTNBJTIydkRiTElaRk5HcXpveHE2TmdTJTJCNzRRJTIyJTJDJTIyYnJvd3NlclZlcnNpb24lMjIlM0ElMjIyNS44JTIyJTJDJTIydHNDcmVhdGVkJTIyJTNBMTc2MTU1MTMzOTYyNSU3RA==; _buzz_mtsa=JTdCJTIydWZwJTIyJTNBJTIyNWNhZGVkNWNkMTBmN2Q1NzlkZTFkNWIxODlkZDhkN2MlMjIlMkMlMjJicm93c2VyVmVyc2lvbiUyMiUzQSUyMjI1LjglMjIlMkMlMjJ0c0NyZWF0ZWQlMjIlM0ExNzYxNTUxMzM5NjQ3JTdE; _ga=GA1.1.1879617030.1761551345; tmr_lvid=8d69466eb5edf5a8c941674d7c5c6961; tmr_lvidTS=1761551345906; adrcid=AOLR1h7TEA5MbvWKILGMlWA; buyer_location_id=626740; __zzatw-avito=MDA0dBA=Fz2+aQ==; cfidsw-avito=Fx6bfWGqcrA3xX5Ouk+ZzH23eUfspRmgLKH9EExuvcO1rL36W8AiYv66AyiBx72Ic4E45UU9sYhHdCSwg0hI0Q2S6wRF0aluvSch1VqmW2jMoxNuGma4eGoBBFMB6IlxnQtq36dKWY+JCmiTFOTQyIsN; ma_cid=1761603649403483045; SEARCH_HISTORY_IDS=1; v=1761697931; _ym_isad=1; utm_source_ad=avito_banner; csprefid=a7bd4a0a-be10-4416-90c6-b5c6e26b1c0a';
 const FETCH_MAX_RETRIES = 4;
 const RATE_LIMIT_BASE_DELAY_MS = 1500;
 const RATE_LIMIT_STATUS_CODES = new Set([403, 429]);
 const CAPTCHA_MARKERS = ['\u0434\u043e\u0441\u0442\u0443\u043f \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d', 'h-captcha', 'captcha'];
 
+interface RateLimitContext {
+  url: string;
+  status?: number;
+  attempt?: number;
+  type: 'status' | 'captcha';
+}
+
 class RateLimitError extends Error {
-  constructor(message: string) {
+  readonly context: RateLimitContext;
+
+  constructor(message: string, context: RateLimitContext) {
     super(message);
     this.name = 'RateLimitError';
+    this.context = context;
   }
 }
 
@@ -166,8 +180,24 @@ export class RealEstateScraperService {
         html = await this.fetchPage(pageUrl);
       } catch (error) {
         if (error instanceof RateLimitError) {
+          const details: string[] = [];
+
+          if (error.context.status) {
+            details.push(`статус ${error.context.status}`);
+          }
+
+          if (error.context.type === 'captcha') {
+            details.push('ответ содержит капчу');
+          }
+
+          if (error.context.attempt) {
+            details.push(`попытка ${error.context.attempt}/${FETCH_MAX_RETRIES}`);
+          }
+
+          const extra = details.length > 0 ? ` (${details.join(', ')})` : '';
+
           this.logger.warn(
-            `Получен ответ об ограничении при обращении к ${pageUrl}, дальнейшие запросы прерваны`,
+            `${error.message}${extra}. Дальнейшие запросы прерваны`,
           );
           break;
         }
@@ -378,18 +408,13 @@ export class RealEstateScraperService {
 
     for (let attempt = 1; attempt <= FETCH_MAX_RETRIES; attempt += 1) {
       try {
-        const response = await this.http.get<string>(url);
+        const response = await this.http.get<string>(url, this.buildRequestConfig(url));
         const html = response.data;
 
         if (this.containsCaptcha(html)) {
           throw new RateLimitError(
-            `Avito вернул страницу с капчей при запросе ${url}`,
-          );
-        }
-
-        if (response.status === 404) {
-          this.logger.warn(
-            `Получен статус 404 от ${url}, продолжаю обработку тела ответа`,
+            `Получена капча при запросе ${url}`,
+            { url, type: 'captcha' },
           );
         }
 
@@ -424,12 +449,18 @@ export class RealEstateScraperService {
             this.calculateRateLimitDelay(attempt);
 
           this.logger.warn(
-            `Avito ответил статусом ${status} для ${url}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${delayMs} мс перед повтором`,
+            `${this.getHostname(url)} ответил статусом ${status}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${delayMs} мс перед повтором`,
           );
 
           if (attempt === FETCH_MAX_RETRIES) {
             throw new RateLimitError(
               `Не удалось загрузить страницу ${url} из-за ограничения по запросам`,
+              {
+                url,
+                status,
+                attempt,
+                type: 'status',
+              },
             );
           }
 
@@ -528,6 +559,59 @@ export class RealEstateScraperService {
     } catch (error) {
       return href;
     }
+  }
+
+  private getHostname(url: string): string {
+    try {
+      return new URL(url).hostname;
+    } catch (error) {
+      return url;
+    }
+  }
+
+  private buildRequestConfig(url: string): AxiosRequestConfig {
+    const hostname = this.getHostname(url);
+
+    if (hostname === 'youla.ru') {
+      return {
+        headers: {
+          Referer: 'https://youla.ru/',
+          Cookie: YOULA_COOKIE_HEADER,
+          'Sec-CH-UA':
+            '"Not.A/Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8"',
+          'Sec-CH-UA-Mobile': '?0',
+          'Sec-CH-UA-Platform': '"Linux"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'same-origin',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
+        },
+      };
+    }
+
+    if (hostname === 'www.avito.ru') {
+      return {
+        headers: {
+          Referer:
+            'https://www.avito.ru/birobidzhan/nedvizhimost?localPriority=0',
+          Cookie: AVITO_COOKIE_HEADER,
+          'Sec-CH-UA':
+            '"Not)A;Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8", "Yowser";v="2.5"',
+          'Sec-CH-UA-Mobile': '?0',
+          'Sec-CH-UA-Platform': '"Linux"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'same-origin',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
+          'Accept-Language': 'ru,en;q=0.9',
+          'Cache-Control': 'max-age=0',
+        },
+      };
+    }
+
+    return {};
   }
 
   private containsCaptcha(html: string): boolean {
