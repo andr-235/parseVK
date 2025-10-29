@@ -46,10 +46,9 @@ services:
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
+      network: host
       args:
         DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/vk_api?schema=public}
-        # Используем зеркало npm по умолчанию; можно переопределить переменной NPM_REGISTRY.
-        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com/}
     ports:
       - "3000:3000"
     depends_on:
