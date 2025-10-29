@@ -1,4 +1,7 @@
-import { InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import type { PrismaService } from '../prisma.service';
 import type { VkService } from '../vk/vk.service';
@@ -317,9 +320,9 @@ describe('GroupsService', () => {
         new Error('REGION_NOT_FOUND'),
       );
 
-      await expect(
-        service.searchRegionGroups(),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.searchRegionGroups()).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('должен оборачивать прочие ошибки во внутреннее исключение', async () => {
@@ -327,9 +330,9 @@ describe('GroupsService', () => {
         new Error('VK error'),
       );
 
-      await expect(
-        service.searchRegionGroups(),
-      ).rejects.toBeInstanceOf(InternalServerErrorException);
+      await expect(service.searchRegionGroups()).rejects.toBeInstanceOf(
+        InternalServerErrorException,
+      );
     });
   });
 });

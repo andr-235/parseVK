@@ -249,14 +249,12 @@ export class VkService {
       occupation: user.occupation ?? undefined,
       personal: user.personal ?? undefined,
       relatives: user.relatives ?? undefined,
-      relation:
-        typeof user.relation === 'number' ? user.relation : undefined,
+      relation: typeof user.relation === 'number' ? user.relation : undefined,
       schools: user.schools ?? undefined,
       sex: typeof user.sex === 'number' ? user.sex : undefined,
       site: user.site ?? undefined,
       status: user.status ?? undefined,
-      timezone:
-        typeof user.timezone === 'number' ? user.timezone : undefined,
+      timezone: typeof user.timezone === 'number' ? user.timezone : undefined,
       tv: user.tv ?? undefined,
       universities: user.universities ?? undefined,
     }));
@@ -317,7 +315,9 @@ export class VkService {
     const priority = ['w', 'z', 'y', 'x', 'm', 's'];
 
     for (const type of priority) {
-      const size = sizes.find((item) => item.type === type && Boolean(item.url));
+      const size = sizes.find(
+        (item) => item.type === type && Boolean(item.url),
+      );
       if (size?.url) {
         return size.url;
       }
@@ -379,14 +379,12 @@ export class VkService {
     return result;
   }
 
-  async searchGroupsByRegion({
-    query,
-  }: {
-    query?: string;
-  }): Promise<IGroup[]> {
+  async searchGroupsByRegion({ query }: { query?: string }): Promise<IGroup[]> {
     this.logger.log(
       `Начат поиск групп в регионе "Еврейская автономная область"${
-        query && query.trim().length > 0 ? ` с фильтром "${query.trim()}"` : ' без фильтра'
+        query && query.trim().length > 0
+          ? ` с фильтром "${query.trim()}"`
+          : ' без фильтра'
       }`,
     );
     const regionTitle = 'Еврейская автономная область';
@@ -475,7 +473,10 @@ export class VkService {
         this.logger.error(
           `VK API error during regional group search: ${error.message}`,
         );
-      } else if (error instanceof Error && error.message === 'REGION_NOT_FOUND') {
+      } else if (
+        error instanceof Error &&
+        error.message === 'REGION_NOT_FOUND'
+      ) {
         throw error;
       } else {
         this.logger.error(
@@ -524,7 +525,7 @@ export class VkService {
         });
         const detailsArray = Array.isArray(detailsResponse)
           ? detailsResponse
-          : (detailsResponse as Responses.GroupsGetByIdObjectResponse).groups ?? [];
+          : (detailsResponse.groups ?? []);
         const details = detailsArray as Objects.GroupsGroupFull[];
 
         details.forEach((detail) => {

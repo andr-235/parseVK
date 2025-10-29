@@ -3,7 +3,11 @@ import { Prisma } from '@prisma/client';
 import type { Author as AuthorModel } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { PhotoAnalysisService } from '../photo-analysis/photo-analysis.service';
-import type { AuthorCardDto, AuthorDetailsDto, AuthorListDto } from './dto/author.dto';
+import type {
+  AuthorCardDto,
+  AuthorDetailsDto,
+  AuthorListDto,
+} from './dto/author.dto';
 import type { PhotoAnalysisSummaryDto } from '../photo-analysis/dto/photo-analysis-response.dto';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 
@@ -54,10 +58,20 @@ export class AuthorsService {
 
   async listAuthors(options: ListAuthorsOptions = {}): Promise<AuthorListDto> {
     const offset = Math.max(options.offset ?? 0, 0);
-    const limit = Math.min(Math.max(options.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
+    const limit = Math.min(
+      Math.max(options.limit ?? DEFAULT_LIMIT, 1),
+      MAX_LIMIT,
+    );
     const search = options.search?.trim();
-    const sort = this.resolveSort(options.sortBy, options.sortOrder, options.verified);
-    const { where, sqlConditions } = this.buildFilters(search, options.verified);
+    const sort = this.resolveSort(
+      options.sortBy,
+      options.sortOrder,
+      options.verified,
+    );
+    const { where, sqlConditions } = this.buildFilters(
+      search,
+      options.verified,
+    );
 
     const [total, authors] = await Promise.all([
       this.prisma.author.count({ where }),
@@ -70,7 +84,8 @@ export class AuthorsService {
     ]);
 
     const authorIds = authors.map((author) => author.id);
-    const summaryMap = await this.photoAnalysisService.getSummariesByAuthorIds(authorIds);
+    const summaryMap =
+      await this.photoAnalysisService.getSummariesByAuthorIds(authorIds);
 
     const items: AuthorCardDto[] = authors.map((author) =>
       this.buildAuthorCard(author, summaryMap.get(author.id)),
@@ -83,19 +98,22 @@ export class AuthorsService {
     };
   }
 
-  private static readonly SORTABLE_FIELDS: ReadonlySet<AuthorSortField> = new Set<AuthorSortField>([
-    'fullName',
-    'photosCount',
-    'audiosCount',
-    'videosCount',
-    'friendsCount',
-    'followersCount',
-    'lastSeenAt',
-    'verifiedAt',
-    'updatedAt',
-  ]);
+  private static readonly SORTABLE_FIELDS: ReadonlySet<AuthorSortField> =
+    new Set<AuthorSortField>([
+      'fullName',
+      'photosCount',
+      'audiosCount',
+      'videosCount',
+      'friendsCount',
+      'followersCount',
+      'lastSeenAt',
+      'verifiedAt',
+      'updatedAt',
+    ]);
 
-  private async queryAuthors(options: QueryAuthorsOptions): Promise<AuthorModel[]> {
+  private async queryAuthors(
+    options: QueryAuthorsOptions,
+  ): Promise<AuthorModel[]> {
     const whereClause = options.sqlConditions.length
       ? Prisma.sql`WHERE ${Prisma.join(options.sqlConditions, ' AND ')}`
       : Prisma.sql``;
@@ -192,7 +210,9 @@ export class AuthorsService {
     };
   }
 
-  private normalizeSortField(value: AuthorSortField | string | null | undefined): AuthorSortField | null {
+  private normalizeSortField(
+    value: AuthorSortField | string | null | undefined,
+  ): AuthorSortField | null {
     if (!value) {
       return null;
     }
@@ -209,43 +229,75 @@ export class AuthorsService {
 
     switch (sort.field) {
       case 'fullName':
-        expressions.push(this.applyDirection(Prisma.sql`LOWER("Author"."lastName")`, sort.order));
-        expressions.push(this.applyDirection(Prisma.sql`LOWER("Author"."firstName")`, sort.order));
-        expressions.push(this.applyDirection(Prisma.sql`"Author"."vkUserId"`, sort.order));
+        expressions.push(
+          this.applyDirection(
+            Prisma.sql`LOWER("Author"."lastName")`,
+            sort.order,
+          ),
+        );
+        expressions.push(
+          this.applyDirection(
+            Prisma.sql`LOWER("Author"."firstName")`,
+            sort.order,
+          ),
+        );
+        expressions.push(
+          this.applyDirection(Prisma.sql`"Author"."vkUserId"`, sort.order),
+        );
         break;
       case 'photosCount':
         expressions.push(
-          this.applyDirection(this.buildCounterValueExpression(['photos', 'photos_count']), sort.order, {
-            nullsLast: true,
-          }),
+          this.applyDirection(
+            this.buildCounterValueExpression(['photos', 'photos_count']),
+            sort.order,
+            {
+              nullsLast: true,
+            },
+          ),
         );
         break;
       case 'audiosCount':
         expressions.push(
-          this.applyDirection(this.buildCounterValueExpression(['audios', 'audio']), sort.order, {
-            nullsLast: true,
-          }),
+          this.applyDirection(
+            this.buildCounterValueExpression(['audios', 'audio']),
+            sort.order,
+            {
+              nullsLast: true,
+            },
+          ),
         );
         break;
       case 'videosCount':
         expressions.push(
-          this.applyDirection(this.buildCounterValueExpression(['videos', 'video']), sort.order, {
-            nullsLast: true,
-          }),
+          this.applyDirection(
+            this.buildCounterValueExpression(['videos', 'video']),
+            sort.order,
+            {
+              nullsLast: true,
+            },
+          ),
         );
         break;
       case 'friendsCount':
         expressions.push(
-          this.applyDirection(this.buildCounterValueExpression(['friends']), sort.order, {
-            nullsLast: true,
-          }),
+          this.applyDirection(
+            this.buildCounterValueExpression(['friends']),
+            sort.order,
+            {
+              nullsLast: true,
+            },
+          ),
         );
         break;
       case 'followersCount':
         expressions.push(
-          this.applyDirection(this.buildFollowersValueExpression(), sort.order, {
-            nullsLast: true,
-          }),
+          this.applyDirection(
+            this.buildFollowersValueExpression(),
+            sort.order,
+            {
+              nullsLast: true,
+            },
+          ),
         );
         break;
       case 'lastSeenAt':
@@ -264,7 +316,9 @@ export class AuthorsService {
         break;
       case 'updatedAt':
       default:
-        expressions.push(this.applyDirection(Prisma.sql`"Author"."updatedAt"`, sort.order));
+        expressions.push(
+          this.applyDirection(Prisma.sql`"Author"."updatedAt"`, sort.order),
+        );
         break;
     }
 
@@ -285,7 +339,9 @@ export class AuthorsService {
   }
 
   private buildCounterValueExpression(keys: string[]): Prisma.Sql {
-    const expressions = keys.map((key) => this.buildCounterValueExpressionForKey(key));
+    const expressions = keys.map((key) =>
+      this.buildCounterValueExpressionForKey(key),
+    );
 
     if (expressions.length === 1) {
       return expressions[0];
@@ -341,7 +397,10 @@ export class AuthorsService {
       END
     `;
 
-    const countersValue = this.buildCounterValueExpression(['followers', 'subscribers']);
+    const countersValue = this.buildCounterValueExpression([
+      'followers',
+      'subscribers',
+    ]);
 
     return Prisma.sql`COALESCE(${directValue}, ${countersValue})`;
   }
@@ -360,7 +419,9 @@ export class AuthorsService {
       END
     `;
 
-    const timeFromObject = this.buildUnixMillisExpression(Prisma.sql`"Author"."lastSeen"->>'time'`);
+    const timeFromObject = this.buildUnixMillisExpression(
+      Prisma.sql`"Author"."lastSeen"->>'time'`,
+    );
     const dateFromObject = Prisma.sql`
       CASE
         WHEN ("Author"."lastSeen"->>'date') ~ '^\\d{4}-\\d{2}-\\d{2}'
@@ -414,7 +475,9 @@ export class AuthorsService {
       throw error;
     }
 
-    const summaries = await this.photoAnalysisService.getSummariesByAuthorIds([author.id]);
+    const summaries = await this.photoAnalysisService.getSummariesByAuthorIds([
+      author.id,
+    ]);
     const summary = summaries.get(author.id);
     const card = this.buildAuthorCard(author, summary);
 
@@ -447,7 +510,9 @@ export class AuthorsService {
     return `https://vk.com/id${author.vkUserId}`;
   }
 
-  private cloneSummary(summary?: PhotoAnalysisSummaryDto): PhotoAnalysisSummaryDto {
+  private cloneSummary(
+    summary?: PhotoAnalysisSummaryDto,
+  ): PhotoAnalysisSummaryDto {
     if (!summary) {
       return this.photoAnalysisService.getEmptySummary();
     }
@@ -470,7 +535,7 @@ export class AuthorsService {
     const summaryPhotos = Number.isFinite(normalizedSummary.total)
       ? normalizedSummary.total
       : null;
-    const photosCount = counters.photos ?? (summaryPhotos ?? null);
+    const photosCount = counters.photos ?? summaryPhotos ?? null;
     const followers = author.followersCount ?? counters.followers ?? null;
 
     return {
@@ -521,7 +586,9 @@ export class AuthorsService {
       audios: this.parseCounterValue(counters.audios ?? counters.audio),
       videos: this.parseCounterValue(counters.videos ?? counters.video),
       friends: this.parseCounterValue(counters.friends),
-      followers: this.parseCounterValue(counters.followers ?? counters.subscribers),
+      followers: this.parseCounterValue(
+        counters.followers ?? counters.subscribers,
+      ),
     };
   }
 
@@ -561,7 +628,16 @@ export class AuthorsService {
 
     if (typeof value === 'object') {
       const record = value as Record<string, unknown>;
-      const preferredKeys = ['count', 'value', 'total', 'amount', 'items', 'length', 'quantity', 'num'];
+      const preferredKeys = [
+        'count',
+        'value',
+        'total',
+        'amount',
+        'items',
+        'length',
+        'quantity',
+        'num',
+      ];
 
       for (const key of preferredKeys) {
         if (Object.prototype.hasOwnProperty.call(record, key)) {

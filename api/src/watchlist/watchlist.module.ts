@@ -10,10 +10,6 @@ import { CommonModule } from '../common/common.module';
 @Module({
   imports: [VkModule, PhotoAnalysisModule, CommonModule],
   controllers: [WatchlistController],
-  providers: [
-    WatchlistService,
-    PrismaService,
-    WatchlistMonitorService,
-  ],
+  providers: [WatchlistService, PrismaService, WatchlistMonitorService],
 })
 export class WatchlistModule {}

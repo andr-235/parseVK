@@ -37,7 +37,9 @@ interface RealEstateListingDelegate {
     };
   }): Promise<RealEstateListingRecord[]>;
 
-  create(args: { data: RealEstateListingCreateInput }): Promise<RealEstateListingRecord>;
+  create(args: {
+    data: RealEstateListingCreateInput;
+  }): Promise<RealEstateListingRecord>;
 
   update(args: {
     where: { id: number };
@@ -234,7 +236,9 @@ export class RealEstateRepository {
     const accessor = client as unknown as PrismaRealEstateAccessor;
 
     if (!accessor.realEstateListing) {
-      throw new Error('Prisma client is not configured with realEstateListing delegate');
+      throw new Error(
+        'Prisma client is not configured with realEstateListing delegate',
+      );
     }
 
     return accessor.realEstateListing;

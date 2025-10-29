@@ -4,4 +4,3 @@ export class TaskCancelledError extends Error {
     this.name = 'TaskCancelledError';
   }
 }
-

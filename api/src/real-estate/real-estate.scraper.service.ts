@@ -1,6 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { load, type CheerioAPI, type Cheerio as CheerioCollection } from 'cheerio';
 import type { Browser, BrowserContext, Page } from 'puppeteer';
 type PuppeteerCookieParam = Parameters<Page['setCookie']>[0];
 import { RealEstateRepository } from './real-estate.repository';
@@ -31,7 +30,114 @@ const AVITO_BUYER_LOCATION_ID = '626740';
 const FETCH_MAX_RETRIES = 4;
 const RATE_LIMIT_BASE_DELAY_MS = 1500;
 const RATE_LIMIT_STATUS_CODES = new Set([403, 429]);
-const CAPTCHA_MARKERS = ['\u0434\u043e\u0441\u0442\u0443\u043f \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d', 'h-captcha', 'captcha'];
+const CAPTCHA_MARKERS = [
+  '\u0434\u043e\u0441\u0442\u0443\u043f \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d',
+  'h-captcha',
+  'captcha',
+];
+const AVITO_CARD_SELECTORS = [
+  'div[data-marker="item"]',
+  'div[data-marker="item-root"]',
+  'div.iva-item-root-G3n7v',
+] as const;
+const AVITO_TITLE_SELECTORS = [
+  'a[data-marker="item-title"]',
+  'a[itemprop="url"]',
+  'a[class*="title-root"]',
+  'a[class*="link-link"]',
+] as const;
+const AVITO_PRICE_SELECTORS = [
+  '[data-marker="item-price"]',
+  '[class*="price-text"]',
+  '[itemprop="price"]',
+] as const;
+const AVITO_ADDRESS_SELECTORS = [
+  '[data-marker="item-address"]',
+  '[class*="geo-root"]',
+  '[class*="geo-address"]',
+] as const;
+const AVITO_DESCRIPTION_SELECTORS = [
+  '[data-marker="item-description"]',
+  '[class*="snippet-text"]',
+  '[class*="description"]',
+  '[data-marker="item-properties"]',
+] as const;
+const AVITO_DATE_SELECTORS = [
+  '[data-marker="item-date"] time',
+  '[data-marker="item-date"]',
+  'time[datetime]',
+  'time',
+  '[class*="date"]',
+] as const;
+const AVITO_IMAGE_SELECTORS = [
+  'img[data-marker="image-content"]',
+  'img[data-marker="image"]',
+  'img[data-marker="item-image"]',
+  'img[class*="photo-slider-image"]',
+  'img',
+] as const;
+const YOULA_CARD_SELECTORS = [
+  'article[data-id]',
+  'div[data-test="product-card"]',
+  'li[data-test="product-item"]',
+] as const;
+const YOULA_TITLE_SELECTORS = [
+  '[data-test="product-title"]',
+  'a[data-test="product-card-link"]',
+  'a[class*="ProductCardTitle"]',
+] as const;
+const YOULA_PRICE_SELECTORS = [
+  '[data-test="product-price"]',
+  '[class*="ProductCard_price"]',
+  '[itemprop="price"]',
+] as const;
+const YOULA_ADDRESS_SELECTORS = [
+  '[data-test="product-address"]',
+  '[class*="ProductCard_address"]',
+] as const;
+const YOULA_DATE_SELECTORS = [
+  '[data-test="product-date"] time',
+  '[data-test="product-date"]',
+  'time[datetime]',
+  'time',
+] as const;
+const YOULA_IMAGE_SELECTORS = [
+  'img[data-test="product-image"]',
+  'img[class*="ProductCardPhoto__image"]',
+  'img[data-src]',
+  'img',
+] as const;
+const RU_MONTHS: Record<string, number> = {
+  января: 0,
+  февраля: 1,
+  марта: 2,
+  апреля: 3,
+  мая: 4,
+  июня: 5,
+  июля: 6,
+  августа: 7,
+  сентября: 8,
+  октября: 9,
+  ноября: 10,
+  декабря: 11,
+};
+interface RawListing {
+  externalId: string | null;
+  title: string | null;
+  url: string | null;
+  priceText: string | null;
+  address: string | null;
+  description: string | null;
+  previewImage: string | null;
+  publishedAt: string | null;
+}
+
+interface PageScrapeResult {
+  listings: RawListing[];
+  hasNextPage: boolean;
+}
+
+type PageExtractor = (page: Page) => Promise<PageScrapeResult>;
 interface UserAgentProfile {
   name: string;
   userAgent: string;
@@ -45,8 +151,7 @@ const USER_AGENT_PROFILES: readonly UserAgentProfile[] = [
     name: 'yabrowser-linux',
     userAgent:
       'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36',
-    secChUa:
-      '"Not.A/Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8"',
+    secChUa: '"Not.A/Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8"',
     secChUaMobile: '?0',
     secChUaPlatform: '"Linux"',
   },
@@ -54,8 +159,7 @@ const USER_AGENT_PROFILES: readonly UserAgentProfile[] = [
     name: 'chrome-windows',
     userAgent:
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
-    secChUa:
-      '"Not.A/Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
+    secChUa: '"Not.A/Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
     secChUaMobile: '?0',
     secChUaPlatform: '"Windows"',
   },
@@ -119,9 +223,8 @@ interface ScrapeConfig {
   source: RealEstateSource;
   baseUrl: string;
   pageParam: string;
-  nextPageSelector: string;
   options: RealEstateScrapeOptionsDto;
-  parser: (api: CheerioAPI, pageUrl: string) => RealEstateListingDto[];
+  extractor: PageExtractor;
 }
 
 @Injectable()
@@ -138,9 +241,11 @@ export class RealEstateScraperService implements OnModuleDestroy {
     this.seedCookies = this.createSeedCookies();
   }
 
-  async collectDailyListings(options: {
-    publishedAfter?: Date;
-  } = {}): Promise<RealEstateDailyCollectResultDto> {
+  async collectDailyListings(
+    options: {
+      publishedAfter?: Date;
+    } = {},
+  ): Promise<RealEstateDailyCollectResultDto> {
     const { publishedAfter } = options;
 
     const avito = await this.scrapeAvito({ publishedAfter });
@@ -152,13 +257,13 @@ export class RealEstateScraperService implements OnModuleDestroy {
   async scrapeAvito(
     options: RealEstateScrapeOptionsDto = {},
   ): Promise<RealEstateSyncResultDto> {
+    const nextPageSelector = 'a[data-marker="pagination-button/next"]';
     const config: ScrapeConfig = {
       source: RealEstateSource.AVITO,
       baseUrl: options.baseUrl ?? DEFAULT_AVITO_URL,
       pageParam: 'p',
-      nextPageSelector: 'a[data-marker="pagination-button/next"]',
       options,
-      parser: (api, pageUrl) => this.parseAvitoPage(api, pageUrl),
+      extractor: (page) => this.extractAvitoPage(page, nextPageSelector),
     };
 
     return this.scrapeSource(config);
@@ -191,13 +296,13 @@ export class RealEstateScraperService implements OnModuleDestroy {
     };
 
     for (const baseUrl of baseUrls) {
+      const nextPageSelector = 'a[data-test-pagination-link="next"]';
       const config: ScrapeConfig = {
         source: RealEstateSource.YOULA,
         baseUrl,
         pageParam: 'page',
-        nextPageSelector: 'a[data-test-pagination-link="next"]',
         options,
-        parser: (api, pageUrl) => this.parseYoulaPage(api, pageUrl),
+        extractor: (page) => this.extractYoulaPage(page, nextPageSelector),
       };
 
       const result = await this.scrapeSource(config);
@@ -218,23 +323,25 @@ export class RealEstateScraperService implements OnModuleDestroy {
     source,
     baseUrl,
     pageParam,
-    nextPageSelector,
     options,
-    parser,
+    extractor,
   }: ScrapeConfig): Promise<RealEstateSyncResultDto> {
     const maxPages = Math.max(options.maxPages ?? DEFAULT_MAX_PAGES, 1);
     const publishedAfter = options.publishedAfter;
-    const delayMs = Math.max(options.requestDelayMs ?? DEFAULT_REQUEST_DELAY_MS, 0);
+    const delayMs = Math.max(
+      options.requestDelayMs ?? DEFAULT_REQUEST_DELAY_MS,
+      0,
+    );
 
     const aggregated: RealEstateListingDto[] = [];
     const seenIds = new Set<string>();
 
     for (let page = 1; page <= maxPages; page += 1) {
       const pageUrl = this.buildPagedUrl(baseUrl, pageParam, page);
-      let html: string;
+      let pageResult: PageScrapeResult;
 
       try {
-        html = await this.fetchPage(pageUrl);
+        pageResult = await this.scrapePage(pageUrl, extractor);
       } catch (error) {
         if (error instanceof RateLimitError) {
           const details: string[] = [];
@@ -248,7 +355,9 @@ export class RealEstateScraperService implements OnModuleDestroy {
           }
 
           if (error.context.attempt) {
-            details.push(`попытка ${error.context.attempt}/${FETCH_MAX_RETRIES}`);
+            details.push(
+              `попытка ${error.context.attempt}/${FETCH_MAX_RETRIES}`,
+            );
           }
 
           const extra = details.length > 0 ? ` (${details.join(', ')})` : '';
@@ -262,8 +371,10 @@ export class RealEstateScraperService implements OnModuleDestroy {
         throw error;
       }
 
-      const api = load(html);
-      const parsedListings = parser(api, pageUrl);
+      const parsedListings = this.mapRawListings(
+        pageResult.listings,
+        source,
+      );
       const { accepted, shouldStop } = this.filterByDate(
         parsedListings,
         publishedAfter,
@@ -278,7 +389,7 @@ export class RealEstateScraperService implements OnModuleDestroy {
         aggregated.push(listing);
       }
 
-      const hasNextPage = api(nextPageSelector).length > 0;
+      const hasNextPage = pageResult.hasNextPage;
 
       if (!hasNextPage || shouldStop) {
         break;
@@ -297,6 +408,69 @@ export class RealEstateScraperService implements OnModuleDestroy {
       created: syncResult.created,
       updated: syncResult.updated,
     };
+  }
+
+  private mapRawListings(
+    rawListings: RawListing[],
+    source: RealEstateSource,
+  ): RealEstateListingDto[] {
+    const result: RealEstateListingDto[] = [];
+
+    for (const raw of rawListings) {
+      const mapped = this.mapRawListing(raw, source);
+      if (mapped) {
+        result.push(mapped);
+      }
+    }
+
+    return result;
+  }
+
+  private mapRawListing(
+    raw: RawListing,
+    source: RealEstateSource,
+  ): RealEstateListingDto | null {
+    const externalId = this.normalizeNullable(raw.externalId);
+    const title = this.normalizeNullable(raw.title);
+    const url = this.normalizeNullable(raw.url);
+    const priceText = this.normalizeNullable(raw.priceText);
+    const address = this.normalizeNullable(raw.address);
+    const description = this.normalizeNullable(raw.description);
+    const previewImage = this.normalizeNullable(raw.previewImage);
+    const publishedAtRaw = this.normalizeNullable(raw.publishedAt);
+
+    if (!externalId || !title || !url || !publishedAtRaw) {
+      return null;
+    }
+
+    const publishedAt = this.parseDate(publishedAtRaw);
+
+    if (!publishedAt) {
+      return null;
+    }
+
+    return {
+      source,
+      externalId,
+      title,
+      url,
+      priceText,
+      price: this.parsePrice(priceText),
+      address,
+      description,
+      previewImage,
+      metadata: null,
+      publishedAt,
+    };
+  }
+
+  private normalizeNullable(value: string | null | undefined): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    return normalized.length > 0 ? normalized : null;
   }
 
   private filterByDate(
@@ -321,152 +495,282 @@ export class RealEstateScraperService implements OnModuleDestroy {
     return { accepted, shouldStop: false };
   }
 
-  private parseAvitoPage(
-    api: CheerioAPI,
-    pageUrl: string,
-  ): RealEstateListingDto[] {
-    const listings: RealEstateListingDto[] = [];
+  private async extractAvitoPage(
+    page: Page,
+    nextPageSelector: string,
+  ): Promise<PageScrapeResult> {
+    return page.evaluate(
+      ({
+        cardSelectors,
+        titleSelectors,
+        priceSelectors,
+        addressSelectors,
+        descriptionSelectors,
+        dateSelectors,
+        imageSelectors,
+        nextSelector,
+      }) => {
+        const selectFirst = (
+          root: Element,
+          selectors: readonly string[],
+        ): Element | null => {
+          for (const selector of selectors) {
+            const candidate = root.querySelector(selector);
+            if (candidate) {
+              return candidate;
+            }
+          }
+          return null;
+        };
 
-    api('div[data-marker="item"]').each((_, element) => {
-      const container = api(element);
-      const externalId =
-        container.attr('data-item-id') ??
-        container.attr('data-id') ??
-        container.attr('id');
+        const extractText = (element: Element | null): string | null => {
+          if (!element) {
+            return null;
+          }
+          const text = element.textContent ?? '';
+          const normalized = text.replace(/\s+/g, ' ').trim();
+          return normalized.length > 0 ? normalized : null;
+        };
 
-      if (!externalId) {
-        return;
-      }
+        const toAbsoluteUrl = (href: string | null): string | null => {
+          if (!href) {
+            return null;
+          }
 
-      const titleElement = container.find('[data-marker="item-title"]').first();
-      const title = this.extractText(titleElement);
+          try {
+            return new URL(href, window.location.href).href;
+          } catch (error) {
+            return href;
+          }
+        };
 
-      if (!title) {
-        return;
-      }
+        const listings: RawListing[] = [];
+        const seen = new Set<string>();
+        const cards = Array.from(
+          document.querySelectorAll(cardSelectors.join(', ')),
+        );
 
-      const linkElement = container.find('a[data-marker="item-title"]').first();
-      const href = linkElement.attr('href') ?? titleElement.attr('href') ?? '';
-      const url = this.resolveUrl(href, pageUrl);
+        for (const card of cards) {
+          const nestedItem = card.querySelector('div[data-marker="item"]');
+          const externalId =
+            card.getAttribute('data-item-id') ??
+            card.getAttribute('data-id') ??
+            card.id ??
+            nestedItem?.getAttribute('data-item-id') ??
+            nestedItem?.getAttribute('data-id') ??
+            null;
 
-      const priceText = this.extractText(
-        container.find('[data-marker="item-price"]').first(),
-      );
-      const address = this.extractText(
-        container.find('[data-marker="item-address"]').first(),
-      );
-      const description = this.extractText(
-        container.find('[data-marker="item-description"]').first(),
-      );
+          if (!externalId || seen.has(externalId)) {
+            continue;
+          }
 
-      const timeAttribute =
-        container.find('time').first().attr('datetime') ??
-        container.find('[data-marker="item-date"]').first().attr('datetime') ??
-        this.extractText(container.find('[data-marker="item-date"]').first());
+          seen.add(externalId);
 
-      const publishedAt = this.parseDate(timeAttribute);
+          const titleElement = selectFirst(card, titleSelectors);
+          const title = extractText(titleElement);
 
-      if (!publishedAt) {
-        return;
-      }
+          if (!title) {
+            continue;
+          }
 
-      const previewImage =
-        container.find('img').first().attr('src') ??
-        container.find('img').first().attr('data-src') ??
-        null;
+          const href =
+            titleElement?.getAttribute('href') ??
+            selectFirst(card, ['a[data-marker="item-title"]'])?.getAttribute(
+              'href',
+            ) ??
+            null;
+          const url = toAbsoluteUrl(href);
 
-      listings.push({
-        source: RealEstateSource.AVITO,
-        externalId,
-        title,
-        url,
-        priceText,
-        price: this.parsePrice(priceText),
-        address,
-        description,
-        previewImage,
-        metadata: null,
-        publishedAt,
-      });
-    });
+          const priceElement = selectFirst(card, priceSelectors);
+          const priceText = extractText(priceElement);
 
-    return listings;
+          const addressElement = selectFirst(card, addressSelectors);
+          const address = extractText(addressElement);
+
+          const descriptionElement = selectFirst(card, descriptionSelectors);
+          const description = extractText(descriptionElement);
+
+          const dateElement = selectFirst(card, dateSelectors);
+          const publishedAt =
+            dateElement?.getAttribute('datetime') ??
+            extractText(dateElement) ??
+            null;
+
+          const imageElement = selectFirst(card, imageSelectors);
+          const previewImage =
+            imageElement?.getAttribute('src') ??
+            imageElement?.getAttribute('data-src') ??
+            imageElement?.getAttribute('srcset') ??
+            null;
+
+          listings.push({
+            externalId,
+            title,
+            url,
+            priceText,
+            address,
+            description,
+            previewImage,
+            publishedAt,
+          });
+        }
+
+        const hasNextPage = nextSelector
+          ? Boolean(document.querySelector(nextSelector))
+          : false;
+
+        return { listings, hasNextPage };
+      },
+      {
+        cardSelectors: AVITO_CARD_SELECTORS,
+        titleSelectors: AVITO_TITLE_SELECTORS,
+        priceSelectors: AVITO_PRICE_SELECTORS,
+        addressSelectors: AVITO_ADDRESS_SELECTORS,
+        descriptionSelectors: AVITO_DESCRIPTION_SELECTORS,
+        dateSelectors: AVITO_DATE_SELECTORS,
+        imageSelectors: AVITO_IMAGE_SELECTORS,
+        nextSelector: nextPageSelector,
+      },
+    );
   }
 
-  private parseYoulaPage(
-    api: CheerioAPI,
-    pageUrl: string,
-  ): RealEstateListingDto[] {
-    const listings: RealEstateListingDto[] = [];
+  private async extractYoulaPage(
+    page: Page,
+    nextPageSelector: string,
+  ): Promise<PageScrapeResult> {
+    return page.evaluate(
+      ({
+        cardSelectors,
+        titleSelectors,
+        priceSelectors,
+        addressSelectors,
+        dateSelectors,
+        imageSelectors,
+        nextSelector,
+      }) => {
+        const selectFirst = (
+          root: Element,
+          selectors: readonly string[],
+        ): Element | null => {
+          for (const selector of selectors) {
+            const candidate = root.querySelector(selector);
+            if (candidate) {
+              return candidate;
+            }
+          }
+          return null;
+        };
 
-    api('article[data-id]').each((_, element) => {
-      const container = api(element);
-      const externalId = container.attr('data-id');
+        const extractText = (element: Element | null): string | null => {
+          if (!element) {
+            return null;
+          }
+          const text = element.textContent ?? '';
+          const normalized = text.replace(/\s+/g, ' ').trim();
+          return normalized.length > 0 ? normalized : null;
+        };
 
-      if (!externalId) {
-        return;
-      }
+        const toAbsoluteUrl = (href: string | null): string | null => {
+          if (!href) {
+            return null;
+          }
 
-      const titleElement = container
-        .find('a[data-test="product-title"]')
-        .first();
-      const title = this.extractText(titleElement);
+          try {
+            return new URL(href, window.location.href).href;
+          } catch (error) {
+            return href;
+          }
+        };
 
-      if (!title) {
-        return;
-      }
+        const listings: RawListing[] = [];
+        const seen = new Set<string>();
+        const cards = Array.from(
+          document.querySelectorAll(cardSelectors.join(', ')),
+        );
 
-      const href = titleElement.attr('href') ?? '';
-      const url = this.resolveUrl(href, pageUrl);
+        for (const card of cards) {
+          const externalId =
+            card.getAttribute('data-id') ??
+            card.getAttribute('data-product-id') ??
+            card.querySelector('[data-id]')?.getAttribute('data-id') ??
+            null;
 
-      const priceText = this.extractText(
-        container.find('[data-test="product-price"]').first(),
-      );
-      const address = this.extractText(
-        container.find('[data-test="product-address"]').first(),
-      );
+          if (!externalId || seen.has(externalId)) {
+            continue;
+          }
 
-      const datetime =
-        container.find('time').first().attr('datetime') ??
-        container.attr('data-published-at') ??
-        this.extractText(container.find('[data-test="product-date"]').first());
+          seen.add(externalId);
 
-      const publishedAt = this.parseDate(datetime);
+          const titleElement = selectFirst(card, titleSelectors);
+          const title = extractText(titleElement);
 
-      if (!publishedAt) {
-        return;
-      }
+          if (!title) {
+            continue;
+          }
 
-      const previewImage =
-        container.find('img').first().attr('src') ??
-        container.find('img').first().attr('data-src') ??
-        null;
+          const href = titleElement?.getAttribute('href') ?? null;
+          const url = toAbsoluteUrl(href);
 
-      listings.push({
-        source: RealEstateSource.YOULA,
-        externalId,
-        title,
-        url,
-        priceText,
-        price: this.parsePrice(priceText),
-        address,
-        description: null,
-        previewImage,
-        metadata: null,
-        publishedAt,
-      });
-    });
+          const priceElement = selectFirst(card, priceSelectors);
+          const priceText = extractText(priceElement);
 
-    return listings;
+          const addressElement = selectFirst(card, addressSelectors);
+          const address = extractText(addressElement);
+
+          const dateElement = selectFirst(card, dateSelectors);
+          const publishedAt =
+            dateElement?.getAttribute('datetime') ??
+            card.getAttribute('data-published-at') ??
+            extractText(dateElement) ??
+            null;
+
+          const imageElement = selectFirst(card, imageSelectors);
+          const previewImage =
+            imageElement?.getAttribute('src') ??
+            imageElement?.getAttribute('data-src') ??
+            imageElement?.getAttribute('srcset') ??
+            null;
+
+          listings.push({
+            externalId,
+            title,
+            url,
+            priceText,
+            address,
+            description: null,
+            previewImage,
+            publishedAt,
+          });
+        }
+
+        const hasNextPage = nextSelector
+          ? Boolean(document.querySelector(nextSelector))
+          : false;
+
+        return { listings, hasNextPage };
+      },
+      {
+        cardSelectors: YOULA_CARD_SELECTORS,
+        titleSelectors: YOULA_TITLE_SELECTORS,
+        priceSelectors: YOULA_PRICE_SELECTORS,
+        addressSelectors: YOULA_ADDRESS_SELECTORS,
+        dateSelectors: YOULA_DATE_SELECTORS,
+        imageSelectors: YOULA_IMAGE_SELECTORS,
+        nextSelector: nextPageSelector,
+      },
+    );
   }
 
-  private async fetchPage(url: string): Promise<string> {
+  private async scrapePage(
+    url: string,
+    extractor: PageExtractor,
+  ): Promise<PageScrapeResult> {
     const hostname = this.getHostname(url);
     let lastError: unknown = null;
 
     for (let attempt = 1; attempt <= FETCH_MAX_RETRIES; attempt += 1) {
       try {
-        return await this.fetchWithHeadlessBrowser(url);
+        return await this.fetchWithHeadlessBrowser(url, extractor);
       } catch (error) {
         lastError = error;
 
@@ -493,10 +797,7 @@ export class RealEstateScraperService implements OnModuleDestroy {
             `${hostname}: ${reasonLabel}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${delayMs} мс перед повтором`,
           );
 
-          await this.rotateIdentity(
-            hostname,
-            isCaptcha ? 'captcha' : 'status',
-          );
+          await this.rotateIdentity(hostname, isCaptcha ? 'captcha' : 'status');
           await this.delay(delayMs);
           continue;
         }
@@ -516,7 +817,11 @@ export class RealEstateScraperService implements OnModuleDestroy {
       : new Error(`Не удалось загрузить страницу ${url}`);
   }
 
-  private buildPagedUrl(baseUrl: string, pageParam: string, page: number): string {
+  private buildPagedUrl(
+    baseUrl: string,
+    pageParam: string,
+    page: number,
+  ): string {
     if (page <= 1) {
       return baseUrl;
     }
@@ -540,15 +845,6 @@ export class RealEstateScraperService implements OnModuleDestroy {
     return digits ? Number(digits) : null;
   }
 
-  private extractText(element: CheerioCollection<any>): string | null {
-    if (element.length === 0) {
-      return null;
-    }
-
-    const text = element.text()?.trim();
-    return text ? text : null;
-  }
-
   private parseDate(value: string | null | undefined): Date | null {
     if (!value) {
       return null;
@@ -560,22 +856,57 @@ export class RealEstateScraperService implements OnModuleDestroy {
       return null;
     }
 
-    if (/^\d{10}$/.test(trimmed)) {
-      return new Date(Number(trimmed) * 1000);
+    const normalizedWhitespace = trimmed.replace(/\s+/g, ' ');
+    const relative = this.parseRelativeDate(normalizedWhitespace);
+
+    if (relative) {
+      return relative;
     }
 
-    if (/^\d{13}$/.test(trimmed)) {
-      return new Date(Number(trimmed));
+    if (/^\d{10}$/.test(normalizedWhitespace)) {
+      return new Date(Number(normalizedWhitespace) * 1000);
     }
 
-    const parsed = new Date(trimmed);
+    if (/^\d{13}$/.test(normalizedWhitespace)) {
+      return new Date(Number(normalizedWhitespace));
+    }
+
+    const dotMatch = normalizedWhitespace.match(
+      /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2})[:.](\d{2}))?$/,
+    );
+
+    if (dotMatch) {
+      const day = Number.parseInt(dotMatch[1], 10);
+      const month = Number.parseInt(dotMatch[2], 10) - 1;
+      const year = Number.parseInt(dotMatch[3], 10);
+      const hours = dotMatch[4] ? Number.parseInt(dotMatch[4], 10) : 0;
+      const minutes = dotMatch[5] ? Number.parseInt(dotMatch[5], 10) : 0;
+
+      if (
+        Number.isFinite(day) &&
+        Number.isFinite(month) &&
+        Number.isFinite(year)
+      ) {
+        return new Date(
+          year,
+          month,
+          day,
+          Number.isFinite(hours) ? hours : 0,
+          Number.isFinite(minutes) ? minutes : 0,
+          0,
+          0,
+        );
+      }
+    }
+
+    const parsed = new Date(normalizedWhitespace);
 
     if (!Number.isNaN(parsed.getTime())) {
       return parsed;
     }
 
-    const normalized = trimmed.replace(' ', 'T');
-    const fallback = new Date(normalized);
+    const normalizedIso = normalizedWhitespace.replace(' ', 'T');
+    const fallback = new Date(normalizedIso);
 
     if (!Number.isNaN(fallback.getTime())) {
       return fallback;
@@ -584,16 +915,110 @@ export class RealEstateScraperService implements OnModuleDestroy {
     return null;
   }
 
-  private resolveUrl(href: string, base: string): string {
-    if (!href) {
-      return base;
+  private parseRelativeDate(value: string): Date | null {
+    const lower = value.toLowerCase();
+    const now = new Date();
+    const timeMatch = lower.match(/(\d{1,2})[:.](\d{2})/);
+
+    const applyTime = (date: Date): Date => {
+      if (!timeMatch) {
+        return date;
+      }
+
+      const hours = Number.parseInt(timeMatch[1] ?? '0', 10);
+      const minutes = Number.parseInt(timeMatch[2] ?? '0', 10);
+      date.setHours(hours, minutes, 0, 0);
+      return date;
+    };
+
+    if (lower.includes('сегодня')) {
+      const date = new Date(now);
+      date.setHours(0, 0, 0, 0);
+      return applyTime(date);
     }
 
-    try {
-      return new URL(href, base).toString();
-    } catch (error) {
-      return href;
+    if (lower.includes('вчера')) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - 1);
+      date.setHours(0, 0, 0, 0);
+      return applyTime(date);
     }
+
+    const agoMatch = lower.match(
+      /(\d+)\s+(секунд|секунды|секунду|минут|минуту|минуты|час|часа|часов|часик|день|дня|дней|сутки|суток)\s+назад/,
+    );
+
+    if (agoMatch) {
+      const amount = Number.parseInt(agoMatch[1], 10);
+      const unit = agoMatch[2];
+      const date = new Date(now);
+
+      if (Number.isFinite(amount)) {
+        if (unit.startsWith('секунд')) {
+          date.setSeconds(date.getSeconds() - amount);
+        } else if (unit.startsWith('минут')) {
+          date.setMinutes(date.getMinutes() - amount);
+        } else if (unit.startsWith('час')) {
+          date.setHours(date.getHours() - amount);
+        } else {
+          date.setDate(date.getDate() - amount);
+        }
+      }
+
+      return date;
+    }
+
+    const monthMatch = lower.match(
+      /(\d{1,2})\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)(?:\s+(\d{4}))?(?:\s*(?:г\.|года)?)?(?:\s*(?:в|,)?\s*(\d{1,2})[:.](\d{2}))?/,
+    );
+
+    if (monthMatch) {
+      const day = Number.parseInt(monthMatch[1], 10);
+      const monthLabel = monthMatch[2];
+      const monthIndex = RU_MONTHS[monthLabel];
+
+      if (!Number.isFinite(day) || monthIndex === undefined) {
+        return null;
+      }
+
+      const resolvedMonthIndex = monthIndex;
+      const year =
+        monthMatch[3] !== undefined
+          ? Number.parseInt(monthMatch[3], 10)
+          : this.resolveImplicitYear(resolvedMonthIndex);
+      const hours = monthMatch[4] ? Number.parseInt(monthMatch[4], 10) : 0;
+      const minutes = monthMatch[5] ? Number.parseInt(monthMatch[5], 10) : 0;
+
+      if (
+        Number.isFinite(day) &&
+        Number.isFinite(resolvedMonthIndex) &&
+        Number.isFinite(year)
+      ) {
+        return new Date(
+          year,
+          resolvedMonthIndex,
+          day,
+          Number.isFinite(hours) ? hours : 0,
+          Number.isFinite(minutes) ? minutes : 0,
+          0,
+          0,
+        );
+      }
+    }
+
+    return null;
+  }
+
+  private resolveImplicitYear(monthIndex: number): number {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    let year = now.getFullYear();
+
+    if (Number.isFinite(monthIndex) && monthIndex > currentMonth) {
+      year -= 1;
+    }
+
+    return year;
   }
 
   private getHostname(url: string): string {
@@ -608,7 +1033,10 @@ export class RealEstateScraperService implements OnModuleDestroy {
     await this.closeHeadlessBrowser();
   }
 
-  private async fetchWithHeadlessBrowser(url: string): Promise<string> {
+  private async fetchWithHeadlessBrowser<T>(
+    url: string,
+    extractor: (page: Page) => Promise<T>,
+  ): Promise<T> {
     const context = await this.getHeadlessContext();
     const page = await context.newPage();
 
@@ -665,7 +1093,7 @@ export class RealEstateScraperService implements OnModuleDestroy {
         );
       }
 
-      return html;
+      return await extractor(page);
     } catch (error) {
       if (error instanceof RateLimitError) {
         throw error;
@@ -701,9 +1129,7 @@ export class RealEstateScraperService implements OnModuleDestroy {
       : hostname;
 
     const candidates =
-      this.seedCookies.get(hostname) ??
-      this.seedCookies.get(normalized) ??
-      [];
+      this.seedCookies.get(hostname) ?? this.seedCookies.get(normalized) ?? [];
 
     return candidates.map((cookie) => ({ ...cookie }));
   }
@@ -923,17 +1349,13 @@ export class RealEstateScraperService implements OnModuleDestroy {
     return Math.floor(min + Math.random() * (max - min));
   }
 
-  private pickUserAgentProfile(
-    exclude?: UserAgentProfile,
-  ): UserAgentProfile {
+  private pickUserAgentProfile(exclude?: UserAgentProfile): UserAgentProfile {
     if (USER_AGENT_PROFILES.length === 1) {
       return USER_AGENT_PROFILES[0];
     }
 
     const candidates = exclude
-      ? USER_AGENT_PROFILES.filter(
-          (profile) => profile.name !== exclude.name,
-        )
+      ? USER_AGENT_PROFILES.filter((profile) => profile.name !== exclude.name)
       : [...USER_AGENT_PROFILES];
 
     if (!candidates.length) {

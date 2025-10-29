@@ -61,7 +61,10 @@ export class GroupsController {
     try {
       return await this.groupsService.searchRegionGroups();
     } catch (error) {
-      this.logger.error('Ошибка поиска групп по региону', error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        'Ошибка поиска групп по региону',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }

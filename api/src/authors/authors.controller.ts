@@ -1,4 +1,12 @@
-import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import {
+  Controller,
+  DefaultValuePipe,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthorsService } from './authors.service';
 import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto';
 
@@ -39,7 +47,12 @@ export class AuthorsController {
   }
 
   private parseVerifiedQuery(value?: string): boolean | undefined {
-    if (value === undefined || value === null || value === '' || value === 'all') {
+    if (
+      value === undefined ||
+      value === null ||
+      value === '' ||
+      value === 'all'
+    ) {
       return undefined;
     }
 

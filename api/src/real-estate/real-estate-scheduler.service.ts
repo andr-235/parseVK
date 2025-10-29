@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { PrismaService } from '../prisma.service';
@@ -13,7 +18,9 @@ import { UpdateRealEstateScheduleSettingsDto } from './dto/update-real-estate-sc
 const DEFAULT_LOOKBACK_HOURS = 24;
 
 @Injectable()
-export class RealEstateSchedulerService implements OnModuleInit, OnModuleDestroy {
+export class RealEstateSchedulerService
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(RealEstateSchedulerService.name);
   private readonly cronJobName = 'real-estate-daily-collect';
   private nextRunAt: Date | null = null;
@@ -93,7 +100,9 @@ export class RealEstateSchedulerService implements OnModuleInit, OnModuleDestroy
 
     try {
       const since = settings.lastRunAt ?? this.calculateDefaultLookback();
-      const summary = await this.scraper.collectDailyListings({ publishedAfter: since });
+      const summary = await this.scraper.collectDailyListings({
+        publishedAfter: since,
+      });
       const completedAt = new Date();
 
       const updated = (await this.prisma.realEstateScheduleSettings.update({
@@ -114,7 +123,10 @@ export class RealEstateSchedulerService implements OnModuleInit, OnModuleDestroy
         error instanceof Error && error.message
           ? error.message
           : 'Не удалось выполнить сбор объявлений';
-      this.logger.error('Ошибка при выполнении ежедневного сбора объявлений', error as Error);
+      this.logger.error(
+        'Ошибка при выполнении ежедневного сбора объявлений',
+        error as Error,
+      );
       await this.scheduleNextRun(settings);
       return {
         started: false,

@@ -36,7 +36,9 @@ export class PhotoAnalysisController {
   async listAuthorAnalyses(
     @Param('vkUserId', ParseIntPipe) vkUserId: number,
   ): Promise<PhotoAnalysisListDto> {
-    this.logger.log(`GET /photo-analysis/vk/${vkUserId} - запрос списка анализов`);
+    this.logger.log(
+      `GET /photo-analysis/vk/${vkUserId} - запрос списка анализов`,
+    );
     return this.photoAnalysisService.listByVkUser(vkUserId);
   }
 
@@ -44,7 +46,9 @@ export class PhotoAnalysisController {
   async listSuspiciousAnalyses(
     @Param('vkUserId', ParseIntPipe) vkUserId: number,
   ): Promise<PhotoAnalysisListDto> {
-    this.logger.log(`GET /photo-analysis/vk/${vkUserId}/suspicious - запрос подозрительных анализов`);
+    this.logger.log(
+      `GET /photo-analysis/vk/${vkUserId}/suspicious - запрос подозрительных анализов`,
+    );
     return this.photoAnalysisService.listSuspiciousByVkUser(vkUserId);
   }
 
@@ -52,7 +56,9 @@ export class PhotoAnalysisController {
   async getSummary(
     @Param('vkUserId', ParseIntPipe) vkUserId: number,
   ): Promise<PhotoAnalysisSummaryDto> {
-    this.logger.log(`GET /photo-analysis/vk/${vkUserId}/summary - запрос сводки анализов`);
+    this.logger.log(
+      `GET /photo-analysis/vk/${vkUserId}/summary - запрос сводки анализов`,
+    );
     return this.photoAnalysisService.getSummaryByVkUser(vkUserId);
   }
 
@@ -60,9 +66,13 @@ export class PhotoAnalysisController {
   async deleteAnalyses(
     @Param('vkUserId', ParseIntPipe) vkUserId: number,
   ): Promise<{ message: string }> {
-    this.logger.log(`DELETE /photo-analysis/vk/${vkUserId} - запрос на удаление анализов`);
+    this.logger.log(
+      `DELETE /photo-analysis/vk/${vkUserId} - запрос на удаление анализов`,
+    );
     await this.photoAnalysisService.deleteByVkUser(vkUserId);
-    this.logger.log(`DELETE /photo-analysis/vk/${vkUserId} - анализы успешно удалены`);
+    this.logger.log(
+      `DELETE /photo-analysis/vk/${vkUserId} - анализы успешно удалены`,
+    );
     return { message: 'Результаты анализа успешно удалены' };
   }
 }

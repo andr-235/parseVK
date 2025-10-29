@@ -210,7 +210,9 @@ export class GroupsService {
 
   async searchRegionGroups(): Promise<IRegionGroupSearchResponse> {
     try {
-      this.logger.log('Запуск поиска групп по региону "Еврейская автономная область"');
+      this.logger.log(
+        'Запуск поиска групп по региону "Еврейская автономная область"',
+      );
       const groups = await this.vkService.searchGroupsByRegion({});
 
       if (!groups.length) {

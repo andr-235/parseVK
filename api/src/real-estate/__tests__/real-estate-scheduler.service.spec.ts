@@ -23,7 +23,8 @@ jest.mock('cron', () => {
   };
 });
 
-const realEstateSchedulerModule = require('../real-estate-scheduler.service') as typeof import('../real-estate-scheduler.service');
+const realEstateSchedulerModule =
+  require('../real-estate-scheduler.service') as typeof import('../real-estate-scheduler.service');
 const { RealEstateSchedulerService } = realEstateSchedulerModule;
 
 const buildSettings = (
@@ -41,8 +42,18 @@ const buildSettings = (
 });
 
 const mockSummary = {
-  avito: { source: RealEstateSource.AVITO, scrapedCount: 2, created: [], updated: [] },
-  youla: { source: RealEstateSource.YOULA, scrapedCount: 1, created: [], updated: [] },
+  avito: {
+    source: RealEstateSource.AVITO,
+    scrapedCount: 2,
+    created: [],
+    updated: [],
+  },
+  youla: {
+    source: RealEstateSource.YOULA,
+    scrapedCount: 1,
+    created: [],
+    updated: [],
+  },
 };
 
 describe('RealEstateSchedulerService', () => {
@@ -101,7 +112,12 @@ describe('RealEstateSchedulerService', () => {
     await service.onModuleInit();
 
     expect(prisma.realEstateScheduleSettings.create).toHaveBeenCalledWith({
-      data: { enabled: false, runHour: 2, runMinute: 0, timezoneOffsetMinutes: 0 },
+      data: {
+        enabled: false,
+        runHour: 2,
+        runMinute: 0,
+        timezoneOffsetMinutes: 0,
+      },
     });
     expect(cronJobInstances).toHaveLength(0);
   });
@@ -148,10 +164,12 @@ describe('RealEstateSchedulerService', () => {
   it('выполняет сбор объявлений вручную и сохраняет отметку времени', async () => {
     const settings = buildSettings();
     prisma.realEstateScheduleSettings.findFirst.mockResolvedValue(settings);
-    prisma.realEstateScheduleSettings.update.mockImplementation(async ({ data }) => ({
-      ...settings,
-      ...data,
-    }));
+    prisma.realEstateScheduleSettings.update.mockImplementation(
+      async ({ data }) => ({
+        ...settings,
+        ...data,
+      }),
+    );
 
     const result = await service.triggerManualRun();
 

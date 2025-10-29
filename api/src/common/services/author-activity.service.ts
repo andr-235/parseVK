@@ -11,10 +11,7 @@ interface SaveCommentsOptions {
 
 const toUpdateJsonValue = (
   value: unknown,
-):
-  | Prisma.NullableJsonNullValueInput
-  | Prisma.InputJsonValue
-  | undefined => {
+): Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue | undefined => {
   if (value === undefined) {
     return undefined;
   }
