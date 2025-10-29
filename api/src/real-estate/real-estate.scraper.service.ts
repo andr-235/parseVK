@@ -727,8 +727,9 @@ export class RealEstateScraperService implements OnModuleDestroy {
     }
 
     const browser = await this.getHeadlessBrowser();
-    this.headlessContext = await browser.createIncognitoBrowserContext();
-    return this.headlessContext;
+    const context = await browser.createBrowserContext();
+    this.headlessContext = context;
+    return context;
   }
 
   private async launchHeadlessBrowser(): Promise<Browser> {
@@ -920,28 +921,6 @@ export class RealEstateScraperService implements OnModuleDestroy {
     const min = Math.max(0, value - spread);
     const max = value + spread;
     return Math.floor(min + Math.random() * (max - min));
-  }
-
-  private createHttpClient(
-    profile: UserAgentProfile,
-    jar: CookieJar,
-  ): Got {
-    return got.extend({
-      cookieJar: jar,
-      headers: {
-        'User-Agent': profile.userAgent,
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-      },
-      timeout: { request: 20000 },
-      http2: false,
-      followRedirect: true,
-      decompress: true,
-      retry: { limit: 0 },
-      responseType: 'text',
-      throwHttpErrors: false,
-    });
   }
 
   private pickUserAgentProfile(
