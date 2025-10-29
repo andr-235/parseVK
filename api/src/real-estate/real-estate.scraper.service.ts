@@ -1,10 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import axios, {
-  type AxiosInstance,
-  type AxiosRequestConfig,
-  type AxiosError,
-} from 'axios';
+import got, { type Got } from 'got';
 import { load, type CheerioAPI, type Cheerio as CheerioCollection } from 'cheerio';
+import { CookieJar } from 'tough-cookie';
 import { RealEstateRepository } from './real-estate.repository';
 import { RealEstateSource } from './dto/real-estate-source.enum';
 import type { RealEstateScrapeOptionsDto } from './dto/real-estate-scrape-options.dto';
@@ -71,10 +68,15 @@ interface ScrapeConfig {
 @Injectable()
 export class RealEstateScraperService {
   private readonly logger = new Logger(RealEstateScraperService.name);
-  private readonly http: AxiosInstance;
+  private readonly http: Got;
 
   constructor(private readonly repository: RealEstateRepository) {
-    this.http = axios.create({
+    const cookieJar = new CookieJar();
+    this.seedCookieJar(cookieJar, 'https://www.avito.ru', AVITO_COOKIE_HEADER);
+    this.seedCookieJar(cookieJar, 'https://youla.ru', YOULA_COOKIE_HEADER);
+
+    this.http = got.extend({
+      cookieJar,
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -82,7 +84,13 @@ export class RealEstateScraperService {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
       },
-      timeout: 20000,
+      timeout: { request: 20000 },
+      http2: false,
+      followRedirect: true,
+      decompress: true,
+      retry: { limit: 0 },
+      responseType: 'text',
+      throwHttpErrors: false,
     });
   }
 
@@ -413,8 +421,9 @@ export class RealEstateScraperService {
 
     for (let attempt = 1; attempt <= FETCH_MAX_RETRIES; attempt += 1) {
       try {
-        const response = await this.http.get<string>(url, this.buildRequestConfig(url));
-        const html = response.data;
+        const response = await this.http.get<string>(url, this.buildRequestOptions(url));
+        const status = response.statusCode ?? 0;
+        const html = response.body;
 
         if (this.containsCaptcha(html)) {
           throw new RateLimitError(
@@ -423,50 +432,15 @@ export class RealEstateScraperService {
           );
         }
 
-        return html;
-      } catch (error) {
-        lastError = error;
-
-        if (!axios.isAxiosError(error)) {
-          throw error;
-        }
-
-        const axiosError = error as AxiosError;
-        const status = axiosError.response?.status;
-        const code = (axiosError as { code?: string }).code;
-
-        if (code && NETWORK_ERROR_CODES.has(code)) {
-          const retryDelay = this.calculateRateLimitDelay(attempt);
-          this.logger.warn(
-            `${this.getHostname(url)}: сетевой сбой ${code}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${retryDelay} мс перед повтором`,
-          );
-
-          if (attempt === FETCH_MAX_RETRIES) {
-            throw new Error(
-              `Не удалось загрузить страницу ${url}: соединение прерывается (${code})`,
-            );
-          }
-
-          await this.delay(retryDelay);
-          continue;
-        }
-
-        if (
-          status === 404 &&
-          typeof axiosError.response?.data === 'string' &&
-          axiosError.response.data.trim().length > 0
-        ) {
+        if (status === 404 && typeof html === 'string' && html.trim().length > 0) {
           this.logger.warn(
             `Получен статус 404 от ${url}, продолжаю обработку тела ответа`,
           );
-          return axiosError.response.data;
+          return html;
         }
 
         if (status && RATE_LIMIT_STATUS_CODES.has(status)) {
-          const retryAfterHeader =
-            (axiosError.response as {
-              headers?: Record<string, string | string[] | undefined>;
-            })?.headers?.['retry-after'];
+          const retryAfterHeader = response.headers?.['retry-after'];
           const delayMs =
             this.extractRetryAfterMs(retryAfterHeader) ??
             this.calculateRateLimitDelay(attempt);
@@ -491,11 +465,43 @@ export class RealEstateScraperService {
           continue;
         }
 
+        if (status >= 400) {
+          throw new Error(
+            `Не удалось загрузить страницу ${url}: HTTP ${status}`,
+          );
+        }
+
+        return html;
+      } catch (error) {
+        lastError = error;
+
+        if (error instanceof RateLimitError) {
+          throw error;
+        }
+
+        const code = this.extractErrorCode(error);
+
+        if (code && NETWORK_ERROR_CODES.has(code)) {
+          const retryDelay = this.calculateRateLimitDelay(attempt);
+          this.logger.warn(
+            `${this.getHostname(url)}: сетевой сбой ${code}. Попытка ${attempt}/${FETCH_MAX_RETRIES}, ожидание ${retryDelay} мс перед повтором`,
+          );
+
+          if (attempt === FETCH_MAX_RETRIES) {
+            throw new Error(
+              `Не удалось загрузить страницу ${url}: соединение прерывается (${code})`,
+            );
+          }
+
+          await this.delay(retryDelay);
+          continue;
+        }
+
         this.logger.warn(
-          `Не удалось загрузить страницу ${url}: ${axiosError.message}`,
+          `Не удалось загрузить страницу ${url}: ${(error as Error).message}`,
         );
 
-        throw axiosError;
+        throw error;
       }
     }
 
@@ -592,14 +598,15 @@ export class RealEstateScraperService {
     }
   }
 
-  private buildRequestConfig(url: string): AxiosRequestConfig {
+  private buildRequestOptions(
+    url: string,
+  ): { headers?: Record<string, string> } {
     const hostname = this.getHostname(url);
 
     if (hostname === 'youla.ru') {
       return {
         headers: {
           Referer: 'https://youla.ru/',
-          Cookie: YOULA_COOKIE_HEADER,
           'Sec-CH-UA':
             '"Not.A/Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8"',
           'Sec-CH-UA-Mobile': '?0',
@@ -618,7 +625,6 @@ export class RealEstateScraperService {
         headers: {
           Referer:
             'https://www.avito.ru/birobidzhan/nedvizhimost?localPriority=0',
-          Cookie: AVITO_COOKIE_HEADER,
           'Sec-CH-UA':
             '"Not)A;Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8", "Yowser";v="2.5"',
           'Sec-CH-UA-Mobile': '?0',
@@ -668,5 +674,42 @@ export class RealEstateScraperService {
     await new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
+  }
+
+  private seedCookieJar(jar: CookieJar, origin: string, cookieHeader: string): void {
+    if (!cookieHeader) {
+      return;
+    }
+
+    const cookies = cookieHeader.split(';');
+
+    for (const rawCookie of cookies) {
+      const trimmed = rawCookie.trim();
+
+      if (!trimmed) {
+        continue;
+      }
+
+      try {
+        jar.setCookieSync(trimmed, origin);
+      } catch (error) {
+        this.logger.warn(
+          `Не удалось загрузить cookie "${trimmed}" для ${origin}: ${(error as Error).message}`,
+        );
+      }
+    }
+  }
+
+  private extractErrorCode(error: unknown): string | null {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof (error as { code?: string }).code === 'string'
+    ) {
+      return (error as { code?: string }).code ?? null;
+    }
+
+    return null;
   }
 }

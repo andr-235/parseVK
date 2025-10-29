@@ -27,19 +27,20 @@
     "@nestjs/core": "^11.1.6",
     "@nestjs/platform-express": "^11.1.6",
     "@nestjs/platform-socket.io": "^11.1.6",
-    "@nestjs/websockets": "^11.1.6",
     "@nestjs/schedule": "^6.0.1",
+    "@nestjs/websockets": "^11.1.6",
     "@prisma/client": "^6.16.3",
-    "axios": "^1.7.9",
-    "cheerio": "^1.0.0",
-    "cron": "^2.4.4",
     "bullmq": "^5.61.0",
     "cache-manager": "^7.2.4",
     "cache-manager-redis-yet": "^5.1.5",
+    "cheerio": "^1.0.0",
     "class-validator": "^0.14.2",
+    "cron": "^2.4.4",
+    "got": "^14.6.1",
     "ioredis": "^5.4.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "tough-cookie": "^6.0.0",
     "vk-io": "^4.10.0"
   },
   "devDependencies": {
@@ -87,7 +88,7 @@
       "^@nestjs/bullmq$": "<rootDir>/../jest-shims/node_modules/@nestjs/bullmq/index.js",
       "^bullmq$": "<rootDir>/../jest-shims/node_modules/bullmq/index.js",
       "^libphonenumber-js/max$": "<rootDir>/../jest-shims/node_modules/libphonenumber-js/max.js",
-      "^axios$": "<rootDir>/../jest-shims/node_modules/axios",
+      "^got$": "<rootDir>/../jest-shims/node_modules/got/index.js",
       "^cheerio$": "<rootDir>/../jest-shims/node_modules/cheerio"
     },
     "collectCoverageFrom": [
