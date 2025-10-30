@@ -67,10 +67,14 @@ describe('RealEstateSchedulerService', () => {
     deleteCronJob: jest.Mock;
   };
   let service: RealEstateSchedulerService;
+  let originalDisplay: string | undefined;
 
   beforeEach(() => {
     jest.useFakeTimers({ now: new Date('2025-01-01T05:00:00.000Z') });
     cronJobInstances.length = 0;
+
+    originalDisplay = process.env.DISPLAY;
+    process.env.DISPLAY = ':99';
 
     prisma = {
       realEstateScheduleSettings: {
@@ -101,6 +105,11 @@ describe('RealEstateSchedulerService', () => {
     jest.useRealTimers();
     jest.clearAllMocks();
     cronJobInstances.length = 0;
+    if (originalDisplay === undefined) {
+      delete process.env.DISPLAY;
+    } else {
+      process.env.DISPLAY = originalDisplay;
+    }
   });
 
   it('создаёт настройки по умолчанию при инициализации, если записи нет', async () => {
@@ -187,6 +196,18 @@ describe('RealEstateSchedulerService', () => {
     expect(result.started).toBe(true);
     expect(result.summary).toEqual(mockSummary);
     expect(result.settings.lastRunAt).not.toBeNull();
+  });
+
+  it('отклоняет ручной запуск без доступного дисплея', async () => {
+    delete process.env.DISPLAY;
+    const settings = buildSettings();
+    prisma.realEstateScheduleSettings.findFirst.mockResolvedValue(settings);
+
+    const result = await service.triggerManualRun({ manual: true });
+
+    expect(result.started).toBe(false);
+    expect(result.reason).toMatch(/дисплея/i);
+    expect(scraper.collectDailyListings).not.toHaveBeenCalled();
   });
 
   it('прокидывает пользовательские параметры ручного запуска', async () => {

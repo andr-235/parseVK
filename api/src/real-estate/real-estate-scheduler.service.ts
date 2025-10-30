@@ -105,10 +105,26 @@ export class RealEstateSchedulerService
     this.isExecuting = true;
 
     try {
+      const manualRequested =
+        source === 'manual' ? manualOptions?.manual ?? true : false;
+      const displayAvailable = this.hasDisplaySupport();
+
+      if (manualRequested && !displayAvailable) {
+        const reason =
+          'Ручной режим недоступен: на сервере нет X/Wayland дисплея. Запустите сбор на машине с графическим окружением или используйте xvfb.';
+        this.logger.warn(reason);
+        return {
+          started: false,
+          reason,
+          settings: this.mapToResponse(settings),
+        };
+      }
+
       const since = settings.lastRunAt ?? this.calculateDefaultLookback();
       const scrapeOptions = this.buildScrapeOptions(
-        source,
         since,
+        manualRequested,
+        displayAvailable,
         manualOptions,
       );
       const summary = await this.scraper.collectDailyListings(scrapeOptions);
@@ -148,31 +164,40 @@ export class RealEstateSchedulerService
   }
 
   private buildScrapeOptions(
-    source: 'manual' | 'timer',
     publishedAfter: Date,
+    manualRequested: boolean,
+    displayAvailable: boolean,
     manualOptions?: ManualRunOptionsDto,
   ): RealEstateScrapeOptionsDto {
-    const manualMode =
-      source === 'manual'
-        ? manualOptions?.manual ?? true
-        : false;
-
     const options: RealEstateScrapeOptionsDto = {
       publishedAfter,
-      manual: manualMode,
+      manual: manualRequested && displayAvailable,
     };
 
-    if (manualMode) {
+    if (manualRequested && displayAvailable) {
       options.manualWaitAfterMs =
         manualOptions?.manualWaitAfterMs ??
         SCRAPING_CONFIG.defaults.manualWaitAfterMs;
-      options.headless =
-        manualOptions?.headless ?? false;
-    } else if (manualOptions?.headless !== undefined) {
-      options.headless = manualOptions.headless;
+      options.headless = manualOptions?.headless ?? false;
+    } else {
+      if (manualOptions?.headless !== undefined) {
+        options.headless = manualOptions.headless;
+      } else {
+        options.headless = true;
+      }
     }
 
     return options;
+  }
+
+  private hasDisplaySupport(): boolean {
+    const xDisplay = process.env.DISPLAY;
+    if (typeof xDisplay === 'string' && xDisplay.trim().length > 0) {
+      return true;
+    }
+
+    const waylandDisplay = process.env.WAYLAND_DISPLAY;
+    return typeof waylandDisplay === 'string' && waylandDisplay.trim().length > 0;
   }
 
   private async ensureSettingsExists(): Promise<void> {
