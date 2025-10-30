@@ -60,6 +60,12 @@ export interface RealEstateScheduleUpdatePayload {
   timezoneOffsetMinutes: number
 }
 
+export interface RealEstateManualRunOptions {
+  manual?: boolean
+  headless?: boolean
+  manualWaitAfterMs?: number
+}
+
 export interface RealEstateSyncResult {
   source: RealEstateListingSource
   scrapedCount: number

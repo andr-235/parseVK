@@ -5,6 +5,7 @@ import type {
   RealEstateScheduleState,
 } from '@/types/stores'
 import type {
+  RealEstateManualRunOptions,
   RealEstateManualRunResponse,
   RealEstateScheduleSettings,
   RealEstateScheduleUpdatePayload,
@@ -47,12 +48,12 @@ export const useRealEstateScheduleStore = create<RealEstateScheduleState>()(
       }
     },
 
-    async runNow(): Promise<boolean> {
+    async runNow(options?: RealEstateManualRunOptions): Promise<boolean> {
       set({ isRunning: true })
 
       try {
         const response: RealEstateManualRunResponse =
-          await realEstateScheduleService.runNow()
+          await realEstateScheduleService.runNow(options)
 
         set((state) => ({
           settings: response.settings,

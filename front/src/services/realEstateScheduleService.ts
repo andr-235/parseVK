@@ -2,6 +2,7 @@ import toast from 'react-hot-toast'
 
 import { realEstateScheduleApi } from '@/api/realEstateScheduleApi'
 import type {
+  RealEstateManualRunOptions,
   RealEstateManualRunResponse,
   RealEstateScheduleSettings,
   RealEstateScheduleUpdatePayload,
@@ -30,9 +31,11 @@ export const realEstateScheduleService = {
     }
   },
 
-  async runNow(): Promise<RealEstateManualRunResponse> {
+  async runNow(
+    options?: RealEstateManualRunOptions,
+  ): Promise<RealEstateManualRunResponse> {
     try {
-      const response = await realEstateScheduleApi.runNow()
+      const response = await realEstateScheduleApi.runNow(options)
 
       if (response.started) {
         toast.success('Запуск парсинга недвижимости начат')

@@ -14,6 +14,7 @@ import type {
 } from './api'
 import type {
   RealEstateDailyCollectResult,
+  RealEstateManualRunOptions,
   RealEstateScheduleSettings,
   RealEstateScheduleUpdatePayload,
 } from './realEstate'
@@ -129,5 +130,5 @@ export interface RealEstateScheduleState {
   isRunning: boolean
   fetchSettings: () => Promise<RealEstateScheduleSettings | null>
   updateSettings: (payload: RealEstateScheduleUpdatePayload) => Promise<boolean>
-  runNow: () => Promise<boolean>
+  runNow: (options?: RealEstateManualRunOptions) => Promise<boolean>
 }

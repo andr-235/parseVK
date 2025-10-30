@@ -6,6 +6,8 @@ import RealEstateScheduleModal from '@/components/RealEstateScheduleModal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ButtonGroup } from '@/components/ui/button-group'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useRealEstateScheduleStore } from '@/stores'
 import type { RealEstateScheduleSettings } from '@/types/realEstate'
 
@@ -56,6 +58,8 @@ const sourceOptions: Array<{ label: string; value: ParsingSource; description: s
 function RealEstateParsing() {
   const [selectedSource, setSelectedSource] = useState<ParsingSource>('AVITO')
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
+  const [manualMode, setManualMode] = useState(true)
+  const [manualWaitInput, setManualWaitInput] = useState('5000')
 
   const scheduleSettings = useRealEstateScheduleStore((state) => state.settings)
   const scheduleSummary = useRealEstateScheduleStore((state) => state.summary)
@@ -109,21 +113,60 @@ function RealEstateParsing() {
   }
 
   const handleRunSchedule = async () => {
-    await runScheduleNow()
+    const parsedWait = Number.parseInt(manualWaitInput, 10)
+    const normalizedWait = Number.isFinite(parsedWait) && parsedWait >= 0 ? parsedWait : undefined
+
+    await runScheduleNow({
+      manual: manualMode,
+      headless: manualMode ? false : true,
+      manualWaitAfterMs: manualMode ? normalizedWait : undefined,
+    })
   }
 
   const heroActions = (
-    <div className="flex flex-col gap-3 md:flex-row">
-      <Button
-        variant="outline"
-        onClick={handleRunSchedule}
-        disabled={isScheduleRunning || scheduleSettings?.isRunning}
-      >
-        {isScheduleRunning || scheduleSettings?.isRunning ? 'Запуск...' : 'Запустить сейчас'}
-      </Button>
-      <Button onClick={handleOpenScheduleModal} disabled={isScheduleLoading}>
-        Настроить расписание
-      </Button>
+    <div className="flex flex-col gap-3 md:flex-row md:items-end">
+      <div className="flex w-full flex-col gap-2 rounded-2xl border border-border bg-background-primary/60 p-3 md:max-w-sm">
+        <div className="flex items-center gap-2">
+          <input
+            id="real-estate-manual-mode"
+            type="checkbox"
+            checked={manualMode}
+            onChange={(event) => setManualMode(event.target.checked)}
+            className="h-4 w-4 rounded border-border text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2"
+          />
+          <Label htmlFor="real-estate-manual-mode" className="text-sm font-medium">
+            Ручной режим (открытый браузер)
+          </Label>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="real-estate-manual-wait" className="text-xs text-text-secondary">
+            Задержка после подтверждения, мс
+          </Label>
+          <Input
+            id="real-estate-manual-wait"
+            type="number"
+            min={0}
+            step={500}
+            value={manualWaitInput}
+            onChange={(event) => setManualWaitInput(event.target.value)}
+            disabled={!manualMode}
+            className="h-9"
+            placeholder={String(5000)}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-3 md:flex-row">
+        <Button
+          variant="outline"
+          onClick={handleRunSchedule}
+          disabled={isScheduleRunning || scheduleSettings?.isRunning}
+        >
+          {isScheduleRunning || scheduleSettings?.isRunning ? 'Запуск...' : 'Запустить сейчас'}
+        </Button>
+        <Button onClick={handleOpenScheduleModal} disabled={isScheduleLoading}>
+          Настроить расписание
+        </Button>
+      </div>
     </div>
   )
 

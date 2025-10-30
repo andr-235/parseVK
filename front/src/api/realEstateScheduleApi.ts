@@ -1,5 +1,6 @@
 import { API_URL } from './config'
 import type {
+  RealEstateManualRunOptions,
   RealEstateManualRunResponse,
   RealEstateScheduleSettings,
   RealEstateScheduleUpdatePayload,
@@ -32,9 +33,13 @@ export const realEstateScheduleApi = {
     return response.json()
   },
 
-  async runNow(): Promise<RealEstateManualRunResponse> {
+  async runNow(
+    options?: RealEstateManualRunOptions,
+  ): Promise<RealEstateManualRunResponse> {
     const response = await fetch(`${API_URL}/real-estate/schedule/run`, {
       method: 'POST',
+      headers: options ? { 'Content-Type': 'application/json' } : undefined,
+      body: options ? JSON.stringify(options) : undefined,
     })
 
     if (!response.ok) {
