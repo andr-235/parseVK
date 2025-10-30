@@ -8,12 +8,15 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { PrismaService } from '../prisma.service';
 import { RealEstateScraperService } from './real-estate.scraper.service';
+import type { RealEstateScrapeOptionsDto } from './dto/real-estate-scrape-options.dto';
 import type {
   RealEstateManualRunResponse,
   RealEstateScheduleSettings,
   RealEstateScheduleSettingsResponse,
 } from './real-estate-schedule.interface';
 import { UpdateRealEstateScheduleSettingsDto } from './dto/update-real-estate-schedule-settings.dto';
+import { ManualRunOptionsDto } from './dto/manual-run-options.dto';
+import { SCRAPING_CONFIG } from './config/scraping.config';
 
 const DEFAULT_LOOKBACK_HOURS = 24;
 
@@ -66,12 +69,15 @@ export class RealEstateSchedulerService
     return this.mapToResponse(updated, nextRun ?? undefined);
   }
 
-  async triggerManualRun(): Promise<RealEstateManualRunResponse> {
-    return this.executeCollection('manual');
+  async triggerManualRun(
+    options?: ManualRunOptionsDto,
+  ): Promise<RealEstateManualRunResponse> {
+    return this.executeCollection('manual', options);
   }
 
   private async executeCollection(
     source: 'manual' | 'timer',
+    manualOptions?: ManualRunOptionsDto,
   ): Promise<RealEstateManualRunResponse> {
     if (this.isExecuting) {
       const settings = await this.getOrCreateSettings();
@@ -100,9 +106,12 @@ export class RealEstateSchedulerService
 
     try {
       const since = settings.lastRunAt ?? this.calculateDefaultLookback();
-      const summary = await this.scraper.collectDailyListings({
-        publishedAfter: since,
-      });
+      const scrapeOptions = this.buildScrapeOptions(
+        source,
+        since,
+        manualOptions,
+      );
+      const summary = await this.scraper.collectDailyListings(scrapeOptions);
       const completedAt = new Date();
 
       const updated = (await this.prisma.realEstateScheduleSettings.update({
@@ -136,6 +145,34 @@ export class RealEstateSchedulerService
     } finally {
       this.isExecuting = false;
     }
+  }
+
+  private buildScrapeOptions(
+    source: 'manual' | 'timer',
+    publishedAfter: Date,
+    manualOptions?: ManualRunOptionsDto,
+  ): RealEstateScrapeOptionsDto {
+    const manualMode =
+      source === 'manual'
+        ? manualOptions?.manual ?? true
+        : false;
+
+    const options: RealEstateScrapeOptionsDto = {
+      publishedAfter,
+      manual: manualMode,
+    };
+
+    if (manualMode) {
+      options.manualWaitAfterMs =
+        manualOptions?.manualWaitAfterMs ??
+        SCRAPING_CONFIG.defaults.manualWaitAfterMs;
+      options.headless =
+        manualOptions?.headless ?? false;
+    } else if (manualOptions?.headless !== undefined) {
+      options.headless = manualOptions.headless;
+    }
+
+    return options;
   }
 
   private async ensureSettingsExists(): Promise<void> {

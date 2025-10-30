@@ -5,6 +5,7 @@ import type {
   RealEstateScheduleSettingsResponse,
 } from './real-estate-schedule.interface';
 import { UpdateRealEstateScheduleSettingsDto } from './dto/update-real-estate-schedule-settings.dto';
+import { ManualRunOptionsDto } from './dto/manual-run-options.dto';
 
 @Controller('real-estate/schedule')
 export class RealEstateController {
@@ -24,7 +25,9 @@ export class RealEstateController {
 
   @Post('run')
   @HttpCode(200)
-  triggerRun(): Promise<RealEstateManualRunResponse> {
-    return this.scheduler.triggerManualRun();
+  triggerRun(
+    @Body() dto: ManualRunOptionsDto,
+  ): Promise<RealEstateManualRunResponse> {
+    return this.scheduler.triggerManualRun(dto);
   }
 }

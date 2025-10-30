@@ -1,6 +1,7 @@
 import type { SchedulerRegistry } from '@nestjs/schedule';
 import type { RealEstateScheduleSettings } from '../real-estate-schedule.interface';
 import { RealEstateSource } from '../dto/real-estate-source.enum';
+import { SCRAPING_CONFIG } from '../config/scraping.config';
 
 const cronJobInstances: Array<{
   start: jest.Mock;
@@ -175,6 +176,9 @@ describe('RealEstateSchedulerService', () => {
 
     expect(scraper.collectDailyListings).toHaveBeenCalledWith({
       publishedAfter: settings.lastRunAt ?? expect.any(Date),
+      manual: true,
+      manualWaitAfterMs: SCRAPING_CONFIG.defaults.manualWaitAfterMs,
+      headless: false,
     });
     expect(prisma.realEstateScheduleSettings.update).toHaveBeenCalledWith({
       where: { id: settings.id },
@@ -183,6 +187,30 @@ describe('RealEstateSchedulerService', () => {
     expect(result.started).toBe(true);
     expect(result.summary).toEqual(mockSummary);
     expect(result.settings.lastRunAt).not.toBeNull();
+  });
+
+  it('прокидывает пользовательские параметры ручного запуска', async () => {
+    const settings = buildSettings();
+    prisma.realEstateScheduleSettings.findFirst.mockResolvedValue(settings);
+    prisma.realEstateScheduleSettings.update.mockImplementation(
+      async ({ data }) => ({
+        ...settings,
+        ...data,
+      }),
+    );
+
+    await service.triggerManualRun({
+      manual: false,
+      headless: true,
+      manualWaitAfterMs: 10_000,
+    });
+
+    expect(scraper.collectDailyListings).toHaveBeenCalledWith({
+      publishedAfter: settings.lastRunAt ?? expect.any(Date),
+      manual: false,
+      headless: true,
+      manualWaitAfterMs: 10_000,
+    });
   });
 
   it('не запускает cron, если расписание выключено', async () => {
