@@ -5,6 +5,7 @@ import CommentsTableCard from './Comments/components/CommentsTableCard'
 import CommentsHero from './Comments/components/CommentsHero'
 import { Separator } from '@/components/ui/separator'
 import type { Comment, Keyword } from '@/types'
+import { normalizeForKeywordMatch } from '@/utils/keywordMatching'
 
 const DEFAULT_CATEGORY = 'Без категории'
 
@@ -29,7 +30,7 @@ function Comments() {
     () =>
       keywords
         .map((keyword) => {
-          const normalizedWord = keyword.word.trim().toLowerCase()
+          const normalizedWord = normalizeForKeywordMatch(keyword.word)
 
           if (!normalizedWord) {
             return null
@@ -56,7 +57,7 @@ function Comments() {
     }
 
     comments.forEach((comment) => {
-      const text = comment.text.toLowerCase()
+      const text = normalizeForKeywordMatch(comment.text)
 
       if (!text) {
         return

@@ -1,27 +1,47 @@
 import type { Keyword } from '../types'
+import { buildKeywordPattern, normalizeForKeywordMatch } from './keywordMatching'
 
 export function highlightKeywords(text: string, keywords: Keyword[]) {
   if (!text || keywords.length === 0) {
     return text
   }
 
-  const keywordTexts = keywords
-    .map((keyword) => keyword.word.trim())
-    .filter((word, index, array) => word.length > 0 && array.indexOf(word) === index)
+  const keywordEntries = keywords
+    .map((keyword) => {
+      const trimmed = keyword.word.trim()
+      const normalized = normalizeForKeywordMatch(trimmed)
 
-  if (keywordTexts.length === 0) {
+      if (!normalized) {
+        return null
+      }
+
+      return { original: trimmed, normalized }
+    })
+    .filter(
+      (
+        entry,
+        index,
+        array,
+      ): entry is { original: string; normalized: string } =>
+        Boolean(entry) && array.findIndex((item) => item?.normalized === entry.normalized) === index,
+    )
+
+  if (keywordEntries.length === 0) {
     return text
   }
 
-  const escapeRegExp = (value: string) =>
-    value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const escapedKeywords = keywordTexts.map(escapeRegExp)
-  const regex = new RegExp(`(${escapedKeywords.join('|')})`, 'gi')
-  const normalizedKeywords = new Set(keywordTexts.map((word) => word.toLowerCase()))
+  const patterns = keywordEntries.map((entry) => buildKeywordPattern(entry.original))
+
+  if (patterns.length === 0) {
+    return text
+  }
+
+  const regex = new RegExp(`(${patterns.join('|')})`, 'gi')
+  const normalizedKeywords = new Set(keywordEntries.map((entry) => entry.normalized))
   const parts = text.split(regex)
 
   return parts.map((part, index) => {
-    if (!normalizedKeywords.has(part.toLowerCase())) {
+    if (!normalizedKeywords.has(normalizeForKeywordMatch(part))) {
       return part
     }
 
