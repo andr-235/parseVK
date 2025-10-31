@@ -17,14 +17,13 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
 
       return { original: trimmed, normalized }
     })
-    .filter(
-      (
-        entry,
-        index,
-        array,
-      ): entry is { original: string; normalized: string } =>
-        Boolean(entry) && array.findIndex((item) => item?.normalized === entry.normalized) === index,
-    )
+    .filter((entry, index, array): entry is { original: string; normalized: string } => {
+      if (!entry) {
+        return false
+      }
+
+      return array.findIndex((item) => item?.normalized === entry.normalized) === index
+    })
 
   if (keywordEntries.length === 0) {
     return text
