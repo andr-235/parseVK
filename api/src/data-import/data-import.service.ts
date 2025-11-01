@@ -216,7 +216,7 @@ export class DataImportService {
 
     const metadata = this.normalizeMetadata(dto.metadata);
 
-    return {
+    const normalized: NormalizedListing = {
       url: parsedUrl.toString(),
       source: this.normalizeString(dto.source),
       externalId: this.normalizeString(dto.externalId),
@@ -238,8 +238,13 @@ export class DataImportService {
       contactName: this.normalizeString(dto.contactName),
       contactPhone: this.normalizePhone(dto.contactPhone),
       images,
-      metadata: metadata ?? null,
     };
+
+    if (metadata !== undefined) {
+      normalized.metadata = metadata;
+    }
+
+    return normalized;
   }
 
   private normalizeString(value?: string | null): string | undefined {
