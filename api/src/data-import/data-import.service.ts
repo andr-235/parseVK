@@ -30,7 +30,7 @@ interface NormalizedListing {
   contactName?: string;
   contactPhone?: string;
   images: string[];
-  metadata?: Record<string, unknown> | null;
+  metadata?: Prisma.InputJsonValue | null;
 }
 
 interface NormalizedEntry {
@@ -214,10 +214,7 @@ export class DataImportService {
           .filter((image) => image.length > 0)
       : [];
 
-    const metadata =
-      dto.metadata && typeof dto.metadata === 'object' && !Array.isArray(dto.metadata)
-        ? (dto.metadata as Record<string, unknown>)
-        : undefined;
+    const metadata = this.normalizeMetadata(dto.metadata);
 
     return {
       url: parsedUrl.toString(),
@@ -314,6 +311,28 @@ export class DataImportService {
     }
 
     return date;
+  }
+
+  private normalizeMetadata(
+    value: unknown,
+  ): Prisma.InputJsonValue | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (value === null) {
+      return null;
+    }
+
+    if (typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('metadata должен быть объектом');
+    }
+
+    try {
+      return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+    } catch {
+      throw new Error('metadata содержит неподдерживаемые значения');
+    }
   }
 
   private mapToCreateManyInput(
