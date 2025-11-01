@@ -5,7 +5,7 @@ import {
   useState,
   type ChangeEvent,
 } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,7 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { queryKeys } from '@/queries/queryKeys'
 import { listingsService } from '@/services/listingsService'
-import type { IListing } from '@/types/api'
+import type { IListing, IListingsResponse } from '@/types/api'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50]
 
@@ -149,7 +149,12 @@ function Listings() {
 
   const querySource = sourceFilter === 'all' ? undefined : sourceFilter
 
-  const listingsQuery = useQuery({
+  const listingsQuery = useQuery<
+    IListingsResponse,
+    Error,
+    IListingsResponse,
+    ReturnType<typeof queryKeys.listings.list>
+  >({
     queryKey: queryKeys.listings.list({
       page,
       pageSize,
@@ -163,7 +168,7 @@ function Listings() {
         search: appliedSearch || undefined,
         source: querySource,
       }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   })
 
   const availableSources = useMemo(() => {
