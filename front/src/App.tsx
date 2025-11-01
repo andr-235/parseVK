@@ -12,6 +12,7 @@ import Watchlist from './pages/Watchlist'
 import AuthorAnalysis from './pages/AuthorAnalysis'
 import Authors from './pages/Authors'
 import Settings from './pages/Settings'
+import Listings from './pages/Listings'
 import AppSyncProvider from './providers/AppSyncProvider'
 
 function App() {
@@ -41,6 +42,7 @@ function App() {
             <Route path="/" element={<Navigate to="/tasks" replace />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/groups" element={<Groups />} />
+            <Route path="/listings" element={<Listings />} />
             <Route path="/comments" element={<Comments />} />
             <Route path="/watchlist" element={<Watchlist />} />
             <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysis />} />

@@ -198,6 +198,88 @@ export interface IParsingTaskResult extends IParsingTaskSummary {
   [key: string]: unknown
 }
 
+export interface IListing {
+  id: number
+  source?: string | null
+  externalId?: string | null
+  title?: string | null
+  description?: string | null
+  url: string
+  price?: number | null
+  currency?: string | null
+  address?: string | null
+  city?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  rooms?: number | null
+  areaTotal?: number | null
+  areaLiving?: number | null
+  areaKitchen?: number | null
+  floor?: number | null
+  floorsTotal?: number | null
+  publishedAt?: string | null
+  contactName?: string | null
+  contactPhone?: string | null
+  images: string[]
+  metadata?: Record<string, unknown> | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface IListingsResponse {
+  items: IListing[]
+  total: number
+  page: number
+  pageSize: number
+  hasMore: boolean
+  sources: string[]
+}
+
+export interface ListingImportItem {
+  url: string
+  source?: string | null
+  externalId?: string | null
+  title?: string | null
+  description?: string | null
+  price?: string | number | null
+  currency?: string | null
+  address?: string | null
+  city?: string | null
+  latitude?: string | number | null
+  longitude?: string | number | null
+  rooms?: string | number | null
+  areaTotal?: string | number | null
+  areaLiving?: string | number | null
+  areaKitchen?: string | number | null
+  floor?: string | number | null
+  floorsTotal?: string | number | null
+  publishedAt?: string | null
+  contactName?: string | null
+  contactPhone?: string | null
+  images?: string[]
+  metadata?: Record<string, unknown> | null
+}
+
+export interface ListingImportRequest {
+  listings: ListingImportItem[]
+  updateExisting?: boolean
+}
+
+export interface ListingImportError {
+  index: number
+  url?: string
+  message: string
+}
+
+export interface ListingImportReport {
+  processed: number
+  created: number
+  updated: number
+  skipped: number
+  failed: number
+  errors: ListingImportError[]
+}
+
 export interface ITaskAutomationSettings {
   enabled: boolean
   runHour: number

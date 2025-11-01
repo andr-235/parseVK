@@ -15,6 +15,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
 import { PhotoAnalysisModule } from './photo-analysis/photo-analysis.module';
 import { AuthorsModule } from './authors/authors.module';
 import { DataImportModule } from './data-import/data-import.module';
+import { ListingsModule } from './listings/listings.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { DataImportModule } from './data-import/data-import.module';
     PhotoAnalysisModule,
     AuthorsModule,
     DataImportModule,
+    ListingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

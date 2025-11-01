@@ -1,5 +1,21 @@
 import type { AuthorSortField, AuthorSortOrder } from '@/types/authors'
 
+type ListingsQueryParams = {
+  page: number
+  pageSize: number
+  search: string
+  source: string
+}
+
+const buildListingsKey = (params: ListingsQueryParams) =>
+  [
+    'listings',
+    params.page,
+    params.pageSize,
+    params.search,
+    params.source,
+  ] as const
+
 type AuthorsQueryParams = {
   status: 'all' | 'verified' | 'unverified'
   search: string
@@ -24,6 +40,10 @@ export const queryKeys = {
   keywords: ['keywords'] as const,
   comments: ['comments'] as const,
   taskAutomation: ['task-automation'] as const,
+  listings: {
+    base: ['listings'] as const,
+    list: (params: ListingsQueryParams) => buildListingsKey(params),
+  },
   authors: {
     list: (params: AuthorsQueryParams) => buildAuthorsKey(params),
   },
@@ -33,4 +53,4 @@ export const queryKeys = {
   },
 } as const
 
-export type { AuthorsQueryParams }
+export type { AuthorsQueryParams, ListingsQueryParams }
