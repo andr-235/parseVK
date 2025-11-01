@@ -14,6 +14,7 @@ import { CommentsModule } from './comments/comments.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 import { PhotoAnalysisModule } from './photo-analysis/photo-analysis.module';
 import { AuthorsModule } from './authors/authors.module';
+import { DataImportModule } from './data-import/data-import.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { AuthorsModule } from './authors/authors.module';
     WatchlistModule,
     PhotoAnalysisModule,
     AuthorsModule,
+    DataImportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
