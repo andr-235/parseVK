@@ -31,11 +31,6 @@ enum SuspicionLevel {
   HIGH
 }
 
-enum RealEstateSource {
-  AVITO
-  YOULA
-}
-
 model Task {
   id             Int      @id @default(autoincrement())
   title          String
@@ -63,17 +58,6 @@ model TaskAutomationSettings {
   lastRunAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model RealEstateScheduleSettings {
-  id                     Int      @id @default(autoincrement())
-  enabled                Boolean  @default(false)
-  runHour                Int      @default(2)
-  runMinute              Int      @default(0)
-  timezoneOffsetMinutes  Int      @default(0)
-  lastRunAt              DateTime?
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
 }
 
 model Group {
@@ -290,26 +274,4 @@ model WatchlistAuthor {
   @@unique([authorVkId, settingsId])
   @@index([status])
   @@index([settingsId])
-}
-
-model RealEstateListing {
-  id           Int               @id @default(autoincrement())
-  source       RealEstateSource
-  externalId   String
-  title        String
-  url          String
-  price        Int?
-  priceText    String?
-  address      String?
-  description  String?
-  previewImage String?
-  metadata     Json?
-  publishedAt  DateTime
-  firstSeenAt  DateTime          @default(now())
-  lastSeenAt   DateTime          @default(now())
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-
-  @@unique([source, externalId])
-  @@index([source, publishedAt(sort: Desc)])
 }

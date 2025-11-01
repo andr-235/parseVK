@@ -17,8 +17,7 @@
     "test:watch": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --watch",
     "test:cov": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --coverage",
     "test:debug": "node --inspect-brk -r ./jest-shims/register.js -r tsconfig-paths/register -r ts-node/register ./node_modules/jest/bin/jest.js --runInBand",
-    "test:e2e": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
-    "scrape:real-estate": "node ./scripts/run-real-estate-scraper.js"
+    "test:e2e": "node --require ./jest-shims/register.js ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
@@ -34,15 +33,12 @@
     "bullmq": "^5.61.0",
     "cache-manager": "^7.2.4",
     "cache-manager-redis-yet": "^5.1.5",
-    "cheerio": "^1.0.0",
     "class-validator": "^0.14.2",
     "cron": "^2.4.4",
     "got": "^14.6.1",
     "ioredis": "^5.4.1",
-    "puppeteer": "^24.26.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "tough-cookie": "^6.0.0",
     "vk-io": "^4.10.0"
   },
   "devDependencies": {
@@ -90,8 +86,7 @@
       "^@nestjs/bullmq$": "<rootDir>/../jest-shims/node_modules/@nestjs/bullmq/index.js",
       "^bullmq$": "<rootDir>/../jest-shims/node_modules/bullmq/index.js",
       "^libphonenumber-js/max$": "<rootDir>/../jest-shims/node_modules/libphonenumber-js/max.js",
-      "^got$": "<rootDir>/../jest-shims/node_modules/got/index.js",
-      "^cheerio$": "<rootDir>/../jest-shims/node_modules/cheerio"
+      "^got$": "<rootDir>/../jest-shims/node_modules/got/index.js"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

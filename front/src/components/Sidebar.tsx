@@ -116,38 +116,6 @@ const WatchlistIcon = () => (
   </svg>
 )
 
-const ReportsIcon = () => (
-  <svg
-    className={iconClasses}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10" />
-    <path d="M21 15a2 2 0 0 1-2 2h-3l-2 3-2-3H5a2 2 0 0 1-2-2" />
-    <path d="M7 10h10" />
-    <path d="M7 6h10" />
-  </svg>
-)
-
-const RealEstateIcon = () => (
-  <svg
-    className={iconClasses}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M3 11.5 12 5l9 6.5" />
-    <path d="M5 10.5V19a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-8.5" />
-  </svg>
-)
-
 const SettingsIcon = () => (
   <svg
     className={iconClasses}
@@ -191,7 +159,6 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
 
     return [
       { label: 'Задачи', path: '/tasks', icon: <TasksIcon />, badge: formatCount(tasksCount) },
-      { label: 'Парсинг недвижимости', path: '/real-estate/parsing', icon: <RealEstateIcon /> },
       { label: 'Группы', path: '/groups', icon: <GroupsIcon /> },
       { label: 'Комментарии', path: '/comments', icon: <CommentsIcon />, badge: formatCount(commentsCount) },
       { label: 'Авторы', path: '/authors', icon: <AuthorsIcon />, badge: formatCount(authorsTotal) },
@@ -201,7 +168,6 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
   }, [tasksCount, commentsCount, watchlistCount, authorsTotal])
 
   const secondaryItems: SidebarItem[] = [
-    { label: 'Отчёты', path: '/reports', icon: <ReportsIcon /> },
     { label: 'Настройки', path: '/settings', icon: <SettingsIcon /> },
   ]
 

@@ -12,13 +12,6 @@ import type {
   IBulkAddResponse,
   IRegionGroupSearchItem
 } from './api'
-import type {
-  RealEstateDailyCollectResult,
-  RealEstateManualRunOptions,
-  RealEstateScheduleSettings,
-  RealEstateScheduleUpdatePayload,
-} from './realEstate'
-
 // Navigation Store Types
 export type Page = 'tasks' | 'groups' | 'comments' | 'keywords' | 'watchlist' | 'authors'
 
@@ -120,15 +113,4 @@ export interface AuthorsState {
   setSort: (value: AuthorSortField) => void
   markAuthorVerified: (vkUserId: number, verifiedAt: string | null) => void
   refreshAuthors: () => Promise<void>
-}
-
-export interface RealEstateScheduleState {
-  settings: RealEstateScheduleSettings | null
-  summary: RealEstateDailyCollectResult | null
-  isLoading: boolean
-  isUpdating: boolean
-  isRunning: boolean
-  fetchSettings: () => Promise<RealEstateScheduleSettings | null>
-  updateSettings: (payload: RealEstateScheduleUpdatePayload) => Promise<boolean>
-  runNow: (options?: RealEstateManualRunOptions) => Promise<boolean>
 }

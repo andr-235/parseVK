@@ -1,9 +1,4 @@
-import type { RealEstateFilters } from '@/types/realEstate'
 import type { AuthorSortField, AuthorSortOrder } from '@/types/authors'
-
-const sortSources = (sources: RealEstateFilters['sources']): string => {
-  return [...sources].sort().join(',')
-}
 
 type AuthorsQueryParams = {
   status: 'all' | 'verified' | 'unverified'
@@ -29,8 +24,6 @@ export const queryKeys = {
   keywords: ['keywords'] as const,
   comments: ['comments'] as const,
   taskAutomation: ['task-automation'] as const,
-  realEstate: (filters: RealEstateFilters) =>
-    ['realEstate', filters.period, sortSources(filters.sources), filters.onlyNew] as const,
   authors: {
     list: (params: AuthorsQueryParams) => buildAuthorsKey(params),
   },

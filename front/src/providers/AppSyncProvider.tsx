@@ -5,14 +5,9 @@ import { useTasksQuery } from '@/queries/useTasksQuery'
 import { useGroupsQuery } from '@/queries/useGroupsQuery'
 import { useKeywordsQuery } from '@/queries/useKeywordsQuery'
 import { useTaskAutomationQuery } from '@/queries/useTaskAutomationQuery'
-import { useRealEstateQuery } from '@/queries/useRealEstateQuery'
 import { useCommentsQuery } from '@/queries/useCommentsQuery'
 import { useAuthorsQuery } from '@/queries/useAuthorsQuery'
 import { useWatchlistAuthorsQuery, useWatchlistSettingsQuery } from '@/queries/useWatchlistQueries'
-
-const shouldSyncRealEstate = (pathname: string): boolean => {
-  return pathname.startsWith('/reports')
-}
 
 const shouldSyncKeywords = (pathname: string): boolean => {
   return pathname.startsWith('/keywords') || pathname.startsWith('/comments')
@@ -28,7 +23,6 @@ function AppSyncProvider(): null {
 
   const syncGroups = useMemo(() => shouldSyncGroups(pathname), [pathname])
   const syncKeywords = useMemo(() => shouldSyncKeywords(pathname), [pathname])
-  const syncRealEstate = useMemo(() => shouldSyncRealEstate(pathname), [pathname])
   const syncComments = useMemo(() => pathname.startsWith('/comments'), [pathname])
   const syncAuthors = useMemo(() => pathname.startsWith('/authors'), [pathname])
   const syncWatchlist = useMemo(() => pathname.startsWith('/watchlist'), [pathname])
@@ -38,7 +32,6 @@ function AppSyncProvider(): null {
   useGroupsQuery({ enabled: syncGroups })
   useKeywordsQuery({ enabled: syncKeywords })
   useCommentsQuery({ enabled: syncComments })
-  useRealEstateQuery({ enabled: syncRealEstate })
   useAuthorsQuery(syncAuthors)
   useWatchlistAuthorsQuery(syncWatchlist)
   useWatchlistSettingsQuery(syncWatchlist)

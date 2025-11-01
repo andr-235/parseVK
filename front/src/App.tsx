@@ -12,9 +12,7 @@ import Watchlist from './pages/Watchlist'
 import AuthorAnalysis from './pages/AuthorAnalysis'
 import Authors from './pages/Authors'
 import Settings from './pages/Settings'
-import RealEstateReports from './pages/RealEstateReports'
 import AppSyncProvider from './providers/AppSyncProvider'
-import RealEstateParsing from './pages/RealEstateParsing'
 
 function App() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode)
@@ -48,8 +46,6 @@ function App() {
             <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysis />} />
             <Route path="/keywords" element={<Keywords />} />
             <Route path="/authors" element={<Authors />} />
-            <Route path="/reports" element={<RealEstateReports />} />
-            <Route path="/real-estate/parsing" element={<RealEstateParsing />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </MainContent>
