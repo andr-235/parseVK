@@ -181,7 +181,7 @@ export class DataImportService {
 
   private metadataValue(
     value: Record<string, unknown> | null | undefined,
-  ): Prisma.NullableJsonNullValueInput | undefined {
+  ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
     if (value === null) {
       return Prisma.JsonNull;
     }
