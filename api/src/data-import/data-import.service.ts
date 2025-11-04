@@ -8,37 +8,6 @@ import type {
 } from './dto/listing-import-report.dto';
 import type { ListingImportRequestDto } from './dto/listing-import-request.dto';
 
-interface NormalizedListing {
-  url: string;
-  source?: string;
-  externalId?: string;
-  title?: string;
-  description?: string;
-  price?: number;
-  currency?: string;
-  address?: string;
-  city?: string;
-  latitude?: number;
-  longitude?: number;
-  rooms?: number;
-  areaTotal?: number;
-  areaLiving?: number;
-  areaKitchen?: number;
-  floor?: number;
-  floorsTotal?: number;
-  publishedAt?: Date;
-  contactName?: string;
-  contactPhone?: string;
-  images: string[];
-  metadata?: Prisma.InputJsonValue | null;
-}
-
-interface NormalizedEntry {
-  index: number;
-  listing: NormalizedListing;
-  originalUrl?: string;
-}
-
 @Injectable()
 export class DataImportService {
   private readonly logger = new Logger(DataImportService.name);
@@ -49,57 +18,37 @@ export class DataImportService {
     request: ListingImportRequestDto,
   ): Promise<ListingImportReportDto> {
     const errors: ListingImportErrorDto[] = [];
-    const normalizedListings: NormalizedEntry[] = [];
-
-    request.listings.forEach((item, index) => {
-      try {
-        const normalized = this.normalizeListing(item);
-        normalizedListings.push({
-          index,
-          listing: normalized,
-          originalUrl: item.url,
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Ошибка нормализации объявления';
-        errors.push({ index, url: item.url, message });
-        this.logger.warn({
-          message: 'Объявление пропущено из-за ошибки нормализации',
-          index,
-          url: item.url,
-          error: message,
-        });
-      }
-    });
-
     let created = 0;
     let updated = 0;
-    let skipped = request.listings.length - normalizedListings.length;
+    let skipped = 0;
 
-    if (normalizedListings.length === 0) {
-      const emptyReport: ListingImportReportDto = {
-        processed: request.listings.length,
-        created,
-        updated,
-        skipped,
-        failed: errors.length,
-        errors,
-      };
-      return emptyReport;
-    }
+    for (const [index, item] of request.listings.entries()) {
+      try {
+        const url = typeof item.url === 'string' ? item.url.trim() : '';
+        if (!url) {
+          throw new Error('url обязателен');
+        }
 
-    if (request.updateExisting) {
-      for (const entry of normalizedListings) {
         try {
+          // Проверяем, что строка является валидным URL.
+          // eslint-disable-next-line no-new
+          new URL(url);
+        } catch {
+          throw new Error('Некорректный формат URL');
+        }
+
+        const data = this.buildListingData({ ...item, url });
+
+        if (request.updateExisting) {
           const existed = await this.prisma.listing.findUnique({
-            where: { url: entry.listing.url },
+            where: { url },
             select: { id: true },
           });
 
           await this.prisma.listing.upsert({
-            where: { url: entry.listing.url },
-            create: this.mapToCreateInput(entry.listing),
-            update: this.mapToUpdateInput(entry.listing),
+            where: { url },
+            create: data,
+            update: data,
           });
 
           if (existed) {
@@ -107,65 +56,35 @@ export class DataImportService {
           } else {
             created += 1;
           }
-        } catch (error) {
-          const message = this.mapPrismaError(error);
-          errors.push({ index: entry.index, url: entry.originalUrl, message });
-          this.logger.error(
-            {
-              message: 'Не удалось сохранить объявление в режиме upsert',
-              index: entry.index,
-              url: entry.originalUrl,
-              error: message,
-            },
-            error instanceof Error ? error.stack : undefined,
-          );
+        } else {
+          await this.prisma.listing.create({
+            data,
+          });
+          created += 1;
         }
-      }
-    } else {
-      try {
-        const createManyData = normalizedListings.map((entry) =>
-          this.mapToCreateManyInput(entry.listing),
-        );
-        const result = await this.prisma.listing.createMany({
-          data: createManyData,
-          skipDuplicates: true,
-        });
-        created = result.count;
-        skipped += normalizedListings.length - result.count;
-      } catch (bulkError) {
+      } catch (error) {
+        if (this.isUniqueViolation(error)) {
+          skipped += 1;
+          this.logger.warn({
+            message: 'Объявление пропущено: дубликат URL',
+            index,
+            url: item.url,
+          });
+          continue;
+        }
+
+        skipped += 1;
+        const message = this.mapPrismaError(error);
+        errors.push({ index, url: item.url, message });
         this.logger.error(
           {
-            message: 'Ошибка пакетного импорта объявлений, выполняется поштучная вставка',
-            error: this.mapPrismaError(bulkError),
+            message: 'Не удалось импортировать объявление',
+            index,
+            url: item.url,
+            error: message,
           },
-          bulkError instanceof Error ? bulkError.stack : undefined,
+          error instanceof Error ? error.stack : undefined,
         );
-
-        for (const entry of normalizedListings) {
-          try {
-            await this.prisma.listing.create({
-              data: this.mapToCreateInput(entry.listing),
-            });
-            created += 1;
-          } catch (error) {
-            if (this.isUniqueViolation(error)) {
-              skipped += 1;
-              continue;
-            }
-
-            const message = this.mapPrismaError(error);
-            errors.push({ index: entry.index, url: entry.originalUrl, message });
-            this.logger.error(
-              {
-                message: 'Ошибка сохранения объявления при поштучной вставке',
-                index: entry.index,
-                url: entry.originalUrl,
-                error: message,
-              },
-              error instanceof Error ? error.stack : undefined,
-            );
-          }
-        }
       }
     }
 
@@ -183,71 +102,40 @@ export class DataImportService {
     return report;
   }
 
-  private normalizeListing(dto: ListingImportDto): NormalizedListing {
-    const url = dto.url?.trim();
-    if (!url) {
-      throw new Error('url обязателен');
-    }
-
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(url);
-    } catch {
-      throw new Error('Некорректный формат URL');
-    }
-
-    const price = this.normalizeInteger(dto.price);
-    const latitude = this.normalizeFloat(dto.latitude);
-    const longitude = this.normalizeFloat(dto.longitude);
-    const rooms = this.normalizeInteger(dto.rooms);
-    const areaTotal = this.normalizeFloat(dto.areaTotal);
-    const areaLiving = this.normalizeFloat(dto.areaLiving);
-    const areaKitchen = this.normalizeFloat(dto.areaKitchen);
-    const floor = this.normalizeInteger(dto.floor);
-    const floorsTotal = this.normalizeInteger(dto.floorsTotal);
-
-    const publishedAt = this.normalizeDate(dto.publishedAt);
-
-    const images = Array.isArray(dto.images)
-      ? dto.images
-          .map((image) => image.trim())
-          .filter((image) => image.length > 0)
+  private buildListingData(listing: ListingImportDto): Prisma.ListingCreateInput {
+    const images = Array.isArray(listing.images)
+      ? listing.images.filter((image) => typeof image === 'string' && image.trim().length > 0)
       : [];
 
-    const metadata = this.normalizeMetadata(dto.metadata);
+    const metadata = this.metadataValue(listing.metadata);
 
-    const normalized: NormalizedListing = {
-      url: parsedUrl.toString(),
-      source: this.normalizeString(dto.source),
-      externalId: this.normalizeString(dto.externalId),
-      title: this.normalizeString(dto.title),
-      description: this.normalizeString(dto.description),
-      price: price ?? undefined,
-      currency: this.normalizeString(dto.currency),
-      address: this.normalizeString(dto.address),
-      city: this.normalizeString(dto.city),
-      latitude: latitude ?? undefined,
-      longitude: longitude ?? undefined,
-      rooms: rooms ?? undefined,
-      areaTotal: areaTotal ?? undefined,
-      areaLiving: areaLiving ?? undefined,
-      areaKitchen: areaKitchen ?? undefined,
-      floor: floor ?? undefined,
-      floorsTotal: floorsTotal ?? undefined,
-      publishedAt: publishedAt ?? undefined,
-      contactName: this.normalizeString(dto.contactName),
-      contactPhone: this.normalizePhone(dto.contactPhone),
+    return {
+      url: listing.url.trim(),
+      source: this.stringValue(listing.source),
+      externalId: this.stringValue(listing.externalId),
+      title: this.stringValue(listing.title),
+      description: this.stringValue(listing.description),
+      price: this.integerValue(listing.price),
+      currency: this.stringValue(listing.currency),
+      address: this.stringValue(listing.address),
+      city: this.stringValue(listing.city),
+      latitude: this.floatValue(listing.latitude),
+      longitude: this.floatValue(listing.longitude),
+      rooms: this.integerValue(listing.rooms),
+      areaTotal: this.floatValue(listing.areaTotal),
+      areaLiving: this.floatValue(listing.areaLiving),
+      areaKitchen: this.floatValue(listing.areaKitchen),
+      floor: this.integerValue(listing.floor),
+      floorsTotal: this.integerValue(listing.floorsTotal),
+      publishedAt: this.dateValue(listing.publishedAt),
+      contactName: this.stringValue(listing.contactName),
+      contactPhone: this.stringValue(listing.contactPhone),
       images,
+      metadata,
     };
-
-    if (metadata !== undefined) {
-      normalized.metadata = metadata;
-    }
-
-    return normalized;
   }
 
-  private normalizeString(value?: string | null): string | undefined {
+  private stringValue(value?: string | null): string | undefined {
     if (typeof value !== 'string') {
       return undefined;
     }
@@ -256,155 +144,53 @@ export class DataImportService {
     return trimmed.length > 0 ? trimmed : undefined;
   }
 
-  private normalizePhone(value?: string | null): string | undefined {
-    if (typeof value !== 'string') {
+  private integerValue(value?: string | number | null): number | undefined {
+    if (value === null || value === undefined) {
       return undefined;
     }
 
-    const digits = value.replace(/[^+\d]/g, '');
-    return digits.length > 0 ? digits : undefined;
-  }
+    const numeric =
+      typeof value === 'number' ? value : Number(String(value).replace(/\s+/g, ''));
 
-  private normalizeInteger(value: string | number | null | undefined): number | null {
-    const numeric = this.normalizeNumber(value);
-    if (numeric === null) {
-      return null;
+    if (!Number.isFinite(numeric)) {
+      return undefined;
     }
 
     return Math.round(numeric);
   }
 
-  private normalizeFloat(value: string | number | null | undefined): number | null {
-    const numeric = this.normalizeNumber(value);
-    if (numeric === null) {
-      return null;
-    }
-
-    return Number(numeric.toFixed(3));
-  }
-
-  private normalizeNumber(value: string | number | null | undefined): number | null {
+  private floatValue(value?: string | number | null): number | undefined {
     if (value === null || value === undefined) {
-      return null;
+      return undefined;
     }
 
-    if (typeof value === 'number') {
-      return Number.isFinite(value) ? value : null;
-    }
+    const numeric =
+      typeof value === 'number' ? value : Number(String(value).replace(/\s+/g, '').replace(',', '.'));
 
-    if (typeof value === 'string') {
-      const cleaned = value.replace(/[^0-9.,-]/g, '').replace(/,/g, '.');
-      if (cleaned.trim().length === 0) {
-        return null;
-      }
-
-      const parsed = Number(cleaned);
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-
-    return null;
+    return Number.isFinite(numeric) ? numeric : undefined;
   }
 
-  private normalizeDate(value?: string | null): Date | null {
+  private dateValue(value?: string | null): Date | undefined {
     if (!value) {
-      return null;
+      return undefined;
     }
 
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      throw new Error('Некорректное значение publishedAt');
-    }
-
-    return date;
+    return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
-  private normalizeMetadata(
-    value: unknown,
-  ): Prisma.InputJsonValue | null | undefined {
+  private metadataValue(
+    value: Record<string, unknown> | null | undefined,
+  ): Prisma.NullableJsonNullValueInput | undefined {
+    if (value === null) {
+      return Prisma.JsonNull;
+    }
+
     if (value === undefined) {
       return undefined;
     }
 
-    if (value === null) {
-      return null;
-    }
-
-    if (typeof value !== 'object' || Array.isArray(value)) {
-      throw new Error('metadata должен быть объектом');
-    }
-
-    try {
-      return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-    } catch {
-      throw new Error('metadata содержит неподдерживаемые значения');
-    }
-  }
-
-  private mapToCreateManyInput(
-    listing: NormalizedListing,
-  ): Prisma.ListingCreateManyInput {
-    return {
-      url: listing.url,
-      source: listing.source,
-      externalId: listing.externalId,
-      title: listing.title,
-      description: listing.description,
-      price: listing.price,
-      currency: listing.currency,
-      address: listing.address,
-      city: listing.city,
-      latitude: listing.latitude,
-      longitude: listing.longitude,
-      rooms: listing.rooms,
-      areaTotal: listing.areaTotal,
-      areaLiving: listing.areaLiving,
-      areaKitchen: listing.areaKitchen,
-      floor: listing.floor,
-      floorsTotal: listing.floorsTotal,
-      publishedAt: listing.publishedAt,
-      contactName: listing.contactName,
-      contactPhone: listing.contactPhone,
-      images: listing.images,
-      metadata:
-        listing.metadata === null
-          ? Prisma.JsonNull
-          : listing.metadata ?? undefined,
-    };
-  }
-
-  private mapToCreateInput(listing: NormalizedListing): Prisma.ListingCreateInput {
-    return {
-      ...this.mapToCreateManyInput(listing),
-    };
-  }
-
-  private mapToUpdateInput(listing: NormalizedListing): Prisma.ListingUpdateInput {
-    return {
-      source: listing.source,
-      externalId: listing.externalId,
-      title: listing.title,
-      description: listing.description,
-      price: listing.price,
-      currency: listing.currency,
-      address: listing.address,
-      city: listing.city,
-      latitude: listing.latitude,
-      longitude: listing.longitude,
-      rooms: listing.rooms,
-      areaTotal: listing.areaTotal,
-      areaLiving: listing.areaLiving,
-      areaKitchen: listing.areaKitchen,
-      floor: listing.floor,
-      floorsTotal: listing.floorsTotal,
-      publishedAt: listing.publishedAt,
-      contactName: listing.contactName,
-      contactPhone: listing.contactPhone,
-      images: { set: listing.images },
-      metadata:
-        listing.metadata === null
-          ? Prisma.JsonNull
-          : listing.metadata ?? undefined,
-    };
+    return value as Prisma.InputJsonValue;
   }
 
   private isUniqueViolation(error: unknown): boolean {

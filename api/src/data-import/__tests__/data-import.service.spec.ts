@@ -9,7 +9,6 @@ describe('DataImportService', () => {
   beforeEach(() => {
     prisma = {
       listing: {
-        createMany: jest.fn(),
         findUnique: jest.fn(),
         upsert: jest.fn(),
         create: jest.fn(),
@@ -19,57 +18,45 @@ describe('DataImportService', () => {
     service = new DataImportService(prisma);
   });
 
-  it('нормализует данные и вставляет объявления с пропуском дубликатов', async () => {
-    (prisma.listing.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+  it('создает объявления последовательно и возвращает отчет', async () => {
+    (prisma.listing.create as jest.Mock).mockResolvedValue({ id: 1 });
 
-    const request = {
+    const result = await service.importListings({
       listings: [
         {
           url: ' https://example.com/listing-1 ',
-          title: '  Тестовая квартира ',
-          price: '1 000 000 ₽',
-          rooms: '3',
+          title: ' Тестовая квартира ',
+          price: 1000000,
+          rooms: 3,
           images: ['https://img.example/1', ''],
-          contactPhone: '+7 (999) 123-45-67',
           metadata: { raw: true },
         },
         {
           url: 'https://example.com/listing-2',
-          price: '2500,50',
+          price: 2500.5,
           rooms: 2,
           images: [],
         },
       ],
-    } as ListingImportRequestDto;
+    } as ListingImportRequestDto);
 
-    const result = await service.importListings(request);
-
-    expect(prisma.listing.createMany).toHaveBeenCalledWith({
-      data: [
-        expect.objectContaining({
-          url: 'https://example.com/listing-1',
-          title: 'Тестовая квартира',
-          price: 1000000,
-          rooms: 3,
-          images: ['https://img.example/1'],
-          contactPhone: '+79991234567',
-          metadata: { raw: true },
-        }),
-        expect.objectContaining({
-          url: 'https://example.com/listing-2',
-          price: 2501,
-          rooms: 2,
-          images: [],
-        }),
-      ],
-      skipDuplicates: true,
+    expect(prisma.listing.create).toHaveBeenCalledTimes(2);
+    expect(prisma.listing.create).toHaveBeenNthCalledWith(1, {
+      data: expect.objectContaining({
+        url: 'https://example.com/listing-1',
+        title: 'Тестовая квартира',
+        price: 1000000,
+        rooms: 3,
+        images: ['https://img.example/1'],
+        metadata: { raw: true },
+      }),
     });
 
     expect(result).toEqual({
       processed: 2,
-      created: 1,
+      created: 2,
       updated: 0,
-      skipped: 1,
+      skipped: 0,
       failed: 0,
       errors: [],
     });
@@ -95,7 +82,7 @@ describe('DataImportService', () => {
       ],
     } as ListingImportRequestDto);
 
-    expect(prisma.listing.createMany).not.toHaveBeenCalled();
+    expect(prisma.listing.create).not.toHaveBeenCalled();
     expect(prisma.listing.upsert).toHaveBeenCalledTimes(2);
     expect(result).toEqual({
       processed: 2,
@@ -107,33 +94,38 @@ describe('DataImportService', () => {
     });
   });
 
-  it('переходит на поштучную вставку при ошибке createMany и корректно обрабатывает дубликаты', async () => {
-    (prisma.listing.createMany as jest.Mock).mockRejectedValue(new Error('bulk error'));
+  it('обрабатывает дубликаты и ошибки вставки', async () => {
     (prisma.listing.create as jest.Mock)
+      .mockResolvedValueOnce({ id: 1 })
       .mockRejectedValueOnce({ code: 'P2002' })
       .mockRejectedValueOnce(new Error('db error'));
 
     const result = await service.importListings({
       listings: [
-        {
-          url: 'https://example.com/listing-1',
-        },
-        {
-          url: 'https://example.com/listing-2',
-        },
+        { url: 'https://example.com/listing-1' },
+        { url: 'https://example.com/listing-2' },
+        { url: 'https://example.com/listing-3' },
       ],
     } as ListingImportRequestDto);
 
-    expect(prisma.listing.create).toHaveBeenCalledTimes(2);
-    expect(result.processed).toBe(2);
-    expect(result.created).toBe(0);
-    expect(result.skipped).toBe(1);
-    expect(result.failed).toBe(1);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatchObject({ index: 1, url: 'https://example.com/listing-2' });
+    expect(prisma.listing.create).toHaveBeenCalledTimes(3);
+    expect(result).toEqual({
+      processed: 3,
+      created: 1,
+      updated: 0,
+      skipped: 2,
+      failed: 1,
+      errors: [
+        {
+          index: 2,
+          url: 'https://example.com/listing-3',
+          message: 'db error',
+        },
+      ],
+    });
   });
 
-  it('пропускает объявления с некорректным URL и возвращает ошибку нормализации', async () => {
+  it('пропускает объявления без URL и возвращает ошибку', async () => {
     const result = await service.importListings({
       listings: [
         {
@@ -142,7 +134,7 @@ describe('DataImportService', () => {
       ],
     } as ListingImportRequestDto);
 
-    expect(prisma.listing.createMany).not.toHaveBeenCalled();
+    expect(prisma.listing.create).not.toHaveBeenCalled();
     expect(result).toEqual({
       processed: 1,
       created: 0,

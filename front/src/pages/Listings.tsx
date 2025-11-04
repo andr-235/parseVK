@@ -145,8 +145,6 @@ function Listings() {
   const [customSource, setCustomSource] = useState('')
   const [updateExisting, setUpdateExisting] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
-  const [savedApiKey, setSavedApiKey] = useState(() => listingsService.getImportApiKey())
-  const [apiKeyDraft, setApiKeyDraft] = useState(() => listingsService.getImportApiKey())
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -258,38 +256,9 @@ function Listings() {
     ? customSource
     : uploadSourceMode
 
-  const hasApiKey = savedApiKey.length > 0
-  const handleApiKeySave = () => {
-    const normalizedValue = apiKeyDraft.trim()
-    listingsService.setImportApiKey(normalizedValue)
-    const actualValue = listingsService.getImportApiKey()
-    setSavedApiKey(actualValue)
-    setApiKeyDraft(actualValue)
-
-    if (actualValue) {
-      toast.success('API ключ сохранён')
-    } else {
-      toast.success('API ключ очищен')
-    }
-  }
-
-  const handleApiKeyReset = () => {
-    listingsService.setImportApiKey('')
-    const actualValue = listingsService.getImportApiKey()
-    setSavedApiKey(actualValue)
-    setApiKeyDraft(actualValue)
-    toast.success('API ключ очищен')
-  }
-
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) {
-      return
-    }
-
-    if (!listingsService.hasImportApiKey()) {
-      toast.error('Сначала укажите API ключ для импорта')
-      event.target.value = ''
       return
     }
 
@@ -313,11 +282,6 @@ function Listings() {
     if (isUploading) {
       return
     }
-
-    if (!listingsService.hasImportApiKey()) {
-      toast.error('Сначала укажите API ключ для импорта')
-      return
-    }
     fileInputRef.current?.click()
   }
 
@@ -332,39 +296,6 @@ function Listings() {
         description="Просматривайте импортированные объявления и загружайте новые данные из JSON-файлов."
         actions={(
           <div className="flex w-full flex-col gap-4">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-text-secondary">API ключ импорта</label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  value={apiKeyDraft}
-                  onChange={(event) => setApiKeyDraft(event.target.value)}
-                  type="password"
-                  placeholder="VITE_DATA_IMPORT_API_KEY"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleApiKeySave}
-                    disabled={apiKeyDraft.trim() === savedApiKey}
-                  >
-                    Сохранить
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={handleApiKeyReset}
-                    disabled={!hasApiKey}
-                  >
-                    Очистить
-                  </Button>
-                </div>
-              </div>
-              <p className="text-xs text-text-tertiary">
-                Ключ используется для запросов импорта и сохраняется локально в браузере.
-              </p>
-            </div>
-
             <div className="grid gap-2">
               <label className="text-sm font-medium text-text-secondary">
                 Источник объявлений
@@ -414,11 +345,16 @@ function Listings() {
               <Button
                 type="button"
                 onClick={handleUploadClick}
-                disabled={isUploading || !hasApiKey}
+                disabled={isUploading}
               >
                 {isUploading ? 'Загрузка...' : 'Загрузить JSON'}
               </Button>
             </div>
+
+            <p className="text-xs text-text-tertiary">
+              Загрузите JSON-файл с массивом объявлений или объектом с полем
+              <code className="mx-1 rounded bg-border/40 px-1 py-0.5">listings</code>.
+            </p>
           </div>
         )}
       />
