@@ -13,7 +13,14 @@ import type {
   IRegionGroupSearchItem
 } from './api'
 // Navigation Store Types
-export type Page = 'tasks' | 'groups' | 'comments' | 'keywords' | 'watchlist' | 'authors'
+export type Page =
+  | 'tasks'
+  | 'groups'
+  | 'listings'
+  | 'comments'
+  | 'keywords'
+  | 'watchlist'
+  | 'authors'
 
 export interface NavigationState {
   currentPage: Page
