@@ -134,6 +134,20 @@ export class DataImportController {
     const existingMetadata = this.extractMetadata(plainItem.metadata);
 
     for (const [key, value] of Object.entries(plainItem)) {
+      if (key === 'author' && typeof value === 'string') {
+        if (typeof result.contactName !== 'string' || result.contactName.trim().length === 0) {
+          result.contactName = value;
+        }
+
+        extraFields[key] = value;
+        continue;
+      }
+
+      if (key === 'author_url' && typeof value === 'string') {
+        extraFields[key] = value;
+        continue;
+      }
+
       if (key === 'metadata') {
         continue;
       }

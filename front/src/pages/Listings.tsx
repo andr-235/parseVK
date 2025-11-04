@@ -83,6 +83,18 @@ const formatArea = (value: number | null | undefined): string | null => {
   }).format(value)} м²`
 }
 
+const getMetadataString = (
+  metadata: Record<string, unknown> | null | undefined,
+  key: string,
+): string | undefined => {
+  if (!metadata || typeof metadata !== 'object') {
+    return undefined
+  }
+
+  const value = (metadata as Record<string, unknown>)[key]
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined
+}
+
 const formatDateTime = (value?: string | null): string => {
   if (!value) {
     return '—'
@@ -101,6 +113,24 @@ const formatDateTime = (value?: string | null): string => {
   } catch {
     return date.toLocaleString('ru-RU')
   }
+}
+
+const formatDateTimeWithFallback = (
+  primary?: string | null,
+  fallback?: string | null,
+): string => {
+  if (primary) {
+    const formatted = formatDateTime(primary)
+    if (formatted !== '—') {
+      return formatted
+    }
+  }
+
+  if (fallback && fallback.trim().length > 0) {
+    return fallback
+  }
+
+  return '—'
 }
 
 const buildParameters = (listing: IListing): string | null => {
@@ -516,6 +546,31 @@ function Listings() {
                     const livingArea = formatArea(item.areaLiving)
                     const kitchenArea = formatArea(item.areaKitchen)
                     const primaryImage = item.images.find((image) => image && image.trim().length > 0)
+                    const metadata = (item.metadata ?? null) as Record<string, unknown> | null
+                    const metadataPostedAt =
+                      getMetadataString(metadata, 'posted_at') ?? getMetadataString(metadata, 'postedAt')
+                    const metadataPublishedAt =
+                      getMetadataString(metadata, 'published_at') ??
+                      getMetadataString(metadata, 'publishedAt')
+                    const metadataParsedAt =
+                      getMetadataString(metadata, 'parsed_at') ?? getMetadataString(metadata, 'parsedAt')
+                    const contactName =
+                      item.contactName ??
+                      getMetadataString(metadata, 'author') ??
+                      getMetadataString(metadata, 'contact_name')
+                    const contactPhone =
+                      item.contactPhone ??
+                      getMetadataString(metadata, 'author_phone') ??
+                      getMetadataString(metadata, 'contact_phone') ??
+                      getMetadataString(metadata, 'phone')
+                    const publishedDisplay = formatDateTimeWithFallback(
+                      item.publishedAt ?? metadataPublishedAt,
+                      metadataPostedAt ?? metadataPublishedAt,
+                    )
+                    const updatedDisplay = formatDateTimeWithFallback(
+                      metadataParsedAt ?? item.updatedAt,
+                      metadataParsedAt,
+                    )
 
                     return (
                       <TableRow key={item.id}>
@@ -560,19 +615,19 @@ function Listings() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            {item.contactName && (
-                              <span className="font-medium text-text-primary">{item.contactName}</span>
+                            {contactName && (
+                              <span className="font-medium text-text-primary">{contactName}</span>
                             )}
-                            {item.contactPhone && (
-                              <span className="text-sm text-text-secondary">{item.contactPhone}</span>
+                            {contactPhone && (
+                              <span className="text-sm text-text-secondary">{contactPhone}</span>
                             )}
                           </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-sm text-text-secondary">
-                          {formatDateTime(item.publishedAt)}
+                          {publishedDisplay}
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-sm text-text-secondary">
-                          {formatDateTime(item.updatedAt)}
+                          {updatedDisplay}
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-2">
