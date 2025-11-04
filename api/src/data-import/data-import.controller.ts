@@ -16,16 +16,15 @@ export class DataImportController {
 
   @Post('import')
   async importData(
-    @Body() body: ListingImportRequestDto,
+    @Body() body: unknown,
   ): Promise<ListingImportReportDto> {
     const requestDto = this.validateBody(body);
     return this.dataImportService.importListings(requestDto);
   }
 
-  private validateBody(
-    body: ListingImportRequestDto,
-  ): ListingImportRequestDto {
-    const requestDto = Object.assign(new ListingImportRequestDto(), body);
+  private validateBody(body: unknown): ListingImportRequestDto {
+    const normalized = this.normalizeRequestBody(body);
+    const requestDto = Object.assign(new ListingImportRequestDto(), normalized);
     const requestErrors = validateSync(requestDto, {
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -63,6 +62,33 @@ export class DataImportController {
 
     requestDto.listings = validatedListings;
     return requestDto;
+  }
+
+  private normalizeRequestBody(
+    body: unknown,
+  ): ListingImportRequestDto | { listings: unknown } {
+    if (Array.isArray(body)) {
+      return { listings: body };
+    }
+
+    if (this.isPlainObject(body)) {
+      if (Array.isArray(body.listings)) {
+        return body as ListingImportRequestDto;
+      }
+
+      return { listings: [body] };
+    }
+
+    throw new BadRequestException({
+      message: 'Неверный формат запроса импорта',
+      errors: ['Ожидался массив объявлений или объект с полем listings'],
+    });
+  }
+
+  private isPlainObject(
+    value: unknown,
+  ): value is Record<string, unknown> & Partial<ListingImportRequestDto> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 
   private flattenErrors(errors: ValidationError[]): string[] {
