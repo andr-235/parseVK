@@ -40,11 +40,15 @@ export const listingsApi = {
     return response.json()
   },
 
-  async importListings(payload: ListingImportRequest): Promise<ListingImportReport> {
+  async importListings(
+    payload: ListingImportRequest,
+    apiKey: string,
+  ): Promise<ListingImportReport> {
     const response = await fetch(`${API_URL}/data/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-api-key': apiKey,
       },
       body: JSON.stringify(payload),
     })

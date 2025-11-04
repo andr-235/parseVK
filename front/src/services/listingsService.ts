@@ -6,6 +6,64 @@ import type {
   ListingImportReport,
 } from '@/types/api'
 
+const STORAGE_KEY = 'listings:dataImportApiKey'
+
+let dataImportApiKey = (import.meta.env.VITE_DATA_IMPORT_API_KEY ?? '').trim()
+
+const readStoredApiKey = (): string => {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  try {
+    const storedValue = window.localStorage.getItem(STORAGE_KEY)
+    return storedValue?.trim() ?? ''
+  } catch {
+    return ''
+  }
+}
+
+const getImportApiKey = (): string => {
+  if (!dataImportApiKey) {
+    dataImportApiKey = readStoredApiKey()
+  }
+
+  return dataImportApiKey
+}
+
+const hasImportApiKey = (): boolean => getImportApiKey().length > 0
+
+const persistApiKey = (value: string): void => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    if (value) {
+      window.localStorage.setItem(STORAGE_KEY, value)
+    } else {
+      window.localStorage.removeItem(STORAGE_KEY)
+    }
+  } catch {
+    // Игнорируем ошибки доступа к хранилищу браузера
+  }
+}
+
+const setImportApiKey = (value: string): void => {
+  dataImportApiKey = value.trim()
+  persistApiKey(dataImportApiKey)
+}
+
+const ensureImportApiKey = (): string => {
+  const apiKey = getImportApiKey()
+
+  if (!apiKey) {
+    throw new Error('API ключ импорта не настроен. Укажите VITE_DATA_IMPORT_API_KEY.')
+  }
+
+  return apiKey
+}
+
 interface FetchListingsOptions {
   page: number
   pageSize: number
@@ -88,10 +146,10 @@ export const listingsService = {
         }
       })
 
-      const report = await listingsApi.importListings({
-        listings: normalizedListings,
-        updateExisting,
-      })
+      const report = await listingsApi.importListings(
+        { listings: normalizedListings, updateExisting },
+        ensureImportApiKey(),
+      )
 
       const summary: string[] = []
       if (report.created > 0) {
@@ -124,4 +182,8 @@ export const listingsService = {
       throw error
     }
   },
+
+  getImportApiKey,
+  setImportApiKey,
+  hasImportApiKey,
 }
