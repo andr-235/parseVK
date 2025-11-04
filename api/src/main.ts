@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { json, urlencoded } from 'express';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
@@ -9,6 +10,9 @@ async function bootstrap() {
   });
   const logger = new Logger('Bootstrap');
 
+  // Увеличиваем лимиты парсинга тела запроса, чтобы принимать крупные JSON
+  app.use(json({ limit: '2mb' }));
+  app.use(urlencoded({ limit: '2mb', extended: true }));
   app.useLogger(logger);
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.enableCors();
