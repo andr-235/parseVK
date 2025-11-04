@@ -3,21 +3,18 @@ import {
   Body,
   Controller,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { validateSync, type ValidationError } from 'class-validator';
 import { DataImportService } from './data-import.service';
 import { ListingImportDto } from './dto/listing-import.dto';
 import { ListingImportRequestDto } from './dto/listing-import-request.dto';
 import type { ListingImportReportDto } from './dto/listing-import-report.dto';
-import { ApiKeyGuard } from './guards/api-key.guard';
 
 @Controller('data')
 export class DataImportController {
   constructor(private readonly dataImportService: DataImportService) {}
 
   @Post('import')
-  @UseGuards(ApiKeyGuard)
   async importData(
     @Body() body: ListingImportRequestDto,
   ): Promise<ListingImportReportDto> {
