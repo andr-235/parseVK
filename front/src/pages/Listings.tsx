@@ -6,7 +6,6 @@ import {
   type ChangeEvent,
 } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
 import { Button } from '@/components/ui/button'
