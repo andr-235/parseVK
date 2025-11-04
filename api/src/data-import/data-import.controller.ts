@@ -10,6 +10,31 @@ import { ListingImportDto } from './dto/listing-import.dto';
 import { ListingImportRequestDto } from './dto/listing-import-request.dto';
 import type { ListingImportReportDto } from './dto/listing-import-report.dto';
 
+const LISTING_FIELD_KEYS = new Set([
+  'url',
+  'source',
+  'externalId',
+  'title',
+  'description',
+  'price',
+  'currency',
+  'address',
+  'city',
+  'latitude',
+  'longitude',
+  'rooms',
+  'areaTotal',
+  'areaLiving',
+  'areaKitchen',
+  'floor',
+  'floorsTotal',
+  'publishedAt',
+  'contactName',
+  'contactPhone',
+  'images',
+  'metadata',
+]);
+
 @Controller('data')
 export class DataImportController {
   constructor(private readonly dataImportService: DataImportService) {}
@@ -24,7 +49,16 @@ export class DataImportController {
 
   private validateBody(body: unknown): ListingImportRequestDto {
     const normalized = this.normalizeRequestBody(body);
-    const requestDto = Object.assign(new ListingImportRequestDto(), normalized);
+    const sanitizedListings = this.sanitizeListingArray(
+      (normalized as { listings: unknown }).listings,
+    );
+    const listingDtos = sanitizedListings.map((item) =>
+      Object.assign(new ListingImportDto(), item),
+    );
+
+    const requestDto = Object.assign(new ListingImportRequestDto(), normalized, {
+      listings: listingDtos,
+    });
     const requestErrors = validateSync(requestDto, {
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -38,8 +72,7 @@ export class DataImportController {
     }
 
     const itemErrors: string[] = [];
-    const validatedListings = requestDto.listings.map((item, index) => {
-      const listingDto = Object.assign(new ListingImportDto(), item);
+    requestDto.listings.forEach((listingDto, index) => {
       const validationErrors = validateSync(listingDto, {
         whitelist: true,
         forbidNonWhitelisted: true,
@@ -49,8 +82,6 @@ export class DataImportController {
         const messages = this.flattenErrors(validationErrors);
         itemErrors.push(`Элемент ${index}: ${messages.join('; ')}`);
       }
-
-      return listingDto;
     });
 
     if (itemErrors.length > 0) {
@@ -60,7 +91,6 @@ export class DataImportController {
       });
     }
 
-    requestDto.listings = validatedListings;
     return requestDto;
   }
 
@@ -83,6 +113,70 @@ export class DataImportController {
       message: 'Неверный формат запроса импорта',
       errors: ['Ожидался массив объявлений или объект с полем listings'],
     });
+  }
+
+  private sanitizeListingArray(listings: unknown): Record<string, unknown>[] {
+    if (!Array.isArray(listings)) {
+      return [];
+    }
+
+    return listings.map((item) => this.sanitizeListingItem(item));
+  }
+
+  private sanitizeListingItem(item: unknown): Record<string, unknown> {
+    if (!this.isPlainObject(item)) {
+      return item as Record<string, unknown>;
+    }
+
+    const plainItem = item as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+    const extraFields: Record<string, unknown> = {};
+    const existingMetadata = this.extractMetadata(plainItem.metadata);
+
+    for (const [key, value] of Object.entries(plainItem)) {
+      if (key === 'metadata') {
+        continue;
+      }
+
+      if (LISTING_FIELD_KEYS.has(key)) {
+        result[key] = value;
+      } else {
+        extraFields[key] = value;
+      }
+    }
+
+    const hasExtraFields = Object.keys(extraFields).length > 0;
+
+    if (existingMetadata !== undefined || hasExtraFields) {
+      const baseMetadata =
+        existingMetadata && typeof existingMetadata === 'object'
+          ? (existingMetadata as Record<string, unknown>)
+          : {};
+
+      result.metadata =
+        existingMetadata === null && !hasExtraFields
+          ? null
+          : {
+              ...baseMetadata,
+              ...(hasExtraFields ? extraFields : {}),
+            };
+    }
+
+    return result;
+  }
+
+  private extractMetadata(
+    metadata: unknown,
+  ): Record<string, unknown> | null | undefined {
+    if (metadata === null) {
+      return null;
+    }
+
+    if (this.isPlainObject(metadata)) {
+      return { ...metadata };
+    }
+
+    return undefined;
   }
 
   private isPlainObject(
