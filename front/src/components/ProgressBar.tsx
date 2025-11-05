@@ -76,9 +76,13 @@ function ProgressBar({
     >
       <div
         className={[
-          'relative w-full overflow-hidden rounded-full bg-background-secondary/70',
+          'relative w-full overflow-hidden rounded-full bg-background-secondary/70 border border-border/60',
           size === 'small' ? 'h-2.5' : 'h-3.5',
         ].join(' ')}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(percentage)}
+        role="progressbar"
       >
         {indeterminate ? (
           <motion.div
