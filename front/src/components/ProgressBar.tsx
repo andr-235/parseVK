@@ -46,16 +46,19 @@ function ProgressBar({
 
   const formattedLabel = useMemo(() => label ?? `${Math.round(percentage)}%`, [label, percentage])
 
-  // Debug logging
-  console.log('ProgressBar render:', {
-    current,
-    total,
-    percentage,
-    formattedLabel,
-    indeterminate,
-    size,
-    tone
-  })
+  // Debug logging отключён в продакшене
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.log('ProgressBar render:', {
+      current,
+      total,
+      percentage,
+      formattedLabel,
+      indeterminate,
+      size,
+      tone
+    })
+  }
 
   const toneClasses = {
     primary: 'bg-accent-primary',

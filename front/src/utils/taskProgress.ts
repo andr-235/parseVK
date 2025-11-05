@@ -168,23 +168,26 @@ export const calculateTaskProgress = (task: Task): TaskProgressInfo => {
     }
   }
 
-  // Debug logging
-  console.log('calculateTaskProgress for task', task.id, ':', {
-    task: {
-      groupsCount: task.groupsCount,
-      groupIds: task.groupIds?.length,
-      stats: task.stats
-    },
-    calculated: {
-      total,
-      processed,
-      success,
-      failed,
-      processing,
-      pending,
-      hasTotals: total > 0
-    }
-  })
+  // Debug logging отключён в продакшене
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.log('calculateTaskProgress for task', task.id, ':', {
+      task: {
+        groupsCount: task.groupsCount,
+        groupIds: task.groupIds?.length,
+        stats: task.stats
+      },
+      calculated: {
+        total,
+        processed,
+        success,
+        failed,
+        processing,
+        pending,
+        hasTotals: total > 0
+      }
+    })
+  }
 
   return {
     total,

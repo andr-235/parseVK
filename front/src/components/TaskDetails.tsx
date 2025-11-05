@@ -56,11 +56,11 @@ const groupStatusClasses: Record<GroupStatus, string> = {
 }
 
 function TaskDetails({ task, onClose }: TaskDetailsProps) {
-  const { resumeTask, checkTask, fetchTaskDetails } = useTasksStore((state) => ({
-    resumeTask: state.resumeTask,
-    checkTask: state.checkTask,
-    fetchTaskDetails: state.fetchTaskDetails,
-  }))
+  // Важно: не использовать объектный селектор — он создаёт новый объект на каждый рендер
+  // и может вызывать лишние обновления. Берём функции по отдельности.
+  const resumeTask = useTasksStore((state) => state.resumeTask)
+  const checkTask = useTasksStore((state) => state.checkTask)
+  const fetchTaskDetails = useTasksStore((state) => state.fetchTaskDetails)
   const [isResuming, setIsResuming] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
 
