@@ -39,7 +39,7 @@ const SOURCE_TITLE_MAP: Record<string, string> = {
 
 // Dark mode: обновлённые стили выпадающего меню с использованием цветовых токенов темы.
 const DROPDOWN_BASE_CLASSNAME =
-  'w-full appearance-none rounded-lg border border-border/70 bg-white px-3 py-2 pr-9 text-sm text-text-primary shadow-soft-sm transition ease-out duration-200 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-border dark:bg-background-secondary dark:text-text-primary dark:shadow-soft-lg dark:hover:bg-white/10 dark:focus-visible:ring-accent-primary/70'
+  'w-full appearance-none rounded-lg border border-border/70 bg-background-secondary px-3 py-2 pr-9 text-sm text-text-primary shadow-soft-sm transition ease-out duration-200 hover:bg-background-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/70 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-background-secondary dark:shadow-soft-lg dark:hover:bg-white/10 dark:focus-visible:ring-accent-primary [color-scheme:light] dark:[color-scheme:dark]'
 
 interface DropdownProps extends SelectHTMLAttributes<HTMLSelectElement> {
   iconClassName?: string
