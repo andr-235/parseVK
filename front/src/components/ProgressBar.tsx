@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import { motion } from "framer-motion"
 
 interface ProgressBarProps {
   current: number
@@ -45,6 +46,13 @@ function ProgressBar({
 
   const formattedLabel = useMemo(() => label ?? `${Math.round(percentage)}%`, [label, percentage])
 
+  const toneClasses = {
+    primary: 'bg-accent-primary',
+    success: 'bg-accent-success',
+    warning: 'bg-accent-warning',
+    danger: 'bg-accent-danger',
+  }
+
   return (
     <div
       className={[
@@ -61,26 +69,39 @@ function ProgressBar({
           size === 'small' ? 'h-2.5' : 'h-3.5',
         ].join(' ')}
       >
-        <div
-          className={[
-            'h-full rounded-full transition-all duration-300 ease-out',
-            {
-              primary: 'bg-accent-primary',
-              success: 'bg-accent-success',
-              warning: 'bg-accent-warning',
-              danger: 'bg-accent-danger',
-            }[tone],
-            indeterminate ? 'w-1/3 animate-pulse' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          style={indeterminate ? undefined : { width: `${percentage}%` }}
-        />
+        {indeterminate ? (
+          <motion.div
+            className={`h-full rounded-full ${toneClasses[tone]}`}
+            initial={{ width: '0%' }}
+            animate={{ width: '100%' }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              repeatType: 'reverse'
+            }}
+          />
+        ) : (
+          <motion.div
+            className={`h-full rounded-full ${toneClasses[tone]}`}
+            initial={{ width: '0%' }}
+            animate={{ width: `${percentage}%` }}
+            transition={{
+              duration: 0.8,
+              ease: [0.4, 0, 0.2, 1], // ease-out cubic-bezier
+            }}
+          />
+        )}
       </div>
       {showLabel && (
-        <div className="font-medium text-text-secondary">
+        <motion.div
+          className="font-medium text-text-secondary"
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
           {formattedLabel}
-        </div>
+        </motion.div>
       )}
     </div>
   )
