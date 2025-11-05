@@ -70,7 +70,7 @@ function KeywordInput({
             value={categoryValue}
             onChange={onCategoryChange}
             placeholder={categoryPlaceholder}
-            className="sm:max-w-[280px]"
+            className="sm:min-w-[280px]"
           />
         )}
         <Input
