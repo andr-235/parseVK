@@ -1,18 +1,10 @@
 import { useMemo } from 'react'
 import ProgressBar from './ProgressBar'
-import { getTaskStatusText } from '../utils/statusHelpers'
 import type { Task } from '../types'
 import { calculateTaskProgress } from '../utils/taskProgress'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
 
-const taskStatusClasses: Record<Task['status'], string> = {
-  pending: 'bg-accent-warning/15 text-accent-warning',
-  processing: 'bg-accent-primary/15 text-accent-primary',
-  running: 'bg-accent-primary/15 text-accent-primary',
-  completed: 'bg-accent-success/15 text-accent-success',
-  failed: 'bg-accent-danger/15 text-accent-danger'
-}
 
 interface ActiveTasksBannerProps {
   tasks: Task[]
@@ -133,62 +125,7 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
           tone={aggregatedTone}
           indeterminate={summary.total === 0 && summary.indeterminateCount > 0}
         />
-
-        {hasActiveTasks ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {tasks.map((task) => {
-              const progress = calculateTaskProgress(task)
-              const hasTotals = progress.total > 0
-              const taskFallbackTotal = hasTotals
-                ? progress.total
-                : Math.max(progress.processed + progress.processing + progress.pending, progress.processed, 1)
-
-              const label = hasTotals
-                ? `Обработано ${formatNumber(progress.processed)} из ${formatNumber(progress.total)}`
-                : progress.processing > 0
-                  ? `В работе: ${formatNumber(progress.processing)}`
-                  : 'Ожидаем запуск обработки...'
-
-              const tone = progress.failed > 0
-                ? 'danger'
-                : task.status === 'completed'
-                  ? 'success'
-                  : 'primary'
-
-              return (
-                <Card
-                  key={task.id}
-                  className="border border-border/60 bg-background-primary/60 shadow-soft-sm"
-                >
-                  <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
-                    <CardTitle className="text-sm font-semibold leading-tight">
-                      {task.title ?? `Задача ${task.id}`}
-                    </CardTitle>
-                    <Badge className={taskStatusClasses[task.status]}>
-                      {getTaskStatusText(task.status)}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <ProgressBar
-                      current={progress.processed}
-                      total={taskFallbackTotal}
-                      size="small"
-                      showLabel
-                      label={label}
-                      tone={tone}
-                      indeterminate={!hasTotals}
-                    />
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="space-y-3 rounded-2xl border border-dashed border-border/70 bg-background-primary/40 p-6 text-center text-sm text-text-secondary">
-            <ProgressBar current={0} total={1} showLabel label="Подготавливаем задачу..." indeterminate />
-            <p>Мы запускаем задачу. Как только появится прогресс, он отобразится здесь автоматически.</p>
-          </div>
-        )}
+        {/* Список карточек задач убран по требованию — оставляем только агрегированный прогресс */}
       </CardContent>
     </Card>
   )
