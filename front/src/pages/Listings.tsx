@@ -6,24 +6,23 @@ import {
   type ChangeEvent,
 } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  Card,
+  CardHeader,
+  CardContent,
+  CardDescription,
+} from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { queryKeys } from '@/queries/queryKeys'
 import { listingsService } from '@/services/listingsService'
 import type { IListing, IListingsResponse } from '@/types/api'
 import { cn } from '@/lib/utils'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ExternalLink, MapPin, Phone, Calendar, Tag } from 'lucide-react'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50]
 
@@ -167,6 +166,213 @@ const buildParameters = (listing: IListing): string | null => {
   }
 
   return parts.join(' • ')
+}
+
+// Компонент карточки объявления с современным дизайном
+interface ListingCardProps {
+  listing: IListing
+  expandedDescriptions: Set<number>
+  onToggleDescription: (id: number) => void
+}
+
+function ListingCard({ listing, expandedDescriptions, onToggleDescription }: ListingCardProps) {
+  const parameters = buildParameters(listing)
+  const livingArea = formatArea(listing.areaLiving)
+  const kitchenArea = formatArea(listing.areaKitchen)
+  const primaryImage = listing.images.find((image) => image && image.trim().length > 0)
+  const metadata = (listing.metadata ?? null) as Record<string, unknown> | null
+  const metadataPostedAt =
+    getMetadataString(metadata, 'posted_at') ?? getMetadataString(metadata, 'postedAt')
+  const metadataPublishedAt =
+    getMetadataString(metadata, 'published_at') ??
+    getMetadataString(metadata, 'publishedAt')
+  const metadataParsedAt =
+    getMetadataString(metadata, 'parsed_at') ?? getMetadataString(metadata, 'parsedAt')
+  const contactName =
+    listing.contactName ??
+    getMetadataString(metadata, 'author') ??
+    getMetadataString(metadata, 'contact_name')
+  const contactPhone =
+    listing.contactPhone ??
+    getMetadataString(metadata, 'author_phone') ??
+    getMetadataString(metadata, 'contact_phone') ??
+    getMetadataString(metadata, 'phone')
+  const publishedDisplay = formatDateTimeWithFallback(
+    listing.publishedAt ?? metadataPublishedAt,
+    metadataPostedAt ?? metadataPublishedAt,
+  )
+  const updatedDisplay = formatDateTimeWithFallback(
+    metadataParsedAt ?? listing.updatedAt,
+    metadataParsedAt,
+  )
+  const descriptionText = listing.description?.trim() ?? ''
+  const hasDescription = descriptionText.length > 0
+  const shouldAllowToggle = descriptionText.length > 240
+  const isDescriptionExpanded = expandedDescriptions.has(listing.id)
+
+  return (
+    <Card className="group h-full overflow-hidden border-border/70 bg-background-secondary shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-accent-primary/10 dark:hover:shadow-accent-primary/20 hover:-translate-y-1">
+        {/* Изображение */}
+        {primaryImage && (
+          <div className="relative h-48 w-full overflow-hidden bg-muted">
+            <img
+              src={primaryImage}
+              alt={listing.title ?? 'Объявление'}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+            {listing.images.length > 1 && (
+              <div className="absolute right-3 top-3 rounded-full bg-background-secondary/90 px-2.5 py-1 text-xs font-medium text-text-secondary shadow-sm">
+                {listing.images.length} фото
+              </div>
+            )}
+            {/* Бейдж источника */}
+            <div className="absolute left-3 top-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-primary/90 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm shadow-sm">
+                <Tag className="h-3 w-3" />
+                {formatSourceLabel(listing.source ?? null)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <CardHeader className="pb-3">
+          <div className="space-y-2">
+            {/* Заголовок */}
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="line-clamp-2 flex-1 text-lg font-semibold leading-tight text-text-primary group-hover:text-accent-primary transition-colors">
+                {listing.title ?? 'Без названия'}
+              </h3>
+              {listing.url && (
+                <a
+                  href={listing.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 text-text-secondary transition-colors hover:text-accent-primary"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+
+            {/* Цена */}
+            {listing.price != null && (
+              <div className="text-2xl font-bold text-accent-primary">
+                {formatPrice(listing.price, listing.currency)}
+              </div>
+            )}
+
+            {/* Параметры */}
+            {(parameters || livingArea || kitchenArea) && (
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-text-secondary">
+                {parameters && <span className="font-medium">{parameters}</span>}
+                {livingArea && <span>Жилая {livingArea}</span>}
+                {kitchenArea && <span>Кухня {kitchenArea}</span>}
+              </div>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4 pt-0">
+          {/* Описание */}
+          {hasDescription && (
+            <div className="space-y-1.5">
+              <CardDescription className="text-sm leading-relaxed">
+                <p
+                  className={cn(
+                    'whitespace-pre-line text-text-secondary',
+                    !isDescriptionExpanded && shouldAllowToggle && 'line-clamp-3',
+                  )}
+                >
+                  {descriptionText}
+                </p>
+              </CardDescription>
+              {shouldAllowToggle && (
+                <button
+                  type="button"
+                  onClick={() => onToggleDescription(listing.id)}
+                  className="text-xs font-medium text-accent-primary transition-colors hover:text-accent-primary/80"
+                >
+                  {isDescriptionExpanded ? 'Свернуть описание' : 'Показать полностью'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Адрес */}
+          {(listing.city || listing.address) && (
+            <div className="flex items-start gap-2 text-sm">
+              <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-text-secondary" />
+              <div className="flex-1 space-y-0.5">
+                {listing.city && (
+                  <div className="font-medium text-text-primary">{listing.city}</div>
+                )}
+                {listing.address && (
+                  <div className="text-text-secondary">{listing.address}</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Контакт */}
+          {(contactName || contactPhone) && (
+            <div className="flex items-start gap-2 text-sm">
+              <Phone className="mt-0.5 h-4 w-4 flex-shrink-0 text-text-secondary" />
+              <div className="flex-1 space-y-0.5">
+                {contactName && (
+                  <div className="font-medium text-text-primary">{contactName}</div>
+                )}
+                {contactPhone && (
+                  <a
+                    href={`tel:${contactPhone}`}
+                    className="text-accent-primary transition-colors hover:text-accent-primary/80"
+                  >
+                    {contactPhone}
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Даты */}
+          <div className="flex flex-wrap items-center gap-4 border-t border-border/60 pt-3 text-xs text-text-secondary">
+            {publishedDisplay !== '—' && (
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>Опубликовано: {publishedDisplay}</span>
+              </div>
+            )}
+            {updatedDisplay !== '—' && (
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>Обновлено: {updatedDisplay}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Ссылка на объявление */}
+          {listing.url && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              asChild
+            >
+              <a
+                href={listing.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Открыть объявление
+              </a>
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+  )
 }
 
 function Listings() {
@@ -362,7 +568,7 @@ function Listings() {
     <div className="flex flex-col gap-8">
       <PageHeroCard
         title="Объявления недвижимости"
-        description="Просматривайте импортированные объявления и загружайте новые данные из JSON-файлов."
+        description="Просматривайте импортированные объявления в удобном формате карточек. Загружайте новые данные из JSON-файлов и управляйте коллекцией объявлений."
         actions={(
           <div className="flex w-full flex-col gap-4">
             <div className="grid gap-2">
@@ -432,8 +638,8 @@ function Listings() {
       />
 
       <SectionCard
-        title="Импортированные объявления"
-        description="Фильтруйте и просматривайте информацию об объектах."
+        title="Каталог объявлений"
+        description="Используйте фильтры и поиск для быстрого нахождения нужных объявлений. Каждая карточка содержит всю важную информацию об объекте."
         headerActions={(
           <Button
             type="button"
@@ -547,195 +753,59 @@ function Listings() {
           </div>
 
           {listingsQuery.isError && (
-            <div className="rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-600">
+            <div className="rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
               {(listingsQuery.error instanceof Error
                 ? listingsQuery.error.message
                 : 'Не удалось загрузить данные')}
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border border-border/70">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="whitespace-nowrap">Источник</TableHead>
-                  <TableHead>Объявление</TableHead>
-                  <TableHead className="whitespace-nowrap">Цена</TableHead>
-                  <TableHead>Адрес</TableHead>
-                  <TableHead>Контакт</TableHead>
-                  <TableHead className="whitespace-nowrap">Опубликовано</TableHead>
-                  <TableHead className="whitespace-nowrap">Обновлено</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isInitialLoading && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-12 text-center text-sm text-text-secondary">
-                      <div className="flex items-center justify-center gap-2">
-                        <Spinner className="h-5 w-5" />
-                        Загрузка объявлений…
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
+          {/* Сетка карточек объявлений */}
+          {isInitialLoading && (
+            <div className="flex min-h-[400px] items-center justify-center rounded-xl border border-border/70 bg-background-secondary py-12">
+              <div className="flex flex-col items-center gap-3 text-sm text-text-secondary">
+                <Spinner className="h-8 w-8" />
+                <span>Загрузка объявлений…</span>
+              </div>
+            </div>
+          )}
 
-                {!isInitialLoading && !hasItems && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-12 text-center text-sm text-text-secondary">
-                      Объявления не найдены
-                    </TableCell>
-                  </TableRow>
-                )}
+          {!isInitialLoading && !hasItems && (
+            <div className="flex min-h-[400px] items-center justify-center rounded-xl border border-border/70 bg-background-secondary py-12">
+              <div className="text-center text-sm text-text-secondary">
+                <p className="text-lg font-medium text-text-primary mb-2">Объявления не найдены</p>
+                <p>Попробуйте изменить параметры поиска или фильтры</p>
+              </div>
+            </div>
+          )}
 
-                {!isInitialLoading &&
-                  items.map((item) => {
-                    const parameters = buildParameters(item)
-                    const livingArea = formatArea(item.areaLiving)
-                    const kitchenArea = formatArea(item.areaKitchen)
-                    const primaryImage = item.images.find((image) => image && image.trim().length > 0)
-                    const metadata = (item.metadata ?? null) as Record<string, unknown> | null
-                    const metadataPostedAt =
-                      getMetadataString(metadata, 'posted_at') ?? getMetadataString(metadata, 'postedAt')
-                    const metadataPublishedAt =
-                      getMetadataString(metadata, 'published_at') ??
-                      getMetadataString(metadata, 'publishedAt')
-                    const metadataParsedAt =
-                      getMetadataString(metadata, 'parsed_at') ?? getMetadataString(metadata, 'parsedAt')
-                    const contactName =
-                      item.contactName ??
-                      getMetadataString(metadata, 'author') ??
-                      getMetadataString(metadata, 'contact_name')
-                    const contactPhone =
-                      item.contactPhone ??
-                      getMetadataString(metadata, 'author_phone') ??
-                      getMetadataString(metadata, 'contact_phone') ??
-                      getMetadataString(metadata, 'phone')
-                    const publishedDisplay = formatDateTimeWithFallback(
-                      item.publishedAt ?? metadataPublishedAt,
-                      metadataPostedAt ?? metadataPublishedAt,
-                    )
-                    const updatedDisplay = formatDateTimeWithFallback(
-                      metadataParsedAt ?? item.updatedAt,
-                      metadataParsedAt,
-                    )
-                    const descriptionText = item.description?.trim() ?? ''
-                    const hasDescription = descriptionText.length > 0
-                    const shouldAllowToggle = descriptionText.length > 240
-                    const isDescriptionExpanded = expandedDescriptions.has(item.id)
+          {!isInitialLoading && hasItems && (
+            <>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {items.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                  >
+                    <ListingCard
+                      listing={item}
+                      expandedDescriptions={expandedDescriptions}
+                      onToggleDescription={toggleDescription}
+                    />
+                  </motion.div>
+                ))}
+              </div>
 
-                    return (
-                      <TableRow key={item.id}>
-                        <TableCell className="whitespace-nowrap font-medium text-text-secondary">
-                          {formatSourceLabel(item.source ?? null)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-2">
-                            <a
-                              href={item.url ?? undefined}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-medium text-accent-primary transition-colors hover:text-accent-primary/80"
-                            >
-                              {item.title ?? 'Без названия'}
-                            </a>
-                            {(parameters || livingArea || kitchenArea) && (
-                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-secondary">
-                                {parameters && <span>{parameters}</span>}
-                                {livingArea && <span>Жилая {livingArea}</span>}
-                                {kitchenArea && <span>Кухня {kitchenArea}</span>}
-                              </div>
-                            )}
-                            {hasDescription && (
-                              <div className="flex flex-col gap-1 text-sm text-text-secondary">
-                                <p
-                                  className={cn(
-                                    'whitespace-pre-line',
-                                    !isDescriptionExpanded && shouldAllowToggle && 'line-clamp-3',
-                                  )}
-                                >
-                                  {descriptionText}
-                                </p>
-                                {shouldAllowToggle && (
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleDescription(item.id)}
-                                    className="self-start text-xs font-medium text-accent-primary transition-colors hover:text-accent-primary/80"
-                                  >
-                                    {isDescriptionExpanded ? 'Свернуть описание' : 'Показать полностью'}
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                            <div className="flex flex-wrap items-center gap-3 text-xs">
-                              {item.url && (
-                                <a
-                                  href={item.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="font-medium text-accent-primary transition-colors hover:text-accent-primary/80"
-                                >
-                                  Открыть объявление
-                                </a>
-                              )}
-                              {primaryImage && (
-                                <a
-                                  href={primaryImage}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-text-secondary transition-colors hover:text-text-primary"
-                                >
-                                  Фото ({item.images.length})
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap font-medium">
-                          {formatPrice(item.price, item.currency)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            {item.city && (
-                              <span className="font-medium text-text-primary">{item.city}</span>
-                            )}
-                            {item.address && (
-                              <span className="text-sm text-text-secondary">{item.address}</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            {contactName && (
-                              <span className="font-medium text-text-primary">{contactName}</span>
-                            )}
-                            {contactPhone && (
-                              <span className="text-sm text-text-secondary">{contactPhone}</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm text-text-secondary">
-                          {publishedDisplay}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-sm text-text-secondary">
-                          {updatedDisplay}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-
-                {isFetching && hasItems && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="py-4 text-center text-sm text-text-secondary">
-                      <div className="flex items-center justify-center gap-2">
-                        <Spinner className="h-4 w-4" />
-                        Обновляем данные…
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+              {isFetching && (
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-border/70 bg-background-secondary py-4 text-sm text-text-secondary">
+                  <Spinner className="h-4 w-4" />
+                  <span>Обновляем данные…</span>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </SectionCard>
     </div>
