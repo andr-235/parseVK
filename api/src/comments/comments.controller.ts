@@ -21,18 +21,69 @@ const MAX_LIMIT = 200;
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
+  private parseKeywords(
+    keywords?: string | string[],
+  ): string[] | undefined {
+    if (!keywords) {
+      return undefined;
+    }
+
+    const values = Array.isArray(keywords)
+      ? keywords
+      : keywords.split(',');
+
+    const normalized = values
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+
+    if (normalized.length === 0) {
+      return undefined;
+    }
+
+    return Array.from(new Set(normalized));
+  }
+
+  private normalizeReadStatus(
+    value?: string,
+  ): 'all' | 'read' | 'unread' {
+    if (!value) {
+      return 'all';
+    }
+
+    const normalized = value.toLowerCase();
+    if (normalized === 'read' || normalized === 'unread') {
+      return normalized;
+    }
+
+    return 'all';
+  }
+
+  private normalizeSearch(search?: string): string | undefined {
+    const trimmed = search?.trim();
+    return trimmed ? trimmed : undefined;
+  }
+
   @Get()
   async getComments(
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe)
     limit: number,
+    @Query('keywords') keywordsParam?: string | string[],
+    @Query('readStatus') readStatusParam?: string,
+    @Query('search') search?: string,
   ): Promise<CommentsListDto> {
     const normalizedOffset = Math.max(offset, 0);
     const normalizedLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
+    const keywords = this.parseKeywords(keywordsParam);
+    const readStatus = this.normalizeReadStatus(readStatusParam);
+    const normalizedSearch = this.normalizeSearch(search);
 
     return this.commentsService.getComments({
       offset: normalizedOffset,
       limit: normalizedLimit,
+      keywords,
+      readStatus,
+      search: normalizedSearch,
     });
   }
 
@@ -49,15 +100,24 @@ export class CommentsController {
     @Query('cursor') cursor?: string,
     @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe)
     limit?: number,
+    @Query('keywords') keywordsParam?: string | string[],
+    @Query('readStatus') readStatusParam?: string,
+    @Query('search') search?: string,
   ): Promise<CommentsCursorListDto> {
     const normalizedLimit = Math.min(
       Math.max(limit || DEFAULT_LIMIT, 1),
       MAX_LIMIT,
     );
+    const keywords = this.parseKeywords(keywordsParam);
+    const readStatus = this.normalizeReadStatus(readStatusParam);
+    const normalizedSearch = this.normalizeSearch(search);
 
     return this.commentsService.getCommentsCursor({
       cursor,
       limit: normalizedLimit,
+      keywords,
+      readStatus,
+      search: normalizedSearch,
     });
   }
 

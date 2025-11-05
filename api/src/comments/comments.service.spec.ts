@@ -53,7 +53,10 @@ describe('CommentsService', () => {
     ] as never;
 
     prisma.comment.findMany.mockResolvedValue(commentsFromPrisma);
-    prisma.comment.count.mockResolvedValue(commentsFromPrisma.length);
+    prisma.comment.count
+      .mockResolvedValueOnce(commentsFromPrisma.length)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(1);
 
     const result = await service.getComments({ offset: 0, limit: 100 });
 
@@ -77,16 +80,22 @@ describe('CommentsService', () => {
       ],
       total: commentsFromPrisma.length,
       hasMore: false,
+      readCount: 1,
+      unreadCount: 1,
     });
   });
 
   it('должен запрашивать комментарии, отсортированные по publishedAt', async () => {
     prisma.comment.findMany.mockResolvedValue([]);
-    prisma.comment.count.mockResolvedValue(0);
+    prisma.comment.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
 
     await service.getComments({ offset: 0, limit: 50 });
 
     expect(prisma.comment.findMany).toHaveBeenCalledWith({
+      where: {},
       skip: 0,
       take: 50,
       orderBy: { publishedAt: 'desc' },
@@ -103,7 +112,7 @@ describe('CommentsService', () => {
         },
       },
     });
-    expect(prisma.comment.count).toHaveBeenCalledWith();
+    expect(prisma.comment.count).toHaveBeenCalledWith({ where: {} });
   });
 
   it('должен корректно выставлять hasMore при неполной странице', async () => {
@@ -114,7 +123,10 @@ describe('CommentsService', () => {
         watchlistAuthorId: null,
       } as never,
     ]);
-    prisma.comment.count.mockResolvedValue(5);
+    prisma.comment.count
+      .mockResolvedValueOnce(5)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(3);
 
     const result = await service.getComments({ offset: 0, limit: 1 });
 
@@ -124,6 +136,182 @@ describe('CommentsService', () => {
       ],
       total: 5,
       hasMore: true,
+      readCount: 2,
+      unreadCount: 3,
+    });
+  });
+
+  it('должен применять фильтр по ключевым словам и статусу чтения', async () => {
+    prisma.comment.findMany.mockResolvedValue([
+      {
+        id: 10,
+        author: null,
+        watchlistAuthorId: null,
+        text: 'demo keyword',
+      } as never,
+    ]);
+    prisma.comment.count
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(1);
+
+    await service.getComments({
+      offset: 0,
+      limit: 10,
+      keywords: ['keyword', 'sample'],
+      readStatus: 'unread',
+      search: 'demo',
+    });
+
+    expect(prisma.comment.findMany).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          {
+            AND: [
+              {
+                OR: [
+                  {
+                    text: {
+                      contains: 'keyword',
+                      mode: 'insensitive',
+                    },
+                  },
+                  {
+                    text: {
+                      contains: 'sample',
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+              {
+                text: {
+                  contains: 'demo',
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          },
+          { isRead: false },
+        ],
+      },
+      skip: 0,
+      take: 10,
+      orderBy: { publishedAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            vkUserId: true,
+            firstName: true,
+            lastName: true,
+            photo50: true,
+            photo100: true,
+            photo200Orig: true,
+          },
+        },
+      },
+    });
+
+    expect(prisma.comment.count).toHaveBeenNthCalledWith(1, {
+      where: {
+        AND: [
+          {
+            AND: [
+              {
+                OR: [
+                  {
+                    text: {
+                      contains: 'keyword',
+                      mode: 'insensitive',
+                    },
+                  },
+                  {
+                    text: {
+                      contains: 'sample',
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+              {
+                text: {
+                  contains: 'demo',
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          },
+          { isRead: false },
+        ],
+      },
+    });
+
+    expect(prisma.comment.count).toHaveBeenNthCalledWith(2, {
+      where: {
+        AND: [
+          {
+            AND: [
+              {
+                OR: [
+                  {
+                    text: {
+                      contains: 'keyword',
+                      mode: 'insensitive',
+                    },
+                  },
+                  {
+                    text: {
+                      contains: 'sample',
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+              {
+                text: {
+                  contains: 'demo',
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          },
+          { isRead: true },
+        ],
+      },
+    });
+
+    expect(prisma.comment.count).toHaveBeenNthCalledWith(3, {
+      where: {
+        AND: [
+          {
+            AND: [
+              {
+                OR: [
+                  {
+                    text: {
+                      contains: 'keyword',
+                      mode: 'insensitive',
+                    },
+                  },
+                  {
+                    text: {
+                      contains: 'sample',
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+              {
+                text: {
+                  contains: 'demo',
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          },
+          { isRead: false },
+        ],
+      },
     });
   });
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { commentsApi } from '../api/commentsApi'
-import type { CommentsState } from '../types/stores'
+import type { CommentsFilters, CommentsState } from '../types/stores'
 import { normalizeCommentResponse, COMMENTS_PAGE_SIZE } from './commentsStore.utils'
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/queries/queryKeys'
@@ -10,6 +10,46 @@ type CommentsQueryData = {
   nextCursor: string | null
   hasMore: boolean
   totalCount: number
+  readCount: number
+  unreadCount: number
+}
+
+const normalizeFilters = (filters?: CommentsFilters): CommentsFilters => {
+  const normalized: CommentsFilters = {
+    readStatus: 'unread',
+  }
+
+  const rawStatus = filters?.readStatus?.toLowerCase()
+  if (rawStatus === 'all' || rawStatus === 'read' || rawStatus === 'unread') {
+    normalized.readStatus = rawStatus
+  }
+
+  const normalizedKeywords = filters?.keywords
+    ?.map((keyword) => keyword.trim())
+    .filter((keyword) => keyword.length > 0)
+
+  if (normalizedKeywords && normalizedKeywords.length > 0) {
+    normalized.keywords = Array.from(new Set(normalizedKeywords))
+  }
+
+  const normalizedSearch = filters?.search?.trim()
+  if (normalizedSearch) {
+    normalized.search = normalizedSearch
+  }
+
+  return normalized
+}
+
+const shouldRemoveAfterToggle = (filters: CommentsFilters, nextIsRead: boolean) => {
+  if (filters.readStatus === 'unread' && nextIsRead) {
+    return true
+  }
+
+  if (filters.readStatus === 'read' && !nextIsRead) {
+    return true
+  }
+
+  return false
 }
 
 export const useCommentsStore = create<CommentsState>((set, get) => ({
@@ -19,8 +59,15 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
   hasMore: true,
   totalCount: 0,
   nextCursor: null,
+  readCount: 0,
+  unreadCount: 0,
+  filters: normalizeFilters(),
 
-  async fetchComments({ reset = false, limit }: { reset?: boolean; limit?: number } = {}) {
+  async fetchComments({
+    reset = false,
+    limit,
+    filters,
+  }: { reset?: boolean; limit?: number; filters?: CommentsFilters } = {}) {
     const state = get()
 
     if (reset ? state.isLoading : state.isLoadingMore || state.isLoading) {
@@ -33,15 +80,22 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
 
     const offset = reset ? 0 : state.comments.length
     const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
+    const activeFilters = reset ? normalizeFilters(filters ?? state.filters) : state.filters
 
     if (reset) {
-      set({ isLoading: true })
+      set({ isLoading: true, filters: activeFilters })
     } else {
       set({ isLoadingMore: true })
     }
 
     try {
-      const response = await commentsApi.getComments({ offset, limit: pageSize })
+      const response = await commentsApi.getComments({
+        offset,
+        limit: pageSize,
+        keywords: activeFilters.keywords,
+        readStatus: activeFilters.readStatus,
+        search: activeFilters.search,
+      })
       const normalized = response.items.map((comment) => normalizeCommentResponse(comment))
 
       set((prevState) => ({
@@ -49,14 +103,19 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         isLoading: false,
         isLoadingMore: false,
         hasMore: response.hasMore,
-        totalCount: response.total
+        totalCount: response.total,
+        readCount: response.readCount,
+        unreadCount: response.unreadCount,
+        filters: activeFilters,
       }))
 
       queryClient.setQueryData<CommentsQueryData>(queryKeys.comments, (prev) => ({
         comments: reset ? normalized : [...(prev?.comments ?? []), ...normalized],
         nextCursor: null,
         hasMore: response.hasMore,
-        totalCount: response.total
+        totalCount: response.total,
+        readCount: response.readCount,
+        unreadCount: response.unreadCount,
       }))
     } catch (error) {
       console.error('Failed to fetch comments', error)
@@ -73,7 +132,11 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
    * - Нет проблемы "missing rows" при добавлении новых данных
    * - Стабильная пагинация при обновлениях данных
    */
-  async fetchCommentsCursor({ reset = false, limit }: { reset?: boolean; limit?: number } = {}) {
+  async fetchCommentsCursor({
+    reset = false,
+    limit,
+    filters,
+  }: { reset?: boolean; limit?: number; filters?: CommentsFilters } = {}) {
     const state = get()
 
     if (reset ? state.isLoading : state.isLoadingMore || state.isLoading) {
@@ -86,15 +149,22 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
 
     const cursor = reset ? undefined : state.nextCursor ?? undefined
     const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
+    const activeFilters = reset ? normalizeFilters(filters ?? state.filters) : state.filters
 
     if (reset) {
-      set({ isLoading: true })
+      set({ isLoading: true, filters: activeFilters })
     } else {
       set({ isLoadingMore: true })
     }
 
     try {
-      const response = await commentsApi.getCommentsCursor({ cursor, limit: pageSize })
+      const response = await commentsApi.getCommentsCursor({
+        cursor,
+        limit: pageSize,
+        keywords: activeFilters.keywords,
+        readStatus: activeFilters.readStatus,
+        search: activeFilters.search,
+      })
       const normalized = response.items.map((comment) => normalizeCommentResponse(comment))
 
       set((prevState) => ({
@@ -103,14 +173,19 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         isLoadingMore: false,
         hasMore: response.hasMore,
         totalCount: response.total,
-        nextCursor: response.nextCursor
+        nextCursor: response.nextCursor,
+        readCount: response.readCount,
+        unreadCount: response.unreadCount,
+        filters: activeFilters,
       }))
 
       queryClient.setQueryData<CommentsQueryData>(queryKeys.comments, (prev) => ({
         comments: reset ? normalized : [...(prev?.comments ?? []), ...normalized],
         nextCursor: response.nextCursor ?? null,
         hasMore: response.hasMore,
-        totalCount: response.total
+        totalCount: response.total,
+        readCount: response.readCount,
+        unreadCount: response.unreadCount,
       }))
     } catch (error) {
       console.error('Failed to fetch comments with cursor', error)
@@ -120,7 +195,9 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
   },
 
   async toggleReadStatus(id) {
-    const currentComment = get().comments.find((comment) => comment.id === id)
+    const state = get()
+    const currentIndex = state.comments.findIndex((comment) => comment.id === id)
+    const currentComment = currentIndex >= 0 ? state.comments[currentIndex] : undefined
 
     if (!currentComment) {
       console.warn(`Комментарий с id=${id} не найден в локальном сторе`)
@@ -128,28 +205,68 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }
 
     const nextIsRead = !currentComment.isRead
+    const readDelta = nextIsRead ? 1 : -1
+    const unreadDelta = -readDelta
+    const shouldRemove = shouldRemoveAfterToggle(state.filters, nextIsRead)
 
     set((state) => ({
-      comments: state.comments.map((comment) =>
-        comment.id === id ? { ...comment, isRead: nextIsRead } : comment
-      )
+      comments: state.comments
+        .map((comment) => (comment.id === id ? { ...comment, isRead: nextIsRead } : comment))
+        .filter((comment) => !(comment.id === id && shouldRemove)),
+      readCount: Math.max(0, state.readCount + readDelta),
+      unreadCount: Math.max(0, state.unreadCount + unreadDelta),
+      totalCount: shouldRemove ? Math.max(0, state.totalCount - 1) : state.totalCount
     }))
 
     try {
       const updated = await commentsApi.updateReadStatus(id, nextIsRead)
-      set((state) => ({
-        comments: state.comments.map((comment) =>
-          comment.id === id
-            ? { ...comment, isRead: updated.isRead ?? nextIsRead }
-            : comment
-        )
-      }))
+      const finalIsRead = updated.isRead ?? nextIsRead
+
+      if (finalIsRead !== nextIsRead) {
+        const finalReadDelta = finalIsRead ? 1 : -1
+        const finalUnreadDelta = -finalReadDelta
+        const shouldRemoveFinal = shouldRemoveAfterToggle(state.filters, finalIsRead)
+
+        set((prevState) => {
+          const baseComments = prevState.comments.filter((comment) => comment.id !== id)
+          const restoredComment = { ...currentComment, isRead: finalIsRead }
+          const nextComments = shouldRemoveFinal
+            ? baseComments
+            : (() => {
+                const copy = [...baseComments]
+                copy.splice(Math.min(currentIndex, copy.length), 0, restoredComment)
+                return copy
+              })()
+
+          return {
+            comments: nextComments,
+            readCount: Math.max(0, prevState.readCount - readDelta + finalReadDelta),
+            unreadCount: Math.max(0, prevState.unreadCount - unreadDelta + finalUnreadDelta),
+            totalCount: shouldRemoveFinal
+              ? Math.max(0, prevState.totalCount)
+              : prevState.totalCount + (shouldRemove ? 1 : 0),
+          }
+        })
+      }
+
+      void get().fetchCommentsCursor({ reset: true, filters: state.filters })
     } catch (error) {
-      set((state) => ({
-        comments: state.comments.map((comment) =>
-          comment.id === id ? { ...comment, isRead: !nextIsRead } : comment
-        )
-      }))
+      set((prevState) => {
+        const baseComments = prevState.comments.filter((comment) => comment.id !== id)
+        const restoredComment = { ...currentComment }
+        const nextComments = (() => {
+          const copy = [...baseComments]
+          copy.splice(Math.min(currentIndex, copy.length), 0, restoredComment)
+          return copy
+        })()
+
+        return {
+          comments: nextComments,
+          readCount: Math.max(0, prevState.readCount - readDelta),
+          unreadCount: Math.max(0, prevState.unreadCount - unreadDelta),
+          totalCount: shouldRemove ? prevState.totalCount + 1 : prevState.totalCount,
+        }
+      })
       console.error('Failed to update read status', error)
       throw error
     }

@@ -7,13 +7,22 @@ import { queryKeys } from '@/queries/queryKeys'
 import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/stores/commentsStore.utils'
 
 const fetchInitialComments = async () => {
-  const response = await commentsApi.getCommentsCursor({ limit: COMMENTS_PAGE_SIZE })
+  const { filters } = useCommentsStore.getState()
+  const response = await commentsApi.getCommentsCursor({
+    limit: COMMENTS_PAGE_SIZE,
+    keywords: filters.keywords,
+    readStatus: filters.readStatus,
+    search: filters.search,
+  })
 
   return {
     comments: response.items.map((item) => normalizeCommentResponse(item)),
     nextCursor: response.nextCursor ?? null,
     hasMore: response.hasMore,
     totalCount: response.total,
+    readCount: response.readCount,
+    unreadCount: response.unreadCount,
+    filters,
   }
 }
 
@@ -44,6 +53,9 @@ export const useCommentsQuery = (options?: UseCommentsQueryOptions) => {
       totalCount: query.data.totalCount,
       hasMore: query.data.hasMore,
       nextCursor: query.data.nextCursor,
+      readCount: query.data.readCount,
+      unreadCount: query.data.unreadCount,
+      filters: query.data.filters,
       isLoading: false,
       isLoadingMore: false,
     })

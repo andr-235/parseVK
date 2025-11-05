@@ -1,8 +1,42 @@
 import { API_URL } from './config'
 import type { ICommentResponse, IGetCommentsResponse, IGetCommentsCursorResponse } from '../types/api'
 
+type CommentsFilters = {
+  keywords?: string[]
+  readStatus?: 'all' | 'unread' | 'read'
+  search?: string
+}
+
+const appendFilterParams = (searchParams: URLSearchParams, filters?: CommentsFilters) => {
+  if (!filters) {
+    return
+  }
+
+  const { keywords, readStatus, search } = filters
+
+  if (Array.isArray(keywords)) {
+    keywords
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword.length > 0)
+      .forEach((keyword) => {
+        searchParams.append('keywords', keyword)
+      })
+  }
+
+  if (readStatus && readStatus !== 'all') {
+    searchParams.set('readStatus', readStatus)
+  }
+
+  const normalizedSearch = search?.trim()
+  if (normalizedSearch) {
+    searchParams.set('search', normalizedSearch)
+  }
+}
+
 export const commentsApi = {
-  async getComments(params?: { offset?: number; limit?: number }): Promise<IGetCommentsResponse> {
+  async getComments(
+    params?: { offset?: number; limit?: number } & CommentsFilters,
+  ): Promise<IGetCommentsResponse> {
     const searchParams = new URLSearchParams()
 
     if (typeof params?.offset === 'number') {
@@ -12,6 +46,8 @@ export const commentsApi = {
     if (typeof params?.limit === 'number') {
       searchParams.set('limit', String(params.limit))
     }
+
+    appendFilterParams(searchParams, params)
 
     const query = searchParams.toString()
     const url = query ? `${API_URL}/comments?${query}` : `${API_URL}/comments`
@@ -31,7 +67,9 @@ export const commentsApi = {
    * - Быстрее на больших offset'ах
    * - Нет проблемы "missing rows" при добавлении новых данных
    */
-  async getCommentsCursor(params?: { cursor?: string; limit?: number }): Promise<IGetCommentsCursorResponse> {
+  async getCommentsCursor(
+    params?: { cursor?: string; limit?: number } & CommentsFilters,
+  ): Promise<IGetCommentsCursorResponse> {
     const searchParams = new URLSearchParams()
 
     if (params?.cursor) {
@@ -41,6 +79,8 @@ export const commentsApi = {
     if (typeof params?.limit === 'number') {
       searchParams.set('limit', String(params.limit))
     }
+
+    appendFilterParams(searchParams, params)
 
     const query = searchParams.toString()
     const url = query ? `${API_URL}/comments/cursor?${query}` : `${API_URL}/comments/cursor`

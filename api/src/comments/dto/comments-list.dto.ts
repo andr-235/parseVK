@@ -4,4 +4,6 @@ export interface CommentsListDto {
   items: CommentWithAuthorDto[];
   total: number;
   hasMore: boolean;
+  readCount: number;
+  unreadCount: number;
 }

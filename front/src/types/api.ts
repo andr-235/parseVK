@@ -134,6 +134,8 @@ export interface IGetCommentsResponse {
   items: ICommentResponse[]
   total: number
   hasMore: boolean
+  readCount: number
+  unreadCount: number
 }
 
 export interface IGetCommentsCursorResponse {
@@ -141,6 +143,8 @@ export interface IGetCommentsCursorResponse {
   nextCursor: string | null
   hasMore: boolean
   total: number
+  readCount: number
+  unreadCount: number
 }
 
 export interface IParsingTaskGroup {

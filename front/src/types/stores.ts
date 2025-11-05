@@ -28,6 +28,12 @@ export interface NavigationState {
 }
 
 // Comments Store Types
+export interface CommentsFilters {
+  keywords?: string[]
+  readStatus?: 'all' | 'unread' | 'read'
+  search?: string
+}
+
 export interface CommentsState {
   comments: Comment[]
   isLoading: boolean
@@ -35,8 +41,11 @@ export interface CommentsState {
   hasMore: boolean
   totalCount: number
   nextCursor: string | null
-  fetchComments: (options?: { reset?: boolean; limit?: number }) => Promise<void>
-  fetchCommentsCursor: (options?: { reset?: boolean; limit?: number }) => Promise<void>
+  readCount: number
+  unreadCount: number
+  filters: CommentsFilters
+  fetchComments: (options?: { reset?: boolean; limit?: number; filters?: CommentsFilters }) => Promise<void>
+  fetchCommentsCursor: (options?: { reset?: boolean; limit?: number; filters?: CommentsFilters }) => Promise<void>
   toggleReadStatus: (id: number) => Promise<void>
   markWatchlisted: (commentId: number, watchlistAuthorId: number) => void
 }

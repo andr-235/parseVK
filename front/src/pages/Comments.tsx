@@ -16,6 +16,8 @@ function Comments() {
   const isLoadingMore = useCommentsStore((state) => state.isLoadingMore)
   const hasMore = useCommentsStore((state) => state.hasMore)
   const totalCount = useCommentsStore((state) => state.totalCount)
+  const readCount = useCommentsStore((state) => state.readCount)
+  const unreadCount = useCommentsStore((state) => state.unreadCount)
   const toggleReadStatus = useCommentsStore((state) => state.toggleReadStatus)
   const markWatchlisted = useCommentsStore((state) => state.markWatchlisted)
   const keywords = useKeywordsStore((state) => state.keywords)
@@ -49,7 +51,7 @@ function Comments() {
   )
 
   const keywordMatchData = useMemo(() => {
-    const matchesByComment = new Map<number, Map<string, Keyword[]>>()
+    const matchesByComment = new Map<number, Map<string, Keyword[]>>() 
     const matchedIds = new Set<number>()
 
     if (keywordsWithMeta.length === 0) {
@@ -94,6 +96,37 @@ function Comments() {
 
   const hasDefinedKeywords = keywordsWithMeta.length > 0
 
+  const keywordFilterValues = useMemo(() => {
+    if (!showOnlyKeywordComments || !hasDefinedKeywords) {
+      return undefined
+    }
+
+    const normalized = keywordsWithMeta
+      .map((item) => item.keyword.word.trim())
+      .filter((word) => word.length > 0)
+
+    if (normalized.length === 0) {
+      return undefined
+    }
+
+    return Array.from(new Set(normalized))
+  }, [hasDefinedKeywords, keywordsWithMeta, showOnlyKeywordComments])
+
+  const normalizedSearch = useMemo(() => searchTerm.trim(), [searchTerm])
+
+  useEffect(() => {
+    fetchCommentsCursor({
+      reset: true,
+      filters: {
+        keywords: keywordFilterValues,
+        readStatus: readFilter,
+        search: normalizedSearch,
+      },
+    }).catch((error) => {
+      console.error('Failed to fetch comments with filters', error)
+    })
+  }, [fetchCommentsCursor, keywordFilterValues, normalizedSearch, readFilter])
+
   const filteredComments = useMemo(() => {
     let result = comments
 
@@ -107,7 +140,7 @@ function Comments() {
       result = result.filter((comment) => !comment.isRead)
     }
 
-    const trimmedSearch = searchTerm.trim().toLowerCase()
+    const trimmedSearch = normalizedSearch.toLowerCase()
 
     if (trimmedSearch) {
       result = result.filter((comment) =>
@@ -120,7 +153,7 @@ function Comments() {
     }
 
     return result
-  }, [comments, hasDefinedKeywords, matchedIds, readFilter, searchTerm, showOnlyKeywordComments])
+  }, [comments, hasDefinedKeywords, matchedIds, normalizedSearch, readFilter, showOnlyKeywordComments])
 
   const commentIndexMap = useMemo(() => {
     const map = new Map<number, number>()
@@ -255,7 +288,7 @@ function Comments() {
   return (
     <div className="flex flex-col gap-8">
 
-      <CommentsHero filteredCount={totalCount} />
+      <CommentsHero totalCount={totalCount} readCount={readCount} unreadCount={unreadCount} />
 
       <Separator className="opacity-40" />
 

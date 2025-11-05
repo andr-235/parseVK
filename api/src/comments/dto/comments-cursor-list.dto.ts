@@ -8,4 +8,6 @@ export interface CommentsCursorListDto {
   nextCursor: string | null;
   hasMore: boolean;
   total: number;
+  readCount: number;
+  unreadCount: number;
 }

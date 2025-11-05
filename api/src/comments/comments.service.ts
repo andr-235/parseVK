@@ -6,12 +6,20 @@ import type { CommentsListDto } from './dto/comments-list.dto';
 import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
 import { CursorUtils } from './dto/comments-cursor.dto';
 
-interface CommentsQueryOptions {
+type ReadStatusFilter = 'all' | 'read' | 'unread';
+
+interface CommentsFilters {
+  keywords?: string[];
+  search?: string;
+  readStatus?: ReadStatusFilter;
+}
+
+interface CommentsQueryOptions extends CommentsFilters {
   offset: number;
   limit: number;
 }
 
-interface CommentsCursorOptions {
+interface CommentsCursorOptions extends CommentsFilters {
   cursor?: string;
   limit: number;
 }
@@ -56,6 +64,88 @@ export class CommentsService {
     };
   }
 
+  private buildBaseWhere({
+    keywords,
+    search,
+  }: CommentsFilters): Prisma.CommentWhereInput {
+    const conditions: Prisma.CommentWhereInput[] = [];
+
+    const normalizedKeywords = (keywords ?? [])
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword.length > 0);
+
+    if (normalizedKeywords.length > 0) {
+      conditions.push({
+        OR: normalizedKeywords.map((keyword) => ({
+          text: {
+            contains: keyword,
+            mode: 'insensitive',
+          },
+        })),
+      });
+    }
+
+    const normalizedSearch = search?.trim();
+    if (normalizedSearch) {
+      conditions.push({
+        text: {
+          contains: normalizedSearch,
+          mode: 'insensitive',
+        },
+      });
+    }
+
+    if (conditions.length === 0) {
+      return {};
+    }
+
+    if (conditions.length === 1) {
+      return conditions[0];
+    }
+
+    return { AND: conditions };
+  }
+
+  private buildReadStatusWhere(
+    readStatus?: ReadStatusFilter,
+  ): Prisma.CommentWhereInput {
+    if (readStatus === 'read') {
+      return { isRead: true };
+    }
+
+    if (readStatus === 'unread') {
+      return { isRead: false };
+    }
+
+    return {};
+  }
+
+  private isWhereEmpty(where?: Prisma.CommentWhereInput): boolean {
+    if (!where) {
+      return true;
+    }
+
+    return Object.keys(where).length === 0;
+  }
+
+  private mergeWhere(
+    ...wheres: Array<Prisma.CommentWhereInput | undefined>
+  ): Prisma.CommentWhereInput {
+    const normalized = wheres.filter(
+      (where) => where && !this.isWhereEmpty(where),
+    ) as Prisma.CommentWhereInput[];
+
+    if (normalized.length === 0) {
+      return {};
+    }
+
+    if (normalized.length === 1) {
+      return normalized[0];
+    }
+
+    return { AND: normalized };
+  }
+
   /**
    * Получить комментарии с offset-based pagination (legacy)
    *
@@ -65,9 +155,20 @@ export class CommentsService {
   async getComments({
     offset,
     limit,
+    keywords,
+    readStatus,
+    search,
   }: CommentsQueryOptions): Promise<CommentsListDto> {
-    const [comments, total] = await this.prisma.$transaction([
+    const baseWhere = this.buildBaseWhere({ keywords, search });
+    const readStatusWhere = this.buildReadStatusWhere(readStatus);
+    const listWhere = this.mergeWhere(baseWhere, readStatusWhere);
+    const totalWhere = this.mergeWhere(baseWhere, readStatusWhere);
+    const readWhere = this.mergeWhere(baseWhere, { isRead: true });
+    const unreadWhere = this.mergeWhere(baseWhere, { isRead: false });
+
+    const [comments, total, readCount, unreadCount] = await this.prisma.$transaction([
       this.prisma.comment.findMany({
+        where: listWhere,
         skip: offset,
         take: limit,
         orderBy: { publishedAt: 'desc' },
@@ -77,7 +178,9 @@ export class CommentsService {
           },
         },
       }),
-      this.prisma.comment.count(),
+      this.prisma.comment.count({ where: totalWhere }),
+      this.prisma.comment.count({ where: readWhere }),
+      this.prisma.comment.count({ where: unreadWhere }),
     ]);
 
     const items = comments.map((comment) => this.mapComment(comment));
@@ -86,6 +189,8 @@ export class CommentsService {
       items,
       total,
       hasMore: offset + items.length < total,
+      readCount,
+      unreadCount,
     };
   }
 
@@ -102,6 +207,9 @@ export class CommentsService {
   async getCommentsCursor({
     cursor,
     limit,
+    keywords,
+    readStatus,
+    search,
   }: CommentsCursorOptions): Promise<CommentsCursorListDto> {
     // Декодируем cursor если есть
     let cursorData: { publishedAt: Date; id: number } | null = null;
@@ -112,8 +220,11 @@ export class CommentsService {
       }
     }
 
+    const baseWhere = this.buildBaseWhere({ keywords, search });
+    const readStatusWhere = this.buildReadStatusWhere(readStatus);
+
     // Строим where clause для cursor
-    const where: Prisma.CommentWhereInput = cursorData
+    const paginationWhere: Prisma.CommentWhereInput = cursorData
       ? {
           OR: [
             {
@@ -131,9 +242,14 @@ export class CommentsService {
         }
       : {};
 
+    const listWhere = this.mergeWhere(baseWhere, readStatusWhere, paginationWhere);
+    const totalWhere = this.mergeWhere(baseWhere, readStatusWhere);
+    const readWhere = this.mergeWhere(baseWhere, { isRead: true });
+    const unreadWhere = this.mergeWhere(baseWhere, { isRead: false });
+
     // Получаем limit + 1 для определения hasMore
     const comments = await this.prisma.comment.findMany({
-      where,
+      where: listWhere,
       take: limit + 1,
       orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
       include: {
@@ -159,13 +275,19 @@ export class CommentsService {
         : null;
 
     // Получаем total count (кэшируется, так что не сильно влияет на производительность)
-    const total = await this.prisma.comment.count();
+    const [total, readCount, unreadCount] = await this.prisma.$transaction([
+      this.prisma.comment.count({ where: totalWhere }),
+      this.prisma.comment.count({ where: readWhere }),
+      this.prisma.comment.count({ where: unreadWhere }),
+    ]);
 
     return {
       items,
       nextCursor,
       hasMore,
       total,
+      readCount,
+      unreadCount,
     };
   }
 
