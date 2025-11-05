@@ -62,17 +62,23 @@ function Comments() {
   )
 
   useEffect(() => {
-    fetchCommentsCursor({
-      reset: true,
-      filters: {
-        keywords: keywordFilterValues,
-        readStatus: readFilter,
-        search: normalizedSearch,
-      },
-    }).catch((error) => {
-      console.error('Failed to fetch comments with filters', error)
-    })
-  }, [fetchCommentsCursor, keywordFilterValues, normalizedSearch, readFilter])
+    // Проверяем, есть ли уже комментарии в сторе (загруженные useCommentsQuery)
+    const hasComments = comments.length > 0
+    const shouldLoad = !hasComments || keywords.length > 0 // Загружаем, если нет комментариев или есть ключевые слова
+
+    if (shouldLoad) {
+      fetchCommentsCursor({
+        reset: true,
+        filters: {
+          keywords: keywordFilterValues,
+          readStatus: readFilter,
+          search: normalizedSearch,
+        },
+      }).catch((error) => {
+        console.error('Failed to fetch comments with filters', error)
+      })
+    }
+  }, [fetchCommentsCursor, keywordFilterValues, normalizedSearch, readFilter, comments.length, keywords.length])
 
   const filteredComments = useMemo(() => {
     let result = comments
