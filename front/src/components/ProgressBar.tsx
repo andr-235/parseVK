@@ -46,6 +46,17 @@ function ProgressBar({
 
   const formattedLabel = useMemo(() => label ?? `${Math.round(percentage)}%`, [label, percentage])
 
+  // Debug logging
+  console.log('ProgressBar render:', {
+    current,
+    total,
+    percentage,
+    formattedLabel,
+    indeterminate,
+    size,
+    tone
+  })
+
   const toneClasses = {
     primary: 'bg-accent-primary',
     success: 'bg-accent-success',
