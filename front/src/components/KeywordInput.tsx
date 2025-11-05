@@ -23,8 +23,11 @@ function KeywordInput({
   categoryPlaceholder,
 }: KeywordInputProps) {
   const [isFocused, setIsFocused] = useState(false)
+  const [isCategoryFocused, setIsCategoryFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const categoryInputRef = useRef<HTMLInputElement>(null)
   const [fontSize, setFontSize] = useState(14)
+  const [categoryFontSize, setCategoryFontSize] = useState(14)
 
   useEffect(() => {
     const adjustFontSize = () => {
@@ -43,12 +46,28 @@ function KeywordInput({
           }
         }
       }
+
+      if (categoryInputRef.current && categoryPlaceholder) {
+        const inputWidth = categoryInputRef.current.offsetWidth
+        const canvas = document.createElement('canvas')
+        const context = canvas.getContext('2d')
+        if (context) {
+          context.font = '14px system-ui'
+          const textWidth = context.measureText(categoryPlaceholder).width
+          if (textWidth > inputWidth - 40) { // 40px for padding
+            const newFontSize = Math.max(10, (inputWidth - 40) / textWidth * 14)
+            setCategoryFontSize(newFontSize)
+          } else {
+            setCategoryFontSize(14)
+          }
+        }
+      }
     }
 
     adjustFontSize()
     window.addEventListener('resize', adjustFontSize)
     return () => window.removeEventListener('resize', adjustFontSize)
-  }, [placeholder])
+  }, [placeholder, categoryPlaceholder])
 
   const handleAdd = () => {
     void onAdd()
@@ -62,15 +81,30 @@ function KeywordInput({
     setIsFocused(false)
   }
 
+  const handleCategoryFocus = () => {
+    setIsCategoryFocused(true)
+  }
+
+  const handleCategoryBlur = () => {
+    setIsCategoryFocused(false)
+  }
+
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-1">
         {onCategoryChange && (
           <Input
+            ref={categoryInputRef}
             value={categoryValue}
             onChange={onCategoryChange}
+            onFocus={handleCategoryFocus}
+            onBlur={handleCategoryBlur}
             placeholder={categoryPlaceholder}
             className="sm:min-w-[220px]"
+            style={{
+              fontSize: categoryValue || isCategoryFocused ? '14px' : `${categoryFontSize}px`,
+              transition: 'font-size 0.2s ease-in-out'
+            }}
           />
         )}
         <Input
