@@ -8,6 +8,7 @@ import { useTaskAutomationQuery } from '@/queries/useTaskAutomationQuery'
 import { useCommentsQuery } from '@/queries/useCommentsQuery'
 import { useAuthorsQuery } from '@/queries/useAuthorsQuery'
 import { useWatchlistAuthorsQuery, useWatchlistSettingsQuery } from '@/queries/useWatchlistQueries'
+import { useTasksSocket } from '@/hooks/useTasksSocket'
 
 const shouldSyncKeywords = (pathname: string): boolean => {
   return pathname.startsWith('/keywords') || pathname.startsWith('/comments')
@@ -35,6 +36,8 @@ function AppSyncProvider(): null {
   useAuthorsQuery(syncAuthors)
   useWatchlistAuthorsQuery(syncWatchlist)
   useWatchlistSettingsQuery(syncWatchlist)
+
+  useTasksSocket()
 
   return null
 }
