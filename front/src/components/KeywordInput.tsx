@@ -70,7 +70,7 @@ function KeywordInput({
             value={categoryValue}
             onChange={onCategoryChange}
             placeholder={categoryPlaceholder}
-            className="sm:min-w-[230px]"
+            className="sm:min-w-[220px]"
           />
         )}
         <Input
@@ -80,7 +80,7 @@ function KeywordInput({
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={placeholder}
-          className="sm:min-w-[280px] sm:flex-1"
+          className="sm:min-w-[270px] sm:flex-1"
           style={{
             fontSize: value || isFocused ? '14px' : `${fontSize}px`,
             transition: 'font-size 0.2s ease-in-out'
