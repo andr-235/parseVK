@@ -22,6 +22,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { queryKeys } from '@/queries/queryKeys'
 import { listingsService } from '@/services/listingsService'
 import type { IListing, IListingsResponse } from '@/types/api'
+import { cn } from '@/lib/utils'
+import { ChevronDown } from 'lucide-react'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50]
 
@@ -31,6 +33,9 @@ const SOURCE_TITLE_MAP: Record<string, string> = {
   юла: 'Юла',
   avto: 'Авто',
 }
+
+const SELECT_FIELD_CLASSNAME =
+  'w-full appearance-none rounded-lg border border-border/70 bg-background-secondary px-3 py-2 pr-9 text-sm text-text-primary shadow-sm transition focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/25 disabled:cursor-not-allowed disabled:opacity-60'
 
 const formatSourceLabel = (value?: string | null): string => {
   if (!value) {
@@ -174,6 +179,7 @@ function Listings() {
   const [customSource, setCustomSource] = useState('')
   const [updateExisting, setUpdateExisting] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<number>>(new Set())
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -215,7 +221,10 @@ function Listings() {
     return ['all', ...unique]
   }, [availableSources, sourceFilter])
 
-  const items = listingsQuery.data?.items ?? []
+  const items = useMemo(
+    () => listingsQuery.data?.items ?? [],
+    [listingsQuery.data?.items],
+  )
   const totalItems = listingsQuery.data?.total ?? 0
 
   const totalPages = useMemo(() => {
@@ -239,6 +248,25 @@ function Listings() {
   }, [totalItems, totalPages, page])
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
+
+  useEffect(() => {
+    setExpandedDescriptions((prev) => {
+      if (prev.size === 0) {
+        return prev
+      }
+      const availableIds = new Set(items.map((item) => item.id))
+      let mutated = false
+      const next = new Set<number>()
+      prev.forEach((id) => {
+        if (availableIds.has(id)) {
+          next.add(id)
+        } else {
+          mutated = true
+        }
+      })
+      return mutated ? next : prev
+    })
+  }, [items])
 
   const rangeStart = totalItems === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd = totalItems === 0 ? 0 : Math.min(totalItems, rangeStart + items.length - 1)
@@ -314,6 +342,18 @@ function Listings() {
     fileInputRef.current?.click()
   }
 
+  const toggleDescription = (listingId: number) => {
+    setExpandedDescriptions((prev) => {
+      const next = new Set(prev)
+      if (next.has(listingId)) {
+        next.delete(listingId)
+      } else {
+        next.add(listingId)
+      }
+      return next
+    })
+  }
+
   const hasItems = items.length > 0
   const isInitialLoading = listingsQuery.isLoading
   const isFetching = listingsQuery.isFetching && !isInitialLoading
@@ -329,17 +369,20 @@ function Listings() {
               <label className="text-sm font-medium text-text-secondary">
                 Источник объявлений
               </label>
-              <select
-                value={uploadSourceMode}
-                onChange={(event) =>
-                  setUploadSourceMode(event.target.value as 'avito' | 'youla' | 'custom')
-                }
-                className="rounded-lg border border-border bg-background-primary px-3 py-2 text-sm text-text-primary shadow-sm focus:border-accent-primary focus:outline-none"
-              >
-                <option value="avito">Авито</option>
-                <option value="youla">Юла</option>
-                <option value="custom">Другое...</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={uploadSourceMode}
+                  onChange={(event) =>
+                    setUploadSourceMode(event.target.value as 'avito' | 'youla' | 'custom')
+                  }
+                  className={SELECT_FIELD_CLASSNAME}
+                >
+                  <option value="avito">Авито</option>
+                  <option value="youla">Юла</option>
+                  <option value="custom">Другое...</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary" />
+              </div>
             </div>
 
             {uploadSourceMode === 'custom' && (
@@ -437,32 +480,38 @@ function Listings() {
 
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-secondary">Источник</label>
-              <select
-                value={sourceFilter}
-                onChange={handleSourceChange}
-                className="rounded-lg border border-border bg-background-primary px-3 py-2 text-sm text-text-primary shadow-sm focus:border-accent-primary focus:outline-none"
-              >
-                {filterOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option === 'all' ? 'Все источники' : formatSourceLabel(option)}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={sourceFilter}
+                  onChange={handleSourceChange}
+                  className={SELECT_FIELD_CLASSNAME}
+                >
+                  {filterOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'all' ? 'Все источники' : formatSourceLabel(option)}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary" />
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-secondary">На странице</label>
-              <select
-                value={pageSize}
-                onChange={handlePageSizeChange}
-                className="w-full rounded-lg border border-border bg-background-primary px-3 py-2 text-sm text-text-primary shadow-sm focus:border-accent-primary focus:outline-none"
-              >
-                {PAGE_SIZE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={pageSize}
+                  onChange={handlePageSizeChange}
+                  className={SELECT_FIELD_CLASSNAME}
+                >
+                  {PAGE_SIZE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary" />
+              </div>
             </div>
           </div>
 
@@ -513,17 +562,15 @@ function Listings() {
                   <TableHead>Объявление</TableHead>
                   <TableHead className="whitespace-nowrap">Цена</TableHead>
                   <TableHead>Адрес</TableHead>
-                  <TableHead>Параметры</TableHead>
                   <TableHead>Контакт</TableHead>
                   <TableHead className="whitespace-nowrap">Опубликовано</TableHead>
                   <TableHead className="whitespace-nowrap">Обновлено</TableHead>
-                  <TableHead className="w-[140px]">Ссылки</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isInitialLoading && (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-12 text-center text-sm text-text-secondary">
+                    <TableCell colSpan={7} className="py-12 text-center text-sm text-text-secondary">
                       <div className="flex items-center justify-center gap-2">
                         <Spinner className="h-5 w-5" />
                         Загрузка объявлений…
@@ -534,7 +581,7 @@ function Listings() {
 
                 {!isInitialLoading && !hasItems && (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-12 text-center text-sm text-text-secondary">
+                    <TableCell colSpan={7} className="py-12 text-center text-sm text-text-secondary">
                       Объявления не найдены
                     </TableCell>
                   </TableRow>
@@ -571,6 +618,10 @@ function Listings() {
                       metadataParsedAt ?? item.updatedAt,
                       metadataParsedAt,
                     )
+                    const descriptionText = item.description?.trim() ?? ''
+                    const hasDescription = descriptionText.length > 0
+                    const shouldAllowToggle = descriptionText.length > 240
+                    const isDescriptionExpanded = expandedDescriptions.has(item.id)
 
                     return (
                       <TableRow key={item.id}>
@@ -579,14 +630,64 @@ function Listings() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-2">
-                            <span className="font-medium text-text-primary">
+                            <a
+                              href={item.url ?? undefined}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-accent-primary transition-colors hover:text-accent-primary/80"
+                            >
                               {item.title ?? 'Без названия'}
-                            </span>
-                            {item.description && (
-                              <p className="text-sm text-text-secondary line-clamp-3">
-                                {item.description}
-                              </p>
+                            </a>
+                            {(parameters || livingArea || kitchenArea) && (
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-secondary">
+                                {parameters && <span>{parameters}</span>}
+                                {livingArea && <span>Жилая {livingArea}</span>}
+                                {kitchenArea && <span>Кухня {kitchenArea}</span>}
+                              </div>
                             )}
+                            {hasDescription && (
+                              <div className="flex flex-col gap-1 text-sm text-text-secondary">
+                                <p
+                                  className={cn(
+                                    'whitespace-pre-line',
+                                    !isDescriptionExpanded && shouldAllowToggle && 'line-clamp-3',
+                                  )}
+                                >
+                                  {descriptionText}
+                                </p>
+                                {shouldAllowToggle && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleDescription(item.id)}
+                                    className="self-start text-xs font-medium text-accent-primary transition-colors hover:text-accent-primary/80"
+                                  >
+                                    {isDescriptionExpanded ? 'Свернуть описание' : 'Показать полностью'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                            <div className="flex flex-wrap items-center gap-3 text-xs">
+                              {item.url && (
+                                <a
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-accent-primary transition-colors hover:text-accent-primary/80"
+                                >
+                                  Открыть объявление
+                                </a>
+                              )}
+                              {primaryImage && (
+                                <a
+                                  href={primaryImage}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-text-secondary transition-colors hover:text-text-primary"
+                                >
+                                  Фото ({item.images.length})
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap font-medium">
@@ -599,17 +700,6 @@ function Listings() {
                             )}
                             {item.address && (
                               <span className="text-sm text-text-secondary">{item.address}</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1 text-sm text-text-primary">
-                            {parameters ?? <span className="text-text-secondary">—</span>}
-                            {livingArea && (
-                              <span className="text-xs text-text-secondary">Жилая {livingArea}</span>
-                            )}
-                            {kitchenArea && (
-                              <span className="text-xs text-text-secondary">Кухня {kitchenArea}</span>
                             )}
                           </div>
                         </TableCell>
@@ -629,29 +719,13 @@ function Listings() {
                         <TableCell className="whitespace-nowrap text-sm text-text-secondary">
                           {updatedDisplay}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-2">
-                            <Button type="button" asChild size="sm" variant="outline">
-                              <a href={item.url} target="_blank" rel="noopener noreferrer">
-                                Открыть
-                              </a>
-                            </Button>
-                            {primaryImage && (
-                              <Button type="button" asChild size="sm" variant="ghost">
-                                <a href={primaryImage} target="_blank" rel="noopener noreferrer">
-                                  Фото ({item.images.length})
-                                </a>
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
                       </TableRow>
                     )
                   })}
 
                 {isFetching && hasItems && (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-4 text-center text-sm text-text-secondary">
+                    <TableCell colSpan={7} className="py-4 text-center text-sm text-text-secondary">
                       <div className="flex items-center justify-center gap-2">
                         <Spinner className="h-4 w-4" />
                         Обновляем данные…
