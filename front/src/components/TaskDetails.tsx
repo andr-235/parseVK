@@ -521,16 +521,16 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
           <section className="mt-10 space-y-4">
             <h3 className="text-lg font-semibold text-text-primary">Группы</h3>
             <div className="overflow-hidden rounded-2xl border border-border bg-background-secondary shadow-soft-md">
-              <table className="min-w-full divide-y divide-border text-sm">
-                <thead className="bg-background-secondary/70 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              <table className="min-w-full table-auto text-sm">
+                <thead className="sticky top-0 z-10 bg-background-secondary/80 backdrop-blur text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
                   <tr>
-                    <th className="px-5 py-3">№</th>
+                    <th className="px-5 py-3 w-[64px]">№</th>
                     <th className="px-5 py-3">Название группы</th>
                     <th className="px-5 py-3">Статус</th>
                     <th className="px-5 py-3">Результат</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-border/70">
                   {task.groups.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="px-5 py-6 text-center text-sm text-text-secondary">
@@ -539,9 +539,9 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
                     </tr>
                   ) : (
                     task.groups.map((group, index) => (
-                      <tr key={`${group.groupId}-${index}`} className="transition-colors duration-150 hover:bg-background-primary/70">
-                        <td className="px-5 py-4 align-top text-sm font-medium text-text-secondary">{index + 1}</td>
-                        <td className="px-5 py-4 align-top text-sm font-medium text-text-primary">{group.groupName}</td>
+                      <tr key={`${group.groupId}-${index}`} className="group transition-colors duration-200 odd:bg-background-primary/20 even:bg-background-primary/10 hover:bg-background-primary/50">
+                        <td className="px-5 py-4 align-top text-sm font-semibold text-text-secondary">{index + 1}</td>
+                        <td className="px-5 py-4 align-top text-sm font-medium text-text-primary max-w-[48ch] truncate">{group.groupName}</td>
                         <td className="px-5 py-4 align-top">
                           <span className={`${STATUS_BADGE_BASE} ${groupStatusClasses[group.status]}`}>
                             {getGroupStatusText(group.status)}
