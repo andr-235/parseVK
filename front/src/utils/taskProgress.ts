@@ -77,6 +77,7 @@ export const calculateTaskProgress = (task: Task): TaskProgressInfo => {
   const totalFromTask = toFiniteNumber(task.groupsCount)
   const totalFromStats = toFiniteNumber(stats.groups)
   const totalFromGroupIds = Array.isArray(task.groupIds) ? task.groupIds.length : 0
+  const totalFromItems = toFiniteNumber(task.totalItems)
 
   let total = toPositive(totalFromTask)
   if (total === 0 && totalFromStats != null) {
@@ -85,10 +86,13 @@ export const calculateTaskProgress = (task: Task): TaskProgressInfo => {
   if (total === 0 && totalFromGroupIds > 0) {
     total = totalFromGroupIds
   }
+  if (total === 0 && totalFromItems != null) {
+    total = toPositive(totalFromItems)
+  }
 
   const successRaw = pickNumber(stats.success, task.successCount)
   const failedRaw = pickNumber(stats.failed, task.failedCount)
-  const processedRaw = pickNumber(stats.processed)
+  const processedRaw = pickNumber(stats.processed, task.processedItems)
   const processingRaw = pickNumber(stats.processing, stats.running)
   const pendingRaw = pickNumber(stats.pending)
 
@@ -127,6 +131,24 @@ export const calculateTaskProgress = (task: Task): TaskProgressInfo => {
     if (failed > processed) {
       failed = Math.max(processed - success, 0)
     }
+  }
+
+  // Fallback: if stats is empty or missing, use processedItems and totalItems
+  if (!task.stats || Object.keys(task.stats).length === 0) {
+    const fallbackProcessed = toPositive(toFiniteNumber(task.processedItems))
+    const fallbackTotal = toPositive(toFiniteNumber(task.totalItems))
+
+    if (fallbackProcessed > 0 || fallbackTotal > 0) {
+      processed = fallbackProcessed
+      total = fallbackTotal
+      success = 0
+      failed = 0
+    }
+  }
+
+  // Ensure processed does not exceed total
+  if (total > 0 && processed > total) {
+    processed = total
   }
 
   if (total === 0) {

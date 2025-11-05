@@ -107,6 +107,8 @@ export interface Task {
   postLimit?: number | null
   groupIds?: Array<number | string> | null
   stats?: TaskStatsInfo
+  processedItems?: number | null
+  totalItems?: number | null
 }
 
 export interface TaskDetails extends Task {
