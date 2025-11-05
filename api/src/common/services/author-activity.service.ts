@@ -429,7 +429,7 @@ export class AuthorActivityService {
       return;
     }
 
-    const operations: Promise<unknown>[] = [];
+    const operations: Prisma.PrismaPromise<unknown>[] = [];
 
     if (toDelete.length > 0) {
       operations.push(
