@@ -270,7 +270,7 @@ function CommentsTableCard({
                           key={`without-keywords-${comment.id}-${commentIndex}`}
                           comment={comment}
                           index={commentIndex}
-                          matchedKeywords={[]}
+                          matchedKeywords={comment.matchedKeywords}
                           toggleReadStatus={toggleReadStatus}
                           onAddToWatchlist={onAddToWatchlist}
                           isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}

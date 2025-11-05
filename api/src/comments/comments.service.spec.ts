@@ -40,6 +40,11 @@ describe('CommentsService', () => {
           photo200Orig: null,
         },
         isRead: true,
+        commentKeywordMatches: [
+          {
+            keyword: { id: 7, word: 'alert', category: 'security' },
+          },
+        ],
       },
       {
         id: 2,
@@ -49,6 +54,7 @@ describe('CommentsService', () => {
         watchlistAuthorId: null,
         author: null,
         isRead: false,
+        commentKeywordMatches: [],
       },
     ] as never;
 
@@ -62,8 +68,12 @@ describe('CommentsService', () => {
 
     expect(result).toEqual({
       items: [
-        {
-          ...commentsFromPrisma[0],
+        expect.objectContaining({
+          id: 1,
+          text: 'Комментарий с автором',
+          publishedAt: new Date('2024-01-01T00:00:00.000Z'),
+          authorVkId: 100,
+          watchlistAuthorId: 42,
           author: {
             vkUserId: 100,
             firstName: 'Иван',
@@ -71,12 +81,20 @@ describe('CommentsService', () => {
             logo: 'https://example.com/photo100.jpg',
           },
           isWatchlisted: true,
-        },
-        {
-          ...commentsFromPrisma[1],
+          matchedKeywords: [
+            { id: 7, word: 'alert', category: 'security' },
+          ],
+        }),
+        expect.objectContaining({
+          id: 2,
+          text: 'Комментарий без автора',
+          publishedAt: new Date('2024-01-02T00:00:00.000Z'),
+          authorVkId: null,
+          watchlistAuthorId: null,
           author: null,
           isWatchlisted: false,
-        },
+          matchedKeywords: [],
+        }),
       ],
       total: commentsFromPrisma.length,
       hasMore: false,
@@ -110,6 +128,17 @@ describe('CommentsService', () => {
             photo200Orig: true,
           },
         },
+        commentKeywordMatches: {
+          include: {
+            keyword: {
+              select: {
+                id: true,
+                word: true,
+                category: true,
+              },
+            },
+          },
+        },
       },
     });
     expect(prisma.comment.count).toHaveBeenCalledWith({ where: {} });
@@ -121,6 +150,7 @@ describe('CommentsService', () => {
         id: 1,
         author: null,
         watchlistAuthorId: null,
+        commentKeywordMatches: [],
       } as never,
     ]);
     prisma.comment.count
@@ -132,7 +162,13 @@ describe('CommentsService', () => {
 
     expect(result).toEqual({
       items: [
-        { id: 1, author: null, watchlistAuthorId: null, isWatchlisted: false },
+        {
+          id: 1,
+          author: null,
+          watchlistAuthorId: null,
+          isWatchlisted: false,
+          matchedKeywords: [],
+        },
       ],
       total: 5,
       hasMore: true,
@@ -148,6 +184,9 @@ describe('CommentsService', () => {
         author: null,
         watchlistAuthorId: null,
         text: 'demo keyword',
+        commentKeywordMatches: [
+          { keyword: { id: 5, word: 'keyword', category: null } },
+        ],
       } as never,
     ]);
     prisma.comment.count
@@ -169,20 +208,15 @@ describe('CommentsService', () => {
           {
             AND: [
               {
-                OR: [
-                  {
-                    text: {
-                      contains: 'keyword',
-                      mode: 'insensitive',
+                commentKeywordMatches: {
+                  some: {
+                    keyword: {
+                      word: {
+                        in: ['keyword', 'sample'],
+                      },
                     },
                   },
-                  {
-                    text: {
-                      contains: 'sample',
-                      mode: 'insensitive',
-                    },
-                  },
-                ],
+                },
               },
               {
                 text: {
@@ -209,6 +243,17 @@ describe('CommentsService', () => {
             photo200Orig: true,
           },
         },
+        commentKeywordMatches: {
+          include: {
+            keyword: {
+              select: {
+                id: true,
+                word: true,
+                category: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -218,20 +263,15 @@ describe('CommentsService', () => {
           {
             AND: [
               {
-                OR: [
-                  {
-                    text: {
-                      contains: 'keyword',
-                      mode: 'insensitive',
+                commentKeywordMatches: {
+                  some: {
+                    keyword: {
+                      word: {
+                        in: ['keyword', 'sample'],
+                      },
                     },
                   },
-                  {
-                    text: {
-                      contains: 'sample',
-                      mode: 'insensitive',
-                    },
-                  },
-                ],
+                },
               },
               {
                 text: {
@@ -252,20 +292,15 @@ describe('CommentsService', () => {
           {
             AND: [
               {
-                OR: [
-                  {
-                    text: {
-                      contains: 'keyword',
-                      mode: 'insensitive',
+                commentKeywordMatches: {
+                  some: {
+                    keyword: {
+                      word: {
+                        in: ['keyword', 'sample'],
+                      },
                     },
                   },
-                  {
-                    text: {
-                      contains: 'sample',
-                      mode: 'insensitive',
-                    },
-                  },
-                ],
+                },
               },
               {
                 text: {
@@ -286,20 +321,15 @@ describe('CommentsService', () => {
           {
             AND: [
               {
-                OR: [
-                  {
-                    text: {
-                      contains: 'keyword',
-                      mode: 'insensitive',
+                commentKeywordMatches: {
+                  some: {
+                    keyword: {
+                      word: {
+                        in: ['keyword', 'sample'],
+                      },
                     },
                   },
-                  {
-                    text: {
-                      contains: 'sample',
-                      mode: 'insensitive',
-                    },
-                  },
-                ],
+                },
               },
               {
                 text: {
@@ -331,20 +361,27 @@ describe('CommentsService', () => {
         photo100: 'https://example.com/photo100.jpg',
         photo200Orig: null,
       },
+      commentKeywordMatches: [],
     } as never;
 
     prisma.comment.update.mockResolvedValue(comment);
 
-    await expect(service.setReadStatus(1, true)).resolves.toEqual({
-      ...comment,
-      author: {
-        vkUserId: 100,
-        firstName: 'Иван',
-        lastName: 'Иванов',
-        logo: 'https://example.com/photo100.jpg',
-      },
-      isWatchlisted: false,
-    });
+    await expect(service.setReadStatus(1, true)).resolves.toEqual(
+      expect.objectContaining({
+        id: 1,
+        text: 'Комментарий',
+        authorVkId: 100,
+        isRead: true,
+        author: {
+          vkUserId: 100,
+          firstName: 'Иван',
+          lastName: 'Иванов',
+          logo: 'https://example.com/photo100.jpg',
+        },
+        isWatchlisted: false,
+        matchedKeywords: [],
+      }),
+    );
 
     expect(prisma.comment.update).toHaveBeenCalledWith({
       where: { id: 1 },
@@ -358,6 +395,17 @@ describe('CommentsService', () => {
             photo50: true,
             photo100: true,
             photo200Orig: true,
+          },
+        },
+        commentKeywordMatches: {
+          include: {
+            keyword: {
+              select: {
+                id: true,
+                word: true,
+                category: true,
+              },
+            },
           },
         },
       },

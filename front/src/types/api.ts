@@ -128,6 +128,7 @@ export interface ICommentResponse {
   isRead?: boolean
   watchlistAuthorId?: number | null
   source?: 'TASK' | 'WATCHLIST'
+  matchedKeywords?: IKeywordResponse[]
 }
 
 export interface IGetCommentsResponse {

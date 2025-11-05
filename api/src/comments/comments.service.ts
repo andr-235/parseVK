@@ -33,20 +33,42 @@ const authorSelect = {
   photo200Orig: true,
 } satisfies Prisma.AuthorSelect;
 
-type CommentWithOptionalAuthor = Prisma.CommentGetPayload<{
-  include: {
-    author: {
-      select: typeof authorSelect;
-    };
-  };
+const keywordSelect = {
+  id: true,
+  word: true,
+  category: true,
+} satisfies Prisma.KeywordSelect;
+
+const commentInclude = {
+  author: {
+    select: authorSelect,
+  },
+  commentKeywordMatches: {
+    include: {
+      keyword: {
+        select: keywordSelect,
+      },
+    },
+  },
+} satisfies Prisma.CommentInclude;
+
+type CommentWithRelations = Prisma.CommentGetPayload<{
+  include: typeof commentInclude;
 }>;
 
 @Injectable()
 export class CommentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private mapComment(comment: CommentWithOptionalAuthor): CommentWithAuthorDto {
-    const { author, watchlistAuthorId, ...commentData } = comment;
+  private mapComment(comment: CommentWithRelations): CommentWithAuthorDto {
+    const { author, watchlistAuthorId, commentKeywordMatches, ...commentData } =
+      comment;
+
+    const matchedKeywords = commentKeywordMatches.map((match) => ({
+      id: match.keyword.id,
+      word: match.keyword.word,
+      category: match.keyword.category,
+    }));
 
     return {
       ...commentData,
@@ -61,6 +83,7 @@ export class CommentsService {
           }
         : null,
       isWatchlisted: watchlistAuthorId != null,
+      matchedKeywords,
     };
   }
 
@@ -70,18 +93,23 @@ export class CommentsService {
   }: CommentsFilters): Prisma.CommentWhereInput {
     const conditions: Prisma.CommentWhereInput[] = [];
 
-    const normalizedKeywords = (keywords ?? [])
-      .map((keyword) => keyword.trim())
-      .filter((keyword) => keyword.length > 0);
+    const normalizedKeywords = Array.from(
+      new Set(
+        (keywords ?? [])
+          .map((keyword) => keyword.trim().toLowerCase())
+          .filter((keyword) => keyword.length > 0),
+      ),
+    );
 
     if (normalizedKeywords.length > 0) {
       conditions.push({
-        OR: normalizedKeywords.map((keyword) => ({
-          text: {
-            contains: keyword,
-            mode: 'insensitive',
+        commentKeywordMatches: {
+          some: {
+            keyword: {
+              word: { in: normalizedKeywords },
+            },
           },
-        })),
+        },
       });
     }
 
@@ -172,11 +200,7 @@ export class CommentsService {
         skip: offset,
         take: limit,
         orderBy: { publishedAt: 'desc' },
-        include: {
-          author: {
-            select: authorSelect,
-          },
-        },
+        include: commentInclude,
       }),
       this.prisma.comment.count({ where: totalWhere }),
       this.prisma.comment.count({ where: readWhere }),
@@ -252,11 +276,7 @@ export class CommentsService {
       where: listWhere,
       take: limit + 1,
       orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
-      include: {
-        author: {
-          select: authorSelect,
-        },
-      },
+      include: commentInclude,
     });
 
     // Определяем hasMore и убираем лишний элемент
@@ -298,11 +318,7 @@ export class CommentsService {
     const comment = await this.prisma.comment.update({
       where: { id },
       data: { isRead },
-      include: {
-        author: {
-          select: authorSelect,
-        },
-      },
+      include: commentInclude,
     });
 
     return this.mapComment(comment);

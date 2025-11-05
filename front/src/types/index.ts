@@ -22,6 +22,7 @@ export interface Comment {
   isRead: boolean
   watchlistAuthorId?: number | null
   isWatchlisted: boolean
+  matchedKeywords: Keyword[]
 }
 
 export interface Group {

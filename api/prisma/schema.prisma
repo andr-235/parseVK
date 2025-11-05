@@ -139,6 +139,7 @@ model Comment {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   post              Post             @relation(fields: [ownerId, postId], references: [ownerId, vkPostId], onDelete: Cascade)
+  commentKeywordMatches CommentKeywordMatch[]
 
   @@unique([ownerId, vkCommentId])
   @@index([postId])
@@ -272,6 +273,20 @@ model Keyword {
   category  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  commentKeywordMatches CommentKeywordMatch[]
+}
+
+model CommentKeywordMatch {
+  commentId Int
+  keywordId Int
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  keyword Keyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, keywordId])
+  @@index([keywordId])
+  @@index([commentId])
 }
 
 model WatchlistSettings {

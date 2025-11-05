@@ -148,6 +148,15 @@ const resolveAuthorInfo = (comment: ICommentResponse): NormalizedAuthor => {
 export const normalizeCommentResponse = (comment: ICommentResponse) => {
   const authorInfo = resolveAuthorInfo(comment)
   const watchlistAuthorId = typeof comment.watchlistAuthorId === 'number' ? comment.watchlistAuthorId : null
+  const matchedKeywords = Array.isArray(comment.matchedKeywords)
+    ? comment.matchedKeywords
+        .map((keyword) => ({
+          id: keyword.id,
+          word: keyword.word,
+          category: keyword.category ?? null,
+        }))
+        .filter((keyword) => typeof keyword.id === 'number' && Boolean(keyword.word))
+    : []
 
   return {
     id: comment.id,
@@ -161,6 +170,7 @@ export const normalizeCommentResponse = (comment: ICommentResponse) => {
     publishedAt: comment.publishedAt ? normalizeCreatedAt(comment.publishedAt) : null,
     isRead: comment.isRead ?? false,
     watchlistAuthorId,
-    isWatchlisted: Boolean(watchlistAuthorId)
+    isWatchlisted: Boolean(watchlistAuthorId),
+    matchedKeywords,
   }
 }

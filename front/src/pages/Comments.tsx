@@ -5,7 +5,6 @@ import CommentsTableCard from './Comments/components/CommentsTableCard'
 import CommentsHero from './Comments/components/CommentsHero'
 import { Separator } from '@/components/ui/separator'
 import type { Comment, Keyword } from '@/types'
-import { normalizeForKeywordMatch } from '@/utils/keywordMatching'
 
 const DEFAULT_CATEGORY = 'Без категории'
 
@@ -28,81 +27,15 @@ function Comments() {
   const [searchTerm, setSearchTerm] = useState('')
   const [pendingWatchlist, setPendingWatchlist] = useState<Record<number, boolean>>({})
 
-  const keywordsWithMeta = useMemo(
-    () =>
-      keywords
-        .map((keyword) => {
-          const normalizedWord = normalizeForKeywordMatch(keyword.word)
-
-          if (!normalizedWord) {
-            return null
-          }
-
-          return {
-            keyword,
-            normalizedWord,
-            categoryName: keyword.category?.trim() || DEFAULT_CATEGORY,
-          }
-        })
-        .filter(
-          (value): value is { keyword: Keyword; normalizedWord: string; categoryName: string } => Boolean(value),
-        ),
-    [keywords],
-  )
-
-  const keywordMatchData = useMemo(() => {
-    const matchesByComment = new Map<number, Map<string, Keyword[]>>() 
-    const matchedIds = new Set<number>()
-
-    if (keywordsWithMeta.length === 0) {
-      return { matchesByComment, matchedIds }
-    }
-
-    comments.forEach((comment) => {
-      const text = normalizeForKeywordMatch(comment.text)
-
-      if (!text) {
-        return
-      }
-
-      const matchedEntries = keywordsWithMeta.filter((item) => text.includes(item.normalizedWord))
-
-      if (matchedEntries.length === 0) {
-        return
-      }
-
-      matchedIds.add(comment.id)
-
-      const categoriesMap = new Map<string, Keyword[]>()
-
-      matchedEntries.forEach(({ keyword, categoryName }) => {
-        const items = categoriesMap.get(categoryName) ?? []
-
-        if (!items.some((item) => item.id === keyword.id)) {
-          items.push(keyword)
-        }
-
-        categoriesMap.set(categoryName, items)
-      })
-
-      matchesByComment.set(comment.id, categoriesMap)
-    })
-
-    return { matchesByComment, matchedIds }
-  }, [comments, keywordsWithMeta])
-
-  const { matchesByComment, matchedIds } = keywordMatchData
-  const keywordCommentsTotal = matchedIds.size
-
-  const hasDefinedKeywords = keywordsWithMeta.length > 0
+  const hasDefinedKeywords = keywords.length > 0
 
   const keywordFilterValues = useMemo(() => {
     if (!showOnlyKeywordComments || !hasDefinedKeywords) {
       return undefined
     }
 
-    const normalized = keywordsWithMeta
-      .map((item) => item.keyword.word.trim())
+    const normalized = keywords
+      .map((item) => item.word.trim())
       .filter((word) => word.length > 0)
 
     if (normalized.length === 0) {
@@ -110,9 +43,14 @@ function Comments() {
     }
 
     return Array.from(new Set(normalized))
-  }, [hasDefinedKeywords, keywordsWithMeta, showOnlyKeywordComments])
+  }, [hasDefinedKeywords, keywords, showOnlyKeywordComments])
 
   const normalizedSearch = useMemo(() => searchTerm.trim(), [searchTerm])
+
+  const keywordCommentsTotal = useMemo(
+    () => comments.reduce((total, comment) => (comment.matchedKeywords.length > 0 ? total + 1 : total), 0),
+    [comments],
+  )
 
   useEffect(() => {
     fetchCommentsCursor({
@@ -131,7 +69,7 @@ function Comments() {
     let result = comments
 
     if (showOnlyKeywordComments && hasDefinedKeywords) {
-      result = result.filter((comment) => matchedIds.has(comment.id))
+      result = result.filter((comment) => comment.matchedKeywords.length > 0)
     }
 
     if (readFilter === 'read') {
@@ -143,17 +81,28 @@ function Comments() {
     const trimmedSearch = normalizedSearch.toLowerCase()
 
     if (trimmedSearch) {
-      result = result.filter((comment) =>
-        Object.values(comment).some((value) =>
+      result = result.filter((comment) => {
+        const fields = [
+          comment.author,
+          comment.authorId,
+          comment.text,
+          comment.commentUrl,
+          comment.watchlistAuthorId,
+          comment.isWatchlisted ? 'watchlisted' : '',
+          comment.matchedKeywords.map((keyword) => keyword.word).join(' '),
+          comment.matchedKeywords.map((keyword) => keyword.category ?? '').join(' '),
+        ]
+
+        return fields.some((value) =>
           String(value ?? '')
             .toLowerCase()
             .includes(trimmedSearch),
-        ),
-      )
+        )
+      })
     }
 
     return result
-  }, [comments, hasDefinedKeywords, matchedIds, normalizedSearch, readFilter, showOnlyKeywordComments])
+  }, [comments, hasDefinedKeywords, normalizedSearch, readFilter, showOnlyKeywordComments])
 
   const commentIndexMap = useMemo(() => {
     const map = new Map<number, number>()
@@ -173,14 +122,30 @@ function Comments() {
     const withoutKeywords: Comment[] = []
 
     filteredComments.forEach((comment) => {
-      const categoriesMap = matchesByComment.get(comment.id)
-
-      if (!categoriesMap || categoriesMap.size === 0) {
+      if (comment.matchedKeywords.length === 0) {
         withoutKeywords.push(comment)
         return
       }
 
-      categoriesMap.forEach((categoryKeywords, categoryName) => {
+      const keywordsByCategory = new Map<string, Keyword[]>()
+
+      comment.matchedKeywords.forEach((keyword) => {
+        const categoryName = keyword.category?.trim() || DEFAULT_CATEGORY
+        const items = keywordsByCategory.get(categoryName) ?? []
+
+        if (!items.some((item) => item.id === keyword.id)) {
+          items.push(keyword)
+        }
+
+        keywordsByCategory.set(categoryName, items)
+      })
+
+      if (keywordsByCategory.size === 0) {
+        withoutKeywords.push(comment)
+        return
+      }
+
+      keywordsByCategory.forEach((categoryKeywords, categoryName) => {
         const existing = groupsMap.get(categoryName) ?? { category: categoryName, comments: [] }
         existing.comments.push({ comment, matchedKeywords: categoryKeywords })
         groupsMap.set(categoryName, existing)
@@ -213,7 +178,7 @@ function Comments() {
       groupedComments: grouped,
       commentsWithoutKeywords: withoutKeywords,
     }
-  }, [commentIndexMap, filteredComments, matchesByComment])
+  }, [commentIndexMap, filteredComments])
 
   const emptyMessage = useMemo(() => {
     if (isLoading) {

@@ -7,7 +7,14 @@ export interface CommentAuthorDto {
   logo: string | null;
 }
 
+export interface CommentMatchedKeywordDto {
+  id: number;
+  word: string;
+  category: string | null;
+}
+
 export type CommentWithAuthorDto = Comment & {
   author: CommentAuthorDto | null;
   isWatchlisted: boolean;
+  matchedKeywords: CommentMatchedKeywordDto[];
 };
