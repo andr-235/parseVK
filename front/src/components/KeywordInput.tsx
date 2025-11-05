@@ -40,7 +40,7 @@ function KeywordInput({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="sm:min-w-[220px] sm:flex-1"
+          className="sm:min-w-[280px] sm:flex-1"
         />
       </div>
       <Button onClick={handleAdd} className="w-full sm:w-auto">
