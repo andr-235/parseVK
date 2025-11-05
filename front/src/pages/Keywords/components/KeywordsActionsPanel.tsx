@@ -40,7 +40,7 @@ function KeywordsActionsPanel({
         headerClassName="border-none pb-4"
         contentClassName="pt-0"
       >
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <KeywordInput
             value={keywordValue}
             categoryValue={categoryValue}

@@ -90,7 +90,7 @@ function KeywordInput({
   }
 
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-1">
         {onCategoryChange && (
           <Input
