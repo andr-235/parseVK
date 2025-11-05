@@ -207,7 +207,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     const nextIsRead = !currentComment.isRead
     const readDelta = nextIsRead ? 1 : -1
     const unreadDelta = -readDelta
-    const shouldRemove = shouldRemoveAfterToggle(state.filters, nextIsRead)
+    const shouldRemove = shouldRemoveAfterToggle(state.filters ?? normalizeFilters(), nextIsRead)
 
     set((state) => ({
       comments: state.comments
@@ -225,7 +225,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       if (finalIsRead !== nextIsRead) {
         const finalReadDelta = finalIsRead ? 1 : -1
         const finalUnreadDelta = -finalReadDelta
-        const shouldRemoveFinal = shouldRemoveAfterToggle(state.filters, finalIsRead)
+        const shouldRemoveFinal = shouldRemoveAfterToggle(state.filters ?? normalizeFilters(), finalIsRead)
 
         set((prevState) => {
           const baseComments = prevState.comments.filter((comment) => comment.id !== id)
