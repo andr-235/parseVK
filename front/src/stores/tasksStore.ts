@@ -64,6 +64,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
   tasksById: {},
   isLoading: false,
   isCreating: false,
+  isSocketConnected: false,
 
   /**
    * Загружает список задач и синхронизирует нормализованное состояние.

@@ -267,14 +267,23 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
     })
 
     socket.on('connect', () => {
+      useTasksStore.setState((state) => {
+        state.isSocketConnected = true
+      })
       onConnect?.()
     })
 
     socket.on('disconnect', () => {
+      useTasksStore.setState((state) => {
+        state.isSocketConnected = false
+      })
       onDisconnect?.()
     })
 
     socket.on('connect_error', () => {
+      useTasksStore.setState((state) => {
+        state.isSocketConnected = false
+      })
       onConnectError?.()
     })
 
@@ -287,6 +296,9 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
     })
 
     return () => {
+      useTasksStore.setState((state) => {
+        state.isSocketConnected = false
+      })
       socket.disconnect()
     }
   }, [onConnect, onConnectError, onDisconnect])

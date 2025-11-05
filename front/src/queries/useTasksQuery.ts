@@ -14,11 +14,13 @@ const mapSummariesToTasks = (summaries: IParsingTaskSummary[]) => {
 
 export const useTasksQuery = () => {
   const previousDataRef = useRef<IParsingTaskSummary[] | null>(null)
+  const isSocketConnected = useTasksStore((s) => s.isSocketConnected)
 
   const query = useQuery({
     queryKey: queryKeys.tasks,
     queryFn: tasksService.fetchTasks,
-    refetchInterval: 15_000,
+    // Когда сокет подключён — не поллим. Когда нет — поллим раз в 15 сек.
+    refetchInterval: isSocketConnected ? false : 15_000,
     refetchIntervalInBackground: true,
     staleTime: 10_000,
     retry: 1,

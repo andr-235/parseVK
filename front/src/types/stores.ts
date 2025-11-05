@@ -101,6 +101,8 @@ export interface TasksState {
   tasksById: Record<string, Task>
   isLoading: boolean
   isCreating: boolean
+  /** Признак активного WebSocket-соединения для задач. */
+  isSocketConnected: boolean
   fetchTasks: () => Promise<void>
   createParseTask: (groupIds: Array<number | string>) => Promise<number | string | null>
   fetchTaskDetails: (taskId: number | string) => Promise<TaskDetails | null>
