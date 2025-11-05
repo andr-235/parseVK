@@ -238,7 +238,29 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
       return
     }
 
-    const namespaceUrl = baseUrl.endsWith('/') ? `${baseUrl}tasks` : `${baseUrl}/tasks`
+    // Нормализуем базовый URL: убираем хвосты вида "/api" и уже указанное "/tasks"
+    const normalizeBase = (url: string): string => {
+      // Быстро убираем конечные слэши
+      let trimmed = url.trim().replace(/\/$/, '')
+
+      // Если указан относительный путь (например, "/api"), превратим в абсолютный для корректной обработки
+      if (!/^wss?:\/\//i.test(trimmed)) {
+        try {
+          const absolute = new URL(trimmed, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+          trimmed = absolute.origin + absolute.pathname.replace(/\/$/, '')
+        } catch {}
+      }
+
+      // Убираем завершающий "/api", чтобы не получить "/api/tasks" (у Socket.IO путь всегда "/socket.io")
+      trimmed = trimmed.replace(/\/api$/i, '')
+      // И на всякий случай убираем дублирующийся namespace
+      trimmed = trimmed.replace(/\/tasks$/i, '')
+
+      return trimmed
+    }
+
+    const normalizedBase = normalizeBase(baseUrl)
+    const namespaceUrl = normalizedBase.endsWith('/') ? `${normalizedBase}tasks` : `${normalizedBase}/tasks`
 
     const socket: Socket<TaskServerEvents, TaskClientEvents> = io(namespaceUrl, {
       transports: ['websocket'],
