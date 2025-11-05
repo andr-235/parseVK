@@ -194,7 +194,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }
   },
 
-  async toggleReadStatus(id) {
+  async toggleReadStatus(id: number) {
     const state = get()
     const currentIndex = state.comments.findIndex((comment) => comment.id === id)
     const currentComment = currentIndex >= 0 ? state.comments[currentIndex] : undefined
