@@ -272,7 +272,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }
   },
 
-  markWatchlisted(commentId, watchlistAuthorId) {
+  markWatchlisted(commentId: number, watchlistAuthorId: number) {
     set((state) => ({
       comments: state.comments.map((comment) =>
         comment.id === commentId
