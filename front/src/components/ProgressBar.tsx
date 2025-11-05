@@ -64,6 +64,14 @@ function ProgressBar({
     danger: 'bg-accent-danger',
   }
 
+  // Явные fallback-цвета на случай, если кастомные классы темы недоступны
+  const toneColors: Record<typeof tone, string> = {
+    primary: '#3b82f6', // blue-500
+    success: '#22c55e', // green-500
+    warning: '#f59e0b', // amber-500
+    danger: '#ef4444',  // red-500
+  }
+
   return (
     <div
       className={[
@@ -87,6 +95,7 @@ function ProgressBar({
         {indeterminate ? (
           <motion.div
             className={`absolute left-0 top-0 h-full rounded-full ${toneClasses[tone]}`}
+            style={{ backgroundColor: toneColors[tone] }}
             initial={{ width: '0%' }}
             animate={{ width: '100%' }}
             transition={{
@@ -99,6 +108,7 @@ function ProgressBar({
         ) : (
           <motion.div
             className={`absolute left-0 top-0 h-full rounded-full ${toneClasses[tone]}`}
+            style={{ backgroundColor: toneColors[tone] }}
             initial={{ width: '0%' }}
             animate={{ width: `${percentage}%` }}
             transition={{
