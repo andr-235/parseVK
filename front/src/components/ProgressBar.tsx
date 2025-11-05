@@ -86,7 +86,7 @@ function ProgressBar({
       >
         {indeterminate ? (
           <motion.div
-            className={`h-full rounded-full ${toneClasses[tone]}`}
+            className={`absolute left-0 top-0 h-full rounded-full ${toneClasses[tone]}`}
             initial={{ width: '0%' }}
             animate={{ width: '100%' }}
             transition={{
@@ -98,12 +98,12 @@ function ProgressBar({
           />
         ) : (
           <motion.div
-            className={`h-full rounded-full ${toneClasses[tone]}`}
+            className={`absolute left-0 top-0 h-full rounded-full ${toneClasses[tone]}`}
             initial={{ width: '0%' }}
             animate={{ width: `${percentage}%` }}
             transition={{
               duration: 0.8,
-              ease: [0.4, 0, 0.2, 1], // ease-out cubic-bezier
+              ease: [0.4, 0, 0.2, 1],
             }}
           />
         )}
