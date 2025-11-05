@@ -37,9 +37,9 @@ const SOURCE_TITLE_MAP: Record<string, string> = {
   avto: 'Авто',
 }
 
-// Dark mode: обновлённые стили выпадающего меню.
+// Dark mode: обновлённые стили выпадающего меню с использованием цветовых токенов темы.
 const DROPDOWN_BASE_CLASSNAME =
-  'w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2 pr-9 text-sm text-gray-900 shadow-md transition ease-out duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700'
+  'w-full appearance-none rounded-lg border border-border/70 bg-white px-3 py-2 pr-9 text-sm text-text-primary shadow-soft-sm transition ease-out duration-200 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-border dark:bg-background-secondary dark:text-text-primary dark:shadow-soft-lg dark:hover:bg-white/10 dark:focus-visible:ring-accent-primary/70'
 
 interface DropdownProps extends SelectHTMLAttributes<HTMLSelectElement> {
   iconClassName?: string
@@ -50,7 +50,7 @@ const Dropdown = forwardRef<HTMLSelectElement, DropdownProps>(
     {
       className,
       children,
-      iconClassName = 'size-4 text-gray-400 dark:text-gray-500',
+      iconClassName = 'size-4 text-text-secondary dark:text-text-secondary',
       onFocus,
       onBlur,
       ...props
