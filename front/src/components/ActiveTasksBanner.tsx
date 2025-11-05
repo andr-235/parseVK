@@ -178,24 +178,6 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
                       tone={tone}
                       indeterminate={!hasTotals}
                     />
-                    <div className="flex flex-wrap gap-3 text-xs text-text-secondary">
-                      <span>
-                        Обработано: {formatNumber(progress.processed)}
-                        {hasTotals ? ` / ${formatNumber(progress.total)}` : ''}
-                      </span>
-                      {progress.processing > 0 && <span>В работе: {formatNumber(progress.processing)}</span>}
-                      {progress.pending > 0 && <span>В очереди: {formatNumber(progress.pending)}</span>}
-                      {progress.success > 0 && (
-                        <span className="font-semibold text-accent-success">
-                          Успешно: {formatNumber(progress.success)}
-                        </span>
-                      )}
-                      {progress.failed > 0 && (
-                        <span className="font-semibold text-accent-danger">
-                          Ошибок: {formatNumber(progress.failed)}
-                        </span>
-                      )}
-                    </div>
                   </CardContent>
                 </Card>
               )
