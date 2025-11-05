@@ -21,7 +21,7 @@ interface CategorizedGroup {
 
 interface CommentsTableCardProps {
   groupedComments: CategorizedGroup[]
-  commentsWithoutKeywords: Comment[]
+  commentsWithoutKeywords: CategorizedComment[]
   commentIndexMap: Map<number, number>
   isLoading: boolean
   emptyMessage: string
@@ -262,7 +262,7 @@ function CommentsTableCard({
                     </p>
                   </header>
                   <div className="flex flex-col gap-4">
-                    {commentsWithoutKeywords.map((comment) => {
+                    {commentsWithoutKeywords.map(({ comment, matchedKeywords }) => {
                       const commentIndex = commentIndexMap.get(comment.id) ?? 0
 
                       return (
@@ -270,7 +270,7 @@ function CommentsTableCard({
                           key={`without-keywords-${comment.id}-${commentIndex}`}
                           comment={comment}
                           index={commentIndex}
-                          matchedKeywords={comment.matchedKeywords}
+                          matchedKeywords={matchedKeywords}
                           toggleReadStatus={toggleReadStatus}
                           onAddToWatchlist={onAddToWatchlist}
                           isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}

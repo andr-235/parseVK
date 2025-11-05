@@ -8,6 +8,11 @@ import type { Comment, Keyword } from '@/types'
 
 const DEFAULT_CATEGORY = 'Без категории'
 
+const ensureMatchedKeywords = (comment: Comment): Keyword[] => {
+  const value = (comment as Partial<Comment> & { matchedKeywords?: Keyword[] }).matchedKeywords
+  return Array.isArray(value) ? value : []
+}
+
 function Comments() {
   const comments = useCommentsStore((state) => state.comments)
   const isLoading = useCommentsStore((state) => state.isLoading)
@@ -48,7 +53,11 @@ function Comments() {
   const normalizedSearch = useMemo(() => searchTerm.trim(), [searchTerm])
 
   const keywordCommentsTotal = useMemo(
-    () => comments.reduce((total, comment) => (comment.matchedKeywords.length > 0 ? total + 1 : total), 0),
+    () =>
+      comments.reduce(
+        (total, comment) => (ensureMatchedKeywords(comment).length > 0 ? total + 1 : total),
+        0,
+      ),
     [comments],
   )
 
@@ -69,7 +78,7 @@ function Comments() {
     let result = comments
 
     if (showOnlyKeywordComments && hasDefinedKeywords) {
-      result = result.filter((comment) => comment.matchedKeywords.length > 0)
+      result = result.filter((comment) => ensureMatchedKeywords(comment).length > 0)
     }
 
     if (readFilter === 'read') {
@@ -82,6 +91,7 @@ function Comments() {
 
     if (trimmedSearch) {
       result = result.filter((comment) => {
+        const matchedKeywords = ensureMatchedKeywords(comment)
         const fields = [
           comment.author,
           comment.authorId,
@@ -89,8 +99,8 @@ function Comments() {
           comment.commentUrl,
           comment.watchlistAuthorId,
           comment.isWatchlisted ? 'watchlisted' : '',
-          comment.matchedKeywords.map((keyword) => keyword.word).join(' '),
-          comment.matchedKeywords.map((keyword) => keyword.category ?? '').join(' '),
+          matchedKeywords.map((keyword) => keyword.word).join(' '),
+          matchedKeywords.map((keyword) => keyword.category ?? '').join(' '),
         ]
 
         return fields.some((value) =>
@@ -119,17 +129,19 @@ function Comments() {
       string,
       { category: string; comments: Array<{ comment: Comment; matchedKeywords: Keyword[] }> }
     >()
-    const withoutKeywords: Comment[] = []
+    const withoutKeywords: Array<{ comment: Comment; matchedKeywords: Keyword[] }> = []
 
     filteredComments.forEach((comment) => {
-      if (comment.matchedKeywords.length === 0) {
-        withoutKeywords.push(comment)
+      const matchedKeywords = ensureMatchedKeywords(comment)
+
+      if (matchedKeywords.length === 0) {
+        withoutKeywords.push({ comment, matchedKeywords })
         return
       }
 
       const keywordsByCategory = new Map<string, Keyword[]>()
 
-      comment.matchedKeywords.forEach((keyword) => {
+      matchedKeywords.forEach((keyword) => {
         const categoryName = keyword.category?.trim() || DEFAULT_CATEGORY
         const items = keywordsByCategory.get(categoryName) ?? []
 
@@ -141,7 +153,7 @@ function Comments() {
       })
 
       if (keywordsByCategory.size === 0) {
-        withoutKeywords.push(comment)
+        withoutKeywords.push({ comment, matchedKeywords })
         return
       }
 
