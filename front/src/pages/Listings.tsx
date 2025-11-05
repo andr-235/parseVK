@@ -1,9 +1,13 @@
 import {
+  forwardRef,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ChangeEvent,
+  type FocusEvent,
+  type OptionHTMLAttributes,
+  type SelectHTMLAttributes,
 } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
@@ -33,8 +37,74 @@ const SOURCE_TITLE_MAP: Record<string, string> = {
   avto: 'Авто',
 }
 
-const SELECT_FIELD_CLASSNAME =
-  'w-full appearance-none rounded-lg border border-border/70 bg-background-secondary px-3 py-2 pr-9 text-sm text-text-primary shadow-sm transition focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/25 disabled:cursor-not-allowed disabled:opacity-60'
+// Dark mode: обновлённые стили выпадающего меню.
+const DROPDOWN_BASE_CLASSNAME =
+  'w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2 pr-9 text-sm text-gray-900 shadow-md transition ease-out duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700'
+
+interface DropdownProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  iconClassName?: string
+}
+
+const Dropdown = forwardRef<HTMLSelectElement, DropdownProps>(
+  (
+    {
+      className,
+      children,
+      iconClassName = 'size-4 text-gray-400 dark:text-gray-500',
+      onFocus,
+      onBlur,
+      ...props
+    },
+    ref,
+  ) => {
+    const [isFocused, setIsFocused] = useState(false)
+    const [isAnimated, setIsAnimated] = useState(false)
+
+    useEffect(() => {
+      const frame = requestAnimationFrame(() => setIsAnimated(true))
+      return () => cancelAnimationFrame(frame)
+    }, [])
+
+    const handleFocus = (event: FocusEvent<HTMLSelectElement>) => {
+      setIsFocused(true)
+      onFocus?.(event)
+    }
+
+    const handleBlur = (event: FocusEvent<HTMLSelectElement>) => {
+      setIsFocused(false)
+      onBlur?.(event)
+    }
+
+    return (
+      <div
+        data-state={isFocused ? 'open' : 'closed'}
+        data-animation={isAnimated ? 'visible' : 'hidden'}
+        className="relative origin-top transform transition ease-out duration-200 data-[animation=hidden]:opacity-0 data-[animation=hidden]:scale-95 data-[animation=visible]:opacity-100 data-[animation=visible]:scale-100"
+      >
+        <select
+          ref={ref}
+          className={cn(DROPDOWN_BASE_CLASSNAME, className)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          {...props}
+        >
+          {children}
+        </select>
+        <ChevronDown
+          className={cn(
+            'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2',
+            iconClassName,
+          )}
+        />
+      </div>
+    )
+  },
+)
+Dropdown.displayName = 'Dropdown'
+
+type MenuItemProps = OptionHTMLAttributes<HTMLOptionElement>
+
+const MenuItem = (props: MenuItemProps) => <option {...props} />
 
 const formatSourceLabel = (value?: string | null): string => {
   if (!value) {
@@ -575,20 +645,16 @@ function Listings() {
               <label className="text-sm font-medium text-text-secondary">
                 Источник объявлений
               </label>
-              <div className="relative">
-                <select
-                  value={uploadSourceMode}
-                  onChange={(event) =>
-                    setUploadSourceMode(event.target.value as 'avito' | 'youla' | 'custom')
-                  }
-                  className={SELECT_FIELD_CLASSNAME}
-                >
-                  <option value="avito">Авито</option>
-                  <option value="youla">Юла</option>
-                  <option value="custom">Другое...</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary" />
-              </div>
+              <Dropdown
+                value={uploadSourceMode}
+                onChange={(event) =>
+                  setUploadSourceMode(event.target.value as 'avito' | 'youla' | 'custom')
+                }
+              >
+                <MenuItem value="avito">Авито</MenuItem>
+                <MenuItem value="youla">Юла</MenuItem>
+                <MenuItem value="custom">Другое...</MenuItem>
+              </Dropdown>
             </div>
 
             {uploadSourceMode === 'custom' && (
@@ -686,38 +752,24 @@ function Listings() {
 
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-secondary">Источник</label>
-              <div className="relative">
-                <select
-                  value={sourceFilter}
-                  onChange={handleSourceChange}
-                  className={SELECT_FIELD_CLASSNAME}
-                >
-                  {filterOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === 'all' ? 'Все источники' : formatSourceLabel(option)}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary" />
-              </div>
+              <Dropdown value={sourceFilter} onChange={handleSourceChange}>
+                {filterOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option === 'all' ? 'Все источники' : formatSourceLabel(option)}
+                  </MenuItem>
+                ))}
+              </Dropdown>
             </div>
 
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-secondary">На странице</label>
-              <div className="relative">
-                <select
-                  value={pageSize}
-                  onChange={handlePageSizeChange}
-                  className={SELECT_FIELD_CLASSNAME}
-                >
-                  {PAGE_SIZE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary" />
-              </div>
+              <Dropdown value={pageSize} onChange={handlePageSizeChange}>
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </Dropdown>
             </div>
           </div>
 
