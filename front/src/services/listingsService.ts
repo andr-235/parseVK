@@ -11,6 +11,7 @@ interface FetchListingsOptions {
   pageSize: number
   search?: string
   source?: string
+  signal?: AbortSignal
 }
 
 interface ImportListingsOptions {

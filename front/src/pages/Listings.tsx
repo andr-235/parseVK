@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -9,7 +10,6 @@ import {
   type OptionHTMLAttributes,
   type SelectHTMLAttributes,
 } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
@@ -21,12 +21,14 @@ import {
   CardContent,
   CardDescription,
 } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
-import { queryKeys } from '@/queries/queryKeys'
 import { listingsService } from '@/services/listingsService'
-import type { IListing, IListingsResponse } from '@/types/api'
+import type { IListing } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ExternalLink, MapPin, Phone, Calendar, Tag } from 'lucide-react'
+import {
+  useInfiniteListings,
+  type UseInfiniteFetcher,
+} from '@/hooks/useInfiniteListings'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50]
 
@@ -35,6 +37,18 @@ const SOURCE_TITLE_MAP: Record<string, string> = {
   youla: 'Юла',
   юла: 'Юла',
   avto: 'Авто',
+}
+
+const MotionCard = motion(Card)
+
+type ListingsMeta = {
+  total?: number
+  sources?: string[]
+}
+
+type ListingsFetcherParams = {
+  search?: string
+  source?: string
 }
 
 // Dark mode: обновлённые стили выпадающего меню с использованием цветовых токенов темы.
@@ -243,9 +257,17 @@ interface ListingCardProps {
   listing: IListing
   expandedDescriptions: Set<number>
   onToggleDescription: (id: number) => void
+  shouldAnimate?: boolean
+  staggerDelay?: number
 }
 
-function ListingCard({ listing, expandedDescriptions, onToggleDescription }: ListingCardProps) {
+function ListingCard({
+  listing,
+  expandedDescriptions,
+  onToggleDescription,
+  shouldAnimate = false,
+  staggerDelay = 0,
+}: ListingCardProps) {
   const parameters = buildParameters(listing)
   const livingArea = formatArea(listing.areaLiving)
   const kitchenArea = formatArea(listing.areaKitchen)
@@ -281,7 +303,17 @@ function ListingCard({ listing, expandedDescriptions, onToggleDescription }: Lis
   const isDescriptionExpanded = expandedDescriptions.has(listing.id)
 
   return (
-    <Card className="group h-full overflow-hidden border-border/70 bg-background-secondary shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-accent-primary/10 dark:hover:shadow-accent-primary/20 hover:-translate-y-1">
+    <MotionCard
+      layout
+      initial={shouldAnimate ? { opacity: 0, y: 12 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.24,
+        ease: 'easeOut',
+        delay: shouldAnimate ? staggerDelay : 0,
+      }}
+      className="group h-full overflow-hidden border-border/70 bg-background-secondary shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-accent-primary/10 dark:hover:shadow-accent-primary/20"
+    >
         {/* Изображение */}
         {primaryImage && (
           <div className="relative h-48 w-full overflow-hidden bg-muted">
@@ -441,12 +473,226 @@ function ListingCard({ listing, expandedDescriptions, onToggleDescription }: Lis
             </Button>
           )}
         </CardContent>
-      </Card>
+      </MotionCard>
+  )
+}
+
+function ListingSkeleton() {
+  return (
+    <Card className="h-full overflow-hidden border-border/60 bg-background-secondary shadow-soft-sm">
+      <div className="h-48 w-full animate-pulse bg-background-secondary/70 dark:bg-white/5" aria-hidden="true" />
+      <CardContent className="space-y-4 py-5">
+        <div className="space-y-2">
+          <div className="h-5 w-3/4 animate-pulse rounded bg-white/40 dark:bg-white/10" aria-hidden="true" />
+          <div className="h-4 w-1/2 animate-pulse rounded bg-white/30 dark:bg-white/5" aria-hidden="true" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-full animate-pulse rounded bg-white/30 dark:bg-white/5" aria-hidden="true" />
+          <div className="h-4 w-5/6 animate-pulse rounded bg-white/25 dark:bg-white/5" aria-hidden="true" />
+        </div>
+        <div className="flex gap-3">
+          <div className="h-9 w-full animate-pulse rounded-md bg-white/30 dark:bg-white/5" aria-hidden="true" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface ListingsInfiniteProps {
+  fetcher: UseInfiniteFetcher<IListing, ListingsMeta, ListingsFetcherParams>
+  limit: number
+  filtersKey: string
+  fetchParams: ListingsFetcherParams
+  expandedDescriptions: Set<number>
+  onToggleDescription: (id: number) => void
+  onMetaChange?: (meta: ListingsMeta | null) => void
+  onItemsChange?: (count: number) => void
+  onLoadingChange?: (loading: boolean) => void
+}
+
+function ListingsInfinite({
+  fetcher,
+  limit,
+  filtersKey,
+  fetchParams,
+  expandedDescriptions,
+  onToggleDescription,
+  onMetaChange,
+  onItemsChange,
+  onLoadingChange,
+}: ListingsInfiniteProps) {
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const animatedIdsRef = useRef<Set<number>>(new Set())
+  const [observerAvailable, setObserverAvailable] = useState(true)
+
+  const {
+    items,
+    loading,
+    initialLoading,
+    error,
+    hasMore,
+    meta,
+    loadMore,
+    reset,
+  } = useInfiniteListings<IListing, ListingsMeta, ListingsFetcherParams>({
+    fetcher,
+    limit,
+    params: fetchParams,
+    dependencies: [filtersKey],
+  })
+
+  const handleLoadMore = useCallback(async () => {
+    await loadMore()
+  }, [loadMore])
+
+  useEffect(() => {
+    animatedIdsRef.current.clear()
+  }, [filtersKey])
+
+  useEffect(() => {
+    onMetaChange?.(meta ?? null)
+  }, [meta, onMetaChange])
+
+  useEffect(() => {
+    onItemsChange?.(items.length)
+  }, [items.length, onItemsChange])
+
+  useEffect(() => {
+    onLoadingChange?.(loading)
+  }, [loading, onLoadingChange])
+
+  useEffect(() => {
+    if (!observerAvailable || !hasMore) {
+      observerRef.current?.disconnect()
+      return
+    }
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setObserverAvailable(false)
+      return
+    }
+
+    const sentinel = sentinelRef.current
+    if (!sentinel) {
+      return
+    }
+
+    try {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const [entry] = entries
+          if (entry?.isIntersecting && !loading) {
+            handleLoadMore().catch(() => {
+              // обработка ошибок выполняется в хукe
+            })
+          }
+        },
+        { root: null, rootMargin: '0px 0px 300px 0px', threshold: 0 },
+      )
+
+      observer.observe(sentinel)
+      observerRef.current = observer
+    } catch (observerError) {
+      if (import.meta.env.DEV) {
+        console.error('IntersectionObserver init error', observerError)
+      }
+      setObserverAvailable(false)
+    }
+
+    return () => observerRef.current?.disconnect()
+  }, [handleLoadMore, hasMore, loading, observerAvailable])
+
+  useEffect(() => {
+    return () => {
+      observerRef.current?.disconnect()
+      reset()
+    }
+  }, [reset])
+
+  const statusMessage = useMemo(() => {
+    if (error) {
+      return 'Не удалось загрузить объявления. Попробуйте ещё раз.'
+    }
+    if (loading && items.length === 0) {
+      return 'Загружаем объявления…'
+    }
+    if (!hasMore) {
+      return `Загружены все объявления (${items.length})`
+    }
+    return `Загружено ${items.length} объявлений`
+  }, [error, hasMore, items.length, loading])
+
+  const skeletonCount = initialLoading ? 6 : 3
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="sr-only" aria-live="polite">
+        {statusMessage}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((listing, index) => {
+          const hasAnimated = animatedIdsRef.current.has(listing.id)
+          if (!hasAnimated) {
+            animatedIdsRef.current.add(listing.id)
+          }
+
+          return (
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              expandedDescriptions={expandedDescriptions}
+              onToggleDescription={onToggleDescription}
+              shouldAnimate={!hasAnimated}
+              staggerDelay={Math.min(index % 8, 6) * 0.04}
+            />
+          )
+        })}
+
+        {(initialLoading || (loading && items.length > 0)) &&
+          Array.from({ length: skeletonCount }).map((_, index) => (
+            <ListingSkeleton key={`skeleton-${index}`} />
+          ))}
+      </div>
+
+      {!initialLoading && items.length === 0 && !loading && !error && (
+        <div className="rounded-lg border border-border/60 bg-background-secondary px-6 py-8 text-center text-text-secondary">
+          Пока нет объявлений, подходящих под условия поиска.
+        </div>
+      )}
+
+      {error && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-4 rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+        >
+          <span>Не удалось загрузить объявления. Попробуйте ещё раз.</span>
+          <Button variant="outline" size="sm" onClick={() => handleLoadMore()}>
+            Повторить
+          </Button>
+        </div>
+      )}
+
+      {hasMore && (!observerAvailable || error) && (
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => handleLoadMore()}
+            disabled={loading}
+          >
+            {loading ? 'Загрузка…' : 'Показать ещё'}
+          </Button>
+        </div>
+      )}
+
+      <div ref={sentinelRef} className="h-px w-full" aria-hidden="true" />
+    </div>
   )
 }
 
 function Listings() {
-  const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [searchTerm, setSearchTerm] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
@@ -456,39 +702,75 @@ function Listings() {
   const [updateExisting, setUpdateExisting] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<number>>(new Set())
+  const [availableSources, setAvailableSources] = useState<string[]>([])
+  const [totalItems, setTotalItems] = useState<number | null>(null)
+  const [fetchedCount, setFetchedCount] = useState(0)
+  const [refreshToken, setRefreshToken] = useState(0)
+  const [isListLoading, setIsListLoading] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const querySource = sourceFilter === 'all' ? undefined : sourceFilter
 
-  const listingsQuery = useQuery<
-    IListingsResponse,
-    Error,
-    IListingsResponse,
-    ReturnType<typeof queryKeys.listings.list>
-  >({
-    queryKey: queryKeys.listings.list({
-      page,
-      pageSize,
-      search: appliedSearch,
-      source: sourceFilter,
+  const fetchParams = useMemo<ListingsFetcherParams>(
+    () => ({
+      search: appliedSearch.trim() || undefined,
+      source: querySource,
     }),
-    queryFn: () =>
-      listingsService.fetchListings({
-        page,
-        pageSize,
-        search: appliedSearch || undefined,
-        source: querySource,
-      }),
-    placeholderData: keepPreviousData,
-  })
+    [appliedSearch, querySource],
+  )
 
-  const availableSources = useMemo(() => {
-    return (listingsQuery.data?.sources ?? []).filter((item) => item.trim().length > 0)
-  }, [listingsQuery.data?.sources])
+  const filtersIdentity = useMemo(
+    () =>
+      JSON.stringify({
+        search: fetchParams.search ?? '',
+        source: fetchParams.source ?? 'all',
+        pageSize,
+      }),
+    [fetchParams.search, fetchParams.source, pageSize],
+  )
+
+  const filtersKey = useMemo(
+    () =>
+      JSON.stringify({
+        search: fetchParams.search ?? '',
+        source: fetchParams.source ?? 'all',
+        pageSize,
+        refreshToken,
+      }),
+    [fetchParams.search, fetchParams.source, pageSize, refreshToken],
+  )
+
+  const fetchListingsBatch = useCallback<
+  UseInfiniteFetcher<IListing, ListingsMeta, ListingsFetcherParams>
+  >(async ({ limit, cursor, page, signal, params }) => {
+    const cursorAsPage =
+      cursor && Number.isFinite(Number.parseInt(cursor, 10))
+        ? Number.parseInt(cursor, 10)
+        : undefined
+
+    const response = await listingsService.fetchListings({
+      page: cursorAsPage ?? page ?? 1,
+      pageSize: limit,
+      search: params?.search,
+      source: params?.source,
+      signal,
+    })
+
+    return {
+      items: response.items,
+      page: response.page,
+      hasMore: response.hasMore,
+      meta: {
+        total: response.total,
+        sources: response.sources,
+      },
+    }
+  }, [])
 
   const filterOptions = useMemo(() => {
-    const unique = Array.from(new Set(availableSources))
+    const sanitized = availableSources.filter((item) => item.trim().length > 0)
+    const unique = Array.from(new Set(sanitized))
 
     if (sourceFilter !== 'all' && !unique.includes(sourceFilter)) {
       unique.unshift(sourceFilter)
@@ -497,92 +779,83 @@ function Listings() {
     return ['all', ...unique]
   }, [availableSources, sourceFilter])
 
-  const items = useMemo(
-    () => listingsQuery.data?.items ?? [],
-    [listingsQuery.data?.items],
-  )
-  const totalItems = listingsQuery.data?.total ?? 0
-
-  const totalPages = useMemo(() => {
-    if (totalItems === 0) {
-      return 1
-    }
-    return Math.max(1, Math.ceil(totalItems / pageSize))
-  }, [totalItems, pageSize])
-
   useEffect(() => {
-    if (totalItems === 0) {
-      if (page !== 1) {
-        setPage(1)
-      }
-      return
-    }
-
-    if (page > totalPages) {
-      setPage(totalPages)
-    }
-  }, [totalItems, totalPages, page])
+    setExpandedDescriptions(new Set())
+  }, [filtersIdentity])
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
 
   useEffect(() => {
-    setExpandedDescriptions((prev) => {
-      if (prev.size === 0) {
-        return prev
-      }
-      const availableIds = new Set(items.map((item) => item.id))
-      let mutated = false
-      const next = new Set<number>()
-      prev.forEach((id) => {
-        if (availableIds.has(id)) {
-          next.add(id)
-        } else {
-          mutated = true
-        }
-      })
-      return mutated ? next : prev
-    })
-  }, [items])
+    setFetchedCount(0)
+    setTotalItems(null)
+    setIsListLoading(true)
+  }, [filtersIdentity])
 
-  const rangeStart = totalItems === 0 ? 0 : (page - 1) * pageSize + 1
-  const rangeEnd = totalItems === 0 ? 0 : Math.min(totalItems, rangeStart + items.length - 1)
+  const handleMetaChange = useCallback((meta: ListingsMeta | null) => {
+    if (!meta) {
+      return
+    }
+
+    if (typeof meta.total === 'number') {
+      setTotalItems(meta.total)
+    }
+
+    if (Array.isArray(meta.sources)) {
+      const sanitized = meta.sources
+        .map((item) => item?.trim?.() ?? '')
+        .filter((item) => item.length > 0)
+      setAvailableSources(Array.from(new Set(sanitized)))
+    }
+  }, [])
+
+  const handleItemsChange = useCallback((count: number) => {
+    setFetchedCount(count)
+  }, [])
+
+  const handleLoadingChange = useCallback((state: boolean) => {
+    setIsListLoading(state)
+  }, [])
+
+  const summaryText = useMemo(() => {
+    if (isListLoading && fetchedCount === 0) {
+      return 'Загружаем объявления…'
+    }
+
+    if (totalItems != null) {
+      if (totalItems === 0) {
+        return 'Нет объявлений для отображения'
+      }
+      return `Загружено ${numberFormatter.format(fetchedCount)} из ${numberFormatter.format(totalItems)}`
+    }
+
+    if (fetchedCount > 0) {
+      return `Загружено ${numberFormatter.format(fetchedCount)} объявлений`
+    }
+
+    return 'Нет объявлений для отображения'
+  }, [fetchedCount, isListLoading, numberFormatter, totalItems])
 
   const handleApplySearch = () => {
     setAppliedSearch(searchTerm.trim())
-    setPage(1)
   }
 
   const handleResetSearch = () => {
     setSearchTerm('')
     setAppliedSearch('')
-    setPage(1)
   }
 
   const handleSourceChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setSourceFilter(event.target.value)
-    setPage(1)
   }
 
   const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const nextSize = Number.parseInt(event.target.value, 10)
-    setPageSize(nextSize)
-    setPage(1)
-  }
-
-  const handlePrevPage = () => {
-    if (page > 1) {
-      setPage((current) => current - 1)
-    }
-  }
-
-  const handleNextPage = () => {
-    if (listingsQuery.data?.hasMore) {
-      setPage((current) => current + 1)
-    }
+    setPageSize(Number.isNaN(nextSize) ? 20 : nextSize)
   }
 
   const handleManualRefresh = () => {
-    void listingsQuery.refetch()
+    setIsListLoading(true)
+    setRefreshToken((token) => token + 1)
   }
 
   const resolvedUploadSource = uploadSourceMode === 'custom'
@@ -602,7 +875,8 @@ function Listings() {
         source: resolvedUploadSource,
         updateExisting,
       })
-      await listingsQuery.refetch()
+      setIsListLoading(true)
+      setRefreshToken((token) => token + 1)
     } catch {
       // Ошибки отображаются в сервисе
     } finally {
@@ -629,10 +903,6 @@ function Listings() {
       return next
     })
   }
-
-  const hasItems = items.length > 0
-  const isInitialLoading = listingsQuery.isLoading
-  const isFetching = listingsQuery.isFetching && !isInitialLoading
 
   return (
     <div className="flex flex-col gap-8">
@@ -712,9 +982,9 @@ function Listings() {
             variant="outline"
             size="sm"
             onClick={handleManualRefresh}
-            disabled={listingsQuery.isFetching}
+            disabled={isListLoading}
           >
-            {listingsQuery.isFetching ? 'Обновление…' : 'Обновить'}
+            {isListLoading ? 'Обновляем…' : 'Обновить'}
           </Button>
         )}
       >
@@ -774,90 +1044,23 @@ function Listings() {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background-primary/80 px-4 py-3 text-sm">
-            <div className="text-text-secondary">
-              {totalItems > 0
-                ? `Показаны объявления ${numberFormatter.format(rangeStart)}–${numberFormatter.format(rangeEnd)} из ${numberFormatter.format(totalItems)}`
-                : 'Нет объявлений для отображения'}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handlePrevPage}
-                disabled={page === 1 || listingsQuery.isFetching}
-              >
-                Назад
-              </Button>
-              <span className="text-text-secondary">
-                Страница {numberFormatter.format(page)} из {numberFormatter.format(totalPages)}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={!listingsQuery.data?.hasMore || listingsQuery.isFetching}
-              >
-                Вперёд
-              </Button>
+            <div className="text-text-secondary">{summaryText}</div>
+            <div className="text-xs text-text-tertiary">
+              Данные обновляются автоматической догрузкой при прокрутке.
             </div>
           </div>
 
-          {listingsQuery.isError && (
-            <div className="rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-              {(listingsQuery.error instanceof Error
-                ? listingsQuery.error.message
-                : 'Не удалось загрузить данные')}
-            </div>
-          )}
-
-          {/* Сетка карточек объявлений */}
-          {isInitialLoading && (
-            <div className="flex min-h-[400px] items-center justify-center rounded-xl border border-border/70 bg-background-secondary py-12">
-              <div className="flex flex-col items-center gap-3 text-sm text-text-secondary">
-                <Spinner className="h-8 w-8" />
-                <span>Загрузка объявлений…</span>
-              </div>
-            </div>
-          )}
-
-          {!isInitialLoading && !hasItems && (
-            <div className="flex min-h-[400px] items-center justify-center rounded-xl border border-border/70 bg-background-secondary py-12">
-              <div className="text-center text-sm text-text-secondary">
-                <p className="text-lg font-medium text-text-primary mb-2">Объявления не найдены</p>
-                <p>Попробуйте изменить параметры поиска или фильтры</p>
-              </div>
-            </div>
-          )}
-
-          {!isInitialLoading && hasItems && (
-            <>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {items.map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                  >
-                    <ListingCard
-                      listing={item}
-                      expandedDescriptions={expandedDescriptions}
-                      onToggleDescription={toggleDescription}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-
-              {isFetching && (
-                <div className="flex items-center justify-center gap-2 rounded-xl border border-border/70 bg-background-secondary py-4 text-sm text-text-secondary">
-                  <Spinner className="h-4 w-4" />
-                  <span>Обновляем данные…</span>
-                </div>
-              )}
-            </>
-          )}
+          <ListingsInfinite
+            fetcher={fetchListingsBatch}
+            limit={pageSize}
+            filtersKey={filtersKey}
+            fetchParams={fetchParams}
+            expandedDescriptions={expandedDescriptions}
+            onToggleDescription={toggleDescription}
+            onMetaChange={handleMetaChange}
+            onItemsChange={handleItemsChange}
+            onLoadingChange={handleLoadingChange}
+          />
         </div>
       </SectionCard>
     </div>

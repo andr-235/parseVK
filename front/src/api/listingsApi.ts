@@ -10,9 +10,10 @@ export interface GetListingsParams {
   pageSize: number
   search?: string
   source?: string
+  signal?: AbortSignal
 }
 
-const buildQuery = (params: GetListingsParams): string => {
+const buildQuery = (params: Omit<GetListingsParams, 'signal'>): string => {
   const searchParams = new URLSearchParams()
   searchParams.set('page', String(params.page))
   searchParams.set('pageSize', String(params.pageSize))
@@ -30,8 +31,9 @@ const buildQuery = (params: GetListingsParams): string => {
 
 export const listingsApi = {
   async getListings(params: GetListingsParams): Promise<IListingsResponse> {
-    const query = buildQuery(params)
-    const response = await fetch(`${API_URL}/listings?${query}`)
+    const { signal, ...rest } = params
+    const query = buildQuery(rest)
+    const response = await fetch(`${API_URL}/listings?${query}`, { signal })
 
     if (!response.ok) {
       throw new Error('Failed to load listings')
