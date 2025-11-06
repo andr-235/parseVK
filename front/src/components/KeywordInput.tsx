@@ -2,7 +2,7 @@ import type { ChangeEvent, KeyboardEvent } from 'react'
 import { useState, useRef, useEffect } from 'react'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
-import { Search, Tag, CornerDownLeft } from 'lucide-react'
+import { Search, Tag } from 'lucide-react'
 
 interface KeywordInputProps {
   value: string
@@ -139,10 +139,6 @@ function KeywordInput({
           <Button onClick={handleAdd} className="w-full sm:w-auto min-w-28">
             Добавить
           </Button>
-        </div>
-        <div className="mt-2 hidden items-center gap-2 text-xs text-text-secondary sm:flex">
-          <CornerDownLeft className="size-3.5" />
-          <span>Нажмите Enter, чтобы добавить слово</span>
         </div>
       </div>
     </div>

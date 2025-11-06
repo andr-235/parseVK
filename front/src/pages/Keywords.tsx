@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
+import { motion } from 'framer-motion'
 import { useKeywordsStore } from '../stores'
 import KeywordsHero from './Keywords/components/KeywordsHero'
 import KeywordsActionsPanel from './Keywords/components/KeywordsActionsPanel'
@@ -47,27 +48,41 @@ function Keywords() {
     }
   }
 
+  const container = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.08 } },
+  }
+
+  const fadeUp = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+  }
+
   return (
-    <div className="flex flex-col gap-8">
-      <KeywordsHero />
+    <motion.div className="flex flex-col gap-8" variants={container} initial="hidden" animate="visible">
+      <motion.div variants={fadeUp}>
+        <KeywordsHero />
+      </motion.div>
 
-      <Separator className="opacity-40" />
+      <motion.div variants={fadeUp}>
+        <Separator className="opacity-40" />
+      </motion.div>
 
-      <KeywordsActionsPanel
-        keywordValue={keywordValue}
-        setKeywordValue={setKeywordValue}
-        categoryValue={categoryValue}
-        setCategoryValue={setCategoryValue}
-        onAdd={handleAddKeyword}
-        onUpload={handleFileUpload}
-      />
+      <motion.div variants={fadeUp}>
+        <KeywordsActionsPanel
+          keywordValue={keywordValue}
+          setKeywordValue={setKeywordValue}
+          categoryValue={categoryValue}
+          setCategoryValue={setCategoryValue}
+          onAdd={handleAddKeyword}
+          onUpload={handleFileUpload}
+        />
+      </motion.div>
 
-      <KeywordsCategoriesCard
-        keywords={keywords}
-        isLoading={isLoading}
-        onDelete={deleteKeyword}
-      />
-    </div>
+      <motion.div variants={fadeUp}>
+        <KeywordsCategoriesCard keywords={keywords} isLoading={isLoading} onDelete={deleteKeyword} />
+      </motion.div>
+    </motion.div>
   )
 }
 

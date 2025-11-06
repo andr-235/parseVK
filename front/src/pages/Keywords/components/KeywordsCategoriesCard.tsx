@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, ChevronUp, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -145,21 +146,21 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
 
         {hasKeywords && (
           <div className="flex flex-col gap-4">
-            {groupedKeywords.some((group) => group.name === DEFAULT_CATEGORY) && (
-              <p className="text-sm text-text-secondary">
-                Чтобы упростить навигацию, ключевые слова без категории собираются в карточку «{DEFAULT_CATEGORY}».
-              </p>
-            )}
+            {/* Подсказка удалена для компактности */}
             {groupedKeywords.map((group) => {
               const isExpanded = expandedCategory === group.name
 
               return (
-                <div
+                <motion.div
                   key={group.name}
                   className={cn(
                     'rounded-3xl border border-border/60 bg-background p-5 transition-colors',
                     isExpanded ? 'border-primary/70 shadow-lg shadow-primary/10' : 'hover:border-primary/60'
                   )}
+                  initial={{ opacity: 0, y: 8 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-40px' }}
+                  transition={{ duration: 0.3 }}
                 >
                   <button
                     type="button"
@@ -178,8 +179,16 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
                     </span>
                   </button>
 
-                  {isExpanded && (
-                    <div className="mt-5">
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        key="expanded"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="mt-5"
+                      >
                       <ul className="flex flex-wrap gap-3">
                         {(showAllInExpanded ? group.keywords : group.keywords.slice(0, INITIAL_VISIBLE)).map((keyword) => (
                           <li
@@ -212,9 +221,10 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
                           </button>
                         </div>
                       )}
-                    </div>
-                  )}
-                </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
               )
             })}
           </div>
