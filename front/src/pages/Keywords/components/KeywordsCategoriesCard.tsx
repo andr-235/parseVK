@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ChevronUp, X } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { Keyword } from '@/types'
 import LoadingKeywordsState from './LoadingKeywordsState'
 import EmptyKeywordsState from './EmptyKeywordsState'
+import KeywordChip from '@/components/KeywordChip'
 
 interface KeywordsCategoriesCardProps {
   keywords: Keyword[]
@@ -189,25 +190,13 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
                         transition={{ duration: 0.25 }}
                         className="mt-5"
                       >
-                      <ul className="flex flex-wrap gap-3">
-                        {(showAllInExpanded ? group.keywords : group.keywords.slice(0, INITIAL_VISIBLE)).map((keyword) => (
-                          <li
-                            key={keyword.id}
-                            className="group relative inline-flex min-h-[36px] items-center justify-center px-1 text-sm text-text-primary"
-                          >
-                            <span className="font-medium transition-opacity duration-300 ease-out group-hover:opacity-0">{keyword.word}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(keyword.id)}
-                              className="pointer-events-none absolute inset-0 flex items-center justify-center bg-transparent text-destructive opacity-0 transition-transform transition-opacity duration-300 ease-out group-hover:pointer-events-auto group-hover:scale-110 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:outline-none focus-visible:ring-0"
-                              aria-label={`Удалить слово ${keyword.word}`}
-                            >
-                              <X className="h-5 w-5" strokeWidth={3} aria-hidden focusable="false" />
-                              <span className="sr-only">Удалить слово {keyword.word}</span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
+                      <motion.ul layout className="flex flex-wrap gap-2.5">
+                        <AnimatePresence initial={false}>
+                          {(showAllInExpanded ? group.keywords : group.keywords.slice(0, INITIAL_VISIBLE)).map((keyword) => (
+                            <KeywordChip key={keyword.id} id={keyword.id} text={keyword.word} onRemove={handleDelete} />
+                          ))}
+                        </AnimatePresence>
+                      </motion.ul>
                       {group.keywords.length > INITIAL_VISIBLE && (
                         <div className="mt-4">
                           <button
