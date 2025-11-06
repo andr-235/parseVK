@@ -99,8 +99,10 @@ function Watchlist() {
   const settings = useWatchlistStore((state) => state.settings)
   const updateSettings = useWatchlistStore((state) => state.updateSettings)
   const isUpdatingSettings = useWatchlistStore((state) => state.isUpdatingSettings)
+  const updateAuthorStatus = useWatchlistStore((state) => state.updateAuthorStatus)
 
   const [selectedAuthorId, setSelectedAuthorId] = useState<number | null>(null)
+  const [pendingRemoval, setPendingRemoval] = useState<Record<number, boolean>>({})
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -150,6 +152,29 @@ function Watchlist() {
 
     void loadMore()
   }, [fetchAuthors])
+
+  const handleRemoveFromWatchlist = useCallback(
+    (id: number) => {
+      setPendingRemoval((prev) => ({ ...prev, [id]: true }))
+
+      const remove = async () => {
+        try {
+          await updateAuthorStatus(id, 'STOPPED')
+        } catch (error) {
+          console.error('Не удалось убрать автора из списка «На карандаше»', error)
+        } finally {
+          setPendingRemoval((prev) => {
+            const next = { ...prev }
+            delete next[id]
+            return next
+          })
+        }
+      }
+
+      void remove()
+    },
+    [updateAuthorStatus],
+  )
 
   const handleToggleTrackAll = useCallback(() => {
     if (!settings) {
@@ -306,19 +331,37 @@ function Watchlist() {
           >
             Анализ фото
           </Button>
+          {item.status !== 'STOPPED' ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={Boolean(pendingRemoval[item.id])}
+              onClick={(event) => {
+                event.stopPropagation()
+                handleRemoveFromWatchlist(item.id)
+              }}
+            >
+              {pendingRemoval[item.id] ? 'Убираем…' : 'Убрать с карандаша'}
+            </Button>
+          ) : null}
         </div>
       ),
     },
-  ], [handleSelectAuthor, navigate])
+  ], [handleSelectAuthor, navigate, pendingRemoval, handleRemoveFromWatchlist])
 
   const {
     sortedItems: sortedAuthors,
     sortState: authorSortState,
     requestSort: requestAuthorSort,
-  } = useTableSorting(authors, authorColumns, {
-    initialKey: 'lastActivityAt',
-    initialDirection: 'desc',
-  })
+  } = useTableSorting(
+    useMemo(() => authors.filter((a) => a.status !== 'STOPPED'), [authors]),
+    authorColumns,
+    {
+      initialKey: 'lastActivityAt',
+      initialDirection: 'desc',
+    },
+  )
 
   const commentColumns = useMemo<TableColumn<WatchlistComment>[]>(() => [
     {
@@ -429,13 +472,13 @@ function Watchlist() {
           </div>
         ) : null}
 
-        {!isLoadingAuthors && authors.length === 0 ? (
+        {!isLoadingAuthors && sortedAuthors.length === 0 ? (
           <div className="py-6 text-center text-sm text-text-secondary">
             Добавьте автора из карточки комментария, чтобы начать мониторинг.
           </div>
         ) : null}
 
-        {authors.length > 0 ? (
+        {sortedAuthors.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
