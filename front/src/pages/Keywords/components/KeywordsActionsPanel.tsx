@@ -35,11 +35,10 @@ function KeywordsActionsPanel({
   return (
     <div className="grid gap-4">
       <SectionCard
-        title="Добавление ключевых слов"
-        description="Введите слово или загрузите файл со списком. Категория необязательна."
         className="border-none bg-transparent shadow-none"
-        headerClassName="border-none pb-2 px-0"
+        headerClassName="hidden"
         contentClassName="pt-0 px-0"
+        hideHeader
       >
         <div className="flex flex-col gap-3">
           <KeywordInput

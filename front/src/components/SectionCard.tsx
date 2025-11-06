@@ -3,13 +3,15 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/
 import { cn } from '@/lib/utils'
 
 interface SectionCardProps {
-  title: string
+  title?: string
   description?: string
   headerActions?: ReactNode
   children: ReactNode
   className?: string
   headerClassName?: string
   contentClassName?: string
+  titleClassName?: string
+  hideHeader?: boolean
 }
 
 function SectionCard({
@@ -19,25 +21,29 @@ function SectionCard({
   children,
   className,
   headerClassName,
-  contentClassName
+  contentClassName,
+  titleClassName,
+  hideHeader,
 }: SectionCardProps) {
   return (
     <Card className={cn('overflow-hidden border border-border/70 bg-background-secondary shadow-soft-lg', className)}>
-      <CardHeader className={cn('gap-6 border-b border-border/60 pb-6', headerClassName)}>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-xl">{title}</CardTitle>
-            {description && (
-              <CardDescription>{description}</CardDescription>
+      {!hideHeader && (
+        <CardHeader className={cn('gap-6 border-b border-border/60 pb-6', headerClassName)}>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              {title && <CardTitle className={cn('text-xl', titleClassName)}>{title}</CardTitle>}
+              {description && (
+                <CardDescription>{description}</CardDescription>
+              )}
+            </div>
+            {headerActions && (
+              <div className="flex items-center gap-3">
+                {headerActions}
+              </div>
             )}
           </div>
-          {headerActions && (
-            <div className="flex items-center gap-3">
-              {headerActions}
-            </div>
-          )}
-        </div>
-      </CardHeader>
+        </CardHeader>
+      )}
       <CardContent className={cn('px-6 py-4', contentClassName)}>
         {children}
       </CardContent>

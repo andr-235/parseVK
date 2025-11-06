@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { Keyword } from '@/types'
 import LoadingKeywordsState from './LoadingKeywordsState'
@@ -90,17 +90,7 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
   const totalCategories = groupedKeywords.length
   const totalKeywords = keywords.length
 
-  const subtitle = useMemo(() => {
-    if (isLoading && !hasKeywords) {
-      return 'Мы подготавливаем данные и проверяем их перед отображением.'
-    }
-
-    if (hasKeywords) {
-      return 'Категории формируются автоматически. Слова без категории попадают в раздел «Без категории».'
-    }
-
-    return 'Добавьте первое ключевое слово — категорию можно задать сразу или позже.'
-  }, [hasKeywords, isLoading])
+  // Описание скрыто по пожеланию — оставляем только бейджи в правом верхнем углу.
 
   const toggleCategory = (name: string) => {
     setExpandedCategory((current) => (current === name ? null : name))
@@ -117,27 +107,21 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
 
   return (
     <Card className="bg-transparent border-none shadow-none" aria-label="Категории ключевых слов">
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0 px-0 pt-0 pb-2">
-        <div className="flex min-w-[260px] flex-1 flex-col gap-2">
-          <CardTitle className="text-2xl font-bold text-text-primary">Категории ключевых слов</CardTitle>
-          <CardDescription className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">{subtitle}</CardDescription>
-        </div>
-        <div className="flex min-w-[220px] flex-col items-end gap-3">
-          {isLoading ? (
-            <Badge variant="secondary" className="bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]">
-              Загрузка…
+      <CardHeader className="flex items-center justify-end px-0 pt-0 pb-3">
+        {isLoading ? (
+          <Badge variant="secondary" className="bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]">
+            Загрузка…
+          </Badge>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]">
+              {totalKeywords} {getWordLabel(totalKeywords)}
             </Badge>
-          ) : (
-            <div className="flex flex-col items-end gap-2">
-              <Badge variant="secondary" className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]">
-                {totalKeywords} {getWordLabel(totalKeywords)}
-              </Badge>
-              <Badge variant="outline" className="border-dashed border-border/60 text-text-secondary">
-                {totalCategories} {getCategoryLabel(totalCategories)}
-              </Badge>
-            </div>
-          )}
-        </div>
+            <Badge variant="outline" className="border-dashed border-border/60 text-text-secondary">
+              {totalCategories} {getCategoryLabel(totalCategories)}
+            </Badge>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="px-0 pb-0 pt-0">
