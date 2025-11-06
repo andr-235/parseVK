@@ -47,11 +47,9 @@ function Keywords() {
     }
   }
 
-  const keywordCount = keywords.length
-
   return (
     <div className="flex flex-col gap-8">
-      <KeywordsHero keywordCount={keywordCount} />
+      <KeywordsHero />
 
       <Separator className="opacity-40" />
 
@@ -74,4 +72,3 @@ function Keywords() {
 }
 
 export default Keywords
-

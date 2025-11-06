@@ -2,9 +2,6 @@ import type { ChangeEvent, Dispatch, SetStateAction } from 'react'
 import KeywordInput from '@/components/KeywordInput'
 import FileUpload from '@/components/FileUpload'
 import SectionCard from '@/components/SectionCard'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
 
 interface KeywordsActionsPanelProps {
   keywordValue: string
@@ -36,7 +33,7 @@ function KeywordsActionsPanel({
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4">
       <SectionCard
         title="Добавление ключевых слов"
         description="Введите слово или загрузите файл со списком. Категория необязательна."
@@ -55,27 +52,6 @@ function KeywordsActionsPanel({
           />
           <FileUpload onUpload={onUpload} />
         </div>
-      </SectionCard>
-
-      <SectionCard title="Подсказки" headerClassName="border-none pb-4" contentClassName="pt-0">
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="-ml-2 px-2 text-text-secondary">
-              <HelpCircle className="mr-2 size-4" />
-              Показать рекомендации
-              <ChevronDown className="ml-2 size-4 data-[state=open]:hidden" />
-              <ChevronUp className="ml-2 hidden size-4 data-[state=open]:block" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-3">
-            <ul className="list-disc space-y-2 pl-5 text-sm text-text-secondary">
-              <li>После импорта быстро просмотрите список и удалите дубликаты.</li>
-              <li>Используйте короткие, понятные формулировки.</li>
-              <li>Для удобства группируйте слова по темам.</li>
-              <li>Формат файла: «слово; Категория» по строке.</li>
-            </ul>
-          </CollapsibleContent>
-        </Collapsible>
       </SectionCard>
     </div>
   )
