@@ -1,7 +1,8 @@
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, KeyboardEvent } from 'react'
 import { useState, useRef, useEffect } from 'react'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
+import { Search, Tag, CornerDownLeft } from 'lucide-react'
 
 interface KeywordInputProps {
   value: string
@@ -73,6 +74,13 @@ function KeywordInput({
     void onAdd()
   }
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      void onAdd()
+    }
+  }
+
   const handleFocus = () => {
     setIsFocused(true)
   }
@@ -90,40 +98,53 @@ function KeywordInput({
   }
 
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-1">
-        {onCategoryChange && (
-          <Input
-            ref={categoryInputRef}
-            value={categoryValue}
-            onChange={onCategoryChange}
-            onFocus={handleCategoryFocus}
-            onBlur={handleCategoryBlur}
-            placeholder={categoryPlaceholder}
-            className="sm:min-w-[220px]"
-            style={{
-              fontSize: categoryValue || isCategoryFocused ? '14px' : `${categoryFontSize}px`,
-              transition: 'font-size 0.2s ease-in-out'
-            }}
-          />
-        )}
-        <Input
-          ref={inputRef}
-          value={value}
-          onChange={onChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          placeholder={placeholder}
-          className="sm:min-w-[270px] sm:flex-1"
-          style={{
-            fontSize: value || isFocused ? '14px' : `${fontSize}px`,
-            transition: 'font-size 0.2s ease-in-out'
-          }}
-        />
+    <div className="flex flex-col gap-3">
+      <div className="rounded-2xl border border-border/60 bg-background/80 px-3 py-3 shadow-soft-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {onCategoryChange && (
+            <div className="relative sm:w-[220px]">
+              <Tag className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-secondary" />
+              <Input
+                ref={categoryInputRef}
+                value={categoryValue}
+                onChange={onCategoryChange}
+                onFocus={handleCategoryFocus}
+                onBlur={handleCategoryBlur}
+                placeholder={categoryPlaceholder}
+                className="pl-9"
+                style={{
+                  fontSize: categoryValue || isCategoryFocused ? '14px' : `${categoryFontSize}px`,
+                  transition: 'font-size 0.2s ease-in-out'
+                }}
+              />
+            </div>
+          )}
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-secondary" />
+            <Input
+              ref={inputRef}
+              value={value}
+              onChange={onChange}
+              onKeyDown={handleKeyDown}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              placeholder={placeholder}
+              className="sm:min-w-[270px] sm:flex-1 pl-9"
+              style={{
+                fontSize: value || isFocused ? '14px' : `${fontSize}px`,
+                transition: 'font-size 0.2s ease-in-out'
+              }}
+            />
+          </div>
+          <Button onClick={handleAdd} className="w-full sm:w-auto min-w-28">
+            Добавить
+          </Button>
+        </div>
+        <div className="mt-2 hidden items-center gap-2 text-xs text-text-secondary sm:flex">
+          <CornerDownLeft className="size-3.5" />
+          <span>Нажмите Enter, чтобы добавить слово</span>
+        </div>
       </div>
-      <Button onClick={handleAdd} className="w-full sm:w-auto">
-        Добавить
-      </Button>
     </div>
   )
 }

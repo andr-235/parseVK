@@ -1,6 +1,7 @@
 import { useRef } from 'react'
-import {Input} from './ui/input'
-import {Button} from './ui/button'
+import { Upload } from 'lucide-react'
+import { Input } from './ui/input'
+import { Button } from './ui/button'
 
 interface FileUploadProps {
   onUpload: (event: React.ChangeEvent<HTMLInputElement>) => void | Promise<void>
@@ -20,7 +21,7 @@ function FileUpload({ onUpload, accept = '.txt', buttonText = 'Загрузит�
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <Input
         ref={fileInputRef}
         type="file"
@@ -29,7 +30,8 @@ function FileUpload({ onUpload, accept = '.txt', buttonText = 'Загрузит�
         style={{ display: 'none' }}
         id="file-upload"
       />
-      <Button onClick={triggerUpload} className="w-full sm:w-auto">
+      <Button onClick={triggerUpload} variant="outline" size="sm" className="w-full sm:w-auto border-dashed">
+        <Upload className="mr-2 size-4" />
         {buttonText}
       </Button>
     </div>
