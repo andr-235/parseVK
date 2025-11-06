@@ -61,7 +61,7 @@ export class WatchlistService {
   ) {}
 
   async getAuthors(
-    params: { offset?: number; limit?: number } = {},
+    params: { offset?: number; limit?: number; excludeStopped?: boolean } = {},
   ): Promise<WatchlistAuthorListDto> {
     const settings = await this.ensureSettings();
     const offset = Math.max(params.offset ?? 0, 0);
@@ -69,10 +69,16 @@ export class WatchlistService {
       Math.max(params.limit ?? WATCHLIST_PAGE_SIZE, 1),
       200,
     );
+    const excludeStopped = params.excludeStopped !== false;
+
+    const where: Prisma.WatchlistAuthorWhereInput = { settingsId: settings.id };
+    if (excludeStopped) {
+      where.status = { not: WatchlistStatus.STOPPED };
+    }
 
     const [records, total] = await this.prisma.$transaction([
       this.prisma.watchlistAuthor.findMany({
-        where: { settingsId: settings.id },
+        where,
         include: { author: true, settings: true },
         orderBy: [
           { status: 'asc' },
@@ -82,7 +88,7 @@ export class WatchlistService {
         skip: offset,
         take: limit,
       }),
-      this.prisma.watchlistAuthor.count({ where: { settingsId: settings.id } }),
+      this.prisma.watchlistAuthor.count({ where }),
     ]);
 
     const commentCounts = await this.collectCommentCounts(

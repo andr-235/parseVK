@@ -10,6 +10,7 @@ import type {
 interface ListParams {
   offset?: number
   limit?: number
+  excludeStopped?: boolean
 }
 
 export const watchlistApi = {
@@ -22,6 +23,10 @@ export const watchlistApi = {
 
     if (typeof params?.limit === 'number') {
       searchParams.set('limit', String(params.limit))
+    }
+
+    if (typeof params?.excludeStopped === 'boolean') {
+      searchParams.set('excludeStopped', String(params.excludeStopped))
     }
 
     const query = searchParams.toString()

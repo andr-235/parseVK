@@ -32,13 +32,16 @@ export class WatchlistController {
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe)
     limit: number,
+    @Query('excludeStopped', new DefaultValuePipe(true)) excludeStoppedRaw?: string | boolean,
   ): Promise<WatchlistAuthorListDto> {
     const normalizedOffset = Math.max(offset, 0);
     const normalizedLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
+    const excludeStopped = String(excludeStoppedRaw).toLowerCase() !== 'false';
 
     return this.watchlistService.getAuthors({
       offset: normalizedOffset,
       limit: normalizedLimit,
+      excludeStopped,
     });
   }
 

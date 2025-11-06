@@ -355,13 +355,15 @@ function Watchlist() {
     sortState: authorSortState,
     requestSort: requestAuthorSort,
   } = useTableSorting(
-    useMemo(() => authors.filter((a) => a.status !== 'STOPPED'), [authors]),
+    authors,
     authorColumns,
     {
       initialKey: 'lastActivityAt',
       initialDirection: 'desc',
     },
   )
+
+  // totalAuthors уже возвращается с бэкенда без авторов со статусом STOPPED
 
   const commentColumns = useMemo<TableColumn<WatchlistComment>[]>(() => [
     {

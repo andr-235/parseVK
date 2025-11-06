@@ -11,7 +11,7 @@ import {
 } from '@/stores/watchlistStore.utils'
 
 const fetchWatchlistAuthors = async () => {
-  const response = await watchlistApi.getAuthors({ offset: 0, limit: WATCHLIST_PAGE_SIZE })
+  const response = await watchlistApi.getAuthors({ offset: 0, limit: WATCHLIST_PAGE_SIZE, excludeStopped: true })
   return {
     items: response.items.map(mapWatchlistAuthor),
     total: response.total,
@@ -39,7 +39,8 @@ export const useWatchlistAuthorsQuery = (enabled: boolean) => {
       const incoming = query.data.items
       const existing = state.authors
       const incomingIds = new Set(incoming.map((item) => item.id))
-      const extras = existing.filter((item) => !incomingIds.has(item.id))
+      // сохраняем элементы из уже загруженных страниц, но исключаем STOPPED
+      const extras = existing.filter((item) => !incomingIds.has(item.id) && item.status !== 'STOPPED')
 
       return {
         ...state,

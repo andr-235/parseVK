@@ -77,7 +77,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     }
 
     try {
-      const response = await watchlistApi.getAuthors({ offset, limit: pageSize })
+      const response = await watchlistApi.getAuthors({ offset, limit: pageSize, excludeStopped: true })
       const mapped = response.items.map(mapWatchlistAuthor)
 
       set((prev) => ({
@@ -169,24 +169,45 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
       const response = await watchlistApi.updateAuthor(id, { status })
       const mapped = mapWatchlistAuthor(response)
 
-      set((prev) => ({
-        authors: prev.authors.map((author) => (author.id === id ? mapped : author)),
-        selectedAuthor:
-          prev.selectedAuthor && prev.selectedAuthor.id === id
-            ? {
-                ...prev.selectedAuthor,
-                ...mapped,
-                comments: prev.selectedAuthor.comments,
-              }
-            : prev.selectedAuthor,
-        error: null,
-      }))
+      set((prev) => {
+        const wasStopped = prev.authors.find((a) => a.id === id)?.status === 'STOPPED'
+        const willBeStopped = mapped.status === 'STOPPED'
 
-      queryClient.setQueryData<WatchlistAuthorsQueryData>(queryKeys.watchlist.authors, (prevData) => ({
-        items: (prevData?.items ?? []).map((author) => (author.id === id ? mapped : author)),
-        total: prevData?.total ?? 0,
-        hasMore: prevData?.hasMore ?? false,
-      }))
+        const nextAuthors = willBeStopped
+          ? prev.authors.filter((author) => author.id !== id)
+          : prev.authors.map((author) => (author.id === id ? mapped : author))
+
+        const nextTotal = prev.totalAuthors + (willBeStopped && !wasStopped ? -1 : !willBeStopped && wasStopped ? 1 : 0)
+
+        return {
+          authors: nextAuthors,
+          totalAuthors: Math.max(nextTotal, 0),
+          selectedAuthor:
+            prev.selectedAuthor && prev.selectedAuthor.id === id
+              ? {
+                  ...prev.selectedAuthor,
+                  ...mapped,
+                  comments: prev.selectedAuthor.comments,
+                }
+              : prev.selectedAuthor,
+          error: null,
+        }
+      })
+
+      queryClient.setQueryData<WatchlistAuthorsQueryData>(queryKeys.watchlist.authors, (prevData) => {
+        const wasStopped = (prevData?.items ?? []).find((a) => a.id === id)?.status === 'STOPPED'
+        const willBeStopped = mapped.status === 'STOPPED'
+        const nextItems = willBeStopped
+          ? (prevData?.items ?? []).filter((a) => a.id !== id)
+          : (prevData?.items ?? []).map((a) => (a.id === id ? mapped : a))
+        const nextTotal = (prevData?.total ?? 0) + (willBeStopped && !wasStopped ? -1 : !willBeStopped && wasStopped ? 1 : 0)
+
+        return {
+          items: nextItems,
+          total: Math.max(nextTotal, 0),
+          hasMore: prevData?.hasMore ?? false,
+        }
+      })
 
       return mapped
     } catch (error) {
