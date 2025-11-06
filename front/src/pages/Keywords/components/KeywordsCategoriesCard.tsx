@@ -52,6 +52,8 @@ const getCategoryLabel = (count: number) => {
 
 function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCategoriesCardProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [showAllInExpanded, setShowAllInExpanded] = useState(false)
+  const INITIAL_VISIBLE = 30
 
   const groupedKeywords = useMemo<CategoryGroup[]>(() => {
     const groups = new Map<string, Keyword[]>()
@@ -75,13 +77,10 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
   }, [keywords])
 
   useEffect(() => {
-    if (groupedKeywords.length === 0) {
+    // Если набор категорий изменился и текущая категория исчезла — сбрасываем выбор
+    if (groupedKeywords.length === 0 || !groupedKeywords.some((g) => g.name === expandedCategory)) {
       setExpandedCategory(null)
-      return
-    }
-
-    if (!expandedCategory || !groupedKeywords.some((group) => group.name === expandedCategory)) {
-      setExpandedCategory(groupedKeywords[0]?.name ?? null)
+      setShowAllInExpanded(false)
     }
   }, [groupedKeywords, expandedCategory])
 
@@ -103,6 +102,7 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
 
   const toggleCategory = (name: string) => {
     setExpandedCategory((current) => (current === name ? null : name))
+    setShowAllInExpanded(false)
   }
 
   const handleDelete = async (id: number) => {
@@ -179,25 +179,40 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
                   </button>
 
                   {isExpanded && (
-                    <ul className="mt-5 flex flex-wrap gap-3">
-                      {group.keywords.map((keyword) => (
-                        <li
-                          key={keyword.id}
-                          className="group relative inline-flex min-h-[36px] items-center justify-center px-1 text-sm text-text-primary"
-                        >
-                          <span className="font-medium transition-opacity duration-300 ease-out group-hover:opacity-0">{keyword.word}</span>
+                    <div className="mt-5">
+                      <ul className="flex flex-wrap gap-3">
+                        {(showAllInExpanded ? group.keywords : group.keywords.slice(0, INITIAL_VISIBLE)).map((keyword) => (
+                          <li
+                            key={keyword.id}
+                            className="group relative inline-flex min-h-[36px] items-center justify-center px-1 text-sm text-text-primary"
+                          >
+                            <span className="font-medium transition-opacity duration-300 ease-out group-hover:opacity-0">{keyword.word}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(keyword.id)}
+                              className="pointer-events-none absolute inset-0 flex items-center justify-center bg-transparent text-destructive opacity-0 transition-transform transition-opacity duration-300 ease-out group-hover:pointer-events-auto group-hover:scale-110 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:outline-none focus-visible:ring-0"
+                              aria-label={`Удалить слово ${keyword.word}`}
+                            >
+                              <X className="h-5 w-5" strokeWidth={3} aria-hidden focusable="false" />
+                              <span className="sr-only">Удалить слово {keyword.word}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      {group.keywords.length > INITIAL_VISIBLE && (
+                        <div className="mt-4">
                           <button
                             type="button"
-                            onClick={() => handleDelete(keyword.id)}
-                          className="pointer-events-none absolute inset-0 flex items-center justify-center bg-transparent text-destructive opacity-0 transition-transform transition-opacity duration-300 ease-out group-hover:pointer-events-auto group-hover:scale-110 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:outline-none focus-visible:ring-0"
-                            aria-label={`Удалить слово ${keyword.word}`}
+                            onClick={() => setShowAllInExpanded((v) => !v)}
+                            className="text-sm text-accent-primary hover:underline"
                           >
-                            <X className="h-5 w-5" strokeWidth={3} aria-hidden focusable="false" />
-                            <span className="sr-only">Удалить слово {keyword.word}</span>
+                            {showAllInExpanded
+                              ? 'Свернуть'
+                              : `Показать все ${group.keywords.length} ${getWordLabel(group.keywords.length)}`}
                           </button>
-                        </li>
-                      ))}
-                    </ul>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )

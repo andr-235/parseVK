@@ -2,6 +2,9 @@ import type { ChangeEvent, Dispatch, SetStateAction } from 'react'
 import KeywordInput from '@/components/KeywordInput'
 import FileUpload from '@/components/FileUpload'
 import SectionCard from '@/components/SectionCard'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Button } from '@/components/ui/button'
+import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
 
 interface KeywordsActionsPanelProps {
   keywordValue: string
@@ -36,7 +39,7 @@ function KeywordsActionsPanel({
     <div className="grid gap-4 md:grid-cols-2">
       <SectionCard
         title="Добавление ключевых слов"
-        description="Введите слово вручную или загрузите готовый список. Категорию можно оставить пустой — в этом случае слово попадёт в общий раздел."
+        description="Введите слово или загрузите файл со списком. Категория необязательна."
         headerClassName="border-none pb-4"
         contentClassName="pt-0"
       >
@@ -54,18 +57,25 @@ function KeywordsActionsPanel({
         </div>
       </SectionCard>
 
-      <SectionCard
-        title="Советы по работе"
-        headerClassName="border-none pb-4"
-        contentClassName="pt-0"
-      >
-        <ul className="list-disc space-y-2 pl-5 text-sm text-text-secondary">
-          <li>Проверяйте список после импорта, чтобы удалить дубликаты.</li>
-          <li>Используйте короткие и понятные формулировки.</li>
-          <li>Добавляйте ключевые слова по темам для разных сценариев.</li>
-          <li>Если загрузить файл с уже существующими словами и новыми категориями, записи обновятся автоматически.</li>
-          <li>В файле указывайте каждое слово с новой строки. Можно добавить категорию через точку с запятой: «ключевое слово; Категория».</li>
-        </ul>
+      <SectionCard title="Подсказки" headerClassName="border-none pb-4" contentClassName="pt-0">
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="-ml-2 px-2 text-text-secondary">
+              <HelpCircle className="mr-2 size-4" />
+              Показать рекомендации
+              <ChevronDown className="ml-2 size-4 data-[state=open]:hidden" />
+              <ChevronUp className="ml-2 hidden size-4 data-[state=open]:block" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3">
+            <ul className="list-disc space-y-2 pl-5 text-sm text-text-secondary">
+              <li>После импорта быстро просмотрите список и удалите дубликаты.</li>
+              <li>Используйте короткие, понятные формулировки.</li>
+              <li>Для удобства группируйте слова по темам.</li>
+              <li>Формат файла: «слово; Категория» по строке.</li>
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
       </SectionCard>
     </div>
   )

@@ -11,7 +11,7 @@ function KeywordsHero({ keywordCount }: KeywordsHeroProps) {
   return (
     <PageHeroCard
       title="Ключевые слова"
-      description="Добавляйте ключевые слова для быстрого отслеживания релевантных комментариев. Вы можете ввести слова вручную или загрузить список из файла — категория для каждого слова необязательна."
+      description="Коротко: добавляйте слова для отслеживания комментариев. Введите вручную или загрузите файл. Категория — по желанию."
       actions={
         <Badge variant="secondary" className="bg-accent-primary/10 text-accent-primary px-5 py-2 text-sm font-semibold">
           {hasKeywords ? `${keywordCount} активно` : 'Пока нет слов'}
