@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
-import { motion } from 'framer-motion'
+import { motion, type Variants, easeOut } from 'framer-motion'
 import { useKeywordsStore } from '../stores'
 import KeywordsHero from './Keywords/components/KeywordsHero'
 import KeywordsActionsPanel from './Keywords/components/KeywordsActionsPanel'
@@ -48,14 +48,14 @@ function Keywords() {
     }
   }
 
-  const container = {
+  const container: Variants = {
     hidden: {},
     visible: { transition: { staggerChildren: 0.08 } },
   }
 
-  const fadeUp = {
+  const fadeUp: Variants = {
     hidden: { opacity: 0, y: 12 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: easeOut } },
   }
 
   return (
