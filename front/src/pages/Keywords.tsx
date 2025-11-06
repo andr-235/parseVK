@@ -4,7 +4,7 @@ import { useKeywordsStore } from '../stores'
 import KeywordsHero from './Keywords/components/KeywordsHero'
 import KeywordsActionsPanel from './Keywords/components/KeywordsActionsPanel'
 import KeywordsCategoriesCard from './Keywords/components/KeywordsCategoriesCard'
-import { Separator } from '@/components/ui/separator'
+// Separator удалён для уменьшения визуальной тяжести
 
 function Keywords() {
   const keywords = useKeywordsStore((state) => state.keywords)
@@ -59,13 +59,9 @@ function Keywords() {
   }
 
   return (
-    <motion.div className="flex flex-col gap-8" variants={container} initial="hidden" animate="visible">
+    <motion.div className="flex flex-col gap-5" variants={container} initial="hidden" animate="visible">
       <motion.div variants={fadeUp}>
         <KeywordsHero />
-      </motion.div>
-
-      <motion.div variants={fadeUp}>
-        <Separator className="opacity-40" />
       </motion.div>
 
       <motion.div variants={fadeUp}>

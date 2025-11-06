@@ -99,8 +99,8 @@ function KeywordInput({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-2xl border border-border/60 bg-background/80 px-3 py-3 shadow-soft-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="rounded-xl border border-border/40 bg-background/30 px-2.5 py-2.5 shadow-none backdrop-blur supports-[backdrop-filter]:bg-background/20">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
           {onCategoryChange && (
             <div className="relative sm:w-[220px]">
               <Tag className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-secondary" />
@@ -136,7 +136,7 @@ function KeywordInput({
               }}
             />
           </div>
-          <Button onClick={handleAdd} className="w-full sm:w-auto min-w-28">
+          <Button onClick={handleAdd} className="w-full sm:w-auto min-w-24">
             Добавить
           </Button>
         </div>

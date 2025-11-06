@@ -37,8 +37,9 @@ function KeywordsActionsPanel({
       <SectionCard
         title="Добавление ключевых слов"
         description="Введите слово или загрузите файл со списком. Категория необязательна."
-        headerClassName="border-none pb-4"
-        contentClassName="pt-0"
+        className="border-none bg-transparent shadow-none"
+        headerClassName="border-none pb-2 px-0"
+        contentClassName="pt-0 px-0"
       >
         <div className="flex flex-col gap-3">
           <KeywordInput

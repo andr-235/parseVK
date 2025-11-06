@@ -116,8 +116,8 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
   }
 
   return (
-    <Card className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Категории ключевых слов">
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-6 space-y-0 p-6 md:p-8">
+    <Card className="bg-transparent border-none shadow-none" aria-label="Категории ключевых слов">
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0 px-0 pt-0 pb-2">
         <div className="flex min-w-[260px] flex-1 flex-col gap-2">
           <CardTitle className="text-2xl font-bold text-text-primary">Категории ключевых слов</CardTitle>
           <CardDescription className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">{subtitle}</CardDescription>
@@ -140,13 +140,13 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
         </div>
       </CardHeader>
 
-      <CardContent className="p-6 pt-0 md:px-8 md:pb-8">
+      <CardContent className="px-0 pb-0 pt-0">
         {isLoading && !hasKeywords && <LoadingKeywordsState />}
 
         {!isLoading && !hasKeywords && <EmptyKeywordsState />}
 
         {hasKeywords && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {/* Подсказка удалена для компактности */}
             {groupedKeywords.map((group) => {
               const isExpanded = expandedCategory === group.name
@@ -155,8 +155,8 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
                 <motion.div
                   key={group.name}
                   className={cn(
-                    'rounded-3xl border border-border/60 bg-background p-5 transition-colors',
-                    isExpanded ? 'border-primary/70 shadow-lg shadow-primary/10' : 'hover:border-primary/60'
+                    'rounded-xl border border-border/40 bg-background/30 p-4 transition-colors',
+                    isExpanded ? 'border-primary/60' : 'hover:border-primary/50'
                   )}
                   initial={{ opacity: 0, y: 8 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -188,7 +188,7 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="mt-5"
+                        className="mt-3"
                       >
                       <motion.ul layout className="flex flex-wrap gap-2.5">
                         <AnimatePresence initial={false}>
