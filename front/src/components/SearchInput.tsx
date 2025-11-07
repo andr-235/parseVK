@@ -55,8 +55,8 @@ const SearchInput = memo(function SearchInput({
   )
 
   const baseInputClass = isGlass
-    ? 'h-12 w-full rounded-[1.75rem] border-0 bg-transparent text-base font-medium text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-0'
-    : 'w-full rounded-xl border border-border bg-background-primary text-sm text-text-primary shadow-soft-sm transition-colors duration-200 focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/40'
+    ? 'h-12 w-full rounded-[1.75rem] border-0 bg-transparent text-base font-medium text-text-primary caret-accent-primary placeholder:text-text-secondary/70 selection:bg-accent-primary/20 selection:text-text-primary focus:outline-none focus:ring-0 dark:text-text-light dark:placeholder:text-text-light/60 dark:selection:bg-accent-primary/40'
+    : 'w-full rounded-xl border border-border bg-background-primary text-sm text-text-primary caret-accent-primary shadow-soft-sm transition-colors duration-200 selection:bg-accent-primary/20 selection:text-text-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/40 dark:selection:bg-accent-primary/40 dark:selection:text-text-light'
 
   const paddingLeftClass = hasLeadingIcon ? 'pl-11' : isGlass ? 'pl-5' : 'pl-4'
   const paddingRightClass = isGlass ? 'pr-14' : 'pr-10'
