@@ -17,7 +17,6 @@ type FieldKey =
   | 'title'
   | 'url'
   | 'price'
-  | 'currency'
   | 'address'
   | 'contactName'
   | 'postedAt'
@@ -31,7 +30,6 @@ const ALL_FIELDS: { key: FieldKey; label: string }[] = [
   { key: 'title', label: 'Заголовок' },
   { key: 'url', label: 'Ссылка' },
   { key: 'price', label: 'Цена' },
-  { key: 'currency', label: 'Валюта' },
   { key: 'address', label: 'Адрес' },
   { key: 'contactName', label: 'Контактное лицо' },
   { key: 'postedAt', label: 'Дата публикации' },
@@ -186,7 +184,7 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
             {(() => {
               // Группировка полей по категориям
               const groups: { title: string; keys: FieldKey[] }[] = [
-                { title: 'Общие', keys: ['id','source','title','url','price','currency', 'postedAt','parsedAt'] },
+                { title: 'Общие', keys: ['id','source','title','url','price', 'postedAt','parsedAt'] },
                 { title: 'Контакты', keys: ['contactName'] },
                 { title: 'Гео', keys: ['address'] },
                 { title: 'Прочее', keys: ['description','metadata'] },

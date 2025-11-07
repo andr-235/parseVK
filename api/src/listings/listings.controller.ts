@@ -120,6 +120,34 @@ export class ListingsController {
       return null;
     };
 
+    const pickContactName = (item: ListingDto): string | null => {
+      const direct = typeof item.contactName === 'string' ? item.contactName.trim() : '';
+      if (direct.length > 0) {
+        return direct;
+      }
+
+      const md: unknown = item.metadata ?? null;
+      if (md && typeof md === 'object') {
+        const meta = md as Record<string, unknown>;
+        const candidates = [
+          meta['author'],
+          meta['author_name'],
+          meta['contact_name'],
+          meta['contactName'],
+        ];
+        for (const value of candidates) {
+          if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed.length > 0) {
+              return trimmed;
+            }
+          }
+        }
+      }
+
+      return null;
+    };
+
     for await (const batch of this.listingsService.iterateAllListings({ search, source, batchSize: 1000 })) {
       for (const item of batch) {
         const row = fields.map((key) => {
@@ -132,7 +160,7 @@ export class ListingsController {
               case 'price': return item.price;
               case 'currency': return item.currency;
               case 'address': return item.address;
-              case 'contactName': return item.contactName;
+              case 'contactName': return pickContactName(item);
               case 'publishedAt': return pickPublished(item);
               case 'postedAt': {
                 const md: unknown = item.metadata ?? null;
