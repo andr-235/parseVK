@@ -30,7 +30,7 @@ function FileUpload({ onUpload, accept = '.txt', buttonText = 'Загрузит�
         style={{ display: 'none' }}
         id="file-upload"
       />
-      <Button onClick={triggerUpload} variant="outline" size="sm" className="w-full sm:w-auto border-dashed">
+      <Button onClick={triggerUpload} variant="outline" className="w-full sm:w-auto">
         <Upload className="mr-2 size-4" />
         {buttonText}
       </Button>

@@ -1,7 +1,6 @@
 import type { ChangeEvent, KeyboardEvent } from 'react'
 import { useRef } from 'react'
 import { Input } from './ui/input'
-import { Button } from './ui/button'
 import { Search, Tag } from 'lucide-react'
 
 interface KeywordInputProps {
@@ -26,10 +25,6 @@ function KeywordInput({
   const inputRef = useRef<HTMLInputElement>(null)
   const categoryInputRef = useRef<HTMLInputElement>(null)
   
-
-  const handleAdd = () => {
-    void onAdd()
-  }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -85,11 +80,7 @@ function KeywordInput({
         </div>
       </div>
 
-      <div className="flex items-center justify-start">
-        <Button onClick={handleAdd} className="min-w-28">
-          Добавить
-        </Button>
-      </div>
+      
     </div>
   )
 }

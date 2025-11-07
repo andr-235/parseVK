@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { Keyword } from '@/types'
 import LoadingKeywordsState from './LoadingKeywordsState'
@@ -37,20 +36,7 @@ const getWordLabel = (count: number) => {
   return 'слов'
 }
 
-const getCategoryLabel = (count: number) => {
-  const remainder10 = count % 10
-  const remainder100 = count % 100
-
-  if (remainder10 === 1 && remainder100 !== 11) {
-    return 'категория'
-  }
-
-  if (remainder10 >= 2 && remainder10 <= 4 && (remainder100 < 12 || remainder100 > 14)) {
-    return 'категории'
-  }
-
-  return 'категорий'
-}
+// Подсчёт категорий/бейджи убраны по запросу
 
 function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCategoriesCardProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
@@ -87,10 +73,7 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
   }, [groupedKeywords, expandedCategory])
 
   const hasKeywords = keywords.length > 0
-  const totalCategories = groupedKeywords.length
-  const totalKeywords = keywords.length
-
-  // Описание скрыто по пожеланию — оставляем только бейджи в правом верхнем углу.
+  // Верхняя панель с бейджами удалена — оставляем только список
 
   const toggleCategory = (name: string) => {
     setExpandedCategory((current) => (current === name ? null : name))
@@ -107,23 +90,6 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
 
   return (
     <Card className="bg-transparent border-none shadow-none" aria-label="Категории ключевых слов">
-      <CardHeader className="flex items-center justify-end px-0 pt-0 pb-3">
-        {isLoading ? (
-          <Badge variant="secondary" className="bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]">
-            Загрузка…
-          </Badge>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]">
-              {totalKeywords} {getWordLabel(totalKeywords)}
-            </Badge>
-            <Badge variant="outline" className="border-dashed border-border/60 text-text-secondary">
-              {totalCategories} {getCategoryLabel(totalCategories)}
-            </Badge>
-          </div>
-        )}
-      </CardHeader>
-
       <CardContent className="px-0 pb-0 pt-0">
         {isLoading && !hasKeywords && <LoadingKeywordsState />}
 
