@@ -24,7 +24,7 @@ function PageHeroCard({ title, description, actions, footer, className }: PageHe
         <div className="space-y-3">
           <CardTitle className="text-3xl font-semibold text-text-primary">{title}</CardTitle>
           {description && (
-            <CardDescription className="max-w-2xl text-base leading-relaxed">
+            <CardDescription className="max-w-xl md:max-w-lg text-sm md:text-base leading-relaxed">
               {description}
             </CardDescription>
           )}

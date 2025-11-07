@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import toast from 'react-hot-toast'
 import { keywordsApi } from '../api/keywordsApi'
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/queries/queryKeys'
@@ -43,9 +44,11 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
         return { keywords: [...state.keywords, keyword] }
       })
       void queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
+      toast.success('Слово добавлено')
       return true
     } catch (error) {
       console.error('Failed to add keyword', error)
+      toast.error('Не удалось добавить слово')
       return false
     }
   },

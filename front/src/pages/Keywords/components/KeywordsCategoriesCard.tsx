@@ -7,6 +7,7 @@ import type { Keyword } from '@/types'
 import LoadingKeywordsState from './LoadingKeywordsState'
 import EmptyKeywordsState from './EmptyKeywordsState'
 import KeywordChip from '@/components/KeywordChip'
+import SearchInput from '@/components/SearchInput'
 
 interface KeywordsCategoriesCardProps {
   keywords: Keyword[]
@@ -41,6 +42,7 @@ const getWordLabel = (count: number) => {
 function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCategoriesCardProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [showAllInExpanded, setShowAllInExpanded] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const INITIAL_VISIBLE = 30
 
   const groupedKeywords = useMemo<CategoryGroup[]>(() => {
@@ -73,6 +75,16 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
   }, [groupedKeywords, expandedCategory])
 
   const hasKeywords = keywords.length > 0
+
+  const filteredGroups = useMemo(() => {
+    if (!searchTerm.trim()) return groupedKeywords
+    const term = searchTerm.toLowerCase()
+    return groupedKeywords.filter((g) => {
+      const byName = g.name.toLowerCase().includes(term)
+      const byItems = g.keywords.some((k) => k.word.toLowerCase().includes(term))
+      return byName || byItems
+    })
+  }, [groupedKeywords, searchTerm])
   // Верхняя панель с бейджами удалена — оставляем только список
 
   const toggleCategory = (name: string) => {
@@ -97,8 +109,20 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
 
         {hasKeywords && (
           <div className="flex flex-col gap-3">
-            {/* Подсказка удалена для компактности */}
-            {groupedKeywords.map((group) => {
+            <div className="mb-1">
+              <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Поиск по категориям и словам"
+                variant="glass"
+              />
+            </div>
+            {filteredGroups.length === 0 && (
+              <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-text-secondary">
+                Ничего не найдено
+              </div>
+            )}
+            {filteredGroups.map((group) => {
               const isExpanded = expandedCategory === group.name
 
               return (
@@ -124,6 +148,15 @@ function KeywordsCategoriesCard({ keywords, isLoading, onDelete }: KeywordsCateg
                       <span className="text-sm text-text-secondary">
                         {group.keywords.length} {getWordLabel(group.keywords.length)}
                       </span>
+                      {!isExpanded && group.keywords.length > 0 && (
+                        <span className="text-xs text-text-secondary/90">
+                          {group.keywords
+                            .slice(0, 4)
+                            .map((k) => k.word)
+                            .join(', ')}
+                          {group.keywords.length > 4 ? '…' : ''}
+                        </span>
+                      )}
                     </div>
                     <span className="text-text-secondary">
                       {isExpanded ? <ChevronUp className="size-5" aria-hidden /> : <ChevronDown className="size-5" aria-hidden />}
