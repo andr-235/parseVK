@@ -78,6 +78,11 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
     }
   }, [isOpen])
 
+  // ВАЖНО: хуки должны вызываться на каждом рендере в одинаковом порядке.
+  // fields вычисляем до возможного раннего возврата.
+  const selectedCount = selected.size
+  const fields = useMemo(() => Array.from(selected), [selected])
+
   if (!isOpen) {
     return null
   }
@@ -96,9 +101,6 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
 
   const handleSelectAll = () => setSelected(new Set(ALL_FIELDS.map((f) => f.key)))
   const handleDeselectAll = () => setSelected(new Set())
-
-  const selectedCount = selected.size
-  const fields = useMemo(() => Array.from(selected), [selected])
 
   const handleExport = async () => {
     if (isExporting || selectedCount === 0) return
@@ -227,4 +229,3 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
 }
 
 export default ExportListingsModal
-
