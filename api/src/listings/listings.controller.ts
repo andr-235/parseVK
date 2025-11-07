@@ -50,6 +50,8 @@ export class ListingsController {
       'address',
       'contactName',
       'publishedAt',
+      'postedAt',
+      'parsedAt',
       'images',
       'description',
       'metadata',
@@ -132,6 +134,28 @@ export class ListingsController {
               case 'address': return item.address;
               case 'contactName': return item.contactName;
               case 'publishedAt': return pickPublished(item);
+              case 'postedAt': {
+                const md: unknown = item.metadata ?? null;
+                if (md && typeof md === 'object') {
+                  const meta = md as Record<string, unknown>;
+                  const candidates = [meta['posted_at'], meta['postedAt']];
+                  for (const v of candidates) {
+                    if (typeof v === 'string' && v.trim().length > 0) return v;
+                  }
+                }
+                return '';
+              }
+              case 'parsedAt': {
+                const md: unknown = item.metadata ?? null;
+                if (md && typeof md === 'object') {
+                  const meta = md as Record<string, unknown>;
+                  const candidates = [meta['parsed_at'], meta['parsedAt']];
+                  for (const v of candidates) {
+                    if (typeof v === 'string' && v.trim().length > 0) return v;
+                  }
+                }
+                return '';
+              }
               case 'images': return item.images;
               case 'description': return item.description;
               case 'metadata': return item.metadata ? JSON.stringify(item.metadata) : '';
