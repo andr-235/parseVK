@@ -125,4 +125,41 @@ export const listingsService = {
       throw error
     }
   },
+
+  async exportCsv(params: { search?: string; source?: string; limit?: number; all?: boolean; fields?: string[] }) {
+    try {
+      const { blob, disposition } = await listingsApi.exportListingsCsv(params)
+
+      let filename = 'listings.csv'
+      const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(disposition ?? '')
+      const encoded = match?.[1] || null
+      const simple = match?.[2] || null
+      if (encoded) {
+        try {
+          filename = decodeURIComponent(encoded)
+        } catch {
+          filename = encoded
+        }
+      } else if (simple) {
+        filename = simple
+      }
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      toast.success('Экспорт выполнен')
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[listingsService] exportCsv error', error)
+      }
+      const message = error instanceof Error ? error.message : 'Не удалось выгрузить CSV'
+      toast.error(message)
+      throw error
+    }
+  },
 }

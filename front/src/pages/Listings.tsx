@@ -22,6 +22,7 @@ import {
   CardDescription,
 } from '@/components/ui/card'
 import { listingsService } from '@/services/listingsService'
+import ExportListingsModal from '@/components/ExportListingsModal'
 import type { IListing } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ExternalLink, MapPin, Phone, Calendar, Tag } from 'lucide-react'
@@ -707,6 +708,7 @@ function Listings() {
   const [fetchedCount, setFetchedCount] = useState(0)
   const [refreshToken, setRefreshToken] = useState(0)
   const [isListLoading, setIsListLoading] = useState(false)
+  const [isExportOpen, setIsExportOpen] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -858,6 +860,8 @@ function Listings() {
     setRefreshToken((token) => token + 1)
   }
 
+  // Экспорт теперь через модальное окно-конструктор
+
   const resolvedUploadSource = uploadSourceMode === 'custom'
     ? customSource
     : uploadSourceMode
@@ -977,15 +981,20 @@ function Listings() {
         title="Каталог объявлений"
         description="Используйте фильтры и поиск для быстрого нахождения нужных объявлений. Каждая карточка содержит всю важную информацию об объекте."
         headerActions={(
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleManualRefresh}
-            disabled={isListLoading}
-          >
-            {isListLoading ? 'Обновляем…' : 'Обновить'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={isListLoading}
+            >
+              {isListLoading ? 'Обновляем…' : 'Обновить'}
+            </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setIsExportOpen(true)}>
+              Экспорт CSV
+            </Button>
+          </div>
         )}
       >
         <div className="flex flex-col gap-6">
@@ -1063,6 +1072,12 @@ function Listings() {
           />
         </div>
       </SectionCard>
+      <ExportListingsModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        defaultSearch={appliedSearch}
+        defaultSource={querySource}
+      />
     </div>
   )
 }

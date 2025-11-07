@@ -58,4 +58,27 @@ export const listingsApi = {
 
     return response.json()
   },
+
+  async exportListingsCsv(params: { search?: string; source?: string; limit?: number; all?: boolean; fields?: string[] }) {
+    const searchParams = new URLSearchParams()
+    if (params.search) searchParams.set('search', params.search)
+    if (params.source) searchParams.set('source', params.source)
+    if (params.limit && Number.isFinite(params.limit)) {
+      searchParams.set('limit', String(params.limit))
+    }
+    if (params.all) searchParams.set('all', '1')
+    if (params.fields && params.fields.length > 0) {
+      searchParams.set('fields', params.fields.join(','))
+    }
+    const query = searchParams.toString()
+    const url = `${API_URL}/listings/export${query ? `?${query}` : ''}`
+    const response = await fetch(url)
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      throw new Error(text || 'Failed to export listings')
+    }
+    const blob = await response.blob()
+    const disposition = response.headers.get('Content-Disposition') || ''
+    return { blob, disposition }
+  },
 }
