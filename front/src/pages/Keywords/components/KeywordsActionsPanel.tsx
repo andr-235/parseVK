@@ -36,16 +36,12 @@ function KeywordsActionsPanel({
   return (
     <div className="grid gap-4">
       <SectionCard
-        className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-accent-primary/10 via-background-secondary to-background-secondary/95 shadow-[0_22px_55px_-28px_rgba(37,99,235,0.28)] transition-shadow duration-300 hover:shadow-[0_28px_70px_-30px_rgba(37,99,235,0.38)] supports-[backdrop-filter]:backdrop-blur-sm dark:from-white/10 dark:via-white/5 dark:to-white/[0.08]"
+        className="border-none bg-transparent shadow-none"
         headerClassName="hidden"
-        contentClassName="px-4 py-4 md:px-5"
+        contentClassName="pt-0 px-0"
         hideHeader
       >
         <div className="relative isolate flex flex-col gap-4">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-16 -top-16 -z-10 size-40 rounded-full bg-accent-primary/25 blur-3xl dark:bg-accent-primary/30"
-          />
           <KeywordInput
             value={keywordValue}
             categoryValue={categoryValue}
