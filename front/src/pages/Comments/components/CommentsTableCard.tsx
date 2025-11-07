@@ -1,23 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
-import type { Comment, Keyword } from '@/types'
 import LoadingCommentsState from './LoadingCommentsState'
 import EmptyCommentsState from './EmptyCommentsState'
 import CommentCard from './CommentCard'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-
-interface CategorizedComment {
-  comment: Comment
-  matchedKeywords: Keyword[]
-}
-
-interface CategorizedGroup {
-  category: string
-  comments: CategorizedComment[]
-}
+import useCommentsTableCardController from '../hooks/useCommentsTableCardController'
+import type { CategorizedComment, CategorizedGroup } from '../types/commentsTable'
 
 interface CommentsTableCardProps {
   groupedComments: CategorizedGroup[]
@@ -88,78 +78,28 @@ function CommentsTableCard({
   watchlistPending,
   keywordCommentsTotal,
 }: CommentsTableCardProps) {
-  const hasComments = visibleCount > 0
-  const totalAvailable = Math.max(totalCount, loadedCount)
-  const keywordGroups = useMemo(
-    () => groupedComments.filter((group) => group.comments.length > 0),
-    [groupedComments],
-  )
-  const hasKeywordGroups = keywordGroups.length > 0
-  const hasCommentsWithoutKeywords = commentsWithoutKeywords.length > 0
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
-
-  useEffect(() => {
-    setExpandedCategories((previous) => {
-      const next: Record<string, boolean> = {}
-      let changed = false
-
-      keywordGroups.forEach((group) => {
-        const prevValue = previous[group.category]
-        if (prevValue === undefined) {
-          changed = true
-        }
-        next[group.category] = prevValue ?? true
-      })
-
-      if (!changed) {
-        const prevKeys = Object.keys(previous)
-        if (prevKeys.length !== keywordGroups.length) {
-          changed = true
-        } else {
-          for (const key of prevKeys) {
-            if (!(key in next)) {
-              changed = true
-              break
-            }
-          }
-        }
-      }
-
-      return changed ? next : previous
-    })
-  }, [keywordGroups])
-
-  const toggleCategory = (category: string) => {
-    setExpandedCategories((previous) => ({
-      ...previous,
-      [category]: !(previous[category] ?? true),
-    }))
-  }
+  const {
+    keywordGroups,
+    hasComments,
+    hasKeywordGroups,
+    hasCommentsWithoutKeywords,
+    expandedCategories,
+    toggleCategory,
+    subtitle,
+    loadedSuffix,
+    totalCategories,
+  } = useCommentsTableCardController({
+    groupedComments,
+    commentsWithoutKeywords,
+    isLoading,
+    showOnlyKeywordComments,
+    hasDefinedKeywords,
+    totalCount,
+    loadedCount,
+    visibleCount,
+  })
 
   const keywordCommentCount = keywordCommentsTotal
-  const totalCategories = keywordGroups.length
-  const loadedSuffix =
-    totalAvailable > 0 ? ` из ${totalAvailable}` : ''
-
-  const subtitle = useMemo(() => {
-    if (isLoading && !hasComments) {
-      return 'Мы подготавливаем данные и проверяем их перед отображением.'
-    }
-
-    if (hasKeywordGroups) {
-      return 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте фильтры, чтобы сосредоточиться на нужных темах.'
-    }
-
-    if (hasCommentsWithoutKeywords && !hasDefinedKeywords) {
-      return 'Ключевые слова пока не заданы — все найденные комментарии находятся в разделе «Без ключевых слов».'
-    }
-
-    if (hasComments && !showOnlyKeywordComments && hasCommentsWithoutKeywords) {
-      return 'Комментарии без совпадений с ключевыми словами отображаются в отдельном блоке.'
-    }
-
-    return 'После добавления групп и запуска парсинга комментарии появятся в списке.'
-  }, [hasComments, hasCommentsWithoutKeywords, hasDefinedKeywords, hasKeywordGroups, isLoading, showOnlyKeywordComments])
 
   return (
     <Card
