@@ -22,7 +22,6 @@ type FieldKey =
   | 'contactName'
   | 'postedAt'
   | 'parsedAt'
-  | 'images'
   | 'description'
   | 'metadata'
 
@@ -37,7 +36,6 @@ const ALL_FIELDS: { key: FieldKey; label: string }[] = [
   { key: 'contactName', label: 'Контактное лицо' },
   { key: 'postedAt', label: 'Дата публикации' },
   { key: 'parsedAt', label: 'Дата парсинга' },
-  { key: 'images', label: 'Изображения' },
   { key: 'description', label: 'Описание' },
   { key: 'metadata', label: 'Метаданные' },
 ]
@@ -191,7 +189,6 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
                 { title: 'Общие', keys: ['id','source','title','url','price','currency', 'postedAt','parsedAt'] },
                 { title: 'Контакты', keys: ['contactName'] },
                 { title: 'Гео', keys: ['address'] },
-                { title: 'Медиа', keys: ['images'] },
                 { title: 'Прочее', keys: ['description','metadata'] },
               ]
 
