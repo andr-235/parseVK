@@ -20,7 +20,6 @@ type FieldKey =
   | 'currency'
   | 'address'
   | 'contactName'
-  | 'publishedAt'
   | 'postedAt'
   | 'parsedAt'
   | 'images'
@@ -36,9 +35,8 @@ const ALL_FIELDS: { key: FieldKey; label: string }[] = [
   { key: 'currency', label: 'Валюта' },
   { key: 'address', label: 'Адрес' },
   { key: 'contactName', label: 'Контактное лицо' },
-  { key: 'publishedAt', label: 'Опубликовано (publishedAt)' },
-  { key: 'postedAt', label: 'posted_at' },
-  { key: 'parsedAt', label: 'parsed_at' },
+  { key: 'postedAt', label: 'Дата публикации' },
+  { key: 'parsedAt', label: 'Дата парсинга' },
   { key: 'images', label: 'Изображения' },
   { key: 'description', label: 'Описание' },
   { key: 'metadata', label: 'Метаданные' },
@@ -190,7 +188,7 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
             {(() => {
               // Группировка полей по категориям
               const groups: { title: string; keys: FieldKey[] }[] = [
-                { title: 'Общие', keys: ['id','source','title','url','price','currency','publishedAt','postedAt','parsedAt'] },
+                { title: 'Общие', keys: ['id','source','title','url','price','currency', 'postedAt','parsedAt'] },
                 { title: 'Контакты', keys: ['contactName'] },
                 { title: 'Гео', keys: ['address'] },
                 { title: 'Медиа', keys: ['images'] },
