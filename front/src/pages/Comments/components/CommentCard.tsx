@@ -7,6 +7,8 @@ import type { Comment, Keyword } from '@/types'
 import { highlightKeywords } from '@/utils/highlightKeywords'
 import { CheckCircle2, ExternalLink, MessageSquare, BookmarkPlus } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
+import { getAuthorInitials } from '../utils/getAuthorInitials'
+import { formatDateTime } from '../utils/formatDateTime'
 
 interface CommentCardProps {
   comment: Comment
@@ -17,44 +19,6 @@ interface CommentCardProps {
   matchedKeywords?: Keyword[]
 }
 
-const getAuthorInitials = (name: string): string => {
-  const sanitized = name.replace(/^https?:\/\//, '')
-
-  if (!sanitized.trim()) {
-    return '—'
-  }
-
-  if (sanitized.startsWith('vk.com/id')) {
-    return 'VK'
-  }
-
-  const parts = sanitized.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) {
-    return sanitized.charAt(0).toUpperCase() || '—'
-  }
-
-  const initials = parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('')
-  return initials || parts[0].charAt(0).toUpperCase() || '—'
-}
-
-const formatDateTime = (value: string): string => {
-  if (!value) {
-    return '-'
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return date.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 function CommentCard({
   comment,
