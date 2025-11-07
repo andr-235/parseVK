@@ -211,7 +211,7 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
         <div
           className={cn(
             'flex items-center gap-3 transition-all',
-            isCollapsed ? 'justify-center' : ''
+            isCollapsed ? 'flex-col items-center justify-center gap-2' : ''
           )}
         >
           <img
@@ -220,23 +220,40 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
             className={cn('h-10 w-10 shrink-0 rounded-xl object-contain', isCollapsed && 'h-9 w-9')}
           />
           {!isCollapsed && <h2 className="text-xl font-semibold leading-tight">{title}</h2>}
+          {isCollapsed && (
+            <button
+              onClick={() => setIsCollapsed(false)}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-full border text-sm transition-all duration-200',
+                isDarkMode
+                  ? 'border-white/10 bg-white/5 text-text-light hover:border-white/20 hover:bg-white/10'
+                  : 'border border-border bg-background-secondary text-text-primary hover:border-accent-primary/40 hover:bg-background-secondary/80'
+              )}
+              aria-label="Expand Sidebar"
+              title="Развернуть"
+            >
+              <ChevronLeftIcon className={cn('h-4 w-4 rotate-180 transition-transform duration-200')} />
+            </button>
+          )}
         </div>
-        <div className={cn('flex items-center gap-2', isCollapsed && 'flex-col gap-1')}>
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-full border text-sm transition-all duration-200',
-              isDarkMode
-                ? 'border-white/10 bg-white/5 text-text-light hover:border-white/20 hover:bg-white/10'
-                : 'border border-border bg-background-secondary text-text-primary hover:border-accent-primary/40 hover:bg-background-secondary/80'
-            )}
-            aria-label="Toggle Sidebar"
-            title={isCollapsed ? 'Развернуть' : 'Свернуть'}
-          >
-            <ChevronLeftIcon className={cn('h-4 w-4 transition-transform duration-200', isCollapsed && 'rotate-180')} />
-          </button>
-          <ThemeToggle />
-        </div>
+        {!isCollapsed && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-full border text-sm transition-all duration-200',
+                isDarkMode
+                  ? 'border-white/10 bg-white/5 text-text-light hover:border-white/20 hover:bg-white/10'
+                  : 'border border-border bg-background-secondary text-text-primary hover:border-accent-primary/40 hover:bg-background-secondary/80'
+              )}
+              aria-label="Collapse Sidebar"
+              title="Свернуть"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </button>
+            <ThemeToggle />
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
