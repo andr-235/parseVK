@@ -14,26 +14,13 @@ interface ExportListingsModalProps {
 type FieldKey =
   | 'id'
   | 'source'
-  | 'externalId'
   | 'title'
   | 'url'
   | 'price'
   | 'currency'
   | 'address'
-  | 'city'
-  | 'rooms'
-  | 'areaTotal'
-  | 'areaLiving'
-  | 'areaKitchen'
-  | 'floor'
-  | 'floorsTotal'
-  | 'latitude'
-  | 'longitude'
   | 'contactName'
-  | 'contactPhone'
   | 'publishedAt'
-  | 'createdAt'
-  | 'updatedAt'
   | 'images'
   | 'description'
   | 'metadata'
@@ -41,26 +28,13 @@ type FieldKey =
 const ALL_FIELDS: { key: FieldKey; label: string }[] = [
   { key: 'id', label: 'ID' },
   { key: 'source', label: 'Источник' },
-  { key: 'externalId', label: 'Внешний ID' },
   { key: 'title', label: 'Заголовок' },
   { key: 'url', label: 'Ссылка' },
   { key: 'price', label: 'Цена' },
   { key: 'currency', label: 'Валюта' },
   { key: 'address', label: 'Адрес' },
-  { key: 'city', label: 'Город' },
-  { key: 'rooms', label: 'Комнат' },
-  { key: 'areaTotal', label: 'Площадь общая' },
-  { key: 'areaLiving', label: 'Площадь жилая' },
-  { key: 'areaKitchen', label: 'Площадь кухня' },
-  { key: 'floor', label: 'Этаж' },
-  { key: 'floorsTotal', label: 'Этажей всего' },
-  { key: 'latitude', label: 'Широта' },
-  { key: 'longitude', label: 'Долгота' },
   { key: 'contactName', label: 'Контактное лицо' },
-  { key: 'contactPhone', label: 'Телефон' },
   { key: 'publishedAt', label: 'Опубликовано' },
-  { key: 'createdAt', label: 'Создано' },
-  { key: 'updatedAt', label: 'Обновлено' },
   { key: 'images', label: 'Изображения' },
   { key: 'description', label: 'Описание' },
   { key: 'metadata', label: 'Метаданные' },
@@ -212,11 +186,11 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
             {(() => {
               // Группировка полей по категориям
               const groups: { title: string; keys: FieldKey[] }[] = [
-                { title: 'Общие', keys: ['id','source','externalId','title','url','price','currency','description','metadata','createdAt','updatedAt'] },
-                { title: 'Контакты', keys: ['contactName','contactPhone'] },
-                { title: 'Гео', keys: ['address','city','latitude','longitude'] },
-                { title: 'Характеристики', keys: ['rooms','areaTotal','areaLiving','areaKitchen','floor','floorsTotal','publishedAt'] },
+                { title: 'Общие', keys: ['id','source','title','url','price','currency','publishedAt'] },
+                { title: 'Контакты', keys: ['contactName'] },
+                { title: 'Гео', keys: ['address'] },
                 { title: 'Медиа', keys: ['images'] },
+                { title: 'Прочее', keys: ['description','metadata'] },
               ]
 
               const labelByKey = Object.fromEntries(ALL_FIELDS.map((f) => [f.key, f.label])) as Record<FieldKey, string>

@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import { ListingsService } from './listings.service';
 import type { ListingsResponseDto } from './dto/listings-response.dto';
+import type { ListingDto } from './dto/listing.dto';
 import type { Response } from 'express';
 
 @Controller('listings')
@@ -40,7 +41,18 @@ export class ListingsController {
     const source = exportAll ? undefined : this.normalizeSource(sourceParam) ?? undefined;
 
     const defaultFields = [
-      'id','source','externalId','title','url','price','currency','address','city','rooms','areaTotal','areaLiving','areaKitchen','floor','floorsTotal','latitude','longitude','contactName','contactPhone','publishedAt','createdAt','updatedAt','images','description','metadata',
+      'id',
+      'source',
+      'title',
+      'url',
+      'price',
+      'currency',
+      'address',
+      'contactName',
+      'publishedAt',
+      'images',
+      'description',
+      'metadata',
     ] as const;
     type FieldKey = typeof defaultFields[number];
 
@@ -86,6 +98,26 @@ export class ListingsController {
     res?.write(bom);
     res?.write(fields.join(',') + '\n');
 
+    const pickPublished = (item: ListingDto): string | null => {
+      if (item.publishedAt) return item.publishedAt;
+      const md: unknown = item.metadata ?? null;
+      if (md && typeof md === 'object') {
+        const meta = md as Record<string, unknown>;
+        const candidates = [
+          meta['published_at'],
+          meta['publishedAt'],
+          meta['posted_at'],
+          meta['postedAt'],
+          meta['parsed_at'],
+          meta['parsedAt'],
+        ];
+        for (const v of candidates) {
+          if (typeof v === 'string' && v.trim().length > 0) return v;
+        }
+      }
+      return null;
+    };
+
     for await (const batch of this.listingsService.iterateAllListings({ search, source, batchSize: 1000 })) {
       for (const item of batch) {
         const row = fields.map((key) => {
@@ -93,26 +125,13 @@ export class ListingsController {
             switch (key) {
               case 'id': return item.id;
               case 'source': return item.source;
-              case 'externalId': return item.externalId;
               case 'title': return item.title;
               case 'url': return item.url;
               case 'price': return item.price;
               case 'currency': return item.currency;
               case 'address': return item.address;
-              case 'city': return item.city;
-              case 'rooms': return item.rooms;
-              case 'areaTotal': return item.areaTotal;
-              case 'areaLiving': return item.areaLiving;
-              case 'areaKitchen': return item.areaKitchen;
-              case 'floor': return item.floor;
-              case 'floorsTotal': return item.floorsTotal;
-              case 'latitude': return item.latitude;
-              case 'longitude': return item.longitude;
               case 'contactName': return item.contactName;
-              case 'contactPhone': return item.contactPhone;
-              case 'publishedAt': return item.publishedAt;
-              case 'createdAt': return item.createdAt;
-              case 'updatedAt': return item.updatedAt;
+              case 'publishedAt': return pickPublished(item);
               case 'images': return item.images;
               case 'description': return item.description;
               case 'metadata': return item.metadata ? JSON.stringify(item.metadata) : '';
