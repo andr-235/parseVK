@@ -25,3 +25,10 @@ dist-ssr
 .env
 node_modules
 dist
+
+/.storybook
+*storybook.log
+storybook-static
+/coverage
+/coverage-watchlist
+/stories
