@@ -426,7 +426,7 @@ function Authors() {
           </TableHeader>
           <TableBody>
             {isLoading && authors.length === 0 ? (
-              <TableRow>
+              <TableRow key="loading-row">
                 <TableCell colSpan={9}>
                   <div className="flex w-full justify-center py-10">
                     <Spinner className="h-6 w-6" />
@@ -515,7 +515,7 @@ function Authors() {
             })}
 
             {showEmptyState ? (
-              <TableRow>
+              <TableRow key="empty-state-row">
                 <TableCell colSpan={9}>
                   <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border/60 bg-background-primary/40 px-6 py-12 text-center text-text-secondary">
                     <p className="text-lg font-medium text-text-primary">{emptyTitle}</p>
@@ -531,7 +531,7 @@ function Authors() {
         </Table>
 
         {hasMore && (
-          <div className="flex justify-center pt-2">
+          <div key="load-more-container" className="flex justify-center pt-2">
             <Button onClick={handleLoadMore} disabled={isLoadingMore} variant="outline">
               {isLoadingMore ? (
                 <span className="flex items-center gap-2">

@@ -38,6 +38,7 @@ export function TableSortButton({
         'group inline-flex w-full items-center justify-between gap-1 rounded-sm px-2 py-1 text-left text-sm font-medium transition-colors hover:bg-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         className,
       )}
+      aria-pressed={direction !== null}
       {...props}
     >
       <span className="whitespace-nowrap">{children}</span>

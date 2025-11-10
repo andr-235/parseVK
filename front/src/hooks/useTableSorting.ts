@@ -110,8 +110,13 @@ const deriveSortValue = <T,>(
   item: T,
   column: TableColumn<T>,
 ): ComparableValue => {
-  const raw = column.sortValue ? column.sortValue(item) : extractValueFromItem(item, column.key)
-  return normalizeSortValue(raw ?? null)
+  try {
+    const raw = column.sortValue ? column.sortValue(item) : extractValueFromItem(item, column.key)
+    return normalizeSortValue(raw ?? null)
+  } catch (error) {
+    console.error(`Ошибка при извлечении значения сортировки для колонки ${column.key}:`, error)
+    return null
+  }
 }
 
 export function useTableSorting<T>(

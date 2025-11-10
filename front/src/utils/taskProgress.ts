@@ -170,7 +170,7 @@ export const calculateTaskProgress = (task: Task): TaskProgressInfo => {
 
   // Debug logging отключён в продакшене
   if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
+     
     console.log('calculateTaskProgress for task', task.id, ':', {
       task: {
         groupsCount: task.groupsCount,

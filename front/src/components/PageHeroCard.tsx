@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from './ui/card'
+import { Card, CardHeader, CardDescription, CardFooter } from './ui/card'
 import { cn } from '@/lib/utils'
+import PageTitle from './PageTitle'
 
 interface PageHeroCardProps {
   title: string
@@ -22,7 +23,7 @@ function PageHeroCard({ title, description, actions, footer, className }: PageHe
 
       <CardHeader className="relative z-10 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="space-y-3">
-          <CardTitle className="text-3xl font-semibold text-text-primary">{title}</CardTitle>
+          <PageTitle className="font-semibold text-text-primary">{title}</PageTitle>
           {description && (
             <CardDescription className="max-w-xl md:max-w-lg text-sm md:text-base leading-relaxed">
               {description}
