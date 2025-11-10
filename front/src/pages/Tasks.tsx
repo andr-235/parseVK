@@ -1,33 +1,65 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useShallow } from 'zustand/react/shallow'
 import toast from 'react-hot-toast'
 import TaskDetails from '../components/TaskDetails'
 import CreateParseTaskModal from '../components/CreateParseTaskModal'
 import { useTasksStore, useGroupsStore, useTaskAutomationStore } from '../stores'
 import ActiveTasksBanner from '../components/ActiveTasksBanner'
 import { isTaskActive } from '../utils/taskProgress'
+import { getLatestTaskDate, formatTaskDate } from '../utils/taskDates'
 import { Separator } from '../components/ui/separator'
 import TasksHero from './Tasks/components/TasksHero'
 import TasksTableCard from './Tasks/components/TasksTableCard'
 
-function Tasks() {
-  const tasks = useTasksStore((state) => state.tasks)
-  const fetchTasks = useTasksStore((state) => state.fetchTasks)
-  const createParseTask = useTasksStore((state) => state.createParseTask)
-  const fetchTaskDetails = useTasksStore((state) => state.fetchTaskDetails)
-  const getTaskDetails = useTasksStore((state) => state.getTaskDetails)
-  const isLoading = useTasksStore((state) => state.isLoading)
-  const isCreating = useTasksStore((state) => state.isCreating)
+const Tasks = () => {
+  const {
+    tasks,
+    fetchTasks,
+    createParseTask,
+    fetchTaskDetails,
+    getTaskDetails,
+    isLoading,
+    isCreating
+  } = useTasksStore(
+    useShallow((state) => ({
+      tasks: state.tasks,
+      fetchTasks: state.fetchTasks,
+      createParseTask: state.createParseTask,
+      fetchTaskDetails: state.fetchTaskDetails,
+      getTaskDetails: state.getTaskDetails,
+      isLoading: state.isLoading,
+      isCreating: state.isCreating
+    }))
+  )
 
-  const groups = useGroupsStore((state) => state.groups)
-  const fetchGroups = useGroupsStore((state) => state.fetchGroups)
-  const areGroupsLoading = useGroupsStore((state) => state.isLoading)
+  const {
+    groups,
+    fetchGroups,
+    areGroupsLoading
+  } = useGroupsStore(
+    useShallow((state) => ({
+      groups: state.groups,
+      fetchGroups: state.fetchGroups,
+      areGroupsLoading: state.isLoading
+    }))
+  )
 
-  const automationSettings = useTaskAutomationStore((state) => state.settings)
-  const fetchAutomationSettings = useTaskAutomationStore((state) => state.fetchSettings)
-  const runAutomation = useTaskAutomationStore((state) => state.runNow)
-  const isAutomationLoading = useTaskAutomationStore((state) => state.isLoading)
-  const isAutomationTriggering = useTaskAutomationStore((state) => state.isTriggering)
+  const {
+    settings: automationSettings,
+    fetchSettings: fetchAutomationSettings,
+    runNow: runAutomation,
+    isLoading: isAutomationLoading,
+    isTriggering: isAutomationTriggering
+  } = useTaskAutomationStore(
+    useShallow((state) => ({
+      settings: state.settings,
+      fetchSettings: state.fetchSettings,
+      runNow: state.runNow,
+      isLoading: state.isLoading,
+      isTriggering: state.isTriggering
+    }))
+  )
 
   const [selectedTaskId, setSelectedTaskId] = useState<number | string | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -36,37 +68,14 @@ function Tasks() {
 
   const activeTasks = useMemo(() => tasks.filter(isTaskActive), [tasks])
 
-  const latestTaskDate = useMemo(() => {
-    const timestamps = tasks
-      .flatMap((task) => [task.completedAt, task.createdAt])
-      .map((value) => (value ? Date.parse(value) : Number.NaN))
-      .filter((value) => Number.isFinite(value))
+  // Вычисляем дату последнего обновления задачи: берем максимальную дату из completedAt и createdAt всех задач
+  const latestTaskDate = useMemo(() => getLatestTaskDate(tasks), [tasks])
 
-    if (timestamps.length === 0) {
-      return null
-    }
-
-    const latest = Math.max(...timestamps)
-    return Number.isFinite(latest) ? new Date(latest) : null
-  }, [tasks])
-
-  const formattedLastUpdated = useMemo(() => {
-    if (!latestTaskDate) {
-      return '—'
-    }
-
-    try {
-      return new Intl.DateTimeFormat('ru-RU', {
-        dateStyle: 'medium',
-        timeStyle: 'short'
-      }).format(latestTaskDate)
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.warn('[Tasks] Failed to format date', error)
-      }
-      return latestTaskDate.toLocaleString('ru-RU')
-    }
-  }, [latestTaskDate])
+  // Форматируем дату последнего обновления в локальный формат с fallback на toLocaleString при ошибке
+  const formattedLastUpdated = useMemo(
+    () => formatTaskDate(latestTaskDate, 'ru-RU'),
+    [latestTaskDate]
+  )
 
   useEffect(() => {
     void fetchTasks()
@@ -105,37 +114,54 @@ function Tasks() {
     setIsCreateModalOpen(true)
   }
 
-  const handleCreateTask = async (groupIds: Array<number | string>) => {
+  const handleCreateTask = useCallback(async (groupIds: Array<number | string>) => {
     if (groupIds.length === 0) {
       toast.error('Выберите хотя бы одну группу для парсинга')
       return
     }
 
-    const taskId = await createParseTask(groupIds)
+    try {
+      const taskId = await createParseTask(groupIds)
 
-    if (taskId != null) {
-      setSelectedTaskId(taskId)
-      setIsCreateModalOpen(false)
+      if (taskId != null) {
+        setSelectedTaskId(taskId)
+        setIsCreateModalOpen(false)
+      }
+    } catch (error) {
+      toast.error('Ошибка при создании задачи')
+      console.error('Failed to create task:', error)
     }
-  }
+  }, [createParseTask])
 
-  const handleTaskSelect = async (taskId: number | string) => {
+  const handleTaskSelect = useCallback(async (taskId: number | string) => {
     const loadingToastId = toast.loading('Загружаем детали задачи...')
-    const details = await fetchTaskDetails(taskId)
-    toast.dismiss(loadingToastId)
 
-    if (details) {
-      setSelectedTaskId(taskId)
+    try {
+      const details = await fetchTaskDetails(taskId)
+      toast.dismiss(loadingToastId)
+
+      if (details) {
+        setSelectedTaskId(taskId)
+      }
+    } catch (error) {
+      toast.dismiss(loadingToastId)
+      toast.error('Ошибка при загрузке деталей задачи')
+      console.error('Failed to fetch task details:', error)
     }
-  }
+  }, [fetchTaskDetails])
 
   const handleOpenAutomationSettings = () => {
     navigate('/settings')
   }
 
-  const handleAutomationRun = async () => {
-    await runAutomation()
-  }
+  const handleAutomationRun = useCallback(async () => {
+    try {
+      await runAutomation()
+    } catch (error) {
+      toast.error('Ошибка при запуске автоматизации')
+      console.error('Failed to run automation:', error)
+    }
+  }, [runAutomation])
 
   const emptyMessage = isLoading
     ? 'Загрузка задач...'
@@ -149,7 +175,7 @@ function Tasks() {
         areGroupsLoading={areGroupsLoading}
         hasGroups={groups.length > 0}
         formattedLastUpdated={formattedLastUpdated}
-        automation={automationSettings}
+      automation={automationSettings}
         onAutomationRun={handleAutomationRun}
         onOpenAutomationSettings={handleOpenAutomationSettings}
         isAutomationLoading={isAutomationLoading}
