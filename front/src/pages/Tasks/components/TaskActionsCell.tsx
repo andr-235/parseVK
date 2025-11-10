@@ -16,10 +16,29 @@ function TaskActionsCell({ task }: TaskActionsCellProps) {
   const [isChecking, setIsChecking] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const canResume = task.status !== 'completed'
+  const canResume = task.status === 'failed'
   const disabled = isResuming || !canResume
   const checkDisabled = isChecking
   const deleteDisabled = isDeleting
+  const resumeTitle = (() => {
+    if (canResume) {
+      return undefined
+    }
+
+    if (task.status === 'completed') {
+      return 'Задача завершена'
+    }
+
+    if (task.status === 'running' || task.status === 'processing') {
+      return 'Задача уже выполняется'
+    }
+
+    if (task.status === 'pending') {
+      return 'Задача уже ожидает запуска'
+    }
+
+    return undefined
+  })()
 
   const handleResume = async (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
@@ -74,7 +93,7 @@ function TaskActionsCell({ task }: TaskActionsCellProps) {
         onClick={handleResume}
         disabled={disabled}
         type="button"
-        title={!canResume ? 'Задача завершена' : undefined}
+      title={resumeTitle}
       >
         {isResuming ? 'Возобновление…' : 'Продолжить'}
       </Button>

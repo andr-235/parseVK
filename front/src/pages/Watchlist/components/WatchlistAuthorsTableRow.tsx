@@ -54,9 +54,9 @@ export const WatchlistAuthorsTableRow = memo(({
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       handleSelectAuthor()
-    } else {
-      onKeyDown(e, index)
     }
+
+    onKeyDown(e, index)
   }, [onKeyDown, index, handleSelectAuthor])
 
   return (

@@ -1,5 +1,5 @@
-import { memo, useCallback, useRef, type ReactNode } from 'react'
-import { List } from 'react-window'
+import { memo, useMemo, useCallback, useRef } from 'react'
+import { List, type ListImperativeAPI, type RowComponentProps } from 'react-window'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
 import { WatchlistAuthorsTableRow } from './WatchlistAuthorsTableRow'
 import { useVirtualizedKeyboardNavigation } from '@/hooks/useVirtualizedKeyboardNavigation'
@@ -8,6 +8,14 @@ import { logger } from '@/utils/logger'
 const DEFAULT_HEIGHT = 400
 const DEFAULT_ITEM_SIZE = 48
 const OVERSCAN_COUNT = 5
+
+type WatchlistRowProps = {
+  sortedAuthors: WatchlistAuthorCard[]
+  authorColumns: TableColumn<WatchlistAuthorCard>[]
+  focusedRowIndex: number | null
+  onSelectAuthor: (author: WatchlistAuthorCard) => void
+  onKeyDown: (event: React.KeyboardEvent, index: number) => void
+}
 
 interface VirtualizedTableBodyProps {
   sortedAuthors: WatchlistAuthorCard[]
@@ -26,50 +34,75 @@ export const VirtualizedTableBody = memo(({
   height = DEFAULT_HEIGHT,
   itemSize = DEFAULT_ITEM_SIZE,
 }: VirtualizedTableBodyProps) => {
-  const listRef = useRef<{
-    scrollToItem: (index: number, align?: string) => void
-  } | null>(null)
+  const listRef = useRef<ListImperativeAPI | null>(null)
 
-  const { handleKeyDown: virtualizedHandleKeyDown, handleScroll } = useVirtualizedKeyboardNavigation({
+  const {
+    handleKeyDown: virtualizedHandleKeyDown,
+    handleScroll,
+  } = useVirtualizedKeyboardNavigation({
     itemsLength: sortedAuthors.length,
     onSelect: (index) => onSelectAuthor(sortedAuthors[index]),
     onFocusChange: () => {}, // Фокус управляется через focusedRowIndex
     listRef,
   })
 
-  const renderRow = useCallback(({ index, style }: { index: number; style: React.CSSProperties }): ReactNode => {
-    const author = sortedAuthors[index]
-    if (!author) return null
+  const rowProps = useMemo<WatchlistRowProps>(() => ({
+    sortedAuthors,
+    authorColumns,
+    focusedRowIndex,
+    onSelectAuthor,
+    onKeyDown: virtualizedHandleKeyDown,
+  }), [sortedAuthors, authorColumns, focusedRowIndex, onSelectAuthor, virtualizedHandleKeyDown])
+
+  const RowRenderer = ({
+    index,
+    style,
+    ariaAttributes,
+    sortedAuthors: authors,
+    authorColumns: columns,
+    focusedRowIndex: focusedIndex,
+    onSelectAuthor: selectAuthor,
+    onKeyDown,
+  }: RowComponentProps<WatchlistRowProps>) => {
+    const author = authors[index]
+    if (!author) {
+      return null
+    }
 
     logger.debug('Rendering row', { index, authorId: author.id })
 
     return (
-      <div style={style} key={author.id}>
+      <div style={style} {...ariaAttributes}>
         <WatchlistAuthorsTableRow
           author={author}
           index={index}
-          authorColumns={authorColumns}
-          focusedRowIndex={focusedRowIndex}
-          sortedAuthorsLength={sortedAuthors.length}
-          onSelectAuthor={onSelectAuthor}
-          onKeyDown={virtualizedHandleKeyDown}
+          authorColumns={columns}
+          focusedRowIndex={focusedIndex}
+          sortedAuthorsLength={authors.length}
+          onSelectAuthor={selectAuthor}
+          onKeyDown={onKeyDown}
         />
       </div>
     )
-  }, [sortedAuthors, authorColumns, focusedRowIndex, onSelectAuthor, virtualizedHandleKeyDown])
+  }
+
+  const handleResize = useCallback(() => {
+    handleScroll()
+  }, [handleScroll])
 
   return (
     <List
-      ref={listRef}
-      height={height}
-      itemCount={sortedAuthors.length}
-      itemSize={itemSize}
+      listRef={listRef}
+      defaultHeight={height}
+      rowCount={sortedAuthors.length}
+      rowHeight={itemSize}
       overscanCount={OVERSCAN_COUNT}
-      onScroll={handleScroll}
+      onResize={handleResize}
+      rowComponent={RowRenderer}
+      rowProps={rowProps}
+      style={{ height, width: '100%' }}
       aria-rowcount={sortedAuthors.length}
-    >
-      {renderRow}
-    </List>
+    />
   )
 })
 

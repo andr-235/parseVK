@@ -63,7 +63,7 @@ function TasksHero({
   const actions = (
     <Button
       onClick={onCreateTask}
-      disabled={isCreating || areGroupsLoading}
+      disabled={isCreating || areGroupsLoading || !hasGroups}
       className="w-full md:w-auto"
     >
       {isCreating ? (
