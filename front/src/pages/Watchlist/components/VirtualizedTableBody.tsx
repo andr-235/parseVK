@@ -1,4 +1,5 @@
 import { memo, useMemo, useCallback, useRef } from 'react'
+import type { KeyboardEvent } from 'react'
 import { List, type ListImperativeAPI, type RowComponentProps } from 'react-window'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
 import { WatchlistAuthorsTableRow } from './WatchlistAuthorsTableRow'
@@ -14,7 +15,7 @@ type WatchlistRowProps = {
   authorColumns: TableColumn<WatchlistAuthorCard>[]
   focusedRowIndex: number | null
   onSelectAuthor: (author: WatchlistAuthorCard) => void
-  onKeyDown: (event: React.KeyboardEvent, index: number) => void
+  onKeyDown: (event: KeyboardEvent, index: number) => void
 }
 
 interface VirtualizedTableBodyProps {
@@ -41,7 +42,7 @@ export const VirtualizedTableBody = memo(({
     handleScroll,
   } = useVirtualizedKeyboardNavigation({
     itemsLength: sortedAuthors.length,
-    onSelect: (index) => onSelectAuthor(sortedAuthors[index]),
+    onSelect: (index: number) => onSelectAuthor(sortedAuthors[index]),
     onFocusChange: () => {}, // Фокус управляется через focusedRowIndex
     listRef,
   })

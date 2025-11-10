@@ -131,7 +131,7 @@ export const WatchlistAuthorsTable = memo(({
 
   const { tableRef, handleKeyDown } = useKeyboardNavigation({
     itemsLength: sortedAuthors.length,
-    onSelect: (index) => handleSelectAuthor(sortedAuthors[index]),
+    onSelect: (index: number) => handleSelectAuthor(sortedAuthors[index]),
     onFocusChange: setFocusedRowIndex,
   })
 

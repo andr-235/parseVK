@@ -1,4 +1,5 @@
 import { memo, useCallback } from 'react'
+import type { KeyboardEvent } from 'react'
 import {
   TableRow,
   TableCell,
@@ -17,7 +18,7 @@ import { logger } from '@/utils/logger'
  * @property {number | null} focusedRowIndex - Индекс текущей фокусированной строки или null.
  * @property {number} sortedAuthorsLength - Общее количество отсортированных авторов в таблице.
  * @property {(author: WatchlistAuthorCard) => void} onSelectAuthor - Функция обратного вызова для выбора автора.
- * @property {(e: React.KeyboardEvent, index: number) => void} onKeyDown - Функция обратного вызова для обработки нажатий клавиш.
+ * @property {(e: KeyboardEvent, index: number) => void} onKeyDown - Функция обратного вызова для обработки нажатий клавиш.
  */
 interface WatchlistAuthorsTableRowProps {
   author: WatchlistAuthorCard
@@ -26,7 +27,7 @@ interface WatchlistAuthorsTableRowProps {
   focusedRowIndex: number | null
   sortedAuthorsLength: number
   onSelectAuthor: (author: WatchlistAuthorCard) => void
-  onKeyDown: (e: React.KeyboardEvent, index: number) => void
+  onKeyDown: (e: KeyboardEvent, index: number) => void
 }
 
 /**
@@ -50,7 +51,7 @@ export const WatchlistAuthorsTableRow = memo(({
     onSelectAuthor(author)
   }, [author, onSelectAuthor])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       handleSelectAuthor()

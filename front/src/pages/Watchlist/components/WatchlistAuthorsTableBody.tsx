@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import type { KeyboardEvent } from 'react'
 import { TableBody } from '@/components/ui/table'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
 import { WatchlistAuthorsTableRow } from './WatchlistAuthorsTableRow'
@@ -8,7 +9,7 @@ interface WatchlistAuthorsTableBodyProps {
   authorColumns: TableColumn<WatchlistAuthorCard>[]
   focusedRowIndex: number | null
   onSelectAuthor: (author: WatchlistAuthorCard) => void
-  onKeyDown: (e: React.KeyboardEvent, index: number) => void
+  onKeyDown: (e: KeyboardEvent, index: number) => void
 }
 
 export const WatchlistAuthorsTableBody = memo(({
