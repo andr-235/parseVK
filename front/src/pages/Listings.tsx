@@ -173,18 +173,6 @@ const formatArea = (value: number | null | undefined): string | null => {
   }).format(value)} м²`
 }
 
-const getMetadataString = (
-  metadata: Record<string, unknown> | null | undefined,
-  key: string,
-): string | undefined => {
-  if (!metadata || typeof metadata !== 'object') {
-    return undefined
-  }
-
-  const value = (metadata as Record<string, unknown>)[key]
-  return typeof value === 'string' && value.trim().length > 0 ? value : undefined
-}
-
 const formatDateTime = (value?: string | null): string => {
   if (!value) {
     return '—'
@@ -276,30 +264,17 @@ function ListingCard({
   const livingArea = formatArea(listing.areaLiving)
   const kitchenArea = formatArea(listing.areaKitchen)
   const primaryImage = listing.images.find((image) => image && image.trim().length > 0)
-  const metadata = (listing.metadata ?? null) as Record<string, unknown> | null
-  const metadataPostedAt =
-    getMetadataString(metadata, 'posted_at') ?? getMetadataString(metadata, 'postedAt')
-  const metadataPublishedAt =
-    getMetadataString(metadata, 'published_at') ??
-    getMetadataString(metadata, 'publishedAt')
-  const metadataParsedAt =
-    getMetadataString(metadata, 'parsed_at') ?? getMetadataString(metadata, 'parsedAt')
-  const contactName =
-    listing.contactName ??
-    getMetadataString(metadata, 'author') ??
-    getMetadataString(metadata, 'contact_name')
-  const contactPhone =
-    listing.contactPhone ??
-    getMetadataString(metadata, 'author_phone') ??
-    getMetadataString(metadata, 'contact_phone') ??
-    getMetadataString(metadata, 'phone')
+  const sourcePostedAt = listing.sourcePostedAt ?? null
+  const sourceParsedAt = listing.sourceParsedAt ?? null
+  const contactName = listing.contactName ?? listing.sourceAuthorName ?? null
+  const contactPhone = listing.contactPhone ?? listing.sourceAuthorPhone ?? null
   const publishedDisplay = formatDateTimeWithFallback(
-    listing.publishedAt ?? metadataPublishedAt,
-    metadataPostedAt ?? metadataPublishedAt,
+    listing.publishedAt,
+    sourcePostedAt,
   )
   const updatedDisplay = formatDateTimeWithFallback(
-    metadataParsedAt ?? listing.updatedAt,
-    metadataParsedAt,
+    sourceParsedAt ?? listing.updatedAt,
+    sourceParsedAt ?? sourcePostedAt,
   )
   const descriptionText = listing.description?.trim() ?? ''
   const hasDescription = descriptionText.length > 0
@@ -435,6 +410,17 @@ function ListingCard({
                     className="text-accent-primary transition-colors hover:text-accent-primary/80"
                   >
                     {contactPhone}
+                  </a>
+                )}
+                {listing.sourceAuthorUrl && (
+                  <a
+                    href={listing.sourceAuthorUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-accent-primary transition-colors hover:text-accent-primary/80"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    Профиль продавца
                   </a>
                 )}
               </div>

@@ -226,7 +226,11 @@ export interface IListing {
   contactName?: string | null
   contactPhone?: string | null
   images: string[]
-  metadata?: Record<string, unknown> | null
+  sourceAuthorName?: string | null
+  sourceAuthorPhone?: string | null
+  sourceAuthorUrl?: string | null
+  sourcePostedAt?: string | null
+  sourceParsedAt?: string | null
   manualOverrides?: string[]
   manualNote?: string | null
   createdAt: string
@@ -264,6 +268,11 @@ export interface ListingImportItem {
   contactName?: string | null
   contactPhone?: string | null
   images?: string[]
+  sourceAuthorName?: string | null
+  sourceAuthorPhone?: string | null
+  sourceAuthorUrl?: string | null
+  sourcePostedAt?: string | null
+  sourceParsedAt?: string | null
   metadata?: Record<string, unknown> | null
 }
 
@@ -309,7 +318,11 @@ export interface ListingUpdatePayload {
   contactName?: string | null
   contactPhone?: string | null
   images?: string[] | null
-  metadata?: Record<string, unknown> | null
+  sourceAuthorName?: string | null
+  sourceAuthorPhone?: string | null
+  sourceAuthorUrl?: string | null
+  sourcePostedAt?: string | null
+  sourceParsedAt?: string | null
   manualNote?: string | null
 }
 

@@ -32,6 +32,11 @@ const LISTING_FIELD_KEYS = new Set([
   'contactName',
   'contactPhone',
   'images',
+  'sourceAuthorName',
+  'sourceAuthorPhone',
+  'sourceAuthorUrl',
+  'sourcePostedAt',
+  'sourceParsedAt',
   'metadata',
 ]);
 
@@ -135,16 +140,91 @@ export class DataImportController {
 
     for (const [key, value] of Object.entries(plainItem)) {
       if (key === 'author' && typeof value === 'string') {
+        const stringValue = value.trim();
+        if (stringValue.length === 0) {
+          continue;
+        }
+        if (
+          typeof result.sourceAuthorName !== 'string' ||
+          result.sourceAuthorName.trim().length === 0
+        ) {
+          result.sourceAuthorName = stringValue;
+        }
         if (typeof result.contactName !== 'string' || result.contactName.trim().length === 0) {
-          result.contactName = value;
+          result.contactName = stringValue;
         }
 
-        extraFields[key] = value;
+        extraFields[key] = stringValue;
+        continue;
+      }
+
+      if (key === 'author_phone' && typeof value === 'string') {
+        const stringValue = value.trim();
+        if (stringValue.length === 0) {
+          continue;
+        }
+        if (
+          typeof result.sourceAuthorPhone !== 'string' ||
+          result.sourceAuthorPhone.trim().length === 0
+        ) {
+          result.sourceAuthorPhone = stringValue;
+        }
+        if (typeof result.contactPhone !== 'string' || result.contactPhone.trim().length === 0) {
+          result.contactPhone = stringValue;
+        }
+
+        extraFields[key] = stringValue;
         continue;
       }
 
       if (key === 'author_url' && typeof value === 'string') {
-        extraFields[key] = value;
+        const stringValue = value.trim();
+        if (stringValue.length === 0) {
+          continue;
+        }
+        if (
+          typeof result.sourceAuthorUrl !== 'string' ||
+          result.sourceAuthorUrl.trim().length === 0
+        ) {
+          result.sourceAuthorUrl = stringValue;
+        }
+
+        extraFields[key] = stringValue;
+        continue;
+      }
+
+      if ((key === 'posted_at' || key === 'postedAt') && typeof value === 'string') {
+        const stringValue = value.trim();
+        if (stringValue.length === 0) {
+          continue;
+        }
+        if (
+          typeof result.sourcePostedAt !== 'string' ||
+          result.sourcePostedAt.trim().length === 0
+        ) {
+          result.sourcePostedAt = stringValue;
+        }
+
+        extraFields[key] = stringValue;
+        continue;
+      }
+
+      if ((key === 'parsed_at' || key === 'parsedAt') && typeof value === 'string') {
+        const stringValue = value.trim();
+        if (stringValue.length === 0) {
+          continue;
+        }
+        if (
+          typeof result.sourceParsedAt !== 'string' ||
+          result.sourceParsedAt.trim().length === 0
+        ) {
+          const parsed = Date.parse(stringValue);
+          if (!Number.isNaN(parsed)) {
+            result.sourceParsedAt = stringValue;
+          }
+        }
+
+        extraFields[key] = stringValue;
         continue;
       }
 

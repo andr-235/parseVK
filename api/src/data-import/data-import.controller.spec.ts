@@ -40,6 +40,10 @@ describe('DataImportController', () => {
     const listing = request.listings[0];
     expect(listing).toBeInstanceOf(ListingImportDto);
     expect(listing.contactName).toBe('Александр');
+    expect(listing.sourceAuthorName).toBe('Александр');
+    expect(listing.sourceAuthorUrl).toBe('https://example.com/authors/1');
+    expect(listing.sourcePostedAt).toBe('4 октября в 09:53');
+    expect(listing.sourceParsedAt).toBe('2025-11-01T02:11:19.640124+00:00');
     expect((listing as ListingImportDto).metadata).toEqual({
       source: 'avito',
       posted_at: '4 октября в 09:53',

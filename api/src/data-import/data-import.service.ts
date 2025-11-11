@@ -113,7 +113,32 @@ export class DataImportService {
       ? listing.images.filter((image) => typeof image === 'string' && image.trim().length > 0)
       : [];
 
-    const metadata = this.metadataValue(listing.metadata);
+    const metadata = this.normalizeMetadata(listing.metadata);
+    const sourceAuthorName = this.resolveSourceString(
+      listing.sourceAuthorName,
+      metadata,
+      ['author', 'author_name', 'contact_name', 'contactName'],
+    );
+    const sourceAuthorPhone = this.resolveSourceString(
+      listing.sourceAuthorPhone,
+      metadata,
+      ['author_phone', 'contact_phone', 'phone'],
+    );
+    const sourceAuthorUrl = this.resolveSourceString(
+      listing.sourceAuthorUrl,
+      metadata,
+      ['author_url', 'url'],
+    );
+    const sourcePostedAt = this.resolveSourceString(
+      listing.sourcePostedAt,
+      metadata,
+      ['posted_at', 'postedAt', 'published_at', 'publishedAt'],
+    );
+    const sourceParsedAt = this.resolveSourceDate(
+      listing.sourceParsedAt,
+      metadata,
+      ['parsed_at', 'parsedAt'],
+    );
 
     return {
       url: listing.url.trim(),
@@ -137,8 +162,93 @@ export class DataImportService {
       contactName: this.stringValue(listing.contactName),
       contactPhone: this.stringValue(listing.contactPhone),
       images,
-      metadata,
+      sourceAuthorName,
+      sourceAuthorPhone,
+      sourceAuthorUrl,
+      sourcePostedAt,
+      sourceParsedAt,
     };
+  }
+
+  private normalizeMetadata(
+    metadata: Record<string, unknown> | null | undefined,
+  ): Record<string, unknown> | null {
+    if (!metadata) {
+      return null;
+    }
+
+    if (Array.isArray(metadata)) {
+      return null;
+    }
+
+    if (typeof metadata !== 'object') {
+      return null;
+    }
+
+    return { ...metadata };
+  }
+
+  private resolveSourceString(
+    direct: string | null | undefined,
+    metadata: Record<string, unknown> | null,
+    keys: string[],
+  ): string | null | undefined {
+    const directValue = this.stringValue(direct);
+    if (directValue !== undefined) {
+      return directValue;
+    }
+
+    if (!metadata) {
+      return undefined;
+    }
+
+    for (const key of keys) {
+      if (!Object.prototype.hasOwnProperty.call(metadata, key)) {
+        continue;
+      }
+
+      const raw = metadata[key];
+      if (typeof raw === 'string' || raw === null) {
+        const normalized = this.stringValue(raw as string | null | undefined);
+        if (normalized !== undefined) {
+          return normalized;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  private resolveSourceDate(
+    direct: string | null | undefined,
+    metadata: Record<string, unknown> | null,
+    keys: string[],
+  ): Date | undefined {
+    if (direct !== undefined) {
+      const parsed = this.dateValue(direct);
+      if (parsed !== undefined) {
+        return parsed;
+      }
+    }
+
+    if (!metadata) {
+      return undefined;
+    }
+
+    for (const key of keys) {
+      if (!Object.prototype.hasOwnProperty.call(metadata, key)) {
+        continue;
+      }
+      const raw = metadata[key];
+      if (typeof raw === 'string') {
+        const parsed = this.dateValue(raw);
+        if (parsed !== undefined) {
+          return parsed;
+        }
+      }
+    }
+
+    return undefined;
   }
 
   private excludeManualOverrides(
@@ -211,20 +321,6 @@ export class DataImportService {
 
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? undefined : date;
-  }
-
-  private metadataValue(
-    value: Record<string, unknown> | null | undefined,
-  ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
-    if (value === null) {
-      return Prisma.JsonNull;
-    }
-
-    if (value === undefined) {
-      return undefined;
-    }
-
-    return value as Prisma.InputJsonValue;
   }
 
   private isUniqueViolation(error: unknown): boolean {

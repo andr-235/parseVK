@@ -19,10 +19,12 @@ type FieldKey =
   | 'price'
   | 'address'
   | 'contactName'
+  | 'sourceAuthorName'
+  | 'sourceAuthorPhone'
+  | 'sourceAuthorUrl'
   | 'postedAt'
   | 'parsedAt'
   | 'description'
-  | 'metadata'
   | 'manualNote'
 
 const ALL_FIELDS: { key: FieldKey; label: string }[] = [
@@ -33,10 +35,12 @@ const ALL_FIELDS: { key: FieldKey; label: string }[] = [
   { key: 'price', label: 'Цена' },
   { key: 'address', label: 'Адрес' },
   { key: 'contactName', label: 'Контактное лицо' },
+  { key: 'sourceAuthorName', label: 'Имя продавца' },
+  { key: 'sourceAuthorPhone', label: 'Телефон продавца' },
+  { key: 'sourceAuthorUrl', label: 'Ссылка на продавца' },
   { key: 'postedAt', label: 'Дата публикации' },
   { key: 'parsedAt', label: 'Дата парсинга' },
   { key: 'description', label: 'Описание' },
-  { key: 'metadata', label: 'Метаданные' },
   { key: 'manualNote', label: 'Примечание' },
 ]
 
@@ -186,10 +190,10 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
             {(() => {
               // Группировка полей по категориям
               const groups: { title: string; keys: FieldKey[] }[] = [
-                { title: 'Общие', keys: ['id','source','title','url','price', 'postedAt','parsedAt'] },
-                { title: 'Контакты', keys: ['contactName'] },
+                { title: 'Общие', keys: ['id','source','title','url','price','postedAt','parsedAt'] },
+                { title: 'Контакты', keys: ['contactName','sourceAuthorName','sourceAuthorPhone','sourceAuthorUrl'] },
                 { title: 'Гео', keys: ['address'] },
-                { title: 'Прочее', keys: ['description','metadata','manualNote'] },
+                { title: 'Прочее', keys: ['description','manualNote'] },
               ]
 
               const labelByKey = Object.fromEntries(ALL_FIELDS.map((f) => [f.key, f.label])) as Record<FieldKey, string>

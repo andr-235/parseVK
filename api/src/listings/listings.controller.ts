@@ -50,12 +50,14 @@ export class ListingsController {
       'currency',
       'address',
       'contactName',
+      'sourceAuthorName',
+      'sourceAuthorPhone',
+      'sourceAuthorUrl',
       'publishedAt',
       'postedAt',
       'parsedAt',
       'images',
       'description',
-      'metadata',
       'manualNote',
     ] as const;
     type FieldKey = typeof defaultFields[number];
@@ -104,22 +106,8 @@ export class ListingsController {
 
     const pickPublished = (item: ListingDto): string | null => {
       if (item.publishedAt) return item.publishedAt;
-      const md: unknown = item.metadata ?? null;
-      if (md && typeof md === 'object') {
-        const meta = md as Record<string, unknown>;
-        const candidates = [
-          meta['published_at'],
-          meta['publishedAt'],
-          meta['posted_at'],
-          meta['postedAt'],
-          meta['parsed_at'],
-          meta['parsedAt'],
-        ];
-        for (const v of candidates) {
-          if (typeof v === 'string' && v.trim().length > 0) return v;
-        }
-      }
-      return null;
+      if (item.sourcePostedAt) return item.sourcePostedAt;
+      return item.sourceParsedAt ?? null;
     };
 
     const pickContactName = (item: ListingDto): string | null => {
@@ -127,27 +115,8 @@ export class ListingsController {
       if (direct.length > 0) {
         return direct;
       }
-
-      const md: unknown = item.metadata ?? null;
-      if (md && typeof md === 'object') {
-        const meta = md as Record<string, unknown>;
-        const candidates = [
-          meta['author'],
-          meta['author_name'],
-          meta['contact_name'],
-          meta['contactName'],
-        ];
-        for (const value of candidates) {
-          if (typeof value === 'string') {
-            const trimmed = value.trim();
-            if (trimmed.length > 0) {
-              return trimmed;
-            }
-          }
-        }
-      }
-
-      return null;
+      const source = typeof item.sourceAuthorName === 'string' ? item.sourceAuthorName.trim() : '';
+      return source.length > 0 ? source : null;
     };
 
     for await (const batch of this.listingsService.iterateAllListings({ search, source, batchSize: 1000 })) {
@@ -165,30 +134,16 @@ export class ListingsController {
               case 'contactName': return pickContactName(item);
               case 'publishedAt': return pickPublished(item);
               case 'postedAt': {
-                const md: unknown = item.metadata ?? null;
-                if (md && typeof md === 'object') {
-                  const meta = md as Record<string, unknown>;
-                  const candidates = [meta['posted_at'], meta['postedAt']];
-                  for (const v of candidates) {
-                    if (typeof v === 'string' && v.trim().length > 0) return v;
-                  }
-                }
-                return '';
+                return item.sourcePostedAt ?? '';
               }
               case 'parsedAt': {
-                const md: unknown = item.metadata ?? null;
-                if (md && typeof md === 'object') {
-                  const meta = md as Record<string, unknown>;
-                  const candidates = [meta['parsed_at'], meta['parsedAt']];
-                  for (const v of candidates) {
-                    if (typeof v === 'string' && v.trim().length > 0) return v;
-                  }
-                }
-                return '';
+                return item.sourceParsedAt ?? '';
               }
               case 'images': return item.images;
               case 'description': return item.description;
-              case 'metadata': return item.metadata ? JSON.stringify(item.metadata) : '';
+              case 'sourceAuthorName': return item.sourceAuthorName;
+              case 'sourceAuthorPhone': return item.sourceAuthorPhone;
+              case 'sourceAuthorUrl': return item.sourceAuthorUrl;
               case 'manualNote': return item.manualNote;
               default: return '';
             }

@@ -176,7 +176,11 @@ model Listing {
   contactName   String?
   contactPhone  String?
   images        String[] @default([])
-  metadata      Json?
+  sourceAuthorName String?
+  sourceAuthorPhone String?
+  sourceAuthorUrl String?
+  sourcePostedAt String? @db.Text
+  sourceParsedAt DateTime?
   manualOverrides Json? @default("[]")
   manualNote    String?  @db.Text
   createdAt     DateTime @default(now())

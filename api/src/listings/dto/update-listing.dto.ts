@@ -20,7 +20,11 @@ export interface UpdateListingDto {
   contactName?: string | null;
   contactPhone?: string | null;
   images?: string[] | null;
-  metadata?: Record<string, unknown> | null;
+  sourceAuthorName?: string | null;
+  sourceAuthorPhone?: string | null;
+  sourceAuthorUrl?: string | null;
+  sourcePostedAt?: string | null;
+  sourceParsedAt?: string | null;
   manualNote?: string | null;
 }
 

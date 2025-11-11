@@ -96,6 +96,26 @@ export class ListingImportDto {
   images?: string[];
 
   @IsOptional()
+  @IsString({ message: 'sourceAuthorName должен быть строкой' })
+  sourceAuthorName?: string;
+
+  @IsOptional()
+  @IsString({ message: 'sourceAuthorPhone должен быть строкой' })
+  sourceAuthorPhone?: string;
+
+  @IsOptional()
+  @IsString({ message: 'sourceAuthorUrl должен быть строкой' })
+  sourceAuthorUrl?: string;
+
+  @IsOptional()
+  @IsString({ message: 'sourcePostedAt должен быть строкой' })
+  sourcePostedAt?: string;
+
+  @IsOptional()
+  @IsDateString({}, { message: 'sourceParsedAt должен быть датой в формате ISO' })
+  sourceParsedAt?: string;
+
+  @IsOptional()
   @IsObject({ message: 'metadata должен быть объектом' })
   metadata?: Record<string, unknown> | null;
 }

@@ -1,5 +1,3 @@
-import type { Prisma } from '@prisma/client';
-
 export interface ListingDto {
   id: number;
   source: string | null;
@@ -23,7 +21,11 @@ export interface ListingDto {
   contactName: string | null;
   contactPhone: string | null;
   images: string[];
-  metadata: Prisma.JsonValue | null;
+  sourceAuthorName: string | null;
+  sourceAuthorPhone: string | null;
+  sourceAuthorUrl: string | null;
+  sourcePostedAt: string | null;
+  sourceParsedAt: string | null;
   manualOverrides: string[];
   manualNote: string | null;
   createdAt: string;

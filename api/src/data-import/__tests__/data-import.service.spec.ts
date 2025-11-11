@@ -41,16 +41,16 @@ describe('DataImportService', () => {
     } as ListingImportRequestDto);
 
     expect(prisma.listing.create).toHaveBeenCalledTimes(2);
-    expect(prisma.listing.create).toHaveBeenNthCalledWith(1, {
-      data: expect.objectContaining({
-        url: 'https://example.com/listing-1',
-        title: 'Тестовая квартира',
-        price: 1000000,
-        rooms: 3,
-        images: ['https://img.example/1'],
-        metadata: { raw: true },
-      }),
+
+    const firstCall = (prisma.listing.create as jest.Mock).mock.calls[0][0];
+    expect(firstCall.data).toMatchObject({
+      url: 'https://example.com/listing-1',
+      title: 'Тестовая квартира',
+      price: 1000000,
+      rooms: 3,
+      images: ['https://img.example/1'],
     });
+    expect(firstCall.data).not.toHaveProperty('metadata');
 
     expect(result).toEqual({
       processed: 2,

@@ -226,7 +226,13 @@ export class ListingsService {
       contactName: listing.contactName ?? null,
       contactPhone: listing.contactPhone ?? null,
       images: listing.images ?? [],
-      metadata: listing.metadata ?? null,
+      sourceAuthorName: listing.sourceAuthorName ?? null,
+      sourceAuthorPhone: listing.sourceAuthorPhone ?? null,
+      sourceAuthorUrl: listing.sourceAuthorUrl ?? null,
+      sourcePostedAt: listing.sourcePostedAt ?? null,
+      sourceParsedAt: listing.sourceParsedAt
+        ? listing.sourceParsedAt.toISOString()
+        : null,
       manualOverrides: overrides,
       manualNote: listing.manualNote ?? null,
       createdAt: listing.createdAt.toISOString(),
@@ -424,10 +430,40 @@ export class ListingsService {
       }
     }
 
-    if (this.has(payload, 'metadata')) {
-      const value = this.metadataValue(payload.metadata);
-      if (value !== undefined && JSON.stringify(value) !== JSON.stringify(existing.metadata ?? null)) {
-        data.metadata = value;
+    if (this.has(payload, 'sourceAuthorName')) {
+      const value = this.stringValue(payload.sourceAuthorName);
+      if (value !== undefined && value !== (existing.sourceAuthorName ?? null)) {
+        data.sourceAuthorName = value;
+      }
+    }
+
+    if (this.has(payload, 'sourceAuthorPhone')) {
+      const value = this.stringValue(payload.sourceAuthorPhone);
+      if (value !== undefined && value !== (existing.sourceAuthorPhone ?? null)) {
+        data.sourceAuthorPhone = value;
+      }
+    }
+
+    if (this.has(payload, 'sourceAuthorUrl')) {
+      const value = this.stringValue(payload.sourceAuthorUrl);
+      if (value !== undefined && value !== (existing.sourceAuthorUrl ?? null)) {
+        data.sourceAuthorUrl = value;
+      }
+    }
+
+    if (this.has(payload, 'sourcePostedAt')) {
+      const value = this.stringValue(payload.sourcePostedAt);
+      if (value !== undefined && value !== (existing.sourcePostedAt ?? null)) {
+        data.sourcePostedAt = value;
+      }
+    }
+
+    if (this.has(payload, 'sourceParsedAt')) {
+      const value = this.dateValue(payload.sourceParsedAt);
+      const existingDate = existing.sourceParsedAt ? existing.sourceParsedAt.toISOString() : null;
+      const nextDate = value ? value.toISOString() : null;
+      if (value !== undefined && nextDate !== existingDate) {
+        data.sourceParsedAt = value;
       }
     }
 
@@ -502,18 +538,6 @@ export class ListingsService {
     }
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? undefined : date;
-  }
-
-  private metadataValue(
-    value?: Record<string, unknown> | null,
-  ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
-    if (value === undefined) {
-      return undefined;
-    }
-    if (value === null) {
-      return Prisma.JsonNull;
-    }
-    return value as Prisma.InputJsonValue;
   }
 
   private imagesValue(value?: string[] | null): string[] | undefined {
