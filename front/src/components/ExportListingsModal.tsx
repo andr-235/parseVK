@@ -23,6 +23,7 @@ type FieldKey =
   | 'parsedAt'
   | 'description'
   | 'metadata'
+  | 'manualNote'
 
 const ALL_FIELDS: { key: FieldKey; label: string }[] = [
   { key: 'id', label: 'ID' },
@@ -36,6 +37,7 @@ const ALL_FIELDS: { key: FieldKey; label: string }[] = [
   { key: 'parsedAt', label: 'Дата парсинга' },
   { key: 'description', label: 'Описание' },
   { key: 'metadata', label: 'Метаданные' },
+  { key: 'manualNote', label: 'Примечание' },
 ]
 
 import { listingsService } from '@/services/listingsService'
@@ -187,7 +189,7 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
                 { title: 'Общие', keys: ['id','source','title','url','price', 'postedAt','parsedAt'] },
                 { title: 'Контакты', keys: ['contactName'] },
                 { title: 'Гео', keys: ['address'] },
-                { title: 'Прочее', keys: ['description','metadata'] },
+                { title: 'Прочее', keys: ['description','metadata','manualNote'] },
               ]
 
               const labelByKey = Object.fromEntries(ALL_FIELDS.map((f) => [f.key, f.label])) as Record<FieldKey, string>

@@ -56,6 +56,7 @@ export class ListingsController {
       'images',
       'description',
       'metadata',
+      'manualNote',
     ] as const;
     type FieldKey = typeof defaultFields[number];
 
@@ -188,6 +189,7 @@ export class ListingsController {
               case 'images': return item.images;
               case 'description': return item.description;
               case 'metadata': return item.metadata ? JSON.stringify(item.metadata) : '';
+              case 'manualNote': return item.manualNote;
               default: return '';
             }
           })();
