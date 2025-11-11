@@ -24,22 +24,22 @@ export class DataImportService {
 
     for (const [index, item] of request.listings.entries()) {
       try {
-        const url = typeof item.url === 'string' ? item.url.trim() : '';
-        if (!url) {
+        const rawUrl = typeof item.url === 'string' ? item.url.trim() : '';
+        if (!rawUrl) {
           throw new Error('url обязателен');
         }
 
+        let url: string;
         try {
-          // Проверяем, что строка является валидным URL.
-          // eslint-disable-next-line no-new
-          new URL(url);
+          url = this.normalizeUrl(rawUrl);
         } catch {
           throw new Error('Некорректный формат URL');
         }
 
         const data = this.buildListingData({ ...item, url });
+        const shouldUpdateExisting = request.updateExisting !== false;
 
-        if (request.updateExisting) {
+        if (shouldUpdateExisting) {
           const existedRecord = await this.prisma.listing.findUnique({
             where: { url },
           });
@@ -168,6 +168,23 @@ export class DataImportService {
       sourcePostedAt,
       sourceParsedAt,
     };
+  }
+
+  private normalizeUrl(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      throw new Error('URL пустой');
+    }
+
+    const parsed = new URL(trimmed);
+    parsed.hash = '';
+    parsed.search = '';
+    parsed.hostname = parsed.hostname.toLowerCase();
+
+    const pathname = parsed.pathname.replace(/\/{2,}/g, '/');
+    const normalizedPath = pathname.length === 0 ? '/' : pathname;
+
+    return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
   }
 
   private normalizeMetadata(
