@@ -96,6 +96,11 @@ export class ListingsService {
     const limit = this.normalizeLimit(options.limit);
 
     const where: Prisma.ListingWhereInput = {};
+    const orderBy: Prisma.ListingOrderByWithRelationInput[] = [
+      { sourceAuthorName: 'asc' },
+      { contactName: 'asc' },
+      { id: 'asc' },
+    ];
 
     if (search) {
       const term = search.trim();
@@ -119,7 +124,7 @@ export class ListingsService {
     const listings = await this.prisma.listing.findMany({
       where,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     });
 
     const items: ListingDto[] = listings.map((listing) =>
@@ -144,6 +149,12 @@ export class ListingsService {
     const batchSize = this.normalizeBatchSize(options.batchSize);
 
     const where: Prisma.ListingWhereInput = {};
+    const orderBy: Prisma.ListingOrderByWithRelationInput[] = [
+      { sourceAuthorName: 'asc' },
+      { contactName: 'asc' },
+      { id: 'asc' },
+    ];
+
     if (search) {
       const term = search.trim();
       if (term.length > 0) {
@@ -162,17 +173,18 @@ export class ListingsService {
       where.source = { equals: source, mode: 'insensitive' };
     }
 
-    let lastId = 0;
+    let cursorId: number | null = null;
     for (;;) {
       const listings = await this.prisma.listing.findMany({
-        where: { ...where, id: { gt: lastId } },
+        where,
         take: batchSize,
-        orderBy: { id: 'asc' },
+        orderBy,
+        ...(cursorId !== null ? { cursor: { id: cursorId }, skip: 1 } : {}),
       });
       if (listings.length === 0) {
         break;
       }
-      lastId = listings[listings.length - 1].id;
+      cursorId = listings[listings.length - 1].id;
 
       const items: ListingDto[] = listings.map((listing) =>
         this.mapListing(listing as ListingWithOverrides),
