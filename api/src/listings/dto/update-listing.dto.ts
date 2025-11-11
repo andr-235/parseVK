@@ -21,5 +21,6 @@ export interface UpdateListingDto {
   contactPhone?: string | null;
   images?: string[] | null;
   metadata?: Record<string, unknown> | null;
+  manualNote?: string | null;
 }
 

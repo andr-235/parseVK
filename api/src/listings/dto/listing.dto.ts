@@ -25,6 +25,7 @@ export interface ListingDto {
   images: string[];
   metadata: Prisma.JsonValue | null;
   manualOverrides: string[];
+  manualNote: string | null;
   createdAt: string;
   updatedAt: string;
 }

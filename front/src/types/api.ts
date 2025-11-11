@@ -228,6 +228,7 @@ export interface IListing {
   images: string[]
   metadata?: Record<string, unknown> | null
   manualOverrides?: string[]
+  manualNote?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -309,6 +310,7 @@ export interface ListingUpdatePayload {
   contactPhone?: string | null
   images?: string[] | null
   metadata?: Record<string, unknown> | null
+  manualNote?: string | null
 }
 
 export interface ITaskAutomationSettings {

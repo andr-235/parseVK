@@ -178,6 +178,7 @@ model Listing {
   images        String[] @default([])
   metadata      Json?
   manualOverrides Json? @default("[]")
+  manualNote    String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

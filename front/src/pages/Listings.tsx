@@ -259,7 +259,7 @@ interface ListingCardProps {
   listing: IListing
   expandedDescriptions: Set<number>
   onToggleDescription: (id: number) => void
-  onEdit: (listing: IListing) => void
+  onAddNote: (listing: IListing) => void
   shouldAnimate?: boolean
   staggerDelay?: number
 }
@@ -268,7 +268,7 @@ function ListingCard({
   listing,
   expandedDescriptions,
   onToggleDescription,
-  onEdit,
+  onAddNote,
   shouldAnimate = false,
   staggerDelay = 0,
 }: ListingCardProps) {
@@ -458,7 +458,7 @@ function ListingCard({
           </div>
 
           {/* Ссылка на объявление */}
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {listing.url && (
               <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
                 <a
@@ -479,12 +479,18 @@ function ListingCard({
               className="w-full sm:w-auto"
               onClick={(event) => {
                 event.stopPropagation()
-                onEdit(listing)
+                onAddNote(listing)
               }}
             >
-              Редактировать
+              {listing.manualNote ? 'Изменить примечание' : 'Добавить примечание'}
             </Button>
           </div>
+          {listing.manualNote && (
+            <div className="rounded-xl border border-border/60 bg-background-primary/70 px-4 py-3 text-sm text-text-secondary">
+              <div className="mb-1 text-xs uppercase tracking-wide text-text-tertiary">Примечание</div>
+              <p className="whitespace-pre-wrap leading-relaxed">{listing.manualNote}</p>
+            </div>
+          )}
         </CardContent>
       </MotionCard>
   )
@@ -518,7 +524,7 @@ interface ListingsInfiniteProps {
   fetchParams: ListingsFetcherParams
   expandedDescriptions: Set<number>
   onToggleDescription: (id: number) => void
-  onEditListing: (listing: IListing) => void
+  onAddNote: (listing: IListing) => void
   onMetaChange?: (meta: ListingsMeta | null) => void
   onItemsChange?: (count: number) => void
   onLoadingChange?: (loading: boolean) => void
@@ -531,7 +537,7 @@ function ListingsInfinite({
   fetchParams,
   expandedDescriptions,
   onToggleDescription,
-  onEditListing,
+  onAddNote,
   onMetaChange,
   onItemsChange,
   onLoadingChange,
@@ -659,7 +665,7 @@ function ListingsInfinite({
               listing={listing}
               expandedDescriptions={expandedDescriptions}
               onToggleDescription={onToggleDescription}
-              onEdit={onEditListing}
+              onAddNote={onAddNote}
               shouldAnimate={!hasAnimated}
               staggerDelay={Math.min(index % 8, 6) * 0.04}
             />
@@ -724,7 +730,7 @@ function Listings() {
   const [refreshToken, setRefreshToken] = useState(0)
   const [isListLoading, setIsListLoading] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
-  const [editingListing, setEditingListing] = useState<IListing | null>(null)
+  const [noteListing, setNoteListing] = useState<IListing | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -924,19 +930,19 @@ function Listings() {
     })
   }
 
-  const handleEditListing = useCallback((listing: IListing) => {
-    setEditingListing(listing)
+  const handleAddNote = useCallback((listing: IListing) => {
+    setNoteListing(listing)
   }, [])
 
   const handleCloseEdit = useCallback(() => {
-    setEditingListing(null)
+    setNoteListing(null)
   }, [])
 
   const handleListingUpdated = useCallback((_listing: IListing) => {
-    setEditingListing(null)
+    setNoteListing(null)
     setIsListLoading(true)
     setRefreshToken((token) => token + 1)
-  }, [setEditingListing, setIsListLoading, setRefreshToken])
+  }, [setNoteListing, setIsListLoading, setRefreshToken])
 
   return (
     <div className="flex flex-col gap-8">
@@ -1096,7 +1102,7 @@ function Listings() {
             fetchParams={fetchParams}
             expandedDescriptions={expandedDescriptions}
             onToggleDescription={toggleDescription}
-            onEditListing={handleEditListing}
+            onAddNote={handleAddNote}
             onMetaChange={handleMetaChange}
             onItemsChange={handleItemsChange}
             onLoadingChange={handleLoadingChange}
@@ -1104,8 +1110,8 @@ function Listings() {
         </div>
       </SectionCard>
       <EditListingModal
-        listing={editingListing}
-        isOpen={Boolean(editingListing)}
+        listing={noteListing}
+        isOpen={Boolean(noteListing)}
         onClose={handleCloseEdit}
         onUpdated={handleListingUpdated}
       />

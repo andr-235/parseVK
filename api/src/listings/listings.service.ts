@@ -228,6 +228,7 @@ export class ListingsService {
       images: listing.images ?? [],
       metadata: listing.metadata ?? null,
       manualOverrides: overrides,
+      manualNote: listing.manualNote ?? null,
       createdAt: listing.createdAt.toISOString(),
       updatedAt: listing.updatedAt.toISOString(),
     };
@@ -427,6 +428,13 @@ export class ListingsService {
       const value = this.metadataValue(payload.metadata);
       if (value !== undefined && JSON.stringify(value) !== JSON.stringify(existing.metadata ?? null)) {
         data.metadata = value;
+      }
+    }
+
+    if (this.has(payload, 'manualNote')) {
+      const value = this.stringValue(payload.manualNote);
+      if (value !== undefined && value !== (existing.manualNote ?? null)) {
+        (data as Record<string, unknown>).manualNote = value;
       }
     }
 
