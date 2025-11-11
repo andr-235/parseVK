@@ -61,6 +61,25 @@ export class ListingsController {
     ] as const;
     type FieldKey = typeof defaultFields[number];
 
+    const fieldLabels: Record<FieldKey, string> = {
+      id: 'ID',
+      source: 'Источник',
+      title: 'Заголовок',
+      url: 'Ссылка',
+      price: 'Цена',
+      currency: 'Валюта',
+      address: 'Адрес',
+      sourceAuthorName: 'Имя продавца',
+      sourceAuthorPhone: 'Телефон продавца',
+      sourceAuthorUrl: 'Ссылка на продавца',
+      publishedAt: 'Дата публикации',
+      postedAt: 'Оригинальная дата публикации',
+      parsedAt: 'Дата парсинга',
+      images: 'Изображения',
+      description: 'Описание',
+      manualNote: 'Примечание',
+    };
+
     const parseFields = (value?: string): FieldKey[] => {
       const raw = (value ?? '').trim();
       if (!raw) return [...defaultFields];
@@ -101,7 +120,10 @@ export class ListingsController {
     res?.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res?.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res?.write(bom);
-    res?.write(fields.join(',') + '\n');
+    const headerRow = fields
+      .map((field) => escapeCsv(fieldLabels[field] ?? field))
+      .join(',');
+    res?.write(headerRow + '\n');
 
     const pickPublished = (item: ListingDto): string | null => {
       if (item.publishedAt) return item.publishedAt;
