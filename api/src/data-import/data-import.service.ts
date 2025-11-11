@@ -181,10 +181,14 @@ export class DataImportService {
     parsed.search = '';
     parsed.hostname = parsed.hostname.toLowerCase();
 
-    const pathname = parsed.pathname.replace(/\/{2,}/g, '/');
-    const normalizedPath = pathname.length === 0 ? '/' : pathname;
+    let pathname = parsed.pathname.replace(/\/{2,}/g, '/');
+    if (pathname.length === 0) {
+      pathname = '/';
+    } else if (pathname.length > 1 && pathname.endsWith('/')) {
+      pathname = pathname.slice(0, -1);
+    }
 
-    return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
+    return `${parsed.protocol}//${parsed.host}${pathname}`;
   }
 
   private normalizeMetadata(

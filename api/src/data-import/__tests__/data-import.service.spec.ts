@@ -95,6 +95,37 @@ describe('DataImportService', () => {
     });
   });
 
+  it('нормализует URL и обновляет существующее объявление', async () => {
+    (prisma.listing.findUnique as jest.Mock).mockResolvedValue({
+      id: 100,
+      manualOverrides: [],
+    });
+    (prisma.listing.upsert as jest.Mock).mockResolvedValue({ id: 100 });
+
+    const result = await service.importListings({
+      updateExisting: true,
+      listings: [
+        {
+          url: 'https://example.com/ad/123/?ref=tracker&utm_campaign=abcd#details',
+        },
+      ],
+    } as ListingImportRequestDto);
+
+    expect(prisma.listing.upsert).toHaveBeenCalledWith({
+      where: { url: 'https://example.com/ad/123' },
+      create: expect.objectContaining({ url: 'https://example.com/ad/123' }),
+      update: expect.any(Object),
+    });
+    expect(result).toEqual({
+      processed: 1,
+      created: 0,
+      updated: 1,
+      skipped: 0,
+      failed: 0,
+      errors: [],
+    });
+  });
+
   it('обрабатывает дубликаты и ошибки вставки', async () => {
     (prisma.listing.findUnique as jest.Mock).mockResolvedValue(null);
     (prisma.listing.upsert as jest.Mock)
