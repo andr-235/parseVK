@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { Listing as ListingEntity } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import type { ListingsResponseDto } from './dto/listings-response.dto';
 import type { ListingDto } from './dto/listing.dto';
+import type { UpdateListingDto } from './dto/update-listing.dto';
 
 interface GetListingsOptions {
   page: number;
@@ -65,35 +67,7 @@ export class ListingsService {
       }),
     ]);
 
-    const items: ListingDto[] = listings.map((listing) => ({
-      id: listing.id,
-      source: listing.source ?? null,
-      externalId: listing.externalId ?? null,
-      title: listing.title ?? null,
-      description: listing.description ?? null,
-      url: listing.url,
-      price: listing.price ?? null,
-      currency: listing.currency ?? null,
-      address: listing.address ?? null,
-      city: listing.city ?? null,
-      latitude: listing.latitude ?? null,
-      longitude: listing.longitude ?? null,
-      rooms: listing.rooms ?? null,
-      areaTotal: listing.areaTotal ?? null,
-      areaLiving: listing.areaLiving ?? null,
-      areaKitchen: listing.areaKitchen ?? null,
-      floor: listing.floor ?? null,
-      floorsTotal: listing.floorsTotal ?? null,
-      publishedAt: listing.publishedAt
-        ? listing.publishedAt.toISOString()
-        : null,
-      contactName: listing.contactName ?? null,
-      contactPhone: listing.contactPhone ?? null,
-      images: listing.images ?? [],
-      metadata: listing.metadata ?? null,
-      createdAt: listing.createdAt.toISOString(),
-      updatedAt: listing.updatedAt.toISOString(),
-    }));
+    const items: ListingDto[] = listings.map((listing) => this.mapListing(listing));
 
     const sources = distinctSources
       .map((entry) => entry.source)
@@ -144,33 +118,7 @@ export class ListingsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const items: ListingDto[] = listings.map((listing) => ({
-      id: listing.id,
-      source: listing.source ?? null,
-      externalId: listing.externalId ?? null,
-      title: listing.title ?? null,
-      description: listing.description ?? null,
-      url: listing.url,
-      price: listing.price ?? null,
-      currency: listing.currency ?? null,
-      address: listing.address ?? null,
-      city: listing.city ?? null,
-      latitude: listing.latitude ?? null,
-      longitude: listing.longitude ?? null,
-      rooms: listing.rooms ?? null,
-      areaTotal: listing.areaTotal ?? null,
-      areaLiving: listing.areaLiving ?? null,
-      areaKitchen: listing.areaKitchen ?? null,
-      floor: listing.floor ?? null,
-      floorsTotal: listing.floorsTotal ?? null,
-      publishedAt: listing.publishedAt ? listing.publishedAt.toISOString() : null,
-      contactName: listing.contactName ?? null,
-      contactPhone: listing.contactPhone ?? null,
-      images: listing.images ?? [],
-      metadata: listing.metadata ?? null,
-      createdAt: listing.createdAt.toISOString(),
-      updatedAt: listing.updatedAt.toISOString(),
-    }));
+    const items: ListingDto[] = listings.map((listing) => this.mapListing(listing));
 
     return items;
   }
@@ -220,36 +168,293 @@ export class ListingsService {
       }
       lastId = listings[listings.length - 1].id;
 
-      const items: ListingDto[] = listings.map((listing) => ({
-        id: listing.id,
-        source: listing.source ?? null,
-        externalId: listing.externalId ?? null,
-        title: listing.title ?? null,
-        description: listing.description ?? null,
-        url: listing.url,
-        price: listing.price ?? null,
-        currency: listing.currency ?? null,
-        address: listing.address ?? null,
-        city: listing.city ?? null,
-        latitude: listing.latitude ?? null,
-        longitude: listing.longitude ?? null,
-        rooms: listing.rooms ?? null,
-        areaTotal: listing.areaTotal ?? null,
-        areaLiving: listing.areaLiving ?? null,
-        areaKitchen: listing.areaKitchen ?? null,
-        floor: listing.floor ?? null,
-        floorsTotal: listing.floorsTotal ?? null,
-        publishedAt: listing.publishedAt ? listing.publishedAt.toISOString() : null,
-        contactName: listing.contactName ?? null,
-        contactPhone: listing.contactPhone ?? null,
-        images: listing.images ?? [],
-        metadata: listing.metadata ?? null,
-        createdAt: listing.createdAt.toISOString(),
-        updatedAt: listing.updatedAt.toISOString(),
-      }));
+      const items: ListingDto[] = listings.map((listing) => this.mapListing(listing));
 
       yield items;
     }
+  }
+
+  async updateListing(id: number, payload: UpdateListingDto): Promise<ListingDto> {
+    const data = this.buildUpdateData(payload);
+    if (Object.keys(data).length === 0) {
+      const existing = await this.prisma.listing.findUniqueOrThrow({
+        where: { id },
+      });
+      return this.mapListing(existing);
+    }
+
+    const listing = await this.prisma.listing.update({
+      where: { id },
+      data,
+    });
+
+    return this.mapListing(listing);
+  }
+
+  private mapListing(listing: ListingEntity): ListingDto {
+    return {
+      id: listing.id,
+      source: listing.source ?? null,
+      externalId: listing.externalId ?? null,
+      title: listing.title ?? null,
+      description: listing.description ?? null,
+      url: listing.url,
+      price: listing.price ?? null,
+      currency: listing.currency ?? null,
+      address: listing.address ?? null,
+      city: listing.city ?? null,
+      latitude: listing.latitude ?? null,
+      longitude: listing.longitude ?? null,
+      rooms: listing.rooms ?? null,
+      areaTotal: listing.areaTotal ?? null,
+      areaLiving: listing.areaLiving ?? null,
+      areaKitchen: listing.areaKitchen ?? null,
+      floor: listing.floor ?? null,
+      floorsTotal: listing.floorsTotal ?? null,
+      publishedAt: listing.publishedAt ? listing.publishedAt.toISOString() : null,
+      contactName: listing.contactName ?? null,
+      contactPhone: listing.contactPhone ?? null,
+      images: listing.images ?? [],
+      metadata: listing.metadata ?? null,
+      createdAt: listing.createdAt.toISOString(),
+      updatedAt: listing.updatedAt.toISOString(),
+    };
+  }
+
+  private buildUpdateData(payload: UpdateListingDto): Prisma.ListingUpdateInput {
+    const data: Prisma.ListingUpdateInput = {};
+
+    if (this.has(payload, 'source')) {
+      const value = this.stringValue(payload.source);
+      if (value !== undefined) {
+        data.source = value;
+      }
+    }
+
+    if (this.has(payload, 'externalId')) {
+      const value = this.stringValue(payload.externalId);
+      if (value !== undefined) {
+        data.externalId = value;
+      }
+    }
+
+    if (this.has(payload, 'title')) {
+      const value = this.stringValue(payload.title);
+      if (value !== undefined) {
+        data.title = value;
+      }
+    }
+
+    if (this.has(payload, 'description')) {
+      const value = this.stringValue(payload.description);
+      if (value !== undefined) {
+        data.description = value;
+      }
+    }
+
+    if (this.has(payload, 'url')) {
+      const value = this.stringValue(payload.url);
+      if (value !== undefined) {
+        data.url = value ?? undefined;
+      }
+    }
+
+    if (this.has(payload, 'price')) {
+      const value = this.integerValue(payload.price);
+      if (value !== undefined) {
+        data.price = value;
+      }
+    }
+
+    if (this.has(payload, 'currency')) {
+      const value = this.stringValue(payload.currency);
+      if (value !== undefined) {
+        data.currency = value;
+      }
+    }
+
+    if (this.has(payload, 'address')) {
+      const value = this.stringValue(payload.address);
+      if (value !== undefined) {
+        data.address = value;
+      }
+    }
+
+    if (this.has(payload, 'city')) {
+      const value = this.stringValue(payload.city);
+      if (value !== undefined) {
+        data.city = value;
+      }
+    }
+
+    if (this.has(payload, 'latitude')) {
+      const value = this.floatValue(payload.latitude);
+      if (value !== undefined) {
+        data.latitude = value;
+      }
+    }
+
+    if (this.has(payload, 'longitude')) {
+      const value = this.floatValue(payload.longitude);
+      if (value !== undefined) {
+        data.longitude = value;
+      }
+    }
+
+    if (this.has(payload, 'rooms')) {
+      const value = this.integerValue(payload.rooms);
+      if (value !== undefined) {
+        data.rooms = value;
+      }
+    }
+
+    if (this.has(payload, 'areaTotal')) {
+      const value = this.floatValue(payload.areaTotal);
+      if (value !== undefined) {
+        data.areaTotal = value;
+      }
+    }
+
+    if (this.has(payload, 'areaLiving')) {
+      const value = this.floatValue(payload.areaLiving);
+      if (value !== undefined) {
+        data.areaLiving = value;
+      }
+    }
+
+    if (this.has(payload, 'areaKitchen')) {
+      const value = this.floatValue(payload.areaKitchen);
+      if (value !== undefined) {
+        data.areaKitchen = value;
+      }
+    }
+
+    if (this.has(payload, 'floor')) {
+      const value = this.integerValue(payload.floor);
+      if (value !== undefined) {
+        data.floor = value;
+      }
+    }
+
+    if (this.has(payload, 'floorsTotal')) {
+      const value = this.integerValue(payload.floorsTotal);
+      if (value !== undefined) {
+        data.floorsTotal = value;
+      }
+    }
+
+    if (this.has(payload, 'publishedAt')) {
+      const value = this.dateValue(payload.publishedAt);
+      if (value !== undefined) {
+        data.publishedAt = value;
+      }
+    }
+
+    if (this.has(payload, 'contactName')) {
+      const value = this.stringValue(payload.contactName);
+      if (value !== undefined) {
+        data.contactName = value;
+      }
+    }
+
+    if (this.has(payload, 'contactPhone')) {
+      const value = this.stringValue(payload.contactPhone);
+      if (value !== undefined) {
+        data.contactPhone = value;
+      }
+    }
+
+    if (this.has(payload, 'images')) {
+      const value = this.imagesValue(payload.images);
+      if (value !== undefined) {
+        data.images = value;
+      }
+    }
+
+    if (this.has(payload, 'metadata')) {
+      const value = this.metadataValue(payload.metadata);
+      if (value !== undefined) {
+        data.metadata = value;
+      }
+    }
+
+    return data;
+  }
+
+  private has(payload: UpdateListingDto, key: keyof UpdateListingDto): boolean {
+    return Object.prototype.hasOwnProperty.call(payload, key);
+  }
+
+  private stringValue(value?: string | null): string | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private integerValue(value?: number | null): number | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    if (!Number.isFinite(value)) {
+      return undefined;
+    }
+    return Math.round(value);
+  }
+
+  private floatValue(value?: number | null): number | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  private dateValue(value?: string | null): Date | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+
+  private metadataValue(
+    value?: Record<string, unknown> | null,
+  ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return Prisma.JsonNull;
+    }
+    return value as Prisma.InputJsonValue;
+  }
+
+  private imagesValue(value?: string[] | null): string[] | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return [];
+    }
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value
+      .map((image) => (typeof image === 'string' ? image.trim() : ''))
+      .filter((image) => image.length > 0);
   }
 
   private normalizeBatchSize(value?: number) {

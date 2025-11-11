@@ -1,0 +1,25 @@
+export interface UpdateListingDto {
+  source?: string | null;
+  externalId?: string | null;
+  title?: string | null;
+  description?: string | null;
+  url?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  address?: string | null;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  rooms?: number | null;
+  areaTotal?: number | null;
+  areaLiving?: number | null;
+  areaKitchen?: number | null;
+  floor?: number | null;
+  floorsTotal?: number | null;
+  publishedAt?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  images?: string[] | null;
+  metadata?: Record<string, unknown> | null;
+}
+

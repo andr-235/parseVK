@@ -1,8 +1,10 @@
 import { API_URL } from './config'
 import type {
+  IListing,
   IListingsResponse,
   ListingImportRequest,
   ListingImportReport,
+  ListingUpdatePayload,
 } from '@/types/api'
 
 export interface GetListingsParams {
@@ -80,5 +82,22 @@ export const listingsApi = {
     const blob = await response.blob()
     const disposition = response.headers.get('Content-Disposition') || ''
     return { blob, disposition }
+  },
+
+  async updateListing(id: number, payload: ListingUpdatePayload): Promise<IListing> {
+    const response = await fetch(`${API_URL}/listings/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      throw new Error(text || 'Failed to update listing')
+    }
+
+    return response.json()
   },
 }

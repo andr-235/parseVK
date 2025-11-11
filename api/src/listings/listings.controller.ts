@@ -1,8 +1,9 @@
-import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query, Res } from '@nestjs/common';
 import { ListingsService } from './listings.service';
 import type { ListingsResponseDto } from './dto/listings-response.dto';
 import type { ListingDto } from './dto/listing.dto';
 import type { Response } from 'express';
+import type { UpdateListingDto } from './dto/update-listing.dto';
 
 @Controller('listings')
 export class ListingsController {
@@ -197,6 +198,15 @@ export class ListingsController {
     }
 
     res?.end();
+  }
+
+  @Patch(':id')
+  async updateListing(
+    @Param('id') idParam: string,
+    @Body() payload: UpdateListingDto,
+  ): Promise<ListingDto> {
+    const id = this.parseNumber(idParam, 0, 1, Number.MAX_SAFE_INTEGER);
+    return this.listingsService.updateListing(id, payload);
   }
 
   private parseNumber(

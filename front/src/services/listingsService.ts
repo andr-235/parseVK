@@ -1,9 +1,11 @@
 import toast from 'react-hot-toast'
 import { listingsApi } from '@/api/listingsApi'
 import type {
+  IListing,
   IListingsResponse,
   ListingImportItem,
   ListingImportReport,
+  ListingUpdatePayload,
 } from '@/types/api'
 
 interface FetchListingsOptions {
@@ -158,6 +160,21 @@ export const listingsService = {
         console.error('[listingsService] exportCsv error', error)
       }
       const message = error instanceof Error ? error.message : 'Не удалось выгрузить CSV'
+      toast.error(message)
+      throw error
+    }
+  },
+
+  async updateListing(id: number, payload: ListingUpdatePayload): Promise<IListing> {
+    try {
+      const result = await listingsApi.updateListing(id, payload)
+      toast.success('Объявление обновлено')
+      return result
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[listingsService] updateListing error', error)
+      }
+      const message = error instanceof Error ? error.message : 'Не удалось обновить объявление'
       toast.error(message)
       throw error
     }

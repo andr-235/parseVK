@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/card'
 import { listingsService } from '@/services/listingsService'
 import ExportListingsModal from '@/components/ExportListingsModal'
+import EditListingModal from '@/components/EditListingModal'
 import type { IListing } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ExternalLink, MapPin, Phone, Calendar, Tag } from 'lucide-react'
@@ -258,6 +259,7 @@ interface ListingCardProps {
   listing: IListing
   expandedDescriptions: Set<number>
   onToggleDescription: (id: number) => void
+  onEdit: (listing: IListing) => void
   shouldAnimate?: boolean
   staggerDelay?: number
 }
@@ -266,6 +268,7 @@ function ListingCard({
   listing,
   expandedDescriptions,
   onToggleDescription,
+  onEdit,
   shouldAnimate = false,
   staggerDelay = 0,
 }: ListingCardProps) {
@@ -455,24 +458,33 @@ function ListingCard({
           </div>
 
           {/* Ссылка на объявление */}
-          {listing.url && (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {listing.url && (
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
+                <a
+                  href={listing.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Открыть объявление
+                </a>
+              </Button>
+            )}
             <Button
-              variant="outline"
+              type="button"
+              variant="secondary"
               size="sm"
-              className="w-full"
-              asChild
+              className="w-full sm:w-auto"
+              onClick={(event) => {
+                event.stopPropagation()
+                onEdit(listing)
+              }}
             >
-              <a
-                href={listing.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Открыть объявление
-              </a>
+              Редактировать
             </Button>
-          )}
+          </div>
         </CardContent>
       </MotionCard>
   )
@@ -506,6 +518,7 @@ interface ListingsInfiniteProps {
   fetchParams: ListingsFetcherParams
   expandedDescriptions: Set<number>
   onToggleDescription: (id: number) => void
+  onEditListing: (listing: IListing) => void
   onMetaChange?: (meta: ListingsMeta | null) => void
   onItemsChange?: (count: number) => void
   onLoadingChange?: (loading: boolean) => void
@@ -518,6 +531,7 @@ function ListingsInfinite({
   fetchParams,
   expandedDescriptions,
   onToggleDescription,
+  onEditListing,
   onMetaChange,
   onItemsChange,
   onLoadingChange,
@@ -645,6 +659,7 @@ function ListingsInfinite({
               listing={listing}
               expandedDescriptions={expandedDescriptions}
               onToggleDescription={onToggleDescription}
+              onEdit={onEditListing}
               shouldAnimate={!hasAnimated}
               staggerDelay={Math.min(index % 8, 6) * 0.04}
             />
@@ -709,6 +724,7 @@ function Listings() {
   const [refreshToken, setRefreshToken] = useState(0)
   const [isListLoading, setIsListLoading] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [editingListing, setEditingListing] = useState<IListing | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -908,6 +924,20 @@ function Listings() {
     })
   }
 
+  const handleEditListing = useCallback((listing: IListing) => {
+    setEditingListing(listing)
+  }, [])
+
+  const handleCloseEdit = useCallback(() => {
+    setEditingListing(null)
+  }, [])
+
+  const handleListingUpdated = useCallback((_listing: IListing) => {
+    setEditingListing(null)
+    setIsListLoading(true)
+    setRefreshToken((token) => token + 1)
+  }, [setEditingListing, setIsListLoading, setRefreshToken])
+
   return (
     <div className="flex flex-col gap-8">
       <PageHeroCard
@@ -1066,12 +1096,19 @@ function Listings() {
             fetchParams={fetchParams}
             expandedDescriptions={expandedDescriptions}
             onToggleDescription={toggleDescription}
+            onEditListing={handleEditListing}
             onMetaChange={handleMetaChange}
             onItemsChange={handleItemsChange}
             onLoadingChange={handleLoadingChange}
           />
         </div>
       </SectionCard>
+      <EditListingModal
+        listing={editingListing}
+        isOpen={Boolean(editingListing)}
+        onClose={handleCloseEdit}
+        onUpdated={handleListingUpdated}
+      />
       <ExportListingsModal
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
