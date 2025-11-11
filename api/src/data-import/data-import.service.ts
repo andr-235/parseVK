@@ -40,18 +40,24 @@ export class DataImportService {
         const data = this.buildListingData({ ...item, url });
 
         if (request.updateExisting) {
-          const existed = await this.prisma.listing.findUnique({
+          const existedRecord = await this.prisma.listing.findUnique({
             where: { url },
-            select: { id: true },
           });
 
           await this.prisma.listing.upsert({
             where: { url },
             create: data,
-            update: data,
+            update: existedRecord
+              ? this.excludeManualOverrides(
+                  data,
+                  this.normalizeManualOverrides(
+                    (existedRecord as { manualOverrides?: unknown }).manualOverrides,
+                  ),
+                )
+              : data,
           });
 
-          if (existed) {
+          if (existedRecord) {
             updated += 1;
           } else {
             created += 1;
@@ -133,6 +139,34 @@ export class DataImportService {
       images,
       metadata,
     };
+  }
+
+  private excludeManualOverrides(
+    data: Prisma.ListingCreateInput,
+    overrides: string[],
+  ): Prisma.ListingUpdateInput {
+    const manualFields = new Set(overrides);
+    const update: Prisma.ListingUpdateInput = { ...data };
+
+    for (const field of manualFields) {
+      if (field in update) {
+        delete (update as Record<string, unknown>)[field];
+      }
+    }
+
+    // manualOverrides should stay untouched during import
+    delete (update as Record<string, unknown>)['manualOverrides'];
+
+    return update;
+  }
+
+  private normalizeManualOverrides(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter((item): item is string => item.length > 0);
   }
 
   private stringValue(value?: string | null): string | undefined {

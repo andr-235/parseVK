@@ -177,6 +177,7 @@ model Listing {
   contactPhone  String?
   images        String[] @default([])
   metadata      Json?
+  manualOverrides Json? @default("[]")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

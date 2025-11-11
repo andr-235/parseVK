@@ -6,6 +6,8 @@ import type { ListingsResponseDto } from './dto/listings-response.dto';
 import type { ListingDto } from './dto/listing.dto';
 import type { UpdateListingDto } from './dto/update-listing.dto';
 
+type ListingWithOverrides = ListingEntity & { manualOverrides?: unknown };
+
 interface GetListingsOptions {
   page: number;
   pageSize: number;
@@ -67,7 +69,9 @@ export class ListingsService {
       }),
     ]);
 
-    const items: ListingDto[] = listings.map((listing) => this.mapListing(listing));
+    const items: ListingDto[] = listings.map((listing) =>
+      this.mapListing(listing as ListingWithOverrides),
+    );
 
     const sources = distinctSources
       .map((entry) => entry.source)
@@ -118,7 +122,9 @@ export class ListingsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    const items: ListingDto[] = listings.map((listing) => this.mapListing(listing));
+    const items: ListingDto[] = listings.map((listing) =>
+      this.mapListing(listing as ListingWithOverrides),
+    );
 
     return items;
   }
@@ -168,18 +174,21 @@ export class ListingsService {
       }
       lastId = listings[listings.length - 1].id;
 
-      const items: ListingDto[] = listings.map((listing) => this.mapListing(listing));
+      const items: ListingDto[] = listings.map((listing) =>
+        this.mapListing(listing as ListingWithOverrides),
+      );
 
       yield items;
     }
   }
 
   async updateListing(id: number, payload: UpdateListingDto): Promise<ListingDto> {
-    const data = this.buildUpdateData(payload);
+    const existingRecord = await this.prisma.listing.findUniqueOrThrow({
+      where: { id },
+    });
+    const existing = existingRecord as ListingWithOverrides;
+    const data = this.buildUpdateData(payload, existing);
     if (Object.keys(data).length === 0) {
-      const existing = await this.prisma.listing.findUniqueOrThrow({
-        where: { id },
-      });
       return this.mapListing(existing);
     }
 
@@ -188,10 +197,12 @@ export class ListingsService {
       data,
     });
 
-    return this.mapListing(listing);
+    return this.mapListing(listing as ListingWithOverrides);
   }
 
-  private mapListing(listing: ListingEntity): ListingDto {
+  private mapListing(listing: ListingWithOverrides): ListingDto {
+    const overrides = this.normalizeManualOverrides(listing.manualOverrides);
+
     return {
       id: listing.id,
       source: listing.source ?? null,
@@ -216,169 +227,224 @@ export class ListingsService {
       contactPhone: listing.contactPhone ?? null,
       images: listing.images ?? [],
       metadata: listing.metadata ?? null,
+      manualOverrides: overrides,
       createdAt: listing.createdAt.toISOString(),
       updatedAt: listing.updatedAt.toISOString(),
     };
   }
 
-  private buildUpdateData(payload: UpdateListingDto): Prisma.ListingUpdateInput {
+  private buildUpdateData(
+    payload: UpdateListingDto,
+    existing: ListingWithOverrides,
+  ): Prisma.ListingUpdateInput {
     const data: Prisma.ListingUpdateInput = {};
+    const currentOverrides = this.normalizeManualOverrides(existing.manualOverrides);
+    const overrides = new Set<string>(currentOverrides);
+    let overridesDirty = false;
 
     if (this.has(payload, 'source')) {
       const value = this.stringValue(payload.source);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.source) {
         data.source = value;
       }
     }
 
     if (this.has(payload, 'externalId')) {
       const value = this.stringValue(payload.externalId);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.externalId) {
         data.externalId = value;
       }
     }
 
     if (this.has(payload, 'title')) {
       const value = this.stringValue(payload.title);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.title) {
         data.title = value;
+        if (!overrides.has('title')) {
+          overrides.add('title');
+          overridesDirty = true;
+        }
       }
     }
 
     if (this.has(payload, 'description')) {
       const value = this.stringValue(payload.description);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.description) {
         data.description = value;
+        if (!overrides.has('description')) {
+          overrides.add('description');
+          overridesDirty = true;
+        }
       }
     }
 
     if (this.has(payload, 'url')) {
       const value = this.stringValue(payload.url);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.url) {
         data.url = value ?? undefined;
       }
     }
 
     if (this.has(payload, 'price')) {
       const value = this.integerValue(payload.price);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.price) {
         data.price = value;
+        if (!overrides.has('price')) {
+          overrides.add('price');
+          overridesDirty = true;
+        }
       }
     }
 
     if (this.has(payload, 'currency')) {
       const value = this.stringValue(payload.currency);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.currency) {
         data.currency = value;
+        if (!overrides.has('currency')) {
+          overrides.add('currency');
+          overridesDirty = true;
+        }
       }
     }
 
     if (this.has(payload, 'address')) {
       const value = this.stringValue(payload.address);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.address) {
         data.address = value;
+        if (!overrides.has('address')) {
+          overrides.add('address');
+          overridesDirty = true;
+        }
       }
     }
 
     if (this.has(payload, 'city')) {
       const value = this.stringValue(payload.city);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.city) {
         data.city = value;
+        if (!overrides.has('city')) {
+          overrides.add('city');
+          overridesDirty = true;
+        }
       }
     }
 
     if (this.has(payload, 'latitude')) {
       const value = this.floatValue(payload.latitude);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.latitude) {
         data.latitude = value;
       }
     }
 
     if (this.has(payload, 'longitude')) {
       const value = this.floatValue(payload.longitude);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.longitude) {
         data.longitude = value;
       }
     }
 
     if (this.has(payload, 'rooms')) {
       const value = this.integerValue(payload.rooms);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.rooms) {
         data.rooms = value;
       }
     }
 
     if (this.has(payload, 'areaTotal')) {
       const value = this.floatValue(payload.areaTotal);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.areaTotal) {
         data.areaTotal = value;
       }
     }
 
     if (this.has(payload, 'areaLiving')) {
       const value = this.floatValue(payload.areaLiving);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.areaLiving) {
         data.areaLiving = value;
       }
     }
 
     if (this.has(payload, 'areaKitchen')) {
       const value = this.floatValue(payload.areaKitchen);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.areaKitchen) {
         data.areaKitchen = value;
       }
     }
 
     if (this.has(payload, 'floor')) {
       const value = this.integerValue(payload.floor);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.floor) {
         data.floor = value;
       }
     }
 
     if (this.has(payload, 'floorsTotal')) {
       const value = this.integerValue(payload.floorsTotal);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.floorsTotal) {
         data.floorsTotal = value;
       }
     }
 
     if (this.has(payload, 'publishedAt')) {
       const value = this.dateValue(payload.publishedAt);
-      if (value !== undefined) {
+      const existingDate = existing.publishedAt ? existing.publishedAt.toISOString() : null;
+      const nextDate = value ? value.toISOString() : null;
+      if (value !== undefined && nextDate !== existingDate) {
         data.publishedAt = value;
       }
     }
 
     if (this.has(payload, 'contactName')) {
       const value = this.stringValue(payload.contactName);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.contactName) {
         data.contactName = value;
+        if (!overrides.has('contactName')) {
+          overrides.add('contactName');
+          overridesDirty = true;
+        }
       }
     }
 
     if (this.has(payload, 'contactPhone')) {
       const value = this.stringValue(payload.contactPhone);
-      if (value !== undefined) {
+      if (value !== undefined && value !== existing.contactPhone) {
         data.contactPhone = value;
+        if (!overrides.has('contactPhone')) {
+          overrides.add('contactPhone');
+          overridesDirty = true;
+        }
       }
     }
 
     if (this.has(payload, 'images')) {
       const value = this.imagesValue(payload.images);
-      if (value !== undefined) {
+      if (value !== undefined && JSON.stringify(value) !== JSON.stringify(existing.images ?? [])) {
         data.images = value;
       }
     }
 
     if (this.has(payload, 'metadata')) {
       const value = this.metadataValue(payload.metadata);
-      if (value !== undefined) {
+      if (value !== undefined && JSON.stringify(value) !== JSON.stringify(existing.metadata ?? null)) {
         data.metadata = value;
       }
     }
 
+    if (overridesDirty) {
+      (data as Record<string, unknown>)['manualOverrides'] = Array.from(overrides);
+    }
+
     return data;
+  }
+
+  private normalizeManualOverrides(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter((item): item is string => item.length > 0);
   }
 
   private has(payload: UpdateListingDto, key: keyof UpdateListingDto): boolean {

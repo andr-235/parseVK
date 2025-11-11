@@ -24,6 +24,7 @@ export interface ListingDto {
   contactPhone: string | null;
   images: string[];
   metadata: Prisma.JsonValue | null;
+  manualOverrides: string[];
   createdAt: string;
   updatedAt: string;
 }

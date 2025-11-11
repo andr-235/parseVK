@@ -227,6 +227,7 @@ export interface IListing {
   contactPhone?: string | null
   images: string[]
   metadata?: Record<string, unknown> | null
+  manualOverrides?: string[]
   createdAt: string
   updatedAt: string
 }
