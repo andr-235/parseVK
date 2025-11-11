@@ -125,9 +125,9 @@ function EditListingModal({ listing, isOpen, onClose, onUpdated }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
-        className="flex w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-background-secondary text-text-primary shadow-2xl"
+        className="flex w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-border/70 bg-background-primary text-text-primary shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-4 border-b border-border/40 px-6 py-5">
