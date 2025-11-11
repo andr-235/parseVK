@@ -49,7 +49,6 @@ export class ListingsController {
       'price',
       'currency',
       'address',
-      'contactName',
       'sourceAuthorName',
       'sourceAuthorPhone',
       'sourceAuthorUrl',
@@ -110,15 +109,6 @@ export class ListingsController {
       return item.sourceParsedAt ?? null;
     };
 
-    const pickContactName = (item: ListingDto): string | null => {
-      const direct = typeof item.contactName === 'string' ? item.contactName.trim() : '';
-      if (direct.length > 0) {
-        return direct;
-      }
-      const source = typeof item.sourceAuthorName === 'string' ? item.sourceAuthorName.trim() : '';
-      return source.length > 0 ? source : null;
-    };
-
     for await (const batch of this.listingsService.iterateAllListings({ search, source, batchSize: 1000 })) {
       for (const item of batch) {
         const row = fields.map((key) => {
@@ -131,7 +121,6 @@ export class ListingsController {
               case 'price': return item.price;
               case 'currency': return item.currency;
               case 'address': return item.address;
-              case 'contactName': return pickContactName(item);
               case 'publishedAt': return pickPublished(item);
               case 'postedAt': {
                 return item.sourcePostedAt ?? '';

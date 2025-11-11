@@ -18,7 +18,6 @@ type FieldKey =
   | 'url'
   | 'price'
   | 'address'
-  | 'contactName'
   | 'sourceAuthorName'
   | 'sourceAuthorPhone'
   | 'sourceAuthorUrl'
@@ -34,7 +33,6 @@ const ALL_FIELDS: { key: FieldKey; label: string }[] = [
   { key: 'url', label: 'Ссылка' },
   { key: 'price', label: 'Цена' },
   { key: 'address', label: 'Адрес' },
-  { key: 'contactName', label: 'Контактное лицо' },
   { key: 'sourceAuthorName', label: 'Имя продавца' },
   { key: 'sourceAuthorPhone', label: 'Телефон продавца' },
   { key: 'sourceAuthorUrl', label: 'Ссылка на продавца' },
@@ -191,7 +189,7 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
               // Группировка полей по категориям
               const groups: { title: string; keys: FieldKey[] }[] = [
                 { title: 'Общие', keys: ['id','source','title','url','price','postedAt','parsedAt'] },
-                { title: 'Контакты', keys: ['contactName','sourceAuthorName','sourceAuthorPhone','sourceAuthorUrl'] },
+                { title: 'Контакты', keys: ['sourceAuthorName','sourceAuthorPhone','sourceAuthorUrl'] },
                 { title: 'Гео', keys: ['address'] },
                 { title: 'Прочее', keys: ['description','manualNote'] },
               ]
