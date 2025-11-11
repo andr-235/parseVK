@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import PageHeroCard from '../components/PageHeroCard'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../components/ui/card'
-import { Label } from '../components/ui/label'
-import { Input } from '../components/ui/input'
-import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
+import { Button } from '../components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../components/ui/card'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
 import { useTaskAutomationStore } from '../stores'
+import { clamp, formatAutomationDate, formatAutomationTime } from '../utils/automationFormatting'
 
 interface AutomationFormState {
   enabled: boolean
@@ -14,39 +15,27 @@ interface AutomationFormState {
 }
 
 const DEFAULT_TIME = '03:00'
-
-function formatTime(hours: number, minutes: number): string {
-  const safeHours = Number.isFinite(hours) ? Math.max(0, Math.min(23, hours)) : 0
-  const safeMinutes = Number.isFinite(minutes) ? Math.max(0, Math.min(59, minutes)) : 0
-  return `${String(safeHours).padStart(2, '0')}:${String(safeMinutes).padStart(2, '0')}`
-}
-
-function formatDate(value: string | null): string {
-  if (!value) {
-    return '—'
-  }
-
-  try {
-    return new Intl.DateTimeFormat('ru-RU', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(new Date(value))
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.warn('[Settings] Failed to format automation date', error)
-    }
-    return new Date(value).toLocaleString('ru-RU')
-  }
-}
+const MIN_POST_LIMIT = 1
+const MAX_POST_LIMIT = 100
 
 function Settings() {
-  const settings = useTaskAutomationStore((state) => state.settings)
-  const fetchSettings = useTaskAutomationStore((state) => state.fetchSettings)
-  const updateSettings = useTaskAutomationStore((state) => state.updateSettings)
-  const runNow = useTaskAutomationStore((state) => state.runNow)
-  const isLoading = useTaskAutomationStore((state) => state.isLoading)
-  const isUpdating = useTaskAutomationStore((state) => state.isUpdating)
-  const isTriggering = useTaskAutomationStore((state) => state.isTriggering)
+  const {
+    settings,
+    fetchSettings,
+    updateSettings,
+    runNow,
+    isLoading,
+    isUpdating,
+    isTriggering,
+  } = useTaskAutomationStore((state) => ({
+    settings: state.settings,
+    fetchSettings: state.fetchSettings,
+    updateSettings: state.updateSettings,
+    runNow: state.runNow,
+    isLoading: state.isLoading,
+    isUpdating: state.isUpdating,
+    isTriggering: state.isTriggering,
+  }))
 
   const [formState, setFormState] = useState<AutomationFormState>({
     enabled: false,
@@ -67,60 +56,71 @@ function Settings() {
 
     setFormState({
       enabled: settings.enabled,
-      time: formatTime(settings.runHour, settings.runMinute),
+      time: formatAutomationTime(settings.runHour, settings.runMinute),
       postLimit: settings.postLimit,
     })
   }, [settings])
 
-  const nextRun = useMemo(() => formatDate(settings?.nextRunAt ?? null), [settings?.nextRunAt])
-  const lastRun = useMemo(() => formatDate(settings?.lastRunAt ?? null), [settings?.lastRunAt])
+  const nextRun = useMemo(
+    () => formatAutomationDate(settings?.nextRunAt ?? null),
+    [settings?.nextRunAt],
+  )
+  const lastRun = useMemo(
+    () => formatAutomationDate(settings?.lastRunAt ?? null),
+    [settings?.lastRunAt],
+  )
   const isFormDisabled = !settings || isUpdating
 
-  const handleToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleToggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setFormState((prev) => ({
       ...prev,
       enabled: event.target.checked,
     }))
-  }
+  }, [])
 
-  const handleTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTimeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setFormState((prev) => ({
       ...prev,
       time: event.target.value,
     }))
-  }
+  }, [])
 
-  const handlePostLimitChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePostLimitChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const parsed = Number.parseInt(event.target.value, 10)
     setFormState((prev) => ({
       ...prev,
-      postLimit: Number.isFinite(parsed) ? Math.max(1, Math.min(100, parsed)) : prev.postLimit,
+      postLimit: Number.isFinite(parsed)
+        ? clamp(parsed, MIN_POST_LIMIT, MAX_POST_LIMIT)
+        : prev.postLimit,
     }))
-  }
+  }, [])
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const handleSubmit = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
 
-    if (!settings) {
-      return
-    }
+      if (!settings) {
+        return
+      }
 
-    const [hoursString, minutesString] = formState.time.split(':')
-    const runHour = Number.parseInt(hoursString ?? '0', 10)
-    const runMinute = Number.parseInt(minutesString ?? '0', 10)
+      const [hoursString, minutesString] = formState.time.split(':')
+      const runHour = clamp(Number.parseInt(hoursString ?? '0', 10), 0, 23)
+      const runMinute = clamp(Number.parseInt(minutesString ?? '0', 10), 0, 59)
 
-    await updateSettings({
-      enabled: formState.enabled,
-      runHour: Number.isFinite(runHour) ? Math.max(0, Math.min(23, runHour)) : 0,
-      runMinute: Number.isFinite(runMinute) ? Math.max(0, Math.min(59, runMinute)) : 0,
-      postLimit: formState.postLimit,
-      timezoneOffsetMinutes: new Date().getTimezoneOffset(),
-    })
-  }
+      await updateSettings({
+        enabled: formState.enabled,
+        runHour,
+        runMinute,
+        postLimit: formState.postLimit,
+        timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+      })
+    },
+    [formState, settings, updateSettings],
+  )
 
-  const handleRunNow = async () => {
+  const handleRunNow = useCallback(async () => {
     await runNow()
-  }
+  }, [runNow])
 
   const heroActions = (
     <div className="flex flex-col items-end gap-2">
