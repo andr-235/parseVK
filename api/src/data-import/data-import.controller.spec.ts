@@ -55,4 +55,25 @@ describe('DataImportController', () => {
     expect('parsed_at' in listing).toBe(false);
     expect('author' in listing).toBe(false);
   });
+
+  it('копирует phone в contactPhone и сохраняет исходное значение в metadata', async () => {
+    const payload = [
+      {
+        url: 'https://example.com/listing-1',
+        title: 'Тестовое объявление',
+        phone: '+7 984 125-62-87',
+      },
+    ];
+
+    await controller.importData(payload);
+
+    expect(service.importListings).toHaveBeenCalledTimes(1);
+    const [request] = service.importListings.mock.calls[0];
+    const listing = request.listings[0];
+
+    expect(listing.contactPhone).toBe('+7 984 125-62-87');
+    expect((listing as ListingImportDto).metadata).toEqual({
+      phone: '+7 984 125-62-87',
+    });
+  });
 });

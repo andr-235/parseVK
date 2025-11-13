@@ -177,6 +177,22 @@ export class DataImportController {
         continue;
       }
 
+      if (key === 'phone' && typeof value === 'string') {
+        const stringValue = value.trim();
+        if (stringValue.length === 0) {
+          continue;
+        }
+        if (
+          typeof result.contactPhone !== 'string' ||
+          result.contactPhone.trim().length === 0
+        ) {
+          result.contactPhone = stringValue;
+        }
+
+        extraFields[key] = stringValue;
+        continue;
+      }
+
       if (key === 'author_url' && typeof value === 'string') {
         const stringValue = value.trim();
         if (stringValue.length === 0) {
