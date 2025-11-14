@@ -67,6 +67,7 @@ const Tasks = () => {
   const navigate = useNavigate()
 
   const activeTasks = useMemo(() => tasks.filter(isTaskActive), [tasks])
+  const hasGroups = Array.isArray(groups) && groups.length > 0
 
   // Вычисляем дату последнего обновления задачи: берем максимальную дату из completedAt и createdAt всех задач
   const latestTaskDate = useMemo(() => getLatestTaskDate(tasks), [tasks])
@@ -106,7 +107,7 @@ const Tasks = () => {
       return
     }
 
-    if (groups.length === 0) {
+    if (!hasGroups) {
       toast.error('Нет групп для парсинга. Добавьте группы на странице "Группы"')
       return
     }
@@ -173,7 +174,7 @@ const Tasks = () => {
         onCreateTask={handleOpenCreateModal}
         isCreating={isCreating}
         areGroupsLoading={areGroupsLoading}
-        hasGroups={groups.length > 0}
+        hasGroups={hasGroups}
         formattedLastUpdated={formattedLastUpdated}
       automation={automationSettings}
         onAutomationRun={handleAutomationRun}
