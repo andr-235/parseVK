@@ -8,6 +8,7 @@ import type { VkService } from '../vk/vk.service';
 import type {
   IGroupResponse,
   IDeleteResponse,
+  IGroupsListResponse,
 } from './interfaces/group.interface';
 import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface';
 import type { IGroup } from '../vk/interfaces/group.interfaces';
@@ -50,7 +51,9 @@ describe('GroupsService', () => {
         findMany: jest.fn(),
         delete: jest.fn(),
         deleteMany: jest.fn(),
+        count: jest.fn(),
       },
+      $transaction: jest.fn(),
     } as unknown as PrismaService;
 
     vkService = {
@@ -118,16 +121,34 @@ describe('GroupsService', () => {
     });
   });
 
-  it('должен возвращать все группы из базы', async () => {
+  it('должен возвращать постраничный список групп', async () => {
     const groups = [{ id: 1 }, { id: 2 }] as IGroupResponse[];
-    (prisma.group.findMany as jest.Mock).mockResolvedValue(groups);
+    (prisma.group.findMany as jest.Mock).mockReturnValue(
+      Promise.resolve(groups),
+    );
+    (prisma.group.count as jest.Mock).mockReturnValue(Promise.resolve(10));
+    (prisma.$transaction as jest.Mock).mockImplementation(
+      async (operations: Array<Promise<unknown>>) => {
+        const [items, total] = await Promise.all(operations);
+        return [items, total];
+      },
+    );
 
-    const result = await service.getAllGroups();
+    const result = await service.getAllGroups({ page: 2, limit: 2 });
 
     expect(prisma.group.findMany).toHaveBeenCalledWith({
       orderBy: { updatedAt: 'desc' },
+      skip: 2,
+      take: 2,
     });
-    expect(result).toBe(groups);
+    expect(prisma.group.count).toHaveBeenCalled();
+    expect(result).toEqual({
+      items: groups,
+      total: 10,
+      page: 2,
+      limit: 2,
+      hasMore: true,
+    } satisfies IGroupsListResponse);
   });
 
   it('должен удалять группу по идентификатору', async () => {

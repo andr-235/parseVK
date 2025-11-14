@@ -93,16 +93,44 @@ describe('GroupsController (HTTP)', () => {
     );
   });
 
-  it('должен успешно возвращать все группы через GET /groups', async () => {
-    const groups = [{ id: 1 }, { id: 2 }];
-    groupsService.getAllGroups.mockResolvedValue(groups);
+  it('должен возвращать постраничный список групп через GET /groups', async () => {
+    const payload = {
+      items: [{ id: 1 }, { id: 2 }],
+      total: 10,
+      page: 1,
+      limit: 50,
+      hasMore: true,
+    };
+    groupsService.getAllGroups.mockResolvedValue(payload);
 
     await request(app.getHttpServer())
       .get('/groups')
       .expect(200)
-      .expect(groups);
+      .expect(payload);
 
-    expect(groupsService.getAllGroups).toHaveBeenCalled();
+    expect(groupsService.getAllGroups).toHaveBeenCalledWith({});
+  });
+
+  it('должен прокидывать параметры пагинации из query', async () => {
+    const payload = {
+      items: [],
+      total: 0,
+      page: 2,
+      limit: 25,
+      hasMore: false,
+    };
+    groupsService.getAllGroups.mockResolvedValue(payload);
+
+    await request(app.getHttpServer())
+      .get('/groups')
+      .query({ page: '2', limit: '25' })
+      .expect(200)
+      .expect(payload);
+
+    expect(groupsService.getAllGroups).toHaveBeenCalledWith({
+      page: 2,
+      limit: 25,
+    });
   });
 
   it('должен успешно удалять все группы через DELETE /groups/all', async () => {

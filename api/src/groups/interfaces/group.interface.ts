@@ -26,3 +26,11 @@ export interface IGroupResponse {
 export interface IDeleteResponse {
   count: number;
 }
+
+export interface IGroupsListResponse {
+  items: IGroupResponse[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}

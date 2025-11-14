@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 import { groupsService } from '@/services/groupsService'
-import { useGroupsStore } from '@/stores'
+import { GROUPS_PAGE_LIMIT, useGroupsStore } from '@/stores'
 import { queryKeys } from '@/queries/queryKeys'
 
 interface UseGroupsQueryOptions {
@@ -14,7 +14,7 @@ export const useGroupsQuery = (options?: UseGroupsQueryOptions) => {
 
   const query = useQuery({
     queryKey: queryKeys.groups,
-    queryFn: groupsService.fetchGroups,
+    queryFn: () => groupsService.fetchGroups({ page: 1, limit: GROUPS_PAGE_LIMIT }),
     staleTime: 60_000,
     gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
@@ -26,7 +26,13 @@ export const useGroupsQuery = (options?: UseGroupsQueryOptions) => {
       return
     }
 
-    useGroupsStore.setState({ groups: query.data })
+    useGroupsStore.setState({
+      groups: query.data.items,
+      total: query.data.total,
+      page: query.data.page,
+      limit: query.data.limit,
+      hasMore: query.data.hasMore,
+    })
   }, [enabled, query.data])
 
   useEffect(() => {
@@ -34,8 +40,11 @@ export const useGroupsQuery = (options?: UseGroupsQueryOptions) => {
       return
     }
 
-    const isProcessing = useGroupsStore.getState().isProcessing
-    useGroupsStore.setState({ isLoading: query.isFetching || isProcessing })
+    const { isProcessing } = useGroupsStore.getState()
+    useGroupsStore.setState({
+      isLoading: query.isFetching || isProcessing,
+      isLoadingMore: query.isFetching ? useGroupsStore.getState().isLoadingMore : false,
+    })
   }, [enabled, query.isFetching])
 
   return query

@@ -2,6 +2,7 @@ import { API_URL } from './config'
 import type {
   IGroupResponse,
   IDeleteResponse,
+ IGroupsListResponse,
   IRegionGroupSearchResponse
 } from '../types/api'
 import type { SaveGroupDto } from '../dto'
@@ -45,8 +46,16 @@ export const groupsApi = {
     }
   },
 
-  async getAllGroups(): Promise<IGroupResponse[]> {
-    const response = await fetch(`${API_URL}/groups`)
+  async getAllGroups(params?: { page?: number; limit?: number }): Promise<IGroupsListResponse> {
+    const searchParams = new URLSearchParams()
+    if (typeof params?.page === 'number') {
+      searchParams.set('page', String(params.page))
+    }
+    if (typeof params?.limit === 'number') {
+      searchParams.set('limit', String(params.limit))
+    }
+    const query = searchParams.toString()
+    const response = await fetch(`${API_URL}/groups${query ? `?${query}` : ''}`)
     if (!response.ok) throw new Error('Failed to fetch groups')
     return response.json()
   },

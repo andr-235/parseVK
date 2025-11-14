@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 import toast from 'react-hot-toast'
-import { queryClient } from '@/lib/queryClient'
-import { queryKeys } from '@/queries/queryKeys'
 import type { GroupsState } from '../types/stores'
 import type { IRegionGroupSearchItem } from '../types/api'
 import { groupsService } from '../services/groupsService'
+
+export const GROUPS_PAGE_LIMIT = 50
 
 const updateRegionSearchAfterGroupAdded = (
   regionSearch: GroupsState['regionSearch'],
@@ -38,8 +38,13 @@ const updateRegionSearchAfterGroupAdded = (
 
 export const useGroupsStore = create<GroupsState>((set, get) => ({
   groups: [],
+  total: 0,
+  page: 0,
+  limit: GROUPS_PAGE_LIMIT,
+  hasMore: true,
   isLoading: false,
   isProcessing: false,
+  isLoadingMore: false,
   regionSearch: {
     total: 0,
     items: [],
@@ -49,16 +54,60 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     error: null
   },
 
-  fetchGroups: async () => {
+  fetchGroups: async (options) => {
+    const state = get()
+    if (!options?.reset && state.page > 0 && state.groups.length > 0) {
+      return
+    }
+
     set({ isLoading: true })
     try {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.groups, refetchType: 'active' })
+      const response = await groupsService.fetchGroups({ page: 1, limit: state.limit })
+      set({
+        groups: response.items,
+        total: response.total,
+        page: response.page,
+        limit: response.limit,
+        hasMore: response.hasMore
+      })
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('[groupsStore] fetchGroups error', error)
       }
     } finally {
       set({ isLoading: false })
+    }
+  },
+
+  loadMoreGroups: async () => {
+    const state = get()
+    if (!state.hasMore || state.isLoadingMore) {
+      return
+    }
+
+    const nextPage = state.page + 1
+    set({ isLoadingMore: true })
+    try {
+      const response = await groupsService.fetchGroups({ page: nextPage, limit: state.limit })
+      set((current) => {
+        const combined = [...current.groups, ...response.items]
+        const uniqueMap = new Map<number, typeof combined[number]>()
+        combined.forEach((group) => {
+          uniqueMap.set(group.id, group)
+        })
+
+        return {
+          groups: Array.from(uniqueMap.values()),
+          total: response.total,
+          page: response.page,
+          limit: response.limit,
+          hasMore: response.hasMore,
+          isLoadingMore: false
+        }
+      })
+    } catch (error) {
+      set({ isLoadingMore: false })
+      throw error
     }
   },
 
@@ -69,14 +118,16 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         set((state) => {
           const existingIndex = state.groups.findIndex((item) => item.id === group.id)
           if (existingIndex === -1) {
-            return { groups: [...state.groups, group] }
+            return {
+              groups: [group, ...state.groups],
+              total: state.total + 1
+            }
           }
 
           const updatedGroups = state.groups.slice()
           updatedGroups[existingIndex] = group
           return { groups: updatedGroups }
         })
-        void queryClient.invalidateQueries({ queryKey: queryKeys.groups, refetchType: 'active' })
         return true
       }
       return false
@@ -89,9 +140,9 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     try {
       await groupsService.deleteGroup(id)
       set((state) => ({
-        groups: state.groups.filter(group => group.id !== id)
+        groups: state.groups.filter(group => group.id !== id),
+        total: Math.max(0, state.total - 1)
       }))
-      void queryClient.invalidateQueries({ queryKey: queryKeys.groups, refetchType: 'active' })
     } catch {
       // Error handled in service
     }
@@ -101,11 +152,10 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     set({ isProcessing: true, isLoading: true })
     try {
       const result = await groupsService.uploadGroupsFile(file)
-      await queryClient.invalidateQueries({ queryKey: queryKeys.groups, refetchType: 'active' })
+      await get().fetchGroups({ reset: true })
       return result
     } finally {
-      const isQueryFetching = queryClient.isFetching({ queryKey: queryKeys.groups }) > 0
-      set({ isProcessing: false, isLoading: isQueryFetching })
+      set({ isProcessing: false, isLoading: false })
     }
   },
 
@@ -113,13 +163,16 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     set({ isProcessing: true, isLoading: true })
     try {
       await groupsService.deleteAllGroups()
-      set({ groups: [] })
-      await queryClient.invalidateQueries({ queryKey: queryKeys.groups, refetchType: 'active' })
+      set({
+        groups: [],
+        total: 0,
+        page: 0,
+        hasMore: false
+      })
     } catch (error) {
       throw error
     } finally {
-      const isQueryFetching = queryClient.isFetching({ queryKey: queryKeys.groups }) > 0
-      set({ isProcessing: false, isLoading: isQueryFetching })
+      set({ isProcessing: false, isLoading: false })
     }
   },
 
@@ -228,9 +281,10 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         regionSearch: successfulGroups.reduce(
           (acc, group) => updateRegionSearchAfterGroupAdded(acc, group),
           state.regionSearch
-        )
+        ),
+        total: state.total + successfulGroups.length
       }))
-      void queryClient.invalidateQueries({ queryKey: queryKeys.groups, refetchType: 'active' })
+      void get().fetchGroups({ reset: true })
       toast.success(`Добавлено групп: ${successfulGroups.length}`)
     }
 

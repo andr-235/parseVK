@@ -16,6 +16,7 @@ import { PhotoAnalysisModule } from './photo-analysis/photo-analysis.module';
 import { AuthorsModule } from './authors/authors.module';
 import { DataImportModule } from './data-import/data-import.module';
 import { ListingsModule } from './listings/listings.module';
+import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ListingsModule } from './listings/listings.module';
     AuthorsModule,
     DataImportModule,
     ListingsModule,
+    TelegramModule,
   ],
   controllers: [AppController],
   providers: [AppService],

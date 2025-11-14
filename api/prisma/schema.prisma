@@ -24,6 +24,22 @@ enum WatchlistStatus {
   STOPPED
 }
 
+enum TelegramChatType {
+  PRIVATE
+  GROUP
+  SUPERGROUP
+  CHANNEL
+}
+
+enum TelegramMemberStatus {
+  CREATOR
+  ADMINISTRATOR
+  MEMBER
+  RESTRICTED
+  LEFT
+  KICKED
+}
+
 enum SuspicionLevel {
   NONE
   LOW
@@ -326,4 +342,58 @@ model WatchlistAuthor {
   @@unique([authorVkId, settingsId])
   @@index([status])
   @@index([settingsId])
+}
+
+model TelegramChat {
+  id          Int               @id @default(autoincrement())
+  telegramId  BigInt            @unique
+  type        TelegramChatType
+  title       String?
+  username    String?
+  photoUrl    String?
+  description String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  members     TelegramChatMember[]
+
+  @@index([type])
+  @@index([username])
+}
+
+model TelegramUser {
+  id           Int               @id @default(autoincrement())
+  telegramId   BigInt            @unique
+  firstName    String?
+  lastName     String?
+  username     String?
+  phoneNumber  String?
+  bio          String?           @db.Text
+  languageCode String?
+  isBot        Boolean           @default(false)
+  isPremium    Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  memberships  TelegramChatMember[]
+
+  @@index([username])
+  @@index([isBot])
+}
+
+model TelegramChatMember {
+  id              Int                  @id @default(autoincrement())
+  chatId          Int
+  userId          Int
+  status          TelegramMemberStatus
+  isAdmin         Boolean              @default(false)
+  isOwner         Boolean              @default(false)
+  joinedAt        DateTime?
+  leftAt          DateTime?
+  importedAt      DateTime             @default(now())
+  rawPayload      Json?
+  chat            TelegramChat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user            TelegramUser         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([userId])
+  @@index([status])
 }

@@ -1,14 +1,12 @@
 import { groupsApi } from '../api/groupsApi'
-import type { Group } from '../types'
-import type { IRegionGroupSearchResponse } from '../types/api'
+import type { IGroupsListResponse, IRegionGroupSearchResponse } from '../types/api'
 import type { SaveGroupDto } from '../dto'
 import toast from 'react-hot-toast'
 
 export const groupsService = {
-  async fetchGroups(): Promise<Group[]> {
+  async fetchGroups(params?: { page?: number; limit?: number }): Promise<IGroupsListResponse> {
     try {
-      const response = await groupsApi.getAllGroups()
-      return response
+      return await groupsApi.getAllGroups(params)
     } catch (error) {
       toast.error('Ошибка загрузки групп')
       throw error

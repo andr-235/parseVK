@@ -7,7 +7,11 @@ import {
 import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import { IGroup } from '../vk/interfaces/group.interfaces';
-import { IGroupResponse, IDeleteResponse } from './interfaces/group.interface';
+import {
+  IGroupResponse,
+  IDeleteResponse,
+  IGroupsListResponse,
+} from './interfaces/group.interface';
 import {
   IBulkSaveGroupError,
   IBulkSaveGroupsResult,
@@ -78,10 +82,35 @@ export class GroupsService {
     };
   }
 
-  async getAllGroups(): Promise<IGroupResponse[]> {
-    return this.prisma.group.findMany({
-      orderBy: { updatedAt: 'desc' },
-    });
+  async getAllGroups(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<IGroupsListResponse> {
+    const page = params?.page && params.page > 0 ? params.page : 1;
+    const limit =
+      params?.limit && params.limit > 0 && params.limit <= 200
+        ? params.limit
+        : 50;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.group.findMany({
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.group.count(),
+    ]);
+
+    const hasMore = skip + items.length < total;
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      hasMore,
+    };
   }
 
   async deleteGroup(id: number): Promise<IGroupResponse> {

@@ -131,6 +131,21 @@ const WatchlistIcon = () => (
   </svg>
 )
 
+const TelegramIcon = () => (
+  <svg
+    className={iconClasses}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m3 11 18-8-4 18-6-4-4 3z" />
+    <path d="m10 13 9-9" />
+  </svg>
+)
+
 const SettingsIcon = () => (
   <svg
     className={iconClasses}
@@ -179,6 +194,7 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
       { label: 'Комментарии', path: '/comments', icon: <CommentsIcon />, badge: formatCount(commentsCount) },
       { label: 'Авторы', path: '/authors', icon: <AuthorsIcon />, badge: formatCount(authorsTotal) },
       { label: 'На карандаше', path: '/watchlist', icon: <WatchlistIcon />, badge: formatCount(watchlistCount) },
+      { label: 'Telegram', path: '/telegram', icon: <TelegramIcon /> },
       { label: 'Ключевые слова', path: '/keywords', icon: <KeywordsIcon /> },
     ]
   }, [tasksCount, commentsCount, watchlistCount, authorsTotal])

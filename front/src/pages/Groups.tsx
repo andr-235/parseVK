@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type ChangeEvent } from 'react'
+import { useState, useEffect, useMemo, useRef, type ChangeEvent } from 'react'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
 import GroupsHero from './Groups/components/GroupsHero'
@@ -10,7 +10,11 @@ import type { IRegionGroupSearchItem } from '../types/api'
 
 function Groups() {
   const groups = useGroupsStore((state) => state.groups)
+  const total = useGroupsStore((state) => state.total)
+  const page = useGroupsStore((state) => state.page)
   const isLoading = useGroupsStore((state) => state.isLoading)
+  const isLoadingMore = useGroupsStore((state) => state.isLoadingMore)
+  const hasMore = useGroupsStore((state) => state.hasMore)
   const fetchGroups = useGroupsStore((state) => state.fetchGroups)
   const addGroup = useGroupsStore((state) => state.addGroup)
   const deleteGroup = useGroupsStore((state) => state.deleteGroup)
@@ -21,11 +25,13 @@ function Groups() {
   const addGroupFromRegionSearch = useGroupsStore((state) => state.addGroupFromRegionSearch)
   const addSelectedRegionGroups = useGroupsStore((state) => state.addSelectedRegionSearchGroups)
   const removeRegionSearchGroup = useGroupsStore((state) => state.removeRegionSearchGroup)
+  const loadMoreGroups = useGroupsStore((state) => state.loadMoreGroups)
   const resetRegionSearch = useGroupsStore((state) => state.resetRegionSearch)
   const [url, setUrl] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
-  const groupsCount = groups.length
+  const groupsCount = total
   const hasGroups = groupsCount > 0
 
   const filteredGroups = useMemo(() => {
@@ -44,8 +50,35 @@ function Groups() {
   }, [groups, searchTerm])
 
   useEffect(() => {
-    fetchGroups()
-  }, [fetchGroups])
+    if (page > 0 || isLoading) {
+      return
+    }
+
+    void fetchGroups({ reset: true })
+  }, [fetchGroups, isLoading, page])
+
+  useEffect(() => {
+    const target = loadMoreRef.current
+    if (!target || !hasMore) {
+      return
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting || isLoading || isLoadingMore) {
+          return
+        }
+
+        void loadMoreGroups().catch(() => {})
+      })
+    }, { root: null, threshold: 0.1 })
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [hasMore, isLoading, isLoadingMore, loadMoreGroups])
 
   const handleAddGroup = async () => {
     if (await addGroup(url)) {
@@ -127,12 +160,15 @@ function Groups() {
         groups={filteredGroups}
         totalCount={groupsCount}
         isLoading={isLoading}
+        isLoadingMore={isLoadingMore}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onClear={handleDeleteAllGroups}
         onDelete={deleteGroup}
         columns={getGroupTableColumns}
       />
+
+      {hasMore && <div ref={loadMoreRef} className="h-1 w-full" />}
     </div>
   )
 }

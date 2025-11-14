@@ -25,6 +25,14 @@ export interface IGroupResponse {
   updatedAt: string
 }
 
+export interface IGroupsListResponse {
+  items: IGroupResponse[]
+  total: number
+  page: number
+  limit: number
+  hasMore: boolean
+}
+
 export interface IRegionGroupSearchItem {
   id: number
   name: string
@@ -446,4 +454,39 @@ export interface IWatchlistSettingsResponse {
   maxAuthors: number
   createdAt: string
   updatedAt: string
+}
+
+export type TelegramChatType = 'PRIVATE' | 'GROUP' | 'SUPERGROUP' | 'CHANNEL'
+
+export type TelegramMemberStatus = 'CREATOR' | 'ADMINISTRATOR' | 'MEMBER' | 'RESTRICTED' | 'LEFT' | 'KICKED'
+
+export interface TelegramMember {
+  userId: number
+  telegramId: string
+  firstName: string | null
+  lastName: string | null
+  username: string | null
+  phoneNumber: string | null
+  status: TelegramMemberStatus
+  isAdmin: boolean
+  isOwner: boolean
+  joinedAt: string | null
+  leftAt: string | null
+}
+
+export interface TelegramSyncResponse {
+  chatId: number
+  telegramId: string
+  type: TelegramChatType
+  title: string | null
+  username: string | null
+  syncedMembers: number
+  totalMembers: number | null
+  fetchedMembers: number
+  members: TelegramMember[]
+}
+
+export interface TelegramSyncRequest {
+  identifier: string
+  limit?: number
 }

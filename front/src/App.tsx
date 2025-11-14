@@ -13,6 +13,7 @@ import AuthorAnalysis from './pages/AuthorAnalysis'
 import Authors from './pages/Authors'
 import Settings from './pages/Settings'
 import Listings from './pages/Listings'
+import Telegram from './pages/Telegram'
 import AppSyncProvider from './providers/AppSyncProvider'
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
             <Route path="/keywords" element={<Keywords />} />
             <Route path="/authors" element={<Authors />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/telegram" element={<Telegram />} />
           </Routes>
         </MainContent>
         <Toaster

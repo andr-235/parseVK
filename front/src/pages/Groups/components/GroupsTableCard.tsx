@@ -24,6 +24,7 @@ interface GroupsTableCardProps {
   groups: Group[]
   totalCount: number
   isLoading: boolean
+  isLoadingMore: boolean
   onClear: () => void | Promise<void>
   onDelete: (id: number) => void
   columns: ColumnsFactory
@@ -50,6 +51,7 @@ function GroupsTableCard({
   groups,
   totalCount,
   isLoading,
+  isLoadingMore,
   onClear,
   onDelete,
   columns,
@@ -172,6 +174,15 @@ function GroupsTableCard({
                       ))}
                     </TableRow>
                   ))}
+                  {isLoadingMore && (
+                    <TableRow>
+                      <TableCell colSpan={tableColumns.length}>
+                        <div className="py-4 text-center text-sm text-text-secondary">
+                          Загрузка данных…
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
