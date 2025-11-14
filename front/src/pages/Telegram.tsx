@@ -20,6 +20,8 @@ const Telegram = () => {
   const [error, setError] = useState<string | null>(null)
 
   const [authPhone, setAuthPhone] = useState('+7')
+  const [authApiId, setAuthApiId] = useState('')
+  const [authApiHash, setAuthApiHash] = useState('')
   const [authTransactionId, setAuthTransactionId] = useState<string | null>(null)
   const [authStep, setAuthStep] = useState<'phone' | 'code' | 'success'>('phone')
   const [authCode, setAuthCode] = useState('')
@@ -48,6 +50,8 @@ const Telegram = () => {
   }, [authNextType])
   const handleResetAuth = () => {
     setAuthPhone('+7')
+    setAuthApiId('')
+    setAuthApiHash('')
     setAuthTransactionId(null)
     setAuthStep('phone')
     setAuthCode('')
@@ -68,7 +72,13 @@ const Telegram = () => {
     setAuthResult(null)
     setCopyStatus('idle')
     try {
-      const response = await telegramApi.startSession({ phoneNumber: authPhone.trim() })
+      const apiIdNum = authApiId.trim() ? Number.parseInt(authApiId.trim(), 10) : undefined
+      const apiHashStr = authApiHash.trim() || undefined
+      const response = await telegramApi.startSession({
+        phoneNumber: authPhone.trim(),
+        apiId: apiIdNum && !Number.isNaN(apiIdNum) ? apiIdNum : undefined,
+        apiHash: apiHashStr,
+      })
       setAuthTransactionId(response.transactionId)
       setAuthCodeLength(response.codeLength)
       setAuthNextType(response.nextType)
@@ -216,19 +226,58 @@ const Telegram = () => {
       >
         <div className="flex flex-col gap-6">
           {authStep === 'phone' && (
-            <form onSubmit={handleStartAuth} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-              <div className="basis-72">
-                <label className="mb-2 block text-sm font-medium text-text-secondary" htmlFor="auth-phone">
-                  Номер телефона
-                </label>
-                <Input
-                  id="auth-phone"
-                  value={authPhone}
-                  onChange={(event) => setAuthPhone(event.target.value)}
-                  placeholder="+79998887766"
-                  disabled={authLoading}
-                  autoComplete="tel"
-                />
+            <form onSubmit={handleStartAuth} className="flex flex-col gap-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-text-secondary" htmlFor="auth-phone">
+                    Номер телефона
+                  </label>
+                  <Input
+                    id="auth-phone"
+                    value={authPhone}
+                    onChange={(event) => setAuthPhone(event.target.value)}
+                    placeholder="+79998887766"
+                    disabled={authLoading}
+                    autoComplete="tel"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-text-secondary" htmlFor="auth-api-id">
+                    API ID
+                  </label>
+                  <Input
+                    id="auth-api-id"
+                    type="number"
+                    value={authApiId}
+                    onChange={(event) => setAuthApiId(event.target.value)}
+                    placeholder="12345678"
+                    disabled={authLoading}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-text-secondary" htmlFor="auth-api-hash">
+                    API Hash
+                  </label>
+                  <Input
+                    id="auth-api-hash"
+                    value={authApiHash}
+                    onChange={(event) => setAuthApiHash(event.target.value)}
+                    placeholder="abcdef1234567890abcdef1234567890"
+                    disabled={authLoading}
+                  />
+                </div>
+              </div>
+              <div className="rounded-lg border border-border/60 bg-background-primary/70 px-4 py-3 text-xs text-text-secondary">
+                API ID и API Hash можно получить на{' '}
+                <a
+                  href="https://my.telegram.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary/80"
+                >
+                  my.telegram.org
+                </a>
+                . Если не указаны, будут использованы значения из переменных окружения.
               </div>
               <Button type="submit" disabled={authLoading} className="sm:w-auto">
                 {authLoading ? 'Отправляем код…' : 'Отправить код'}

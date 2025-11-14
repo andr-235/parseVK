@@ -493,6 +493,8 @@ export interface TelegramSyncRequest {
 
 export interface TelegramSessionStartRequest {
   phoneNumber: string
+  apiId?: number
+  apiHash?: string
 }
 
 export interface TelegramSessionStartResponse {

@@ -24,6 +24,8 @@ interface AuthTransactionState {
   phoneNumber: string;
   phoneCodeHash: string;
   session: string;
+  apiId: number;
+  apiHash: string;
   createdAt: string;
 }
 
@@ -34,8 +36,8 @@ const TRANSACTION_TTL_SEC = 5 * 60;
 @Injectable()
 export class TelegramAuthService {
   private readonly logger = new Logger(TelegramAuthService.name);
-  private readonly apiId: number;
-  private readonly apiHash: string;
+  private readonly defaultApiId: number | null;
+  private readonly defaultApiHash: string | null;
 
   constructor(
     private readonly configService: ConfigService,
@@ -47,16 +49,9 @@ export class TelegramAuthService {
     const parsedApiId =
       typeof apiIdRaw === 'string' ? Number.parseInt(apiIdRaw, 10) : apiIdRaw;
 
-    if (!parsedApiId || Number.isNaN(parsedApiId)) {
-      throw new InternalServerErrorException('TELEGRAM_API_ID is missing');
-    }
-
-    if (!apiHash) {
-      throw new InternalServerErrorException('TELEGRAM_API_HASH is missing');
-    }
-
-    this.apiId = parsedApiId;
-    this.apiHash = apiHash;
+    this.defaultApiId =
+      parsedApiId && !Number.isNaN(parsedApiId) ? parsedApiId : null;
+    this.defaultApiHash = apiHash || null;
   }
 
   async startSession(
@@ -67,13 +62,20 @@ export class TelegramAuthService {
       throw new BadRequestException('PHONE_NUMBER_REQUIRED');
     }
 
-    const client = await this.createClient('');
+    const apiId = payload.apiId ?? this.defaultApiId;
+    const apiHash = payload.apiHash ?? this.defaultApiHash;
+
+    if (!apiId || !apiHash) {
+      throw new BadRequestException('API_ID_AND_HASH_REQUIRED');
+    }
+
+    const client = await this.createClient('', apiId, apiHash);
 
     try {
       const response = await client.sendCode(
         {
-          apiId: this.apiId,
-          apiHash: this.apiHash,
+          apiId,
+          apiHash,
         },
         phoneNumber,
         false,
@@ -86,6 +88,8 @@ export class TelegramAuthService {
         phoneNumber,
         phoneCodeHash: response.phoneCodeHash,
         session: sessionString,
+        apiId,
+        apiHash,
         createdAt: new Date().toISOString(),
       };
 
@@ -127,15 +131,19 @@ export class TelegramAuthService {
       throw new BadRequestException('TRANSACTION_NOT_FOUND_OR_EXPIRED');
     }
 
-    const client = await this.createClient(transaction.session);
+    const client = await this.createClient(
+      transaction.session,
+      transaction.apiId,
+      transaction.apiHash,
+    );
 
     try {
       let me: Api.TypeUser;
       try {
         me = await client.signInUser(
           {
-            apiId: this.apiId,
-            apiHash: this.apiHash,
+            apiId: transaction.apiId,
+            apiHash: transaction.apiHash,
           },
           {
             phoneNumber: transaction.phoneNumber,
@@ -168,8 +176,8 @@ export class TelegramAuthService {
           }
           me = await client.signInWithPassword(
             {
-              apiId: this.apiId,
-              apiHash: this.apiHash,
+              apiId: transaction.apiId,
+              apiHash: transaction.apiHash,
             },
             {
               password: async () => payload.password!,
@@ -215,11 +223,15 @@ export class TelegramAuthService {
     }
   }
 
-  private async createClient(session: string): Promise<TelegramClient> {
+  private async createClient(
+    session: string,
+    apiId: number,
+    apiHash: string,
+  ): Promise<TelegramClient> {
     const client = new TelegramClient(
       new StringSession(session),
-      this.apiId,
-      this.apiHash,
+      apiId,
+      apiHash,
       {
         connectionRetries: 5,
       },
