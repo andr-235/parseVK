@@ -333,6 +333,7 @@ export interface ListingUpdatePayload {
   sourcePostedAt?: string | null
   sourceParsedAt?: string | null
   manualNote?: string | null
+  archived?: boolean | null
 }
 
 export interface ITaskAutomationSettings {

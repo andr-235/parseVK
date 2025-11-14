@@ -26,7 +26,7 @@ import ExportListingsModal from '@/components/ExportListingsModal'
 import EditListingModal from '@/components/EditListingModal'
 import type { IListing } from '@/types/api'
 import { cn } from '@/lib/utils'
-import { ChevronDown, ExternalLink, MapPin, Phone, Calendar, Tag, Archive } from 'lucide-react'
+import { ChevronDown, ExternalLink, MapPin, Phone, Calendar, Tag } from 'lucide-react'
 import {
   useInfiniteListings,
   type UseInfiniteFetcher,
@@ -528,6 +528,7 @@ interface ListingsInfiniteProps {
   expandedDescriptions: Set<number>
   onToggleDescription: (id: number) => void
   onAddNote: (listing: IListing) => void
+  onArchive: (listing: IListing) => void | Promise<void>
   onMetaChange?: (meta: ListingsMeta | null) => void
   onItemsChange?: (count: number) => void
   onLoadingChange?: (loading: boolean) => void
