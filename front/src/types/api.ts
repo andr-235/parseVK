@@ -490,3 +490,28 @@ export interface TelegramSyncRequest {
   identifier: string
   limit?: number
 }
+
+export interface TelegramSessionStartRequest {
+  phoneNumber: string
+}
+
+export interface TelegramSessionStartResponse {
+  transactionId: string
+  codeLength: number
+  nextType: 'app' | 'sms' | 'call' | 'flash'
+  timeoutSec: number | null
+}
+
+export interface TelegramSessionConfirmRequest {
+  transactionId: string
+  code: string
+  password?: string
+}
+
+export interface TelegramSessionConfirmResponse {
+  session: string
+  expiresAt: string | null
+  userId: number
+  username: string | null
+  phoneNumber: string | null
+}
