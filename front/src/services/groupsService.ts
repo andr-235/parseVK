@@ -1,5 +1,5 @@
 import { groupsApi } from '../api/groupsApi'
-import type { IGroupsListResponse, IRegionGroupSearchResponse } from '../types/api'
+import type { IGroupResponse, IGroupsListResponse, IRegionGroupSearchResponse } from '../types/api'
 import type { SaveGroupDto } from '../dto'
 import toast from 'react-hot-toast'
 
@@ -17,7 +17,7 @@ export const groupsService = {
     name: string,
     description = '',
     options?: { silent?: boolean }
-  ): Promise<Group | null> {
+  ): Promise<IGroupResponse | null> {
     if (!name.trim()) return null
 
     try {
