@@ -70,8 +70,9 @@ export const groupsService = {
     try {
       const response = await groupsApi.uploadGroups(file)
       toast.success(`Загружено групп: ${response.saved}`)
-      if (response.errors.length > 0) {
-        toast.error(`Ошибок: ${response.errors.length}`)
+      const errorsCount = Array.isArray(response.errors) ? response.errors.length : 0
+      if (errorsCount > 0) {
+        toast.error(`Ошибок: ${errorsCount}`)
       }
       return response
     } catch (error) {
