@@ -6,7 +6,15 @@ import toast from 'react-hot-toast'
 export const groupsService = {
   async fetchGroups(params?: { page?: number; limit?: number }): Promise<IGroupsListResponse> {
     try {
-      return await groupsApi.getAllGroups(params)
+      const response = await groupsApi.getAllGroups(params)
+      return {
+        ...response,
+        items: Array.isArray(response.items) ? response.items : [],
+        total: typeof response.total === 'number' ? response.total : 0,
+        page: typeof response.page === 'number' ? response.page : 0,
+        limit: typeof response.limit === 'number' ? response.limit : params?.limit ?? 20,
+        hasMore: Boolean(response.hasMore),
+      }
     } catch (error) {
       toast.error('Ошибка загрузки групп')
       throw error
@@ -74,7 +82,10 @@ export const groupsService = {
       if (errorsCount > 0) {
         toast.error(`Ошибок: ${errorsCount}`)
       }
-      return response
+      return {
+        saved: typeof response.saved === 'number' ? response.saved : 0,
+        errors: Array.isArray(response.errors) ? response.errors : [],
+      }
     } catch (error) {
       toast.error('Ошибка при загрузке файла с группами')
       throw error
