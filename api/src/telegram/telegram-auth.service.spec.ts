@@ -38,8 +38,7 @@ describe('TelegramAuthService', () => {
 
     const sendCodeResponse = {
       phoneCodeHash: 'hash123',
-      type: new Api.auth.SentCodeTypeSms({ length: 6 }),
-      timeout: 20,
+      isCodeViaApp: false,
     };
 
     const clientMock = {
@@ -54,8 +53,12 @@ describe('TelegramAuthService', () => {
 
     const result = await service.startSession({ phoneNumber: '+79998887766' });
 
-    expect(clientMock.sendCode).toHaveBeenCalledTimes(1);
-    expect(result.codeLength).toBe(6);
+    expect(clientMock.sendCode).toHaveBeenCalledWith(
+      { apiId: 123456, apiHash: 'hash' },
+      '+79998887766',
+      false,
+    );
+    expect(result.codeLength).toBe(5);
     expect(result.nextType).toBe('sms');
     expect(cache.set).toHaveBeenCalledTimes(1);
     const [[cacheKey, cacheValue]] = (cache.set as jest.Mock).mock.calls;
@@ -83,14 +86,17 @@ describe('TelegramAuthService', () => {
       300,
     );
 
+    const userMock = new Api.User({
+      id: BigInt(123),
+      username: 'user123',
+      phone: '+79998887766',
+      firstName: 'Test',
+      lastName: 'User',
+    });
+
     const clientMock = {
-      signIn: jest.fn().mockResolvedValue(undefined),
-      checkPassword: jest.fn().mockResolvedValue(undefined),
-      getMe: jest.fn().mockResolvedValue({
-        id: 123,
-        username: 'user123',
-        phone: '+79998887766',
-      }),
+      signInUser: jest.fn().mockResolvedValue(userMock),
+      getMe: jest.fn().mockResolvedValue(userMock),
       session: { save: jest.fn().mockReturnValue('final-session') },
       disconnect: jest.fn().mockResolvedValue(undefined),
     } as unknown as Record<string, unknown>;
@@ -104,11 +110,12 @@ describe('TelegramAuthService', () => {
       code: '123456',
     });
 
-    expect(clientMock.signIn).toHaveBeenCalledWith({
-      phoneCode: '123456',
-      phoneCodeHash: 'hash123',
-      phoneNumber: '+79998887766',
-    });
+    expect(clientMock.signInUser).toHaveBeenCalledWith(
+      { apiId: 123456, apiHash: 'hash' },
+      expect.objectContaining({
+        phoneNumber: '+79998887766',
+      }),
+    );
     expect(result.session).toBe('final-session');
     expect(result.userId).toBe(123);
     expect(result.username).toBe('user123');
@@ -130,11 +137,11 @@ describe('TelegramAuthService', () => {
       300,
     );
 
-    const error = Object.assign(new Error(''), { errorMessage: 'SESSION_PASSWORD_NEEDED' });
+    const error = new Error('PASSWORD_REQUIRED');
 
     const clientMock = {
-      signIn: jest.fn().mockRejectedValue(error),
-      checkPassword: jest.fn(),
+      signInUser: jest.fn().mockRejectedValue(error),
+      signInWithPassword: jest.fn(),
       disconnect: jest.fn().mockResolvedValue(undefined),
       session: { save: jest.fn() },
     } as unknown as Record<string, unknown>;

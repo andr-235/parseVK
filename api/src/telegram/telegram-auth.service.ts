@@ -70,18 +70,17 @@ export class TelegramAuthService {
     const client = await this.createClient('');
 
     try {
-      const response = await client.sendCode({
-        apiId: this.apiId,
-        apiHash: this.apiHash,
+      const response = await client.sendCode(
+        {
+          apiId: this.apiId,
+          apiHash: this.apiHash,
+        },
         phoneNumber,
-        settings: new Api.CodeSettings({
-          allowFlashcall: false,
-          allowAppHash: true,
-        }),
-      });
+        false,
+      );
 
       const transactionId = randomUUID();
-      const sessionString = client.session.save();
+      const sessionString = (client.session.save() as unknown) as string;
 
       const state: AuthTransactionState = {
         phoneNumber,
@@ -98,9 +97,9 @@ export class TelegramAuthService {
 
       return {
         transactionId,
-        codeLength: this.resolveCodeLength(response.type),
-        nextType: this.resolveNextType(response.type),
-        timeoutSec: response.timeout ?? null,
+        codeLength: DEFAULT_CODE_LENGTH,
+        nextType: response.isCodeViaApp ? 'app' : 'sms',
+        timeoutSec: null,
       };
     } catch (error) {
       this.logger.error(
@@ -131,47 +130,85 @@ export class TelegramAuthService {
     const client = await this.createClient(transaction.session);
 
     try {
+      let me: Api.TypeUser;
       try {
-        await client.signIn({
-          phoneNumber: transaction.phoneNumber,
-          phoneCodeHash: transaction.phoneCodeHash,
-          phoneCode: payload.code,
-        });
+        me = await client.signInUser(
+          {
+            apiId: this.apiId,
+            apiHash: this.apiHash,
+          },
+          {
+            phoneNumber: transaction.phoneNumber,
+            phoneCode: async () => payload.code,
+            password: payload.password
+              ? async () => payload.password!
+              : undefined,
+            onError: async (err: Error) => {
+              this.logger.warn(
+                `Telegram signIn error for ${transaction.phoneNumber}: ${this.stringifyError(err)}`,
+              );
+              if (
+                err.message.includes('PASSWORD') ||
+                err.message.includes('password')
+              ) {
+                return false;
+              }
+              return true;
+            },
+          },
+        );
       } catch (error) {
         if (
           error instanceof Error &&
-          'errorMessage' in error &&
-          (error as { errorMessage?: string }).errorMessage ===
-            'SESSION_PASSWORD_NEEDED'
+          (error.message.includes('PASSWORD') ||
+            error.message.includes('password'))
         ) {
           if (!payload.password) {
             throw new BadRequestException('PASSWORD_REQUIRED');
           }
-          await client.checkPassword(payload.password);
+          me = await client.signInWithPassword(
+            {
+              apiId: this.apiId,
+              apiHash: this.apiHash,
+            },
+            {
+              password: async () => payload.password!,
+              onError: async (err: Error) => {
+                this.logger.warn(
+                  `Telegram password check failed for ${transaction.phoneNumber}: ${this.stringifyError(err)}`,
+                );
+                return true;
+              },
+            },
+          );
         } else {
           this.logger.warn(
             `Telegram signIn failed for ${transaction.phoneNumber}: ${this.stringifyError(error)}`,
           );
           throw new BadRequestException(
-            (error as { errorMessage?: string }).errorMessage ??
-              'TELEGRAM_SIGN_IN_FAILED',
+            error instanceof Error ? error.message : 'TELEGRAM_SIGN_IN_FAILED',
           );
         }
       }
 
-      const session = client.session.save();
-      const me = await client.getMe();
+      const session = (client.session.save() as unknown) as string;
 
       await this.cache.del(this.buildCacheKey(payload.transactionId));
+
+      const userId =
+        typeof me.id === 'bigint' ? Number(me.id) : typeof me.id === 'number' ? me.id : 0;
+
+      const username =
+        me instanceof Api.User && me.username ? me.username : null;
+      const phoneNumber =
+        me instanceof Api.User && me.phone ? me.phone : null;
 
       return {
         session,
         expiresAt: null,
-        userId: (me as { id: number }).id ?? 0,
-        username:
-          (me as { username?: string | null }).username?.toString() ?? null,
-        phoneNumber:
-          (me as { phone?: string | null }).phone?.toString() ?? null,
+        userId,
+        username,
+        phoneNumber,
       };
     } finally {
       await client.disconnect();
@@ -193,37 +230,6 @@ export class TelegramAuthService {
 
   private buildCacheKey(transactionId: string): string {
     return `${CACHE_PREFIX}${transactionId}`;
-  }
-
-  private resolveCodeLength(type: Api.TypeSentCodeType | undefined): number {
-    if (!type) {
-      return DEFAULT_CODE_LENGTH;
-    }
-
-    if ('length' in type && typeof type.length === 'number') {
-      return type.length;
-    }
-
-    return DEFAULT_CODE_LENGTH;
-  }
-
-  private resolveNextType(
-    type: Api.TypeSentCodeType | undefined,
-  ): 'app' | 'sms' | 'call' | 'flash' {
-    if (!type) {
-      return 'sms';
-    }
-
-    if (type instanceof Api.auth.SentCodeTypeApp) {
-      return 'app';
-    }
-    if (type instanceof Api.auth.SentCodeTypeCall) {
-      return 'call';
-    }
-    if (type instanceof Api.auth.SentCodeTypeFlashCall) {
-      return 'flash';
-    }
-    return 'sms';
   }
 
   private stringifyError(error: unknown): string {
