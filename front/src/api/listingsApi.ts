@@ -12,6 +12,7 @@ export interface GetListingsParams {
   pageSize: number
   search?: string
   source?: string
+  archived?: boolean
   signal?: AbortSignal
 }
 
@@ -26,6 +27,10 @@ const buildQuery = (params: Omit<GetListingsParams, 'signal'>): string => {
 
   if (params.source) {
     searchParams.set('source', params.source)
+  }
+
+  if (params.archived !== undefined) {
+    searchParams.set('archived', String(params.archived))
   }
 
   return searchParams.toString()

@@ -28,6 +28,7 @@ export interface ListingDto {
   sourceParsedAt: string | null;
   manualOverrides: string[];
   manualNote: string | null;
+  archived: boolean;
   createdAt: string;
   updatedAt: string;
 }

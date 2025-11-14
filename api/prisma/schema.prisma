@@ -199,11 +199,13 @@ model Listing {
   sourceParsedAt DateTime?
   manualOverrides Json? @default("[]")
   manualNote    String?  @db.Text
+  archived      Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([city])
   @@index([price])
+  @@index([archived])
 }
 
 model Author {

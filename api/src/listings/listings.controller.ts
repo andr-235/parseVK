@@ -15,17 +15,20 @@ export class ListingsController {
     @Query('pageSize') pageSizeParam?: string,
     @Query('search') searchParam?: string,
     @Query('source') sourceParam?: string,
+    @Query('archived') archivedParam?: string,
   ): Promise<ListingsResponseDto> {
     const page = this.parseNumber(pageParam, 1, 1, 1000);
     const pageSize = this.parseNumber(pageSizeParam, 25, 1, 100);
     const search = this.normalizeString(searchParam);
     const source = this.normalizeSource(sourceParam);
+    const archived = this.parseBoolean(archivedParam);
 
     return this.listingsService.getListings({
       page,
       pageSize,
       search: search ?? undefined,
       source: source ?? undefined,
+      archived: archived ?? undefined,
     });
   }
 
@@ -33,6 +36,7 @@ export class ListingsController {
   async exportListingsCsv(
     @Query('search') searchParam?: string,
     @Query('source') sourceParam?: string,
+    @Query('archived') archivedParam?: string,
     @Query('all') allParam?: string,
     @Query('fields') fieldsParam?: string,
     @Res() res?: Response,
@@ -40,6 +44,7 @@ export class ListingsController {
     const exportAll = (allParam ?? '').toLowerCase() === '1' || (allParam ?? '').toLowerCase() === 'true';
     const search = exportAll ? undefined : this.normalizeString(searchParam) ?? undefined;
     const source = exportAll ? undefined : this.normalizeSource(sourceParam) ?? undefined;
+    const archived = exportAll ? undefined : this.parseBoolean(archivedParam) ?? undefined;
 
     const defaultFields = [
       'id',
@@ -131,7 +136,7 @@ export class ListingsController {
       return item.sourceParsedAt ?? null;
     };
 
-    for await (const batch of this.listingsService.iterateAllListings({ search, source, batchSize: 1000 })) {
+    for await (const batch of this.listingsService.iterateAllListings({ search, source, archived, batchSize: 1000 })) {
       for (const item of batch) {
         const row = fields.map((key) => {
           const value = ((): unknown => {
@@ -223,5 +228,21 @@ export class ListingsController {
     }
 
     return normalized;
+  }
+
+  private parseBoolean(value?: string): boolean | null {
+    if (!value) {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+      return true;
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+      return false;
+    }
+
+    return null;
   }
 }

@@ -13,11 +13,13 @@ interface GetListingsOptions {
   pageSize: number;
   search?: string;
   source?: string;
+  archived?: boolean;
 }
 
 interface ExportListingsOptions {
   search?: string;
   source?: string;
+  archived?: boolean;
   /**
    * Максимальное количество записей для экспорта (защита от слишком больших выгрузок)
    */
@@ -29,7 +31,7 @@ export class ListingsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getListings(options: GetListingsOptions): Promise<ListingsResponseDto> {
-    const { page, pageSize, search, source } = options;
+    const { page, pageSize, search, source, archived } = options;
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.ListingWhereInput = {};
@@ -51,6 +53,12 @@ export class ListingsService {
 
     if (source) {
       where.source = { equals: source, mode: 'insensitive' };
+    }
+
+    if (archived !== undefined) {
+      where.archived = archived;
+    } else {
+      where.archived = false;
     }
 
     const [listings, total, distinctSources] = await this.prisma.$transaction([
@@ -92,7 +100,7 @@ export class ListingsService {
   }
 
   async getListingsForExport(options: ExportListingsOptions) {
-    const { search, source } = options;
+    const { search, source, archived } = options;
     const limit = this.normalizeLimit(options.limit);
 
     const where: Prisma.ListingWhereInput = {};
@@ -121,6 +129,12 @@ export class ListingsService {
       where.source = { equals: source, mode: 'insensitive' };
     }
 
+    if (archived !== undefined) {
+      where.archived = archived;
+    } else {
+      where.archived = false;
+    }
+
     const listings = await this.prisma.listing.findMany({
       where,
       take: limit,
@@ -145,7 +159,7 @@ export class ListingsService {
   }
 
   async *iterateAllListings(options: ExportListingsOptions & { batchSize?: number }) {
-    const { search, source } = options;
+    const { search, source, archived } = options;
     const batchSize = this.normalizeBatchSize(options.batchSize);
 
     const where: Prisma.ListingWhereInput = {};
@@ -171,6 +185,12 @@ export class ListingsService {
     }
     if (source) {
       where.source = { equals: source, mode: 'insensitive' };
+    }
+
+    if (archived !== undefined) {
+      where.archived = archived;
+    } else {
+      where.archived = false;
     }
 
     let cursorId: number | null = null;
@@ -247,6 +267,7 @@ export class ListingsService {
         : null,
       manualOverrides: overrides,
       manualNote: listing.manualNote ?? null,
+      archived: listing.archived ?? false,
       createdAt: listing.createdAt.toISOString(),
       updatedAt: listing.updatedAt.toISOString(),
     };
@@ -486,6 +507,13 @@ export class ListingsService {
       }
     }
 
+    if (this.has(payload, 'archived')) {
+      const value = this.booleanValue(payload.archived);
+      if (value !== undefined && value !== (existing.archived ?? false)) {
+        (data as Record<string, unknown>).archived = value;
+      }
+    }
+
     if (overridesDirty) {
       (data as Record<string, unknown>)['manualOverrides'] = Array.from(overrides);
     }
@@ -550,6 +578,13 @@ export class ListingsService {
     }
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+
+  private booleanValue(value?: boolean | null): boolean | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    return Boolean(value);
   }
 
   private imagesValue(value?: string[] | null): string[] | undefined {

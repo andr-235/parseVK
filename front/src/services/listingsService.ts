@@ -13,6 +13,7 @@ interface FetchListingsOptions {
   pageSize: number
   search?: string
   source?: string
+  archived?: boolean
   signal?: AbortSignal
 }
 
@@ -175,6 +176,21 @@ export const listingsService = {
         console.error('[listingsService] updateListing error', error)
       }
       const message = error instanceof Error ? error.message : 'Не удалось обновить объявление'
+      toast.error(message)
+      throw error
+    }
+  },
+
+  async archiveListing(id: number): Promise<IListing> {
+    try {
+      const result = await listingsApi.updateListing(id, { archived: true })
+      toast.success('Объявление отправлено в архив')
+      return result
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[listingsService] archiveListing error', error)
+      }
+      const message = error instanceof Error ? error.message : 'Не удалось отправить в архив'
       toast.error(message)
       throw error
     }

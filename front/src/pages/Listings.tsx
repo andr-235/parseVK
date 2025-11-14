@@ -26,7 +26,7 @@ import ExportListingsModal from '@/components/ExportListingsModal'
 import EditListingModal from '@/components/EditListingModal'
 import type { IListing } from '@/types/api'
 import { cn } from '@/lib/utils'
-import { ChevronDown, ExternalLink, MapPin, Phone, Calendar, Tag } from 'lucide-react'
+import { ChevronDown, ExternalLink, MapPin, Phone, Calendar, Tag, Archive } from 'lucide-react'
 import {
   useInfiniteListings,
   type UseInfiniteFetcher,
@@ -51,6 +51,7 @@ type ListingsMeta = {
 type ListingsFetcherParams = {
   search?: string
   source?: string
+  archived?: boolean
 }
 
 // Dark mode: обновлённые стили выпадающего меню с использованием цветовых токенов темы.
@@ -248,6 +249,7 @@ interface ListingCardProps {
   expandedDescriptions: Set<number>
   onToggleDescription: (id: number) => void
   onAddNote: (listing: IListing) => void
+  onArchive: (listing: IListing) => void
   shouldAnimate?: boolean
   staggerDelay?: number
 }
@@ -257,6 +259,7 @@ function ListingCard({
   expandedDescriptions,
   onToggleDescription,
   onAddNote,
+  onArchive,
   shouldAnimate = false,
   staggerDelay = 0,
 }: ListingCardProps) {
@@ -470,6 +473,20 @@ function ListingCard({
             >
               {listing.manualNote ? 'Изменить примечание' : 'Добавить примечание'}
             </Button>
+            {!listing.archived && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onArchive(listing)
+                }}
+              >
+                В архив
+              </Button>
+            )}
           </div>
           {listing.manualNote && (
             <div className="rounded-xl border border-border/60 bg-background-primary/70 px-4 py-3 text-sm text-text-secondary">
@@ -524,6 +541,7 @@ function ListingsInfinite({
   expandedDescriptions,
   onToggleDescription,
   onAddNote,
+  onArchive,
   onMetaChange,
   onItemsChange,
   onLoadingChange,
@@ -652,6 +670,7 @@ function ListingsInfinite({
               expandedDescriptions={expandedDescriptions}
               onToggleDescription={onToggleDescription}
               onAddNote={onAddNote}
+              onArchive={onArchive}
               shouldAnimate={!hasAnimated}
               staggerDelay={Math.min(index % 8, 6) * 0.04}
             />
@@ -705,6 +724,7 @@ function Listings() {
   const [searchTerm, setSearchTerm] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [sourceFilter, setSourceFilter] = useState('all')
+  const [archivedFilter, setArchivedFilter] = useState(false)
   const [uploadSourceMode, setUploadSourceMode] = useState<'avito' | 'youla' | 'custom'>('avito')
   const [customSource, setCustomSource] = useState('')
   const [updateExisting, setUpdateExisting] = useState(true)
@@ -726,8 +746,9 @@ function Listings() {
     () => ({
       search: appliedSearch.trim() || undefined,
       source: querySource,
+      archived: archivedFilter || undefined,
     }),
-    [appliedSearch, querySource],
+    [appliedSearch, querySource, archivedFilter],
   )
 
   const filtersIdentity = useMemo(
@@ -735,9 +756,10 @@ function Listings() {
       JSON.stringify({
         search: fetchParams.search ?? '',
         source: fetchParams.source ?? 'all',
+        archived: fetchParams.archived ?? false,
         pageSize,
       }),
-    [fetchParams.search, fetchParams.source, pageSize],
+    [fetchParams.search, fetchParams.source, fetchParams.archived, pageSize],
   )
 
   const filtersKey = useMemo(
@@ -745,10 +767,11 @@ function Listings() {
       JSON.stringify({
         search: fetchParams.search ?? '',
         source: fetchParams.source ?? 'all',
+        archived: fetchParams.archived ?? false,
         pageSize,
         refreshToken,
       }),
-    [fetchParams.search, fetchParams.source, pageSize, refreshToken],
+    [fetchParams.search, fetchParams.source, fetchParams.archived, pageSize, refreshToken],
   )
 
   const fetchListingsBatch = useCallback<
@@ -764,6 +787,7 @@ function Listings() {
       pageSize: limit,
       search: params?.search,
       source: params?.source,
+      archived: params?.archived,
       signal,
     })
 
@@ -928,7 +952,17 @@ function Listings() {
     setNoteListing(null)
     setIsListLoading(true)
     setRefreshToken((token) => token + 1)
-  }, [setNoteListing, setIsListLoading, setRefreshToken])
+  }, [])
+
+  const handleArchive = useCallback(async (listing: IListing) => {
+    try {
+      await listingsService.archiveListing(listing.id)
+      setIsListLoading(true)
+      setRefreshToken((token) => token + 1)
+    } catch {
+      // Ошибки отображаются в сервисе
+    }
+  }, [])
 
   return (
     <div className="flex flex-col gap-8">
@@ -1020,7 +1054,7 @@ function Listings() {
         )}
       >
         <div className="flex flex-col gap-6">
-          <div className="grid gap-4 lg:grid-cols-[minmax(260px,1.2fr)_minmax(200px,0.8fr)_minmax(140px,0.6fr)] lg:items-end">
+          <div className="grid gap-4 lg:grid-cols-[minmax(260px,1.2fr)_minmax(200px,0.8fr)_minmax(140px,0.8fr)_minmax(140px,0.6fr)] lg:items-end">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-secondary">Поиск</label>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -1063,6 +1097,17 @@ function Listings() {
             </div>
 
             <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-text-secondary">Статус</label>
+              <Dropdown
+                value={archivedFilter ? 'archived' : 'active'}
+                onChange={(event) => setArchivedFilter(event.target.value === 'archived')}
+              >
+                <MenuItem value="active">Активные</MenuItem>
+                <MenuItem value="archived">В архиве</MenuItem>
+              </Dropdown>
+            </div>
+
+            <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-secondary">На странице</label>
               <Dropdown value={pageSize} onChange={handlePageSizeChange}>
                 {PAGE_SIZE_OPTIONS.map((option) => (
@@ -1089,6 +1134,7 @@ function Listings() {
             expandedDescriptions={expandedDescriptions}
             onToggleDescription={toggleDescription}
             onAddNote={handleAddNote}
+            onArchive={handleArchive}
             onMetaChange={handleMetaChange}
             onItemsChange={handleItemsChange}
             onLoadingChange={handleLoadingChange}

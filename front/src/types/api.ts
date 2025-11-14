@@ -241,6 +241,7 @@ export interface IListing {
   sourceParsedAt?: string | null
   manualOverrides?: string[]
   manualNote?: string | null
+  archived: boolean
   createdAt: string
   updatedAt: string
 }
