@@ -1,11 +1,12 @@
 import type { JSX } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import {
   useAuthorsStore,
   useCommentsStore,
+  useGroupsStore,
   useTasksStore,
   useThemeStore,
   useWatchlistStore,
@@ -175,14 +176,49 @@ const ChevronLeftIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
+const ChevronDownIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className || "h-4 w-4"}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+)
+
 export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
   const isDarkMode = useThemeStore((state) => state.isDarkMode)
 
   const tasksCount = useTasksStore((state) => state.tasks.length)
   const commentsCount = useCommentsStore((state) => state.totalCount)
   const watchlistCount = useWatchlistStore((state) => state.totalAuthors)
   const authorsTotal = useAuthorsStore((state) => state.total)
+  const groups = useGroupsStore((state) => state.groups)
+  const fetchGroups = useGroupsStore((state) => state.fetchGroups)
+
+  useEffect(() => {
+    if (groups.length === 0) {
+      void fetchGroups({ reset: true })
+    }
+  }, [groups.length, fetchGroups])
+
+  const toggleGroup = (groupId: number) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(groupId)) {
+        next.delete(groupId)
+      } else {
+        next.add(groupId)
+      }
+      return next
+    })
+  }
 
   const primaryItems = useMemo<SidebarItem[]>(() => {
     const formatCount = (count: number) => (count > 0 ? String(count) : undefined)
@@ -201,6 +237,15 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
 
   const secondaryItems: SidebarItem[] = [
     { label: 'Настройки', path: '/settings', icon: <SettingsIcon /> },
+  ]
+
+  const groupSubItems = [
+    { label: 'Задачи', path: 'tasks' },
+    { label: 'Группы', path: 'groups' },
+    { label: 'Комментарии', path: 'comments' },
+    { label: 'Авторы', path: 'authors' },
+    { label: 'На карандаше', path: 'watchlist' },
+    { label: 'Ключевые слова', path: 'keywords' },
   ]
 
   return (
@@ -338,6 +383,97 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
             ))}
           </ul>
         </div>
+
+        {/* Groups menu */}
+        {groups.length > 0 && (
+          <div>
+            {!isCollapsed && (
+              <div
+                className={cn(
+                  'mb-3 px-0 text-xs uppercase tracking-[0.35em]',
+                  isDarkMode ? 'text-text-light/45' : 'text-text-secondary/70'
+                )}
+              >
+                Группы ВК
+              </div>
+            )}
+            <ul className="space-y-1.5">
+              {groups.map((group) => {
+                const isExpanded = expandedGroups.has(group.id)
+                const groupPath = `/groups/${group.id}`
+                return (
+                  <li key={group.id}>
+                    <button
+                      onClick={() => !isCollapsed && toggleGroup(group.id)}
+                      className={cn(
+                        'group w-full flex items-center justify-between rounded-2xl border border-transparent px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                        isCollapsed && 'justify-center px-2',
+                        isDarkMode
+                          ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
+                          : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
+                        isDarkMode ? 'text-text-light/70' : 'text-text-secondary'
+                      )}
+                    >
+                      <span className={cn('flex items-center', !isCollapsed && 'gap-3')}>
+                        <span
+                          className={cn(
+                            'flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200 ring-1',
+                            isDarkMode
+                              ? 'bg-white/10 text-text-light/80 ring-white/10 group-hover:text-white'
+                              : 'bg-accent-primary/10 text-accent-primary/70 ring-accent-primary/15 group-hover:text-accent-primary'
+                          )}
+                        >
+                          <GroupsIcon />
+                        </span>
+                        {!isCollapsed && (
+                          <span className="truncate max-w-[140px]" title={group.name}>
+                            {group.name}
+                          </span>
+                        )}
+                      </span>
+                      {!isCollapsed && (
+                        <ChevronDownIcon
+                          className={cn(
+                            'h-4 w-4 transition-transform duration-200',
+                            isExpanded && 'rotate-180'
+                          )}
+                        />
+                      )}
+                    </button>
+                    {!isCollapsed && isExpanded && (
+                      <ul className="ml-4 mt-1.5 space-y-1">
+                        {groupSubItems.map((subItem) => (
+                          <li key={subItem.path}>
+                            <NavLink
+                              to={`${groupPath}/${subItem.path}`}
+                              className={({ isActive }) =>
+                                cn(
+                                  'flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-xs font-medium transition-all duration-200',
+                                  isDarkMode
+                                    ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
+                                    : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
+                                  isActive
+                                    ? isDarkMode
+                                      ? 'bg-white/15 text-white shadow-soft-sm ring-1 ring-white/15'
+                                      : 'border-accent-primary/30 bg-accent-primary/15 text-accent-primary shadow-soft-sm ring-1 ring-accent-primary/30'
+                                    : isDarkMode
+                                      ? 'text-text-light/60'
+                                      : 'text-text-secondary/80'
+                                )
+                              }
+                            >
+                              {subItem.label}
+                            </NavLink>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
 
         {/* Secondary items */}
         <div>
