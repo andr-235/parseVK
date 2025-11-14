@@ -447,7 +447,7 @@ function ListingCard({
           </div>
 
           {/* Ссылка на объявление */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             {listing.url && (
               <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
                 <a
