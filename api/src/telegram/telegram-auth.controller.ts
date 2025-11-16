@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { TelegramAuthService } from './telegram-auth.service';
 import {
   StartTelegramSessionDto,
@@ -12,6 +12,11 @@ import {
 @Controller('telegram/session')
 export class TelegramAuthController {
   constructor(private readonly telegramAuthService: TelegramAuthService) {}
+
+  @Get()
+  getCurrentSession() {
+    return this.telegramAuthService.getCurrentSession();
+  }
 
   @Post('start')
   startSession(

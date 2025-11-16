@@ -11,6 +11,7 @@ import { Inject } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { TelegramClient, Api } from 'telegram';
 import { StringSession } from 'telegram/sessions';
+import { PrismaService } from '../prisma.service';
 import type {
   ConfirmTelegramSessionDto,
   ConfirmTelegramSessionResponseDto,
@@ -42,6 +43,7 @@ export class TelegramAuthService {
   constructor(
     private readonly configService: ConfigService,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
+    private readonly prisma: PrismaService,
   ) {
     const apiIdRaw = this.configService.get<string | number>('TELEGRAM_API_ID');
     const apiHash = this.configService.get<string>('TELEGRAM_API_HASH');
@@ -68,6 +70,8 @@ export class TelegramAuthService {
     if (!apiId || !apiHash) {
       throw new BadRequestException('API_ID_AND_HASH_REQUIRED');
     }
+
+    await this.deleteExistingSession();
 
     const client = await this.createClient('', apiId, apiHash);
 
@@ -118,6 +122,24 @@ export class TelegramAuthService {
     } finally {
       await client.disconnect();
     }
+  }
+
+  async getCurrentSession(): Promise<ConfirmTelegramSessionResponseDto | null> {
+    const sessionRecord = await this.prisma.telegramSession.findFirst({
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (!sessionRecord) {
+      return null;
+    }
+
+    return {
+      session: sessionRecord.session,
+      expiresAt: null,
+      userId: sessionRecord.userId ?? undefined,
+      username: sessionRecord.username ?? undefined,
+      phoneNumber: sessionRecord.phoneNumber ?? undefined,
+    };
   }
 
   async confirmSession(
@@ -211,6 +233,8 @@ export class TelegramAuthService {
       const phoneNumber =
         me instanceof Api.User && me.phone ? me.phone : null;
 
+      await this.saveSession(session, userId, username, phoneNumber);
+
       return {
         session,
         expiresAt: null,
@@ -242,6 +266,31 @@ export class TelegramAuthService {
 
   private buildCacheKey(transactionId: string): string {
     return `${CACHE_PREFIX}${transactionId}`;
+  }
+
+  private async saveSession(
+    session: string,
+    userId: number,
+    username: string | null,
+    phoneNumber: string | null,
+  ): Promise<void> {
+    await this.prisma.telegramSession.deleteMany({});
+    await this.prisma.telegramSession.create({
+      data: {
+        session,
+        userId: userId > 0 ? userId : null,
+        username,
+        phoneNumber,
+      },
+    });
+    this.logger.log('Telegram session saved to database');
+  }
+
+  private async deleteExistingSession(): Promise<void> {
+    const deleted = await this.prisma.telegramSession.deleteMany({});
+    if (deleted.count > 0) {
+      this.logger.log('Existing Telegram session deleted');
+    }
   }
 
   private stringifyError(error: unknown): string {

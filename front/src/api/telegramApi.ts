@@ -53,5 +53,22 @@ export const telegramApi = {
 
     return response.json() as Promise<TelegramSessionConfirmResponse>
   },
+
+  async getCurrentSession(): Promise<TelegramSessionConfirmResponse | null> {
+    const response = await fetch(`${API_URL}/telegram/session`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null
+      }
+      const message = await response.text()
+      throw new Error(message || 'Не удалось получить текущую сессию')
+    }
+
+    return response.json() as Promise<TelegramSessionConfirmResponse>
+  },
 }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
 import { Input } from '@/components/ui/input'
@@ -35,6 +35,24 @@ const Telegram = () => {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
   const members = useMemo(() => data?.members ?? [], [data?.members])
+
+  useEffect(() => {
+    const loadCurrentSession = async () => {
+      try {
+        const currentSession = await telegramApi.getCurrentSession()
+        if (currentSession) {
+          setAuthResult(currentSession)
+          setAuthStep('success')
+          setCopyStatus('idle')
+        }
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('Failed to load current session', err)
+        }
+      }
+    }
+    void loadCurrentSession()
+  }, [])
 
   const authHint = useMemo(() => {
     switch (authNextType) {
@@ -355,7 +373,7 @@ const Telegram = () => {
                   Телефон: <span className="font-medium text-text-primary">{authResult.phoneNumber ?? '—'}</span>
                 </p>
                 <p className="text-xs text-text-tertiary">
-                  Скопируйте строку в переменную окружения <code className="rounded bg-border/50 px-1 py-0.5">TELEGRAM_SESSION</code>.
+                  Сессия автоматически сохранена и используется системой. При создании новой сессии текущая будет заменена.
                 </p>
               </div>
             </div>

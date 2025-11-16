@@ -43,6 +43,7 @@ export class TelegramService {
   private client: TelegramClient | null = null;
   private initializing: Promise<void> | null = null;
   private readonly defaultLimit = 1000;
+  private currentSessionId: number | null = null;
 
   constructor(
     private readonly configService: ConfigService,
@@ -96,8 +97,18 @@ export class TelegramService {
   }
 
   private async getClient(): Promise<TelegramClient> {
-    if (this.client) {
+    const sessionRecord = await this.prisma.telegramSession.findFirst({
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (this.client && this.currentSessionId === sessionRecord?.id) {
       return this.client;
+    }
+
+    if (this.client) {
+      await this.client.disconnect();
+      this.client = null;
+      this.currentSessionId = null;
     }
 
     if (!this.initializing) {
@@ -114,7 +125,6 @@ export class TelegramService {
   private async initializeClient(): Promise<void> {
     const apiIdRaw = this.configService.get<string | number>('TELEGRAM_API_ID');
     const apiHash = this.configService.get<string>('TELEGRAM_API_HASH');
-    const sessionString = this.configService.get<string>('TELEGRAM_SESSION');
 
     const apiId = typeof apiIdRaw === 'string' ? Number.parseInt(apiIdRaw, 10) : apiIdRaw;
     if (!apiId || Number.isNaN(apiId)) {
@@ -125,8 +135,14 @@ export class TelegramService {
       throw new InternalServerErrorException('TELEGRAM_API_HASH is not configured');
     }
 
+    const sessionRecord = await this.prisma.telegramSession.findFirst({
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const sessionString = sessionRecord?.session ?? this.configService.get<string>('TELEGRAM_SESSION');
+
     if (!sessionString) {
-      throw new InternalServerErrorException('TELEGRAM_SESSION is not configured');
+      throw new InternalServerErrorException('TELEGRAM_SESSION is not configured. Please create a session first.');
     }
 
     try {
@@ -136,6 +152,7 @@ export class TelegramService {
       });
       await client.connect();
       this.client = client;
+      this.currentSessionId = sessionRecord?.id ?? null;
       this.logger.log('Telegram client initialized');
     } catch (error) {
       this.logger.error('Telegram client initialization error', error as Error);

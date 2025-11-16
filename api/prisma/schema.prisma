@@ -399,3 +399,15 @@ model TelegramChatMember {
   @@index([userId])
   @@index([status])
 }
+
+model TelegramSession {
+  id          Int      @id @default(autoincrement())
+  session     String   @db.Text
+  userId      Int?
+  username    String?
+  phoneNumber String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
