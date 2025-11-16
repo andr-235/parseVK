@@ -123,16 +123,20 @@ export class TelegramService {
   }
 
   private async initializeClient(): Promise<void> {
-    const apiIdRaw = this.configService.get<string | number>('TELEGRAM_API_ID');
-    const apiHash = this.configService.get<string>('TELEGRAM_API_HASH');
+    const settingsRecord = await this.prisma.telegramSettings.findFirst({
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const apiIdRaw = settingsRecord?.apiId ?? this.configService.get<string | number>('TELEGRAM_API_ID');
+    const apiHash = settingsRecord?.apiHash ?? this.configService.get<string>('TELEGRAM_API_HASH');
 
     const apiId = typeof apiIdRaw === 'string' ? Number.parseInt(apiIdRaw, 10) : apiIdRaw;
     if (!apiId || Number.isNaN(apiId)) {
-      throw new InternalServerErrorException('TELEGRAM_API_ID is not configured');
+      throw new InternalServerErrorException('TELEGRAM_API_ID is not configured. Please set it in Settings.');
     }
 
     if (!apiHash) {
-      throw new InternalServerErrorException('TELEGRAM_API_HASH is not configured');
+      throw new InternalServerErrorException('TELEGRAM_API_HASH is not configured. Please set it in Settings.');
     }
 
     const sessionRecord = await this.prisma.telegramSession.findFirst({
@@ -150,6 +154,14 @@ export class TelegramService {
       const client = new TelegramClient(session, apiId, apiHash, {
         connectionRetries: 5,
       });
+      
+      client.addEventHandler(
+        () => {
+          // Ignore update loop errors
+        },
+        { event: 'error' },
+      );
+      
       await client.connect();
       this.client = client;
       this.currentSessionId = sessionRecord?.id ?? null;
@@ -157,6 +169,8 @@ export class TelegramService {
     } catch (error) {
       this.logger.error('Telegram client initialization error', error as Error);
       throw new InternalServerErrorException('Failed to initialize Telegram client');
+    } finally {
+      this.initializing = null;
     }
   }
 
