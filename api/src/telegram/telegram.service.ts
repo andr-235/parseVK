@@ -155,13 +155,6 @@ export class TelegramService {
         connectionRetries: 5,
       });
       
-      client.addEventHandler(
-        () => {
-          // Ignore update loop errors
-        },
-        { event: 'error' },
-      );
-      
       await client.connect();
       this.client = client;
       this.currentSessionId = sessionRecord?.id ?? null;
