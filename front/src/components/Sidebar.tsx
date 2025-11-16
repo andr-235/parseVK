@@ -115,9 +115,10 @@ const ChevronDownIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
+export function Sidebar({ title = 'Центр аналитики' }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isVkExpanded, setIsVkExpanded] = useState(false)
+  const [isParsingExpanded, setIsParsingExpanded] = useState(false)
   const isDarkMode = useThemeStore((state) => state.isDarkMode)
 
   const tasksCount = useTasksStore((state) => state.tasks.length)
@@ -125,9 +126,14 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
   const watchlistCount = useWatchlistStore((state) => state.totalAuthors)
   const authorsTotal = useAuthorsStore((state) => state.total)
 
+  const parsingSubItems = useMemo<Array<{ label: string; path: string; badge?: string }>>(() => {
+    return [
+      { label: 'Недвижимость', path: '/listings' },
+    ]
+  }, [])
+
   const primaryItems = useMemo<SidebarItem[]>(() => {
     return [
-      { label: 'Недвижимость', path: '/listings', icon: <ListingsIcon /> },
       { label: 'Telegram', path: '/telegram', icon: <TelegramIcon /> },
     ]
   }, [])
@@ -270,6 +276,79 @@ export function Sidebar({ title = 'ВК Аналитик' }: SidebarProps) {
               {!isCollapsed && isVkExpanded && (
                 <ul className="ml-4 mt-1.5 space-y-1">
                   {vkSubItems.map((subItem) => (
+                    <li key={subItem.path}>
+                      <NavLink
+                        to={subItem.path}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center justify-between gap-2 rounded-xl border border-transparent px-3 py-2 text-xs font-medium transition-all duration-200',
+                            isDarkMode
+                              ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
+                              : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
+                            isActive
+                              ? isDarkMode
+                                ? 'bg-white/15 text-white shadow-soft-sm ring-1 ring-white/15'
+                                : 'border-accent-primary/30 bg-accent-primary/15 text-accent-primary shadow-soft-sm ring-1 ring-accent-primary/30'
+                              : isDarkMode
+                                ? 'text-text-light/60'
+                                : 'text-text-secondary/80'
+                          )
+                        }
+                      >
+                        <span>{subItem.label}</span>
+                        {subItem.badge && (
+                          <Badge
+                            className={cn(
+                              'rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1',
+                              isDarkMode ? 'bg-white/15 text-white/90 ring-white/20' : 'bg-accent-primary/15 text-accent-primary ring-accent-primary/30'
+                            )}
+                          >
+                            {subItem.badge}
+                          </Badge>
+                        )}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+            <li>
+              <button
+                onClick={() => !isCollapsed && setIsParsingExpanded(!isParsingExpanded)}
+                className={cn(
+                  'group w-full flex items-center justify-between rounded-2xl border border-transparent px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  isCollapsed && 'justify-center px-2',
+                  isDarkMode
+                    ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
+                    : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
+                  isDarkMode ? 'text-text-light/70' : 'text-text-secondary'
+                )}
+              >
+                <span className={cn('flex items-center', !isCollapsed && 'gap-3')}>
+                  <span
+                    className={cn(
+                      'flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200 ring-1',
+                      isDarkMode
+                        ? 'bg-white/10 text-text-light/80 ring-white/10 group-hover:text-white'
+                        : 'bg-accent-primary/10 text-accent-primary/70 ring-accent-primary/15 group-hover:text-accent-primary'
+                    )}
+                  >
+                    <ListingsIcon />
+                  </span>
+                  {!isCollapsed && <span>Парсинг</span>}
+                </span>
+                {!isCollapsed && (
+                  <ChevronDownIcon
+                    className={cn(
+                      'h-4 w-4 transition-transform duration-200',
+                      isParsingExpanded && 'rotate-180'
+                    )}
+                  />
+                )}
+              </button>
+              {!isCollapsed && isParsingExpanded && (
+                <ul className="ml-4 mt-1.5 space-y-1">
+                  {parsingSubItems.map((subItem) => (
                     <li key={subItem.path}>
                       <NavLink
                         to={subItem.path}
