@@ -494,7 +494,7 @@ export interface TelegramSyncRequest {
 }
 
 export interface TelegramSessionStartRequest {
-  phoneNumber: string
+  phoneNumber?: string
   apiId?: number
   apiHash?: string
 }
@@ -518,4 +518,18 @@ export interface TelegramSessionConfirmResponse {
   userId: number
   username: string | null
   phoneNumber: string | null
+}
+
+export interface TelegramSettings {
+  phoneNumber: string | null
+  apiId: number | null
+  apiHash: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TelegramSettingsRequest {
+  phoneNumber?: string | null
+  apiId?: number | null
+  apiHash?: string | null
 }

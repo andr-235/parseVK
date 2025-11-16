@@ -19,11 +19,8 @@ const Telegram = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [authPhone, setAuthPhone] = useState('+7')
-  const [authApiId, setAuthApiId] = useState('')
-  const [authApiHash, setAuthApiHash] = useState('')
   const [authTransactionId, setAuthTransactionId] = useState<string | null>(null)
-  const [authStep, setAuthStep] = useState<'phone' | 'code' | 'success'>('phone')
+  const [authStep, setAuthStep] = useState<'code' | 'success'>('success')
   const [authCode, setAuthCode] = useState('')
   const [authPassword, setAuthPassword] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
@@ -36,21 +33,22 @@ const Telegram = () => {
 
   const members = useMemo(() => data?.members ?? [], [data?.members])
 
-  useEffect(() => {
-    const loadCurrentSession = async () => {
-      try {
-        const currentSession = await telegramApi.getCurrentSession()
-        if (currentSession) {
-          setAuthResult(currentSession)
-          setAuthStep('success')
-          setCopyStatus('idle')
-        }
-      } catch (err) {
-        if (import.meta.env.DEV) {
-          console.error('Failed to load current session', err)
-        }
+  const loadCurrentSession = async () => {
+    try {
+      const currentSession = await telegramApi.getCurrentSession()
+      if (currentSession) {
+        setAuthResult(currentSession)
+        setAuthStep('success')
+        setCopyStatus('idle')
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('Failed to load current session', err)
       }
     }
+  }
+
+  useEffect(() => {
     void loadCurrentSession()
   }, [])
 
@@ -66,47 +64,36 @@ const Telegram = () => {
         return 'Код отправлен через SMS. Введите его ниже.'
     }
   }, [authNextType])
-  const handleResetAuth = () => {
-    setAuthPhone('+7')
-    setAuthApiId('')
-    setAuthApiHash('')
-    setAuthTransactionId(null)
-    setAuthStep('phone')
-    setAuthCode('')
-    setAuthPassword('')
-    setAuthResult(null)
-    setAuthError(null)
-    setCopyStatus('idle')
-  }
-
-  const handleStartAuth = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!authPhone.trim()) {
-      setAuthError('Введите номер телефона в международном формате')
-      return
-    }
+  const handleStartNewSession = async () => {
     setAuthLoading(true)
     setAuthError(null)
     setAuthResult(null)
     setCopyStatus('idle')
+    setAuthCode('')
+    setAuthPassword('')
     try {
-      const apiIdNum = authApiId.trim() ? Number.parseInt(authApiId.trim(), 10) : undefined
-      const apiHashStr = authApiHash.trim() || undefined
-      const response = await telegramApi.startSession({
-        phoneNumber: authPhone.trim(),
-        apiId: apiIdNum && !Number.isNaN(apiIdNum) ? apiIdNum : undefined,
-        apiHash: apiHashStr,
-      })
+      const response = await telegramApi.startSession({})
       setAuthTransactionId(response.transactionId)
       setAuthCodeLength(response.codeLength)
       setAuthNextType(response.nextType)
       setAuthTimeoutSec(response.timeoutSec)
       setAuthStep('code')
     } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Не удалось отправить код, попробуйте позже')
+      setAuthError(err instanceof Error ? err.message : 'Не удалось отправить код. Проверьте настройки Telegram в разделе "Настройки".')
     } finally {
       setAuthLoading(false)
     }
+  }
+
+  const handleResetAuth = () => {
+    setAuthTransactionId(null)
+    setAuthStep('success')
+    setAuthCode('')
+    setAuthPassword('')
+    setAuthResult(null)
+    setAuthError(null)
+    setCopyStatus('idle')
+    void loadCurrentSession()
   }
 
   const handleConfirmAuth = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -239,70 +226,10 @@ const Telegram = () => {
       />
 
       <SectionCard
-        title="Создание StringSession"
-        description="Сервис отправит код через Telegram и вернёт готовую строку для переменной окружения TELEGRAM_SESSION."
+        title="Текущая сессия Telegram"
+        description="Сессия автоматически сохраняется и используется системой. Для создания новой сессии используйте сохраненные настройки из раздела 'Настройки'."
       >
         <div className="flex flex-col gap-6">
-          {authStep === 'phone' && (
-            <form onSubmit={handleStartAuth} className="flex flex-col gap-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-text-secondary" htmlFor="auth-phone">
-                    Номер телефона
-                  </label>
-                  <Input
-                    id="auth-phone"
-                    value={authPhone}
-                    onChange={(event) => setAuthPhone(event.target.value)}
-                    placeholder="+79998887766"
-                    disabled={authLoading}
-                    autoComplete="tel"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-text-secondary" htmlFor="auth-api-id">
-                    API ID
-                  </label>
-                  <Input
-                    id="auth-api-id"
-                    type="number"
-                    value={authApiId}
-                    onChange={(event) => setAuthApiId(event.target.value)}
-                    placeholder="12345678"
-                    disabled={authLoading}
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-text-secondary" htmlFor="auth-api-hash">
-                    API Hash
-                  </label>
-                  <Input
-                    id="auth-api-hash"
-                    value={authApiHash}
-                    onChange={(event) => setAuthApiHash(event.target.value)}
-                    placeholder="abcdef1234567890abcdef1234567890"
-                    disabled={authLoading}
-                  />
-                </div>
-              </div>
-              <div className="rounded-lg border border-border/60 bg-background-primary/70 px-4 py-3 text-xs text-text-secondary">
-                API ID и API Hash можно получить на{' '}
-                <a
-                  href="https://my.telegram.org"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline hover:text-primary/80"
-                >
-                  my.telegram.org
-                </a>
-                . Если не указаны, будут использованы значения из переменных окружения.
-              </div>
-              <Button type="submit" disabled={authLoading} className="sm:w-auto">
-                {authLoading ? 'Отправляем код…' : 'Отправить код'}
-              </Button>
-            </form>
-          )}
-
           {authStep === 'code' && (
             <form onSubmit={handleConfirmAuth} className="flex flex-col gap-4">
               <div className="grid gap-2 sm:grid-cols-2">
@@ -361,8 +288,8 @@ const Telegram = () => {
                 <Button type="button" onClick={handleCopySession}>
                   {copyStatus === 'success' ? 'Скопировано!' : copyStatus === 'error' ? 'Ошибка копирования' : 'Скопировать'}
                 </Button>
-                <Button type="button" variant="ghost" onClick={handleResetAuth}>
-                  Создать новую сессию
+                <Button type="button" variant="ghost" onClick={handleStartNewSession} disabled={authLoading}>
+                  {authLoading ? 'Отправляем код…' : 'Создать новую сессию'}
                 </Button>
               </div>
               <div className="rounded-lg border border-border/60 bg-background-primary/70 px-4 py-3 text-sm text-text-secondary">
@@ -373,9 +300,20 @@ const Telegram = () => {
                   Телефон: <span className="font-medium text-text-primary">{authResult.phoneNumber ?? '—'}</span>
                 </p>
                 <p className="text-xs text-text-tertiary">
-                  Сессия автоматически сохранена и используется системой. При создании новой сессии текущая будет заменена.
+                  Сессия автоматически сохранена и используется системой. При создании новой сессии текущая будет заменена. Настройки берутся из раздела "Настройки".
                 </p>
               </div>
+            </div>
+          )}
+
+          {authStep === 'success' && !authResult && (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-lg border border-border/60 bg-background-primary/70 px-4 py-3 text-sm text-text-secondary">
+                <p>Сессия не создана. Настройте параметры в разделе "Настройки" и создайте новую сессию.</p>
+              </div>
+              <Button type="button" onClick={handleStartNewSession} disabled={authLoading}>
+                {authLoading ? 'Отправляем код…' : 'Создать сессию'}
+              </Button>
             </div>
           )}
 

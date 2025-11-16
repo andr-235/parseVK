@@ -4,6 +4,8 @@ import type {
   TelegramSessionConfirmResponse,
   TelegramSessionStartRequest,
   TelegramSessionStartResponse,
+  TelegramSettings,
+  TelegramSettingsRequest,
   TelegramSyncRequest,
   TelegramSyncResponse,
 } from '@/types/api'
@@ -69,6 +71,38 @@ export const telegramApi = {
     }
 
     return response.json() as Promise<TelegramSessionConfirmResponse>
+  },
+
+  async getSettings(): Promise<TelegramSettings | null> {
+    const response = await fetch(`${API_URL}/telegram/settings`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null
+      }
+      const message = await response.text()
+      throw new Error(message || 'Не удалось получить настройки Telegram')
+    }
+
+    return response.json() as Promise<TelegramSettings>
+  },
+
+  async updateSettings(payload: TelegramSettingsRequest): Promise<TelegramSettings> {
+    const response = await fetch(`${API_URL}/telegram/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const message = await response.text()
+      throw new Error(message || 'Не удалось сохранить настройки Telegram')
+    }
+
+    return response.json() as Promise<TelegramSettings>
   },
 }
 

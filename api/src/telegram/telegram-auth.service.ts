@@ -20,6 +20,10 @@ import type {
   StartTelegramSessionDto,
   StartTelegramSessionResponseDto,
 } from './dto/start-session.dto';
+import type {
+  TelegramSettingsDto,
+  TelegramSettingsResponseDto,
+} from './dto/telegram-settings.dto';
 
 interface AuthTransactionState {
   phoneNumber: string;
@@ -56,16 +60,71 @@ export class TelegramAuthService {
     this.defaultApiHash = apiHash || null;
   }
 
+  async getSettings(): Promise<TelegramSettingsResponseDto | null> {
+    const settings = await this.prisma.telegramSettings.findFirst({
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (!settings) {
+      return null;
+    }
+
+    return {
+      phoneNumber: settings.phoneNumber,
+      apiId: settings.apiId,
+      apiHash: settings.apiHash,
+      createdAt: settings.createdAt.toISOString(),
+      updatedAt: settings.updatedAt.toISOString(),
+    };
+  }
+
+  async updateSettings(
+    payload: TelegramSettingsDto,
+  ): Promise<TelegramSettingsResponseDto> {
+    const existing = await this.prisma.telegramSettings.findFirst({
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const settings = existing
+      ? await this.prisma.telegramSettings.update({
+          where: { id: existing.id },
+          data: {
+            phoneNumber: payload.phoneNumber ?? undefined,
+            apiId: payload.apiId ?? undefined,
+            apiHash: payload.apiHash ?? undefined,
+          },
+        })
+      : await this.prisma.telegramSettings.create({
+          data: {
+            phoneNumber: payload.phoneNumber ?? null,
+            apiId: payload.apiId ?? null,
+            apiHash: payload.apiHash ?? null,
+          },
+        });
+
+    return {
+      phoneNumber: settings.phoneNumber,
+      apiId: settings.apiId,
+      apiHash: settings.apiHash,
+      createdAt: settings.createdAt.toISOString(),
+      updatedAt: settings.updatedAt.toISOString(),
+    };
+  }
+
   async startSession(
     payload: StartTelegramSessionDto,
   ): Promise<StartTelegramSessionResponseDto> {
-    const phoneNumber = payload.phoneNumber.trim();
+    const savedSettings = await this.prisma.telegramSettings.findFirst({
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const phoneNumber = payload.phoneNumber?.trim() ?? savedSettings?.phoneNumber?.trim();
     if (!phoneNumber) {
       throw new BadRequestException('PHONE_NUMBER_REQUIRED');
     }
 
-    const apiId = payload.apiId ?? this.defaultApiId;
-    const apiHash = payload.apiHash ?? this.defaultApiHash;
+    const apiId = payload.apiId ?? savedSettings?.apiId ?? this.defaultApiId;
+    const apiHash = payload.apiHash ?? savedSettings?.apiHash ?? this.defaultApiHash;
 
     if (!apiId || !apiHash) {
       throw new BadRequestException('API_ID_AND_HASH_REQUIRED');

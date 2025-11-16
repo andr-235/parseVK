@@ -2,9 +2,10 @@ import { IsNumber, IsOptional, IsString, Length, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class StartTelegramSessionDto {
+  @IsOptional()
   @IsString()
   @Length(5, 32)
-  phoneNumber!: string;
+  phoneNumber?: string;
 
   @IsOptional()
   @Transform(({ value }) => {

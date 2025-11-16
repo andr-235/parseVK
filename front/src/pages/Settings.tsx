@@ -7,6 +7,9 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { useTaskAutomationStore } from '../stores'
 import { clamp, formatAutomationDate, formatAutomationTime } from '../utils/automationFormatting'
+import { telegramApi } from '../api/telegramApi'
+import type { TelegramSettingsRequest } from '../types/api'
+import toast from 'react-hot-toast'
 
 interface AutomationFormState {
   enabled: boolean
@@ -43,11 +46,46 @@ function Settings() {
     postLimit: 10,
   })
 
+  const [telegramSettings, setTelegramSettings] = useState<{
+    phoneNumber: string
+    apiId: string
+    apiHash: string
+  }>({
+    phoneNumber: '',
+    apiId: '',
+    apiHash: '',
+  })
+  const [isLoadingTelegramSettings, setIsLoadingTelegramSettings] = useState(false)
+  const [isSavingTelegramSettings, setIsSavingTelegramSettings] = useState(false)
+
   useEffect(() => {
     if (!settings && !isLoading) {
       void fetchSettings()
     }
   }, [settings, isLoading, fetchSettings])
+
+  useEffect(() => {
+    const loadTelegramSettings = async () => {
+      setIsLoadingTelegramSettings(true)
+      try {
+        const saved = await telegramApi.getSettings()
+        if (saved) {
+          setTelegramSettings({
+            phoneNumber: saved.phoneNumber ?? '',
+            apiId: saved.apiId ? String(saved.apiId) : '',
+            apiHash: saved.apiHash ?? '',
+          })
+        }
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('Failed to load Telegram settings', err)
+        }
+      } finally {
+        setIsLoadingTelegramSettings(false)
+      }
+    }
+    void loadTelegramSettings()
+  }, [])
 
   useEffect(() => {
     if (!settings) {
@@ -121,6 +159,40 @@ function Settings() {
   const handleRunNow = useCallback(async () => {
     await runNow()
   }, [runNow])
+
+  const handleTelegramSettingsChange = useCallback(
+    (field: 'phoneNumber' | 'apiId' | 'apiHash') =>
+      (event: React.ChangeEvent<HTMLInputElement>) => {
+        setTelegramSettings((prev) => ({
+          ...prev,
+          [field]: event.target.value,
+        }))
+      },
+    [],
+  )
+
+  const handleSaveTelegramSettings = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      setIsSavingTelegramSettings(true)
+      try {
+        const payload: TelegramSettingsRequest = {
+          phoneNumber: telegramSettings.phoneNumber.trim() || null,
+          apiId: telegramSettings.apiId.trim()
+            ? Number.parseInt(telegramSettings.apiId.trim(), 10)
+            : null,
+          apiHash: telegramSettings.apiHash.trim() || null,
+        }
+        await telegramApi.updateSettings(payload)
+        toast.success('Настройки Telegram сохранены')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Не удалось сохранить настройки')
+      } finally {
+        setIsSavingTelegramSettings(false)
+      }
+    },
+    [telegramSettings],
+  )
 
   const heroActions = (
     <div className="flex flex-col items-end gap-2">
@@ -231,6 +303,74 @@ function Settings() {
             <span className="font-medium text-text-primary">{lastRun}</span>
           </span>
         </CardFooter>
+      </Card>
+
+      <Card className="bg-background-secondary/60">
+        <CardHeader>
+          <CardTitle className="text-xl">Настройки Telegram</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-6" onSubmit={handleSaveTelegramSettings}>
+            <div className="rounded-lg border border-border/60 bg-background-primary/70 px-4 py-3 text-sm text-text-secondary">
+              <p>
+                Укажите данные для создания Telegram сессии. Эти настройки будут использоваться автоматически при создании новой сессии.
+              </p>
+              <p className="mt-2 text-xs text-text-tertiary">
+                API ID и API Hash можно получить на{' '}
+                <a
+                  href="https://my.telegram.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary/80"
+                >
+                  my.telegram.org
+                </a>
+                .
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="telegram-phone">Номер телефона</Label>
+                <Input
+                  id="telegram-phone"
+                  type="tel"
+                  value={telegramSettings.phoneNumber}
+                  onChange={handleTelegramSettingsChange('phoneNumber')}
+                  placeholder="+79998887766"
+                  disabled={isLoadingTelegramSettings || isSavingTelegramSettings}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="telegram-api-id">API ID</Label>
+                <Input
+                  id="telegram-api-id"
+                  type="number"
+                  value={telegramSettings.apiId}
+                  onChange={handleTelegramSettingsChange('apiId')}
+                  placeholder="12345678"
+                  disabled={isLoadingTelegramSettings || isSavingTelegramSettings}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="telegram-api-hash">API Hash</Label>
+                <Input
+                  id="telegram-api-hash"
+                  value={telegramSettings.apiHash}
+                  onChange={handleTelegramSettingsChange('apiHash')}
+                  placeholder="abcdef1234567890abcdef1234567890"
+                  disabled={isLoadingTelegramSettings || isSavingTelegramSettings}
+                />
+              </div>
+            </div>
+
+            <Button type="submit" disabled={isLoadingTelegramSettings || isSavingTelegramSettings}>
+              {isSavingTelegramSettings ? 'Сохраняем...' : 'Сохранить настройки'}
+            </Button>
+          </form>
+        </CardContent>
       </Card>
     </div>
   )
