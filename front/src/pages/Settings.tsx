@@ -160,16 +160,26 @@ function Settings() {
     await runNow()
   }, [runNow])
 
-  const handleTelegramSettingsChange = useCallback(
-    (field: 'phoneNumber' | 'apiId' | 'apiHash') =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        setTelegramSettings((prev) => ({
-          ...prev,
-          [field]: event.target.value,
-        }))
-      },
-    [],
-  )
+  const handleTelegramPhoneChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setTelegramSettings((prev) => ({
+      ...prev,
+      phoneNumber: event.target.value,
+    }))
+  }, [])
+
+  const handleTelegramApiIdChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setTelegramSettings((prev) => ({
+      ...prev,
+      apiId: event.target.value,
+    }))
+  }, [])
+
+  const handleTelegramApiHashChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setTelegramSettings((prev) => ({
+      ...prev,
+      apiHash: event.target.value,
+    }))
+  }, [])
 
   const handleSaveTelegramSettings = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -336,7 +346,7 @@ function Settings() {
                   id="telegram-phone"
                   type="tel"
                   value={telegramSettings.phoneNumber}
-                  onChange={handleTelegramSettingsChange('phoneNumber')}
+                  onChange={handleTelegramPhoneChange}
                   placeholder="+79998887766"
                   disabled={isLoadingTelegramSettings || isSavingTelegramSettings}
                 />
@@ -348,7 +358,7 @@ function Settings() {
                   id="telegram-api-id"
                   type="number"
                   value={telegramSettings.apiId}
-                  onChange={handleTelegramSettingsChange('apiId')}
+                  onChange={handleTelegramApiIdChange}
                   placeholder="12345678"
                   disabled={isLoadingTelegramSettings || isSavingTelegramSettings}
                 />
@@ -359,7 +369,7 @@ function Settings() {
                 <Input
                   id="telegram-api-hash"
                   value={telegramSettings.apiHash}
-                  onChange={handleTelegramSettingsChange('apiHash')}
+                  onChange={handleTelegramApiHashChange}
                   placeholder="abcdef1234567890abcdef1234567890"
                   disabled={isLoadingTelegramSettings || isSavingTelegramSettings}
                 />
