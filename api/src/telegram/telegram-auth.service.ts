@@ -136,9 +136,9 @@ export class TelegramAuthService {
     return {
       session: sessionRecord.session,
       expiresAt: null,
-      userId: sessionRecord.userId ?? undefined,
-      username: sessionRecord.username ?? undefined,
-      phoneNumber: sessionRecord.phoneNumber ?? undefined,
+      userId: sessionRecord.userId ?? 0,
+      username: sessionRecord.username ?? null,
+      phoneNumber: sessionRecord.phoneNumber ?? null,
     };
   }
 
