@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PageHeroCard from '../components/PageHeroCard'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -22,23 +22,13 @@ const MIN_POST_LIMIT = 1
 const MAX_POST_LIMIT = 100
 
 function Settings() {
-  const {
-    settings,
-    fetchSettings,
-    updateSettings,
-    runNow,
-    isLoading,
-    isUpdating,
-    isTriggering,
-  } = useTaskAutomationStore((state) => ({
-    settings: state.settings,
-    fetchSettings: state.fetchSettings,
-    updateSettings: state.updateSettings,
-    runNow: state.runNow,
-    isLoading: state.isLoading,
-    isUpdating: state.isUpdating,
-    isTriggering: state.isTriggering,
-  }))
+  const settings = useTaskAutomationStore((state) => state.settings)
+  const fetchSettings = useTaskAutomationStore((state) => state.fetchSettings)
+  const updateSettings = useTaskAutomationStore((state) => state.updateSettings)
+  const runNow = useTaskAutomationStore((state) => state.runNow)
+  const isLoading = useTaskAutomationStore((state) => state.isLoading)
+  const isUpdating = useTaskAutomationStore((state) => state.isUpdating)
+  const isTriggering = useTaskAutomationStore((state) => state.isTriggering)
 
   const [formState, setFormState] = useState<AutomationFormState>({
     enabled: false,
@@ -57,12 +47,13 @@ function Settings() {
   })
   const [isLoadingTelegramSettings, setIsLoadingTelegramSettings] = useState(false)
   const [isSavingTelegramSettings, setIsSavingTelegramSettings] = useState(false)
+  const fetchSettingsRef = useRef(fetchSettings)
+  fetchSettingsRef.current = fetchSettings
 
   useEffect(() => {
     if (!settings && !isLoading) {
-      void fetchSettings()
+      void fetchSettingsRef.current()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, isLoading])
 
   useEffect(() => {
@@ -108,7 +99,7 @@ function Settings() {
         postLimit: settings.postLimit,
       }
     })
-  }, [settings])
+  }, [settings?.enabled, settings?.runHour, settings?.runMinute, settings?.postLimit])
 
   const nextRun = useMemo(() => {
     if (!settings?.nextRunAt) {
@@ -169,14 +160,12 @@ function Settings() {
         timezoneOffsetMinutes: new Date().getTimezoneOffset(),
       })
     },
-    [formState, settings],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formState, settings, updateSettings],
   )
 
   const handleRunNow = useCallback(async () => {
     await runNow()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [runNow])
 
   const handleTelegramPhoneChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setTelegramSettings((prev) => ({
