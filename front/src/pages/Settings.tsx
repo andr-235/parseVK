@@ -62,7 +62,8 @@ function Settings() {
     if (!settings && !isLoading) {
       void fetchSettings()
     }
-  }, [settings, isLoading, fetchSettings])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings, isLoading])
 
   useEffect(() => {
     const loadTelegramSettings = async () => {
@@ -92,21 +93,36 @@ function Settings() {
       return
     }
 
-    setFormState({
-      enabled: settings.enabled,
-      time: formatAutomationTime(settings.runHour, settings.runMinute),
-      postLimit: settings.postLimit,
+    const newTime = formatAutomationTime(settings.runHour, settings.runMinute)
+    setFormState((prev) => {
+      if (
+        prev.enabled === settings.enabled &&
+        prev.time === newTime &&
+        prev.postLimit === settings.postLimit
+      ) {
+        return prev
+      }
+      return {
+        enabled: settings.enabled,
+        time: newTime,
+        postLimit: settings.postLimit,
+      }
     })
   }, [settings])
 
-  const nextRun = useMemo(
-    () => formatAutomationDate(settings?.nextRunAt ?? null),
-    [settings?.nextRunAt],
-  )
-  const lastRun = useMemo(
-    () => formatAutomationDate(settings?.lastRunAt ?? null),
-    [settings?.lastRunAt],
-  )
+  const nextRun = useMemo(() => {
+    if (!settings?.nextRunAt) {
+      return '—'
+    }
+    return formatAutomationDate(settings.nextRunAt)
+  }, [settings?.nextRunAt])
+
+  const lastRun = useMemo(() => {
+    if (!settings?.lastRunAt) {
+      return '—'
+    }
+    return formatAutomationDate(settings.lastRunAt)
+  }, [settings?.lastRunAt])
   const isFormDisabled = !settings || isUpdating
 
   const handleToggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,12 +169,14 @@ function Settings() {
         timezoneOffsetMinutes: new Date().getTimezoneOffset(),
       })
     },
-    [formState, settings, updateSettings],
+    [formState, settings],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   )
 
   const handleRunNow = useCallback(async () => {
     await runNow()
-  }, [runNow])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleTelegramPhoneChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setTelegramSettings((prev) => ({
