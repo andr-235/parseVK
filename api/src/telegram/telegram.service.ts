@@ -266,25 +266,9 @@ export class TelegramService implements OnModuleDestroy {
       const session = new StringSession(sessionString);
       const client = new TelegramClient(session, apiId, apiHash, {
         connectionRetries: 5,
-        noUpdates: true,
-        receiveUpdates: false,
       });
       
       await client.connect();
-      
-      // Явно отключаем update loop
-      if ('setNoUpdates' in client && typeof (client as { setNoUpdates?: (value: boolean) => void }).setNoUpdates === 'function') {
-        (client as { setNoUpdates: (value: boolean) => void }).setNoUpdates(true);
-      }
-      
-      // Подавляем ошибки update loop
-      const originalEmit = client.emit.bind(client);
-      client.emit = function (event: string, ...args: unknown[]) {
-        if (event === 'error' && args[0] instanceof Error && args[0].message.includes('TIMEOUT')) {
-          return false;
-        }
-        return originalEmit(event, ...args);
-      };
       
       this.client = client;
       this.currentSessionId = sessionRecord?.id ?? null;

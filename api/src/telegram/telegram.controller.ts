@@ -29,4 +29,4 @@ export class TelegramController {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(buffer);
   }
-
+}
