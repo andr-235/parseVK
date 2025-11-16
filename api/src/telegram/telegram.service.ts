@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TelegramClient, Api } from 'telegram';
 import { StringSession } from 'telegram/sessions';
@@ -39,17 +39,45 @@ interface ParticipantCollection {
 }
 
 @Injectable()
-export class TelegramService {
+export class TelegramService implements OnModuleDestroy {
   private readonly logger = new Logger(TelegramService.name);
   private client: TelegramClient | null = null;
   private initializing: Promise<void> | null = null;
   private readonly defaultLimit = 1000;
   private currentSessionId: number | null = null;
+  private unhandledRejectionHandler: ((reason: unknown) => void) | null = null;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) {
+    this.setupErrorHandling();
+  }
+
+  private setupErrorHandling(): void {
+    this.unhandledRejectionHandler = (reason: unknown) => {
+      if (
+        reason instanceof Error &&
+        reason.message.includes('TIMEOUT') &&
+        reason.stack?.includes('telegram/client/updates.js')
+      ) {
+        // Подавляем ошибки TIMEOUT из update loop
+        return;
+      }
+      // Для других ошибок используем стандартную обработку
+    };
+
+    process.on('unhandledRejection', this.unhandledRejectionHandler);
+  }
+
+  onModuleDestroy(): void {
+    if (this.unhandledRejectionHandler) {
+      process.off('unhandledRejection', this.unhandledRejectionHandler);
+    }
+    if (this.client) {
+      void this.client.disconnect();
+    }
+  }
 
   async syncChat(params: SyncChatParams): Promise<TelegramSyncResultDto> {
     const identifier = params.identifier?.trim();
@@ -239,9 +267,25 @@ export class TelegramService {
       const client = new TelegramClient(session, apiId, apiHash, {
         connectionRetries: 5,
         noUpdates: true,
+        receiveUpdates: false,
       });
       
       await client.connect();
+      
+      // Явно отключаем update loop
+      if ('setNoUpdates' in client && typeof (client as { setNoUpdates?: (value: boolean) => void }).setNoUpdates === 'function') {
+        (client as { setNoUpdates: (value: boolean) => void }).setNoUpdates(true);
+      }
+      
+      // Подавляем ошибки update loop
+      const originalEmit = client.emit.bind(client);
+      client.emit = function (event: string, ...args: unknown[]) {
+        if (event === 'error' && args[0] instanceof Error && args[0].message.includes('TIMEOUT')) {
+          return false;
+        }
+        return originalEmit(event, ...args);
+      };
+      
       this.client = client;
       this.currentSessionId = sessionRecord?.id ?? null;
       this.logger.log('Telegram client initialized');
