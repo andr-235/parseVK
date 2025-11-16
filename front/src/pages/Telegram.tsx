@@ -366,13 +366,25 @@ const Telegram = () => {
         )}
 
         {data && (
-          <div className="grid gap-3 rounded-xl border border-border/60 bg-background-primary/80 px-4 py-3 text-sm text-text-secondary md:grid-cols-5">
-            {summaryItems.map((item) => (
-              <div key={item.label} className="flex flex-col gap-1">
-                <span className="text-xs uppercase tracking-wide text-text-tertiary">{item.label}</span>
-                <span className="text-sm text-text-primary">{item.value}</span>
-              </div>
-            ))}
+          <div className="flex flex-col gap-3">
+            <div className="grid gap-3 rounded-xl border border-border/60 bg-background-primary/80 px-4 py-3 text-sm text-text-secondary md:grid-cols-5">
+              {summaryItems.map((item) => (
+                <div key={item.label} className="flex flex-col gap-1">
+                  <span className="text-xs uppercase tracking-wide text-text-tertiary">{item.label}</span>
+                  <span className="text-sm text-text-primary">{item.value}</span>
+                </div>
+              ))}
+            </div>
+            <Button
+              type="button"
+              onClick={() => {
+                const url = `${import.meta.env.VITE_API_URL || '/api'}/telegram/export/${data.chatId}`
+                window.open(url, '_blank')
+              }}
+              className="w-full sm:w-auto"
+            >
+              Выгрузить в Excel
+            </Button>
           </div>
         )}
       </SectionCard>

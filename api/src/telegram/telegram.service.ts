@@ -7,6 +7,7 @@ import { TelegramChatType, TelegramMemberStatus } from '@prisma/client';
 import type { TelegramSyncResultDto } from './dto/telegram-sync-result.dto';
 import type { TelegramMemberDto } from './dto/telegram-member.dto';
 import { PrismaService } from '../prisma.service';
+import ExcelJS from 'exceljs';
 
 interface SyncChatParams {
   identifier: string;
@@ -96,6 +97,90 @@ export class TelegramService {
     };
   }
 
+  async exportChatToExcel(chatId: number): Promise<Buffer> {
+    const chat = await this.prisma.telegramChat.findUnique({
+      where: { id: chatId },
+      include: {
+        members: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!chat) {
+      throw new BadRequestException('Chat not found');
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Участники');
+
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Telegram ID', key: 'telegramId', width: 15 },
+      { header: 'Имя', key: 'firstName', width: 20 },
+      { header: 'Фамилия', key: 'lastName', width: 20 },
+      { header: 'Username', key: 'username', width: 20 },
+      { header: 'Телефон', key: 'phoneNumber', width: 15 },
+      { header: 'Статус', key: 'status', width: 15 },
+      { header: 'Админ', key: 'isAdmin', width: 10 },
+      { header: 'Владелец', key: 'isOwner', width: 10 },
+      { header: 'Присоединился', key: 'joinedAt', width: 20 },
+      { header: 'Покинул', key: 'leftAt', width: 20 },
+    ];
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' },
+    };
+
+    for (const member of chat.members) {
+      worksheet.addRow({
+        id: member.user.id,
+        telegramId: member.user.telegramId.toString(),
+        firstName: member.user.firstName ?? '',
+        lastName: member.user.lastName ?? '',
+        username: member.user.username ? `@${member.user.username}` : '',
+        phoneNumber: member.user.phoneNumber ?? '',
+        status: this.formatMemberStatus(member.status),
+        isAdmin: member.isAdmin ? 'Да' : 'Нет',
+        isOwner: member.isOwner ? 'Да' : 'Нет',
+        joinedAt: member.joinedAt ? member.joinedAt.toLocaleString('ru-RU') : '',
+        leftAt: member.leftAt ? member.leftAt.toLocaleString('ru-RU') : '',
+      });
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  async getChatInfo(chatId: number) {
+    const chat = await this.prisma.telegramChat.findUnique({
+      where: { id: chatId },
+    });
+
+    if (!chat) {
+      throw new BadRequestException('Chat not found');
+    }
+
+    return chat;
+  }
+
+  private formatMemberStatus(status: TelegramMemberStatus): string {
+    const statusMap: Record<TelegramMemberStatus, string> = {
+      CREATOR: 'Создатель',
+      ADMINISTRATOR: 'Администратор',
+      MEMBER: 'Участник',
+      RESTRICTED: 'Ограничен',
+      LEFT: 'Покинул',
+      KICKED: 'Исключен',
+    };
+    return statusMap[status] ?? status;
+  }
+
   private async getClient(): Promise<TelegramClient> {
     const sessionRecord = await this.prisma.telegramSession.findFirst({
       orderBy: { updatedAt: 'desc' },
@@ -153,6 +238,7 @@ export class TelegramService {
       const session = new StringSession(sessionString);
       const client = new TelegramClient(session, apiId, apiHash, {
         connectionRetries: 5,
+        noUpdates: true,
       });
       
       await client.connect();
