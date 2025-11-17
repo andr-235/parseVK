@@ -38,6 +38,24 @@ const isDeclinableWord = (word: string): boolean => {
   return true;
 };
 
+const isValidDeclinedForm = (original: string, declined: string): boolean => {
+  if (declined === original) {
+    return true;
+  }
+
+  if (declined.length < original.length - 2 || declined.length > original.length + 3) {
+    return false;
+  }
+
+  const minStemLength = Math.min(original.length - 1, 3);
+  const originalStem = original.slice(0, minStemLength);
+  if (!declined.toLowerCase().startsWith(originalStem.toLowerCase())) {
+    return false;
+  }
+
+  return true;
+};
+
 export function generateAllWordForms(keyword: string): string[] {
   const trimmed = keyword.trim();
   if (!trimmed) {
@@ -75,14 +93,14 @@ export function generateAllWordForms(keyword: string): string[] {
           const declinedForm = rne.decline(word, grammaticalCase);
           if (declinedForm && typeof declinedForm === 'string') {
             const normalizedForm = normalizeForKeywordMatch(declinedForm);
-            if (normalizedForm) {
+            if (normalizedForm && isValidDeclinedForm(normalized, normalizedForm)) {
               allForms.add(normalizedForm);
             }
           } else if (Array.isArray(declinedForm)) {
             for (const form of declinedForm) {
               if (typeof form === 'string' && form) {
                 const normalizedForm = normalizeForKeywordMatch(form);
-                if (normalizedForm) {
+                if (normalizedForm && isValidDeclinedForm(normalized, normalizedForm)) {
                   allForms.add(normalizedForm);
                 }
               }
