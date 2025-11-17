@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import toast from 'react-hot-toast'
 import type { GroupsState } from '../types/stores'
 import type { IRegionGroupSearchItem } from '../types/api'
+import type { Group } from '../types'
 import { groupsService } from '../services/groupsService'
 
 export const GROUPS_PAGE_LIMIT = 50
@@ -114,7 +115,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
   fetchAllGroups: async () => {
     set({ isLoading: true })
     try {
-      const allGroups: typeof get().groups = []
+      const allGroups: Group[] = []
       let page = 1
       let hasMore = true
       const limit = 100
