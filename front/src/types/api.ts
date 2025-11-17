@@ -474,6 +474,10 @@ export interface TelegramMember {
   isOwner: boolean
   joinedAt: string | null
   leftAt: string | null
+  bio?: string | null
+  languageCode?: string | null
+  isBot?: boolean
+  isPremium?: boolean
   deleted?: boolean
   restricted?: boolean
   verified?: boolean
@@ -489,7 +493,6 @@ export interface TelegramMember {
   photoHasVideo?: boolean
   commonChatsCount?: number | null
   usernames?: Array<{ username: string; active: boolean; editable: boolean }> | null
-  bio?: string | null
   personal?: {
     flags?: number
     phoneNumber?: string
