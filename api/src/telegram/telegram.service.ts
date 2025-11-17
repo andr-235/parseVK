@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { TelegramClient, Api } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import bigInt, { type BigInteger } from 'big-integer';
-import { TelegramChatType, TelegramMemberStatus } from '@prisma/client';
+import { TelegramChatType, TelegramMemberStatus, Prisma } from '@prisma/client';
 import type { TelegramSyncResultDto } from './dto/telegram-sync-result.dto';
 import type { TelegramMemberDto } from './dto/telegram-member.dto';
 import { PrismaService } from '../prisma.service';
@@ -520,7 +520,7 @@ export class TelegramService implements OnModuleDestroy {
         
         if (enrichWithFullData) {
           const fullData = await this.enrichUserWithFullData(client, member.user);
-          userData = { ...userData, ...fullData };
+          userData = { ...userData, ...fullData } as typeof userData;
         }
 
         const userRecord = await tx.telegramUser.upsert({
@@ -558,7 +558,7 @@ export class TelegramService implements OnModuleDestroy {
         });
 
         const usernames = userRecord.usernames && typeof userRecord.usernames === 'object' && Array.isArray(userRecord.usernames)
-          ? userRecord.usernames
+          ? (userRecord.usernames as Array<{ username: string; active: boolean; editable: boolean }>)
           : null;
 
         membersPayload.push({
@@ -724,7 +724,7 @@ export class TelegramService implements OnModuleDestroy {
       lastName: user.lastName ?? null,
       username: user.username ?? null,
       phoneNumber: user.phone ?? null,
-      bio: null,
+      bio: null as string | null,
       languageCode: user.langCode ?? null,
       isBot: Boolean(user.bot),
       isPremium: Boolean(user.premium),
@@ -741,10 +741,10 @@ export class TelegramService implements OnModuleDestroy {
       photoId: photo ? this.toBigInt(photo.photoId) : null,
       photoDcId: photo ? photo.dcId : null,
       photoHasVideo: photo ? Boolean(photo.hasVideo) : false,
-      commonChatsCount: typeof user.commonChatsCount === 'number' ? user.commonChatsCount : null,
-      usernames: usernames ? JSON.parse(JSON.stringify(usernames)) : null,
-      personal: null,
-      botInfo: null,
+      commonChatsCount: 'commonChatsCount' in user && typeof user.commonChatsCount === 'number' ? user.commonChatsCount : null,
+      usernames: usernames ? (JSON.parse(JSON.stringify(usernames)) as Prisma.InputJsonValue) : Prisma.JsonNull,
+      personal: Prisma.JsonNull,
+      botInfo: Prisma.JsonNull,
       blocked: false,
       contactRequirePremium: false,
       spam: false,
@@ -761,33 +761,33 @@ export class TelegramService implements OnModuleDestroy {
       }
 
       const full = fullUser.fullUser;
-      const personal = full.personal ? {
-        flags: full.personal.flags,
-        phoneNumber: full.personal.phoneNumber,
-        email: full.personal.email,
-        firstName: full.personal.firstName,
-        lastName: full.personal.lastName,
-        birthday: full.personal.birthday,
-        country: full.personal.country,
-        countryCode: full.personal.countryCode,
-        about: full.personal.about,
+      const personal = 'personal' in full && full.personal ? {
+        flags: 'flags' in full.personal ? full.personal.flags : undefined,
+        phoneNumber: 'phoneNumber' in full.personal ? full.personal.phoneNumber : undefined,
+        email: 'email' in full.personal ? full.personal.email : undefined,
+        firstName: 'firstName' in full.personal ? full.personal.firstName : undefined,
+        lastName: 'lastName' in full.personal ? full.personal.lastName : undefined,
+        birthday: 'birthday' in full.personal ? full.personal.birthday : undefined,
+        country: 'country' in full.personal ? full.personal.country : undefined,
+        countryCode: 'countryCode' in full.personal ? full.personal.countryCode : undefined,
+        about: 'about' in full.personal ? full.personal.about : undefined,
       } : null;
 
       const botInfo = full.botInfo ? {
         userId: full.botInfo.userId?.toString(),
         description: full.botInfo.description,
-        descriptionPhoto: full.botInfo.descriptionPhoto ? {
-          photoId: full.botInfo.descriptionPhoto.photoId?.toString(),
-          dcId: full.botInfo.descriptionPhoto.dcId,
+        descriptionPhoto: full.botInfo.descriptionPhoto && !(full.botInfo.descriptionPhoto instanceof Api.PhotoEmpty) ? {
+          photoId: 'photoId' in full.botInfo.descriptionPhoto ? full.botInfo.descriptionPhoto.photoId?.toString() : undefined,
+          dcId: 'dcId' in full.botInfo.descriptionPhoto ? full.botInfo.descriptionPhoto.dcId : undefined,
         } : null,
-        descriptionDocument: full.botInfo.descriptionDocument ? {
-          id: full.botInfo.descriptionDocument.id?.toString(),
-          accessHash: full.botInfo.descriptionDocument.accessHash?.toString(),
+        descriptionDocument: full.botInfo.descriptionDocument && !(full.botInfo.descriptionDocument instanceof Api.DocumentEmpty) ? {
+          id: 'id' in full.botInfo.descriptionDocument ? full.botInfo.descriptionDocument.id?.toString() : undefined,
+          accessHash: 'accessHash' in full.botInfo.descriptionDocument ? full.botInfo.descriptionDocument.accessHash?.toString() : undefined,
         } : null,
         commands: full.botInfo.commands?.map((cmd) => ({
           command: cmd.command,
           description: cmd.description,
-        })) : null,
+        })) || null,
         menuButton: full.botInfo.menuButton ? {
           type: full.botInfo.menuButton.className,
         } : null,
@@ -795,12 +795,12 @@ export class TelegramService implements OnModuleDestroy {
 
       return {
         bio: full.about ?? null,
-        personal: personal ? JSON.parse(JSON.stringify(personal)) : null,
-        botInfo: botInfo ? JSON.parse(JSON.stringify(botInfo)) : null,
-        blocked: Boolean(full.blocked),
-        contactRequirePremium: Boolean(full.contactRequirePremium),
-        spam: Boolean(full.spam),
-        closeFriend: Boolean(full.closeFriend),
+        personal: personal ? (JSON.parse(JSON.stringify(personal)) as Prisma.InputJsonValue) : Prisma.JsonNull,
+        botInfo: botInfo ? (JSON.parse(JSON.stringify(botInfo)) as Prisma.InputJsonValue) : Prisma.JsonNull,
+        blocked: Boolean('blocked' in full && full.blocked),
+        contactRequirePremium: Boolean('contactRequirePremium' in full && full.contactRequirePremium),
+        spam: Boolean('spam' in full && full.spam),
+        closeFriend: Boolean('closeFriend' in full && full.closeFriend),
       };
     } catch (error) {
       this.logger.warn(`Failed to get full user data for ${user.id}: ${this.stringifyError(error)}`);
