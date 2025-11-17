@@ -520,7 +520,12 @@ export class TelegramService implements OnModuleDestroy {
         
         if (enrichWithFullData) {
           const fullData = await this.enrichUserWithFullData(client, member.user);
-          userData = { ...userData, ...fullData } as typeof userData;
+          userData = {
+            ...userData,
+            ...fullData,
+            personal: fullData.personal !== undefined ? fullData.personal : userData.personal,
+            botInfo: fullData.botInfo !== undefined ? fullData.botInfo : userData.botInfo,
+          } as typeof userData;
         }
 
         const userRecord = await tx.telegramUser.upsert({
@@ -761,16 +766,16 @@ export class TelegramService implements OnModuleDestroy {
       }
 
       const full = fullUser.fullUser;
-      const personal = 'personal' in full && full.personal ? {
-        flags: 'flags' in full.personal ? full.personal.flags : undefined,
-        phoneNumber: 'phoneNumber' in full.personal ? full.personal.phoneNumber : undefined,
-        email: 'email' in full.personal ? full.personal.email : undefined,
-        firstName: 'firstName' in full.personal ? full.personal.firstName : undefined,
-        lastName: 'lastName' in full.personal ? full.personal.lastName : undefined,
-        birthday: 'birthday' in full.personal ? full.personal.birthday : undefined,
-        country: 'country' in full.personal ? full.personal.country : undefined,
-        countryCode: 'countryCode' in full.personal ? full.personal.countryCode : undefined,
-        about: 'about' in full.personal ? full.personal.about : undefined,
+      const personal = 'personal' in full && full.personal && typeof full.personal === 'object' && full.personal !== null ? {
+        flags: (full.personal as any).flags,
+        phoneNumber: (full.personal as any).phoneNumber,
+        email: (full.personal as any).email,
+        firstName: (full.personal as any).firstName,
+        lastName: (full.personal as any).lastName,
+        birthday: (full.personal as any).birthday,
+        country: (full.personal as any).country,
+        countryCode: (full.personal as any).countryCode,
+        about: (full.personal as any).about,
       } : null;
 
       const botInfo = full.botInfo ? {
@@ -793,15 +798,22 @@ export class TelegramService implements OnModuleDestroy {
         } : null,
       } : null;
 
-      return {
+      const result: Partial<ReturnType<typeof this.buildTelegramUserData>> = {
         bio: full.about ?? null,
-        personal: personal ? (JSON.parse(JSON.stringify(personal)) as Prisma.InputJsonValue) : Prisma.JsonNull,
-        botInfo: botInfo ? (JSON.parse(JSON.stringify(botInfo)) as Prisma.InputJsonValue) : Prisma.JsonNull,
         blocked: Boolean('blocked' in full && full.blocked),
         contactRequirePremium: Boolean('contactRequirePremium' in full && full.contactRequirePremium),
         spam: Boolean('spam' in full && full.spam),
         closeFriend: Boolean('closeFriend' in full && full.closeFriend),
       };
+
+      if (personal) {
+        result.personal = JSON.parse(JSON.stringify(personal)) as Prisma.InputJsonValue as typeof result.personal;
+      }
+      if (botInfo) {
+        result.botInfo = JSON.parse(JSON.stringify(botInfo)) as Prisma.InputJsonValue as typeof result.botInfo;
+      }
+
+      return result;
     } catch (error) {
       this.logger.warn(`Failed to get full user data for ${user.id}: ${this.stringifyError(error)}`);
       return {};
