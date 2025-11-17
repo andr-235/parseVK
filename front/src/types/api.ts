@@ -474,6 +474,45 @@ export interface TelegramMember {
   isOwner: boolean
   joinedAt: string | null
   leftAt: string | null
+  deleted?: boolean
+  restricted?: boolean
+  verified?: boolean
+  scam?: boolean
+  fake?: boolean
+  min?: boolean
+  self?: boolean
+  contact?: boolean
+  mutualContact?: boolean
+  accessHash?: string | null
+  photoId?: string | null
+  photoDcId?: number | null
+  photoHasVideo?: boolean
+  commonChatsCount?: number | null
+  usernames?: Array<{ username: string; active: boolean; editable: boolean }> | null
+  bio?: string | null
+  personal?: {
+    flags?: number
+    phoneNumber?: string
+    email?: string
+    firstName?: string
+    lastName?: string
+    birthday?: unknown
+    country?: string
+    countryCode?: string
+    about?: string
+  } | null
+  botInfo?: {
+    userId?: string
+    description?: string
+    descriptionPhoto?: { photoId?: string; dcId?: number } | null
+    descriptionDocument?: { id?: string; accessHash?: string } | null
+    commands?: Array<{ command: string; description: string }> | null
+    menuButton?: { type: string } | null
+  } | null
+  blocked?: boolean
+  contactRequirePremium?: boolean
+  spam?: boolean
+  closeFriend?: boolean
 }
 
 export interface TelegramSyncResponse {

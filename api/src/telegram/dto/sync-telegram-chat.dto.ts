@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class SyncTelegramChatDto {
   @IsString()
@@ -11,5 +11,10 @@ export class SyncTelegramChatDto {
   @Min(1)
   @Max(10000)
   limit?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  enrichWithFullData?: boolean;
 }
 

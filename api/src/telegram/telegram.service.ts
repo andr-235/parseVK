@@ -12,6 +12,7 @@ import ExcelJS from 'exceljs';
 interface SyncChatParams {
   identifier: string;
   limit?: number;
+  enrichWithFullData?: boolean;
 }
 
 interface ResolvedChat {
@@ -110,7 +111,7 @@ export class TelegramService implements OnModuleDestroy {
       throw new InternalServerErrorException('Unable to fetch Telegram chat participants');
     }
 
-    const persisted = await this.persistChat(resolved, collection.members);
+    const persisted = await this.persistChat(resolved, collection.members, client, params.enrichWithFullData ?? false);
 
     return {
       chatId: persisted.chatId,
@@ -151,6 +152,23 @@ export class TelegramService implements OnModuleDestroy {
       { header: 'Фамилия', key: 'lastName', width: 20 },
       { header: 'Username', key: 'username', width: 20 },
       { header: 'Телефон', key: 'phoneNumber', width: 15 },
+      { header: 'Bio', key: 'bio', width: 30 },
+      { header: 'Язык', key: 'languageCode', width: 10 },
+      { header: 'Бот', key: 'isBot', width: 8 },
+      { header: 'Premium', key: 'isPremium', width: 10 },
+      { header: 'Верифицирован', key: 'verified', width: 12 },
+      { header: 'Удален', key: 'deleted', width: 10 },
+      { header: 'Ограничен', key: 'restricted', width: 12 },
+      { header: 'Мошенник', key: 'scam', width: 10 },
+      { header: 'Фейк', key: 'fake', width: 8 },
+      { header: 'Минимальный', key: 'min', width: 12 },
+      { header: 'В контактах', key: 'contact', width: 12 },
+      { header: 'Взаимный контакт', key: 'mutualContact', width: 15 },
+      { header: 'Общих чатов', key: 'commonChatsCount', width: 12 },
+      { header: 'Заблокирован', key: 'blocked', width: 12 },
+      { header: 'Требует Premium', key: 'contactRequirePremium', width: 15 },
+      { header: 'Спам', key: 'spam', width: 8 },
+      { header: 'Близкий друг', key: 'closeFriend', width: 12 },
       { header: 'Статус', key: 'status', width: 15 },
       { header: 'Админ', key: 'isAdmin', width: 10 },
       { header: 'Владелец', key: 'isOwner', width: 10 },
@@ -166,6 +184,10 @@ export class TelegramService implements OnModuleDestroy {
     };
 
     for (const member of chat.members) {
+      const usernames = member.user.usernames && typeof member.user.usernames === 'object' && Array.isArray(member.user.usernames)
+        ? member.user.usernames.map((u: { username: string; active: boolean }) => u.username).join(', ')
+        : '';
+
       worksheet.addRow({
         id: member.user.id,
         telegramId: member.user.telegramId.toString(),
@@ -173,6 +195,23 @@ export class TelegramService implements OnModuleDestroy {
         lastName: member.user.lastName ?? '',
         username: member.user.username ? `@${member.user.username}` : '',
         phoneNumber: member.user.phoneNumber ?? '',
+        bio: member.user.bio ?? '',
+        languageCode: member.user.languageCode ?? '',
+        isBot: member.user.isBot ? 'Да' : 'Нет',
+        isPremium: member.user.isPremium ? 'Да' : 'Нет',
+        verified: member.user.verified ? 'Да' : 'Нет',
+        deleted: member.user.deleted ? 'Да' : 'Нет',
+        restricted: member.user.restricted ? 'Да' : 'Нет',
+        scam: member.user.scam ? 'Да' : 'Нет',
+        fake: member.user.fake ? 'Да' : 'Нет',
+        min: member.user.min ? 'Да' : 'Нет',
+        contact: member.user.contact ? 'Да' : 'Нет',
+        mutualContact: member.user.mutualContact ? 'Да' : 'Нет',
+        commonChatsCount: member.user.commonChatsCount ?? '',
+        blocked: member.user.blocked ? 'Да' : 'Нет',
+        contactRequirePremium: member.user.contactRequirePremium ? 'Да' : 'Нет',
+        spam: member.user.spam ? 'Да' : 'Нет',
+        closeFriend: member.user.closeFriend ? 'Да' : 'Нет',
         status: this.formatMemberStatus(member.status),
         isAdmin: member.isAdmin ? 'Да' : 'Нет',
         isOwner: member.isOwner ? 'Да' : 'Нет',
@@ -455,7 +494,7 @@ export class TelegramService implements OnModuleDestroy {
     return { members: [member], total: 1 };
   }
 
-  private async persistChat(resolved: ResolvedChat, members: MemberRecord[]) {
+  private async persistChat(resolved: ResolvedChat, members: MemberRecord[], client: TelegramClient, enrichWithFullData = false) {
     return this.prisma.$transaction(async (tx) => {
       const chat = await tx.telegramChat.upsert({
         where: { telegramId: resolved.telegramId },
@@ -477,10 +516,17 @@ export class TelegramService implements OnModuleDestroy {
       const membersPayload: TelegramMemberDto[] = [];
 
       for (const member of members) {
+        let userData = this.buildTelegramUserData(member.user);
+        
+        if (enrichWithFullData) {
+          const fullData = await this.enrichUserWithFullData(client, member.user);
+          userData = { ...userData, ...fullData };
+        }
+
         const userRecord = await tx.telegramUser.upsert({
           where: { telegramId: this.toBigInt(member.user.id) },
-          create: this.buildTelegramUserData(member.user),
-          update: this.buildTelegramUserData(member.user),
+          create: userData,
+          update: userData,
         });
 
         const joinedAt = member.joinedAt ?? null;
@@ -511,6 +557,10 @@ export class TelegramService implements OnModuleDestroy {
           },
         });
 
+        const usernames = userRecord.usernames && typeof userRecord.usernames === 'object' && Array.isArray(userRecord.usernames)
+          ? userRecord.usernames
+          : null;
+
         membersPayload.push({
           userId: userRecord.id,
           telegramId: userRecord.telegramId.toString(),
@@ -518,6 +568,31 @@ export class TelegramService implements OnModuleDestroy {
           lastName: userRecord.lastName,
           username: userRecord.username,
           phoneNumber: userRecord.phoneNumber,
+          bio: userRecord.bio,
+          languageCode: userRecord.languageCode,
+          isBot: userRecord.isBot,
+          isPremium: userRecord.isPremium,
+          deleted: userRecord.deleted,
+          restricted: userRecord.restricted,
+          verified: userRecord.verified,
+          scam: userRecord.scam,
+          fake: userRecord.fake,
+          min: userRecord.min,
+          self: userRecord.self,
+          contact: userRecord.contact,
+          mutualContact: userRecord.mutualContact,
+          accessHash: userRecord.accessHash,
+          photoId: userRecord.photoId ? userRecord.photoId.toString() : null,
+          photoDcId: userRecord.photoDcId,
+          photoHasVideo: userRecord.photoHasVideo,
+          commonChatsCount: userRecord.commonChatsCount,
+          usernames,
+          personal: userRecord.personal && typeof userRecord.personal === 'object' ? userRecord.personal as any : null,
+          botInfo: userRecord.botInfo && typeof userRecord.botInfo === 'object' ? userRecord.botInfo as any : null,
+          blocked: userRecord.blocked,
+          contactRequirePremium: userRecord.contactRequirePremium,
+          spam: userRecord.spam,
+          closeFriend: userRecord.closeFriend,
           status: member.status,
           isAdmin: member.isAdmin,
           isOwner: member.isOwner,
@@ -640,6 +715,9 @@ export class TelegramService implements OnModuleDestroy {
   }
 
   private buildTelegramUserData(user: Api.User) {
+    const photo = user.photo instanceof Api.UserProfilePhoto ? user.photo : null;
+    const usernames = user.usernames?.length ? user.usernames.map((u) => ({ username: u.username, active: u.active, editable: u.editable })) : null;
+
     return {
       telegramId: this.toBigInt(user.id),
       firstName: user.firstName ?? null,
@@ -650,7 +728,84 @@ export class TelegramService implements OnModuleDestroy {
       languageCode: user.langCode ?? null,
       isBot: Boolean(user.bot),
       isPremium: Boolean(user.premium),
+      deleted: Boolean(user.deleted),
+      restricted: Boolean(user.restricted),
+      verified: Boolean(user.verified),
+      scam: Boolean(user.scam),
+      fake: Boolean(user.fake),
+      min: Boolean(user.min),
+      self: Boolean(user.self),
+      contact: Boolean(user.contact),
+      mutualContact: Boolean(user.mutualContact),
+      accessHash: user.accessHash ? user.accessHash.toString() : null,
+      photoId: photo ? this.toBigInt(photo.photoId) : null,
+      photoDcId: photo ? photo.dcId : null,
+      photoHasVideo: photo ? Boolean(photo.hasVideo) : false,
+      commonChatsCount: typeof user.commonChatsCount === 'number' ? user.commonChatsCount : null,
+      usernames: usernames ? JSON.parse(JSON.stringify(usernames)) : null,
+      personal: null,
+      botInfo: null,
+      blocked: false,
+      contactRequirePremium: false,
+      spam: false,
+      closeFriend: false,
     };
+  }
+
+  private async enrichUserWithFullData(client: TelegramClient, user: Api.User): Promise<Partial<ReturnType<typeof this.buildTelegramUserData>>> {
+    try {
+      const fullUser = await client.invoke(new Api.users.GetFullUser({ id: user.id }));
+      
+      if (!(fullUser.fullUser instanceof Api.UserFull)) {
+        return {};
+      }
+
+      const full = fullUser.fullUser;
+      const personal = full.personal ? {
+        flags: full.personal.flags,
+        phoneNumber: full.personal.phoneNumber,
+        email: full.personal.email,
+        firstName: full.personal.firstName,
+        lastName: full.personal.lastName,
+        birthday: full.personal.birthday,
+        country: full.personal.country,
+        countryCode: full.personal.countryCode,
+        about: full.personal.about,
+      } : null;
+
+      const botInfo = full.botInfo ? {
+        userId: full.botInfo.userId?.toString(),
+        description: full.botInfo.description,
+        descriptionPhoto: full.botInfo.descriptionPhoto ? {
+          photoId: full.botInfo.descriptionPhoto.photoId?.toString(),
+          dcId: full.botInfo.descriptionPhoto.dcId,
+        } : null,
+        descriptionDocument: full.botInfo.descriptionDocument ? {
+          id: full.botInfo.descriptionDocument.id?.toString(),
+          accessHash: full.botInfo.descriptionDocument.accessHash?.toString(),
+        } : null,
+        commands: full.botInfo.commands?.map((cmd) => ({
+          command: cmd.command,
+          description: cmd.description,
+        })) : null,
+        menuButton: full.botInfo.menuButton ? {
+          type: full.botInfo.menuButton.className,
+        } : null,
+      } : null;
+
+      return {
+        bio: full.about ?? null,
+        personal: personal ? JSON.parse(JSON.stringify(personal)) : null,
+        botInfo: botInfo ? JSON.parse(JSON.stringify(botInfo)) : null,
+        blocked: Boolean(full.blocked),
+        contactRequirePremium: Boolean(full.contactRequirePremium),
+        spam: Boolean(full.spam),
+        closeFriend: Boolean(full.closeFriend),
+      };
+    } catch (error) {
+      this.logger.warn(`Failed to get full user data for ${user.id}: ${this.stringifyError(error)}`);
+      return {};
+    }
   }
 
   private buildUsersMap(users: Api.TypeUser[]) {
@@ -757,6 +912,17 @@ export class TelegramService implements OnModuleDestroy {
       }
     }
     return null;
+  }
+
+  private stringifyError(error: unknown): string {
+    if (error instanceof Error) {
+      return `${error.name}: ${error.message}`;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
   }
 }
 

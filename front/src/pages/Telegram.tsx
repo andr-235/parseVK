@@ -406,36 +406,87 @@ const Telegram = () => {
         )}
 
         {!loading && members.length > 0 && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[220px]">Участник</TableHead>
-                <TableHead className="w-[140px]">Роль</TableHead>
-                <TableHead>Контакты</TableHead>
-                <TableHead className="w-[180px]">Присоединился</TableHead>
-                <TableHead className="w-[180px]">Покинул</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((member) => (
-                <TableRow key={`${member.userId}-${member.telegramId}`}>
-                  <TableCell className="space-y-1">
-                    <div className="font-medium text-text-primary">{formatMemberName(member)}</div>
-                    <div className="text-xs text-text-secondary">ID: {member.telegramId}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant(member.status)}>{formatStatus(member.status)}</Badge>
-                  </TableCell>
-                  <TableCell className="space-y-1">
-                    <div className="text-sm text-text-secondary">{member.username ? `@${member.username}` : '—'}</div>
-                    <div className="text-sm text-text-secondary">{member.phoneNumber ?? '—'}</div>
-                  </TableCell>
-                  <TableCell className="text-sm text-text-secondary">{formatDate(member.joinedAt)}</TableCell>
-                  <TableCell className="text-sm text-text-secondary">{formatDate(member.leftAt)}</TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[220px]">Участник</TableHead>
+                  <TableHead className="w-[140px]">Роль</TableHead>
+                  <TableHead>Контакты</TableHead>
+                  <TableHead className="w-[120px]">Флаги</TableHead>
+                  <TableHead className="w-[100px]">Доп. инфо</TableHead>
+                  <TableHead className="w-[180px]">Присоединился</TableHead>
+                  <TableHead className="w-[180px]">Покинул</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {members.map((member) => {
+                  const flags = []
+                  if (member.verified) flags.push({ label: '✓', title: 'Верифицирован', variant: 'default' as const })
+                  if (member.scam) flags.push({ label: '⚠', title: 'Мошенник', variant: 'destructive' as const })
+                  if (member.fake) flags.push({ label: 'F', title: 'Фейк', variant: 'outline' as const })
+                  if (member.deleted) flags.push({ label: '🗑', title: 'Удален', variant: 'secondary' as const })
+                  if (member.restricted) flags.push({ label: '🔒', title: 'Ограничен', variant: 'outline' as const })
+                  if (member.isPremium) flags.push({ label: '⭐', title: 'Premium', variant: 'default' as const })
+                  if (member.isBot) flags.push({ label: '🤖', title: 'Бот', variant: 'secondary' as const })
+
+                  const additionalInfo = []
+                  if (member.commonChatsCount) additionalInfo.push(`Общих чатов: ${member.commonChatsCount}`)
+                  if (member.bio) additionalInfo.push(`Bio: ${member.bio.substring(0, 30)}${member.bio.length > 30 ? '...' : ''}`)
+                  if (member.languageCode) additionalInfo.push(`Язык: ${member.languageCode}`)
+
+                  return (
+                    <TableRow key={`${member.userId}-${member.telegramId}`}>
+                      <TableCell className="space-y-1">
+                        <div className="font-medium text-text-primary">{formatMemberName(member)}</div>
+                        <div className="text-xs text-text-secondary">ID: {member.telegramId}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant(member.status)}>{formatStatus(member.status)}</Badge>
+                        {member.isAdmin && (
+                          <Badge variant="secondary" className="ml-1 text-xs">
+                            Админ
+                          </Badge>
+                        )}
+                        {member.isOwner && (
+                          <Badge variant="default" className="ml-1 text-xs">
+                            Владелец
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="space-y-1">
+                        <div className="text-sm text-text-secondary">{member.username ? `@${member.username}` : '—'}</div>
+                        <div className="text-sm text-text-secondary">{member.phoneNumber ?? '—'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {flags.map((flag, idx) => (
+                            <Badge key={idx} variant={flag.variant} title={flag.title} className="text-xs">
+                              {flag.label}
+                            </Badge>
+                          ))}
+                          {flags.length === 0 && <span className="text-xs text-text-tertiary">—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-text-secondary">
+                        {additionalInfo.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {additionalInfo.map((info, idx) => (
+                              <div key={idx}>{info}</div>
+                            ))}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-text-secondary">{formatDate(member.joinedAt)}</TableCell>
+                      <TableCell className="text-sm text-text-secondary">{formatDate(member.leftAt)}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </SectionCard>
     </div>

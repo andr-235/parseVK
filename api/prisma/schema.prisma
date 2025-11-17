@@ -363,22 +363,45 @@ model TelegramChat {
 }
 
 model TelegramUser {
-  id           Int               @id @default(autoincrement())
-  telegramId   BigInt            @unique
-  firstName    String?
-  lastName     String?
-  username     String?
-  phoneNumber  String?
-  bio          String?           @db.Text
-  languageCode String?
-  isBot        Boolean           @default(false)
-  isPremium    Boolean           @default(false)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  memberships  TelegramChatMember[]
+  id                    Int               @id @default(autoincrement())
+  telegramId            BigInt            @unique
+  firstName             String?
+  lastName              String?
+  username              String?
+  phoneNumber           String?
+  bio                   String?           @db.Text
+  languageCode          String?
+  isBot                 Boolean           @default(false)
+  isPremium             Boolean           @default(false)
+  deleted               Boolean           @default(false)
+  restricted            Boolean           @default(false)
+  verified              Boolean           @default(false)
+  scam                 Boolean           @default(false)
+  fake                  Boolean           @default(false)
+  min                   Boolean           @default(false)
+  self                  Boolean           @default(false)
+  contact               Boolean           @default(false)
+  mutualContact         Boolean           @default(false)
+  accessHash            String?
+  photoId               BigInt?
+  photoDcId             Int?
+  photoHasVideo         Boolean           @default(false)
+  commonChatsCount      Int?
+  usernames             Json?
+  personal              Json?
+  botInfo               Json?
+  blocked               Boolean           @default(false)
+  contactRequirePremium Boolean           @default(false)
+  spam                  Boolean           @default(false)
+  closeFriend           Boolean           @default(false)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  memberships           TelegramChatMember[]
 
   @@index([username])
   @@index([isBot])
+  @@index([verified])
+  @@index([deleted])
 }
 
 model TelegramChatMember {
