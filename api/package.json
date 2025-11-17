@@ -43,6 +43,7 @@
     "reflect-metadata": "^0.2.2",
     "exceljs": "^4.4.0",
     "rxjs": "^7.8.1",
+    "russian-nouns-js": "^1.0.0",
     "telegram": "^2.26.22",
     "vk-io": "^4.10.0"
   },

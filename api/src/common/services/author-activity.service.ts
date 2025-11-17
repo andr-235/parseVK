@@ -3,6 +3,7 @@ import { CommentSource, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 import { VkService } from '../../vk/vk.service';
 import type { CommentEntity } from '../types/comment-entity.type';
+import { generateAllWordForms } from '../utils/russian-nouns.util';
 
 interface SaveCommentsOptions {
   source: CommentSource;
@@ -12,7 +13,7 @@ interface SaveCommentsOptions {
 
 interface KeywordMatchCandidate {
   id: number;
-  normalizedWord: string;
+  normalizedForms: string[];
 }
 
 const NBSP_REGEX = /\u00a0/g;
@@ -377,11 +378,14 @@ export class AuthorActivityService {
     });
 
     return keywords
-      .map((keyword) => ({
-        id: keyword.id,
-        normalizedWord: normalizeForKeywordMatch(keyword.word),
-      }))
-      .filter((keyword) => keyword.normalizedWord.length > 0);
+      .map((keyword) => {
+        const forms = generateAllWordForms(keyword.word);
+        return {
+          id: keyword.id,
+          normalizedForms: forms,
+        };
+      })
+      .filter((keyword) => keyword.normalizedForms.length > 0);
   }
 
   private async syncCommentKeywordMatches(
@@ -404,7 +408,9 @@ export class AuthorActivityService {
     const matchedKeywordIds = new Set(
       keywordMatches
         .filter((keyword) =>
-          keyword.normalizedWord && normalizedText.includes(keyword.normalizedWord),
+          keyword.normalizedForms.some((form) =>
+            normalizedText.includes(form),
+          ),
         )
         .map((keyword) => keyword.id),
     );
