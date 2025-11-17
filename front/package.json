@@ -40,7 +40,7 @@
     "react-window": "^2.2.1",
     "socket.io-client": "^4.8.1",
     "source-map": "^0.7.6",
-    "russian-nouns-js": "^1.0.0",
+    "russian-nouns-js": "^1.5.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^5.0.8"
