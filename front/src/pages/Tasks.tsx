@@ -36,11 +36,13 @@ const Tasks = () => {
   const {
     groups,
     fetchGroups,
+    fetchAllGroups,
     areGroupsLoading
   } = useGroupsStore(
     useShallow((state) => ({
       groups: state.groups,
       fetchGroups: state.fetchGroups,
+      fetchAllGroups: state.fetchAllGroups,
       areGroupsLoading: state.isLoading
     }))
   )
@@ -102,7 +104,7 @@ const Tasks = () => {
     }
   }, [tasks, selectedTaskId])
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = async () => {
     if (areGroupsLoading) {
       return
     }
@@ -112,6 +114,7 @@ const Tasks = () => {
       return
     }
 
+    await fetchAllGroups()
     setIsCreateModalOpen(true)
   }
 

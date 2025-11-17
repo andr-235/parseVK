@@ -14,7 +14,7 @@ export const buttonVariants = cva(
         secondary:
           "bg-gradient-to-r from-background-secondary via-background-secondary/95 to-background-secondary text-text-primary shadow-soft-sm hover:from-accent-primary/15 hover:via-accent-primary/12 hover:to-accent-primary/15 dark:from-white/15 dark:via-white/12 dark:to-white/15 dark:text-text-light dark:hover:from-white/25 dark:hover:via-white/18 dark:hover:to-white/25",
         ghost:
-          "text-text-secondary hover:bg-accent-primary/15 hover:text-accent-primary dark:text-text-light/80 dark:hover:text-text-light dark:hover:bg-accent-primary/25",
+          "text-text-secondary hover:bg-accent-primary/15 hover:text-accent-primary dark:text-text-light dark:bg-white/5 dark:hover:bg-accent-primary/25 dark:hover:text-text-light",
         link: "text-accent-primary underline-offset-4 hover:underline",
       },
       size: {

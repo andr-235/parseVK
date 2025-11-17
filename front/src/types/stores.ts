@@ -82,6 +82,7 @@ export interface GroupsState {
   isLoadingMore: boolean
   fetchGroups: (options?: { reset?: boolean }) => Promise<void>
   loadMoreGroups: () => Promise<void>
+  fetchAllGroups: () => Promise<void>
   addGroup: (url: string, description?: string, options?: { silent?: boolean }) => Promise<boolean>
   deleteGroup: (id: number) => Promise<void>
   loadFromFile: (file: File) => Promise<{ saved: number; errors: string[] }>

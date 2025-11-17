@@ -111,6 +111,37 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     }
   },
 
+  fetchAllGroups: async () => {
+    set({ isLoading: true })
+    try {
+      const allGroups: typeof get().groups = []
+      let page = 1
+      let hasMore = true
+      const limit = 100
+
+      while (hasMore) {
+        const response = await groupsService.fetchGroups({ page, limit })
+        allGroups.push(...response.items)
+        hasMore = response.hasMore
+        page++
+      }
+
+      set({
+        groups: allGroups,
+        total: allGroups.length,
+        page: 1,
+        limit,
+        hasMore: false
+      })
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[groupsStore] fetchAllGroups error', error)
+      }
+    } finally {
+      set({ isLoading: false })
+    }
+  },
+
   addGroup: async (name, description = '', options?: { silent?: boolean }) => {
     try {
       const group = await groupsService.addGroup(name, description, options)
