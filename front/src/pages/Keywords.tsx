@@ -1,6 +1,8 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { motion, type Variants, easeOut } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { useKeywordsStore } from '../stores'
+import { keywordsApi } from '../api/keywordsApi'
 import KeywordsHero from './Keywords/components/KeywordsHero'
 import KeywordsActionsPanel from './Keywords/components/KeywordsActionsPanel'
 import KeywordsCategoriesCard from './Keywords/components/KeywordsCategoriesCard'
@@ -15,6 +17,7 @@ function Keywords() {
 
   const [keywordValue, setKeywordValue] = useState('')
   const [categoryValue, setCategoryValue] = useState('')
+  const [isRecalculating, setIsRecalculating] = useState(false)
 
   useEffect(() => {
     const loadKeywords = async () => {
@@ -45,6 +48,28 @@ function Keywords() {
       console.error('Failed to upload keywords from file', error)
     } finally {
       event.target.value = ''
+    }
+  }
+
+  const handleRecalculate = async () => {
+    if (isRecalculating) return
+
+    setIsRecalculating(true)
+    const toastId = toast.loading('Пересчет совпадений...')
+
+    try {
+      const result = await keywordsApi.recalculateKeywordMatches()
+      toast.success(
+        `Обработано: ${result.processed}, обновлено: ${result.updated}, создано: ${result.created}, удалено: ${result.deleted}`,
+        { id: toastId, duration: 5000 }
+      )
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Ошибка при пересчете совпадений',
+        { id: toastId }
+      )
+    } finally {
+      setIsRecalculating(false)
     }
   }
 
@@ -88,6 +113,8 @@ function Keywords() {
             setCategoryValue={setCategoryValue}
             onAdd={handleAddKeyword}
             onUpload={handleFileUpload}
+            onRecalculate={handleRecalculate}
+            isRecalculating={isRecalculating}
           />
         </motion.aside>
 

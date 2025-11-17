@@ -54,5 +54,19 @@ export const keywordsApi = {
     })
     if (!response.ok) throw new Error('Failed to delete keyword')
     return response.json()
+  },
+
+  async recalculateKeywordMatches(): Promise<{
+    processed: number
+    updated: number
+    created: number
+    deleted: number
+  }> {
+    const response = await fetch(`${API_URL}/keywords/recalculate-matches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    if (!response.ok) throw new Error('Failed to recalculate keyword matches')
+    return response.json()
   }
 }

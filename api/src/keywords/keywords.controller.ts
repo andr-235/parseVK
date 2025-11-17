@@ -62,4 +62,14 @@ export class KeywordsController {
   async deleteKeyword(@Param('id') id: string): Promise<IKeywordResponse> {
     return this.keywordsService.deleteKeyword(Number(id));
   }
+
+  @Post('recalculate-matches')
+  async recalculateKeywordMatches(): Promise<{
+    processed: number;
+    updated: number;
+    created: number;
+    deleted: number;
+  }> {
+    return this.keywordsService.recalculateKeywordMatches();
+  }
 }

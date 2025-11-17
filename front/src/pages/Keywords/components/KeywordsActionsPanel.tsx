@@ -11,6 +11,8 @@ interface KeywordsActionsPanelProps {
   setCategoryValue: Dispatch<SetStateAction<string>>
   onAdd: () => Promise<void> | void
   onUpload: (event: ChangeEvent<HTMLInputElement>) => Promise<void> | void
+  onRecalculate?: () => Promise<void> | void
+  isRecalculating?: boolean
 }
 
 function KeywordsActionsPanel({
@@ -20,6 +22,8 @@ function KeywordsActionsPanel({
   setCategoryValue,
   onAdd,
   onUpload,
+  onRecalculate,
+  isRecalculating = false,
 }: KeywordsActionsPanelProps) {
   const handleKeywordChange = (e: ChangeEvent<HTMLInputElement>) => {
     setKeywordValue(e.target.value)
@@ -58,6 +62,23 @@ function KeywordsActionsPanel({
           </div>
         </div>
       </SectionCard>
+
+      {onRecalculate && (
+        <SectionCard
+          title="Обновить совпадения"
+          description="Пересчитать совпадения ключевых слов во всех комментариях с учетом склонений."
+          contentClassName="pt-4"
+        >
+          <Button
+            onClick={onRecalculate}
+            disabled={isRecalculating}
+            variant="outline"
+            className="w-full"
+          >
+            {isRecalculating ? 'Обновление...' : 'Обновить комментарии'}
+          </Button>
+        </SectionCard>
+      )}
     </div>
   )
 }

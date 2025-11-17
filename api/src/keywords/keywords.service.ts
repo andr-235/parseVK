@@ -5,6 +5,7 @@ import {
   IDeleteResponse,
   IBulkAddResponse,
 } from './interfaces/keyword.interface';
+import { generateAllWordForms } from '../common/utils/russian-nouns.util';
 
 @Injectable()
 export class KeywordsService {
@@ -134,5 +135,121 @@ export class KeywordsService {
 
   async deleteAllKeywords(): Promise<IDeleteResponse> {
     return this.prisma.keyword.deleteMany({});
+  }
+
+  async recalculateKeywordMatches(): Promise<{
+    processed: number;
+    updated: number;
+    created: number;
+    deleted: number;
+  }> {
+    const NBSP_REGEX = /\u00a0/g;
+    const SOFT_HYPHEN_REGEX = /\u00ad/g;
+    const INVISIBLE_SPACE_REGEX = /[\u2000-\u200f\u2028\u2029\u202f\u205f\u3000]/g;
+    const WHITESPACE_REGEX = /\s+/g;
+
+    const normalizeForKeywordMatch = (value: string | null | undefined): string => {
+      if (!value) {
+        return '';
+      }
+
+      return value
+        .toLowerCase()
+        .replace(NBSP_REGEX, ' ')
+        .replace(INVISIBLE_SPACE_REGEX, ' ')
+        .replace(SOFT_HYPHEN_REGEX, '')
+        .replace(/ё/g, 'е')
+        .replace(WHITESPACE_REGEX, ' ')
+        .trim();
+    };
+
+    const keywords = await this.prisma.keyword.findMany({
+      select: { id: true, word: true },
+    });
+
+    const keywordCandidates = keywords
+      .map((keyword) => {
+        const forms = generateAllWordForms(keyword.word);
+        return {
+          id: keyword.id,
+          normalizedForms: forms,
+        };
+      })
+      .filter((keyword) => keyword.normalizedForms.length > 0);
+
+    const totalComments = await this.prisma.comment.count();
+    const batchSize = 1000;
+    let processed = 0;
+    let updated = 0;
+    let created = 0;
+    let deleted = 0;
+
+    for (let offset = 0; offset < totalComments; offset += batchSize) {
+      const comments = await this.prisma.comment.findMany({
+        select: { id: true, text: true },
+        skip: offset,
+        take: batchSize,
+      });
+
+      for (const comment of comments) {
+        const normalizedText = normalizeForKeywordMatch(comment.text);
+
+        if (!normalizedText) {
+          await this.prisma.commentKeywordMatch.deleteMany({ where: { commentId: comment.id } });
+          processed++;
+          continue;
+        }
+
+        const matchedKeywordIds = new Set(
+          keywordCandidates
+            .filter((keyword) =>
+              keyword.normalizedForms.some((form) => normalizedText.includes(form)),
+            )
+            .map((keyword) => keyword.id),
+        );
+
+        const existingMatches = await this.prisma.commentKeywordMatch.findMany({
+          where: { commentId: comment.id },
+          select: { keywordId: true },
+        });
+
+        const existingKeywordIds = new Set(
+          existingMatches.map((match) => match.keywordId),
+        );
+
+        const toCreate = Array.from(matchedKeywordIds).filter(
+          (keywordId) => !existingKeywordIds.has(keywordId),
+        );
+        const toDelete = Array.from(existingKeywordIds).filter(
+          (keywordId) => !matchedKeywordIds.has(keywordId),
+        );
+
+        if (toCreate.length > 0 || toDelete.length > 0) {
+          if (toDelete.length > 0) {
+            await this.prisma.commentKeywordMatch.deleteMany({
+              where: {
+                commentId: comment.id,
+                keywordId: { in: toDelete },
+              },
+            });
+            deleted += toDelete.length;
+          }
+
+          if (toCreate.length > 0) {
+            await this.prisma.commentKeywordMatch.createMany({
+              data: toCreate.map((keywordId) => ({ commentId: comment.id, keywordId })),
+              skipDuplicates: true,
+            });
+            created += toCreate.length;
+          }
+
+          updated++;
+        }
+
+        processed++;
+      }
+    }
+
+    return { processed, updated, created, deleted };
   }
 }
