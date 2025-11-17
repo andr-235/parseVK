@@ -22,6 +22,22 @@ const normalizeForKeywordMatch = (value: string | null | undefined): string => {
 
 const rne = new Engine();
 
+const isDeclinableWord = (word: string): boolean => {
+  if (word.length < 2) {
+    return false;
+  }
+
+  if (/[\.\-_]/g.test(word)) {
+    return false;
+  }
+
+  if (!/^[а-яё]+$/i.test(word)) {
+    return false;
+  }
+
+  return true;
+};
+
 export function generateAllWordForms(keyword: string): string[] {
   const trimmed = keyword.trim();
   if (!trimmed) {
@@ -35,6 +51,10 @@ export function generateAllWordForms(keyword: string): string[] {
 
   const allForms = new Set<string>();
   allForms.add(normalized);
+
+  if (!isDeclinableWord(normalized)) {
+    return Array.from(allForms);
+  }
 
   const genders = [Gender.MASCULINE, Gender.FEMININE, Gender.NEUTER];
   const cases = [
