@@ -67,7 +67,7 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
-        VITE_APP_TITLE: ${VITE_APP_TITLE:-ВК Аналитик}
+        VITE_APP_TITLE: ${VITE_APP_TITLE:-Центр аналитики}
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_API_WS_URL: ${VITE_API_WS_URL:-auto}
         VITE_DEV_MODE: ${VITE_DEV_MODE:-false}

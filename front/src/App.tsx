@@ -37,7 +37,7 @@ function App() {
     <BrowserRouter>
       <AppSyncProvider />
       <div className="flex min-h-screen w-full bg-background-primary text-text-primary transition-colors duration-300">
-        <Sidebar title="ВК Аналитик" />
+        <Sidebar />
         <MainContent>
           <Routes>
             <Route path="/" element={<Navigate to="/tasks" replace />} />

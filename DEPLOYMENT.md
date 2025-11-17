@@ -272,7 +272,7 @@ DATABASE_URL=postgresql://postgres:MySecurePassword123!@db:5432/vk_api?schema=pu
 VK_TOKEN=vk1.a.ВАSШ_РЕАЛЬНЫЙ_ТОКЕН_ОТ_ВК
 
 # FRONTEND
-VITE_APP_TITLE=ВК Аналитик
+VITE_APP_TITLE=Центр аналитики
 VITE_API_URL=/api
 VITE_DEV_MODE=false
 
@@ -453,7 +453,7 @@ cd ~/Project/parseVK
 http://ВАШ_IP_АДРЕС
 ```
 
-Вы должны увидеть интерфейс приложения **ВК Аналитик**.
+Вы должны увидеть интерфейс приложения **Центр аналитики**.
 
 ### 8.2. Проверка API
 
