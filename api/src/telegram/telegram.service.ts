@@ -807,10 +807,10 @@ export class TelegramService implements OnModuleDestroy {
       };
 
       if (personal) {
-        result.personal = JSON.parse(JSON.stringify(personal)) as Prisma.InputJsonValue as typeof result.personal;
+        result.personal = JSON.parse(JSON.stringify(personal)) as unknown as typeof result.personal;
       }
       if (botInfo) {
-        result.botInfo = JSON.parse(JSON.stringify(botInfo)) as Prisma.InputJsonValue as typeof result.botInfo;
+        result.botInfo = JSON.parse(JSON.stringify(botInfo)) as unknown as typeof result.botInfo;
       }
 
       return result;
