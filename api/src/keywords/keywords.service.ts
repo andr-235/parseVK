@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { MatchSource } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import {
   IKeywordResponse,
@@ -178,6 +179,7 @@ export class KeywordsService {
       .filter((keyword) => keyword.normalizedForms.length > 0);
 
     const totalComments = await this.prisma.comment.count();
+    const totalPosts = await this.prisma.post.count();
     const batchSize = 1000;
     let processed = 0;
     let updated = 0;
@@ -195,7 +197,9 @@ export class KeywordsService {
         const normalizedText = normalizeForKeywordMatch(comment.text);
 
         if (!normalizedText) {
-          await this.prisma.commentKeywordMatch.deleteMany({ where: { commentId: comment.id } });
+          await this.prisma.commentKeywordMatch.deleteMany({
+            where: { commentId: comment.id, source: MatchSource.COMMENT },
+          });
           processed++;
           continue;
         }
@@ -209,7 +213,7 @@ export class KeywordsService {
         );
 
         const existingMatches = await this.prisma.commentKeywordMatch.findMany({
-          where: { commentId: comment.id },
+          where: { commentId: comment.id, source: MatchSource.COMMENT },
           select: { keywordId: true },
         });
 
@@ -229,6 +233,7 @@ export class KeywordsService {
             await this.prisma.commentKeywordMatch.deleteMany({
               where: {
                 commentId: comment.id,
+                source: MatchSource.COMMENT,
                 keywordId: { in: toDelete },
               },
             });
@@ -237,7 +242,11 @@ export class KeywordsService {
 
           if (toCreate.length > 0) {
             await this.prisma.commentKeywordMatch.createMany({
-              data: toCreate.map((keywordId) => ({ commentId: comment.id, keywordId })),
+              data: toCreate.map((keywordId) => ({
+                commentId: comment.id,
+                keywordId,
+                source: MatchSource.COMMENT,
+              })),
               skipDuplicates: true,
             });
             created += toCreate.length;
@@ -247,6 +256,114 @@ export class KeywordsService {
         }
 
         processed++;
+      }
+    }
+
+    for (let offset = 0; offset < totalPosts; offset += batchSize) {
+      const posts = await this.prisma.post.findMany({
+        select: { id: true, ownerId: true, vkPostId: true, text: true },
+        skip: offset,
+        take: batchSize,
+      });
+
+      for (const post of posts) {
+        const normalizedText = normalizeForKeywordMatch(post.text);
+
+        if (!normalizedText) {
+          const comments = await this.prisma.comment.findMany({
+            where: { ownerId: post.ownerId, postId: post.vkPostId },
+            select: { id: true },
+          });
+
+          if (comments.length > 0) {
+            await this.prisma.commentKeywordMatch.deleteMany({
+              where: {
+                commentId: { in: comments.map((c) => c.id) },
+                source: MatchSource.POST,
+              },
+            });
+          }
+          continue;
+        }
+
+        const matchedKeywordIds = new Set(
+          keywordCandidates
+            .filter((keyword) =>
+              keyword.normalizedForms.some((form) => normalizedText.includes(form)),
+            )
+            .map((keyword) => keyword.id),
+        );
+
+        const comments = await this.prisma.comment.findMany({
+          where: { ownerId: post.ownerId, postId: post.vkPostId },
+          select: { id: true },
+        });
+
+        if (comments.length === 0) {
+          continue;
+        }
+
+        const commentIds = comments.map((c) => c.id);
+
+        const existingMatches = await this.prisma.commentKeywordMatch.findMany({
+          where: {
+            commentId: { in: commentIds },
+            source: MatchSource.POST,
+          },
+          select: { commentId: true, keywordId: true },
+        });
+
+        const existingKeys = new Set(
+          existingMatches.map((m) => `${m.commentId}-${m.keywordId}`),
+        );
+
+        const toCreate: Array<{ commentId: number; keywordId: number }> = [];
+
+        for (const commentId of commentIds) {
+          for (const keywordId of matchedKeywordIds) {
+            const key = `${commentId}-${keywordId}`;
+            if (!existingKeys.has(key)) {
+              toCreate.push({ commentId, keywordId });
+            }
+          }
+        }
+
+        const toDelete: Array<{ commentId: number; keywordId: number }> = [];
+
+        for (const match of existingMatches) {
+          if (!matchedKeywordIds.has(match.keywordId)) {
+            toDelete.push({ commentId: match.commentId, keywordId: match.keywordId });
+          }
+        }
+
+        if (toCreate.length > 0 || toDelete.length > 0) {
+          if (toDelete.length > 0) {
+            for (const { commentId, keywordId } of toDelete) {
+              await this.prisma.commentKeywordMatch.deleteMany({
+                where: {
+                  commentId,
+                  keywordId,
+                  source: MatchSource.POST,
+                },
+              });
+            }
+            deleted += toDelete.length;
+          }
+
+          if (toCreate.length > 0) {
+            await this.prisma.commentKeywordMatch.createMany({
+              data: toCreate.map(({ commentId, keywordId }) => ({
+                commentId,
+                keywordId,
+                source: MatchSource.POST,
+              })),
+              skipDuplicates: true,
+            });
+            created += toCreate.length;
+          }
+
+          updated++;
+        }
       }
     }
 

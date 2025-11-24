@@ -47,6 +47,11 @@ enum SuspicionLevel {
   HIGH
 }
 
+enum MatchSource {
+  COMMENT
+  POST
+}
+
 model Task {
   id             Int      @id @default(autoincrement())
   title          String
@@ -303,14 +308,16 @@ model Keyword {
 model CommentKeywordMatch {
   commentId Int
   keywordId Int
-  createdAt DateTime @default(now())
+  source    MatchSource @default(COMMENT)
+  createdAt DateTime    @default(now())
 
   comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
   keyword Keyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
 
-  @@id([commentId, keywordId])
+  @@id([commentId, keywordId, source])
   @@index([keywordId])
   @@index([commentId])
+  @@index([source])
 }
 
 model WatchlistSettings {

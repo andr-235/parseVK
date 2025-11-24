@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { MatchSource, PrismaClient } from '@prisma/client';
 import { generateAllWordForms } from '../src/common/utils/russian-nouns.util';
 
 const NBSP_REGEX = /\u00a0/g;
@@ -71,7 +71,9 @@ async function main() {
         const normalizedText = normalizeForKeywordMatch(comment.text);
 
         if (!normalizedText) {
-          await prisma.commentKeywordMatch.deleteMany({ where: { commentId: comment.id } });
+          await prisma.commentKeywordMatch.deleteMany({
+            where: { commentId: comment.id, source: MatchSource.COMMENT },
+          });
           processed++;
           continue;
         }
@@ -85,7 +87,7 @@ async function main() {
         );
 
         const existingMatches = await prisma.commentKeywordMatch.findMany({
-          where: { commentId: comment.id },
+          where: { commentId: comment.id, source: MatchSource.COMMENT },
           select: { keywordId: true },
         });
 
@@ -105,6 +107,7 @@ async function main() {
             await prisma.commentKeywordMatch.deleteMany({
               where: {
                 commentId: comment.id,
+                source: MatchSource.COMMENT,
                 keywordId: { in: toDelete },
               },
             });
@@ -113,7 +116,11 @@ async function main() {
 
           if (toCreate.length > 0) {
             await prisma.commentKeywordMatch.createMany({
-              data: toCreate.map((keywordId) => ({ commentId: comment.id, keywordId })),
+              data: toCreate.map((keywordId) => ({
+                commentId: comment.id,
+                keywordId,
+                source: MatchSource.COMMENT,
+              })),
               skipDuplicates: true,
             });
             created += toCreate.length;
@@ -125,14 +132,137 @@ async function main() {
         processed++;
 
         if (processed % 100 === 0) {
-          console.log(`Обработано: ${processed}/${totalComments}`);
+          console.log(`Обработано комментариев: ${processed}/${totalComments}`);
+        }
+      }
+    }
+
+    console.log('\nЗагрузка постов...');
+    const totalPosts = await prisma.post.count();
+    console.log(`Всего постов: ${totalPosts}`);
+
+    let processedPosts = 0;
+
+    for (let offset = 0; offset < totalPosts; offset += batchSize) {
+      const posts = await prisma.post.findMany({
+        select: { id: true, ownerId: true, vkPostId: true, text: true },
+        skip: offset,
+        take: batchSize,
+      });
+
+      for (const post of posts) {
+        const normalizedText = normalizeForKeywordMatch(post.text);
+
+        if (!normalizedText) {
+          const comments = await prisma.comment.findMany({
+            where: { ownerId: post.ownerId, postId: post.vkPostId },
+            select: { id: true },
+          });
+
+          if (comments.length > 0) {
+            await prisma.commentKeywordMatch.deleteMany({
+              where: {
+                commentId: { in: comments.map((c) => c.id) },
+                source: MatchSource.POST,
+              },
+            });
+          }
+          processedPosts++;
+          continue;
+        }
+
+        const matchedKeywordIds = new Set(
+          keywordCandidates
+            .filter((keyword) =>
+              keyword.normalizedForms.some((form) => normalizedText.includes(form)),
+            )
+            .map((keyword) => keyword.id),
+        );
+
+        const comments = await prisma.comment.findMany({
+          where: { ownerId: post.ownerId, postId: post.vkPostId },
+          select: { id: true },
+        });
+
+        if (comments.length === 0) {
+          processedPosts++;
+          continue;
+        }
+
+        const commentIds = comments.map((c) => c.id);
+
+        const existingMatches = await prisma.commentKeywordMatch.findMany({
+          where: {
+            commentId: { in: commentIds },
+            source: MatchSource.POST,
+          },
+          select: { commentId: true, keywordId: true },
+        });
+
+        const existingKeys = new Set(
+          existingMatches.map((m) => `${m.commentId}-${m.keywordId}`),
+        );
+
+        const toCreate: Array<{ commentId: number; keywordId: number }> = [];
+
+        for (const commentId of commentIds) {
+          for (const keywordId of matchedKeywordIds) {
+            const key = `${commentId}-${keywordId}`;
+            if (!existingKeys.has(key)) {
+              toCreate.push({ commentId, keywordId });
+            }
+          }
+        }
+
+        const toDelete: Array<{ commentId: number; keywordId: number }> = [];
+
+        for (const match of existingMatches) {
+          if (!matchedKeywordIds.has(match.keywordId)) {
+            toDelete.push({ commentId: match.commentId, keywordId: match.keywordId });
+          }
+        }
+
+        if (toCreate.length > 0 || toDelete.length > 0) {
+          if (toDelete.length > 0) {
+            for (const { commentId, keywordId } of toDelete) {
+              await prisma.commentKeywordMatch.deleteMany({
+                where: {
+                  commentId,
+                  keywordId,
+                  source: MatchSource.POST,
+                },
+              });
+            }
+            deleted += toDelete.length;
+          }
+
+          if (toCreate.length > 0) {
+            await prisma.commentKeywordMatch.createMany({
+              data: toCreate.map(({ commentId, keywordId }) => ({
+                commentId,
+                keywordId,
+                source: MatchSource.POST,
+              })),
+              skipDuplicates: true,
+            });
+            created += toCreate.length;
+          }
+
+          updated++;
+        }
+
+        processedPosts++;
+
+        if (processedPosts % 100 === 0) {
+          console.log(`Обработано постов: ${processedPosts}/${totalPosts}`);
         }
       }
     }
 
     console.log('\n=== Результаты ===');
     console.log(`Обработано комментариев: ${processed}`);
-    console.log(`Обновлено комментариев: ${updated}`);
+    console.log(`Обработано постов: ${processedPosts}`);
+    console.log(`Обновлено записей: ${updated}`);
     console.log(`Создано совпадений: ${created}`);
     console.log(`Удалено совпадений: ${deleted}`);
   } catch (error) {
