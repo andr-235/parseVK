@@ -1,8 +1,9 @@
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -10,13 +11,22 @@ async function bootstrap() {
   });
   const logger = new Logger('Bootstrap');
 
-  // Увеличиваем лимиты парсинга тела запроса, чтобы принимать крупные JSON
   app.use(json({ limit: '2mb' }));
   app.use(urlencoded({ limit: '2mb', extended: true }));
   app.useLogger(logger);
   app.useGlobalInterceptors(new LoggingInterceptor());
+  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
   app.enableCors();
-  app.useGlobalInterceptors(new LoggingInterceptor());
   app.setGlobalPrefix('api');
 
   const port = process.env.PORT ?? 3000;
