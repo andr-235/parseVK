@@ -17,7 +17,7 @@ RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retry-mintimeout 20000 \
     && npm config set fetch-retry-maxtimeout 120000 \
     && npm config set fetch-timeout 600000 \
-    && npm ci --no-audit --prefer-offline
+    && npm install --no-audit --legacy-peer-deps
 
 COPY api/ ./
 
