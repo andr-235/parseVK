@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsController } from './comments.controller';
 import { CommentsService } from './comments.service';
+import { CommentsQueryValidator } from './validators/comments-query.validator';
 
 describe('CommentsController', () => {
   let controller: CommentsController;
@@ -8,6 +9,14 @@ describe('CommentsController', () => {
     getComments: jest.Mock;
     getCommentsCursor: jest.Mock;
     setReadStatus: jest.Mock;
+  };
+  let queryValidator: {
+    normalizeOffset: jest.Mock;
+    normalizeLimit: jest.Mock;
+    normalizeLimitWithDefault: jest.Mock;
+    parseKeywords: jest.Mock;
+    normalizeReadStatus: jest.Mock;
+    normalizeSearch: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -17,12 +26,37 @@ describe('CommentsController', () => {
       setReadStatus: jest.fn(),
     };
 
+    queryValidator = {
+      normalizeOffset: jest.fn((val) => Math.max(val, 0)),
+      normalizeLimit: jest.fn((val) => Math.min(Math.max(val, 1), 200)),
+      normalizeLimitWithDefault: jest.fn((val) =>
+        Math.min(Math.max(val ?? 100, 1), 200),
+      ),
+      parseKeywords: jest.fn((val) => {
+        if (!val) return undefined;
+        const values = Array.isArray(val) ? val : val.split(',');
+        return values.map((v: string) => v.trim()).filter((v: string) => v);
+      }),
+      normalizeReadStatus: jest.fn((val) => {
+        if (!val) return 'all';
+        const normalized = val.toLowerCase();
+        return normalized === 'read' || normalized === 'unread'
+          ? normalized
+          : 'all';
+      }),
+      normalizeSearch: jest.fn((val) => val?.trim() || undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CommentsController],
       providers: [
         {
           provide: CommentsService,
           useValue: commentsService,
+        },
+        {
+          provide: CommentsQueryValidator,
+          useValue: queryValidator,
         },
       ],
     }).compile();
@@ -62,8 +96,13 @@ describe('CommentsController', () => {
     } as never;
     commentsService.getComments.mockResolvedValue(serviceResult);
 
+    queryValidator.normalizeOffset.mockReturnValue(0);
+    queryValidator.normalizeLimit.mockReturnValue(200);
+
     await controller.getComments(-50, 1000, undefined, undefined, undefined);
 
+    expect(queryValidator.normalizeOffset).toHaveBeenCalledWith(-50);
+    expect(queryValidator.normalizeLimit).toHaveBeenCalledWith(1000);
     expect(commentsService.getComments).toHaveBeenLastCalledWith({
       offset: 0,
       limit: 200,
@@ -83,14 +122,53 @@ describe('CommentsController', () => {
     } as never;
     commentsService.getComments.mockResolvedValue(serviceResult);
 
+    queryValidator.parseKeywords.mockReturnValue(['test', 'demo']);
+    queryValidator.normalizeReadStatus.mockReturnValue('unread');
+    queryValidator.normalizeSearch.mockReturnValue('keyword');
+
     await controller.getComments(10, 20, [' test ', 'demo'], 'unread', '  keyword  ');
 
+    expect(queryValidator.parseKeywords).toHaveBeenCalledWith([' test ', 'demo']);
+    expect(queryValidator.normalizeReadStatus).toHaveBeenCalledWith('unread');
+    expect(queryValidator.normalizeSearch).toHaveBeenCalledWith('  keyword  ');
     expect(commentsService.getComments).toHaveBeenLastCalledWith({
       offset: 10,
       limit: 20,
       keywords: ['test', 'demo'],
       readStatus: 'unread',
       search: 'keyword',
+    });
+  });
+
+  it('должен обрабатывать cursor-based пагинацию', async () => {
+    const serviceResult = {
+      items: [],
+      nextCursor: 'next-cursor',
+      hasMore: true,
+      total: 10,
+      readCount: 5,
+      unreadCount: 5,
+    } as never;
+    commentsService.getCommentsCursor.mockResolvedValue(serviceResult);
+
+    queryValidator.normalizeLimitWithDefault.mockReturnValue(50);
+
+    const result = await controller.getCommentsCursor(
+      'cursor',
+      50,
+      undefined,
+      undefined,
+      undefined,
+    );
+
+    expect(result).toBe(serviceResult);
+    expect(queryValidator.normalizeLimitWithDefault).toHaveBeenCalledWith(50);
+    expect(commentsService.getCommentsCursor).toHaveBeenCalledWith({
+      cursor: 'cursor',
+      limit: 50,
+      keywords: undefined,
+      readStatus: 'all',
+      search: undefined,
     });
   });
 
