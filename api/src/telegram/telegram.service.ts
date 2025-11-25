@@ -12,6 +12,7 @@ import { TelegramParticipantCollectorService } from './services/telegram-partici
 import { TelegramChatSyncService } from './services/telegram-chat-sync.service';
 import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service';
 import { TelegramChatRepository } from './repositories/telegram-chat.repository';
+import { TelegramChatType } from '@prisma/client';
 
 @Injectable()
 export class TelegramService {
@@ -84,7 +85,7 @@ export class TelegramService {
     return {
       chatId: persisted.chatId,
       telegramId: persisted.telegramId.toString(),
-      type: resolved.type,
+      type: resolved.type as TelegramChatType,
       title: resolved.title,
       username: resolved.username,
       syncedMembers: collection.members.length,

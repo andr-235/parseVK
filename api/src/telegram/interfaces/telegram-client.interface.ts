@@ -1,5 +1,6 @@
 import type { TelegramClient } from 'telegram';
 import type { Api } from 'telegram';
+import { TelegramChatType, TelegramMemberStatus } from '@prisma/client';
 
 export interface ITelegramClient {
   getClient(): Promise<TelegramClient>;
@@ -8,7 +9,7 @@ export interface ITelegramClient {
 
 export interface ResolvedChat {
   telegramId: bigint;
-  type: string;
+  type: TelegramChatType | string;
   title: string | null;
   username: string | null;
   description: string | null;
@@ -18,7 +19,7 @@ export interface ResolvedChat {
 
 export interface MemberRecord {
   user: Api.User;
-  status: string;
+  status: TelegramMemberStatus | string;
   isAdmin: boolean;
   isOwner: boolean;
   joinedAt: Date | null;

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import type { Prisma } from '@prisma/client';
+import { TelegramMemberStatus } from '@prisma/client';
 
 export interface TelegramUserCreateData {
   telegramId: bigint;
@@ -38,7 +39,7 @@ export interface TelegramUserCreateData {
 export interface TelegramChatMemberCreateData {
   chatId: number;
   userId: number;
-  status: string;
+  status: TelegramMemberStatus;
   isAdmin: boolean;
   isOwner: boolean;
   joinedAt: Date | null;

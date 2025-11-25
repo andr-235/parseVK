@@ -1,27 +1,31 @@
 import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
+import type { Prisma } from '@prisma/client';
 
-export interface CommentWithRelations {
-  id: number;
-  text: string;
-  publishedAt: Date;
-  isRead: boolean;
-  watchlistAuthorId: number | null;
-  author: {
-    vkUserId: number;
-    firstName: string;
-    lastName: string;
-    photo50: string | null;
-    photo100: string | null;
-    photo200Orig: string | null;
-  } | null;
-  commentKeywordMatches: Array<{
-    keyword: {
-      id: number;
-      word: string;
-      category: string | null;
+export type CommentWithRelations = Prisma.CommentGetPayload<{
+  include: {
+    author: {
+      select: {
+        vkUserId: true;
+        firstName: true;
+        lastName: true;
+        photo50: true;
+        photo100: true;
+        photo200Orig: true;
+      };
     };
-  }>;
-}
+    commentKeywordMatches: {
+      include: {
+        keyword: {
+          select: {
+            id: true;
+            word: true;
+            category: true;
+          };
+        };
+      };
+    };
+  };
+}>;
 
 export interface FindCommentsParams {
   where: unknown;
@@ -43,6 +47,6 @@ export interface ICommentsRepository {
   findMany(params: FindCommentsParams): Promise<CommentWithRelations[]>;
   count(params: CountCommentsParams): Promise<number>;
   update(params: UpdateCommentParams): Promise<CommentWithRelations>;
-  transaction<T>(queries: Promise<T>[]): Promise<T[]>;
+  transaction<T>(queries: any[]): Promise<T[]>;
 }
 

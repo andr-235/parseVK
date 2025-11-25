@@ -275,7 +275,7 @@ export class TelegramMemberMapper {
     return statusMap[status] ?? status;
   }
 
-  private toBigInt(value: unknown): bigint {
+  toBigInt(value: unknown): bigint {
     if (typeof value === 'bigint') {
       return value;
     }
@@ -337,31 +337,6 @@ export class TelegramMemberMapper {
 
   bigIntKey(value: unknown): string {
     return this.toBigInt(value).toString();
-  }
-
-  toBigInt(value: unknown): bigint {
-    if (typeof value === 'bigint') {
-      return value;
-    }
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return BigInt(Math.trunc(value));
-    }
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      if (/^-?\d+$/.test(trimmed)) {
-        return BigInt(trimmed);
-      }
-    }
-    if (
-      value &&
-      typeof (value as { toString?: () => string }).toString === 'function'
-    ) {
-      const stringValue = (value as { toString: () => string }).toString();
-      if (/^-?\d+$/.test(stringValue)) {
-        return BigInt(stringValue);
-      }
-    }
-    throw new Error('Unable to convert value to bigint');
   }
 }
 

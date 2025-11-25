@@ -5,8 +5,7 @@ import type { CommentWithRelations } from '../interfaces/comments-repository.int
 @Injectable()
 export class CommentMapper {
   map(comment: CommentWithRelations): CommentWithAuthorDto {
-    const { author, watchlistAuthorId, commentKeywordMatches, ...commentData } =
-      comment;
+    const { author, watchlistAuthorId, commentKeywordMatches } = comment;
 
     const matchedKeywords = commentKeywordMatches.map((match) => ({
       id: match.keyword.id,
@@ -15,8 +14,7 @@ export class CommentMapper {
     }));
 
     return {
-      ...commentData,
-      watchlistAuthorId: watchlistAuthorId ?? null,
+      ...comment,
       author: author
         ? {
             vkUserId: author.vkUserId,

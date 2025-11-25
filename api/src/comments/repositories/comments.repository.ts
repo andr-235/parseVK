@@ -43,23 +43,29 @@ export class CommentsRepository implements ICommentsRepository {
 
   async findMany(params: FindCommentsParams): Promise<CommentWithRelations[]> {
     return this.prisma.comment.findMany({
-      ...params,
+      where: params.where as Prisma.CommentWhereInput,
+      skip: params.skip,
+      take: params.take,
+      orderBy: params.orderBy as Prisma.CommentOrderByWithRelationInput,
       include: commentInclude,
-    }) as Promise<CommentWithRelations[]>;
+    });
   }
 
   async count(params: CountCommentsParams): Promise<number> {
-    return this.prisma.comment.count(params);
+    return this.prisma.comment.count({
+      where: params.where as Prisma.CommentWhereInput,
+    });
   }
 
   async update(params: UpdateCommentParams): Promise<CommentWithRelations> {
     return this.prisma.comment.update({
-      ...params,
+      where: params.where,
+      data: params.data,
       include: commentInclude,
-    }) as Promise<CommentWithRelations>;
+    });
   }
 
-  async transaction<T>(queries: Promise<T>[]): Promise<T[]> {
+  async transaction<T>(queries: Prisma.PrismaPromise<T>[]): Promise<T[]> {
     return this.prisma.$transaction(queries);
   }
 }

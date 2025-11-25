@@ -38,24 +38,23 @@ export class OffsetPaginationStrategy implements IPaginationStrategy {
       isRead: false,
     });
 
-    const [comments, total, readCount, unreadCount] =
-      await this.repository.transaction([
-        this.repository.findMany({
-          where: listWhere as unknown,
-          skip: offset,
-          take: limit,
-          orderBy: { publishedAt: 'desc' },
-        }),
-        this.repository.count({
-          where: totalWhere as unknown,
-        }),
-        this.repository.count({
-          where: readWhere as unknown,
-        }),
-        this.repository.count({
-          where: unreadWhere as unknown,
-        }),
-      ]);
+    const [comments, total, readCount, unreadCount] = await Promise.all([
+      this.repository.findMany({
+        where: listWhere as unknown,
+        skip: offset,
+        take: limit,
+        orderBy: { publishedAt: 'desc' },
+      }),
+      this.repository.count({
+        where: totalWhere as unknown,
+      }),
+      this.repository.count({
+        where: readWhere as unknown,
+      }),
+      this.repository.count({
+        where: unreadWhere as unknown,
+      }),
+    ]);
 
     const items = this.mapper.mapMany(comments);
 

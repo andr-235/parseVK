@@ -7,6 +7,7 @@ import { TelegramMemberRepository } from '../repositories/telegram-member.reposi
 import { TelegramMemberMapper } from '../mappers/telegram-member.mapper';
 import { PrismaService } from '../../prisma.service';
 import type { Prisma } from '@prisma/client';
+import { TelegramChatType } from '@prisma/client';
 
 @Injectable()
 export class TelegramChatSyncService {
@@ -34,13 +35,13 @@ export class TelegramChatSyncService {
         where: { telegramId: resolved.telegramId },
         create: {
           telegramId: resolved.telegramId,
-          type: resolved.type,
+          type: resolved.type as TelegramChatType,
           title: resolved.title,
           username: resolved.username,
           description: resolved.description,
         },
         update: {
-          type: resolved.type,
+          type: resolved.type as TelegramChatType,
           title: resolved.title,
           username: resolved.username,
           description: resolved.description,
