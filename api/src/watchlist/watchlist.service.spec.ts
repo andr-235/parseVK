@@ -90,10 +90,55 @@ describe('WatchlistService', () => {
       getAuthorCommentsForPost: jest.fn(),
     };
 
+    const repositoryMock = {
+      ensureSettings: jest.fn().mockResolvedValue(createSettings()),
+      findMany: jest.fn(),
+      findActiveAuthors: jest.fn(),
+      findById: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      countComments: jest.fn(),
+      getAuthorComments: jest.fn(),
+      create: jest.fn(),
+      findByAuthorVkIdAndSettingsId: jest.fn(),
+      updateComment: jest.fn(),
+    };
+
+    const authorMapperMock = {
+      mapAuthor: jest.fn(),
+      mapComment: jest.fn(),
+      buildCommentUrl: jest.fn(),
+    };
+
+    const settingsMapperMock = {
+      map: jest.fn(),
+    };
+
+    const statsCollectorMock = {
+      collectCommentCounts: jest.fn().mockResolvedValue(new Map()),
+      collectAnalysisSummaries: jest.fn().mockResolvedValue(new Map()),
+      resolveSummary: jest.fn(),
+    };
+
+    const authorRefresherMock = {
+      refreshAuthorRecord: jest.fn(),
+    };
+
+    const queryValidatorMock = {
+      normalizeOffset: jest.fn((v) => v ?? 0),
+      normalizeLimit: jest.fn((v) => v ?? 20),
+      normalizeExcludeStopped: jest.fn((v) => v !== false),
+    };
+
     service = new WatchlistService(
-      prisma as unknown as PrismaService,
+      repositoryMock as any,
+      authorMapperMock as any,
+      settingsMapperMock as any,
+      statsCollectorMock as any,
+      authorRefresherMock as any,
+      queryValidatorMock as any,
       authorActivityService as unknown as AuthorActivityService,
-      vkService as unknown as VkService,
+      prisma as unknown as PrismaService,
     );
 
     prisma.watchlistSettings.upsert.mockResolvedValue(createSettings());
