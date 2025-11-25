@@ -3,18 +3,56 @@ import { TelegramChatType, TelegramMemberStatus } from '@prisma/client';
 import type { Api } from 'telegram';
 import type { TelegramMemberDto } from './dto/telegram-member.dto';
 import { TelegramService } from './telegram.service';
+import { TelegramClientManagerService } from './services/telegram-client-manager.service';
+import { TelegramChatMapper } from './mappers/telegram-chat.mapper';
+import { TelegramParticipantCollectorService } from './services/telegram-participant-collector.service';
+import { TelegramChatSyncService } from './services/telegram-chat-sync.service';
+import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service';
+import { TelegramChatRepository } from './repositories/telegram-chat.repository';
 
 describe('TelegramService', () => {
-  const mockConfig = {
-    get: jest.fn(),
-  };
-  const mockPrisma = {};
-
   let service: TelegramService;
+  let clientManagerMock: jest.Mocked<TelegramClientManagerService>;
+  let chatMapperMock: jest.Mocked<TelegramChatMapper>;
+  let participantCollectorMock: jest.Mocked<TelegramParticipantCollectorService>;
+  let chatSyncMock: jest.Mocked<TelegramChatSyncService>;
+  let excelExporterMock: jest.Mocked<TelegramExcelExporterService>;
+  let chatRepositoryMock: jest.Mocked<TelegramChatRepository>;
 
   beforeEach(() => {
-    jest.resetModules();
-    service = new TelegramService(mockConfig as never, mockPrisma as never);
+    clientManagerMock = {
+      getClient: jest.fn(),
+      disconnect: jest.fn(),
+    } as any;
+
+    chatMapperMock = {
+      resolveChat: jest.fn(),
+    } as any;
+
+    participantCollectorMock = {
+      collectParticipants: jest.fn(),
+    } as any;
+
+    chatSyncMock = {
+      persistChat: jest.fn(),
+    } as any;
+
+    excelExporterMock = {
+      exportChatToExcel: jest.fn(),
+    } as any;
+
+    chatRepositoryMock = {
+      findById: jest.fn(),
+    } as any;
+
+    service = new TelegramService(
+      clientManagerMock,
+      chatMapperMock,
+      participantCollectorMock,
+      chatSyncMock,
+      excelExporterMock,
+      chatRepositoryMock,
+    );
   });
 
   afterEach(() => {
@@ -31,8 +69,7 @@ describe('TelegramService', () => {
       getEntity: jest.fn().mockResolvedValue(fakeEntity),
     } as Record<string, unknown>;
 
-    const prototype = Object.getPrototypeOf(service) as Record<string, unknown>;
-    jest.spyOn(prototype, 'getClient').mockResolvedValue(mockClient);
+    clientManagerMock.getClient.mockResolvedValue(mockClient as any);
 
     const resolvedChat = {
       telegramId: BigInt(123),
@@ -43,7 +80,7 @@ describe('TelegramService', () => {
       entity: {} as Record<string, unknown>,
       totalMembers: 42,
     };
-    jest.spyOn(prototype, 'resolveChat').mockReturnValue(resolvedChat);
+    chatMapperMock.resolveChat.mockReturnValue(resolvedChat as any);
 
     const participants = {
       members: [
@@ -58,18 +95,21 @@ describe('TelegramService', () => {
       ],
       total: 42,
     };
-    jest.spyOn(prototype, 'collectParticipants').mockResolvedValue(participants);
+    participantCollectorMock.collectParticipants.mockResolvedValue(participants as any);
 
     const persisted = {
       chatId: 17,
       telegramId: BigInt(123),
       members: [] as TelegramMemberDto[],
     };
-    jest.spyOn(prototype, 'persistChat').mockResolvedValue(persisted);
+    chatSyncMock.persistChat.mockResolvedValue(persisted as any);
 
     const result = await service.syncChat({ identifier: 'test', limit: 10 });
 
     expect(mockClient.getEntity).toHaveBeenCalledWith('test');
+    expect(chatMapperMock.resolveChat).toHaveBeenCalledWith(fakeEntity);
+    expect(participantCollectorMock.collectParticipants).toHaveBeenCalled();
+    expect(chatSyncMock.persistChat).toHaveBeenCalled();
     expect(result).toEqual({
       chatId: persisted.chatId,
       telegramId: persisted.telegramId.toString(),
