@@ -17,6 +17,9 @@ import { TaskCancellationService } from './task-cancellation.service';
 import { CommonModule } from '../common/common.module';
 import { TaskAutomationService } from './automation/task-automation.service';
 import { TaskAutomationController } from './automation/task-automation.controller';
+import { TaskMapper } from './mappers/task.mapper';
+import { TaskDescriptionParser } from './parsers/task-description.parser';
+import { TaskContextBuilder } from './builders/task-context.builder';
 
 @Module({
   imports: [
@@ -26,11 +29,11 @@ import { TaskAutomationController } from './automation/task-automation.controlle
       name: PARSING_QUEUE,
       defaultJobOptions: {
         removeOnComplete: {
-          age: 24 * 60 * 60, // 24 часа
+          age: 24 * 60 * 60,
           count: 100,
         },
         removeOnFail: {
-          age: 7 * 24 * 60 * 60, // 7 дней
+          age: 7 * 24 * 60 * 60,
         },
       },
     }),
@@ -46,6 +49,9 @@ import { TaskAutomationController } from './automation/task-automation.controlle
     ParsingProcessor,
     TaskCancellationService,
     TaskAutomationService,
+    TaskMapper,
+    TaskDescriptionParser,
+    TaskContextBuilder,
   ],
   exports: [ParsingQueueService],
 })
