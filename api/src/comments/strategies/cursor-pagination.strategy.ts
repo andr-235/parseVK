@@ -87,7 +87,7 @@ export class CursorPaginationStrategy implements IPaginationStrategy {
           )
         : null;
 
-    const [total, readCount, unreadCount] = await this.repository.transaction([
+    const [total, readCount, unreadCount] = await Promise.all([
       this.repository.count({
         where: totalWhere as unknown,
       }),
