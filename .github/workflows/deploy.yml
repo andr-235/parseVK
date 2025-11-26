@@ -459,10 +459,30 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Starting all containers ==="
-          docker compose up -d
+          if ! docker compose up -d; then
+            echo "Error: Failed to start containers"
+            echo "=== Container logs ==="
+            docker compose logs --tail=50
+            exit 1
+          fi
+          
+          echo "=== Waiting for containers to start ==="
+          sleep 5
           
           echo "=== Container status ==="
           docker compose ps
+          
+          FAILED_CONTAINERS=$(docker compose ps --format json | jq -r 'select(.State != "running" and .State != "healthy") | .Name' 2>/dev/null || docker compose ps | grep -E "(Exit|Error|unhealthy)" || echo "")
+          if [ -n "$FAILED_CONTAINERS" ]; then
+            echo "Error: Some containers failed to start"
+            echo "Failed containers: $FAILED_CONTAINERS"
+            echo "=== API container logs ==="
+            docker compose logs --tail=100 api || true
+            echo "=== All container logs ==="
+            docker compose logs --tail=50
+            exit 1
+          fi
+          
           STEP_END=$(date +%s)
           echo "Container start completed in $((STEP_END - STEP_START))s"
 
@@ -527,7 +547,18 @@ jobs:
               
               if [ "$ALL_HEALTHY" != "true" ]; then
                 echo "Error: Not all containers are healthy"
+                echo "=== Container status ==="
                 docker compose ps
+                echo "=== Failed container logs ==="
+                for container in $(docker compose ps -q); do
+                  STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
+                  HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
+                  NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
+                  if [ "$STATUS" != "running" ] || ([ "$HEALTH" != "healthy" ] && [ "$HEALTH" != "none" ]); then
+                    echo "=== Logs for $NAME ==="
+                    docker compose logs --tail=100 "$(echo $NAME | sed 's/^parsevk-//' | sed 's/-[0-9]*$//')" || docker logs "$container" --tail=100 || true
+                  fi
+                done
                 exit 1
               fi
             fi
@@ -853,13 +884,8 @@ jobs:
               -d "parse_mode=HTML" > /dev/null 2>&1 || echo "Warning: Failed to send Telegram notification"
           elif [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
             echo "Sending Slack notification..."
-            PAYLOAD=$(cat <<EOF
-            {
-              "text": "$(echo "$MESSAGE" | sed 's/"/\\"/g' | tr '\n' ' ')",
-              "username": "Deployment Bot"
-            }
-            EOF
-            )
+            MESSAGE_ESCAPED=$(echo "$MESSAGE" | sed 's/"/\\"/g' | tr '\n' ' ')
+            PAYLOAD="{\"text\": \"$MESSAGE_ESCAPED\", \"username\": \"Deployment Bot\"}"
             curl -s -X POST "${SLACK_WEBHOOK_URL}" \
               -H "Content-Type: application/json" \
               -d "$PAYLOAD" > /dev/null 2>&1 || echo "Warning: Failed to send Slack notification"
