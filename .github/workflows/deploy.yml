@@ -6,13 +6,21 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy to Debian Server
-    runs-on: [self-hosted, production]
-    timeout-minutes: 45
+    runs-on: [self-hosted]
+    timeout-minutes: 90
     permissions:
       contents: read
+
+    env:
+      DOCKER_BUILDKIT: 1
+      COMPOSE_DOCKER_CLI_BUILD: 1
 
     steps:
       - name: Checkout code
@@ -31,6 +39,44 @@ jobs:
           echo "Author: $(git log -1 --pretty=format:'%an <%ae>')"
           echo "Message: $(git log -1 --pretty=format:'%s')"
           echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+      - name: Validate environment variables
+        id: validate_env
+        working-directory: /opt/parseVK
+        timeout-minutes: 1
+        run: |
+          STEP_START=$(date +%s)
+          echo "=== Validating environment variables ==="
+          
+          MISSING_VARS=0
+          
+          if [ ! -f ".env" ] && [ -z "${DATABASE_URL:-}" ] && [ -z "${VK_TOKEN:-}" ]; then
+            echo "Warning: .env file not found and no environment variables set"
+            echo "Checking for docker-compose.yml with default values..."
+          fi
+          
+          if [ -f ".env" ]; then
+            echo ".env file exists"
+            source .env 2>/dev/null || true
+          fi
+          
+          if [ -z "${DATABASE_URL:-}" ] && [ -z "${POSTGRES_PASSWORD:-}" ]; then
+            echo "Warning: DATABASE_URL not set, will use default from docker-compose.yml"
+          fi
+          
+          if [ -z "${VK_TOKEN:-}" ]; then
+            echo "Error: VK_TOKEN is required but not set"
+            MISSING_VARS=1
+          fi
+          
+          if [ $MISSING_VARS -eq 1 ]; then
+            echo "Error: Required environment variables are missing"
+            exit 1
+          fi
+          
+          echo "Environment variables validated"
+          STEP_END=$(date +%s)
+          echo "Environment validation completed in $((STEP_END - STEP_START))s"
 
       - name: Check environment
         id: env_check
@@ -129,58 +175,6 @@ jobs:
           STEP_END=$(date +%s)
           echo "Version save completed in $((STEP_END - STEP_START))s"
 
-      - name: Check port availability
-        id: check_ports
-        timeout-minutes: 1
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Checking port availability ==="
-          
-          PORT_ERROR=0
-          
-          check_port() {
-            local port=$1
-            local service=$2
-            local is_critical=${3:-false}
-            
-            if command -v netstat > /dev/null 2>&1; then
-              if netstat -tuln 2>/dev/null | grep -q ":$port "; then
-                if [ "$is_critical" = "true" ]; then
-                  echo "Error: Port $port ($service) is already in use and is critical"
-                  PORT_ERROR=1
-                  return 1
-                else
-                  echo "Warning: Port $port is already in use (may be from previous deployment)"
-                  return 0
-                fi
-              fi
-            elif command -v ss > /dev/null 2>&1; then
-              if ss -tuln 2>/dev/null | grep -q ":$port "; then
-                if [ "$is_critical" = "true" ]; then
-                  echo "Error: Port $port ($service) is already in use and is critical"
-                  PORT_ERROR=1
-                  return 1
-                else
-                  echo "Warning: Port $port is already in use (may be from previous deployment)"
-                  return 0
-                fi
-              fi
-            fi
-            echo "Port $port ($service) is available"
-            return 0
-          }
-          
-          check_port 3000 "API" true
-          check_port 8080 "Frontend" true
-          
-          if [ $PORT_ERROR -eq 1 ]; then
-            echo "Error: Critical ports are in use. Please stop conflicting services."
-            exit 1
-          fi
-          
-          STEP_END=$(date +%s)
-          echo "Port check completed in $((STEP_END - STEP_START))s"
-
       - name: Update code
         id: update_code
         working-directory: /opt/parseVK
@@ -265,6 +259,87 @@ jobs:
           STEP_END=$(date +%s)
           echo "Container stop completed in $((STEP_END - STEP_START))s"
 
+      - name: Check port availability
+        id: check_ports
+        timeout-minutes: 1
+        run: |
+          STEP_START=$(date +%s)
+          echo "=== Checking port availability ==="
+          
+          PORT_ERROR=0
+          
+          check_port() {
+            local port=$1
+            local service=$2
+            local is_critical=${3:-false}
+            
+            if command -v netstat > /dev/null 2>&1; then
+              if netstat -tuln 2>/dev/null | grep -q ":$port "; then
+                if [ "$is_critical" = "true" ]; then
+                  echo "Error: Port $port ($service) is already in use and is critical"
+                  PORT_ERROR=1
+                  return 1
+                else
+                  echo "Warning: Port $port is already in use (may be from previous deployment)"
+                  return 0
+                fi
+              fi
+            elif command -v ss > /dev/null 2>&1; then
+              if ss -tuln 2>/dev/null | grep -q ":$port "; then
+                if [ "$is_critical" = "true" ]; then
+                  echo "Error: Port $port ($service) is already in use and is critical"
+                  PORT_ERROR=1
+                  return 1
+                else
+                  echo "Warning: Port $port is already in use (may be from previous deployment)"
+                  return 0
+                fi
+              fi
+            fi
+            echo "Port $port ($service) is available"
+            return 0
+          }
+          
+          check_port 3000 "API" true
+          check_port 8080 "Frontend" true
+          
+          if [ $PORT_ERROR -eq 1 ]; then
+            echo "Error: Critical ports are in use. Please stop conflicting services."
+            exit 1
+          fi
+          
+          STEP_END=$(date +%s)
+          echo "Port check completed in $((STEP_END - STEP_START))s"
+
+      - name: Check database availability
+        id: check_db
+        timeout-minutes: 2
+        run: |
+          STEP_START=$(date +%s)
+          echo "=== Checking database availability ==="
+          
+          if command -v pg_isready > /dev/null 2>&1; then
+            if pg_isready -h localhost -p 5433 -U postgres -d vk_api > /dev/null 2>&1; then
+              echo "Database is available on port 5433"
+            else
+              echo "Warning: Database on port 5433 is not accessible (may be starting)"
+            fi
+          fi
+          
+          if docker ps -a --format "{{.Names}}" | grep -q "^postgres_db$"; then
+            echo "PostgreSQL container exists"
+            if docker inspect postgres_db --format='{{.State.Status}}' 2>/dev/null | grep -q "running"; then
+              echo "PostgreSQL container is running"
+            else
+              echo "PostgreSQL container is not running, will be started with docker-compose"
+            fi
+          else
+            echo "PostgreSQL container does not exist, will be created"
+          fi
+          
+          STEP_END=$(date +%s)
+          echo "Database check completed in $((STEP_END - STEP_START))s"
+
       - name: Cleanup old images
         id: cleanup_images
         working-directory: /opt/parseVK
@@ -278,7 +353,7 @@ jobs:
           CURRENT_IMAGES=$(docker compose config --images 2>/dev/null || echo "")
           
           if [ -n "$CURRENT_IMAGES" ]; then
-            docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "(parsevk|parseVK|postgres_db|redis)" | while read image; do
+            docker images --format "{{.Repository}}:{{.Tag}}" | grep -iE "(parsevk|postgres|redis)" | while read image; do
               if ! echo "$CURRENT_IMAGES" | grep -q "$image"; then
                 echo "Removing unused image: $image"
                 docker rmi "$image" 2>/dev/null || true
@@ -309,13 +384,81 @@ jobs:
           STEP_END=$(date +%s)
           echo "Container build completed in $((STEP_END - STEP_START))s"
 
-      - name: Start containers
+      - name: Start database and dependencies
+        id: start_db
+        working-directory: /opt/parseVK
+        timeout-minutes: 5
+        run: |
+          STEP_START=$(date +%s)
+          echo "=== Starting database and dependencies ==="
+          docker compose up -d db redis
+          
+          echo "=== Waiting for database to be ready ==="
+          MAX_WAIT=60
+          WAIT_COUNT=0
+          while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+            if docker compose exec -T db pg_isready -U postgres -d vk_api > /dev/null 2>&1; then
+              echo "Database is ready"
+              break
+            fi
+            echo "Waiting for database... ($WAIT_COUNT/$MAX_WAIT)"
+            sleep 1
+            WAIT_COUNT=$((WAIT_COUNT + 1))
+          done
+          
+          if [ $WAIT_COUNT -eq $MAX_WAIT ]; then
+            echo "Error: Database did not become ready in time"
+            docker compose logs db
+            exit 1
+          fi
+          
+          STEP_END=$(date +%s)
+          echo "Database start completed in $((STEP_END - STEP_START))s"
+
+      - name: Run database migrations
+        id: run_migrations
+        working-directory: /opt/parseVK
+        timeout-minutes: 5
+        run: |
+          STEP_START=$(date +%s)
+          echo "=== Running database migrations ==="
+          
+          API_CONTAINER_ID=$(docker compose ps -q api 2>/dev/null || echo "")
+          
+          if [ -n "$API_CONTAINER_ID" ] && [ "$(docker inspect --format='{{.State.Status}}' "$API_CONTAINER_ID" 2>/dev/null)" = "running" ]; then
+            echo "Using existing API container for migrations"
+            if docker compose exec -T api sh -c "command -v npx > /dev/null 2>&1 && npx prisma migrate deploy" 2>/dev/null; then
+              echo "Migrations completed via existing container"
+            else
+              echo "Warning: Failed to run migrations via existing container, will build and run temporary container"
+              docker compose run --rm api npx prisma migrate deploy || {
+                echo "Error: Migrations failed"
+                exit 1
+              }
+            fi
+          else
+            echo "Building temporary API container for migrations"
+            docker compose build api || {
+              echo "Error: Failed to build API container for migrations"
+              exit 1
+            }
+            
+            docker compose run --rm api npx prisma migrate deploy || {
+              echo "Error: Migrations failed"
+              exit 1
+            }
+          fi
+          
+          STEP_END=$(date +%s)
+          echo "Migrations completed in $((STEP_END - STEP_START))s"
+
+      - name: Start all containers
         id: start_containers
         working-directory: /opt/parseVK
         timeout-minutes: 5
         run: |
           STEP_START=$(date +%s)
-          echo "=== Starting containers ==="
+          echo "=== Starting all containers ==="
           docker compose up -d
           
           echo "=== Container status ==="
@@ -552,6 +695,80 @@ jobs:
             echo "Waiting for services..."
             sleep 10
             
+            echo "=== Waiting for services to be healthy after rollback ==="
+            MAX_ATTEMPTS=30
+            ATTEMPT=0
+            ALL_HEALTHY=false
+            
+            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              ATTEMPT=$((ATTEMPT + 1))
+              echo "Health check attempt $ATTEMPT/$MAX_ATTEMPTS"
+              
+              UNHEALTHY_COUNT=0
+              TOTAL_COUNT=0
+              
+              for container in $(docker compose ps -q); do
+                if [ -z "$container" ]; then
+                  continue
+                fi
+                
+                TOTAL_COUNT=$((TOTAL_COUNT + 1))
+                STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
+                HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
+                NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
+                
+                if [ "$STATUS" = "running" ]; then
+                  if [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "none" ]; then
+                    echo "  $NAME: running ($HEALTH)"
+                  else
+                    echo "  $NAME: running ($HEALTH - waiting...)"
+                    UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
+                  fi
+                else
+                  echo "  $NAME: $STATUS (waiting...)"
+                  UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
+                fi
+              done
+              
+              if [ $UNHEALTHY_COUNT -eq 0 ] && [ $TOTAL_COUNT -gt 0 ]; then
+                ALL_HEALTHY=true
+                break
+              fi
+              
+              sleep 2
+            done
+            
+            if [ "$ALL_HEALTHY" != "true" ]; then
+              echo "Warning: Not all containers are healthy after rollback"
+              docker compose ps
+              docker compose logs --tail=30
+            fi
+            
+            echo "=== Rollback health check ==="
+            if command -v curl > /dev/null 2>&1; then
+              API_CONTAINER=$(docker compose ps -q api 2>/dev/null || echo "")
+              if [ -n "$API_CONTAINER" ]; then
+                if docker exec "$API_CONTAINER" sh -c "command -v curl > /dev/null 2>&1 && curl -f -s -m 10 http://localhost:3000/api/health > /dev/null 2>&1 || wget -q -O- --timeout=10 http://localhost:3000/api/health > /dev/null 2>&1" 2>/dev/null; then
+                  echo "✅ API health check passed after rollback"
+                elif curl -f -s -m 10 http://localhost:3000/api/health > /dev/null 2>&1; then
+                  echo "✅ API health check passed after rollback (via localhost)"
+                else
+                  echo "⚠️ API health check failed after rollback"
+                fi
+              fi
+              
+              FRONTEND_CONTAINER=$(docker compose ps -q frontend 2>/dev/null || echo "")
+              if [ -n "$FRONTEND_CONTAINER" ]; then
+                if docker exec "$FRONTEND_CONTAINER" sh -c "command -v curl > /dev/null 2>&1 && curl -f -s -m 10 http://localhost:80 > /dev/null 2>&1 || wget -q -O- --timeout=10 http://localhost:80 > /dev/null 2>&1" 2>/dev/null; then
+                  echo "✅ Frontend health check passed after rollback"
+                elif curl -f -s -m 10 http://localhost:8080 > /dev/null 2>&1; then
+                  echo "✅ Frontend health check passed after rollback (via localhost)"
+                else
+                  echo "⚠️ Frontend health check failed after rollback"
+                fi
+              fi
+            fi
+            
             echo "=== Checking rollback status ==="
             docker compose ps
             
@@ -572,11 +789,75 @@ jobs:
           START_TIME=${START_TIME:-$END_TIME}
           DURATION=$((END_TIME - START_TIME))
           
+          DEPLOYMENT_COMMIT=$(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
+          DEPLOYMENT_AUTHOR=$(cd /opt/parseVK && git log -1 --pretty=format:'%an' 2>/dev/null || echo 'unknown')
+          
           if [ "${{ job.status }}" == "success" ]; then
             echo "✅ Deployment successful!"
-            echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+            echo "Commit: $DEPLOYMENT_COMMIT"
+            echo "Author: $DEPLOYMENT_AUTHOR"
             echo "Total deployment time: ${DURATION}s"
+            echo "DEPLOYMENT_STATUS=success" >> $GITHUB_ENV
           else
             echo "❌ Deployment failed!"
+            echo "Commit: $DEPLOYMENT_COMMIT"
+            echo "Author: $DEPLOYMENT_AUTHOR"
             echo "Total deployment time: ${DURATION}s"
+            echo "DEPLOYMENT_STATUS=failed" >> $GITHUB_ENV
+          fi
+          
+          echo "DEPLOYMENT_COMMIT=$DEPLOYMENT_COMMIT" >> $GITHUB_ENV
+          echo "DEPLOYMENT_AUTHOR=$DEPLOYMENT_AUTHOR" >> $GITHUB_ENV
+          echo "DEPLOYMENT_DURATION=$DURATION" >> $GITHUB_ENV
+
+      - name: Send deployment notification
+        if: always()
+        id: send_notification
+        timeout-minutes: 1
+        run: |
+          STATUS="${{ job.status }}"
+          COMMIT="${DEPLOYMENT_COMMIT:-unknown}"
+          AUTHOR="${DEPLOYMENT_AUTHOR:-unknown}"
+          DURATION="${DEPLOYMENT_DURATION:-0}"
+          
+          if [ "$STATUS" == "success" ]; then
+            MESSAGE="✅ Deployment successful!
+            Commit: $COMMIT
+            Author: $AUTHOR
+            Duration: ${DURATION}s
+            Repository: ${{ github.repository }}
+            Workflow: ${{ github.workflow }}"
+          else
+            MESSAGE="❌ Deployment failed!
+            Commit: $COMMIT
+            Author: $AUTHOR
+            Duration: ${DURATION}s
+            Repository: ${{ github.repository }}
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+          
+          echo "$MESSAGE"
+          
+          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "Sending Telegram notification..."
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -d "chat_id=${TELEGRAM_CHAT_ID}" \
+              -d "text=$(echo "$MESSAGE" | sed 's/$/\\n/' | tr -d '\n')" \
+              -d "parse_mode=HTML" > /dev/null 2>&1 || echo "Warning: Failed to send Telegram notification"
+          elif [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "Sending Slack notification..."
+            PAYLOAD=$(cat <<EOF
+            {
+              "text": "$(echo "$MESSAGE" | sed 's/"/\\"/g' | tr '\n' ' ')",
+              "username": "Deployment Bot"
+            }
+            EOF
+            )
+            curl -s -X POST "${SLACK_WEBHOOK_URL}" \
+              -H "Content-Type: application/json" \
+              -d "$PAYLOAD" > /dev/null 2>&1 || echo "Warning: Failed to send Slack notification"
+          else
+            echo "Notification settings not configured (TELEGRAM_BOT_TOKEN/CHAT_ID or SLACK_WEBHOOK_URL)"
+            echo "To enable notifications, set these as GitHub Secrets or environment variables"
           fi
