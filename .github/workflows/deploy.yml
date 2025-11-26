@@ -499,18 +499,21 @@ jobs:
                   TOTAL_COUNT=$((TOTAL_COUNT + 1))
                   STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
                   HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
+                  HAS_HEALTHCHECK=$(docker inspect --format='{{.Config.Healthcheck}}' "$container" 2>/dev/null | grep -q "Test" && echo "yes" || echo "no")
                   NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
                   
-                  if [ "$STATUS" = "running" ]; then
-                    if [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "none" ]; then
-                      echo "  $NAME: running ($HEALTH)"
+                  if [ "$STATUS" != "running" ]; then
+                    echo "  $NAME: $STATUS (waiting...)"
+                    UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
+                  elif [ "$HAS_HEALTHCHECK" = "yes" ]; then
+                    if [ "$HEALTH" = "healthy" ]; then
+                      echo "  $NAME: running (healthy)"
                     else
                       echo "  $NAME: running ($HEALTH - waiting...)"
                       UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
                     fi
                   else
-                    echo "  $NAME: $STATUS (waiting...)"
-                    UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
+                    echo "  $NAME: running (no healthcheck)"
                   fi
                 done
                 
@@ -715,18 +718,21 @@ jobs:
                 TOTAL_COUNT=$((TOTAL_COUNT + 1))
                 STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
                 HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
+                HAS_HEALTHCHECK=$(docker inspect --format='{{.Config.Healthcheck}}' "$container" 2>/dev/null | grep -q "Test" && echo "yes" || echo "no")
                 NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
                 
-                if [ "$STATUS" = "running" ]; then
-                  if [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "none" ]; then
-                    echo "  $NAME: running ($HEALTH)"
+                if [ "$STATUS" != "running" ]; then
+                  echo "  $NAME: $STATUS (waiting...)"
+                  UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
+                elif [ "$HAS_HEALTHCHECK" = "yes" ]; then
+                  if [ "$HEALTH" = "healthy" ]; then
+                    echo "  $NAME: running (healthy)"
                   else
                     echo "  $NAME: running ($HEALTH - waiting...)"
                     UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
                   fi
                 else
-                  echo "  $NAME: $STATUS (waiting...)"
-                  UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
+                  echo "  $NAME: running (no healthcheck)"
                 fi
               done
               

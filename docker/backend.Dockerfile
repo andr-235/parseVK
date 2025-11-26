@@ -68,4 +68,7 @@ COPY --from=build /app/tsconfig*.json ./
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
+  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+
+CMD ["npm", "run", "start:prod"]
