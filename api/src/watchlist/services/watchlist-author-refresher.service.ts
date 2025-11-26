@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { CommentSource } from '@prisma/client';
 import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
@@ -18,6 +18,7 @@ export class WatchlistAuthorRefresherService {
   private readonly logger = new Logger(WatchlistAuthorRefresherService.name);
 
   constructor(
+    @Inject('IWatchlistRepository')
     private readonly repository: IWatchlistRepository,
     private readonly prisma: PrismaService,
     private readonly authorActivityService: AuthorActivityService,
