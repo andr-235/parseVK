@@ -112,9 +112,14 @@ function CommentCard({
                 <span className="text-xs font-medium uppercase tracking-wide">
                   Пост
                   {keywordsFromPost.length > 0 && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {keywordsFromPost.length} ключ. слов
-                    </Badge>
+                    <>
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {keywordsFromPost.length} ключ. слов
+                      </Badge>
+                      <span className="ml-2 text-xs normal-case text-text-secondary/80">
+                        (ключевые слова из поста)
+                      </span>
+                    </>
                   )}
                 </span>
               </div>
@@ -133,9 +138,14 @@ function CommentCard({
             <span className="text-xs font-medium uppercase tracking-wide">
               Комментарий
               {keywordsFromComment.length > 0 && (
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  {keywordsFromComment.length} ключ. слов
-                </Badge>
+                <>
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {keywordsFromComment.length} ключ. слов
+                  </Badge>
+                  <span className="ml-2 text-xs normal-case text-text-secondary/80">
+                    (ключевые слова из комментария)
+                  </span>
+                </>
               )}
             </span>
           </div>
