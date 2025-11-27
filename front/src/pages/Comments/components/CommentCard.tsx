@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import type { Comment, Keyword } from '@/types'
 import { highlightKeywords } from '@/utils/highlightKeywords'
-import { CheckCircle2, ExternalLink, MessageSquare, BookmarkPlus } from 'lucide-react'
+import { CheckCircle2, ExternalLink, MessageSquare, BookmarkPlus, FileText } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { getAuthorInitials } from '../utils/getAuthorInitials'
 import { formatDateTime } from '../utils/formatDateTime'
@@ -31,6 +31,9 @@ function CommentCard({
   const uniqueMatchedKeywords = (matchedKeywords ?? []).filter(
     (keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index,
   )
+
+  const keywordsFromPost = uniqueMatchedKeywords.filter((kw) => kw.source === 'POST')
+  const keywordsFromComment = uniqueMatchedKeywords.filter((kw) => kw.source !== 'POST')
 
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
@@ -105,11 +108,18 @@ function CommentCard({
           <>
             <div className="space-y-3">
               <div className="flex items-start gap-2 text-text-secondary/60">
-                <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
-                <span className="text-xs font-medium uppercase tracking-wide">Пост</span>
+                <FileText className="h-4 w-4 mt-0.5 shrink-0" />
+                <span className="text-xs font-medium uppercase tracking-wide">
+                  Пост
+                  {keywordsFromPost.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {keywordsFromPost.length} ключ. слов
+                    </Badge>
+                  )}
+                </span>
               </div>
               <div className="text-[15px] leading-relaxed text-text-primary whitespace-pre-wrap break-words pl-6">
-                {highlightKeywords(comment.postText, uniqueMatchedKeywords)}
+                {highlightKeywords(comment.postText, keywordsFromPost.length > 0 ? keywordsFromPost : uniqueMatchedKeywords)}
               </div>
             </div>
             <Separator />
@@ -120,10 +130,17 @@ function CommentCard({
         <div className="space-y-3">
           <div className="flex items-start gap-2 text-text-secondary/60">
             <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
-            <span className="text-xs font-medium uppercase tracking-wide">Комментарий</span>
+            <span className="text-xs font-medium uppercase tracking-wide">
+              Комментарий
+              {keywordsFromComment.length > 0 && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {keywordsFromComment.length} ключ. слов
+                </Badge>
+              )}
+            </span>
           </div>
           <div className="text-[15px] leading-relaxed text-text-primary whitespace-pre-wrap break-words pl-6">
-            {highlightKeywords(comment.text, uniqueMatchedKeywords)}
+            {highlightKeywords(comment.text, keywordsFromComment.length > 0 ? keywordsFromComment : uniqueMatchedKeywords)}
           </div>
         </div>
 

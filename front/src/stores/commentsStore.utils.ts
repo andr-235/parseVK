@@ -154,6 +154,7 @@ export const normalizeCommentResponse = (comment: ICommentResponse) => {
           id: keyword.id,
           word: keyword.word,
           category: keyword.category ?? null,
+          source: keyword.source === 'POST' || keyword.source === 'COMMENT' ? keyword.source : undefined,
         }))
         .filter((keyword) => typeof keyword.id === 'number' && Boolean(keyword.word))
     : []

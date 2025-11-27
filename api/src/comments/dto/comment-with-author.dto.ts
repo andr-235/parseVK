@@ -11,6 +11,7 @@ export interface CommentMatchedKeywordDto {
   id: number;
   word: string;
   category: string | null;
+  source?: 'COMMENT' | 'POST';
 }
 
 export type CommentWithAuthorDto = Comment & {

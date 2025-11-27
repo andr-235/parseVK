@@ -11,6 +11,7 @@ export class CommentMapper {
       id: match.keyword.id,
       word: match.keyword.word,
       category: match.keyword.category,
+      source: match.source,
     }));
 
     return {
