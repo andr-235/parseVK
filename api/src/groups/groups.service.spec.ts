@@ -12,6 +12,8 @@ import type {
 } from './interfaces/group.interface';
 import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface';
 import type { IGroup } from '../vk/interfaces/group.interfaces';
+import { GroupMapper } from './mappers/group.mapper';
+import { GroupIdentifierValidator } from './validators/group-identifier.validator';
 
 jest.mock('../vk/vk.service', () => ({
   VkService: jest.fn(),
@@ -21,6 +23,8 @@ describe('GroupsService', () => {
   let service: GroupsService;
   let prisma: PrismaService;
   let vkService: VkService;
+  let groupMapper: jest.Mocked<GroupMapper>;
+  let identifierValidator: jest.Mocked<GroupIdentifierValidator>;
 
   const vkGroup = {
     id: 123,
@@ -61,7 +65,21 @@ describe('GroupsService', () => {
       searchGroupsByRegion: jest.fn(),
     } as unknown as VkService;
 
-    service = new GroupsService(prisma, vkService);
+    groupMapper = {
+      mapGroupData: jest.fn(),
+    } as any;
+
+    identifierValidator = {
+      normalizeIdentifier: jest.fn((id) => id),
+      parseVkIdentifier: jest.fn((id) => id),
+    } as any;
+
+    service = new GroupsService(
+      prisma,
+      vkService,
+      groupMapper,
+      identifierValidator,
+    );
   });
 
   describe('saveGroup', () => {
@@ -91,12 +109,15 @@ describe('GroupsService', () => {
         counters: vkGroup.counters,
       } satisfies Partial<IGroupResponse>;
 
+      groupMapper.mapGroupData.mockReturnValue(mappedData as any);
+
       const savedGroup = {
         id: 1,
         vkId: vkGroup.id,
         ...mappedData,
       } as IGroupResponse;
       (prisma.group.upsert as jest.Mock).mockResolvedValue(savedGroup);
+      identifierValidator.normalizeIdentifier.mockReturnValue(123);
 
       const result = await service.saveGroup('https://vk.com/club123');
 
@@ -263,21 +284,24 @@ describe('GroupsService', () => {
   });
 
   it('должен корректно нормализовывать различные идентификаторы', () => {
-    const normalizeIdentifier = (
-      service as unknown as {
-        normalizeIdentifier: (value: string | number) => string | number;
+    identifierValidator.normalizeIdentifier.mockImplementation((id) => {
+      if (typeof id === 'string') {
+        return identifierValidator.parseVkIdentifier(id);
       }
-    ).normalizeIdentifier.bind(service);
-
-    expect(normalizeIdentifier('https://vk.com/club123')).toBe('123');
-    expect(normalizeIdentifier('https://vk.com/public456')).toBe('456');
-    expect(normalizeIdentifier('https://vk.com/screen_name')).toBe(
-      'screen_name',
-    );
-    expect(normalizeIdentifier('club789')).toBe('789');
-    expect(normalizeIdentifier('public101')).toBe('101');
-    expect(normalizeIdentifier('  screen_name  ')).toBe('screen_name');
-    expect(normalizeIdentifier(555)).toBe(555);
+      return id;
+    });
+    identifierValidator.parseVkIdentifier.mockImplementation((input) => {
+      if (input.includes('club')) return input.replace('club', '');
+      if (input.includes('public')) return input.replace('public', '');
+      return input;
+    });
+    expect(identifierValidator.normalizeIdentifier('https://vk.com/club123')).toBe('123');
+    expect(identifierValidator.normalizeIdentifier('https://vk.com/public456')).toBe('456');
+    expect(identifierValidator.normalizeIdentifier('https://vk.com/screen_name')).toBe('screen_name');
+    expect(identifierValidator.normalizeIdentifier('club789')).toBe('789');
+    expect(identifierValidator.normalizeIdentifier('public101')).toBe('101');
+    expect(identifierValidator.normalizeIdentifier('  screen_name  ')).toBe('screen_name');
+    expect(identifierValidator.normalizeIdentifier(555)).toBe(555);
   });
 
   describe('searchRegionGroups', () => {

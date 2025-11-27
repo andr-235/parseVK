@@ -1,6 +1,5 @@
 import {
   Controller,
-  DefaultValuePipe,
   Get,
   Param,
   ParseIntPipe,
@@ -9,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { AuthorsService } from './authors.service';
 import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto';
+import { ListAuthorsQueryDto } from './dto/list-authors-query.dto';
 
 @Controller('authors')
 export class AuthorsController {
@@ -16,20 +16,18 @@ export class AuthorsController {
 
   @Get()
   async listAuthors(
-    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
-    @Query('search') search?: string,
-    @Query('verified') verified?: string,
-    @Query('sortBy') sortBy?: string,
-    @Query('sortOrder') sortOrder?: string,
+    @Query() query: ListAuthorsQueryDto,
   ): Promise<AuthorListDto> {
     return this.authorsService.listAuthors({
-      offset,
-      limit,
-      search,
-      verified: this.parseVerifiedQuery(verified),
-      sortBy: sortBy ?? null,
-      sortOrder: sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : null,
+      offset: query.offset ?? 0,
+      limit: query.limit ?? 20,
+      search: query.search,
+      verified: query.verified,
+      sortBy: query.sortBy ?? null,
+      sortOrder:
+        query.sortOrder === 'asc' || query.sortOrder === 'desc'
+          ? query.sortOrder
+          : null,
     });
   }
 
@@ -44,26 +42,5 @@ export class AuthorsController {
   async refreshAuthors(): Promise<{ updated: number }> {
     const updated = await this.authorsService.refreshAuthors();
     return { updated };
-  }
-
-  private parseVerifiedQuery(value?: string): boolean | undefined {
-    if (
-      value === undefined ||
-      value === null ||
-      value === '' ||
-      value === 'all'
-    ) {
-      return undefined;
-    }
-
-    if (value === 'true') {
-      return true;
-    }
-
-    if (value === 'false') {
-      return false;
-    }
-
-    return undefined;
   }
 }

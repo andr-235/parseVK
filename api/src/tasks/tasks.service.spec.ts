@@ -9,12 +9,20 @@ import { TasksService } from './tasks.service';
 import { ParsingScope } from './dto/create-parsing-task.dto';
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
 import { ParsingQueueService } from './parsing-queue.service';
+import { TaskMapper } from './mappers/task.mapper';
+import { TaskDescriptionParser } from './parsers/task-description.parser';
+import { TaskContextBuilder } from './builders/task-context.builder';
+import { TaskCancellationService } from './task-cancellation.service';
 
 describe('TasksService', () => {
   let service: TasksService;
   let prismaMock: any;
   let runnerMock: any;
   let queueMock: jest.Mocked<ParsingQueueService>;
+  let taskMapperMock: jest.Mocked<TaskMapper>;
+  let descriptionParserMock: jest.Mocked<TaskDescriptionParser>;
+  let contextBuilderMock: jest.Mocked<TaskContextBuilder>;
+  let cancellationServiceMock: jest.Mocked<TaskCancellationService>;
 
   const createTaskRecord = (overrides: Partial<any> = {}) => ({
     id: 1,
@@ -41,6 +49,7 @@ describe('TasksService', () => {
         findMany: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
@@ -51,9 +60,39 @@ describe('TasksService', () => {
 
     queueMock = {
       enqueue: jest.fn(),
+      remove: jest.fn(),
     } as unknown as jest.Mocked<ParsingQueueService>;
 
-    service = new TasksService(prismaMock, runnerMock, queueMock);
+    taskMapperMock = {
+      mapToDetail: jest.fn(),
+      mapToSummary: jest.fn(),
+      parseTaskStatus: jest.fn(),
+      resolveTaskStatus: jest.fn(),
+    } as any;
+
+    descriptionParserMock = {
+      parse: jest.fn(),
+      stringify: jest.fn(),
+    } as any;
+
+    contextBuilderMock = {
+      buildResumeContext: jest.fn(),
+    } as any;
+
+    cancellationServiceMock = {
+      requestCancel: jest.fn(),
+      clear: jest.fn(),
+    } as any;
+
+    service = new TasksService(
+      prismaMock,
+      runnerMock,
+      queueMock,
+      cancellationServiceMock,
+      taskMapperMock,
+      descriptionParserMock,
+      contextBuilderMock,
+    );
   });
 
   describe('createParsingTask', () => {
@@ -74,6 +113,37 @@ describe('TasksService', () => {
       });
       prismaMock.task.create.mockResolvedValue(createdTask);
 
+      const parsed = {
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 5,
+        stats: null,
+        error: null,
+        skippedGroupsMessage: null,
+        skippedGroupIds: [],
+      };
+      descriptionParserMock.parse.mockReturnValue(parsed);
+      taskMapperMock.parseTaskStatus.mockReturnValue(null);
+      taskMapperMock.resolveTaskStatus.mockReturnValue('pending');
+      taskMapperMock.mapToDetail.mockReturnValue({
+        id: 42,
+        title: 'title',
+        status: 'pending',
+        completed: false,
+        totalItems: groups.length,
+        processedItems: 0,
+        progress: 0,
+        createdAt: createdTask.createdAt,
+        updatedAt: createdTask.updatedAt,
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 5,
+        stats: null,
+        error: null,
+        skippedGroupsMessage: null,
+        description: null,
+      } as any);
+
       const result = await service.createParsingTask({ postLimit: 5 });
 
       expect(prismaMock.task.create).toHaveBeenCalledWith({
@@ -91,6 +161,8 @@ describe('TasksService', () => {
       });
       expect(result.id).toBe(createdTask.id);
       expect(result.status).toBe('pending');
+      expect(descriptionParserMock.parse).toHaveBeenCalled();
+      expect(taskMapperMock.mapToDetail).toHaveBeenCalled();
     });
 
     it('throws when groups are not available', async () => {
@@ -127,6 +199,38 @@ describe('TasksService', () => {
       ];
       prismaMock.task.findMany.mockResolvedValue(tasks);
 
+      descriptionParserMock.parse.mockImplementation((task: any) => {
+        const parsed = JSON.parse(task.description || '{}');
+        return {
+          scope: parsed.scope || null,
+          groupIds: parsed.groupIds || [],
+          postLimit: parsed.postLimit || null,
+          stats: parsed.stats || null,
+          error: parsed.error || null,
+          skippedGroupsMessage: parsed.skippedGroupsMessage || null,
+          skippedGroupIds: parsed.skippedGroupIds || [],
+        };
+      });
+      taskMapperMock.parseTaskStatus.mockReturnValue(null);
+      taskMapperMock.resolveTaskStatus.mockReturnValue('pending');
+      taskMapperMock.mapToSummary.mockImplementation((task: any, parsed: any, status: any) => ({
+        id: task.id,
+        title: task.title,
+        status,
+        completed: task.completed || false,
+        totalItems: task.totalItems || 0,
+        processedItems: task.processedItems || 0,
+        progress: task.progress || 0,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        scope: parsed.scope,
+        groupIds: parsed.groupIds,
+        postLimit: parsed.postLimit,
+        stats: parsed.stats,
+        error: parsed.error,
+        skippedGroupsMessage: parsed.skippedGroupsMessage,
+      }));
+
       const result = await service.getTasks();
 
       expect(result).toHaveLength(1);
@@ -146,6 +250,37 @@ describe('TasksService', () => {
     it('returns detailed task data', async () => {
       const task = createTaskRecord({ id: 7 });
       prismaMock.task.findUnique.mockResolvedValue(task);
+
+      const parsed = {
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 10,
+        stats: null,
+        error: null,
+        skippedGroupsMessage: null,
+        skippedGroupIds: [],
+      };
+      descriptionParserMock.parse.mockReturnValue(parsed);
+      taskMapperMock.parseTaskStatus.mockReturnValue(null);
+      taskMapperMock.resolveTaskStatus.mockReturnValue('pending');
+      taskMapperMock.mapToDetail.mockReturnValue({
+        id: 7,
+        title: task.title,
+        status: 'pending',
+        completed: false,
+        totalItems: 0,
+        processedItems: 0,
+        progress: 0,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 10,
+        stats: null,
+        error: null,
+        skippedGroupsMessage: null,
+        description: task.description,
+      } as any);
 
       const result = await service.getTask(7);
 
@@ -187,17 +322,57 @@ describe('TasksService', () => {
       });
 
       prismaMock.task.findUnique.mockResolvedValue(task);
-      runnerMock.resolveGroups.mockResolvedValue([
-        { id: 50, vkId: 500, name: 'Group A', wall: 1 },
-        { id: 51, vkId: 501, name: 'Group B', wall: 1 },
-        { id: 52, vkId: 502, name: 'Group C', wall: 1 },
-      ]);
+      taskMapperMock.parseTaskStatus.mockReturnValue('failed');
+      contextBuilderMock.buildResumeContext.mockResolvedValue({
+        scope: ParsingScope.SELECTED,
+        groupIds: [11, 12, 13],
+        postLimit: 20,
+        parsed: {
+          scope: ParsingScope.SELECTED,
+          groupIds: [11, 12, 13],
+          postLimit: 20,
+          stats,
+          error: null,
+          skippedGroupsMessage: 'Пропущены группы с отключенной стеной: 999',
+          skippedGroupIds: [999],
+        },
+        totalItems: 3,
+        processedItems: 1,
+        progress: 1 / 3,
+      });
+      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
+        scope: ParsingScope.SELECTED,
+        groupIds: [11, 12, 13],
+        postLimit: 20,
+        stats,
+        skippedGroupsMessage: 'Пропущены группы с отключенной стеной: 999',
+        skippedGroupIds: [999],
+      }));
 
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,
         ...data,
         updatedAt: new Date('2024-01-02T00:00:00Z'),
       }));
+
+      taskMapperMock.mapToDetail.mockReturnValue({
+        id: 15,
+        title: task.title,
+        status: 'pending',
+        completed: false,
+        totalItems: 3,
+        processedItems: 1,
+        progress: 1 / 3,
+        createdAt: task.createdAt,
+        updatedAt: new Date('2024-01-02T00:00:00Z'),
+        scope: ParsingScope.SELECTED,
+        groupIds: [11, 12, 13],
+        postLimit: 20,
+        stats,
+        error: null,
+        skippedGroupsMessage: 'Пропущены группы с отключенной стеной: 999',
+        description: task.description,
+      } as any);
 
       const result = await service.resumeTask(task.id);
 
@@ -234,16 +409,58 @@ describe('TasksService', () => {
         status: 'running',
         processedItems: 3,
         totalItems: 10,
+        description: JSON.stringify({
+          scope: ParsingScope.ALL,
+          groupIds: [],
+          postLimit: 10,
+        }),
       });
       prismaMock.task.findUnique.mockResolvedValue(task);
-      runnerMock.resolveGroups.mockResolvedValue([
-        { id: 1, vkId: 100, name: 'Group', wall: 1 },
-        { id: 2, vkId: 200, name: 'Group 2', wall: 1 },
-      ]);
+      taskMapperMock.parseTaskStatus.mockReturnValue('running');
+      contextBuilderMock.buildResumeContext.mockResolvedValue({
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 10,
+        parsed: {
+          scope: ParsingScope.ALL,
+          groupIds: [],
+          postLimit: 10,
+          stats: null,
+          error: null,
+          skippedGroupsMessage: null,
+          skippedGroupIds: [],
+        },
+        totalItems: 10,
+        processedItems: 3,
+        progress: 3 / 10,
+      });
+      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 10,
+      }));
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,
         ...data,
       }));
+      taskMapperMock.mapToDetail.mockReturnValue({
+        id: 21,
+        title: task.title,
+        status: 'pending',
+        completed: false,
+        totalItems: 10,
+        processedItems: 3,
+        progress: 3 / 10,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 10,
+        stats: null,
+        error: null,
+        skippedGroupsMessage: null,
+        description: task.description,
+      } as any);
 
       await expect(service.resumeTask(task.id)).resolves.toEqual(
         expect.objectContaining({
@@ -279,14 +496,51 @@ describe('TasksService', () => {
         }),
       });
       prismaMock.task.findUnique.mockResolvedValue(task);
-      runnerMock.resolveGroups.mockResolvedValue([
-        { id: 10, vkId: 500, name: 'Group 10', wall: 1 },
-        { id: 11, vkId: 501, name: 'Group 11', wall: 1 },
-      ]);
+      taskMapperMock.parseTaskStatus.mockReturnValue('pending');
+      contextBuilderMock.buildResumeContext.mockResolvedValue({
+        scope: ParsingScope.SELECTED,
+        groupIds: [10, 11],
+        postLimit: 15,
+        parsed: {
+          scope: ParsingScope.SELECTED,
+          groupIds: [10, 11],
+          postLimit: 15,
+          stats: null,
+          error: null,
+          skippedGroupsMessage: null,
+          skippedGroupIds: [],
+        },
+        totalItems: 5,
+        processedItems: 0,
+        progress: 0,
+      });
+      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
+        scope: ParsingScope.SELECTED,
+        groupIds: [10, 11],
+        postLimit: 15,
+      }));
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,
         ...data,
       }));
+      taskMapperMock.mapToDetail.mockReturnValue({
+        id: 22,
+        title: task.title,
+        status: 'pending',
+        completed: false,
+        totalItems: 5,
+        processedItems: 0,
+        progress: 0,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        scope: ParsingScope.SELECTED,
+        groupIds: [10, 11],
+        postLimit: 15,
+        stats: null,
+        error: null,
+        skippedGroupsMessage: null,
+        description: task.description,
+      } as any);
 
       await expect(service.resumeTask(task.id)).resolves.toEqual(
         expect.objectContaining({
@@ -306,6 +560,7 @@ describe('TasksService', () => {
     it('throws when task already completed', async () => {
       const task = createTaskRecord({ id: 2, status: 'done', completed: true });
       prismaMock.task.findUnique.mockResolvedValue(task);
+      taskMapperMock.parseTaskStatus.mockReturnValue('done');
 
       await expect(service.resumeTask(2)).rejects.toBeInstanceOf(
         BadRequestException,
@@ -324,7 +579,10 @@ describe('TasksService', () => {
       });
 
       prismaMock.task.findUnique.mockResolvedValue(task);
-      runnerMock.resolveGroups.mockResolvedValue([]);
+      taskMapperMock.parseTaskStatus.mockReturnValue('failed');
+      contextBuilderMock.buildResumeContext.mockRejectedValue(
+        new NotFoundException('Нет доступных групп для парсинга'),
+      );
 
       await expect(service.resumeTask(3)).rejects.toBeInstanceOf(
         NotFoundException,
@@ -349,16 +607,52 @@ describe('TasksService', () => {
       });
 
       prismaMock.task.findUnique.mockResolvedValue(task);
-      runnerMock.resolveGroups.mockResolvedValue([
-        { id: 1, vkId: 101, name: 'Group 1', wall: 1 },
-        { id: 2, vkId: 102, name: 'Group 2', wall: 1 },
-        { id: 3, vkId: 103, name: 'Group 3', wall: 1 },
-      ]);
+      contextBuilderMock.buildResumeContext.mockResolvedValue({
+        scope: ParsingScope.SELECTED,
+        groupIds: [1, 2, 3],
+        postLimit: 10,
+        parsed: {
+          scope: ParsingScope.SELECTED,
+          groupIds: [1, 2, 3],
+          postLimit: 10,
+          stats: null,
+          error: null,
+          skippedGroupsMessage: null,
+          skippedGroupIds: [],
+        },
+        totalItems: 3,
+        processedItems: 3,
+        progress: 1,
+      });
+      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
+        scope: ParsingScope.SELECTED,
+        groupIds: [1, 2, 3],
+        postLimit: 10,
+      }));
 
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,
         ...data,
       }));
+
+      taskMapperMock.mapToDetail.mockReturnValue({
+        id: 33,
+        title: task.title,
+        status: 'done',
+        completed: true,
+        totalItems: 3,
+        processedItems: 3,
+        progress: 1,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        scope: ParsingScope.SELECTED,
+        groupIds: [1, 2, 3],
+        postLimit: 10,
+        stats: null,
+        error: null,
+        skippedGroupsMessage: null,
+        description: task.description,
+      } as any);
 
       const result = await service.refreshTask(task.id);
 
@@ -391,16 +685,52 @@ describe('TasksService', () => {
       });
 
       prismaMock.task.findUnique.mockResolvedValue(task);
-      runnerMock.resolveGroups.mockResolvedValue([
-        { id: 1, vkId: 201, name: 'Group 1', wall: 1 },
-        { id: 2, vkId: 202, name: 'Group 2', wall: 1 },
-        { id: 3, vkId: 203, name: 'Group 3', wall: 1 },
-      ]);
+      contextBuilderMock.buildResumeContext.mockResolvedValue({
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 5,
+        parsed: {
+          scope: ParsingScope.ALL,
+          groupIds: [],
+          postLimit: 5,
+          stats: null,
+          error: null,
+          skippedGroupsMessage: null,
+          skippedGroupIds: [],
+        },
+        totalItems: 3,
+        processedItems: 1,
+        progress: 1 / 3,
+      });
+      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 5,
+      }));
 
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,
         ...data,
       }));
+
+      taskMapperMock.mapToDetail.mockReturnValue({
+        id: 34,
+        title: task.title,
+        status: 'pending',
+        completed: false,
+        totalItems: 3,
+        processedItems: 1,
+        progress: 1 / 3,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        scope: ParsingScope.ALL,
+        groupIds: [],
+        postLimit: 5,
+        stats: null,
+        error: null,
+        skippedGroupsMessage: null,
+        description: task.description,
+      } as any);
 
       const result = await service.refreshTask(task.id);
 

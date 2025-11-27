@@ -1,414 +1,132 @@
 import { CommentsService } from './comments.service';
-import { PrismaService } from '../prisma.service';
+import type { ICommentsRepository } from './interfaces/comments-repository.interface';
+import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
+import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
+import { CommentMapper } from './mappers/comment.mapper';
+import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
+import type { CommentsListDto } from './dto/comments-list.dto';
+import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
 
 describe('CommentsService', () => {
   let service: CommentsService;
-  let prisma: {
-    comment: { findMany: jest.Mock; count: jest.Mock; update: jest.Mock };
-    $transaction: jest.Mock;
-  };
+  let repository: jest.Mocked<ICommentsRepository>;
+  let offsetStrategy: jest.Mocked<OffsetPaginationStrategy>;
+  let cursorStrategy: jest.Mocked<CursorPaginationStrategy>;
+  let mapper: jest.Mocked<CommentMapper>;
 
   beforeEach(() => {
-    prisma = {
-      comment: {
-        findMany: jest.fn(),
-        count: jest.fn(),
-        update: jest.fn(),
-      },
-      $transaction: jest.fn(async (operations: Array<Promise<unknown>>) =>
-        Promise.all(operations),
-      ),
+    repository = {
+      findMany: jest.fn(),
+      count: jest.fn(),
+      update: jest.fn(),
+      transaction: jest.fn(),
+    } as never;
+
+    offsetStrategy = {
+      execute: jest.fn(),
+    } as never;
+
+    cursorStrategy = {
+      execute: jest.fn(),
+    } as never;
+
+    mapper = {
+      map: jest.fn(),
+      mapMany: jest.fn(),
+    } as never;
+
+    service = new CommentsService(
+      repository,
+      offsetStrategy,
+      cursorStrategy,
+      mapper,
+    );
+  });
+
+  it('должен вызывать offset стратегию для getComments', async () => {
+    const expectedResult: CommentsListDto = {
+      items: [],
+      total: 0,
+      hasMore: false,
+      readCount: 0,
+      unreadCount: 0,
     };
 
-    service = new CommentsService(prisma as unknown as PrismaService);
-  });
+    offsetStrategy.execute.mockResolvedValue(expectedResult);
 
-  it('должен маппить данные автора и выставлять author: null при отсутствии данных', async () => {
-    const commentsFromPrisma = [
-      {
-        id: 1,
-        text: 'Комментарий с автором',
-        publishedAt: new Date('2024-01-01T00:00:00.000Z'),
-        authorVkId: 100,
-        watchlistAuthorId: 42,
-        author: {
-          vkUserId: 100,
-          firstName: 'Иван',
-          lastName: 'Иванов',
-          photo50: null,
-          photo100: 'https://example.com/photo100.jpg',
-          photo200Orig: null,
-        },
-        isRead: true,
-        commentKeywordMatches: [
-          {
-            keyword: { id: 7, word: 'alert', category: 'security' },
-          },
-        ],
-      },
-      {
-        id: 2,
-        text: 'Комментарий без автора',
-        publishedAt: new Date('2024-01-02T00:00:00.000Z'),
-        authorVkId: null,
-        watchlistAuthorId: null,
-        author: null,
-        isRead: false,
-        commentKeywordMatches: [],
-      },
-    ] as never;
-
-    prisma.comment.findMany.mockResolvedValue(commentsFromPrisma);
-    prisma.comment.count
-      .mockResolvedValueOnce(commentsFromPrisma.length)
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(1);
-
-    const result = await service.getComments({ offset: 0, limit: 100 });
-
-    expect(result).toEqual({
-      items: [
-        expect.objectContaining({
-          id: 1,
-          text: 'Комментарий с автором',
-          publishedAt: new Date('2024-01-01T00:00:00.000Z'),
-          authorVkId: 100,
-          watchlistAuthorId: 42,
-          author: {
-            vkUserId: 100,
-            firstName: 'Иван',
-            lastName: 'Иванов',
-            logo: 'https://example.com/photo100.jpg',
-          },
-          isWatchlisted: true,
-          matchedKeywords: [
-            { id: 7, word: 'alert', category: 'security' },
-          ],
-        }),
-        expect.objectContaining({
-          id: 2,
-          text: 'Комментарий без автора',
-          publishedAt: new Date('2024-01-02T00:00:00.000Z'),
-          authorVkId: null,
-          watchlistAuthorId: null,
-          author: null,
-          isWatchlisted: false,
-          matchedKeywords: [],
-        }),
-      ],
-      total: commentsFromPrisma.length,
-      hasMore: false,
-      readCount: 1,
-      unreadCount: 1,
-    });
-  });
-
-  it('должен запрашивать комментарии, отсортированные по publishedAt', async () => {
-    prisma.comment.findMany.mockResolvedValue([]);
-    prisma.comment.count
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(0);
-
-    await service.getComments({ offset: 0, limit: 50 });
-
-    expect(prisma.comment.findMany).toHaveBeenCalledWith({
-      where: {},
-      skip: 0,
-      take: 50,
-      orderBy: { publishedAt: 'desc' },
-      include: {
-        author: {
-          select: {
-            vkUserId: true,
-            firstName: true,
-            lastName: true,
-            photo50: true,
-            photo100: true,
-            photo200Orig: true,
-          },
-        },
-        commentKeywordMatches: {
-          include: {
-            keyword: {
-              select: {
-                id: true,
-                word: true,
-                category: true,
-              },
-            },
-          },
-        },
-      },
-    });
-    expect(prisma.comment.count).toHaveBeenCalledWith({ where: {} });
-  });
-
-  it('должен корректно выставлять hasMore при неполной странице', async () => {
-    prisma.comment.findMany.mockResolvedValue([
-      {
-        id: 1,
-        author: null,
-        watchlistAuthorId: null,
-        commentKeywordMatches: [],
-      } as never,
-    ]);
-    prisma.comment.count
-      .mockResolvedValueOnce(5)
-      .mockResolvedValueOnce(2)
-      .mockResolvedValueOnce(3);
-
-    const result = await service.getComments({ offset: 0, limit: 1 });
-
-    expect(result).toEqual({
-      items: [
-        {
-          id: 1,
-          author: null,
-          watchlistAuthorId: null,
-          isWatchlisted: false,
-          matchedKeywords: [],
-        },
-      ],
-      total: 5,
-      hasMore: true,
-      readCount: 2,
-      unreadCount: 3,
-    });
-  });
-
-  it('должен применять фильтр по ключевым словам и статусу чтения', async () => {
-    prisma.comment.findMany.mockResolvedValue([
-      {
-        id: 10,
-        author: null,
-        watchlistAuthorId: null,
-        text: 'demo keyword',
-        commentKeywordMatches: [
-          { keyword: { id: 5, word: 'keyword', category: null } },
-        ],
-      } as never,
-    ]);
-    prisma.comment.count
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(1);
-
-    await service.getComments({
+    const result = await service.getComments({
       offset: 0,
-      limit: 10,
-      keywords: ['keyword', 'sample'],
-      readStatus: 'unread',
+      limit: 100,
+      keywords: ['test'],
+      readStatus: 'all',
       search: 'demo',
     });
 
-    expect(prisma.comment.findMany).toHaveBeenCalledWith({
-      where: {
-        AND: [
-          {
-            AND: [
-              {
-                commentKeywordMatches: {
-                  some: {
-                    keyword: {
-                      word: {
-                        in: ['keyword', 'sample'],
-                      },
-                    },
-                  },
-                },
-              },
-              {
-                text: {
-                  contains: 'demo',
-                  mode: 'insensitive',
-                },
-              },
-            ],
-          },
-          { isRead: false },
-        ],
-      },
-      skip: 0,
-      take: 10,
-      orderBy: { publishedAt: 'desc' },
-      include: {
-        author: {
-          select: {
-            vkUserId: true,
-            firstName: true,
-            lastName: true,
-            photo50: true,
-            photo100: true,
-            photo200Orig: true,
-          },
-        },
-        commentKeywordMatches: {
-          include: {
-            keyword: {
-              select: {
-                id: true,
-                word: true,
-                category: true,
-              },
-            },
-          },
-        },
-      },
+    expect(result).toBe(expectedResult);
+    expect(offsetStrategy.execute).toHaveBeenCalledWith(
+      { keywords: ['test'], readStatus: 'all', search: 'demo' },
+      { offset: 0, limit: 100 },
+    );
+  });
+
+  it('должен вызывать cursor стратегию для getCommentsCursor', async () => {
+    const expectedResult: CommentsCursorListDto = {
+      items: [],
+      nextCursor: null,
+      hasMore: false,
+      total: 0,
+      readCount: 0,
+      unreadCount: 0,
+    };
+
+    cursorStrategy.execute.mockResolvedValue(expectedResult);
+
+    const result = await service.getCommentsCursor({
+      cursor: 'test-cursor',
+      limit: 50,
+      keywords: ['keyword'],
+      readStatus: 'unread',
     });
 
-    expect(prisma.comment.count).toHaveBeenNthCalledWith(1, {
-      where: {
-        AND: [
-          {
-            AND: [
-              {
-                commentKeywordMatches: {
-                  some: {
-                    keyword: {
-                      word: {
-                        in: ['keyword', 'sample'],
-                      },
-                    },
-                  },
-                },
-              },
-              {
-                text: {
-                  contains: 'demo',
-                  mode: 'insensitive',
-                },
-              },
-            ],
-          },
-          { isRead: false },
-        ],
-      },
-    });
-
-    expect(prisma.comment.count).toHaveBeenNthCalledWith(2, {
-      where: {
-        AND: [
-          {
-            AND: [
-              {
-                commentKeywordMatches: {
-                  some: {
-                    keyword: {
-                      word: {
-                        in: ['keyword', 'sample'],
-                      },
-                    },
-                  },
-                },
-              },
-              {
-                text: {
-                  contains: 'demo',
-                  mode: 'insensitive',
-                },
-              },
-            ],
-          },
-          { isRead: true },
-        ],
-      },
-    });
-
-    expect(prisma.comment.count).toHaveBeenNthCalledWith(3, {
-      where: {
-        AND: [
-          {
-            AND: [
-              {
-                commentKeywordMatches: {
-                  some: {
-                    keyword: {
-                      word: {
-                        in: ['keyword', 'sample'],
-                      },
-                    },
-                  },
-                },
-              },
-              {
-                text: {
-                  contains: 'demo',
-                  mode: 'insensitive',
-                },
-              },
-            ],
-          },
-          { isRead: false },
-        ],
-      },
-    });
+    expect(result).toBe(expectedResult);
+    expect(cursorStrategy.execute).toHaveBeenCalledWith(
+      { keywords: ['keyword'], readStatus: 'unread' },
+      { cursor: 'test-cursor', limit: 50 },
+    );
   });
 
   it('должен обновлять статус прочтения комментария', async () => {
-    const comment = {
+    const commentFromRepo = {
       id: 1,
-      text: 'Комментарий',
-      publishedAt: new Date('2024-01-01T00:00:00.000Z'),
-      authorVkId: 100,
+      text: 'Test',
+      publishedAt: new Date(),
       isRead: true,
       watchlistAuthorId: null,
-      author: {
-        vkUserId: 100,
-        firstName: 'Иван',
-        lastName: 'Иванов',
-        photo50: null,
-        photo100: 'https://example.com/photo100.jpg',
-        photo200Orig: null,
-      },
+      author: null,
       commentKeywordMatches: [],
-    } as never;
+    };
 
-    prisma.comment.update.mockResolvedValue(comment);
+    const mappedComment: CommentWithAuthorDto = {
+      id: 1,
+      text: 'Test',
+      publishedAt: new Date(),
+      isRead: true,
+      watchlistAuthorId: null,
+      author: null,
+      isWatchlisted: false,
+      matchedKeywords: [],
+    } as CommentWithAuthorDto;
 
-    await expect(service.setReadStatus(1, true)).resolves.toEqual(
-      expect.objectContaining({
-        id: 1,
-        text: 'Комментарий',
-        authorVkId: 100,
-        isRead: true,
-        author: {
-          vkUserId: 100,
-          firstName: 'Иван',
-          lastName: 'Иванов',
-          logo: 'https://example.com/photo100.jpg',
-        },
-        isWatchlisted: false,
-        matchedKeywords: [],
-      }),
-    );
+    repository.update.mockResolvedValue(commentFromRepo);
+    mapper.map.mockReturnValue(mappedComment);
 
-    expect(prisma.comment.update).toHaveBeenCalledWith({
+    const result = await service.setReadStatus(1, true);
+
+    expect(result).toBe(mappedComment);
+    expect(repository.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: { isRead: true },
-      include: {
-        author: {
-          select: {
-            vkUserId: true,
-            firstName: true,
-            lastName: true,
-            photo50: true,
-            photo100: true,
-            photo200Orig: true,
-          },
-        },
-        commentKeywordMatches: {
-          include: {
-            keyword: {
-              select: {
-                id: true,
-                word: true,
-                category: true,
-              },
-            },
-          },
-        },
-      },
     });
+    expect(mapper.map).toHaveBeenCalledWith(commentFromRepo);
   });
 });

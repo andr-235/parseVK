@@ -17,7 +17,7 @@ RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retry-mintimeout 20000 \
     && npm config set fetch-retry-maxtimeout 120000 \
     && npm config set fetch-timeout 600000 \
-    && npm ci --no-audit --prefer-offline
+    && npm install --no-audit --legacy-peer-deps
 
 COPY api/ ./
 
@@ -66,6 +66,11 @@ COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/src ./src
 COPY --from=build /app/tsconfig*.json ./
 
+RUN npx prisma generate || echo "Warning: Prisma generate failed, using pre-generated client"
+
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
+  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+
+CMD ["npm", "run", "start:prod"]

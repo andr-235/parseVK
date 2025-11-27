@@ -13,55 +13,16 @@ import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
 import type { CommentsListDto } from './dto/comments-list.dto';
 import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
 import { UpdateCommentReadDto } from './dto/update-comment-read.dto';
+import { CommentsQueryValidator } from './validators/comments-query.validator';
 
 const DEFAULT_LIMIT = 100;
-const MAX_LIMIT = 200;
 
 @Controller('comments')
 export class CommentsController {
-  constructor(private readonly commentsService: CommentsService) {}
-
-  private parseKeywords(
-    keywords?: string | string[],
-  ): string[] | undefined {
-    if (!keywords) {
-      return undefined;
-    }
-
-    const values = Array.isArray(keywords)
-      ? keywords
-      : keywords.split(',');
-
-    const normalized = values
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0);
-
-    if (normalized.length === 0) {
-      return undefined;
-    }
-
-    return Array.from(new Set(normalized));
-  }
-
-  private normalizeReadStatus(
-    value?: string,
-  ): 'all' | 'read' | 'unread' {
-    if (!value) {
-      return 'all';
-    }
-
-    const normalized = value.toLowerCase();
-    if (normalized === 'read' || normalized === 'unread') {
-      return normalized;
-    }
-
-    return 'all';
-  }
-
-  private normalizeSearch(search?: string): string | undefined {
-    const trimmed = search?.trim();
-    return trimmed ? trimmed : undefined;
-  }
+  constructor(
+    private readonly commentsService: CommentsService,
+    private readonly queryValidator: CommentsQueryValidator,
+  ) {}
 
   @Get()
   async getComments(
@@ -72,11 +33,11 @@ export class CommentsController {
     @Query('readStatus') readStatusParam?: string,
     @Query('search') search?: string,
   ): Promise<CommentsListDto> {
-    const normalizedOffset = Math.max(offset, 0);
-    const normalizedLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
-    const keywords = this.parseKeywords(keywordsParam);
-    const readStatus = this.normalizeReadStatus(readStatusParam);
-    const normalizedSearch = this.normalizeSearch(search);
+    const normalizedOffset = this.queryValidator.normalizeOffset(offset);
+    const normalizedLimit = this.queryValidator.normalizeLimit(limit);
+    const keywords = this.queryValidator.parseKeywords(keywordsParam);
+    const readStatus = this.queryValidator.normalizeReadStatus(readStatusParam);
+    const normalizedSearch = this.queryValidator.normalizeSearch(search);
 
     return this.commentsService.getComments({
       offset: normalizedOffset,
@@ -104,13 +65,10 @@ export class CommentsController {
     @Query('readStatus') readStatusParam?: string,
     @Query('search') search?: string,
   ): Promise<CommentsCursorListDto> {
-    const normalizedLimit = Math.min(
-      Math.max(limit || DEFAULT_LIMIT, 1),
-      MAX_LIMIT,
-    );
-    const keywords = this.parseKeywords(keywordsParam);
-    const readStatus = this.normalizeReadStatus(readStatusParam);
-    const normalizedSearch = this.normalizeSearch(search);
+    const normalizedLimit = this.queryValidator.normalizeLimitWithDefault(limit);
+    const keywords = this.queryValidator.parseKeywords(keywordsParam);
+    const readStatus = this.queryValidator.normalizeReadStatus(readStatusParam);
+    const normalizedSearch = this.queryValidator.normalizeSearch(search);
 
     return this.commentsService.getCommentsCursor({
       cursor,
