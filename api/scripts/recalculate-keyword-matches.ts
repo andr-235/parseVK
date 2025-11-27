@@ -1,5 +1,4 @@
 import { MatchSource, PrismaClient } from '@prisma/client';
-import { generateAllWordForms } from '../src/common/utils/russian-nouns.util';
 
 const NBSP_REGEX = /\u00a0/g;
 const SOFT_HYPHEN_REGEX = /\u00ad/g;
@@ -23,7 +22,7 @@ const normalizeForKeywordMatch = (value: string | null | undefined): string => {
 
 interface KeywordMatchCandidate {
   id: number;
-  normalizedForms: string[];
+  normalizedWord: string;
 }
 
 async function main() {
@@ -37,16 +36,16 @@ async function main() {
 
     console.log(`Найдено ${keywords.length} ключевых слов`);
 
-    console.log('Генерация форм склонений...');
+    console.log('Подготовка ключевых слов...');
     const keywordCandidates: KeywordMatchCandidate[] = keywords
       .map((keyword) => {
-        const forms = generateAllWordForms(keyword.word);
+        const normalized = normalizeForKeywordMatch(keyword.word);
         return {
           id: keyword.id,
-          normalizedForms: forms,
+          normalizedWord: normalized,
         };
       })
-      .filter((keyword) => keyword.normalizedForms.length > 0);
+      .filter((keyword) => keyword.normalizedWord.length > 0);
 
     console.log(`Сгенерировано форм для ${keywordCandidates.length} ключевых слов`);
 
@@ -81,7 +80,7 @@ async function main() {
         const matchedKeywordIds = new Set(
           keywordCandidates
             .filter((keyword) =>
-              keyword.normalizedForms.some((form) => normalizedText.includes(form)),
+              normalizedText.includes(keyword.normalizedWord),
             )
             .map((keyword) => keyword.id),
         );
@@ -174,7 +173,7 @@ async function main() {
         const matchedKeywordIds = new Set(
           keywordCandidates
             .filter((keyword) =>
-              keyword.normalizedForms.some((form) => normalizedText.includes(form)),
+              normalizedText.includes(keyword.normalizedWord),
             )
             .map((keyword) => keyword.id),
         );

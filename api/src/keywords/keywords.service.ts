@@ -6,7 +6,6 @@ import {
   IDeleteResponse,
   IBulkAddResponse,
 } from './interfaces/keyword.interface';
-import { generateAllWordForms } from '../common/utils/russian-nouns.util';
 
 @Injectable()
 export class KeywordsService {
@@ -170,13 +169,13 @@ export class KeywordsService {
 
     const keywordCandidates = keywords
       .map((keyword) => {
-        const forms = generateAllWordForms(keyword.word);
+        const normalized = normalizeForKeywordMatch(keyword.word);
         return {
           id: keyword.id,
-          normalizedForms: forms,
+          normalizedWord: normalized,
         };
       })
-      .filter((keyword) => keyword.normalizedForms.length > 0);
+      .filter((keyword) => keyword.normalizedWord.length > 0);
 
     const totalComments = await this.prisma.comment.count();
     const totalPosts = await this.prisma.post.count();
@@ -207,7 +206,7 @@ export class KeywordsService {
         const matchedKeywordIds = new Set(
           keywordCandidates
             .filter((keyword) =>
-              keyword.normalizedForms.some((form) => normalizedText.includes(form)),
+              normalizedText.includes(keyword.normalizedWord),
             )
             .map((keyword) => keyword.id),
         );
@@ -289,7 +288,7 @@ export class KeywordsService {
         const matchedKeywordIds = new Set(
           keywordCandidates
             .filter((keyword) =>
-              keyword.normalizedForms.some((form) => normalizedText.includes(form)),
+              normalizedText.includes(keyword.normalizedWord),
             )
             .map((keyword) => keyword.id),
         );

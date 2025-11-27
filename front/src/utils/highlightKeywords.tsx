@@ -1,6 +1,5 @@
 import type { Keyword } from '../types'
-import { buildKeywordPatternWithDeclensions, normalizeForKeywordMatch } from './keywordMatching'
-import { generateAllWordForms } from './russianNounsUtils'
+import { buildKeywordPattern, normalizeForKeywordMatch } from './keywordMatching'
 
 export function highlightKeywords(text: string, keywords: Keyword[]) {
   if (!text || keywords.length === 0) {
@@ -16,12 +15,9 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
         return null
       }
 
-      const allForms = generateAllWordForms(trimmed)
-      const normalizedForms = new Set(allForms.map((form) => normalizeForKeywordMatch(form)))
-
-      return { original: trimmed, normalized, normalizedForms }
+      return { original: trimmed, normalized }
     })
-    .filter((entry, index, array): entry is { original: string; normalized: string; normalizedForms: Set<string> } => {
+    .filter((entry, index, array): entry is { original: string; normalized: string } => {
       if (!entry) {
         return false
       }
@@ -33,23 +29,20 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
     return text
   }
 
-  const patterns = keywordEntries.map((entry) => buildKeywordPatternWithDeclensions(entry.original))
+  const patterns = keywordEntries.map((entry) => buildKeywordPattern(entry.original))
 
   if (patterns.length === 0) {
     return text
   }
 
   const regex = new RegExp(`(${patterns.join('|')})`, 'gi')
-  const allNormalizedForms = new Set<string>()
-  keywordEntries.forEach((entry) => {
-    entry.normalizedForms.forEach((form) => allNormalizedForms.add(form))
-  })
+  const normalizedKeywords = new Set(keywordEntries.map((entry) => entry.normalized))
   
   const parts = text.split(regex)
 
   return parts.map((part, index) => {
     const normalizedPart = normalizeForKeywordMatch(part)
-    if (!allNormalizedForms.has(normalizedPart)) {
+    if (!normalizedKeywords.has(normalizedPart)) {
       return part
     }
 

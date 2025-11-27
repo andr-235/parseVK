@@ -1,5 +1,3 @@
-import { generateAllWordForms } from './russianNounsUtils'
-
 const WHITESPACE_REGEX = /\s+/g
 const NBSP_REGEX = /\u00a0/g
 const SOFT_HYPHEN_REGEX = /\u00ad/g
@@ -27,19 +25,4 @@ export const normalizeForKeywordMatch = (value: string | null | undefined): stri
 export const buildKeywordPattern = (value: string): string => {
   const escaped = escapeRegExp(value)
   return escaped.replace(YE_REGEX, '[её]')
-}
-
-export const buildKeywordPatternWithDeclensions = (value: string): string => {
-  const forms = generateAllWordForms(value)
-  
-  if (forms.length === 0) {
-    return buildKeywordPattern(value)
-  }
-
-  const patterns = forms.map((form: string) => {
-    const escaped = escapeRegExp(form)
-    return escaped.replace(YE_REGEX, '[её]')
-  })
-
-  return `(?:${patterns.join('|')})`
 }
