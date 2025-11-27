@@ -166,6 +166,7 @@ export const normalizeCommentResponse = (comment: ICommentResponse) => {
     authorAvatar: authorInfo.avatar,
     commentUrl: buildCommentUrl(comment),
     text: comment.text ?? '',
+    postText: comment.postText ?? null,
     createdAt: normalizeCreatedAt(comment.createdAt),
     publishedAt: comment.publishedAt ? normalizeCreatedAt(comment.publishedAt) : null,
     isRead: comment.isRead ?? false,

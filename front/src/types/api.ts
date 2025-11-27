@@ -122,6 +122,7 @@ export interface ICommentResponse {
   author?: string | ICommentAuthorResponse | null
   authorName?: string | null
   text: string | null
+  postText?: string | null
   createdAt: string
   updatedAt?: string
   publishedAt?: string

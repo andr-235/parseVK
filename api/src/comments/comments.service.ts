@@ -50,6 +50,11 @@ const commentInclude = {
       },
     },
   },
+  post: {
+    select: {
+      text: true,
+    },
+  },
 } satisfies Prisma.CommentInclude;
 
 type CommentWithRelations = Prisma.CommentGetPayload<{
@@ -61,7 +66,7 @@ export class CommentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private mapComment(comment: CommentWithRelations): CommentWithAuthorDto {
-    const { author, watchlistAuthorId, commentKeywordMatches, ...commentData } =
+    const { author, watchlistAuthorId, commentKeywordMatches, post, ...commentData } =
       comment;
 
     const matchedKeywords = commentKeywordMatches.map((match) => ({
@@ -73,6 +78,7 @@ export class CommentsService {
     return {
       ...commentData,
       watchlistAuthorId: watchlistAuthorId ?? null,
+      postText: post?.text ?? null,
       author: author
         ? {
             vkUserId: author.vkUserId,
@@ -116,10 +122,22 @@ export class CommentsService {
     const normalizedSearch = search?.trim();
     if (normalizedSearch) {
       conditions.push({
-        text: {
-          contains: normalizedSearch,
-          mode: 'insensitive',
-        },
+        OR: [
+          {
+            text: {
+              contains: normalizedSearch,
+              mode: 'insensitive',
+            },
+          },
+          {
+            post: {
+              text: {
+                contains: normalizedSearch,
+                mode: 'insensitive',
+              },
+            },
+          },
+        ],
       });
     }
 

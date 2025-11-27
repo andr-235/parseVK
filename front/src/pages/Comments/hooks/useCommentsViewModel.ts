@@ -81,6 +81,7 @@ const matchesSearch = (comment: Comment, searchLower: string) => {
     comment.author,
     comment.authorId,
     comment.text,
+    comment.postText,
     comment.commentUrl,
     comment.watchlistAuthorId,
     comment.isWatchlisted ? 'watchlisted' : '',
@@ -137,7 +138,7 @@ const useCommentsViewModel = () => {
         shouldIncludeByRead(comment, readFilter) &&
         matchesSearch(comment, searchLower),
       ),
-    [comments, readFilter, searchLower, shouldFilterByKeywords],
+    [comments, readFilter, searchLower, shouldFilterByKeywords, keywords],
   )
 
   const commentIndexMap = useMemo(

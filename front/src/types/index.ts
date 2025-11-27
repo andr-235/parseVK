@@ -17,6 +17,7 @@ export interface Comment {
   authorAvatar?: string | null
   commentUrl?: string | null
   text: string
+  postText?: string | null
   createdAt: string
   publishedAt?: string | null
   isRead: boolean

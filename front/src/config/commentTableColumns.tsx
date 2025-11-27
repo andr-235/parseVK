@@ -84,7 +84,12 @@ export const getCommentTableColumns = (
   {
     header: 'Комментарий',
     key: 'text',
-    render: (item: Comment) => highlightKeywords(item.text, keywords)
+    render: (item: Comment) => {
+      const combinedText = item.postText 
+        ? `${item.postText}\n\n${item.text}`
+        : item.text
+      return highlightKeywords(combinedText, keywords)
+    }
   },
   {
     header: 'Дата/время',

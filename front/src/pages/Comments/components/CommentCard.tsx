@@ -100,6 +100,22 @@ function CommentCard({
 
         <Separator />
 
+        {/* Текст поста */}
+        {comment.postText && (
+          <>
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 text-text-secondary/60">
+                <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
+                <span className="text-xs font-medium uppercase tracking-wide">Пост</span>
+              </div>
+              <div className="text-[15px] leading-relaxed text-text-primary whitespace-pre-wrap break-words pl-6">
+                {highlightKeywords(comment.postText, uniqueMatchedKeywords)}
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
+
         {/* Текст комментария */}
         <div className="space-y-3">
           <div className="flex items-start gap-2 text-text-secondary/60">
