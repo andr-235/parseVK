@@ -20,7 +20,6 @@ export class CommentsService {
     private readonly cursorStrategy: CursorPaginationStrategy,
     private readonly mapper: CommentMapper,
   ) {}
->>>>>>> 8315c216790a32705c425b2446aa0dc5df5db2cf
 
   /**
    * Получить комментарии с offset-based pagination (legacy)
