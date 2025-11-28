@@ -10,8 +10,10 @@ import { cn } from '@/lib/utils'
 interface CommentsFiltersPanelProps {
   searchTerm: string
   onSearchChange: (value: string) => void
-  showOnlyKeywordComments: boolean
-  onToggleKeywords: (value: boolean) => void
+  showKeywordComments: boolean
+  onToggleKeywordComments: (value: boolean) => void
+  showKeywordPosts: boolean
+  onToggleKeywordPosts: (value: boolean) => void
   readFilter: 'all' | 'unread' | 'read'
   onReadFilterChange: (value: 'all' | 'unread' | 'read') => void
   keywordsCount: number
@@ -31,15 +33,16 @@ const cardBlockClass =
 function CommentsFiltersPanel({
   searchTerm,
   onSearchChange,
-  showOnlyKeywordComments,
-  onToggleKeywords,
+  showKeywordComments,
+  onToggleKeywordComments,
+  showKeywordPosts,
+  onToggleKeywordPosts,
   readFilter,
   onReadFilterChange,
   keywordsCount,
 }: CommentsFiltersPanelProps) {
   const readFilters: Array<{ value: 'all' | 'unread' | 'read'; label: string }> = [{ value: 'all', label: 'Все' }, { value: 'unread', label: 'Непрочитанные' }, { value: 'read', label: 'Прочитанные' }]
-  const keywordButtons: Array<{ value: boolean; label: string; disabled?: boolean }> = [{ value: false, label: 'Все комментарии' }, { value: true, label: 'С ключевыми словами', disabled: keywordsCount === 0 }]
-  const keywordStateLabel = showOnlyKeywordComments ? 'Только ключевые' : 'Все комментарии'
+  const hasAnyKeywordFilter = showKeywordComments || showKeywordPosts
 
   return (
     <SectionCard
@@ -66,16 +69,34 @@ function CommentsFiltersPanel({
         <div className="grid gap-4 lg:grid-cols-2">
           <div className={cardBlockClass}>
             <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-secondary dark:text-text-light/75"><FilterIcon className="h-3.5 w-3.5" />Показать</span>
-              {keywordsCount > 0 && <Badge variant="secondary" className="rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-text-secondary dark:text-text-light">{keywordStateLabel}</Badge>}
+              <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-secondary dark:text-text-light/75"><FilterIcon className="h-3.5 w-3.5" />Ключевые слова</span>
+              {keywordsCount > 0 && hasAnyKeywordFilter && <Badge variant="secondary" className="rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-text-secondary dark:text-text-light">Активен</Badge>}
             </div>
-            <ButtonGroup className="flex flex-wrap gap-2">
-              {keywordButtons.map(({ value, label, disabled }) => (
-                <Button key={label} type="button" variant="ghost" className={cn(toggleButtonClass(showOnlyKeywordComments === value), disabled && 'cursor-not-allowed opacity-60 hover:border-border/60 hover:text-text-secondary')} onClick={() => onToggleKeywords(value)} disabled={disabled}>
-                  {label}
+            <div className="flex flex-col gap-2">
+              <ButtonGroup className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={cn(toggleButtonClass(showKeywordComments), keywordsCount === 0 && 'cursor-not-allowed opacity-60 hover:border-border/60 hover:text-text-secondary')}
+                  onClick={() => onToggleKeywordComments(!showKeywordComments)}
+                  disabled={keywordsCount === 0}
+                >
+                  В комментарии
                 </Button>
-              ))}
-            </ButtonGroup>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={cn(toggleButtonClass(showKeywordPosts), keywordsCount === 0 && 'cursor-not-allowed opacity-60 hover:border-border/60 hover:text-text-secondary')}
+                  onClick={() => onToggleKeywordPosts(!showKeywordPosts)}
+                  disabled={keywordsCount === 0}
+                >
+                  В посте
+                </Button>
+              </ButtonGroup>
+              {keywordsCount > 0 && !hasAnyKeywordFilter && (
+                <p className="text-xs text-text-secondary dark:text-text-light/70">Выберите фильтр для отображения комментариев с ключевыми словами</p>
+              )}
+            </div>
           </div>
 
           <div className={cardBlockClass}>

@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { MatchSource } from '@prisma/client';
 import type { CommentsFilters, ReadStatusFilter } from '../types/comments-filters.type';
 
 @Injectable()
 export class CommentsFilterBuilder {
-  buildBaseWhere({ keywords, search }: CommentsFilters): Prisma.CommentWhereInput {
+  buildBaseWhere({ keywords, keywordSource, search }: CommentsFilters): Prisma.CommentWhereInput {
     const conditions: Prisma.CommentWhereInput[] = [];
 
     const normalizedKeywords = Array.from(
@@ -16,15 +17,30 @@ export class CommentsFilterBuilder {
     );
 
     if (normalizedKeywords.length > 0) {
-      conditions.push({
+      const matchSource = keywordSource
+        ? keywordSource === 'COMMENT'
+          ? MatchSource.COMMENT
+          : MatchSource.POST
+        : undefined;
+
+      const keywordMatchCondition: Prisma.CommentWhereInput = {
         commentKeywordMatches: {
-          some: {
-            keyword: {
-              word: { in: normalizedKeywords },
-            },
-          },
+          some: matchSource
+            ? {
+                keyword: {
+                  word: { in: normalizedKeywords },
+                },
+                source: matchSource,
+              }
+            : {
+                keyword: {
+                  word: { in: normalizedKeywords },
+                },
+              },
         },
-      });
+      };
+
+      conditions.push(keywordMatchCondition);
     }
 
     const normalizedSearch = search?.trim();

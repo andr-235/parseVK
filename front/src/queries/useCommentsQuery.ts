@@ -11,6 +11,7 @@ const fetchInitialComments = async () => {
   const response = await commentsApi.getCommentsCursor({
     limit: COMMENTS_PAGE_SIZE,
     keywords: filters.keywords,
+    keywordSource: filters.keywordSource,
     readStatus: filters.readStatus,
     search: filters.search,
   })

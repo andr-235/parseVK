@@ -1,7 +1,9 @@
 export type ReadStatusFilter = 'all' | 'read' | 'unread';
+export type KeywordSourceFilter = 'COMMENT' | 'POST';
 
 export interface CommentsFilters {
   keywords?: string[];
+  keywordSource?: KeywordSourceFilter;
   search?: string;
   readStatus?: ReadStatusFilter;
 }

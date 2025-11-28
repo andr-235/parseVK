@@ -110,36 +110,83 @@ const useCommentsViewModel = () => {
   } = useCommentsStore()
   const { keywords, fetchKeywords } = useKeywordsStore()
   const { addAuthorFromComment } = useWatchlistStore()
-  const [showOnlyKeywordComments, setShowOnlyKeywordComments] = useState(true)
+  const [showKeywordComments, setShowKeywordComments] = useState(true)
+  const [showKeywordPosts, setShowKeywordPosts] = useState(false)
   const [readFilter, setReadFilter] = useState<ReadFilter>('unread')
   const [searchTerm, setSearchTerm] = useState('')
   const [watchlistPending, setWatchlistPending] = useState<Record<number, boolean>>({})
 
   const hasKeywords = keywords.length > 0
-  const shouldFilterByKeywords = showOnlyKeywordComments && hasKeywords
+  const shouldFilterByKeywordComments = showKeywordComments && hasKeywords
+  const shouldFilterByKeywordPosts = showKeywordPosts && hasKeywords
 
-  const { keywordFilterValues, trimmedSearch, searchLower } = useMemo(() => {
+  const { keywordFilterValues, keywordSource, trimmedSearch, searchLower } = useMemo(() => {
     const trimmed = searchTerm.trim()
-    if (!shouldFilterByKeywords) return { keywordFilterValues: undefined, trimmedSearch: trimmed, searchLower: trimmed.toLowerCase() }
+    if (!shouldFilterByKeywordComments && !shouldFilterByKeywordPosts) {
+      return {
+        keywordFilterValues: undefined,
+        keywordSource: undefined,
+        trimmedSearch: trimmed,
+        searchLower: trimmed.toLowerCase(),
+      }
+    }
     const normalized = keywords.map((item) => item.word.trim()).filter(Boolean)
     const values = normalized.length > 0 ? Array.from(new Set(normalized)) : undefined
-    return { keywordFilterValues: values, trimmedSearch: trimmed, searchLower: trimmed.toLowerCase() }
-  }, [keywords, searchTerm, shouldFilterByKeywords])
+
+    let source: 'COMMENT' | 'POST' | undefined = undefined
+    if (shouldFilterByKeywordComments && shouldFilterByKeywordPosts) {
+      source = undefined
+    } else if (shouldFilterByKeywordComments) {
+      source = 'COMMENT'
+    } else if (shouldFilterByKeywordPosts) {
+      source = 'POST'
+    }
+
+    return {
+      keywordFilterValues: values,
+      keywordSource: source,
+      trimmedSearch: trimmed,
+      searchLower: trimmed.toLowerCase(),
+    }
+  }, [keywords, searchTerm, shouldFilterByKeywordComments, shouldFilterByKeywordPosts])
 
   const fetchFilters = useMemo(
-    () => ({ keywords: keywordFilterValues, readStatus: readFilter, search: trimmedSearch }),
-    [keywordFilterValues, readFilter, trimmedSearch],
+    () => ({
+      keywords: keywordFilterValues,
+      keywordSource,
+      readStatus: readFilter,
+      search: trimmedSearch,
+    }),
+    [keywordFilterValues, keywordSource, readFilter, trimmedSearch],
   )
 
-  const filteredComments = useMemo(
-    () =>
-      comments.filter((comment) =>
-        (!shouldFilterByKeywords || getMatchedKeywords(comment).length > 0) &&
+  const filteredComments = useMemo(() => {
+    return comments.filter((comment) => {
+      const matchedKeywords = getMatchedKeywords(comment)
+      const keywordsFromComment = matchedKeywords.filter((kw) => kw.source !== 'POST')
+      const keywordsFromPost = matchedKeywords.filter((kw) => kw.source === 'POST')
+
+      const hasKeywordsInComment = keywordsFromComment.length > 0
+      const hasKeywordsInPost = keywordsFromPost.length > 0
+
+      let keywordFilterPass = true
+      if (shouldFilterByKeywordComments || shouldFilterByKeywordPosts) {
+        keywordFilterPass = false
+        if (shouldFilterByKeywordComments && hasKeywordsInComment) {
+          keywordFilterPass = true
+        }
+        if (shouldFilterByKeywordPosts && hasKeywordsInPost) {
+          keywordFilterPass = true
+        }
+      }
+
+      return (
+        keywordFilterPass &&
         shouldIncludeByRead(comment, readFilter) &&
-        matchesSearch(comment, searchLower),
-      ),
-    [comments, readFilter, searchLower, shouldFilterByKeywords, keywords],
-  )
+        matchesSearch(comment, searchLower)
+      )
+    })
+  }, [comments, readFilter, searchLower, shouldFilterByKeywordComments, shouldFilterByKeywordPosts, keywords])
 
   const commentIndexMap = useMemo(
     () =>
@@ -162,19 +209,20 @@ const useCommentsViewModel = () => {
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return 'Загрузка...'
+    const hasAnyKeywordFilter = showKeywordComments || showKeywordPosts
     if (readFilter === 'read') {
-      return showOnlyKeywordComments
+      return hasAnyKeywordFilter
         ? 'Нет прочитанных комментариев с ключевыми словами'
         : 'Нет прочитанных комментариев'
     }
     if (readFilter === 'unread') {
-      return showOnlyKeywordComments
+      return hasAnyKeywordFilter
         ? 'Все комментарии с ключевыми словами прочитаны'
         : 'Все комментарии прочитаны'
     }
-    if (showOnlyKeywordComments) return 'Нет комментариев с ключевыми словами'
+    if (hasAnyKeywordFilter) return 'Нет комментариев с ключевыми словами'
     return trimmedSearch ? 'Ничего не найдено по вашему запросу' : 'Нет комментариев'
-  }, [isLoading, readFilter, showOnlyKeywordComments, trimmedSearch])
+  }, [isLoading, readFilter, showKeywordComments, showKeywordPosts, trimmedSearch])
 
   useEffect(() => {
     if (comments.length > 0 && !hasKeywords) return
@@ -216,7 +264,8 @@ const useCommentsViewModel = () => {
   )
 
   const handleSearchChange = useCallback((value: string) => setSearchTerm(value), [])
-  const handleToggleKeywords = useCallback((value: boolean) => setShowOnlyKeywordComments(value), [])
+  const handleToggleKeywordComments = useCallback((value: boolean) => setShowKeywordComments(value), [])
+  const handleToggleKeywordPosts = useCallback((value: boolean) => setShowKeywordPosts(value), [])
   const handleReadFilterChange = useCallback((value: ReadFilter) => setReadFilter(value), [])
 
   return {
@@ -225,8 +274,10 @@ const useCommentsViewModel = () => {
     unreadCount,
     searchTerm,
     handleSearchChange,
-    showOnlyKeywordComments,
-    handleToggleKeywords,
+    showKeywordComments,
+    handleToggleKeywordComments,
+    showKeywordPosts,
+    handleToggleKeywordPosts,
     readFilter,
     handleReadFilterChange,
     keywordsCount: keywords.length,

@@ -11,8 +11,10 @@ function Comments() {
     unreadCount,
     searchTerm,
     handleSearchChange,
-    showOnlyKeywordComments,
-    handleToggleKeywords,
+    showKeywordComments,
+    handleToggleKeywordComments,
+    showKeywordPosts,
+    handleToggleKeywordPosts,
     readFilter,
     handleReadFilterChange,
     keywordsCount,
@@ -40,8 +42,10 @@ function Comments() {
       <CommentsFiltersPanel
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
-        showOnlyKeywordComments={showOnlyKeywordComments}
-        onToggleKeywords={handleToggleKeywords}
+        showKeywordComments={showKeywordComments}
+        onToggleKeywordComments={handleToggleKeywordComments}
+        showKeywordPosts={showKeywordPosts}
+        onToggleKeywordPosts={handleToggleKeywordPosts}
         readFilter={readFilter}
         onReadFilterChange={handleReadFilterChange}
         keywordsCount={keywordsCount}
@@ -59,7 +63,8 @@ function Comments() {
         totalCount={totalCount}
         loadedCount={loadedCount}
         visibleCount={visibleCount}
-        showOnlyKeywordComments={showOnlyKeywordComments}
+        showKeywordComments={showKeywordComments}
+        showKeywordPosts={showKeywordPosts}
         hasDefinedKeywords={hasDefinedKeywords}
         onAddToWatchlist={handleAddToWatchlist}
         watchlistPending={watchlistPending}

@@ -3,6 +3,7 @@ import type { ICommentResponse, IGetCommentsResponse, IGetCommentsCursorResponse
 
 type CommentsFilters = {
   keywords?: string[]
+  keywordSource?: 'COMMENT' | 'POST'
   readStatus?: 'all' | 'unread' | 'read'
   search?: string
 }
@@ -12,7 +13,7 @@ const appendFilterParams = (searchParams: URLSearchParams, filters?: CommentsFil
     return
   }
 
-  const { keywords, readStatus, search } = filters
+  const { keywords, keywordSource, readStatus, search } = filters
 
   if (Array.isArray(keywords)) {
     keywords
@@ -21,6 +22,10 @@ const appendFilterParams = (searchParams: URLSearchParams, filters?: CommentsFil
       .forEach((keyword) => {
         searchParams.append('keywords', keyword)
       })
+  }
+
+  if (keywordSource) {
+    searchParams.set('keywordSource', keywordSource)
   }
 
   if (readStatus && readStatus !== 'all') {

@@ -32,6 +32,10 @@ const normalizeFilters = (filters?: CommentsFilters): CommentsFilters => {
     normalized.keywords = Array.from(new Set(normalizedKeywords))
   }
 
+  if (filters?.keywordSource === 'COMMENT' || filters?.keywordSource === 'POST') {
+    normalized.keywordSource = filters.keywordSource
+  }
+
   const normalizedSearch = filters?.search?.trim()
   if (normalizedSearch) {
     normalized.search = normalizedSearch
@@ -93,6 +97,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         offset,
         limit: pageSize,
         keywords: activeFilters.keywords,
+        keywordSource: activeFilters.keywordSource,
         readStatus: activeFilters.readStatus,
         search: activeFilters.search,
       })
@@ -162,6 +167,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         cursor,
         limit: pageSize,
         keywords: activeFilters.keywords,
+        keywordSource: activeFilters.keywordSource,
         readStatus: activeFilters.readStatus,
         search: activeFilters.search,
       })

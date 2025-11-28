@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { ReadStatusFilter } from '../types/comments-filters.type';
+import type { ReadStatusFilter, KeywordSourceFilter } from '../types/comments-filters.type';
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 200;
@@ -52,6 +52,19 @@ export class CommentsQueryValidator {
 
   normalizeLimitWithDefault(limit?: number): number {
     return this.normalizeLimit(limit ?? DEFAULT_LIMIT);
+  }
+
+  normalizeKeywordSource(value?: string): KeywordSourceFilter | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const normalized = value.toUpperCase();
+    if (normalized === 'COMMENT' || normalized === 'POST') {
+      return normalized;
+    }
+
+    return undefined;
   }
 }
 

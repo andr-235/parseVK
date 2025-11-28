@@ -5,7 +5,8 @@ interface UseCommentsTableCardControllerParams {
   groupedComments: CategorizedGroup[]
   commentsWithoutKeywords: CategorizedComment[]
   isLoading: boolean
-  showOnlyKeywordComments: boolean
+  showKeywordComments: boolean
+  showKeywordPosts: boolean
   hasDefinedKeywords: boolean
   totalCount: number
   loadedCount: number
@@ -16,7 +17,8 @@ export default function useCommentsTableCardController({
   groupedComments,
   commentsWithoutKeywords,
   isLoading,
-  showOnlyKeywordComments,
+  showKeywordComments,
+  showKeywordPosts,
   hasDefinedKeywords,
   totalCount,
   loadedCount,
@@ -47,6 +49,7 @@ export default function useCommentsTableCardController({
 
   const totalCategories = keywordGroups.length
   const loadedSuffix = Math.max(totalCount, loadedCount) > 0 ? ` из ${Math.max(totalCount, loadedCount)}` : ''
+  const hasAnyKeywordFilter = showKeywordComments || showKeywordPosts
   const subtitle = useMemo(
     () =>
       buildSubtitle({
@@ -55,7 +58,7 @@ export default function useCommentsTableCardController({
         hasKeywordGroups,
         hasCommentsWithoutKeywords,
         hasDefinedKeywords,
-        showOnlyKeywordComments,
+        hasAnyKeywordFilter,
       }),
     [
       hasComments,
@@ -63,7 +66,7 @@ export default function useCommentsTableCardController({
       hasDefinedKeywords,
       hasKeywordGroups,
       isLoading,
-      showOnlyKeywordComments,
+      hasAnyKeywordFilter,
     ],
   )
   return {
@@ -84,19 +87,19 @@ function buildSubtitle({
   hasKeywordGroups,
   hasCommentsWithoutKeywords,
   hasDefinedKeywords,
-  showOnlyKeywordComments,
+  hasAnyKeywordFilter,
 }: {
   isLoading: boolean
   hasComments: boolean
   hasKeywordGroups: boolean
   hasCommentsWithoutKeywords: boolean
   hasDefinedKeywords: boolean
-  showOnlyKeywordComments: boolean
+  hasAnyKeywordFilter: boolean
 }) {
   if (isLoading && !hasComments) return 'Мы подготавливаем данные и проверяем их перед отображением.'
   if (hasKeywordGroups) return 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте фильтры, чтобы сосредоточиться на нужных темах.'
   if (hasCommentsWithoutKeywords && !hasDefinedKeywords) return 'Ключевые слова пока не заданы — все найденные комментарии находятся в разделе «Без ключевых слов».'
-  if (hasComments && !showOnlyKeywordComments && hasCommentsWithoutKeywords)
+  if (hasComments && !hasAnyKeywordFilter && hasCommentsWithoutKeywords)
     return 'Комментарии без совпадений с ключевыми словами отображаются в отдельном блоке.'
   return 'После добавления групп и запуска парсинга комментарии появятся в списке.'
 }

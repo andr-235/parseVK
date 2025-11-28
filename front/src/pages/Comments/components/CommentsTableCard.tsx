@@ -22,7 +22,8 @@ interface CommentsTableCardProps {
   totalCount: number
   loadedCount: number
   visibleCount: number
-  showOnlyKeywordComments: boolean
+  showKeywordComments: boolean
+  showKeywordPosts: boolean
   hasDefinedKeywords: boolean
   onAddToWatchlist?: (commentId: number) => void
   watchlistPending?: Record<number, boolean>
@@ -72,7 +73,8 @@ function CommentsTableCard({
   totalCount,
   loadedCount,
   visibleCount,
-  showOnlyKeywordComments,
+  showKeywordComments,
+  showKeywordPosts,
   hasDefinedKeywords,
   onAddToWatchlist,
   watchlistPending,
@@ -92,7 +94,8 @@ function CommentsTableCard({
     groupedComments,
     commentsWithoutKeywords,
     isLoading,
-    showOnlyKeywordComments,
+    showKeywordComments,
+    showKeywordPosts,
     hasDefinedKeywords,
     totalCount,
     loadedCount,
@@ -192,7 +195,7 @@ function CommentsTableCard({
               </div>
             )}
 
-            {(!showOnlyKeywordComments || !hasDefinedKeywords) && hasCommentsWithoutKeywords && (
+            {(!showKeywordComments && !showKeywordPosts || !hasDefinedKeywords) && hasCommentsWithoutKeywords && (
               <div className="flex flex-col gap-4">
                 <section className="rounded-3xl border border-border/60 bg-background p-5">
                   <header className="flex flex-col gap-2 pb-4">

@@ -30,6 +30,7 @@ export interface NavigationState {
 // Comments Store Types
 export interface CommentsFilters {
   keywords?: string[]
+  keywordSource?: 'COMMENT' | 'POST'
   readStatus?: 'all' | 'unread' | 'read'
   search?: string
 }
