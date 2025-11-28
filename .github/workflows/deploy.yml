@@ -415,6 +415,56 @@ jobs:
           STEP_END=$(date +%s)
           echo "Database start completed in $((STEP_END - STEP_START))s"
 
+      - name: Fix failed migrations
+        id: fix_migrations
+        working-directory: /opt/parseVK
+        timeout-minutes: 2
+        run: |
+          STEP_START=$(date +%s)
+          echo "=== Fixing failed migrations ==="
+          
+          API_CONTAINER_ID=$(docker compose ps -q api 2>/dev/null || echo "")
+          
+          FIX_SCRIPT="
+          DO \$\$
+          BEGIN
+              -- Исправляем failed миграцию для attachments, если колонка уже существует
+              IF EXISTS (
+                  SELECT 1 
+                  FROM information_schema.columns 
+                  WHERE table_name = 'Post' 
+                  AND column_name = 'attachments'
+                  AND table_schema = 'public'
+              ) THEN
+                  -- Удаляем failed запись
+                  DELETE FROM _prisma_migrations 
+                  WHERE migration_name = '20251128142604_add_post_attachments' 
+                  AND finished_at IS NULL;
+                  
+                  -- Добавляем успешную запись
+                  INSERT INTO _prisma_migrations (migration_name, finished_at, applied_steps_count)
+                  VALUES ('20251128142604_add_post_attachments', NOW(), 1)
+                  ON CONFLICT (migration_name) DO UPDATE
+                  SET finished_at = NOW(), applied_steps_count = 1;
+              END IF;
+          END \$\$;
+          "
+          
+          if [ -n "$API_CONTAINER_ID" ] && [ "$(docker inspect --format='{{.State.Status}}' "$API_CONTAINER_ID" 2>/dev/null)" = "running" ]; then
+            echo "Fixing migrations via existing API container"
+            docker compose exec -T db psql -U postgres -d vk_api -c "$FIX_SCRIPT" || {
+              echo "Warning: Failed to fix migrations via existing container"
+            }
+          else
+            echo "Fixing migrations via database container"
+            docker compose exec -T db psql -U postgres -d vk_api -c "$FIX_SCRIPT" || {
+              echo "Warning: Failed to fix migrations"
+            }
+          fi
+          
+          STEP_END=$(date +%s)
+          echo "Migration fix completed in $((STEP_END - STEP_START))s"
+
       - name: Run database migrations
         id: run_migrations
         working-directory: /opt/parseVK
