@@ -6,7 +6,7 @@ export interface IPost {
   from_id: number;
   date: number;
   text: string;
-  attachments?: Objects.WallPostAttachment[];
+  attachments?: Objects.WallWallpostAttachment[];
   comments: {
     count: number;
     can_post: number;

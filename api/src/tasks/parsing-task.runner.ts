@@ -725,7 +725,7 @@ export class ParsingTaskRunner {
       ? (post.attachments as Prisma.InputJsonValue)
       : undefined;
 
-    const upsertData: Prisma.PostUpdateInput = {
+    const baseData = {
       groupId: group.id,
       fromId: post.from_id,
       postedAt,
@@ -737,8 +737,22 @@ export class ParsingTaskRunner {
       commentsCanOpen: post.comments.can_open,
     };
 
+    const updateData: Prisma.PostUpdateInput = {
+      ...baseData,
+    };
+
     if (attachmentsJson !== undefined) {
-      upsertData.attachments = attachmentsJson;
+      updateData.attachments = attachmentsJson;
+    }
+
+    const createData: Prisma.PostUncheckedCreateInput = {
+      ownerId: post.owner_id,
+      vkPostId: post.id,
+      ...baseData,
+    };
+
+    if (attachmentsJson !== undefined) {
+      createData.attachments = attachmentsJson;
     }
 
     await this.prisma.post.upsert({
@@ -748,12 +762,8 @@ export class ParsingTaskRunner {
           vkPostId: post.id,
         },
       },
-      update: upsertData,
-      create: {
-        ownerId: post.owner_id,
-        vkPostId: post.id,
-        ...upsertData,
-      },
+      update: updateData,
+      create: createData,
     });
   }
 

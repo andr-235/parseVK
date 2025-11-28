@@ -27,6 +27,17 @@ export type CommentWithRelations = Prisma.CommentGetPayload<{
     post: {
       select: {
         text: true;
+        attachments: true;
+        group: {
+          select: {
+            id: true;
+            vkId: true;
+            name: true;
+            screenName: true;
+            photo100: true;
+            photo200: true;
+          };
+        };
       };
     };
   };
