@@ -117,6 +117,7 @@ model Post {
   fromId                Int
   postedAt              DateTime
   text                  String    @db.Text
+  attachments           Json?
   commentsCount         Int
   commentsCanPost       Int
   commentsGroupsCanPost Boolean

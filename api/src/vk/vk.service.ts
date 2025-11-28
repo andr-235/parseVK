@@ -364,6 +364,7 @@ export class VkService {
       from_id: item.from_id,
       date: item.date,
       text: item.text ?? '',
+      attachments: item.attachments,
       comments: {
         count: item.comments?.count ?? 0,
         can_post: item.comments?.can_post ?? 0,

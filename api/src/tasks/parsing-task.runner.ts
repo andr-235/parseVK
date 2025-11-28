@@ -721,7 +721,11 @@ export class ParsingTaskRunner {
 
   private async savePost(post: IPost, group: PrismaGroupRecord): Promise<void> {
     const postedAt = new Date(post.date * 1000);
-    const upsertData = {
+    const attachmentsJson = post.attachments
+      ? (post.attachments as Prisma.InputJsonValue)
+      : undefined;
+
+    const upsertData: Prisma.PostUpdateInput = {
       groupId: group.id,
       fromId: post.from_id,
       postedAt,
@@ -732,6 +736,10 @@ export class ParsingTaskRunner {
       commentsCanClose: post.comments.can_close,
       commentsCanOpen: post.comments.can_open,
     };
+
+    if (attachmentsJson !== undefined) {
+      upsertData.attachments = attachmentsJson;
+    }
 
     await this.prisma.post.upsert({
       where: {

@@ -5,10 +5,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import type { Comment, Keyword } from '@/types'
 import { highlightKeywords } from '@/utils/highlightKeywords'
-import { CheckCircle2, ExternalLink, MessageSquare, BookmarkPlus, FileText } from 'lucide-react'
+import { CheckCircle2, ExternalLink, MessageSquare, BookmarkPlus, FileText, Users, Image as ImageIcon, Video, Link as LinkIcon } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { getAuthorInitials } from '../utils/getAuthorInitials'
 import { formatDateTime } from '../utils/formatDateTime'
+import { useMemo } from 'react'
 
 interface CommentCardProps {
   comment: Comment
@@ -34,6 +35,135 @@ function CommentCard({
 
   const keywordsFromPost = uniqueMatchedKeywords.filter((kw) => kw.source === 'POST')
   const keywordsFromComment = uniqueMatchedKeywords.filter((kw) => kw.source !== 'POST')
+
+  const postAttachments = useMemo(() => {
+    if (!comment.postAttachments || !Array.isArray(comment.postAttachments)) {
+      return []
+    }
+    return comment.postAttachments
+  }, [comment.postAttachments])
+
+  const renderAttachment = (attachment: unknown) => {
+    if (!attachment || typeof attachment !== 'object') return null
+
+    const att = attachment as Record<string, unknown>
+    const type = att.type as string
+
+    if (type === 'photo') {
+      const photo = att.photo as Record<string, unknown>
+      const sizes = (photo?.sizes as Array<Record<string, unknown>>) || []
+      const largestSize = sizes.reduce((max, size) => {
+        const maxWidth = (max?.width as number) || 0
+        const currentWidth = (size?.width as number) || 0
+        return currentWidth > maxWidth ? size : max
+      }, sizes[0] || {})
+      const photoUrl = (largestSize?.url as string) || (photo?.photo_604 as string) || (photo?.photo_807 as string)
+      const photoId = (photo?.id as number) || (photo?.pid as number)
+
+      if (!photoUrl) return null
+
+      return (
+        <a
+          key={`photo-${photoId || Math.random()}`}
+          href={photoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-lg overflow-hidden border border-border/60 hover:border-primary/50 transition-colors"
+        >
+          <img
+            src={photoUrl}
+            alt="Фото из поста"
+            className="w-full h-auto max-h-96 object-contain"
+            loading="lazy"
+          />
+        </a>
+      )
+    }
+
+    if (type === 'video') {
+      const video = att.video as Record<string, unknown>
+      const videoId = (video?.id as number) || (video?.vid as number)
+      const ownerId = (video?.owner_id as number) || (video?.oid as number)
+      const accessKey = (video?.access_key as string) || ''
+      const title = (video?.title as string) || 'Видео'
+      const thumb = (video?.photo_320 as string) || (video?.photo_640 as string) || (video?.image as string)
+
+      return (
+        <div
+          key={`video-${videoId || Math.random()}`}
+          className="flex items-center gap-3 rounded-lg border border-border/60 p-3 bg-background-secondary/40"
+        >
+          {thumb && (
+            <img
+              src={thumb}
+              alt={title}
+              className="w-20 h-20 object-cover rounded"
+              loading="lazy"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <Video className="h-4 w-4 shrink-0" />
+              <span className="truncate">{title}</span>
+            </div>
+            {ownerId && videoId && (
+              <a
+                href={`https://vk.com/video${ownerId}_${videoId}${accessKey ? `_${accessKey}` : ''}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-text-secondary hover:text-primary inline-flex items-center gap-1 mt-1"
+              >
+                Открыть видео
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    if (type === 'link') {
+      const link = att.link as Record<string, unknown>
+      const url = (link?.url as string) || ''
+      const title = (link?.title as string) || (link?.caption as string) || 'Ссылка'
+      const description = (link?.description as string) || ''
+      const photo = (link?.photo as Record<string, unknown>) || null
+      const photoUrl = photo ? ((photo?.photo_604 as string) || (photo?.photo_807 as string)) : null
+
+      if (!url) return null
+
+      return (
+        <a
+          key={`link-${url}`}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-start gap-3 rounded-lg border border-border/60 p-3 bg-background-secondary/40 hover:border-primary/50 transition-colors"
+        >
+          {photoUrl && (
+            <img
+              src={photoUrl}
+              alt={title}
+              className="w-20 h-20 object-cover rounded shrink-0"
+              loading="lazy"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <LinkIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{title}</span>
+            </div>
+            {description && (
+              <p className="text-xs text-text-secondary mt-1 line-clamp-2">{description}</p>
+            )}
+            <span className="text-xs text-text-secondary/60 mt-1 block truncate">{url}</span>
+          </div>
+        </a>
+      )
+    }
+
+    return null
+  }
 
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
@@ -104,7 +234,7 @@ function CommentCard({
         <Separator />
 
         {/* Текст поста */}
-        {comment.postText && (
+        {(comment.postText || comment.postGroup || postAttachments.length > 0) && (
           <>
             <div className="space-y-3">
               <div className="flex items-start gap-2 text-text-secondary/60">
@@ -123,9 +253,57 @@ function CommentCard({
                   )}
                 </span>
               </div>
-              <div className="text-[15px] leading-relaxed text-text-primary whitespace-pre-wrap break-words pl-6">
-                {highlightKeywords(comment.postText, keywordsFromPost.length > 0 ? keywordsFromPost : uniqueMatchedKeywords)}
-              </div>
+
+              {/* Группа */}
+              {comment.postGroup && (
+                <div className="flex items-center gap-2 pl-6">
+                  <Users className="h-4 w-4 text-text-secondary/60 shrink-0" />
+                  <div className="flex items-center gap-2">
+                    {comment.postGroup.photo && (
+                      <img
+                        src={comment.postGroup.photo}
+                        alt={comment.postGroup.name}
+                        className="w-5 h-5 rounded-full"
+                        loading="lazy"
+                      />
+                    )}
+                    <span className="text-sm font-medium text-text-primary">
+                      {comment.postGroup.name}
+                    </span>
+                    {comment.postGroup.screenName && (
+                      <a
+                        href={`https://vk.com/${comment.postGroup.screenName}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-text-secondary hover:text-primary inline-flex items-center gap-1"
+                      >
+                        @{comment.postGroup.screenName}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Текст поста */}
+              {comment.postText && (
+                <div className="text-[15px] leading-relaxed text-text-primary whitespace-pre-wrap break-words pl-6">
+                  {highlightKeywords(comment.postText, keywordsFromPost.length > 0 ? keywordsFromPost : uniqueMatchedKeywords)}
+                </div>
+              )}
+
+              {/* Медиа поста */}
+              {postAttachments.length > 0 && (
+                <div className="space-y-2 pl-6">
+                  <div className="flex items-center gap-2 text-xs text-text-secondary/60">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    <span>Медиа из поста</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {postAttachments.map((attachment) => renderAttachment(attachment)).filter(Boolean)}
+                  </div>
+                </div>
+              )}
             </div>
             <Separator />
           </>

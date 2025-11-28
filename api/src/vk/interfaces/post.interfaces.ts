@@ -1,9 +1,12 @@
+import type { Objects } from 'vk-io';
+
 export interface IPost {
   id: number;
   owner_id: number;
   from_id: number;
   date: number;
   text: string;
+  attachments?: Objects.WallPostAttachment[];
   comments: {
     count: number;
     can_post: number;

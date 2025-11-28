@@ -113,6 +113,14 @@ export interface ICommentAuthorResponse {
   photo_200?: string | null
 }
 
+export interface IPostGroupResponse {
+  id: number
+  vkId: number
+  name: string
+  screenName: string | null
+  photo: string | null
+}
+
 export interface ICommentResponse {
   id: number
   postId?: number
@@ -124,6 +132,8 @@ export interface ICommentResponse {
   authorName?: string | null
   text: string | null
   postText?: string | null
+  postAttachments?: unknown | null
+  postGroup?: IPostGroupResponse | null
   createdAt: string
   updatedAt?: string
   publishedAt?: string

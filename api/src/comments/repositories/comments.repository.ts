@@ -38,6 +38,17 @@ const commentInclude = {
   post: {
     select: {
       text: true,
+      attachments: true,
+      group: {
+        select: {
+          id: true,
+          vkId: true,
+          name: true,
+          screenName: true,
+          photo100: true,
+          photo200: true,
+        },
+      },
     },
   },
 } satisfies Prisma.CommentInclude;

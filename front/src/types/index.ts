@@ -10,6 +10,14 @@ export interface Keyword {
   updatedAt?: string
 }
 
+export interface PostGroup {
+  id: number
+  vkId: number
+  name: string
+  screenName: string | null
+  photo: string | null
+}
+
 export interface Comment {
   id: number
   author: string
@@ -19,6 +27,8 @@ export interface Comment {
   commentUrl?: string | null
   text: string
   postText?: string | null
+  postAttachments?: unknown | null
+  postGroup?: PostGroup | null
   createdAt: string
   publishedAt?: string | null
   isRead: boolean

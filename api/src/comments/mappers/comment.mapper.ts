@@ -17,6 +17,16 @@ export class CommentMapper {
     return {
       ...comment,
       postText: post?.text ?? null,
+      postAttachments: post?.attachments ?? null,
+      postGroup: post?.group
+        ? {
+            id: post.group.id,
+            vkId: post.group.vkId,
+            name: post.group.name,
+            screenName: post.group.screenName,
+            photo: post.group.photo200 ?? post.group.photo100 ?? null,
+          }
+        : null,
       author: author
         ? {
             vkUserId: author.vkUserId,

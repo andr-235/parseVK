@@ -14,9 +14,19 @@ export interface CommentMatchedKeywordDto {
   source?: 'COMMENT' | 'POST';
 }
 
+export interface PostGroupDto {
+  id: number;
+  vkId: number;
+  name: string;
+  screenName: string | null;
+  photo: string | null;
+}
+
 export type CommentWithAuthorDto = Comment & {
   author: CommentAuthorDto | null;
   isWatchlisted: boolean;
   matchedKeywords: CommentMatchedKeywordDto[];
   postText: string | null;
+  postAttachments: unknown | null;
+  postGroup: PostGroupDto | null;
 };
