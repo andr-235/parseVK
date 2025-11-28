@@ -18,6 +18,8 @@ interface CommentCardProps {
   onAddToWatchlist?: (commentId: number) => void
   isWatchlistLoading?: boolean
   matchedKeywords?: Keyword[]
+  showKeywordComments?: boolean
+  showKeywordPosts?: boolean
 }
 
 
@@ -28,6 +30,8 @@ function CommentCard({
   onAddToWatchlist,
   isWatchlistLoading,
   matchedKeywords,
+  showKeywordComments,
+  showKeywordPosts,
 }: CommentCardProps) {
   const uniqueMatchedKeywords = (matchedKeywords ?? []).filter(
     (keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index,
@@ -35,6 +39,19 @@ function CommentCard({
 
   const keywordsFromPost = uniqueMatchedKeywords.filter((kw) => kw.source === 'POST')
   const keywordsFromComment = uniqueMatchedKeywords.filter((kw) => kw.source !== 'POST')
+
+  // Определяем, что показывать:
+  // - Если оба фильтра не выбраны (undefined) - показываем всё
+  // - Если выбран только комментарий - показываем только комментарий
+  // - Если выбран только пост - показываем только пост
+  // - Если выбраны оба - показываем оба
+  const isFilterActive = showKeywordComments !== undefined || showKeywordPosts !== undefined
+  
+  const shouldShowPost = !isFilterActive 
+    || showKeywordPosts === true
+  
+  const shouldShowComment = !isFilterActive
+    || showKeywordComments === true
 
   const postAttachments = useMemo(() => {
     if (!comment.postAttachments || !Array.isArray(comment.postAttachments)) {
@@ -231,10 +248,10 @@ function CommentCard({
           </div>
         </div>
 
-        <Separator />
+        {shouldShowPost && <Separator />}
 
         {/* Текст поста */}
-        {(comment.postText || comment.postGroup || postAttachments.length > 0) && (
+        {shouldShowPost && (comment.postText || comment.postGroup || postAttachments.length > 0) && (
           <>
             <div className="space-y-3">
               <div className="flex items-start gap-2 text-text-secondary/60">
@@ -305,12 +322,14 @@ function CommentCard({
                 </div>
               )}
             </div>
-            <Separator />
           </>
         )}
 
+        {shouldShowPost && shouldShowComment && <Separator />}
+
         {/* Текст комментария */}
-        <div className="space-y-3">
+        {shouldShowComment && (
+          <div className="space-y-3">
           <div className="flex items-start gap-2 text-text-secondary/60">
             <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
             <span className="text-xs font-medium uppercase tracking-wide">
@@ -331,6 +350,7 @@ function CommentCard({
             {highlightKeywords(comment.text, keywordsFromComment.length > 0 ? keywordsFromComment : uniqueMatchedKeywords)}
           </div>
         </div>
+        )}
 
         <Separator />
 

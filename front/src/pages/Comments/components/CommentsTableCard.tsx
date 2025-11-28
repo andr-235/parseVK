@@ -184,6 +184,8 @@ function CommentsTableCard({
                                 toggleReadStatus={toggleReadStatus}
                                 onAddToWatchlist={onAddToWatchlist}
                                 isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
+                                showKeywordComments={showKeywordComments}
+                                showKeywordPosts={showKeywordPosts}
                               />
                             )
                           })}
@@ -217,6 +219,8 @@ function CommentsTableCard({
                           toggleReadStatus={toggleReadStatus}
                           onAddToWatchlist={onAddToWatchlist}
                           isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
+                          showKeywordComments={showKeywordComments}
+                          showKeywordPosts={showKeywordPosts}
                         />
                       )
                     })}
