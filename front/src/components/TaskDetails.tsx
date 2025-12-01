@@ -388,7 +388,7 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
              <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-1">Название</p>
-              <p className="text-sm font-medium text-white truncate" title={task.title}>{task.title || 'Без названия'}</p>
+              <p className="text-sm font-medium text-white truncate" title={task.title || undefined}>{task.title || 'Без названия'}</p>
             </div>
             <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Статус</p>
