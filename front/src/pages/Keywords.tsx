@@ -90,7 +90,7 @@ function Keywords() {
   }, [keywords, searchTerm])
 
   return (
-    <div className="flex flex-col gap-8 pb-10">
+    <div className="flex flex-col gap-8 pb-10 pt-6">
       {/* Header Section */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1.5">
