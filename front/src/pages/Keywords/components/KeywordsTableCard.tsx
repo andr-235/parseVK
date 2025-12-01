@@ -106,9 +106,8 @@ function KeywordsTableCard({
              )}
 
              {sortedKeywords.length > 0 && (
-                 <div className="relative w-full overflow-x-auto">
-                     <Table>
-                        <TableHeader className="bg-muted/30">
+                 <Table>
+                    <TableHeader className="bg-muted/30">
                              <TableRow className="hover:bg-transparent">
                                 {tableColumns.map((column) => (
                                     <TableHead key={column.key} className={column.headerClassName}>
@@ -140,7 +139,6 @@ function KeywordsTableCard({
                             ))}
                         </TableBody>
                      </Table>
-                 </div>
              )}
         </CardContent>
     </Card>

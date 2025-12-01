@@ -440,9 +440,8 @@ function RegionGroupsSearchCard({
                </Button>
             </div>
             
-            <div className="relative w-full overflow-auto">
-              <Table>
-                <TableHeader className="bg-muted/30">
+            <Table>
+              <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-12 text-center">
                       <input
@@ -487,8 +486,7 @@ function RegionGroupsSearchCard({
                     />
                   ))}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           </>
         )}
       </CardContent>
