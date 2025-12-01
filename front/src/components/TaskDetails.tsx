@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { X } from 'lucide-react'
 import type { TaskDetails as TaskDetailsType } from '../types'
 import { getTaskStatusText, getGroupStatusText } from '../utils/statusHelpers'
 import { calculateTaskProgress } from '../utils/taskProgress'
@@ -37,27 +38,25 @@ const getNumberFromObject = (source: Record<string, unknown>, ...keys: string[])
 type TaskStatus = TaskDetailsType['status']
 type GroupStatus = TaskDetailsType['groups'][number]['status']
 
-const STATUS_BADGE_BASE = 'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide'
+const STATUS_BADGE_BASE = 'inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide'
 
 const taskStatusClasses: Record<TaskStatus, string> = {
-  pending: 'bg-accent-warning/20 text-accent-warning',
-  processing: 'bg-accent-primary/20 text-accent-primary',
-  running: 'bg-accent-primary/20 text-accent-primary',
-  completed: 'bg-accent-success/20 text-accent-success',
-  failed: 'bg-accent-danger/20 text-accent-danger',
+  pending: 'bg-yellow-500/10 text-yellow-500',
+  processing: 'bg-blue-500/10 text-blue-500',
+  running: 'bg-blue-500/10 text-blue-500',
+  completed: 'bg-green-500/10 text-green-500',
+  failed: 'bg-red-500/10 text-red-500',
 }
 
 const groupStatusClasses: Record<GroupStatus, string> = {
-  pending: 'bg-accent-warning/20 text-accent-warning',
-  processing: 'bg-accent-primary/20 text-accent-primary',
-  running: 'bg-accent-primary/20 text-accent-primary',
-  success: 'bg-accent-success/20 text-accent-success',
-  failed: 'bg-accent-danger/20 text-accent-danger',
+  pending: 'text-yellow-500',
+  processing: 'text-blue-500',
+  running: 'text-blue-500',
+  success: 'text-green-500',
+  failed: 'text-red-500',
 }
 
 function TaskDetails({ task, onClose }: TaskDetailsProps) {
-  // Важно: не использовать объектный селектор — он создаёт новый объект на каждый рендер
-  // и может вызывать лишние обновления. Берём функции по отдельности.
   const resumeTask = useTasksStore((state) => state.resumeTask)
   const checkTask = useTasksStore((state) => state.checkTask)
   const fetchTaskDetails = useTasksStore((state) => state.fetchTaskDetails)
@@ -269,17 +268,20 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
       const safeCurrent = clamp(currentValue, 0, safeTotal)
 
       return (
-        <div className="space-y-2 rounded-xl border border-border/60 bg-background-primary/40 p-4">
+        <div className="w-full max-w-[240px] space-y-1.5">
           <ProgressBar
             current={indeterminate ? 1 : safeCurrent}
             total={indeterminate ? 1 : safeTotal}
             size="small"
             tone={tone}
-            label={labelText}
-            showLabel
+            showLabel={false}
             indeterminate={indeterminate}
+            className="h-1.5"
           />
-          {detail}
+          <div className="flex items-center justify-between text-xs">
+             <span className="font-medium text-white">{labelText}</span>
+             {detail}
+          </div>
         </div>
       )
     }
@@ -287,38 +289,34 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
     if (group.status === 'success') {
       const commentsCount = parsedData ? getNumberFromObject(parsedData, 'commentsCount', 'comments') : null
       const posts = parsedData ? getNumberFromObject(parsedData, 'postsCount', 'posts') : null
-
-      let detail: ReactNode = <span className="text-sm font-medium text-accent-success">Данные получены</span>
-
+      
+      let detail = ''
       if (commentsCount !== null && posts !== null) {
-        detail = <span className="text-sm font-medium text-accent-success">Постов: {posts} / Комментариев: {commentsCount}</span>
+        detail = `${posts} п. / ${commentsCount} ком.`
       } else if (commentsCount !== null) {
-        detail = <span className="text-sm font-medium text-accent-success">Комментариев: {commentsCount}</span>
+        detail = `${commentsCount} ком.`
       } else if (posts !== null) {
-        detail = <span className="text-sm font-medium text-accent-success">Постов: {posts}</span>
+        detail = `${posts} п.`
       }
 
-      return renderProgress('success', 1, 1, 'Готово', detail)
+      return renderProgress('success', 1, 1, '100%', <span className="text-gray-400">{detail}</span>)
     }
 
     if (group.status === 'failed') {
-      const detail = <span className="text-sm font-medium text-accent-danger">{group.error ?? 'Ошибка парсинга'}</span>
-      return renderProgress('danger', 1, 1, 'Ошибка', detail)
+      return renderProgress('danger', 1, 1, 'Ошибка', <span className="text-red-400 truncate max-w-[120px]">{group.error ?? 'Сбой'}</span>)
     }
 
     if (group.status === 'pending') {
-      const detail = <span className="text-sm text-text-secondary">Ждёт обработки</span>
-      return renderProgress('primary', 0, 1, 'В очереди', detail)
+      return <span className="text-sm text-gray-500">В очереди</span>
     }
 
     if (group.status === 'processing' || group.status === 'running') {
       const progressInfo = resolveGroupProgress(group, parsedData)
 
       if (!progressInfo) {
-        return renderProgress('primary', 0, 1, 'Обработка...', <span className="text-sm text-text-secondary">Парсим посты...</span>, true)
+        return renderProgress('primary', 0, 1, 'Обработка...', <span className="text-gray-400">...</span>, true)
       }
 
-      const infoParts: string[] = []
       let barTotal = progressInfo.total != null && progressInfo.total > 0 ? progressInfo.total : progressInfo.percent != null ? 100 : 1
       let barCurrent = 0
 
@@ -327,69 +325,43 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
           barCurrent = clamp(progressInfo.processed, 0, progressInfo.total)
         } else if (progressInfo.percent != null) {
           barCurrent = clamp((progressInfo.percent / 100) * progressInfo.total, 0, progressInfo.total)
-        } else if (progressInfo.current != null) {
-          barCurrent = clamp(progressInfo.current, 0, progressInfo.total)
         }
       } else if (progressInfo.percent != null) {
         barCurrent = clamp(progressInfo.percent, 0, 100)
         barTotal = 100
       }
 
-      if (progressInfo.processed != null && progressInfo.total != null) {
-        infoParts.push(`Готово: ${Math.min(progressInfo.processed, progressInfo.total)} / ${progressInfo.total}`)
-      } else if (progressInfo.processed != null) {
-        infoParts.push(`Готово: ${progressInfo.processed}`)
-      }
-
-      if (progressInfo.current != null) {
-        const displayCurrent = progressInfo.total != null
-          ? `${Math.min(progressInfo.current + 1, progressInfo.total)} / ${progressInfo.total}`
-          : `${progressInfo.current + 1}`
-        infoParts.push(`Текущий: ${displayCurrent}`)
-      }
-
-      if (progressInfo.remaining != null && progressInfo.remaining > 0) {
-        infoParts.push(`Осталось: ${progressInfo.remaining}`)
-      }
-
-      const labelText = progressInfo.percent != null
+      const percentText = progressInfo.percent != null
         ? `${Math.round(progressInfo.percent)}%`
-        : progressInfo.total != null && progressInfo.processed != null
-          ? `${Math.min(progressInfo.processed, progressInfo.total)} / ${progressInfo.total}`
-          : 'Обработка...'
-
-      const detail = (
-        <span className="text-sm text-text-secondary">
-          {infoParts.length > 0 ? infoParts.join(' • ') : 'Посты обрабатываются'}
-        </span>
-      )
+        : '...'
 
       const hasConcreteProgress = progressInfo.percent != null || progressInfo.processed != null || progressInfo.total != null
 
-      return renderProgress('primary', hasConcreteProgress ? barCurrent : 0, hasConcreteProgress ? barTotal : 1, labelText, detail, !hasConcreteProgress)
+      return renderProgress('primary', hasConcreteProgress ? barCurrent : 0, hasConcreteProgress ? barTotal : 1, percentText, <span className="text-gray-400">Парсинг...</span>, !hasConcreteProgress)
     }
 
-    return '—'
+    return <span className="text-gray-500">—</span>
   }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm transition-opacity"
       onClick={onClose}
     >
       <div
-        className="flex w-full max-h-[90vh] max-w-5xl flex-col overflow-hidden rounded-3xl bg-background-secondary text-text-primary shadow-soft-lg transition-colors duration-300"
+        className="flex w-full max-h-[90vh] max-w-5xl flex-col overflow-hidden rounded-3xl bg-[#0F1115] text-white shadow-2xl ring-1 ring-white/10"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-border px-8 py-6">
-          <h2 className="text-2xl font-semibold tracking-tight">Детали задачи #{task.id}</h2>
+        {/* Header */}
+        <header className="flex items-center justify-between gap-4 px-8 py-6 border-b border-white/10">
+          <h2 className="text-2xl font-bold tracking-tight text-white">Детали задачи #{task.id}</h2>
           <div className="flex items-center gap-3">
             <Button
               variant="secondary"
               disabled={isResuming || !canResume}
               onClick={handleResume}
+              className="bg-[#1C1F26] text-white hover:bg-[#252932] border-transparent"
               title={canResume ? undefined : 'Завершённую задачу возобновлять не требуется'}
-              type="button"
             >
               {isResuming ? 'Возобновление…' : 'Продолжить'}
             </Button>
@@ -397,164 +369,141 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
               variant="ghost"
               onClick={handleCheck}
               disabled={isChecking}
-              type="button"
+              className="bg-[#1C1F26] text-white hover:bg-[#252932] border-transparent"
             >
               {isChecking ? 'Проверяем…' : 'Проверить'}
             </Button>
             <button
               type="button"
-              className="rounded-full bg-background-primary/40 p-2 text-2xl leading-none text-text-secondary transition-colors duration-200 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60"
+              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
               onClick={onClose}
-              aria-label="Закрыть модальное окно"
+              aria-label="Закрыть"
             >
-              ×
+              <X className="h-6 w-6" />
             </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-8 py-6">
-          <section className="grid gap-4 text-sm sm:grid-cols-2">
-            {task.title && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Название</p>
-                <p className="mt-1 text-base font-medium text-text-primary">{task.title}</p>
-              </div>
-            )}
-            <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Статус</p>
-              <span className={`${STATUS_BADGE_BASE} mt-2 ${taskStatusClasses[task.status]}`}>
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+          {/* Top Stats Grid */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+             <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-1">Название</p>
+              <p className="text-sm font-medium text-white truncate" title={task.title}>{task.title || 'Без названия'}</p>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Статус</p>
+              <span className={`${STATUS_BADGE_BASE} ${taskStatusClasses[task.status]}`}>
                 {getTaskStatusText(task.status)}
               </span>
             </div>
-            {scopeLabel && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Охват</p>
-                <p className="mt-1 text-base font-medium text-text-primary">{scopeLabel}</p>
-              </div>
-            )}
-            <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Создана</p>
-              <p className="mt-1 text-base font-medium text-text-primary">{formatDate(task.createdAt)}</p>
+            <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Охват</p>
+              <p className="text-sm font-medium text-white truncate">{scopeLabel}</p>
             </div>
-            {task.completedAt && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Завершена</p>
-                <p className="mt-1 text-base font-medium text-text-primary">{formatDate(task.completedAt)}</p>
-              </div>
-            )}
-            {task.postLimit != null && Number.isFinite(task.postLimit) && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Лимит постов</p>
-                <p className="mt-1 text-base font-medium text-text-primary">{task.postLimit}</p>
-              </div>
-            )}
-            <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Всего групп</p>
-              <p className="mt-1 text-base font-semibold text-text-primary">{totalGroups}</p>
+            <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Создана</p>
+              <p className="text-sm font-medium text-white">{formatDate(task.createdAt)}</p>
             </div>
-            {totalGroups > 0 && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm sm:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-medium text-text-secondary">
-                  <span>Прогресс</span>
-                  <span>{processedTotal} / {totalGroups}</span>
-                </div>
-                <ProgressBar
-                  className="mt-3"
-                  current={processedTotal}
-                  total={totalGroups}
-                  showLabel
-                  label={`${Math.round(totalGroups > 0 ? (processedTotal / totalGroups) * 100 : 0)}%`}
-                  tone={processedTotal >= totalGroups && totalGroups > 0 ? 'success' : 'primary'}
-                />
-              </div>
-            )}
-            {activeGroups > 0 && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">В работе</p>
-                <p className="mt-1 text-base font-medium text-text-primary">{activeGroups}</p>
-              </div>
-            )}
-            {pendingGroups > 0 && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">В очереди</p>
-                <p className="mt-1 text-base font-medium text-text-primary">{pendingGroups}</p>
-              </div>
-            )}
-            {successCount !== null && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Успешно</p>
-                <p className="mt-1 text-base font-semibold text-accent-success">{successCount}</p>
-              </div>
-            )}
-            {failedCount !== null && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Ошибок</p>
-                <p className="mt-1 text-base font-semibold text-accent-danger">{failedCount}</p>
-              </div>
-            )}
-            {postsCount !== null && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Постов</p>
-                <p className="mt-1 text-base font-medium text-text-primary">{postsCount}</p>
-              </div>
-            )}
-            {commentsCountTotal !== null && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Комментариев</p>
-                <p className="mt-1 text-base font-medium text-text-primary">{commentsCountTotal}</p>
-              </div>
-            )}
-            {authorsCount !== null && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Авторов</p>
-                <p className="mt-1 text-base font-medium text-text-primary">{authorsCount}</p>
-              </div>
-            )}
-            {task.skippedGroupsMessage && (
-              <div className="rounded-2xl border border-border/60 bg-background-primary/40 p-4 shadow-soft-sm sm:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Пропущенные группы</p>
-                <p className="mt-1 text-sm font-medium text-accent-warning">{task.skippedGroupsMessage}</p>
-              </div>
-            )}
-          </section>
+             <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Лимит постов</p>
+              <p className="text-sm font-medium text-white">{task.postLimit ?? '—'}</p>
+            </div>
+             <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Всего групп</p>
+              <p className="text-sm font-medium text-white">{totalGroups}</p>
+            </div>
+             <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Постов</p>
+              <p className="text-sm font-medium text-white">{postsCount ?? 0}</p>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-[#181B21] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Комментариев</p>
+              <p className="text-sm font-medium text-white">{commentsCountTotal ?? 0}</p>
+            </div>
+          </div>
 
-          <section className="mt-10 space-y-4">
-            <h3 className="text-lg font-semibold text-text-primary">Группы</h3>
-            <div className="overflow-hidden rounded-2xl border border-border bg-background-secondary shadow-soft-md">
-              <table className="min-w-full table-auto text-sm">
-                <thead className="sticky top-0 z-10 bg-background-secondary/80 backdrop-blur text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          {/* Main Progress Section */}
+          {totalGroups > 0 && (
+            <div className="rounded-2xl border border-white/5 bg-[#181B21] p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-white">Прогресс</span>
+                <span className="text-sm font-medium text-gray-400">{processedTotal} / {totalGroups}</span>
+              </div>
+              <ProgressBar
+                current={processedTotal}
+                total={totalGroups}
+                showLabel={false}
+                tone={processedTotal >= totalGroups && totalGroups > 0 ? 'success' : 'primary'}
+                className="h-2 mb-4"
+              />
+              <div className="text-xs font-medium text-gray-500 mb-6">
+                {Math.round(totalGroups > 0 ? (processedTotal / totalGroups) * 100 : 0)}%
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-white/5">
+                 <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">В работе</p>
+                  <p className="text-lg font-semibold text-white">{activeGroups}</p>
+                </div>
+                <div>
+                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">В очереди</p>
+                   <p className="text-lg font-semibold text-white">{pendingGroups}</p>
+                </div>
+                <div>
+                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Успешно</p>
+                   <p className="text-lg font-semibold text-white">{successCount ?? 0}</p>
+                </div>
+                <div>
+                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Ошибок</p>
+                   <p className="text-lg font-semibold text-white">{failedCount ?? 0}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Groups Table */}
+          <div>
+            <h3 className="text-lg font-bold text-white mb-4">Группы</h3>
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#131519]">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-[#1C1F26] text-xs font-bold uppercase tracking-wider text-gray-400">
                   <tr>
-                    <th className="px-5 py-3 w-[64px]">№</th>
-                    <th className="px-5 py-3">Название группы</th>
-                    <th className="px-5 py-3">Статус</th>
-                    <th className="px-5 py-3">Результат</th>
+                    <th className="px-6 py-4 w-16">№</th>
+                    <th className="px-6 py-4">Название группы</th>
+                    <th className="px-6 py-4 w-32">Статус</th>
+                    <th className="px-6 py-4 w-64 text-right">Результат</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/70">
+                <tbody className="divide-y divide-white/5">
                   {task.groups.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-5 py-6 text-center text-sm text-text-secondary">
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                         Нет данных по группам
                       </td>
                     </tr>
                   ) : (
                     task.groups.map((group, index) => (
-                      <tr key={`${group.groupId}-${index}`} className="group transition-colors duration-200 odd:bg-background-primary/20 even:bg-background-primary/10 hover:bg-background-primary/50">
-                        <td className="px-5 py-4 align-top text-sm font-semibold text-text-secondary">{index + 1}</td>
-                        <td className="px-5 py-4 align-top text-sm font-medium text-text-primary max-w-[48ch] truncate">{group.groupName}</td>
-                        <td className="px-5 py-4 align-top">
-                          <span className={`${STATUS_BADGE_BASE} ${groupStatusClasses[group.status]}`}>
+                      <tr key={`${group.groupId}-${index}`} className="hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4 text-gray-500">{index + 1}</td>
+                        <td className="px-6 py-4 font-medium text-white max-w-[300px] truncate" title={group.groupName}>
+                          {group.groupName}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-xs font-bold uppercase tracking-wide ${groupStatusClasses[group.status]}`}>
                             {getGroupStatusText(group.status)}
                           </span>
                         </td>
-                        <td className="px-5 py-4 align-top">{renderGroupResult(group)}</td>
+                        <td className="px-6 py-4 flex justify-end">
+                          {renderGroupResult(group)}
+                        </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
             </div>
-          </section>
+          </div>
         </div>
       </div>
     </div>
