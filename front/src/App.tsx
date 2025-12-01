@@ -1,23 +1,23 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { useThemeStore } from './store'
-import { Sidebar } from './components/Sidebar'
-import MainContent from './components/MainContent'
-import Tasks from './pages/Tasks'
-import Groups from './pages/Groups'
-import Comments from './pages/Comments'
-import Keywords from './pages/Keywords'
-import Watchlist from './pages/Watchlist'
-import AuthorAnalysis from './pages/AuthorAnalysis'
-import Authors from './pages/Authors'
-import Settings from './pages/Settings'
-import Listings from './pages/Listings'
-import Telegram from './pages/Telegram'
+import { useTheme } from '@/hooks/useTheme'
+import { Sidebar } from '@/components/Sidebar'
+import MainContent from '@/components/MainContent'
+import Tasks from '@/pages/Tasks'
+import Groups from '@/pages/Groups'
+import Comments from '@/pages/Comments'
+import Keywords from '@/pages/Keywords'
+import Watchlist from '@/pages/Watchlist'
+import AuthorAnalysis from '@/pages/AuthorAnalysis'
+import Authors from '@/pages/Authors'
+import Settings from '@/pages/Settings'
+import Listings from '@/pages/Listings'
+import Telegram from '@/pages/Telegram'
 import AppSyncProvider from '@/lib/providers/AppSyncProvider'
 
 function App() {
-  const isDarkMode = useThemeStore((state) => state.isDarkMode)
+  const { isDarkMode } = useTheme()
 
   useEffect(() => {
     const root = document.documentElement
