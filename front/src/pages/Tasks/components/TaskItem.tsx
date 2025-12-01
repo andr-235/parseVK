@@ -2,8 +2,6 @@ import { memo } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import {
-  Play,
-  Pause,
   RotateCw,
   Trash2,
   Clock,

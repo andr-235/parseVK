@@ -8,7 +8,6 @@ import { useTasksStore, useGroupsStore, useTaskAutomationStore } from '../stores
 import ActiveTasksBanner from '../components/ActiveTasksBanner'
 import { isTaskActive } from '@/utils/taskProgress'
 import { getLatestTaskDate, formatTaskDate } from '@/utils/taskDates'
-import { Separator } from '@/components/ui/separator'
 import TasksHero from './Tasks/components/TasksHero'
 import TasksList from './Tasks/components/TasksList'
 

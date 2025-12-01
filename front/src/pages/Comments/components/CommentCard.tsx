@@ -50,7 +50,7 @@ function CommentCard({
   const keywordsFromPost = (matchedKeywords ?? [])
     .filter((kw) => kw.source === 'POST')
     .filter((keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index)
-    .filter((kw) => isKeywordInText(comment.postText, kw))
+    .filter((kw) => isKeywordInText(comment.postText || undefined, kw))
 
   const keywordsFromComment = (matchedKeywords ?? [])
     .filter((kw) => kw.source !== 'POST')
