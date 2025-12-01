@@ -8,9 +8,9 @@ import { useTasksStore, useGroupsStore, useTaskAutomationStore } from '../stores
 import ActiveTasksBanner from '../components/ActiveTasksBanner'
 import { isTaskActive } from '@/utils/taskProgress'
 import { getLatestTaskDate, formatTaskDate } from '@/utils/taskDates'
-import { Separator } from '../components/ui/separator'
+import { Separator } from '@/components/ui/separator'
 import TasksHero from './Tasks/components/TasksHero'
-import TasksTableCard from './Tasks/components/TasksTableCard'
+import TasksList from './Tasks/components/TasksList'
 
 const Tasks = () => {
   const {
@@ -71,10 +71,10 @@ const Tasks = () => {
   const activeTasks = useMemo(() => tasks.filter(isTaskActive), [tasks])
   const hasGroups = Array.isArray(groups) && groups.length > 0
 
-  // Вычисляем дату последнего обновления задачи: берем максимальную дату из completedAt и createdAt всех задач
+  // Вычисляем дату последнего обновления задачи
   const latestTaskDate = useMemo(() => getLatestTaskDate(tasks), [tasks])
 
-  // Форматируем дату последнего обновления в локальный формат с fallback на toLocaleString при ошибке
+  // Форматируем дату последнего обновления
   const formattedLastUpdated = useMemo(
     () => formatTaskDate(latestTaskDate, 'ru-RU'),
     [latestTaskDate]
@@ -172,28 +172,40 @@ const Tasks = () => {
     : 'Нет задач. Создайте новую задачу на парсинг групп.'
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6">
       <TasksHero
         onCreateTask={handleOpenCreateModal}
         isCreating={isCreating}
         areGroupsLoading={areGroupsLoading}
         hasGroups={hasGroups}
         formattedLastUpdated={formattedLastUpdated}
-      automation={automationSettings}
+        automation={automationSettings}
         onAutomationRun={handleAutomationRun}
         onOpenAutomationSettings={handleOpenAutomationSettings}
         isAutomationLoading={isAutomationLoading}
         isAutomationTriggering={isAutomationTriggering}
       />
 
-      <Separator className="opacity-40" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-semibold text-foreground">Активные задачи</h2>
+          <div className="h-px flex-1 bg-border/60" />
+        </div>
 
-      <ActiveTasksBanner tasks={activeTasks} isCreating={isCreating} />
+        <ActiveTasksBanner tasks={activeTasks} isCreating={isCreating} />
+      </div>
+      
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-semibold text-foreground">История запусков</h2>
+          <div className="h-px flex-1 bg-border/60" />
+        </div>
 
-      <TasksTableCard
-        emptyMessage={emptyMessage}
-        onTaskSelect={handleTaskSelect}
-      />
+        <TasksList
+          emptyMessage={emptyMessage}
+          onTaskSelect={handleTaskSelect}
+        />
+      </div>
 
       {selectedTaskId && (
         <TaskDetails
