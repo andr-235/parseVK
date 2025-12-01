@@ -1,5 +1,5 @@
 import PageTitle from '@/components/PageTitle'
-import GroupInput from '@/components/GroupInput'
+import GroupInput from '@/modules/groups/components/GroupInput'
 import FileUpload from '@/components/FileUpload'
 
 interface GroupsHeroProps {
