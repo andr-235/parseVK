@@ -15,13 +15,9 @@ import {
   ChevronRight,
   ChevronDown,
   Users,
-  MessageSquare,
-  Eye,
-  Hash,
   Settings,
   Send,
   Building,
-  ListTodo,
   LayoutGrid
 } from 'lucide-react'
 
@@ -62,12 +58,12 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
   const vkSubItems = useMemo(() => {
     const formatCount = (count: number) => (count > 0 ? String(count) : undefined)
     return [
-      { label: 'Задачи', path: '/tasks', badge: formatCount(tasksCount), icon: <ListTodo className="h-4 w-4" /> },
-      { label: 'Группы', path: '/groups', icon: <Users className="h-4 w-4" /> },
-      { label: 'Комментарии', path: '/comments', badge: formatCount(commentsCount), icon: <MessageSquare className="h-4 w-4" /> },
-      { label: 'Авторы', path: '/authors', badge: formatCount(authorsTotal), icon: <Users className="h-4 w-4" /> },
-      { label: 'На карандаше', path: '/watchlist', badge: formatCount(watchlistCount), icon: <Eye className="h-4 w-4" /> },
-      { label: 'Ключевые слова', path: '/keywords', icon: <Hash className="h-4 w-4" /> },
+      { label: 'Задачи', path: '/tasks', badge: formatCount(tasksCount) },
+      { label: 'Группы', path: '/groups' },
+      { label: 'Комментарии', path: '/comments', badge: formatCount(commentsCount) },
+      { label: 'Авторы', path: '/authors', badge: formatCount(authorsTotal) },
+      { label: 'На карандаше', path: '/watchlist', badge: formatCount(watchlistCount) },
+      { label: 'Ключевые слова', path: '/keywords' },
     ]
   }, [tasksCount, commentsCount, watchlistCount, authorsTotal])
 
