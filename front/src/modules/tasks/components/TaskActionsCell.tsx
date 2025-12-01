@@ -1,7 +1,7 @@
 import { useState, type MouseEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { useTaskActions } from '../hooks/useTaskActions'
+import { useTaskActions } from '@/modules/tasks/hooks/useTaskActions'
 import type { Task } from '@/types'
 
 interface TaskActionsCellProps {
