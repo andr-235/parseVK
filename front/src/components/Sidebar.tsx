@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import { useMemo, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import {
@@ -37,7 +37,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ title = 'Центр аналитики' }: SidebarProps) {
+  const location = useLocation()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isVkExpanded, setIsVkExpanded] = useState(true)
   const [isParsingExpanded, setIsParsingExpanded] = useState(false)
 
   const tasksCount = useTasksStore((state) => state.tasks.length)
@@ -117,37 +119,61 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
                   ВКонтакте
                 </div>
              )}
-            {vkSubItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  cn(
-                    'group flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
-                     isCollapsed && 'justify-center px-0'
-                  )
-                }
-                title={isCollapsed ? item.label : undefined}
-              >
-                {item.icon}
-                {!isCollapsed && (
-                    <div className="flex flex-1 items-center justify-between">
-                        <span>{item.label}</span>
-                        {item.badge && (
-                        <Badge
-                            variant="secondary"
-                            className="ml-auto h-5 px-1.5 min-w-5 flex items-center justify-center text-[10px]"
-                        >
-                            {item.badge}
-                        </Badge>
-                        )}
-                    </div>
+             
+             <button
+                onClick={() => !isCollapsed && setIsVkExpanded(!isVkExpanded)}
+                className={cn(
+                  'group flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                  isCollapsed && 'justify-center px-0',
+                  // Auto expand active section or highlight if collapsed and active
+                  isCollapsed && vkSubItems.some(item => location.pathname.startsWith(item.path)) && 'bg-sidebar-accent text-sidebar-accent-foreground'
                 )}
-              </NavLink>
-            ))}
+             >
+                {isCollapsed ? (
+                     <Users className="h-4 w-4" />
+                ) : (
+                    <>
+                        <div className="flex items-center gap-3 flex-1">
+                            <Users className="h-4 w-4" />
+                            <span>Основное</span>
+                        </div>
+                        <ChevronDown
+                            className={cn("h-3 w-3 transition-transform", isVkExpanded && "rotate-180")}
+                        />
+                    </>
+                )}
+             </button>
+
+            {!isCollapsed && isVkExpanded && (
+                <div className="ml-4 space-y-1 mt-1 border-l border-sidebar-border/50 pl-2">
+                    {vkSubItems.map((item) => (
+                    <NavLink
+                        key={item.path}
+                        to={item.path}
+                        className={({ isActive }) =>
+                        cn(
+                            'flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors',
+                            isActive
+                            ? 'text-sidebar-primary font-medium'
+                            : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                        )
+                        }
+                    >
+                        <div className="flex flex-1 items-center justify-between">
+                            <span>{item.label}</span>
+                            {item.badge && (
+                            <Badge
+                                variant="secondary"
+                                className="ml-auto h-5 px-1.5 min-w-5 flex items-center justify-center text-[10px]"
+                            >
+                                {item.badge}
+                            </Badge>
+                            )}
+                        </div>
+                    </NavLink>
+                    ))}
+                </div>
+            )}
           </div>
 
           {/* Parsing Section */}
@@ -157,12 +183,12 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
                   Парсинг
                 </div>
              )}
-             {/* Parsing Submenu - Simplified for now as direct links or similar structure */}
              <button
                 onClick={() => !isCollapsed && setIsParsingExpanded(!isParsingExpanded)}
                 className={cn(
                   'group flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
-                  isCollapsed && 'justify-center px-0'
+                  isCollapsed && 'justify-center px-0',
+                  isCollapsed && parsingSubItems.some(item => location.pathname.startsWith(item.path)) && 'bg-sidebar-accent text-sidebar-accent-foreground'
                 )}
              >
                 <Building className="h-4 w-4" />
