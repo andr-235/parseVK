@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { API_URL } from '@/lib/apiConfig'
 import { createRequest, handleResponse } from '@/lib/apiUtils'
-import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '../types/api'
+import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '@/types/api'
 
 export const keywordsService = {
   async addKeyword(word: string, category?: string | null): Promise<IKeywordResponse> {

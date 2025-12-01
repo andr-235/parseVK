@@ -1,0 +1,361 @@
+---
+description: architecture frontend
+alwaysApply: false
+---
+# Архитектура фронтенд-проекта
+
+## Структура проекта
+
+```
+src/
+  pages/           # Страницы-роуты (только композиция модулей)
+  components/       # Переиспользуемые UI-компоненты
+    ui/           # Базовые UI компоненты (shadcn/ui)
+  modules/         # Логически связанные фичи
+    {module}/
+      components/  # Компоненты модуля
+      hooks/       # Хуки модуля
+      config/      # Конфигурация (колонки таблиц, константы)
+      utils/       # Утилиты модуля (если специфичны для модуля)
+      types/       # Типы модуля (если специфичны для модуля)
+      constants/   # Константы модуля (если специфичны для модуля)
+  hooks/           # Общие кастомные хуки
+  services/        # Работа с API, бизнес-логика
+  store/           # Глобальное состояние (Zustand)
+  utils/           # Общие утилиты, хелперы
+  types/           # Общие типы и интерфейсы
+  lib/             # Низкоуровневые вещи (конфиги, клиенты, провайдеры)
+```
+
+## Правила зависимостей
+
+### Схема зависимостей
+
+```
+pages/
+  ↓ может использовать
+modules/, components/, hooks/, services/, store/, utils/, types/
+
+modules/
+  ↓ может использовать
+components/, hooks/, services/, store/, utils/, types/
+
+components/
+  ↓ может использовать
+hooks/, utils/, types/
+
+services/
+  ↓ может использовать
+lib/, utils/, types/
+
+store/
+  ↓ может использовать
+services/, utils/, types/
+
+hooks/
+  ↓ может использовать
+store/, services/, utils/, types/
+
+utils/
+  ↓ может использовать
+types/
+
+types/
+  ↓ не зависит ни от чего
+
+lib/
+  ↓ может использовать
+types/
+```
+
+### Запрещённые зависимости
+
+- ❌ `components/` → `modules/` (компоненты не знают о модулях)
+- ❌ `utils/` → `services/`, `store/`, `components/` (утилиты не зависят от бизнес-логики)
+- ❌ `types/` → что-либо (типы независимы)
+- ❌ `modules/` → `modules/` (модули изолированы друг от друга)
+- ❌ `lib/` → `services/`, `store/`, `components/` (низкоуровневые вещи не зависят от верхних слоёв)
+
+## Стандарт структуры модуля
+
+### Базовая структура
+
+Каждый модуль должен иметь следующую структуру:
+
+```
+modules/{moduleName}/
+  components/          # UI компоненты модуля
+    ComponentName.tsx
+  hooks/              # Хуки модуля
+    useModuleQuery.ts
+    useModuleViewModel.ts
+  config/             # Конфигурация (опционально)
+    tableColumns.tsx
+    constants.ts
+  utils/              # Утилиты модуля (опционально)
+    formatData.ts
+  types/              # Типы модуля (опционально)
+    moduleTypes.ts
+  constants/          # Константы модуля (опционально)
+    moduleConstants.ts
+```
+
+### Когда использовать подпапки модуля
+
+#### `components/` - всегда
+
+Все UI компоненты, специфичные для модуля, должны находиться в `components/`.
+
+**Примеры:**
+- `modules/tasks/components/TasksHero.tsx`
+- `modules/comments/components/CommentCard.tsx`
+- `modules/watchlist/components/WatchlistTableCard.tsx`
+
+#### `hooks/` - всегда
+
+Все хуки, специфичные для модуля, должны находиться в `hooks/`.
+
+**Примеры:**
+- `modules/tasks/hooks/useTasksQuery.ts` - запросы данных
+- `modules/comments/hooks/useCommentsViewModel.ts` - логика представления
+- `modules/watchlist/hooks/useWatchlistAuthors.ts` - бизнес-логика модуля
+
+#### `config/` - когда нужна конфигурация
+
+Используйте `config/`, когда модулю нужна конфигурация, которая:
+- Определяет структуру данных (колонки таблиц, поля форм)
+- Содержит статические настройки отображения
+- Используется только внутри модуля
+
+**Примеры:**
+- `modules/tasks/config/taskTableColumns.tsx` - определение колонок таблицы задач
+- `modules/groups/config/groupTableColumns.tsx` - определение колонок таблицы групп
+- `modules/comments/config/commentTableColumns.tsx` - определение колонок таблицы комментариев
+
+**НЕ используйте `config/` для:**
+- Констант, которые используются в нескольких модулях → `utils/` или `constants/` на верхнем уровне
+- Типов → `types/` модуля или общие `types/`
+
+#### `utils/` - когда утилиты специфичны для модуля
+
+Используйте `utils/` внутри модуля, когда:
+- Утилита используется **ТОЛЬКО** в этом модуле
+- Утилита специфична для бизнес-логики модуля
+- Утилита не может быть переиспользована в других модулях
+
+**Примеры:**
+- `modules/comments/utils/formatDateTime.ts` - форматирование даты для комментариев
+- `modules/comments/utils/getAuthorInitials.ts` - получение инициалов автора для комментариев
+
+**НЕ используйте `utils/` модуля для:**
+- Утилит, которые используются в нескольких модулях → `utils/` на верхнем уровне
+- Чистых функций без зависимости от модуля → `utils/` на верхнем уровне
+
+#### `types/` - когда типы специфичны для модуля
+
+Используйте `types/` внутри модуля, когда:
+- Тип используется **ТОЛЬКО** в этом модуле
+- Тип специфичен для внутренней структуры модуля
+- Тип не должен быть доступен извне модуля
+
+**Примеры:**
+- `modules/comments/types/commentsTable.ts` - типы для внутренней структуры таблицы комментариев
+- `modules/listings/types.ts` - типы для модуля listings
+
+**НЕ используйте `types/` модуля для:**
+- Типов, которые используются в нескольких модулях → `types/` на верхнем уровне
+- DTO и API типов → `types/dto/` или `types/api/` на верхнем уровне
+- Типов для store → `types/stores.ts` на верхнем уровне
+
+#### `constants/` - когда константы специфичны для модуля
+
+Используйте `constants/` внутри модуля, когда:
+- Константы используются **ТОЛЬКО** в этом модуле
+- Константы специфичны для бизнес-логики модуля
+
+**Примеры:**
+- `modules/watchlist/constants/watchlist.ts` - константы для watchlist модуля
+
+**НЕ используйте `constants/` модуля для:**
+- Констант, которые используются в нескольких модулях → общие константы на верхнем уровне
+
+### Правило выбора места для файла
+
+**Если файл используется только в одном модуле:**
+- Компонент → `modules/{module}/components/`
+- Хук → `modules/{module}/hooks/`
+- Утилита → `modules/{module}/utils/` (если специфична) или `utils/` (если общая)
+- Тип → `modules/{module}/types/` (если специфичен) или `types/` (если общий)
+- Константа → `modules/{module}/constants/` (если специфична) или общие константы
+
+**Если файл используется в нескольких модулях:**
+- Компонент → `components/`
+- Хук → `hooks/`
+- Утилита → `utils/`
+- Тип → `types/`
+- Константа → общие константы
+
+## Импорты
+
+### Использование alias `@/`
+
+Все импорты из общих слоёв должны использовать alias `@/`:
+
+```typescript
+// ✅ Правильно
+import { Button } from '@/components/ui/button'
+import { useTableSorting } from '@/hooks/useTableSorting'
+import { tasksService } from '@/services/tasksService'
+import type { Task } from '@/types'
+
+// ❌ Неправильно
+import { Button } from '../../../components/ui/button'
+import { useTableSorting } from '../../../hooks/useTableSorting'
+```
+
+### Внутримодульные импорты
+
+Внутри модуля можно использовать относительные импорты для связи частей модуля:
+
+```typescript
+// ✅ Правильно (внутри модуля)
+import { useModuleQuery } from '../hooks/useModuleQuery'
+import { MODULE_CONSTANTS } from '../constants/moduleConstants'
+import type { ModuleType } from '../types/moduleTypes'
+
+// ✅ Также правильно (через alias)
+import { useModuleQuery } from '@/modules/moduleName/hooks/useModuleQuery'
+```
+
+## Примеры модулей
+
+### Модуль tasks
+
+```
+modules/tasks/
+  components/
+    TasksHero.tsx
+    TasksList.tsx
+    CreateParseTaskModal.tsx
+    TaskDetails.tsx
+  hooks/
+    useTasksQuery.ts
+    useTasksViewModel.ts
+    useTasksSocket.ts
+  config/
+    taskTableColumns.tsx
+    utils.ts
+```
+
+### Модуль comments
+
+```
+modules/comments/
+  components/
+    CommentCard.tsx
+    CommentsTableCard.tsx
+    CommentsHero.tsx
+  hooks/
+    useCommentsQuery.ts
+    useCommentsViewModel.ts
+  config/
+    commentTableColumns.tsx
+  utils/
+    formatDateTime.ts
+    getAuthorInitials.ts
+  types/
+    commentsTable.ts
+```
+
+### Модуль watchlist
+
+```
+modules/watchlist/
+  components/
+    WatchlistTableCard.tsx
+    WatchlistHero.tsx
+    WatchlistHeroErrorBoundary.tsx
+  hooks/
+    useWatchlistAuthors.ts
+    useWatchlistQueries.ts
+  constants/
+    watchlist.ts
+```
+
+## Назначение слоёв
+
+### pages/
+
+Тонкие обёртки, которые:
+- Импортируют компоненты из modules/
+- Используют хуки из modules/ (viewModel hooks)
+- Минимальная логика, только композиция
+
+**Пример:**
+```typescript
+function Tasks() {
+  const { tasks, fetchTasks } = useTasksViewModel()
+  
+  return (
+    <div>
+      <TasksHero />
+      <TasksList tasks={tasks} />
+    </div>
+  )
+}
+```
+
+### components/
+
+Переиспользуемые UI-компоненты:
+- Базовые UI (кнопки, карточки, таблицы) - `ui/`
+- Общие компоненты (PageHeroCard, SearchInput, ProgressBar)
+- НЕ содержат бизнес-логику
+- НЕ зависят от конкретных модулей
+
+### modules/
+
+Доменные модули:
+- Каждый модуль = одна фича/домен (tasks, groups, comments, watchlist и т.д.)
+- Содержит компоненты, хуки, конфиги, специфичные утилиты и типы
+- Модули изолированы друг от друга
+- Могут использовать components/, hooks/, services/, store/, utils/, types/
+
+### hooks/
+
+Общие хуки:
+- useIsMobile, useKeyboardNavigation, useTableSorting
+- Используются в разных модулях
+
+### services/
+
+API и бизнес-логика:
+- Один сервис = одна доменная область (tasksService, groupsService)
+- Работают с API через lib/apiConfig, lib/apiUtils
+- Могут использовать utils/, types/, lib/
+
+### store/
+
+Глобальное состояние:
+- Zustand сторы для каждой доменной области
+- Могут использовать services/, utils/, types/
+
+### utils/
+
+Общие утилиты:
+- Чистые функции без зависимостей от React/бизнес-логики
+- highlightKeywords, numberFormat, taskProgress и т.д.
+
+### types/
+
+Общие типы:
+- DTO, API типы, общие интерфейсы
+- Используются везде
+
+### lib/
+
+Низкоуровневые вещи:
+- Конфиги (apiConfig, apiUtils)
+- Провайдеры (QueryProvider, AppSyncProvider)
+- queryClient
+

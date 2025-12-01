@@ -8,9 +8,7 @@ export const WATCHLIST_CONSTANTS = {
   VK_BASE_URL: 'vk.com/',
   AUTHOR_NOT_FOUND: 'Автор не найден',
 
-  // PhotoAnalysis
-  SUSPICIOUS_LABEL: 'Подозрительных',
-  LAST_ANALYSIS_LABEL: 'Последний анализ',
+  // PhotoAnalysis - константы перенесены в @/utils/photoAnalysisConstants
 
   // WatchlistHero
   REFRESH_BUTTON_TEXT: 'Обновить список',

@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import toast from 'react-hot-toast'
-import { keywordsService } from '../services/keywordsService'
+import { keywordsService } from '@/services/keywordsService'
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/hooks/queryKeys'
-import type { KeywordsState } from '../types/stores'
+import type { KeywordsState } from '@/types/stores'
 
 export const useKeywordsStore = create<KeywordsState>((set) => ({
   keywords: [],

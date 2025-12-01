@@ -1,5 +1,5 @@
-import type { Task, TaskDetails, TaskStatus, TaskStatsInfo } from '../types'
-import type { TasksState } from '../types/stores'
+import type { Task, TaskDetails, TaskStatus, TaskStatsInfo } from '@/types'
+import type { TasksState } from '@/types/stores'
 
 export type TaskIdentifier = number | string
 

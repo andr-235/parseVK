@@ -4,7 +4,7 @@ import { createRequest, handleResponse } from '@/lib/apiUtils'
 import type {
   ITaskAutomationRunResponse,
   ITaskAutomationSettings,
-} from '../types/api'
+} from '@/types/api'
 
 export interface UpdateTaskAutomationSettingsRequest {
   enabled: boolean

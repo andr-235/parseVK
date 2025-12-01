@@ -5,7 +5,7 @@ import { Spinner } from '@/components/ui/spinner'
 import PageHeroCard from '@/components/PageHeroCard'
 import type { AuthorDetails, PhotoAnalysisSummary } from '@/types'
 import { formatDateTime } from '@/utils/authorAnalysisUtils'
-import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
+import { PHOTO_ANALYSIS_LABELS } from '@/utils/photoAnalysisConstants'
 
 interface AuthorHeroSectionProps {
   author: AuthorDetails | null
@@ -43,10 +43,10 @@ export const AuthorHeroSection = ({
           Фото: {summary.total}
         </Badge>
         <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-destructive">
-          {WATCHLIST_CONSTANTS.SUSPICIOUS_LABEL}: {summary.suspicious}
+          {PHOTO_ANALYSIS_LABELS.SUSPICIOUS_LABEL}: {summary.suspicious}
         </Badge>
         <Badge variant="outline" className="border-border/50">
-          {WATCHLIST_CONSTANTS.LAST_ANALYSIS_LABEL}: {lastAnalyzed}
+          {PHOTO_ANALYSIS_LABELS.LAST_ANALYSIS_LABEL}: {lastAnalyzed}
         </Badge>
         <Badge variant="outline" className="border-border/50">
           Последний вход: {lastSeen}

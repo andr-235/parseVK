@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import { authorsService } from '../services/authorsService'
-import type { AuthorListResponse, AuthorSortField } from '../types'
-import type { AuthorsState } from '../types/stores'
+import { authorsService } from '@/services/authorsService'
+import type { AuthorListResponse, AuthorSortField } from '@/types'
+import type { AuthorsState } from '@/types/stores'
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys, type AuthorsQueryParams } from '@/hooks/queryKeys'
 

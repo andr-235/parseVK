@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import type { WatchlistAuthorCard, PhotoAnalysisSummaryCategory } from '@/types'
 import { formatDateTime } from '@/utils/watchlistUtils'
+import { PHOTO_ANALYSIS_LABELS } from '@/utils/photoAnalysisConstants'
 import { WATCHLIST_CONSTANTS } from '../constants/watchlist'
 
 const getBadgeVariant = (count: number) => {
@@ -47,7 +48,7 @@ export const PhotoAnalysisCell = ({ item }: PhotoAnalysisCellProps) => {
         ))}
       </div>
       <span className="text-xs text-text-secondary">
-        {WATCHLIST_CONSTANTS.SUSPICIOUS_LABEL}: {summary.suspicious} · {WATCHLIST_CONSTANTS.LAST_ANALYSIS_LABEL}: {lastAnalyzed}
+        {PHOTO_ANALYSIS_LABELS.SUSPICIOUS_LABEL}: {summary.suspicious} · {PHOTO_ANALYSIS_LABELS.LAST_ANALYSIS_LABEL}: {lastAnalyzed}
       </span>
     </div>
   )

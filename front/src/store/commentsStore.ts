@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { commentsService } from '../services/commentsService'
-import type { CommentsFilters, CommentsState } from '../types/stores'
+import { commentsService } from '@/services/commentsService'
+import type { CommentsFilters, CommentsState } from '@/types/stores'
 import { normalizeCommentResponse, COMMENTS_PAGE_SIZE } from './commentsStore.utils'
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/hooks/queryKeys'

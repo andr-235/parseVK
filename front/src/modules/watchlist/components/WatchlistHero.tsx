@@ -6,7 +6,7 @@ import PageHeroCard from '@/components/PageHeroCard'
 import { WATCHLIST_CONSTANTS } from '../constants/watchlist'
 import type { WatchlistHeroProps } from '@/types/watchlist'
 import { isValidWatchlistSettings } from '@/utils/watchlistUtils'
-import WatchlistHeroErrorBoundary from '@/components/WatchlistHeroErrorBoundary'
+import WatchlistHeroErrorBoundary from './WatchlistHeroErrorBoundary'
 
 /**
  * Компонент героя страницы watchlist, отображающий настройки мониторинга,

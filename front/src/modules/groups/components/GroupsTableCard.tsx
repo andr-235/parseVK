@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
-import { Button } from '../../../components/ui/button'
-import { Badge } from '../../../components/ui/badge'
-import SearchInput from '../../../components/SearchInput'
-import { Card, CardContent } from '../../../components/ui/card'
-import { useTableSorting } from '../../../hooks/useTableSorting'
-import type { Group, TableColumn } from '../../../types'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import SearchInput from '@/components/SearchInput'
+import { Card, CardContent } from '@/components/ui/card'
+import { useTableSorting } from '@/hooks/useTableSorting'
+import type { Group, TableColumn } from '@/types'
 import LoadingGroupsState from './LoadingGroupsState'
 import EmptyGroupsState from './EmptyGroupsState'
 import { ArrowUpDown, Trash2 } from 'lucide-react'
@@ -14,7 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../../../components/ui/dropdown-menu'
+} from '@/components/ui/dropdown-menu'
 
 type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn<Group>[]
 

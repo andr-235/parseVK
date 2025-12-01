@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { watchlistService } from '../services/watchlistService'
-import type { WatchlistAuthorCard, WatchlistAuthorDetails, WatchlistSettings, WatchlistStatus } from '../types'
+import { watchlistService } from '@/services/watchlistService'
+import type { WatchlistAuthorCard, WatchlistAuthorDetails, WatchlistSettings, WatchlistStatus } from '@/types'
 import {
   WATCHLIST_PAGE_SIZE,
   mapWatchlistAuthor,

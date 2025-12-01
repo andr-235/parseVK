@@ -4,9 +4,9 @@ import { devtools, persist, subscribeWithSelector } from 'zustand/middleware'
 import type { PersistOptions } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 
-import { tasksService } from '../services/tasksService'
-import { queryClient } from '../lib/queryClient'
-import { queryKeys } from '../hooks/queryKeys'
+import { tasksService } from '@/services/tasksService'
+import { queryClient } from '@/lib/queryClient'
+import { queryKeys } from '@/hooks/queryKeys'
 import { mapResultToTaskDetails } from './tasksStore.mappers'
 import {
   ensureGroupsLoaded,
@@ -17,7 +17,7 @@ import {
   toTaskKey,
   upsertTaskEntity
 } from './tasksStore.utils'
-import { isTaskActive } from '../utils/taskProgress'
+import { isTaskActive } from '@/utils/taskProgress'
 import type { PersistedTasksState, Task, TaskIdentifier, TaskStatus, TasksStore } from './tasksStore.types'
 
 const persistOptions: PersistOptions<TasksStore, PersistedTasksState> = {
