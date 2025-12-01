@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { telegramApi } from '@/api/telegramApi'
 import type { TelegramSessionConfirmResponse } from '@/types/api'
-import { Copy, Key, LogOut, Phone, RefreshCw, Shield, Smartphone, User } from 'lucide-react'
+import { Copy, LogOut, RefreshCw, Shield, User } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import toast from 'react-hot-toast'
 
@@ -15,9 +15,7 @@ export default function TelegramSessionCard() {
   const [authPassword, setAuthPassword] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
-  const [authCodeLength, setAuthCodeLength] = useState(5)
   const [authNextType, setAuthNextType] = useState<'app' | 'sms' | 'call' | 'flash'>('sms')
-  const [authTimeoutSec, setAuthTimeoutSec] = useState<number | null>(null)
   const [authResult, setAuthResult] = useState<TelegramSessionConfirmResponse | null>(null)
 
   const loadCurrentSession = async () => {
@@ -58,9 +56,7 @@ export default function TelegramSessionCard() {
     try {
       const response = await telegramApi.startSession({})
       setAuthTransactionId(response.transactionId)
-      setAuthCodeLength(response.codeLength)
       setAuthNextType(response.nextType)
-      setAuthTimeoutSec(response.timeoutSec)
       setAuthStep('code')
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Ошибка отправки кода')

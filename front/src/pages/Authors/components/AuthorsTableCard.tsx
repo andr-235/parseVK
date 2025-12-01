@@ -11,7 +11,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { AuthorCard, AuthorSortField } from '@/types'
-import { ArrowRight, Camera } from 'lucide-react'
+import { ArrowRight, Camera, Search } from 'lucide-react'
 
 interface AuthorsTableCardProps {
   authors: AuthorCard[]

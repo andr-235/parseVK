@@ -15,8 +15,6 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Search, X, RotateCcw } from 'lucide-react'
-import { cn } from '@/lib/utils'
-
 interface RegionGroupRowProps {
   group: IRegionGroupSearchItem
   columns: TableColumn<IRegionGroupSearchItem>[]

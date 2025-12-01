@@ -119,11 +119,9 @@ export function ListingCard({
   const kitchenArea = formatArea(listing.areaKitchen)
   const primaryImage = listing.images.find((image) => image && image.trim().length > 0)
   const sourcePostedAt = listing.sourcePostedAt ?? null
-  const sourceParsedAt = listing.sourceParsedAt ?? null
   const contactName = listing.contactName ?? listing.sourceAuthorName ?? null
   const contactPhone = listing.contactPhone ?? listing.sourceAuthorPhone ?? null
   const publishedDisplay = formatDateTimeWithFallback(listing.publishedAt, sourcePostedAt)
-  const updatedDisplay = formatDateTimeWithFallback(sourceParsedAt ?? listing.updatedAt, sourceParsedAt ?? sourcePostedAt)
   const descriptionText = listing.description?.trim() ?? ''
   const hasDescription = descriptionText.length > 0
   const shouldAllowToggle = descriptionText.length > 240

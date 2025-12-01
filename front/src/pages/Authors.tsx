@@ -229,7 +229,7 @@ function Authors() {
          <AuthorsTableCard 
             authors={authors}
             isLoading={isLoading}
-            sortBy={sortBy}
+            sortBy={sortBy ?? 'fullName'}
             sortOrder={sortOrder}
             onSortChange={handleSortChange}
             onOpenDetails={handleOpenDetails}

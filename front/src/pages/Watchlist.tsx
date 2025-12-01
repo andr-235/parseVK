@@ -46,10 +46,10 @@ function Watchlist() {
     const normalizedSearch = searchTerm.trim().toLowerCase()
     if (!normalizedSearch) return authors
 
-    return authors.filter((author) => {
-      const nameMatch = author.name?.toLowerCase().includes(normalizedSearch)
-      const screenNameMatch = author.screenName?.toLowerCase().includes(normalizedSearch)
-      const vkIdMatch = String(author.vkId ?? '').includes(normalizedSearch)
+    return authors.filter((item) => {
+      const nameMatch = item.author.fullName.toLowerCase().includes(normalizedSearch)
+      const screenNameMatch = item.author.screenName?.toLowerCase().includes(normalizedSearch)
+      const vkIdMatch = String(item.authorVkId ?? '').includes(normalizedSearch)
       return Boolean(nameMatch || screenNameMatch || vkIdMatch)
     })
   }, [authors, searchTerm])
