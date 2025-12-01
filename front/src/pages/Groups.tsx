@@ -138,14 +138,14 @@ function Groups() {
     <div className="flex flex-col gap-8 pb-10 pt-6">
       {/* Header Section */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 min-w-0">
           <PageTitle>Группы</PageTitle>
           <p className="max-w-2xl text-muted-foreground">
             Управляйте VK сообществами: добавляйте группы для парсинга, отслеживайте их метрики и аудиторию.
           </p>
         </div>
         
-        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center shrink-0">
           <GroupInput url={url} onUrlChange={handleUrlChange} onAdd={handleAddGroup} />
           <FileUpload onUpload={handleFileUpload} buttonText="Импорт" className="shrink-0" />
         </div>

@@ -103,40 +103,39 @@ function Keywords() {
 
       {/* Actions Section */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end w-full lg:w-auto">
-            <div className="w-full sm:w-[200px]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end min-w-0">
+            <div className="w-full sm:w-[200px] sm:shrink-0">
                 <Input 
                     placeholder="Категория (опц.)" 
                     value={categoryValue}
                     onChange={(e) => setCategoryValue(e.target.value)}
                 />
             </div>
-            <div className="flex w-full sm:w-auto gap-2 flex-1">
+            <div className="flex gap-2 min-w-0">
                 <Input 
                     placeholder="Ключевое слово" 
                     value={keywordValue}
                     onChange={(e) => setKeywordValue(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
-                    className="flex-1 sm:w-[240px]"
+                    className="min-w-[180px] flex-1"
                 />
-                <Button onClick={handleAddKeyword}>
+                <Button onClick={handleAddKeyword} className="shrink-0">
                     <Plus className="mr-2 size-4" />
                     Добавить
                 </Button>
             </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full lg:w-auto">
+        <div className="flex items-center gap-3 shrink-0">
              <Button
                 variant="outline"
                 onClick={handleRecalculate}
                 disabled={isRecalculating}
-                className="flex-1 lg:flex-none"
              >
                 <RefreshCw className={`mr-2 size-4 ${isRecalculating ? 'animate-spin' : ''}`} />
                 Пересчитать
              </Button>
-             <FileUpload onUpload={handleFileUpload} buttonText="Импорт" className="flex-1 lg:flex-none" />
+             <FileUpload onUpload={handleFileUpload} buttonText="Импорт" />
         </div>
       </div>
 
