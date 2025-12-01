@@ -1,5 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react'
-import type { KeyboardEvent, RefObject } from 'react'
+import { useCallback, useEffect, useRef, type KeyboardEvent, type RefObject } from 'react'
 
 type VirtualizedListRef =
   | {
@@ -77,10 +76,6 @@ export const useVirtualizedKeyboardNavigation = ({
     [itemsLength, onSelect, onFocusChange, scrollToIndex]
   )
 
-  const handleScroll = useCallback(() => {
-    // Можно добавить логику для обновления видимых элементов при скролле
-  }, [])
-
   useEffect(() => {
     if (focusedIndexRef.current !== null && focusedIndexRef.current >= itemsLength) {
       focusedIndexRef.current = null
@@ -89,7 +84,6 @@ export const useVirtualizedKeyboardNavigation = ({
 
   return {
     handleKeyDown,
-    handleScroll,
     scrollToIndex,
   }
 }

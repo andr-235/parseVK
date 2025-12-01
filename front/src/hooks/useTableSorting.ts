@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-
-import type {
-  TableColumn,
-  TableSortDirection,
-  TableSortState,
-  TableSortValue,
-} from '@/types'
+import type { TableColumn, TableSortDirection, TableSortState, TableSortValue } from '@/types'
 
 type SortableColumnMap<T> = Map<string, TableColumn<T>>
 

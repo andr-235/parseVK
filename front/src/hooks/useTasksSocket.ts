@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { io, type Socket } from 'socket.io-client'
-import { useTasksStore } from '../stores'
-import type { TaskStatsInfo, TaskStatus } from '../stores/tasksStore.types'
-import { normalizeId, rebuildTaskList, toTaskKey } from '../stores/tasksStore.utils'
+import { useTasksStore } from '@/stores'
+import type { TaskStatsInfo, TaskStatus } from '@/stores/tasksStore.types'
+import { normalizeId, rebuildTaskList, toTaskKey } from '@/stores/tasksStore.utils'
 
 export type GatewayTaskStatus = 'pending' | 'running' | 'done' | 'failed'
 
@@ -238,12 +238,9 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
       return
     }
 
-    // Нормализуем базовый URL: убираем хвосты вида "/api" и уже указанное "/tasks"
     const normalizeBase = (url: string): string => {
-      // Быстро убираем конечные слэши
       let trimmed = url.trim().replace(/\/$/, '')
 
-      // Если указан относительный путь (например, "/api"), превратим в абсолютный для корректной обработки
       if (!/^wss?:\/\//i.test(trimmed)) {
         try {
           const absolute = new URL(trimmed, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
@@ -251,9 +248,7 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
         } catch {}
       }
 
-      // Убираем завершающий "/api", чтобы не получить "/api/tasks" (у Socket.IO путь всегда "/socket.io")
       trimmed = trimmed.replace(/\/api$/i, '')
-      // И на всякий случай убираем дублирующийся namespace
       trimmed = trimmed.replace(/\/tasks$/i, '')
 
       return trimmed

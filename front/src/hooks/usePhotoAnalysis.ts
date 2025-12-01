@@ -1,16 +1,9 @@
-import { useEffect, useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { usePhotoAnalysisStore } from '@/stores'
-import type { AnalyzePhotosOptions } from '@/types'
 import { calculateAnalysisParams } from '@/utils/authorAnalysisUtils'
-import type { AuthorDetails } from '@/types'
-
-/**
- * Кастомный хук для управления анализом фотографий
- * Использует селекторы Zustand для оптимизации рендеров
- */
+import type { AnalyzePhotosOptions, AuthorDetails } from '@/types'
 export const usePhotoAnalysis = (vkUserId: number, isValidAuthor: boolean, author: AuthorDetails | null) => {
-  // Используем селекторы для подписки только на нужные поля
   const analyses = usePhotoAnalysisStore((state) => state.analyses)
   const summary = usePhotoAnalysisStore((state) => state.summary)
   const isLoading = usePhotoAnalysisStore((state) => state.isLoading)
@@ -23,8 +16,6 @@ export const usePhotoAnalysis = (vkUserId: number, isValidAuthor: boolean, autho
   const deleteResults = usePhotoAnalysisStore((state) => state.deleteResults)
   const setFilter = usePhotoAnalysisStore((state) => state.setFilter)
   const clear = usePhotoAnalysisStore((state) => state.clear)
-
-  // Загрузка результатов анализа при изменении фильтра
   useEffect(() => {
     if (!isValidAuthor) {
       return
@@ -46,12 +37,9 @@ export const usePhotoAnalysis = (vkUserId: number, isValidAuthor: boolean, autho
     void load()
   }, [fetchResults, fetchSuspicious, filter, isValidAuthor, vkUserId])
 
-  // Очистка состояния при размонтировании
   useEffect(() => () => {
     clear()
   }, [clear])
-
-  // Анализ фотографий с поддержкой пакетной обработки
   const handleAnalyze = useCallback(async (force = false) => {
     if (!isValidAuthor || !author) {
       return
@@ -109,7 +97,6 @@ export const usePhotoAnalysis = (vkUserId: number, isValidAuthor: boolean, autho
     }
   }, [isValidAuthor, author, summary?.total, analyzeAuthor, vkUserId])
 
-  // Удаление результатов анализа
   const handleDelete = useCallback(async () => {
     if (!isValidAuthor) {
       return
@@ -124,7 +111,6 @@ export const usePhotoAnalysis = (vkUserId: number, isValidAuthor: boolean, autho
     }
   }, [isValidAuthor, deleteResults, vkUserId])
 
-  // Изменение фильтра
   const handleFilterChange = useCallback((nextFilter: 'all' | 'suspicious') => {
     if (filter === nextFilter || !isValidAuthor) {
       return
@@ -134,14 +120,11 @@ export const usePhotoAnalysis = (vkUserId: number, isValidAuthor: boolean, autho
   }, [filter, isValidAuthor, setFilter])
 
   return {
-    // Состояние
     analyses,
     summary,
     isLoading,
     isAnalyzing,
     filter,
-
-    // Действия
     handleAnalyze,
     handleDelete,
     handleFilterChange,

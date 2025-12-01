@@ -7,7 +7,7 @@ import { PanelLeft } from "lucide-react"
 
 import { SIDEBAR_COOKIE_MAX_AGE, SIDEBAR_COOKIE_NAME, SIDEBAR_KEYBOARD_SHORTCUT, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON, SIDEBAR_WIDTH_MOBILE } from "./sidebar-constants"
 import { SidebarContext, useSidebar, type SidebarContextProps } from "./sidebar-context"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

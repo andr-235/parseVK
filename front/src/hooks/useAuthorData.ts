@@ -1,17 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { authorsService } from '@/services/authorsService'
 import { useAuthorsStore } from '@/stores'
-import type { AuthorDetails } from '@/types'
-import { createEmptyPhotoAnalysisSummary } from '@/types'
+import { createEmptyPhotoAnalysisSummary, type AuthorDetails } from '@/types'
 import type { AuthorAnalysisLocationState } from '@/types/authorAnalysis'
 import { isValidAuthorId } from '@/utils/authorAnalysisUtils'
-
-/**
- * Кастомный хук для управления данными автора
- * Обрабатывает загрузку автора из API или из состояния location
- */
 export const useAuthorData = () => {
   const params = useParams<{ vkUserId: string }>()
   const navigate = useNavigate()
@@ -25,7 +19,6 @@ export const useAuthorData = () => {
   const locationState = location.state as AuthorAnalysisLocationState | null
   const markAuthorVerified = useAuthorsStore((state) => state.markAuthorVerified)
 
-  // Загрузка автора из состояния location
   useEffect(() => {
     if (!locationState?.author || author) {
       return
@@ -61,7 +54,6 @@ export const useAuthorData = () => {
     })
   }, [author, locationState])
 
-  // Загрузка автора из API
   useEffect(() => {
     if (!isValidAuthor) {
       toast.error('Некорректный идентификатор пользователя')
@@ -84,7 +76,6 @@ export const useAuthorData = () => {
       })
   }, [isValidAuthor, navigate, vkUserId])
 
-  // Отметка автора как проверенного
   useEffect(() => {
     if (!author?.vkUserId || !author.verifiedAt) {
       return

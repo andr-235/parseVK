@@ -1,5 +1,4 @@
-import { useCallback, useRef } from 'react'
-import type { KeyboardEvent } from 'react'
+import { useCallback, useRef, type KeyboardEvent } from 'react'
 
 interface UseKeyboardNavigationOptions {
   itemsLength: number

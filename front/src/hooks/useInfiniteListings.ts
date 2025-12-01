@@ -164,7 +164,6 @@ export function useInfiniteListings<T, M = unknown, P = Record<string, unknown>>
     }
   }, [enabled, fetcher, hasMore, limit, loading, params])
 
-  // Initial load + reload on deps
   const depsKey = useMemo(() => dependencies.map((dep) => `${dep}`).join('|'), [dependencies])
 
   useEffect(() => {
@@ -175,9 +174,7 @@ export function useInfiniteListings<T, M = unknown, P = Record<string, unknown>>
     reset()
 
     const schedule = requestAnimationFrame(() => {
-      loadMore().catch(() => {
-        // ошибка будет обработана loadMore
-      })
+      loadMore().catch(() => {})
     })
 
     return () => {

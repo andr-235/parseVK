@@ -1,15 +1,7 @@
 import { useMemo } from 'react'
-import type { Task } from '../types'
-import { calculateTaskProgress } from '../utils/taskProgress'
-
-const numberFormatter = new Intl.NumberFormat('ru-RU')
-
-const formatNumber = (value: number): string => numberFormatter.format(Math.max(0, Math.round(value)))
-
-const declOfNumber = (count: number, titles: [string, string, string]): string => {
-  const cases = [2, 0, 1, 1, 1, 2]
-  return titles[count % 100 > 4 && count % 100 < 20 ? 2 : cases[Math.min(count % 10, 5)]]
-}
+import type { Task } from '@/types'
+import { calculateTaskProgress } from '@/utils/taskProgress'
+import { formatNumber, declOfNumber } from '@/utils/numberFormat'
 
 interface UseActiveTasksBannerResult {
   shouldRender: boolean
