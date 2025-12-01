@@ -38,7 +38,6 @@ interface SidebarProps {
 
 export function Sidebar({ title = 'Центр аналитики' }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [isVkExpanded, setIsVkExpanded] = useState(true)
   const [isParsingExpanded, setIsParsingExpanded] = useState(false)
 
   const tasksCount = useTasksStore((state) => state.tasks.length)
