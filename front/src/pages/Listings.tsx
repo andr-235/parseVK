@@ -224,7 +224,7 @@ function Listings() {
   const selectClass = "h-10 rounded-lg border border-border bg-background-primary px-3 py-2 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
 
   return (
-    <div className="flex flex-col gap-8 pb-10">
+    <div className="flex flex-col gap-8 pb-10 pt-6">
       {/* Header Section */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1.5">
