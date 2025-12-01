@@ -1,11 +1,13 @@
-import { useEffect, useState, type ChangeEvent } from 'react'
-import { motion, type Variants, easeOut } from 'framer-motion'
+import { useEffect, useState, useMemo, type ChangeEvent } from 'react'
 import toast from 'react-hot-toast'
 import { useKeywordsStore } from '../stores'
 import { keywordsApi } from '../api/keywordsApi'
-import KeywordsHero from './Keywords/components/KeywordsHero'
-import KeywordsActionsPanel from './Keywords/components/KeywordsActionsPanel'
-import KeywordsCategoriesCard from './Keywords/components/KeywordsCategoriesCard'
+import KeywordsTableCard from './Keywords/components/KeywordsTableCard'
+import PageTitle from '../components/PageTitle'
+import FileUpload from '../components/FileUpload'
+import { Input } from '../components/ui/input'
+import { Button } from '../components/ui/button'
+import { Plus, RefreshCw } from 'lucide-react'
 
 function Keywords() {
   const keywords = useKeywordsStore((state) => state.keywords)
@@ -18,6 +20,7 @@ function Keywords() {
   const [keywordValue, setKeywordValue] = useState('')
   const [categoryValue, setCategoryValue] = useState('')
   const [isRecalculating, setIsRecalculating] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     const loadKeywords = async () => {
@@ -32,9 +35,12 @@ function Keywords() {
   }, [fetchKeywords])
 
   const handleAddKeyword = async () => {
+    if (!keywordValue.trim()) return
+
     const isAdded = await addKeyword(keywordValue, categoryValue)
     if (isAdded) {
       setKeywordValue('')
+      // categoryValue is intentionally left as is for easier bulk entry
     }
   }
 
@@ -73,56 +79,75 @@ function Keywords() {
     }
   }
 
-  const container: Variants = {
-    hidden: {},
-    visible: { transition: { staggerChildren: 0.08 } },
-  }
+  const filteredKeywords = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+    if (!normalizedSearch) return keywords
 
-  const fadeUp: Variants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: easeOut } },
-  }
+    return keywords.filter(k => 
+      k.word.toLowerCase().includes(normalizedSearch) || 
+      (k.category && k.category.toLowerCase().includes(normalizedSearch))
+    )
+  }, [keywords, searchTerm])
 
   return (
-    <motion.main
-      variants={container}
-      initial="hidden"
-      animate="visible"
-      className="relative flex flex-col gap-6 md:gap-7 [color-scheme:light] dark:[color-scheme:dark]"
-    >
-      {/* Декоративный фон с мягким градиентом, адаптируется к теме */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-[220px] select-none bg-gradient-to-b from-accent/15 via-transparent to-transparent blur-[2px] dark:from-accent/20"
+    <div className="flex flex-col gap-8 pb-10">
+      {/* Header Section */}
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-1.5">
+          <PageTitle>Ключевые слова</PageTitle>
+          <p className="max-w-2xl text-muted-foreground">
+            Управляйте словарем для поиска совпадений в комментариях. Вы можете группировать слова по категориям.
+          </p>
+        </div>
+      </div>
+
+      {/* Actions Section */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end w-full lg:w-auto">
+            <div className="w-full sm:w-[200px]">
+                <Input 
+                    placeholder="Категория (опц.)" 
+                    value={categoryValue}
+                    onChange={(e) => setCategoryValue(e.target.value)}
+                />
+            </div>
+            <div className="flex w-full sm:w-auto gap-2 flex-1">
+                <Input 
+                    placeholder="Ключевое слово" 
+                    value={keywordValue}
+                    onChange={(e) => setKeywordValue(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
+                    className="flex-1 sm:w-[240px]"
+                />
+                <Button onClick={handleAddKeyword}>
+                    <Plus className="mr-2 size-4" />
+                    Добавить
+                </Button>
+            </div>
+        </div>
+
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+             <Button
+                variant="outline"
+                onClick={handleRecalculate}
+                disabled={isRecalculating}
+                className="flex-1 lg:flex-none"
+             >
+                <RefreshCw className={`mr-2 size-4 ${isRecalculating ? 'animate-spin' : ''}`} />
+                Пересчитать
+             </Button>
+             <FileUpload onUpload={handleFileUpload} buttonText="Импорт" className="flex-1 lg:flex-none" />
+        </div>
+      </div>
+
+      <KeywordsTableCard 
+        keywords={filteredKeywords}
+        isLoading={isLoading}
+        onDelete={deleteKeyword}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
       />
-
-      <motion.section variants={fadeUp}>
-        <KeywordsHero />
-      </motion.section>
-
-      {/* Адаптивная двухколоночная сетка: действия слева (sticky), список категорий справа */}
-      <section className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
-        <motion.aside
-          variants={fadeUp}
-          className="lg:col-span-4 lg:sticky lg:top-4 lg:self-start"
-        >
-          <KeywordsActionsPanel
-            keywordValue={keywordValue}
-            setKeywordValue={setKeywordValue}
-            categoryValue={categoryValue}
-            setCategoryValue={setCategoryValue}
-            onAdd={handleAddKeyword}
-            onUpload={handleFileUpload}
-            onRecalculate={handleRecalculate}
-            isRecalculating={isRecalculating}
-          />
-        </motion.aside>
-
-        <motion.div variants={fadeUp} className="lg:col-span-8">
-          <KeywordsCategoriesCard keywords={keywords} isLoading={isLoading} onDelete={deleteKeyword} />
-        </motion.div>
-      </section>
-    </motion.main>
+    </div>
   )
 }
 
