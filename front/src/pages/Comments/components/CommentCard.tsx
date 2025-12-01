@@ -7,7 +7,7 @@ import { CheckCircle2, ExternalLink, BookmarkPlus, Video, Link as LinkIcon, Eye 
 import { Spinner } from '@/components/ui/spinner'
 import { getAuthorInitials } from '../utils/getAuthorInitials'
 import { formatDateTime } from '../utils/formatDateTime'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Tooltip,
@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { normalizeForKeywordMatch } from '@/utils/keywordMatching'
 
 interface CommentCardProps {
   comment: Comment
@@ -36,9 +37,20 @@ function CommentCard({
   showKeywordComments,
   showKeywordPosts,
 }: CommentCardProps) {
+  const [isPostExpanded, setIsPostExpanded] = useState(false)
+
+  // Helper to check if a keyword is actually present in the text
+  const isKeywordInText = (text: string | undefined, keyword: Keyword) => {
+    if (!text) return false
+    const normalizedText = normalizeForKeywordMatch(text)
+    const normalizedKeyword = normalizeForKeywordMatch(keyword.word)
+    return normalizedText.includes(normalizedKeyword)
+  }
+
   const keywordsFromPost = (matchedKeywords ?? [])
     .filter((kw) => kw.source === 'POST')
     .filter((keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index)
+    .filter((kw) => isKeywordInText(comment.postText, kw))
 
   const keywordsFromComment = (matchedKeywords ?? [])
     .filter((kw) => kw.source !== 'POST')
@@ -300,8 +312,17 @@ function CommentCard({
 
             {/* Текст поста (урезанный если длинный) */}
             {comment.postText && (
-                <div className="text-sm text-foreground/80 leading-relaxed line-clamp-4 whitespace-pre-wrap break-words">
+                <div 
+                  className={cn(
+                    "text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap break-words cursor-pointer hover:text-foreground transition-colors",
+                    !isPostExpanded && "line-clamp-4"
+                  )}
+                  onClick={() => setIsPostExpanded(!isPostExpanded)}
+                >
                    {highlightKeywords(comment.postText, keywordsFromPost.length > 0 ? keywordsFromPost : allUniqueKeywords)}
+                   {!isPostExpanded && comment.postText.length > 200 && (
+                      <span className="text-primary/70 ml-1 text-xs font-medium hover:underline">...показать полностью</span>
+                   )}
                 </div>
             )}
             
