@@ -1,6 +1,5 @@
 import { create } from 'zustand'
-import toast from 'react-hot-toast'
-import { keywordsApi } from '../api/keywordsApi'
+import { keywordsService } from '../services/keywordsService'
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/queries/queryKeys'
 import type { KeywordsState } from '../types/stores'
@@ -29,7 +28,7 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
     }
 
     try {
-      const keyword = await keywordsApi.addKeyword(trimmed, trimmedCategory ? trimmedCategory : null)
+      const keyword = await keywordsService.addKeyword(trimmed, trimmedCategory ? trimmedCategory : null)
       set((state) => {
         const existingIndex = state.keywords.findIndex(
           (existing) => existing.id === keyword.id || existing.word === keyword.word
@@ -44,7 +43,6 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
         return { keywords: [...state.keywords, keyword] }
       })
       void queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
-      toast.success('Слово добавлено')
       return true
     } catch (error) {
       console.error('Failed to add keyword', error)
@@ -55,7 +53,7 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
 
   async deleteKeyword(id) {
     try {
-      await keywordsApi.deleteKeyword(id)
+      await keywordsService.deleteKeyword(id)
       set((state) => ({ keywords: state.keywords.filter((kw) => kw.id !== id) }))
       void queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
     } catch (error) {
@@ -66,7 +64,7 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
 
   async loadFromFile(file) {
     try {
-      const response = await keywordsApi.uploadKeywords(file)
+      const response = await keywordsService.uploadKeywords(file)
       await queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
       return response
     } catch (error) {
@@ -77,7 +75,7 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
 
   async deleteAllKeywords() {
     try {
-      await keywordsApi.deleteAllKeywords()
+      await keywordsService.deleteAllKeywords()
       set({ keywords: [] })
       void queryClient.invalidateQueries({ queryKey: queryKeys.keywords, refetchType: 'active' })
     } catch (error) {

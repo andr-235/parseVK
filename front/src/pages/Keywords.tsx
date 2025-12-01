@@ -1,7 +1,7 @@
-import KeywordsTableCard from './Keywords/components/KeywordsTableCard'
-import { KeywordsHero } from './Keywords/components/KeywordsHero'
-import { KeywordsForm } from './Keywords/components/KeywordsForm'
-import { useKeywordsViewModel } from './Keywords/hooks/useKeywordsViewModel'
+import KeywordsTableCard from '@/modules/keywords/components/KeywordsTableCard'
+import { KeywordsHero } from '@/modules/keywords/components/KeywordsHero'
+import { KeywordsForm } from '@/modules/keywords/components/KeywordsForm'
+import { useKeywordsViewModel } from '@/modules/keywords/hooks/useKeywordsViewModel'
 
 function Keywords() {
   const {

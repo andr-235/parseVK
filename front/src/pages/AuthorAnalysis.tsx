@@ -1,8 +1,8 @@
 import { useAuthorData } from '@/hooks/useAuthorData'
 import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis'
-import { AuthorHeroSection } from './AuthorAnalysis/components/AuthorHeroSection'
-import { AnalysisSummarySection } from './AuthorAnalysis/components/AnalysisSummarySection'
-import { PhotosSection } from './AuthorAnalysis/components/PhotosSection'
+import { AuthorHeroSection } from '@/modules/authorAnalysis/components/AuthorHeroSection'
+import { AnalysisSummarySection } from '@/modules/authorAnalysis/components/AnalysisSummarySection'
+import { PhotosSection } from '@/modules/authorAnalysis/components/PhotosSection'
 
 function AuthorAnalysis() {
   const { author, isAuthorLoading, vkUserId, isValidAuthor } = useAuthorData()

@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
-import { keywordsApi } from '@/api/keywordsApi'
-import { useKeywordsStore } from '@/stores'
+import { keywordsService } from '@/services/keywordsService'
+import { useKeywordsStore } from '@/store'
 import { queryKeys } from '@/queries/queryKeys'
 
-const fetchKeywords = () => keywordsApi.getAllKeywords()
+const fetchKeywords = () => keywordsService.getAllKeywords()
 
 interface UseKeywordsQueryOptions {
   enabled?: boolean

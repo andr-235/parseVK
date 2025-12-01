@@ -1,17 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
-import { watchlistApi } from '@/api/watchlistApi'
-import { useWatchlistStore } from '@/stores'
+import { watchlistService } from '@/services/watchlistService'
+import { useWatchlistStore } from '@/store'
 import { queryKeys } from '@/queries/queryKeys'
 import {
   WATCHLIST_PAGE_SIZE,
   mapWatchlistAuthor,
   mapWatchlistSettings,
-} from '@/stores/watchlistStore.utils'
+} from '@/store/watchlistStore.utils'
 
 const fetchWatchlistAuthors = async () => {
-  const response = await watchlistApi.getAuthors({ offset: 0, limit: WATCHLIST_PAGE_SIZE, excludeStopped: true })
+  const response = await watchlistService.getAuthors({ offset: 0, limit: WATCHLIST_PAGE_SIZE, excludeStopped: true })
   return {
     items: response.items.map(mapWatchlistAuthor),
     total: response.total,
@@ -71,7 +71,7 @@ export const useWatchlistAuthorsQuery = (enabled: boolean) => {
 }
 
 const fetchWatchlistSettings = async () => {
-  const response = await watchlistApi.getSettings()
+  const response = await watchlistService.getSettings()
   return mapWatchlistSettings(response)
 }
 

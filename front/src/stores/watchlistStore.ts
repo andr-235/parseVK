@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { watchlistApi } from '../api/watchlistApi'
+import { watchlistService } from '../services/watchlistService'
 import type { WatchlistAuthorCard, WatchlistAuthorDetails, WatchlistSettings, WatchlistStatus } from '../types'
 import {
   WATCHLIST_PAGE_SIZE,
@@ -77,7 +77,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     }
 
     try {
-      const response = await watchlistApi.getAuthors({ offset, limit: pageSize, excludeStopped: true })
+      const response = await watchlistService.getAuthors({ offset, limit: pageSize, excludeStopped: true })
       const mapped = response.items.map(mapWatchlistAuthor)
 
       set((prev) => ({
@@ -117,7 +117,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     set({ isLoadingAuthorDetails: true })
 
     try {
-      const response = await watchlistApi.getAuthorDetails(id, options)
+      const response = await watchlistService.getAuthorDetails(id, options)
       const mapped = mapWatchlistDetails(response)
 
       set({ selectedAuthor: mapped, isLoadingAuthorDetails: false, error: null })
@@ -136,7 +136,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     set({ isCreatingAuthor: true })
 
     try {
-      const response = await watchlistApi.createAuthor(payload)
+      const response = await watchlistService.createAuthor(payload)
       const mapped = mapWatchlistAuthor(response)
 
       set((prev) => ({
@@ -166,7 +166,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
 
   async updateAuthorStatus(id, status) {
     try {
-      const response = await watchlistApi.updateAuthor(id, { status })
+      const response = await watchlistService.updateAuthor(id, { status })
       const mapped = mapWatchlistAuthor(response)
 
       set((prev) => {
@@ -221,7 +221,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     set({ isLoadingSettings: true })
 
     try {
-      const response = await watchlistApi.getSettings()
+      const response = await watchlistService.getSettings()
       const mapped = mapWatchlistSettings(response)
       set({ settings: mapped, isLoadingSettings: false, error: null })
       queryClient.setQueryData(queryKeys.watchlist.settings, mapped)
@@ -236,7 +236,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     set({ isUpdatingSettings: true })
 
     try {
-      const response = await watchlistApi.updateSettings(payload)
+      const response = await watchlistService.updateSettings(payload)
       const mapped = mapWatchlistSettings(response)
       set({ settings: mapped, isUpdatingSettings: false, error: null })
       queryClient.setQueryData(queryKeys.watchlist.settings, mapped)

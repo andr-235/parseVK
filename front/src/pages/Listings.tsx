@@ -1,10 +1,10 @@
-import { ListingsHero } from './Listings/components/ListingsHero'
-import { ListingsFilters } from './Listings/components/ListingsFilters'
-import { ListingsInfinite } from './Listings/components/ListingsInfinite'
-import ExportListingsModal from './Listings/components/ExportListingsModal'
-import ImportListingsModal from './Listings/components/ImportListingsModal'
-import EditListingModal from './Listings/components/EditListingModal'
-import { useListingsViewModel } from './Listings/hooks/useListingsViewModel'
+import { ListingsHero } from '@/modules/listings/components/ListingsHero'
+import { ListingsFilters } from '@/modules/listings/components/ListingsFilters'
+import { ListingsInfinite } from '@/modules/listings/components/ListingsInfinite'
+import ExportListingsModal from '@/modules/listings/components/ExportListingsModal'
+import ImportListingsModal from '@/modules/listings/components/ImportListingsModal'
+import EditListingModal from '@/modules/listings/components/EditListingModal'
+import { useListingsViewModel } from '@/modules/listings/hooks/useListingsViewModel'
 
 function Listings() {
   const {

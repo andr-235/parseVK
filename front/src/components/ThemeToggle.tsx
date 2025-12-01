@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useThemeStore } from '@/stores'
+import { useThemeStore } from '@/store'
 import { Moon, Sun } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

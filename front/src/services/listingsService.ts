@@ -1,9 +1,10 @@
 import toast from 'react-hot-toast'
-import { listingsApi } from '@/api/listingsApi'
+import { API_URL } from '@/lib/apiConfig'
+import { buildQueryString, createRequest, handleResponse } from '@/lib/apiUtils'
 import type {
   IListing,
   IListingsResponse,
-  ListingImportItem,
+  ListingImportRequest,
   ListingImportReport,
   ListingUpdatePayload,
 } from '@/types/api'
@@ -32,9 +33,9 @@ const parseFileContent = async (file: File): Promise<unknown> => {
   }
 }
 
-const extractListings = (data: unknown): ListingImportItem[] => {
+const extractListings = (data: unknown): ListingImportRequest['listings'] => {
   if (Array.isArray(data)) {
-    return data as ListingImportItem[]
+    return data as ListingImportRequest['listings']
   }
 
   if (
@@ -42,7 +43,7 @@ const extractListings = (data: unknown): ListingImportItem[] => {
     typeof data === 'object' &&
     Array.isArray((data as { listings?: unknown }).listings)
   ) {
-    return (data as { listings: ListingImportItem[] }).listings
+    return (data as { listings: ListingImportRequest['listings'] }).listings
   }
 
   throw new Error('Ожидается массив объявлений или объект с полем "listings"')
@@ -59,7 +60,11 @@ const ensureSource = (source: string): string => {
 export const listingsService = {
   async fetchListings(options: FetchListingsOptions): Promise<IListingsResponse> {
     try {
-      return await listingsApi.getListings(options)
+      const { signal, ...rest } = options
+      const query = buildQueryString(rest)
+      const response = await fetch(`${API_URL}/listings?${query}`, { signal })
+
+      return await handleResponse<IListingsResponse>(response, 'Failed to load listings')
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('[listingsService] fetchListings error', error)
@@ -81,21 +86,23 @@ export const listingsService = {
         throw new Error('Файл не содержит объявлений для импорта')
       }
 
-      const normalizedListings: ListingImportItem[] = listings.map((item, index) => {
+      const normalizedListings = listings.map((item, index) => {
         if (!item || typeof item !== 'object') {
           throw new Error(`Элемент №${index + 1} не является объектом объявления`)
         }
 
         return {
-          ...(item as ListingImportItem),
+          ...(item as ListingImportRequest['listings'][0]),
           source: resolvedSource,
         }
       })
 
-      const report = await listingsApi.importListings({
-        listings: normalizedListings,
-        updateExisting,
+      const response = await createRequest(`${API_URL}/data/import`, {
+        method: 'POST',
+        body: JSON.stringify({ listings: normalizedListings, updateExisting }),
       })
+
+      const report = await handleResponse<ListingImportReport>(response, 'Failed to import listings')
 
       const summary: string[] = []
       if (report.created > 0) {
@@ -131,30 +138,58 @@ export const listingsService = {
 
   async exportCsv(params: { search?: string; source?: string; limit?: number; all?: boolean; fields?: string[] }) {
     try {
-      const { blob, disposition } = await listingsApi.exportListingsCsv(params)
+      const queryParams: Record<string, string> = {}
 
-      let filename = 'listings.csv'
-      const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(disposition ?? '')
-      const encoded = match?.[1] || null
-      const simple = match?.[2] || null
-      if (encoded) {
-        try {
-          filename = decodeURIComponent(encoded)
-        } catch {
-          filename = encoded
-        }
-      } else if (simple) {
-        filename = simple
+      if (params.search) {
+        queryParams.search = params.search
+      }
+      if (params.source) {
+        queryParams.source = params.source
+      }
+      if (params.limit && Number.isFinite(params.limit)) {
+        queryParams.limit = String(params.limit)
+      }
+      if (params.all) {
+        queryParams.all = '1'
+      }
+      if (params.fields && params.fields.length > 0) {
+        queryParams.fields = params.fields.join(',')
       }
 
-      const url = URL.createObjectURL(blob)
+      const query = buildQueryString(queryParams)
+      const url = `${API_URL}/listings/export${query ? `?${query}` : ''}`
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '')
+        throw new Error(text || 'Failed to export listings')
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get('Content-Disposition') || ''
+      const urlObj = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
-      a.download = filename
+      a.href = urlObj
+      a.download = (() => {
+        let filename = 'listings.csv'
+        const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(disposition ?? '')
+        const encoded = match?.[1] || null
+        const simple = match?.[2] || null
+        if (encoded) {
+          try {
+            filename = decodeURIComponent(encoded)
+          } catch {
+            filename = encoded
+          }
+        } else if (simple) {
+          filename = simple
+        }
+        return filename
+      })()
       document.body.appendChild(a)
       a.click()
       a.remove()
-      URL.revokeObjectURL(url)
+      URL.revokeObjectURL(urlObj)
       toast.success('Экспорт выполнен')
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -168,7 +203,12 @@ export const listingsService = {
 
   async updateListing(id: number, payload: ListingUpdatePayload): Promise<IListing> {
     try {
-      const result = await listingsApi.updateListing(id, payload)
+      const response = await createRequest(`${API_URL}/listings/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
+
+      const result = await handleResponse<IListing>(response, 'Failed to update listing')
       toast.success('Объявление обновлено')
       return result
     } catch (error) {
@@ -183,7 +223,7 @@ export const listingsService = {
 
   async archiveListing(id: number): Promise<IListing> {
     try {
-      const result = await listingsApi.updateListing(id, { archived: true })
+      const result = await this.updateListing(id, { archived: true })
       toast.success('Объявление отправлено в архив')
       return result
     } catch (error) {

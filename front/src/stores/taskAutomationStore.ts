@@ -4,7 +4,7 @@ import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/queries/queryKeys'
 import type { TaskAutomationSettings } from '../types'
 import { taskAutomationService } from '../services/taskAutomationService'
-import type { UpdateTaskAutomationSettingsRequest } from '../api/taskAutomationApi'
+import type { UpdateTaskAutomationSettingsRequest } from '../services/taskAutomationService'
 
 interface TaskAutomationStore {
   settings: TaskAutomationSettings | null

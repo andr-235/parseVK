@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { commentsApi } from '../api/commentsApi'
+import { commentsService } from '../services/commentsService'
 import type { CommentsFilters, CommentsState } from '../types/stores'
 import { normalizeCommentResponse, COMMENTS_PAGE_SIZE } from './commentsStore.utils'
 import { queryClient } from '@/lib/queryClient'
@@ -93,7 +93,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }
 
     try {
-      const response = await commentsApi.getComments({
+      const response = await commentsService.getComments({
         offset,
         limit: pageSize,
         keywords: activeFilters.keywords,
@@ -163,7 +163,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }
 
     try {
-      const response = await commentsApi.getCommentsCursor({
+      const response = await commentsService.getCommentsCursor({
         cursor,
         limit: pageSize,
         keywords: activeFilters.keywords,
@@ -225,7 +225,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }))
 
     try {
-      const updated = await commentsApi.updateReadStatus(id, nextIsRead)
+      const updated = await commentsService.updateReadStatus(id, nextIsRead)
       const finalIsRead = updated.isRead ?? nextIsRead
 
       if (finalIsRead !== nextIsRead) {

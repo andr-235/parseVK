@@ -1,8 +1,8 @@
-import { getGroupTableColumns } from '@/config/groupTableColumns'
-import GroupsTableCard from './Groups/components/GroupsTableCard'
-import RegionGroupsSearchCard from './Groups/components/RegionGroupsSearchCard'
-import { GroupsHero } from './Groups/components/GroupsHero'
-import { useGroupsViewModel } from './Groups/hooks/useGroupsViewModel'
+import { getGroupTableColumns } from '@/modules/groups/config/groupTableColumns'
+import GroupsTableCard from '@/modules/groups/components/GroupsTableCard'
+import RegionGroupsSearchCard from '@/modules/groups/components/RegionGroupsSearchCard'
+import { GroupsHero } from '@/modules/groups/components/GroupsHero'
+import { useGroupsViewModel } from '@/modules/groups/hooks/useGroupsViewModel'
 
 function Groups() {
   const {

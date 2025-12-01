@@ -1,8 +1,8 @@
 import { Separator } from '@/components/ui/separator'
-import CommentsHero from './Comments/components/CommentsHero'
-import CommentsFiltersPanel from './Comments/components/CommentsFiltersPanel'
-import CommentsTableCard from './Comments/components/CommentsTableCard'
-import useCommentsViewModel from './Comments/hooks/useCommentsViewModel'
+import CommentsHero from '@/modules/comments/components/CommentsHero'
+import CommentsFiltersPanel from '@/modules/comments/components/CommentsFiltersPanel'
+import CommentsTableCard from '@/modules/comments/components/CommentsTableCard'
+import useCommentsViewModel from '@/modules/comments/hooks/useCommentsViewModel'
 
 function Comments() {
   const {

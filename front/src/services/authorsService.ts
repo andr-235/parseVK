@@ -1,5 +1,6 @@
 import toast from 'react-hot-toast'
-import { authorsApi } from '../api/authorsApi'
+import { API_URL } from '@/lib/apiConfig'
+import { buildQueryString, handleResponse } from '@/lib/apiUtils'
 import { createEmptyPhotoAnalysisSummary } from '../types'
 import type {
   AuthorCard,
@@ -12,6 +13,8 @@ import type {
 import type {
   AuthorCardResponse,
   AuthorDetailsResponse,
+  AuthorsListResponse,
+  RefreshAuthorsResponse,
 } from '../types/api'
 
 const normalizeSummary = (summary?: PhotoAnalysisSummary | null): PhotoAnalysisSummary => {
@@ -81,11 +84,22 @@ export const authorsService = {
     sortOrder?: AuthorSortOrder
   } = {}): Promise<AuthorListResponse> {
     try {
-      const response = await authorsApi.fetchAuthors(params)
+      const query = buildQueryString({
+        offset: params.offset,
+        limit: params.limit,
+        search: params.search,
+        verified: params.verified,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+      })
+      const url = query ? `${API_URL}/authors?${query}` : `${API_URL}/authors`
+      const response = await fetch(url)
+
+      const data = await handleResponse<AuthorsListResponse>(response, 'Не удалось загрузить список авторов')
       return {
-        items: response.items.map(mapAuthorCard),
-        total: response.total,
-        hasMore: response.hasMore,
+        items: data.items.map(mapAuthorCard),
+        total: data.total,
+        hasMore: data.hasMore,
       }
     } catch (error) {
       toast.error('Ошибка загрузки авторов')
@@ -95,8 +109,9 @@ export const authorsService = {
 
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetails> {
     try {
-      const response = await authorsApi.getDetails(vkUserId)
-      return mapAuthorDetails(response)
+      const response = await fetch(`${API_URL}/authors/${vkUserId}`)
+      const data = await handleResponse<AuthorDetailsResponse>(response, 'Не удалось загрузить данные пользователя')
+      return mapAuthorDetails(data)
     } catch (error) {
       toast.error('Не удалось загрузить данные пользователя')
       throw error
@@ -105,7 +120,11 @@ export const authorsService = {
 
   async refreshAuthors(): Promise<number> {
     try {
-      const result = await authorsApi.refreshAuthors()
+      const response = await fetch(`${API_URL}/authors/refresh`, {
+        method: 'POST',
+      })
+
+      const result = await handleResponse<RefreshAuthorsResponse>(response, 'Не удалось обновить карточки авторов')
       toast.success('Карточки авторов обновлены')
       return result.updated
     } catch (error) {

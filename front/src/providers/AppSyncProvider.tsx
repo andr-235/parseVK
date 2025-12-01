@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 
-import { useTasksQuery } from '@/queries/useTasksQuery'
-import { useGroupsQuery } from '@/queries/useGroupsQuery'
-import { useKeywordsQuery } from '@/queries/useKeywordsQuery'
-import { useTaskAutomationQuery } from '@/queries/useTaskAutomationQuery'
-import { useCommentsQuery } from '@/queries/useCommentsQuery'
-import { useAuthorsQuery } from '@/queries/useAuthorsQuery'
-import { useWatchlistAuthorsQuery, useWatchlistSettingsQuery } from '@/queries/useWatchlistQueries'
+import { useTasksQuery } from '@/hooks/useTasksQuery'
+import { useGroupsQuery } from '@/hooks/useGroupsQuery'
+import { useKeywordsQuery } from '@/hooks/useKeywordsQuery'
+import { useTaskAutomationQuery } from '@/hooks/useTaskAutomationQuery'
+import { useCommentsQuery } from '@/hooks/useCommentsQuery'
+import { useAuthorsQuery } from '@/hooks/useAuthorsQuery'
+import { useWatchlistAuthorsQuery, useWatchlistSettingsQuery } from '@/hooks/useWatchlistQueries'
 import { useTasksSocket } from '@/hooks/useTasksSocket'
 
 const shouldSyncKeywords = (pathname: string): boolean => {

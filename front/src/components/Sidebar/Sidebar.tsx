@@ -6,7 +6,7 @@ import {
   useCommentsStore,
   useTasksStore,
   useWatchlistStore,
-} from '@/stores'
+} from '@/store'
 import { useSidebarState } from '@/hooks/useSidebarState'
 import {
   createVkSubItems,

@@ -1,7 +1,7 @@
 import PageHeroCard from '@/components/PageHeroCard'
-import { AuthorsFiltersPanel } from './Authors/components/AuthorsFiltersPanel'
-import { AuthorsTableCard } from './Authors/components/AuthorsTableCard'
-import { useAuthorsViewModel } from './Authors/hooks/useAuthorsViewModel'
+import { AuthorsFiltersPanel } from '@/modules/authors/components/AuthorsFiltersPanel'
+import { AuthorsTableCard } from '@/modules/authors/components/AuthorsTableCard'
+import { useAuthorsViewModel } from '@/modules/authors/hooks/useAuthorsViewModel'
 
 function Authors() {
   const {

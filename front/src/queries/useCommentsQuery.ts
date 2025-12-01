@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
-import { commentsApi } from '@/api/commentsApi'
-import { useCommentsStore } from '@/stores'
+import { commentsService } from '@/services/commentsService'
+import { useCommentsStore } from '@/store'
 import { queryKeys } from '@/queries/queryKeys'
-import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/stores/commentsStore.utils'
+import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/store/commentsStore.utils'
 
 const fetchInitialComments = async () => {
   const { filters } = useCommentsStore.getState()
-  const response = await commentsApi.getCommentsCursor({
+  const response = await commentsService.getCommentsCursor({
     limit: COMMENTS_PAGE_SIZE,
     keywords: filters.keywords,
     keywordSource: filters.keywordSource,

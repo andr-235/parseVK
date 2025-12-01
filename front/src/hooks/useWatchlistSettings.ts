@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useWatchlistStore } from '@/stores'
+import { useWatchlistStore } from '@/store'
 
 export const useWatchlistSettings = () => {
   const settings = useWatchlistStore((state) => state.settings)

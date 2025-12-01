@@ -1,7 +1,7 @@
 import PageHeroCard from '@/components/PageHeroCard'
-import { AutomationCard } from './Settings/components/AutomationCard'
-import { TelegramCard } from './Settings/components/TelegramCard'
-import { SettingsHero } from './Settings/components/SettingsHero'
+import { AutomationCard } from '@/modules/settings/components/AutomationCard'
+import { TelegramCard } from '@/modules/settings/components/TelegramCard'
+import { SettingsHero } from '@/modules/settings/components/SettingsHero'
 
 function Settings() {
   return (

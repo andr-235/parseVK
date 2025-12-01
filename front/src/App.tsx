@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { useThemeStore } from './stores'
+import { useThemeStore } from './store'
 import { Sidebar } from './components/Sidebar'
 import MainContent from './components/MainContent'
 import Tasks from './pages/Tasks'

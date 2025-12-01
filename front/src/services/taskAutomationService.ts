@@ -1,11 +1,24 @@
 import toast from 'react-hot-toast'
-import { taskAutomationApi, type UpdateTaskAutomationSettingsRequest } from '../api/taskAutomationApi'
-import type { ITaskAutomationRunResponse, ITaskAutomationSettings } from '../types/api'
+import { API_URL } from '@/lib/apiConfig'
+import { createRequest, handleResponse } from '@/lib/apiUtils'
+import type {
+  ITaskAutomationRunResponse,
+  ITaskAutomationSettings,
+} from '../types/api'
+
+export interface UpdateTaskAutomationSettingsRequest {
+  enabled: boolean
+  runHour: number
+  runMinute: number
+  postLimit: number
+  timezoneOffsetMinutes: number
+}
 
 export const taskAutomationService = {
   async fetchSettings(): Promise<ITaskAutomationSettings> {
     try {
-      return await taskAutomationApi.getSettings()
+      const response = await fetch(`${API_URL}/tasks/automation/settings`)
+      return await handleResponse<ITaskAutomationSettings>(response, 'Failed to load automation settings')
     } catch (error) {
       toast.error('Не удалось загрузить настройки автозапуска')
       throw error
@@ -16,7 +29,12 @@ export const taskAutomationService = {
     payload: UpdateTaskAutomationSettingsRequest,
   ): Promise<ITaskAutomationSettings> {
     try {
-      const settings = await taskAutomationApi.updateSettings(payload)
+      const response = await createRequest(`${API_URL}/tasks/automation/settings`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+
+      const settings = await handleResponse<ITaskAutomationSettings>(response, 'Failed to update automation settings')
       toast.success('Настройки автозапуска сохранены')
       return settings
     } catch (error) {
@@ -27,15 +45,19 @@ export const taskAutomationService = {
 
   async runAutomation(): Promise<ITaskAutomationRunResponse> {
     try {
-      const response = await taskAutomationApi.runNow()
+      const response = await fetch(`${API_URL}/tasks/automation/run`, {
+        method: 'POST',
+      })
 
-      if (response.started) {
+      const result = await handleResponse<ITaskAutomationRunResponse>(response, 'Failed to trigger automation run')
+
+      if (result.started) {
         toast.success('Запущена автоматическая задача на парсинг')
-      } else if (response.reason) {
-        toast('Автозапуск не запущен: ' + response.reason)
+      } else if (result.reason) {
+        toast('Автозапуск не запущен: ' + result.reason)
       }
 
-      return response
+      return result
     } catch (error) {
       toast.error('Не удалось запустить автозадачу')
       throw error

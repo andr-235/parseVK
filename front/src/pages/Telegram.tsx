@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import type { TelegramSyncResponse } from '@/types/api'
 import PageTitle from '@/components/PageTitle'
-import TelegramSessionCard from './Telegram/components/TelegramSessionCard'
-import TelegramSyncCard from './Telegram/components/TelegramSyncCard'
-import TelegramMembersCard from './Telegram/components/TelegramMembersCard'
+import TelegramSessionCard from '@/modules/telegram/components/TelegramSessionCard'
+import TelegramSyncCard from '@/modules/telegram/components/TelegramSyncCard'
+import TelegramMembersCard from '@/modules/telegram/components/TelegramMembersCard'
 
 function Telegram() {
   const [data, setData] = useState<TelegramSyncResponse | null>(null)

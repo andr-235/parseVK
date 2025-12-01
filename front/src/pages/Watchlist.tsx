@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useWatchlistAuthors } from '@/hooks/useWatchlistAuthors'
 import { useWatchlistSettings } from '@/hooks/useWatchlistSettings'
-import { useAuthorColumns } from './Watchlist/components/authorColumns'
-import { useCommentColumns } from './Watchlist/components/commentColumns'
-import { WatchlistTableCard } from './Watchlist/components/WatchlistTableCard'
-import { WatchlistAuthorDetails } from './Watchlist/components/WatchlistAuthorDetails'
+import { useAuthorColumns } from '@/modules/watchlist/components/authorColumns'
+import { useCommentColumns } from '@/modules/watchlist/components/commentColumns'
+import { WatchlistTableCard } from '@/modules/watchlist/components/WatchlistTableCard'
+import { WatchlistAuthorDetails } from '@/modules/watchlist/components/WatchlistAuthorDetails'
 
 function Watchlist() {
   const {
