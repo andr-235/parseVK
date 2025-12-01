@@ -15,7 +15,8 @@ function PageHeroCard({ title, description, actions, footer, className }: PageHe
   return (
     <Card
       className={cn(
-        'relative overflow-hidden border-none bg-gradient-to-br from-accent-primary/15 via-background-secondary to-background-secondary/90',
+        'relative overflow-hidden border-none',
+        'bg-gradient-to-br from-accent-primary/15 via-background-secondary to-background-secondary/90',
         className
       )}
     >
@@ -25,7 +26,7 @@ function PageHeroCard({ title, description, actions, footer, className }: PageHe
         <div className="space-y-3">
           <PageTitle className="font-semibold text-text-primary">{title}</PageTitle>
           {description && (
-            <CardDescription className="max-w-xl md:max-w-lg text-sm md:text-base leading-relaxed">
+            <CardDescription className="max-w-xl text-sm leading-relaxed md:max-w-lg md:text-base">
               {description}
             </CardDescription>
           )}

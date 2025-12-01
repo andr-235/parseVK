@@ -1,5 +1,6 @@
-import { useMemo } from "react"
-import { motion } from "framer-motion"
+import { useMemo } from 'react'
+import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
 interface ProgressBarProps {
   current: number
@@ -16,17 +17,29 @@ const clampPercentage = (value: number): number => {
   if (Number.isNaN(value) || !Number.isFinite(value)) {
     return 0
   }
-
-  if (value < 0) {
-    return 0
-  }
-
-  if (value > 100) {
-    return 100
-  }
-
+  if (value < 0) return 0
+  if (value > 100) return 100
   return value
 }
+
+const TONE_STYLES = {
+  primary: {
+    className: 'bg-accent-primary',
+    color: '#3b82f6',
+  },
+  success: {
+    className: 'bg-accent-success',
+    color: '#22c55e',
+  },
+  warning: {
+    className: 'bg-accent-warning',
+    color: '#f59e0b',
+  },
+  danger: {
+    className: 'bg-accent-danger',
+    color: '#ef4444',
+  },
+} as const
 
 function ProgressBar({
   current,
@@ -36,7 +49,7 @@ function ProgressBar({
   size = 'default',
   tone = 'primary',
   className,
-  indeterminate = false
+  indeterminate = false,
 }: ProgressBarProps) {
   const percentage = useMemo(() => {
     const safeTotal = total > 0 ? total : 0
@@ -46,50 +59,15 @@ function ProgressBar({
 
   const formattedLabel = useMemo(() => label ?? `${Math.round(percentage)}%`, [label, percentage])
 
-  // Debug logging отключён в продакшене
-  if (import.meta.env.DEV) {
-     
-    console.log('ProgressBar render:', {
-      current,
-      total,
-      percentage,
-      formattedLabel,
-      indeterminate,
-      size,
-      tone
-    })
-  }
-
-  const toneClasses = {
-    primary: 'bg-accent-primary',
-    success: 'bg-accent-success',
-    warning: 'bg-accent-warning',
-    danger: 'bg-accent-danger',
-  }
-
-  // Явные fallback-цвета на случай, если кастомные классы темы недоступны
-  const toneColors: Record<typeof tone, string> = {
-    primary: '#3b82f6', // blue-500
-    success: '#22c55e', // green-500
-    warning: '#f59e0b', // amber-500
-    danger: '#ef4444',  // red-500
-  }
+  const toneStyle = TONE_STYLES[tone]
 
   return (
-    <div
-      className={[
-        'flex flex-col gap-2',
-        size === 'small' ? 'text-xs' : 'text-sm',
-        className ?? '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
+    <div className={cn('flex flex-col gap-2', size === 'small' ? 'text-xs' : 'text-sm', className)}>
       <div
-        className={[
-          'relative w-full overflow-hidden rounded-full bg-background-secondary/70 border border-border/60',
-          size === 'small' ? 'h-2.5' : 'h-3.5',
-        ].join(' ')}
+        className={cn(
+          'relative w-full overflow-hidden rounded-full border border-border/60 bg-background-secondary/70',
+          size === 'small' ? 'h-2.5' : 'h-3.5'
+        )}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(percentage)}
@@ -97,21 +75,21 @@ function ProgressBar({
       >
         {indeterminate ? (
           <motion.div
-            className={`absolute left-0 top-0 h-full rounded-full ${toneClasses[tone]}`}
-            style={{ backgroundColor: toneColors[tone] }}
+            className={cn('absolute left-0 top-0 h-full rounded-full', toneStyle.className)}
+            style={{ backgroundColor: toneStyle.color }}
             initial={{ width: '0%' }}
             animate={{ width: '100%' }}
             transition={{
               duration: 1.5,
               repeat: Infinity,
               ease: 'easeInOut',
-              repeatType: 'reverse'
+              repeatType: 'reverse',
             }}
           />
         ) : (
           <motion.div
-            className={`absolute left-0 top-0 h-full rounded-full ${toneClasses[tone]}`}
-            style={{ backgroundColor: toneColors[tone] }}
+            className={cn('absolute left-0 top-0 h-full rounded-full', toneStyle.className)}
+            style={{ backgroundColor: toneStyle.color }}
             initial={{ width: '0%' }}
             animate={{ width: `${percentage}%` }}
             transition={{

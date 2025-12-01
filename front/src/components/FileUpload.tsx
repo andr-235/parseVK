@@ -4,45 +4,7 @@ import { Input } from './ui/input'
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
 import type { FileUploadProps, FileUploadRef } from '@/types/fileUpload'
-
-// Простой матчинг accept: поддерживает расширения .txt и MIME image/*
-const matchesAccept = (file: File, accept?: string) => {
-  if (!accept) return true
-  const tokens = accept
-    .split(',')
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean)
-  if (tokens.length === 0) return true
-  const name = file.name.toLowerCase()
-  const type = file.type.toLowerCase()
-
-  return tokens.some((token) => {
-    if (token.startsWith('.')) return name.endsWith(token)
-    if (token.endsWith('/*')) {
-      const base = token.slice(0, -1) // keep '/'
-      return type.startsWith(base)
-    }
-    if (token.includes('/')) return type === token
-    // fallback: treat as extension without dot
-    return name.endsWith(`.${token}`)
-  })
-}
-
-const validateFiles = (files: File[], accept?: string, maxSizeBytes?: number) => {
-  const valid: File[] = []
-  const errors: string[] = []
-  for (const file of files) {
-    const typeOk = !accept || matchesAccept(file, accept)
-    const sizeOk = !maxSizeBytes || file.size <= maxSizeBytes
-    if (typeOk && sizeOk) {
-      valid.push(file)
-      continue
-    }
-    if (!typeOk) errors.push(`Неверный тип файла: ${file.name}`)
-    if (!sizeOk) errors.push(`Файл слишком большой: ${file.name}`)
-  }
-  return { valid, errors }
-}
+import { validateFiles } from '@/utils/fileValidation'
 
 const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(function FileUpload(
   {
@@ -90,7 +52,9 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(function FileUploa
     async (files: File[]) => {
       const { valid } = validateFiles(files, accept, maxSizeBytes)
       if (valid.length === 0) return
-      if (onFilesSelect) await onFilesSelect(valid)
+      if (onFilesSelect) {
+        await onFilesSelect(valid)
+      }
     },
     [accept, maxSizeBytes, onFilesSelect]
   )
@@ -165,8 +129,8 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(function FileUploa
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={cn(
-            'group relative grid cursor-pointer place-items-center rounded-xl border border-dashed p-4 transition-colors',
-            'text-text-secondary hover:text-text-primary',
+            'group relative grid cursor-pointer place-items-center rounded-xl border border-dashed p-4',
+            'transition-colors text-text-secondary hover:text-text-primary',
             isDragOver
               ? 'border-accent-primary/70 bg-accent-primary/10'
               : 'border-border/60 bg-background-primary/40 hover:border-accent-primary/60',

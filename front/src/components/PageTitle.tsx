@@ -1,18 +1,16 @@
-import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 interface PageTitleProps {
   children: React.ReactNode
   className?: string
+  as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
 }
 
-function PageTitle({ children, className }: PageTitleProps) {
+function PageTitle({ children, className, as: Component = 'h1' }: PageTitleProps) {
   return (
-    <Card className="border-none shadow-none bg-transparent p-0 m-0">
-      <CardHeader className="px-0 py-0">
-        <CardTitle className={cn("text-3xl", className)}>{children}</CardTitle>
-      </CardHeader>
-    </Card>
+    <Component className={cn('text-3xl font-semibold leading-none tracking-tight', className)}>
+      {children}
+    </Component>
   )
 }
 

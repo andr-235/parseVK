@@ -1,5 +1,6 @@
-import {Input} from './ui/input'
-import {Button} from './ui/button'
+import { useCallback } from 'react'
+import { Input } from './ui/input'
+import { Button } from './ui/button'
 
 interface GroupInputProps {
   url: string
@@ -8,12 +9,22 @@ interface GroupInputProps {
 }
 
 function GroupInput({ url, onUrlChange, onAdd }: GroupInputProps) {
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        onAdd()
+      }
+    },
+    [onAdd]
+  )
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
       <Input
         value={url}
         onChange={onUrlChange}
-        onKeyDown={onAdd}
+        onKeyDown={handleKeyDown}
         placeholder="URL группы"
         className="sm:min-w-[260px] sm:flex-1"
       />
