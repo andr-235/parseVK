@@ -5,7 +5,7 @@ import { useTableSorting } from '@/hooks/useTableSorting'
 import type { TableColumn } from '@/types'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent } from '@/components/ui/card'
-import { Search, X, RotateCcw, ArrowUpDown, Plus, Check } from 'lucide-react'
+import { Search, X, RotateCcw, ArrowUpDown, Plus } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
