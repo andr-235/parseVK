@@ -1,5 +1,5 @@
 import type { WatchlistAuthorCard } from '@/types'
-import { WATCHLIST_CONSTANTS } from '../constants/watchlist'
+import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 
 
 interface AuthorCellProps {

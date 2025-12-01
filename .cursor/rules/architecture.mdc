@@ -1,6 +1,5 @@
 ---
-description: architecture frontend
-alwaysApply: false
+alwaysApply: true
 ---
 # Архитектура фронтенд-проекта
 
@@ -11,6 +10,7 @@ src/
   pages/           # Страницы-роуты (только композиция модулей)
   components/       # Переиспользуемые UI-компоненты
     ui/           # Базовые UI компоненты (shadcn/ui)
+    Sidebar/      # Группа компонентов сайдбара
   modules/         # Логически связанные фичи
     {module}/
       components/  # Компоненты модуля
@@ -71,10 +71,60 @@ types/
 ### Запрещённые зависимости
 
 - ❌ `components/` → `modules/` (компоненты не знают о модулях)
+- ❌ `components/` → `store/` (компоненты не зависят от store напрямую, только через хуки)
 - ❌ `utils/` → `services/`, `store/`, `components/` (утилиты не зависят от бизнес-логики)
 - ❌ `types/` → что-либо (типы независимы)
 - ❌ `modules/` → `modules/` (модули изолированы друг от друга)
 - ❌ `lib/` → `services/`, `store/`, `components/` (низкоуровневые вещи не зависят от верхних слоёв)
+
+### Детальные правила
+
+1. **pages/** — только композиция компонентов, минимум логики
+   - Импортируют модули, компоненты, хуки
+   - Используют store через хуки
+   - Не содержат бизнес-логику
+
+2. **modules/** — фичи с собственной логикой
+   - Компоненты модуля используют хуки модуля
+   - Хуки модуля используют store и services
+   - Могут иметь собственные типы и утилиты
+
+3. **components/** — переиспользуемые UI-компоненты
+   - Не зависят от store напрямую
+   - Получают данные через props
+   - Могут использовать общие хуки и utils
+
+4. **services/** — работа с API
+   - Только HTTP-запросы и обработка ответов
+   - Не содержат UI-логику
+   - Могут использовать utils и lib
+
+5. **store/** — глобальное состояние
+   - Используют services для загрузки данных
+   - Предоставляют API для компонентов
+   - Могут использовать utils
+
+6. **hooks/** — общие хуки
+   - Могут использовать store, services, utils
+   - Не содержат специфичную логику модулей
+
+7. **utils/** — чистые функции
+   - Не зависят от других слоев
+   - Могут использовать только types
+
+8. **lib/** — конфигурация
+   - Настройки клиентов, провайдеров
+   - Могут использовать types
+
+9. **types/** — типы и интерфейсы
+   - Никаких зависимостей
+
+### Исключения
+
+- Компоненты могут использовать store через кастомные хуки (например, `useTheme` в обертке)
+- Модули могут напрямую использовать services для:
+  - React Query queryFn (стандартный паттерн)
+  - Одноразовых операций (импорт, экспорт, синхронизация), не требующих глобального состояния
 
 ## Стандарт структуры модуля
 
@@ -207,24 +257,126 @@ import { Button } from '@/components/ui/button'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import { tasksService } from '@/services/tasksService'
 import type { Task } from '@/types'
+import { formatDateTime } from '@/modules/comments/utils/formatDateTime'
 
 // ❌ Неправильно
 import { Button } from '../../../components/ui/button'
-import { useTableSorting } from '../../../hooks/useTableSorting'
+import { formatDateTime } from '../utils/formatDateTime'
 ```
 
 ### Внутримодульные импорты
 
-Внутри модуля можно использовать относительные импорты для связи частей модуля:
+Внутри модуля можно использовать относительные импорты для связи частей модуля, но предпочтительно использовать alias:
 
 ```typescript
-// ✅ Правильно (внутри модуля)
-import { useModuleQuery } from '../hooks/useModuleQuery'
-import { MODULE_CONSTANTS } from '../constants/moduleConstants'
-import type { ModuleType } from '../types/moduleTypes'
-
-// ✅ Также правильно (через alias)
+// ✅ Правильно (через alias)
 import { useModuleQuery } from '@/modules/moduleName/hooks/useModuleQuery'
+import { MODULE_CONSTANTS } from '@/modules/moduleName/constants/moduleConstants'
+import type { ModuleType } from '@/modules/moduleName/types/moduleTypes'
+
+// ✅ Также допустимо (внутри модуля)
+import { useModuleQuery } from '../hooks/useModuleQuery'
+```
+
+## Разделение логики
+
+### Компоненты
+
+Компоненты должны содержать только UI-логику. Бизнес-логика выносится в хуки:
+
+```typescript
+// ✅ Правильно: логика в хуке
+function CreateParseTaskModal({ isOpen, groups, ... }: Props) {
+  const {
+    selectedIds,
+    search,
+    setSearch,
+    filteredGroups,
+    handleToggle,
+    handleSelectAll,
+    handleDeselectAll,
+  } = useCreateParseTaskModal(groups, isOpen)
+  
+  // только UI-логика
+}
+
+// ❌ Неправильно: логика в компоненте
+function CreateParseTaskModal({ isOpen, groups, ... }: Props) {
+  const [selectedIds, setSelectedIds] = useState(...)
+  const [search, setSearch] = useState(...)
+  // ... вся логика фильтрации здесь
+}
+```
+
+### Хуки
+
+Хуки модуля могут использовать:
+- Store для получения и обновления состояния
+- Services для работы с API (в React Query queryFn или для одноразовых операций)
+- Utils для вспомогательных функций
+
+## Работа с API
+
+### React Query
+
+Для работы с API используется React Query. Services используются напрямую в queryFn:
+
+```typescript
+// ✅ Правильно: services в queryFn
+export const useTasksQuery = () => {
+  const query = useQuery({
+    queryKey: queryKeys.tasks,
+    queryFn: tasksService.fetchTasks, // services используется здесь
+    // ...
+  })
+  
+  useEffect(() => {
+    if (query.data) {
+      useTasksStore.setState({ tasks: query.data }) // store обновляется здесь
+    }
+  }, [query.data])
+  
+  return query
+}
+```
+
+### Одноразовые операции
+
+Для одноразовых операций (импорт, экспорт, синхронизация) services могут использоваться напрямую:
+
+```typescript
+// ✅ Правильно: одноразовая операция
+const handleImport = async () => {
+  await listingsService.importFromJson({ file, source })
+  onImportComplete()
+}
+```
+
+## Глобальное состояние
+
+Store используется для:
+- Глобального состояния приложения
+- Кэширования данных
+- Синхронизации между компонентами
+
+Компоненты не должны импортировать store напрямую. Вместо этого используются хуки:
+
+```typescript
+// ✅ Правильно: через хук
+import { useTheme } from '@/hooks/useTheme'
+
+function ThemeToggle() {
+  const { isDarkMode, toggleTheme } = useTheme()
+  // ...
+}
+
+// ❌ Неправильно: напрямую из store
+import { useThemeStore } from '@/store'
+
+function ThemeToggle() {
+  const isDarkMode = useThemeStore((state) => state.isDarkMode)
+  // ...
+}
 ```
 
 ## Примеры модулей
@@ -242,6 +394,7 @@ modules/tasks/
     useTasksQuery.ts
     useTasksViewModel.ts
     useTasksSocket.ts
+    useCreateParseTaskModal.ts
   config/
     taskTableColumns.tsx
     utils.ts
@@ -324,7 +477,7 @@ function Tasks() {
 ### hooks/
 
 Общие хуки:
-- useIsMobile, useKeyboardNavigation, useTableSorting
+- useIsMobile, useKeyboardNavigation, useTableSorting, useTheme, useSidebarData
 - Используются в разных модулях
 
 ### services/
@@ -359,3 +512,15 @@ API и бизнес-логика:
 - Провайдеры (QueryProvider, AppSyncProvider)
 - queryClient
 
+## Чек-лист для новых фич
+
+При добавлении новой фичи:
+
+1. ✅ Создать модуль в `modules/{moduleName}/`
+2. ✅ Добавить компоненты в `modules/{moduleName}/components/`
+3. ✅ Добавить хуки в `modules/{moduleName}/hooks/`
+4. ✅ Использовать алиас `@/` для всех импортов
+5. ✅ Вынести бизнес-логику из компонентов в хуки
+6. ✅ Использовать store через хуки, а не напрямую
+7. ✅ Использовать services в React Query queryFn или для одноразовых операций
+8. ✅ Следовать правилам зависимостей между слоями

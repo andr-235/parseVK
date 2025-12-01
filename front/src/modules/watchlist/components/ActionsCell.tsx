@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import type { WatchlistAuthorCard } from '@/types'
-import { WATCHLIST_CONSTANTS } from '../constants/watchlist'
+import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 
 
 interface ActionsCellProps {

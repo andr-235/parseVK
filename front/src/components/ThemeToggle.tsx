@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useThemeStore } from '@/store'
+import { useTheme } from '@/hooks/useTheme'
 import { Moon, Sun } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -8,8 +8,7 @@ interface ThemeToggleProps {
 }
 
 function ThemeToggle({ className }: ThemeToggleProps) {
-  const isDarkMode = useThemeStore((state) => state.isDarkMode)
-  const toggleTheme = useThemeStore((state) => state.toggleTheme)
+  const { isDarkMode, toggleTheme } = useTheme()
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLButtonElement>) => {

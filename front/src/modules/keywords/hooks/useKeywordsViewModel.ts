@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import toast from 'react-hot-toast'
 import { useKeywordsStore } from '@/store'
+// Использование services для одноразовой операции (пересчет совпадений)
+// Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { keywordsService } from '@/services/keywordsService'
 
 export const useKeywordsViewModel = () => {

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
 import { Search, X, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Group } from '@/types'
+import { useCreateParseTaskModal } from '@/modules/tasks/hooks/useCreateParseTaskModal'
 
 interface CreateParseTaskModalProps {
   isOpen: boolean
@@ -11,69 +11,17 @@ interface CreateParseTaskModalProps {
   onSubmit: (groupIds: Array<number | string>) => void
 }
 
-const getDisplayName = (group: Group): string => {
-  if (group.name && group.name.trim() !== '') {
-    return group.name
-  }
-
-  if (group.screenName && group.screenName.trim() !== '') {
-    return group.screenName
-  }
-
-  if (typeof group.vkId === 'number') {
-    return 'Группа ' + group.vkId
-  }
-
-  return 'Группа ' + group.id
-}
-
 function CreateParseTaskModal({ isOpen, groups, isLoading, onClose, onSubmit }: CreateParseTaskModalProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set())
-  const [search, setSearch] = useState('')
-
-  useEffect(() => {
-    if (!isOpen) {
-      setSelectedIds(new Set())
-      setSearch('')
-      return
-    }
-
-    setSelectedIds(new Set(groups.map((group) => group.id)))
-  }, [isOpen, groups])
-
-  const filteredGroups = useMemo(() => {
-    if (!search.trim()) {
-      return groups
-    }
-
-    const normalized = search.toLowerCase()
-    return groups.filter((group) => {
-      const display = getDisplayName(group).toLowerCase()
-      const vkId = group.vkId ? String(group.vkId) : ''
-      const id = String(group.id)
-      return display.includes(normalized) || vkId.includes(normalized) || id.includes(normalized)
-    })
-  }, [groups, search])
-
-  const handleToggle = (groupId: number | string) => {
-    setSelectedIds((prev) => {
-      const updated = new Set(prev)
-      if (updated.has(groupId)) {
-        updated.delete(groupId)
-      } else {
-        updated.add(groupId)
-      }
-      return updated
-    })
-  }
-
-  const handleSelectAll = () => {
-    setSelectedIds(new Set(groups.map((group) => group.id)))
-  }
-
-  const handleDeselectAll = () => {
-    setSelectedIds(new Set())
-  }
+  const {
+    selectedIds,
+    search,
+    setSearch,
+    filteredGroups,
+    handleToggle,
+    handleSelectAll,
+    handleDeselectAll,
+    getDisplayName,
+  } = useCreateParseTaskModal(groups, isOpen)
 
   const handleSubmit = () => {
     if (isLoading) {

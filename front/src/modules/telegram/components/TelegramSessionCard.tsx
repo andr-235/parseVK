@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+// Использование services для одноразовых операций (управление сессией Telegram)
+// Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { telegramService } from '@/services/telegramService'
 import type { TelegramSessionConfirmResponse } from '@/types/api'
 import { Copy, LogOut, RefreshCw, Shield, User } from 'lucide-react'

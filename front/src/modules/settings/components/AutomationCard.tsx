@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Clock, Activity, Calendar, Zap, Save } from 'lucide-react'
 import { formatAutomationDate } from '@/utils/automationFormatting'
-import { useAutomationSettings } from '../hooks/useAutomationSettings'
+import { useAutomationSettings } from '@/modules/settings/hooks/useAutomationSettings'
 
 export const AutomationCard = () => {
   const {

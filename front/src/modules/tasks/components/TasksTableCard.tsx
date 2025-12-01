@@ -11,7 +11,7 @@ import {
 import { TableSortButton } from '@/components/ui/table-sort-button'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type { Task } from '@/types'
-import { getTaskTableColumns } from '../config/taskTableColumns'
+import { getTaskTableColumns } from '@/modules/tasks/config/taskTableColumns'
 import { useTasksStore } from '@/store'
 
 interface TasksTableCardProps {

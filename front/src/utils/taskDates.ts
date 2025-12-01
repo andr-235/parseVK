@@ -1,4 +1,4 @@
-import type { Task } from '../types'
+import type { Task } from '@/types'
 
 export const getLatestTaskDate = (tasks: Task[]): Date | null => {
   if (!Array.isArray(tasks) || tasks.length === 0) {

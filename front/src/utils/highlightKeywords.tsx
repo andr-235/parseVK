@@ -1,5 +1,5 @@
-import type { Keyword } from '../types'
-import { buildKeywordPattern, normalizeForKeywordMatch } from './keywordMatching'
+import type { Keyword } from '@/types'
+import { buildKeywordPattern, normalizeForKeywordMatch } from '@/utils/keywordMatching'
 
 export function highlightKeywords(text: string, keywords: Keyword[]) {
   if (!text || keywords.length === 0) {

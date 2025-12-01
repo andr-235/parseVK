@@ -42,6 +42,8 @@ const ALL_FIELDS: { key: FieldKey; label: string }[] = [
   { key: 'manualNote', label: 'Примечание' },
 ]
 
+// Использование services для одноразовой операции (экспорт данных)
+// Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { listingsService } from '@/services/listingsService'
 
 function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: ExportListingsModalProps) {

@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Play } from 'lucide-react'
-import { useAutomationSettings } from '../hooks/useAutomationSettings'
+import { useAutomationSettings } from '@/modules/settings/hooks/useAutomationSettings'
 
 export const SettingsHero = () => {
   const { settings, isTriggering, handleRunNow } = useAutomationSettings()

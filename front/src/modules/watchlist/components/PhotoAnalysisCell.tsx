@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge'
 import type { WatchlistAuthorCard, PhotoAnalysisSummaryCategory } from '@/types'
 import { formatDateTime } from '@/utils/watchlistUtils'
 import { PHOTO_ANALYSIS_LABELS } from '@/utils/photoAnalysisConstants'
-import { WATCHLIST_CONSTANTS } from '../constants/watchlist'
+import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 
 const getBadgeVariant = (count: number) => {
   if (count > 5) return 'destructive'

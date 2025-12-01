@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Smartphone, Key, Hash, Info, Save, Send } from 'lucide-react'
-import { useTelegramSettings } from '../hooks/useTelegramSettings'
+import { useTelegramSettings } from '@/modules/settings/hooks/useTelegramSettings'
 
 export const TelegramCard = () => {
   const {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { CategorizedComment, CategorizedGroup } from '../types/commentsTable'
+import type { CategorizedComment, CategorizedGroup } from '@/modules/comments/types/commentsTable'
 
 interface UseCommentsTableCardControllerParams {
   groupedComments: CategorizedGroup[]

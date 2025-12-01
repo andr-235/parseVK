@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+// Использование services для одноразовой операции (синхронизация чата)
+// Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { telegramService } from '@/services/telegramService'
 import type { TelegramSyncResponse } from '@/types/api'
 import { Users, Download, Search, ArrowRight } from 'lucide-react'

@@ -1,13 +1,8 @@
 import { useMemo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Users, Building, Send, Settings } from 'lucide-react'
-import {
-  useAuthorsStore,
-  useCommentsStore,
-  useTasksStore,
-  useWatchlistStore,
-} from '@/store'
 import { useSidebarState } from '@/hooks/useSidebarState'
+import { useSidebarData } from '@/hooks/useSidebarData'
 import {
   createVkSubItems,
   createParsingSubItems,
@@ -30,10 +25,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
     toggleSection,
   } = useSidebarState()
 
-  const tasksCount = useTasksStore((state) => state.tasks.length)
-  const commentsCount = useCommentsStore((state) => state.totalCount)
-  const watchlistCount = useWatchlistStore((state) => state.totalAuthors)
-  const authorsTotal = useAuthorsStore((state) => state.total)
+  const { tasksCount, commentsCount, watchlistCount, authorsTotal } = useSidebarData()
 
   const vkSubItems = useMemo(
     () =>

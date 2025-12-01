@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import type { IListing } from '@/types/api'
 import type { UseInfiniteFetcher } from '@/modules/listings/hooks/useInfiniteListings'
+// Использование services для создания fetcher функции для useInfiniteListings
+// Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { listingsService } from '@/services/listingsService'
-import type { ListingsMeta, ListingsFetcherParams } from '../types'
+import type { ListingsMeta, ListingsFetcherParams } from '@/modules/listings/types'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 

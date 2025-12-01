@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 
+// Использование services напрямую в queryFn - стандартный паттерн React Query
+// Store обновляется через useEffect после получения данных
 import { tasksService } from '@/services/tasksService'
 import { useTasksStore } from '@/store'
 import { mapSummaryToTask } from '@/store/tasksStore.mappers'

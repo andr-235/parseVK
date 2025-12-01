@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 
+// Использование services напрямую в queryFn - стандартный паттерн React Query
+// Store обновляется через useEffect после получения данных
 import { authorsService } from '@/services/authorsService'
 import { useAuthorsStore } from '@/store'
 import { queryKeys, type AuthorsQueryParams } from '@/hooks/queryKeys'

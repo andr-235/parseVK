@@ -1,5 +1,5 @@
 import { Spinner } from '@/components/ui/spinner'
-import { WATCHLIST_CONSTANTS } from '../constants/watchlist'
+import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 
 export const LoadingState = () => (
   <div className="flex items-center justify-center py-8">

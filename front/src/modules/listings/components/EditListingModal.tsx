@@ -2,6 +2,8 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+// Использование services для одноразовой операции (обновление объявления)
+// Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { listingsService } from '@/services/listingsService'
 import type { IListing, ListingUpdatePayload } from '@/types/api'
 

@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
+// Использование services напрямую в queryFn - стандартный паттерн React Query
+// Store обновляется через useEffect после получения данных
 import { groupsService } from '@/services/groupsService'
 import { GROUPS_PAGE_LIMIT, useGroupsStore } from '@/store'
 import { queryKeys } from '@/hooks/queryKeys'

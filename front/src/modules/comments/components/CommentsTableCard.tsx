@@ -6,8 +6,8 @@ import LoadingCommentsState from './LoadingCommentsState'
 import EmptyCommentsState from './EmptyCommentsState'
 import CommentCard from './CommentCard'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import useCommentsTableCardController from '../hooks/useCommentsTableCardController'
-import type { CategorizedComment, CategorizedGroup } from '../types/commentsTable'
+import useCommentsTableCardController from '@/modules/comments/hooks/useCommentsTableCardController'
+import type { CategorizedComment, CategorizedGroup } from '@/modules/comments/types/commentsTable'
 import { useEffect, useRef } from 'react'
 
 interface CommentsTableCardProps {
