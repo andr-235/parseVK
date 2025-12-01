@@ -1,15 +1,20 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import type { Comment, Keyword } from '@/types'
 import { highlightKeywords } from '@/utils/highlightKeywords'
-import { CheckCircle2, ExternalLink, MessageSquare, BookmarkPlus, FileText, Users, Image as ImageIcon, Video, Link as LinkIcon } from 'lucide-react'
+import { CheckCircle2, ExternalLink, BookmarkPlus, Video, Link as LinkIcon, Eye } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { getAuthorInitials } from '../utils/getAuthorInitials'
 import { formatDateTime } from '../utils/formatDateTime'
 import { useMemo } from 'react'
+import { cn } from '@/lib/utils'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface CommentCardProps {
   comment: Comment
@@ -22,10 +27,8 @@ interface CommentCardProps {
   showKeywordPosts?: boolean
 }
 
-
 function CommentCard({
   comment,
-  index,
   toggleReadStatus,
   onAddToWatchlist,
   isWatchlistLoading,
@@ -40,11 +43,6 @@ function CommentCard({
   const keywordsFromPost = uniqueMatchedKeywords.filter((kw) => kw.source === 'POST')
   const keywordsFromComment = uniqueMatchedKeywords.filter((kw) => kw.source !== 'POST')
 
-  // Определяем, что показывать:
-  // - Если оба фильтра не выбраны (undefined) - показываем всё
-  // - Если выбран только комментарий - показываем только комментарий
-  // - Если выбран только пост - показываем только пост
-  // - Если выбраны оба - показываем оба
   const isFilterActive = showKeywordComments !== undefined || showKeywordPosts !== undefined
   
   const shouldShowPost = !isFilterActive 
@@ -85,12 +83,12 @@ function CommentCard({
           href={photoUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="block rounded-lg overflow-hidden border border-border/60 hover:border-primary/50 transition-colors"
+          className="block rounded-xl overflow-hidden border border-border/40 hover:border-primary/50 transition-all hover:shadow-sm group/media"
         >
           <img
             src={photoUrl}
             alt="Фото из поста"
-            className="w-full h-auto max-h-96 object-contain"
+            className="w-full h-auto max-h-96 object-contain bg-muted/10"
             loading="lazy"
           />
         </a>
@@ -108,19 +106,23 @@ function CommentCard({
       return (
         <div
           key={`video-${videoId || Math.random()}`}
-          className="flex items-center gap-3 rounded-lg border border-border/60 p-3 bg-background-secondary/40"
+          className="flex items-center gap-3 rounded-xl border border-border/40 p-3 bg-muted/20 hover:bg-muted/30 transition-colors"
         >
           {thumb && (
-            <img
-              src={thumb}
-              alt={title}
-              className="w-20 h-20 object-cover rounded"
-              loading="lazy"
-            />
+            <div className="relative group/video shrink-0">
+              <img
+                src={thumb}
+                alt={title}
+                className="w-24 h-16 object-cover rounded-lg"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/video:bg-black/10 transition-colors rounded-lg">
+                <Video className="h-6 w-6 text-white drop-shadow-md" />
+              </div>
+            </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <Video className="h-4 w-4 shrink-0" />
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <span className="truncate">{title}</span>
             </div>
             {ownerId && videoId && (
@@ -128,9 +130,9 @@ function CommentCard({
                 href={`https://vk.com/video${ownerId}_${videoId}${accessKey ? `_${accessKey}` : ''}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-text-secondary hover:text-primary inline-flex items-center gap-1 mt-1"
+                className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 mt-1.5 transition-colors"
               >
-                Открыть видео
+                Смотреть видео
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
@@ -155,25 +157,28 @@ function CommentCard({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-start gap-3 rounded-lg border border-border/60 p-3 bg-background-secondary/40 hover:border-primary/50 transition-colors"
+          className="flex items-start gap-3 rounded-xl border border-border/40 p-3 bg-muted/20 hover:bg-muted/30 hover:border-primary/30 transition-all"
         >
-          {photoUrl && (
-            <img
+          {photoUrl ? (
+             <img
               src={photoUrl}
               alt={title}
-              className="w-20 h-20 object-cover rounded shrink-0"
+              className="w-20 h-20 object-cover rounded-lg shrink-0"
               loading="lazy"
             />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <LinkIcon className="h-5 w-5 text-primary" />
+            </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <LinkIcon className="h-4 w-4 shrink-0" />
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <span className="truncate">{title}</span>
             </div>
             {description && (
-              <p className="text-xs text-text-secondary mt-1 line-clamp-2">{description}</p>
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{description}</p>
             )}
-            <span className="text-xs text-text-secondary/60 mt-1 block truncate">{url}</span>
+            <span className="text-[10px] text-muted-foreground/60 mt-1.5 block truncate">{url}</span>
           </div>
         </a>
       )
@@ -183,237 +188,191 @@ function CommentCard({
   }
 
   return (
-    <Card className="overflow-hidden transition-all hover:shadow-md">
-      <CardContent className="px-6 pb-6 pt-8 space-y-6">
-        {/* Header с аватаром и мета-информацией */}
-        <div className="flex items-start gap-4">
-          {/* Аватар */}
-          <Avatar className="h-12 w-12 border-2 border-muted">
-            {comment.authorAvatar ? (
-              <AvatarImage src={comment.authorAvatar} alt={comment.author} />
-            ) : null}
-            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-              {getAuthorInitials(comment.author)}
-            </AvatarFallback>
-          </Avatar>
+    <div className={cn(
+      "group relative flex gap-4 p-5 transition-all duration-200",
+      "hover:bg-muted/30 border-b border-border/40 last:border-0",
+      comment.isRead && "opacity-75 hover:opacity-100"
+    )}>
+      {/* Левая колонка: Аватар */}
+      <div className="shrink-0">
+        <Avatar className="h-10 w-10 sm:h-11 sm:w-11 border border-border shadow-sm">
+          {comment.authorAvatar ? (
+            <AvatarImage src={comment.authorAvatar} alt={comment.author} />
+          ) : null}
+          <AvatarFallback className="bg-primary/5 text-primary font-semibold text-xs sm:text-sm">
+            {getAuthorInitials(comment.author)}
+          </AvatarFallback>
+        </Avatar>
+      </div>
 
-          {/* Автор и мета-информация */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-4 mb-1">
-              <div className="flex flex-col gap-1">
-                {/* Имя автора */}
+      {/* Правая колонка: Контент */}
+      <div className="flex-1 min-w-0 space-y-3">
+        {/* Хедер: Автор и мета */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-0.5">
+             <div className="flex items-center gap-2 flex-wrap">
                 {comment.authorUrl ? (
                   <a
                     href={comment.authorUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-base font-semibold text-text-primary hover:text-primary transition-colors inline-flex items-center gap-1.5"
+                    className="text-sm sm:text-base font-bold text-foreground hover:text-primary transition-colors"
                   >
                     {comment.author}
-                    <ExternalLink className="h-3.5 w-3.5 opacity-50" />
                   </a>
                 ) : (
-                  <span className="text-base font-semibold text-text-primary">{comment.author}</span>
+                  <span className="text-sm sm:text-base font-bold text-foreground">{comment.author}</span>
                 )}
-
-                {/* ID и дата */}
-                <div className="flex items-center gap-2 text-sm text-text-secondary">
-                  {comment.authorId && (
-                    <>
-                      <Badge variant="outline" className="text-xs px-2 py-0">
-                        ID: {comment.authorId}
-                      </Badge>
-                      <span className="text-text-secondary/50">•</span>
-                    </>
+                
+                 {comment.authorId && (
+                    <span className="text-[10px] text-muted-foreground/60 bg-muted/50 px-1.5 py-0.5 rounded font-mono">
+                      ID: {comment.authorId}
+                    </span>
                   )}
-                  <time className="text-xs" dateTime={comment.publishedAt ?? comment.createdAt}>
-                    {formatDateTime(comment.publishedAt ?? comment.createdAt)}
-                  </time>
-                </div>
-              </div>
-
-              {/* Номер комментария и статус */}
-              <div className="flex items-center gap-2 shrink-0">
-                <Badge variant="secondary" className="text-xs">
-                  #{index + 1}
-                </Badge>
-                {comment.isRead && (
-                  <Badge variant="default" className="text-xs bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Прочитано
-                  </Badge>
+             </div>
+            
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <time dateTime={comment.publishedAt ?? comment.createdAt} className="hover:underline decoration-muted-foreground/30">
+                {formatDateTime(comment.publishedAt ?? comment.createdAt)}
+              </time>
+              {comment.isRead && (
+                  <>
+                   <span className="text-muted-foreground/30">•</span>
+                   <span className="text-green-600/80 dark:text-green-400/80 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Прочитано
+                   </span>
+                  </>
                 )}
-              </div>
             </div>
           </div>
+
+          {/* Кнопка меню действий (опционально, или основные действия сразу) */}
+           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              {comment.commentUrl && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" asChild>
+                            <a href={comment.commentUrl} target="_blank" rel="noopener noreferrer">
+                               <ExternalLink className="h-4 w-4" />
+                            </a>
+                         </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Открыть в VK</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+              )}
+           </div>
         </div>
 
-        {shouldShowPost && <Separator />}
-
-        {/* Текст поста */}
+        {/* Пост (Контекст) */}
         {shouldShowPost && (comment.postText || comment.postGroup || postAttachments.length > 0) && (
-          <>
-            <div className="space-y-3">
-              <div className="flex items-start gap-2 text-text-secondary/60">
-                <FileText className="h-4 w-4 mt-0.5 shrink-0" />
-                <span className="text-xs font-medium uppercase tracking-wide">
-                  Пост
-                  {keywordsFromPost.length > 0 && (
-                    <>
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {keywordsFromPost.length} ключ. слов
-                      </Badge>
-                      <span className="ml-2 text-xs normal-case text-text-secondary/80">
-                        (ключевые слова из поста)
-                      </span>
-                    </>
-                  )}
-                </span>
-              </div>
-
-              {/* Группа */}
-              {comment.postGroup && (
-                <div className="flex items-center gap-2 pl-6">
-                  <Users className="h-4 w-4 text-text-secondary/60 shrink-0" />
-                  <div className="flex items-center gap-2">
-                    {comment.postGroup.photo && (
-                      <img
-                        src={comment.postGroup.photo}
-                        alt={comment.postGroup.name}
-                        className="w-5 h-5 rounded-full"
-                        loading="lazy"
-                      />
-                    )}
-                    <span className="text-sm font-medium text-text-primary">
-                      {comment.postGroup.name}
-                    </span>
-                    {comment.postGroup.screenName && (
-                      <a
-                        href={`https://vk.com/${comment.postGroup.screenName}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-text-secondary hover:text-primary inline-flex items-center gap-1"
-                      >
-                        @{comment.postGroup.screenName}
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Текст поста */}
-              {comment.postText && (
-                <div className="text-[15px] leading-relaxed text-text-primary whitespace-pre-wrap break-words pl-6">
-                  {highlightKeywords(comment.postText, keywordsFromPost.length > 0 ? keywordsFromPost : uniqueMatchedKeywords)}
-                </div>
-              )}
-
-              {/* Медиа поста */}
-              {postAttachments.length > 0 && (
-                <div className="space-y-2 pl-6">
-                  <div className="flex items-center gap-2 text-xs text-text-secondary/60">
-                    <ImageIcon className="h-3.5 w-3.5" />
-                    <span>Медиа из поста</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {postAttachments.map((attachment) => renderAttachment(attachment)).filter(Boolean)}
-                  </div>
-                </div>
-              )}
+          <div className="relative pl-4 border-l-[3px] border-primary/20 bg-muted/20 rounded-r-xl py-3 pr-3 space-y-3 my-2">
+             {/* Label 'Context' */}
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 select-none">
+               Контекст поста
+               {keywordsFromPost.length > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[9px] bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-0">
+                        {keywordsFromPost.length} keywords
+                    </Badge>
+               )}
             </div>
-          </>
-        )}
 
-        {shouldShowPost && shouldShowComment && <Separator />}
+            {/* Группа поста */}
+            {comment.postGroup && (
+                <div className="flex items-center gap-2">
+                   {comment.postGroup.photo && (
+                      <img src={comment.postGroup.photo} alt="" className="w-5 h-5 rounded-full" />
+                   )}
+                   <span className="text-xs font-semibold text-foreground/80">{comment.postGroup.name}</span>
+                </div>
+            )}
+
+            {/* Текст поста (урезанный если длинный) */}
+            {comment.postText && (
+                <div className="text-sm text-foreground/80 leading-relaxed line-clamp-4 whitespace-pre-wrap break-words">
+                   {highlightKeywords(comment.postText, keywordsFromPost.length > 0 ? keywordsFromPost : uniqueMatchedKeywords)}
+                </div>
+            )}
+            
+             {/* Медиа поста */}
+             {postAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                    {/* Показываем только превью если много вложений, чтобы не засорять */}
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
+                      {postAttachments.map((attachment) => renderAttachment(attachment)).filter(Boolean)}
+                   </div>
+                </div>
+             )}
+          </div>
+        )}
 
         {/* Текст комментария */}
         {shouldShowComment && (
-          <div className="space-y-3">
-          <div className="flex items-start gap-2 text-text-secondary/60">
-            <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
-            <span className="text-xs font-medium uppercase tracking-wide">
-              Комментарий
+           <div className="space-y-2">
               {keywordsFromComment.length > 0 && (
-                <>
-                  <Badge variant="secondary" className="ml-2 text-xs">
-                    {keywordsFromComment.length} ключ. слов
-                  </Badge>
-                  <span className="ml-2 text-xs normal-case text-text-secondary/80">
-                    (ключевые слова из комментария)
-                  </span>
-                </>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="outline" className="h-5 border-primary/30 text-primary bg-primary/5 text-[10px]">
+                        Найдено {keywordsFromComment.length} ключей
+                    </Badge>
+                  </div>
               )}
-            </span>
-          </div>
-          <div className="text-[15px] leading-relaxed text-text-primary whitespace-pre-wrap break-words pl-6">
-            {highlightKeywords(comment.text, keywordsFromComment.length > 0 ? keywordsFromComment : uniqueMatchedKeywords)}
-          </div>
-        </div>
+              <div className="text-[15px] leading-relaxed text-foreground whitespace-pre-wrap break-words font-normal">
+                {highlightKeywords(comment.text, keywordsFromComment.length > 0 ? keywordsFromComment : uniqueMatchedKeywords)}
+              </div>
+           </div>
         )}
 
-        <Separator />
-
-        {/* Действия */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant={comment.isRead ? 'outline' : 'default'}
-            size="sm"
-            onClick={() => {
-              void toggleReadStatus(comment.id)
-            }}
-            className="gap-2"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            {comment.isRead ? 'Отметить непрочитанным' : 'Отметить прочитанным'}
-          </Button>
-
-          {onAddToWatchlist && (
+        {/* Нижняя панель действий */}
+        <div className="flex items-center gap-2 pt-2">
             <Button
-              variant="outline"
+              variant={comment.isRead ? 'ghost' : 'secondary'}
               size="sm"
-              className="gap-2"
-              disabled={comment.isWatchlisted || Boolean(isWatchlistLoading)}
-              onClick={() => {
-                if (!comment.isWatchlisted) {
-                  onAddToWatchlist(comment.id)
-                }
-              }}
-            >
-              {isWatchlistLoading ? (
-                <Spinner className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <BookmarkPlus className="h-4 w-4" />
+              onClick={() => void toggleReadStatus(comment.id)}
+              className={cn(
+                "h-8 gap-2 px-3 text-xs font-medium transition-all",
+                comment.isRead 
+                  ? "text-muted-foreground hover:text-foreground" 
+                  : "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
               )}
-              {comment.isWatchlisted ? 'В списке' : 'На карандаше'}
-            </Button>
-          )}
-
-          {comment.commentUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="gap-2"
-              onClick={() => {
-                if (!comment.isRead) {
-                  void toggleReadStatus(comment.id)
-                }
-              }}
             >
-              <a
-                href={comment.commentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Открыть в VK
-              </a>
+              {comment.isRead ? (
+                  <>
+                   <Eye className="h-3.5 w-3.5" /> 
+                   Прочитано
+                  </>
+              ) : (
+                  <>
+                   <CheckCircle2 className="h-3.5 w-3.5" />
+                   Прочитать
+                  </>
+              )}
             </Button>
-          )}
+
+            {onAddToWatchlist && (
+               <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={comment.isWatchlisted || Boolean(isWatchlistLoading)}
+                  onClick={() => !comment.isWatchlisted && onAddToWatchlist(comment.id)}
+                  className={cn(
+                      "h-8 gap-2 px-3 text-xs font-medium",
+                      comment.isWatchlisted ? "text-muted-foreground opacity-70" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                  )}
+               >
+                  {isWatchlistLoading ? (
+                      <Spinner className="h-3.5 w-3.5" />
+                  ) : (
+                      <BookmarkPlus className={cn("h-3.5 w-3.5", comment.isWatchlisted && "fill-current")} />
+                  )}
+                  {comment.isWatchlisted ? 'В списке' : 'На карандаш'}
+               </Button>
+            )}
         </div>
-      </CardContent>
-    </Card>
+
+      </div>
+    </div>
   )
 }
 
