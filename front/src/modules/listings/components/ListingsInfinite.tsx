@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { useInfiniteListings, type UseInfiniteFetcher } from '@/hooks/useInfiniteListings'
+import { useInfiniteListings, type UseInfiniteFetcher } from '@/modules/listings/hooks/useInfiniteListings'
 import type { IListing } from '@/types/api'
 import { ListingCard, ListingSkeleton } from './ListingCard'
 import type { ListingsMeta, ListingsFetcherParams } from '../types'

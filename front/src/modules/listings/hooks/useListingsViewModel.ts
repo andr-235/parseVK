@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import type { IListing } from '@/types/api'
-import type { UseInfiniteFetcher } from '@/hooks/useInfiniteListings'
+import type { UseInfiniteFetcher } from '@/modules/listings/hooks/useInfiniteListings'
 import { listingsService } from '@/services/listingsService'
 import type { ListingsMeta, ListingsFetcherParams } from '../types'
 

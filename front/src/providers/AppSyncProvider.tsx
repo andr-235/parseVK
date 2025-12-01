@@ -1,14 +1,14 @@
 import { useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 
-import { useTasksQuery } from '@/hooks/useTasksQuery'
-import { useGroupsQuery } from '@/hooks/useGroupsQuery'
-import { useKeywordsQuery } from '@/hooks/useKeywordsQuery'
-import { useTaskAutomationQuery } from '@/hooks/useTaskAutomationQuery'
-import { useCommentsQuery } from '@/hooks/useCommentsQuery'
-import { useAuthorsQuery } from '@/hooks/useAuthorsQuery'
-import { useWatchlistAuthorsQuery, useWatchlistSettingsQuery } from '@/hooks/useWatchlistQueries'
-import { useTasksSocket } from '@/hooks/useTasksSocket'
+import { useTasksQuery } from '@/modules/tasks/hooks/useTasksQuery'
+import { useGroupsQuery } from '@/modules/groups/hooks/useGroupsQuery'
+import { useKeywordsQuery } from '@/modules/keywords/hooks/useKeywordsQuery'
+import { useTaskAutomationQuery } from '@/modules/settings/hooks/useTaskAutomationQuery'
+import { useCommentsQuery } from '@/modules/comments/hooks/useCommentsQuery'
+import { useAuthorsQuery } from '@/modules/authors/hooks/useAuthorsQuery'
+import { useWatchlistAuthorsQuery, useWatchlistSettingsQuery } from '@/modules/watchlist/hooks/useWatchlistQueries'
+import { useTasksSocket } from '@/modules/tasks/hooks/useTasksSocket'
 
 const shouldSyncKeywords = (pathname: string): boolean => {
   return pathname.startsWith('/keywords') || pathname.startsWith('/comments')

@@ -1,5 +1,5 @@
-import { useAuthorData } from '@/hooks/useAuthorData'
-import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis'
+import { useAuthorData } from '@/modules/authors/hooks/useAuthorData'
+import { usePhotoAnalysis } from '@/modules/authorAnalysis/hooks/usePhotoAnalysis'
 import { AuthorHeroSection } from '@/modules/authorAnalysis/components/AuthorHeroSection'
 import { AnalysisSummarySection } from '@/modules/authorAnalysis/components/AnalysisSummarySection'
 import { PhotosSection } from '@/modules/authorAnalysis/components/PhotosSection'
