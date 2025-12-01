@@ -1,23 +1,20 @@
 import { useMemo } from 'react'
-import type { ReactNode } from 'react'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
 import SearchInput from '../../../components/SearchInput'
 import { Card, CardContent } from '../../../components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../../../components/ui/table'
-import { TableSortButton } from '../../../components/ui/table-sort-button'
 import { useTableSorting } from '../../../hooks/useTableSorting'
 import type { Group, TableColumn } from '../../../types'
 import LoadingGroupsState from './LoadingGroupsState'
 import EmptyGroupsState from './EmptyGroupsState'
-import { Trash2 } from 'lucide-react'
+import { ArrowUpDown, Trash2 } from 'lucide-react'
+import { GroupCard } from './GroupCard'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../components/ui/dropdown-menu'
 
 type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn<Group>[]
 
@@ -69,17 +66,16 @@ function GroupsTableCard({
     ? `${groups.length} из ${totalCount}`
     : `${totalCount}`
 
-  const getDefaultCellContent = (value: Group[keyof Group], column: TableColumn<Group>): ReactNode => {
-    if (value === null || value === undefined || value === '') {
-      return column.emptyValue ?? '-'
-    }
+  const sortOptions = useMemo(() => {
+    return tableColumns
+      .filter((col) => col.sortable)
+      .map((col) => ({
+        key: col.key,
+        label: col.header,
+      }))
+  }, [tableColumns])
 
-    if (typeof value === 'object') {
-      return column.emptyValue ?? '-'
-    }
-
-    return value
-  }
+  const currentSortLabel = sortOptions.find((o) => o.key === sortState?.key)?.label || 'Сортировка'
 
   return (
     <Card className="overflow-hidden rounded-xl border border-border shadow-sm">
@@ -100,6 +96,30 @@ function GroupsTableCard({
             placeholder="Поиск..."
             className="h-9 w-full sm:w-[250px]"
           />
+          
+          {hasGroups && (
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                   <Button variant="outline" size="sm" className="h-9 gap-2">
+                      <ArrowUpDown className="size-4" />
+                      <span className="truncate max-w-[100px]">{currentSortLabel}</span>
+                   </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {sortOptions.map((option) => (
+                    <DropdownMenuItem key={option.key} onClick={() => requestSort(option.key)}>
+                      {option.label}
+                      {sortState?.key === option.key && (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {sortState.direction === 'asc' ? ' (А-Я)' : ' (Я-А)'}
+                        </span>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+             </DropdownMenu>
+          )}
+
           {hasGroups && (
             <Button
               variant="ghost"
@@ -110,15 +130,15 @@ function GroupsTableCard({
               title="Очистить список"
             >
               <Trash2 className="mr-2 size-4" />
-              Очистить все
+              <span className="sr-only sm:not-sr-only">Очистить все</span>
             </Button>
           )}
         </div>
       </div>
 
-      <CardContent className="p-0">
+      <CardContent className="p-4 md:p-6">
         {isLoading && !hasGroups && (
-            <div className="p-8">
+            <div className="py-8">
                 <LoadingGroupsState />
             </div>
         )}
@@ -134,48 +154,17 @@ function GroupsTableCard({
         )}
 
         {hasFilteredGroups && (
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="hover:bg-transparent">
-                  {tableColumns.map((column) => (
-                    <TableHead key={column.key} className={column.headerClassName}>
-                      {column.sortable ? (
-                        <TableSortButton
-                          direction={sortState?.key === column.key ? sortState.direction : null}
-                          onClick={() => requestSort(column.key)}
-                        >
-                          {column.header}
-                        </TableSortButton>
-                      ) : (
-                        column.header
-                      )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedGroups.map((group, index) => (
-                  <TableRow key={group.id || index} className="group hover:bg-muted/30">
-                    {tableColumns.map((column) => (
-                      <TableCell key={column.key} className={column.cellClassName}>
-                        {column.render
-                          ? column.render(group, index)
-                          : getDefaultCellContent(group[column.key as keyof Group], column)}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-                {isLoadingMore && (
-                  <TableRow>
-                    <TableCell colSpan={tableColumns.length}>
-                      <div className="flex justify-center py-4">
-                         <span className="text-sm text-muted-foreground">Загрузка...</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {sortedGroups.map((group) => (
+                 <GroupCard key={group.id} group={group} onDelete={onDelete} />
+              ))}
+           </div>
+        )}
+        
+        {isLoadingMore && (
+           <div className="flex justify-center py-4">
+              <span className="text-sm text-muted-foreground">Загрузка...</span>
+           </div>
         )}
       </CardContent>
     </Card>

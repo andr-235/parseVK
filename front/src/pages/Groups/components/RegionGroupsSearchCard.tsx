@@ -1,80 +1,97 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { IRegionGroupSearchItem } from '../../../types/api'
 import { Button } from '@/components/ui/button'
-import { TableSortButton } from '@/components/ui/table-sort-button'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type { TableColumn } from '@/types'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent } from '@/components/ui/card'
-import { Search, X, RotateCcw } from 'lucide-react'
-interface RegionGroupRowProps {
+import { Search, X, RotateCcw, ArrowUpDown, Plus, Check } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+interface RegionGroupCardProps {
   group: IRegionGroupSearchItem
-  columns: TableColumn<IRegionGroupSearchItem>[]
   isSelected: boolean
   isBulkAdding: boolean
-  rowIndex: number
   onToggleSelection: (groupId: number) => void
   onAddGroup: (group: IRegionGroupSearchItem) => void | Promise<void>
   onRemoveGroup: (groupId: number) => void
+  formatCityTitle: (group: IRegionGroupSearchItem) => string
+  renderMembersCount: (group: IRegionGroupSearchItem) => string
 }
 
-const RegionGroupRow = memo(function RegionGroupRow({
+const RegionGroupCard = memo(function RegionGroupCard({
   group,
-  columns,
   isSelected,
   isBulkAdding,
-  rowIndex,
   onToggleSelection,
   onAddGroup,
   onRemoveGroup,
-}: RegionGroupRowProps) {
+  formatCityTitle,
+  renderMembersCount,
+}: RegionGroupCardProps) {
   return (
-    <TableRow className="group hover:bg-muted/30">
-      <TableCell className="w-12 text-center">
+    <div className={`relative flex flex-col gap-3 rounded-lg border p-4 transition-colors ${isSelected ? 'bg-primary/5 border-primary/20' : 'bg-card hover:bg-muted/30'}`}>
+      <div className="flex items-start gap-3">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={() => onToggleSelection(group.id)}
-          className="size-4 cursor-pointer rounded border-primary text-primary focus:ring-primary"
-          aria-label={isSelected ? 'Снять выделение' : 'Выделить группу'}
+          className="mt-1 size-4 shrink-0 cursor-pointer rounded border-primary text-primary focus:ring-primary"
         />
-      </TableCell>
-      {columns.map((column) => (
-        <TableCell key={column.key} className={column.cellClassName}>
-          {column.render ? column.render(group, rowIndex) : '—'}
-        </TableCell>
-      ))}
-      <TableCell className="flex justify-end gap-2">
-        <Button
-          size="sm"
-          variant="secondary"
-          className="h-8"
-          onClick={() => {
-            void onAddGroup(group)
-          }}
-          disabled={isBulkAdding}
-        >
-          Добавить
-        </Button>
+        
+        <div className="min-w-0 flex-1 space-y-1">
+          <a
+            href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block font-medium leading-tight text-foreground hover:text-primary hover:underline truncate"
+            title={group.name}
+          >
+            {group.name}
+          </a>
+          <div className="text-xs text-muted-foreground truncate">
+            vk.com/{group.screen_name ?? `club${group.id}`}
+          </div>
+        </div>
+        
         <Button
           variant="ghost"
-          size="sm"
-          className="h-8 text-muted-foreground hover:text-destructive"
+          size="icon"
+          className="h-6 w-6 -mr-2 -mt-2 text-muted-foreground hover:text-destructive"
           onClick={() => onRemoveGroup(group.id)}
           disabled={isBulkAdding}
         >
           <X className="size-4" />
         </Button>
-      </TableCell>
-    </TableRow>
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex items-center gap-1.5" title="Участники">
+          <span className="text-xs font-medium">👥 {renderMembersCount(group)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 truncate max-w-[50%]" title="Город">
+           <span className="text-xs truncate">📍 {formatCityTitle(group)}</span>
+        </div>
+      </div>
+
+      <Button
+        size="sm"
+        variant="secondary"
+        className="w-full h-8 text-xs"
+        onClick={() => {
+          void onAddGroup(group)
+        }}
+        disabled={isBulkAdding}
+      >
+        <Plus className="mr-1.5 size-3" />
+        Добавить
+      </Button>
+    </div>
   )
 })
 
@@ -101,37 +118,23 @@ function RegionGroupsSearchCard({
   onRemoveGroup,
   onReset
 }: RegionGroupsSearchCardProps) {
-  const formatCityTitle = (group: IRegionGroupSearchItem): string => {
+  const formatCityTitle = useCallback((group: IRegionGroupSearchItem): string => {
     const city = group.city
-
-    if (!city) {
-      return '—'
-    }
-
-    if (typeof city === 'string') {
-      return city
-    }
-
+    if (!city) return '—'
+    if (typeof city === 'string') return city
     if (typeof city === 'object' && city !== null) {
-      if ('title' in city && typeof city.title === 'string') {
-        return city.title
-      }
-
-      if ('name' in city && typeof city.name === 'string') {
-        return city.name
-      }
+      if ('title' in city && typeof city.title === 'string') return city.title
+      if ('name' in city && typeof city.name === 'string') return city.name
     }
-
     return '—'
-  }
+  }, [])
 
-  const renderMembersCount = (group: IRegionGroupSearchItem) => {
+  const renderMembersCount = useCallback((group: IRegionGroupSearchItem) => {
     if (typeof group.members_count === 'number') {
       return group.members_count.toLocaleString('ru-RU')
     }
-
     return '—'
-  }
+  }, [])
 
   const columns = useMemo<TableColumn<IRegionGroupSearchItem>[]>(() => [
     {
@@ -139,30 +142,12 @@ function RegionGroupsSearchCard({
       header: 'Название',
       sortable: true,
       sortValue: (item) => item.name?.toLowerCase() ?? '',
-      render: (group) => (
-        <a
-          href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-col rounded-md outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          <span className="font-medium leading-tight text-foreground">
-            {group.name}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            vk.com/{group.screen_name ?? `club${group.id}`}
-          </span>
-        </a>
-      ),
     },
     {
       key: 'members_count',
       header: 'Участники',
       sortable: true,
       sortValue: (item) => item.members_count ?? null,
-      render: (group) => renderMembersCount(group),
-      headerClassName: 'w-[140px]',
-      cellClassName: 'w-[140px]',
     },
     {
       key: 'city',
@@ -170,25 +155,14 @@ function RegionGroupsSearchCard({
       sortable: true,
       sortValue: (item) => {
         const city = item.city
-        if (!city) {
-          return ''
-        }
-        if (typeof city === 'string') {
-          return city.toLowerCase()
-        }
+        if (!city) return ''
+        if (typeof city === 'string') return city.toLowerCase()
         if (typeof city === 'object') {
-          if ('title' in city && typeof city.title === 'string') {
-            return city.title.toLowerCase()
-          }
-          if ('name' in city && typeof city.name === 'string') {
-            return city.name.toLowerCase()
-          }
+          if ('title' in city && typeof city.title === 'string') return city.title.toLowerCase()
+          if ('name' in city && typeof city.name === 'string') return city.name.toLowerCase()
         }
         return ''
       },
-      render: (group) => formatCityTitle(group),
-      headerClassName: 'w-[180px]',
-      cellClassName: 'w-[180px]',
     },
   ], [])
 
@@ -207,53 +181,33 @@ function RegionGroupsSearchCard({
 
   useEffect(() => {
     setSelectedIds((prev) => {
-      if (prev.size === 0) {
-        return prev
-      }
-
+      if (prev.size === 0) return prev
       const next = new Set<number>()
       for (const group of results) {
-        if (prev.has(group.id)) {
-          next.add(group.id)
-        }
+        if (prev.has(group.id)) next.add(group.id)
       }
-
-      if (next.size === prev.size) {
-        return prev
-      }
-
-      return next
+      return next.size === prev.size ? prev : next
     })
   }, [results])
 
   const resultsMap = useMemo(() => {
     const map = new Map<number, IRegionGroupSearchItem>()
-    results.forEach((group) => {
-      map.set(group.id, group)
-    })
+    results.forEach((group) => map.set(group.id, group))
     return map
   }, [results])
 
-  const isAllSelected =
-    sortedResults.length > 0
-    && sortedResults.every((group) => selectedIds.has(group.id))
+  const isAllSelected = sortedResults.length > 0 && sortedResults.every((group) => selectedIds.has(group.id))
   const hasSelection = selectedIds.size > 0
   const isSelectionPartial = hasSelection && !isAllSelected
   const selectionSize = selectedIds.size
 
   const selectedGroups = useMemo(() => {
-    if (!hasSelection) {
-      return []
-    }
-
+    if (!hasSelection) return []
     const items: IRegionGroupSearchItem[] = []
     selectedIds.forEach((id) => {
       const group = resultsMap.get(id)
-      if (group) {
-        items.push(group)
-      }
+      if (group) items.push(group)
     })
-
     return items
   }, [hasSelection, resultsMap, selectedIds])
 
@@ -267,10 +221,7 @@ function RegionGroupsSearchCard({
   const canSearch = !isLoading && !isBulkAdding
 
   const handleSearchClick = async () => {
-    if (!canSearch) {
-      return
-    }
-
+    if (!canSearch) return
     await onSearch()
   }
 
@@ -286,12 +237,9 @@ function RegionGroupsSearchCard({
       setSelectedIds(new Set<number>())
       return
     }
-
     if (checked) {
       const next = new Set<number>()
-      sortedResults.forEach((group) => {
-        next.add(group.id)
-      })
+      sortedResults.forEach((group) => next.add(group.id))
       setSelectedIds(next)
     } else {
       setSelectedIds(new Set<number>())
@@ -301,33 +249,21 @@ function RegionGroupsSearchCard({
   const toggleSelection = useCallback((groupId: number) => {
     setSelectedIds((prev) => {
       const next = new Set<number>(prev)
-      if (next.has(groupId)) {
-        next.delete(groupId)
-      } else {
-        next.add(groupId)
-      }
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
       return next
     })
   }, [])
 
   const handleAddGroups = useCallback(async () => {
     const groupsToAdd = hasSelection ? selectedGroups : results
-
-    if (!groupsToAdd.length) {
-      return
-    }
+    if (!groupsToAdd.length) return
 
     setIsBulkAdding(true)
     try {
       const result = await onAddSelected(groupsToAdd)
       const failedIds = result?.failedIds ?? []
-      setSelectedIds(() => {
-        if (!failedIds.length) {
-          return new Set<number>()
-        }
-
-        return new Set<number>(failedIds)
-      })
+      setSelectedIds(() => failedIds.length ? new Set<number>(failedIds) : new Set<number>())
     } finally {
       setIsBulkAdding(false)
     }
@@ -337,10 +273,7 @@ function RegionGroupsSearchCard({
     const success = await onAddGroup(group)
     if (success) {
       setSelectedIds((prev) => {
-        if (!prev.has(group.id)) {
-          return prev
-        }
-
+        if (!prev.has(group.id)) return prev
         const next = new Set<number>(prev)
         next.delete(group.id)
         return next
@@ -350,16 +283,15 @@ function RegionGroupsSearchCard({
 
   const handleRemoveSingleGroup = useCallback((groupId: number) => {
     setSelectedIds((prev) => {
-      if (!prev.has(groupId)) {
-        return prev
-      }
-
+      if (!prev.has(groupId)) return prev
       const next = new Set<number>(prev)
       next.delete(groupId)
       return next
     })
     onRemoveGroup(groupId)
   }, [onRemoveGroup])
+
+  const currentSortLabel = columns.find(c => c.key === sortState?.key)?.header || 'Сортировка'
 
   return (
     <Card className="overflow-hidden rounded-xl border border-border shadow-sm">
@@ -398,9 +330,7 @@ function RegionGroupsSearchCard({
       </div>
 
       <CardContent className="p-0">
-        {error && (
-           <div className="p-6 text-sm text-destructive">{error}</div>
-        )}
+        {error && <div className="p-6 text-sm text-destructive">{error}</div>}
 
         {isLoading && !hasResults && (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
@@ -422,72 +352,79 @@ function RegionGroupsSearchCard({
         )}
 
         {hasResults && (
-          <>
-            <div className="flex items-center justify-between border-b bg-muted/10 px-6 py-3">
-               <div className="text-xs text-muted-foreground">
-                 Найдено новых: {results.length} (Всего: {total})
-               </div>
-               <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="h-8 text-xs"
-                  disabled={isLoading || isBulkAdding || !hasResults}
-                  onClick={handleAddGroups}
-               >
-                 {isBulkAdding && <Spinner className="mr-2 size-3" />}
-                 {hasSelection ? `Добавить выделенное (${selectionSize})` : 'Добавить все'}
-               </Button>
-            </div>
-            
-            <Table>
-              <TableHeader className="bg-muted/30">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-12 text-center">
-                      <input
+          <div className="flex flex-col">
+            <div className="flex flex-col gap-3 border-b bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+               <div className="flex items-center gap-4">
+                   <label className="flex items-center gap-2 cursor-pointer select-none">
+                       <input
                         ref={selectAllRef}
                         type="checkbox"
                         checked={isAllSelected}
                         disabled={!hasResults || isLoading}
                         onChange={(event) => toggleSelectAll(event.target.checked)}
-                        className="size-4 cursor-pointer rounded border-primary text-primary focus:ring-primary"
-                        aria-label={isAllSelected ? 'Снять выделение со всех' : 'Выделить все группы'}
+                        className="size-4 rounded border-primary text-primary focus:ring-primary"
                       />
-                    </TableHead>
-                    {columns.map((column) => (
-                      <TableHead key={column.key} className={column.headerClassName}>
-                        {column.sortable === false ? (
-                          column.header
-                        ) : (
-                          <TableSortButton
-                            direction={sortState?.key === column.key ? sortState.direction : null}
-                            onClick={() => requestSort(column.key)}
-                          >
-                            {column.header}
-                          </TableSortButton>
-                        )}
-                      </TableHead>
-                    ))}
-                    <TableHead className="text-right">Действия</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedResults.map((group, index) => (
-                    <RegionGroupRow
-                      key={group.id}
-                      group={group}
-                      columns={columns}
-                      isSelected={selectedIds.has(group.id)}
-                      isBulkAdding={isBulkAdding}
-                      rowIndex={index}
-                      onToggleSelection={toggleSelection}
-                      onAddGroup={handleAddSingleGroup}
-                      onRemoveGroup={handleRemoveSingleGroup}
-                    />
-                  ))}
-                </TableBody>
-            </Table>
-          </>
+                      <span className="text-sm font-medium">
+                        Выбрать все
+                      </span>
+                   </label>
+                   <span className="hidden sm:inline text-xs text-muted-foreground">
+                     ({results.length})
+                   </span>
+               </div>
+
+               <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 gap-2">
+                          <ArrowUpDown className="size-3.5" />
+                          <span className="truncate max-w-[100px] text-xs">{currentSortLabel}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {columns.filter(c => c.sortable).map((col) => (
+                        <DropdownMenuItem key={col.key} onClick={() => requestSort(col.key)}>
+                          {col.header}
+                          {sortState?.key === col.key && (
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {sortState.direction === 'asc' ? ' (А-Я)' : ' (Я-А)'}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="h-8 text-xs"
+                      disabled={isLoading || isBulkAdding || !hasResults}
+                      onClick={handleAddGroups}
+                  >
+                    {isBulkAdding && <Spinner className="mr-2 size-3" />}
+                    {hasSelection ? `Добавить (${selectionSize})` : 'Добавить все'}
+                  </Button>
+               </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+               {sortedResults.map((group) => (
+                 <RegionGroupCard
+                   key={group.id}
+                   group={group}
+                   isSelected={selectedIds.has(group.id)}
+                   isBulkAdding={isBulkAdding}
+                   onToggleSelection={toggleSelection}
+                   onAddGroup={handleAddSingleGroup}
+                   onRemoveGroup={handleRemoveSingleGroup}
+                   formatCityTitle={formatCityTitle}
+                   renderMembersCount={renderMembersCount}
+                 />
+               ))}
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
