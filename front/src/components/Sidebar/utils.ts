@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-export const getNavItemClasses = (isActive: boolean, isCollapsed: boolean) => {
+export const getNavItemClasses = (isActive: boolean) => {
   return cn(
     'flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors',
     isActive

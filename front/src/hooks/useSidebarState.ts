@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 
 type SectionKey = 'vk' | 'parsing'
