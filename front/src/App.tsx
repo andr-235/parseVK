@@ -36,7 +36,7 @@ function App() {
   return (
     <BrowserRouter>
       <AppSyncProvider />
-      <div className="flex min-h-screen w-full bg-background-primary text-text-primary transition-colors duration-300">
+      <div className="flex h-screen w-full overflow-hidden bg-background-primary text-text-primary transition-colors duration-300">
         <Sidebar />
         <MainContent>
           <Routes>
@@ -55,12 +55,12 @@ function App() {
         </MainContent>
         <Toaster
           position="top-right"
+          containerStyle={{
+            pointerEvents: 'none',
+          }}
           toastOptions={{
             duration: 3000,
-            style: {
-              background: 'var(--bg-sidebar)',
-              color: 'var(--text-light)',
-            },
+            className: 'bg-background-sidebar text-text-light pointer-events-auto',
           }}
         />
       </div>
