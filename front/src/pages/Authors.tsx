@@ -209,7 +209,7 @@ function Authors() {
     : 'Попробуйте изменить фильтр или уточнить поисковый запрос.'
 
   return (
-    <div className="flex flex-col gap-8 max-w-[1600px] mx-auto">
+    <div className="flex flex-col gap-8 w-full">
       <PageHeroCard
         title="Авторы ВКонтакте"
         description="База авторов, собранная через парсинг и мониторинг. Управляйте статусами проверки и анализируйте профили."
