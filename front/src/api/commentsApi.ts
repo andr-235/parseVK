@@ -1,4 +1,5 @@
 import { API_URL } from './config'
+import { createRequest, handleResponse } from './utils'
 import type { ICommentResponse, IGetCommentsResponse, IGetCommentsCursorResponse } from '../types/api'
 
 type CommentsFilters = {
@@ -8,15 +9,15 @@ type CommentsFilters = {
   search?: string
 }
 
-const appendFilterParams = (searchParams: URLSearchParams, filters?: CommentsFilters) => {
+const buildFilterQuery = (filters?: CommentsFilters): string => {
   if (!filters) {
-    return
+    return ''
   }
 
-  const { keywords, keywordSource, readStatus, search } = filters
+  const searchParams = new URLSearchParams()
 
-  if (Array.isArray(keywords)) {
-    keywords
+  if (Array.isArray(filters.keywords)) {
+    filters.keywords
       .map((keyword) => keyword.trim())
       .filter((keyword) => keyword.length > 0)
       .forEach((keyword) => {
@@ -24,18 +25,20 @@ const appendFilterParams = (searchParams: URLSearchParams, filters?: CommentsFil
       })
   }
 
-  if (keywordSource) {
-    searchParams.set('keywordSource', keywordSource)
+  if (filters.keywordSource) {
+    searchParams.set('keywordSource', filters.keywordSource)
   }
 
-  if (readStatus && readStatus !== 'all') {
-    searchParams.set('readStatus', readStatus)
+  if (filters.readStatus && filters.readStatus !== 'all') {
+    searchParams.set('readStatus', filters.readStatus)
   }
 
-  const normalizedSearch = search?.trim()
+  const normalizedSearch = filters.search?.trim()
   if (normalizedSearch) {
     searchParams.set('search', normalizedSearch)
   }
+
+  return searchParams.toString()
 }
 
 export const commentsApi = {
@@ -52,17 +55,19 @@ export const commentsApi = {
       searchParams.set('limit', String(params.limit))
     }
 
-    appendFilterParams(searchParams, params)
+    const filterQuery = buildFilterQuery(params)
+    if (filterQuery) {
+      const filterParams = new URLSearchParams(filterQuery)
+      for (const [key, value] of filterParams.entries()) {
+        searchParams.append(key, value)
+      }
+    }
 
     const query = searchParams.toString()
     const url = query ? `${API_URL}/comments?${query}` : `${API_URL}/comments`
     const response = await fetch(url)
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch comments')
-    }
-
-    return response.json()
+    return handleResponse<IGetCommentsResponse>(response, 'Failed to fetch comments')
   },
 
   /**
@@ -85,30 +90,27 @@ export const commentsApi = {
       searchParams.set('limit', String(params.limit))
     }
 
-    appendFilterParams(searchParams, params)
+    const filterQuery = buildFilterQuery(params)
+    if (filterQuery) {
+      const filterParams = new URLSearchParams(filterQuery)
+      for (const [key, value] of filterParams.entries()) {
+        searchParams.append(key, value)
+      }
+    }
 
     const query = searchParams.toString()
     const url = query ? `${API_URL}/comments/cursor?${query}` : `${API_URL}/comments/cursor`
     const response = await fetch(url)
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch comments with cursor')
-    }
-
-    return response.json()
+    return handleResponse<IGetCommentsCursorResponse>(response, 'Failed to fetch comments with cursor')
   },
 
   async updateReadStatus(id: number, isRead: boolean): Promise<ICommentResponse> {
-    const response = await fetch(`${API_URL}/comments/${id}/read`, {
+    const response = await createRequest(`${API_URL}/comments/${id}/read`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isRead }),
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to update comment read status')
-    }
-
-    return response.json()
-  }
+    return handleResponse<ICommentResponse>(response, 'Failed to update comment read status')
+  },
 }

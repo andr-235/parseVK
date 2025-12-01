@@ -1,4 +1,5 @@
 import { API_URL } from './config'
+import { createRequest, handleResponse } from './utils'
 import type {
   ITaskAutomationRunResponse,
   ITaskAutomationSettings,
@@ -16,27 +17,18 @@ export const taskAutomationApi = {
   async getSettings(): Promise<ITaskAutomationSettings> {
     const response = await fetch(`${API_URL}/tasks/automation/settings`)
 
-    if (!response.ok) {
-      throw new Error('Failed to load automation settings')
-    }
-
-    return response.json()
+    return handleResponse<ITaskAutomationSettings>(response, 'Failed to load automation settings')
   },
 
   async updateSettings(
     payload: UpdateTaskAutomationSettingsRequest,
   ): Promise<ITaskAutomationSettings> {
-    const response = await fetch(`${API_URL}/tasks/automation/settings`, {
+    const response = await createRequest(`${API_URL}/tasks/automation/settings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to update automation settings')
-    }
-
-    return response.json()
+    return handleResponse<ITaskAutomationSettings>(response, 'Failed to update automation settings')
   },
 
   async runNow(): Promise<ITaskAutomationRunResponse> {
@@ -44,10 +36,6 @@ export const taskAutomationApi = {
       method: 'POST',
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to trigger automation run')
-    }
-
-    return response.json()
+    return handleResponse<ITaskAutomationRunResponse>(response, 'Failed to trigger automation run')
   },
 }

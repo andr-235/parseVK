@@ -1,25 +1,24 @@
 import { API_URL } from './config'
+import { createRequest, handleResponse } from './utils'
 import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '../types/api'
 
 export const keywordsApi = {
   async addKeyword(word: string, category?: string | null): Promise<IKeywordResponse> {
-    const response = await fetch(`${API_URL}/keywords/add`, {
+    const response = await createRequest(`${API_URL}/keywords/add`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ word, category })
+      body: JSON.stringify({ word, category }),
     })
-    if (!response.ok) throw new Error('Failed to add keyword')
-    return response.json()
+
+    return handleResponse<IKeywordResponse>(response, 'Failed to add keyword')
   },
 
   async bulkAddKeywords(words: string[]): Promise<IBulkAddResponse> {
-    const response = await fetch(`${API_URL}/keywords/bulk-add`, {
+    const response = await createRequest(`${API_URL}/keywords/bulk-add`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ words })
+      body: JSON.stringify({ words }),
     })
-    if (!response.ok) throw new Error('Failed to add keywords')
-    return response.json()
+
+    return handleResponse<IBulkAddResponse>(response, 'Failed to add keywords')
   },
 
   async uploadKeywords(file: File): Promise<IBulkAddResponse> {
@@ -28,32 +27,32 @@ export const keywordsApi = {
 
     const response = await fetch(`${API_URL}/keywords/upload`, {
       method: 'POST',
-      body: formData
+      body: formData,
     })
-    if (!response.ok) throw new Error('Failed to upload keywords')
-    return response.json()
+
+    return handleResponse<IBulkAddResponse>(response, 'Failed to upload keywords')
   },
 
   async getAllKeywords(): Promise<IKeywordResponse[]> {
     const response = await fetch(`${API_URL}/keywords`)
-    if (!response.ok) throw new Error('Failed to fetch keywords')
-    return response.json()
+
+    return handleResponse<IKeywordResponse[]>(response, 'Failed to fetch keywords')
   },
 
   async deleteAllKeywords(): Promise<IDeleteResponse> {
     const response = await fetch(`${API_URL}/keywords/all`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
-    if (!response.ok) throw new Error('Failed to delete keywords')
-    return response.json()
+
+    return handleResponse<IDeleteResponse>(response, 'Failed to delete keywords')
   },
 
   async deleteKeyword(id: number): Promise<IKeywordResponse> {
     const response = await fetch(`${API_URL}/keywords/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
-    if (!response.ok) throw new Error('Failed to delete keyword')
-    return response.json()
+
+    return handleResponse<IKeywordResponse>(response, 'Failed to delete keyword')
   },
 
   async recalculateKeywordMatches(): Promise<{
@@ -62,11 +61,15 @@ export const keywordsApi = {
     created: number
     deleted: number
   }> {
-    const response = await fetch(`${API_URL}/keywords/recalculate-matches`, {
+    const response = await createRequest(`${API_URL}/keywords/recalculate-matches`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
     })
-    if (!response.ok) throw new Error('Failed to recalculate keyword matches')
-    return response.json()
-  }
+
+    return handleResponse<{
+      processed: number
+      updated: number
+      created: number
+      deleted: number
+    }>(response, 'Failed to recalculate keyword matches')
+  },
 }

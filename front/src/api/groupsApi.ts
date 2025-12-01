@@ -1,21 +1,21 @@
 import { API_URL } from './config'
+import { buildQueryString, createRequest, handleResponse } from './utils'
 import type {
   IGroupResponse,
   IDeleteResponse,
- IGroupsListResponse,
-  IRegionGroupSearchResponse
+  IGroupsListResponse,
+  IRegionGroupSearchResponse,
 } from '../types/api'
 import type { SaveGroupDto } from '../dto'
 
 export const groupsApi = {
   async saveGroup(dto: SaveGroupDto): Promise<IGroupResponse> {
-    const response = await fetch(`${API_URL}/groups/save`, {
+    const response = await createRequest(`${API_URL}/groups/save`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dto)
+      body: JSON.stringify(dto),
     })
-    if (!response.ok) throw new Error('Failed to save group')
-    return response.json()
+
+    return handleResponse<IGroupResponse>(response, 'Failed to save group')
   },
 
   async uploadGroups(file: File): Promise<{ saved: number; errors: string[] }> {
@@ -24,9 +24,13 @@ export const groupsApi = {
 
     const response = await fetch(`${API_URL}/groups/upload`, {
       method: 'POST',
-      body: formData
+      body: formData,
     })
-    if (!response.ok) throw new Error('Failed to upload groups')
+
+    if (!response.ok) {
+      throw new Error('Failed to upload groups')
+    }
+
     const data = await response.json()
     const failedErrors = Array.isArray(data?.failed)
       ? data.failed.map((item: { identifier?: string; error?: string; errorMessage?: string }) => {
@@ -42,47 +46,40 @@ export const groupsApi = {
 
     return {
       saved: typeof data?.successCount === 'number' ? data.successCount : 0,
-      errors: failedErrors
+      errors: failedErrors,
     }
   },
 
   async getAllGroups(params?: { page?: number; limit?: number }): Promise<IGroupsListResponse> {
-    const searchParams = new URLSearchParams()
-    if (typeof params?.page === 'number') {
-      searchParams.set('page', String(params.page))
-    }
-    if (typeof params?.limit === 'number') {
-      searchParams.set('limit', String(params.limit))
-    }
-    const query = searchParams.toString()
-    const response = await fetch(`${API_URL}/groups${query ? `?${query}` : ''}`)
-    if (!response.ok) throw new Error('Failed to fetch groups')
-    return response.json()
+    const query = buildQueryString({
+      page: params?.page,
+      limit: params?.limit,
+    })
+    const url = `${API_URL}/groups${query ? `?${query}` : ''}`
+    const response = await fetch(url)
+
+    return handleResponse<IGroupsListResponse>(response, 'Failed to fetch groups')
   },
 
   async deleteAllGroups(): Promise<IDeleteResponse> {
     const response = await fetch(`${API_URL}/groups/all`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
-    if (!response.ok) throw new Error('Failed to delete all groups')
-    return response.json()
+
+    return handleResponse<IDeleteResponse>(response, 'Failed to delete all groups')
   },
 
   async deleteGroup(id: number): Promise<IGroupResponse> {
     const response = await fetch(`${API_URL}/groups/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
-    if (!response.ok) throw new Error('Failed to delete group')
-    return response.json()
+
+    return handleResponse<IGroupResponse>(response, 'Failed to delete group')
   },
 
   async searchRegionGroups(): Promise<IRegionGroupSearchResponse> {
     const response = await fetch(`${API_URL}/groups/search/region`)
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(errorText || 'Failed to search region groups')
-    }
 
-    return response.json()
-  }
+    return handleResponse<IRegionGroupSearchResponse>(response, 'Failed to search region groups')
+  },
 }

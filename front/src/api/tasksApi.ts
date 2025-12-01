@@ -1,20 +1,16 @@
 import { API_URL } from './config'
+import { createRequest, handleResponse } from './utils'
 import type { CreateParsingTaskDto } from '../dto'
 import type { IParsingTaskResult, IParsingTaskSummary } from '../types/api'
 
 export const tasksApi = {
   async createParsingTask(dto: CreateParsingTaskDto): Promise<IParsingTaskResult> {
-    const response = await fetch(`${API_URL}/tasks/parse`, {
+    const response = await createRequest(`${API_URL}/tasks/parse`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dto)
+      body: JSON.stringify(dto),
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to create parsing task')
-    }
-
-    return response.json()
+    return handleResponse<IParsingTaskResult>(response, 'Failed to create parsing task')
   },
 
   async getTasks(): Promise<IParsingTaskSummary[]> {
@@ -24,57 +20,41 @@ export const tasksApi = {
       return []
     }
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch tasks')
-    }
-
-    return response.json()
+    return handleResponse<IParsingTaskSummary[]>(response, 'Failed to fetch tasks')
   },
 
   async getTaskDetails(taskId: number | string): Promise<IParsingTaskResult> {
     const response = await fetch(`${API_URL}/tasks/${taskId}`)
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch task details')
-    }
-
-    return response.json()
+    return handleResponse<IParsingTaskResult>(response, 'Failed to fetch task details')
   },
 
   async resumeTask(taskId: number | string): Promise<IParsingTaskResult> {
     const id = encodeURIComponent(String(taskId))
     const response = await fetch(`${API_URL}/tasks/${id}/resume`, {
-      method: 'POST'
+      method: 'POST',
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to resume task')
-    }
-
-    return response.json()
+    return handleResponse<IParsingTaskResult>(response, 'Failed to resume task')
   },
 
   async checkTask(taskId: number | string): Promise<IParsingTaskResult> {
     const id = encodeURIComponent(String(taskId))
     const response = await fetch(`${API_URL}/tasks/${id}/check`, {
-      method: 'POST'
+      method: 'POST',
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to check task')
-    }
-
-    return response.json()
+    return handleResponse<IParsingTaskResult>(response, 'Failed to check task')
   },
 
   async deleteTask(taskId: number | string): Promise<void> {
     const id = encodeURIComponent(String(taskId))
     const response = await fetch(`${API_URL}/tasks/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
 
     if (!response.ok) {
       throw new Error('Failed to delete task')
     }
-  }
+  },
 }

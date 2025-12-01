@@ -1,4 +1,5 @@
 import { API_URL } from './config'
+import { buildQueryString, handleResponse } from './utils'
 import type {
   AuthorDetailsResponse,
   AuthorsListResponse,
@@ -14,51 +15,24 @@ export const authorsApi = {
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
   } = {}): Promise<AuthorsListResponse> {
-    const searchParams = new URLSearchParams()
-
-    if (typeof params.offset === 'number') {
-      searchParams.set('offset', String(params.offset))
-    }
-
-    if (typeof params.limit === 'number') {
-      searchParams.set('limit', String(params.limit))
-    }
-
-    if (params.search) {
-      searchParams.set('search', params.search)
-    }
-
-    if (typeof params.verified === 'boolean') {
-      searchParams.set('verified', String(params.verified))
-    }
-
-    if (params.sortBy) {
-      searchParams.set('sortBy', params.sortBy)
-    }
-
-    if (params.sortOrder) {
-      searchParams.set('sortOrder', params.sortOrder)
-    }
-
-    const query = searchParams.toString()
+    const query = buildQueryString({
+      offset: params.offset,
+      limit: params.limit,
+      search: params.search,
+      verified: params.verified,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    })
     const url = query ? `${API_URL}/authors?${query}` : `${API_URL}/authors`
     const response = await fetch(url)
 
-    if (!response.ok) {
-      throw new Error('Не удалось загрузить список авторов')
-    }
-
-    return response.json()
+    return handleResponse<AuthorsListResponse>(response, 'Не удалось загрузить список авторов')
   },
 
   async getDetails(vkUserId: number): Promise<AuthorDetailsResponse> {
     const response = await fetch(`${API_URL}/authors/${vkUserId}`)
 
-    if (!response.ok) {
-      throw new Error('Не удалось загрузить данные пользователя')
-    }
-
-    return response.json()
+    return handleResponse<AuthorDetailsResponse>(response, 'Не удалось загрузить данные пользователя')
   },
 
   async refreshAuthors(): Promise<RefreshAuthorsResponse> {
@@ -66,10 +40,6 @@ export const authorsApi = {
       method: 'POST',
     })
 
-    if (!response.ok) {
-      throw new Error('Не удалось обновить карточки авторов')
-    }
-
-    return response.json()
+    return handleResponse<RefreshAuthorsResponse>(response, 'Не удалось обновить карточки авторов')
   },
 }

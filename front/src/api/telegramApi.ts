@@ -1,4 +1,5 @@
 import { API_URL } from './config'
+import { createRequest, handleResponse } from './utils'
 import type {
   TelegramSessionConfirmRequest,
   TelegramSessionConfirmResponse,
@@ -12,97 +13,63 @@ import type {
 
 export const telegramApi = {
   async syncChat(payload: TelegramSyncRequest): Promise<TelegramSyncResponse> {
-    const response = await fetch(`${API_URL}/telegram/sync`, {
+    const response = await createRequest(`${API_URL}/telegram/sync`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      const message = await response.text()
-      throw new Error(message || 'Не удалось синхронизировать чат Telegram')
-    }
-
-    return response.json() as Promise<TelegramSyncResponse>
+    return handleResponse<TelegramSyncResponse>(response, 'Не удалось синхронизировать чат Telegram')
   },
 
   async startSession(payload: TelegramSessionStartRequest): Promise<TelegramSessionStartResponse> {
-    const response = await fetch(`${API_URL}/telegram/session/start`, {
+    const response = await createRequest(`${API_URL}/telegram/session/start`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      const message = await response.text()
-      throw new Error(message || 'Не удалось отправить код Telegram')
-    }
-
-    return response.json() as Promise<TelegramSessionStartResponse>
+    return handleResponse<TelegramSessionStartResponse>(response, 'Не удалось отправить код Telegram')
   },
 
   async confirmSession(payload: TelegramSessionConfirmRequest): Promise<TelegramSessionConfirmResponse> {
-    const response = await fetch(`${API_URL}/telegram/session/confirm`, {
+    const response = await createRequest(`${API_URL}/telegram/session/confirm`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      const message = await response.text()
-      throw new Error(message || 'Не удалось подтвердить код Telegram')
-    }
-
-    return response.json() as Promise<TelegramSessionConfirmResponse>
+    return handleResponse<TelegramSessionConfirmResponse>(response, 'Не удалось подтвердить код Telegram')
   },
 
   async getCurrentSession(): Promise<TelegramSessionConfirmResponse | null> {
-    const response = await fetch(`${API_URL}/telegram/session`, {
+    const response = await createRequest(`${API_URL}/telegram/session`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
     })
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null
-      }
-      const message = await response.text()
-      throw new Error(message || 'Не удалось получить текущую сессию')
+    if (response.status === 404) {
+      return null
     }
 
-    return response.json() as Promise<TelegramSessionConfirmResponse>
+    return handleResponse<TelegramSessionConfirmResponse>(response, 'Не удалось получить текущую сессию')
   },
 
   async getSettings(): Promise<TelegramSettings | null> {
-    const response = await fetch(`${API_URL}/telegram/settings`, {
+    const response = await createRequest(`${API_URL}/telegram/settings`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
     })
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null
-      }
-      const message = await response.text()
-      throw new Error(message || 'Не удалось получить настройки Telegram')
+    if (response.status === 404) {
+      return null
     }
 
-    return response.json() as Promise<TelegramSettings>
+    return handleResponse<TelegramSettings>(response, 'Не удалось получить настройки Telegram')
   },
 
   async updateSettings(payload: TelegramSettingsRequest): Promise<TelegramSettings> {
-    const response = await fetch(`${API_URL}/telegram/settings`, {
+    const response = await createRequest(`${API_URL}/telegram/settings`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
-      const message = await response.text()
-      throw new Error(message || 'Не удалось сохранить настройки Telegram')
-    }
-
-    return response.json() as Promise<TelegramSettings>
+    return handleResponse<TelegramSettings>(response, 'Не удалось сохранить настройки Telegram')
   },
 }
 
