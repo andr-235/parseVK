@@ -1,8 +1,8 @@
+import { Separator } from '@/components/ui/separator'
+import CommentsHero from './Comments/components/CommentsHero'
 import CommentsFiltersPanel from './Comments/components/CommentsFiltersPanel'
 import CommentsTableCard from './Comments/components/CommentsTableCard'
-import CommentsHero from './Comments/components/CommentsHero'
 import useCommentsViewModel from './Comments/hooks/useCommentsViewModel'
-import { Separator } from '@/components/ui/separator'
 
 function Comments() {
   const {

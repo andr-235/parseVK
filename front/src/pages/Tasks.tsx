@@ -2,16 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import toast from 'react-hot-toast'
-import TaskDetails from './Tasks/components/TaskDetails'
-import CreateParseTaskModal from './Tasks/components/CreateParseTaskModal'
-import { useTasksStore, useGroupsStore, useTaskAutomationStore } from '../stores'
-import ActiveTasksBanner from './Tasks/components/ActiveTasksBanner'
+import { useTasksStore, useGroupsStore, useTaskAutomationStore } from '@/stores'
 import { isTaskActive } from '@/utils/taskProgress'
 import { getLatestTaskDate, formatTaskDate } from '@/utils/taskDates'
+import TaskDetails from './Tasks/components/TaskDetails'
+import CreateParseTaskModal from './Tasks/components/CreateParseTaskModal'
+import ActiveTasksBanner from './Tasks/components/ActiveTasksBanner'
 import TasksHero from './Tasks/components/TasksHero'
 import TasksList from './Tasks/components/TasksList'
 
-const Tasks = () => {
+function Tasks() {
   const {
     tasks,
     fetchTasks,
@@ -103,7 +103,7 @@ const Tasks = () => {
     }
   }, [tasks, selectedTaskId])
 
-  const handleOpenCreateModal = async () => {
+  const handleOpenCreateModal = useCallback(async () => {
     if (areGroupsLoading) {
       return
     }
@@ -115,7 +115,7 @@ const Tasks = () => {
 
     await fetchAllGroups()
     setIsCreateModalOpen(true)
-  }
+  }, [areGroupsLoading, hasGroups, fetchAllGroups])
 
   const handleCreateTask = useCallback(async (groupIds: Array<number | string>) => {
     if (groupIds.length === 0) {
@@ -153,9 +153,9 @@ const Tasks = () => {
     }
   }, [fetchTaskDetails])
 
-  const handleOpenAutomationSettings = () => {
+  const handleOpenAutomationSettings = useCallback(() => {
     navigate('/settings')
-  }
+  }, [navigate])
 
   const handleAutomationRun = useCallback(async () => {
     try {

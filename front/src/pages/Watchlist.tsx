@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react'
+import { RefreshCw, Eye, EyeOff } from 'lucide-react'
+import PageTitle from '@/components/PageTitle'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { useWatchlistAuthors } from '@/hooks/useWatchlistAuthors'
 import { useWatchlistSettings } from '@/hooks/useWatchlistSettings'
 import { useAuthorColumns } from './Watchlist/components/authorColumns'
 import { useCommentColumns } from './Watchlist/components/commentColumns'
 import { WatchlistTableCard } from './Watchlist/components/WatchlistTableCard'
 import { WatchlistAuthorDetails } from './Watchlist/components/WatchlistAuthorDetails'
-import PageTitle from '@/components/PageTitle'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { RefreshCw, Eye, EyeOff } from 'lucide-react'
 
 function Watchlist() {
   const {

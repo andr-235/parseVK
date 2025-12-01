@@ -4,15 +4,8 @@ import { AuthorHeroSection } from './AuthorAnalysis/components/AuthorHeroSection
 import { AnalysisSummarySection } from './AuthorAnalysis/components/AnalysisSummarySection'
 import { PhotosSection } from './AuthorAnalysis/components/PhotosSection'
 
-/**
- * Компонент страницы анализа автора
- * Рефакторинг: разделен на меньшие компоненты и кастомные хуки для лучшей читаемости и поддерживаемости
- */
 function AuthorAnalysis() {
-  // Используем кастомный хук для управления данными автора
   const { author, isAuthorLoading, vkUserId, isValidAuthor } = useAuthorData()
-
-  // Используем кастомный хук для управления анализом фотографий
   const {
     analyses,
     summary,
