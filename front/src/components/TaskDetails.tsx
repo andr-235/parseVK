@@ -126,7 +126,6 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
 
   const postsCount = typeof task.stats?.posts === 'number' ? task.stats.posts : null
   const commentsCountTotal = typeof task.stats?.comments === 'number' ? task.stats.comments : null
-  const authorsCount = typeof task.stats?.authors === 'number' ? task.stats.authors : null
 
   const groupStatusDistribution = task.groups.reduce<Record<TaskDetailsType['groups'][number]['status'], number>>((acc, groupItem) => {
     acc[groupItem.status] = (acc[groupItem.status] ?? 0) + 1
@@ -486,7 +485,7 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
                     task.groups.map((group, index) => (
                       <tr key={`${group.groupId}-${index}`} className="hover:bg-white/5 transition-colors">
                         <td className="px-6 py-4 text-gray-500">{index + 1}</td>
-                        <td className="px-6 py-4 font-medium text-white max-w-[300px] truncate" title={group.groupName}>
+                        <td className="px-6 py-4 font-medium text-white max-w-[300px] truncate" title={group.groupName || undefined}>
                           {group.groupName}
                         </td>
                         <td className="px-6 py-4">
