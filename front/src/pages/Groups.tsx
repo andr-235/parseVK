@@ -135,7 +135,7 @@ function Groups() {
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-10">
+    <div className="flex flex-col gap-8 pb-10 pt-6">
       {/* Header Section */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1.5">
@@ -146,9 +146,7 @@ function Groups() {
         </div>
         
         <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-          <div className="w-full md:w-[320px]">
-            <GroupInput url={url} onUrlChange={handleUrlChange} onAdd={handleAddGroup} />
-          </div>
+          <GroupInput url={url} onUrlChange={handleUrlChange} onAdd={handleAddGroup} />
           <FileUpload onUpload={handleFileUpload} buttonText="Импорт" className="shrink-0" />
         </div>
       </div>
