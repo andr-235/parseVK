@@ -179,6 +179,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  #root {
+    @apply flex min-h-screen w-full;
+  }
 
   /* Кастомный скроллбар для таблиц */
   .overflow-x-auto::-webkit-scrollbar {

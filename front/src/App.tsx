@@ -36,34 +36,32 @@ function App() {
   return (
     <BrowserRouter>
       <AppSyncProvider />
-      <div className="flex h-screen w-full overflow-hidden bg-background-primary text-text-primary transition-colors duration-300">
-        <Sidebar />
-        <MainContent>
-          <Routes>
-            <Route path="/" element={<Navigate to="/tasks" replace />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/groups" element={<Groups />} />
-            <Route path="/listings" element={<Listings />} />
-            <Route path="/comments" element={<Comments />} />
-            <Route path="/watchlist" element={<Watchlist />} />
-            <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysis />} />
-            <Route path="/keywords" element={<Keywords />} />
-            <Route path="/authors" element={<Authors />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/telegram" element={<Telegram />} />
-          </Routes>
-        </MainContent>
-        <Toaster
-          position="top-right"
-          containerStyle={{
-            pointerEvents: 'none',
-          }}
-          toastOptions={{
-            duration: 3000,
-            className: 'bg-background-sidebar text-text-light pointer-events-auto',
-          }}
-        />
-      </div>
+      <Sidebar />
+      <MainContent>
+        <Routes>
+          <Route path="/" element={<Navigate to="/tasks" replace />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/groups" element={<Groups />} />
+          <Route path="/listings" element={<Listings />} />
+          <Route path="/comments" element={<Comments />} />
+          <Route path="/watchlist" element={<Watchlist />} />
+          <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysis />} />
+          <Route path="/keywords" element={<Keywords />} />
+          <Route path="/authors" element={<Authors />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/telegram" element={<Telegram />} />
+        </Routes>
+      </MainContent>
+      <Toaster
+        position="top-right"
+        containerStyle={{
+          pointerEvents: 'none',
+        }}
+        toastOptions={{
+          duration: 3000,
+          className: 'bg-background-sidebar text-text-light pointer-events-auto',
+        }}
+      />
     </BrowserRouter>
   )
 }
