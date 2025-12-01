@@ -2,8 +2,8 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import LoadingCommentsState from './LoadingCommentsState'
-import EmptyCommentsState from './EmptyCommentsState'
+import { LoadingState } from '@/components/LoadingState'
+import { EmptyState } from '@/components/EmptyState'
 import CommentCard from './CommentCard'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import useCommentsTableCardController from '@/modules/comments/hooks/useCommentsTableCardController'
@@ -140,9 +140,11 @@ function CommentsTableCard({
        </CardHeader>
 
       <CardContent className="p-0 space-y-8">
-        {isLoading && !hasComments && <LoadingCommentsState />}
+        {isLoading && !hasComments && <LoadingState message="Загружаем комментарии…" useCard />}
 
-        {!isLoading && !hasComments && <EmptyCommentsState message={emptyMessage} />}
+        {!isLoading && !hasComments && (
+          <EmptyState icon="💬" title="Нет данных" description={emptyMessage} />
+        )}
 
         {hasComments && (
           <>

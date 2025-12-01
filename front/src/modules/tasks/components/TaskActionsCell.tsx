@@ -1,7 +1,7 @@
 import { useState, type MouseEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { useTasksStore } from '@/store'
+import { useTaskActions } from '../hooks/useTaskActions'
 import type { Task } from '@/types'
 
 interface TaskActionsCellProps {
@@ -9,9 +9,7 @@ interface TaskActionsCellProps {
 }
 
 function TaskActionsCell({ task }: TaskActionsCellProps) {
-  const resumeTask = useTasksStore((state: any) => state.resumeTask)
-  const checkTask = useTasksStore((state: any) => state.checkTask)
-  const deleteTask = useTasksStore((state: any) => state.deleteTask)
+  const { resumeTask, checkTask, deleteTask } = useTaskActions()
   const [isResuming, setIsResuming] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -93,7 +91,7 @@ function TaskActionsCell({ task }: TaskActionsCellProps) {
         onClick={handleResume}
         disabled={disabled}
         type="button"
-      title={resumeTitle}
+        title={resumeTitle}
       >
         {isResuming ? 'Возобновление…' : 'Продолжить'}
       </Button>

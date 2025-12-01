@@ -5,8 +5,8 @@ import SearchInput from '@/components/SearchInput'
 import { Card, CardContent } from '@/components/ui/card'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type { Group, TableColumn } from '@/types'
-import LoadingGroupsState from './LoadingGroupsState'
-import EmptyGroupsState from './EmptyGroupsState'
+import { LoadingState } from '@/components/LoadingState'
+import { EmptyState } from '@/components/EmptyState'
 import { ArrowUpDown, Trash2 } from 'lucide-react'
 import { GroupCard } from './GroupCard'
 import {
@@ -138,12 +138,19 @@ function GroupsTableCard({
 
       <CardContent className="p-4 md:p-6">
         {isLoading && !hasGroups && (
-            <div className="py-8">
-                <LoadingGroupsState />
-            </div>
+          <div className="py-8">
+            <LoadingState message="Загружаем группы…" />
+          </div>
         )}
 
-        {!isLoading && !hasGroups && <EmptyGroupsState />}
+        {!isLoading && !hasGroups && (
+          <EmptyState
+            variant="custom"
+            icon="📁"
+            title="Список пуст"
+            description="Добавьте группы по ссылке или загрузите список из файла — после обработки данные появятся здесь и будут доступны для управления."
+          />
+        )}
 
         {hasGroups && !isLoading && !hasFilteredGroups && (
           <div className="flex flex-col items-center justify-center py-12 text-center">

@@ -5,8 +5,8 @@ import SearchInput from '@/components/SearchInput'
 import { Card, CardContent } from '@/components/ui/card'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type { Keyword, TableColumn } from '@/types'
-import LoadingKeywordsState from './LoadingKeywordsState'
-import EmptyKeywordsState from './EmptyKeywordsState'
+import { LoadingState } from '@/components/LoadingState'
+import { EmptyState } from '@/components/EmptyState'
 import { KeywordCard } from './KeywordCard'
 import { ArrowUpDown } from 'lucide-react'
 import {
@@ -108,11 +108,18 @@ function KeywordsTableCard({
       <CardContent className="p-4 md:p-6">
         {isLoading && !hasKeywords && (
           <div className="py-8">
-            <LoadingKeywordsState />
+            <LoadingState message="Загружаем ключевые слова…" />
           </div>
         )}
 
-        {!isLoading && !hasKeywords && <EmptyKeywordsState />}
+        {!isLoading && !hasKeywords && (
+          <EmptyState
+            variant="custom"
+            icon="🔑"
+            title="Список пуст"
+            description="Добавьте ключевые слова вручную или загрузите список из файла. Если не указать категорию, слово автоматически окажется в разделе «Без категории», и вы сможете распределить его позже."
+          />
+        )}
 
         {hasKeywords && !isLoading && !hasFilteredKeywords && (
           <div className="flex flex-col items-center justify-center py-12 text-center">

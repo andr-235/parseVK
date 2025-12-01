@@ -12,15 +12,14 @@ import { TableSortButton } from '@/components/ui/table-sort-button'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type { Task } from '@/types'
 import { getTaskTableColumns } from '@/modules/tasks/config/taskTableColumns'
-import { useTasksStore } from '@/store'
 
 interface TasksTableCardProps {
+  tasks: Task[]
   emptyMessage: string
   onTaskSelect: (taskId: number | string) => void
 }
 
-function TasksTableCard({ emptyMessage, onTaskSelect }: TasksTableCardProps) {
-  const tasks = useTasksStore((state: any) => state.tasks)
+function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardProps) {
   const hasTasks = tasks.length > 0
   const columns = getTaskTableColumns()
   const { sortedItems: sortedTasks, sortState, requestSort } = useTableSorting(tasks, columns)
