@@ -8,6 +8,64 @@ const GROUP_TYPE_LABELS: Record<string, string> = {
   event: 'событие'
 }
 
+const renderGroupPhoto = (item: Group) => {
+  if (!item.photo50) {
+    return '-'
+  }
+  return (
+    <img
+      src={item.photo50}
+      alt={item.name}
+      style={{ width: 50, height: 50, borderRadius: '50%' }}
+    />
+  )
+}
+
+const renderGroupType = (item: Group) => {
+  if (!item.type) {
+    return '-'
+  }
+  return GROUP_TYPE_LABELS[item.type] || item.type
+}
+
+const renderGroupDescription = (item: Group) => (
+  <ExpandableText text={item.description || ''} maxLength={50} />
+)
+
+const renderGroupStatus = (item: Group) => (
+  <ExpandableText text={item.status || ''} maxLength={50} />
+)
+
+const renderGroupIsClosed = (item: Group) => {
+  if (item.isClosed === 1) return 'Да'
+  if (item.isClosed === 0) return 'Нет'
+  return '-'
+}
+
+const renderGroupActions = (item: Group, deleteGroup: (id: number) => void) => {
+  const handleOpenVk = () => {
+    const url = item.screenName
+      ? `https://vk.com/${item.screenName}`
+      : `https://vk.com/club${item.vkId}`
+    window.open(url, '_blank')
+  }
+
+  const handleDelete = () => {
+    deleteGroup(item.id)
+  }
+
+  return (
+    <div className="table-actions flex gap-2">
+      <Button size="sm" onClick={handleOpenVk}>
+        Перейти
+      </Button>
+      <Button size="sm" variant="destructive" onClick={handleDelete}>
+        Удалить
+      </Button>
+    </div>
+  )
+}
+
 export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableColumn<Group>[] => [
   {
     header: 'ID',
@@ -23,9 +81,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     cellClassName: 'w-[70px]',
     headerClassName: 'w-[70px]',
     sortable: false,
-    render: (item: Group) => (
-      item.photo50 ? <img src={item.photo50} alt={item.name} style={{ width: 50, height: 50, borderRadius: '50%' }} /> : '-'
-    )
+    render: renderGroupPhoto
   },
   {
     header: 'VK ID',
@@ -59,13 +115,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     headerClassName: 'table-cell-nowrap',
     sortable: true,
     sortValue: (item: Group) => item.type?.toLowerCase() ?? '',
-    render: (item: Group) => {
-      if (!item.type) {
-        return '-'
-      }
-
-      return GROUP_TYPE_LABELS[item.type] || item.type
-    }
+    render: renderGroupType
   },
   {
     header: 'Описание',
@@ -74,9 +124,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     headerClassName: 'table-cell-description w-[250px]',
     sortable: true,
     sortValue: (item: Group) => item.description?.toLowerCase() ?? '',
-    render: (item: Group) => (
-      <ExpandableText text={item.description || ''} maxLength={50} />
-    )
+    render: renderGroupDescription
   },
   {
     header: 'Участники',
@@ -94,9 +142,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     headerClassName: 'w-[150px]',
     sortable: true,
     sortValue: (item: Group) => item.status?.toLowerCase() ?? '',
-    render: (item: Group) => (
-      <ExpandableText text={item.status || ''} maxLength={50} />
-    )
+    render: renderGroupStatus
   },
   {
     header: 'Закрытая',
@@ -106,7 +152,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     sortable: true,
     sortValue: (item: Group) =>
       typeof item.isClosed === 'number' ? item.isClosed : null,
-    render: (item: Group) => item.isClosed === 1 ? 'Да' : item.isClosed === 0 ? 'Нет' : '-'
+    render: renderGroupIsClosed
   },
   {
     header: 'Действия',
@@ -114,20 +160,6 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     cellClassName: 'table-cell-actions sticky right-0 bg-background-primary',
     headerClassName: 'table-cell-actions sticky right-0 bg-background-primary w-[180px]',
     sortable: false,
-    render: (item: Group) => (
-      <div className="table-actions flex gap-2">
-        <Button
-          size="sm"
-          onClick={() => {
-            window.open(`https://vk.com/${item.screenName || `club${item.vkId}`}`, '_blank')
-          }}
-        >
-          Перейти
-        </Button>
-        <Button size="sm" variant="destructive" onClick={() => deleteGroup(item.id)}>
-          Удалить
-        </Button>
-      </div>
-    )
+    render: (item: Group) => renderGroupActions(item, deleteGroup)
   }
 ]

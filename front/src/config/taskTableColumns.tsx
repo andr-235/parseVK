@@ -3,38 +3,10 @@ import TaskActionsCell from '../pages/Tasks/components/TaskActionsCell'
 import { cn } from '../lib/utils'
 import { getTaskStatusText } from '../utils/statusHelpers'
 import { calculateTaskProgress } from '../utils/taskProgress'
+import { formatDate, formatPair, resolveNumber, toNumber } from './utils'
 import type { TableColumn, Task } from '../types'
 
-const dateFormatter = new Intl.DateTimeFormat('ru-RU')
-
-const toNumber = (value: unknown): number | null =>
-  typeof value === 'number' ? value : null
-
-const resolveNumber = (...values: unknown[]): number | null => {
-  for (const value of values) {
-    const numeric = toNumber(value)
-    if (numeric != null) {
-      return numeric
-    }
-  }
-
-  return null
-}
-
-const formatPair = (left: number | null, right: number | null): string =>
-  `${left ?? '—'} / ${right ?? '—'}`
-
-const formatDate = (value?: string | null): string => {
-  if (!value) {
-    return '—'
-  }
-
-  const date = new Date(value)
-
-  return Number.isNaN(date.getTime()) ? '—' : dateFormatter.format(date)
-}
-
-const formatResult = (item: Task): string => {
+const getResultFromStats = (item: Task): string | null => {
   const posts = toNumber(item.stats?.posts)
   const comments = toNumber(item.stats?.comments)
 
@@ -42,8 +14,11 @@ const formatResult = (item: Task): string => {
     return formatPair(posts, comments)
   }
 
-  const progress = calculateTaskProgress(item)
+  return null
+}
 
+const getResultFromProgress = (item: Task): string => {
+  const progress = calculateTaskProgress(item)
   const baseTotal = resolveNumber(item.stats?.groups, item.groupsCount)
   const fallbackTotal = Math.max(
     baseTotal ?? 0,
@@ -66,6 +41,14 @@ const formatResult = (item: Task): string => {
   return '—'
 }
 
+const formatResult = (item: Task): string => {
+  const statsResult = getResultFromStats(item)
+  if (statsResult !== null) {
+    return statsResult
+  }
+  return getResultFromProgress(item)
+}
+
 const STATUS_WEIGHTS: Record<Task['status'], number> = {
   pending: 0,
   processing: 1,
@@ -80,6 +63,85 @@ const STATUS_BADGE_STYLES: Record<Task['status'], string> = {
   running: 'bg-sky-500/20 text-sky-500 ring-1 ring-inset ring-sky-500/30',
   completed: 'bg-emerald-500/20 text-emerald-500 ring-1 ring-inset ring-emerald-500/30',
   failed: 'bg-rose-500/20 text-rose-400 ring-1 ring-inset ring-rose-500/30',
+}
+
+interface TaskProgressCounts {
+  total: number
+  processedCount: number
+  failedCount: number
+  successCount: number
+  processingCount: number
+  pendingCount: number
+}
+
+const calculateTaskCounts = (item: Task, progress: ReturnType<typeof calculateTaskProgress>): TaskProgressCounts => {
+  const baseTotal = typeof item.groupsCount === 'number' ? item.groupsCount : 0
+  const fallbackTotal = Math.max(
+    baseTotal,
+    progress.processed + progress.processing + progress.pending,
+    progress.processed,
+    0
+  )
+  const total = progress.total > 0 ? progress.total : fallbackTotal
+  const processedCount = Math.min(progress.processed, total)
+  const failedCount = Math.min(progress.failed, total)
+  const successDerived = progress.success > 0
+    ? progress.success
+    : Math.max(processedCount - failedCount, 0)
+  const successCount = Math.min(successDerived, total)
+  const processingCount = Math.min(progress.processing, Math.max(total - processedCount, progress.processing))
+  const pendingCount = progress.pending > 0
+    ? progress.pending
+    : Math.max(total - processedCount - processingCount, 0)
+
+  return {
+    total,
+    processedCount,
+    failedCount,
+    successCount,
+    processingCount,
+    pendingCount
+  }
+}
+
+const getScopeLabel = (item: Task, totalNormalized: number | null): string | null => {
+  if (!item.scope) {
+    return null
+  }
+
+  const normalizedScope = typeof item.scope === 'string' ? item.scope.toUpperCase() : item.scope
+  if (normalizedScope === 'ALL') {
+    return 'Все группы'
+  }
+  if (normalizedScope === 'SELECTED') {
+    const count = Array.isArray(item.groupIds) ? item.groupIds.length : totalNormalized ?? undefined
+    return `Выбранные${count ? ` (${count})` : ''}`
+  }
+  return item.scope
+}
+
+const getSkippedLabel = (item: Task): { label: string | null; raw: string } => {
+  const skippedPreviewRaw = typeof item.skippedGroupsMessage === 'string'
+    ? item.skippedGroupsMessage.trim()
+    : ''
+  const hasSkipped = skippedPreviewRaw.length > 0
+  const skippedLabel = hasSkipped
+    ? (skippedPreviewRaw.length > 80
+      ? `${skippedPreviewRaw.slice(0, 80).trim()}…`
+      : skippedPreviewRaw)
+    : null
+
+  return { label: skippedLabel, raw: skippedPreviewRaw }
+}
+
+const getProgressTone = (failedCount: number, processedCount: number, total: number): 'danger' | 'success' | 'primary' => {
+  if (failedCount > 0 && processedCount >= total) {
+    return 'danger'
+  }
+  if (processedCount >= total) {
+    return 'success'
+  }
+  return 'primary'
 }
 
 const columns: TableColumn<Task>[] = [
@@ -101,54 +163,16 @@ const columns: TableColumn<Task>[] = [
     key: 'status',
     render: (item: Task) => {
       const progress = calculateTaskProgress(item)
-      const baseTotal = typeof item.groupsCount === 'number' ? item.groupsCount : 0
-      const fallbackTotal = Math.max(
-        baseTotal,
-        progress.processed + progress.processing + progress.pending,
-        progress.processed,
-        0
-      )
-      const total = progress.total > 0 ? progress.total : fallbackTotal
-      const processedCount = Math.min(progress.processed, total)
-      const failedCount = Math.min(progress.failed, total)
-      const successDerived = progress.success > 0
-        ? progress.success
-        : Math.max(processedCount - failedCount, 0)
-      const successCount = Math.min(successDerived, total)
-      const processingCount = Math.min(progress.processing, Math.max(total - processedCount, progress.processing))
-      const pendingCount = progress.pending > 0
-        ? progress.pending
-        : Math.max(total - processedCount - processingCount, 0)
+      const counts = calculateTaskCounts(item, progress)
+      const { total, processedCount, failedCount, successCount, processingCount, pendingCount } = counts
       const totalNormalized = total > 0 ? total : null
 
-      const scopeLabel = (() => {
-        if (!item.scope) {
-          return null
-        }
-        const normalizedScope = typeof item.scope === 'string' ? item.scope.toUpperCase() : item.scope
-        if (normalizedScope === 'ALL') {
-          return 'Все группы'
-        }
-        if (normalizedScope === 'SELECTED') {
-          const count = Array.isArray(item.groupIds) ? item.groupIds.length : totalNormalized ?? undefined
-          return `Выбранные${count ? ` (${count})` : ''}`
-        }
-        return item.scope
-      })()
-
+      const scopeLabel = getScopeLabel(item, totalNormalized)
       const postLimitValue = typeof item.postLimit === 'number' && Number.isFinite(item.postLimit)
         ? item.postLimit
         : null
-
-      const skippedPreviewRaw = typeof item.skippedGroupsMessage === 'string'
-        ? item.skippedGroupsMessage.trim()
-        : ''
+      const { label: skippedLabel, raw: skippedPreviewRaw } = getSkippedLabel(item)
       const hasSkipped = skippedPreviewRaw.length > 0
-      const skippedLabel = hasSkipped
-        ? (skippedPreviewRaw.length > 80
-          ? `${skippedPreviewRaw.slice(0, 80).trim()}…`
-          : skippedPreviewRaw)
-        : null
 
       const hasMeta =
         total > 0 ||
@@ -160,11 +184,7 @@ const columns: TableColumn<Task>[] = [
         postLimitValue !== null ||
         hasSkipped
 
-      const progressTone = failedCount > 0 && processedCount >= total
-        ? 'danger'
-        : processedCount >= total
-          ? 'success'
-          : 'primary'
+      const progressTone = getProgressTone(failedCount, processedCount, total)
 
       return (
         <div className="flex w-full flex-col gap-3 text-sm text-text-secondary">
