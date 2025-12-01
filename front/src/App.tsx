@@ -55,6 +55,12 @@ function App() {
         </MainContent>
         <Toaster
           position="top-right"
+          containerStyle={{
+            top: 20,
+            right: 20,
+            bottom: 20,
+            left: 20,
+          }}
           toastOptions={{
             duration: 3000,
             style: {

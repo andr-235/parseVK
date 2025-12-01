@@ -83,7 +83,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
         </div>
       </CardContent>
 
-      <CardFooter className="p-3 bg-muted/5 flex items-center justify-between gap-2 border-t">
+      <CardFooter className="p-3 pt-3 bg-muted/5 flex items-center justify-between gap-2 border-t">
         <Button
           variant="ghost"
           size="sm"
