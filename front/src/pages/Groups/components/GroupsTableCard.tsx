@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
 import SearchInput from '../../../components/SearchInput'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/card'
+import { Card, CardContent } from '../../../components/ui/card'
 import {
   Table,
   TableBody,
@@ -17,6 +17,7 @@ import { useTableSorting } from '../../../hooks/useTableSorting'
 import type { Group, TableColumn } from '../../../types'
 import LoadingGroupsState from './LoadingGroupsState'
 import EmptyGroupsState from './EmptyGroupsState'
+import { Trash2 } from 'lucide-react'
 
 type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn<Group>[]
 
@@ -63,22 +64,10 @@ function GroupsTableCard({
   const tableColumns = useMemo(() => columns(onDelete), [columns, onDelete])
   const { sortedItems: sortedGroups, sortState, requestSort } = useTableSorting(groups, tableColumns)
 
-  const subtitle = useMemo(() => {
-    if (isLoading && !hasGroups) {
-      return 'Мы подготавливаем данные и проверяем их перед отображением.'
-    }
-
-    if (hasGroups) {
-      return 'Ниже отображаются все добавленные сообщества. Вы можете открыть группу во вкладке VK или удалить её из базы.'
-    }
-
-    return 'После добавления групп их карточки появятся в таблице, и вы сможете управлять ими из одного места.'
-  }, [hasGroups, isLoading])
-
   const clearDisabled = isLoading || !hasGroups
   const badgeText = searchTerm.trim()
-    ? `${groups.length} из ${totalCount} ${getCounterLabel(totalCount)}`
-    : `${totalCount} ${getCounterLabel(totalCount)}`
+    ? `${groups.length} из ${totalCount}`
+    : `${totalCount}`
 
   const getDefaultCellContent = (value: Group[keyof Group], column: TableColumn<Group>): ReactNode => {
     if (value === null || value === undefined || value === '') {
@@ -93,100 +82,102 @@ function GroupsTableCard({
   }
 
   return (
-    <Card className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Список групп">
-      <CardHeader className="flex flex-col gap-6 space-y-0 p-6 pb-4 md:p-8 md:pb-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-[260px] flex-1 flex-col gap-2">
-            <CardTitle className="text-2xl font-bold text-text-primary">Список групп</CardTitle>
-            <CardDescription className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">{subtitle}</CardDescription>
-          </div>
-          <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center">
-            <div className="flex flex-wrap justify-end gap-3">
-              {isLoading ? (
-                <Badge variant="secondary" className="bg-[rgba(241,196,15,0.18)] text-[#f1c40f] dark:text-[#f9e79f]">
-                  Загрузка…
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]">
-                  {badgeText}
-                </Badge>
-              )}
-            </div>
-            <div className="flex flex-wrap justify-end gap-3">
-              <Button className="min-w-[180px]" variant="destructive" onClick={onClear} disabled={clearDisabled}>
-                Очистить список
-              </Button>
-            </div>
-          </div>
+    <Card className="overflow-hidden rounded-xl border border-border shadow-sm">
+      <div className="flex flex-col gap-4 border-b bg-muted/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Список групп</h2>
+          {!isLoading && (
+            <Badge variant="secondary" className="bg-background/50 px-2 py-0.5 text-xs font-normal text-muted-foreground">
+              {badgeText} {getCounterLabel(totalCount)}
+            </Badge>
+          )}
         </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium uppercase tracking-wide text-text-secondary/80">Поиск по сообществам</span>
+        
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <SearchInput
             value={searchTerm}
             onChange={onSearchChange}
-            placeholder="Введите название, домен или VK ID"
+            placeholder="Поиск..."
+            className="h-9 w-full sm:w-[250px]"
           />
+          {hasGroups && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClear}
+              disabled={clearDisabled}
+              className="h-9 text-muted-foreground hover:text-destructive"
+              title="Очистить список"
+            >
+              <Trash2 className="mr-2 size-4" />
+              Очистить все
+            </Button>
+          )}
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-6 pt-0 md:px-8 md:pb-8">
-        {isLoading && !hasGroups && <LoadingGroupsState />}
+      <CardContent className="p-0">
+        {isLoading && !hasGroups && (
+            <div className="p-8">
+                <LoadingGroupsState />
+            </div>
+        )}
 
         {!isLoading && !hasGroups && <EmptyGroupsState />}
 
         {hasGroups && !isLoading && !hasFilteredGroups && (
-          <div className="rounded-[20px] border border-dashed border-border bg-background-primary/40 p-8 text-center text-sm text-text-secondary dark:border-white/10 dark:bg-white/5 dark:text-text-light/70">
-            По вашему запросу ничего не найдено. Проверьте правильность VK ID или названия сообщества.
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+             <div className="text-sm text-muted-foreground">
+                По запросу «{searchTerm}» ничего не найдено
+             </div>
           </div>
         )}
 
         {hasFilteredGroups && (
-          <Card className="relative w-full overflow-hidden rounded-[20px] p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
+          <div className="relative w-full overflow-auto">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="hover:bg-transparent">
+                  {tableColumns.map((column) => (
+                    <TableHead key={column.key} className={column.headerClassName}>
+                      {column.sortable ? (
+                        <TableSortButton
+                          direction={sortState?.key === column.key ? sortState.direction : null}
+                          onClick={() => requestSort(column.key)}
+                        >
+                          {column.header}
+                        </TableSortButton>
+                      ) : (
+                        column.header
+                      )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedGroups.map((group, index) => (
+                  <TableRow key={group.id || index} className="group hover:bg-muted/30">
                     {tableColumns.map((column) => (
-                      <TableHead key={column.key} className={column.headerClassName}>
-                        {column.sortable ? (
-                          <TableSortButton
-                            direction={sortState?.key === column.key ? sortState.direction : null}
-                            onClick={() => requestSort(column.key)}
-                          >
-                            {column.header}
-                          </TableSortButton>
-                        ) : (
-                          column.header
-                        )}
-                      </TableHead>
+                      <TableCell key={column.key} className={column.cellClassName}>
+                        {column.render
+                          ? column.render(group, index)
+                          : getDefaultCellContent(group[column.key as keyof Group], column)}
+                      </TableCell>
                     ))}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedGroups.map((group, index) => (
-                    <TableRow key={group.id || index}>
-                      {tableColumns.map((column) => (
-                        <TableCell key={column.key} className={column.cellClassName}>
-                          {column.render
-                            ? column.render(group, index)
-                            : getDefaultCellContent(group[column.key as keyof Group], column)}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                  {isLoadingMore && (
-                    <TableRow>
-                      <TableCell colSpan={tableColumns.length}>
-                        <div className="py-4 text-center text-sm text-text-secondary">
-                          Загрузка данных…
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
+                ))}
+                {isLoadingMore && (
+                  <TableRow>
+                    <TableCell colSpan={tableColumns.length}>
+                      <div className="flex justify-center py-4">
+                         <span className="text-sm text-muted-foreground">Загрузка...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

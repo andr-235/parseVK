@@ -1,6 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { IRegionGroupSearchItem } from '../../../types/api'
-import SectionCard from '../../../components/SectionCard'
 import { Button } from '@/components/ui/button'
 import { TableSortButton } from '@/components/ui/table-sort-button'
 import { useTableSorting } from '@/hooks/useTableSorting'
@@ -14,6 +13,9 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Spinner } from '@/components/ui/spinner'
+import { Card, CardContent } from '@/components/ui/card'
+import { Search, X, RotateCcw } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface RegionGroupRowProps {
   group: IRegionGroupSearchItem
@@ -37,13 +39,13 @@ const RegionGroupRow = memo(function RegionGroupRow({
   onRemoveGroup,
 }: RegionGroupRowProps) {
   return (
-    <TableRow>
+    <TableRow className="group hover:bg-muted/30">
       <TableCell className="w-12 text-center">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={() => onToggleSelection(group.id)}
-          className="size-4 cursor-pointer"
+          className="size-4 cursor-pointer rounded border-primary text-primary focus:ring-primary"
           aria-label={isSelected ? 'Снять выделение' : 'Выделить группу'}
         />
       </TableCell>
@@ -55,20 +57,23 @@ const RegionGroupRow = memo(function RegionGroupRow({
       <TableCell className="flex justify-end gap-2">
         <Button
           size="sm"
+          variant="secondary"
+          className="h-8"
           onClick={() => {
             void onAddGroup(group)
           }}
           disabled={isBulkAdding}
         >
-          Добавить в БД
+          Добавить
         </Button>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
+          className="h-8 text-muted-foreground hover:text-destructive"
           onClick={() => onRemoveGroup(group.id)}
           disabled={isBulkAdding}
         >
-          Убрать из списка
+          <X className="size-4" />
         </Button>
       </TableCell>
     </TableRow>
@@ -143,7 +148,7 @@ function RegionGroupsSearchCard({
           rel="noopener noreferrer"
           className="flex flex-col rounded-md outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          <span className="font-medium leading-tight">
+          <span className="font-medium leading-tight text-foreground">
             {group.name}
           </span>
           <span className="text-xs text-muted-foreground">
@@ -262,12 +267,6 @@ function RegionGroupsSearchCard({
 
   const hasResults = sortedResults.length > 0
   const canSearch = !isLoading && !isBulkAdding
-  const description = useMemo(
-    () =>
-      'Поиск групп в регионе «Еврейская автономная область». '
-        + 'Результаты показывают только сообщества, которых нет в базе данных.',
-    []
-  )
 
   const handleSearchClick = async () => {
     if (!canSearch) {
@@ -365,126 +364,137 @@ function RegionGroupsSearchCard({
   }, [onRemoveGroup])
 
   return (
-    <SectionCard
-      title="Поиск групп по региону"
-      description={description}
-      headerClassName="border-none pb-4"
-      contentClassName="pt-0"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button onClick={handleSearchClick} disabled={!canSearch} className="sm:w-auto">
-          {isLoading && <Spinner className="mr-2" />}
-          Загрузить группы региона
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={isLoading || isBulkAdding || !hasResults}
-          onClick={handleAddGroups}
-          className="sm:w-auto"
-        >
-          {isBulkAdding && <Spinner className="mr-2" />}
-          {hasSelection ? `Добавить выделенное (${selectionSize})` : 'Добавить все'}
-        </Button>
-        {(total > 0 || hasResults) && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isLoading}
-            onClick={handleResetClick}
-            className="sm:w-auto"
+    <Card className="overflow-hidden rounded-xl border border-border shadow-sm">
+      <div className="flex flex-col gap-4 border-b bg-muted/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold tracking-tight">Поиск по региону</h2>
+          <p className="text-sm text-muted-foreground">
+            Поиск групп в регионе «Еврейская автономная область»
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button 
+             onClick={handleSearchClick} 
+             disabled={!canSearch} 
+             size="sm"
+             className="min-w-[140px]"
           >
-            Очистить результаты
+            {isLoading ? <Spinner className="mr-2 size-4" /> : <Search className="mr-2 size-4" />}
+            Найти группы
           </Button>
+          
+          {(total > 0 || hasResults) && (
+             <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                disabled={isLoading}
+                onClick={handleResetClick}
+                title="Очистить результаты"
+             >
+               <RotateCcw className="size-4 text-muted-foreground" />
+             </Button>
+          )}
+        </div>
+      </div>
+
+      <CardContent className="p-0">
+        {error && (
+           <div className="p-6 text-sm text-destructive">{error}</div>
         )}
-      </div>
 
-      {error && (
-        <p className="mt-4 text-sm text-destructive">
-          {error}
-        </p>
-      )}
-
-      <div className="mt-6 space-y-2 text-sm text-muted-foreground">
-        <p>
-          Найдено групп: {total}
-        </p>
-        <p>
-          Отображаются только группы, которых нет в базе: {results.length}
-        </p>
-      </div>
-
-      <div className="mt-4">
-        {isLoading && !hasResults ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner />
-            <span>Выполняется поиск групп…</span>
+        {isLoading && !hasResults && (
+          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+            <Spinner className="mr-2" />
+            Выполняется поиск групп...
           </div>
-        ) : null}
+        )}
+        
+        {!isLoading && !hasResults && total > 0 && !error && (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+             Все найденные группы уже добавлены в базу данных.
+          </div>
+        )}
 
-        {!isLoading && !hasResults && total > 0 && !error ? (
-          <p className="text-sm text-muted-foreground">
-            Все найденные группы уже добавлены в базу данных.
-          </p>
-        ) : null}
-
-        {!isLoading && !hasResults && total === 0 && !error ? (
-          <p className="text-sm text-muted-foreground">
-            В регионе пока не найдено сообществ, отсутствующих в базе.
-          </p>
-        ) : null}
+        {!isLoading && !hasResults && total === 0 && !error && (
+           <div className="p-6 text-center text-sm text-muted-foreground">
+              В регионе пока не найдено сообществ, отсутствующих в базе.
+           </div>
+        )}
 
         {hasResults && (
-          <Table className="mt-4">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12 text-center">
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
-                    checked={isAllSelected}
-                    disabled={!hasResults || isLoading}
-                    onChange={(event) => toggleSelectAll(event.target.checked)}
-                    className="size-4 cursor-pointer"
-                    aria-label={isAllSelected ? 'Снять выделение со всех' : 'Выделить все группы'}
-                  />
-                </TableHead>
-                {columns.map((column) => (
-                  <TableHead key={column.key} className={column.headerClassName}>
-                    {column.sortable === false ? (
-                      column.header
-                    ) : (
-                      <TableSortButton
-                        direction={sortState?.key === column.key ? sortState.direction : null}
-                        onClick={() => requestSort(column.key)}
-                      >
-                        {column.header}
-                      </TableSortButton>
-                    )}
-                  </TableHead>
-                ))}
-                <TableHead className="text-right">Действия</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedResults.map((group, index) => (
-                <RegionGroupRow
-                  key={group.id}
-                  group={group}
-                  columns={columns}
-                  isSelected={selectedIds.has(group.id)}
-                  isBulkAdding={isBulkAdding}
-                  rowIndex={index}
-                  onToggleSelection={toggleSelection}
-                  onAddGroup={handleAddSingleGroup}
-                  onRemoveGroup={handleRemoveSingleGroup}
-                />
-              ))}
-            </TableBody>
-          </Table>
+          <>
+            <div className="flex items-center justify-between border-b bg-muted/10 px-6 py-3">
+               <div className="text-xs text-muted-foreground">
+                 Найдено новых: {results.length} (Всего: {total})
+               </div>
+               <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 text-xs"
+                  disabled={isLoading || isBulkAdding || !hasResults}
+                  onClick={handleAddGroups}
+               >
+                 {isBulkAdding && <Spinner className="mr-2 size-3" />}
+                 {hasSelection ? `Добавить выделенное (${selectionSize})` : 'Добавить все'}
+               </Button>
+            </div>
+            
+            <div className="relative w-full overflow-auto">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-12 text-center">
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={isAllSelected}
+                        disabled={!hasResults || isLoading}
+                        onChange={(event) => toggleSelectAll(event.target.checked)}
+                        className="size-4 cursor-pointer rounded border-primary text-primary focus:ring-primary"
+                        aria-label={isAllSelected ? 'Снять выделение со всех' : 'Выделить все группы'}
+                      />
+                    </TableHead>
+                    {columns.map((column) => (
+                      <TableHead key={column.key} className={column.headerClassName}>
+                        {column.sortable === false ? (
+                          column.header
+                        ) : (
+                          <TableSortButton
+                            direction={sortState?.key === column.key ? sortState.direction : null}
+                            onClick={() => requestSort(column.key)}
+                          >
+                            {column.header}
+                          </TableSortButton>
+                        )}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right">Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedResults.map((group, index) => (
+                    <RegionGroupRow
+                      key={group.id}
+                      group={group}
+                      columns={columns}
+                      isSelected={selectedIds.has(group.id)}
+                      isBulkAdding={isBulkAdding}
+                      rowIndex={index}
+                      onToggleSelection={toggleSelection}
+                      onAddGroup={handleAddSingleGroup}
+                      onRemoveGroup={handleRemoveSingleGroup}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
-      </div>
-    </SectionCard>
+      </CardContent>
+    </Card>
   )
 }
 

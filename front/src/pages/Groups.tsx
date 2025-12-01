@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo, useRef, type ChangeEvent } from 'react'
 import { useGroupsStore } from '../stores'
 import { getGroupTableColumns } from '../config/groupTableColumns'
-import GroupsHero from './Groups/components/GroupsHero'
-import GroupsActionsPanel from './Groups/components/GroupsActionsPanel'
 import GroupsTableCard from './Groups/components/GroupsTableCard'
 import RegionGroupsSearchCard from './Groups/components/RegionGroupsSearchCard'
-import { Separator } from '@/components/ui/separator'
 import type { IRegionGroupSearchItem } from '../types/api'
+import GroupInput from '../components/GroupInput'
+import FileUpload from '../components/FileUpload'
+import PageTitle from '../components/PageTitle'
 
 function Groups() {
   const groups = useGroupsStore((state) => state.groups)
@@ -86,6 +86,10 @@ function Groups() {
     }
   }
 
+  const handleUrlChange = ({ target }: ChangeEvent<HTMLInputElement>) => {
+    setUrl(target.value)
+  }
+
   const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -131,44 +135,52 @@ function Groups() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <GroupsHero />
+    <div className="flex flex-col gap-8 pb-10">
+      {/* Header Section */}
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-1.5">
+          <PageTitle>Группы</PageTitle>
+          <p className="max-w-2xl text-muted-foreground">
+            Управляйте VK сообществами: добавляйте группы для парсинга, отслеживайте их метрики и аудиторию.
+          </p>
+        </div>
+        
+        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+          <div className="w-full md:w-[320px]">
+            <GroupInput url={url} onUrlChange={handleUrlChange} onAdd={handleAddGroup} />
+          </div>
+          <FileUpload onUpload={handleFileUpload} buttonText="Импорт" className="shrink-0" />
+        </div>
+      </div>
 
-      <Separator className="opacity-40" />
+      {/* Region Search Section - Collapsible or distinct area */}
+      <div className="space-y-6">
+        <RegionGroupsSearchCard
+          total={regionSearch.total}
+          results={regionSearch.missing}
+          isLoading={regionSearch.isLoading}
+          error={regionSearch.error}
+          onSearch={handleRegionSearch}
+          onAddGroup={handleAddRegionGroup}
+          onAddSelected={handleAddSelectedRegionGroups}
+          onRemoveGroup={handleRemoveRegionGroup}
+          onReset={resetRegionSearch}
+        />
 
-      <GroupsActionsPanel
-        onAdd={handleAddGroup}
-        onUpload={handleFileUpload}
-        isLoading={isLoading}
-        url={url}
-        setUrl={setUrl}
-      />
+        <GroupsTableCard
+          groups={filteredGroups}
+          totalCount={groupsCount}
+          isLoading={isLoading}
+          isLoadingMore={isLoadingMore}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onClear={handleDeleteAllGroups}
+          onDelete={deleteGroup}
+          columns={getGroupTableColumns}
+        />
 
-      <RegionGroupsSearchCard
-        total={regionSearch.total}
-        results={regionSearch.missing}
-        isLoading={regionSearch.isLoading}
-        error={regionSearch.error}
-        onSearch={handleRegionSearch}
-        onAddGroup={handleAddRegionGroup}
-        onAddSelected={handleAddSelectedRegionGroups}
-        onRemoveGroup={handleRemoveRegionGroup}
-        onReset={resetRegionSearch}
-      />
-
-      <GroupsTableCard
-        groups={filteredGroups}
-        totalCount={groupsCount}
-        isLoading={isLoading}
-        isLoadingMore={isLoadingMore}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onClear={handleDeleteAllGroups}
-        onDelete={deleteGroup}
-        columns={getGroupTableColumns}
-      />
-
-      {hasMore && <div ref={loadMoreRef} className="h-1 w-full" />}
+        {hasMore && <div ref={loadMoreRef} className="h-1 w-full" />}
+      </div>
     </div>
   )
 }
