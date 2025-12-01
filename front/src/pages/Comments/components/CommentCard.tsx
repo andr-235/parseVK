@@ -278,9 +278,13 @@ function CommentCard({
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 select-none">
                Контекст поста
                {keywordsFromPost.length > 0 && (
-                    <Badge variant="secondary" className="h-5 px-1.5 text-[9px] bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-0">
-                        {keywordsFromPost.length} keywords
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {keywordsFromPost.map(kw => (
+                        <Badge key={kw.id} variant="secondary" className="h-5 px-1.5 text-[9px] bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-0">
+                            {kw.word}
+                        </Badge>
+                      ))}
+                    </div>
                )}
             </div>
 
