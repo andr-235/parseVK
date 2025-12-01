@@ -7,10 +7,23 @@ import {
   useAuthorsStore,
   useCommentsStore,
   useTasksStore,
-  useThemeStore,
   useWatchlistStore,
 } from '@/stores'
 import ThemeToggle from './ThemeToggle'
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Users,
+  MessageSquare,
+  Eye,
+  Hash,
+  Settings,
+  Send,
+  Building,
+  ListTodo,
+  LayoutGrid
+} from 'lucide-react'
 
 type SidebarItem = {
   label: string
@@ -23,103 +36,10 @@ interface SidebarProps {
   title?: string
 }
 
-const iconClasses = 'h-5 w-5 shrink-0'
-
-const GroupsIcon = () => (
-  <svg
-    className={iconClasses}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-)
-
-const ListingsIcon = () => (
-  <svg
-    className={iconClasses}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="m3 10.5 9-6.5 9 6.5" />
-    <path d="M4 10v10h6v-6h4v6h6V10" />
-  </svg>
-)
-
-const TelegramIcon = () => (
-  <svg
-    className={iconClasses}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="m3 11 18-8-4 18-6-4-4 3z" />
-    <path d="m10 13 9-9" />
-  </svg>
-)
-
-const SettingsIcon = () => (
-  <svg
-    className={iconClasses}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-  </svg>
-)
-
-const ChevronLeftIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className || "h-5 w-5"}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="m15 18-6-6 6-6" />
-  </svg>
-)
-
-const ChevronDownIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className || "h-4 w-4"}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="m6 9 6 6 6-6" />
-  </svg>
-)
-
 export function Sidebar({ title = 'Центр аналитики' }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [isVkExpanded, setIsVkExpanded] = useState(false)
+  const [isVkExpanded, setIsVkExpanded] = useState(true)
   const [isParsingExpanded, setIsParsingExpanded] = useState(false)
-  const isDarkMode = useThemeStore((state) => state.isDarkMode)
 
   const tasksCount = useTasksStore((state) => state.tasks.length)
   const commentsCount = useCommentsStore((state) => state.totalCount)
@@ -134,362 +54,219 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
 
   const primaryItems = useMemo<SidebarItem[]>(() => {
     return [
-      { label: 'Telegram', path: '/telegram', icon: <TelegramIcon /> },
+      { label: 'Telegram', path: '/telegram', icon: <Send className="h-4 w-4" /> },
     ]
   }, [])
 
   const vkSubItems = useMemo(() => {
     const formatCount = (count: number) => (count > 0 ? String(count) : undefined)
     return [
-      { label: 'Задачи', path: '/tasks', badge: formatCount(tasksCount) },
-      { label: 'Группы', path: '/groups' },
-      { label: 'Комментарии', path: '/comments', badge: formatCount(commentsCount) },
-      { label: 'Авторы', path: '/authors', badge: formatCount(authorsTotal) },
-      { label: 'На карандаше', path: '/watchlist', badge: formatCount(watchlistCount) },
-      { label: 'Ключевые слова', path: '/keywords' },
+      { label: 'Задачи', path: '/tasks', badge: formatCount(tasksCount), icon: <ListTodo className="h-4 w-4" /> },
+      { label: 'Группы', path: '/groups', icon: <Users className="h-4 w-4" /> },
+      { label: 'Комментарии', path: '/comments', badge: formatCount(commentsCount), icon: <MessageSquare className="h-4 w-4" /> },
+      { label: 'Авторы', path: '/authors', badge: formatCount(authorsTotal), icon: <Users className="h-4 w-4" /> },
+      { label: 'На карандаше', path: '/watchlist', badge: formatCount(watchlistCount), icon: <Eye className="h-4 w-4" /> },
+      { label: 'Ключевые слова', path: '/keywords', icon: <Hash className="h-4 w-4" /> },
     ]
   }, [tasksCount, commentsCount, watchlistCount, authorsTotal])
 
   const secondaryItems: SidebarItem[] = [
-    { label: 'Настройки', path: '/settings', icon: <SettingsIcon /> },
+    { label: 'Настройки', path: '/settings', icon: <Settings className="h-4 w-4" /> },
   ]
-
 
   return (
     <aside
       className={cn(
-        // Layout
-        'sticky top-2 z-10 flex h-[calc(100svh-0.5rem)] shrink-0 flex-col overflow-hidden rounded-r-3xl transition-all duration-300',
-        // Visuals
-        'bg-gradient-to-b from-background-sidebar via-background-sidebar/95 to-background-sidebar/80 shadow-soft-lg',
-        // Widths
-        isCollapsed ? 'w-16' : 'w-72',
-        // Theme
-        isDarkMode ? 'text-text-light' : 'text-text-primary'
+        'sticky top-0 z-30 flex h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
+        isCollapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Header */}
-      <div
-        className={cn(
-          // Sticky header: всегда под рукой при скролле сайдбара
-          'sticky top-0 z-20 flex items-start justify-between gap-3 border-b/0 bg-background-sidebar/80 px-4 pb-4 pt-5 backdrop-blur-md supports-[backdrop-filter]:bg-background-sidebar/60',
-          isCollapsed && 'items-center px-2 pb-2 pt-2'
-        )}
-      >
-        <div
+      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
+        <div 
           className={cn(
-            'flex items-center gap-3 transition-all',
-            isCollapsed ? 'flex-col items-center justify-center gap-2' : ''
+            'flex items-center gap-2 overflow-hidden transition-all', 
+            isCollapsed && 'justify-center w-full cursor-pointer hover:opacity-80'
           )}
+          onClick={() => isCollapsed && setIsCollapsed(false)}
+          title={isCollapsed ? "Развернуть" : undefined}
         >
-          <img
-            src="/favicon-64x64.png"
-            alt="ParseVK логотип"
-            className={cn('h-10 w-10 shrink-0 rounded-xl object-contain', isCollapsed && 'h-9 w-9')}
-          />
-          {!isCollapsed && <h2 className="text-xl font-semibold leading-tight">{title}</h2>}
-          {isCollapsed && (
-            <button
-              onClick={() => setIsCollapsed(false)}
-              className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-full border text-sm transition-all duration-200',
-                isDarkMode
-                  ? 'border-white/10 bg-white/5 text-text-light hover:border-white/20 hover:bg-white/10'
-                  : 'border border-border bg-background-secondary text-text-primary hover:border-accent-primary/40 hover:bg-background-secondary/80'
-              )}
-              aria-label="Expand Sidebar"
-              title="Развернуть"
-            >
-              <ChevronLeftIcon className={cn('h-4 w-4 rotate-180 transition-transform duration-200')} />
-            </button>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+            <LayoutGrid className="h-5 w-5" />
+          </div>
+          {!isCollapsed && (
+            <span className="font-semibold truncate text-sm">{title}</span>
           )}
         </div>
         {!isCollapsed && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsCollapsed(true)}
-              className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-full border text-sm transition-all duration-200',
-                isDarkMode
-                  ? 'border-white/10 bg-white/5 text-text-light hover:border-white/20 hover:bg-white/10'
-                  : 'border border-border bg-background-secondary text-text-primary hover:border-accent-primary/40 hover:bg-background-secondary/80'
-              )}
-              aria-label="Collapse Sidebar"
-              title="Свернуть"
-            >
-              <ChevronLeftIcon className="h-4 w-4" />
-            </button>
-            <ThemeToggle />
-          </div>
+          <button
+            onClick={() => setIsCollapsed(true)}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-6">
-        {/* Primary items */}
-        <div>
-          {!isCollapsed && (
-            <div
-              className={cn(
-                'mb-3 px-0 text-xs uppercase tracking-[0.35em]',
-                isDarkMode ? 'text-text-light/45' : 'text-text-secondary/70'
-              )}
-            >
-              Навигация
-            </div>
-          )}
-          <ul className="space-y-1.5">
-            <li>
-              <button
-                onClick={() => !isCollapsed && setIsVkExpanded(!isVkExpanded)}
-                className={cn(
-                  'group w-full flex items-center justify-between rounded-2xl border border-transparent px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                  isCollapsed && 'justify-center px-2',
-                  isDarkMode
-                    ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
-                    : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
-                  isDarkMode ? 'text-text-light/70' : 'text-text-secondary'
-                )}
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto py-4 px-3 scrollbar-none">
+        <nav className="space-y-6">
+          {/* VK Section */}
+          <div className="space-y-1">
+             {!isCollapsed && (
+                <div className="px-2 mb-2 text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+                  ВКонтакте
+                </div>
+             )}
+            {vkSubItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  cn(
+                    'group flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                     isCollapsed && 'justify-center px-0'
+                  )
+                }
+                title={isCollapsed ? item.label : undefined}
               >
-                <span className={cn('flex items-center', !isCollapsed && 'gap-3')}>
-                  <span
-                    className={cn(
-                      'flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200 ring-1',
-                      isDarkMode
-                        ? 'bg-white/10 text-text-light/80 ring-white/10 group-hover:text-white'
-                        : 'bg-accent-primary/10 text-accent-primary/70 ring-accent-primary/15 group-hover:text-accent-primary'
-                    )}
-                  >
-                    <GroupsIcon />
-                  </span>
-                  {!isCollapsed && <span>ВК</span>}
-                </span>
+                {item.icon}
                 {!isCollapsed && (
-                  <ChevronDownIcon
-                    className={cn(
-                      'h-4 w-4 transition-transform duration-200',
-                      isVkExpanded && 'rotate-180'
-                    )}
-                  />
-                )}
-              </button>
-              {!isCollapsed && isVkExpanded && (
-                <ul className="ml-4 mt-1.5 space-y-1">
-                  {vkSubItems.map((subItem) => (
-                    <li key={subItem.path}>
-                      <NavLink
-                        to={subItem.path}
-                        className={({ isActive }) =>
-                          cn(
-                            'flex items-center justify-between gap-2 rounded-xl border border-transparent px-3 py-2 text-xs font-medium transition-all duration-200',
-                            isDarkMode
-                              ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
-                              : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
-                            isActive
-                              ? isDarkMode
-                                ? 'bg-white/15 text-white shadow-soft-sm ring-1 ring-white/15'
-                                : 'border-accent-primary/30 bg-accent-primary/15 text-accent-primary shadow-soft-sm ring-1 ring-accent-primary/30'
-                              : isDarkMode
-                                ? 'text-text-light/60'
-                                : 'text-text-secondary/80'
-                          )
-                        }
-                      >
-                        <span>{subItem.label}</span>
-                        {subItem.badge && (
-                          <Badge
-                            className={cn(
-                              'rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1',
-                              isDarkMode ? 'bg-white/15 text-white/90 ring-white/20' : 'bg-accent-primary/15 text-accent-primary ring-accent-primary/30'
-                            )}
-                          >
-                            {subItem.badge}
-                          </Badge>
+                    <div className="flex flex-1 items-center justify-between">
+                        <span>{item.label}</span>
+                        {item.badge && (
+                        <Badge
+                            variant="secondary"
+                            className="ml-auto h-5 px-1.5 min-w-5 flex items-center justify-center text-[10px]"
+                        >
+                            {item.badge}
+                        </Badge>
                         )}
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-            <li>
-              <button
+                    </div>
+                )}
+              </NavLink>
+            ))}
+          </div>
+
+          {/* Parsing Section */}
+          <div className="space-y-1">
+            {!isCollapsed && (
+                <div className="px-2 mb-2 text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+                  Парсинг
+                </div>
+             )}
+             {/* Parsing Submenu - Simplified for now as direct links or similar structure */}
+             <button
                 onClick={() => !isCollapsed && setIsParsingExpanded(!isParsingExpanded)}
                 className={cn(
-                  'group w-full flex items-center justify-between rounded-2xl border border-transparent px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                  isCollapsed && 'justify-center px-2',
-                  isDarkMode
-                    ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
-                    : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
-                  isDarkMode ? 'text-text-light/70' : 'text-text-secondary'
+                  'group flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                  isCollapsed && 'justify-center px-0'
                 )}
-              >
-                <span className={cn('flex items-center', !isCollapsed && 'gap-3')}>
-                  <span
-                    className={cn(
-                      'flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200 ring-1',
-                      isDarkMode
-                        ? 'bg-white/10 text-text-light/80 ring-white/10 group-hover:text-white'
-                        : 'bg-accent-primary/10 text-accent-primary/70 ring-accent-primary/15 group-hover:text-accent-primary'
-                    )}
-                  >
-                    <ListingsIcon />
-                  </span>
-                  {!isCollapsed && <span>Парсинг</span>}
-                </span>
+             >
+                <Building className="h-4 w-4" />
                 {!isCollapsed && (
-                  <ChevronDownIcon
-                    className={cn(
-                      'h-4 w-4 transition-transform duration-200',
-                      isParsingExpanded && 'rotate-180'
-                    )}
-                  />
+                    <>
+                        <span className="flex-1 text-left">Недвижимость</span>
+                         <ChevronDown
+                            className={cn("h-3 w-3 transition-transform", isParsingExpanded && "rotate-180")}
+                         />
+                    </>
                 )}
-              </button>
-              {!isCollapsed && isParsingExpanded && (
-                <ul className="ml-4 mt-1.5 space-y-1">
-                  {parsingSubItems.map((subItem) => (
-                    <li key={subItem.path}>
-                      <NavLink
-                        to={subItem.path}
-                        className={({ isActive }) =>
-                          cn(
-                            'flex items-center justify-between gap-2 rounded-xl border border-transparent px-3 py-2 text-xs font-medium transition-all duration-200',
-                            isDarkMode
-                              ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
-                              : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
-                            isActive
-                              ? isDarkMode
-                                ? 'bg-white/15 text-white shadow-soft-sm ring-1 ring-white/15'
-                                : 'border-accent-primary/30 bg-accent-primary/15 text-accent-primary shadow-soft-sm ring-1 ring-accent-primary/30'
-                              : isDarkMode
-                                ? 'text-text-light/60'
-                                : 'text-text-secondary/80'
-                          )
-                        }
-                      >
-                        <span>{subItem.label}</span>
-                        {subItem.badge && (
-                          <Badge
-                            className={cn(
-                              'rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1',
-                              isDarkMode ? 'bg-white/15 text-white/90 ring-white/20' : 'bg-accent-primary/15 text-accent-primary ring-accent-primary/30'
-                            )}
-                          >
-                            {subItem.badge}
-                          </Badge>
-                        )}
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-            {primaryItems.map((item) => (
-              <li key={item.path}>
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) =>
-                    cn(
-                      'group flex items-center justify-between rounded-2xl border border-transparent px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                      isCollapsed && 'justify-center px-2',
-                      isDarkMode
-                        ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
-                        : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
-                      isActive
-                        ? isDarkMode
-                          ? 'bg-white/15 text-white shadow-soft-sm ring-1 ring-white/15 backdrop-blur-md'
-                          : 'border-accent-primary/30 bg-accent-primary/15 text-accent-primary shadow-soft-sm ring-1 ring-accent-primary/30'
-                        : isDarkMode
-                          ? 'text-text-light/70'
-                          : 'text-text-secondary'
-                    )
-                  }
-                >
-                  <span className={cn('flex items-center', !isCollapsed && 'gap-3')}>
-                    <span
-                      className={cn(
-                        'flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200 ring-1',
-                        isDarkMode
-                          ? 'bg-white/10 text-text-light/80 ring-white/10 group-hover:text-white'
-                          : 'bg-accent-primary/10 text-accent-primary/70 ring-accent-primary/15 group-hover:text-accent-primary'
-                      )}
-                    >
-                      {item.icon}
-                    </span>
-                    {!isCollapsed && <span>{item.label}</span>}
-                  </span>
-                  {!isCollapsed && item.badge && (
-                    <Badge
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-xs font-semibold ring-1',
-                        isDarkMode ? 'bg-white/15 text-white/90 ring-white/20' : 'bg-accent-primary/15 text-accent-primary ring-accent-primary/30'
-                      )}
-                    >
-                      {item.badge}
-                    </Badge>
-                  )}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </div>
+             </button>
+             {!isCollapsed && isParsingExpanded && (
+                 <div className="ml-4 space-y-1 mt-1 border-l border-sidebar-border/50 pl-2">
+                    {parsingSubItems.map(item => (
+                        <NavLink
+                            key={item.path}
+                            to={item.path}
+                            className={({ isActive }) =>
+                            cn(
+                                'flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors',
+                                isActive
+                                ? 'text-sidebar-primary font-medium'
+                                : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                            )
+                            }
+                        >
+                            {item.label}
+                        </NavLink>
+                    ))}
+                 </div>
+             )}
+          </div>
 
-        {/* Secondary items */}
-        <div>
-          {!isCollapsed && (
-            <div
-              className={cn(
-                'mb-3 px-0 text-xs uppercase tracking-[0.35em]',
-                isDarkMode ? 'text-text-light/45' : 'text-text-secondary/70'
-              )}
-            >
-              Управление
-            </div>
-          )}
-          <ul className="space-y-1.5">
-            {secondaryItems.map((item) => (
-              <li key={item.path}>
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) =>
-                    cn(
-                      'group flex items-center justify-between rounded-2xl border border-transparent px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                      isCollapsed && 'justify-center px-2',
-                      isDarkMode
-                        ? 'hover:border-white/10 hover:bg-white/10 hover:text-white'
-                        : 'hover:border-accent-primary/25 hover:bg-accent-primary/10 hover:text-accent-primary',
-                      isActive
-                        ? isDarkMode
-                          ? 'bg-white/15 text-white shadow-soft-sm ring-1 ring-white/15 backdrop-blur-md'
-                          : 'border-accent-primary/30 bg-accent-primary/15 text-accent-primary shadow-soft-sm ring-1 ring-accent-primary/30'
-                        : isDarkMode
-                          ? 'text-text-light/70'
-                          : 'text-text-secondary'
-                    )
-                  }
-                >
-                  <span className={cn('flex items-center', !isCollapsed && 'gap-3')}>
-                    <span
-                      className={cn(
-                        'flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200 ring-1',
-                        isDarkMode
-                          ? 'bg-white/10 text-text-light/80 ring-white/10 group-hover:text-white'
-                          : 'bg-accent-primary/10 text-accent-primary/70 ring-accent-primary/15 group-hover:text-accent-primary'
-                      )}
-                    >
-                      {item.icon}
-                    </span>
-                    {!isCollapsed && <span>{item.label}</span>}
-                  </span>
-                </NavLink>
-              </li>
+           {/* Other Primary Items */}
+           <div className="space-y-1">
+             {primaryItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  cn(
+                    'group flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                     isCollapsed && 'justify-center px-0'
+                  )
+                }
+                 title={isCollapsed ? item.label : undefined}
+              >
+                {item.icon}
+                {!isCollapsed && <span>{item.label}</span>}
+              </NavLink>
             ))}
-          </ul>
-        </div>
-      </nav>
+           </div>
+        </nav>
+      </div>
 
-      {/* Нет нижнего футера — переключатель перенесён наверх */}
+      {/* Footer */}
+      <div className="mt-auto border-t border-sidebar-border p-4">
+          <div className="space-y-1">
+             {secondaryItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  cn(
+                    'group flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                     isCollapsed && 'justify-center px-0'
+                  )
+                }
+                 title={isCollapsed ? item.label : undefined}
+              >
+                {item.icon}
+                {!isCollapsed && <span>{item.label}</span>}
+              </NavLink>
+            ))}
+          </div>
+          
+        <div className={cn("mt-4 flex items-center", isCollapsed ? "justify-center" : "justify-between")}>
+             {!isCollapsed && <ThemeToggle />}
+             {isCollapsed && (
+                 <button
+                    onClick={() => setIsCollapsed(false)}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                 >
+                    <ChevronRight className="h-4 w-4" />
+                 </button>
+             )}
+             {!isCollapsed && (
+                  <div className="text-xs text-sidebar-foreground/40">v1.0</div>
+             )}
+        </div>
+        {isCollapsed && (
+             <div className="mt-2 flex justify-center">
+                 <ThemeToggle />
+             </div>
+        )}
+      </div>
     </aside>
   )
 }
