@@ -1,7 +1,8 @@
-import { Button } from '../components/ui/button'
-import { highlightKeywords } from '../utils/highlightKeywords'
-import { formatDateTime, getAuthorInitials } from './utils'
-import type { TableColumn, Comment, Keyword } from '../types'
+import { Button } from '@/components/ui/button'
+import { highlightKeywords } from '@/utils/highlightKeywords'
+import { formatDateTime } from '../utils/formatDateTime'
+import { getAuthorInitials } from '../utils/getAuthorInitials'
+import type { TableColumn, Comment, Keyword } from '@/types'
 
 export const getCommentTableColumns = (
   keywords: Keyword[],
@@ -10,7 +11,7 @@ export const getCommentTableColumns = (
   {
     header: '№',
     key: 'index',
-    render: (_item, index) => index + 1
+    render: (_item: Comment, index: number) => index + 1
   },
   {
     header: 'Автор',

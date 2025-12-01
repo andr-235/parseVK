@@ -1,10 +1,10 @@
-import ProgressBar from '../components/ProgressBar'
-import TaskActionsCell from '../pages/Tasks/components/TaskActionsCell'
-import { cn } from '../lib/utils'
-import { getTaskStatusText } from '../utils/statusHelpers'
-import { calculateTaskProgress } from '../utils/taskProgress'
+import ProgressBar from '@/components/ProgressBar'
+import TaskActionsCell from '../components/TaskActionsCell'
+import { cn } from '@/lib/utils'
+import { getTaskStatusText } from '@/utils/statusHelpers'
+import { calculateTaskProgress } from '@/utils/taskProgress'
 import { formatDate, formatPair, resolveNumber, toNumber } from './utils'
-import type { TableColumn, Task } from '../types'
+import type { TableColumn, Task } from '@/types'
 
 const getResultFromStats = (item: Task): string | null => {
   const posts = toNumber(item.stats?.posts)

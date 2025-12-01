@@ -15,7 +15,6 @@ function Groups() {
     url,
     loadMoreRef,
     regionSearch,
-    setUrl,
     setSearchTerm,
     handleAddGroup,
     handleUrlChange,

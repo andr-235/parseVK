@@ -78,14 +78,14 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
 
     try {
       const response = await watchlistService.getAuthors({ offset, limit: pageSize, excludeStopped: true })
-      const mapped = response.items.map(mapWatchlistAuthor)
+      const mapped: WatchlistAuthorCard[] = response.items.map(mapWatchlistAuthor)
 
       set((prev) => ({
         authors: reset
           ? mapped
           : [
               ...prev.authors,
-              ...mapped.filter((author) => !prev.authors.some((existing) => existing.id === author.id)),
+              ...mapped.filter((author: WatchlistAuthorCard) => !prev.authors.some((existing) => existing.id === author.id)),
             ],
         totalAuthors: response.total,
         hasMoreAuthors: response.hasMore,
@@ -100,7 +100,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
           : [
               ...(prevData?.items ?? []),
               ...mapped.filter(
-                (author) => !(prevData?.items ?? []).some((existing) => existing.id === author.id),
+                (author: WatchlistAuthorCard) => !(prevData?.items ?? []).some((existing) => existing.id === author.id),
               ),
             ],
         total: response.total,

@@ -1,5 +1,5 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/card'
-import { Badge } from '../../../components/ui/badge'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -7,12 +7,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../../components/ui/table'
-import { TableSortButton } from '../../../components/ui/table-sort-button'
-import { useTableSorting } from '../../../hooks/useTableSorting'
-import type { Task } from '../../../types'
-import { getTaskTableColumns } from '../../../config/taskTableColumns'
-import { useTasksStore } from '../../../stores'
+} from '@/components/ui/table'
+import { TableSortButton } from '@/components/ui/table-sort-button'
+import { useTableSorting } from '@/hooks/useTableSorting'
+import type { Task } from '@/types'
+import { getTaskTableColumns } from '../config/taskTableColumns'
+import { useTasksStore } from '@/store'
 
 interface TasksTableCardProps {
   emptyMessage: string
@@ -20,7 +20,7 @@ interface TasksTableCardProps {
 }
 
 function TasksTableCard({ emptyMessage, onTaskSelect }: TasksTableCardProps) {
-  const tasks = useTasksStore((state) => state.tasks)
+  const tasks = useTasksStore((state: any) => state.tasks)
   const hasTasks = tasks.length > 0
   const columns = getTaskTableColumns()
   const { sortedItems: sortedTasks, sortState, requestSort } = useTableSorting(tasks, columns)
@@ -56,7 +56,7 @@ function TasksTableCard({ emptyMessage, onTaskSelect }: TasksTableCardProps) {
                       <TableHead key={column.key} className={column.headerClassName}>
                         {column.sortable ? (
                           <TableSortButton
-                            direction={sortState?.key === column.key ? sortState.direction : null}
+                            direction={sortState && sortState.key === column.key ? sortState.direction : null}
                             onClick={() => requestSort(column.key)}
                           >
                             {column.header}
@@ -69,7 +69,7 @@ function TasksTableCard({ emptyMessage, onTaskSelect }: TasksTableCardProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedTasks.map((task, index) => (
+                  {sortedTasks.map((task: Task, index: number) => (
                     <TableRow
                       key={task.id}
                       className="cursor-pointer"
@@ -77,7 +77,7 @@ function TasksTableCard({ emptyMessage, onTaskSelect }: TasksTableCardProps) {
                         onTaskSelect(task.id)
                       }}
                     >
-                      {columns.map((column) => (
+                      {columns.map((column: any) => (
                         <TableCell key={column.key} className={column.cellClassName}>
                           {column.render ? column.render(task as Task, index) : String(task[column.key as keyof Task] ?? '')}
                         </TableCell>

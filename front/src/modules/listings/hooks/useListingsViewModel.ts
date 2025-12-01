@@ -118,8 +118,8 @@ export const useListingsViewModel = () => {
 
     if (Array.isArray(meta.sources)) {
       const sanitized = meta.sources
-        .map((item) => item?.trim?.() ?? '')
-        .filter((item) => item.length > 0)
+        .map((item: any) => item?.trim?.() ?? '')
+        .filter((item: string) => item.length > 0)
       setAvailableSources(Array.from(new Set(sanitized)))
     }
   }, [])

@@ -28,7 +28,7 @@ export const keywordsService = {
       })
 
       const result = await handleResponse<IBulkAddResponse>(response, 'Failed to add keywords')
-      toast.success(`Добавлено ключевых слов: ${result.added}`)
+      toast.success(`Добавлено ключевых слов: ${result.successCount ?? 0}`)
       return result
     } catch (error) {
       toast.error('Не удалось добавить ключевые слова')
@@ -47,7 +47,7 @@ export const keywordsService = {
       })
 
       const result = await handleResponse<IBulkAddResponse>(response, 'Failed to upload keywords')
-      toast.success(`Загружено ключевых слов: ${result.added}`)
+      toast.success(`Загружено ключевых слов: ${result.successCount ?? 0}`)
       return result
     } catch (error) {
       toast.error('Не удалось загрузить ключевые слова')

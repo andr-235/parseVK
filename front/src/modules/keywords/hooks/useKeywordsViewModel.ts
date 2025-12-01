@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'rea
 import toast from 'react-hot-toast'
 import { useKeywordsStore } from '@/store'
 import { keywordsService } from '@/services/keywordsService'
-import type { Keyword } from '@/types'
 
 export const useKeywordsViewModel = () => {
   const keywords = useKeywordsStore((state) => state.keywords)

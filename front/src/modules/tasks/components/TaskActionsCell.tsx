@@ -1,17 +1,17 @@
 import { useState, type MouseEvent } from 'react'
 
-import { Button } from '../../../components/ui/button'
-import { useTasksStore } from '../../../stores'
-import type { Task } from '../../../types'
+import { Button } from '@/components/ui/button'
+import { useTasksStore } from '@/store'
+import type { Task } from '@/types'
 
 interface TaskActionsCellProps {
   task: Task
 }
 
 function TaskActionsCell({ task }: TaskActionsCellProps) {
-  const resumeTask = useTasksStore((state) => state.resumeTask)
-  const checkTask = useTasksStore((state) => state.checkTask)
-  const deleteTask = useTasksStore((state) => state.deleteTask)
+  const resumeTask = useTasksStore((state: any) => state.resumeTask)
+  const checkTask = useTasksStore((state: any) => state.checkTask)
+  const deleteTask = useTasksStore((state: any) => state.deleteTask)
   const [isResuming, setIsResuming] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)

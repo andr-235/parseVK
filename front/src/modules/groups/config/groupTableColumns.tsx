@@ -1,6 +1,6 @@
-import { Button } from '../components/ui/button'
-import { ExpandableText } from '../components/ExpandableText'
-import type { TableColumn, Group } from '../types'
+import { Button } from '@/components/ui/button'
+import { ExpandableText } from '@/components/ExpandableText'
+import type { TableColumn, Group } from '@/types'
 
 const GROUP_TYPE_LABELS: Record<string, string> = {
   group: 'группа',
