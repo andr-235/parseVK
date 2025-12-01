@@ -36,12 +36,17 @@ function CommentCard({
   showKeywordComments,
   showKeywordPosts,
 }: CommentCardProps) {
-  const uniqueMatchedKeywords = (matchedKeywords ?? []).filter(
-    (keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index,
-  )
+  const keywordsFromPost = (matchedKeywords ?? [])
+    .filter((kw) => kw.source === 'POST')
+    .filter((keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index)
 
-  const keywordsFromPost = uniqueMatchedKeywords.filter((kw) => kw.source === 'POST')
-  const keywordsFromComment = uniqueMatchedKeywords.filter((kw) => kw.source !== 'POST')
+  const keywordsFromComment = (matchedKeywords ?? [])
+    .filter((kw) => kw.source !== 'POST')
+    .filter((keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index)
+
+  const allUniqueKeywords = [...keywordsFromPost, ...keywordsFromComment].filter(
+    (keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index
+  )
 
   const isFilterActive = showKeywordComments !== undefined || showKeywordPosts !== undefined
   
@@ -292,7 +297,7 @@ function CommentCard({
             {/* Текст поста (урезанный если длинный) */}
             {comment.postText && (
                 <div className="text-sm text-foreground/80 leading-relaxed line-clamp-4 whitespace-pre-wrap break-words">
-                   {highlightKeywords(comment.postText, keywordsFromPost.length > 0 ? keywordsFromPost : uniqueMatchedKeywords)}
+                   {highlightKeywords(comment.postText, keywordsFromPost.length > 0 ? keywordsFromPost : allUniqueKeywords)}
                 </div>
             )}
             
@@ -319,7 +324,7 @@ function CommentCard({
                   </div>
               )}
               <div className="text-[15px] leading-relaxed text-foreground whitespace-pre-wrap break-words font-normal">
-                {highlightKeywords(comment.text, keywordsFromComment.length > 0 ? keywordsFromComment : uniqueMatchedKeywords)}
+                {highlightKeywords(comment.text, keywordsFromComment.length > 0 ? keywordsFromComment : allUniqueKeywords)}
               </div>
            </div>
         )}
