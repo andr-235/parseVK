@@ -1,8 +1,8 @@
 import { useAuthorData } from '@/hooks/useAuthorData'
 import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis'
-import { AuthorHeroSection } from '@/components/AuthorHeroSection'
-import { AnalysisSummarySection } from '@/components/AnalysisSummarySection'
-import { PhotosSection } from '@/components/PhotosSection'
+import { AuthorHeroSection } from './components/AuthorHeroSection'
+import { AnalysisSummarySection } from './components/AnalysisSummarySection'
+import { PhotosSection } from './components/PhotosSection'
 
 /**
  * Компонент страницы анализа автора

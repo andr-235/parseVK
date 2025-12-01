@@ -12,12 +12,10 @@ interface KeywordCardProps {
 export function KeywordCard({ keyword, onDelete }: KeywordCardProps) {
   return (
     <Card className="flex flex-col h-full overflow-hidden hover:shadow-md transition-shadow">
-      <CardContent className="flex-1 p-4 flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-base text-foreground" title={keyword.word}>
-            {keyword.word}
-          </h3>
-        </div>
+      <CardContent className="flex-1 p-3 flex flex-col gap-2">
+        <h3 className="font-semibold text-sm text-foreground truncate" title={keyword.word}>
+          {keyword.word}
+        </h3>
         
         {keyword.category ? (
           <Badge variant="secondary" className="w-fit bg-muted/50 text-xs font-normal">
@@ -28,15 +26,14 @@ export function KeywordCard({ keyword, onDelete }: KeywordCardProps) {
         )}
       </CardContent>
 
-      <CardFooter className="p-3 pt-3 bg-muted/5 flex items-center justify-end gap-2 border-t">
+      <CardFooter className="p-2 pt-2 bg-muted/5 flex items-center justify-end gap-2 border-t">
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+          className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs"
           onClick={() => onDelete(keyword.id)}
         >
-          <Trash2 className="mr-2 size-3.5" />
-          Удалить
+          <Trash2 className="size-3" />
         </Button>
       </CardFooter>
     </Card>

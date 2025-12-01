@@ -1,8 +1,8 @@
-import ProgressBar from './ProgressBar'
-import type { Task } from '../types'
-import { useActiveTasksBanner } from '../hooks/useActiveTasksBanner'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Badge } from './ui/badge'
+import ProgressBar from '@/components/ProgressBar'
+import type { Task } from '@/types'
+import { useActiveTasksBanner } from '@/hooks/useActiveTasksBanner'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 interface ActiveTasksBannerProps {
   tasks: Task[]

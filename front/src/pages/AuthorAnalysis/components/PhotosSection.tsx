@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import SectionCard from '@/components/SectionCard'
 import { Spinner } from '@/components/ui/spinner'
-import { PhotoAnalysisCard } from '@/components/PhotoAnalysisCard'
+import { PhotoAnalysisCard } from './PhotoAnalysisCard'
 import type { PhotoAnalysis } from '@/types'
 
 interface PhotosSectionProps {

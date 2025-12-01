@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import SectionCard from '@/components/SectionCard'
-import { SuspicionLevelBadge } from '@/components/SuspicionLevelBadge'
+import { SuspicionLevelBadge } from './SuspicionLevelBadge'
 import type { AuthorDetails, PhotoAnalysisSummary } from '@/types'
 import { categoryLabels } from '@/utils/authorAnalysisUtils'
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Search, X, Check } from 'lucide-react'
-import { Button } from './ui/button'
-import type { Group } from '../types'
+import { Button } from '@/components/ui/button'
+import type { Group } from '@/types'
 
 interface CreateParseTaskModalProps {
   isOpen: boolean

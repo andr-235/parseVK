@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
-import type { TaskDetails as TaskDetailsType } from '../types'
-import { getTaskStatusText, getGroupStatusText } from '../utils/statusHelpers'
-import { calculateTaskProgress } from '../utils/taskProgress'
-import ProgressBar from './ProgressBar'
-import { Button } from './ui/button'
-import { useTasksStore } from '../stores'
+import type { TaskDetails as TaskDetailsType } from '@/types'
+import { getTaskStatusText, getGroupStatusText } from '@/utils/statusHelpers'
+import { calculateTaskProgress } from '@/utils/taskProgress'
+import ProgressBar from '@/components/ProgressBar'
+import { Button } from '@/components/ui/button'
+import { useTasksStore } from '@/stores'
 
 interface TaskDetailsProps {
   task: TaskDetailsType | undefined
