@@ -2,7 +2,7 @@ import toast from 'react-hot-toast'
 import { API_URL } from '@/lib/apiConfig'
 import { buildQueryString, createRequest, handleResponse } from '@/lib/apiUtils'
 import type { IGroupResponse, IDeleteResponse, IGroupsListResponse, IRegionGroupSearchResponse } from '../types/api'
-import type { SaveGroupDto } from '../dto'
+import type { SaveGroupDto } from '@/types/dto'
 
 export const groupsService = {
   async fetchGroups(params?: { page?: number; limit?: number }): Promise<IGroupsListResponse> {

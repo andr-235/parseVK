@@ -127,14 +127,53 @@ npm run format:check       # Check formatting without changes
 
 ### Frontend Architecture (React/Vite)
 
+**Project Structure:**
+
+The frontend follows a layered architecture pattern with clear separation of concerns:
+
+```
+src/
+├── pages/              # Route components (entry points for routing)
+├── modules/            # Feature modules with domain logic
+│   └── {module}/
+│       ├── components/ # Module-specific UI components
+│       ├── hooks/      # Module-specific hooks
+│       ├── config/     # Module configuration (table columns, etc.)
+│       ├── types/      # Module-specific types
+│       └── utils/      # Module-specific utilities
+├── components/         # Shared reusable UI components
+│   ├── ui/            # Base UI components (shadcn/ui)
+│   └── Sidebar/       # Sidebar component group
+├── hooks/              # Shared custom hooks
+├── services/           # API clients and business logic
+├── store/              # Global state management (Zustand)
+├── utils/              # Pure utility functions
+├── types/              # Shared TypeScript types and interfaces
+│   └── dto/           # Data Transfer Objects for API
+└── lib/                # Low-level configuration and setup
+    ├── providers/     # React providers (QueryClient, AppSync)
+    └── configUtils.ts # Configuration utilities
+```
+
+**Dependency Rules:**
+- `pages/` → can use: modules, components, hooks, services, store, utils
+- `modules/` → can use: components, hooks, services, store, utils
+- `components/` → can use: hooks, utils, types
+- `services/` → can use: lib, utils, types
+- `store/` → can use: services, lib, utils, types
+- `hooks/` → can use: store, services, utils, types
+- `utils/` → can use: types only
+- `types/` → no dependencies (except built-in types)
+- `lib/` → can use: types only
+
 **State Management (Zustand):**
-- `tasksStore` ([stores/tasksStore.ts](front/src/stores/tasksStore.ts)) - Task list with normalized state (taskIds, tasksById), task details caching
-- `groupsStore` ([stores/groupsStore.ts](front/src/stores/groupsStore.ts)) - VK groups management
-- `commentsStore` ([stores/commentsStore.ts](front/src/stores/commentsStore.ts)) - Comments data with keyword filtering
-- `keywordsStore` ([stores/keywordsStore.ts](front/src/stores/keywordsStore.ts)) - Keyword management
-- `watchlistStore` ([stores/watchlistStore.ts](front/src/stores/watchlistStore.ts)) - Watchlist authors management, author details with paginated comments, settings
-- `themeStore` ([stores/themeStore.ts](front/src/stores/themeStore.ts)) - Dark/light theme toggle
-- `navigationStore` ([stores/navigationStore.ts](front/src/stores/navigationStore.ts)) - Sidebar navigation state
+- `tasksStore` ([store/tasksStore.ts](front/src/store/tasksStore.ts)) - Task list with normalized state (taskIds, tasksById), task details caching
+- `groupsStore` ([store/groupsStore.ts](front/src/store/groupsStore.ts)) - VK groups management
+- `commentsStore` ([store/commentsStore.ts](front/src/store/commentsStore.ts)) - Comments data with keyword filtering
+- `keywordsStore` ([store/keywordsStore.ts](front/src/store/keywordsStore.ts)) - Keyword management
+- `watchlistStore` ([store/watchlistStore.ts](front/src/store/watchlistStore.ts)) - Watchlist authors management, author details with paginated comments, settings
+- `themeStore` ([store/themeStore.ts](front/src/store/themeStore.ts)) - Dark/light theme toggle
+- `navigationStore` ([store/navigationStore.ts](front/src/store/navigationStore.ts)) - Sidebar navigation state
 
 All stores use Zustand with immer, persist, devtools, and subscribeWithSelector middleware.
 
@@ -254,8 +293,9 @@ When modifying the Prisma schema:
 1. Create page component in `front/src/pages/`
 2. Add route in `App.tsx`
 3. Add navigation item in `Sidebar.tsx`
-4. Create store if needed in `front/src/stores/`
-5. Create API service in `front/src/api/`
+4. Create store if needed in `front/src/store/`
+5. Create API service in `front/src/services/`
+6. Create module in `front/src/modules/` if page has complex logic
 
 ### Adding an Author to Watchlist
 1. User clicks "Add to Watchlist" button on comment card (provides `commentId`)

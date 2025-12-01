@@ -28,3 +28,4 @@ function QueryProvider({ children }: PropsWithChildren) {
 }
 
 export default QueryProvider
+

@@ -14,7 +14,7 @@ import Authors from './pages/Authors'
 import Settings from './pages/Settings'
 import Listings from './pages/Listings'
 import Telegram from './pages/Telegram'
-import AppSyncProvider from './providers/AppSyncProvider'
+import AppSyncProvider from '@/lib/providers/AppSyncProvider'
 
 function App() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode)

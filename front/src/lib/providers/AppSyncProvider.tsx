@@ -43,3 +43,4 @@ function AppSyncProvider(): null {
 }
 
 export default AppSyncProvider
+
