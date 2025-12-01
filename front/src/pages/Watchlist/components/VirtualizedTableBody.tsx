@@ -39,11 +39,10 @@ export const VirtualizedTableBody = memo(({
 
   const {
     handleKeyDown: virtualizedHandleKeyDown,
-    handleScroll,
   } = useVirtualizedKeyboardNavigation({
     itemsLength: sortedAuthors.length,
     onSelect: (index: number) => onSelectAuthor(sortedAuthors[index]),
-    onFocusChange: () => {}, // Фокус управляется через focusedRowIndex
+    onFocusChange: () => {},
     listRef,
   })
 
@@ -88,8 +87,8 @@ export const VirtualizedTableBody = memo(({
   }
 
   const handleResize = useCallback(() => {
-    handleScroll()
-  }, [handleScroll])
+    // Resize handled by react-window automatically
+  }, [])
 
   return (
     <List
