@@ -176,12 +176,17 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  html, body {
+    @apply overflow-x-hidden;
+  }
+  
   body {
     @apply bg-background text-foreground;
   }
   
   #root {
-    @apply flex min-h-screen w-full;
+    @apply flex min-h-screen w-full overflow-x-hidden;
   }
 
   /* Кастомный скроллбар для таблиц */
