@@ -134,7 +134,7 @@ function GroupsTableCard({
         )}
 
         {hasFilteredGroups && (
-          <div className="relative w-full overflow-auto">
+          <div className="relative w-full overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
