@@ -54,21 +54,31 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
   }
 
   const regex = new RegExp(`(${patterns.join('|')})`, 'gi')
-  const normalizedKeywords = new Set(keywordEntries.map((entry) => entry.normalized))
+  
+  const keywordPatternMap = new Map<string, RegExp>()
+  keywordEntries.forEach((entry) => {
+    const pattern = buildKeywordPattern(entry.original, entry.isPhrase)
+    keywordPatternMap.set(entry.normalized, new RegExp(`^${pattern}$`, 'i'))
+  })
 
   const parts = text.split(regex)
 
   return parts.map((part, index) => {
-    const normalizedPart = normalizeForKeywordMatch(part)
-    if (!normalizedKeywords.has(normalizedPart)) {
+    if (!part) {
       return part
     }
+    
+    for (const pattern of keywordPatternMap.values()) {
+      if (pattern.test(part)) {
+        return (
+          <span key={index} className="text-yellow-600 dark:text-yellow-300 font-semibold">
+            {part}
+          </span>
+        )
+      }
+    }
 
-    return (
-      <span key={index} className="text-yellow-600 dark:text-yellow-300 font-semibold">
-        {part}
-      </span>
-    )
+    return part
   })
 }
 

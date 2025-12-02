@@ -342,10 +342,12 @@ function CommentCard({
         {shouldShowComment && (
            <div className="space-y-2">
               {keywordsFromComment.length > 0 && (
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="outline" className="h-5 border-primary/30 text-primary bg-primary/5 text-[10px]">
-                        Найдено {keywordsFromComment.length} ключей
-                    </Badge>
+                  <div className="flex flex-wrap items-center gap-1 mb-1">
+                    {keywordsFromComment.map(kw => (
+                      <Badge key={kw.id} variant="secondary" className="h-5 px-1.5 text-[9px] bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-0">
+                        {kw.word}
+                      </Badge>
+                    ))}
                   </div>
               )}
               <div className="text-[15px] leading-relaxed text-foreground whitespace-pre-wrap break-words font-normal">
