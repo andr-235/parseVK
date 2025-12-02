@@ -20,6 +20,7 @@ export type CommentWithRelations = Prisma.CommentGetPayload<{
             id: true;
             word: true;
             category: true;
+            isPhrase: true;
           };
         };
       };
