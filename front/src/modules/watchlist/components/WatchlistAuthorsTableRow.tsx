@@ -5,8 +5,8 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
-import { getPrimitiveColumnValue } from '@/utils/watchlistUtils'
-import { logger } from '@/utils/logger'
+import { getPrimitiveColumnValue } from '@/modules/watchlist/utils/watchlistUtils'
+import { logger } from '@/modules/watchlist/utils/logger'
 
 /**
  * Интерфейс пропсов для компонента WatchlistAuthorsTableRow.

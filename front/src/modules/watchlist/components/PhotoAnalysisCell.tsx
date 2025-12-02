@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import type { WatchlistAuthorCard, PhotoAnalysisSummaryCategory } from '@/types'
-import { formatDateTime } from '@/utils/watchlistUtils'
+import { formatDateTime } from '@/modules/watchlist/utils/watchlistUtils'
 import { PHOTO_ANALYSIS_LABELS } from '@/utils/photoAnalysisConstants'
 import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 

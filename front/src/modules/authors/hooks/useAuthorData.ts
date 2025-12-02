@@ -7,7 +7,7 @@ import { authorsService } from '@/services/authorsService'
 import { useAuthorsStore } from '@/store'
 import { createEmptyPhotoAnalysisSummary, type AuthorDetails } from '@/types'
 import type { AuthorAnalysisLocationState } from '@/types/authorAnalysis'
-import { isValidAuthorId } from '@/utils/authorAnalysisUtils'
+import { isValidAuthorId } from '@/modules/authorAnalysis/utils/authorAnalysisUtils'
 export const useAuthorData = () => {
   const params = useParams<{ vkUserId: string }>()
   const navigate = useNavigate()

@@ -4,7 +4,7 @@ import { Spinner } from '@/components/ui/spinner'
 import SectionCard from '@/components/SectionCard'
 import { SuspicionLevelBadge } from './SuspicionLevelBadge'
 import type { AuthorDetails, PhotoAnalysisSummary } from '@/types'
-import { categoryLabels } from '@/utils/authorAnalysisUtils'
+import { categoryLabels } from '@/modules/authorAnalysis/utils/authorAnalysisUtils'
 
 interface AnalysisSummarySectionProps {
   author: AuthorDetails | null

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import type { TableColumn, WatchlistAuthorCard } from '@/types'
-import { formatDateTime, formatStatus } from '@/utils/watchlistUtils'
+import { formatDateTime, formatStatus } from '@/modules/watchlist/utils/watchlistUtils'
 import { AuthorCell } from '@/modules/watchlist/components/AuthorCell'
 import { PhotoAnalysisCell } from '@/modules/watchlist/components/PhotoAnalysisCell'
 import { ActionsCell } from '@/modules/watchlist/components/ActionsCell'

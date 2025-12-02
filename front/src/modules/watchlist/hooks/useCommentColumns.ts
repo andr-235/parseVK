@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { TableColumn, WatchlistComment } from '@/types'
-import { formatDateTime, formatCommentSource } from '@/utils/watchlistUtils'
+import { formatDateTime, formatCommentSource } from '@/modules/watchlist/utils/watchlistUtils'
 
 export const useCommentColumns = (): TableColumn<WatchlistComment>[] => {
   return useMemo<TableColumn<WatchlistComment>[]>(() => [

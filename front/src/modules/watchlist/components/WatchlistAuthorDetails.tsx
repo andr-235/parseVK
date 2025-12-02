@@ -12,7 +12,7 @@ import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Spinner } from '@/components/ui/spinner'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type { WatchlistAuthorDetails as WatchlistAuthorDetailsType, WatchlistComment, TableColumn } from '@/types'
-import { formatDateTime, formatStatus, getPrimitiveColumnValue } from '@/utils/watchlistUtils'
+import { formatDateTime, formatStatus, getPrimitiveColumnValue } from '@/modules/watchlist/utils/watchlistUtils'
 
 interface WatchlistAuthorDetailsProps {
   currentAuthor: WatchlistAuthorDetailsType | null

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import PageHeroCard from '@/components/PageHeroCard'
 import type { AuthorDetails, PhotoAnalysisSummary } from '@/types'
-import { formatDateTime } from '@/utils/authorAnalysisUtils'
+import { formatDateTime } from '@/modules/authorAnalysis/utils/authorAnalysisUtils'
 import { PHOTO_ANALYSIS_LABELS } from '@/utils/photoAnalysisConstants'
 
 interface AuthorHeroSectionProps {

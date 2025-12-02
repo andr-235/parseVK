@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { Search, SlidersHorizontal } from 'lucide-react'
-import { formatSourceLabel } from '@/utils/listingsUtils'
+import { formatSourceLabel } from '@/modules/listings/utils/listingsUtils'
 
 interface ListingsFiltersProps {
   searchTerm: string

@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { usePhotoAnalysisStore } from '@/store'
-import { calculateAnalysisParams } from '@/utils/authorAnalysisUtils'
+import { calculateAnalysisParams } from '@/modules/authorAnalysis/utils/authorAnalysisUtils'
 import type { AnalyzePhotosOptions, AuthorDetails } from '@/types'
 export const usePhotoAnalysis = (vkUserId: number, isValidAuthor: boolean, author: AuthorDetails | null) => {
   const analyses = usePhotoAnalysisStore((state) => state.analyses)

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuthorsStore, usePhotoAnalysisStore } from '@/store'
 import type { AuthorCard, AuthorSortField, PhotoAnalysisSummary } from '@/types'
-import { resolveProfileUrl } from '@/utils/authorUtils'
+import { resolveProfileUrl } from '@/modules/authors/utils/authorUtils'
 
 export const useAuthorsViewModel = () => {
   const authors = useAuthorsStore((state) => state.authors)

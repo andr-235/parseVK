@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import PageHeroCard from '@/components/PageHeroCard'
 import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 import type { WatchlistHeroProps } from '@/types/watchlist'
-import { isValidWatchlistSettings } from '@/utils/watchlistUtils'
+import { isValidWatchlistSettings } from '@/modules/watchlist/utils/watchlistUtils'
 import WatchlistHeroErrorBoundary from './WatchlistHeroErrorBoundary'
 
 /**

@@ -1,4 +1,4 @@
-import { filterValidAuthors, validateAuthorId } from '@/utils/watchlistUtils'
+import { filterValidAuthors, validateAuthorId } from '@/modules/watchlist/utils/watchlistUtils'
 import type { WatchlistAuthorCard } from '@/types'
 import { createEmptyPhotoAnalysisSummary } from '@/types'
 

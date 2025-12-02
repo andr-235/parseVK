@@ -128,3 +128,4 @@ export const filterValidAuthors = (authors: WatchlistAuthorCard[]): WatchlistAut
     return true
   })
 }
+

@@ -26,3 +26,4 @@ export const buildKeywordPattern = (value: string): string => {
   const escaped = escapeRegExp(value)
   return escaped.replace(YE_REGEX, '[её]')
 }
+

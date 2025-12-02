@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTaskAutomationStore } from '@/store'
-import { clamp, formatAutomationTime } from '@/utils/automationFormatting'
+import { clamp, formatAutomationTime } from '@/modules/settings/utils/automationFormatting'
 
 interface AutomationFormState {
   enabled: boolean

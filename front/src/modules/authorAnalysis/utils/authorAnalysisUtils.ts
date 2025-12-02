@@ -60,3 +60,4 @@ export const calculateAnalysisParams = (photosCount: number | null, batchSize: n
     batchSize,
   }
 }
+

@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { Comment, Keyword } from '@/types'
-import { highlightKeywords } from '@/utils/highlightKeywords'
+import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
 import { CheckCircle2, ExternalLink, BookmarkPlus, Video, Link as LinkIcon, Eye } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { getAuthorInitials } from '@/modules/comments/utils/getAuthorInitials'
@@ -15,7 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { normalizeForKeywordMatch } from '@/utils/keywordMatching'
+import { normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
 
 interface CommentCardProps {
   comment: Comment

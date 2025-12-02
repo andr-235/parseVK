@@ -1,5 +1,5 @@
 import type { Keyword } from '@/types'
-import { buildKeywordPattern, normalizeForKeywordMatch } from '@/utils/keywordMatching'
+import { buildKeywordPattern, normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
 
 export function highlightKeywords(text: string, keywords: Keyword[]) {
   if (!text || keywords.length === 0) {
@@ -53,3 +53,4 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
     )
   })
 }
+

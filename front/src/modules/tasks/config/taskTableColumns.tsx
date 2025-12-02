@@ -1,7 +1,7 @@
 import ProgressBar from '@/components/ProgressBar'
 import TaskActionsCell from '@/modules/tasks/components/TaskActionsCell'
 import { cn } from '@/lib/utils'
-import { getTaskStatusText } from '@/utils/statusHelpers'
+import { getTaskStatusText } from '@/modules/tasks/utils/statusHelpers'
 import { calculateTaskProgress } from '@/utils/taskProgress'
 import { formatDate, formatPair, resolveNumber, toNumber } from '@/modules/tasks/config/utils'
 import type { TableColumn, Task } from '@/types'
