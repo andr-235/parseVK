@@ -1,5 +1,5 @@
 import TaskItem from './TaskItem'
-import { useTasksList } from '../hooks/useTasksList'
+import { useTasksList } from '@/modules/tasks/hooks/useTasksList'
 
 interface TasksListProps {
   onTaskSelect: (taskId: number | string) => void

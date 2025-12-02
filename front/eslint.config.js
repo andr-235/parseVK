@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'coverage', 'coverage-*', '**/*.test.ts', '**/*.test.tsx', '**/__tests__/**']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -21,6 +21,60 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+  },
+  // Правила для компонентов модулей - запрет импорта store
+  {
+    files: ['src/modules/**/components/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/store',
+              message: 'Компоненты не должны импортировать store напрямую. Используйте хуки модуля.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['../store', '../../store', '../../../store'],
+              message: 'Компоненты не должны импортировать store напрямую. Используйте хуки модуля.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Правила для utils - запрет импорта services/store
+  {
+    files: ['src/utils/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/services',
+              message: 'Utils должны быть чистыми функциями без зависимостей от services.',
+            },
+            {
+              name: '@/store',
+              message: 'Utils должны быть чистыми функциями без зависимостей от store.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['../services/*', '../../services/*'],
+              message: 'Utils должны быть чистыми функциями без зависимостей от services.',
+            },
+            {
+              group: ['../store/*', '../../store/*'],
+              message: 'Utils должны быть чистыми функциями без зависимостей от store.',
+            },
+          ],
+        },
+      ],
     },
   },
 ])

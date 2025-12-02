@@ -266,16 +266,35 @@ import { formatDateTime } from '../utils/formatDateTime'
 
 ### Внутримодульные импорты
 
-Внутри модуля можно использовать относительные импорты для связи частей модуля, но предпочтительно использовать alias:
+**Все импорты внутри модулей должны использовать alias `@/`**, включая импорты между компонентами, хуками и другими частями модуля:
 
 ```typescript
 // ✅ Правильно (через alias)
 import { useModuleQuery } from '@/modules/moduleName/hooks/useModuleQuery'
 import { MODULE_CONSTANTS } from '@/modules/moduleName/constants/moduleConstants'
 import type { ModuleType } from '@/modules/moduleName/types/moduleTypes'
+import { ComponentName } from '@/modules/moduleName/components/ComponentName'
 
-// ✅ Также допустимо (внутри модуля)
+// ❌ Неправильно (относительные импорты)
 import { useModuleQuery } from '../hooks/useModuleQuery'
+import { ComponentName } from './ComponentName'
+```
+
+**Преимущества использования alias:**
+- Единообразие импортов по всему проекту
+- Упрощение рефакторинга (перемещение файлов не ломает импорты)
+- Лучшая читаемость (явный путь к модулю)
+- Проще находить зависимости через поиск по проекту
+
+**Примеры из проекта:**
+
+```typescript
+// modules/tasks/components/TaskDetails.tsx
+import { useTaskDetails } from '@/modules/tasks/hooks/useTaskDetails'  // ✅
+
+// modules/watchlist/hooks/useAuthorColumns.ts
+import { AuthorCell } from '@/modules/watchlist/components/AuthorCell'  // ✅
+import { PhotoAnalysisCell } from '@/modules/watchlist/components/PhotoAnalysisCell'  // ✅
 ```
 
 ## Разделение логики
@@ -519,8 +538,65 @@ API и бизнес-логика:
 1. ✅ Создать модуль в `modules/{moduleName}/`
 2. ✅ Добавить компоненты в `modules/{moduleName}/components/`
 3. ✅ Добавить хуки в `modules/{moduleName}/hooks/`
-4. ✅ Использовать алиас `@/` для всех импортов
+4. ✅ Использовать алиас `@/` для всех импортов (включая внутримодульные)
 5. ✅ Вынести бизнес-логику из компонентов в хуки
 6. ✅ Использовать store через хуки, а не напрямую
 7. ✅ Использовать services в React Query queryFn или для одноразовых операций
 8. ✅ Следовать правилам зависимостей между слоями
+
+## Проверка соответствия архитектуре
+
+### Аудит зависимостей
+
+После изменений рекомендуется проверить соблюдение правил зависимостей:
+
+1. **Компоненты не импортируют store напрямую**
+   ```bash
+   # Проверка: нет импортов store в компонентах модулей
+   find modules -path "*/components/*" -name "*.tsx" | xargs grep -l "from '@/store'"
+   ```
+
+2. **Модули не импортируют друг друга**
+   ```bash
+   # Проверка: нет взаимных зависимостей между модулями
+   # Все импорты должны быть внутри одного модуля
+   ```
+
+3. **Utils не импортируют services/store**
+   ```bash
+   # Проверка: utils остаются чистыми функциями
+   find utils -name "*.ts" | xargs grep -l "from '@/\(services\|store\)'"
+   ```
+
+4. **Все импорты используют alias `@/`**
+   ```bash
+   # Проверка: нет относительных импортов
+   find modules -name "*.tsx" -o -name "*.ts" | xargs grep "from '\.\./"
+   ```
+
+### Текущее состояние
+
+✅ Все относительные импорты в модулях заменены на alias `@/`  
+✅ Компоненты не импортируют store напрямую  
+✅ Модули изолированы друг от друга  
+✅ Utils не содержат зависимостей от services/store  
+✅ Правила зависимостей соблюдаются
+
+### Автоматическая проверка через ESLint
+
+Настроены правила ESLint для автоматической проверки соблюдения архитектуры:
+
+**Правила для компонентов модулей:**
+- Запрет импорта `@/store` напрямую
+- Компоненты должны использовать хуки модуля
+
+**Правила для utils:**
+- Запрет импорта `@/services` и `@/store`
+- Utils должны оставаться чистыми функциями
+
+**Запуск проверки:**
+```bash
+npm run lint
+```
+
+Правила настроены в `eslint.config.js` и используют встроенное правило `no-restricted-imports`.

@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils'
 import type { Task } from '@/types'
 import { calculateTaskProgress, isTaskActive } from '@/utils/taskProgress'
 import { getTaskStatusText } from '@/utils/statusHelpers'
-import { useTaskActions } from '../hooks/useTaskActions'
+import { useTaskActions } from '@/modules/tasks/hooks/useTaskActions'
 
 interface TaskItemProps {
   task: Task

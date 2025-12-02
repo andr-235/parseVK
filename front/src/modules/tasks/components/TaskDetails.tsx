@@ -5,7 +5,7 @@ import { getTaskStatusText, getGroupStatusText } from '@/utils/statusHelpers'
 import { calculateTaskProgress } from '@/utils/taskProgress'
 import ProgressBar from '@/components/ProgressBar'
 import { Button } from '@/components/ui/button'
-import { useTaskDetails } from '../hooks/useTaskDetails'
+import { useTaskDetails } from '@/modules/tasks/hooks/useTaskDetails'
 
 interface TaskDetailsProps {
   task: TaskDetailsType | undefined
