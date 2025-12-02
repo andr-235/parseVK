@@ -1,58 +1,30 @@
-import { useState, useMemo } from 'react'
 import { RefreshCw, Eye, EyeOff } from 'lucide-react'
 import PageTitle from '@/components/PageTitle'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useWatchlistAuthors } from '@/modules/watchlist/hooks/useWatchlistAuthors'
-import { useWatchlistSettings } from '@/modules/watchlist/hooks/useWatchlistSettings'
-import { useAuthorColumns } from '@/modules/watchlist/hooks/useAuthorColumns'
-import { useCommentColumns } from '@/modules/watchlist/hooks/useCommentColumns'
+import { useWatchlistViewModel } from '@/modules/watchlist/hooks/useWatchlistViewModel'
 import { WatchlistTableCard } from '@/modules/watchlist/components/WatchlistTableCard'
 import { WatchlistAuthorDetails } from '@/modules/watchlist/components/WatchlistAuthorDetails'
 
 function Watchlist() {
   const {
-    authors,
+    filteredAuthors,
     totalAuthors,
     hasMoreAuthors,
     isLoadingAuthors,
     isLoadingMoreAuthors,
     currentAuthor,
     isLoadingAuthorDetails,
-    pendingRemoval,
-    handleRefresh,
-    handleLoadMore,
-    handleRemoveFromWatchlist,
-    handleSelectAuthor,
-  } = useWatchlistAuthors()
-
-  const {
     settings,
     isUpdatingSettings,
+    searchTerm,
+    setSearchTerm,
+    authorColumns,
+    commentColumns,
+    handleRefresh,
+    handleLoadMore,
     handleToggleTrackAll,
-  } = useWatchlistSettings()
-
-  const [searchTerm, setSearchTerm] = useState('')
-
-  const authorColumns = useAuthorColumns({
-    handleSelectAuthor,
-    handleRemoveFromWatchlist,
-    pendingRemoval,
-  })
-
-  const commentColumns = useCommentColumns()
-
-  const filteredAuthors = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
-    if (!normalizedSearch) return authors
-
-    return authors.filter((item) => {
-      const nameMatch = item.author.fullName.toLowerCase().includes(normalizedSearch)
-      const screenNameMatch = item.author.screenName?.toLowerCase().includes(normalizedSearch)
-      const vkIdMatch = String(item.authorVkId ?? '').includes(normalizedSearch)
-      return Boolean(nameMatch || screenNameMatch || vkIdMatch)
-    })
-  }, [authors, searchTerm])
+  } = useWatchlistViewModel()
 
   return (
     <div className="flex flex-col gap-8 pb-10 pt-6">

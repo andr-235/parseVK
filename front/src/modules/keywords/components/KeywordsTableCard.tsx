@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import SearchInput from '@/components/SearchInput'
 import { Card, CardContent } from '@/components/ui/card'
 import { useTableSorting } from '@/hooks/useTableSorting'
-import type { Keyword, TableColumn } from '@/types'
+import type { Keyword } from '@/types'
 import { LoadingState } from '@/components/LoadingState'
 import { EmptyState } from '@/components/EmptyState'
 import { KeywordCard } from './KeywordCard'
@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { getKeywordTableColumns } from '@/modules/keywords/config/keywordTableColumns'
 
 interface KeywordsTableCardProps {
   keywords: Keyword[]
@@ -31,18 +32,7 @@ function KeywordsTableCard({
   searchTerm,
   onSearchChange,
 }: KeywordsTableCardProps) {
-  const tableColumns = useMemo<TableColumn<Keyword>[]>(() => [
-    {
-      header: 'Ключевое слово',
-      key: 'word',
-      sortable: true,
-    },
-    {
-      header: 'Категория',
-      key: 'category',
-      sortable: true,
-    },
-  ], [])
+  const tableColumns = useMemo(() => getKeywordTableColumns(), [])
 
   const { sortedItems: sortedKeywords, sortState, requestSort } = useTableSorting(keywords, tableColumns)
 

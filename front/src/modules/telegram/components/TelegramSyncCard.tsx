@@ -1,52 +1,25 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-// Использование services для одноразовой операции (синхронизация чата)
-// Это допустимо согласно правилам архитектуры для операций, не требующих состояния
-import { telegramService } from '@/services/telegramService'
 import type { TelegramSyncResponse } from '@/types/api'
 import { Users, Download, Search, ArrowRight } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { useTelegramSync } from '@/modules/telegram/hooks/useTelegramSync'
 
 interface TelegramSyncCardProps {
   onDataLoaded: (data: TelegramSyncResponse) => void
 }
 
 export default function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps) {
-  const [identifier, setIdentifier] = useState('')
-  const [limit, setLimit] = useState<string>('1000')
-  const [loading, setLoading] = useState(false)
-  const [lastSyncData, setLastSyncData] = useState<TelegramSyncResponse | null>(null)
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!identifier.trim()) {
-      toast.error('Укажите идентификатор чата')
-      return
-    }
-    setLoading(true)
-    try {
-      const numericLimit = Number.parseInt(limit, 10)
-      const response = await telegramService.syncChat({
-        identifier: identifier.trim(),
-        limit: Number.isNaN(numericLimit) ? undefined : numericLimit,
-      })
-      setLastSyncData(response)
-      onDataLoaded(response)
-      toast.success('Участники успешно загружены')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Ошибка загрузки участников')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleExport = () => {
-    if (!lastSyncData?.chatId) return
-    const url = `${import.meta.env.VITE_API_URL || '/api'}/telegram/export/${lastSyncData.chatId}`
-    window.open(url, '_blank')
-  }
+  const {
+    identifier,
+    setIdentifier,
+    limit,
+    setLimit,
+    loading,
+    lastSyncData,
+    handleSubmit,
+    handleExport,
+  } = useTelegramSync(onDataLoaded)
 
   return (
     <Card className="h-full">
