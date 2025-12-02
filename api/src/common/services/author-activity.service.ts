@@ -21,6 +21,10 @@ const SOFT_HYPHEN_REGEX = /\u00ad/g;
 const INVISIBLE_SPACE_REGEX = /[\u2000-\u200f\u2028\u2029\u202f\u205f\u3000]/g;
 const WHITESPACE_REGEX = /\s+/g;
 
+// Определяем символы, которые считаются частью слова (латиница, кириллица, цифры, подчеркивание)
+const WORD_CHARS_PATTERN = '[a-zA-Z0-9_\\u0400-\\u04FF]';
+const WORD_CHAR_TEST = new RegExp(WORD_CHARS_PATTERN);
+
 const normalizeForKeywordMatch = (value: string | null | undefined): string => {
   if (!value) {
     return '';
@@ -44,14 +48,26 @@ const matchesKeyword = (
   text: string,
   keyword: KeywordMatchCandidate,
 ): boolean => {
+  const escaped = escapeRegExp(keyword.normalizedWord);
+  
+  const startsWithWordChar = WORD_CHAR_TEST.test(keyword.normalizedWord[0]);
+  const endsWithWordChar = WORD_CHAR_TEST.test(
+    keyword.normalizedWord[keyword.normalizedWord.length - 1],
+  );
+
+  const boundaryStart = startsWithWordChar
+    ? `(?<!${WORD_CHARS_PATTERN})`
+    : '';
+  const boundaryEnd = endsWithWordChar
+    ? `(?!${WORD_CHARS_PATTERN})`
+    : '';
+
   if (keyword.isPhrase) {
-    const escaped = escapeRegExp(keyword.normalizedWord);
-    const pattern = `\\b${escaped}\\b`;
+    const pattern = `${boundaryStart}${escaped}${boundaryEnd}`;
     const regex = new RegExp(pattern, 'i');
     return regex.test(text);
   } else {
-    const escaped = escapeRegExp(keyword.normalizedWord);
-    const pattern = `\\b${escaped}`;
+    const pattern = `${boundaryStart}${escaped}`;
     const regex = new RegExp(pattern, 'i');
     return regex.test(text);
   }

@@ -7,6 +7,10 @@ import {
   IBulkAddResponse,
 } from './interfaces/keyword.interface';
 
+// Определяем символы, которые считаются частью слова (латиница, кириллица, цифры, подчеркивание)
+const WORD_CHARS_PATTERN = '[a-zA-Z0-9_\\u0400-\\u04FF]';
+const WORD_CHAR_TEST = new RegExp(WORD_CHARS_PATTERN);
+
 @Injectable()
 export class KeywordsService {
   constructor(private prisma: PrismaService) {}
@@ -19,40 +23,45 @@ export class KeywordsService {
     const normalizedWord = word.trim().toLowerCase();
     const normalizedCategory = category?.trim() ?? null;
 
-    return this.prisma.keyword.upsert({
+    if (!normalizedWord) {
+      throw new Error('Keyword cannot be empty');
+    }
+
+    const existing = await this.prisma.keyword.findUnique({
       where: { word: normalizedWord },
-      update: {
-        ...(normalizedCategory !== null ? { category: normalizedCategory } : {}),
-        ...(isPhrase !== undefined ? { isPhrase } : {}),
-      },
-      create: {
+    });
+
+    if (existing) {
+      const updated = await this.prisma.keyword.update({
+        where: { id: existing.id },
+        data: {
+          category: normalizedCategory,
+          isPhrase: isPhrase ?? existing.isPhrase,
+        },
+      });
+      return updated;
+    }
+
+    const created = await this.prisma.keyword.create({
+      data: {
         word: normalizedWord,
         category: normalizedCategory,
         isPhrase: isPhrase ?? false,
       },
     });
-  }
 
-  async bulkAddKeywords(words: string[]): Promise<IBulkAddResponse> {
-    const entries = words.map((word) => ({ word }));
-    return this.bulkAddKeywordEntries(entries);
+    return created;
   }
 
   async addKeywordsFromFile(fileContent: string): Promise<IBulkAddResponse> {
     const entries = fileContent
       .split('\n')
-      .map((line) => line.replace(/\r/g, '').trim())
-      .filter((line) => line.length > 0)
       .map((line) => {
-        const separator = line.includes(';') ? ';' : ',';
-        const parts = line
-          .split(separator)
-          .map((part) => part.trim())
-          .filter(Boolean);
-
-        if (parts.length === 0) {
+        const parts = line.split(';').map((p) => p.trim());
+        if (parts.length === 0 || !parts[0]) {
           return null;
         }
+
 
         if (parts.length === 1) {
           return { word: parts[0] };
@@ -123,28 +132,37 @@ export class KeywordsService {
     return {
       success,
       failed,
-      total: entries.length,
-      successCount: success.length,
-      failedCount: failed.length,
-      createdCount,
-      updatedCount,
+      stats: {
+        total: entries.length,
+        success: success.length,
+        failed: failed.length,
+        created: createdCount,
+        updated: updatedCount,
+      },
     };
   }
 
-  async getAllKeywords(): Promise<IKeywordResponse[]> {
+  async deleteKeyword(id: number): Promise<IDeleteResponse> {
+    await this.prisma.keyword.delete({ where: { id } });
+    return { success: true, id };
+  }
+
+  async getKeywords(search?: string): Promise<IKeywordResponse[]> {
+    if (search) {
+      return this.prisma.keyword.findMany({
+        where: {
+          OR: [
+            { word: { contains: search, mode: 'insensitive' } },
+            { category: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+        orderBy: { word: 'asc' },
+      });
+    }
+
     return this.prisma.keyword.findMany({
       orderBy: { word: 'asc' },
     });
-  }
-
-  async deleteKeyword(id: number): Promise<IKeywordResponse> {
-    return this.prisma.keyword.delete({
-      where: { id },
-    });
-  }
-
-  async deleteAllKeywords(): Promise<IDeleteResponse> {
-    return this.prisma.keyword.deleteMany({});
   }
 
   async recalculateKeywordMatches(): Promise<{
@@ -155,10 +173,13 @@ export class KeywordsService {
   }> {
     const NBSP_REGEX = /\u00a0/g;
     const SOFT_HYPHEN_REGEX = /\u00ad/g;
-    const INVISIBLE_SPACE_REGEX = /[\u2000-\u200f\u2028\u2029\u202f\u205f\u3000]/g;
+    const INVISIBLE_SPACE_REGEX =
+      /[\u2000-\u200f\u2028\u2029\u202f\u205f\u3000]/g;
     const WHITESPACE_REGEX = /\s+/g;
 
-    const normalizeForKeywordMatch = (value: string | null | undefined): string => {
+    const normalizeForKeywordMatch = (
+      value: string | null | undefined,
+    ): string => {
       if (!value) {
         return '';
       }
@@ -187,14 +208,26 @@ export class KeywordsService {
       text: string,
       keyword: KeywordCandidate,
     ): boolean => {
+      const escaped = escapeRegExp(keyword.normalizedWord);
+      
+      const startsWithWordChar = WORD_CHAR_TEST.test(keyword.normalizedWord[0]);
+      const endsWithWordChar = WORD_CHAR_TEST.test(
+        keyword.normalizedWord[keyword.normalizedWord.length - 1],
+      );
+
+      const boundaryStart = startsWithWordChar
+        ? `(?<!${WORD_CHARS_PATTERN})`
+        : '';
+      const boundaryEnd = endsWithWordChar
+        ? `(?!${WORD_CHARS_PATTERN})`
+        : '';
+
       if (keyword.isPhrase) {
-        const escaped = escapeRegExp(keyword.normalizedWord);
-        const pattern = `\\b${escaped}\\b`;
+        const pattern = `${boundaryStart}${escaped}${boundaryEnd}`;
         const regex = new RegExp(pattern, 'i');
         return regex.test(text);
       } else {
-        const escaped = escapeRegExp(keyword.normalizedWord);
-        const pattern = `\\b${escaped}`;
+        const pattern = `${boundaryStart}${escaped}`;
         const regex = new RegExp(pattern, 'i');
         return regex.test(text);
       }
@@ -302,22 +335,11 @@ export class KeywordsService {
       });
 
       for (const post of posts) {
+        if (!post.text) continue;
+
         const normalizedText = normalizeForKeywordMatch(post.text);
 
         if (!normalizedText) {
-          const comments = await this.prisma.comment.findMany({
-            where: { ownerId: post.ownerId, postId: post.vkPostId },
-            select: { id: true },
-          });
-
-          if (comments.length > 0) {
-            await this.prisma.commentKeywordMatch.deleteMany({
-              where: {
-                commentId: { in: comments.map((c) => c.id) },
-                source: MatchSource.POST,
-              },
-            });
-          }
           continue;
         }
 
