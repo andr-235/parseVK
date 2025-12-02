@@ -65,5 +65,6 @@ export const useWatchlistViewModel = () => {
     handleRefresh,
     handleLoadMore,
     handleToggleTrackAll,
+    handleSelectAuthor,
   }
 }

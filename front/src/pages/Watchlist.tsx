@@ -24,6 +24,7 @@ function Watchlist() {
     handleRefresh,
     handleLoadMore,
     handleToggleTrackAll,
+    handleSelectAuthor,
   } = useWatchlistViewModel()
 
   return (
