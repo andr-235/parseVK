@@ -210,7 +210,7 @@ modules/{moduleName}/
 
 **Примеры:**
 - `modules/comments/types/commentsTable.ts` - типы для внутренней структуры таблицы комментариев
-- `modules/listings/types.ts` - типы для модуля listings
+- `modules/listings/types/listingsTypes.ts` - типы для модуля listings
 
 **НЕ используйте `types/` модуля для:**
 - Типов, которые используются в нескольких модулях → `types/` на верхнем уровне

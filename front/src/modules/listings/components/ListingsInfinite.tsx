@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { useInfiniteListings, type UseInfiniteFetcher } from '@/modules/listings/hooks/useInfiniteListings'
 import type { IListing } from '@/types/api'
 import { ListingCard, ListingSkeleton } from './ListingCard'
-import type { ListingsMeta, ListingsFetcherParams } from '@/modules/listings/types'
+import type { ListingsMeta, ListingsFetcherParams } from '@/modules/listings/types/listingsTypes'
 
 interface ListingsInfiniteProps {
   fetcher: UseInfiniteFetcher<IListing, ListingsMeta, ListingsFetcherParams>

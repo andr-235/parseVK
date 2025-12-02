@@ -185,7 +185,7 @@ modules/listings/
 │   ├── useInfiniteListings.ts
 │   └── useListingsViewModel.ts
 └── types/
-    └── index.ts  # ListingsMeta, ListingsFetcherParams
+    └── listingsTypes.ts  # ListingsMeta, ListingsFetcherParams
 ```
 
 **Модуль с константами:**
