@@ -113,7 +113,13 @@ function CommentsTableCard({
     const standaloneItems: CategorizedComment[] = []
 
     items.forEach((item) => {
-      const hasPostMatch = item.matchedKeywords.some((kw) => kw.source === 'POST')
+      // Only group by post if BOTH filters are active.
+      // If only one is active (or neither), show as standalone comments.
+      // CommentCard handles hiding post context internally based on showKeywordPosts.
+      const shouldGroupPosts = showKeywordPosts && showKeywordComments
+      const hasPostMatch =
+        shouldGroupPosts && item.matchedKeywords.some((kw) => kw.source === 'POST')
+
       if (hasPostMatch && item.comment.postText) {
         // Create a unique key for the post
         const key = item.comment.postText + (item.comment.postGroup?.id || '')
