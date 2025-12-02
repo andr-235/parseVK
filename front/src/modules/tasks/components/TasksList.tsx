@@ -1,5 +1,5 @@
-import { useTasksStore } from '@/store'
 import TaskItem from './TaskItem'
+import { useTasksList } from '../hooks/useTasksList'
 
 interface TasksListProps {
   onTaskSelect: (taskId: number | string) => void
@@ -7,8 +7,7 @@ interface TasksListProps {
 }
 
 const TasksList = ({ onTaskSelect, emptyMessage }: TasksListProps) => {
-  const tasks = useTasksStore((state) => state.tasks)
-  const isLoading = useTasksStore((state) => state.isLoading)
+  const { tasks, isLoading } = useTasksList()
 
   if (isLoading && tasks.length === 0) {
     return (

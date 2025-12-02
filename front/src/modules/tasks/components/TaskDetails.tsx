@@ -5,7 +5,7 @@ import { getTaskStatusText, getGroupStatusText } from '@/utils/statusHelpers'
 import { calculateTaskProgress } from '@/utils/taskProgress'
 import ProgressBar from '@/components/ProgressBar'
 import { Button } from '@/components/ui/button'
-import { useTasksStore } from '@/store'
+import { useTaskDetails } from '../hooks/useTaskDetails'
 
 interface TaskDetailsProps {
   task: TaskDetailsType | undefined
@@ -57,9 +57,7 @@ const groupStatusClasses: Record<GroupStatus, string> = {
 }
 
 function TaskDetails({ task, onClose }: TaskDetailsProps) {
-  const resumeTask = useTasksStore((state) => state.resumeTask)
-  const checkTask = useTasksStore((state) => state.checkTask)
-  const fetchTaskDetails = useTasksStore((state) => state.fetchTaskDetails)
+  const { resumeTask, checkTask, fetchTaskDetails } = useTaskDetails()
   const [isResuming, setIsResuming] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
 

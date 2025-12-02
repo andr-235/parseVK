@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils'
 import type { Task } from '@/types'
 import { calculateTaskProgress, isTaskActive } from '@/utils/taskProgress'
 import { getTaskStatusText } from '@/utils/statusHelpers'
-import { useTasksStore } from '@/store'
+import { useTaskActions } from '../hooks/useTaskActions'
 
 interface TaskItemProps {
   task: Task
@@ -39,9 +39,7 @@ interface TaskItemProps {
 }
 
 const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
-  const resumeTask = useTasksStore((state) => state.resumeTask)
-  const deleteTask = useTasksStore((state) => state.deleteTask)
-  const checkTask = useTasksStore((state) => state.checkTask)
+  const { resumeTask, deleteTask, checkTask } = useTaskActions()
 
   const progress = calculateTaskProgress(task)
   const isActive = isTaskActive(task)

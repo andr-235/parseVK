@@ -2,9 +2,9 @@ import { useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import type { TableColumn, WatchlistAuthorCard } from '@/types'
 import { formatDateTime, formatStatus } from '@/utils/watchlistUtils'
-import { AuthorCell } from './AuthorCell'
-import { PhotoAnalysisCell } from './PhotoAnalysisCell'
-import { ActionsCell } from './ActionsCell'
+import { AuthorCell } from '../components/AuthorCell'
+import { PhotoAnalysisCell } from '../components/PhotoAnalysisCell'
+import { ActionsCell } from '../components/ActionsCell'
 
 /**
  * Константы для ключей колонок таблицы авторов
