@@ -82,8 +82,6 @@ function CommentsTableCard({
     showKeywordComments,
     showKeywordPosts,
     hasDefinedKeywords,
-    totalCount,
-    loadedCount,
     visibleCount,
   })
 

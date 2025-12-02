@@ -8,8 +8,6 @@ interface UseCommentsTableCardControllerParams {
   showKeywordComments: boolean
   showKeywordPosts: boolean
   hasDefinedKeywords: boolean
-  totalCount: number
-  loadedCount: number
   visibleCount: number
 }
 
@@ -20,8 +18,6 @@ export default function useCommentsTableCardController({
   showKeywordComments,
   showKeywordPosts,
   hasDefinedKeywords,
-  totalCount,
-  loadedCount,
   visibleCount,
 }: UseCommentsTableCardControllerParams) {
   const keywordGroups = useMemo(
