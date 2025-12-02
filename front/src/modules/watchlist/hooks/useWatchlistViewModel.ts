@@ -20,11 +20,7 @@ export const useWatchlistViewModel = () => {
     handleSelectAuthor,
   } = useWatchlistAuthors()
 
-  const {
-    settings,
-    isUpdatingSettings,
-    handleToggleTrackAll,
-  } = useWatchlistSettings()
+  const { settings, isUpdatingSettings, handleToggleTrackAll } = useWatchlistSettings()
 
   const [searchTerm, setSearchTerm] = useState('')
 

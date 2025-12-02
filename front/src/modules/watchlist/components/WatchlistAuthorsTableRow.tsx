@@ -1,9 +1,6 @@
 import { memo, useCallback } from 'react'
 import type { KeyboardEvent } from 'react'
-import {
-  TableRow,
-  TableCell,
-} from '@/components/ui/table'
+import { TableRow, TableCell } from '@/components/ui/table'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
 import { getPrimitiveColumnValue } from '@/modules/watchlist/utils/watchlistUtils'
 import { logger } from '@/modules/watchlist/utils/logger'
@@ -38,64 +35,69 @@ interface WatchlistAuthorsTableRowProps {
  * @param {WatchlistAuthorsTableRowProps} props - Пропсы компонента.
  * @returns {JSX.Element} Элемент строки таблицы.
  */
-export const WatchlistAuthorsTableRow = memo(({
-  author,
-  index,
-  authorColumns,
-  focusedRowIndex,
-  sortedAuthorsLength,
-  onSelectAuthor,
-  onKeyDown,
-}: WatchlistAuthorsTableRowProps) => {
-  const handleSelectAuthor = useCallback(() => {
-    onSelectAuthor(author)
-  }, [author, onSelectAuthor])
+export const WatchlistAuthorsTableRow = memo(
+  ({
+    author,
+    index,
+    authorColumns,
+    focusedRowIndex,
+    sortedAuthorsLength,
+    onSelectAuthor,
+    onKeyDown,
+  }: WatchlistAuthorsTableRowProps) => {
+    const handleSelectAuthor = useCallback(() => {
+      onSelectAuthor(author)
+    }, [author, onSelectAuthor])
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      handleSelectAuthor()
-    }
+    const handleKeyDown = useCallback(
+      (e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleSelectAuthor()
+        }
 
-    onKeyDown(e, index)
-  }, [onKeyDown, index, handleSelectAuthor])
+        onKeyDown(e, index)
+      },
+      [onKeyDown, index, handleSelectAuthor]
+    )
 
-  return (
-    <TableRow
-      id={`author-row-${author.id}`}
-      data-row-index={index}
-      className="cursor-pointer hover:bg-muted/40"
-      onClick={handleSelectAuthor}
-      role="row"
-      tabIndex={focusedRowIndex === index ? 0 : -1}
-      aria-selected={focusedRowIndex === index}
-      aria-rowindex={index + 1}
-      aria-setsize={sortedAuthorsLength}
-      aria-label={`Автор ${author.author.fullName || author.id}, строка ${index + 1} из ${sortedAuthorsLength}`}
-      onKeyDown={handleKeyDown}
-    >
-      {authorColumns.map((column, colIndex) => (
-        <TableCell
-          key={column.key}
-          className={column.cellClassName}
-          role="gridcell"
-          aria-colindex={colIndex + 1}
-          aria-describedby={`col-${column.key}`}
-        >
-          {column.render
-            ? (() => {
-                try {
-                  return column.render(author, index)
-                } catch (error) {
-                  logger.error('Ошибка рендера колонки:', error)
-                  return column.emptyValue ?? 'Ошибка рендера'
-                }
-              })()
-            : getPrimitiveColumnValue(author, column.key) ?? column.emptyValue ?? '—'}
-        </TableCell>
-      ))}
-    </TableRow>
-  )
-})
+    return (
+      <TableRow
+        id={`author-row-${author.id}`}
+        data-row-index={index}
+        className="cursor-pointer hover:bg-muted/40"
+        onClick={handleSelectAuthor}
+        role="row"
+        tabIndex={focusedRowIndex === index ? 0 : -1}
+        aria-selected={focusedRowIndex === index}
+        aria-rowindex={index + 1}
+        aria-setsize={sortedAuthorsLength}
+        aria-label={`Автор ${author.author.fullName || author.id}, строка ${index + 1} из ${sortedAuthorsLength}`}
+        onKeyDown={handleKeyDown}
+      >
+        {authorColumns.map((column, colIndex) => (
+          <TableCell
+            key={column.key}
+            className={column.cellClassName}
+            role="gridcell"
+            aria-colindex={colIndex + 1}
+            aria-describedby={`col-${column.key}`}
+          >
+            {column.render
+              ? (() => {
+                  try {
+                    return column.render(author, index)
+                  } catch (error) {
+                    logger.error('Ошибка рендера колонки:', error)
+                    return column.emptyValue ?? 'Ошибка рендера'
+                  }
+                })()
+              : (getPrimitiveColumnValue(author, column.key) ?? column.emptyValue ?? '—')}
+          </TableCell>
+        ))}
+      </TableRow>
+    )
+  }
+)
 
 WatchlistAuthorsTableRow.displayName = 'WatchlistAuthorsTableRow'

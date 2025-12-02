@@ -8,13 +8,7 @@ type ListingsQueryParams = {
 }
 
 const buildListingsKey = (params: ListingsQueryParams) =>
-  [
-    'listings',
-    params.page,
-    params.pageSize,
-    params.search,
-    params.source,
-  ] as const
+  ['listings', params.page, params.pageSize, params.search, params.source] as const
 
 type AuthorsQueryParams = {
   status: 'all' | 'verified' | 'unverified'

@@ -73,34 +73,46 @@ function WatchlistHeroComponent({
         : WATCHLIST_CONSTANTS.ENABLE_TRACK_ALL_TEXT
   }, [isUpdatingSettings, settings])
 
-  const refreshButton = useMemo(() => (
-    <Button type="button" variant="outline" onClick={handleRefresh} disabled={isLoadingAuthors} aria-label="Обновить список">
-      {WATCHLIST_CONSTANTS.REFRESH_BUTTON_TEXT}
-    </Button>
-  ), [handleRefresh, isLoadingAuthors])
+  const refreshButton = useMemo(
+    () => (
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleRefresh}
+        disabled={isLoadingAuthors}
+        aria-label="Обновить список"
+      >
+        {WATCHLIST_CONSTANTS.REFRESH_BUTTON_TEXT}
+      </Button>
+    ),
+    [handleRefresh, isLoadingAuthors]
+  )
 
-  const toggleTrackAllButton = useMemo(() => (
-    <Button
-      type="button"
-      variant={settings.trackAllComments ? 'default' : 'outline'}
-      onClick={handleToggleTrackAll}
-      disabled={isUpdatingSettings}
-      aria-label={toggleButtonText}
-    >
-      {toggleButtonText}
-    </Button>
-  ), [handleToggleTrackAll, settings, isUpdatingSettings, toggleButtonText])
+  const toggleTrackAllButton = useMemo(
+    () => (
+      <Button
+        type="button"
+        variant={settings.trackAllComments ? 'default' : 'outline'}
+        onClick={handleToggleTrackAll}
+        disabled={isUpdatingSettings}
+        aria-label={toggleButtonText}
+      >
+        {toggleButtonText}
+      </Button>
+    ),
+    [handleToggleTrackAll, settings, isUpdatingSettings, toggleButtonText]
+  )
 
   return (
     <PageHeroCard
       title="Авторы на карандаше"
       description={heroDescription}
-      actions={(
+      actions={
         <div className="flex flex-col gap-2 sm:flex-row">
           {refreshButton}
           {toggleTrackAllButton}
         </div>
-      )}
+      }
       footer={footer}
     />
   )

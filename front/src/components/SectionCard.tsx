@@ -31,7 +31,10 @@ const SectionCard = forwardRef<HTMLDivElement, SectionCardProps>(function Sectio
   return (
     <Card
       ref={ref}
-      className={cn('overflow-hidden border border-border/70 bg-background-secondary shadow-soft-lg', className)}
+      className={cn(
+        'overflow-hidden border border-border/70 bg-background-secondary shadow-soft-lg',
+        className
+      )}
     >
       {!hideHeader && (
         <CardHeader className={cn('gap-6 border-b border-border/60 pb-6', headerClassName)}>

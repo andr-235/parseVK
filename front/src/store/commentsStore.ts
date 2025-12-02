@@ -152,7 +152,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       return
     }
 
-    const cursor = reset ? undefined : state.nextCursor ?? undefined
+    const cursor = reset ? undefined : (state.nextCursor ?? undefined)
     const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
     const activeFilters = reset ? normalizeFilters(filters ?? state.filters) : state.filters
 
@@ -221,7 +221,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         .filter((comment) => !(comment.id === id && shouldRemove)),
       readCount: Math.max(0, state.readCount + readDelta),
       unreadCount: Math.max(0, state.unreadCount + unreadDelta),
-      totalCount: shouldRemove ? Math.max(0, state.totalCount - 1) : state.totalCount
+      totalCount: shouldRemove ? Math.max(0, state.totalCount - 1) : state.totalCount,
     }))
 
     try {
@@ -231,7 +231,10 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       if (finalIsRead !== nextIsRead) {
         const finalReadDelta = finalIsRead ? 1 : -1
         const finalUnreadDelta = -finalReadDelta
-        const shouldRemoveFinal = shouldRemoveAfterToggle(state.filters ?? normalizeFilters(), finalIsRead)
+        const shouldRemoveFinal = shouldRemoveAfterToggle(
+          state.filters ?? normalizeFilters(),
+          finalIsRead
+        )
 
         set((prevState) => {
           const baseComments = prevState.comments.filter((comment) => comment.id !== id)
@@ -281,10 +284,8 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
   markWatchlisted(commentId: number, watchlistAuthorId: number) {
     set((state) => ({
       comments: state.comments.map((comment) =>
-        comment.id === commentId
-          ? { ...comment, watchlistAuthorId, isWatchlisted: true }
-          : comment
-      )
+        comment.id === commentId ? { ...comment, watchlistAuthorId, isWatchlisted: true } : comment
+      ),
     }))
-  }
+  },
 }))

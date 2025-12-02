@@ -5,8 +5,7 @@ import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react'
 import type { TableSortDirection } from '@/types'
 import { cn } from '@/lib/utils'
 
-interface TableSortButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface TableSortButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   direction?: TableSortDirection | null
   children: ReactNode
 }
@@ -36,7 +35,7 @@ export function TableSortButton({
       type="button"
       className={cn(
         'group inline-flex w-full items-center justify-between gap-1 rounded-sm px-2 py-1 text-left text-sm font-medium transition-colors hover:bg-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        className,
+        className
       )}
       aria-pressed={direction !== null}
       {...props}
@@ -45,7 +44,7 @@ export function TableSortButton({
       <Icon
         className={cn(
           'size-3.5 text-muted-foreground transition-colors group-hover:text-foreground',
-          direction && 'text-foreground',
+          direction && 'text-foreground'
         )}
         aria-hidden="true"
       />

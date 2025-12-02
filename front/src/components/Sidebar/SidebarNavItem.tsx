@@ -12,10 +12,7 @@ interface SidebarNavItemProps {
 
 export function SidebarNavItem({ item }: SidebarNavItemProps) {
   return (
-    <NavLink
-      to={item.path}
-      className={({ isActive }) => getNavItemClasses(isActive)}
-    >
+    <NavLink to={item.path} className={({ isActive }) => getNavItemClasses(isActive)}>
       <div className="flex flex-1 items-center justify-between">
         <span>{item.label}</span>
         {item.badge && (
@@ -30,4 +27,3 @@ export function SidebarNavItem({ item }: SidebarNavItemProps) {
     </NavLink>
   )
 }
-

@@ -71,9 +71,7 @@ export const useTelegramSettings = () => {
       try {
         const payload: TelegramSettingsRequest = {
           phoneNumber: formState.phoneNumber.trim() || null,
-          apiId: formState.apiId.trim()
-            ? Number.parseInt(formState.apiId.trim(), 10)
-            : null,
+          apiId: formState.apiId.trim() ? Number.parseInt(formState.apiId.trim(), 10) : null,
           apiHash: formState.apiHash.trim() || null,
         }
         await telegramService.updateSettings(payload)
@@ -83,7 +81,7 @@ export const useTelegramSettings = () => {
         setIsSaving(false)
       }
     },
-    [formState],
+    [formState]
   )
 
   return {
@@ -96,4 +94,3 @@ export const useTelegramSettings = () => {
     handleSubmit,
   }
 }
-

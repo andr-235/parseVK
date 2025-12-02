@@ -54,7 +54,9 @@ export const getAuthorInitials = (name: string): string => {
     return sanitized.charAt(0).toUpperCase() || '—'
   }
 
-  const initials = parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('')
+  const initials = parts
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('')
   return initials || parts[0].charAt(0).toUpperCase() || '—'
 }
-

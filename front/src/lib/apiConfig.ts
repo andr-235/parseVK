@@ -1,24 +1,23 @@
-const rawBaseUrl = (import.meta.env.VITE_API_URL ?? '').trim();
+const rawBaseUrl = (import.meta.env.VITE_API_URL ?? '').trim()
 
-const fallbackBase = '/api';
+const fallbackBase = '/api'
 
 const normalize = (value: string): string => {
   if (!value) {
-    return fallbackBase;
+    return fallbackBase
   }
 
-  const withoutTrailingSlash = value.replace(/\/+$/, '');
+  const withoutTrailingSlash = value.replace(/\/+$/, '')
 
   if (
     withoutTrailingSlash === '/api' ||
     withoutTrailingSlash.endsWith('/api') ||
     withoutTrailingSlash.includes('/api/')
   ) {
-    return withoutTrailingSlash;
+    return withoutTrailingSlash
   }
 
-  return `${withoutTrailingSlash}/api`;
-};
+  return `${withoutTrailingSlash}/api`
+}
 
-export const API_URL = normalize(rawBaseUrl);
-
+export const API_URL = normalize(rawBaseUrl)

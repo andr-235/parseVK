@@ -43,4 +43,3 @@ export interface FileUploadProps {
   dropzoneText?: string
   'aria-label'?: string
 }
-

@@ -31,12 +31,7 @@ export const useTasksViewModel = () => {
     }))
   )
 
-  const {
-    groups,
-    fetchGroups,
-    fetchAllGroups,
-    areGroupsLoading,
-  } = useGroupsStore(
+  const { groups, fetchGroups, fetchAllGroups, areGroupsLoading } = useGroupsStore(
     useShallow((state) => ({
       groups: state.groups,
       fetchGroups: state.fetchGroups,
@@ -78,10 +73,7 @@ export const useTasksViewModel = () => {
   )
 
   const emptyMessage = useMemo(
-    () =>
-      isLoading
-        ? 'Загрузка задач...'
-        : 'Нет задач. Создайте новую задачу на парсинг групп.',
+    () => (isLoading ? 'Загрузка задач...' : 'Нет задач. Создайте новую задачу на парсинг групп.'),
     [isLoading]
   )
 

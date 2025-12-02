@@ -9,7 +9,7 @@ export const GROUPS_PAGE_LIMIT = 50
 
 const updateRegionSearchAfterGroupAdded = (
   regionSearch: GroupsState['regionSearch'],
-  group: IRegionGroupSearchItem,
+  group: IRegionGroupSearchItem
 ) => {
   const normalizedGroup = { ...group, existsInDb: true }
 
@@ -17,13 +17,9 @@ const updateRegionSearchAfterGroupAdded = (
     item.id === group.id ? normalizedGroup : item
   )
 
-  const updatedMissing = regionSearch.missing.filter(
-    (item) => item.id !== group.id
-  )
+  const updatedMissing = regionSearch.missing.filter((item) => item.id !== group.id)
 
-  const alreadyInDb = regionSearch.existsInDb.some(
-    (item) => item.id === group.id
-  )
+  const alreadyInDb = regionSearch.existsInDb.some((item) => item.id === group.id)
 
   const updatedExistsInDb = alreadyInDb
     ? regionSearch.existsInDb
@@ -52,7 +48,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     missing: [],
     existsInDb: [],
     isLoading: false,
-    error: null
+    error: null,
   },
 
   fetchGroups: async (options) => {
@@ -69,7 +65,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         total: response.total,
         page: response.page,
         limit: response.limit,
-        hasMore: response.hasMore
+        hasMore: response.hasMore,
       })
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -92,7 +88,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
       const response = await groupsService.fetchGroups({ page: nextPage, limit: state.limit })
       set((current) => {
         const combined = [...current.groups, ...response.items]
-        const uniqueMap = new Map<number, typeof combined[number]>()
+        const uniqueMap = new Map<number, (typeof combined)[number]>()
         combined.forEach((group) => {
           uniqueMap.set(group.id, group)
         })
@@ -103,7 +99,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
           page: response.page,
           limit: response.limit,
           hasMore: response.hasMore,
-          isLoadingMore: false
+          isLoadingMore: false,
         }
       })
     } catch (error) {
@@ -132,7 +128,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         total: allGroups.length,
         page: 1,
         limit,
-        hasMore: false
+        hasMore: false,
       })
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -152,7 +148,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
           if (existingIndex === -1) {
             return {
               groups: [group, ...state.groups],
-              total: state.total + 1
+              total: state.total + 1,
             }
           }
 
@@ -172,8 +168,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     try {
       await groupsService.deleteGroup(id)
       set((state) => ({
-        groups: state.groups.filter(group => group.id !== id),
-        total: Math.max(0, state.total - 1)
+        groups: state.groups.filter((group) => group.id !== id),
+        total: Math.max(0, state.total - 1),
       }))
     } catch {
       // Error handled in service
@@ -199,7 +195,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         groups: [],
         total: 0,
         page: 0,
-        hasMore: false
+        hasMore: false,
       })
     } catch (error) {
       throw error
@@ -217,8 +213,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         missing: [],
         existsInDb: [],
         isLoading: false,
-        error: null
-      }
+        error: null,
+      },
     }))
   },
 
@@ -228,8 +224,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
       regionSearch: {
         ...regionSearch,
         isLoading: true,
-        error: null
-      }
+        error: null,
+      },
     })
 
     try {
@@ -243,8 +239,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
           missing: response.missing,
           existsInDb: response.existsInDb,
           isLoading: false,
-          error: null
-        }
+          error: null,
+        },
       }))
     } catch (error) {
       const errorMessage =
@@ -254,8 +250,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         regionSearch: {
           ...state.regionSearch,
           isLoading: false,
-          error: errorMessage
-        }
+          error: errorMessage,
+        },
       }))
 
       throw error
@@ -263,9 +259,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
   },
 
   addGroupFromRegionSearch: async (group: IRegionGroupSearchItem) => {
-    const identifier = group.screen_name
-      ? `https://vk.com/${group.screen_name}`
-      : `club${group.id}`
+    const identifier = group.screen_name ? `https://vk.com/${group.screen_name}` : `club${group.id}`
 
     const success = await get().addGroup(identifier, group.description ?? '')
 
@@ -274,7 +268,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     }
 
     set((state) => ({
-      regionSearch: updateRegionSearchAfterGroupAdded(state.regionSearch, group)
+      regionSearch: updateRegionSearchAfterGroupAdded(state.regionSearch, group),
     }))
 
     return true
@@ -314,7 +308,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
           (acc, group) => updateRegionSearchAfterGroupAdded(acc, group),
           state.regionSearch
         ),
-        total: state.total + successfulGroups.length
+        total: state.total + successfulGroups.length,
       }))
       void get().fetchGroups({ reset: true })
       toast.success(`Добавлено групп: ${successfulGroups.length}`)
@@ -326,7 +320,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
 
     return {
       successCount: successfulGroups.length,
-      failedIds
+      failedIds,
     }
   },
 
@@ -334,8 +328,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     set((state) => ({
       regionSearch: {
         ...state.regionSearch,
-        missing: state.regionSearch.missing.filter((item) => item.id !== vkGroupId)
-      }
+        missing: state.regionSearch.missing.filter((item) => item.id !== vkGroupId),
+      },
     }))
-  }
+  },
 }))

@@ -52,24 +52,18 @@ function Tasks() {
 
         <ActiveTasksBanner tasks={activeTasks} isCreating={isCreating} />
       </div>
-      
+
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-semibold text-foreground">История запусков</h2>
           <div className="h-px flex-1 bg-border/60" />
         </div>
 
-        <TasksList
-          emptyMessage={emptyMessage}
-          onTaskSelect={handleTaskSelect}
-        />
+        <TasksList emptyMessage={emptyMessage} onTaskSelect={handleTaskSelect} />
       </div>
 
       {selectedTaskId && (
-        <TaskDetails
-          task={getTaskDetails(selectedTaskId)}
-          onClose={handleCloseTaskDetails}
-        />
+        <TaskDetails task={getTaskDetails(selectedTaskId)} onClose={handleCloseTaskDetails} />
       )}
 
       <CreateParseTaskModal

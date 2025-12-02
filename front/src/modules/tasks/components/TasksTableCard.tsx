@@ -25,16 +25,23 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
   const { sortedItems: sortedTasks, sortState, requestSort } = useTableSorting(tasks, columns)
 
   return (
-    <Card className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]" aria-label="Список задач">
+    <Card
+      className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]"
+      aria-label="Список задач"
+    >
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-6 space-y-0 p-6 md:p-8">
         <div className="flex min-w-[260px] flex-1 flex-col gap-2">
           <CardTitle className="text-2xl font-bold text-text-primary">История запусков</CardTitle>
           <CardDescription className="max-w-[640px] text-[15px] leading-relaxed text-text-secondary">
-            Сравнивайте статусы, просматривайте детали и повторно запускайте задачи при необходимости.
+            Сравнивайте статусы, просматривайте детали и повторно запускайте задачи при
+            необходимости.
           </CardDescription>
         </div>
         <div className="flex min-w-[220px] flex-col items-end gap-3">
-          <Badge variant="secondary" className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]">
+          <Badge
+            variant="secondary"
+            className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]"
+          >
             {tasks.length} задач
           </Badge>
         </div>
@@ -55,7 +62,9 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
                       <TableHead key={column.key} className={column.headerClassName}>
                         {column.sortable ? (
                           <TableSortButton
-                            direction={sortState && sortState.key === column.key ? sortState.direction : null}
+                            direction={
+                              sortState && sortState.key === column.key ? sortState.direction : null
+                            }
                             onClick={() => requestSort(column.key)}
                           >
                             {column.header}
@@ -78,7 +87,9 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
                     >
                       {columns.map((column: any) => (
                         <TableCell key={column.key} className={column.cellClassName}>
-                          {column.render ? column.render(task as Task, index) : String(task[column.key as keyof Task] ?? '')}
+                          {column.render
+                            ? column.render(task as Task, index)
+                            : String(task[column.key as keyof Task] ?? '')}
                         </TableCell>
                       ))}
                     </TableRow>

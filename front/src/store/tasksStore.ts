@@ -15,17 +15,23 @@ import {
   normalizeId,
   rebuildTaskList,
   toTaskKey,
-  upsertTaskEntity
+  upsertTaskEntity,
 } from './tasksStore.utils'
 import { isTaskActive } from '@/utils/taskProgress'
-import type { PersistedTasksState, Task, TaskIdentifier, TaskStatus, TasksStore } from './tasksStore.types'
+import type {
+  PersistedTasksState,
+  Task,
+  TaskIdentifier,
+  TaskStatus,
+  TasksStore,
+} from './tasksStore.types'
 
 const persistOptions: PersistOptions<TasksStore, PersistedTasksState> = {
   name: 'tasks-store',
   version: 1,
   partialize: (state) => ({
     taskIds: state.taskIds,
-    tasksById: state.tasksById
+    tasksById: state.tasksById,
   }),
   merge: (persistedState, currentState) => {
     if (!persistedState) {
@@ -44,18 +50,16 @@ const persistOptions: PersistOptions<TasksStore, PersistedTasksState> = {
         )
       : {}
 
-
     return {
       ...currentState,
       taskIds,
       tasksById,
-      tasks: rebuildTaskList(taskIds, tasksById)
+      tasks: rebuildTaskList(taskIds, tasksById),
     }
-  }
+  },
 }
 
 type TasksStoreCreator = StateCreator<TasksStore, [['zustand/immer', never]]>
-
 
 const createTasksStore: TasksStoreCreator = (set, get) => ({
   tasks: [],
@@ -73,7 +77,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
     try {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.tasks,
-        refetchType: 'active'
+        refetchType: 'active',
       })
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -91,7 +95,9 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
     })
     const normalizedGroupIds = Array.from(new Set(validIds.map((id) => normalizeId(id))))
 
-    const isNumericArray = normalizedGroupIds.every((value): value is number => typeof value === 'number')
+    const isNumericArray = normalizedGroupIds.every(
+      (value): value is number => typeof value === 'number'
+    )
     const payloadGroupIds: string[] | number[] = isNumericArray
       ? normalizedGroupIds
       : normalizedGroupIds.map((value) => String(value))
@@ -252,7 +258,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
    */
   getTaskDetails: (taskId) => {
     return get().taskDetails[toTaskKey(taskId)]
-  }
+  },
 })
 
 export const useTasksStore = create<
@@ -261,14 +267,11 @@ export const useTasksStore = create<
     ['zustand/subscribeWithSelector', never],
     ['zustand/devtools', Record<string, unknown>],
     ['zustand/persist', PersistedTasksState],
-    ['zustand/immer', never]
+    ['zustand/immer', never],
   ]
 >(
   subscribeWithSelector(
-    devtools(
-      persist(immer(createTasksStore), persistOptions),
-      { name: 'TasksStore' }
-    )
+    devtools(persist(immer(createTasksStore), persistOptions), { name: 'TasksStore' })
   )
 )
 
@@ -290,18 +293,20 @@ export const selectTaskList = (state: TasksStore): Task[] => state.tasks
 /**
  * Создаёт селектор для получения задачи по идентификатору.
  */
-export const selectTaskById = (taskId: TaskIdentifier) => (state: TasksStore): Task | undefined => {
-  return state.tasksById[toTaskKey(taskId)]
-}
+export const selectTaskById =
+  (taskId: TaskIdentifier) =>
+  (state: TasksStore): Task | undefined => {
+    return state.tasksById[toTaskKey(taskId)]
+  }
 
 /**
  * Создаёт селектор для получения статуса конкретной задачи.
  */
-export const selectTaskStatus = (taskId: TaskIdentifier) => (
-  state: TasksStore
-): TaskStatus | undefined => {
-  return state.tasksById[toTaskKey(taskId)]?.status
-}
+export const selectTaskStatus =
+  (taskId: TaskIdentifier) =>
+  (state: TasksStore): TaskStatus | undefined => {
+    return state.tasksById[toTaskKey(taskId)]?.status
+  }
 
 /**
  * Пример точечной подписки на изменение статуса задачи.

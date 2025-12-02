@@ -1,23 +1,23 @@
-import { Engine, Gender, Case } from 'russian-nouns-js';
-import { normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching';
+import { Engine, Gender, Case } from 'russian-nouns-js'
+import { normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
 
-const rne = new Engine();
+const rne = new Engine()
 
 export function generateAllWordForms(keyword: string): string[] {
-  const trimmed = keyword.trim();
+  const trimmed = keyword.trim()
   if (!trimmed) {
-    return [];
+    return []
   }
 
-  const normalized = normalizeForKeywordMatch(trimmed);
+  const normalized = normalizeForKeywordMatch(trimmed)
   if (!normalized) {
-    return [];
+    return []
   }
 
-  const allForms = new Set<string>();
-  allForms.add(normalized);
+  const allForms = new Set<string>()
+  allForms.add(normalized)
 
-  const genders = [Gender.MASCULINE, Gender.FEMININE, Gender.NEUTER];
+  const genders = [Gender.MASCULINE, Gender.FEMININE, Gender.NEUTER]
   const cases = [
     Case.NOMINATIVE,
     Case.GENITIVE,
@@ -25,39 +25,38 @@ export function generateAllWordForms(keyword: string): string[] {
     Case.ACCUSATIVE,
     Case.INSTRUMENTAL,
     Case.PREPOSITIONAL,
-  ];
+  ]
 
   for (const gender of genders) {
     try {
-      const word = { text: normalized, gender };
+      const word = { text: normalized, gender }
 
       for (const grammaticalCase of cases) {
         try {
-          const declinedForm = rne.decline(word, grammaticalCase);
+          const declinedForm = rne.decline(word, grammaticalCase)
           if (declinedForm && typeof declinedForm === 'string') {
-            const normalizedForm = normalizeForKeywordMatch(declinedForm);
+            const normalizedForm = normalizeForKeywordMatch(declinedForm)
             if (normalizedForm) {
-              allForms.add(normalizedForm);
+              allForms.add(normalizedForm)
             }
           } else if (Array.isArray(declinedForm)) {
             for (const form of declinedForm) {
               if (typeof form === 'string' && form) {
-                const normalizedForm = normalizeForKeywordMatch(form);
+                const normalizedForm = normalizeForKeywordMatch(form)
                 if (normalizedForm) {
-                  allForms.add(normalizedForm);
+                  allForms.add(normalizedForm)
                 }
               }
             }
           }
         } catch {
-          continue;
+          continue
         }
       }
     } catch {
-      continue;
+      continue
     }
   }
 
-  return Array.from(allForms);
+  return Array.from(allForms)
 }
-

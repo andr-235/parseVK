@@ -9,4 +9,3 @@ export interface CategorizedGroup {
   category: string
   comments: CategorizedComment[]
 }
-

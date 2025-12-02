@@ -31,7 +31,14 @@ export interface PhotoAnalysisSummary {
   levels: PhotoAnalysisSummaryLevel[]
 }
 
-const KNOWN_CATEGORIES = ['violence', 'drugs', 'weapons', 'nsfw', 'extremism', 'hate speech'] as const
+const KNOWN_CATEGORIES = [
+  'violence',
+  'drugs',
+  'weapons',
+  'nsfw',
+  'extremism',
+  'hate speech',
+] as const
 
 export const createEmptyPhotoAnalysisSummary = (): PhotoAnalysisSummary => ({
   total: 0,

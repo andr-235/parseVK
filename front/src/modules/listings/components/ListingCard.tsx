@@ -1,11 +1,6 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardDescription,
-} from '@/components/ui/card'
+import { Card, CardHeader, CardContent, CardDescription } from '@/components/ui/card'
 import type { IListing } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { ExternalLink, MapPin, Phone, Calendar, Tag } from 'lucide-react'
@@ -62,10 +57,7 @@ const formatDateTime = (value?: string | null): string => {
   }
 }
 
-const formatDateTimeWithFallback = (
-  primary?: string | null,
-  fallback?: string | null,
-): string => {
+const formatDateTimeWithFallback = (primary?: string | null, fallback?: string | null): string => {
   if (primary) {
     const formatted = formatDateTime(primary)
     if (formatted !== '—') return formatted
@@ -200,7 +192,12 @@ export function ListingCard({
         {hasDescription && (
           <div className="space-y-1.5">
             <CardDescription className="text-sm leading-relaxed">
-              <p className={cn('whitespace-pre-line text-text-secondary', !isDescriptionExpanded && shouldAllowToggle && 'line-clamp-3')}>
+              <p
+                className={cn(
+                  'whitespace-pre-line text-text-secondary',
+                  !isDescriptionExpanded && shouldAllowToggle && 'line-clamp-3'
+                )}
+              >
                 {descriptionText}
               </p>
             </CardDescription>
@@ -221,7 +218,9 @@ export function ListingCard({
             <div className="flex items-start gap-2.5 text-sm">
               <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-text-tertiary" />
               <div className="flex-1 space-y-0.5">
-                {listing.city && <div className="font-medium text-text-primary">{listing.city}</div>}
+                {listing.city && (
+                  <div className="font-medium text-text-primary">{listing.city}</div>
+                )}
                 {listing.address && <div className="text-text-secondary">{listing.address}</div>}
               </div>
             </div>
@@ -264,7 +263,7 @@ export function ListingCard({
           >
             {listing.manualNote ? 'Заметка' : 'Заметка'}
           </Button>
-          
+
           {!listing.archived && (
             <Button
               type="button"
@@ -280,10 +279,12 @@ export function ListingCard({
             </Button>
           )}
         </div>
-        
+
         {listing.manualNote && (
           <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-3 py-2 text-xs text-text-secondary">
-            <p className="line-clamp-2 font-medium text-yellow-600 dark:text-yellow-400">{listing.manualNote}</p>
+            <p className="line-clamp-2 font-medium text-yellow-600 dark:text-yellow-400">
+              {listing.manualNote}
+            </p>
           </div>
         )}
       </CardContent>

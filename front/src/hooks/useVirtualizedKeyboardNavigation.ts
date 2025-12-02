@@ -5,7 +5,11 @@ type VirtualizedListRef =
       scrollToItem: (index: number, align?: string) => void
     }
   | {
-      scrollToRow: (options: { index: number; align?: 'auto' | 'center' | 'end' | 'smart' | 'start'; behavior?: 'auto' | 'instant' | 'smooth' }) => void
+      scrollToRow: (options: {
+        index: number
+        align?: 'auto' | 'center' | 'end' | 'smart' | 'start'
+        behavior?: 'auto' | 'instant' | 'smooth'
+      }) => void
     }
 
 interface UseVirtualizedKeyboardNavigationOptions {
@@ -23,21 +27,24 @@ export const useVirtualizedKeyboardNavigation = ({
 }: UseVirtualizedKeyboardNavigationOptions) => {
   const focusedIndexRef = useRef<number | null>(null)
 
-  const scrollToIndex = useCallback((index: number) => {
-    const listInstance = listRef.current
-    if (!listInstance) {
-      return
-    }
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      const listInstance = listRef.current
+      if (!listInstance) {
+        return
+      }
 
-    if ('scrollToItem' in listInstance) {
-      listInstance.scrollToItem(index, 'center')
-      return
-    }
+      if ('scrollToItem' in listInstance) {
+        listInstance.scrollToItem(index, 'center')
+        return
+      }
 
-    if ('scrollToRow' in listInstance) {
-      listInstance.scrollToRow({ index, align: 'center' })
-    }
-  }, [listRef])
+      if ('scrollToRow' in listInstance) {
+        listInstance.scrollToRow({ index, align: 'center' })
+      }
+    },
+    [listRef]
+  )
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent, index: number) => {

@@ -75,14 +75,16 @@ const mapAuthorDetails = (author: AuthorDetailsResponse): AuthorDetails => ({
 })
 
 export const authorsService = {
-  async fetchAuthors(params: {
-    offset?: number
-    limit?: number
-    search?: string
-    verified?: boolean
-    sortBy?: AuthorSortField
-    sortOrder?: AuthorSortOrder
-  } = {}): Promise<AuthorListResponse> {
+  async fetchAuthors(
+    params: {
+      offset?: number
+      limit?: number
+      search?: string
+      verified?: boolean
+      sortBy?: AuthorSortField
+      sortOrder?: AuthorSortOrder
+    } = {}
+  ): Promise<AuthorListResponse> {
     try {
       const query = buildQueryString({
         offset: params.offset,
@@ -95,7 +97,10 @@ export const authorsService = {
       const url = query ? `${API_URL}/authors?${query}` : `${API_URL}/authors`
       const response = await fetch(url)
 
-      const data = await handleResponse<AuthorsListResponse>(response, 'Не удалось загрузить список авторов')
+      const data = await handleResponse<AuthorsListResponse>(
+        response,
+        'Не удалось загрузить список авторов'
+      )
       return {
         items: data.items.map(mapAuthorCard),
         total: data.total,
@@ -110,7 +115,10 @@ export const authorsService = {
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetails> {
     try {
       const response = await fetch(`${API_URL}/authors/${vkUserId}`)
-      const data = await handleResponse<AuthorDetailsResponse>(response, 'Не удалось загрузить данные пользователя')
+      const data = await handleResponse<AuthorDetailsResponse>(
+        response,
+        'Не удалось загрузить данные пользователя'
+      )
       return mapAuthorDetails(data)
     } catch (error) {
       toast.error('Не удалось загрузить данные пользователя')
@@ -124,7 +132,10 @@ export const authorsService = {
         method: 'POST',
       })
 
-      const result = await handleResponse<RefreshAuthorsResponse>(response, 'Не удалось обновить карточки авторов')
+      const result = await handleResponse<RefreshAuthorsResponse>(
+        response,
+        'Не удалось обновить карточки авторов'
+      )
       toast.success('Карточки авторов обновлены')
       return result.updated
     } catch (error) {

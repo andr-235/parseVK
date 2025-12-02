@@ -65,7 +65,7 @@ const compareValues = (a: ComparableValue, b: ComparableValue): number => {
   return collator.compare(String(a), String(b))
 }
 
-const buildColumnMap = <T,>(columns: TableColumn<T>[]): SortableColumnMap<T> => {
+const buildColumnMap = <T>(columns: TableColumn<T>[]): SortableColumnMap<T> => {
   const map: SortableColumnMap<T> = new Map()
   columns.forEach((column) => {
     map.set(column.key, column)
@@ -87,7 +87,7 @@ const isTableSortValue = (value: unknown): value is TableSortValue => {
   return value instanceof Date
 }
 
-const extractValueFromItem = <T,>(item: T, key: string): TableSortValue | undefined => {
+const extractValueFromItem = <T>(item: T, key: string): TableSortValue | undefined => {
   if (item && typeof item === 'object') {
     const record = item as Record<string, unknown>
     const candidate = record[key]
@@ -100,10 +100,7 @@ const extractValueFromItem = <T,>(item: T, key: string): TableSortValue | undefi
   return undefined
 }
 
-const deriveSortValue = <T,>(
-  item: T,
-  column: TableColumn<T>,
-): ComparableValue => {
+const deriveSortValue = <T>(item: T, column: TableColumn<T>): ComparableValue => {
   try {
     const raw = column.sortValue ? column.sortValue(item) : extractValueFromItem(item, column.key)
     return normalizeSortValue(raw ?? null)
@@ -116,7 +113,7 @@ const deriveSortValue = <T,>(
 export function useTableSorting<T>(
   data: T[],
   columns: TableColumn<T>[],
-  options?: UseTableSortingOptions,
+  options?: UseTableSortingOptions
 ) {
   const [sortState, setSortState] = useState<TableSortState | null>(() => {
     if (options?.initialKey) {
@@ -184,7 +181,7 @@ export function useTableSorting<T>(
         }
       })
     },
-    [columnMap],
+    [columnMap]
   )
 
   const resetSort = useCallback(() => {

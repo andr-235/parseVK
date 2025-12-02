@@ -38,7 +38,10 @@ export const tasksService = {
         body: JSON.stringify(dto),
       })
 
-      const result = await handleResponse<IParsingTaskResult>(response, 'Failed to create parsing task')
+      const result = await handleResponse<IParsingTaskResult>(
+        response,
+        'Failed to create parsing task'
+      )
       toast.success('Задача на парсинг создана')
       return result
     } catch (error) {
@@ -98,5 +101,5 @@ export const tasksService = {
       toast.error('Не удалось удалить задачу')
       throw error
     }
-  }
+  },
 }

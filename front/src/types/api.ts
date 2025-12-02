@@ -473,7 +473,13 @@ export interface IWatchlistSettingsResponse {
 
 export type TelegramChatType = 'PRIVATE' | 'GROUP' | 'SUPERGROUP' | 'CHANNEL'
 
-export type TelegramMemberStatus = 'CREATOR' | 'ADMINISTRATOR' | 'MEMBER' | 'RESTRICTED' | 'LEFT' | 'KICKED'
+export type TelegramMemberStatus =
+  | 'CREATOR'
+  | 'ADMINISTRATOR'
+  | 'MEMBER'
+  | 'RESTRICTED'
+  | 'LEFT'
+  | 'KICKED'
 
 export interface TelegramMember {
   userId: number

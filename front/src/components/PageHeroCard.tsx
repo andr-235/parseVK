@@ -40,9 +40,7 @@ function PageHeroCard({ title, description, actions, footer, className }: PageHe
       </CardHeader>
 
       {footer && (
-        <CardFooter className="relative z-10 flex flex-wrap gap-2 pt-0">
-          {footer}
-        </CardFooter>
+        <CardFooter className="relative z-10 flex flex-wrap gap-2 pt-0">{footer}</CardFooter>
       )}
     </Card>
   )

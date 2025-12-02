@@ -44,9 +44,7 @@ export const mapWatchlistAuthor = (author: IWatchlistAuthorResponse): WatchlistA
     screenName: author.author.screenName,
     domain: author.author.domain,
   },
-  analysisSummary: cloneSummary(
-    author.analysisSummary ?? createEmptyPhotoAnalysisSummary(),
-  ),
+  analysisSummary: cloneSummary(author.analysisSummary ?? createEmptyPhotoAnalysisSummary()),
 })
 
 export const mapWatchlistComment = (comment: IWatchlistCommentResponse): WatchlistComment => ({
@@ -61,7 +59,9 @@ export const mapWatchlistComment = (comment: IWatchlistCommentResponse): Watchli
   commentUrl: comment.commentUrl,
 })
 
-export const mapWatchlistDetails = (details: IWatchlistAuthorDetailsResponse): WatchlistAuthorDetails => ({
+export const mapWatchlistDetails = (
+  details: IWatchlistAuthorDetailsResponse
+): WatchlistAuthorDetails => ({
   ...mapWatchlistAuthor(details),
   comments: {
     items: details.comments.items.map(mapWatchlistComment),

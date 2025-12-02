@@ -58,7 +58,10 @@ const toFiniteNumber = (value: unknown): number | undefined => {
   return undefined
 }
 
-const mapGatewayStatus = (status: GatewayTaskStatus | undefined, completed: boolean | null | undefined): TaskStatus => {
+const mapGatewayStatus = (
+  status: GatewayTaskStatus | undefined,
+  completed: boolean | null | undefined
+): TaskStatus => {
   if (status === 'failed') {
     return 'failed'
   }
@@ -82,7 +85,7 @@ const mergeStats = (
   const incomingStats = payload.stats ?? null
 
   if (incomingStats) {
-    (Object.keys(incomingStats) as Array<keyof TaskStatsInfo>).forEach((key) => {
+    ;(Object.keys(incomingStats) as Array<keyof TaskStatsInfo>).forEach((key) => {
       const numeric = toFiniteNumber(incomingStats[key])
       if (numeric != null) {
         next[key] = numeric
@@ -232,7 +235,9 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
     const baseUrl = resolveBaseUrl()
     if (!baseUrl) {
       if (import.meta.env.DEV) {
-        console.warn('[useTasksSocket] VITE_API_WS_URL is not defined, skipping websocket connection')
+        console.warn(
+          '[useTasksSocket] VITE_API_WS_URL is not defined, skipping websocket connection'
+        )
       }
       onConnectError?.()
       return
@@ -243,7 +248,10 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
 
       if (!/^wss?:\/\//i.test(trimmed)) {
         try {
-          const absolute = new URL(trimmed, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+          const absolute = new URL(
+            trimmed,
+            typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
+          )
           trimmed = absolute.origin + absolute.pathname.replace(/\/$/, '')
         } catch {}
       }
@@ -255,7 +263,9 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
     }
 
     const normalizedBase = normalizeBase(baseUrl)
-    const namespaceUrl = normalizedBase.endsWith('/') ? `${normalizedBase}tasks` : `${normalizedBase}/tasks`
+    const namespaceUrl = normalizedBase.endsWith('/')
+      ? `${normalizedBase}tasks`
+      : `${normalizedBase}/tasks`
 
     const socket: Socket<TaskServerEvents, TaskClientEvents> = io(namespaceUrl, {
       transports: ['websocket'],

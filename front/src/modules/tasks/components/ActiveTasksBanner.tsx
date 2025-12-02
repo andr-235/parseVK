@@ -18,7 +18,7 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
     progressTotal,
     processed,
     aggregatedTone,
-    indeterminate
+    indeterminate,
   } = useActiveTasksBanner(tasks, isCreating)
 
   if (!shouldRender) {
@@ -35,7 +35,10 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
           </div>
           {indicatorText && (
             <Badge className="gap-2 bg-accent-primary/15 text-accent-primary">
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent-primary" aria-hidden />
+              <span
+                className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent-primary"
+                aria-hidden
+              />
               {indicatorText}
             </Badge>
           )}

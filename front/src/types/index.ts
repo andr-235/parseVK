@@ -65,13 +65,7 @@ export interface Group {
 
 export type TableSortDirection = 'asc' | 'desc'
 
-export type TableSortValue =
-  | string
-  | number
-  | boolean
-  | Date
-  | null
-  | undefined
+export type TableSortValue = string | number | boolean | Date | null | undefined
 
 export interface TableSortState {
   key: string

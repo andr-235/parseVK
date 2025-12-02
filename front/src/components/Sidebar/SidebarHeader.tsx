@@ -28,17 +28,11 @@ export function SidebarHeader({
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
           <LayoutGrid className="h-5 w-5" />
         </div>
-        {!isCollapsed && (
-          <span className="font-semibold truncate text-sm">{title}</span>
-        )}
+        {!isCollapsed && <span className="font-semibold truncate text-sm">{title}</span>}
       </div>
       {!isCollapsed && (
-        <SidebarCollapseButton
-          isCollapsed={isCollapsed}
-          onToggle={onToggleCollapse}
-        />
+        <SidebarCollapseButton isCollapsed={isCollapsed} onToggle={onToggleCollapse} />
       )}
     </div>
   )
 }
-

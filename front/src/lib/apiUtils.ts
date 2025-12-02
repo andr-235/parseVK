@@ -21,10 +21,7 @@ export async function handleResponse<T>(response: Response, defaultError?: strin
   return response.json() as Promise<T>
 }
 
-export function createRequest(
-  url: string,
-  options: RequestInit = {}
-): Promise<Response> {
+export function createRequest(url: string, options: RequestInit = {}): Promise<Response> {
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
   }
@@ -39,4 +36,3 @@ export function createRequest(
     headers,
   })
 }
-

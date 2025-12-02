@@ -8,10 +8,7 @@ import type {
   Task,
   TaskDetails,
 } from './index'
-import type {
-  IBulkAddResponse,
-  IRegionGroupSearchItem
-} from './api'
+import type { IBulkAddResponse, IRegionGroupSearchItem } from './api'
 // Navigation Store Types
 export type Page =
   | 'tasks'
@@ -45,8 +42,16 @@ export interface CommentsState {
   readCount: number
   unreadCount: number
   filters: CommentsFilters
-  fetchComments: (options?: { reset?: boolean; limit?: number; filters?: CommentsFilters }) => Promise<void>
-  fetchCommentsCursor: (options?: { reset?: boolean; limit?: number; filters?: CommentsFilters }) => Promise<void>
+  fetchComments: (options?: {
+    reset?: boolean
+    limit?: number
+    filters?: CommentsFilters
+  }) => Promise<void>
+  fetchCommentsCursor: (options?: {
+    reset?: boolean
+    limit?: number
+    filters?: CommentsFilters
+  }) => Promise<void>
   toggleReadStatus: (id: number) => Promise<void>
   markWatchlisted: (commentId: number, watchlistAuthorId: number) => void
 }

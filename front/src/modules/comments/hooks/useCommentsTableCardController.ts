@@ -24,7 +24,10 @@ export default function useCommentsTableCardController({
   loadedCount,
   visibleCount,
 }: UseCommentsTableCardControllerParams) {
-  const keywordGroups = useMemo(() => groupedComments.filter((group) => group.comments.length > 0), [groupedComments])
+  const keywordGroups = useMemo(
+    () => groupedComments.filter((group) => group.comments.length > 0),
+    [groupedComments]
+  )
   const hasComments = visibleCount > 0
   const hasKeywordGroups = keywordGroups.length > 0
   const hasCommentsWithoutKeywords = commentsWithoutKeywords.length > 0
@@ -43,12 +46,14 @@ export default function useCommentsTableCardController({
 
   const toggleCategory = useCallback(
     (category: string) =>
-      setExpandedCategories((previous) => ({ ...previous, [category]: !(previous[category] ?? true) })),
-    [],
+      setExpandedCategories((previous) => ({
+        ...previous,
+        [category]: !(previous[category] ?? true),
+      })),
+    []
   )
 
   const totalCategories = keywordGroups.length
-  const loadedSuffix = Math.max(totalCount, loadedCount) > 0 ? ` из ${Math.max(totalCount, loadedCount)}` : ''
   const hasAnyKeywordFilter = showKeywordComments || showKeywordPosts
   const subtitle = useMemo(
     () =>
@@ -67,7 +72,7 @@ export default function useCommentsTableCardController({
       hasKeywordGroups,
       isLoading,
       hasAnyKeywordFilter,
-    ],
+    ]
   )
   return {
     keywordGroups,
@@ -77,7 +82,6 @@ export default function useCommentsTableCardController({
     expandedCategories,
     toggleCategory,
     subtitle,
-    loadedSuffix,
     totalCategories,
   }
 }
@@ -96,11 +100,13 @@ function buildSubtitle({
   hasDefinedKeywords: boolean
   hasAnyKeywordFilter: boolean
 }) {
-  if (isLoading && !hasComments) return 'Мы подготавливаем данные и проверяем их перед отображением.'
-  if (hasKeywordGroups) return 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте фильтры, чтобы сосредоточиться на нужных темах.'
-  if (hasCommentsWithoutKeywords && !hasDefinedKeywords) return 'Ключевые слова пока не заданы — все найденные комментарии находятся в разделе «Без ключевых слов».'
+  if (isLoading && !hasComments)
+    return 'Мы подготавливаем данные и проверяем их перед отображением.'
+  if (hasKeywordGroups)
+    return 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте фильтры, чтобы сосредоточиться на нужных темах.'
+  if (hasCommentsWithoutKeywords && !hasDefinedKeywords)
+    return 'Ключевые слова пока не заданы — все найденные комментарии находятся в разделе «Без ключевых слов».'
   if (hasComments && !hasAnyKeywordFilter && hasCommentsWithoutKeywords)
     return 'Комментарии без совпадений с ключевыми словами отображаются в отдельном блоке.'
   return 'После добавления групп и запуска парсинга комментарии появятся в списке.'
 }
-

@@ -91,8 +91,7 @@ export function AuthorsTableCard({
   emptyTitle,
   emptyDescription,
 }: AuthorsTableCardProps) {
-  const resolveSortDirection = (field: AuthorSortField) =>
-    sortBy === field ? sortOrder : null
+  const resolveSortDirection = (field: AuthorSortField) => (sortBy === field ? sortOrder : null)
 
   const showEmptyState = !isLoading && authors.length === 0
 
@@ -167,7 +166,9 @@ export function AuthorsTableCard({
                   Дата проверки
                 </TableSortButton>
               </TableHead>
-              <TableHead className="text-right sticky right-0 bg-muted/30 backdrop-blur-sm z-10">Действия</TableHead>
+              <TableHead className="text-right sticky right-0 bg-muted/30 backdrop-blur-sm z-10">
+                Действия
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -183,8 +184,7 @@ export function AuthorsTableCard({
 
             {authors.map((author) => {
               const profileUrl = resolveProfileUrl(author)
-              const avatarUrl =
-                author.photo200 ?? author.photo100 ?? author.photo50 ?? undefined
+              const avatarUrl = author.photo200 ?? author.photo100 ?? author.photo50 ?? undefined
 
               return (
                 <TableRow key={author.id} className="group">
@@ -205,20 +205,18 @@ export function AuthorsTableCard({
                           {author.fullName}
                         </span>
                         <div className="flex items-center gap-2">
-                           <span className="text-xs text-muted-foreground">
-                            {author.screenName
-                                ? `@${author.screenName}`
-                                : `id${author.vkUserId}`}
-                           </span>
-                           <a
-                             href={profileUrl}
-                             target="_blank"
-                             rel="noopener noreferrer"
-                             className="text-[10px] text-primary/80 hover:text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
-                             onClick={(e) => e.stopPropagation()}
-                           >
-                             VK
-                           </a>
+                          <span className="text-xs text-muted-foreground">
+                            {author.screenName ? `@${author.screenName}` : `id${author.vkUserId}`}
+                          </span>
+                          <a
+                            href={profileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-primary/80 hover:text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            VK
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -230,18 +228,30 @@ export function AuthorsTableCard({
                         {formatMetricValue(author.photosCount)}
                       </span>
                       {author.summary.suspicious > 0 && (
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
-                            Подозр: {formatMetricValue(author.summary.suspicious)}
-                          </span>
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
+                          Подозр: {formatMetricValue(author.summary.suspicious)}
+                        </span>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatMetricValue(author.audiosCount)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatMetricValue(author.videosCount)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatMetricValue(author.friendsCount)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatMetricValue(author.followersCount)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatDateTimeCell(author.lastSeenAt)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatDateTimeCell(author.verifiedAt)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatMetricValue(author.audiosCount)}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatMetricValue(author.videosCount)}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatMetricValue(author.friendsCount)}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatMetricValue(author.followersCount)}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDateTimeCell(author.lastSeenAt)}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDateTimeCell(author.verifiedAt)}
+                  </TableCell>
                   <TableCell className="text-right sticky right-0 bg-card z-10 group-hover:bg-muted/50 transition-colors">
                     <div className="flex justify-end gap-2">
                       <Button
@@ -253,15 +263,15 @@ export function AuthorsTableCard({
                         title="Анализ фотографий"
                       >
                         {isAnalyzing && analyzingVkUserId === author.vkUserId ? (
-                            <Spinner className="h-3.5 w-3.5" />
+                          <Spinner className="h-3.5 w-3.5" />
                         ) : (
-                            <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Camera className="h-3.5 w-3.5 text-muted-foreground" />
                         )}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                         className="h-8 w-8 p-0 rounded-full hover:bg-primary/10 hover:text-primary"
+                        className="h-8 w-8 p-0 rounded-full hover:bg-primary/10 hover:text-primary"
                         onClick={() => onOpenDetails(author)}
                         title="Открыть детали"
                       >
@@ -278,11 +288,13 @@ export function AuthorsTableCard({
                 <TableCell colSpan={9} className="h-[300px]">
                   <div className="flex flex-col items-center justify-center gap-3 text-center">
                     <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
-                       <Search className="h-6 w-6 text-muted-foreground/50" />
+                      <Search className="h-6 w-6 text-muted-foreground/50" />
                     </div>
                     <div>
-                        <p className="text-lg font-medium text-foreground">{emptyTitle}</p>
-                        <p className="max-w-xs text-sm text-muted-foreground mx-auto mt-1">{emptyDescription}</p>
+                      <p className="text-lg font-medium text-foreground">{emptyTitle}</p>
+                      <p className="max-w-xs text-sm text-muted-foreground mx-auto mt-1">
+                        {emptyDescription}
+                      </p>
                     </div>
                   </div>
                 </TableCell>
@@ -294,9 +306,9 @@ export function AuthorsTableCard({
 
       {hasMore && (
         <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">
-          <Button 
-            onClick={onLoadMore} 
-            disabled={isLoadingMore} 
+          <Button
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
             variant="ghost"
             className="text-muted-foreground hover:text-foreground"
           >

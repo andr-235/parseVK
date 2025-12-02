@@ -26,5 +26,4 @@ export const WATCHLIST_CONSTANTS = {
 
   // Общие
   NO_DATA: '—',
-  
 } as const

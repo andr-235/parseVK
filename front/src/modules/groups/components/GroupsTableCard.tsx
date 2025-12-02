@@ -59,12 +59,14 @@ function GroupsTableCard({
   const hasGroups = totalCount > 0
   const hasFilteredGroups = groups.length > 0
   const tableColumns = useMemo(() => columns(onDelete), [columns, onDelete])
-  const { sortedItems: sortedGroups, sortState, requestSort } = useTableSorting(groups, tableColumns)
+  const {
+    sortedItems: sortedGroups,
+    sortState,
+    requestSort,
+  } = useTableSorting(groups, tableColumns)
 
   const clearDisabled = isLoading || !hasGroups
-  const badgeText = searchTerm.trim()
-    ? `${groups.length} из ${totalCount}`
-    : `${totalCount}`
+  const badgeText = searchTerm.trim() ? `${groups.length} из ${totalCount}` : `${totalCount}`
 
   const sortOptions = useMemo(() => {
     return tableColumns
@@ -83,12 +85,15 @@ function GroupsTableCard({
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Список групп</h2>
           {!isLoading && (
-            <Badge variant="secondary" className="bg-background/50 px-2 py-0.5 text-xs font-normal text-muted-foreground">
+            <Badge
+              variant="secondary"
+              className="bg-background/50 px-2 py-0.5 text-xs font-normal text-muted-foreground"
+            >
               {badgeText} {getCounterLabel(totalCount)}
             </Badge>
           )}
         </div>
-        
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <SearchInput
             value={searchTerm}
@@ -96,28 +101,28 @@ function GroupsTableCard({
             placeholder="Поиск..."
             className="h-9 w-full sm:w-[250px]"
           />
-          
+
           {hasGroups && (
-             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                   <Button variant="outline" size="sm" className="h-9 gap-2">
-                      <ArrowUpDown className="size-4" />
-                      <span className="truncate max-w-[100px]">{currentSortLabel}</span>
-                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {sortOptions.map((option) => (
-                    <DropdownMenuItem key={option.key} onClick={() => requestSort(option.key)}>
-                      {option.label}
-                      {sortState?.key === option.key && (
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {sortState.direction === 'asc' ? ' (А-Я)' : ' (Я-А)'}
-                        </span>
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-             </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-2">
+                  <ArrowUpDown className="size-4" />
+                  <span className="truncate max-w-[100px]">{currentSortLabel}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {sortOptions.map((option) => (
+                  <DropdownMenuItem key={option.key} onClick={() => requestSort(option.key)}>
+                    {option.label}
+                    {sortState?.key === option.key && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {sortState.direction === 'asc' ? ' (А-Я)' : ' (Я-А)'}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {hasGroups && (
@@ -154,24 +159,24 @@ function GroupsTableCard({
 
         {hasGroups && !isLoading && !hasFilteredGroups && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-             <div className="text-sm text-muted-foreground">
-                По запросу «{searchTerm}» ничего не найдено
-             </div>
+            <div className="text-sm text-muted-foreground">
+              По запросу «{searchTerm}» ничего не найдено
+            </div>
           </div>
         )}
 
         {hasFilteredGroups && (
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sortedGroups.map((group) => (
-                 <GroupCard key={group.id} group={group} onDelete={onDelete} />
-              ))}
-           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {sortedGroups.map((group) => (
+              <GroupCard key={group.id} group={group} onDelete={onDelete} />
+            ))}
+          </div>
         )}
-        
+
         {isLoadingMore && (
-           <div className="flex justify-center py-4">
-              <span className="text-sm text-muted-foreground">Загрузка...</span>
-           </div>
+          <div className="flex justify-center py-4">
+            <span className="text-sm text-muted-foreground">Загрузка...</span>
+          </div>
         )}
       </CardContent>
     </Card>

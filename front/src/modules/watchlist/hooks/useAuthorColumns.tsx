@@ -75,21 +75,28 @@ const COLUMN_DATA = [
     header: 'Последняя активность',
     key: COLUMN_KEYS.LAST_ACTIVITY_AT,
     sortable: true,
-    sortValue: (item: WatchlistAuthorCard) => (item.lastActivityAt ? new Date(item.lastActivityAt).getTime() : -1),
+    sortValue: (item: WatchlistAuthorCard) =>
+      item.lastActivityAt ? new Date(item.lastActivityAt).getTime() : -1,
     render: (item: WatchlistAuthorCard) => formatDateTime(item.lastActivityAt),
   },
   {
     header: 'Последняя проверка',
     key: COLUMN_KEYS.LAST_CHECKED_AT,
     sortable: true,
-    sortValue: (item: WatchlistAuthorCard) => (item.lastCheckedAt ? new Date(item.lastCheckedAt).getTime() : -1),
+    sortValue: (item: WatchlistAuthorCard) =>
+      item.lastCheckedAt ? new Date(item.lastCheckedAt).getTime() : -1,
     render: (item: WatchlistAuthorCard) => formatDateTime(item.lastCheckedAt),
   },
   {
     header: 'Действия',
     key: COLUMN_KEYS.ACTIONS,
     sortable: false,
-    render: (item: WatchlistAuthorCard, handleSelectAuthor: (id: number) => void, handleRemoveFromWatchlist: (id: number) => void, pendingRemoval: Record<number, boolean>) => (
+    render: (
+      item: WatchlistAuthorCard,
+      handleSelectAuthor: (id: number) => void,
+      handleRemoveFromWatchlist: (id: number) => void,
+      pendingRemoval: Record<number, boolean>
+    ) => (
       <ActionsCell
         item={item}
         handleSelectAuthor={handleSelectAuthor}
@@ -110,13 +117,16 @@ export const useAuthorColumns = ({
   handleRemoveFromWatchlist,
   pendingRemoval,
 }: AuthorColumnsProps): TableColumn<WatchlistAuthorCard>[] => {
-  return useMemo<TableColumn<WatchlistAuthorCard>[]>(() =>
-    COLUMN_DATA.map(config => ({
-      ...config,
-      render: config.key === COLUMN_KEYS.ACTIONS
-        ? (item: WatchlistAuthorCard) => config.render(item, handleSelectAuthor, handleRemoveFromWatchlist, pendingRemoval)
-        : config.render,
-    })),
+  return useMemo<TableColumn<WatchlistAuthorCard>[]>(
+    () =>
+      COLUMN_DATA.map((config) => ({
+        ...config,
+        render:
+          config.key === COLUMN_KEYS.ACTIONS
+            ? (item: WatchlistAuthorCard) =>
+                config.render(item, handleSelectAuthor, handleRemoveFromWatchlist, pendingRemoval)
+            : config.render,
+      })),
     [handleSelectAuthor, handleRemoveFromWatchlist, pendingRemoval]
   )
 }

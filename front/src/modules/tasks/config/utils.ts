@@ -22,4 +22,3 @@ export const resolveNumber = (...values: unknown[]): number | null => {
 
 export const formatPair = (left: number | null, right: number | null): string =>
   `${left ?? '—'} / ${right ?? '—'}`
-

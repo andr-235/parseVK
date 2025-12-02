@@ -34,7 +34,7 @@ export const useListingsViewModel = () => {
       source: querySource,
       archived: archivedFilter || undefined,
     }),
-    [appliedSearch, querySource, archivedFilter],
+    [appliedSearch, querySource, archivedFilter]
   )
 
   const filtersIdentity = useMemo(
@@ -45,7 +45,7 @@ export const useListingsViewModel = () => {
         archived: fetchParams.archived ?? false,
         pageSize,
       }),
-    [fetchParams, pageSize],
+    [fetchParams, pageSize]
   )
 
   const filtersKey = useMemo(
@@ -54,39 +54,36 @@ export const useListingsViewModel = () => {
         ...JSON.parse(filtersIdentity),
         refreshToken,
       }),
-    [filtersIdentity, refreshToken],
+    [filtersIdentity, refreshToken]
   )
 
   const fetchListingsBatch = useCallback<
     UseInfiniteFetcher<IListing, ListingsMeta, ListingsFetcherParams>
-  >(
-    async ({ limit, cursor, page, signal, params }) => {
-      const cursorAsPage =
-        cursor && Number.isFinite(Number.parseInt(cursor, 10))
-          ? Number.parseInt(cursor, 10)
-          : undefined
+  >(async ({ limit, cursor, page, signal, params }) => {
+    const cursorAsPage =
+      cursor && Number.isFinite(Number.parseInt(cursor, 10))
+        ? Number.parseInt(cursor, 10)
+        : undefined
 
-      const response = await listingsService.fetchListings({
-        page: cursorAsPage ?? page ?? 1,
-        pageSize: limit,
-        search: params?.search,
-        source: params?.source,
-        archived: params?.archived,
-        signal,
-      })
+    const response = await listingsService.fetchListings({
+      page: cursorAsPage ?? page ?? 1,
+      pageSize: limit,
+      search: params?.search,
+      source: params?.source,
+      archived: params?.archived,
+      signal,
+    })
 
-      return {
-        items: response.items,
-        page: response.page,
-        hasMore: response.hasMore,
-        meta: {
-          total: response.total,
-          sources: response.sources,
-        },
-      }
-    },
-    [],
-  )
+    return {
+      items: response.items,
+      page: response.page,
+      hasMore: response.hasMore,
+      meta: {
+        total: response.total,
+        sources: response.sources,
+      },
+    }
+  }, [])
 
   const filterOptions = useMemo(() => {
     const sanitized = availableSources.filter((item) => item.trim().length > 0)
@@ -245,4 +242,3 @@ export const useListingsViewModel = () => {
     handleLoadingChange,
   }
 }
-

@@ -19,14 +19,12 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
   const [updateExisting, setUpdateExisting] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   if (!isOpen) return null
 
-  const resolvedUploadSource = uploadSourceMode === 'custom'
-    ? customSource
-    : uploadSourceMode
+  const resolvedUploadSource = uploadSourceMode === 'custom' ? customSource : uploadSourceMode
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -59,10 +57,13 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div 
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
         className="w-full max-w-md overflow-hidden rounded-2xl bg-background-secondary border border-border shadow-2xl"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
           <div className="mb-6 flex items-center gap-4">
@@ -115,7 +116,8 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
               <div className="flex gap-2 text-xs text-text-secondary leading-relaxed">
                 <FileJson className="h-4 w-4 shrink-0 text-accent-primary mt-0.5" />
                 <p>
-                  Поддерживаются JSON-файлы, содержащие массив объявлений или объект с полем <code className="font-mono font-bold">listings</code>.
+                  Поддерживаются JSON-файлы, содержащие массив объявлений или объект с полем{' '}
+                  <code className="font-mono font-bold">listings</code>.
                 </p>
               </div>
             </div>
@@ -157,4 +159,3 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
 }
 
 export default ImportListingsModal
-

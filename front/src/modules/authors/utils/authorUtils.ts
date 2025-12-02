@@ -15,4 +15,3 @@ export const resolveProfileUrl = (author: AuthorCard): string => {
 
   return `https://vk.com/id${author.vkUserId}`
 }
-

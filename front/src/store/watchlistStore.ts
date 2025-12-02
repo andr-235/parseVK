@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { watchlistService } from '@/services/watchlistService'
-import type { WatchlistAuthorCard, WatchlistAuthorDetails, WatchlistSettings, WatchlistStatus } from '@/types'
+import type {
+  WatchlistAuthorCard,
+  WatchlistAuthorDetails,
+  WatchlistSettings,
+  WatchlistStatus,
+} from '@/types'
 import {
   WATCHLIST_PAGE_SIZE,
   mapWatchlistAuthor,
@@ -77,7 +82,11 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     }
 
     try {
-      const response = await watchlistService.getAuthors({ offset, limit: pageSize, excludeStopped: true })
+      const response = await watchlistService.getAuthors({
+        offset,
+        limit: pageSize,
+        excludeStopped: true,
+      })
       const mapped: WatchlistAuthorCard[] = response.items.map(mapWatchlistAuthor)
 
       set((prev) => ({
@@ -85,7 +94,10 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
           ? mapped
           : [
               ...prev.authors,
-              ...mapped.filter((author: WatchlistAuthorCard) => !prev.authors.some((existing) => existing.id === author.id)),
+              ...mapped.filter(
+                (author: WatchlistAuthorCard) =>
+                  !prev.authors.some((existing) => existing.id === author.id)
+              ),
             ],
         totalAuthors: response.total,
         hasMoreAuthors: response.hasMore,
@@ -94,21 +106,29 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         error: null,
       }))
 
-      queryClient.setQueryData<WatchlistAuthorsQueryData>(queryKeys.watchlist.authors, (prevData) => ({
-        items: reset
-          ? mapped
-          : [
-              ...(prevData?.items ?? []),
-              ...mapped.filter(
-                (author: WatchlistAuthorCard) => !(prevData?.items ?? []).some((existing) => existing.id === author.id),
-              ),
-            ],
-        total: response.total,
-        hasMore: response.hasMore,
-      }))
+      queryClient.setQueryData<WatchlistAuthorsQueryData>(
+        queryKeys.watchlist.authors,
+        (prevData) => ({
+          items: reset
+            ? mapped
+            : [
+                ...(prevData?.items ?? []),
+                ...mapped.filter(
+                  (author: WatchlistAuthorCard) =>
+                    !(prevData?.items ?? []).some((existing) => existing.id === author.id)
+                ),
+              ],
+          total: response.total,
+          hasMore: response.hasMore,
+        })
+      )
     } catch (error) {
       console.error('Не удалось загрузить список авторов "На карандаше"', error)
-      set({ isLoadingAuthors: false, isLoadingMoreAuthors: false, error: 'Не удалось загрузить список авторов' })
+      set({
+        isLoadingAuthors: false,
+        isLoadingMoreAuthors: false,
+        error: 'Не удалось загрузить список авторов',
+      })
       throw error
     }
   },
@@ -141,20 +161,25 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
 
       set((prev) => ({
         authors: [mapped, ...prev.authors.filter((author) => author.id !== mapped.id)],
-        totalAuthors: prev.totalAuthors + (prev.authors.some((author) => author.id === mapped.id) ? 0 : 1),
+        totalAuthors:
+          prev.totalAuthors + (prev.authors.some((author) => author.id === mapped.id) ? 0 : 1),
         isCreatingAuthor: false,
         error: null,
       }))
 
-      queryClient.setQueryData<WatchlistAuthorsQueryData>(queryKeys.watchlist.authors, (prevData) => {
-        const existing = prevData?.items ?? []
-        const filtered = existing.filter((item) => item.id !== mapped.id)
-        return {
-          items: [mapped, ...filtered],
-          total: (prevData?.total ?? 0) + (existing.some((item) => item.id === mapped.id) ? 0 : 1),
-          hasMore: prevData?.hasMore ?? false,
+      queryClient.setQueryData<WatchlistAuthorsQueryData>(
+        queryKeys.watchlist.authors,
+        (prevData) => {
+          const existing = prevData?.items ?? []
+          const filtered = existing.filter((item) => item.id !== mapped.id)
+          return {
+            items: [mapped, ...filtered],
+            total:
+              (prevData?.total ?? 0) + (existing.some((item) => item.id === mapped.id) ? 0 : 1),
+            hasMore: prevData?.hasMore ?? false,
+          }
         }
-      })
+      )
 
       return mapped
     } catch (error) {
@@ -177,7 +202,9 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
           ? prev.authors.filter((author) => author.id !== id)
           : prev.authors.map((author) => (author.id === id ? mapped : author))
 
-        const nextTotal = prev.totalAuthors + (willBeStopped && !wasStopped ? -1 : !willBeStopped && wasStopped ? 1 : 0)
+        const nextTotal =
+          prev.totalAuthors +
+          (willBeStopped && !wasStopped ? -1 : !willBeStopped && wasStopped ? 1 : 0)
 
         return {
           authors: nextAuthors,
@@ -194,20 +221,25 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         }
       })
 
-      queryClient.setQueryData<WatchlistAuthorsQueryData>(queryKeys.watchlist.authors, (prevData) => {
-        const wasStopped = (prevData?.items ?? []).find((a) => a.id === id)?.status === 'STOPPED'
-        const willBeStopped = mapped.status === 'STOPPED'
-        const nextItems = willBeStopped
-          ? (prevData?.items ?? []).filter((a) => a.id !== id)
-          : (prevData?.items ?? []).map((a) => (a.id === id ? mapped : a))
-        const nextTotal = (prevData?.total ?? 0) + (willBeStopped && !wasStopped ? -1 : !willBeStopped && wasStopped ? 1 : 0)
+      queryClient.setQueryData<WatchlistAuthorsQueryData>(
+        queryKeys.watchlist.authors,
+        (prevData) => {
+          const wasStopped = (prevData?.items ?? []).find((a) => a.id === id)?.status === 'STOPPED'
+          const willBeStopped = mapped.status === 'STOPPED'
+          const nextItems = willBeStopped
+            ? (prevData?.items ?? []).filter((a) => a.id !== id)
+            : (prevData?.items ?? []).map((a) => (a.id === id ? mapped : a))
+          const nextTotal =
+            (prevData?.total ?? 0) +
+            (willBeStopped && !wasStopped ? -1 : !willBeStopped && wasStopped ? 1 : 0)
 
-        return {
-          items: nextItems,
-          total: Math.max(nextTotal, 0),
-          hasMore: prevData?.hasMore ?? false,
+          return {
+            items: nextItems,
+            total: Math.max(nextTotal, 0),
+            hasMore: prevData?.hasMore ?? false,
+          }
         }
-      })
+      )
 
       return mapped
     } catch (error) {

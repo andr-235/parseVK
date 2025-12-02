@@ -130,4 +130,3 @@ export const TelegramCard = () => {
     </Card>
   )
 }
-

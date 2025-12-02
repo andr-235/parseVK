@@ -88,12 +88,15 @@ export const useGroupsViewModel = () => {
     setUrl(target.value)
   }, [])
 
-  const handleFileUpload = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      await loadFromFile(file)
-    }
-  }, [loadFromFile])
+  const handleFileUpload = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (file) {
+        await loadFromFile(file)
+      }
+    },
+    [loadFromFile]
+  )
 
   const handleDeleteAllGroups = useCallback(async () => {
     if (!hasGroups || isLoading) {
@@ -168,4 +171,3 @@ export const useGroupsViewModel = () => {
     resetRegionSearch,
   }
 }
-

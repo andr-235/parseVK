@@ -12,10 +12,7 @@ const createFetchAuthors = (params: AuthorsQueryParams) => () => {
     offset: 0,
     limit: params.pageSize,
     search: params.search || undefined,
-    verified:
-      params.status === 'all'
-        ? undefined
-        : params.status === 'verified',
+    verified: params.status === 'all' ? undefined : params.status === 'verified',
     sortBy: params.sortBy ?? undefined,
     sortOrder: params.sortBy ? params.sortOrder : undefined,
   })
@@ -28,13 +25,16 @@ export const useAuthorsQuery = (enabled: boolean) => {
   const sortOrder = useAuthorsStore((state) => state.sortOrder)
   const pageSize = useAuthorsStore((state) => state.pageSize)
 
-  const params = useMemo<AuthorsQueryParams>(() => ({
-    status: statusFilter,
-    search: rawSearch.trim(),
-    sortBy,
-    sortOrder: sortBy ? sortOrder : 'desc',
-    pageSize,
-  }), [statusFilter, rawSearch, sortBy, sortOrder, pageSize])
+  const params = useMemo<AuthorsQueryParams>(
+    () => ({
+      status: statusFilter,
+      search: rawSearch.trim(),
+      sortBy,
+      sortOrder: sortBy ? sortOrder : 'desc',
+      pageSize,
+    }),
+    [statusFilter, rawSearch, sortBy, sortOrder, pageSize]
+  )
 
   const queryKey = useMemo(() => queryKeys.authors.list(params), [params])
 

@@ -8,7 +8,7 @@ import type {
   TaskStatsInfo,
   TaskStatus,
   TaskStatusComputationContext,
-  TasksStore
+  TasksStore,
 } from './tasksStore.types'
 
 export type UnknownRecord = Record<string, unknown>
@@ -108,7 +108,7 @@ export const findGroupMetadata = (groupId: number | string): GroupMetadata | nul
 
   return {
     id: normalizedId,
-    name: displayName
+    name: displayName,
   }
 }
 
@@ -186,25 +186,29 @@ export const createEmptyGroupStatusCounters = (): Record<GroupStatus, number> =>
   processing: 0,
   running: 0,
   success: 0,
-  failed: 0
+  failed: 0,
 })
 
 export const deriveTaskStatus = (
   initialStatus: TaskStatus,
   context: TaskStatusComputationContext
 ): TaskStatus => {
-  const groupsCount = typeof context.groupsCount === 'number' && Number.isFinite(context.groupsCount)
-    ? context.groupsCount
-    : 0
-  const successCount = typeof context.successCount === 'number' && Number.isFinite(context.successCount)
-    ? context.successCount
-    : 0
-  const failedCount = typeof context.failedCount === 'number' && Number.isFinite(context.failedCount)
-    ? context.failedCount
-    : 0
-  const processingCount = typeof context.processingCount === 'number' && Number.isFinite(context.processingCount)
-    ? context.processingCount
-    : 0
+  const groupsCount =
+    typeof context.groupsCount === 'number' && Number.isFinite(context.groupsCount)
+      ? context.groupsCount
+      : 0
+  const successCount =
+    typeof context.successCount === 'number' && Number.isFinite(context.successCount)
+      ? context.successCount
+      : 0
+  const failedCount =
+    typeof context.failedCount === 'number' && Number.isFinite(context.failedCount)
+      ? context.failedCount
+      : 0
+  const processingCount =
+    typeof context.processingCount === 'number' && Number.isFinite(context.processingCount)
+      ? context.processingCount
+      : 0
 
   const totalGroups = Math.max(groupsCount, 0)
   const processedGroups = Math.max(successCount + failedCount, 0)
@@ -283,13 +287,20 @@ export const mergeStats = (...sources: unknown[]): TaskStatsInfo => {
     groups: ['groups', 'totalGroups', 'groupCount', 'groupsCount', 'count'],
     success: ['success', 'successCount', 'completed', 'completedGroups', 'successGroups'],
     failed: ['failed', 'failedCount', 'errors', 'errorCount', 'failedGroups'],
-    processing: ['processing', 'processingCount', 'inProgress', 'inProgressCount', 'processingGroups', 'active'],
+    processing: [
+      'processing',
+      'processingCount',
+      'inProgress',
+      'inProgressCount',
+      'processingGroups',
+      'active',
+    ],
     running: ['running', 'runningCount', 'activeGroups', 'activeCount'],
     pending: ['pending', 'pendingCount', 'waiting', 'queued', 'queue', 'remaining'],
     processed: ['processed', 'processedCount', 'finished', 'finishedCount', 'handled'],
     posts: ['posts', 'postsCount', 'postCount'],
     comments: ['comments', 'commentsCount'],
-    authors: ['authors', 'authorsCount', 'users', 'userCount']
+    authors: ['authors', 'authorsCount', 'users', 'userCount'],
   }
 
   for (const source of sources) {
@@ -299,7 +310,7 @@ export const mergeStats = (...sources: unknown[]): TaskStatsInfo => {
 
     const data = source as UnknownRecord
 
-    (Object.keys(aliasMap) as Array<keyof TaskStatsInfo>).forEach((key) => {
+    ;(Object.keys(aliasMap) as Array<keyof TaskStatsInfo>).forEach((key) => {
       if (stats[key] != null) {
         return
       }
@@ -325,7 +336,20 @@ export const cleanStats = (stats?: TaskStatsInfo): TaskStatsInfo | undefined => 
   }
 
   const cleaned: TaskStatsInfo = {}
-  ;(['groups', 'success', 'failed', 'processing', 'running', 'pending', 'processed', 'posts', 'comments', 'authors'] as const).forEach((key) => {
+  ;(
+    [
+      'groups',
+      'success',
+      'failed',
+      'processing',
+      'running',
+      'pending',
+      'processed',
+      'posts',
+      'comments',
+      'authors',
+    ] as const
+  ).forEach((key) => {
     const value = stats[key]
     if (value != null && !Number.isNaN(value)) {
       cleaned[key] = value
@@ -461,9 +485,7 @@ export const toTaskKey = (taskId: TaskIdentifier): string => {
 }
 
 export const rebuildTaskList = (ids: TaskIdentifier[], entities: Record<string, Task>): Task[] => {
-  return ids
-    .map((id) => entities[toTaskKey(id)])
-    .filter((task): task is Task => Boolean(task))
+  return ids.map((id) => entities[toTaskKey(id)]).filter((task): task is Task => Boolean(task))
 }
 
 export const replaceTasksCollection = (state: TasksStore, tasks: Task[]): void => {

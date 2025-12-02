@@ -20,7 +20,6 @@ const getBadgeClassName = (count: number) => {
   return 'border-border/60 text-xs text-text-secondary'
 }
 
-
 interface PhotoAnalysisCellProps {
   item: WatchlistAuthorCard
 }
@@ -48,7 +47,8 @@ export const PhotoAnalysisCell = ({ item }: PhotoAnalysisCellProps) => {
         ))}
       </div>
       <span className="text-xs text-text-secondary">
-        {PHOTO_ANALYSIS_LABELS.SUSPICIOUS_LABEL}: {summary.suspicious} · {PHOTO_ANALYSIS_LABELS.LAST_ANALYSIS_LABEL}: {lastAnalyzed}
+        {PHOTO_ANALYSIS_LABELS.SUSPICIOUS_LABEL}: {summary.suspicious} ·{' '}
+        {PHOTO_ANALYSIS_LABELS.LAST_ANALYSIS_LABEL}: {lastAnalyzed}
       </span>
     </div>
   )

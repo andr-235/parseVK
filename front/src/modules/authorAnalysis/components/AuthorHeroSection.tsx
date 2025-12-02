@@ -39,10 +39,16 @@ export const AuthorHeroSection = ({
 
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className="border-accent-primary/30 bg-accent-primary/10 text-accent-primary">
+        <Badge
+          variant="outline"
+          className="border-accent-primary/30 bg-accent-primary/10 text-accent-primary"
+        >
           Фото: {summary.total}
         </Badge>
-        <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-destructive">
+        <Badge
+          variant="outline"
+          className="border-destructive/30 bg-destructive/10 text-destructive"
+        >
           {PHOTO_ANALYSIS_LABELS.SUSPICIOUS_LABEL}: {summary.suspicious}
         </Badge>
         <Badge variant="outline" className="border-border/50">

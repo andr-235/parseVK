@@ -37,9 +37,11 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
             </div>
           )}
           <div className="absolute -bottom-1 -right-1">
-             {group.isClosed === 1 ? (
-               <Badge variant="secondary" className="px-1 h-4 text-[10px]">Закр</Badge>
-             ) : null}
+            {group.isClosed === 1 ? (
+              <Badge variant="secondary" className="px-1 h-4 text-[10px]">
+                Закр
+              </Badge>
+            ) : null}
           </div>
         </div>
 
@@ -50,20 +52,20 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
             </h3>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-             <span className="font-medium text-foreground/80">
-                {GROUP_TYPE_LABELS[group.type || ''] || group.type || 'Группа'}
-             </span>
-             <span>•</span>
-             <span>ID: {group.vkId}</span>
+            <span className="font-medium text-foreground/80">
+              {GROUP_TYPE_LABELS[group.type || ''] || group.type || 'Группа'}
+            </span>
+            <span>•</span>
+            <span>ID: {group.vkId}</span>
           </div>
         </div>
       </div>
 
       <CardContent className="flex-1 p-4 flex flex-col gap-3 text-sm">
         {group.status && (
-           <div className="text-muted-foreground bg-muted/20 p-2 rounded-md text-xs italic">
-             "{group.status}"
-           </div>
+          <div className="text-muted-foreground bg-muted/20 p-2 rounded-md text-xs italic">
+            "{group.status}"
+          </div>
         )}
 
         <div className="space-y-2">
@@ -74,7 +76,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
             </span>
             <span>участников</span>
           </div>
-          
+
           {group.description && (
             <div className="text-muted-foreground text-xs mt-2">
               <ExpandableText text={group.description} maxLength={80} />
@@ -93,7 +95,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
           <ExternalLink className="mr-2 size-3.5" />
           Открыть
         </Button>
-        
+
         <Button
           variant="ghost"
           size="sm"
@@ -107,4 +109,3 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
     </Card>
   )
 }
-

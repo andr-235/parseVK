@@ -170,12 +170,11 @@ export const calculateTaskProgress = (task: Task): TaskProgressInfo => {
 
   // Debug logging отключён в продакшене
   if (import.meta.env.DEV) {
-     
     console.log('calculateTaskProgress for task', task.id, ':', {
       task: {
         groupsCount: task.groupsCount,
         groupIds: task.groupIds?.length,
-        stats: task.stats
+        stats: task.stats,
       },
       calculated: {
         total,
@@ -184,8 +183,8 @@ export const calculateTaskProgress = (task: Task): TaskProgressInfo => {
         failed,
         processing,
         pending,
-        hasTotals: total > 0
-      }
+        hasTotals: total > 0,
+      },
     })
   }
 
@@ -196,7 +195,7 @@ export const calculateTaskProgress = (task: Task): TaskProgressInfo => {
     failed,
     processing,
     pending,
-    hasTotals: total > 0
+    hasTotals: total > 0,
   }
 }
 

@@ -1,7 +1,11 @@
 import toast from 'react-hot-toast'
 import { API_URL } from '@/lib/apiConfig'
 import { createRequest, handleResponse } from '@/lib/apiUtils'
-import type { ICommentResponse, IGetCommentsResponse, IGetCommentsCursorResponse } from '@/types/api'
+import type {
+  ICommentResponse,
+  IGetCommentsResponse,
+  IGetCommentsCursorResponse,
+} from '@/types/api'
 
 type CommentsFilters = {
   keywords?: string[]
@@ -44,7 +48,7 @@ const buildFilterQuery = (filters?: CommentsFilters): string => {
 
 export const commentsService = {
   async getComments(
-    params?: { offset?: number; limit?: number } & CommentsFilters,
+    params?: { offset?: number; limit?: number } & CommentsFilters
   ): Promise<IGetCommentsResponse> {
     try {
       const searchParams = new URLSearchParams()
@@ -77,7 +81,7 @@ export const commentsService = {
   },
 
   async getCommentsCursor(
-    params?: { cursor?: string; limit?: number } & CommentsFilters,
+    params?: { cursor?: string; limit?: number } & CommentsFilters
   ): Promise<IGetCommentsCursorResponse> {
     try {
       const searchParams = new URLSearchParams()
@@ -102,7 +106,10 @@ export const commentsService = {
       const url = query ? `${API_URL}/comments/cursor?${query}` : `${API_URL}/comments/cursor`
       const response = await fetch(url)
 
-      return await handleResponse<IGetCommentsCursorResponse>(response, 'Failed to fetch comments with cursor')
+      return await handleResponse<IGetCommentsCursorResponse>(
+        response,
+        'Failed to fetch comments with cursor'
+      )
     } catch (error) {
       toast.error('Не удалось загрузить комментарии')
       throw error
@@ -116,11 +123,13 @@ export const commentsService = {
         body: JSON.stringify({ isRead }),
       })
 
-      return await handleResponse<ICommentResponse>(response, 'Failed to update comment read status')
+      return await handleResponse<ICommentResponse>(
+        response,
+        'Failed to update comment read status'
+      )
     } catch (error) {
       toast.error('Не удалось обновить статус комментария')
       throw error
     }
   },
 }
-

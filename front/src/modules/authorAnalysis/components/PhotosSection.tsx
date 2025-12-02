@@ -53,7 +53,9 @@ export const PhotosSection = ({
       {!isLoading && analyses.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border/60 bg-background-primary/40 px-6 py-12 text-center text-text-secondary">
           <p className="text-lg font-medium text-text-primary">
-            {filter === 'suspicious' ? 'Подозрительные фото не найдены' : 'Результаты анализа отсутствуют'}
+            {filter === 'suspicious'
+              ? 'Подозрительные фото не найдены'
+              : 'Результаты анализа отсутствуют'}
           </p>
           <p className="max-w-md text-sm">
             {filter === 'suspicious'

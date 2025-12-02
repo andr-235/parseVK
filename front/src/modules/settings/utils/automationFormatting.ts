@@ -28,4 +28,3 @@ export const formatAutomationDate = (value: string | null, locale = 'ru-RU'): st
     return new Date(value).toLocaleString(locale)
   }
 }
-

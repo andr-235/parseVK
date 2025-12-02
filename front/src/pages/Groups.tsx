@@ -30,7 +30,12 @@ function Groups() {
 
   return (
     <div className="flex flex-col gap-8 pb-10 pt-6">
-      <GroupsHero url={url} onUrlChange={handleUrlChange} onAdd={handleAddGroup} onFileUpload={handleFileUpload} />
+      <GroupsHero
+        url={url}
+        onUrlChange={handleUrlChange}
+        onAdd={handleAddGroup}
+        onFileUpload={handleFileUpload}
+      />
 
       <div className="space-y-6">
         <RegionGroupsSearchCard

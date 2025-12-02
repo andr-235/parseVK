@@ -27,7 +27,7 @@ export const formatTaskDate = (date: Date | null, locale = 'ru-RU'): string => {
   try {
     return new Intl.DateTimeFormat(locale, {
       dateStyle: 'medium',
-      timeStyle: 'short'
+      timeStyle: 'short',
     }).format(date)
   } catch (error) {
     if (import.meta.env.DEV) {
@@ -37,4 +37,3 @@ export const formatTaskDate = (date: Date | null, locale = 'ru-RU'): string => {
     return date.toLocaleString(locale)
   }
 }
-

@@ -72,7 +72,10 @@ const SearchInput = memo(function SearchInput({
     [isGlass, className]
   )
 
-  const baseInputClass = useMemo(() => (isGlass ? GLASS_INPUT_CLASSES : DEFAULT_INPUT_CLASSES), [isGlass])
+  const baseInputClass = useMemo(
+    () => (isGlass ? GLASS_INPUT_CLASSES : DEFAULT_INPUT_CLASSES),
+    [isGlass]
+  )
 
   const paddingLeftClass = hasLeadingIcon ? 'pl-11' : isGlass ? 'pl-5' : 'pl-4'
   const paddingRightClass = isGlass ? 'pr-14' : 'pr-10'

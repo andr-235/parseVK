@@ -4,7 +4,6 @@ import { Loader2 } from 'lucide-react'
 import type { WatchlistAuthorCard } from '@/types'
 import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 
-
 interface ActionsCellProps {
   item: WatchlistAuthorCard
   handleSelectAuthor: (id: number) => void
@@ -63,7 +62,9 @@ export const ActionsCell = ({
           }}
         >
           {pendingRemoval[item.id] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {pendingRemoval[item.id] ? WATCHLIST_CONSTANTS.REMOVING_TEXT : WATCHLIST_CONSTANTS.REMOVE_TEXT}
+          {pendingRemoval[item.id]
+            ? WATCHLIST_CONSTANTS.REMOVING_TEXT
+            : WATCHLIST_CONSTANTS.REMOVE_TEXT}
         </Button>
       ) : null}
     </div>

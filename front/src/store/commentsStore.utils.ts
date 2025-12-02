@@ -51,7 +51,9 @@ const buildCommentUrl = (comment: ICommentResponse): string | null => {
 }
 
 const resolveAuthorInfo = (comment: ICommentResponse): NormalizedAuthor => {
-  const directAuthor = normalizeString(typeof comment.author === 'string' ? comment.author : comment.authorName)
+  const directAuthor = normalizeString(
+    typeof comment.author === 'string' ? comment.author : comment.authorName
+  )
 
   const authorRecord =
     comment.author && typeof comment.author === 'object'
@@ -103,11 +105,19 @@ const resolveAuthorInfo = (comment: ICommentResponse): NormalizedAuthor => {
     'photoMax',
     'photo_max',
     'photo200',
-    'photo_200'
+    'photo_200',
   ])
 
-  const directName = directAuthor
-    || pickNormalizedString(['fullName', 'full_name', 'name', 'displayName', 'display_name', 'nickname'])
+  const directName =
+    directAuthor ||
+    pickNormalizedString([
+      'fullName',
+      'full_name',
+      'name',
+      'displayName',
+      'display_name',
+      'nickname',
+    ])
 
   const firstName = pickNormalizedString(['firstName', 'first_name'])
   const lastName = pickNormalizedString(['lastName', 'last_name'])
@@ -147,14 +157,16 @@ const resolveAuthorInfo = (comment: ICommentResponse): NormalizedAuthor => {
 
 export const normalizeCommentResponse = (comment: ICommentResponse) => {
   const authorInfo = resolveAuthorInfo(comment)
-  const watchlistAuthorId = typeof comment.watchlistAuthorId === 'number' ? comment.watchlistAuthorId : null
+  const watchlistAuthorId =
+    typeof comment.watchlistAuthorId === 'number' ? comment.watchlistAuthorId : null
   const matchedKeywords = Array.isArray(comment.matchedKeywords)
     ? comment.matchedKeywords
         .map((keyword) => ({
           id: keyword.id,
           word: keyword.word,
           category: keyword.category ?? null,
-          source: keyword.source === 'POST' || keyword.source === 'COMMENT' ? keyword.source : undefined,
+          source:
+            keyword.source === 'POST' || keyword.source === 'COMMENT' ? keyword.source : undefined,
         }))
         .filter((keyword) => typeof keyword.id === 'number' && Boolean(keyword.word))
     : []

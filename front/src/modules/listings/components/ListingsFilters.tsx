@@ -65,7 +65,11 @@ export const ListingsFilters = ({
           )}
         </div>
 
-        <select value={sourceFilter} onChange={onSourceChange} className={`${selectClass} min-w-[160px]`}>
+        <select
+          value={sourceFilter}
+          onChange={onSourceChange}
+          className={`${selectClass} min-w-[160px]`}
+        >
           {filterOptions.map((option) => (
             <option key={option} value={option}>
               {option === 'all' ? 'Все источники' : formatSourceLabel(option)}
@@ -105,4 +109,3 @@ export const ListingsFilters = ({
     </div>
   )
 }
-

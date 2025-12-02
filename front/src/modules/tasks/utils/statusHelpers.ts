@@ -31,4 +31,3 @@ export const getGroupStatusText = (status: string): string => {
       return status
   }
 }
-

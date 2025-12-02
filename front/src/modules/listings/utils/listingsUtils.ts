@@ -9,4 +9,3 @@ export const formatSourceLabel = (value?: string | null): string => {
   const key = value.toLowerCase()
   return map[key] || value
 }
-

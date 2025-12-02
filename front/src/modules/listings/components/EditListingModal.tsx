@@ -62,7 +62,10 @@ function EditListingModal({ listing, isOpen, onClose, onUpdated }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
+      onClick={onClose}
+    >
       <div
         className="flex w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-border/70 bg-background-primary text-text-primary shadow-2xl"
         onClick={(event) => event.stopPropagation()}
@@ -116,4 +119,3 @@ function EditListingModal({ listing, isOpen, onClose, onUpdated }: Props) {
 }
 
 export default EditListingModal
-

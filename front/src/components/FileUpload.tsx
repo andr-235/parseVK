@@ -1,4 +1,12 @@
-import { forwardRef, useCallback, useId, useImperativeHandle, useRef, useState, type ChangeEvent } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from 'react'
 import { Upload } from 'lucide-react'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
@@ -75,10 +83,13 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(function FileUploa
     [autoReset, handleFiles, onUpload, reset]
   )
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    if (!disabled) setIsDragOver(true)
-  }, [disabled])
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      if (!disabled) setIsDragOver(true)
+    },
+    [disabled]
+  )
 
   const handleDragLeave = useCallback(() => {
     setIsDragOver(false)
@@ -134,7 +145,7 @@ const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(function FileUploa
             isDragOver
               ? 'border-accent-primary/70 bg-accent-primary/10'
               : 'border-border/60 bg-background-primary/40 hover:border-accent-primary/60',
-            disabled && 'cursor-not-allowed opacity-60',
+            disabled && 'cursor-not-allowed opacity-60'
           )}
         >
           <div className="pointer-events-none flex flex-col items-center gap-2 text-center">

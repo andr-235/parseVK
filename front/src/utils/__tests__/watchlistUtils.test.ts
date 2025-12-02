@@ -41,11 +41,7 @@ describe('watchlistUtils', () => {
     })
 
     it('should filter out authors with undefined id', () => {
-      const authors = [
-        mockAuthor(1),
-        mockAuthor(undefined),
-        mockAuthor(2),
-      ]
+      const authors = [mockAuthor(1), mockAuthor(undefined), mockAuthor(2)]
 
       const result = filterValidAuthors(authors)
 
@@ -55,11 +51,7 @@ describe('watchlistUtils', () => {
     })
 
     it('should remove duplicate authors by id', () => {
-      const authors = [
-        mockAuthor(1),
-        mockAuthor(1),
-        mockAuthor(2),
-      ]
+      const authors = [mockAuthor(1), mockAuthor(1), mockAuthor(2)]
 
       const result = filterValidAuthors(authors)
 
@@ -74,10 +66,7 @@ describe('watchlistUtils', () => {
     })
 
     it('should return empty array when all authors have undefined id', () => {
-      const authors = [
-        mockAuthor(undefined),
-        mockAuthor(undefined),
-      ]
+      const authors = [mockAuthor(undefined), mockAuthor(undefined)]
 
       const result = filterValidAuthors(authors)
       expect(result).toEqual([])

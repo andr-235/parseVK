@@ -27,4 +27,3 @@ export const GroupsHero = ({ url, onUrlChange, onAdd, onFileUpload }: GroupsHero
     </div>
   )
 }
-

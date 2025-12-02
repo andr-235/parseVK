@@ -8,4 +8,3 @@ export type ListingsFetcherParams = {
   source?: string
   archived?: boolean
 }
-

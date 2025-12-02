@@ -7,7 +7,7 @@ export const keywordsService = {
   async addKeyword(
     word: string,
     category?: string | null,
-    isPhrase?: boolean,
+    isPhrase?: boolean
   ): Promise<IKeywordResponse> {
     try {
       const response = await createRequest(`${API_URL}/keywords/add`, {
@@ -124,4 +124,3 @@ export const keywordsService = {
     }
   },
 }
-

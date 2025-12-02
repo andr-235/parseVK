@@ -5,4 +5,3 @@ export { SidebarNavItem } from './SidebarNavItem'
 export { SidebarFooter } from './SidebarFooter'
 export { SidebarCollapseButton } from './SidebarCollapseButton'
 export type * from './types'
-

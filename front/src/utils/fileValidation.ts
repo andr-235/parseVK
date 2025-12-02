@@ -49,7 +49,7 @@ export function matchesAccept(file: File, accept?: string): boolean {
 export function validateFiles(
   files: File[],
   accept?: string,
-  maxSizeBytes?: number,
+  maxSizeBytes?: number
 ): { valid: File[]; errors: FileValidationError[] } {
   const valid: File[] = []
   const errors: FileValidationError[] = []
@@ -73,4 +73,3 @@ export function validateFiles(
 
   return { valid, errors }
 }
-

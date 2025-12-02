@@ -48,9 +48,8 @@ export const isValidAuthorId = (vkUserId: number): boolean => {
  * Вычисляет параметры для анализа фотографий
  */
 export const calculateAnalysisParams = (photosCount: number | null, batchSize: number = 10) => {
-  const totalPhotos = typeof photosCount === 'number' && photosCount > 0
-    ? Math.min(photosCount, 200)
-    : 200
+  const totalPhotos =
+    typeof photosCount === 'number' && photosCount > 0 ? Math.min(photosCount, 200) : 200
 
   const maxBatches = Math.max(Math.ceil(totalPhotos / batchSize), 1)
 
@@ -60,4 +59,3 @@ export const calculateAnalysisParams = (photosCount: number | null, batchSize: n
     batchSize,
   }
 }
-

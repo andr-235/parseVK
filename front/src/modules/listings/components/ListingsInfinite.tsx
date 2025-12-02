@@ -1,6 +1,9 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { useInfiniteListings, type UseInfiniteFetcher } from '@/modules/listings/hooks/useInfiniteListings'
+import {
+  useInfiniteListings,
+  type UseInfiniteFetcher,
+} from '@/modules/listings/hooks/useInfiniteListings'
 import type { IListing } from '@/types/api'
 import { ListingCard, ListingSkeleton } from './ListingCard'
 import type { ListingsMeta, ListingsFetcherParams } from '@/modules/listings/types/listingsTypes'
@@ -37,21 +40,13 @@ export function ListingsInfinite({
   const animatedIdsRef = useRef<Set<number>>(new Set())
   const [observerAvailable, setObserverAvailable] = useState(true)
 
-  const {
-    items,
-    loading,
-    initialLoading,
-    error,
-    hasMore,
-    meta,
-    loadMore,
-    reset,
-  } = useInfiniteListings<IListing, ListingsMeta, ListingsFetcherParams>({
-    fetcher,
-    limit,
-    params: fetchParams,
-    dependencies: [filtersKey],
-  })
+  const { items, loading, initialLoading, error, hasMore, meta, loadMore, reset } =
+    useInfiniteListings<IListing, ListingsMeta, ListingsFetcherParams>({
+      fetcher,
+      limit,
+      params: fetchParams,
+      dependencies: [filtersKey],
+    })
 
   const handleLoadMore = useCallback(async () => {
     await loadMore()
@@ -95,7 +90,7 @@ export function ListingsInfinite({
             handleLoadMore().catch(() => {})
           }
         },
-        { root: null, rootMargin: '0px 0px 300px 0px', threshold: 0 },
+        { root: null, rootMargin: '0px 0px 300px 0px', threshold: 0 }
       )
 
       observer.observe(sentinel)
@@ -191,4 +186,3 @@ export function ListingsInfinite({
     </div>
   )
 }
-

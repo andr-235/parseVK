@@ -28,11 +28,7 @@ function AuthorAnalysis() {
         onDelete={handleDelete}
       />
 
-      <AnalysisSummarySection
-        author={author}
-        summary={summary}
-        isAuthorLoading={isAuthorLoading}
-      />
+      <AnalysisSummarySection author={author} summary={summary} isAuthorLoading={isAuthorLoading} />
 
       <PhotosSection
         analyses={analyses}

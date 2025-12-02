@@ -1,7 +1,12 @@
 import toast from 'react-hot-toast'
 import { API_URL } from '@/lib/apiConfig'
 import { buildQueryString, createRequest, handleResponse } from '@/lib/apiUtils'
-import type { IGroupResponse, IDeleteResponse, IGroupsListResponse, IRegionGroupSearchResponse } from '@/types/api'
+import type {
+  IGroupResponse,
+  IDeleteResponse,
+  IGroupsListResponse,
+  IRegionGroupSearchResponse,
+} from '@/types/api'
 import type { SaveGroupDto } from '@/types/dto'
 
 export const groupsService = {
@@ -20,7 +25,7 @@ export const groupsService = {
         items: Array.isArray(data.items) ? data.items : [],
         total: typeof data.total === 'number' ? data.total : 0,
         page: typeof data.page === 'number' ? data.page : 0,
-        limit: typeof data.limit === 'number' ? data.limit : params?.limit ?? 20,
+        limit: typeof data.limit === 'number' ? data.limit : (params?.limit ?? 20),
         hasMore: Boolean(data.hasMore),
       }
     } catch (error) {
@@ -82,11 +87,7 @@ export const groupsService = {
       const data = await handleResponse<IDeleteResponse>(response, 'Failed to delete all groups')
       const deletedCount = typeof data?.count === 'number' ? data.count : 0
 
-      toast.success(
-        deletedCount > 0
-          ? `Удалено групп: ${deletedCount}`
-          : 'Список групп уже пуст'
-      )
+      toast.success(deletedCount > 0 ? `Удалено групп: ${deletedCount}` : 'Список групп уже пуст')
 
       return deletedCount
     } catch (error) {
@@ -111,15 +112,17 @@ export const groupsService = {
 
       const data = await response.json()
       const failedErrors = Array.isArray(data?.failed)
-        ? data.failed.map((item: { identifier?: string; error?: string; errorMessage?: string }) => {
-            const message = item?.error ?? item?.errorMessage
+        ? data.failed.map(
+            (item: { identifier?: string; error?: string; errorMessage?: string }) => {
+              const message = item?.error ?? item?.errorMessage
 
-            if (item?.identifier && typeof message === 'string') {
-              return `${item.identifier}: ${message}`
+              if (item?.identifier && typeof message === 'string') {
+                return `${item.identifier}: ${message}`
+              }
+
+              return message ?? 'Unknown error'
             }
-
-            return message ?? 'Unknown error'
-          })
+          )
         : []
 
       const result = {
@@ -142,10 +145,13 @@ export const groupsService = {
   async searchRegionGroups(): Promise<IRegionGroupSearchResponse> {
     try {
       const response = await fetch(`${API_URL}/groups/search/region`)
-      return await handleResponse<IRegionGroupSearchResponse>(response, 'Failed to search region groups')
+      return await handleResponse<IRegionGroupSearchResponse>(
+        response,
+        'Failed to search region groups'
+      )
     } catch (error) {
       toast.error('Ошибка поиска групп по региону')
       throw error
     }
-  }
+  },
 }

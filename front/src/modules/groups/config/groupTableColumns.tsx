@@ -5,7 +5,7 @@ import type { TableColumn, Group } from '@/types'
 const GROUP_TYPE_LABELS: Record<string, string> = {
   group: 'группа',
   page: 'страница',
-  event: 'событие'
+  event: 'событие',
 }
 
 const renderGroupPhoto = (item: Group) => {
@@ -73,7 +73,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     cellClassName: 'table-cell-nowrap w-[80px]',
     headerClassName: 'table-cell-nowrap w-[80px]',
     sortable: true,
-    sortValue: (item: Group) => item.id
+    sortValue: (item: Group) => item.id,
   },
   {
     header: 'Фото',
@@ -81,7 +81,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     cellClassName: 'w-[70px]',
     headerClassName: 'w-[70px]',
     sortable: false,
-    render: renderGroupPhoto
+    render: renderGroupPhoto,
   },
   {
     header: 'VK ID',
@@ -89,7 +89,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     cellClassName: 'table-cell-nowrap w-[100px]',
     headerClassName: 'table-cell-nowrap w-[100px]',
     sortable: true,
-    sortValue: (item: Group) => item.vkId
+    sortValue: (item: Group) => item.vkId,
   },
   {
     header: 'Название',
@@ -97,7 +97,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     cellClassName: 'max-w-[200px] truncate',
     headerClassName: 'w-[200px]',
     sortable: true,
-    sortValue: (item: Group) => item.name?.toLowerCase() ?? ''
+    sortValue: (item: Group) => item.name?.toLowerCase() ?? '',
   },
   {
     header: 'Screen Name',
@@ -106,7 +106,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     headerClassName: 'w-[150px]',
     sortable: true,
     sortValue: (item: Group) => item.screenName?.toLowerCase() ?? '',
-    render: (item: Group) => item.screenName || '-'
+    render: (item: Group) => item.screenName || '-',
   },
   {
     header: 'Тип',
@@ -115,7 +115,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     headerClassName: 'table-cell-nowrap',
     sortable: true,
     sortValue: (item: Group) => item.type?.toLowerCase() ?? '',
-    render: renderGroupType
+    render: renderGroupType,
   },
   {
     header: 'Описание',
@@ -124,7 +124,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     headerClassName: 'table-cell-description w-[250px]',
     sortable: true,
     sortValue: (item: Group) => item.description?.toLowerCase() ?? '',
-    render: renderGroupDescription
+    render: renderGroupDescription,
   },
   {
     header: 'Участники',
@@ -133,7 +133,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     headerClassName: 'table-cell-nowrap w-[120px]',
     sortable: true,
     sortValue: (item: Group) => item.membersCount ?? null,
-    render: (item: Group) => item.membersCount?.toLocaleString() || '-'
+    render: (item: Group) => item.membersCount?.toLocaleString() || '-',
   },
   {
     header: 'Статус',
@@ -142,7 +142,7 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     headerClassName: 'w-[150px]',
     sortable: true,
     sortValue: (item: Group) => item.status?.toLowerCase() ?? '',
-    render: renderGroupStatus
+    render: renderGroupStatus,
   },
   {
     header: 'Закрытая',
@@ -150,9 +150,8 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     cellClassName: 'table-cell-nowrap w-[100px]',
     headerClassName: 'table-cell-nowrap w-[100px]',
     sortable: true,
-    sortValue: (item: Group) =>
-      typeof item.isClosed === 'number' ? item.isClosed : null,
-    render: renderGroupIsClosed
+    sortValue: (item: Group) => (typeof item.isClosed === 'number' ? item.isClosed : null),
+    render: renderGroupIsClosed,
   },
   {
     header: 'Действия',
@@ -160,6 +159,6 @@ export const getGroupTableColumns = (deleteGroup: (id: number) => void): TableCo
     cellClassName: 'table-cell-actions sticky right-0 bg-background-primary',
     headerClassName: 'table-cell-actions sticky right-0 bg-background-primary w-[180px]',
     sortable: false,
-    render: (item: Group) => renderGroupActions(item, deleteGroup)
-  }
+    render: (item: Group) => renderGroupActions(item, deleteGroup),
+  },
 ]

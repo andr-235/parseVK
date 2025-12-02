@@ -16,7 +16,7 @@ export function KeywordCard({ keyword, onDelete }: KeywordCardProps) {
         <h3 className="font-semibold text-sm text-foreground truncate" title={keyword.word}>
           {keyword.word}
         </h3>
-        
+
         {keyword.category ? (
           <Badge variant="secondary" className="w-fit bg-muted/50 text-xs font-normal">
             {keyword.category}
@@ -39,4 +39,3 @@ export function KeywordCard({ keyword, onDelete }: KeywordCardProps) {
     </Card>
   )
 }
-

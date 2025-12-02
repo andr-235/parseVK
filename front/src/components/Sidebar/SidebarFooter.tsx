@@ -11,11 +11,7 @@ interface SidebarFooterProps {
   onExpand: () => void
 }
 
-export function SidebarFooter({
-  items,
-  isCollapsed,
-  onExpand,
-}: SidebarFooterProps) {
+export function SidebarFooter({ items, isCollapsed, onExpand }: SidebarFooterProps) {
   return (
     <div className="mt-auto border-t border-sidebar-border p-4">
       <div className="space-y-1">
@@ -23,9 +19,7 @@ export function SidebarFooter({
           <NavLink
             key={item.path}
             to={item.path}
-            className={({ isActive }) =>
-              getPrimaryNavItemClasses(isActive, isCollapsed)
-            }
+            className={({ isActive }) => getPrimaryNavItemClasses(isActive, isCollapsed)}
             title={isCollapsed ? item.label : undefined}
           >
             {item.icon}
@@ -35,21 +29,11 @@ export function SidebarFooter({
       </div>
 
       <div
-        className={cn(
-          'mt-4 flex items-center',
-          isCollapsed ? 'justify-center' : 'justify-between'
-        )}
+        className={cn('mt-4 flex items-center', isCollapsed ? 'justify-center' : 'justify-between')}
       >
         {!isCollapsed && <ThemeToggle />}
-        {isCollapsed && (
-          <SidebarCollapseButton
-            isCollapsed={isCollapsed}
-            onToggle={onExpand}
-          />
-        )}
-        {!isCollapsed && (
-          <div className="text-xs text-sidebar-foreground/40">v1.0</div>
-        )}
+        {isCollapsed && <SidebarCollapseButton isCollapsed={isCollapsed} onToggle={onExpand} />}
+        {!isCollapsed && <div className="text-xs text-sidebar-foreground/40">v1.0</div>}
       </div>
       {isCollapsed && (
         <div className="mt-2 flex justify-center">
@@ -59,4 +43,3 @@ export function SidebarFooter({
     </div>
   )
 }
-

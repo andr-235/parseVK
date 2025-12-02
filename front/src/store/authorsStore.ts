@@ -69,10 +69,7 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
         offset,
         limit: state.pageSize,
         search: trimmedSearch || undefined,
-        verified:
-          state.statusFilter === 'all'
-            ? undefined
-            : state.statusFilter === 'verified',
+        verified: state.statusFilter === 'all' ? undefined : state.statusFilter === 'verified',
         sortBy: state.sortBy ?? undefined,
         sortOrder: state.sortBy ? state.sortOrder : undefined,
       })
@@ -181,9 +178,7 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
       }
 
       const nextAuthors = state.authors.map((item, itemIndex) =>
-        itemIndex === index
-          ? { ...item, isVerified: true, verifiedAt: resolvedVerifiedAt }
-          : item
+        itemIndex === index ? { ...item, isVerified: true, verifiedAt: resolvedVerifiedAt } : item
       )
 
       return {

@@ -11,8 +11,16 @@ import {
 import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Spinner } from '@/components/ui/spinner'
 import { useTableSorting } from '@/hooks/useTableSorting'
-import type { WatchlistAuthorDetails as WatchlistAuthorDetailsType, WatchlistComment, TableColumn } from '@/types'
-import { formatDateTime, formatStatus, getPrimitiveColumnValue } from '@/modules/watchlist/utils/watchlistUtils'
+import type {
+  WatchlistAuthorDetails as WatchlistAuthorDetailsType,
+  WatchlistComment,
+  TableColumn,
+} from '@/types'
+import {
+  formatDateTime,
+  formatStatus,
+  getPrimitiveColumnValue,
+} from '@/modules/watchlist/utils/watchlistUtils'
 
 interface WatchlistAuthorDetailsProps {
   currentAuthor: WatchlistAuthorDetailsType | null
@@ -38,7 +46,11 @@ export const WatchlistAuthorDetails = ({
   return (
     <SectionCard
       title="Активность автора"
-      description={currentAuthor ? currentAuthor.author.fullName : 'Выберите автора, чтобы увидеть историю комментариев'}
+      description={
+        currentAuthor
+          ? currentAuthor.author.fullName
+          : 'Выберите автора, чтобы увидеть историю комментариев'
+      }
     >
       {isLoadingAuthorDetails && !currentAuthor ? (
         <div key="loading-author-details" className="flex items-center justify-center py-10">
@@ -63,7 +75,9 @@ export const WatchlistAuthorDetails = ({
                     <TableHead key={column.key} className={column.headerClassName}>
                       {column.sortable ? (
                         <TableSortButton
-                          direction={commentSortState?.key === column.key ? commentSortState.direction : null}
+                          direction={
+                            commentSortState?.key === column.key ? commentSortState.direction : null
+                          }
                           onClick={() => requestCommentSort(column.key)}
                         >
                           {column.header}
@@ -82,7 +96,9 @@ export const WatchlistAuthorDetails = ({
                       <TableCell key={column.key} className={column.cellClassName}>
                         {column.render
                           ? column.render(comment, index)
-                          : getPrimitiveColumnValue(comment, column.key) ?? column.emptyValue ?? '—'}
+                          : (getPrimitiveColumnValue(comment, column.key) ??
+                            column.emptyValue ??
+                            '—')}
                       </TableCell>
                     ))}
                   </TableRow>

@@ -13,7 +13,10 @@ const TasksList = ({ onTaskSelect, emptyMessage }: TasksListProps) => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-[220px] rounded-xl bg-card/50 animate-pulse border border-border/50" />
+          <div
+            key={i}
+            className="h-[220px] rounded-xl bg-card/50 animate-pulse border border-border/50"
+          />
         ))}
       </div>
     )
@@ -25,9 +28,7 @@ const TasksList = ({ onTaskSelect, emptyMessage }: TasksListProps) => {
         <div className="p-4 rounded-full bg-background/50 mb-2">
           <div className="w-8 h-8 rounded-full border-2 border-muted-foreground/20" />
         </div>
-        <p className="text-muted-foreground max-w-[300px]">
-          {emptyMessage}
-        </p>
+        <p className="text-muted-foreground max-w-[300px]">{emptyMessage}</p>
       </div>
     )
   }
@@ -35,11 +36,7 @@ const TasksList = ({ onTaskSelect, emptyMessage }: TasksListProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-10">
       {tasks.map((task) => (
-        <TaskItem
-          key={task.id}
-          task={task}
-          onSelect={onTaskSelect}
-        />
+        <TaskItem key={task.id} task={task} onSelect={onTaskSelect} />
       ))}
     </div>
   )

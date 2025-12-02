@@ -60,7 +60,10 @@ export const usePhotoAnalysisStore = create<PhotoAnalysisState>()(
           })
           return response
         } catch (error) {
-          set({ isAnalyzing: false, error: error instanceof Error ? error.message : 'Ошибка анализа фотографий' })
+          set({
+            isAnalyzing: false,
+            error: error instanceof Error ? error.message : 'Ошибка анализа фотографий',
+          })
           throw error
         }
       },
@@ -79,7 +82,10 @@ export const usePhotoAnalysisStore = create<PhotoAnalysisState>()(
           })
           return response
         } catch (error) {
-          set({ isLoading: false, error: error instanceof Error ? error.message : 'Ошибка загрузки результатов' })
+          set({
+            isLoading: false,
+            error: error instanceof Error ? error.message : 'Ошибка загрузки результатов',
+          })
           throw error
         }
       },
@@ -98,7 +104,10 @@ export const usePhotoAnalysisStore = create<PhotoAnalysisState>()(
           })
           return response
         } catch (error) {
-          set({ isLoading: false, error: error instanceof Error ? error.message : 'Ошибка загрузки результатов' })
+          set({
+            isLoading: false,
+            error: error instanceof Error ? error.message : 'Ошибка загрузки результатов',
+          })
           throw error
         }
       },
@@ -127,7 +136,10 @@ export const usePhotoAnalysisStore = create<PhotoAnalysisState>()(
             isLoading: false,
           })
         } catch (error) {
-          set({ isLoading: false, error: error instanceof Error ? error.message : 'Ошибка удаления результатов' })
+          set({
+            isLoading: false,
+            error: error instanceof Error ? error.message : 'Ошибка удаления результатов',
+          })
           throw error
         }
       },

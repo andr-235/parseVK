@@ -102,7 +102,10 @@ export const listingsService = {
         body: JSON.stringify({ listings: normalizedListings, updateExisting }),
       })
 
-      const report = await handleResponse<ListingImportReport>(response, 'Failed to import listings')
+      const report = await handleResponse<ListingImportReport>(
+        response,
+        'Failed to import listings'
+      )
 
       const summary: string[] = []
       if (report.created > 0) {
@@ -116,9 +119,7 @@ export const listingsService = {
       }
 
       toast.success(
-        summary.length > 0
-          ? `Импорт завершён: ${summary.join(', ')}`
-          : 'Импорт выполнен',
+        summary.length > 0 ? `Импорт завершён: ${summary.join(', ')}` : 'Импорт выполнен'
       )
 
       if (report.failed > 0) {
@@ -136,7 +137,13 @@ export const listingsService = {
     }
   },
 
-  async exportCsv(params: { search?: string; source?: string; limit?: number; all?: boolean; fields?: string[] }) {
+  async exportCsv(params: {
+    search?: string
+    source?: string
+    limit?: number
+    all?: boolean
+    fields?: string[]
+  }) {
     try {
       const queryParams: Record<string, string> = {}
 

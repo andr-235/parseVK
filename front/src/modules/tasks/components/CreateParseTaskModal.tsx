@@ -11,7 +11,13 @@ interface CreateParseTaskModalProps {
   onSubmit: (groupIds: Array<number | string>) => void
 }
 
-function CreateParseTaskModal({ isOpen, groups, isLoading, onClose, onSubmit }: CreateParseTaskModalProps) {
+function CreateParseTaskModal({
+  isOpen,
+  groups,
+  isLoading,
+  onClose,
+  onSubmit,
+}: CreateParseTaskModalProps) {
   const {
     selectedIds,
     search,
@@ -51,7 +57,10 @@ function CreateParseTaskModal({ isOpen, groups, isLoading, onClose, onSubmit }: 
         {/* Header */}
         <header className="flex items-start justify-between gap-4 px-8 py-6">
           <div className="space-y-1">
-            <h2 id="create-parse-modal-title" className="text-2xl font-bold tracking-tight text-white">
+            <h2
+              id="create-parse-modal-title"
+              className="text-2xl font-bold tracking-tight text-white"
+            >
               Создание задачи на парсинг групп
             </h2>
             <p className="text-sm text-gray-400">
@@ -121,7 +130,9 @@ function CreateParseTaskModal({ isOpen, groups, isLoading, onClose, onSubmit }: 
               <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 py-12 text-center">
                 <Search className="mb-3 h-8 w-8 text-gray-600" />
                 <h3 className="text-base font-medium text-gray-300">Не нашли подходящих групп</h3>
-                <p className="text-sm text-gray-500">Попробуйте изменить запрос или сбросить фильтры</p>
+                <p className="text-sm text-gray-500">
+                  Попробуйте изменить запрос или сбросить фильтры
+                </p>
               </div>
             ) : (
               filteredGroups.map((group) => {

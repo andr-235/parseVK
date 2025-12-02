@@ -27,9 +27,8 @@ const getResultFromProgress = (item: Task): string => {
   )
   const total = fallbackTotal > 0 ? fallbackTotal : null
   const failed = Math.min(progress.failed, total ?? progress.failed)
-  const derivedSuccess = progress.success > 0
-    ? progress.success
-    : Math.max(progress.processed - failed, 0)
+  const derivedSuccess =
+    progress.success > 0 ? progress.success : Math.max(progress.processed - failed, 0)
   const success = Math.min(derivedSuccess, total ?? derivedSuccess)
 
   if (total != null || success > 0 || failed > 0) {
@@ -74,7 +73,10 @@ interface TaskProgressCounts {
   pendingCount: number
 }
 
-const calculateTaskCounts = (item: Task, progress: ReturnType<typeof calculateTaskProgress>): TaskProgressCounts => {
+const calculateTaskCounts = (
+  item: Task,
+  progress: ReturnType<typeof calculateTaskProgress>
+): TaskProgressCounts => {
   const baseTotal = typeof item.groupsCount === 'number' ? item.groupsCount : 0
   const fallbackTotal = Math.max(
     baseTotal,
@@ -85,14 +87,15 @@ const calculateTaskCounts = (item: Task, progress: ReturnType<typeof calculateTa
   const total = progress.total > 0 ? progress.total : fallbackTotal
   const processedCount = Math.min(progress.processed, total)
   const failedCount = Math.min(progress.failed, total)
-  const successDerived = progress.success > 0
-    ? progress.success
-    : Math.max(processedCount - failedCount, 0)
+  const successDerived =
+    progress.success > 0 ? progress.success : Math.max(processedCount - failedCount, 0)
   const successCount = Math.min(successDerived, total)
-  const processingCount = Math.min(progress.processing, Math.max(total - processedCount, progress.processing))
-  const pendingCount = progress.pending > 0
-    ? progress.pending
-    : Math.max(total - processedCount - processingCount, 0)
+  const processingCount = Math.min(
+    progress.processing,
+    Math.max(total - processedCount, progress.processing)
+  )
+  const pendingCount =
+    progress.pending > 0 ? progress.pending : Math.max(total - processedCount - processingCount, 0)
 
   return {
     total,
@@ -100,7 +103,7 @@ const calculateTaskCounts = (item: Task, progress: ReturnType<typeof calculateTa
     failedCount,
     successCount,
     processingCount,
-    pendingCount
+    pendingCount,
   }
 }
 
@@ -114,27 +117,32 @@ const getScopeLabel = (item: Task, totalNormalized: number | null): string | nul
     return 'Все группы'
   }
   if (normalizedScope === 'SELECTED') {
-    const count = Array.isArray(item.groupIds) ? item.groupIds.length : totalNormalized ?? undefined
+    const count = Array.isArray(item.groupIds)
+      ? item.groupIds.length
+      : (totalNormalized ?? undefined)
     return `Выбранные${count ? ` (${count})` : ''}`
   }
   return item.scope
 }
 
 const getSkippedLabel = (item: Task): { label: string | null; raw: string } => {
-  const skippedPreviewRaw = typeof item.skippedGroupsMessage === 'string'
-    ? item.skippedGroupsMessage.trim()
-    : ''
+  const skippedPreviewRaw =
+    typeof item.skippedGroupsMessage === 'string' ? item.skippedGroupsMessage.trim() : ''
   const hasSkipped = skippedPreviewRaw.length > 0
   const skippedLabel = hasSkipped
-    ? (skippedPreviewRaw.length > 80
+    ? skippedPreviewRaw.length > 80
       ? `${skippedPreviewRaw.slice(0, 80).trim()}…`
-      : skippedPreviewRaw)
+      : skippedPreviewRaw
     : null
 
   return { label: skippedLabel, raw: skippedPreviewRaw }
 }
 
-const getProgressTone = (failedCount: number, processedCount: number, total: number): 'danger' | 'success' | 'primary' => {
+const getProgressTone = (
+  failedCount: number,
+  processedCount: number,
+  total: number
+): 'danger' | 'success' | 'primary' => {
   if (failedCount > 0 && processedCount >= total) {
     return 'danger'
   }
@@ -164,13 +172,15 @@ const columns: TableColumn<Task>[] = [
     render: (item: Task) => {
       const progress = calculateTaskProgress(item)
       const counts = calculateTaskCounts(item, progress)
-      const { total, processedCount, failedCount, successCount, processingCount, pendingCount } = counts
+      const { total, processedCount, failedCount, successCount, processingCount, pendingCount } =
+        counts
       const totalNormalized = total > 0 ? total : null
 
       const scopeLabel = getScopeLabel(item, totalNormalized)
-      const postLimitValue = typeof item.postLimit === 'number' && Number.isFinite(item.postLimit)
-        ? item.postLimit
-        : null
+      const postLimitValue =
+        typeof item.postLimit === 'number' && Number.isFinite(item.postLimit)
+          ? item.postLimit
+          : null
       const { label: skippedLabel, raw: skippedPreviewRaw } = getSkippedLabel(item)
       const hasSkipped = skippedPreviewRaw.length > 0
 
@@ -191,7 +201,8 @@ const columns: TableColumn<Task>[] = [
           <span
             className={cn(
               'inline-flex items-center self-start rounded-full px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em]',
-              STATUS_BADGE_STYLES[item.status] ?? 'bg-muted text-text-secondary ring-1 ring-inset ring-border/60'
+              STATUS_BADGE_STYLES[item.status] ??
+                'bg-muted text-text-secondary ring-1 ring-inset ring-border/60'
             )}
           >
             {getTaskStatusText(item.status)}
@@ -212,20 +223,28 @@ const columns: TableColumn<Task>[] = [
               {postLimitValue !== null && (
                 <span className="whitespace-nowrap">{`Лимит постов: ${postLimitValue}`}</span>
               )}
-              {total > 0 && <span className="whitespace-nowrap">{`Обработано: ${processedCount}/${total}`}</span>}
-              {processingCount > 0 && <span className="whitespace-nowrap">{`В работе: ${processingCount}`}</span>}
-              {pendingCount > 0 && <span className="whitespace-nowrap">{`В очереди: ${pendingCount}`}</span>}
-              <span className={cn('whitespace-nowrap font-medium', successCount > 0 && 'text-emerald-500')}>
+              {total > 0 && (
+                <span className="whitespace-nowrap">{`Обработано: ${processedCount}/${total}`}</span>
+              )}
+              {processingCount > 0 && (
+                <span className="whitespace-nowrap">{`В работе: ${processingCount}`}</span>
+              )}
+              {pendingCount > 0 && (
+                <span className="whitespace-nowrap">{`В очереди: ${pendingCount}`}</span>
+              )}
+              <span
+                className={cn(
+                  'whitespace-nowrap font-medium',
+                  successCount > 0 && 'text-emerald-500'
+                )}
+              >
                 {`Успешно: ${successCount}`}
               </span>
               {failedCount > 0 && (
                 <span className="whitespace-nowrap font-medium text-rose-500">{`Ошибок: ${failedCount}`}</span>
               )}
               {hasSkipped && skippedLabel && (
-                <span
-                  className="max-w-full text-amber-500"
-                  title={skippedPreviewRaw}
-                >
+                <span className="max-w-full text-amber-500" title={skippedPreviewRaw}>
                   {`Пропущены: ${skippedLabel}`}
                 </span>
               )}

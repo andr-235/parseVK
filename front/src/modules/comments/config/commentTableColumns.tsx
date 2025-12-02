@@ -11,7 +11,7 @@ export const getCommentTableColumns = (
   {
     header: '№',
     key: 'index',
-    render: (_item: Comment, index: number) => index + 1
+    render: (_item: Comment, index: number) => index + 1,
   },
   {
     header: 'Автор',
@@ -47,28 +47,24 @@ export const getCommentTableColumns = (
             ) : (
               <span className="comment-author__name">{item.author}</span>
             )}
-            {item.authorId && (
-              <span className="comment-author__meta">id{item.authorId}</span>
-            )}
+            {item.authorId && <span className="comment-author__meta">id{item.authorId}</span>}
           </div>
         </div>
       )
-    }
+    },
   },
   {
     header: 'Комментарий',
     key: 'text',
     render: (item: Comment) => {
-      const combinedText = item.postText
-        ? `${item.postText}\n\n${item.text}`
-        : item.text
+      const combinedText = item.postText ? `${item.postText}\n\n${item.text}` : item.text
       return highlightKeywords(combinedText, keywords)
-    }
+    },
   },
   {
     header: 'Дата/время',
     key: 'publishedAt',
-    render: (item: Comment) => formatDateTime(item.publishedAt ?? item.createdAt)
+    render: (item: Comment) => formatDateTime(item.publishedAt ?? item.createdAt),
   },
   {
     header: 'Действия',
@@ -107,6 +103,6 @@ export const getCommentTableColumns = (
           </Button>
         </div>
       )
-    }
-  }
+    },
+  },
 ]

@@ -76,4 +76,3 @@ export function useCreateParseTaskModal(groups: Group[], isOpen: boolean) {
     getDisplayName,
   }
 }
-

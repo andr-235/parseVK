@@ -19,10 +19,7 @@ export const getPrimaryNavItemClasses = (isActive: boolean, isCollapsed: boolean
   )
 }
 
-export const getSectionButtonClasses = (
-  isCollapsed: boolean,
-  isActive: boolean
-) => {
+export const getSectionButtonClasses = (isCollapsed: boolean, isActive: boolean) => {
   return cn(
     'group flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
     isCollapsed && 'justify-center px-0',
@@ -36,4 +33,3 @@ export const getSidebarClasses = (isCollapsed: boolean) => {
     isCollapsed ? 'w-16' : 'w-64'
   )
 }
-

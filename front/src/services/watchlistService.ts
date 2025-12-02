@@ -28,7 +28,7 @@ export const watchlistService = {
 
       return await handleResponse<IWatchlistAuthorListResponse>(
         response,
-        'Не удалось загрузить список авторов "На карандаше"',
+        'Не удалось загрузить список авторов "На карандаше"'
       )
     } catch (error) {
       toast.error('Не удалось загрузить список авторов "На карандаше"')
@@ -48,7 +48,7 @@ export const watchlistService = {
 
       const result = await handleResponse<IWatchlistAuthorResponse>(
         response,
-        'Не удалось добавить автора в список "На карандаше"',
+        'Не удалось добавить автора в список "На карандаше"'
       )
       toast.success('Автор добавлен в список "На карандаше"')
       return result
@@ -60,7 +60,7 @@ export const watchlistService = {
 
   async getAuthorDetails(
     id: number,
-    params?: ListParams,
+    params?: ListParams
   ): Promise<IWatchlistAuthorDetailsResponse> {
     try {
       const query = buildQueryString({
@@ -75,7 +75,7 @@ export const watchlistService = {
 
       return await handleResponse<IWatchlistAuthorDetailsResponse>(
         response,
-        'Не удалось загрузить данные автора "На карандаше"',
+        'Не удалось загрузить данные автора "На карандаше"'
       )
     } catch (error) {
       toast.error('Не удалось загрузить данные автора "На карандаше"')
@@ -85,7 +85,7 @@ export const watchlistService = {
 
   async updateAuthor(
     id: number,
-    payload: { status?: WatchlistStatus },
+    payload: { status?: WatchlistStatus }
   ): Promise<IWatchlistAuthorResponse> {
     try {
       const response = await createRequest(`${API_URL}/watchlist/authors/${id}`, {
@@ -93,7 +93,10 @@ export const watchlistService = {
         body: JSON.stringify(payload),
       })
 
-      return await handleResponse<IWatchlistAuthorResponse>(response, 'Не удалось обновить данные автора')
+      return await handleResponse<IWatchlistAuthorResponse>(
+        response,
+        'Не удалось обновить данные автора'
+      )
     } catch (error) {
       toast.error('Не удалось обновить данные автора')
       throw error
@@ -106,7 +109,7 @@ export const watchlistService = {
 
       return await handleResponse<IWatchlistSettingsResponse>(
         response,
-        'Не удалось загрузить настройки мониторинга авторов',
+        'Не удалось загрузить настройки мониторинга авторов'
       )
     } catch (error) {
       toast.error('Не удалось загрузить настройки мониторинга авторов')
@@ -115,7 +118,7 @@ export const watchlistService = {
   },
 
   async updateSettings(
-    payload: Partial<IWatchlistSettingsResponse>,
+    payload: Partial<IWatchlistSettingsResponse>
   ): Promise<IWatchlistSettingsResponse> {
     try {
       const response = await createRequest(`${API_URL}/watchlist/settings`, {
@@ -125,7 +128,7 @@ export const watchlistService = {
 
       const result = await handleResponse<IWatchlistSettingsResponse>(
         response,
-        'Не удалось обновить настройки мониторинга авторов',
+        'Не удалось обновить настройки мониторинга авторов'
       )
       toast.success('Настройки мониторинга обновлены')
       return result
@@ -135,4 +138,3 @@ export const watchlistService = {
     }
   },
 }
-

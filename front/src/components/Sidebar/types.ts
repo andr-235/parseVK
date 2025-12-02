@@ -23,4 +23,3 @@ export interface SidebarSectionConfig {
 export interface SidebarProps {
   title?: string
 }
-

@@ -65,14 +65,14 @@ export const useAuthorsViewModel = () => {
         },
       })
     },
-    [navigate],
+    [navigate]
   )
 
   const handleOpenDetails = useCallback(
     (author: AuthorCard) => {
       navigateToAuthorDetails(author, author.summary)
     },
-    [navigateToAuthorDetails],
+    [navigateToAuthorDetails]
   )
 
   const handleSearchChange = useCallback((value: string) => {
@@ -166,23 +166,21 @@ export const useAuthorsViewModel = () => {
         toast.success('Анализ фотографий выполнен')
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : 'Не удалось выполнить анализ фотографий автора'
+          error instanceof Error ? error.message : 'Не удалось выполнить анализ фотографий автора'
         toast.error(message)
         console.error('Ошибка анализа фотографий автора', error)
       } finally {
         setAnalyzingVkUserId(null)
       }
     },
-    [analyzeAuthor, fetchAuthors, isAnalyzing, navigateToAuthorDetails],
+    [analyzeAuthor, fetchAuthors, isAnalyzing, navigateToAuthorDetails]
   )
 
   const handleSortChange = useCallback(
     (field: AuthorSortField) => {
       setSort(field)
     },
-    [setSort],
+    [setSort]
   )
 
   const emptyTitle =
@@ -215,4 +213,3 @@ export const useAuthorsViewModel = () => {
     handleSortChange,
   }
 }
-

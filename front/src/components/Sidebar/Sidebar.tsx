@@ -28,8 +28,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
   const { tasksCount, commentsCount, watchlistCount, authorsTotal } = useSidebarData()
 
   const vkSubItems = useMemo(
-    () =>
-      createVkSubItems(tasksCount, commentsCount, watchlistCount, authorsTotal),
+    () => createVkSubItems(tasksCount, commentsCount, watchlistCount, authorsTotal),
     [tasksCount, commentsCount, watchlistCount, authorsTotal]
   )
 
@@ -58,10 +57,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
   )
 
   const vkPaths = useMemo(() => vkSubItems.map((item) => item.path), [vkSubItems])
-  const parsingPaths = useMemo(
-    () => parsingSubItems.map((item) => item.path),
-    [parsingSubItems]
-  )
+  const parsingPaths = useMemo(() => parsingSubItems.map((item) => item.path), [parsingSubItems])
 
   const isVkActive = isSectionActive(vkPaths)
   const isParsingActive = isSectionActive(parsingPaths)
@@ -119,9 +115,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  className={({ isActive }) =>
-                    getPrimaryNavItemClasses(isActive, isCollapsed)
-                  }
+                  className={({ isActive }) => getPrimaryNavItemClasses(isActive, isCollapsed)}
                   title={isCollapsed ? item.label : undefined}
                 >
                   {item.icon}
@@ -133,14 +127,9 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
         </nav>
       </div>
 
-      <SidebarFooter
-        items={secondaryItems}
-        isCollapsed={isCollapsed}
-        onExpand={handleExpand}
-      />
+      <SidebarFooter items={secondaryItems} isCollapsed={isCollapsed} onExpand={handleExpand} />
     </aside>
   )
 }
 
 export default Sidebar
-

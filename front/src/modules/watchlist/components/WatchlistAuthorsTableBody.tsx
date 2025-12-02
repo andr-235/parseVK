@@ -12,27 +12,29 @@ interface WatchlistAuthorsTableBodyProps {
   onKeyDown: (e: KeyboardEvent, index: number) => void
 }
 
-export const WatchlistAuthorsTableBody = memo(({
-  sortedAuthors,
-  authorColumns,
-  focusedRowIndex,
-  onSelectAuthor,
-  onKeyDown,
-}: WatchlistAuthorsTableBodyProps) => {
-  return (
-    <TableBody>
-      {sortedAuthors.map((author, index) => (
-        <WatchlistAuthorsTableRow
-          key={author.id}
-          author={author}
-          index={index}
-          authorColumns={authorColumns}
-          focusedRowIndex={focusedRowIndex}
-          sortedAuthorsLength={sortedAuthors.length}
-          onSelectAuthor={onSelectAuthor}
-          onKeyDown={onKeyDown}
-        />
-      ))}
-    </TableBody>
-  )
-})
+export const WatchlistAuthorsTableBody = memo(
+  ({
+    sortedAuthors,
+    authorColumns,
+    focusedRowIndex,
+    onSelectAuthor,
+    onKeyDown,
+  }: WatchlistAuthorsTableBodyProps) => {
+    return (
+      <TableBody>
+        {sortedAuthors.map((author, index) => (
+          <WatchlistAuthorsTableRow
+            key={author.id}
+            author={author}
+            index={index}
+            authorColumns={authorColumns}
+            focusedRowIndex={focusedRowIndex}
+            sortedAuthorsLength={sortedAuthors.length}
+            onSelectAuthor={onSelectAuthor}
+            onKeyDown={onKeyDown}
+          />
+        ))}
+      </TableBody>
+    )
+  }
+)

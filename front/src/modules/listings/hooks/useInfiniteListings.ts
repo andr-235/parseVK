@@ -25,7 +25,7 @@ export interface UseInfiniteFetcherParams<P = Record<string, unknown>> {
 }
 
 export type UseInfiniteFetcher<T, M = unknown, P = Record<string, unknown>> = (
-  params: UseInfiniteFetcherParams<P>,
+  params: UseInfiniteFetcherParams<P>
 ) => Promise<FetchResponse<T, M>>
 
 interface UseInfiniteListingsOptions<T, M = unknown, P = Record<string, unknown>> {
@@ -53,7 +53,7 @@ const isCursorResponse = <T, M>(response: FetchResponse<T, M>): response is Curs
   'nextCursor' in response
 
 export function useInfiniteListings<T, M = unknown, P = Record<string, unknown>>(
-  options: UseInfiniteListingsOptions<T, M, P>,
+  options: UseInfiniteListingsOptions<T, M, P>
 ): UseInfiniteListingsResult<T, M> {
   const { fetcher, limit = 20, params, enabled = true, dependencies = [] } = options
 
@@ -103,13 +103,10 @@ export function useInfiniteListings<T, M = unknown, P = Record<string, unknown>>
     const controller = new AbortController()
     abortRef.current = controller
 
-    const requestPage =
-      modeRef.current === 'page' ? pageRef.current + 1 : pageRef.current || 1
+    const requestPage = modeRef.current === 'page' ? pageRef.current + 1 : pageRef.current || 1
     const requestCursor = cursorRef.current
 
-    const cacheKey = modeRef.current === 'cursor'
-      ? requestCursor ?? 'root'
-      : requestPage
+    const cacheKey = modeRef.current === 'cursor' ? (requestCursor ?? 'root') : requestPage
 
     if (cacheRef.current.has(cacheKey)) {
       const cached = cacheRef.current.get(cacheKey) ?? []

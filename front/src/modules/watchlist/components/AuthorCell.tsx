@@ -1,7 +1,6 @@
 import type { WatchlistAuthorCard } from '@/types'
 import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 
-
 interface AuthorCellProps {
   item: WatchlistAuthorCard
 }
@@ -19,7 +18,8 @@ export const AuthorCell = ({ item }: AuthorCellProps) => {
         rel="noopener noreferrer"
         className="text-xs text-text-secondary hover:text-primary"
       >
-        {WATCHLIST_CONSTANTS.VK_BASE_URL}{item.author.vkUserId}
+        {WATCHLIST_CONSTANTS.VK_BASE_URL}
+        {item.author.vkUserId}
       </a>
     </div>
   )

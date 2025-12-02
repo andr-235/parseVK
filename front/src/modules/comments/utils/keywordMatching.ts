@@ -29,7 +29,7 @@ export const normalizeForKeywordMatch = (value: string | null | undefined): stri
 export const buildKeywordPattern = (value: string, isPhrase: boolean = false): string => {
   const escaped = escapeRegExp(value)
   const withYe = escaped.replace(YE_REGEX, '[её]')
-  
+
   // Проверяем, начинается/заканчивается ли ключевое слово с символа слова
   // Это нужно для корректной расстановки границ
   const startsWithWordChar = WORD_CHAR_TEST.test(value[0])
@@ -39,7 +39,7 @@ export const buildKeywordPattern = (value: string, isPhrase: boolean = false): s
   // так как стандартный \b в JS работает некорректно с не-ASCII символами
   const boundaryStart = startsWithWordChar ? `(?<!${WORD_CHARS_PATTERN})` : ''
   const boundaryEnd = endsWithWordChar ? `(?!${WORD_CHARS_PATTERN})` : ''
-  
+
   if (isPhrase) {
     return `${boundaryStart}${withYe}${boundaryEnd}`
   } else {

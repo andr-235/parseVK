@@ -51,18 +51,21 @@ export const useKeywordsViewModel = () => {
     }
   }, [phraseValue, categoryValue, addKeyword])
 
-  const handleFileUpload = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleFileUpload = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
 
-    try {
-      await loadFromFile(file)
-    } catch (error) {
-      console.error('Failed to upload keywords from file', error)
-    } finally {
-      event.target.value = ''
-    }
-  }, [loadFromFile])
+      try {
+        await loadFromFile(file)
+      } catch (error) {
+        console.error('Failed to upload keywords from file', error)
+      } finally {
+        event.target.value = ''
+      }
+    },
+    [loadFromFile]
+  )
 
   const handleRecalculate = useCallback(async () => {
     if (isRecalculating) return
@@ -77,10 +80,9 @@ export const useKeywordsViewModel = () => {
         { id: toastId, duration: 5000 }
       )
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Ошибка при пересчете совпадений',
-        { id: toastId }
-      )
+      toast.error(error instanceof Error ? error.message : 'Ошибка при пересчете совпадений', {
+        id: toastId,
+      })
     } finally {
       setIsRecalculating(false)
     }
@@ -116,4 +118,3 @@ export const useKeywordsViewModel = () => {
     deleteKeyword,
   }
 }
-

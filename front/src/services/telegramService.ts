@@ -20,7 +20,10 @@ export const telegramService = {
         body: JSON.stringify(payload),
       })
 
-      const result = await handleResponse<TelegramSyncResponse>(response, 'Не удалось синхронизировать чат Telegram')
+      const result = await handleResponse<TelegramSyncResponse>(
+        response,
+        'Не удалось синхронизировать чат Telegram'
+      )
       toast.success('Синхронизация Telegram завершена')
       return result
     } catch (error) {
@@ -36,7 +39,10 @@ export const telegramService = {
         body: JSON.stringify(payload),
       })
 
-      const result = await handleResponse<TelegramSessionStartResponse>(response, 'Не удалось отправить код Telegram')
+      const result = await handleResponse<TelegramSessionStartResponse>(
+        response,
+        'Не удалось отправить код Telegram'
+      )
       toast.success('Код отправлен в Telegram')
       return result
     } catch (error) {
@@ -45,14 +51,19 @@ export const telegramService = {
     }
   },
 
-  async confirmSession(payload: TelegramSessionConfirmRequest): Promise<TelegramSessionConfirmResponse> {
+  async confirmSession(
+    payload: TelegramSessionConfirmRequest
+  ): Promise<TelegramSessionConfirmResponse> {
     try {
       const response = await createRequest(`${API_URL}/telegram/session/confirm`, {
         method: 'POST',
         body: JSON.stringify(payload),
       })
 
-      const result = await handleResponse<TelegramSessionConfirmResponse>(response, 'Не удалось подтвердить код Telegram')
+      const result = await handleResponse<TelegramSessionConfirmResponse>(
+        response,
+        'Не удалось подтвердить код Telegram'
+      )
       toast.success('Сессия Telegram подтверждена')
       return result
     } catch (error) {
@@ -71,7 +82,10 @@ export const telegramService = {
         return null
       }
 
-      return await handleResponse<TelegramSessionConfirmResponse>(response, 'Не удалось получить текущую сессию')
+      return await handleResponse<TelegramSessionConfirmResponse>(
+        response,
+        'Не удалось получить текущую сессию'
+      )
     } catch (error) {
       toast.error('Не удалось получить текущую сессию')
       throw error
@@ -88,7 +102,10 @@ export const telegramService = {
         return null
       }
 
-      return await handleResponse<TelegramSettings>(response, 'Не удалось получить настройки Telegram')
+      return await handleResponse<TelegramSettings>(
+        response,
+        'Не удалось получить настройки Telegram'
+      )
     } catch (error) {
       toast.error('Не удалось получить настройки Telegram')
       throw error
@@ -102,7 +119,10 @@ export const telegramService = {
         body: JSON.stringify(payload),
       })
 
-      const result = await handleResponse<TelegramSettings>(response, 'Не удалось сохранить настройки Telegram')
+      const result = await handleResponse<TelegramSettings>(
+        response,
+        'Не удалось сохранить настройки Telegram'
+      )
       toast.success('Настройки Telegram сохранены')
       return result
     } catch (error) {
@@ -111,4 +131,3 @@ export const telegramService = {
     }
   },
 }
-

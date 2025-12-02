@@ -52,7 +52,10 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
         try {
           const settings = await taskAutomationService.updateSettings(payload)
           set({ settings, isUpdating: false })
-          void queryClient.invalidateQueries({ queryKey: queryKeys.taskAutomation, refetchType: 'active' })
+          void queryClient.invalidateQueries({
+            queryKey: queryKeys.taskAutomation,
+            refetchType: 'active',
+          })
           return true
         } catch (error) {
           console.error('Failed to update task automation settings', error)
@@ -71,7 +74,10 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
         try {
           const response = await taskAutomationService.runAutomation()
           set({ settings: response.settings, isTriggering: false })
-          void queryClient.invalidateQueries({ queryKey: queryKeys.taskAutomation, refetchType: 'active' })
+          void queryClient.invalidateQueries({
+            queryKey: queryKeys.taskAutomation,
+            refetchType: 'active',
+          })
           return response.started
         } catch (error) {
           console.error('Failed to trigger task automation', error)
@@ -80,6 +86,6 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
         }
       },
     }),
-    { name: 'task-automation-store' },
-  ),
+    { name: 'task-automation-store' }
+  )
 )

@@ -35,4 +35,3 @@ class WatchlistHeroErrorBoundary extends Component<{ children: ReactNode }, { ha
 }
 
 export default WatchlistHeroErrorBoundary
-

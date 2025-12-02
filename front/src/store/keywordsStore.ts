@@ -87,5 +87,5 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
       console.error('Failed to delete all keywords', error)
       throw error
     }
-  }
+  },
 }))

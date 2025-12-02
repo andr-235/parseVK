@@ -56,7 +56,7 @@ const groupComments = (comments: Comment[], indexMap: Map<number, number>) => {
     .map(([category, commentsInGroup]) => ({
       category,
       comments: commentsInGroup.sort(
-        (a, b) => (indexMap.get(a.comment.id) ?? 0) - (indexMap.get(b.comment.id) ?? 0),
+        (a, b) => (indexMap.get(a.comment.id) ?? 0) - (indexMap.get(b.comment.id) ?? 0)
       ),
     }))
     .sort((a, b) => {
@@ -91,7 +91,7 @@ const matchesSearch = (comment: Comment, searchLower: string) => {
   return fields.some((value) =>
     String(value ?? '')
       .toLowerCase()
-      .includes(searchLower),
+      .includes(searchLower)
   )
 }
 
@@ -157,15 +157,12 @@ const useCommentsViewModel = () => {
       readStatus: readFilter,
       search: trimmedSearch,
     }),
-    [keywordFilterValues, keywordSource, readFilter, trimmedSearch],
+    [keywordFilterValues, keywordSource, readFilter, trimmedSearch]
   )
 
   const filteredComments = useMemo(() => {
     return comments.filter((comment) => {
-      return (
-        shouldIncludeByRead(comment, readFilter) &&
-        matchesSearch(comment, searchLower)
-      )
+      return shouldIncludeByRead(comment, readFilter) && matchesSearch(comment, searchLower)
     })
   }, [comments, readFilter, searchLower])
 
@@ -175,17 +172,17 @@ const useCommentsViewModel = () => {
         map.set(comment.id, index)
         return map
       }, new Map<number, number>()),
-    [filteredComments],
+    [filteredComments]
   )
 
   const { groupedComments, commentsWithoutKeywords } = useMemo(
     () => groupComments(filteredComments, commentIndexMap),
-    [commentIndexMap, filteredComments],
+    [commentIndexMap, filteredComments]
   )
 
   const keywordCommentsTotal = useMemo(
     () => comments.filter((comment) => getMatchedKeywords(comment).length > 0).length,
-    [comments],
+    [comments]
   )
 
   const emptyMessage = useMemo(() => {
@@ -241,11 +238,14 @@ const useCommentsViewModel = () => {
         })
       }
     },
-    [addAuthorFromComment, markWatchlisted],
+    [addAuthorFromComment, markWatchlisted]
   )
 
   const handleSearchChange = useCallback((value: string) => setSearchTerm(value), [])
-  const handleToggleKeywordComments = useCallback((value: boolean) => setShowKeywordComments(value), [])
+  const handleToggleKeywordComments = useCallback(
+    (value: boolean) => setShowKeywordComments(value),
+    []
+  )
   const handleToggleKeywordPosts = useCallback((value: boolean) => setShowKeywordPosts(value), [])
   const handleReadFilterChange = useCallback((value: ReadFilter) => setReadFilter(value), [])
 
@@ -281,4 +281,3 @@ const useCommentsViewModel = () => {
 }
 
 export default useCommentsViewModel
-

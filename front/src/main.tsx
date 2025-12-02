@@ -9,5 +9,5 @@ createRoot(document.getElementById('root')!).render(
     <QueryProvider>
       <App />
     </QueryProvider>
-  </StrictMode>,
+  </StrictMode>
 )

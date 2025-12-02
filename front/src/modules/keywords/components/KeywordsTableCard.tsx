@@ -34,7 +34,11 @@ function KeywordsTableCard({
 }: KeywordsTableCardProps) {
   const tableColumns = useMemo(() => getKeywordTableColumns(), [])
 
-  const { sortedItems: sortedKeywords, sortState, requestSort } = useTableSorting(keywords, tableColumns)
+  const {
+    sortedItems: sortedKeywords,
+    sortState,
+    requestSort,
+  } = useTableSorting(keywords, tableColumns)
 
   const sortOptions = useMemo(() => {
     return tableColumns
@@ -56,12 +60,15 @@ function KeywordsTableCard({
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Список слов</h2>
           {!isLoading && (
-            <Badge variant="secondary" className="bg-background/50 px-2 py-0.5 text-xs font-normal text-muted-foreground">
+            <Badge
+              variant="secondary"
+              className="bg-background/50 px-2 py-0.5 text-xs font-normal text-muted-foreground"
+            >
               {keywords.length}
             </Badge>
           )}
         </div>
-        
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <SearchInput
             value={searchTerm}
@@ -69,7 +76,7 @@ function KeywordsTableCard({
             placeholder="Поиск..."
             className="h-9 w-full sm:w-[250px]"
           />
-          
+
           {hasKeywords && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

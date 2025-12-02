@@ -1,5 +1,8 @@
 import type { Keyword } from '@/types'
-import { buildKeywordPattern, normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
+import {
+  buildKeywordPattern,
+  normalizeForKeywordMatch,
+} from '@/modules/comments/utils/keywordMatching'
 
 export function highlightKeywords(text: string, keywords: Keyword[]) {
   if (!text || keywords.length === 0) {
@@ -22,7 +25,11 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
       }
     })
     .filter(
-      (entry, index, array): entry is {
+      (
+        entry,
+        index,
+        array
+      ): entry is {
         original: string
         normalized: string
         isPhrase: boolean
@@ -33,12 +40,10 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
 
         return (
           array.findIndex(
-            (item) =>
-              item?.normalized === entry.normalized &&
-              item?.isPhrase === entry.isPhrase,
+            (item) => item?.normalized === entry.normalized && item?.isPhrase === entry.isPhrase
           ) === index
         )
-      },
+      }
     )
 
   if (keywordEntries.length === 0) {
@@ -46,7 +51,7 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
   }
 
   const patterns = keywordEntries.map((entry) =>
-    buildKeywordPattern(entry.original, entry.isPhrase),
+    buildKeywordPattern(entry.original, entry.isPhrase)
   )
 
   if (patterns.length === 0) {
@@ -62,9 +67,9 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
     if (!part) {
       return part
     }
-    
+
     const normalizedPart = normalizeForKeywordMatch(part)
-    
+
     if (normalizedKeywords.has(normalizedPart)) {
       return (
         <span key={index} className="text-yellow-600 dark:text-yellow-300 font-semibold">
@@ -76,4 +81,3 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
     return part
   })
 }
-

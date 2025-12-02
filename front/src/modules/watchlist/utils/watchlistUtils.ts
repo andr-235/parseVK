@@ -60,7 +60,7 @@ export const formatCommentSource = (comment: WatchlistComment): string => {
  */
 export const getPrimitiveColumnValue = (
   item: unknown,
-  key: string,
+  key: string
 ): string | number | boolean | null => {
   if (!item || typeof item !== 'object') {
     return null
@@ -82,11 +82,7 @@ export const getPrimitiveColumnValue = (
     return null
   }
 
-  if (
-    typeof current === 'string' ||
-    typeof current === 'number' ||
-    typeof current === 'boolean'
-  ) {
+  if (typeof current === 'string' || typeof current === 'number' || typeof current === 'boolean') {
     return current
   }
 
@@ -122,10 +118,9 @@ export const validateAuthorId = (id: number | undefined): id is number => {
  */
 export const filterValidAuthors = (authors: WatchlistAuthorCard[]): WatchlistAuthorCard[] => {
   const seen = new Set<number>()
-  return authors.filter(author => {
+  return authors.filter((author) => {
     if (!validateAuthorId(author.id) || seen.has(author.id)) return false
     seen.add(author.id)
     return true
   })
 }
-

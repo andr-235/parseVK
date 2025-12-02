@@ -46,7 +46,12 @@ const ALL_FIELDS: { key: FieldKey; label: string }[] = [
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { listingsService } from '@/services/listingsService'
 
-function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: ExportListingsModalProps) {
+function ExportListingsModal({
+  isOpen,
+  onClose,
+  defaultSearch,
+  defaultSource,
+}: ExportListingsModalProps) {
   const [scope, setScope] = useState<'filtered' | 'all'>('filtered')
   const [selected, setSelected] = useState<Set<FieldKey>>(new Set(ALL_FIELDS.map((f) => f.key)))
   const [isExporting, setIsExporting] = useState(false)
@@ -88,7 +93,7 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
     setIsExporting(true)
     try {
       await listingsService.exportCsv({
-        search: scope === 'filtered' ? (defaultSearch?.trim() || undefined) : undefined,
+        search: scope === 'filtered' ? defaultSearch?.trim() || undefined : undefined,
         source: scope === 'filtered' ? defaultSource : undefined,
         all: scope === 'all',
         fields,
@@ -100,7 +105,10 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         className="flex w-full max-h-[90vh] max-w-4xl flex-col overflow-hidden rounded-3xl bg-background-secondary text-text-primary shadow-2xl transition-colors duration-300"
         role="dialog"
@@ -114,7 +122,8 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
               Экспорт объявлений в CSV
             </h2>
             <p className="max-w-md text-sm leading-relaxed text-white/80">
-              Выберите поля и область выгрузки. По умолчанию учитываются текущие фильтры, но можно выгрузить все.
+              Выберите поля и область выгрузки. По умолчанию учитываются текущие фильтры, но можно
+              выгрузить все.
             </p>
           </div>
           <button
@@ -133,7 +142,11 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
               <h3 className="text-base font-semibold text-white">Область выгрузки</h3>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" aria-label="Подсказка" className="text-white/60 hover:text-white/80 transition-colors">
+                  <button
+                    type="button"
+                    aria-label="Подсказка"
+                    className="text-white/60 hover:text-white/80 transition-colors"
+                  >
                     <Info className="size-4" />
                   </button>
                 </TooltipTrigger>
@@ -166,8 +179,12 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
           <section className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <div>
-                <h3 className="text-base font-semibold text-white">Поля ({selectedCount}/{ALL_FIELDS.length})</h3>
-                <div className="text-xs text-white/60">Выбрано: {selectedCount} из {ALL_FIELDS.length}</div>
+                <h3 className="text-base font-semibold text-white">
+                  Поля ({selectedCount}/{ALL_FIELDS.length})
+                </h3>
+                <div className="text-xs text-white/60">
+                  Выбрано: {selectedCount} из {ALL_FIELDS.length}
+                </div>
               </div>
               <div className="flex gap-4">
                 <button
@@ -190,18 +207,29 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
             {(() => {
               // Группировка полей по категориям
               const groups: { title: string; keys: FieldKey[] }[] = [
-                { title: 'Общие', keys: ['id','source','title','url','price','postedAt','parsedAt'] },
-                { title: 'Контакты', keys: ['sourceAuthorName','sourceAuthorPhone','sourceAuthorUrl'] },
+                {
+                  title: 'Общие',
+                  keys: ['id', 'source', 'title', 'url', 'price', 'postedAt', 'parsedAt'],
+                },
+                {
+                  title: 'Контакты',
+                  keys: ['sourceAuthorName', 'sourceAuthorPhone', 'sourceAuthorUrl'],
+                },
                 { title: 'Гео', keys: ['address'] },
-                { title: 'Прочее', keys: ['description','manualNote'] },
+                { title: 'Прочее', keys: ['description', 'manualNote'] },
               ]
 
-              const labelByKey = Object.fromEntries(ALL_FIELDS.map((f) => [f.key, f.label])) as Record<FieldKey, string>
+              const labelByKey = Object.fromEntries(
+                ALL_FIELDS.map((f) => [f.key, f.label])
+              ) as Record<FieldKey, string>
 
               return (
                 <div className="space-y-4">
                   {groups.map((g) => (
-                    <div key={g.title} className="rounded-xl bg-neutral-900/40 border border-white/10 p-4">
+                    <div
+                      key={g.title}
+                      className="rounded-xl bg-neutral-900/40 border border-white/10 p-4"
+                    >
                       <h4 className="text-white/90 font-medium mb-2">{g.title}</h4>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                         {g.keys.map((key) => {
@@ -210,7 +238,9 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
                             <label
                               key={key}
                               className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
-                                checked ? 'border-accent-primary/60 bg-white/5' : 'border-white/10 hover:bg-white/5'
+                                checked
+                                  ? 'border-accent-primary/60 bg-white/5'
+                                  : 'border-white/10 hover:bg-white/5'
                               }`}
                             >
                               <input
@@ -236,9 +266,16 @@ function ExportListingsModal({ isOpen, onClose, defaultSearch, defaultSource }: 
           <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
             Отмена
           </Button>
-          <Button type="button" onClick={handleExport} disabled={isExporting || selectedCount === 0} className="w-full sm:w-auto">
+          <Button
+            type="button"
+            onClick={handleExport}
+            disabled={isExporting || selectedCount === 0}
+            className="w-full sm:w-auto"
+          >
             {isExporting ? (
-              <span className="inline-flex items-center gap-2"><Spinner className="size-4" /> Экспортируется…</span>
+              <span className="inline-flex items-center gap-2">
+                <Spinner className="size-4" /> Экспортируется…
+              </span>
             ) : (
               'Экспортировать'
             )}

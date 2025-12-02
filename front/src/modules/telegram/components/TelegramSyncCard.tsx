@@ -37,21 +37,19 @@ export default function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps
               Идентификатор (username или ID)
             </label>
             <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="@channel или ID"
-                    className="pl-9"
-                    disabled={loading}
-                />
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="@channel или ID"
+                className="pl-9"
+                disabled={loading}
+              />
             </div>
           </div>
-          
+
           <div className="space-y-2">
-            <label className="text-sm font-medium leading-none">
-              Лимит участников
-            </label>
+            <label className="text-sm font-medium leading-none">Лимит участников</label>
             <Input
               value={limit}
               onChange={(e) => setLimit(e.target.value)}
@@ -67,35 +65,34 @@ export default function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps
         </form>
 
         {lastSyncData && (
-            <div className="mt-6 pt-6 border-t space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <p className="text-muted-foreground text-xs uppercase">Чат</p>
-                        <p className="font-medium truncate" title={lastSyncData.title || ''}>
-                            {lastSyncData.title || 'Без названия'}
-                        </p>
-                    </div>
-                     <div>
-                        <p className="text-muted-foreground text-xs uppercase">Тип</p>
-                        <p className="font-medium">{lastSyncData.type}</p>
-                    </div>
-                    <div>
-                        <p className="text-muted-foreground text-xs uppercase">Всего</p>
-                        <p className="font-medium">{lastSyncData.totalMembers ?? '—'}</p>
-                    </div>
-                     <div>
-                        <p className="text-muted-foreground text-xs uppercase">Загружено</p>
-                        <p className="font-medium text-primary">{lastSyncData.syncedMembers}</p>
-                    </div>
-                </div>
-                <Button variant="outline" className="w-full" onClick={handleExport}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Экспорт в Excel
-                </Button>
+          <div className="mt-6 pt-6 border-t space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground text-xs uppercase">Чат</p>
+                <p className="font-medium truncate" title={lastSyncData.title || ''}>
+                  {lastSyncData.title || 'Без названия'}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs uppercase">Тип</p>
+                <p className="font-medium">{lastSyncData.type}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs uppercase">Всего</p>
+                <p className="font-medium">{lastSyncData.totalMembers ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs uppercase">Загружено</p>
+                <p className="font-medium text-primary">{lastSyncData.syncedMembers}</p>
+              </div>
             </div>
+            <Button variant="outline" className="w-full" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Экспорт в Excel
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
   )
 }
-

@@ -85,7 +85,7 @@ export const useWatchlistAuthors = () => {
 
       void remove()
     },
-    [updateAuthorStatus],
+    [updateAuthorStatus]
   )
 
   const handleSelectAuthor = useCallback((id: number) => {

@@ -15,7 +15,10 @@ interface UseActiveTasksBannerResult {
   indeterminate: boolean
 }
 
-export const useActiveTasksBanner = (tasks: Task[], isCreating: boolean): UseActiveTasksBannerResult => {
+export const useActiveTasksBanner = (
+  tasks: Task[],
+  isCreating: boolean
+): UseActiveTasksBannerResult => {
   const summary = useMemo(() => {
     return tasks.reduce(
       (acc, task) => {
@@ -40,7 +43,7 @@ export const useActiveTasksBanner = (tasks: Task[], isCreating: boolean): UseAct
         failed: 0,
         processing: 0,
         pending: 0,
-        indeterminateCount: 0
+        indeterminateCount: 0,
       }
     )
   }, [tasks])
@@ -49,13 +52,18 @@ export const useActiveTasksBanner = (tasks: Task[], isCreating: boolean): UseAct
   const hasActiveTasks = totalActiveTasks > 0
   const shouldRender = isCreating || hasActiveTasks
 
-  const fallbackTotal = Math.max(summary.processed + summary.processing + summary.pending, summary.processed, 1)
+  const fallbackTotal = Math.max(
+    summary.processed + summary.processing + summary.pending,
+    summary.processed,
+    1
+  )
   const progressTotal = summary.total > 0 ? summary.total : fallbackTotal
-  const aggregatedTone = summary.failed > 0
-    ? 'danger'
-    : summary.total > 0 && summary.processed >= summary.total
-      ? 'success'
-      : 'primary'
+  const aggregatedTone =
+    summary.failed > 0
+      ? 'danger'
+      : summary.total > 0 && summary.processed >= summary.total
+        ? 'success'
+        : 'primary'
 
   const summaryParts: string[] = []
 
@@ -79,11 +87,12 @@ export const useActiveTasksBanner = (tasks: Task[], isCreating: boolean): UseAct
       }`
     : 'Создаем задачу и распределяем группы. Это может занять несколько минут.'
 
-  const aggregatedLabel = summary.total > 0
-    ? `Обработано ${formatNumber(summary.processed)} из ${formatNumber(summary.total)}`
-    : summary.processing > 0
-      ? `В работе: ${formatNumber(summary.processing)}`
-      : 'Подготавливаем статистику...'
+  const aggregatedLabel =
+    summary.total > 0
+      ? `Обработано ${formatNumber(summary.processed)} из ${formatNumber(summary.total)}`
+      : summary.processing > 0
+        ? `В работе: ${formatNumber(summary.processing)}`
+        : 'Подготавливаем статистику...'
 
   const indicatorText = isCreating
     ? 'Запускаем задачу...'
@@ -100,7 +109,6 @@ export const useActiveTasksBanner = (tasks: Task[], isCreating: boolean): UseAct
     progressTotal,
     processed: summary.processed,
     aggregatedTone,
-    indeterminate: summary.total === 0 && summary.indeterminateCount > 0
+    indeterminate: summary.total === 0 && summary.indeterminateCount > 0,
   }
 }
-

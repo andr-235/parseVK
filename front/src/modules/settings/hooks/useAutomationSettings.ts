@@ -104,7 +104,7 @@ export const useAutomationSettings = () => {
         timezoneOffsetMinutes: new Date().getTimezoneOffset(),
       })
     },
-    [formState, settings, updateSettings],
+    [formState, settings, updateSettings]
   )
 
   const handleRunNow = useCallback(async () => {
@@ -125,4 +125,3 @@ export const useAutomationSettings = () => {
     handleRunNow,
   }
 }
-

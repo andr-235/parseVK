@@ -33,10 +33,7 @@ export function SidebarSection({
         </div>
       )}
 
-      <button
-        onClick={onToggle}
-        className={getSectionButtonClasses(isCollapsed, isActive)}
-      >
+      <button onClick={onToggle} className={getSectionButtonClasses(isCollapsed, isActive)}>
         {isCollapsed ? (
           icon
         ) : (
@@ -46,10 +43,7 @@ export function SidebarSection({
               <span>{collapsedLabel || title}</span>
             </div>
             <ChevronDown
-              className={cn(
-                'h-3 w-3 transition-transform',
-                isExpanded && 'rotate-180'
-              )}
+              className={cn('h-3 w-3 transition-transform', isExpanded && 'rotate-180')}
             />
           </>
         )}
@@ -65,4 +59,3 @@ export function SidebarSection({
     </div>
   )
 }
-

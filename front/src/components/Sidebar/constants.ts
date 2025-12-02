@@ -24,11 +24,6 @@ export const createParsingSubItems = (): SidebarNavItem[] => {
   return [{ label: 'Недвижимость', path: '/listings' }]
 }
 
-export const PRIMARY_ITEMS_CONFIG = [
-  { label: 'Telegram', path: '/telegram' },
-] as const
+export const PRIMARY_ITEMS_CONFIG = [{ label: 'Telegram', path: '/telegram' }] as const
 
-export const SECONDARY_ITEMS_CONFIG = [
-  { label: 'Настройки', path: '/settings' },
-] as const
-
+export const SECONDARY_ITEMS_CONFIG = [{ label: 'Настройки', path: '/settings' }] as const

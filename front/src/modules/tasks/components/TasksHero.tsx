@@ -30,7 +30,7 @@ function formatDateTime(value: string | null): string {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     }).format(new Date(value))
   } catch {
     return '—'
@@ -58,13 +58,14 @@ function TasksHero({
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Задачи парсинга</h1>
           <p className="text-muted-foreground max-w-2xl text-lg">
-            Управляйте сбором данных из ВКонтакте. Создавайте новые задачи или настройте автоматический парсинг по расписанию.
+            Управляйте сбором данных из ВКонтакте. Создавайте новые задачи или настройте
+            автоматический парсинг по расписанию.
           </p>
         </div>
-        
-        <Button 
-          onClick={onCreateTask} 
-          size="lg" 
+
+        <Button
+          onClick={onCreateTask}
+          size="lg"
           className="shadow-lg shadow-primary/20 shrink-0"
           disabled={isCreating || areGroupsLoading || !hasGroups}
         >
@@ -89,11 +90,14 @@ function TasksHero({
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-foreground">Автоматизация</h3>
-                <Badge variant={automationEnabled ? "default" : "secondary"} className={cn(
-                  "uppercase text-[10px] tracking-wider font-bold",
-                  automationEnabled ? "bg-emerald-500 hover:bg-emerald-600" : ""
-                )}>
-                  {automationEnabled ? "Включено" : "Выключено"}
+                <Badge
+                  variant={automationEnabled ? 'default' : 'secondary'}
+                  className={cn(
+                    'uppercase text-[10px] tracking-wider font-bold',
+                    automationEnabled ? 'bg-emerald-500 hover:bg-emerald-600' : ''
+                  )}
+                >
+                  {automationEnabled ? 'Включено' : 'Выключено'}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -111,7 +115,9 @@ function TasksHero({
                 <Clock className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Следующий запуск</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  Следующий запуск
+                </span>
                 <span className="font-semibold text-foreground">{nextRunText}</span>
               </div>
             </div>
@@ -123,7 +129,9 @@ function TasksHero({
                 <Calendar className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Последний запуск</span>
+                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  Последний запуск
+                </span>
                 <span className="font-semibold text-foreground">{lastRunText}</span>
               </div>
             </div>
@@ -132,14 +140,14 @@ function TasksHero({
 
         {/* Quick Action Card */}
         <div className="p-5 rounded-xl bg-card border border-border/50 shadow-sm flex flex-col justify-center items-center text-center gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full h-12 text-base font-medium border-primary/20 hover:bg-primary/5 hover:text-primary"
             onClick={onAutomationRun}
             disabled={isAutomationLoading || isAutomationTriggering || automation?.isRunning}
           >
             {isAutomationTriggering ? (
-               <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+              <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
             ) : (
               <Play className="w-5 h-5 mr-2 fill-current" />
             )}

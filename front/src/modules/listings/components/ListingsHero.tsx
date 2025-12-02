@@ -9,7 +9,12 @@ interface ListingsHeroProps {
   onRefresh: () => void
 }
 
-export const ListingsHero = ({ isListLoading, onImport, onExport, onRefresh }: ListingsHeroProps) => {
+export const ListingsHero = ({
+  isListLoading,
+  onImport,
+  onExport,
+  onRefresh,
+}: ListingsHeroProps) => {
   return (
     <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
       <div className="space-y-1.5">
@@ -28,12 +33,7 @@ export const ListingsHero = ({ isListLoading, onImport, onExport, onRefresh }: L
           <Download className="h-4 w-4" />
           Экспорт
         </Button>
-        <Button
-          variant="secondary"
-          onClick={onRefresh}
-          disabled={isListLoading}
-          className="gap-2"
-        >
+        <Button variant="secondary" onClick={onRefresh} disabled={isListLoading} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${isListLoading ? 'animate-spin' : ''}`} />
           Обновить
         </Button>
@@ -41,4 +41,3 @@ export const ListingsHero = ({ isListLoading, onImport, onExport, onRefresh }: L
     </div>
   )
 }
-

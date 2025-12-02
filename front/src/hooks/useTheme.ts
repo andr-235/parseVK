@@ -5,4 +5,3 @@ export function useTheme() {
   const toggleTheme = useThemeStore((state) => state.toggleTheme)
   return { isDarkMode, toggleTheme }
 }
-

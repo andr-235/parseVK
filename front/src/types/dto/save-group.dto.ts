@@ -1,5 +1,4 @@
 export interface SaveGroupDto {
-  [x: string]: string;
+  [x: string]: string
   identifier: string
 }
-
