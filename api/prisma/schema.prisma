@@ -301,6 +301,7 @@ model Keyword {
   id        Int      @id @default(autoincrement())
   word      String   @unique
   category  String?
+  isPhrase  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   commentKeywordMatches CommentKeywordMatch[]

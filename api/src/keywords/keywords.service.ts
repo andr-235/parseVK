@@ -11,15 +11,25 @@ import {
 export class KeywordsService {
   constructor(private prisma: PrismaService) {}
 
-  async addKeyword(word: string, category?: string): Promise<IKeywordResponse> {
+  async addKeyword(
+    word: string,
+    category?: string,
+    isPhrase?: boolean,
+  ): Promise<IKeywordResponse> {
     const normalizedWord = word.trim().toLowerCase();
     const normalizedCategory = category?.trim() ?? null;
 
     return this.prisma.keyword.upsert({
       where: { word: normalizedWord },
-      update:
-        normalizedCategory !== null ? { category: normalizedCategory } : {},
-      create: { word: normalizedWord, category: normalizedCategory },
+      update: {
+        ...(normalizedCategory !== null ? { category: normalizedCategory } : {}),
+        ...(isPhrase !== undefined ? { isPhrase } : {}),
+      },
+      create: {
+        word: normalizedWord,
+        category: normalizedCategory,
+        isPhrase: isPhrase ?? false,
+      },
     });
   }
 
@@ -163,16 +173,44 @@ export class KeywordsService {
         .trim();
     };
 
+    const escapeRegExp = (value: string): string => {
+      return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    };
+
+    interface KeywordCandidate {
+      id: number;
+      normalizedWord: string;
+      isPhrase: boolean;
+    }
+
+    const matchesKeyword = (
+      text: string,
+      keyword: KeywordCandidate,
+    ): boolean => {
+      if (keyword.isPhrase) {
+        const escaped = escapeRegExp(keyword.normalizedWord);
+        const pattern = `\\b${escaped}\\b`;
+        const regex = new RegExp(pattern, 'i');
+        return regex.test(text);
+      } else {
+        const escaped = escapeRegExp(keyword.normalizedWord);
+        const pattern = `\\b${escaped}`;
+        const regex = new RegExp(pattern, 'i');
+        return regex.test(text);
+      }
+    };
+
     const keywords = await this.prisma.keyword.findMany({
-      select: { id: true, word: true },
+      select: { id: true, word: true, isPhrase: true },
     });
 
-    const keywordCandidates = keywords
+    const keywordCandidates: KeywordCandidate[] = keywords
       .map((keyword) => {
         const normalized = normalizeForKeywordMatch(keyword.word);
         return {
           id: keyword.id,
           normalizedWord: normalized,
+          isPhrase: keyword.isPhrase,
         };
       })
       .filter((keyword) => keyword.normalizedWord.length > 0);
@@ -205,9 +243,7 @@ export class KeywordsService {
 
         const matchedKeywordIds = new Set(
           keywordCandidates
-            .filter((keyword) =>
-              normalizedText.includes(keyword.normalizedWord),
-            )
+            .filter((keyword) => matchesKeyword(normalizedText, keyword))
             .map((keyword) => keyword.id),
         );
 
@@ -287,9 +323,7 @@ export class KeywordsService {
 
         const matchedKeywordIds = new Set(
           keywordCandidates
-            .filter((keyword) =>
-              normalizedText.includes(keyword.normalizedWord),
-            )
+            .filter((keyword) => matchesKeyword(normalizedText, keyword))
             .map((keyword) => keyword.id),
         );
 

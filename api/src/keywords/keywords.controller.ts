@@ -25,7 +25,11 @@ export class KeywordsController {
 
   @Post('add')
   async addKeyword(@Body() dto: AddKeywordDto): Promise<IKeywordResponse> {
-    return this.keywordsService.addKeyword(dto.word, dto.category);
+    return this.keywordsService.addKeyword(
+      dto.word,
+      dto.category,
+      dto.isPhrase,
+    );
   }
 
   @Post('bulk-add')

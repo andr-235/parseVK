@@ -4,15 +4,19 @@ import { createRequest, handleResponse } from '@/lib/apiUtils'
 import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '@/types/api'
 
 export const keywordsService = {
-  async addKeyword(word: string, category?: string | null): Promise<IKeywordResponse> {
+  async addKeyword(
+    word: string,
+    category?: string | null,
+    isPhrase?: boolean,
+  ): Promise<IKeywordResponse> {
     try {
       const response = await createRequest(`${API_URL}/keywords/add`, {
         method: 'POST',
-        body: JSON.stringify({ word, category }),
+        body: JSON.stringify({ word, category, isPhrase }),
       })
 
       const result = await handleResponse<IKeywordResponse>(response, 'Failed to add keyword')
-      toast.success('Ключевое слово добавлено')
+      toast.success(isPhrase ? 'Фраза добавлена' : 'Ключевое слово добавлено')
       return result
     } catch (error) {
       toast.error('Не удалось добавить ключевое слово')

@@ -13,6 +13,7 @@ interface SaveCommentsOptions {
 interface KeywordMatchCandidate {
   id: number;
   normalizedWord: string;
+  isPhrase: boolean;
 }
 
 const NBSP_REGEX = /\u00a0/g;
@@ -33,6 +34,27 @@ const normalizeForKeywordMatch = (value: string | null | undefined): string => {
     .replace(/ё/g, 'е')
     .replace(WHITESPACE_REGEX, ' ')
     .trim();
+};
+
+const escapeRegExp = (value: string): string => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+const matchesKeyword = (
+  text: string,
+  keyword: KeywordMatchCandidate,
+): boolean => {
+  if (keyword.isPhrase) {
+    const escaped = escapeRegExp(keyword.normalizedWord);
+    const pattern = `\\b${escaped}\\b`;
+    const regex = new RegExp(pattern, 'i');
+    return regex.test(text);
+  } else {
+    const escaped = escapeRegExp(keyword.normalizedWord);
+    const pattern = `\\b${escaped}`;
+    const regex = new RegExp(pattern, 'i');
+    return regex.test(text);
+  }
 };
 
 const toUpdateJsonValue = (
@@ -380,7 +402,7 @@ export class AuthorActivityService {
 
   private async loadKeywordMatchCandidates(): Promise<KeywordMatchCandidate[]> {
     const keywords = await this.prisma.keyword.findMany({
-      select: { id: true, word: true },
+      select: { id: true, word: true, isPhrase: true },
     });
 
     return keywords
@@ -389,6 +411,7 @@ export class AuthorActivityService {
         return {
           id: keyword.id,
           normalizedWord: normalized,
+          isPhrase: keyword.isPhrase,
         };
       })
       .filter((keyword) => keyword.normalizedWord.length > 0);
@@ -418,9 +441,7 @@ export class AuthorActivityService {
 
     const matchedKeywordIds = new Set(
       keywordMatches
-        .filter((keyword) =>
-          normalizedText.includes(keyword.normalizedWord),
-        )
+        .filter((keyword) => matchesKeyword(normalizedText, keyword))
         .map((keyword) => keyword.id),
     );
 
@@ -503,9 +524,7 @@ export class AuthorActivityService {
 
     const matchedKeywordIds = new Set(
       keywordMatches
-        .filter((keyword) =>
-          normalizedText.includes(keyword.normalizedWord),
-        )
+        .filter((keyword) => matchesKeyword(normalizedText, keyword))
         .map((keyword) => keyword.id),
     );
 

@@ -2,6 +2,7 @@ export interface IKeywordResponse {
   id: number;
   word: string;
   category: string | null;
+  isPhrase: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

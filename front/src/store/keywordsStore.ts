@@ -21,7 +21,7 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
     }
   },
 
-  async addKeyword(word, category) {
+  async addKeyword(word, category, isPhrase = false) {
     const trimmed = word.trim()
     const trimmedCategory = category?.trim() ?? ''
     if (!trimmed) {
@@ -29,7 +29,11 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
     }
 
     try {
-      const keyword = await keywordsService.addKeyword(trimmed, trimmedCategory ? trimmedCategory : null)
+      const keyword = await keywordsService.addKeyword(
+        trimmed,
+        trimmedCategory ? trimmedCategory : null,
+        isPhrase
+      )
       set((state) => {
         const existingIndex = state.keywords.findIndex(
           (existing) => existing.id === keyword.id || existing.word === keyword.word

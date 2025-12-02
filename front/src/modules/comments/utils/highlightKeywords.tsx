@@ -15,21 +15,39 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
         return null
       }
 
-      return { original: trimmed, normalized }
-    })
-    .filter((entry, index, array): entry is { original: string; normalized: string } => {
-      if (!entry) {
-        return false
+      return {
+        original: trimmed,
+        normalized,
+        isPhrase: keyword.isPhrase ?? false,
       }
-
-      return array.findIndex((item) => item?.normalized === entry.normalized) === index
     })
+    .filter(
+      (entry, index, array): entry is {
+        original: string
+        normalized: string
+        isPhrase: boolean
+      } => {
+        if (!entry) {
+          return false
+        }
+
+        return (
+          array.findIndex(
+            (item) =>
+              item?.normalized === entry.normalized &&
+              item?.isPhrase === entry.isPhrase,
+          ) === index
+        )
+      },
+    )
 
   if (keywordEntries.length === 0) {
     return text
   }
 
-  const patterns = keywordEntries.map((entry) => buildKeywordPattern(entry.original))
+  const patterns = keywordEntries.map((entry) =>
+    buildKeywordPattern(entry.original, entry.isPhrase),
+  )
 
   if (patterns.length === 0) {
     return text
@@ -37,7 +55,7 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
 
   const regex = new RegExp(`(${patterns.join('|')})`, 'gi')
   const normalizedKeywords = new Set(keywordEntries.map((entry) => entry.normalized))
-  
+
   const parts = text.split(regex)
 
   return parts.map((part, index) => {

@@ -22,8 +22,14 @@ export const normalizeForKeywordMatch = (value: string | null | undefined): stri
     .trim()
 }
 
-export const buildKeywordPattern = (value: string): string => {
+export const buildKeywordPattern = (value: string, isPhrase: boolean = false): string => {
   const escaped = escapeRegExp(value)
-  return escaped.replace(YE_REGEX, '[её]')
+  const withYe = escaped.replace(YE_REGEX, '[её]')
+  
+  if (isPhrase) {
+    return `\\b${withYe}\\b`
+  } else {
+    return `\\b${withYe}`
+  }
 }
 

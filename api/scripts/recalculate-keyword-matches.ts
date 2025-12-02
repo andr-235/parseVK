@@ -23,7 +23,29 @@ const normalizeForKeywordMatch = (value: string | null | undefined): string => {
 interface KeywordMatchCandidate {
   id: number;
   normalizedWord: string;
+  isPhrase: boolean;
 }
+
+const escapeRegExp = (value: string): string => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+const matchesKeyword = (
+  text: string,
+  keyword: KeywordMatchCandidate,
+): boolean => {
+  if (keyword.isPhrase) {
+    const escaped = escapeRegExp(keyword.normalizedWord);
+    const pattern = `\\b${escaped}\\b`;
+    const regex = new RegExp(pattern, 'i');
+    return regex.test(text);
+  } else {
+    const escaped = escapeRegExp(keyword.normalizedWord);
+    const pattern = `\\b${escaped}`;
+    const regex = new RegExp(pattern, 'i');
+    return regex.test(text);
+  }
+};
 
 async function main() {
   const prisma = new PrismaClient();
@@ -31,7 +53,7 @@ async function main() {
   try {
     console.log('Загрузка ключевых слов...');
     const keywords = await prisma.keyword.findMany({
-      select: { id: true, word: true },
+      select: { id: true, word: true, isPhrase: true },
     });
 
     console.log(`Найдено ${keywords.length} ключевых слов`);
@@ -43,6 +65,7 @@ async function main() {
         return {
           id: keyword.id,
           normalizedWord: normalized,
+          isPhrase: keyword.isPhrase,
         };
       })
       .filter((keyword) => keyword.normalizedWord.length > 0);
@@ -79,9 +102,7 @@ async function main() {
 
         const matchedKeywordIds = new Set(
           keywordCandidates
-            .filter((keyword) =>
-              normalizedText.includes(keyword.normalizedWord),
-            )
+            .filter((keyword) => matchesKeyword(normalizedText, keyword))
             .map((keyword) => keyword.id),
         );
 
@@ -172,9 +193,7 @@ async function main() {
 
         const matchedKeywordIds = new Set(
           keywordCandidates
-            .filter((keyword) =>
-              normalizedText.includes(keyword.normalizedWord),
-            )
+            .filter((keyword) => matchesKeyword(normalizedText, keyword))
             .map((keyword) => keyword.id),
         );
 

@@ -15,6 +15,7 @@ export const useKeywordsViewModel = () => {
 
   const [keywordValue, setKeywordValue] = useState('')
   const [categoryValue, setCategoryValue] = useState('')
+  const [phraseValue, setPhraseValue] = useState('')
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -33,12 +34,22 @@ export const useKeywordsViewModel = () => {
   const handleAddKeyword = useCallback(async () => {
     if (!keywordValue.trim()) return
 
-    const isAdded = await addKeyword(keywordValue, categoryValue)
+    const isAdded = await addKeyword(keywordValue, categoryValue, false)
     if (isAdded) {
       setKeywordValue('')
       // categoryValue is intentionally left as is for easier bulk entry
     }
   }, [keywordValue, categoryValue, addKeyword])
+
+  const handleAddPhrase = useCallback(async () => {
+    if (!phraseValue.trim()) return
+
+    const isAdded = await addKeyword(phraseValue, categoryValue, true)
+    if (isAdded) {
+      setPhraseValue('')
+      // categoryValue is intentionally left as is for easier bulk entry
+    }
+  }, [phraseValue, categoryValue, addKeyword])
 
   const handleFileUpload = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -92,11 +103,14 @@ export const useKeywordsViewModel = () => {
     searchTerm,
     keywordValue,
     categoryValue,
+    phraseValue,
     isRecalculating,
     setKeywordValue,
     setCategoryValue,
+    setPhraseValue,
     setSearchTerm,
     handleAddKeyword,
+    handleAddPhrase,
     handleFileUpload,
     handleRecalculate,
     deleteKeyword,

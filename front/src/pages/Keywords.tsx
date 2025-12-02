@@ -10,11 +10,14 @@ function Keywords() {
     searchTerm,
     keywordValue,
     categoryValue,
+    phraseValue,
     isRecalculating,
     setKeywordValue,
     setCategoryValue,
+    setPhraseValue,
     setSearchTerm,
     handleAddKeyword,
+    handleAddPhrase,
     handleFileUpload,
     handleRecalculate,
     deleteKeyword,
@@ -27,10 +30,13 @@ function Keywords() {
       <KeywordsForm
         keywordValue={keywordValue}
         categoryValue={categoryValue}
+        phraseValue={phraseValue}
         isRecalculating={isRecalculating}
         onKeywordChange={setKeywordValue}
         onCategoryChange={setCategoryValue}
+        onPhraseChange={setPhraseValue}
         onAdd={handleAddKeyword}
+        onAddPhrase={handleAddPhrase}
         onRecalculate={handleRecalculate}
         onFileUpload={handleFileUpload}
       />
