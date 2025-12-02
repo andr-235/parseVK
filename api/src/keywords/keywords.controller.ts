@@ -54,7 +54,7 @@ export class KeywordsController {
 
   @Get()
   async getAllKeywords(): Promise<IKeywordResponse[]> {
-    return this.keywordsService.getAllKeywords();
+    return this.keywordsService.getKeywords();
   }
 
   @Delete('all')
@@ -63,7 +63,7 @@ export class KeywordsController {
   }
 
   @Delete(':id')
-  async deleteKeyword(@Param('id') id: string): Promise<IKeywordResponse> {
+  async deleteKeyword(@Param('id') id: string): Promise<IDeleteResponse> {
     return this.keywordsService.deleteKeyword(Number(id));
   }
 

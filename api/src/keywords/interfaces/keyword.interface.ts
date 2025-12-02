@@ -8,15 +8,19 @@ export interface IKeywordResponse {
 }
 
 export interface IDeleteResponse {
-  count: number;
+  success: boolean;
+  id?: number;
+  count?: number;
 }
 
 export interface IBulkAddResponse {
   success: IKeywordResponse[];
   failed: { word: string; error: string }[];
-  total: number;
-  successCount: number;
-  failedCount: number;
-  createdCount: number;
-  updatedCount: number;
+  stats: {
+    total: number;
+    success: number;
+    failed: number;
+    created: number;
+    updated: number;
+  };
 }

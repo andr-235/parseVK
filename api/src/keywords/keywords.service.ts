@@ -36,7 +36,7 @@ export class KeywordsService {
         where: { id: existing.id },
         data: {
           category: normalizedCategory,
-          isPhrase: isPhrase ?? existing.isPhrase,
+          isPhrase: isPhrase ?? existing.isPhrase ?? false,
         },
       });
       return updated;
@@ -53,6 +53,11 @@ export class KeywordsService {
     return created;
   }
 
+  async bulkAddKeywords(words: string[]): Promise<IBulkAddResponse> {
+    const entries = words.map((word) => ({ word: word.trim(), category: null }));
+    return this.bulkAddKeywordEntries(entries);
+  }
+
   async addKeywordsFromFile(fileContent: string): Promise<IBulkAddResponse> {
     const entries = fileContent
       .split('\n')
@@ -61,7 +66,6 @@ export class KeywordsService {
         if (parts.length === 0 || !parts[0]) {
           return null;
         }
-
 
         if (parts.length === 1) {
           return { word: parts[0] };
@@ -145,6 +149,15 @@ export class KeywordsService {
   async deleteKeyword(id: number): Promise<IDeleteResponse> {
     await this.prisma.keyword.delete({ where: { id } });
     return { success: true, id };
+  }
+
+  async deleteAllKeywords(): Promise<IDeleteResponse> {
+    const result = await this.prisma.keyword.deleteMany({});
+    return { success: true, count: result.count };
+  }
+
+  async getAllKeywords(): Promise<IKeywordResponse[]> {
+    return this.getKeywords();
   }
 
   async getKeywords(search?: string): Promise<IKeywordResponse[]> {
