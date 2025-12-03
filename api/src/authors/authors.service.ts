@@ -20,6 +20,12 @@ import type {
   ResolvedAuthorSort,
 } from './types/authors.types';
 
+/**
+ * Сервис для работы с авторами комментариев
+ * 
+ * Обеспечивает получение списка авторов с фильтрацией и сортировкой,
+ * детальной информации об авторе и обновление данных из VK API.
+ */
 @Injectable()
 export class AuthorsService {
   private readonly sortBuilder = new AuthorSortBuilder();

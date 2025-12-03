@@ -27,6 +27,12 @@ interface ExportListingsOptions {
   limit?: number;
 }
 
+/**
+ * Сервис для управления объявлениями (listings)
+ * 
+ * Обеспечивает получение, фильтрацию, экспорт и обновление объявлений
+ * с поддержкой пагинации и поиска.
+ */
 @Injectable()
 export class ListingsService {
   constructor(

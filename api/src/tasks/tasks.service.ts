@@ -24,6 +24,12 @@ import { TaskDescriptionParser } from './parsers/task-description.parser';
 import { TaskContextBuilder } from './builders/task-context.builder';
 import type { PrismaTaskRecord } from './mappers/task.mapper';
 
+/**
+ * Сервис для управления задачами парсинга VK групп
+ * 
+ * Обеспечивает создание, выполнение и отслеживание задач парсинга,
+ * включая обработку постов и комментариев из VK групп.
+ */
 @Injectable()
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
@@ -39,6 +45,13 @@ export class TasksService {
     private readonly contextBuilder: TaskContextBuilder,
   ) {}
 
+  /**
+   * Создает новую задачу парсинга
+   * 
+   * @param dto - DTO с параметрами задачи (scope, groupIds, postLimit)
+   * @returns Результат создания задачи с деталями
+   * @throws NotFoundException если нет доступных групп для парсинга
+   */
   async createParsingTask(
     dto: CreateParsingTaskDto,
   ): Promise<ParsingTaskResult> {
@@ -74,11 +87,37 @@ export class TasksService {
     return this.mapTaskToDetail(task);
   }
 
-  async getTasks(): Promise<TaskSummary[]> {
-    const tasks = await this.repository.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    return tasks.map((task) => this.mapTaskToSummary(task as PrismaTaskRecord));
+  /**
+   * Получает список задач с пагинацией
+   * 
+   * @param options - Опции пагинации (page, limit)
+   * @returns Список задач с метаданными пагинации
+   */
+  async getTasks(options?: { page?: number; limit?: number }): Promise<{
+    tasks: TaskSummary[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const [tasks, total] = await Promise.all([
+      this.repository.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.repository.count(),
+    ]);
+
+    return {
+      tasks: tasks.map((task) => this.mapTaskToSummary(task as PrismaTaskRecord)),
+      total,
+      page,
+      limit,
+    };
   }
 
   async getTask(taskId: number): Promise<TaskDetail> {

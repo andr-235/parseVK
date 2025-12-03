@@ -8,6 +8,7 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -31,6 +32,7 @@
     "@nestjs/platform-express": "^11.1.6",
     "@nestjs/platform-socket.io": "^11.1.6",
     "@nestjs/schedule": "^6.0.1",
+    "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^11.1.6",
     "@prisma/client": "^6.16.3",
     "bullmq": "^5.61.0",
@@ -41,6 +43,7 @@
     "cron": "^2.4.4",
     "exceljs": "^4.4.0",
     "got": "^14.6.1",
+    "helmet": "^8.1.0",
     "ioredis": "^5.4.1",
     "reflect-metadata": "^0.2.2",
     "russian-nouns-js": "^1.5.0",

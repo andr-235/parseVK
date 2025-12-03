@@ -24,6 +24,11 @@ import type { IGroupsRepository } from './interfaces/groups-repository.interface
 import { GroupMapper } from './mappers/group.mapper';
 import { GroupIdentifierValidator } from './validators/group-identifier.validator';
 
+/**
+ * Сервис для управления VK группами
+ * 
+ * Обеспечивает сохранение, поиск и массовую загрузку групп из VK API.
+ */
 @Injectable()
 export class GroupsService {
   private readonly logger = new Logger(GroupsService.name);
@@ -36,6 +41,13 @@ export class GroupsService {
     private readonly identifierValidator: GroupIdentifierValidator,
   ) {}
 
+  /**
+   * Сохраняет группу из VK API в базу данных
+   * 
+   * @param identifier - Идентификатор группы (screen_name, vkId или короткое имя)
+   * @returns Сохраненная группа
+   * @throws NotFoundException если группа не найдена в VK
+   */
   async saveGroup(identifier: string | number): Promise<IGroupResponse> {
     const parsedIdentifier = this.identifierValidator.normalizeIdentifier(
       identifier,

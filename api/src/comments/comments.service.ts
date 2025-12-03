@@ -11,6 +11,13 @@ import { OffsetPaginationStrategy } from './strategies/offset-pagination.strateg
 import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
 import { CommentMapper } from './mappers/comment.mapper';
 
+/**
+ * Сервис для работы с комментариями
+ * 
+ * Обеспечивает получение комментариев с поддержкой пагинации
+ * (offset-based и cursor-based), фильтрации по ключевым словам
+ * и управления статусом прочтения.
+ */
 @Injectable()
 export class CommentsService {
   constructor(

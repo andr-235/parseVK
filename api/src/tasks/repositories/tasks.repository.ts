@@ -12,9 +12,15 @@ export class TasksRepository implements ITasksRepository {
   }
 
   async findMany(params?: {
+    skip?: number;
+    take?: number;
     orderBy?: Prisma.TaskOrderByWithRelationInput;
   }): Promise<Task[]> {
     return this.prisma.task.findMany(params);
+  }
+
+  async count(): Promise<number> {
+    return this.prisma.task.count();
   }
 
   async findUnique(where: { id: number }): Promise<Task | null> {

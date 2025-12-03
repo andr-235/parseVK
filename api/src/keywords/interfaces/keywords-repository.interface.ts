@@ -5,7 +5,10 @@ export interface IKeywordsRepository {
   findMany(
     where?: Prisma.KeywordWhereInput,
     orderBy?: Prisma.KeywordOrderByWithRelationInput,
+    skip?: number,
+    take?: number,
   ): Promise<Keyword[]>;
+  count(where?: Prisma.KeywordWhereInput): Promise<number>;
   create(data: {
     word: string;
     category: string | null;

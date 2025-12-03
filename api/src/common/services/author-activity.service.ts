@@ -94,6 +94,12 @@ const toCreateJsonValue = (
   return value as Prisma.InputJsonValue;
 };
 
+/**
+ * Сервис для сохранения авторов и комментариев
+ * 
+ * Общий сервис, используемый как задачами парсинга, так и watchlist мониторингом.
+ * Обеспечивает сохранение авторов, комментариев и сопоставление ключевых слов.
+ */
 @Injectable()
 export class AuthorActivityService {
   constructor(

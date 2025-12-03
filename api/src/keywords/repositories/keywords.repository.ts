@@ -14,8 +14,14 @@ export class KeywordsRepository implements IKeywordsRepository {
   async findMany(
     where?: Prisma.KeywordWhereInput,
     orderBy?: Prisma.KeywordOrderByWithRelationInput,
+    skip?: number,
+    take?: number,
   ): Promise<Keyword[]> {
-    return this.prisma.keyword.findMany({ where, orderBy });
+    return this.prisma.keyword.findMany({ where, orderBy, skip, take });
+  }
+
+  async count(where?: Prisma.KeywordWhereInput): Promise<number> {
+    return this.prisma.keyword.count({ where });
   }
 
   async create(data: {

@@ -25,6 +25,12 @@ import { WatchlistAuthorRefresherService } from './services/watchlist-author-ref
 import { WatchlistQueryValidator } from './validators/watchlist-query.validator';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 
+/**
+ * Сервис для управления списком отслеживаемых авторов ("На карандаше")
+ * 
+ * Обеспечивает добавление авторов в watchlist, мониторинг их активности,
+ * обновление настроек и сбор статистики.
+ */
 @Injectable()
 export class WatchlistService {
   private readonly logger = new Logger(WatchlistService.name);

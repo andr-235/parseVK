@@ -7,6 +7,12 @@ import {
 import type { IKeywordsRepository } from './interfaces/keywords-repository.interface';
 import { KeywordsMatchesService } from './services/keywords-matches.service';
 
+/**
+ * Сервис для управления ключевыми словами
+ * 
+ * Обеспечивает CRUD операции с ключевыми словами,
+ * массовое добавление и пересчет совпадений в комментариях.
+ */
 @Injectable()
 export class KeywordsService {
   constructor(
@@ -15,6 +21,15 @@ export class KeywordsService {
     private readonly matchesService: KeywordsMatchesService,
   ) {}
 
+  /**
+   * Добавляет новое ключевое слово
+   * 
+   * @param word - Ключевое слово (будет нормализовано в lowercase)
+   * @param category - Категория ключевого слова (опционально)
+   * @param isPhrase - Флаг, что это фраза, а не отдельное слово
+   * @returns Созданное или обновленное ключевое слово
+   * @throws Error если слово пустое
+   */
   async addKeyword(
     word: string,
     category?: string,
@@ -154,25 +169,49 @@ export class KeywordsService {
     return { success: true, count: result.count };
   }
 
-  async getAllKeywords(): Promise<IKeywordResponse[]> {
+  async getAllKeywords(): Promise<{
+    keywords: IKeywordResponse[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     return this.getKeywords();
   }
 
-  async getKeywords(search?: string): Promise<IKeywordResponse[]> {
+  async getKeywords(
+    options?: { page?: number; limit?: number; search?: string },
+  ): Promise<{
+    keywords: IKeywordResponse[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 50;
+    const skip = (page - 1) * limit;
+    const search = options?.search;
     const orderBy = { word: 'asc' as const };
-    if (search) {
-      return this.repository.findMany(
-        {
-          OR: [
-            { word: { contains: search, mode: 'insensitive' } },
-            { category: { contains: search, mode: 'insensitive' } },
-          ],
-        },
-        orderBy,
-      );
-    }
 
-    return this.repository.findMany(undefined, orderBy);
+    const where = search
+      ? {
+          OR: [
+            { word: { contains: search, mode: 'insensitive' as const } },
+            { category: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : undefined;
+
+    const [keywords, total] = await Promise.all([
+      this.repository.findMany(where, orderBy, skip, limit),
+      this.repository.count(where),
+    ]);
+
+    return {
+      keywords,
+      total,
+      page,
+      limit,
+    };
   }
 
   async recalculateKeywordMatches(): Promise<{
