@@ -371,7 +371,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { useTasksStore, useGroupsStore } from '@/store'
 import { useTasksQuery } from '@/modules/tasks/hooks/useTasksQuery'
 import { useTasksSocket } from '@/modules/tasks/hooks/useTasksSocket'
-import { isTaskActive } from '@/utils/taskProgress'
+import { isTaskActive } from '@/modules/tasks/utils/taskProgress'
 
 export const useTasksViewModel = () => {
   const { tasks, fetchTasks, createParseTask } = useTasksStore(

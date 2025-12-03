@@ -17,7 +17,7 @@ import {
   toTaskKey,
   upsertTaskEntity,
 } from './tasksStore.utils'
-import { isTaskActive } from '@/utils/taskProgress'
+import { isTaskActive } from '@/modules/tasks/utils/taskProgress'
 import type {
   PersistedTasksState,
   Task,

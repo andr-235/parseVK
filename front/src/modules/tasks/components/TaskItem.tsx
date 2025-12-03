@@ -29,7 +29,7 @@ import { Separator } from '@/components/ui/separator'
 
 import { cn } from '@/lib/utils'
 import type { Task } from '@/types'
-import { calculateTaskProgress, isTaskActive } from '@/utils/taskProgress'
+import { calculateTaskProgress, isTaskActive } from '@/modules/tasks/utils/taskProgress'
 import { getTaskStatusText } from '@/modules/tasks/utils/statusHelpers'
 import { useTaskActions } from '@/modules/tasks/hooks/useTaskActions'
 

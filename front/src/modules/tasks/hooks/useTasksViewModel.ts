@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { useTasksStore, useGroupsStore, useTaskAutomationStore } from '@/store'
 import { useTasksQuery } from '@/modules/tasks/hooks/useTasksQuery'
 import { useTasksSocket } from '@/modules/tasks/hooks/useTasksSocket'
-import { isTaskActive } from '@/utils/taskProgress'
+import { isTaskActive } from '@/modules/tasks/utils/taskProgress'
 import { getLatestTaskDate, formatTaskDate } from '@/modules/tasks/utils/taskDates'
 
 export const useTasksViewModel = () => {

@@ -5,7 +5,7 @@ import { Spinner } from '@/components/ui/spinner'
 import PageHeroCard from '@/components/PageHeroCard'
 import type { AuthorDetails, PhotoAnalysisSummary } from '@/types'
 import { formatDateTime } from '@/modules/authorAnalysis/utils/authorAnalysisUtils'
-import { PHOTO_ANALYSIS_LABELS } from '@/utils/photoAnalysisConstants'
+import { PHOTO_ANALYSIS_LABELS } from '@/modules/authorAnalysis/constants/photoAnalysisConstants'
 
 interface AuthorHeroSectionProps {
   author: AuthorDetails | null

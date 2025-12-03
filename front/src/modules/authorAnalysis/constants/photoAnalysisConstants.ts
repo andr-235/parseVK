@@ -6,3 +6,4 @@ export const PHOTO_ANALYSIS_LABELS = {
   SUSPICIOUS_LABEL: 'Подозрительных',
   LAST_ANALYSIS_LABEL: 'Последний анализ',
 } as const
+
