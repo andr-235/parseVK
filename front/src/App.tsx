@@ -1,20 +1,23 @@
-import { useEffect } from 'react'
+import { useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useTheme } from '@/hooks/useTheme'
 import { Sidebar } from '@/components/Sidebar'
 import MainContent from '@/components/MainContent'
-import Tasks from '@/pages/Tasks'
-import Groups from '@/pages/Groups'
-import Comments from '@/pages/Comments'
-import Keywords from '@/pages/Keywords'
-import Watchlist from '@/pages/Watchlist'
-import AuthorAnalysis from '@/pages/AuthorAnalysis'
-import Authors from '@/pages/Authors'
-import Settings from '@/pages/Settings'
-import Listings from '@/pages/Listings'
-import Telegram from '@/pages/Telegram'
 import AppSyncProvider from '@/lib/providers/AppSyncProvider'
+
+// Lazy load pages
+const Tasks = lazy(() => import('@/pages/Tasks'))
+const Groups = lazy(() => import('@/pages/Groups'))
+const Comments = lazy(() => import('@/pages/Comments'))
+const Keywords = lazy(() => import('@/pages/Keywords'))
+const Watchlist = lazy(() => import('@/pages/Watchlist'))
+const AuthorAnalysis = lazy(() => import('@/pages/AuthorAnalysis'))
+const Authors = lazy(() => import('@/pages/Authors'))
+const Settings = lazy(() => import('@/pages/Settings'))
+const Listings = lazy(() => import('@/pages/Listings'))
+const Telegram = lazy(() => import('@/pages/Telegram'))
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 function App() {
   const { isDarkMode } = useTheme()
@@ -34,35 +37,45 @@ function App() {
   }, [isDarkMode])
 
   return (
-    <BrowserRouter>
-      <AppSyncProvider />
-      <Sidebar />
-      <MainContent>
-        <Routes>
-          <Route path="/" element={<Navigate to="/tasks" replace />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/groups" element={<Groups />} />
-          <Route path="/listings" element={<Listings />} />
-          <Route path="/comments" element={<Comments />} />
-          <Route path="/watchlist" element={<Watchlist />} />
-          <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysis />} />
-          <Route path="/keywords" element={<Keywords />} />
-          <Route path="/authors" element={<Authors />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/telegram" element={<Telegram />} />
-        </Routes>
-      </MainContent>
-      <Toaster
-        position="top-right"
-        containerStyle={{
-          pointerEvents: 'none',
-        }}
-        toastOptions={{
-          duration: 3000,
-          className: 'bg-background-sidebar text-text-light pointer-events-auto',
-        }}
-      />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppSyncProvider />
+        <Sidebar />
+        <MainContent>
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center">
+                <div className="text-muted-foreground">Загрузка...</div>
+              </div>
+            }
+          >
+            <Routes>
+              <Route path="/" element={<Navigate to="/tasks" replace />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/groups" element={<Groups />} />
+              <Route path="/listings" element={<Listings />} />
+              <Route path="/comments" element={<Comments />} />
+              <Route path="/watchlist" element={<Watchlist />} />
+              <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysis />} />
+              <Route path="/keywords" element={<Keywords />} />
+              <Route path="/authors" element={<Authors />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/telegram" element={<Telegram />} />
+            </Routes>
+          </Suspense>
+        </MainContent>
+        <Toaster
+          position="top-right"
+          containerStyle={{
+            pointerEvents: 'none',
+          }}
+          toastOptions={{
+            duration: 3000,
+            className: 'bg-background-sidebar text-text-light pointer-events-auto',
+          }}
+        />
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
 

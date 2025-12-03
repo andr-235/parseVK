@@ -20,6 +20,7 @@ import { TaskAutomationController } from './automation/task-automation.controlle
 import { TaskMapper } from './mappers/task.mapper';
 import { TaskDescriptionParser } from './parsers/task-description.parser';
 import { TaskContextBuilder } from './builders/task-context.builder';
+import { TasksRepository } from './repositories/tasks.repository';
 
 @Module({
   imports: [
@@ -42,6 +43,10 @@ import { TaskContextBuilder } from './builders/task-context.builder';
   providers: [
     TasksService,
     PrismaService,
+    {
+      provide: 'ITasksRepository',
+      useClass: TasksRepository,
+    },
     ParsingTaskRunner,
     ParsingQueueService,
     TasksGateway,

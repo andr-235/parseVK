@@ -18,7 +18,10 @@ export interface IPhotoAnalysisRepository {
     rawResponse: unknown;
   }): Promise<void>;
   deleteByAuthorId(authorId: number): Promise<void>;
-  findExistingAnalyses(authorId: number, photoVkIds: string[]): Promise<string[]>;
+  findExistingAnalyses(
+    authorId: number,
+    photoVkIds: string[],
+  ): Promise<string[]>;
   markAuthorVerified(authorId: number): Promise<void>;
 }
 
@@ -40,13 +43,16 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       hasSuspicious: analysis.hasSuspicious,
       suspicionLevel: analysis.suspicionLevel as any,
       categories: analysis.categories ?? [],
-      confidence: typeof analysis.confidence === 'number' ? analysis.confidence : null,
+      confidence:
+        typeof analysis.confidence === 'number' ? analysis.confidence : null,
       explanation: analysis.explanation,
       analyzedAt: analysis.analyzedAt.toISOString(),
     }));
   }
 
-  async findSuspiciousByAuthorId(authorId: number): Promise<PhotoAnalysisItemDto[]> {
+  async findSuspiciousByAuthorId(
+    authorId: number,
+  ): Promise<PhotoAnalysisItemDto[]> {
     const analyses = await this.prisma.photoAnalysis.findMany({
       where: {
         authorId,
@@ -63,7 +69,8 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       hasSuspicious: analysis.hasSuspicious,
       suspicionLevel: analysis.suspicionLevel as any,
       categories: analysis.categories ?? [],
-      confidence: typeof analysis.confidence === 'number' ? analysis.confidence : null,
+      confidence:
+        typeof analysis.confidence === 'number' ? analysis.confidence : null,
       explanation: analysis.explanation,
       analyzedAt: analysis.analyzedAt.toISOString(),
     }));
@@ -117,7 +124,10 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
     });
   }
 
-  async findExistingAnalyses(authorId: number, photoVkIds: string[]): Promise<string[]> {
+  async findExistingAnalyses(
+    authorId: number,
+    photoVkIds: string[],
+  ): Promise<string[]> {
     const existing = await this.prisma.photoAnalysis.findMany({
       where: {
         authorId,
@@ -148,7 +158,8 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       hasSuspicious: analysis.hasSuspicious,
       suspicionLevel: analysis.suspicionLevel as any,
       categories: analysis.categories ?? [],
-      confidence: typeof analysis.confidence === 'number' ? analysis.confidence : null,
+      confidence:
+        typeof analysis.confidence === 'number' ? analysis.confidence : null,
       explanation: analysis.explanation,
       analyzedAt: analysis.analyzedAt.toISOString(),
     }));
@@ -162,7 +173,10 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       });
     } catch (error) {
       // Логирование ошибки, но не прерываем выполнение
-      console.error(`Не удалось обновить дату проверки автора ${authorId}`, error);
+      console.error(
+        `Не удалось обновить дату проверки автора ${authorId}`,
+        error,
+      );
     }
   }
 }

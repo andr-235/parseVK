@@ -1,11 +1,20 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { VkService } from '../../vk/vk.service';
 import type { VkPhoto } from '../../vk/vk.service';
-import type { AnalyzePhotosCommand, IAnalyzePhotosCommandHandler } from '../commands/analyze-photos.command';
+import type {
+  AnalyzePhotosCommand,
+  IAnalyzePhotosCommandHandler,
+} from '../commands/analyze-photos.command';
 import type { PhotoAnalysisListDto } from '../dto/photo-analysis-response.dto';
 import type { IPhotoAnalysisRepository } from '../interfaces/photo-analysis-repository.interface';
-import type { IAuthorService, IPhotoLoader } from '../interfaces/photo-loader.interface';
-import type { IModerationService, ModerationResult } from '../interfaces/moderation-service.interface';
+import type {
+  IAuthorService,
+  IPhotoLoader,
+} from '../interfaces/photo-loader.interface';
+import type {
+  IModerationService,
+  ModerationResult,
+} from '../interfaces/moderation-service.interface';
 import { PhotoAnalysisFactory } from '../factories/photo-analysis.factory';
 import { PhotoAnalysisSummaryBuilder } from '../builders/photo-analysis-summary.builder';
 
@@ -63,7 +72,9 @@ export class AnalyzePhotosService implements IAnalyzePhotosCommandHandler {
     );
 
     if (!photosToAnalyze.length) {
-      this.logger.log('Нет новых фото для анализа — запрос к модерации не выполнялся');
+      this.logger.log(
+        'Нет новых фото для анализа — запрос к модерации не выполнялся',
+      );
       await this.repository.markAuthorVerified(author.id);
       return this.getAnalysisList(vkUserId);
     }
@@ -87,16 +98,18 @@ export class AnalyzePhotosService implements IAnalyzePhotosCommandHandler {
     }
   }
 
-  private normalizeOptions(options?: { limit?: number; force?: boolean; offset?: number }): {
+  private normalizeOptions(options?: {
+    limit?: number;
+    force?: boolean;
+    offset?: number;
+  }): {
     limit: number | null;
     force: boolean;
     offset: number;
   } {
     const { limit, force = false, offset = 0 } = options ?? {};
     const normalizedLimit =
-      typeof limit === 'number'
-        ? Math.min(Math.max(limit, 1), 200)
-        : null;
+      typeof limit === 'number' ? Math.min(Math.max(limit, 1), 200) : null;
 
     return {
       limit: normalizedLimit,
@@ -112,7 +125,9 @@ export class AnalyzePhotosService implements IAnalyzePhotosCommandHandler {
       const photoUrl = this.vkService.getMaxPhotoSize(photo.sizes);
 
       if (!photoUrl) {
-        this.logger.warn(`Не найден URL изображения для фото ${photo.photo_id}`);
+        this.logger.warn(
+          `Не найден URL изображения для фото ${photo.photo_id}`,
+        );
         continue;
       }
 
@@ -143,9 +158,13 @@ export class AnalyzePhotosService implements IAnalyzePhotosCommandHandler {
     return photos.filter((photo) => !processed.has(photo.photoVkId));
   }
 
-  private async performModeration(photos: PhotoForModeration[]): Promise<ModerationResult[]> {
+  private async performModeration(
+    photos: PhotoForModeration[],
+  ): Promise<ModerationResult[]> {
     try {
-      return await this.moderationService.moderatePhotos(photos.map((p) => p.url));
+      return await this.moderationService.moderatePhotos(
+        photos.map((p) => p.url),
+      );
     } catch (error) {
       this.logger.error(
         'Не удалось получить ответ модерации',
@@ -155,7 +174,10 @@ export class AnalyzePhotosService implements IAnalyzePhotosCommandHandler {
     }
   }
 
-  private async saveAnalysisResults(authorId: number, results: ModerationResult[]): Promise<void> {
+  private async saveAnalysisResults(
+    authorId: number,
+    results: ModerationResult[],
+  ): Promise<void> {
     for (const result of results) {
       try {
         const suspicionLevel = this.factory.createSuspicionLevel(
@@ -188,7 +210,9 @@ export class AnalyzePhotosService implements IAnalyzePhotosCommandHandler {
     }
   }
 
-  private async getAnalysisList(vkUserId: number): Promise<PhotoAnalysisListDto> {
+  private async getAnalysisList(
+    vkUserId: number,
+  ): Promise<PhotoAnalysisListDto> {
     const analyses = await this.repository.findByAuthorId(vkUserId);
     const summary = this.summaryBuilder.reset().addItems(analyses).build();
 

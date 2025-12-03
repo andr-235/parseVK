@@ -1,10 +1,10 @@
 import {
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
 import { VkService } from '../vk/vk.service';
 import { IGroup } from '../vk/interfaces/group.interfaces';
 import {
@@ -20,24 +20,37 @@ import {
   IRegionGroupSearchItem,
   IRegionGroupSearchResponse,
 } from './interfaces/group-search.interface';
+import type { IGroupsRepository } from './interfaces/groups-repository.interface';
 import { GroupMapper } from './mappers/group.mapper';
 import { GroupIdentifierValidator } from './validators/group-identifier.validator';
 
+/**
+ * Сервис для управления VK группами
+ *
+ * Обеспечивает сохранение, поиск и массовую загрузку групп из VK API.
+ */
 @Injectable()
 export class GroupsService {
   private readonly logger = new Logger(GroupsService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private vkService: VkService,
-    private groupMapper: GroupMapper,
-    private identifierValidator: GroupIdentifierValidator,
+    @Inject('IGroupsRepository')
+    private readonly repository: IGroupsRepository,
+    private readonly vkService: VkService,
+    private readonly groupMapper: GroupMapper,
+    private readonly identifierValidator: GroupIdentifierValidator,
   ) {}
 
+  /**
+   * Сохраняет группу из VK API в базу данных
+   *
+   * @param identifier - Идентификатор группы (screen_name, vkId или короткое имя)
+   * @returns Сохраненная группа
+   * @throws NotFoundException если группа не найдена в VK
+   */
   async saveGroup(identifier: string | number): Promise<IGroupResponse> {
-    const parsedIdentifier = this.identifierValidator.normalizeIdentifier(
-      identifier,
-    );
+    const parsedIdentifier =
+      this.identifierValidator.normalizeIdentifier(identifier);
     const response = await this.vkService.getGroups(parsedIdentifier);
 
     if (!response?.groups || response.groups.length === 0) {
@@ -47,14 +60,14 @@ export class GroupsService {
 
     const groupData = response.groups[0] as IGroup;
 
-    const group = await this.prisma.group.upsert({
-      where: { vkId: groupData.id },
-      update: this.groupMapper.mapGroupData(groupData),
-      create: {
+    const mappedData = this.groupMapper.mapGroupData(groupData);
+    const group = await this.repository.upsert(
+      { vkId: groupData.id },
+      {
         vkId: groupData.id,
-        ...this.groupMapper.mapGroupData(groupData),
+        ...mappedData,
       },
-    });
+    );
 
     this.logger.log(
       `Группа ${groupData.id} сохранена в базе (id записи ${group.id})`,
@@ -74,14 +87,10 @@ export class GroupsService {
         : 50;
     const skip = (page - 1) * limit;
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.group.findMany({
-        orderBy: { updatedAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.group.count(),
-    ]);
+    const { items, total } = await this.repository.getGroupsWithCount({
+      skip,
+      take: limit,
+    });
 
     const hasMore = skip + items.length < total;
 
@@ -95,13 +104,11 @@ export class GroupsService {
   }
 
   async deleteGroup(id: number): Promise<IGroupResponse> {
-    return this.prisma.group.delete({
-      where: { id },
-    });
+    return this.repository.delete({ id });
   }
 
   async deleteAllGroups(): Promise<IDeleteResponse> {
-    return this.prisma.group.deleteMany({});
+    return this.repository.deleteMany();
   }
 
   async bulkSaveGroups(identifiers: string[]): Promise<IBulkSaveGroupsResult> {
@@ -203,13 +210,7 @@ export class GroupsService {
       }
 
       const vkIds = groups.map((group) => group.id);
-      const existing = await this.prisma.group.findMany({
-        where: {
-          vkId: {
-            in: vkIds,
-          },
-        },
-      });
+      const existing = await this.repository.findManyByVkIds(vkIds);
 
       const existingIds = new Set(existing.map((group) => group.vkId));
 

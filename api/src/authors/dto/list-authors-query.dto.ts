@@ -68,4 +68,3 @@ export class ListAuthorsQueryDto {
   @IsOptional()
   sortOrder?: string;
 }
-

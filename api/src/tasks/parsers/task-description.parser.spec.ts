@@ -103,4 +103,3 @@ describe('TaskDescriptionParser', () => {
     expect(parsed.postLimit).toBe(10);
   });
 });
-

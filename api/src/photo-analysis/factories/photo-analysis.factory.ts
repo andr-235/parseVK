@@ -25,7 +25,10 @@ export class PhotoAnalysisFactory {
     };
   }
 
-  createSuspicionLevel(hasSuspicious: boolean, confidence: number | null): PrismaSuspicionLevel {
+  createSuspicionLevel(
+    hasSuspicious: boolean,
+    confidence: number | null,
+  ): PrismaSuspicionLevel {
     if (!hasSuspicious) {
       return PrismaSuspicionLevel.NONE;
     }
@@ -47,11 +50,7 @@ export class PhotoAnalysisFactory {
 
   createCategories(rawCategories: string[]): string[] {
     return Array.from(
-      new Set(
-        rawCategories
-          .map((category) => category.trim())
-          .filter(Boolean),
-      ),
+      new Set(rawCategories.map((category) => category.trim()).filter(Boolean)),
     );
   }
 }

@@ -162,9 +162,7 @@ export class TelegramParticipantCollectorService {
     return { members, total };
   }
 
-  private collectPrivateParticipant(
-    user: Api.User,
-  ): ParticipantCollection {
+  private collectPrivateParticipant(user: Api.User): ParticipantCollection {
     const member: MemberRecord = {
       user,
       status: 'MEMBER',
@@ -228,4 +226,3 @@ export class TelegramParticipantCollectorService {
     return this.memberMapper.toTelegramLong(value);
   }
 }
-

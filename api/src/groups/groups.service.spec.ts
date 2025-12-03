@@ -3,7 +3,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
-import type { PrismaService } from '../prisma.service';
 import type { VkService } from '../vk/vk.service';
 import type {
   IGroupResponse,
@@ -12,6 +11,7 @@ import type {
 } from './interfaces/group.interface';
 import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface';
 import type { IGroup } from '../vk/interfaces/group.interfaces';
+import type { IGroupsRepository } from './interfaces/groups-repository.interface';
 import { GroupMapper } from './mappers/group.mapper';
 import { GroupIdentifierValidator } from './validators/group-identifier.validator';
 
@@ -21,7 +21,7 @@ jest.mock('../vk/vk.service', () => ({
 
 describe('GroupsService', () => {
   let service: GroupsService;
-  let prisma: PrismaService;
+  let repository: jest.Mocked<IGroupsRepository>;
   let vkService: VkService;
   let groupMapper: jest.Mocked<GroupMapper>;
   let identifierValidator: jest.Mocked<GroupIdentifierValidator>;
@@ -49,16 +49,15 @@ describe('GroupsService', () => {
   } as unknown as IGroup;
 
   beforeEach(() => {
-    prisma = {
-      group: {
-        upsert: jest.fn(),
-        findMany: jest.fn(),
-        delete: jest.fn(),
-        deleteMany: jest.fn(),
-        count: jest.fn(),
-      },
-      $transaction: jest.fn(),
-    } as unknown as PrismaService;
+    repository = {
+      upsert: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+      getGroupsWithCount: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+      findManyByVkIds: jest.fn(),
+    } as any;
 
     vkService = {
       getGroups: jest.fn(),
@@ -75,7 +74,7 @@ describe('GroupsService', () => {
     } as any;
 
     service = new GroupsService(
-      prisma,
+      repository,
       vkService,
       groupMapper,
       identifierValidator,
@@ -116,20 +115,19 @@ describe('GroupsService', () => {
         vkId: vkGroup.id,
         ...mappedData,
       } as IGroupResponse;
-      (prisma.group.upsert as jest.Mock).mockResolvedValue(savedGroup);
+      repository.upsert.mockResolvedValue(savedGroup);
       identifierValidator.normalizeIdentifier.mockReturnValue(123);
 
       const result = await service.saveGroup('https://vk.com/club123');
 
       expect(vkService.getGroups).toHaveBeenCalledWith('123');
-      expect(prisma.group.upsert).toHaveBeenCalledWith({
-        where: { vkId: vkGroup.id },
-        update: mappedData,
-        create: {
+      expect(repository.upsert).toHaveBeenCalledWith(
+        { vkId: vkGroup.id },
+        {
           vkId: vkGroup.id,
           ...mappedData,
         },
-      });
+      );
       expect(result).toBe(savedGroup);
     });
 
@@ -144,25 +142,17 @@ describe('GroupsService', () => {
 
   it('должен возвращать постраничный список групп', async () => {
     const groups = [{ id: 1 }, { id: 2 }] as IGroupResponse[];
-    (prisma.group.findMany as jest.Mock).mockReturnValue(
-      Promise.resolve(groups),
-    );
-    (prisma.group.count as jest.Mock).mockReturnValue(Promise.resolve(10));
-    (prisma.$transaction as jest.Mock).mockImplementation(
-      async (operations: Array<Promise<unknown>>) => {
-        const [items, total] = await Promise.all(operations);
-        return [items, total];
-      },
-    );
+    repository.getGroupsWithCount.mockResolvedValue({
+      items: groups,
+      total: 10,
+    });
 
     const result = await service.getAllGroups({ page: 2, limit: 2 });
 
-    expect(prisma.group.findMany).toHaveBeenCalledWith({
-      orderBy: { updatedAt: 'desc' },
+    expect(repository.getGroupsWithCount).toHaveBeenCalledWith({
       skip: 2,
       take: 2,
     });
-    expect(prisma.group.count).toHaveBeenCalled();
     expect(result).toEqual({
       items: groups,
       total: 10,
@@ -174,22 +164,22 @@ describe('GroupsService', () => {
 
   it('должен удалять группу по идентификатору', async () => {
     const group = { id: 10 } as IGroupResponse;
-    (prisma.group.delete as jest.Mock).mockResolvedValue(group);
+    repository.delete.mockResolvedValue(group);
 
     const result = await service.deleteGroup(10);
 
-    expect(prisma.group.delete).toHaveBeenCalledWith({ where: { id: 10 } });
+    expect(repository.delete).toHaveBeenCalledWith({ id: 10 });
     expect(result).toBe(group);
   });
 
   it('должен удалять все группы', async () => {
-    const response = { count: 3 } as unknown as IDeleteResponse;
-    (prisma.group.deleteMany as jest.Mock).mockResolvedValue(response);
+    const response = { count: 3 };
+    repository.deleteMany.mockResolvedValue(response);
 
     const result = await service.deleteAllGroups();
 
-    expect(prisma.group.deleteMany).toHaveBeenCalledWith({});
-    expect(result).toBe(response);
+    expect(repository.deleteMany).toHaveBeenCalled();
+    expect(result).toEqual(response);
   });
 
   describe('bulkSaveGroups', () => {
@@ -295,12 +285,20 @@ describe('GroupsService', () => {
       if (input.includes('public')) return input.replace('public', '');
       return input;
     });
-    expect(identifierValidator.normalizeIdentifier('https://vk.com/club123')).toBe('123');
-    expect(identifierValidator.normalizeIdentifier('https://vk.com/public456')).toBe('456');
-    expect(identifierValidator.normalizeIdentifier('https://vk.com/screen_name')).toBe('screen_name');
+    expect(
+      identifierValidator.normalizeIdentifier('https://vk.com/club123'),
+    ).toBe('123');
+    expect(
+      identifierValidator.normalizeIdentifier('https://vk.com/public456'),
+    ).toBe('456');
+    expect(
+      identifierValidator.normalizeIdentifier('https://vk.com/screen_name'),
+    ).toBe('screen_name');
     expect(identifierValidator.normalizeIdentifier('club789')).toBe('789');
     expect(identifierValidator.normalizeIdentifier('public101')).toBe('101');
-    expect(identifierValidator.normalizeIdentifier('  screen_name  ')).toBe('screen_name');
+    expect(identifierValidator.normalizeIdentifier('  screen_name  ')).toBe(
+      'screen_name',
+    );
     expect(identifierValidator.normalizeIdentifier(555)).toBe(555);
   });
 
@@ -319,20 +317,14 @@ describe('GroupsService', () => {
       ];
 
       (vkService.searchGroupsByRegion as jest.Mock).mockResolvedValue(vkGroups);
-      (prisma.group.findMany as jest.Mock).mockResolvedValue([
+      repository.findManyByVkIds.mockResolvedValue([
         { id: 1, vkId: 10 },
-      ]);
+      ] as any);
 
       const result = await service.searchRegionGroups();
 
       expect(vkService.searchGroupsByRegion).toHaveBeenCalledWith({});
-      expect(prisma.group.findMany).toHaveBeenCalledWith({
-        where: {
-          vkId: {
-            in: [10, 20, 30],
-          },
-        },
-      });
+      expect(repository.findManyByVkIds).toHaveBeenCalledWith([10, 20, 30]);
 
       expect(result.total).toBe(3);
       expect(result.existsInDb).toHaveLength(1);
@@ -357,7 +349,7 @@ describe('GroupsService', () => {
         existsInDb: [],
         missing: [],
       });
-      expect(prisma.group.findMany).not.toHaveBeenCalled();
+      expect(repository.findManyByVkIds).not.toHaveBeenCalled();
     });
 
     it('должен пробрасывать NotFoundException при отсутствии региона', async () => {

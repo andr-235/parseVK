@@ -18,7 +18,8 @@ export class AuthorSortBuilder {
   private buildPrimarySortExpression(sort: ResolvedAuthorSort): Prisma.Sql {
     const handlers: Record<AuthorSortField, () => Prisma.Sql> = {
       fullName: () => this.buildFullNameSort(sort.order),
-      photosCount: () => this.buildCounterSort(['photos', 'photos_count'], sort.order),
+      photosCount: () =>
+        this.buildCounterSort(['photos', 'photos_count'], sort.order),
       audiosCount: () => this.buildCounterSort(['audios', 'audio'], sort.order),
       videosCount: () => this.buildCounterSort(['videos', 'video'], sort.order),
       friendsCount: () => this.buildCounterSort(['friends'], sort.order),
@@ -41,7 +42,10 @@ export class AuthorSortBuilder {
     return Prisma.join(expressions, ', ');
   }
 
-  private buildCounterSort(keys: string[], order: AuthorSortDirection): Prisma.Sql {
+  private buildCounterSort(
+    keys: string[],
+    order: AuthorSortDirection,
+  ): Prisma.Sql {
     const expression = this.buildCounterValueExpression(keys);
     return this.applyDirection(expression, order, { nullsLast: true });
   }
@@ -57,11 +61,9 @@ export class AuthorSortBuilder {
   }
 
   private buildVerifiedAtSort(order: AuthorSortDirection): Prisma.Sql {
-    return this.applyDirection(
-      Prisma.sql`"Author"."verifiedAt"`,
-      order,
-      { nullsLast: true },
-    );
+    return this.applyDirection(Prisma.sql`"Author"."verifiedAt"`, order, {
+      nullsLast: true,
+    });
   }
 
   private buildUpdatedAtSort(order: AuthorSortDirection): Prisma.Sql {
@@ -79,7 +81,9 @@ export class AuthorSortBuilder {
   }
 
   private buildCounterValueExpression(keys: string[]): Prisma.Sql {
-    const expressions = keys.map((key) => this.buildCounterValueExpressionForKey(key));
+    const expressions = keys.map((key) =>
+      this.buildCounterValueExpressionForKey(key),
+    );
 
     if (expressions.length === 1) {
       return expressions[0];
@@ -194,4 +198,3 @@ export class AuthorSortBuilder {
     `;
   }
 }
-

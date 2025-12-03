@@ -46,4 +46,3 @@ export class CommentMapper {
     return comments.map((comment) => this.map(comment));
   }
 }
-

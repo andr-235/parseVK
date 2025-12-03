@@ -15,4 +15,3 @@ export class GetGroupsQueryDto {
   @Max(200)
   limit?: number;
 }
-

@@ -10,9 +10,7 @@ import { PhotoAnalysisFacadeService } from './services/photo-analysis-facade.ser
 export class PhotoAnalysisService {
   private readonly logger = new Logger(PhotoAnalysisService.name);
 
-  constructor(
-    private readonly facade: PhotoAnalysisFacadeService,
-  ) {}
+  constructor(private readonly facade: PhotoAnalysisFacadeService) {}
 
   async analyzeByVkUser(
     vkUserId: number,
@@ -25,7 +23,9 @@ export class PhotoAnalysisService {
     return this.facade.listByVkUser(vkUserId);
   }
 
-  async listSuspiciousByVkUser(vkUserId: number): Promise<PhotoAnalysisListDto> {
+  async listSuspiciousByVkUser(
+    vkUserId: number,
+  ): Promise<PhotoAnalysisListDto> {
     return this.facade.listSuspiciousByVkUser(vkUserId);
   }
 
@@ -46,5 +46,4 @@ export class PhotoAnalysisService {
   getEmptySummary(): PhotoAnalysisSummaryDto {
     return this.facade.getEmptySummary();
   }
-
 }

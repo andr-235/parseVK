@@ -3,4 +3,3 @@ export interface SyncChatParams {
   limit?: number;
   enrichWithFullData?: boolean;
 }
-

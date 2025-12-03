@@ -86,4 +86,3 @@ export class CommentsRepository implements ICommentsRepository {
     return this.prisma.$transaction(queries);
   }
 }
-

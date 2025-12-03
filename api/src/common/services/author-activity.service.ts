@@ -49,18 +49,14 @@ const matchesKeyword = (
   keyword: KeywordMatchCandidate,
 ): boolean => {
   const escaped = escapeRegExp(keyword.normalizedWord);
-  
+
   const startsWithWordChar = WORD_CHAR_TEST.test(keyword.normalizedWord[0]);
   const endsWithWordChar = WORD_CHAR_TEST.test(
     keyword.normalizedWord[keyword.normalizedWord.length - 1],
   );
 
-  const boundaryStart = startsWithWordChar
-    ? `(?<!${WORD_CHARS_PATTERN})`
-    : '';
-  const boundaryEnd = endsWithWordChar
-    ? `(?!${WORD_CHARS_PATTERN})`
-    : '';
+  const boundaryStart = startsWithWordChar ? `(?<!${WORD_CHARS_PATTERN})` : '';
+  const boundaryEnd = endsWithWordChar ? `(?!${WORD_CHARS_PATTERN})` : '';
 
   if (keyword.isPhrase) {
     const pattern = `${boundaryStart}${escaped}${boundaryEnd}`;
@@ -94,6 +90,12 @@ const toCreateJsonValue = (
   return value as Prisma.InputJsonValue;
 };
 
+/**
+ * Сервис для сохранения авторов и комментариев
+ *
+ * Общий сервис, используемый как задачами парсинга, так и watchlist мониторингом.
+ * Обеспечивает сохранение авторов, комментариев и сопоставление ключевых слов.
+ */
 @Injectable()
 export class AuthorActivityService {
   constructor(
@@ -599,7 +601,10 @@ export class AuthorActivityService {
 
     for (const match of existingMatches) {
       if (!matchedKeywordIds.has(match.keywordId)) {
-        toDelete.push({ commentId: match.commentId, keywordId: match.keywordId });
+        toDelete.push({
+          commentId: match.commentId,
+          keywordId: match.keywordId,
+        });
       }
     }
 

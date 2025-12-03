@@ -6,7 +6,9 @@ import type { IAuthorService } from '../interfaces/photo-loader.interface';
 export class AuthorService implements IAuthorService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAuthorByVkId(vkUserId: number): Promise<{ id: number; vkUserId: number }> {
+  async findAuthorByVkId(
+    vkUserId: number,
+  ): Promise<{ id: number; vkUserId: number }> {
     const author = await this.prisma.author.findUnique({
       where: { vkUserId },
     });

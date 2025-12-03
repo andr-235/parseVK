@@ -221,5 +221,19 @@ export class WatchlistRepository implements IWatchlistRepository {
       },
     });
   }
-}
 
+  async findCommentById(id: number): Promise<{
+    id: number;
+    authorVkId: number | null;
+    fromId: number;
+  } | null> {
+    return this.prisma.comment.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        authorVkId: true,
+        fromId: true,
+      },
+    });
+  }
+}

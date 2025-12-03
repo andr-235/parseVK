@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { MatchSource } from '@prisma/client';
-import type { CommentsFilters, ReadStatusFilter } from '../types/comments-filters.type';
+import type {
+  CommentsFilters,
+  ReadStatusFilter,
+} from '../types/comments-filters.type';
 
 @Injectable()
 export class CommentsFilterBuilder {
-  buildBaseWhere({ keywords, keywordSource, search }: CommentsFilters): Prisma.CommentWhereInput {
+  buildBaseWhere({
+    keywords,
+    keywordSource,
+    search,
+  }: CommentsFilters): Prisma.CommentWhereInput {
     const conditions: Prisma.CommentWhereInput[] = [];
 
     const normalizedKeywords = Array.from(
@@ -122,4 +129,3 @@ export class CommentsFilterBuilder {
     return this.mergeWhere(baseWhere, readStatusWhere);
   }
 }
-

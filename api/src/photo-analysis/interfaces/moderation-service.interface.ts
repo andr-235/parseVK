@@ -17,5 +17,8 @@ export interface IModerationStrategy {
 }
 
 export interface IModerationAdapter {
-  adapt(rawResponse: unknown, photo: { photoVkId: string; url: string }): ModerationResult;
+  adapt(
+    rawResponse: unknown,
+    photo: { photoVkId: string; url: string },
+  ): ModerationResult;
 }

@@ -1,17 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { request as httpRequest } from 'node:http';
-import { request as httpsRequest, type RequestOptions as HttpsRequestOptions } from 'node:https';
+import {
+  request as httpsRequest,
+  type RequestOptions as HttpsRequestOptions,
+} from 'node:https';
 import type { IModerationStrategy } from '../interfaces/moderation-service.interface';
+import type { AppConfig } from '../../config/app.config';
 
-const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL = 'https://192.168.88.12/webhook/image-moderation';
+const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL =
+  'https://192.168.88.12/webhook/image-moderation';
 
 @Injectable()
 export class WebhookModerationStrategy implements IModerationStrategy {
   private readonly logger = new Logger(WebhookModerationStrategy.name);
 
+  constructor(private readonly configService: ConfigService<AppConfig>) {}
+
   async moderate(imageUrls: string[]): Promise<unknown[]> {
-    const webhookUrl = process.env.IMAGE_MODERATION_WEBHOOK_URL ?? DEFAULT_IMAGE_MODERATION_WEBHOOK_URL;
-    const allowSelfSignedEnv = process.env.IMAGE_MODERATION_ALLOW_SELF_SIGNED;
+    const webhookUrl =
+      this.configService.get('imageModerationWebhookUrl', { infer: true }) ??
+      DEFAULT_IMAGE_MODERATION_WEBHOOK_URL;
+    const allowSelfSignedEnv = this.configService.get(
+      'imageModerationAllowSelfSigned',
+      { infer: true },
+    );
     const allowSelfSigned =
       typeof allowSelfSignedEnv === 'string'
         ? allowSelfSignedEnv.toLowerCase() === 'true'

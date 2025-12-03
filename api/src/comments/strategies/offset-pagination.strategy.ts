@@ -30,7 +30,10 @@ export class OffsetPaginationStrategy implements IPaginationStrategy {
       filters.readStatus,
     );
     const listWhere = this.filterBuilder.mergeWhere(baseWhere, readStatusWhere);
-    const totalWhere = this.filterBuilder.mergeWhere(baseWhere, readStatusWhere);
+    const totalWhere = this.filterBuilder.mergeWhere(
+      baseWhere,
+      readStatusWhere,
+    );
     const readWhere = this.filterBuilder.mergeWhere(baseWhere, {
       isRead: true,
     });
@@ -67,4 +70,3 @@ export class OffsetPaginationStrategy implements IPaginationStrategy {
     };
   }
 }
-

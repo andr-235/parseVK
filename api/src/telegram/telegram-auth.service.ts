@@ -118,13 +118,15 @@ export class TelegramAuthService {
       orderBy: { updatedAt: 'desc' },
     });
 
-    const phoneNumber = payload.phoneNumber?.trim() ?? savedSettings?.phoneNumber?.trim();
+    const phoneNumber =
+      payload.phoneNumber?.trim() ?? savedSettings?.phoneNumber?.trim();
     if (!phoneNumber) {
       throw new BadRequestException('PHONE_NUMBER_REQUIRED');
     }
 
     const apiId = payload.apiId ?? savedSettings?.apiId ?? this.defaultApiId;
-    const apiHash = payload.apiHash ?? savedSettings?.apiHash ?? this.defaultApiHash;
+    const apiHash =
+      payload.apiHash ?? savedSettings?.apiHash ?? this.defaultApiHash;
 
     if (!apiId || !apiHash) {
       throw new BadRequestException('API_ID_AND_HASH_REQUIRED');
@@ -145,7 +147,7 @@ export class TelegramAuthService {
       );
 
       const transactionId = randomUUID();
-      const sessionString = (client.session.save() as unknown) as string;
+      const sessionString = client.session.save() as unknown as string;
 
       const state: AuthTransactionState = {
         phoneNumber,
@@ -280,17 +282,20 @@ export class TelegramAuthService {
         }
       }
 
-      const session = (client.session.save() as unknown) as string;
+      const session = client.session.save() as unknown as string;
 
       await this.cache.del(this.buildCacheKey(payload.transactionId));
 
       const userId =
-        typeof me.id === 'bigint' ? Number(me.id) : typeof me.id === 'number' ? me.id : 0;
+        typeof me.id === 'bigint'
+          ? Number(me.id)
+          : typeof me.id === 'number'
+            ? me.id
+            : 0;
 
       const username =
         me instanceof Api.User && me.username ? me.username : null;
-      const phoneNumber =
-        me instanceof Api.User && me.phone ? me.phone : null;
+      const phoneNumber = me instanceof Api.User && me.phone ? me.phone : null;
 
       await this.saveSession(session, userId, username, phoneNumber);
 
@@ -363,4 +368,3 @@ export class TelegramAuthService {
     }
   }
 }
-

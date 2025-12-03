@@ -89,4 +89,3 @@ export class TelegramChatMapper {
     throw new Error('Unable to convert value to bigint');
   }
 }
-

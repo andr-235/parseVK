@@ -126,9 +126,18 @@ describe('CommentsController', () => {
     queryValidator.normalizeReadStatus.mockReturnValue('unread');
     queryValidator.normalizeSearch.mockReturnValue('keyword');
 
-    await controller.getComments(10, 20, [' test ', 'demo'], 'unread', '  keyword  ');
+    await controller.getComments(
+      10,
+      20,
+      [' test ', 'demo'],
+      'unread',
+      '  keyword  ',
+    );
 
-    expect(queryValidator.parseKeywords).toHaveBeenCalledWith([' test ', 'demo']);
+    expect(queryValidator.parseKeywords).toHaveBeenCalledWith([
+      ' test ',
+      'demo',
+    ]);
     expect(queryValidator.normalizeReadStatus).toHaveBeenCalledWith('unread');
     expect(queryValidator.normalizeSearch).toHaveBeenCalledWith('  keyword  ');
     expect(commentsService.getComments).toHaveBeenLastCalledWith({

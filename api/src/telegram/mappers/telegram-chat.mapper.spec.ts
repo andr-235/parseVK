@@ -88,4 +88,3 @@ describe('TelegramChatMapper', () => {
     expect(result).toBeNull();
   });
 });
-

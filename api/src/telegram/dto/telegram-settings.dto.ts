@@ -21,4 +21,3 @@ export class TelegramSettingsResponseDto {
   createdAt!: string;
   updatedAt!: string;
 }
-

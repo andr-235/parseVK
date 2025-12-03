@@ -31,4 +31,3 @@ export class StartTelegramSessionResponseDto {
   nextType!: 'app' | 'sms' | 'call' | 'flash';
   timeoutSec!: number | null;
 }
-

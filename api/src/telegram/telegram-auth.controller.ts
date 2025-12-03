@@ -48,4 +48,3 @@ export class TelegramAuthController {
     return this.telegramAuthService.confirmSession(payload);
   }
 }
-

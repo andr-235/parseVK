@@ -12,4 +12,3 @@ export class TelegramSyncResultDto {
   fetchedMembers!: number;
   members!: TelegramMemberDto[];
 }
-

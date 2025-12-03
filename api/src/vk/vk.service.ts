@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { APIError, VK } from 'vk-io';
@@ -54,13 +55,22 @@ export interface VkPhoto {
   sizes: VkPhotoSize[];
 }
 
+/**
+ * Сервис для работы с VK API
+ *
+ * Обертка над библиотекой vk-io для взаимодействия с VK API.
+ * Обеспечивает кэширование запросов и обработку ошибок.
+ */
 @Injectable()
 export class VkService {
   private readonly vk: VK;
   private readonly logger = new Logger(VkService.name);
 
-  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {
-    const token = process.env.VK_TOKEN;
+  constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly configService: ConfigService,
+  ) {
+    const token = this.configService.get<string>('vkToken');
     if (!token) {
       throw new Error('VK_TOKEN environment variable is required');
     }
@@ -324,6 +334,16 @@ export class VkService {
     }
 
     return sizes[0]?.url ?? null;
+  }
+
+  /**
+   * Простая проверка доступности VK API
+   * Используется для health check
+   */
+  async checkApiHealth(): Promise<void> {
+    await this.vk.api.groups.getById({
+      group_ids: ['1'],
+    });
   }
 
   async getGroupRecentPosts(options: {
@@ -839,7 +859,8 @@ export class VkService {
 
   private resolveApiTimeout(): number {
     const fallback = 60_000; // VK API часто отвечает дольше стандартных 10 секунд.
-    return parsePositiveInteger(process.env.VK_API_TIMEOUT_MS, fallback);
+    const timeout = this.configService.get<number>('vkApiTimeoutMs');
+    return timeout ?? fallback;
   }
 
   private applyApiTimeout(vk: VK, timeout: number): void {

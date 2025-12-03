@@ -18,4 +18,3 @@ export interface CursorPaginationOptions {
   cursor?: string;
   limit: number;
 }
-

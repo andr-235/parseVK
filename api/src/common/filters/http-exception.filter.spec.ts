@@ -149,7 +149,10 @@ describe('HttpExceptionFilter', () => {
   });
 
   it('преобразует строковое сообщение в массив', () => {
-    const exception = new HttpException('Простая ошибка', HttpStatus.BAD_REQUEST);
+    const exception = new HttpException(
+      'Простая ошибка',
+      HttpStatus.BAD_REQUEST,
+    );
 
     filter.catch(exception, host);
 
@@ -161,7 +164,10 @@ describe('HttpExceptionFilter', () => {
   });
 
   it('использует дефолтное сообщение для HttpException без message', () => {
-    const exception = new HttpException({ error: 'Error' }, HttpStatus.BAD_REQUEST);
+    const exception = new HttpException(
+      { error: 'Error' },
+      HttpStatus.BAD_REQUEST,
+    );
 
     filter.catch(exception, host);
 
@@ -173,4 +179,3 @@ describe('HttpExceptionFilter', () => {
     );
   });
 });
-

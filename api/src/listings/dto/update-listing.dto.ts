@@ -28,4 +28,3 @@ export interface UpdateListingDto {
   manualNote?: string | null;
   archived?: boolean | null;
 }
-

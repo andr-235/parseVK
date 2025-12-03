@@ -1,9 +1,19 @@
-import { Body, Controller, Get, Param, Patch, Query, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { ListingsService } from './listings.service';
 import type { ListingsResponseDto } from './dto/listings-response.dto';
 import type { ListingDto } from './dto/listing.dto';
 import type { Response } from 'express';
 import type { UpdateListingDto } from './dto/update-listing.dto';
+import { ListingsQueryDto } from './dto/listings-query.dto';
+import { ListingIdParamDto } from './dto/listing-id-param.dto';
 
 @Controller('listings')
 export class ListingsController {
@@ -11,24 +21,14 @@ export class ListingsController {
 
   @Get()
   async getListings(
-    @Query('page') pageParam?: string,
-    @Query('pageSize') pageSizeParam?: string,
-    @Query('search') searchParam?: string,
-    @Query('source') sourceParam?: string,
-    @Query('archived') archivedParam?: string,
+    @Query() query: ListingsQueryDto,
   ): Promise<ListingsResponseDto> {
-    const page = this.parseNumber(pageParam, 1, 1, 1000);
-    const pageSize = this.parseNumber(pageSizeParam, 25, 1, 100);
-    const search = this.normalizeString(searchParam);
-    const source = this.normalizeSource(sourceParam);
-    const archived = this.parseBoolean(archivedParam);
-
     return this.listingsService.getListings({
-      page,
-      pageSize,
-      search: search ?? undefined,
-      source: source ?? undefined,
-      archived: archived ?? undefined,
+      page: query.page ?? 1,
+      pageSize: query.pageSize ?? 25,
+      search: query.search,
+      source: query.source,
+      archived: query.archived,
     });
   }
 
@@ -41,10 +41,18 @@ export class ListingsController {
     @Query('fields') fieldsParam?: string,
     @Res() res?: Response,
   ) {
-    const exportAll = (allParam ?? '').toLowerCase() === '1' || (allParam ?? '').toLowerCase() === 'true';
-    const search = exportAll ? undefined : this.normalizeString(searchParam) ?? undefined;
-    const source = exportAll ? undefined : this.normalizeSource(sourceParam) ?? undefined;
-    const archived = exportAll ? undefined : this.parseBoolean(archivedParam) ?? undefined;
+    const exportAll =
+      (allParam ?? '').toLowerCase() === '1' ||
+      (allParam ?? '').toLowerCase() === 'true';
+    const search = exportAll
+      ? undefined
+      : (this.normalizeString(searchParam) ?? undefined);
+    const source = exportAll
+      ? undefined
+      : (this.normalizeSource(sourceParam) ?? undefined);
+    const archived = exportAll
+      ? undefined
+      : (this.parseBoolean(archivedParam) ?? undefined);
 
     const defaultFields = [
       'id',
@@ -64,7 +72,7 @@ export class ListingsController {
       'description',
       'manualNote',
     ] as const;
-    type FieldKey = typeof defaultFields[number];
+    type FieldKey = (typeof defaultFields)[number];
 
     const fieldLabels: Record<FieldKey, string> = {
       id: 'ID',
@@ -89,7 +97,10 @@ export class ListingsController {
       const raw = (value ?? '').trim();
       if (!raw) return [...defaultFields];
       const allowed = new Set(defaultFields);
-      const list = raw.split(',').map((s) => s.trim()).filter(Boolean) as string[];
+      const list = raw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
       const result: FieldKey[] = [];
       for (const key of list) {
         if (allowed.has(key as FieldKey)) {
@@ -118,7 +129,9 @@ export class ListingsController {
     if (exportAll) filenameParts.push('all');
     const now = new Date();
     const iso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-      .toISOString().replace(/[:T]/g, '-').slice(0, 16);
+      .toISOString()
+      .replace(/[:T]/g, '-')
+      .slice(0, 16);
     filenameParts.push(iso);
     const filename = `${filenameParts.join('_')}.csv`;
 
@@ -136,36 +149,58 @@ export class ListingsController {
       return item.sourceParsedAt ?? null;
     };
 
-    for await (const batch of this.listingsService.iterateAllListings({ search, source, archived, batchSize: 1000 })) {
+    for await (const batch of this.listingsService.iterateAllListings({
+      search,
+      source,
+      archived,
+      batchSize: 1000,
+    })) {
       for (const item of batch) {
-        const row = fields.map((key) => {
-          const value = ((): unknown => {
-            switch (key) {
-              case 'id': return item.id;
-              case 'source': return item.source;
-              case 'title': return item.title;
-              case 'url': return item.url;
-              case 'price': return item.price;
-              case 'currency': return item.currency;
-              case 'address': return item.address;
-              case 'publishedAt': return pickPublished(item);
-              case 'postedAt': {
-                return item.sourcePostedAt ?? '';
+        const row = fields
+          .map((key) => {
+            const value = ((): unknown => {
+              switch (key) {
+                case 'id':
+                  return item.id;
+                case 'source':
+                  return item.source;
+                case 'title':
+                  return item.title;
+                case 'url':
+                  return item.url;
+                case 'price':
+                  return item.price;
+                case 'currency':
+                  return item.currency;
+                case 'address':
+                  return item.address;
+                case 'publishedAt':
+                  return pickPublished(item);
+                case 'postedAt': {
+                  return item.sourcePostedAt ?? '';
+                }
+                case 'parsedAt': {
+                  return item.sourceParsedAt ?? '';
+                }
+                case 'images':
+                  return item.images;
+                case 'description':
+                  return item.description;
+                case 'sourceAuthorName':
+                  return item.sourceAuthorName;
+                case 'sourceAuthorPhone':
+                  return item.sourceAuthorPhone;
+                case 'sourceAuthorUrl':
+                  return item.sourceAuthorUrl;
+                case 'manualNote':
+                  return item.manualNote;
+                default:
+                  return '';
               }
-              case 'parsedAt': {
-                return item.sourceParsedAt ?? '';
-              }
-              case 'images': return item.images;
-              case 'description': return item.description;
-              case 'sourceAuthorName': return item.sourceAuthorName;
-              case 'sourceAuthorPhone': return item.sourceAuthorPhone;
-              case 'sourceAuthorUrl': return item.sourceAuthorUrl;
-              case 'manualNote': return item.manualNote;
-              default: return '';
-            }
-          })();
-          return escapeCsv(value);
-        }).join(',');
+            })();
+            return escapeCsv(value);
+          })
+          .join(',');
         res?.write(row + '\n');
       }
     }
@@ -175,37 +210,10 @@ export class ListingsController {
 
   @Patch(':id')
   async updateListing(
-    @Param('id') idParam: string,
+    @Param() params: ListingIdParamDto,
     @Body() payload: UpdateListingDto,
   ): Promise<ListingDto> {
-    const id = this.parseNumber(idParam, 0, 1, Number.MAX_SAFE_INTEGER);
-    return this.listingsService.updateListing(id, payload);
-  }
-
-  private parseNumber(
-    value: string | undefined,
-    defaultValue: number,
-    min: number,
-    max: number,
-  ): number {
-    if (!value) {
-      return defaultValue;
-    }
-
-    const parsed = Number.parseInt(value, 10);
-    if (!Number.isFinite(parsed)) {
-      return defaultValue;
-    }
-
-    if (parsed < min) {
-      return min;
-    }
-
-    if (parsed > max) {
-      return max;
-    }
-
-    return parsed;
+    return this.listingsService.updateListing(params.id, payload);
   }
 
   private normalizeString(value?: string): string | null {

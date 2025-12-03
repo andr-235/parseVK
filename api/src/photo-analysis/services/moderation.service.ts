@@ -24,7 +24,9 @@ export class ModerationService implements IModerationService {
       const raw = rawResults[index];
 
       if (raw === undefined) {
-        throw new Error(`Отсутствует результат модерации для изображения ${url}`);
+        throw new Error(
+          `Отсутствует результат модерации для изображения ${url}`,
+        );
       }
 
       const photo = {

@@ -92,7 +92,10 @@ export class ListingImportDto {
 
   @IsOptional()
   @IsArray({ message: 'images должен быть массивом строк' })
-  @IsString({ each: true, message: 'каждый элемент images должен быть строкой' })
+  @IsString({
+    each: true,
+    message: 'каждый элемент images должен быть строкой',
+  })
   images?: string[];
 
   @IsOptional()
@@ -112,7 +115,10 @@ export class ListingImportDto {
   sourcePostedAt?: string;
 
   @IsOptional()
-  @IsDateString({}, { message: 'sourceParsedAt должен быть датой в формате ISO' })
+  @IsDateString(
+    {},
+    { message: 'sourceParsedAt должен быть датой в формате ISO' },
+  )
   sourceParsedAt?: string;
 
   @IsOptional()

@@ -17,4 +17,3 @@ export interface CommentsCursorOptions extends CommentsFilters {
   cursor?: string;
   limit: number;
 }
-

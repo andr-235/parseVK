@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ParsingScope } from '../dto/create-parsing-task.dto';
 import type { ParsingStats } from '../interfaces/parsing-stats.interface';
 import type { ParsedTaskDescription } from '../parsers/task-description.parser';
@@ -81,4 +85,3 @@ export class TaskContextBuilder {
     return Math.max(1, Math.min(normalized, 100));
   }
 }
-

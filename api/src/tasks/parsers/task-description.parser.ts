@@ -219,4 +219,3 @@ export class TaskDescriptionParser {
     return null;
   }
 }
-

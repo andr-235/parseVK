@@ -5,6 +5,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
@@ -13,6 +14,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { KeywordsService } from './keywords.service';
 import { AddKeywordDto } from './dto/add-keyword.dto';
 import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto';
+import { KeywordIdParamDto } from './dto/keyword-id-param.dto';
+import { GetKeywordsQueryDto } from './dto/get-keywords-query.dto';
 import {
   IKeywordResponse,
   IDeleteResponse,
@@ -53,8 +56,16 @@ export class KeywordsController {
   }
 
   @Get()
-  async getAllKeywords(): Promise<IKeywordResponse[]> {
-    return this.keywordsService.getKeywords();
+  async getAllKeywords(@Query() query: GetKeywordsQueryDto): Promise<{
+    keywords: IKeywordResponse[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.keywordsService.getKeywords({
+      page: query.page ?? 1,
+      limit: query.limit ?? 50,
+    });
   }
 
   @Delete('all')
@@ -63,8 +74,10 @@ export class KeywordsController {
   }
 
   @Delete(':id')
-  async deleteKeyword(@Param('id') id: string): Promise<IDeleteResponse> {
-    return this.keywordsService.deleteKeyword(Number(id));
+  async deleteKeyword(
+    @Param() params: KeywordIdParamDto,
+  ): Promise<IDeleteResponse> {
+    return this.keywordsService.deleteKeyword(params.id);
   }
 
   @Post('recalculate-matches')

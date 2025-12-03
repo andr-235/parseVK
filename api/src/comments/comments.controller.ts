@@ -37,7 +37,8 @@ export class CommentsController {
     const normalizedOffset = this.queryValidator.normalizeOffset(offset);
     const normalizedLimit = this.queryValidator.normalizeLimit(limit);
     const keywords = this.queryValidator.parseKeywords(keywordsParam);
-    const keywordSource = this.queryValidator.normalizeKeywordSource(keywordSourceParam);
+    const keywordSource =
+      this.queryValidator.normalizeKeywordSource(keywordSourceParam);
     const readStatus = this.queryValidator.normalizeReadStatus(readStatusParam);
     const normalizedSearch = this.queryValidator.normalizeSearch(search);
 
@@ -69,9 +70,11 @@ export class CommentsController {
     @Query('readStatus') readStatusParam?: string,
     @Query('search') search?: string,
   ): Promise<CommentsCursorListDto> {
-    const normalizedLimit = this.queryValidator.normalizeLimitWithDefault(limit);
+    const normalizedLimit =
+      this.queryValidator.normalizeLimitWithDefault(limit);
     const keywords = this.queryValidator.parseKeywords(keywordsParam);
-    const keywordSource = this.queryValidator.normalizeKeywordSource(keywordSourceParam);
+    const keywordSource =
+      this.queryValidator.normalizeKeywordSource(keywordSourceParam);
     const readStatus = this.queryValidator.normalizeReadStatus(readStatusParam);
     const normalizedSearch = this.queryValidator.normalizeSearch(search);
 

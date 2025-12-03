@@ -213,23 +213,25 @@ describe('TasksService', () => {
       });
       taskMapperMock.parseTaskStatus.mockReturnValue(null);
       taskMapperMock.resolveTaskStatus.mockReturnValue('pending');
-      taskMapperMock.mapToSummary.mockImplementation((task: any, parsed: any, status: any) => ({
-        id: task.id,
-        title: task.title,
-        status,
-        completed: task.completed || false,
-        totalItems: task.totalItems || 0,
-        processedItems: task.processedItems || 0,
-        progress: task.progress || 0,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt,
-        scope: parsed.scope,
-        groupIds: parsed.groupIds,
-        postLimit: parsed.postLimit,
-        stats: parsed.stats,
-        error: parsed.error,
-        skippedGroupsMessage: parsed.skippedGroupsMessage,
-      }));
+      taskMapperMock.mapToSummary.mockImplementation(
+        (task: any, parsed: any, status: any) => ({
+          id: task.id,
+          title: task.title,
+          status,
+          completed: task.completed || false,
+          totalItems: task.totalItems || 0,
+          processedItems: task.processedItems || 0,
+          progress: task.progress || 0,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+          scope: parsed.scope,
+          groupIds: parsed.groupIds,
+          postLimit: parsed.postLimit,
+          stats: parsed.stats,
+          error: parsed.error,
+          skippedGroupsMessage: parsed.skippedGroupsMessage,
+        }),
+      );
 
       const result = await service.getTasks();
 
@@ -340,14 +342,16 @@ describe('TasksService', () => {
         processedItems: 1,
         progress: 1 / 3,
       });
-      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
-        scope: ParsingScope.SELECTED,
-        groupIds: [11, 12, 13],
-        postLimit: 20,
-        stats,
-        skippedGroupsMessage: 'Пропущены группы с отключенной стеной: 999',
-        skippedGroupIds: [999],
-      }));
+      descriptionParserMock.stringify.mockReturnValue(
+        JSON.stringify({
+          scope: ParsingScope.SELECTED,
+          groupIds: [11, 12, 13],
+          postLimit: 20,
+          stats,
+          skippedGroupsMessage: 'Пропущены группы с отключенной стеной: 999',
+          skippedGroupIds: [999],
+        }),
+      );
 
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,
@@ -434,11 +438,13 @@ describe('TasksService', () => {
         processedItems: 3,
         progress: 3 / 10,
       });
-      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
-        scope: ParsingScope.ALL,
-        groupIds: [],
-        postLimit: 10,
-      }));
+      descriptionParserMock.stringify.mockReturnValue(
+        JSON.stringify({
+          scope: ParsingScope.ALL,
+          groupIds: [],
+          postLimit: 10,
+        }),
+      );
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,
         ...data,
@@ -514,11 +520,13 @@ describe('TasksService', () => {
         processedItems: 0,
         progress: 0,
       });
-      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
-        scope: ParsingScope.SELECTED,
-        groupIds: [10, 11],
-        postLimit: 15,
-      }));
+      descriptionParserMock.stringify.mockReturnValue(
+        JSON.stringify({
+          scope: ParsingScope.SELECTED,
+          groupIds: [10, 11],
+          postLimit: 15,
+        }),
+      );
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,
         ...data,
@@ -624,11 +632,13 @@ describe('TasksService', () => {
         processedItems: 3,
         progress: 1,
       });
-      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
-        scope: ParsingScope.SELECTED,
-        groupIds: [1, 2, 3],
-        postLimit: 10,
-      }));
+      descriptionParserMock.stringify.mockReturnValue(
+        JSON.stringify({
+          scope: ParsingScope.SELECTED,
+          groupIds: [1, 2, 3],
+          postLimit: 10,
+        }),
+      );
 
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,
@@ -702,11 +712,13 @@ describe('TasksService', () => {
         processedItems: 1,
         progress: 1 / 3,
       });
-      descriptionParserMock.stringify.mockReturnValue(JSON.stringify({
-        scope: ParsingScope.ALL,
-        groupIds: [],
-        postLimit: 5,
-      }));
+      descriptionParserMock.stringify.mockReturnValue(
+        JSON.stringify({
+          scope: ParsingScope.ALL,
+          groupIds: [],
+          postLimit: 5,
+        }),
+      );
 
       prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
         ...task,

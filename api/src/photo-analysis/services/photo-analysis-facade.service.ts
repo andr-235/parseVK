@@ -1,5 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { PhotoAnalysisListDto, PhotoAnalysisSummaryDto } from '../dto/photo-analysis-response.dto';
+import type {
+  PhotoAnalysisListDto,
+  PhotoAnalysisSummaryDto,
+} from '../dto/photo-analysis-response.dto';
 import type { IPhotoAnalysisRepository } from '../interfaces/photo-analysis-repository.interface';
 import type { IAuthorService } from '../interfaces/photo-loader.interface';
 import { PhotoAnalysisSummaryBuilder } from '../builders/photo-analysis-summary.builder';
@@ -18,7 +21,9 @@ export class PhotoAnalysisFacadeService {
     private readonly analyzeCommandHandler: IAnalyzePhotosCommandHandler,
   ) {}
 
-  async analyzeByVkUser(command: AnalyzePhotosCommand): Promise<PhotoAnalysisListDto> {
+  async analyzeByVkUser(
+    command: AnalyzePhotosCommand,
+  ): Promise<PhotoAnalysisListDto> {
     return this.analyzeCommandHandler.execute(command);
   }
 
@@ -36,7 +41,9 @@ export class PhotoAnalysisFacadeService {
     };
   }
 
-  async listSuspiciousByVkUser(vkUserId: number): Promise<PhotoAnalysisListDto> {
+  async listSuspiciousByVkUser(
+    vkUserId: number,
+  ): Promise<PhotoAnalysisListDto> {
     const author = await this.authorService.findAuthorByVkId(vkUserId);
     const analyses = await this.repository.findSuspiciousByAuthorId(author.id);
     const summary = this.summaryBuilder.reset().addItems(analyses).build();
@@ -60,7 +67,9 @@ export class PhotoAnalysisFacadeService {
     return summary;
   }
 
-  async getSummariesByAuthorIds(authorIds: number[]): Promise<Map<number, PhotoAnalysisSummaryDto>> {
+  async getSummariesByAuthorIds(
+    authorIds: number[],
+  ): Promise<Map<number, PhotoAnalysisSummaryDto>> {
     if (!authorIds.length) {
       return new Map();
     }

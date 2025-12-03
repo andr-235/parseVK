@@ -156,15 +156,18 @@ describe('CursorPaginationStrategy', () => {
   });
 
   it('должен генерировать nextCursor если hasMore = true', async () => {
-    const comments: CommentWithRelations[] = Array.from({ length: 11 }, (_, i) => ({
-      id: i + 1,
-      text: `Comment ${i + 1}`,
-      publishedAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
-      isRead: false,
-      watchlistAuthorId: null,
-      author: null,
-      commentKeywordMatches: [],
-    }));
+    const comments: CommentWithRelations[] = Array.from(
+      { length: 11 },
+      (_, i) => ({
+        id: i + 1,
+        text: `Comment ${i + 1}`,
+        publishedAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
+        isRead: false,
+        watchlistAuthorId: null,
+        author: null,
+        commentKeywordMatches: [],
+      }),
+    );
 
     const mappedComments: CommentWithAuthorDto[] = comments
       .slice(0, 10)
@@ -246,4 +249,3 @@ describe('CursorPaginationStrategy', () => {
     expect(filterBuilder.buildReadStatusWhere).toHaveBeenCalledWith('unread');
   });
 });
-

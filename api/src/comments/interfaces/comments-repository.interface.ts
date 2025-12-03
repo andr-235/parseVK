@@ -66,4 +66,3 @@ export interface ICommentsRepository {
   update(params: UpdateCommentParams): Promise<CommentWithRelations>;
   transaction<T>(queries: any[]): Promise<T[]>;
 }
-

@@ -24,8 +24,13 @@ import { WatchlistStatsCollectorService } from './services/watchlist-stats-colle
 import { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service';
 import { WatchlistQueryValidator } from './validators/watchlist-query.validator';
 import { AuthorActivityService } from '../common/services/author-activity.service';
-import { PrismaService } from '../prisma.service';
 
+/**
+ * Сервис для управления списком отслеживаемых авторов ("На карандаше")
+ *
+ * Обеспечивает добавление авторов в watchlist, мониторинг их активности,
+ * обновление настроек и сбор статистики.
+ */
 @Injectable()
 export class WatchlistService {
   private readonly logger = new Logger(WatchlistService.name);
@@ -40,14 +45,15 @@ export class WatchlistService {
     private readonly authorRefresher: WatchlistAuthorRefresherService,
     private readonly queryValidator: WatchlistQueryValidator,
     private readonly authorActivityService: AuthorActivityService,
-    private readonly prisma: PrismaService,
   ) {}
 
-  async getAuthors(params: {
-    offset?: number;
-    limit?: number;
-    excludeStopped?: boolean;
-  } = {}): Promise<WatchlistAuthorListDto> {
+  async getAuthors(
+    params: {
+      offset?: number;
+      limit?: number;
+      excludeStopped?: boolean;
+    } = {},
+  ): Promise<WatchlistAuthorListDto> {
     const settings = await this.repository.ensureSettings();
     const offset = this.queryValidator.normalizeOffset(params.offset);
     const limit = this.queryValidator.normalizeLimit(params.limit);
@@ -65,9 +71,8 @@ export class WatchlistService {
     const commentCounts = await this.statsCollector.collectCommentCounts(
       records.map((record) => record.id),
     );
-    const summaryMap = await this.statsCollector.collectAnalysisSummaries(
-      records,
-    );
+    const summaryMap =
+      await this.statsCollector.collectAnalysisSummaries(records);
 
     const items = records.map((record) =>
       this.authorMapper.mapAuthor(
@@ -97,13 +102,11 @@ export class WatchlistService {
     const offset = this.queryValidator.normalizeOffset(params.offset);
     const limit = this.queryValidator.normalizeLimit(params.limit);
 
-    const { items: comments, total } = await this.repository.getAuthorComments(
-      {
-        watchlistAuthorId: id,
-        offset,
-        limit,
-      },
-    );
+    const { items: comments, total } = await this.repository.getAuthorComments({
+      watchlistAuthorId: id,
+      offset,
+      limit,
+    });
 
     const commentDtos = comments.map((comment) =>
       this.authorMapper.mapComment(comment as any),
@@ -143,9 +146,7 @@ export class WatchlistService {
     let sourceCommentId: number | null = null;
 
     if (typeof dto.commentId === 'number') {
-      const comment = await this.prisma.comment.findUnique({
-        where: { id: dto.commentId },
-      });
+      const comment = await this.repository.findCommentById(dto.commentId);
 
       if (!comment) {
         throw new NotFoundException('Комментарий не найден');
@@ -325,9 +326,8 @@ export class WatchlistService {
     let totalNewComments = 0;
 
     for (const author of activeAuthors) {
-      const newComments = await this.authorRefresher.refreshAuthorRecord(
-        author,
-      );
+      const newComments =
+        await this.authorRefresher.refreshAuthorRecord(author);
       totalNewComments += newComments;
     }
 

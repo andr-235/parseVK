@@ -38,9 +38,7 @@ export class WatchlistAuthorMapper {
     };
   }
 
-  mapProfile(
-    record: WatchlistAuthorWithRelations,
-  ): WatchlistAuthorProfileDto {
+  mapProfile(record: WatchlistAuthorWithRelations): WatchlistAuthorProfileDto {
     const author = record.author;
 
     const firstName = author?.firstName ?? '';
@@ -116,4 +114,3 @@ export class WatchlistAuthorMapper {
     return `${baseUrl}?reply=${vkCommentId}`;
   }
 }
-

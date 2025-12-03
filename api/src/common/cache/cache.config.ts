@@ -1,6 +1,8 @@
 import { redisStore } from 'cache-manager-redis-yet';
 import { CacheModuleOptions, CacheOptionsFactory } from '@nestjs/cache-manager';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from '../../config/app.config';
 
 const DEFAULT_TTL_MS = 3600 * 1000;
 
@@ -8,9 +10,12 @@ const DEFAULT_TTL_MS = 3600 * 1000;
 export class CacheConfigService implements CacheOptionsFactory {
   private readonly logger = new Logger(CacheConfigService.name);
 
+  constructor(private readonly configService: ConfigService<AppConfig>) {}
+
   async createCacheOptions(): Promise<CacheModuleOptions> {
-    const host = process.env.REDIS_HOST || 'redis';
-    const port = parseInt(process.env.REDIS_PORT || '6379', 10);
+    const host =
+      this.configService.get('redisHost', { infer: true }) || 'redis';
+    const port = this.configService.get('redisPort', { infer: true }) || 6379;
 
     try {
       const store = await redisStore({

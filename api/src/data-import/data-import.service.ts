@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma.service';
+import type { IListingsRepository } from '../listings/interfaces/listings-repository.interface';
 import type { ListingImportDto } from './dto/listing-import.dto';
 import type {
   ListingImportErrorDto,
@@ -12,7 +12,10 @@ import type { ListingImportRequestDto } from './dto/listing-import-request.dto';
 export class DataImportService {
   private readonly logger = new Logger(DataImportService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject('IListingsRepository')
+    private readonly listingsRepository: IListingsRepository,
+  ) {}
 
   async importListings(
     request: ListingImportRequestDto,
@@ -40,31 +43,27 @@ export class DataImportService {
         const shouldUpdateExisting = request.updateExisting !== false;
 
         if (shouldUpdateExisting) {
-          const existedRecord = await this.prisma.listing.findUnique({
-            where: { url },
-          });
-
-          await this.prisma.listing.upsert({
-            where: { url },
-            create: data,
-            update: existedRecord
-              ? this.excludeManualOverrides(
-                  data,
-                  this.normalizeManualOverrides(
-                    (existedRecord as { manualOverrides?: unknown }).manualOverrides,
-                  ),
-                )
-              : data,
+          const existedRecord = await this.listingsRepository.findUniqueByUrl({
+            url,
           });
 
           if (existedRecord) {
+            const updateData = this.excludeManualOverrides(
+              data,
+              this.normalizeManualOverrides(
+                (existedRecord as { manualOverrides?: unknown })
+                  .manualOverrides,
+              ),
+            );
+            await this.listingsRepository.upsert({ url }, data, updateData);
             updated += 1;
           } else {
+            await this.listingsRepository.upsert({ url }, data);
             created += 1;
           }
         } else {
-          await this.prisma.listing.create({
-            data,
+          await this.listingsRepository.transaction(async (tx) => {
+            await tx.listing.create({ data });
           });
           created += 1;
         }
@@ -108,9 +107,13 @@ export class DataImportService {
     return report;
   }
 
-  private buildListingData(listing: ListingImportDto): Prisma.ListingCreateInput {
+  private buildListingData(
+    listing: ListingImportDto,
+  ): Prisma.ListingCreateInput {
     const images = Array.isArray(listing.images)
-      ? listing.images.filter((image) => typeof image === 'string' && image.trim().length > 0)
+      ? listing.images.filter(
+          (image) => typeof image === 'string' && image.trim().length > 0,
+        )
       : [];
 
     const metadata = this.normalizeMetadata(listing.metadata);
@@ -315,7 +318,9 @@ export class DataImportService {
     }
 
     const numeric =
-      typeof value === 'number' ? value : Number(String(value).replace(/\s+/g, ''));
+      typeof value === 'number'
+        ? value
+        : Number(String(value).replace(/\s+/g, ''));
 
     if (!Number.isFinite(numeric)) {
       return undefined;
@@ -330,7 +335,9 @@ export class DataImportService {
     }
 
     const numeric =
-      typeof value === 'number' ? value : Number(String(value).replace(/\s+/g, '').replace(',', '.'));
+      typeof value === 'number'
+        ? value
+        : Number(String(value).replace(/\s+/g, '').replace(',', '.'));
 
     return Number.isFinite(numeric) ? numeric : undefined;
   }
@@ -345,15 +352,16 @@ export class DataImportService {
   }
 
   private isUniqueViolation(error: unknown): boolean {
-    const KnownError =
-      (Prisma as unknown as {
+    const KnownError = (
+      Prisma as unknown as {
         PrismaClientKnownRequestError?: typeof Prisma.PrismaClientKnownRequestError;
-      }).PrismaClientKnownRequestError;
+      }
+    ).PrismaClientKnownRequestError;
 
     if (
       typeof KnownError === 'function' &&
       error instanceof KnownError &&
-      (error as Prisma.PrismaClientKnownRequestError).code === 'P2002'
+      error.code === 'P2002'
     ) {
       return true;
     }
@@ -366,13 +374,14 @@ export class DataImportService {
   }
 
   private mapPrismaError(error: unknown): string {
-    const KnownError =
-      (Prisma as unknown as {
+    const KnownError = (
+      Prisma as unknown as {
         PrismaClientKnownRequestError?: typeof Prisma.PrismaClientKnownRequestError;
-      }).PrismaClientKnownRequestError;
+      }
+    ).PrismaClientKnownRequestError;
 
     if (typeof KnownError === 'function' && error instanceof KnownError) {
-      return `Prisma error ${(error as Prisma.PrismaClientKnownRequestError).code}`;
+      return `Prisma error ${error.code}`;
     }
 
     if (error instanceof Error) {

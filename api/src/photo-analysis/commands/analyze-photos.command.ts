@@ -10,8 +10,12 @@ export interface IAnalyzePhotosCommandHandler {
   execute(command: AnalyzePhotosCommand): Promise<PhotoAnalysisListDto>;
 }
 
-export abstract class BaseAnalyzePhotosCommand implements IAnalyzePhotosCommandHandler {
-  abstract execute(command: AnalyzePhotosCommand): Promise<PhotoAnalysisListDto>;
+export abstract class BaseAnalyzePhotosCommand
+  implements IAnalyzePhotosCommandHandler
+{
+  abstract execute(
+    command: AnalyzePhotosCommand,
+  ): Promise<PhotoAnalysisListDto>;
 
   protected validateCommand(command: AnalyzePhotosCommand): void {
     if (!command.vkUserId || command.vkUserId <= 0) {
@@ -22,9 +26,7 @@ export abstract class BaseAnalyzePhotosCommand implements IAnalyzePhotosCommandH
   protected normalizeOptions(options?: AnalyzePhotosDto): AnalyzePhotosDto {
     const { limit, force = false, offset = 0 } = options ?? {};
     const normalizedLimit =
-      typeof limit === 'number'
-        ? Math.min(Math.max(limit, 1), 200)
-        : undefined;
+      typeof limit === 'number' ? Math.min(Math.max(limit, 1), 200) : undefined;
 
     return {
       limit: normalizedLimit,

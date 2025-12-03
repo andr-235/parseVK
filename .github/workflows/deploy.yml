@@ -1,7 +1,10 @@
 name: Deploy to Production Server
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
     branches:
       - main
   workflow_dispatch:
@@ -15,6 +18,7 @@ jobs:
     name: Deploy to Debian Server
     runs-on: [self-hosted]
     timeout-minutes: 90
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     permissions:
       contents: read
 
@@ -23,21 +27,20 @@ jobs:
       COMPOSE_DOCKER_CLI_BUILD: 1
 
     steps:
-      - name: Checkout code
-        id: checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Log deployment info
+        working-directory: /opt/parseVK
         run: |
           START_TIME=$(date +%s)
           echo "START_TIME=$START_TIME" >> $GITHUB_ENV
+          DEPLOY_COMMIT="${{ github.event.workflow_run.head_sha || github.sha }}"
           echo "=== Deployment Information ==="
-          echo "Commit: $(git rev-parse --short HEAD)"
-          echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
-          echo "Author: $(git log -1 --pretty=format:'%an <%ae>')"
-          echo "Message: $(git log -1 --pretty=format:'%s')"
+          echo "Deploying commit: $DEPLOY_COMMIT"
+          if [ -d ".git" ]; then
+            echo "Current commit: $(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+            echo "Branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
+            echo "Author: $(git log -1 --pretty=format:'%an <%ae>' 2>/dev/null || echo 'unknown')"
+            echo "Message: $(git log -1 --pretty=format:'%s' 2>/dev/null || echo 'unknown')"
+          fi
           echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
       - name: Validate environment variables
@@ -193,6 +196,10 @@ jobs:
             exit 1
           fi
           
+          DEPLOY_COMMIT="${{ github.event.workflow_run.head_sha || github.sha }}"
+          
+          echo "Deploying commit: $DEPLOY_COMMIT"
+          
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
           echo "Current branch: $CURRENT_BRANCH"
           
@@ -212,10 +219,14 @@ jobs:
             fi
           fi
           
-          if ! git reset --hard origin/main; then
-            echo "Error: Failed to reset to origin/main"
-            echo "Current branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
-            exit 1
+          if ! git reset --hard "$DEPLOY_COMMIT"; then
+            echo "Error: Failed to reset to commit $DEPLOY_COMMIT"
+            echo "Falling back to origin/main..."
+            if ! git reset --hard origin/main; then
+              echo "Error: Failed to reset to origin/main"
+              echo "Current branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
+              exit 1
+            fi
           fi
           
           NEW_COMMIT=$(git rev-parse HEAD)

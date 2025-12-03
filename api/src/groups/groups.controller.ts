@@ -14,6 +14,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { GroupsService } from './groups.service';
 import { SaveGroupDto } from './dto/save-group.dto';
+import { GroupIdParamDto } from './dto/group-id-param.dto';
 import {
   IGroupResponse,
   IDeleteResponse,
@@ -75,8 +76,8 @@ export class GroupsController {
   }
 
   @Delete(':id')
-  async deleteGroup(@Param('id') id: string): Promise<IGroupResponse> {
-    return this.groupsService.deleteGroup(Number(id));
+  async deleteGroup(@Param() params: GroupIdParamDto): Promise<IGroupResponse> {
+    return this.groupsService.deleteGroup(params.id);
   }
 
   @Get('search/region')

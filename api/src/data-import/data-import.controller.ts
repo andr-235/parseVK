@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Post,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
 import { validateSync, type ValidationError } from 'class-validator';
 import { DataImportService } from './data-import.service';
 import { ListingImportDto } from './dto/listing-import.dto';
@@ -45,9 +40,7 @@ export class DataImportController {
   constructor(private readonly dataImportService: DataImportService) {}
 
   @Post('import')
-  async importData(
-    @Body() body: unknown,
-  ): Promise<ListingImportReportDto> {
+  async importData(@Body() body: unknown): Promise<ListingImportReportDto> {
     const requestDto = this.validateBody(body);
     return this.dataImportService.importListings(requestDto);
   }
@@ -61,9 +54,13 @@ export class DataImportController {
       Object.assign(new ListingImportDto(), item),
     );
 
-    const requestDto = Object.assign(new ListingImportRequestDto(), normalized, {
-      listings: listingDtos,
-    });
+    const requestDto = Object.assign(
+      new ListingImportRequestDto(),
+      normalized,
+      {
+        listings: listingDtos,
+      },
+    );
     const requestErrors = validateSync(requestDto, {
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -150,7 +147,10 @@ export class DataImportController {
         ) {
           result.sourceAuthorName = stringValue;
         }
-        if (typeof result.contactName !== 'string' || result.contactName.trim().length === 0) {
+        if (
+          typeof result.contactName !== 'string' ||
+          result.contactName.trim().length === 0
+        ) {
           result.contactName = stringValue;
         }
 
@@ -169,7 +169,10 @@ export class DataImportController {
         ) {
           result.sourceAuthorPhone = stringValue;
         }
-        if (typeof result.contactPhone !== 'string' || result.contactPhone.trim().length === 0) {
+        if (
+          typeof result.contactPhone !== 'string' ||
+          result.contactPhone.trim().length === 0
+        ) {
           result.contactPhone = stringValue;
         }
 
@@ -209,7 +212,10 @@ export class DataImportController {
         continue;
       }
 
-      if ((key === 'posted_at' || key === 'postedAt') && typeof value === 'string') {
+      if (
+        (key === 'posted_at' || key === 'postedAt') &&
+        typeof value === 'string'
+      ) {
         const stringValue = value.trim();
         if (stringValue.length === 0) {
           continue;
@@ -225,7 +231,10 @@ export class DataImportController {
         continue;
       }
 
-      if ((key === 'parsed_at' || key === 'parsedAt') && typeof value === 'string') {
+      if (
+        (key === 'parsed_at' || key === 'parsedAt') &&
+        typeof value === 'string'
+      ) {
         const stringValue = value.trim();
         if (stringValue.length === 0) {
           continue;
@@ -260,7 +269,7 @@ export class DataImportController {
     if (existingMetadata !== undefined || hasExtraFields) {
       const baseMetadata =
         existingMetadata && typeof existingMetadata === 'object'
-          ? (existingMetadata as Record<string, unknown>)
+          ? existingMetadata
           : {};
 
       result.metadata =

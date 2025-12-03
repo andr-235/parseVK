@@ -60,7 +60,9 @@ describe('TelegramService', () => {
   });
 
   it('throws BadRequestException when identifier is empty', async () => {
-    await expect(service.syncChat({ identifier: '   ' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.syncChat({ identifier: '   ' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('returns sync result with persisted data', async () => {
@@ -95,7 +97,9 @@ describe('TelegramService', () => {
       ],
       total: 42,
     };
-    participantCollectorMock.collectParticipants.mockResolvedValue(participants as any);
+    participantCollectorMock.collectParticipants.mockResolvedValue(
+      participants as any,
+    );
 
     const persisted = {
       chatId: 17,
@@ -123,4 +127,3 @@ describe('TelegramService', () => {
     });
   });
 });
-

@@ -21,4 +21,3 @@ export class ConfirmTelegramSessionResponseDto {
   username!: string | null;
   phoneNumber!: string | null;
 }
-

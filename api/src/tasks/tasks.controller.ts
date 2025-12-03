@@ -6,9 +6,11 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateParsingTaskDto } from './dto/create-parsing-task.dto';
+import { GetTasksQueryDto } from './dto/get-tasks-query.dto';
 import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface';
 import type { TaskDetail, TaskSummary } from './interfaces/task.interface';
 
@@ -24,8 +26,16 @@ export class TasksController {
   }
 
   @Get()
-  async getTasks(): Promise<TaskSummary[]> {
-    return this.tasksService.getTasks();
+  async getTasks(@Query() query: GetTasksQueryDto): Promise<{
+    tasks: TaskSummary[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return this.tasksService.getTasks({
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
+    });
   }
 
   @Get(':taskId')

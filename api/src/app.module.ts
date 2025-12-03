@@ -1,7 +1,11 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { ConfigModule } from './config/config.module';
+import { ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CacheModule } from './common/cache/cache.module';
@@ -17,20 +21,28 @@ import { AuthorsModule } from './authors/authors.module';
 import { DataImportModule } from './data-import/data-import.module';
 import { ListingsModule } from './listings/listings.module';
 import { TelegramModule } from './telegram/telegram.module';
+import type { AppConfig } from './config/app.config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: undefined,
-    }),
+    ConfigModule,
     ScheduleModule.forRoot(),
-    // BullMQ глобальная конфигурация
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'redis',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    // Rate limiting
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 минута
+        limit: 100, // 100 запросов в минуту
       },
+    ]),
+    // BullMQ глобальная конфигурация
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<AppConfig>) => ({
+        connection: {
+          host: configService.get('redisHost', { infer: true }) || 'redis',
+          port: configService.get('redisPort', { infer: true }) || 6379,
+        },
+      }),
     }),
     CacheModule,
     CommonModule,
@@ -47,6 +59,16 @@ import { TelegramModule } from './telegram/telegram.module';
     TelegramModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}

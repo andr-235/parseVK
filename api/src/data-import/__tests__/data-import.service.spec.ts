@@ -131,7 +131,9 @@ describe('DataImportService', () => {
     (prisma.listing.upsert as jest.Mock)
       .mockResolvedValueOnce({ id: 1 })
       .mockImplementationOnce(() => {
-        const duplicateError = { code: 'P2002' } as Prisma.PrismaClientKnownRequestError;
+        const duplicateError = {
+          code: 'P2002',
+        } as Prisma.PrismaClientKnownRequestError;
         throw duplicateError;
       })
       .mockRejectedValueOnce(new Error('db error'));

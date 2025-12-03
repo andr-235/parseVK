@@ -161,4 +161,3 @@ export class WatchlistAuthorRefresherService {
     return comments.map((item) => normalizeComment(item));
   }
 }
-

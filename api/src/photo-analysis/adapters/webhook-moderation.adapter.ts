@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { IModerationAdapter, ModerationResult } from '../interfaces/moderation-service.interface';
+import type {
+  IModerationAdapter,
+  ModerationResult,
+} from '../interfaces/moderation-service.interface';
 
 interface PhotoForModeration {
   photoVkId: string;

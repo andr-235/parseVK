@@ -48,7 +48,7 @@ describe('WatchlistAuthorMapper', () => {
     const summary: PhotoAnalysisSummaryDto = {
       total: 10,
       suspicious: 2,
-      lastAnalyzedAt: new Date('2024-01-01'),
+      lastAnalyzedAt: '2024-01-01T00:00:00.000Z',
       categories: [],
       levels: [],
     };
@@ -82,4 +82,3 @@ describe('WatchlistAuthorMapper', () => {
     expect(url).toBeNull();
   });
 });
-

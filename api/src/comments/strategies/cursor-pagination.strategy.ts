@@ -62,7 +62,10 @@ export class CursorPaginationStrategy implements IPaginationStrategy {
       readStatusWhere,
       paginationWhere,
     );
-    const totalWhere = this.filterBuilder.mergeWhere(baseWhere, readStatusWhere);
+    const totalWhere = this.filterBuilder.mergeWhere(
+      baseWhere,
+      readStatusWhere,
+    );
     const readWhere = this.filterBuilder.mergeWhere(baseWhere, {
       isRead: true,
     });
@@ -109,4 +112,3 @@ export class CursorPaginationStrategy implements IPaginationStrategy {
     };
   }
 }
-

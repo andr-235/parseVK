@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TelegramClient, Api } from 'telegram';
-import type { ResolvedChat, MemberRecord } from '../interfaces/telegram-client.interface';
+import type {
+  ResolvedChat,
+  MemberRecord,
+} from '../interfaces/telegram-client.interface';
 import type { TelegramMemberDto } from '../dto/telegram-member.dto';
 import { TelegramChatRepository } from '../repositories/telegram-chat.repository';
 import { TelegramMemberRepository } from '../repositories/telegram-member.repository';
@@ -123,7 +126,9 @@ export class TelegramChatSyncService {
     client: TelegramClient,
     user: Api.User,
   ): Promise<
-    Partial<ReturnType<typeof TelegramMemberMapper.prototype.buildTelegramUserData>>
+    Partial<
+      ReturnType<typeof TelegramMemberMapper.prototype.buildTelegramUserData>
+    >
   > {
     try {
       const fullUser = await client.invoke(
@@ -241,4 +246,3 @@ export class TelegramChatSyncService {
     }
   }
 }
-

@@ -1,4 +1,8 @@
-import type { Prisma, WatchlistStatus, WatchlistSettings } from '@prisma/client';
+import type {
+  Prisma,
+  WatchlistStatus,
+  WatchlistSettings,
+} from '@prisma/client';
 
 export interface WatchlistAuthorWithRelations {
   id: number;
@@ -58,7 +62,10 @@ export interface IWatchlistRepository {
     data: Prisma.WatchlistAuthorUpdateInput,
   ): Promise<void>;
   countComments(watchlistAuthorId: number): Promise<number>;
-  getTrackedPosts(watchlistAuthorId: number, authorVkId: number): Promise<
+  getTrackedPosts(
+    watchlistAuthorId: number,
+    authorVkId: number,
+  ): Promise<
     Array<{
       ownerId: number;
       postId: number;
@@ -83,5 +90,9 @@ export interface IWatchlistRepository {
     id: number,
     data: { watchlistAuthorId: number; source: string },
   ): Promise<void>;
+  findCommentById(id: number): Promise<{
+    id: number;
+    authorVkId: number | null;
+    fromId: number;
+  } | null>;
 }
-

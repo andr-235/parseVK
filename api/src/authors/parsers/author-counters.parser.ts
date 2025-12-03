@@ -216,4 +216,3 @@ export class AuthorCountersParser {
     return date.toISOString();
   }
 }
-

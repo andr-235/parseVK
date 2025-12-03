@@ -30,4 +30,3 @@ export interface ParticipantCollection {
   members: MemberRecord[];
   total: number | null;
 }
-

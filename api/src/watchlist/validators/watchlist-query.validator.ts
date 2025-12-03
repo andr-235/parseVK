@@ -16,4 +16,3 @@ export class WatchlistQueryValidator {
     return excludeStopped !== false;
   }
 }
-

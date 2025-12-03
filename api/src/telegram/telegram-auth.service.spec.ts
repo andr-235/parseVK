@@ -34,7 +34,10 @@ describe('TelegramAuthService', () => {
 
   it('starts session and stores transaction', async () => {
     const cache = createCacheMock();
-    const service = new TelegramAuthService(configMock as never, cache as never);
+    const service = new TelegramAuthService(
+      configMock as never,
+      cache as never,
+    );
 
     const sendCodeResponse = {
       phoneCodeHash: 'hash123',
@@ -74,7 +77,10 @@ describe('TelegramAuthService', () => {
 
   it('confirms session and returns final data', async () => {
     const cache = createCacheMock();
-    const service = new TelegramAuthService(configMock as never, cache as never);
+    const service = new TelegramAuthService(
+      configMock as never,
+      cache as never,
+    );
 
     const transactionId = 'tx-1';
     await cache.set(
@@ -120,7 +126,11 @@ describe('TelegramAuthService', () => {
         phoneNumber: '+79998887766',
       }),
     );
-    expect(service['createClient']).toHaveBeenCalledWith('temp-session', 123456, 'hash');
+    expect(service['createClient']).toHaveBeenCalledWith(
+      'temp-session',
+      123456,
+      'hash',
+    );
     expect(result.session).toBe('final-session');
     expect(result.userId).toBe(123);
     expect(result.username).toBe('user123');
@@ -129,7 +139,10 @@ describe('TelegramAuthService', () => {
 
   it('uses provided apiId and apiHash instead of env', async () => {
     const cache = createCacheMock();
-    const service = new TelegramAuthService(configMock as never, cache as never);
+    const service = new TelegramAuthService(
+      configMock as never,
+      cache as never,
+    );
 
     const sendCodeResponse = {
       phoneCodeHash: 'hash123',
@@ -169,7 +182,10 @@ describe('TelegramAuthService', () => {
     const configWithoutApi = {
       get: jest.fn(() => undefined),
     };
-    const service = new TelegramAuthService(configWithoutApi as never, cache as never);
+    const service = new TelegramAuthService(
+      configWithoutApi as never,
+      cache as never,
+    );
 
     await expect(
       service.startSession({ phoneNumber: '+79998887766' }),
@@ -178,7 +194,10 @@ describe('TelegramAuthService', () => {
 
   it('requires password when session password needed', async () => {
     const cache = createCacheMock();
-    const service = new TelegramAuthService(configMock as never, cache as never);
+    const service = new TelegramAuthService(
+      configMock as never,
+      cache as never,
+    );
     const transactionId = 'tx-2';
     await cache.set(
       `telegram:auth:tx:${transactionId}`,
@@ -214,4 +233,3 @@ describe('TelegramAuthService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
-

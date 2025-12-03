@@ -18,8 +18,8 @@ export interface ListAuthorsOptions {
   limit?: number;
   search?: string | null;
   verified?: boolean;
-  sortBy?: AuthorSortField | string | null;
-  sortOrder?: AuthorSortDirection | string | null;
+  sortBy?: AuthorSortField | null;
+  sortOrder?: AuthorSortDirection | null;
 }
 
 export interface ResolvedAuthorSort {
@@ -33,4 +33,3 @@ export interface QueryAuthorsOptions {
   limit: number;
   sort: ResolvedAuthorSort;
 }
-

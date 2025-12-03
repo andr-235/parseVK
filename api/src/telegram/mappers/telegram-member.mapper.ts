@@ -12,9 +12,7 @@ import bigInt, { type BigInteger } from 'big-integer';
 
 @Injectable()
 export class TelegramMemberMapper {
-  mapChannelParticipantStatus(
-    participant: Api.TypeChannelParticipant,
-  ): {
+  mapChannelParticipantStatus(participant: Api.TypeChannelParticipant): {
     status: TelegramMemberStatus;
     isAdmin: boolean;
     isOwner: boolean;
@@ -79,9 +77,7 @@ export class TelegramMemberMapper {
     };
   }
 
-  mapChatParticipantStatus(
-    participant: Api.TypeChatParticipant,
-  ): {
+  mapChatParticipantStatus(participant: Api.TypeChatParticipant): {
     status: TelegramMemberStatus;
     isAdmin: boolean;
     isOwner: boolean;
@@ -186,8 +182,7 @@ export class TelegramMemberMapper {
       photoDcId: photo ? photo.dcId : null,
       photoHasVideo: photo ? Boolean(photo.hasVideo) : false,
       commonChatsCount:
-        'commonChatsCount' in user &&
-        typeof user.commonChatsCount === 'number'
+        'commonChatsCount' in user && typeof user.commonChatsCount === 'number'
           ? user.commonChatsCount
           : null,
       usernames: usernames
@@ -339,4 +334,3 @@ export class TelegramMemberMapper {
     return this.toBigInt(value).toString();
   }
 }
-

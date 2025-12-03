@@ -89,9 +89,7 @@ export class TelegramExcelExporterService {
         mutualContact: member.user.mutualContact ? 'Да' : 'Нет',
         commonChatsCount: member.user.commonChatsCount ?? '',
         blocked: member.user.blocked ? 'Да' : 'Нет',
-        contactRequirePremium: member.user.contactRequirePremium
-          ? 'Да'
-          : 'Нет',
+        contactRequirePremium: member.user.contactRequirePremium ? 'Да' : 'Нет',
         spam: member.user.spam ? 'Да' : 'Нет',
         closeFriend: member.user.closeFriend ? 'Да' : 'Нет',
         status: this.memberMapper.formatMemberStatus(member.status),
@@ -108,4 +106,3 @@ export class TelegramExcelExporterService {
     return Buffer.from(buffer);
   }
 }
-

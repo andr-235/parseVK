@@ -107,15 +107,18 @@ describe('OffsetPaginationStrategy', () => {
   });
 
   it('должен правильно вычислять hasMore', async () => {
-    const comments: CommentWithRelations[] = Array.from({ length: 10 }, (_, i) => ({
-      id: i + 1,
-      text: `Comment ${i + 1}`,
-      publishedAt: new Date(),
-      isRead: false,
-      watchlistAuthorId: null,
-      author: null,
-      commentKeywordMatches: [],
-    }));
+    const comments: CommentWithRelations[] = Array.from(
+      { length: 10 },
+      (_, i) => ({
+        id: i + 1,
+        text: `Comment ${i + 1}`,
+        publishedAt: new Date(),
+        isRead: false,
+        watchlistAuthorId: null,
+        author: null,
+        commentKeywordMatches: [],
+      }),
+    );
 
     const mappedComments: CommentWithAuthorDto[] = comments.map((c) => ({
       ...c,
@@ -159,4 +162,3 @@ describe('OffsetPaginationStrategy', () => {
     expect(filterBuilder.buildReadStatusWhere).toHaveBeenCalledWith('unread');
   });
 });
-

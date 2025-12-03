@@ -1,9 +1,12 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
+import helmet from 'helmet';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import type { AppConfig } from './config/app.config';
 
 async function bootstrap() {
   try {
@@ -11,6 +14,10 @@ async function bootstrap() {
       bufferLogs: true,
     });
     const logger = new Logger('Bootstrap');
+    const configService = app.get(ConfigService<AppConfig>);
+
+    // Security headers
+    app.use(helmet());
 
     app.use(json({ limit: '2mb' }));
     app.use(urlencoded({ limit: '2mb', extended: true }));
@@ -27,10 +34,28 @@ async function bootstrap() {
         },
       }),
     );
-    app.enableCors();
+
+    // CORS configuration
+    const corsOrigins =
+      configService.get('corsOrigins', { infer: true }) ||
+      'http://localhost:8080,http://localhost:3000';
+    const allowedOrigins = corsOrigins.split(',');
+    app.enableCors({
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    });
+
     app.setGlobalPrefix('api');
 
-    const port = process.env.PORT ?? 3000;
+    const port = configService.get('port', { infer: true }) ?? 3000;
     await app.listen(port);
     logger.log(`API запущено на порту ${port}`);
   } catch (error) {

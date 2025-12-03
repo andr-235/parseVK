@@ -44,7 +44,7 @@ describe('DataImportController', () => {
     expect(listing.sourceAuthorUrl).toBe('https://example.com/authors/1');
     expect(listing.sourcePostedAt).toBe('4 октября в 09:53');
     expect(listing.sourceParsedAt).toBe('2025-11-01T02:11:19.640124+00:00');
-    expect((listing as ListingImportDto).metadata).toEqual({
+    expect(listing.metadata).toEqual({
       source: 'avito',
       posted_at: '4 октября в 09:53',
       parsed_at: '2025-11-01T02:11:19.640124+00:00',
@@ -72,7 +72,7 @@ describe('DataImportController', () => {
     const listing = request.listings[0];
 
     expect(listing.contactPhone).toBe('+7 984 125-62-87');
-    expect((listing as ListingImportDto).metadata).toEqual({
+    expect(listing.metadata).toEqual({
       phone: '+7 984 125-62-87',
     });
   });

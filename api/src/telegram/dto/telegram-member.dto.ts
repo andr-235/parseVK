@@ -25,7 +25,11 @@ export class TelegramMemberDto {
   photoDcId?: number | null;
   photoHasVideo?: boolean;
   commonChatsCount?: number | null;
-  usernames?: Array<{ username: string; active: boolean; editable: boolean }> | null;
+  usernames?: Array<{
+    username: string;
+    active: boolean;
+    editable: boolean;
+  }> | null;
   personal?: {
     flags?: number;
     phoneNumber?: string;
@@ -55,4 +59,3 @@ export class TelegramMemberDto {
   joinedAt!: string | null;
   leftAt!: string | null;
 }
-
