@@ -98,11 +98,18 @@ function CommentsTableCard({
 
   useEffect(() => {
     const target = observerTargetRef.current
+    console.log('[Observer] Setup:', { target: !!target, hasComments, hasMore })
     if (!target) return
 
     const observer = new IntersectionObserver(
       (entries) => {
+        console.log('[Observer] Triggered:', {
+          isIntersecting: entries[0].isIntersecting,
+          hasMore: hasMoreRef.current,
+          isLoadingMore: isLoadingMoreRef.current,
+        })
         if (entries[0].isIntersecting && hasMoreRef.current && !isLoadingMoreRef.current) {
+          console.log('[Observer] Calling onLoadMore')
           onLoadMoreRef.current()
         }
       },

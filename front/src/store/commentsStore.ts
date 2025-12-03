@@ -143,12 +143,21 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     filters,
   }: { reset?: boolean; limit?: number; filters?: CommentsFilters } = {}) {
     const state = get()
+    console.log('[Store] fetchCommentsCursor called:', {
+      reset,
+      isLoading: state.isLoading,
+      isLoadingMore: state.isLoadingMore,
+      hasMore: state.hasMore,
+      nextCursor: state.nextCursor,
+    })
 
     if (reset ? state.isLoading : state.isLoadingMore || state.isLoading) {
+      console.log('[Store] Skipping: already loading')
       return
     }
 
     if (!reset && !state.hasMore) {
+      console.log('[Store] Skipping: no more data')
       return
     }
 
