@@ -13,6 +13,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { KeywordsService } from './keywords.service';
 import { AddKeywordDto } from './dto/add-keyword.dto';
 import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto';
+import { KeywordIdParamDto } from './dto/keyword-id-param.dto';
 import {
   IKeywordResponse,
   IDeleteResponse,
@@ -63,8 +64,8 @@ export class KeywordsController {
   }
 
   @Delete(':id')
-  async deleteKeyword(@Param('id') id: string): Promise<IDeleteResponse> {
-    return this.keywordsService.deleteKeyword(Number(id));
+  async deleteKeyword(@Param() params: KeywordIdParamDto): Promise<IDeleteResponse> {
+    return this.keywordsService.deleteKeyword(params.id);
   }
 
   @Post('recalculate-matches')

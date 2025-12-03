@@ -24,7 +24,6 @@ import { WatchlistStatsCollectorService } from './services/watchlist-stats-colle
 import { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service';
 import { WatchlistQueryValidator } from './validators/watchlist-query.validator';
 import { AuthorActivityService } from '../common/services/author-activity.service';
-import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class WatchlistService {
@@ -40,7 +39,6 @@ export class WatchlistService {
     private readonly authorRefresher: WatchlistAuthorRefresherService,
     private readonly queryValidator: WatchlistQueryValidator,
     private readonly authorActivityService: AuthorActivityService,
-    private readonly prisma: PrismaService,
   ) {}
 
   async getAuthors(params: {
@@ -143,9 +141,7 @@ export class WatchlistService {
     let sourceCommentId: number | null = null;
 
     if (typeof dto.commentId === 'number') {
-      const comment = await this.prisma.comment.findUnique({
-        where: { id: dto.commentId },
-      });
+      const comment = await this.repository.findCommentById(dto.commentId);
 
       if (!comment) {
         throw new NotFoundException('Комментарий не найден');

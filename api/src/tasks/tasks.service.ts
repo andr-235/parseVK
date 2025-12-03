@@ -1,11 +1,11 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma.service';
 import {
   CreateParsingTaskDto,
   ParsingScope,
@@ -15,6 +15,7 @@ import type {
   TaskDetail,
   TaskSummary,
 } from './interfaces/task.interface';
+import type { ITasksRepository } from './interfaces/tasks-repository.interface';
 import { ParsingTaskRunner } from './parsing-task.runner';
 import { ParsingQueueService } from './parsing-queue.service';
 import { TaskCancellationService } from './task-cancellation.service';
@@ -28,7 +29,8 @@ export class TasksService {
   private readonly logger = new Logger(TasksService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject('ITasksRepository')
+    private readonly repository: ITasksRepository,
     private readonly runner: ParsingTaskRunner,
     private readonly parsingQueue: ParsingQueueService,
     private readonly cancellationService: TaskCancellationService,
@@ -53,16 +55,14 @@ export class TasksService {
 
     const totalItems = groups.length;
 
-    const task = (await this.prisma.task.create({
-      data: {
-        title: this.runner.buildTaskTitle(scope, groups),
-        description: JSON.stringify({ scope, groupIds, postLimit }),
-        totalItems,
-        processedItems: 0,
-        progress: 0,
-        status: 'pending',
-      } as Prisma.TaskUncheckedCreateInput,
-    })) as PrismaTaskRecord;
+    const task = (await this.repository.create({
+      title: this.runner.buildTaskTitle(scope, groups),
+      description: JSON.stringify({ scope, groupIds, postLimit }),
+      totalItems,
+      processedItems: 0,
+      progress: 0,
+      status: 'pending',
+    } as Prisma.TaskUncheckedCreateInput)) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
       taskId: task.id,
@@ -75,16 +75,14 @@ export class TasksService {
   }
 
   async getTasks(): Promise<TaskSummary[]> {
-    const tasks = await this.prisma.task.findMany({
+    const tasks = await this.repository.findMany({
       orderBy: { createdAt: 'desc' },
     });
     return tasks.map((task) => this.mapTaskToSummary(task as PrismaTaskRecord));
   }
 
   async getTask(taskId: number): Promise<TaskDetail> {
-    const task = await this.prisma.task.findUnique({
-      where: { id: taskId },
-    });
+    const task = await this.repository.findUnique({ id: taskId });
 
     if (!task) {
       throw new NotFoundException('Task not found');
@@ -94,9 +92,7 @@ export class TasksService {
   }
 
   async resumeTask(taskId: number): Promise<ParsingTaskResult> {
-    const task = await this.prisma.task.findUnique({
-      where: { id: taskId },
-    });
+    const task = await this.repository.findUnique({ id: taskId });
 
     if (!task) {
       throw new NotFoundException('Task not found');
@@ -110,9 +106,9 @@ export class TasksService {
 
     const context = await this.contextBuilder.buildResumeContext(taskRecord);
 
-    const updatedTask = (await this.prisma.task.update({
-      where: { id: taskId },
-      data: {
+    const updatedTask = (await this.repository.update(
+      { id: taskId },
+      {
         status: 'pending',
         completed: false,
         totalItems: context.totalItems,
@@ -128,7 +124,7 @@ export class TasksService {
           current: taskRecord.description,
         }),
       } as Prisma.TaskUncheckedUpdateInput,
-    })) as PrismaTaskRecord;
+    )) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
       taskId: task.id,
@@ -141,9 +137,7 @@ export class TasksService {
   }
 
   async refreshTask(taskId: number): Promise<ParsingTaskResult> {
-    const task = await this.prisma.task.findUnique({
-      where: { id: taskId },
-    });
+    const task = await this.repository.findUnique({ id: taskId });
 
     if (!task) {
       throw new NotFoundException('Task not found');
@@ -155,9 +149,9 @@ export class TasksService {
       context.totalItems > 0 &&
       context.processedItems >= context.totalItems;
 
-    const updatedTask = (await this.prisma.task.update({
-      where: { id: taskId },
-      data: {
+    const updatedTask = (await this.repository.update(
+      { id: taskId },
+      {
         status: shouldComplete ? 'done' : 'pending',
         completed: shouldComplete,
         totalItems: context.totalItems,
@@ -173,7 +167,7 @@ export class TasksService {
           current: taskRecord.description,
         }),
       } as Prisma.TaskUncheckedUpdateInput,
-    })) as PrismaTaskRecord;
+    )) as PrismaTaskRecord;
 
     if (!shouldComplete) {
       await this.parsingQueue.enqueue({
@@ -188,9 +182,7 @@ export class TasksService {
   }
 
   async deleteTask(taskId: number): Promise<void> {
-    const task = await this.prisma.task.findUnique({
-      where: { id: taskId },
-    });
+    const task = await this.repository.findUnique({ id: taskId });
 
     if (!task) {
       throw new NotFoundException('Task not found');
@@ -217,9 +209,7 @@ export class TasksService {
       }
     }
 
-    await this.prisma.task.delete({
-      where: { id: taskId },
-    });
+    await this.repository.delete({ id: taskId });
 
     if (shouldClearCancellation) {
       this.cancellationService.clear(taskId);

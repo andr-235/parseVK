@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma.service';
+import type { IListingsRepository } from '../listings/interfaces/listings-repository.interface';
 import type { ListingImportDto } from './dto/listing-import.dto';
 import type {
   ListingImportErrorDto,
@@ -12,7 +12,10 @@ import type { ListingImportRequestDto } from './dto/listing-import-request.dto';
 export class DataImportService {
   private readonly logger = new Logger(DataImportService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject('IListingsRepository')
+    private readonly listingsRepository: IListingsRepository,
+  ) {}
 
   async importListings(
     request: ListingImportRequestDto,
@@ -40,22 +43,22 @@ export class DataImportService {
         const shouldUpdateExisting = request.updateExisting !== false;
 
         if (shouldUpdateExisting) {
-          const existedRecord = await this.prisma.listing.findUnique({
-            where: { url },
+          const existedRecord = await this.listingsRepository.findUniqueByUrl({
+            url,
           });
 
-          await this.prisma.listing.upsert({
-            where: { url },
-            create: data,
-            update: existedRecord
+          await this.listingsRepository.upsert(
+            { url },
+            existedRecord
               ? this.excludeManualOverrides(
                   data,
                   this.normalizeManualOverrides(
-                    (existedRecord as { manualOverrides?: unknown }).manualOverrides,
+                    (existedRecord as { manualOverrides?: unknown })
+                      .manualOverrides,
                   ),
                 )
               : data,
-          });
+          );
 
           if (existedRecord) {
             updated += 1;
@@ -63,8 +66,8 @@ export class DataImportService {
             created += 1;
           }
         } else {
-          await this.prisma.listing.create({
-            data,
+          await this.listingsRepository.transaction(async (tx) => {
+            await tx.listing.create({ data });
           });
           created += 1;
         }

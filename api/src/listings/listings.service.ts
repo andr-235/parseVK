@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Listing as ListingEntity } from '@prisma/client';
-import { PrismaService } from '../prisma.service';
+import type { IListingsRepository } from './interfaces/listings-repository.interface';
+import { ListingMapper } from './mappers/listing.mapper';
 import type { ListingsResponseDto } from './dto/listings-response.dto';
 import type { ListingDto } from './dto/listing.dto';
 import type { UpdateListingDto } from './dto/update-listing.dto';
@@ -28,7 +29,10 @@ interface ExportListingsOptions {
 
 @Injectable()
 export class ListingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject('IListingsRepository')
+    private readonly repository: IListingsRepository,
+  ) {}
 
   async getListings(options: GetListingsOptions): Promise<ListingsResponseDto> {
     const { page, pageSize, search, source, archived } = options;
@@ -61,24 +65,15 @@ export class ListingsService {
       where.archived = false;
     }
 
-    const [listings, total, distinctSources] = await this.prisma.$transaction([
-      this.prisma.listing.findMany({
+    const { listings, total, distinctSources } =
+      await this.repository.getListingsWithCountAndSources({
         where,
         skip,
         take: pageSize,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.listing.count({ where }),
-      this.prisma.listing.findMany({
-        where: { source: { not: null, notIn: [''] } },
-        distinct: ['source'],
-        select: { source: true },
-        orderBy: { source: 'asc' },
-      }),
-    ]);
+      });
 
     const items: ListingDto[] = listings.map((listing) =>
-      this.mapListing(listing as ListingWithOverrides),
+      ListingMapper.toDto(listing as ListingWithOverrides),
     );
 
     const sources = distinctSources
@@ -135,14 +130,14 @@ export class ListingsService {
       where.archived = false;
     }
 
-    const listings = await this.prisma.listing.findMany({
+    const listings = await this.repository.findMany({
       where,
       take: limit,
       orderBy,
     });
 
     const items: ListingDto[] = listings.map((listing) =>
-      this.mapListing(listing as ListingWithOverrides),
+      ListingMapper.toDto(listing as ListingWithOverrides),
     );
 
     return items;
@@ -195,7 +190,7 @@ export class ListingsService {
 
     let cursorId: number | null = null;
     for (;;) {
-      const listings = await this.prisma.listing.findMany({
+      const listings = await this.repository.findMany({
         where,
         take: batchSize,
         orderBy,
@@ -207,7 +202,7 @@ export class ListingsService {
       cursorId = listings[listings.length - 1].id;
 
       const items: ListingDto[] = listings.map((listing) =>
-        this.mapListing(listing as ListingWithOverrides),
+        ListingMapper.toDto(listing as ListingWithOverrides),
       );
 
       yield items;
@@ -215,62 +210,16 @@ export class ListingsService {
   }
 
   async updateListing(id: number, payload: UpdateListingDto): Promise<ListingDto> {
-    const existingRecord = await this.prisma.listing.findUniqueOrThrow({
-      where: { id },
-    });
+    const existingRecord = await this.repository.findUniqueOrThrow({ id });
     const existing = existingRecord as ListingWithOverrides;
     const data = this.buildUpdateData(payload, existing);
     if (Object.keys(data).length === 0) {
-      return this.mapListing(existing);
+      return ListingMapper.toDto(existing);
     }
 
-    const listing = await this.prisma.listing.update({
-      where: { id },
-      data,
-    });
+    const listing = await this.repository.update({ id }, data);
 
-    return this.mapListing(listing as ListingWithOverrides);
-  }
-
-  private mapListing(listing: ListingWithOverrides): ListingDto {
-    const overrides = this.normalizeManualOverrides(listing.manualOverrides);
-
-    return {
-      id: listing.id,
-      source: listing.source ?? null,
-      externalId: listing.externalId ?? null,
-      title: listing.title ?? null,
-      description: listing.description ?? null,
-      url: listing.url,
-      price: listing.price ?? null,
-      currency: listing.currency ?? null,
-      address: listing.address ?? null,
-      city: listing.city ?? null,
-      latitude: listing.latitude ?? null,
-      longitude: listing.longitude ?? null,
-      rooms: listing.rooms ?? null,
-      areaTotal: listing.areaTotal ?? null,
-      areaLiving: listing.areaLiving ?? null,
-      areaKitchen: listing.areaKitchen ?? null,
-      floor: listing.floor ?? null,
-      floorsTotal: listing.floorsTotal ?? null,
-      publishedAt: listing.publishedAt ? listing.publishedAt.toISOString() : null,
-      contactName: listing.contactName ?? null,
-      contactPhone: listing.contactPhone ?? null,
-      images: listing.images ?? [],
-      sourceAuthorName: listing.sourceAuthorName ?? null,
-      sourceAuthorPhone: listing.sourceAuthorPhone ?? null,
-      sourceAuthorUrl: listing.sourceAuthorUrl ?? null,
-      sourcePostedAt: listing.sourcePostedAt ?? null,
-      sourceParsedAt: listing.sourceParsedAt
-        ? listing.sourceParsedAt.toISOString()
-        : null,
-      manualOverrides: overrides,
-      manualNote: listing.manualNote ?? null,
-      archived: listing.archived ?? false,
-      createdAt: listing.createdAt.toISOString(),
-      updatedAt: listing.updatedAt.toISOString(),
-    };
+    return ListingMapper.toDto(listing as ListingWithOverrides);
   }
 
   private buildUpdateData(
@@ -521,15 +470,6 @@ export class ListingsService {
     return data;
   }
 
-  private normalizeManualOverrides(value: unknown): string[] {
-    if (!Array.isArray(value)) {
-      return [];
-    }
-
-    return value
-      .map((item) => (typeof item === 'string' ? item.trim() : ''))
-      .filter((item): item is string => item.length > 0);
-  }
 
   private has(payload: UpdateListingDto, key: keyof UpdateListingDto): boolean {
     return Object.prototype.hasOwnProperty.call(payload, key);
@@ -610,5 +550,15 @@ export class ListingsService {
     if (value < MIN) return MIN;
     if (value > MAX) return MAX;
     return Math.floor(value);
+  }
+
+  private normalizeManualOverrides(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter((item): item is string => item.length > 0);
   }
 }

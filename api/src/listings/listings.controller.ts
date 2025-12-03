@@ -4,6 +4,8 @@ import type { ListingsResponseDto } from './dto/listings-response.dto';
 import type { ListingDto } from './dto/listing.dto';
 import type { Response } from 'express';
 import type { UpdateListingDto } from './dto/update-listing.dto';
+import { ListingsQueryDto } from './dto/listings-query.dto';
+import { ListingIdParamDto } from './dto/listing-id-param.dto';
 
 @Controller('listings')
 export class ListingsController {
@@ -11,24 +13,14 @@ export class ListingsController {
 
   @Get()
   async getListings(
-    @Query('page') pageParam?: string,
-    @Query('pageSize') pageSizeParam?: string,
-    @Query('search') searchParam?: string,
-    @Query('source') sourceParam?: string,
-    @Query('archived') archivedParam?: string,
+    @Query() query: ListingsQueryDto,
   ): Promise<ListingsResponseDto> {
-    const page = this.parseNumber(pageParam, 1, 1, 1000);
-    const pageSize = this.parseNumber(pageSizeParam, 25, 1, 100);
-    const search = this.normalizeString(searchParam);
-    const source = this.normalizeSource(sourceParam);
-    const archived = this.parseBoolean(archivedParam);
-
     return this.listingsService.getListings({
-      page,
-      pageSize,
-      search: search ?? undefined,
-      source: source ?? undefined,
-      archived: archived ?? undefined,
+      page: query.page ?? 1,
+      pageSize: query.pageSize ?? 25,
+      search: query.search,
+      source: query.source,
+      archived: query.archived,
     });
   }
 
@@ -175,37 +167,10 @@ export class ListingsController {
 
   @Patch(':id')
   async updateListing(
-    @Param('id') idParam: string,
+    @Param() params: ListingIdParamDto,
     @Body() payload: UpdateListingDto,
   ): Promise<ListingDto> {
-    const id = this.parseNumber(idParam, 0, 1, Number.MAX_SAFE_INTEGER);
-    return this.listingsService.updateListing(id, payload);
-  }
-
-  private parseNumber(
-    value: string | undefined,
-    defaultValue: number,
-    min: number,
-    max: number,
-  ): number {
-    if (!value) {
-      return defaultValue;
-    }
-
-    const parsed = Number.parseInt(value, 10);
-    if (!Number.isFinite(parsed)) {
-      return defaultValue;
-    }
-
-    if (parsed < min) {
-      return min;
-    }
-
-    if (parsed > max) {
-      return max;
-    }
-
-    return parsed;
+    return this.listingsService.updateListing(params.id, payload);
   }
 
   private normalizeString(value?: string): string | null {

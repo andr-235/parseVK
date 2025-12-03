@@ -83,5 +83,10 @@ export interface IWatchlistRepository {
     id: number,
     data: { watchlistAuthorId: number; source: string },
   ): Promise<void>;
+  findCommentById(id: number): Promise<{
+    id: number;
+    authorVkId: number | null;
+    fromId: number;
+  } | null>;
 }
 
