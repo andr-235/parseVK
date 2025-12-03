@@ -29,7 +29,7 @@ export const getSectionButtonClasses = (isCollapsed: boolean, isActive: boolean)
 
 export const getSidebarClasses = (isCollapsed: boolean) => {
   return cn(
-    'sticky top-0 z-30 flex h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
+    'flex min-h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300',
     isCollapsed ? 'w-16' : 'w-64'
   )
 }

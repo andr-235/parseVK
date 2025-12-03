@@ -14,7 +14,7 @@ const MainContent = forwardRef<HTMLElement, MainContentProps>(function MainConte
     <main
       ref={ref}
       className={cn(
-        'flex-1 min-w-0 overflow-y-auto overflow-x-hidden',
+        'flex-1 min-w-0 overflow-x-hidden',
         'bg-background-primary transition-colors duration-300',
         className
       )}
