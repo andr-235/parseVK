@@ -85,34 +85,36 @@ function CommentsTableCard({
     visibleCount,
   })
 
-  const observerTarget = useRef<HTMLDivElement>(null)
+  const observerTargetRef = useRef<HTMLDivElement>(null)
   const onLoadMoreRef = useRef(onLoadMore)
+  const hasMoreRef = useRef(hasMore)
+  const isLoadingMoreRef = useRef(isLoadingMore)
 
   useEffect(() => {
     onLoadMoreRef.current = onLoadMore
-  }, [onLoadMore])
+    hasMoreRef.current = hasMore
+    isLoadingMoreRef.current = isLoadingMore
+  }, [onLoadMore, hasMore, isLoadingMore])
 
   useEffect(() => {
+    const target = observerTargetRef.current
+    if (!target) return
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+        if (entries[0].isIntersecting && hasMoreRef.current && !isLoadingMoreRef.current) {
           onLoadMoreRef.current()
         }
       },
       { threshold: 0.1, rootMargin: '200px' }
     )
 
-    const currentTarget = observerTarget.current
-    if (currentTarget) {
-      observer.observe(currentTarget)
-    }
+    observer.observe(target)
 
     return () => {
-      if (currentTarget) {
-        observer.unobserve(currentTarget)
-      }
+      observer.disconnect()
     }
-  }, [hasMore, isLoadingMore])
+  }, [hasComments, hasMore])
 
   const renderCommentsList = (items: CategorizedComment[]) => {
     const postGroups = new Map<string, CategorizedComment[]>()
@@ -294,16 +296,14 @@ function CommentsTableCard({
                 Загружено {loadedCount} из {totalCount} {getCommentLabel(totalCount)}
               </p>
 
-              {hasMore && (
-                <div ref={observerTarget} className="w-full flex justify-center py-4">
-                  {isLoadingMore && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Spinner className="h-4 w-4" />
-                      Загрузка...
-                    </div>
-                  )}
-                </div>
-              )}
+              <div ref={observerTargetRef} className="w-full flex justify-center py-4">
+                {hasMore && isLoadingMore && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Spinner className="h-4 w-4" />
+                    Загрузка...
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
