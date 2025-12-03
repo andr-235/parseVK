@@ -154,7 +154,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
 
     const cursor = reset ? undefined : (state.nextCursor ?? undefined)
     const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
-    const activeFilters = reset ? normalizeFilters(filters ?? state.filters) : state.filters
+    const activeFilters = normalizeFilters(reset ? (filters ?? state.filters) : state.filters)
 
     if (reset) {
       set({ isLoading: true, filters: activeFilters })
