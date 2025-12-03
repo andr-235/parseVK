@@ -21,17 +21,19 @@ export function KeywordCard({ keyword, onDelete }: KeywordCardProps) {
         <Trash2 className="size-4" />
       </Button>
 
-      <CardContent className="flex-1 p-3 pt-4 flex flex-col gap-2">
+      <CardContent className="flex-1 p-3 pt-4 flex flex-col gap-4">
         <h3 className="font-semibold text-base text-foreground truncate pr-8" title={keyword.word}>
           {keyword.word}
         </h3>
 
         {keyword.category ? (
-          <Badge variant="secondary" className="w-fit bg-muted/50 text-xs font-normal">
+          <Badge variant="outline" className="w-fit text-xs font-normal">
             {keyword.category}
           </Badge>
         ) : (
-          <span className="text-xs text-muted-foreground italic">Без категории</span>
+          <Badge variant="outline" className="w-fit text-xs font-normal text-muted-foreground">
+            Без категории
+          </Badge>
         )}
       </CardContent>
     </Card>
