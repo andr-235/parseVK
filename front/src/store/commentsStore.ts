@@ -184,26 +184,41 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       })
       const normalized = response.items.map((comment) => normalizeCommentResponse(comment))
 
-      set((prevState) => ({
-        comments: reset ? normalized : [...prevState.comments, ...normalized],
-        isLoading: false,
-        isLoadingMore: false,
-        hasMore: response.hasMore,
-        totalCount: response.total,
-        nextCursor: response.nextCursor,
-        readCount: response.readCount,
-        unreadCount: response.unreadCount,
-        filters: activeFilters,
-      }))
+      set((prevState) => {
+        const nextComments = reset ? normalized : [...prevState.comments, ...normalized]
+        // Если все комментарии загружены, обновляем totalCount до фактического количества
+        const finalTotalCount = response.hasMore
+          ? response.total
+          : Math.max(response.total, nextComments.length)
 
-      queryClient.setQueryData<CommentsQueryData>(queryKeys.comments, (prev) => ({
-        comments: reset ? normalized : [...(prev?.comments ?? []), ...normalized],
-        nextCursor: response.nextCursor ?? null,
-        hasMore: response.hasMore,
-        totalCount: response.total,
-        readCount: response.readCount,
-        unreadCount: response.unreadCount,
-      }))
+        return {
+          comments: nextComments,
+          isLoading: false,
+          isLoadingMore: false,
+          hasMore: response.hasMore,
+          totalCount: finalTotalCount,
+          nextCursor: response.nextCursor,
+          readCount: response.readCount,
+          unreadCount: response.unreadCount,
+          filters: activeFilters,
+        }
+      })
+
+      queryClient.setQueryData<CommentsQueryData>(queryKeys.comments, (prev) => {
+        const nextComments = reset ? normalized : [...(prev?.comments ?? []), ...normalized]
+        const finalTotalCount = response.hasMore
+          ? response.total
+          : Math.max(response.total, nextComments.length)
+
+        return {
+          comments: nextComments,
+          nextCursor: response.nextCursor ?? null,
+          hasMore: response.hasMore,
+          totalCount: finalTotalCount,
+          readCount: response.readCount,
+          unreadCount: response.unreadCount,
+        }
+      })
     } catch (error) {
       console.error('Failed to fetch comments with cursor', error)
       set({ isLoading: false, isLoadingMore: false })

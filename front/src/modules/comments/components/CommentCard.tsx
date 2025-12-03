@@ -36,6 +36,7 @@ function CommentCard({
   hidePostContext = false,
 }: CommentCardProps) {
   const [isPostExpanded, setIsPostExpanded] = useState(false)
+  const [isCommentExpanded, setIsCommentExpanded] = useState(false)
 
   // Helper to check if a keyword is actually present in the text
   const isKeywordInText = (text: string | undefined, keyword: Keyword) => {
@@ -238,10 +239,21 @@ function CommentCard({
                 ))}
               </div>
             )}
-            <div className="text-[15px] leading-relaxed text-foreground whitespace-pre-wrap break-words font-normal">
+            <div
+              className={cn(
+                'text-[15px] leading-relaxed text-foreground whitespace-pre-wrap break-words font-normal cursor-pointer hover:text-foreground/90 transition-colors',
+                !isCommentExpanded && 'line-clamp-4'
+              )}
+              onClick={() => setIsCommentExpanded(!isCommentExpanded)}
+            >
               {highlightKeywords(
                 comment.text,
                 keywordsFromComment.length > 0 ? keywordsFromComment : allUniqueKeywords
+              )}
+              {!isCommentExpanded && comment.text.length > 200 && (
+                <span className="text-primary/70 ml-1 text-xs font-medium hover:underline">
+                  ...показать полностью
+                </span>
               )}
             </div>
           </div>
