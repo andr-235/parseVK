@@ -210,11 +210,6 @@ function CommentCard({
                     comment.postText,
                     keywordsFromPost.length > 0 ? keywordsFromPost : allUniqueKeywords
                   )}
-                  {!isPostExpanded && comment.postText.length > 200 && (
-                    <span className="text-primary/70 ml-1 text-xs font-medium hover:underline">
-                      ...показать полностью
-                    </span>
-                  )}
                 </div>
               )}
 
@@ -249,11 +244,6 @@ function CommentCard({
               {highlightKeywords(
                 comment.text,
                 keywordsFromComment.length > 0 ? keywordsFromComment : allUniqueKeywords
-              )}
-              {!isCommentExpanded && comment.text.length > 200 && (
-                <span className="text-primary/70 ml-1 text-xs font-medium hover:underline">
-                  ...показать полностью
-                </span>
               )}
             </div>
           </div>
