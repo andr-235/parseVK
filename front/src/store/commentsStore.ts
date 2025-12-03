@@ -8,6 +8,10 @@ import { queryKeys } from '@/hooks/queryKeys'
 // Синхронный флаг для предотвращения race condition
 let isFetchingComments = false
 
+// Счётчик и ID для защиты от race condition при reset запросах
+let cursorRequestCounter = 0
+let latestCursorRequestId = 0
+
 type CommentsQueryData = {
   comments: CommentsState['comments']
   nextCursor: string | null
@@ -145,7 +149,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     limit,
     filters,
   }: { reset?: boolean; limit?: number; filters?: CommentsFilters } = {}) {
-    // Синхронная проверка для предотвращения race condition
+    // Синхронная проверка для предотвращения race condition (только для loadMore)
     if (isFetchingComments && !reset) {
       return
     }
@@ -162,6 +166,12 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
 
     // Устанавливаем синхронный флаг
     isFetchingComments = true
+
+    // Генерируем уникальный ID для этого запроса (защита от race condition при reset)
+    const requestId = ++cursorRequestCounter
+    if (reset) {
+      latestCursorRequestId = requestId
+    }
 
     const cursor = reset ? undefined : (state.nextCursor ?? undefined)
     const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
@@ -182,6 +192,13 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         readStatus: activeFilters.readStatus,
         search: activeFilters.search,
       })
+
+      // Проверяем актуальность запроса (для reset запросов)
+      if (reset && requestId !== latestCursorRequestId) {
+        // Ответ устарел - более новый reset запрос уже отправлен
+        return
+      }
+
       const normalized = response.items.map((comment) => normalizeCommentResponse(comment))
 
       set((prevState) => {
@@ -220,6 +237,10 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         }
       })
     } catch (error) {
+      // Проверяем актуальность запроса перед обработкой ошибки
+      if (reset && requestId !== latestCursorRequestId) {
+        return
+      }
       console.error('Failed to fetch comments with cursor', error)
       set({ isLoading: false, isLoadingMore: false })
       throw error
