@@ -34,12 +34,13 @@ export class ListingsRepository implements IListingsRepository {
 
   async upsert(
     where: { url: string },
-    data: Prisma.ListingCreateInput,
+    create: Prisma.ListingCreateInput,
+    update?: Prisma.ListingUpdateInput,
   ): Promise<Listing> {
     return this.prisma.listing.upsert({
       where,
-      update: data,
-      create: data,
+      update: update ?? create,
+      create,
     });
   }
 
@@ -71,6 +72,10 @@ export class ListingsRepository implements IListingsRepository {
       });
       return { listings, total, distinctSources };
     });
+  }
+
+  async transaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(callback);
   }
 }
 

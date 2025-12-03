@@ -47,22 +47,25 @@ export class DataImportService {
             url,
           });
 
-          await this.listingsRepository.upsert(
-            { url },
-            existedRecord
-              ? this.excludeManualOverrides(
-                  data,
-                  this.normalizeManualOverrides(
-                    (existedRecord as { manualOverrides?: unknown })
-                      .manualOverrides,
-                  ),
-                )
-              : data,
-          );
-
           if (existedRecord) {
+            const updateData = this.excludeManualOverrides(
+              data,
+              this.normalizeManualOverrides(
+                (existedRecord as { manualOverrides?: unknown })
+                  .manualOverrides,
+              ),
+            );
+            await this.listingsRepository.upsert(
+              { url },
+              data,
+              updateData,
+            );
             updated += 1;
           } else {
+            await this.listingsRepository.upsert(
+              { url },
+              data,
+            );
             created += 1;
           }
         } else {

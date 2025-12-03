@@ -19,7 +19,8 @@ export interface IListingsRepository {
   findUniqueByUrl(where: { url: string }): Promise<Listing | null>;
   upsert(
     where: { url: string },
-    data: Prisma.ListingCreateInput,
+    create: Prisma.ListingCreateInput,
+    update?: Prisma.ListingUpdateInput,
   ): Promise<Listing>;
   update(where: { id: number }, data: Prisma.ListingUpdateInput): Promise<Listing>;
   getListingsWithCountAndSources(params: {
@@ -27,5 +28,6 @@ export interface IListingsRepository {
     skip: number;
     take: number;
   }): Promise<GetListingsTransactionResult>;
+  transaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T>;
 }
 
