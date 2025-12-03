@@ -1,10 +1,7 @@
 name: Deploy to Production Server
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
+  push:
     branches:
       - main
   workflow_dispatch:
@@ -18,7 +15,6 @@ jobs:
     name: Deploy to Debian Server
     runs-on: [self-hosted]
     timeout-minutes: 90
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     permissions:
       contents: read
 
@@ -27,20 +23,21 @@ jobs:
       COMPOSE_DOCKER_CLI_BUILD: 1
 
     steps:
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Log deployment info
-        working-directory: /opt/parseVK
         run: |
           START_TIME=$(date +%s)
           echo "START_TIME=$START_TIME" >> $GITHUB_ENV
-          DEPLOY_COMMIT="${{ github.event.workflow_run.head_sha || github.sha }}"
           echo "=== Deployment Information ==="
-          echo "Deploying commit: $DEPLOY_COMMIT"
-          if [ -d ".git" ]; then
-            echo "Current commit: $(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
-            echo "Branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
-            echo "Author: $(git log -1 --pretty=format:'%an <%ae>' 2>/dev/null || echo 'unknown')"
-            echo "Message: $(git log -1 --pretty=format:'%s' 2>/dev/null || echo 'unknown')"
-          fi
+          echo "Commit: $(git rev-parse --short HEAD)"
+          echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
+          echo "Author: $(git log -1 --pretty=format:'%an <%ae>')"
+          echo "Message: $(git log -1 --pretty=format:'%s')"
           echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
       - name: Validate environment variables
@@ -50,33 +47,33 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Validating environment variables ==="
-          
+
           MISSING_VARS=0
-          
+
           if [ ! -f ".env" ] && [ -z "${DATABASE_URL:-}" ] && [ -z "${VK_TOKEN:-}" ]; then
             echo "Warning: .env file not found and no environment variables set"
             echo "Checking for docker-compose.yml with default values..."
           fi
-          
+
           if [ -f ".env" ]; then
             echo ".env file exists"
             source .env 2>/dev/null || true
           fi
-          
+
           if [ -z "${DATABASE_URL:-}" ] && [ -z "${POSTGRES_PASSWORD:-}" ]; then
             echo "Warning: DATABASE_URL not set, will use default from docker-compose.yml"
           fi
-          
+
           if [ -z "${VK_TOKEN:-}" ]; then
             echo "Error: VK_TOKEN is required but not set"
             MISSING_VARS=1
           fi
-          
+
           if [ $MISSING_VARS -eq 1 ]; then
             echo "Error: Required environment variables are missing"
             exit 1
           fi
-          
+
           echo "Environment variables validated"
           STEP_END=$(date +%s)
           echo "Environment validation completed in $((STEP_END - STEP_START))s"
@@ -89,54 +86,54 @@ jobs:
           echo "=== Environment Check ==="
           echo "User: $(whoami)"
           echo "Working directory: $(pwd)"
-          
+
           DOCKER_VERSION=$(docker --version 2>/dev/null || echo "not installed")
           COMPOSE_VERSION=$(docker compose version 2>/dev/null || echo "not installed")
-          
+
           if [ "$DOCKER_VERSION" = "not installed" ]; then
             echo "Error: Docker is not installed"
             exit 1
           fi
-          
+
           if [ "$COMPOSE_VERSION" = "not installed" ]; then
             echo "Error: Docker Compose is not installed"
             exit 1
           fi
-          
+
           echo "Docker version: $DOCKER_VERSION"
           echo "Docker Compose version: $COMPOSE_VERSION"
-          
+
           MIN_DOCKER_VERSION="20.10"
           MIN_COMPOSE_VERSION="2.0"
-          
+
           DOCKER_VER_NUM=$(echo "$DOCKER_VERSION" | grep -oE '[0-9]+\.[0-9]+' | head -1)
           COMPOSE_VER_NUM=$(echo "$COMPOSE_VERSION" | grep -oE '[0-9]+\.[0-9]+' | head -1)
-          
+
           if [ -n "$DOCKER_VER_NUM" ] && [ "$(printf '%s\n' "$MIN_DOCKER_VERSION" "$DOCKER_VER_NUM" | sort -V | head -1)" != "$MIN_DOCKER_VERSION" ]; then
             echo "Warning: Docker version $DOCKER_VER_NUM is below recommended $MIN_DOCKER_VERSION"
           fi
-          
+
           if [ -n "$COMPOSE_VER_NUM" ] && [ "$(printf '%s\n' "$MIN_COMPOSE_VERSION" "$COMPOSE_VER_NUM" | sort -V | head -1)" != "$MIN_COMPOSE_VERSION" ]; then
             echo "Warning: Docker Compose version $COMPOSE_VER_NUM is below recommended $MIN_COMPOSE_VERSION"
           fi
-          
+
           AVAILABLE_SPACE=$(df -BG /opt 2>/dev/null | tail -1 | awk '{print $4}' | sed 's/G//')
           if [ -n "$AVAILABLE_SPACE" ] && [ "$AVAILABLE_SPACE" -lt 10 ]; then
             echo "Error: Insufficient disk space. Available: ${AVAILABLE_SPACE}GB, required: at least 10GB"
             exit 1
           fi
           echo "Available disk space: ${AVAILABLE_SPACE}GB"
-          
+
           if [ ! -d "/opt/parseVK" ]; then
             echo "Error: /opt/parseVK directory does not exist"
             exit 1
           fi
-          
+
           if [ ! -d "/opt/parseVK/.git" ]; then
             echo "Error: /opt/parseVK is not a git repository"
             exit 1
           fi
-          
+
           STEP_END=$(date +%s)
           echo "Environment check completed in $((STEP_END - STEP_START))s"
 
@@ -167,12 +164,12 @@ jobs:
             echo "Error: Not a valid git repository"
             exit 1
           fi
-          
+
           CURRENT_COMMIT=$(git rev-parse HEAD 2>/dev/null)
           if [ -z "$CURRENT_COMMIT" ] || [ "$CURRENT_COMMIT" = "HEAD" ]; then
             CURRENT_COMMIT=$(git rev-parse origin/main 2>/dev/null || echo "unknown")
           fi
-          
+
           echo "current_commit=$CURRENT_COMMIT" >> $GITHUB_OUTPUT
           echo "Saved current commit: $CURRENT_COMMIT"
           STEP_END=$(date +%s)
@@ -185,29 +182,25 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Updating code ==="
-          
+
           if ! git remote get-url origin > /dev/null 2>&1; then
             echo "Error: Git remote 'origin' is not configured"
             exit 1
           fi
-          
+
           if ! git fetch origin; then
             echo "Error: Failed to fetch from origin"
             exit 1
           fi
-          
-          DEPLOY_COMMIT="${{ github.event.workflow_run.head_sha || github.sha }}"
-          
-          echo "Deploying commit: $DEPLOY_COMMIT"
-          
+
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
           echo "Current branch: $CURRENT_BRANCH"
-          
+
           if ! git diff-index --quiet HEAD -- 2>/dev/null; then
             echo "Warning: Working directory has uncommitted changes"
             git status --short
           fi
-          
+
           if [ "$CURRENT_BRANCH" != "main" ]; then
             echo "Switching to main branch..."
             if ! git checkout -f main 2>/dev/null; then
@@ -218,17 +211,13 @@ jobs:
               }
             fi
           fi
-          
-          if ! git reset --hard "$DEPLOY_COMMIT"; then
-            echo "Error: Failed to reset to commit $DEPLOY_COMMIT"
-            echo "Falling back to origin/main..."
-            if ! git reset --hard origin/main; then
-              echo "Error: Failed to reset to origin/main"
-              echo "Current branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
-              exit 1
-            fi
+
+          if ! git reset --hard origin/main; then
+            echo "Error: Failed to reset to origin/main"
+            echo "Current branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
+            exit 1
           fi
-          
+
           NEW_COMMIT=$(git rev-parse HEAD)
           echo "Updated to commit: $NEW_COMMIT"
           echo "new_commit=$NEW_COMMIT" >> $GITHUB_OUTPUT
@@ -242,13 +231,13 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Stopping containers ==="
-          
+
           if ! docker compose down --timeout 30; then
             echo "Warning: docker compose down failed, forcing stop"
             docker compose kill || true
             docker compose down --remove-orphans || true
           fi
-          
+
           MAX_WAIT=30
           WAIT_COUNT=0
           while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
@@ -261,12 +250,12 @@ jobs:
             sleep 1
             WAIT_COUNT=$((WAIT_COUNT + 1))
           done
-          
+
           if [ "$RUNNING" -gt 0 ]; then
             echo "Warning: Some containers may still be running"
             docker compose ps
           fi
-          
+
           STEP_END=$(date +%s)
           echo "Container stop completed in $((STEP_END - STEP_START))s"
 
@@ -276,9 +265,9 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Checking port availability ==="
-          
+
           PORT_ERROR=0
-          
+
           check_port() {
             local port=$1
             local service=$2
@@ -310,15 +299,15 @@ jobs:
             echo "Port $port ($service) is available"
             return 0
           }
-          
+
           check_port 3000 "API" true
           check_port 8080 "Frontend" true
-          
+
           if [ $PORT_ERROR -eq 1 ]; then
             echo "Error: Critical ports are in use. Please stop conflicting services."
             exit 1
           fi
-          
+
           STEP_END=$(date +%s)
           echo "Port check completed in $((STEP_END - STEP_START))s"
 
@@ -328,7 +317,7 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Checking database availability ==="
-          
+
           if command -v pg_isready > /dev/null 2>&1; then
             if pg_isready -h localhost -p 5433 -U postgres -d vk_api > /dev/null 2>&1; then
               echo "Database is available on port 5433"
@@ -336,7 +325,7 @@ jobs:
               echo "Warning: Database on port 5433 is not accessible (may be starting)"
             fi
           fi
-          
+
           if docker ps -a --format "{{.Names}}" | grep -q "^postgres_db$"; then
             echo "PostgreSQL container exists"
             if docker inspect postgres_db --format='{{.State.Status}}' 2>/dev/null | grep -q "running"; then
@@ -347,7 +336,7 @@ jobs:
           else
             echo "PostgreSQL container does not exist, will be created"
           fi
-          
+
           STEP_END=$(date +%s)
           echo "Database check completed in $((STEP_END - STEP_START))s"
 
@@ -358,11 +347,11 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Cleaning up old images ==="
-          
+
           docker compose down --rmi local --remove-orphans 2>/dev/null || true
-          
+
           CURRENT_IMAGES=$(docker compose config --images 2>/dev/null || echo "")
-          
+
           if [ -n "$CURRENT_IMAGES" ]; then
             docker images --format "{{.Repository}}:{{.Tag}}" | grep -iE "(parsevk|postgres|redis)" | while read image; do
               if ! echo "$CURRENT_IMAGES" | grep -q "$image"; then
@@ -371,7 +360,7 @@ jobs:
               fi
             done
           fi
-          
+
           docker image prune -f --filter "dangling=true" || true
           STEP_END=$(date +%s)
           echo "Image cleanup completed in $((STEP_END - STEP_START))s"
@@ -383,13 +372,13 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Building containers ==="
-          
+
           if ! docker compose build --parallel; then
             echo "Error: Build failed"
             docker compose build 2>&1 | tail -50
             exit 1
           fi
-          
+
           echo "=== Built images ==="
           docker compose images
           STEP_END=$(date +%s)
@@ -403,7 +392,7 @@ jobs:
           STEP_START=$(date +%s)
           echo "=== Starting database and dependencies ==="
           docker compose up -d db redis
-          
+
           echo "=== Waiting for database to be ready ==="
           MAX_WAIT=60
           WAIT_COUNT=0
@@ -416,13 +405,13 @@ jobs:
             sleep 1
             WAIT_COUNT=$((WAIT_COUNT + 1))
           done
-          
+
           if [ $WAIT_COUNT -eq $MAX_WAIT ]; then
             echo "Error: Database did not become ready in time"
             docker compose logs db
             exit 1
           fi
-          
+
           STEP_END=$(date +%s)
           echo "Database start completed in $((STEP_END - STEP_START))s"
 
@@ -433,14 +422,14 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Cleaning failed migrations ==="
-          
+
           CLEAN_SCRIPT="DELETE FROM _prisma_migrations WHERE migration_name = '20251128142604_add_post_attachments' AND finished_at IS NULL;"
-          
+
           echo "Removing failed migration record from database..."
           docker compose exec -T db psql -U postgres -d vk_api -c "$CLEAN_SCRIPT" || {
             echo "Warning: Failed to clean migration record (may not exist)"
           }
-          
+
           STEP_END=$(date +%s)
           echo "Migration cleanup completed in $((STEP_END - STEP_START))s"
 
@@ -451,9 +440,9 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Running database migrations ==="
-          
+
           API_CONTAINER_ID=$(docker compose ps -q api 2>/dev/null || echo "")
-          
+
           if [ -n "$API_CONTAINER_ID" ] && [ "$(docker inspect --format='{{.State.Status}}' "$API_CONTAINER_ID" 2>/dev/null)" = "running" ]; then
             echo "Using existing API container for migrations"
             if docker compose exec -T api sh -c "command -v npx > /dev/null 2>&1 && npx prisma migrate deploy" 2>/dev/null; then
@@ -477,7 +466,7 @@ jobs:
               exit 1
             }
           fi
-          
+
           STEP_END=$(date +%s)
           echo "Migrations completed in $((STEP_END - STEP_START))s"
 
@@ -494,13 +483,13 @@ jobs:
             docker compose logs --tail=50
             exit 1
           fi
-          
+
           echo "=== Waiting for containers to start ==="
           sleep 5
-          
+
           echo "=== Container status ==="
           docker compose ps
-          
+
           FAILED_CONTAINERS=$(docker compose ps --format json | jq -r 'select(.State != "running" and .State != "healthy") | .Name' 2>/dev/null || docker compose ps | grep -E "(Exit|Error|unhealthy)" || echo "")
           if [ -n "$FAILED_CONTAINERS" ]; then
             echo "Error: Some containers failed to start"
@@ -511,7 +500,7 @@ jobs:
             docker compose logs --tail=50
             exit 1
           fi
-          
+
           STEP_END=$(date +%s)
           echo "Container start completed in $((STEP_END - STEP_START))s"
 
@@ -522,7 +511,7 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Waiting for services to be healthy ==="
-          
+
           if command -v docker > /dev/null 2>&1 && docker compose version > /dev/null 2>&1; then
             if docker compose wait --timeout 120 2>/dev/null; then
               echo "All services with healthchecks are healthy (via docker compose wait)"
@@ -595,7 +584,7 @@ jobs:
             echo "Error: Docker or docker compose not available"
             exit 1
           fi
-          
+
           echo "All containers are healthy"
           STEP_END=$(date +%s)
           echo "Health wait completed in $((STEP_END - STEP_START))s"
@@ -607,18 +596,18 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Health Checks ==="
-          
+
           if ! command -v curl > /dev/null 2>&1; then
             echo "Error: curl is not installed on the host"
             exit 1
           fi
-          
+
           MAX_RETRIES=5
           RETRY_DELAY=3
-          
+
           API_CONTAINER=$(docker compose ps -q api 2>/dev/null || echo "")
           FRONTEND_CONTAINER=$(docker compose ps -q frontend 2>/dev/null || echo "")
-          
+
           check_api() {
             local retry=0
             while [ $retry -lt $MAX_RETRIES ]; do
@@ -643,7 +632,7 @@ jobs:
             echo "❌ API health check failed after $MAX_RETRIES attempts"
             return 1
           }
-          
+
           check_frontend() {
             local retry=0
             while [ $retry -lt $MAX_RETRIES ]; do
@@ -668,28 +657,28 @@ jobs:
             echo "❌ Frontend health check failed after $MAX_RETRIES attempts"
             return 1
           }
-          
+
           API_OK=false
           FRONTEND_OK=false
-          
+
           if check_api; then
             API_OK=true
           else
             echo "API health check failed. Container logs:"
             docker compose logs --tail=20 api 2>/dev/null || true
           fi
-          
+
           if check_frontend; then
             FRONTEND_OK=true
           else
             echo "Frontend health check failed. Container logs:"
             docker compose logs --tail=20 frontend 2>/dev/null || true
           fi
-          
+
           echo ""
           echo "=== Container logs (last 30 lines) ==="
           docker compose logs --tail=30
-          
+
           if [ "$API_OK" != "true" ] || [ "$FRONTEND_OK" != "true" ]; then
             echo ""
             echo "=== Container status ==="
@@ -698,7 +687,7 @@ jobs:
             echo "❌ Health checks failed"
             exit 1
           fi
-          
+
           echo ""
           echo "✅ All health checks passed"
           STEP_END=$(date +%s)
@@ -712,9 +701,9 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Rolling back to previous version ==="
-          
+
           PREVIOUS_COMMIT="${{ steps.save_version.outputs.current_commit }}"
-          
+
           if [ "$PREVIOUS_COMMIT" != "unknown" ] && [ -n "$PREVIOUS_COMMIT" ] && [ "$PREVIOUS_COMMIT" != "HEAD" ]; then
             echo "Rolling back to commit: $PREVIOUS_COMMIT"
             
@@ -854,10 +843,10 @@ jobs:
           END_TIME=$(date +%s)
           START_TIME=${START_TIME:-$END_TIME}
           DURATION=$((END_TIME - START_TIME))
-          
+
           DEPLOYMENT_COMMIT=$(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
           DEPLOYMENT_AUTHOR=$(cd /opt/parseVK && git log -1 --pretty=format:'%an' 2>/dev/null || echo 'unknown')
-          
+
           if [ "${{ job.status }}" == "success" ]; then
             echo "✅ Deployment successful!"
             echo "Commit: $DEPLOYMENT_COMMIT"
@@ -871,7 +860,7 @@ jobs:
             echo "Total deployment time: ${DURATION}s"
             echo "DEPLOYMENT_STATUS=failed" >> $GITHUB_ENV
           fi
-          
+
           echo "DEPLOYMENT_COMMIT=$DEPLOYMENT_COMMIT" >> $GITHUB_ENV
           echo "DEPLOYMENT_AUTHOR=$DEPLOYMENT_AUTHOR" >> $GITHUB_ENV
           echo "DEPLOYMENT_DURATION=$DURATION" >> $GITHUB_ENV
@@ -885,7 +874,7 @@ jobs:
           COMMIT="${DEPLOYMENT_COMMIT:-unknown}"
           AUTHOR="${DEPLOYMENT_AUTHOR:-unknown}"
           DURATION="${DEPLOYMENT_DURATION:-0}"
-          
+
           if [ "$STATUS" == "success" ]; then
             MESSAGE="✅ Deployment successful!
             Commit: $COMMIT
@@ -902,9 +891,9 @@ jobs:
             Workflow: ${{ github.workflow }}
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           fi
-          
+
           echo "$MESSAGE"
-          
+
           if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
             echo "Sending Telegram notification..."
             curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
