@@ -78,7 +78,7 @@ export const KeywordsForm = ({
             value={phraseValue}
             onChange={(e) => onPhraseChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onAddPhrase()}
-            className="flex-1 sm:w-[240px]"
+            className="flex-1 sm:w-[180px]"
           />
           <Button onClick={onAddPhrase}>
             <Plus className="mr-2 size-4" />
