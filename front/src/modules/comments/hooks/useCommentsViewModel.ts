@@ -162,7 +162,7 @@ const useCommentsViewModel = () => {
     return comments.filter((comment) => {
       return shouldIncludeByRead(comment, readFilter) && matchesSearch(comment, searchLower)
     })
-  }, [comments, readFilter, searchLower])
+  }, [comments, comments.length, readFilter, searchLower])
 
   const commentIndexMap = useMemo(
     () =>
