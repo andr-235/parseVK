@@ -96,6 +96,26 @@ function CommentsTableCard({
     isLoadingMoreRef.current = isLoadingMore
   }, [onLoadMore, hasMore, isLoadingMore])
 
+  // После загрузки проверяем, находится ли target в viewport — если да, загружаем ещё
+  useEffect(() => {
+    if (isLoading || isLoadingMore || !hasMore || !hasComments) return
+
+    const target = observerTargetRef.current
+    if (!target) return
+
+    // Используем setTimeout чтобы дождаться рендера
+    const timeoutId = setTimeout(() => {
+      const rect = target.getBoundingClientRect()
+      const isInViewport = rect.top < window.innerHeight + 200
+
+      if (isInViewport && hasMoreRef.current && !isLoadingMoreRef.current) {
+        onLoadMoreRef.current()
+      }
+    }, 100)
+
+    return () => clearTimeout(timeoutId)
+  }, [isLoading, isLoadingMore, hasMore, hasComments])
+
   useEffect(() => {
     const target = observerTargetRef.current
     if (!target) return
