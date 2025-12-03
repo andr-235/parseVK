@@ -33,6 +33,7 @@ export interface Comment {
   createdAt: string
   publishedAt?: string | null
   isRead: boolean
+  isDeleted?: boolean
   watchlistAuthorId?: number | null
   isWatchlisted: boolean
   matchedKeywords: Keyword[]

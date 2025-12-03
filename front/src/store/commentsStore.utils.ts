@@ -51,6 +51,10 @@ const buildCommentUrl = (comment: ICommentResponse): string | null => {
 }
 
 const resolveAuthorInfo = (comment: ICommentResponse): NormalizedAuthor => {
+  if (comment.isDeleted) {
+    return { name: 'Удалённый комментарий', id: null, url: null, avatar: null }
+  }
+
   const directAuthor = normalizeString(
     typeof comment.author === 'string' ? comment.author : comment.authorName
   )
@@ -185,6 +189,7 @@ export const normalizeCommentResponse = (comment: ICommentResponse) => {
     createdAt: normalizeCreatedAt(comment.createdAt),
     publishedAt: comment.publishedAt ? normalizeCreatedAt(comment.publishedAt) : null,
     isRead: comment.isRead ?? false,
+    isDeleted: comment.isDeleted ?? false,
     watchlistAuthorId,
     isWatchlisted: Boolean(watchlistAuthorId),
     matchedKeywords,
