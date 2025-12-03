@@ -27,11 +27,11 @@ export function KeywordCard({ keyword, onDelete }: KeywordCardProps) {
         </h3>
 
         {keyword.category ? (
-          <Badge variant="secondary" className="w-fit bg-blue-500/15 text-blue-500 hover:bg-blue-500/25 border-blue-500/20 text-xs font-medium px-2.5 py-0.5">
+          <Badge variant="secondary" className="w-fit text-xs font-normal px-2.5 py-0.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/10">
             {keyword.category}
           </Badge>
         ) : (
-          <Badge variant="outline" className="w-fit text-xs font-normal text-muted-foreground border-muted-foreground/30">
+          <Badge variant="outline" className="w-fit text-xs font-normal text-muted-foreground border-muted-foreground/20 bg-transparent">
             Без категории
           </Badge>
         )}
