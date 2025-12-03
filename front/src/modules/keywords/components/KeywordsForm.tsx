@@ -72,13 +72,13 @@ export const KeywordsForm = ({
       </div>
 
       <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end lg:w-auto">
-        <div className="flex flex-1 gap-2 sm:w-auto">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Input
             placeholder="Фраза для поиска"
             value={phraseValue}
             onChange={(e) => onPhraseChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onAddPhrase()}
-            className="flex-1 sm:w-[180px]"
+            className="flex-1 sm:flex-none sm:w-[320px]"
           />
           <Button onClick={onAddPhrase}>
             <Plus className="mr-2 size-4" />
