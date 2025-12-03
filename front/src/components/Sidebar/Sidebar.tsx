@@ -85,7 +85,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
         onExpand={handleExpand}
       />
 
-      <div className="flex-1 overflow-y-auto py-4 px-3 scrollbar-none">
+      <div className="py-4 px-3">
         <nav className="space-y-6">
           <SidebarSection
             title="ВКонтакте"

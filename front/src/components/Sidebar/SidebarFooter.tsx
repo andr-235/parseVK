@@ -13,7 +13,7 @@ interface SidebarFooterProps {
 
 export function SidebarFooter({ items, isCollapsed, onExpand }: SidebarFooterProps) {
   return (
-    <div className="mt-auto border-t border-sidebar-border p-4">
+    <div className="border-t border-sidebar-border p-4">
       <div className="space-y-1">
         {items.map((item) => (
           <NavLink
