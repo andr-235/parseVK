@@ -2,7 +2,7 @@
   "name": "parsevk",
   "private": true,
   "scripts": {
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "devDependencies": {
     "shadcn": "^3.4.0",
@@ -11,11 +11,11 @@
   },
   "lint-staged": {
     "api/**/*.ts": [
-      "cd api && npm run format:check",
+      "cd api && npm run format",
       "cd api && npm run lint"
     ],
     "front/**/*.{ts,tsx,css}": [
-      "cd front && npm run format:check",
+      "cd front && npm run format",
       "cd front && npm run lint"
     ]
   }
