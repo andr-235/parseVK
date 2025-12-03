@@ -5,6 +5,9 @@ import { normalizeCommentResponse, COMMENTS_PAGE_SIZE } from './commentsStore.ut
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/hooks/queryKeys'
 
+// Синхронный флаг для предотвращения race condition
+let isFetchingComments = false
+
 type CommentsQueryData = {
   comments: CommentsState['comments']
   nextCursor: string | null
@@ -142,24 +145,23 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     limit,
     filters,
   }: { reset?: boolean; limit?: number; filters?: CommentsFilters } = {}) {
+    // Синхронная проверка для предотвращения race condition
+    if (isFetchingComments && !reset) {
+      return
+    }
+
     const state = get()
-    console.log('[Store] fetchCommentsCursor called:', {
-      reset,
-      isLoading: state.isLoading,
-      isLoadingMore: state.isLoadingMore,
-      hasMore: state.hasMore,
-      nextCursor: state.nextCursor,
-    })
 
     if (reset ? state.isLoading : state.isLoadingMore || state.isLoading) {
-      console.log('[Store] Skipping: already loading')
       return
     }
 
     if (!reset && !state.hasMore) {
-      console.log('[Store] Skipping: no more data')
       return
     }
+
+    // Устанавливаем синхронный флаг
+    isFetchingComments = true
 
     const cursor = reset ? undefined : (state.nextCursor ?? undefined)
     const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
@@ -206,6 +208,8 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       console.error('Failed to fetch comments with cursor', error)
       set({ isLoading: false, isLoadingMore: false })
       throw error
+    } finally {
+      isFetchingComments = false
     }
   },
 
