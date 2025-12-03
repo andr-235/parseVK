@@ -86,27 +86,33 @@ function CommentsTableCard({
   })
 
   const observerTarget = useRef<HTMLDivElement>(null)
+  const onLoadMoreRef = useRef(onLoadMore)
+
+  useEffect(() => {
+    onLoadMoreRef.current = onLoadMore
+  }, [onLoadMore])
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
-          onLoadMore()
+          onLoadMoreRef.current()
         }
       },
       { threshold: 0.1, rootMargin: '200px' }
     )
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current)
+    const currentTarget = observerTarget.current
+    if (currentTarget) {
+      observer.observe(currentTarget)
     }
 
     return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current)
+      if (currentTarget) {
+        observer.unobserve(currentTarget)
       }
     }
-  }, [hasMore, isLoadingMore, onLoadMore])
+  }, [hasMore, isLoadingMore])
 
   const renderCommentsList = (items: CategorizedComment[]) => {
     const postGroups = new Map<string, CategorizedComment[]>()
