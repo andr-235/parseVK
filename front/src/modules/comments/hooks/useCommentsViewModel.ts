@@ -96,18 +96,16 @@ const matchesSearch = (comment: Comment, searchLower: string) => {
 }
 
 const useCommentsViewModel = () => {
-  const {
-    comments,
-    isLoading,
-    fetchCommentsCursor,
-    isLoadingMore,
-    hasMore,
-    totalCount,
-    readCount,
-    unreadCount,
-    toggleReadStatus,
-    markWatchlisted,
-  } = useCommentsStore()
+  const comments = useCommentsStore((state) => state.comments)
+  const isLoading = useCommentsStore((state) => state.isLoading)
+  const fetchCommentsCursor = useCommentsStore((state) => state.fetchCommentsCursor)
+  const isLoadingMore = useCommentsStore((state) => state.isLoadingMore)
+  const hasMore = useCommentsStore((state) => state.hasMore)
+  const totalCount = useCommentsStore((state) => state.totalCount)
+  const readCount = useCommentsStore((state) => state.readCount)
+  const unreadCount = useCommentsStore((state) => state.unreadCount)
+  const toggleReadStatus = useCommentsStore((state) => state.toggleReadStatus)
+  const markWatchlisted = useCommentsStore((state) => state.markWatchlisted)
   const { keywords, fetchKeywords } = useKeywordsStore()
   const { addAuthorFromComment } = useWatchlistStore()
   const [showKeywordComments, setShowKeywordComments] = useState(true)
@@ -184,6 +182,8 @@ const useCommentsViewModel = () => {
     () => comments.filter((comment) => getMatchedKeywords(comment).length > 0).length,
     [comments]
   )
+
+  const visibleCount = useMemo(() => filteredComments.length, [filteredComments])
 
   const emptyMessage = useMemo(() => {
     if (isLoading) return 'Загрузка...'
@@ -272,7 +272,7 @@ const useCommentsViewModel = () => {
     hasMore,
     isLoadingMore,
     loadedCount: comments.length,
-    visibleCount: filteredComments.length,
+    visibleCount,
     hasDefinedKeywords: hasKeywords,
     handleAddToWatchlist,
     watchlistPending,
