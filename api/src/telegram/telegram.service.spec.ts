@@ -29,27 +29,32 @@ describe('TelegramService', () => {
     clientManagerMock = {
       getClient: jest.fn(),
       disconnect: jest.fn(),
-    } as jest.Mocked<TelegramClientManagerService>;
+      onModuleDestroy: jest.fn(),
+    } as unknown as jest.Mocked<TelegramClientManagerService>;
 
     chatMapperMock = {
       resolveChat: jest.fn(),
-    } as jest.Mocked<TelegramChatMapper>;
+      composeUserTitle: jest.fn(),
+      toBigInt: jest.fn(),
+    } as unknown as jest.Mocked<TelegramChatMapper>;
 
     participantCollectorMock = {
       collectParticipants: jest.fn(),
-    } as jest.Mocked<TelegramParticipantCollectorService>;
+    } as unknown as jest.Mocked<TelegramParticipantCollectorService>;
 
     chatSyncMock = {
       persistChat: jest.fn(),
-    } as jest.Mocked<TelegramChatSyncService>;
+    } as unknown as jest.Mocked<TelegramChatSyncService>;
 
     excelExporterMock = {
       exportChatToExcel: jest.fn(),
-    } as jest.Mocked<TelegramExcelExporterService>;
+    } as unknown as jest.Mocked<TelegramExcelExporterService>;
 
     chatRepositoryMock = {
       findById: jest.fn(),
-    } as jest.Mocked<TelegramChatRepository>;
+      findByTelegramId: jest.fn(),
+      upsert: jest.fn(),
+    } as unknown as jest.Mocked<TelegramChatRepository>;
 
     service = new TelegramService(
       clientManagerMock,

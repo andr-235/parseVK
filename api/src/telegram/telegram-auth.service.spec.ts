@@ -1,12 +1,14 @@
 import { BadRequestException } from '@nestjs/common';
 import { TelegramAuthService } from './telegram-auth.service';
 import { Api } from 'telegram';
+import type { PrismaService } from '../prisma.service';
 
 const createCacheMock = () => {
   const store = new Map<string, unknown>();
   return {
     get: jest.fn((key: string) => Promise.resolve(store.get(key))),
-    set: jest.fn((key: string, value: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    set: jest.fn((key: string, value: unknown, ttl?: number) => {
       store.set(key, value);
       return Promise.resolve();
     }),
@@ -36,9 +38,17 @@ describe('TelegramAuthService', () => {
 
   it('starts session and stores transaction', async () => {
     const cache = createCacheMock();
+    const prismaMock = {
+      telegramSettings: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+    } as unknown as PrismaService;
     const service = new TelegramAuthService(
       configMock as never,
       cache as never,
+      prismaMock,
     );
 
     const sendCodeResponse = {
@@ -52,8 +62,8 @@ describe('TelegramAuthService', () => {
       disconnect: jest.fn().mockResolvedValue(undefined),
     } as unknown as Record<string, unknown>;
 
-    jest
-      .spyOn(service as unknown as Record<string, unknown>, 'createClient')
+    (service as unknown as { createClient: jest.Mock }).createClient = jest
+      .fn()
       .mockResolvedValue(clientMock);
 
     const result = await service.startSession({ phoneNumber: '+79998887766' });
@@ -80,9 +90,17 @@ describe('TelegramAuthService', () => {
 
   it('confirms session and returns final data', async () => {
     const cache = createCacheMock();
+    const prismaMock = {
+      telegramSettings: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+    } as unknown as PrismaService;
     const service = new TelegramAuthService(
       configMock as never,
       cache as never,
+      prismaMock,
     );
 
     const transactionId = 'tx-1';
@@ -105,7 +123,7 @@ describe('TelegramAuthService', () => {
       phone: '+79998887766',
       firstName: 'Test',
       lastName: 'User',
-    });
+    } as unknown as ConstructorParameters<typeof Api.User>[0]);
 
     const clientMock = {
       signInUser: jest.fn().mockResolvedValue(userMock),
@@ -114,8 +132,8 @@ describe('TelegramAuthService', () => {
       disconnect: jest.fn().mockResolvedValue(undefined),
     } as unknown as Record<string, unknown>;
 
-    jest
-      .spyOn(service as unknown as Record<string, unknown>, 'createClient')
+    (service as unknown as { createClient: jest.Mock }).createClient = jest
+      .fn()
       .mockResolvedValue(clientMock);
 
     const result = await service.confirmSession({
@@ -129,11 +147,9 @@ describe('TelegramAuthService', () => {
         phoneNumber: '+79998887766',
       }),
     );
-    expect(service['createClient']).toHaveBeenCalledWith(
-      'temp-session',
-      123456,
-      'hash',
-    );
+    expect(
+      (service as unknown as { createClient: jest.Mock }).createClient,
+    ).toHaveBeenCalledWith('temp-session', 123456, 'hash');
     expect(result.session).toBe('final-session');
     expect(result.userId).toBe(123);
     expect(result.username).toBe('user123');
@@ -142,9 +158,17 @@ describe('TelegramAuthService', () => {
 
   it('uses provided apiId and apiHash instead of env', async () => {
     const cache = createCacheMock();
+    const prismaMock = {
+      telegramSettings: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+    } as unknown as PrismaService;
     const service = new TelegramAuthService(
       configMock as never,
       cache as never,
+      prismaMock,
     );
 
     const sendCodeResponse = {
@@ -158,8 +182,8 @@ describe('TelegramAuthService', () => {
       disconnect: jest.fn().mockResolvedValue(undefined),
     } as unknown as Record<string, unknown>;
 
-    jest
-      .spyOn(service as unknown as Record<string, unknown>, 'createClient')
+    (service as unknown as { createClient: jest.Mock }).createClient = jest
+      .fn()
       .mockResolvedValue(clientMock);
 
     await service.startSession({
@@ -183,12 +207,20 @@ describe('TelegramAuthService', () => {
 
   it('throws error when apiId and apiHash are missing', async () => {
     const cache = createCacheMock();
+    const prismaMock = {
+      telegramSettings: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+    } as unknown as PrismaService;
     const configWithoutApi = {
       get: jest.fn(() => undefined),
     };
     const service = new TelegramAuthService(
       configWithoutApi as never,
       cache as never,
+      prismaMock,
     );
 
     await expect(
@@ -198,9 +230,17 @@ describe('TelegramAuthService', () => {
 
   it('requires password when session password needed', async () => {
     const cache = createCacheMock();
+    const prismaMock = {
+      telegramSettings: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+    } as unknown as PrismaService;
     const service = new TelegramAuthService(
       configMock as never,
       cache as never,
+      prismaMock,
     );
     const transactionId = 'tx-2';
     await cache.set(
@@ -225,8 +265,8 @@ describe('TelegramAuthService', () => {
       session: { save: jest.fn() },
     } as unknown as Record<string, unknown>;
 
-    jest
-      .spyOn(service as unknown as Record<string, unknown>, 'createClient')
+    (service as unknown as { createClient: jest.Mock }).createClient = jest
+      .fn()
       .mockResolvedValue(clientMock);
 
     await expect(

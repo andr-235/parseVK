@@ -14,7 +14,9 @@ describe('TelegramMemberMapper', () => {
     it('должен маппить ChannelParticipantCreator', () => {
       const participant = new Api.ChannelParticipantCreator({
         userId: BigInt(123),
-      } as Parameters<typeof Api.ChannelParticipantCreator>[0]);
+      } as unknown as ConstructorParameters<
+        typeof Api.ChannelParticipantCreator
+      >[0]);
 
       const result: {
         status: TelegramMemberStatus;
@@ -37,7 +39,9 @@ describe('TelegramMemberMapper', () => {
       const participant = new Api.ChannelParticipantAdmin({
         userId: BigInt(123),
         date: 1609459200,
-      } as Parameters<typeof Api.ChannelParticipantAdmin>[0]);
+      } as unknown as ConstructorParameters<
+        typeof Api.ChannelParticipantAdmin
+      >[0]);
 
       const result: {
         status: TelegramMemberStatus;
@@ -58,12 +62,14 @@ describe('TelegramMemberMapper', () => {
 
     it('должен маппить ChannelParticipantBanned', () => {
       const participant = new Api.ChannelParticipantBanned({
-        peer: new Api.PeerUser({ userId: BigInt(123) } as Parameters<
-          typeof Api.PeerUser
-        >[0]),
+        peer: new Api.PeerUser({
+          userId: BigInt(123),
+        } as unknown as ConstructorParameters<typeof Api.PeerUser>[0]),
         left: false,
         date: 1609459200,
-      } as Parameters<typeof Api.ChannelParticipantBanned>[0]);
+      } as unknown as ConstructorParameters<
+        typeof Api.ChannelParticipantBanned
+      >[0]);
 
       const result: {
         status: TelegramMemberStatus;

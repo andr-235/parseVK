@@ -63,9 +63,10 @@ describe('TasksService', () => {
     } as jest.Mocked<ITasksRepository>;
 
     runnerMock = {
+      execute: jest.fn(),
       resolveGroups: jest.fn(),
       buildTaskTitle: jest.fn(),
-    } as jest.Mocked<ParsingTaskRunner>;
+    } as unknown as jest.Mocked<ParsingTaskRunner>;
 
     queueMock = {
       enqueue: jest.fn(),
@@ -73,7 +74,7 @@ describe('TasksService', () => {
       getStats: jest.fn(),
       pause: jest.fn(),
       resume: jest.fn(),
-    } as jest.Mocked<ParsingQueueService>;
+    } as unknown as jest.Mocked<ParsingQueueService>;
 
     taskMapperMock = {
       mapToDetail: jest.fn(),
@@ -85,18 +86,29 @@ describe('TasksService', () => {
     descriptionParserMock = {
       parse: jest.fn(),
       stringify: jest.fn(),
-    } as jest.Mocked<TaskDescriptionParser>;
+      createEmpty: jest.fn(),
+      parseScope: jest.fn(),
+      parseGroupIds: jest.fn(),
+      parseSkippedGroupIds: jest.fn(),
+      parsePostLimit: jest.fn(),
+      parseStats: jest.fn(),
+      parseNumericField: jest.fn(),
+    } as unknown as jest.Mocked<TaskDescriptionParser>;
 
     contextBuilderMock = {
       buildResumeContext: jest.fn(),
-    } as jest.Mocked<TaskContextBuilder>;
+      runner: {} as unknown as ParsingTaskRunner,
+      parser: {} as unknown as TaskDescriptionParser,
+      normalizePostLimit: jest.fn(),
+    } as unknown as jest.Mocked<TaskContextBuilder>;
 
     cancellationServiceMock = {
       requestCancel: jest.fn(),
       clear: jest.fn(),
       isCancelled: jest.fn(),
       throwIfCancelled: jest.fn(),
-    } as jest.Mocked<TaskCancellationService>;
+      cancelledTasks: new Set<number>(),
+    } as unknown as jest.Mocked<TaskCancellationService>;
 
     service = new TasksService(
       repositoryMock,

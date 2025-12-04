@@ -111,6 +111,7 @@ describe('WatchlistService', () => {
 
     const authorMapperMock = {
       mapAuthor: jest.fn(),
+      mapProfile: jest.fn(),
       mapComment: jest.fn(),
       buildCommentUrl: jest.fn(),
     };
@@ -123,11 +124,19 @@ describe('WatchlistService', () => {
       collectCommentCounts: jest.fn().mockResolvedValue(new Map()),
       collectAnalysisSummaries: jest.fn().mockResolvedValue(new Map()),
       resolveSummary: jest.fn(),
-    };
+      prisma: {} as unknown as PrismaService,
+      photoAnalysisService: {} as unknown as never,
+      cloneSummary: jest.fn(),
+    } as unknown as jest.Mocked<WatchlistStatsCollectorService>;
 
     const authorRefresherMock = {
       refreshAuthorRecord: jest.fn(),
-    };
+      logger: {} as unknown as never,
+      repository: {} as unknown as IWatchlistRepository,
+      prisma: {} as unknown as PrismaService,
+      authorActivityService: {} as unknown as AuthorActivityService,
+      vkService: {} as unknown as never,
+    } as unknown as jest.Mocked<WatchlistAuthorRefresherService>;
 
     const queryValidatorMock: jest.Mocked<WatchlistQueryValidator> = {
       normalizeOffset: jest.fn((v?: number): number => v ?? 0),
@@ -136,14 +145,13 @@ describe('WatchlistService', () => {
     };
 
     service = new WatchlistService(
-      repositoryMock as jest.Mocked<IWatchlistRepository>,
-      authorMapperMock as jest.Mocked<WatchlistAuthorMapper>,
+      repositoryMock as unknown as jest.Mocked<IWatchlistRepository>,
+      authorMapperMock as unknown as jest.Mocked<WatchlistAuthorMapper>,
       settingsMapperMock as jest.Mocked<WatchlistSettingsMapper>,
-      statsCollectorMock as jest.Mocked<WatchlistStatsCollectorService>,
-      authorRefresherMock as jest.Mocked<WatchlistAuthorRefresherService>,
+      statsCollectorMock,
+      authorRefresherMock,
       queryValidatorMock,
       authorActivityService as unknown as AuthorActivityService,
-      prisma as unknown as PrismaService,
     );
 
     prisma.watchlistSettings.upsert.mockResolvedValue(createSettings());

@@ -1,5 +1,6 @@
 import { APIError, VK } from 'vk-io';
 import { VkService } from './vk.service';
+import type { Cache } from 'cache-manager';
 
 type ApiMock = {
   users: { get: jest.Mock };
@@ -40,7 +41,11 @@ const getLastVkInstance = () => {
 };
 
 describe('VkService', () => {
-  let mockCacheManager: jest.Mocked<any>;
+  let mockCacheManager: {
+    get: jest.Mock;
+    set: jest.Mock;
+    del: jest.Mock;
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -59,9 +64,20 @@ describe('VkService', () => {
   });
 
   const createService = () => {
-    const service = new VkService(mockCacheManager as Cache);
+    const configServiceMock = {
+      get: jest.fn((key: string) => {
+        if (key === 'vkToken') {
+          return process.env.VK_TOKEN;
+        }
+        return undefined;
+      }),
+    } as unknown as { get: jest.Mock };
+    const service = new VkService(
+      mockCacheManager as unknown as Cache,
+      configServiceMock as never,
+    );
     const { api } = getLastVkInstance();
-    return { service, api, cacheManager: mockCacheManager as Cache };
+    return { service, api, cacheManager: mockCacheManager as unknown as Cache };
   };
 
   describe('getGroups', () => {
@@ -499,7 +515,7 @@ describe('VkService', () => {
       const { service, api } = createService();
 
       api.wall.getComments.mockRejectedValue(
-        new APIError({ code: 15, message: 'Access denied' }),
+        new APIError({ code: 15, message: 'Access denied' } as never),
       );
 
       await expect(
