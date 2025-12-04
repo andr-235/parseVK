@@ -117,7 +117,12 @@ export class ListingsController {
       if (Array.isArray(value)) {
         return escapeCsv(value.join('; '));
       }
-      const str = typeof value === 'string' ? value : String(value);
+      const str =
+        typeof value === 'string'
+          ? value
+          : typeof value === 'number' || typeof value === 'boolean'
+            ? String(value)
+            : JSON.stringify(value);
       const needsQuotes = /[",\n\r;]/.test(str);
       const escaped = str.replace(/"/g, '""');
       return needsQuotes ? `"${escaped}"` : escaped;

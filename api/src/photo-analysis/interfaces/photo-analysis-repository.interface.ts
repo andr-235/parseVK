@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
-import type { PhotoAnalysisItemDto } from '../dto/photo-analysis-response.dto';
+import type {
+  PhotoAnalysisItemDto,
+  PhotoSuspicionLevel,
+} from '../dto/photo-analysis-response.dto';
 
 export interface IPhotoAnalysisRepository {
   findByAuthorId(authorId: number): Promise<PhotoAnalysisItemDto[]>;
@@ -41,7 +44,7 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       photoUrl: analysis.photoUrl,
       photoVkId: analysis.photoVkId,
       hasSuspicious: analysis.hasSuspicious,
-      suspicionLevel: analysis.suspicionLevel as any,
+      suspicionLevel: analysis.suspicionLevel as PhotoSuspicionLevel,
       categories: analysis.categories ?? [],
       confidence:
         typeof analysis.confidence === 'number' ? analysis.confidence : null,
@@ -67,7 +70,7 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       photoUrl: analysis.photoUrl,
       photoVkId: analysis.photoVkId,
       hasSuspicious: analysis.hasSuspicious,
-      suspicionLevel: analysis.suspicionLevel as any,
+      suspicionLevel: analysis.suspicionLevel as PhotoSuspicionLevel,
       categories: analysis.categories ?? [],
       confidence:
         typeof analysis.confidence === 'number' ? analysis.confidence : null,
@@ -98,7 +101,7 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
         photoUrl: params.photoUrl,
         analysisResult: JSON.stringify(params.rawResponse ?? null),
         hasSuspicious: params.hasSuspicious,
-        suspicionLevel: params.suspicionLevel as any,
+        suspicionLevel: params.suspicionLevel as PhotoSuspicionLevel,
         categories: params.categories,
         confidence: params.confidence,
         explanation: params.explanation,
@@ -110,7 +113,7 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
         photoVkId: params.photoVkId,
         analysisResult: JSON.stringify(params.rawResponse ?? null),
         hasSuspicious: params.hasSuspicious,
-        suspicionLevel: params.suspicionLevel as any,
+        suspicionLevel: params.suspicionLevel as PhotoSuspicionLevel,
         categories: params.categories,
         confidence: params.confidence,
         explanation: params.explanation,
@@ -156,7 +159,7 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       photoUrl: analysis.photoUrl,
       photoVkId: analysis.photoVkId,
       hasSuspicious: analysis.hasSuspicious,
-      suspicionLevel: analysis.suspicionLevel as any,
+      suspicionLevel: analysis.suspicionLevel as PhotoSuspicionLevel,
       categories: analysis.categories ?? [],
       confidence:
         typeof analysis.confidence === 'number' ? analysis.confidence : null,

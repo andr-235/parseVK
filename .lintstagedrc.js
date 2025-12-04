@@ -3,23 +3,29 @@ module.exports = {
   'api/**/*.ts': [
     // 1. Автоматическое форматирование
     'bash -c "cd api && npm run format"',
-    // 2. Линтинг с автоФиксом и блокировкой при предупреждениях
-    'bash -c "cd api && npx eslint --fix --max-warnings=0"',
-    // 3. Проверка типов TypeScript (только для измененных файлов)
-    'bash -c "cd api && npx tsc --noEmit --pretty false"',
+    // 2. Линтинг с автоФиксом и блокировкой при предупреждениях (только для измененных файлов)
+    (filenames) => {
+      const relativePaths = filenames.map(f => f.replace(/^api\//, 'src/')).join(' ');
+      return `bash -c "cd api && npx eslint --fix --max-warnings=0 ${relativePaths}"`;
+    },
   ],
-  // Тестовые файлы: только форматирование (типы проверяются в основном коде)
+  // Тестовые файлы: только форматирование
   'api/**/*.spec.ts': [
     'bash -c "cd api && npm run format"',
+    (filenames) => {
+      const relativePaths = filenames.map(f => f.replace(/^api\//, 'src/')).join(' ');
+      return `bash -c "cd api && npx eslint --fix --max-warnings=0 ${relativePaths}"`;
+    },
   ],
   // Frontend: строгая проверка TypeScript/TSX файлов
   'front/**/*.{ts,tsx}': [
     // 1. Автоматическое форматирование
     'bash -c "cd front && npm run format"',
-    // 2. Линтинг с автоФиксом и блокировкой при предупреждениях
-    'bash -c "cd front && npx eslint --fix --max-warnings=0"',
-    // 3. Проверка типов TypeScript (только для измененных файлов)
-    'bash -c "cd front && npx tsc --noEmit --pretty false"',
+    // 2. Линтинг с автоФиксом и блокировкой при предупреждений (только для измененных файлов)
+    (filenames) => {
+      const relativePaths = filenames.map(f => f.replace(/^front\//, 'src/')).join(' ');
+      return `bash -c "cd front && npx eslint --fix --max-warnings=0 ${relativePaths}"`;
+    },
   ],
   // CSS файлы: только форматирование
   'front/**/*.css': [

@@ -9,8 +9,14 @@ import {
 import { Transform, Type } from 'class-transformer';
 
 export class ListingsQueryDto {
-  @Transform(({ value }) => {
-    const parsed = Number.parseInt(value, 10);
+  @Transform(({ value }: { value: unknown }) => {
+    const str =
+      typeof value === 'string'
+        ? value
+        : typeof value === 'number'
+          ? String(value)
+          : '';
+    const parsed = Number.parseInt(str, 10);
     return Number.isFinite(parsed) ? parsed : 1;
   })
   @Type(() => Number)
@@ -20,8 +26,14 @@ export class ListingsQueryDto {
   @Max(1000)
   page?: number;
 
-  @Transform(({ value }) => {
-    const parsed = Number.parseInt(value, 10);
+  @Transform(({ value }: { value: unknown }) => {
+    const str =
+      typeof value === 'string'
+        ? value
+        : typeof value === 'number'
+          ? String(value)
+          : '';
+    const parsed = Number.parseInt(str, 10);
     return Number.isFinite(parsed) ? parsed : 25;
   })
   @Type(() => Number)

@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { KeywordsController } from './keywords.controller';
 import { KeywordsService } from './keywords.service';
+import { AddKeywordDto } from './dto/add-keyword.dto';
+import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto';
 
 const mockKeywordsService = () => ({
   addKeyword: jest.fn(),
@@ -36,7 +38,7 @@ describe('KeywordsController', () => {
   });
 
   it('должен добавить ключевое слово через POST /add', async () => {
-    const dto = { word: 'test', category: 'Маркетинг' };
+    const dto: AddKeywordDto = { word: 'test', category: 'Маркетинг' };
     const response = {
       id: 1,
       word: 'test',
@@ -46,7 +48,7 @@ describe('KeywordsController', () => {
     };
     keywordsService.addKeyword.mockResolvedValue(response);
 
-    const result = await controller.addKeyword(dto as any);
+    const result = await controller.addKeyword(dto);
 
     expect(result).toEqual(response);
     expect(keywordsService.addKeyword).toHaveBeenCalledWith(
@@ -56,7 +58,7 @@ describe('KeywordsController', () => {
   });
 
   it('должен массово добавить ключевые слова через POST /bulk-add', async () => {
-    const dto = { words: ['one', 'two'] };
+    const dto: BulkAddKeywordsDto = { words: ['one', 'two'] };
     const response = {
       success: [],
       failed: [],
@@ -68,7 +70,7 @@ describe('KeywordsController', () => {
     };
     keywordsService.bulkAddKeywords.mockResolvedValue(response);
 
-    const result = await controller.bulkAddKeywords(dto as any);
+    const result = await controller.bulkAddKeywords(dto);
 
     expect(result).toEqual(response);
     expect(keywordsService.bulkAddKeywords).toHaveBeenCalledWith([

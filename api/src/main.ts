@@ -17,7 +17,13 @@ async function bootstrap() {
     const configService = app.get(ConfigService<AppConfig>);
 
     // Security headers
-    app.use(helmet());
+    app.use(
+      helmet() as unknown as (
+        req: unknown,
+        res: unknown,
+        next: () => void,
+      ) => void,
+    );
 
     app.use(json({ limit: '2mb' }));
     app.use(urlencoded({ limit: '2mb', extended: true }));
@@ -39,9 +45,12 @@ async function bootstrap() {
     const corsOrigins =
       configService.get('corsOrigins', { infer: true }) ||
       'http://localhost:8080,http://localhost:3000';
-    const allowedOrigins = corsOrigins.split(',');
+    const allowedOrigins = String(corsOrigins).split(',');
     app.enableCors({
-      origin: (origin, callback) => {
+      origin: (
+        origin: string | undefined,
+        callback: (err: Error | null, allow?: boolean) => void,
+      ) => {
         if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {

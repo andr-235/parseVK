@@ -17,6 +17,7 @@ describe('KeywordsService', () => {
       delete: jest.fn(),
       deleteMany: jest.fn(),
       findManyWithSelect: jest.fn(),
+      count: jest.fn(),
       countComments: jest.fn(),
       countPosts: jest.fn(),
       findCommentsBatch: jest.fn(),
@@ -27,11 +28,11 @@ describe('KeywordsService', () => {
       deleteCommentKeywordMatches: jest.fn(),
       deletePostKeywordMatches: jest.fn(),
       createCommentKeywordMatches: jest.fn(),
-    } as any;
+    } as jest.Mocked<IKeywordsRepository>;
 
     matchesServiceMock = {
       recalculateKeywordMatches: jest.fn(),
-    } as any;
+    } as jest.Mocked<KeywordsMatchesService>;
 
     service = new KeywordsService(repositoryMock, matchesServiceMock);
     jest.clearAllMocks();
@@ -52,8 +53,10 @@ describe('KeywordsService', () => {
 
     const result = await service.addKeyword('  TeSt  ');
 
-    expect(repositoryMock.findUnique).toHaveBeenCalledWith({ word: 'test' });
-    expect(repositoryMock.create).toHaveBeenCalledWith({
+    expect(repositoryMock.findUnique.bind(repositoryMock)).toHaveBeenCalledWith(
+      { word: 'test' },
+    );
+    expect(repositoryMock.create.bind(repositoryMock)).toHaveBeenCalledWith({
       word: 'test',
       category: null,
       isPhrase: false,
@@ -79,8 +82,10 @@ describe('KeywordsService', () => {
 
     const result = await service.addKeyword('test', '  Маркетинг  ');
 
-    expect(repositoryMock.findUnique).toHaveBeenCalledWith({ word: 'test' });
-    expect(repositoryMock.update).toHaveBeenCalledWith(
+    expect(repositoryMock.findUnique.bind(repositoryMock)).toHaveBeenCalledWith(
+      { word: 'test' },
+    );
+    expect(repositoryMock.update.bind(repositoryMock)).toHaveBeenCalledWith(
       { id: 1 },
       { category: 'Маркетинг', isPhrase: false },
     );
@@ -195,7 +200,9 @@ describe('KeywordsService', () => {
 
     const result = await service.deleteKeyword(1);
 
-    expect(repositoryMock.delete).toHaveBeenCalledWith({ id: 1 });
+    expect(repositoryMock.delete.bind(repositoryMock)).toHaveBeenCalledWith({
+      id: 1,
+    });
     expect(result).toEqual({ success: true, id: 1 });
   });
 
@@ -205,7 +212,7 @@ describe('KeywordsService', () => {
 
     const result = await service.deleteAllKeywords();
 
-    expect(repositoryMock.deleteMany).toHaveBeenCalled();
+    expect(repositoryMock.deleteMany.bind(repositoryMock)).toHaveBeenCalled();
     expect(result).toEqual({ success: true, count: 2 });
   });
 });

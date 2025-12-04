@@ -43,7 +43,7 @@ export class WebhookModerationStrategy implements IModerationStrategy {
 
     try {
       data = rawResponse.length ? JSON.parse(rawResponse) : null;
-    } catch (error) {
+    } catch {
       throw new Error('Сервис модерации вернул некорректный JSON');
     }
 
@@ -67,7 +67,7 @@ export class WebhookModerationStrategy implements IModerationStrategy {
     const targetUrl = new URL(params.url);
     const isHttps = targetUrl.protocol === 'https:';
     const requestFn = isHttps ? httpsRequest : httpRequest;
-    const timeoutMs = this.resolveModerationTimeout(params.imageCount);
+    const timeoutMs = this.resolveModerationTimeout();
     const timeoutLabel = timeoutMs === 0 ? 'без ограничения' : `${timeoutMs}мс`;
 
     this.logger.debug(
@@ -137,7 +137,7 @@ export class WebhookModerationStrategy implements IModerationStrategy {
     });
   }
 
-  private resolveModerationTimeout(_imageCount: number): number {
+  private resolveModerationTimeout(): number {
     const timeoutEnv = process.env.IMAGE_MODERATION_TIMEOUT_MS;
 
     if (timeoutEnv && timeoutEnv.trim().length > 0) {

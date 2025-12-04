@@ -11,26 +11,39 @@ describe('PrismaService', () => {
     connectMock.mockClear();
     disconnectMock.mockClear();
     prismaClientConstructor.mockClear();
-    __setPrismaMocks({
-      constructor: prismaClientConstructor,
-      connect: connectMock,
-      disconnect: disconnectMock,
+    (
+      __setPrismaMocks as (mocks?: {
+        constructor?: () => void;
+        connect?: () => Promise<void>;
+        disconnect?: () => Promise<void>;
+      }) => void
+    )({
+      constructor: prismaClientConstructor as unknown as () => void,
+      connect: connectMock as unknown as () => Promise<void>,
+      disconnect: disconnectMock as unknown as () => Promise<void>,
     });
   });
 
   afterEach(() => {
-    __setPrismaMocks();
+    (
+      __setPrismaMocks as (mocks?: {
+        constructor?: () => void;
+        connect?: () => Promise<void>;
+        disconnect?: () => Promise<void>;
+      }) => void
+    )(undefined);
   });
 
   it('должен пробрасывать конфигурацию в super и инициировать подключение', async () => {
     const databaseUrl = 'postgres://user:password@localhost:5432/db';
+    const getMock = jest.fn().mockReturnValue(databaseUrl);
     const configService = {
-      get: jest.fn().mockReturnValue(databaseUrl),
+      get: getMock,
     } as unknown as ConfigService;
 
     const service = new PrismaService(configService);
 
-    expect(configService.get).toHaveBeenCalledWith('DATABASE_URL');
+    expect(getMock).toHaveBeenCalledWith('DATABASE_URL');
     expect(prismaClientConstructor).toHaveBeenCalledWith({
       datasources: {
         db: {

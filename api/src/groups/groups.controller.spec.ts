@@ -1,5 +1,6 @@
 import { INestApplication, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import * as http from 'http';
 import request from 'supertest';
 import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
@@ -49,7 +50,7 @@ describe('GroupsController (HTTP)', () => {
     const group = { id: 1, name: 'Test group' };
     groupsService.saveGroup.mockResolvedValue(group);
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as http.Server)
       .post('/groups/save')
       .send({ identifier: 'club1' })
       .expect(201)
@@ -63,12 +64,14 @@ describe('GroupsController (HTTP)', () => {
       new NotFoundException('Group 123 not found'),
     );
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as http.Server)
       .post('/groups/save')
       .send({ identifier: '123' })
       .expect(404)
-      .expect((response) => {
-        expect(response.body.message).toBe('Group 123 not found');
+      .expect((response: request.Response) => {
+        expect((response.body as { message?: string }).message).toBe(
+          'Group 123 not found',
+        );
       });
   });
 
@@ -82,7 +85,7 @@ describe('GroupsController (HTTP)', () => {
     };
     groupsService.uploadGroupsFromFile.mockResolvedValue(result);
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as http.Server)
       .post('/groups/upload')
       .attach('file', Buffer.from('club1\nclub2'), 'groups.txt')
       .expect(201)
@@ -103,7 +106,7 @@ describe('GroupsController (HTTP)', () => {
     };
     groupsService.getAllGroups.mockResolvedValue(payload);
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as http.Server)
       .get('/groups')
       .expect(200)
       .expect(payload);
@@ -121,7 +124,7 @@ describe('GroupsController (HTTP)', () => {
     };
     groupsService.getAllGroups.mockResolvedValue(payload);
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as http.Server)
       .get('/groups')
       .query({ page: '2', limit: '25' })
       .expect(200)
@@ -137,7 +140,7 @@ describe('GroupsController (HTTP)', () => {
     const response = { count: 2 };
     groupsService.deleteAllGroups.mockResolvedValue(response);
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as http.Server)
       .delete('/groups/all')
       .expect(200)
       .expect(response);
@@ -149,7 +152,7 @@ describe('GroupsController (HTTP)', () => {
     const group = { id: 10 };
     groupsService.deleteGroup.mockResolvedValue(group);
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as http.Server)
       .delete('/groups/10')
       .expect(200)
       .expect(group);

@@ -1,8 +1,6 @@
 import type {
   PhotoAnalysisItemDto,
   PhotoAnalysisSummaryDto,
-  PhotoAnalysisSummaryCategoryDto,
-  PhotoAnalysisSummaryLevelDto,
   PhotoSuspicionLevel,
 } from '../dto/photo-analysis-response.dto';
 
