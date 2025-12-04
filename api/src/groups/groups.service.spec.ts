@@ -144,7 +144,7 @@ describe('GroupsService', () => {
         ...mappedData,
       } as IGroupResponse;
       repositoryObj.upsert.mockResolvedValue(savedGroup);
-      identifierValidatorObj.normalizeIdentifier.mockReturnValue(123);
+      identifierValidatorObj.normalizeIdentifier.mockReturnValue('123');
 
       const result = await service.saveGroup('https://vk.com/club123');
 

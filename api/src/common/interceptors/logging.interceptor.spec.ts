@@ -11,6 +11,7 @@ describe('LoggingInterceptor', () => {
     originalUrl: string;
     ip: string;
     get: jest.Mock;
+    headers: Record<string, string>;
   };
   let response: {
     statusCode: number;
