@@ -87,7 +87,9 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         limit: pageSize,
         excludeStopped: true,
       })
-      const mapped: WatchlistAuthorCard[] = response.items.map(mapWatchlistAuthor)
+      const mapped: WatchlistAuthorCard[] = Array.isArray(response.items)
+        ? response.items.map(mapWatchlistAuthor)
+        : []
 
       set((prev) => ({
         authors: reset

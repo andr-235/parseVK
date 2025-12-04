@@ -11,7 +11,7 @@ import { queryKeys } from '@/hooks/queryKeys'
 import type { IParsingTaskSummary } from '@/types/api'
 
 const mapSummariesToTasks = (summaries: IParsingTaskSummary[]) => {
-  return summaries.map((summary) => mapSummaryToTask(summary))
+  return Array.isArray(summaries) ? summaries.map((summary) => mapSummaryToTask(summary)) : []
 }
 
 export const useTasksQuery = () => {

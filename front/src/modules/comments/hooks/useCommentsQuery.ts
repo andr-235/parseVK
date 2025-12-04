@@ -19,7 +19,9 @@ const fetchInitialComments = async () => {
   })
 
   return {
-    comments: response.items.map((item) => normalizeCommentResponse(item)),
+    comments: Array.isArray(response.items)
+      ? response.items.map((item) => normalizeCommentResponse(item))
+      : [],
     nextCursor: response.nextCursor ?? null,
     hasMore: response.hasMore,
     totalCount: response.total,

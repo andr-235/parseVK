@@ -19,7 +19,7 @@ const fetchWatchlistAuthors = async () => {
     excludeStopped: true,
   })
   return {
-    items: response.items.map(mapWatchlistAuthor),
+    items: Array.isArray(response.items) ? response.items.map(mapWatchlistAuthor) : [],
     total: response.total,
     hasMore: response.hasMore,
   }
@@ -42,7 +42,7 @@ export const useWatchlistAuthorsQuery = (enabled: boolean) => {
     }
 
     useWatchlistStore.setState((state) => {
-      const incoming = query.data.items
+      const incoming = Array.isArray(query.data.items) ? query.data.items : []
       const existing = state.authors
       const incomingIds = new Set(incoming.map((item) => item.id))
       // сохраняем элементы из уже загруженных страниц, но исключаем STOPPED

@@ -137,16 +137,18 @@ export function useTableSorting<T>(
   }, [columnMap, sortState])
 
   const sortedItems = useMemo(() => {
+    const safeData = Array.isArray(data) ? data : []
+
     if (!sortState) {
-      return data
+      return safeData
     }
 
     const column = columnMap.get(sortState.key)
     if (!column || column.sortable === false) {
-      return data
+      return safeData
     }
 
-    const itemsWithIndex = data.map((item, index) => ({
+    const itemsWithIndex = safeData.map((item, index) => ({
       item,
       index,
       value: deriveSortValue(item, column),

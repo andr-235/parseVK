@@ -108,7 +108,9 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         readStatus: activeFilters.readStatus,
         search: activeFilters.search,
       })
-      const normalized = response.items.map((comment) => normalizeCommentResponse(comment))
+      const normalized = Array.isArray(response.items)
+        ? response.items.map((comment) => normalizeCommentResponse(comment))
+        : []
 
       set((prevState) => ({
         comments: reset ? normalized : [...prevState.comments, ...normalized],
@@ -199,7 +201,9 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         return
       }
 
-      const normalized = response.items.map((comment) => normalizeCommentResponse(comment))
+      const normalized = Array.isArray(response.items)
+        ? response.items.map((comment) => normalizeCommentResponse(comment))
+        : []
 
       set((prevState) => {
         const nextComments = reset ? normalized : [...prevState.comments, ...normalized]

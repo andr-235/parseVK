@@ -74,8 +74,9 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
         sortOrder: state.sortBy ? state.sortOrder : undefined,
       })
 
+      const items = Array.isArray(response.items) ? response.items : []
       set((prev) => ({
-        authors: offset === 0 ? response.items : [...prev.authors, ...response.items],
+        authors: offset === 0 ? items : [...prev.authors, ...items],
         total: response.total,
         hasMore: response.hasMore,
         isLoading: false,
@@ -85,13 +86,13 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
 
       queryClient.setQueryData<AuthorListResponse>(queryKey, (prevData) => {
         if (!prevData || offset === 0) {
-          return response
+          return { ...response, items }
         }
 
         const existingIds = new Set(prevData.items.map((item) => item.id))
         const mergedItems = [
           ...prevData.items,
-          ...response.items.filter((item) => !existingIds.has(item.id)),
+          ...items.filter((item) => !existingIds.has(item.id)),
         ]
 
         return {

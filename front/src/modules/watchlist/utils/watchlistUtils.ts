@@ -117,6 +117,9 @@ export const validateAuthorId = (id: number | undefined): id is number => {
  * @returns Отфильтрованный массив валидных авторов без дубликатов
  */
 export const filterValidAuthors = (authors: WatchlistAuthorCard[]): WatchlistAuthorCard[] => {
+  if (!Array.isArray(authors)) {
+    return []
+  }
   const seen = new Set<number>()
   return authors.filter((author) => {
     if (!validateAuthorId(author.id) || seen.has(author.id)) return false

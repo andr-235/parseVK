@@ -61,7 +61,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     try {
       const response = await groupsService.fetchGroups({ page: 1, limit: state.limit })
       set({
-        groups: response.items,
+        groups: Array.isArray(response.items) ? response.items : [],
         total: response.total,
         page: response.page,
         limit: response.limit,
@@ -87,7 +87,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     try {
       const response = await groupsService.fetchGroups({ page: nextPage, limit: state.limit })
       set((current) => {
-        const combined = [...current.groups, ...response.items]
+        const items = Array.isArray(response.items) ? response.items : []
+        const combined = [...current.groups, ...items]
         const uniqueMap = new Map<number, (typeof combined)[number]>()
         combined.forEach((group) => {
           uniqueMap.set(group.id, group)
@@ -118,7 +119,8 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
 
       while (hasMore) {
         const response = await groupsService.fetchGroups({ page, limit })
-        allGroups.push(...response.items)
+        const items = Array.isArray(response.items) ? response.items : []
+        allGroups.push(...items)
         hasMore = response.hasMore
         page++
       }

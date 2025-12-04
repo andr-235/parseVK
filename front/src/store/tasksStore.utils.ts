@@ -485,6 +485,9 @@ export const toTaskKey = (taskId: TaskIdentifier): string => {
 }
 
 export const rebuildTaskList = (ids: TaskIdentifier[], entities: Record<string, Task>): Task[] => {
+  if (!Array.isArray(ids)) {
+    return []
+  }
   return ids.map((id) => entities[toTaskKey(id)]).filter((task): task is Task => Boolean(task))
 }
 
