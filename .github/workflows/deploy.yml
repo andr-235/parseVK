@@ -1,9 +1,10 @@
 name: Deploy to Production Server
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +18,7 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: read
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
 
     env:
       DOCKER_BUILDKIT: 1
