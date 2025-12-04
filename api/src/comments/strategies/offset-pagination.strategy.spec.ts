@@ -197,7 +197,11 @@ describe('OffsetPaginationStrategy', () => {
       keywords: ['test'],
       isRead: false,
     });
-    repositoryObj.transaction.mockResolvedValue([[], 0, 0, 0]);
+    repositoryObj.findMany.mockResolvedValue([]);
+    repositoryObj.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
     mapperObj.mapMany.mockReturnValue([]);
 
     await strategy.execute(
