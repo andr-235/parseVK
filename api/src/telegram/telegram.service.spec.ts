@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { BadRequestException } from '@nestjs/common';
 import { TelegramChatType, TelegramMemberStatus } from '@prisma/client';
 import type { Api } from 'telegram';
@@ -9,6 +10,11 @@ import { TelegramParticipantCollectorService } from './services/telegram-partici
 import { TelegramChatSyncService } from './services/telegram-chat-sync.service';
 import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service';
 import { TelegramChatRepository } from './repositories/telegram-chat.repository';
+import type {
+  ResolvedChat,
+  ParticipantCollection,
+} from './interfaces/telegram-client.interface';
+import type { TelegramClient } from 'telegram';
 
 describe('TelegramService', () => {
   let service: TelegramService;
@@ -23,27 +29,27 @@ describe('TelegramService', () => {
     clientManagerMock = {
       getClient: jest.fn(),
       disconnect: jest.fn(),
-    } as any;
+    } as jest.Mocked<TelegramClientManagerService>;
 
     chatMapperMock = {
       resolveChat: jest.fn(),
-    } as any;
+    } as jest.Mocked<TelegramChatMapper>;
 
     participantCollectorMock = {
       collectParticipants: jest.fn(),
-    } as any;
+    } as jest.Mocked<TelegramParticipantCollectorService>;
 
     chatSyncMock = {
       persistChat: jest.fn(),
-    } as any;
+    } as jest.Mocked<TelegramChatSyncService>;
 
     excelExporterMock = {
       exportChatToExcel: jest.fn(),
-    } as any;
+    } as jest.Mocked<TelegramExcelExporterService>;
 
     chatRepositoryMock = {
       findById: jest.fn(),
-    } as any;
+    } as jest.Mocked<TelegramChatRepository>;
 
     service = new TelegramService(
       clientManagerMock,
@@ -69,22 +75,22 @@ describe('TelegramService', () => {
     const fakeEntity = {};
     const mockClient = {
       getEntity: jest.fn().mockResolvedValue(fakeEntity),
-    } as Record<string, unknown>;
+    } as unknown as TelegramClient;
 
-    clientManagerMock.getClient.mockResolvedValue(mockClient as any);
+    clientManagerMock.getClient.mockResolvedValue(mockClient);
 
-    const resolvedChat = {
+    const resolvedChat: ResolvedChat = {
       telegramId: BigInt(123),
       type: TelegramChatType.CHANNEL,
       title: 'Test channel',
       username: 'test_channel',
       description: null,
-      entity: {} as Record<string, unknown>,
+      entity: {} as Api.Channel,
       totalMembers: 42,
     };
-    chatMapperMock.resolveChat.mockReturnValue(resolvedChat as any);
+    chatMapperMock.resolveChat.mockReturnValue(resolvedChat);
 
-    const participants = {
+    const participants: ParticipantCollection = {
       members: [
         {
           user: {} as Api.User,
@@ -98,7 +104,7 @@ describe('TelegramService', () => {
       total: 42,
     };
     participantCollectorMock.collectParticipants.mockResolvedValue(
-      participants as any,
+      participants,
     );
 
     const persisted = {
@@ -106,7 +112,7 @@ describe('TelegramService', () => {
       telegramId: BigInt(123),
       members: [] as TelegramMemberDto[],
     };
-    chatSyncMock.persistChat.mockResolvedValue(persisted as any);
+    chatSyncMock.persistChat.mockResolvedValue(persisted);
 
     const result = await service.syncChat({ identifier: 'test', limit: 10 });
 

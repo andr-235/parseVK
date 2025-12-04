@@ -59,15 +59,6 @@ export class TelegramExcelExporterService {
     };
 
     for (const member of chat.members) {
-      const usernames =
-        member.user.usernames &&
-        typeof member.user.usernames === 'object' &&
-        Array.isArray(member.user.usernames)
-          ? member.user.usernames
-              .map((u: { username: string; active: boolean }) => u.username)
-              .join(', ')
-          : '';
-
       worksheet.addRow({
         id: member.user.id,
         telegramId: member.user.telegramId.toString(),

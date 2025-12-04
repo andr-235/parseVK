@@ -9,8 +9,19 @@ import { TelegramChatRepository } from '../repositories/telegram-chat.repository
 import { TelegramMemberRepository } from '../repositories/telegram-member.repository';
 import { TelegramMemberMapper } from '../mappers/telegram-member.mapper';
 import { PrismaService } from '../../prisma.service';
-import type { Prisma } from '@prisma/client';
-import { TelegramChatType } from '@prisma/client';
+import { TelegramChatType, TelegramMemberStatus } from '@prisma/client';
+
+interface TelegramUserPersonal {
+  flags?: number;
+  phoneNumber?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  birthday?: Api.Birthday;
+  country?: string;
+  countryCode?: string;
+  about?: string;
+}
 
 @Injectable()
 export class TelegramChatSyncService {
@@ -94,14 +105,14 @@ export class TelegramChatSyncService {
           create: {
             chatId: chat.id,
             userId: userRecord.id,
-            status: member.status as any,
+            status: member.status as TelegramMemberStatus,
             isAdmin: member.isAdmin,
             isOwner: member.isOwner,
             joinedAt,
             leftAt,
           },
           update: {
-            status: member.status as any,
+            status: member.status as TelegramMemberStatus,
             isAdmin: member.isAdmin,
             isOwner: member.isOwner,
             joinedAt,
@@ -146,15 +157,42 @@ export class TelegramChatSyncService {
         typeof full.personal === 'object' &&
         full.personal !== null
           ? {
-              flags: (full.personal as any).flags,
-              phoneNumber: (full.personal as any).phoneNumber,
-              email: (full.personal as any).email,
-              firstName: (full.personal as any).firstName,
-              lastName: (full.personal as any).lastName,
-              birthday: (full.personal as any).birthday,
-              country: (full.personal as any).country,
-              countryCode: (full.personal as any).countryCode,
-              about: (full.personal as any).about,
+              flags:
+                'flags' in full.personal
+                  ? (full.personal as TelegramUserPersonal).flags
+                  : undefined,
+              phoneNumber:
+                'phoneNumber' in full.personal
+                  ? (full.personal as TelegramUserPersonal).phoneNumber
+                  : undefined,
+              email:
+                'email' in full.personal
+                  ? (full.personal as TelegramUserPersonal).email
+                  : undefined,
+              firstName:
+                'firstName' in full.personal
+                  ? (full.personal as TelegramUserPersonal).firstName
+                  : undefined,
+              lastName:
+                'lastName' in full.personal
+                  ? (full.personal as TelegramUserPersonal).lastName
+                  : undefined,
+              birthday:
+                'birthday' in full.personal
+                  ? (full.personal as TelegramUserPersonal).birthday
+                  : undefined,
+              country:
+                'country' in full.personal
+                  ? (full.personal as TelegramUserPersonal).country
+                  : undefined,
+              countryCode:
+                'countryCode' in full.personal
+                  ? (full.personal as TelegramUserPersonal).countryCode
+                  : undefined,
+              about:
+                'about' in full.personal
+                  ? (full.personal as TelegramUserPersonal).about
+                  : undefined,
             }
           : null;
 
@@ -227,9 +265,18 @@ export class TelegramChatSyncService {
       }
 
       return result;
-    } catch (error) {
+    } catch (err: unknown) {
+      const userid = user.id as unknown as bigint | number;
+      const userId =
+        typeof userid === 'bigint' ? userid.toString() : String(userid);
+      const errorMessage =
+        err instanceof Error
+          ? `${err.name}: ${err.message}`
+          : typeof err === 'string'
+            ? err
+            : String(err);
       this.logger.warn(
-        `Failed to get full user data for ${user.id}: ${this.stringifyError(error)}`,
+        `Failed to get full user data for ${userId}: ${errorMessage}`,
       );
       return {};
     }
@@ -238,6 +285,9 @@ export class TelegramChatSyncService {
   private stringifyError(error: unknown): string {
     if (error instanceof Error) {
       return `${error.name}: ${error.message}`;
+    }
+    if (typeof error === 'string') {
+      return error;
     }
     try {
       return JSON.stringify(error);

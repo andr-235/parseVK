@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
+import type { RequestHandler } from 'express';
 import helmet from 'helmet';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -17,7 +18,7 @@ async function bootstrap() {
     const configService = app.get(ConfigService<AppConfig>);
 
     // Security headers
-    app.use(helmet() as any);
+    app.use(helmet() as RequestHandler);
 
     app.use(json({ limit: '2mb' }));
     app.use(urlencoded({ limit: '2mb', extended: true }));

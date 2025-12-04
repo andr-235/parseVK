@@ -230,11 +230,11 @@ export class TelegramAuthService {
           },
           {
             phoneNumber: transaction.phoneNumber,
-            phoneCode: async () => payload.code,
+            phoneCode: () => Promise.resolve(payload.code),
             password: payload.password
-              ? async () => payload.password!
+              ? () => Promise.resolve(payload.password!)
               : undefined,
-            onError: async (err: Error) => {
+            onError: (err: Error) => {
               this.logger.warn(
                 `Telegram signIn error for ${transaction.phoneNumber}: ${this.stringifyError(err)}`,
               );
@@ -242,9 +242,9 @@ export class TelegramAuthService {
                 err.message.includes('PASSWORD') ||
                 err.message.includes('password')
               ) {
-                return false;
+                return Promise.resolve(false);
               }
-              return true;
+              return Promise.resolve(true);
             },
           },
         );
@@ -263,12 +263,12 @@ export class TelegramAuthService {
               apiHash: transaction.apiHash,
             },
             {
-              password: async () => payload.password!,
-              onError: async (err: Error) => {
+              password: () => Promise.resolve(payload.password!),
+              onError: (err: Error) => {
                 this.logger.warn(
                   `Telegram password check failed for ${transaction.phoneNumber}: ${this.stringifyError(err)}`,
                 );
-                return true;
+                return Promise.resolve(true);
               },
             },
           );

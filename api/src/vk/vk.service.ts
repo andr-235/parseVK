@@ -239,11 +239,11 @@ export class VkService {
       activities: user.activities ?? undefined,
       bdate: user.bdate ?? undefined,
       books: user.books ?? undefined,
-      career: user.career ?? undefined,
-      connections: user.connections ?? undefined,
-      contacts: user.contacts ?? undefined,
-      counters: user.counters ?? undefined,
-      education: user.education ?? undefined,
+      career: user.career as IAuthor['career'] | undefined,
+      connections: user.connections as IAuthor['connections'] | undefined,
+      contacts: user.contacts as IAuthor['contacts'] | undefined,
+      counters: user.counters as IAuthor['counters'] | undefined,
+      education: user.education as IAuthor['education'] | undefined,
       followers_count:
         typeof user.followers_count === 'number'
           ? user.followers_count
@@ -300,12 +300,20 @@ export class VkService {
         album_id: photo.album_id,
         date: photo.date,
         text: photo.text ?? undefined,
-        sizes: (photo.sizes ?? []).map((size) => ({
-          type: size.type,
-          url: size.url,
-          width: size.width ?? 0,
-          height: size.height ?? 0,
-        })),
+        sizes: (photo.sizes ?? []).map((size) => {
+          const typedSize = size as unknown as {
+            type: string;
+            url: string;
+            width?: number;
+            height?: number;
+          };
+          return {
+            type: typedSize.type,
+            url: typedSize.url,
+            width: typedSize.width ?? 0,
+            height: typedSize.height ?? 0,
+          };
+        }),
       }));
     } catch (error) {
       if (error instanceof APIError) {
@@ -387,10 +395,16 @@ export class VkService {
       attachments: item.attachments,
       comments: {
         count: item.comments?.count ?? 0,
-        can_post: item.comments?.can_post ?? 0,
-        groups_can_post: normalizeBoolean(item.comments?.groups_can_post),
-        can_close: normalizeBoolean(item.comments?.can_close),
-        can_open: normalizeBoolean(item.comments?.can_open),
+        can_post: (item.comments?.can_post ?? 0) as number,
+        groups_can_post: normalizeBoolean(
+          item.comments?.groups_can_post as boolean | number | null | undefined,
+        ),
+        can_close: normalizeBoolean(
+          item.comments?.can_close as boolean | number | null | undefined,
+        ),
+        can_open: normalizeBoolean(
+          item.comments?.can_open as boolean | number | null | undefined,
+        ),
       },
     }));
 
@@ -834,9 +848,22 @@ export class VkService {
     const postId = item.post_id ?? defaults.postId;
     const threadDefaults = { ownerId, postId };
 
-    const threadItems = item.thread?.items
-      ? this.mapComments(item.thread.items, threadDefaults)
+    type ThreadType = { items?: Objects.WallWallComment[]; count?: number };
+    const thread = item.thread as ThreadType | undefined;
+    const threadItems = thread?.items
+      ? this.mapComments(thread.items, threadDefaults)
       : undefined;
+
+    let threadCount: number | undefined = undefined;
+    if (thread && typeof thread === 'object' && thread !== null) {
+      const typedThread = thread as unknown as { count?: number };
+      if ('count' in typedThread) {
+        const countValue = typedThread.count;
+        if (typeof countValue === 'number') {
+          threadCount = countValue;
+        }
+      }
+    }
 
     return {
       vkCommentId: item.id,
@@ -845,9 +872,21 @@ export class VkService {
       fromId: item.from_id,
       text: item.text ?? '',
       publishedAt: new Date(item.date * 1000),
-      likesCount: item.likes?.count,
+      likesCount: (() => {
+        if (
+          item.likes &&
+          typeof item.likes === 'object' &&
+          'count' in item.likes
+        ) {
+          const likesObj = item.likes as unknown as { count?: number };
+          return typeof likesObj.count === 'number'
+            ? likesObj.count
+            : undefined;
+        }
+        return undefined;
+      })(),
       parentsStack: item.parents_stack,
-      threadCount: item.thread?.count,
+      threadCount: threadCount,
       threadItems:
         threadItems && threadItems.length > 0 ? threadItems : undefined,
       attachments: item.attachments,
@@ -868,20 +907,4 @@ export class VkService {
       vk.api.options.apiTimeout = timeout;
     }
   }
-}
-
-function parsePositiveInteger(
-  value: string | undefined,
-  fallback: number,
-): number {
-  if (!value) {
-    return fallback;
-  }
-
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed) || parsed <= 0) {
-    return fallback;
-  }
-
-  return parsed;
 }

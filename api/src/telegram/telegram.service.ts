@@ -13,6 +13,7 @@ import { TelegramChatSyncService } from './services/telegram-chat-sync.service';
 import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service';
 import { TelegramChatRepository } from './repositories/telegram-chat.repository';
 import { TelegramChatType } from '@prisma/client';
+import type { ParticipantCollection } from './interfaces/telegram-client.interface';
 
 @Injectable()
 export class TelegramService {
@@ -58,7 +59,7 @@ export class TelegramService {
 
     const limit = params.limit ?? this.defaultLimit;
 
-    let collection;
+    let collection: ParticipantCollection;
     try {
       collection = await this.participantCollector.collectParticipants(
         client,
@@ -89,7 +90,7 @@ export class TelegramService {
       title: resolved.title,
       username: resolved.username,
       syncedMembers: collection.members.length,
-      totalMembers: collection.total,
+      totalMembers: collection.total ?? null,
       fetchedMembers: collection.members.length,
       members: persisted.members,
     };

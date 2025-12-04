@@ -59,9 +59,9 @@ describe('VkService', () => {
   });
 
   const createService = () => {
-    const service = new VkService(mockCacheManager);
+    const service = new VkService(mockCacheManager as Cache);
     const { api } = getLastVkInstance();
-    return { service, api, cacheManager: mockCacheManager };
+    return { service, api, cacheManager: mockCacheManager as Cache };
   };
 
   describe('getGroups', () => {

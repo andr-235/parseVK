@@ -5,12 +5,14 @@ import { Api } from 'telegram';
 const createCacheMock = () => {
   const store = new Map<string, unknown>();
   return {
-    get: jest.fn(async (key: string) => store.get(key)),
-    set: jest.fn(async (key: string, value: unknown) => {
+    get: jest.fn((key: string) => Promise.resolve(store.get(key))),
+    set: jest.fn((key: string, value: unknown) => {
       store.set(key, value);
+      return Promise.resolve();
     }),
-    del: jest.fn(async (key: string) => {
+    del: jest.fn((key: string) => {
       store.delete(key);
+      return Promise.resolve();
     }),
   };
 };
@@ -64,7 +66,8 @@ describe('TelegramAuthService', () => {
     expect(result.codeLength).toBe(5);
     expect(result.nextType).toBe('sms');
     expect(cache.set).toHaveBeenCalledTimes(1);
-    const [[cacheKey, cacheValue]] = (cache.set as jest.Mock).mock.calls;
+    const calls = (cache.set as jest.Mock).mock.calls;
+    const [cacheKey, cacheValue] = calls[0] as [string, unknown];
     expect(cacheKey).toMatch(/^telegram:auth:tx:/);
     expect(cacheValue).toMatchObject({
       phoneNumber: '+79998887766',
@@ -170,7 +173,8 @@ describe('TelegramAuthService', () => {
       '+79998887766',
       false,
     );
-    const [[, cacheValue]] = (cache.set as jest.Mock).mock.calls;
+    const calls = (cache.set as jest.Mock).mock.calls;
+    const [, cacheValue] = calls[0] as [string, unknown];
     expect(cacheValue).toMatchObject({
       apiId: 999999,
       apiHash: 'custom-hash',

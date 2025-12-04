@@ -6,6 +6,12 @@ import {
 } from '@prisma/client';
 import type { PrismaService } from '../prisma.service';
 import type { AuthorActivityService } from '../common/services/author-activity.service';
+import type { IWatchlistRepository } from './interfaces/watchlist-repository.interface';
+import type { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper';
+import type { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper';
+import type { WatchlistStatsCollectorService } from './services/watchlist-stats-collector.service';
+import type { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service';
+import type { WatchlistQueryValidator } from './validators/watchlist-query.validator';
 
 jest.mock('vk-io', () => {
   class APIErrorMock extends Error {}
@@ -123,19 +129,19 @@ describe('WatchlistService', () => {
       refreshAuthorRecord: jest.fn(),
     };
 
-    const queryValidatorMock = {
-      normalizeOffset: jest.fn((v) => v ?? 0),
-      normalizeLimit: jest.fn((v) => v ?? 20),
-      normalizeExcludeStopped: jest.fn((v) => v !== false),
+    const queryValidatorMock: jest.Mocked<WatchlistQueryValidator> = {
+      normalizeOffset: jest.fn((v?: number): number => v ?? 0),
+      normalizeLimit: jest.fn((v?: number): number => v ?? 20),
+      normalizeExcludeStopped: jest.fn((v?: boolean): boolean => v !== false),
     };
 
     service = new WatchlistService(
-      repositoryMock as any,
-      authorMapperMock as any,
-      settingsMapperMock as any,
-      statsCollectorMock as any,
-      authorRefresherMock as any,
-      queryValidatorMock as any,
+      repositoryMock as jest.Mocked<IWatchlistRepository>,
+      authorMapperMock as jest.Mocked<WatchlistAuthorMapper>,
+      settingsMapperMock as jest.Mocked<WatchlistSettingsMapper>,
+      statsCollectorMock as jest.Mocked<WatchlistStatsCollectorService>,
+      authorRefresherMock as jest.Mocked<WatchlistAuthorRefresherService>,
+      queryValidatorMock,
       authorActivityService as unknown as AuthorActivityService,
       prisma as unknown as PrismaService,
     );
@@ -185,7 +191,7 @@ describe('WatchlistService', () => {
     expect(authorActivityService.saveAuthors).toHaveBeenCalledWith([123]);
     expect(prisma.watchlistAuthor.updateMany).toHaveBeenCalledWith({
       where: { id: { in: [1] } },
-      data: { lastCheckedAt: expect.any(Date) },
+      data: { lastCheckedAt: expect.any(Date) as Date },
     });
     expect(vkService.getAuthorCommentsForPost).not.toHaveBeenCalled();
   });
@@ -294,10 +300,10 @@ describe('WatchlistService', () => {
     expect(prisma.watchlistAuthor.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: expect.objectContaining({
-        lastCheckedAt: expect.any(Date),
+        lastCheckedAt: expect.any(Date) as Date,
         foundCommentsCount: { increment: 2 },
         lastActivityAt: new Date('2024-03-01T12:00:00.000Z'),
-      }),
+      }) as unknown,
     });
   });
 });

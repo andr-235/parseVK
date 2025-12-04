@@ -7,7 +7,7 @@ export class CreateWatchlistAuthorDto {
   commentId?: number;
 
   @ValidateIf(
-    (object): object is CreateWatchlistAuthorDto =>
+    (object: CreateWatchlistAuthorDto): object is CreateWatchlistAuthorDto =>
       typeof object.commentId === 'undefined',
   )
   @IsInt()
