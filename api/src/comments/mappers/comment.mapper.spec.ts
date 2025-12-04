@@ -110,21 +110,8 @@ describe('CommentMapper', () => {
   });
 
   it('должен использовать photo100 если photo200Orig отсутствует', () => {
-    const comment: CommentWithRelations = {
-      id: 1,
-      postId: 1,
-      ownerId: -123,
-      vkCommentId: 456,
-      fromId: 123,
-      text: 'Test',
-      publishedAt: new Date(),
-      isRead: false,
-      isDeleted: false,
-      source: 'TASK',
-      watchlistAuthorId: null,
+    const comment = createMockComment({
       authorVkId: 123,
-      createdAt: new Date(),
-      updatedAt: new Date(),
       author: {
         vkUserId: 123,
         firstName: 'John',
@@ -133,9 +120,7 @@ describe('CommentMapper', () => {
         photo100: 'photo100.jpg',
         photo200Orig: null,
       },
-      commentKeywordMatches: [],
-      post: createMockPost(),
-    };
+    });
 
     const result = mapper.map(comment);
 
@@ -143,21 +128,8 @@ describe('CommentMapper', () => {
   });
 
   it('должен использовать photo50 если другие фото отсутствуют', () => {
-    const comment: CommentWithRelations = {
-      id: 1,
-      postId: 1,
-      ownerId: -123,
-      vkCommentId: 456,
-      fromId: 123,
-      text: 'Test',
-      publishedAt: new Date(),
-      isRead: false,
-      isDeleted: false,
-      source: 'TASK',
-      watchlistAuthorId: null,
+    const comment = createMockComment({
       authorVkId: 123,
-      createdAt: new Date(),
-      updatedAt: new Date(),
       author: {
         vkUserId: 123,
         firstName: 'John',
@@ -166,9 +138,7 @@ describe('CommentMapper', () => {
         photo100: null,
         photo200Orig: null,
       },
-      commentKeywordMatches: [],
-      post: createMockPost(),
-    };
+    });
 
     const result = mapper.map(comment);
 
@@ -176,21 +146,8 @@ describe('CommentMapper', () => {
   });
 
   it('должен возвращать null для logo если все фото отсутствуют', () => {
-    const comment: CommentWithRelations = {
-      id: 1,
-      postId: 1,
-      ownerId: -123,
-      vkCommentId: 456,
-      fromId: 123,
-      text: 'Test',
-      publishedAt: new Date(),
-      isRead: false,
-      isDeleted: false,
-      source: 'TASK',
-      watchlistAuthorId: null,
+    const comment = createMockComment({
       authorVkId: 123,
-      createdAt: new Date(),
-      updatedAt: new Date(),
       author: {
         vkUserId: 123,
         firstName: 'John',
@@ -199,9 +156,7 @@ describe('CommentMapper', () => {
         photo100: null,
         photo200Orig: null,
       },
-      commentKeywordMatches: [],
-      post: createMockPost(),
-    };
+    });
 
     const result = mapper.map(comment);
 
@@ -209,25 +164,7 @@ describe('CommentMapper', () => {
   });
 
   it('должен обрабатывать комментарий без автора', () => {
-    const comment: CommentWithRelations = {
-      id: 1,
-      postId: 1,
-      ownerId: -123,
-      vkCommentId: 456,
-      fromId: 123,
-      text: 'Test',
-      publishedAt: new Date(),
-      isRead: false,
-      isDeleted: false,
-      source: 'TASK',
-      watchlistAuthorId: null,
-      authorVkId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      author: null,
-      commentKeywordMatches: [],
-      post: createMockPost(),
-    };
+    const comment = createMockComment();
 
     const result = mapper.map(comment);
 
@@ -236,25 +173,9 @@ describe('CommentMapper', () => {
   });
 
   it('должен устанавливать isWatchlisted в true если watchlistAuthorId не null', () => {
-    const comment: CommentWithRelations = {
-      id: 1,
-      postId: 1,
-      ownerId: -123,
-      vkCommentId: 456,
-      fromId: 123,
-      text: 'Test',
-      publishedAt: new Date(),
-      isRead: false,
-      isDeleted: false,
-      source: 'TASK',
+    const comment = createMockComment({
       watchlistAuthorId: 456,
-      authorVkId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      author: null,
-      commentKeywordMatches: [],
-      post: createMockPost(),
-    };
+    });
 
     const result = mapper.map(comment);
 
@@ -264,44 +185,18 @@ describe('CommentMapper', () => {
 
   it('должен маппить несколько комментариев', () => {
     const comments: CommentWithRelations[] = [
-      {
+      createMockComment({
         id: 1,
-        postId: 1,
-        ownerId: -123,
-        vkCommentId: 456,
-        fromId: 123,
         text: 'Comment 1',
-        publishedAt: new Date(),
-        isRead: false,
-        isDeleted: false,
-        source: 'TASK',
-        watchlistAuthorId: null,
-        authorVkId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        author: null,
-        commentKeywordMatches: [],
-        post: createMockPost(),
-      },
-      {
+        vkCommentId: 456,
+      }),
+      createMockComment({
         id: 2,
-        postId: 1,
-        ownerId: -123,
-        vkCommentId: 457,
-        fromId: 123,
         text: 'Comment 2',
-        publishedAt: new Date(),
+        vkCommentId: 457,
         isRead: true,
-        isDeleted: false,
-        source: 'TASK',
         watchlistAuthorId: 123,
-        authorVkId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        author: null,
-        commentKeywordMatches: [],
-        post: createMockPost(),
-      },
+      }),
     ];
 
     const result = mapper.mapMany(comments);
