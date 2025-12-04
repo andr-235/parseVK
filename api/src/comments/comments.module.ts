@@ -8,7 +8,6 @@ import { CommentsFilterBuilder } from './builders/comments-filter.builder';
 import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
 import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
 import { CommentsQueryValidator } from './validators/comments-query.validator';
-import type { ICommentsRepository } from './interfaces/comments-repository.interface';
 
 @Module({
   controllers: [CommentsController],

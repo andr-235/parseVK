@@ -22,16 +22,25 @@ export function KeywordCard({ keyword, onDelete }: KeywordCardProps) {
       </Button>
 
       <CardContent className="flex-1 p-3 pt-4 flex flex-col">
-        <h3 className="font-bold text-lg text-foreground truncate pr-8 mb-3 tracking-tight" title={keyword.word}>
+        <h3
+          className="font-bold text-lg text-foreground truncate pr-8 mb-3 tracking-tight"
+          title={keyword.word}
+        >
           {keyword.word}
         </h3>
 
         {keyword.category ? (
-          <Badge variant="secondary" className="w-fit text-xs font-normal px-2.5 py-0.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/10">
+          <Badge
+            variant="secondary"
+            className="w-fit text-xs font-normal px-2.5 py-0.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/10"
+          >
             {keyword.category}
           </Badge>
         ) : (
-          <Badge variant="outline" className="w-fit text-xs font-normal text-muted-foreground border-muted-foreground/20 bg-transparent">
+          <Badge
+            variant="outline"
+            className="w-fit text-xs font-normal text-muted-foreground border-muted-foreground/20 bg-transparent"
+          >
             Без категории
           </Badge>
         )}

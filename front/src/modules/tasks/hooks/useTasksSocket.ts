@@ -253,7 +253,9 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
             typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
           )
           trimmed = absolute.origin + absolute.pathname.replace(/\/$/, '')
-        } catch {}
+        } catch {
+          // Игнорируем ошибки парсинга URL
+        }
       }
 
       trimmed = trimmed.replace(/\/api$/i, '')

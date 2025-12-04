@@ -109,7 +109,16 @@ export class WatchlistService {
     });
 
     const commentDtos = comments.map((comment) =>
-      this.authorMapper.mapComment(comment as any),
+      this.authorMapper.mapComment({
+        id: (comment as { id: number }).id,
+        ownerId: (comment as { ownerId: number }).ownerId,
+        postId: (comment as { postId: number }).postId,
+        vkCommentId: (comment as { vkCommentId: number }).vkCommentId,
+        text: (comment as { text: string | null }).text,
+        publishedAt: (comment as { publishedAt: Date | null }).publishedAt,
+        createdAt: (comment as { createdAt: Date }).createdAt,
+        source: (comment as { source: string }).source,
+      }),
     );
 
     const summaryMap = await this.statsCollector.collectAnalysisSummaries([

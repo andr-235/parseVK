@@ -85,7 +85,7 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
                         onTaskSelect(task.id)
                       }}
                     >
-                      {columns.map((column: any) => (
+                      {columns.map((column) => (
                         <TableCell key={column.key} className={column.cellClassName}>
                           {column.render
                             ? column.render(task as Task, index)

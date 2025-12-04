@@ -5,7 +5,7 @@ import type { HealthCheckResult } from './common/services/health.service';
 
 /**
  * Основной контроллер приложения
- * 
+ *
  * Предоставляет базовые endpoints: health check и readiness probe.
  */
 @Controller()

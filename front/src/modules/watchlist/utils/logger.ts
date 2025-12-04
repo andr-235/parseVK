@@ -4,32 +4,32 @@
  */
 
 export interface Logger {
-  warn: (message: string, ...args: any[]) => void
-  error: (message: string, ...args: any[]) => void
-  info: (message: string, ...args: any[]) => void
-  debug: (message: string, ...args: any[]) => void
+  warn: (message: string, ...args: unknown[]) => void
+  error: (message: string, ...args: unknown[]) => void
+  info: (message: string, ...args: unknown[]) => void
+  debug: (message: string, ...args: unknown[]) => void
 }
 
 const createLogger = (): Logger => {
   const isDevelopment = import.meta.env.DEV
 
   return {
-    warn: (message: string, ...args: any[]) => {
+    warn: (message: string, ...args: unknown[]) => {
       if (isDevelopment) {
         console.warn(`[WARN] ${message}`, ...args)
       }
       // В продакшене можно отправлять логи на сервер
     },
-    error: (message: string, ...args: any[]) => {
+    error: (message: string, ...args: unknown[]) => {
       console.error(`[ERROR] ${message}`, ...args)
       // В продакшене можно отправлять логи на сервер
     },
-    info: (message: string, ...args: any[]) => {
+    info: (message: string, ...args: unknown[]) => {
       if (isDevelopment) {
         console.info(`[INFO] ${message}`, ...args)
       }
     },
-    debug: (message: string, ...args: any[]) => {
+    debug: (message: string, ...args: unknown[]) => {
       if (isDevelopment) {
         console.debug(`[DEBUG] ${message}`, ...args)
       }

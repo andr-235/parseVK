@@ -6,7 +6,10 @@ export class CreateWatchlistAuthorDto {
   @Min(1)
   commentId?: number;
 
-  @ValidateIf((object) => typeof object.commentId === 'undefined')
+  @ValidateIf(
+    (object): object is CreateWatchlistAuthorDto =>
+      typeof object.commentId === 'undefined',
+  )
   @IsInt()
   @Min(1)
   authorVkId?: number;

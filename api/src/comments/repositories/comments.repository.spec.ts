@@ -63,9 +63,10 @@ describe('CommentsRepository', () => {
       const result = await repository.findMany(params);
 
       expect(result).toBe(mockComments);
+
       expect(prismaService.comment.findMany).toHaveBeenCalledWith({
         ...params,
-        include: expect.any(Object),
+        include: expect.any(Object) as unknown,
       });
     });
   });
@@ -107,9 +108,10 @@ describe('CommentsRepository', () => {
       const result = await repository.update(params);
 
       expect(result).toBe(mockComment);
+
       expect(prismaService.comment.update).toHaveBeenCalledWith({
         ...params,
-        include: expect.any(Object),
+        include: expect.any(Object) as unknown,
       });
     });
   });

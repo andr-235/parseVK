@@ -27,24 +27,26 @@ describe('CommentsController', () => {
     };
 
     queryValidator = {
-      normalizeOffset: jest.fn((val) => Math.max(val, 0)),
-      normalizeLimit: jest.fn((val) => Math.min(Math.max(val, 1), 200)),
-      normalizeLimitWithDefault: jest.fn((val) =>
+      normalizeOffset: jest.fn((val: number) => Math.max(val, 0)),
+      normalizeLimit: jest.fn((val: number) => Math.min(Math.max(val, 1), 200)),
+      normalizeLimitWithDefault: jest.fn((val: number | undefined) =>
         Math.min(Math.max(val ?? 100, 1), 200),
       ),
-      parseKeywords: jest.fn((val) => {
+      parseKeywords: jest.fn((val: string | string[] | undefined) => {
         if (!val) return undefined;
         const values = Array.isArray(val) ? val : val.split(',');
         return values.map((v: string) => v.trim()).filter((v: string) => v);
       }),
-      normalizeReadStatus: jest.fn((val) => {
+      normalizeReadStatus: jest.fn((val: string | undefined) => {
         if (!val) return 'all';
         const normalized = val.toLowerCase();
         return normalized === 'read' || normalized === 'unread'
           ? normalized
           : 'all';
       }),
-      normalizeSearch: jest.fn((val) => val?.trim() || undefined),
+      normalizeSearch: jest.fn(
+        (val: string | undefined) => val?.trim() || undefined,
+      ),
     };
 
     const module: TestingModule = await Test.createTestingModule({

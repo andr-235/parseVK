@@ -7,11 +7,15 @@ import type { ListingImportReportDto } from './dto/listing-import-report.dto';
 describe('DataImportController', () => {
   let controller: DataImportController;
   let service: jest.Mocked<DataImportService>;
+  let serviceObj: {
+    importListings: jest.Mock;
+  };
 
   beforeEach(() => {
-    service = {
+    serviceObj = {
       importListings: jest.fn().mockResolvedValue({} as ListingImportReportDto),
-    } as unknown as jest.Mocked<DataImportService>;
+    };
+    service = serviceObj as unknown as jest.Mocked<DataImportService>;
 
     controller = new DataImportController(service);
   });
@@ -31,8 +35,12 @@ describe('DataImportController', () => {
 
     await controller.importData(payload);
 
-    expect(service.importListings).toHaveBeenCalledTimes(1);
-    const [request] = service.importListings.mock.calls[0];
+    expect(serviceObj.importListings).toHaveBeenCalledTimes(1);
+    const calls = serviceObj.importListings.mock.calls;
+    if (!calls[0] || !Array.isArray(calls[0]) || !calls[0][0]) {
+      throw new Error('Expected service.importListings to be called');
+    }
+    const [request] = calls[0] as [ListingImportRequestDto];
 
     expect(request).toBeInstanceOf(ListingImportRequestDto);
     expect(request.listings).toHaveLength(1);
@@ -67,8 +75,12 @@ describe('DataImportController', () => {
 
     await controller.importData(payload);
 
-    expect(service.importListings).toHaveBeenCalledTimes(1);
-    const [request] = service.importListings.mock.calls[0];
+    expect(serviceObj.importListings).toHaveBeenCalledTimes(1);
+    const calls = serviceObj.importListings.mock.calls;
+    if (!calls[0] || !Array.isArray(calls[0]) || !calls[0][0]) {
+      throw new Error('Expected service.importListings to be called');
+    }
+    const [request] = calls[0] as [ListingImportRequestDto];
     const listing = request.listings[0];
 
     expect(listing.contactPhone).toBe('+7 984 125-62-87');

@@ -305,9 +305,6 @@ model Keyword {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   commentKeywordMatches CommentKeywordMatch[]
-
-  @@index([category]) // для фильтрации по категории
-  @@index([isPhrase]) // для фильтрации фраз
 }
 
 model CommentKeywordMatch {

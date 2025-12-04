@@ -56,7 +56,7 @@ export const useAutomationSettings = () => {
         postLimit: settings.postLimit,
       }
     })
-  }, [settings?.enabled, settings?.runHour, settings?.runMinute, settings?.postLimit])
+  }, [settings])
 
   const isFormDisabled = !settings || isUpdating
 

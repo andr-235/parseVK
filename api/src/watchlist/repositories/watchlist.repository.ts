@@ -4,7 +4,7 @@ import type {
   IWatchlistRepository,
   WatchlistAuthorWithRelations,
 } from '../interfaces/watchlist-repository.interface';
-import type { Prisma, WatchlistStatus } from '@prisma/client';
+import type { CommentSource, Prisma, WatchlistStatus } from '@prisma/client';
 import { WatchlistStatus as WS } from '@prisma/client';
 import { composeCommentKey } from '../utils/watchlist-comment.utils';
 
@@ -160,7 +160,9 @@ export class WatchlistRepository implements IWatchlistRepository {
     return keys;
   }
 
-  async ensureSettings(): Promise<Prisma.WatchlistSettingsGetPayload<{}>> {
+  async ensureSettings(): Promise<
+    Prisma.WatchlistSettingsGetPayload<Record<string, never>>
+  > {
     return this.prisma.watchlistSettings.upsert({
       where: { id: DEFAULT_SETTINGS_ID },
       update: {},
@@ -173,7 +175,9 @@ export class WatchlistRepository implements IWatchlistRepository {
     });
   }
 
-  async getSettings(): Promise<Prisma.WatchlistSettingsGetPayload<{}> | null> {
+  async getSettings(): Promise<Prisma.WatchlistSettingsGetPayload<
+    Record<string, never>
+  > | null> {
     return this.prisma.watchlistSettings.findUnique({
       where: { id: DEFAULT_SETTINGS_ID },
     });
@@ -182,7 +186,7 @@ export class WatchlistRepository implements IWatchlistRepository {
   async updateSettings(
     id: number,
     data: Prisma.WatchlistSettingsUpdateInput,
-  ): Promise<Prisma.WatchlistSettingsGetPayload<{}>> {
+  ): Promise<Prisma.WatchlistSettingsGetPayload<Record<string, never>>> {
     return this.prisma.watchlistSettings.update({
       where: { id },
       data,
@@ -217,7 +221,7 @@ export class WatchlistRepository implements IWatchlistRepository {
       where: { id },
       data: {
         watchlistAuthorId: data.watchlistAuthorId,
-        source: data.source as any,
+        source: data.source as CommentSource,
       },
     });
   }

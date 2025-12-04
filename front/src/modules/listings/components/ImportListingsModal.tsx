@@ -82,7 +82,9 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
               <select
                 className="w-full appearance-none rounded-lg border border-border bg-background-primary px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary"
                 value={uploadSourceMode}
-                onChange={(e) => setUploadSourceMode(e.target.value as any)}
+                onChange={(e) =>
+                  setUploadSourceMode(e.target.value as 'avito' | 'youla' | 'custom')
+                }
               >
                 <option value="avito">Авито</option>
                 <option value="youla">Юла</option>

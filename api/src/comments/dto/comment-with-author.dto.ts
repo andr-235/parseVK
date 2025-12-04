@@ -27,6 +27,6 @@ export type CommentWithAuthorDto = Comment & {
   isWatchlisted: boolean;
   matchedKeywords: CommentMatchedKeywordDto[];
   postText: string | null;
-  postAttachments: unknown | null;
+  postAttachments: unknown;
   postGroup: PostGroupDto | null;
 };

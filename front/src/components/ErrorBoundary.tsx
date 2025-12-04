@@ -11,10 +11,7 @@ interface ErrorBoundaryState {
   error: Error | null
 }
 
-export class ErrorBoundary extends Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props)
     this.state = {
@@ -50,24 +47,18 @@ export class ErrorBoundary extends Component<
       return (
         <div className="flex min-h-screen flex-col items-center justify-center p-4">
           <div className="max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
-            <h1 className="mb-4 text-2xl font-bold text-destructive">
-              Произошла ошибка
-            </h1>
+            <h1 className="mb-4 text-2xl font-bold text-destructive">Произошла ошибка</h1>
             <p className="mb-4 text-muted-foreground">
-              Приложение столкнулось с неожиданной ошибкой. Пожалуйста,
-              попробуйте обновить страницу.
+              Приложение столкнулось с неожиданной ошибкой. Пожалуйста, попробуйте обновить
+              страницу.
             </p>
             {this.state.error && (
               <details className="mb-4 rounded bg-muted p-3">
-                <summary className="cursor-pointer text-sm font-medium">
-                  Детали ошибки
-                </summary>
+                <summary className="cursor-pointer text-sm font-medium">Детали ошибки</summary>
                 <pre className="mt-2 overflow-auto text-xs">
                   {this.state.error.toString()}
                   {this.state.error.stack && (
-                    <div className="mt-2 whitespace-pre-wrap">
-                      {this.state.error.stack}
-                    </div>
+                    <div className="mt-2 whitespace-pre-wrap">{this.state.error.stack}</div>
                   )}
                 </pre>
               </details>
@@ -76,10 +67,7 @@ export class ErrorBoundary extends Component<
               <Button onClick={this.handleReset} variant="default">
                 Попробовать снова
               </Button>
-              <Button
-                onClick={() => window.location.reload()}
-                variant="outline"
-              >
+              <Button onClick={() => window.location.reload()} variant="outline">
                 Обновить страницу
               </Button>
             </div>
@@ -91,4 +79,3 @@ export class ErrorBoundary extends Component<
     return this.props.children
   }
 }
-

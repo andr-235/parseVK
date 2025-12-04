@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
 import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
 import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
 import { PhotoAnalysisService } from '../../photo-analysis/photo-analysis.service';

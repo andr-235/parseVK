@@ -15,9 +15,9 @@ export interface IGroup {
   status?: string;
   verified?: number;
   wall?: number;
-  addresses?: any;
-  city?: any;
-  counters?: any;
+  addresses?: unknown;
+  city?: unknown;
+  counters?: unknown;
 }
 
 export interface IGroupsResponse {

@@ -197,8 +197,6 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         page: 0,
         hasMore: false,
       })
-    } catch (error) {
-      throw error
     } finally {
       set({ isProcessing: false, isLoading: false })
     }

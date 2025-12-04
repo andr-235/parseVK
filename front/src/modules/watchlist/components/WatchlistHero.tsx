@@ -27,15 +27,6 @@ function WatchlistHeroComponent({
   onRefresh,
   onToggleTrackAll,
 }: WatchlistHeroProps) {
-  if (!settings) {
-    return <div>{WATCHLIST_CONSTANTS.LOADING_SETTINGS_TEXT}</div>
-  }
-
-  // Валидация settings с помощью guard function
-  if (!isValidWatchlistSettings(settings)) {
-    return <div>{WATCHLIST_CONSTANTS.INVALID_SETTINGS_ERROR}</div>
-  }
-
   const handleRefresh = useCallback(() => {
     onRefresh()
   }, [onRefresh])
@@ -43,13 +34,18 @@ function WatchlistHeroComponent({
   const handleToggleTrackAll = useCallback(() => {
     onToggleTrackAll()
   }, [onToggleTrackAll])
+
   const heroDescription = useMemo(() => {
-    // Формирует описание автора: показывает описание с интервалом опроса и лимитом авторов
+    if (!settings || !isValidWatchlistSettings(settings)) {
+      return ''
+    }
     return `Список авторов «На карандаше». Проверка активности каждые ${settings.pollIntervalMinutes} мин., лимит одновременно обновляемых авторов — ${settings.maxAuthors}.`
   }, [settings])
 
   const footer = useMemo((): ReactNode => {
-    // Создает массив бейджей для отображения количества авторов и интервала опроса
+    if (!settings || !isValidWatchlistSettings(settings)) {
+      return null
+    }
     const badges = [
       <Badge key="authors" variant="secondary" className="bg-white/20 text-text-primary">
         {`${WATCHLIST_CONSTANTS.AUTHORS_BADGE_PREFIX}${totalAuthors || 0}`}
@@ -66,6 +62,9 @@ function WatchlistHeroComponent({
   }, [settings, totalAuthors])
 
   const toggleButtonText = useMemo(() => {
+    if (!settings || !isValidWatchlistSettings(settings)) {
+      return ''
+    }
     return isUpdatingSettings
       ? WATCHLIST_CONSTANTS.SAVING_TEXT
       : settings.trackAllComments
@@ -88,8 +87,11 @@ function WatchlistHeroComponent({
     [handleRefresh, isLoadingAuthors]
   )
 
-  const toggleTrackAllButton = useMemo(
-    () => (
+  const toggleTrackAllButton = useMemo(() => {
+    if (!settings || !isValidWatchlistSettings(settings)) {
+      return null
+    }
+    return (
       <Button
         type="button"
         variant={settings.trackAllComments ? 'default' : 'outline'}
@@ -99,9 +101,16 @@ function WatchlistHeroComponent({
       >
         {toggleButtonText}
       </Button>
-    ),
-    [handleToggleTrackAll, settings, isUpdatingSettings, toggleButtonText]
-  )
+    )
+  }, [handleToggleTrackAll, settings, isUpdatingSettings, toggleButtonText])
+
+  if (!settings) {
+    return <div>{WATCHLIST_CONSTANTS.LOADING_SETTINGS_TEXT}</div>
+  }
+
+  if (!isValidWatchlistSettings(settings)) {
+    return <div>{WATCHLIST_CONSTANTS.INVALID_SETTINGS_ERROR}</div>
+  }
 
   return (
     <PageHeroCard

@@ -6,7 +6,6 @@ import {
 } from '@prisma/client';
 import type { PrismaService } from '../prisma.service';
 import type { AuthorActivityService } from '../common/services/author-activity.service';
-import type { VkService } from '../vk/vk.service';
 
 jest.mock('vk-io', () => {
   class APIErrorMock extends Error {}
@@ -19,7 +18,7 @@ jest.mock('vk-io', () => {
 
 jest.mock('@prisma/client', () => {
   class PrismaClientMock {
-    constructor(..._args: unknown[]) {}
+    constructor() {}
   }
 
   return {

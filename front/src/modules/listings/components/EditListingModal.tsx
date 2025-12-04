@@ -11,7 +11,7 @@ type Props = {
   listing: IListing | null
   isOpen: boolean
   onClose: () => void
-  onUpdated: (listing: IListing) => void
+  onUpdated: () => void
 }
 
 function EditListingModal({ listing, isOpen, onClose, onUpdated }: Props) {
@@ -54,8 +54,8 @@ function EditListingModal({ listing, isOpen, onClose, onUpdated }: Props) {
 
     setSaving(true)
     try {
-      const updated = await listingsService.updateListing(listing.id, payload)
-      onUpdated(updated)
+      await listingsService.updateListing(listing.id, payload)
+      onUpdated()
     } finally {
       setSaving(false)
     }

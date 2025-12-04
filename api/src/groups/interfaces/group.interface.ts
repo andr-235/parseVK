@@ -16,9 +16,9 @@ export interface IGroupResponse {
   status?: string | null;
   verified?: number | null;
   wall?: number | null;
-  addresses?: any;
-  city?: any;
-  counters?: any;
+  addresses?: unknown;
+  city?: unknown;
+  counters?: unknown;
   createdAt: Date;
   updatedAt: Date;
 }

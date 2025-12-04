@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { CommentSource } from '@prisma/client';
 import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
 import type {
   WatchlistAuthorCardDto,
@@ -87,7 +88,7 @@ export class WatchlistAuthorMapper {
       text: comment.text,
       publishedAt: comment.publishedAt?.toISOString() ?? null,
       createdAt: comment.createdAt.toISOString(),
-      source: comment.source as any,
+      source: comment.source as CommentSource,
       commentUrl: this.buildCommentUrl(
         comment.ownerId,
         comment.postId,

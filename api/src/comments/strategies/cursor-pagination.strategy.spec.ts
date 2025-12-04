@@ -13,25 +13,43 @@ describe('CursorPaginationStrategy', () => {
   let repository: jest.Mocked<ICommentsRepository>;
   let filterBuilder: jest.Mocked<CommentsFilterBuilder>;
   let mapper: jest.Mocked<CommentMapper>;
+  let repositoryObj: {
+    findMany: jest.Mock;
+    count: jest.Mock;
+    update: jest.Mock;
+    transaction: jest.Mock;
+  };
+  let filterBuilderObj: {
+    buildBaseWhere: jest.Mock;
+    buildReadStatusWhere: jest.Mock;
+    mergeWhere: jest.Mock;
+  };
+  let mapperObj: {
+    map: jest.Mock;
+    mapMany: jest.Mock;
+  };
 
   beforeEach(async () => {
-    repository = {
+    repositoryObj = {
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
       transaction: jest.fn(),
-    } as never;
+    };
+    repository = repositoryObj as never;
 
-    filterBuilder = {
+    filterBuilderObj = {
       buildBaseWhere: jest.fn(),
       buildReadStatusWhere: jest.fn(),
       mergeWhere: jest.fn(),
-    } as never;
+    };
+    filterBuilder = filterBuilderObj as never;
 
-    mapper = {
+    mapperObj = {
       map: jest.fn(),
       mapMany: jest.fn(),
-    } as never;
+    };
+    mapper = mapperObj as never;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -73,13 +91,13 @@ describe('CursorPaginationStrategy', () => {
       matchedKeywords: [],
     })) as CommentWithAuthorDto[];
 
-    filterBuilder.buildBaseWhere.mockReturnValue({});
-    filterBuilder.buildReadStatusWhere.mockReturnValue({});
-    filterBuilder.mergeWhere.mockReturnValue({});
+    filterBuilderObj.buildBaseWhere.mockReturnValue({});
+    filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
+    filterBuilderObj.mergeWhere.mockReturnValue({});
 
-    repository.findMany.mockResolvedValue(comments);
-    repository.transaction.mockResolvedValue([10, 5, 5]);
-    mapper.mapMany.mockReturnValue(mappedComments);
+    repositoryObj.findMany.mockResolvedValue(comments);
+    repositoryObj.transaction.mockResolvedValue([10, 5, 5]);
+    mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { limit: 10 });
 
@@ -92,7 +110,7 @@ describe('CursorPaginationStrategy', () => {
       unreadCount: 5,
     });
 
-    expect(repository.findMany).toHaveBeenCalledWith({
+    expect(repositoryObj.findMany).toHaveBeenCalledWith({
       where: {},
       take: 11,
       orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
@@ -122,27 +140,27 @@ describe('CursorPaginationStrategy', () => {
       matchedKeywords: [],
     })) as CommentWithAuthorDto[];
 
-    filterBuilder.buildBaseWhere.mockReturnValue({});
-    filterBuilder.buildReadStatusWhere.mockReturnValue({});
-    filterBuilder.mergeWhere.mockReturnValue({
+    filterBuilderObj.buildBaseWhere.mockReturnValue({});
+    filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
+    filterBuilderObj.mergeWhere.mockReturnValue({
       OR: [
         { publishedAt: { lt: publishedAt } },
         { publishedAt, id: { lt: id } },
       ],
     });
-
-    repository.findMany.mockResolvedValue(comments);
-    repository.transaction.mockResolvedValue([10, 5, 5]);
-    mapper.mapMany.mockReturnValue(mappedComments);
+    repositoryObj.findMany.mockResolvedValue(comments);
+    repositoryObj.transaction.mockResolvedValue([10, 5, 5]);
+    mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { cursor, limit: 10 });
 
     expect(result.items).toEqual(mappedComments);
-    expect(filterBuilder.mergeWhere).toHaveBeenCalledWith(
+    const orMatcher = expect.any(Array) as unknown;
+    expect(filterBuilderObj.mergeWhere).toHaveBeenCalledWith(
       {},
       {},
       expect.objectContaining({
-        OR: expect.any(Array),
+        OR: orMatcher,
       }),
     );
   });
@@ -152,7 +170,7 @@ describe('CursorPaginationStrategy', () => {
       strategy.execute({}, { cursor: 'invalid-cursor', limit: 10 }),
     ).rejects.toThrow(BadRequestException);
 
-    expect(repository.findMany).not.toHaveBeenCalled();
+    expect(repositoryObj.findMany).not.toHaveBeenCalled();
   });
 
   it('должен генерировать nextCursor если hasMore = true', async () => {
@@ -177,13 +195,12 @@ describe('CursorPaginationStrategy', () => {
         matchedKeywords: [],
       })) as CommentWithAuthorDto[];
 
-    filterBuilder.buildBaseWhere.mockReturnValue({});
-    filterBuilder.buildReadStatusWhere.mockReturnValue({});
-    filterBuilder.mergeWhere.mockReturnValue({});
-
-    repository.findMany.mockResolvedValue(comments);
-    repository.transaction.mockResolvedValue([20, 10, 10]);
-    mapper.mapMany.mockReturnValue(mappedComments);
+    filterBuilderObj.buildBaseWhere.mockReturnValue({});
+    filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
+    filterBuilderObj.mergeWhere.mockReturnValue({});
+    repositoryObj.findMany.mockResolvedValue(comments);
+    repositoryObj.transaction.mockResolvedValue([20, 10, 10]);
+    mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { limit: 10 });
 
@@ -211,13 +228,12 @@ describe('CursorPaginationStrategy', () => {
       matchedKeywords: [],
     })) as CommentWithAuthorDto[];
 
-    filterBuilder.buildBaseWhere.mockReturnValue({});
-    filterBuilder.buildReadStatusWhere.mockReturnValue({});
-    filterBuilder.mergeWhere.mockReturnValue({});
-
-    repository.findMany.mockResolvedValue(comments);
-    repository.transaction.mockResolvedValue([1, 0, 1]);
-    mapper.mapMany.mockReturnValue(mappedComments);
+    filterBuilderObj.buildBaseWhere.mockReturnValue({});
+    filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
+    filterBuilderObj.mergeWhere.mockReturnValue({});
+    repositoryObj.findMany.mockResolvedValue(comments);
+    repositoryObj.transaction.mockResolvedValue([1, 0, 1]);
+    mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { limit: 10 });
 
@@ -226,26 +242,27 @@ describe('CursorPaginationStrategy', () => {
   });
 
   it('должен использовать фильтры для построения where условий', async () => {
-    filterBuilder.buildBaseWhere.mockReturnValue({ keywords: ['test'] });
-    filterBuilder.buildReadStatusWhere.mockReturnValue({ isRead: false });
-    filterBuilder.mergeWhere.mockReturnValue({
+    filterBuilderObj.buildBaseWhere.mockReturnValue({ keywords: ['test'] });
+    filterBuilderObj.buildReadStatusWhere.mockReturnValue({ isRead: false });
+    filterBuilderObj.mergeWhere.mockReturnValue({
       keywords: ['test'],
       isRead: false,
     });
-
-    repository.findMany.mockResolvedValue([]);
-    repository.transaction.mockResolvedValue([0, 0, 0]);
-    mapper.mapMany.mockReturnValue([]);
+    repositoryObj.findMany.mockResolvedValue([]);
+    repositoryObj.transaction.mockResolvedValue([0, 0, 0]);
+    mapperObj.mapMany.mockReturnValue([]);
 
     await strategy.execute(
       { keywords: ['test'], readStatus: 'unread' },
       { limit: 10 },
     );
 
-    expect(filterBuilder.buildBaseWhere).toHaveBeenCalledWith({
+    expect(filterBuilderObj.buildBaseWhere).toHaveBeenCalledWith({
       keywords: ['test'],
       readStatus: 'unread',
     });
-    expect(filterBuilder.buildReadStatusWhere).toHaveBeenCalledWith('unread');
+    expect(filterBuilderObj.buildReadStatusWhere).toHaveBeenCalledWith(
+      'unread',
+    );
   });
 });

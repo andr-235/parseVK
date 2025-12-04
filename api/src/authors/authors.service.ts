@@ -1,17 +1,18 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Author } from '@prisma/client';
+import { PrismaService } from '../prisma.service';
 import { PhotoAnalysisService } from '../photo-analysis/photo-analysis.service';
 import type {
   AuthorCardDto,
   AuthorDetailsDto,
   AuthorListDto,
 } from './dto/author.dto';
+import type { PhotoAnalysisSummaryDto } from '../photo-analysis/dto/photo-analysis-response.dto';
 import { AuthorActivityService } from '../common/services/author-activity.service';
 import { AUTHORS_CONSTANTS } from './authors.constants';
 import { AuthorSortBuilder } from './builders/author-sort.builder';
-import type { IAuthorsRepository } from './interfaces/authors-repository.interface';
-import { AuthorMapper } from './mappers/author.mapper';
+import { AuthorCountersParser } from './parsers/author-counters.parser';
 import type {
   AuthorSortDirection,
   AuthorSortField,
@@ -20,19 +21,13 @@ import type {
   ResolvedAuthorSort,
 } from './types/authors.types';
 
-/**
- * Сервис для работы с авторами комментариев
- *
- * Обеспечивает получение списка авторов с фильтрацией и сортировкой,
- * детальной информации об авторе и обновление данных из VK API.
- */
 @Injectable()
 export class AuthorsService {
   private readonly sortBuilder = new AuthorSortBuilder();
+  private readonly countersParser = new AuthorCountersParser();
 
   constructor(
-    @Inject('IAuthorsRepository')
-    private readonly repository: IAuthorsRepository,
+    private readonly prisma: PrismaService,
     private readonly photoAnalysisService: PhotoAnalysisService,
     private readonly authorActivityService: AuthorActivityService,
   ) {}
@@ -55,7 +50,7 @@ export class AuthorsService {
     );
 
     const [total, authors] = await Promise.all([
-      this.repository.count(where),
+      this.prisma.author.count({ where }),
       this.queryAuthors({
         sqlConditions,
         offset,
@@ -69,7 +64,7 @@ export class AuthorsService {
       await this.photoAnalysisService.getSummariesByAuthorIds(authorIds);
 
     const items: AuthorCardDto[] = authors.map((author) =>
-      AuthorMapper.toCardDto(author, summaryMap.get(author.id)),
+      this.buildAuthorCard(author, summaryMap.get(author.id)),
     );
 
     return {
@@ -108,7 +103,7 @@ export class AuthorsService {
       LIMIT ${options.limit}
     `;
 
-    return this.repository.queryRaw<Author[]>(query);
+    return this.prisma.$queryRaw<Author[]>(query);
   }
 
   private buildFilters(
@@ -204,7 +199,9 @@ export class AuthorsService {
   }
 
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetailsDto> {
-    const author = await this.repository.findUnique({ vkUserId });
+    const author = await this.prisma.author.findUnique({
+      where: { vkUserId },
+    });
 
     if (!author) {
       throw new NotFoundException(`Автор с vkUserId=${vkUserId} не найден`);
@@ -214,11 +211,94 @@ export class AuthorsService {
       author.id,
     ]);
     const summary = summaries.get(author.id);
+    const card = this.buildAuthorCard(author, summary);
 
-    return AuthorMapper.toDetailsDto(author, summary);
+    return {
+      ...card,
+      city: (author.city as Record<string, unknown>) ?? null,
+      country: (author.country as Record<string, unknown>) ?? null,
+      createdAt: author.createdAt.toISOString(),
+      updatedAt: author.updatedAt.toISOString(),
+    };
   }
 
   async refreshAuthors(): Promise<number> {
     return this.authorActivityService.refreshAllAuthors();
+  }
+
+  private buildProfileUrl(author: {
+    vkUserId: number;
+    domain: string | null;
+    screenName: string | null;
+  }): string | null {
+    if (author.domain) {
+      return `https://vk.com/${author.domain}`;
+    }
+
+    if (author.screenName) {
+      return `https://vk.com/${author.screenName}`;
+    }
+
+    return `https://vk.com/id${author.vkUserId}`;
+  }
+
+  private cloneSummary(
+    summary?: PhotoAnalysisSummaryDto,
+  ): PhotoAnalysisSummaryDto {
+    if (!summary) {
+      return this.photoAnalysisService.getEmptySummary();
+    }
+
+    return {
+      total: summary.total,
+      suspicious: summary.suspicious,
+      lastAnalyzedAt: summary.lastAnalyzedAt,
+      categories: summary.categories.map((item) => ({ ...item })),
+      levels: summary.levels.map((item) => ({ ...item })),
+    };
+  }
+
+  private buildAuthorCard(
+    author: Author,
+    summary?: PhotoAnalysisSummaryDto,
+  ): AuthorCardDto {
+    const normalizedSummary = this.cloneSummary(summary);
+    const counters = this.extractCounters(author.counters);
+    const summaryPhotos = Number.isFinite(normalizedSummary.total)
+      ? normalizedSummary.total
+      : null;
+    const photosCount = counters.photos ?? summaryPhotos ?? null;
+    const followers = author.followersCount ?? counters.followers ?? null;
+
+    return {
+      id: author.id,
+      vkUserId: author.vkUserId,
+      firstName: author.firstName,
+      lastName: author.lastName,
+      fullName: `${author.firstName} ${author.lastName}`.trim(),
+      photo50: author.photo50 ?? null,
+      photo100: author.photo100 ?? null,
+      photo200: author.photo200Orig ?? null,
+      domain: author.domain ?? null,
+      screenName: author.screenName ?? null,
+      profileUrl: this.buildProfileUrl(author),
+      summary: normalizedSummary,
+      photosCount,
+      audiosCount: counters.audios,
+      videosCount: counters.videos,
+      friendsCount: counters.friends,
+      followersCount: followers,
+      lastSeenAt: this.extractLastSeenAt(author.lastSeen),
+      verifiedAt: author.verifiedAt ? author.verifiedAt.toISOString() : null,
+      isVerified: Boolean(author.verifiedAt),
+    };
+  }
+
+  private extractCounters(value: Prisma.JsonValue | null) {
+    return this.countersParser.extractCounters(value);
+  }
+
+  private extractLastSeenAt(value: Prisma.JsonValue | null): string | null {
+    return this.countersParser.extractLastSeenAt(value);
   }
 }

@@ -1,4 +1,3 @@
-import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
 import type { Prisma } from '@prisma/client';
 
 export type CommentWithRelations = Prisma.CommentGetPayload<{

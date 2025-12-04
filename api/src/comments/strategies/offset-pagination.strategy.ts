@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
 import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
 import type {
   IPaginationStrategy,

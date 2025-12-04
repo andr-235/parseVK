@@ -117,7 +117,7 @@ export const useListingsViewModel = () => {
 
     if (Array.isArray(meta.sources)) {
       const sanitized = meta.sources
-        .map((item: any) => item?.trim?.() ?? '')
+        .map((item: unknown) => (typeof item === 'string' ? item.trim() : ''))
         .filter((item: string) => item.length > 0)
       setAvailableSources(Array.from(new Set(sanitized)))
     }
@@ -185,7 +185,7 @@ export const useListingsViewModel = () => {
     setNoteListing(null)
   }, [])
 
-  const handleListingUpdated = useCallback((_listing: IListing) => {
+  const handleListingUpdated = useCallback(() => {
     setNoteListing(null)
     setIsListLoading(true)
     setRefreshToken((token) => token + 1)

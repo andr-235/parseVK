@@ -9,7 +9,7 @@ export type CommentEntity = {
   parentsStack: number[] | null;
   threadCount: number | null;
   threadItems: CommentEntity[] | null;
-  attachments: unknown | null;
+  attachments: unknown;
   replyToUser: number | null;
   replyToComment: number | null;
   isDeleted: boolean;

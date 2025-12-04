@@ -12,7 +12,6 @@ import { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper';
 import { WatchlistStatsCollectorService } from './services/watchlist-stats-collector.service';
 import { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service';
 import { WatchlistQueryValidator } from './validators/watchlist-query.validator';
-import type { IWatchlistRepository } from './interfaces/watchlist-repository.interface';
 
 @Module({
   imports: [VkModule, PhotoAnalysisModule, CommonModule],

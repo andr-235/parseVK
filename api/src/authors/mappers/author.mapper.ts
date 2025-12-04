@@ -1,4 +1,4 @@
-import type { Author, Prisma } from '@prisma/client';
+import type { Author } from '@prisma/client';
 import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
 import { AuthorCardDto, AuthorDetailsDto } from '../dto/author.dto';
 import { AuthorCountersParser } from '../parsers/author-counters.parser';

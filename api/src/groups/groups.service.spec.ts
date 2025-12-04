@@ -6,7 +6,6 @@ import { GroupsService } from './groups.service';
 import type { VkService } from '../vk/vk.service';
 import type {
   IGroupResponse,
-  IDeleteResponse,
   IGroupsListResponse,
 } from './interfaces/group.interface';
 import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface';
@@ -25,6 +24,26 @@ describe('GroupsService', () => {
   let vkService: VkService;
   let groupMapper: jest.Mocked<GroupMapper>;
   let identifierValidator: jest.Mocked<GroupIdentifierValidator>;
+  let repositoryObj: {
+    upsert: jest.Mock;
+    findMany: jest.Mock;
+    count: jest.Mock;
+    getGroupsWithCount: jest.Mock;
+    delete: jest.Mock;
+    deleteMany: jest.Mock;
+    findManyByVkIds: jest.Mock;
+  };
+  let vkServiceObj: {
+    getGroups: jest.Mock;
+    searchGroupsByRegion: jest.Mock;
+  };
+  let groupMapperObj: {
+    mapGroupData: jest.Mock;
+  };
+  let identifierValidatorObj: {
+    normalizeIdentifier: jest.Mock;
+    parseVkIdentifier: jest.Mock;
+  };
 
   const vkGroup = {
     id: 123,
@@ -49,7 +68,7 @@ describe('GroupsService', () => {
   } as unknown as IGroup;
 
   beforeEach(() => {
-    repository = {
+    repositoryObj = {
       upsert: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
@@ -57,21 +76,25 @@ describe('GroupsService', () => {
       delete: jest.fn(),
       deleteMany: jest.fn(),
       findManyByVkIds: jest.fn(),
-    } as any;
+    };
+    repository = repositoryObj as never;
 
-    vkService = {
+    vkServiceObj = {
       getGroups: jest.fn(),
       searchGroupsByRegion: jest.fn(),
-    } as unknown as VkService;
+    };
+    vkService = vkServiceObj as unknown as VkService;
 
-    groupMapper = {
+    groupMapperObj = {
       mapGroupData: jest.fn(),
-    } as any;
+    };
+    groupMapper = groupMapperObj as never;
 
-    identifierValidator = {
-      normalizeIdentifier: jest.fn((id) => id),
-      parseVkIdentifier: jest.fn((id) => id),
-    } as any;
+    identifierValidatorObj = {
+      normalizeIdentifier: jest.fn((id: string) => id),
+      parseVkIdentifier: jest.fn((id: string) => id),
+    };
+    identifierValidator = identifierValidatorObj as never;
 
     service = new GroupsService(
       repository,
@@ -83,7 +106,7 @@ describe('GroupsService', () => {
 
   describe('saveGroup', () => {
     it('должен успешно сохранять и маппить данные группы', async () => {
-      (vkService.getGroups as jest.Mock).mockResolvedValue({
+      vkServiceObj.getGroups.mockResolvedValue({
         groups: [vkGroup],
       });
 
@@ -108,20 +131,25 @@ describe('GroupsService', () => {
         counters: vkGroup.counters,
       } satisfies Partial<IGroupResponse>;
 
-      groupMapper.mapGroupData.mockReturnValue(mappedData as any);
+      groupMapperObj.mapGroupData.mockReturnValue(
+        mappedData as Omit<
+          IGroupResponse,
+          'id' | 'vkId' | 'createdAt' | 'updatedAt'
+        >,
+      );
 
       const savedGroup = {
         id: 1,
         vkId: vkGroup.id,
         ...mappedData,
       } as IGroupResponse;
-      repository.upsert.mockResolvedValue(savedGroup);
-      identifierValidator.normalizeIdentifier.mockReturnValue(123);
+      repositoryObj.upsert.mockResolvedValue(savedGroup);
+      identifierValidatorObj.normalizeIdentifier.mockReturnValue(123);
 
       const result = await service.saveGroup('https://vk.com/club123');
 
-      expect(vkService.getGroups).toHaveBeenCalledWith('123');
-      expect(repository.upsert).toHaveBeenCalledWith(
+      expect(vkServiceObj.getGroups).toHaveBeenCalledWith('123');
+      expect(repositoryObj.upsert).toHaveBeenCalledWith(
         { vkId: vkGroup.id },
         {
           vkId: vkGroup.id,
@@ -132,7 +160,7 @@ describe('GroupsService', () => {
     });
 
     it('должен выбрасывать NotFoundException, если группа не найдена', async () => {
-      (vkService.getGroups as jest.Mock).mockResolvedValue({ groups: [] });
+      vkServiceObj.getGroups.mockResolvedValue({ groups: [] });
 
       await expect(service.saveGroup('123')).rejects.toThrow(
         new NotFoundException('Group 123 not found'),
@@ -142,14 +170,14 @@ describe('GroupsService', () => {
 
   it('должен возвращать постраничный список групп', async () => {
     const groups = [{ id: 1 }, { id: 2 }] as IGroupResponse[];
-    repository.getGroupsWithCount.mockResolvedValue({
+    repositoryObj.getGroupsWithCount.mockResolvedValue({
       items: groups,
       total: 10,
     });
 
     const result = await service.getAllGroups({ page: 2, limit: 2 });
 
-    expect(repository.getGroupsWithCount).toHaveBeenCalledWith({
+    expect(repositoryObj.getGroupsWithCount).toHaveBeenCalledWith({
       skip: 2,
       take: 2,
     });
@@ -164,21 +192,21 @@ describe('GroupsService', () => {
 
   it('должен удалять группу по идентификатору', async () => {
     const group = { id: 10 } as IGroupResponse;
-    repository.delete.mockResolvedValue(group);
+    repositoryObj.delete.mockResolvedValue(group);
 
     const result = await service.deleteGroup(10);
 
-    expect(repository.delete).toHaveBeenCalledWith({ id: 10 });
+    expect(repositoryObj.delete).toHaveBeenCalledWith({ id: 10 });
     expect(result).toBe(group);
   });
 
   it('должен удалять все группы', async () => {
     const response = { count: 3 };
-    repository.deleteMany.mockResolvedValue(response);
+    repositoryObj.deleteMany.mockResolvedValue(response);
 
     const result = await service.deleteAllGroups();
 
-    expect(repository.deleteMany).toHaveBeenCalled();
+    expect(repositoryObj.deleteMany).toHaveBeenCalled();
     expect(result).toEqual(response);
   });
 
@@ -193,15 +221,13 @@ describe('GroupsService', () => {
 
       const setTimeoutSpy = jest
         .spyOn(global, 'setTimeout')
-        .mockImplementation(
-          (callback: Parameters<typeof setTimeout>[0], timeout?: number) => {
-            if (typeof callback === 'function') {
-              (callback as (...args: unknown[]) => void)();
-            }
+        .mockImplementation((callback: Parameters<typeof setTimeout>[0]) => {
+          if (typeof callback === 'function') {
+            (callback as (...args: unknown[]) => void)();
+          }
 
-            return 0 as ReturnType<typeof setTimeout>;
-          },
-        );
+          return 0 as ReturnType<typeof setTimeout>;
+        });
 
       const saveGroupMock = jest
         .spyOn(
@@ -210,7 +236,7 @@ describe('GroupsService', () => {
           },
           'saveGroup',
         )
-        .mockImplementation(async (identifier: string | number) => {
+        .mockImplementation(() => {
           if (identifier === 'errorGroup') {
             throw new Error('VK error');
           }
@@ -274,32 +300,38 @@ describe('GroupsService', () => {
   });
 
   it('должен корректно нормализовывать различные идентификаторы', () => {
-    identifierValidator.normalizeIdentifier.mockImplementation((id) => {
-      if (typeof id === 'string') {
-        return identifierValidator.parseVkIdentifier(id);
-      }
-      return id;
-    });
-    identifierValidator.parseVkIdentifier.mockImplementation((input) => {
-      if (input.includes('club')) return input.replace('club', '');
-      if (input.includes('public')) return input.replace('public', '');
-      return input;
-    });
+    identifierValidatorObj.normalizeIdentifier.mockImplementation(
+      (id: string | number) => {
+        if (typeof id === 'string') {
+          return identifierValidatorObj.parseVkIdentifier(id) as
+            | string
+            | number;
+        }
+        return id;
+      },
+    );
+    identifierValidatorObj.parseVkIdentifier.mockImplementation(
+      (input: string) => {
+        if (input.includes('club')) return input.replace('club', '');
+        if (input.includes('public')) return input.replace('public', '');
+        return input;
+      },
+    );
     expect(
-      identifierValidator.normalizeIdentifier('https://vk.com/club123'),
+      identifierValidatorObj.normalizeIdentifier('https://vk.com/club123'),
     ).toBe('123');
     expect(
-      identifierValidator.normalizeIdentifier('https://vk.com/public456'),
+      identifierValidatorObj.normalizeIdentifier('https://vk.com/public456'),
     ).toBe('456');
     expect(
-      identifierValidator.normalizeIdentifier('https://vk.com/screen_name'),
+      identifierValidatorObj.normalizeIdentifier('https://vk.com/screen_name'),
     ).toBe('screen_name');
-    expect(identifierValidator.normalizeIdentifier('club789')).toBe('789');
-    expect(identifierValidator.normalizeIdentifier('public101')).toBe('101');
-    expect(identifierValidator.normalizeIdentifier('  screen_name  ')).toBe(
+    expect(identifierValidatorObj.normalizeIdentifier('club789')).toBe('789');
+    expect(identifierValidatorObj.normalizeIdentifier('public101')).toBe('101');
+    expect(identifierValidatorObj.normalizeIdentifier('  screen_name  ')).toBe(
       'screen_name',
     );
-    expect(identifierValidator.normalizeIdentifier(555)).toBe(555);
+    expect(identifierValidatorObj.normalizeIdentifier('555')).toBe('555');
   });
 
   describe('searchRegionGroups', () => {
@@ -316,15 +348,15 @@ describe('GroupsService', () => {
         createGroup({ id: 30, name: 'Нет в БД #2' }),
       ];
 
-      (vkService.searchGroupsByRegion as jest.Mock).mockResolvedValue(vkGroups);
-      repository.findManyByVkIds.mockResolvedValue([
+      vkServiceObj.searchGroupsByRegion.mockResolvedValue(vkGroups);
+      repositoryObj.findManyByVkIds.mockResolvedValue([
         { id: 1, vkId: 10 },
-      ] as any);
+      ] as unknown as Array<{ id: number; vkId: number }>);
 
       const result = await service.searchRegionGroups();
 
-      expect(vkService.searchGroupsByRegion).toHaveBeenCalledWith({});
-      expect(repository.findManyByVkIds).toHaveBeenCalledWith([10, 20, 30]);
+      expect(vkServiceObj.searchGroupsByRegion).toHaveBeenCalledWith({});
+      expect(repositoryObj.findManyByVkIds).toHaveBeenCalledWith([10, 20, 30]);
 
       expect(result.total).toBe(3);
       expect(result.existsInDb).toHaveLength(1);
@@ -339,7 +371,7 @@ describe('GroupsService', () => {
     });
 
     it('должен возвращать пустой результат, если VK не нашёл группы', async () => {
-      (vkService.searchGroupsByRegion as jest.Mock).mockResolvedValue([]);
+      vkServiceObj.searchGroupsByRegion.mockResolvedValue([]);
 
       const result = await service.searchRegionGroups();
 
@@ -349,11 +381,11 @@ describe('GroupsService', () => {
         existsInDb: [],
         missing: [],
       });
-      expect(repository.findManyByVkIds).not.toHaveBeenCalled();
+      expect(repositoryObj.findManyByVkIds).not.toHaveBeenCalled();
     });
 
     it('должен пробрасывать NotFoundException при отсутствии региона', async () => {
-      (vkService.searchGroupsByRegion as jest.Mock).mockRejectedValue(
+      vkServiceObj.searchGroupsByRegion.mockRejectedValue(
         new Error('REGION_NOT_FOUND'),
       );
 
@@ -363,7 +395,7 @@ describe('GroupsService', () => {
     });
 
     it('должен оборачивать прочие ошибки во внутреннее исключение', async () => {
-      (vkService.searchGroupsByRegion as jest.Mock).mockRejectedValue(
+      vkServiceObj.searchGroupsByRegion.mockRejectedValue(
         new Error('VK error'),
       );
 

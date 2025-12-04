@@ -1,13 +1,5 @@
 import { Type, Transform } from 'class-transformer';
-import {
-  IsInt,
-  IsOptional,
-  IsString,
-  Min,
-  Max,
-  IsIn,
-  IsBoolean,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, Min, Max, IsIn } from 'class-validator';
 import { AUTHORS_CONSTANTS } from '../authors.constants';
 
 export class ListAuthorsQueryDto {

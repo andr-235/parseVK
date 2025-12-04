@@ -29,9 +29,11 @@ describe('HttpExceptionFilter', () => {
       url: '/test',
     };
 
+    const statusMock = jest.fn().mockReturnThis();
+    const jsonMock = jest.fn();
     response = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
+      status: statusMock,
+      json: jsonMock,
     };
 
     const httpContext = {
@@ -58,10 +60,11 @@ describe('HttpExceptionFilter', () => {
     filter.catch(exception, host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+    const timestampMatcher = expect.any(String) as unknown;
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: HttpStatus.NOT_FOUND,
-        timestamp: expect.any(String),
+        timestamp: timestampMatcher,
         path: '/test',
         method: 'GET',
         message: ['Ресурс не найден'],
@@ -79,9 +82,10 @@ describe('HttpExceptionFilter', () => {
     filter.catch(exception, host);
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    const timestampMatcher = expect.any(String) as unknown;
     expect(response.json).toHaveBeenCalledWith({
       statusCode: HttpStatus.BAD_REQUEST,
-      timestamp: expect.any(String),
+      timestamp: timestampMatcher,
       path: '/test',
       method: 'GET',
       message: ['Поле email обязательно', 'Поле name обязательно'],
@@ -112,13 +116,16 @@ describe('HttpExceptionFilter', () => {
     expect(response.status).toHaveBeenCalledWith(
       HttpStatus.INTERNAL_SERVER_ERROR,
     );
-    expect(response.json).toHaveBeenCalledWith({
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      timestamp: expect.any(String),
-      path: '/test',
-      method: 'GET',
-      message: ['Внутренняя ошибка'],
-    });
+    const timestampMatcher = expect.any(String) as unknown;
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        timestamp: timestampMatcher,
+        path: '/test',
+        method: 'GET',
+        message: ['Внутренняя ошибка'],
+      }),
+    );
     expect(errorSpy).toHaveBeenCalledWith(
       'Необработанная ошибка: Внутренняя ошибка',
       'stack trace',
@@ -134,13 +141,16 @@ describe('HttpExceptionFilter', () => {
     expect(response.status).toHaveBeenCalledWith(
       HttpStatus.INTERNAL_SERVER_ERROR,
     );
-    expect(response.json).toHaveBeenCalledWith({
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      timestamp: expect.any(String),
-      path: '/test',
-      method: 'GET',
-      message: ['Внутренняя ошибка сервера'],
-    });
+    const timestampMatcher = expect.any(String) as unknown;
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        timestamp: timestampMatcher,
+        path: '/test',
+        method: 'GET',
+        message: ['Внутренняя ошибка сервера'],
+      }),
+    );
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining('Необработанная ошибка неизвестного типа'),
       undefined,

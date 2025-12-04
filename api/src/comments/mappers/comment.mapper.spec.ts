@@ -1,6 +1,5 @@
 import { CommentMapper } from './comment.mapper';
 import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
-import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
 
 describe('CommentMapper', () => {
   let mapper: CommentMapper;

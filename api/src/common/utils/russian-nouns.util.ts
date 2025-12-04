@@ -27,7 +27,7 @@ const isDeclinableWord = (word: string): boolean => {
     return false;
   }
 
-  if (/[\.\-_]/g.test(word)) {
+  if (/[.\-_]/g.test(word)) {
     return false;
   }
 
