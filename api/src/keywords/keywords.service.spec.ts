@@ -93,6 +93,7 @@ describe('KeywordsService', () => {
       id: 1,
       word: 'one',
       category: null,
+      isPhrase: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -106,11 +107,13 @@ describe('KeywordsService', () => {
     expect(result).toEqual({
       success: [keyword],
       failed: [],
-      total: 1,
-      successCount: 1,
-      failedCount: 0,
-      createdCount: 1,
-      updatedCount: 0,
+      stats: {
+        total: 1,
+        success: 1,
+        failed: 0,
+        created: 1,
+        updated: 0,
+      },
     });
   });
 
@@ -122,11 +125,11 @@ describe('KeywordsService', () => {
 
     expect(result.success).toEqual([]);
     expect(result.failed).toEqual([{ word: 'one', error: 'duplicate' }]);
-    expect(result.total).toBe(1);
-    expect(result.successCount).toBe(0);
-    expect(result.failedCount).toBe(1);
-    expect(result.createdCount).toBe(0);
-    expect(result.updatedCount).toBe(0);
+    expect(result.stats.total).toBe(1);
+    expect(result.stats.success).toBe(0);
+    expect(result.stats.failed).toBe(1);
+    expect(result.stats.created).toBe(0);
+    expect(result.stats.updated).toBe(0);
   });
 
   it('должен обновлять существующие ключевые слова при повторном добавлении', async () => {
@@ -134,6 +137,7 @@ describe('KeywordsService', () => {
       id: 1,
       word: 'one',
       category: null,
+      isPhrase: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -153,11 +157,13 @@ describe('KeywordsService', () => {
     expect(result).toEqual({
       success: [updatedKeyword],
       failed: [],
-      total: 1,
-      successCount: 1,
-      failedCount: 0,
-      createdCount: 0,
-      updatedCount: 1,
+      stats: {
+        total: 1,
+        success: 1,
+        failed: 0,
+        created: 0,
+        updated: 1,
+      },
     });
   });
 
@@ -175,11 +181,13 @@ describe('KeywordsService', () => {
       .mockResolvedValue({
         success: [],
         failed: [],
-        total: 0,
-        successCount: 0,
-        failedCount: 0,
-        createdCount: 0,
-        updatedCount: 0,
+        stats: {
+          total: 0,
+          success: 0,
+          failed: 0,
+          created: 0,
+          updated: 0,
+        },
       });
 
     await service.addKeywordsFromFile(fileContent);

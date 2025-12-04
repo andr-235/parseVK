@@ -6,6 +6,35 @@ import { CommentMapper } from '../mappers/comment.mapper';
 import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
 import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
 
+const createMockPost = () => ({
+  text: 'Post text',
+  attachments: null,
+  group: null,
+});
+
+const createMockComment = (overrides = {}): CommentWithRelations => ({
+  id: 1,
+  postId: 1,
+  ownerId: -123,
+  vkCommentId: 456,
+  fromId: 123,
+  text: 'Test',
+  publishedAt: new Date(),
+  isRead: false,
+  isDeleted: false,
+  source: 'TASK',
+  watchlistAuthorId: null,
+  authorVkId: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  author: null,
+  commentKeywordMatches: [],
+  post: createMockPost(),
+  ...overrides,
+});
+
+const realMapper = new CommentMapper();
+
 describe('OffsetPaginationStrategy', () => {
   let strategy: OffsetPaginationStrategy;
   let repositoryMock: jest.Mocked<ICommentsRepository>;
@@ -72,31 +101,21 @@ describe('OffsetPaginationStrategy', () => {
 
   it('должен возвращать пагинированный список комментариев', async () => {
     const comments: CommentWithRelations[] = [
-      {
+      createMockComment({
         id: 1,
         text: 'Comment 1',
         publishedAt: new Date(),
         isRead: false,
-        watchlistAuthorId: null,
-        author: null,
-        commentKeywordMatches: [],
-      },
-      {
+      }),
+      createMockComment({
         id: 2,
         text: 'Comment 2',
         publishedAt: new Date(),
         isRead: true,
-        watchlistAuthorId: null,
-        author: null,
-        commentKeywordMatches: [],
-      },
+      }),
     ];
 
-    const mappedComments: CommentWithAuthorDto[] = comments.map((c) => ({
-      ...c,
-      isWatchlisted: false,
-      matchedKeywords: [],
-    })) as CommentWithAuthorDto[];
+    const mappedComments: CommentWithAuthorDto[] = realMapper.mapMany(comments);
 
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
@@ -133,22 +152,16 @@ describe('OffsetPaginationStrategy', () => {
   it('должен правильно вычислять hasMore', async () => {
     const comments: CommentWithRelations[] = Array.from(
       { length: 10 },
-      (_, i) => ({
-        id: i + 1,
-        text: `Comment ${i + 1}`,
-        publishedAt: new Date(),
-        isRead: false,
-        watchlistAuthorId: null,
-        author: null,
-        commentKeywordMatches: [],
-      }),
+      (_, i) =>
+        createMockComment({
+          id: i + 1,
+          text: `Comment ${i + 1}`,
+          publishedAt: new Date(),
+          isRead: false,
+        }),
     );
 
-    const mappedComments: CommentWithAuthorDto[] = comments.map((c) => ({
-      ...c,
-      isWatchlisted: false,
-      matchedKeywords: [],
-    })) as CommentWithAuthorDto[];
+    const mappedComments: CommentWithAuthorDto[] = realMapper.mapMany(comments);
 
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});

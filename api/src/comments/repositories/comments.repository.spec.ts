@@ -1,7 +1,35 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from '@prisma/client';
 import { CommentsRepository } from './comments.repository';
 import { PrismaService } from '../../prisma.service';
 import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
+
+const createMockPost = () => ({
+  text: 'Post text',
+  attachments: null,
+  group: null,
+});
+
+const createMockComment = (overrides = {}): CommentWithRelations => ({
+  id: 1,
+  postId: 1,
+  ownerId: -123,
+  vkCommentId: 456,
+  fromId: 123,
+  text: 'Test',
+  publishedAt: new Date(),
+  isRead: false,
+  isDeleted: false,
+  source: 'TASK',
+  watchlistAuthorId: null,
+  authorVkId: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  author: null,
+  commentKeywordMatches: [],
+  post: createMockPost(),
+  ...overrides,
+});
 
 describe('CommentsRepository', () => {
   let repository: CommentsRepository;
@@ -47,15 +75,10 @@ describe('CommentsRepository', () => {
       };
 
       const mockComments: CommentWithRelations[] = [
-        {
+        createMockComment({
           id: 1,
-          text: 'Test',
-          publishedAt: new Date(),
           isRead: true,
-          watchlistAuthorId: null,
-          author: null,
-          commentKeywordMatches: [],
-        },
+        }),
       ];
 
       prismaService.comment.findMany.mockResolvedValue(mockComments);
@@ -93,15 +116,10 @@ describe('CommentsRepository', () => {
         data: { isRead: true },
       };
 
-      const mockComment: CommentWithRelations = {
+      const mockComment: CommentWithRelations = createMockComment({
         id: 1,
-        text: 'Test',
-        publishedAt: new Date(),
         isRead: true,
-        watchlistAuthorId: null,
-        author: null,
-        commentKeywordMatches: [],
-      };
+      });
 
       prismaService.comment.update.mockResolvedValue(mockComment);
 
@@ -118,10 +136,10 @@ describe('CommentsRepository', () => {
 
   describe('transaction', () => {
     it('должен вызывать prisma.$transaction с массивом промисов', async () => {
-      const queries = [
-        Promise.resolve(1),
-        Promise.resolve(2),
-        Promise.resolve(3),
+      const queries: Prisma.PrismaPromise<number>[] = [
+        Promise.resolve(1) as Prisma.PrismaPromise<number>,
+        Promise.resolve(2) as Prisma.PrismaPromise<number>,
+        Promise.resolve(3) as Prisma.PrismaPromise<number>,
       ];
 
       prismaService.$transaction.mockResolvedValue([1, 2, 3]);

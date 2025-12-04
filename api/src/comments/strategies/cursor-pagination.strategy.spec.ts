@@ -8,6 +8,35 @@ import { CursorUtils } from '../dto/comments-cursor.dto';
 import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
 import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
 
+const realMapper = new CommentMapper();
+
+const createMockPost = () => ({
+  text: 'Post text',
+  attachments: null,
+  group: null,
+});
+
+const createMockComment = (overrides = {}): CommentWithRelations => ({
+  id: 1,
+  postId: 1,
+  ownerId: -123,
+  vkCommentId: 456,
+  fromId: 123,
+  text: 'Test',
+  publishedAt: new Date(),
+  isRead: false,
+  isDeleted: false,
+  source: 'TASK',
+  watchlistAuthorId: null,
+  authorVkId: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  author: null,
+  commentKeywordMatches: [],
+  post: createMockPost(),
+  ...overrides,
+});
+
 describe('CursorPaginationStrategy', () => {
   let strategy: CursorPaginationStrategy;
   let repository: jest.Mocked<ICommentsRepository>;
@@ -74,22 +103,15 @@ describe('CursorPaginationStrategy', () => {
 
   it('должен возвращать пагинированный список без cursor', async () => {
     const comments: CommentWithRelations[] = [
-      {
+      createMockComment({
         id: 1,
         text: 'Comment 1',
         publishedAt: new Date('2024-01-01'),
         isRead: false,
-        watchlistAuthorId: null,
-        author: null,
-        commentKeywordMatches: [],
-      },
+      }),
     ];
 
-    const mappedComments: CommentWithAuthorDto[] = comments.map((c) => ({
-      ...c,
-      isWatchlisted: false,
-      matchedKeywords: [],
-    })) as CommentWithAuthorDto[];
+    const mappedComments: CommentWithAuthorDto[] = realMapper.mapMany(comments);
 
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
@@ -123,22 +145,15 @@ describe('CursorPaginationStrategy', () => {
     const cursor = CursorUtils.encode(publishedAt, id);
 
     const comments: CommentWithRelations[] = [
-      {
+      createMockComment({
         id: 124,
         text: 'Comment',
         publishedAt: new Date('2024-01-02'),
         isRead: false,
-        watchlistAuthorId: null,
-        author: null,
-        commentKeywordMatches: [],
-      },
+      }),
     ];
 
-    const mappedComments: CommentWithAuthorDto[] = comments.map((c) => ({
-      ...c,
-      isWatchlisted: false,
-      matchedKeywords: [],
-    })) as CommentWithAuthorDto[];
+    const mappedComments: CommentWithAuthorDto[] = realMapper.mapMany(comments);
 
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
@@ -176,24 +191,18 @@ describe('CursorPaginationStrategy', () => {
   it('должен генерировать nextCursor если hasMore = true', async () => {
     const comments: CommentWithRelations[] = Array.from(
       { length: 11 },
-      (_, i) => ({
-        id: i + 1,
-        text: `Comment ${i + 1}`,
-        publishedAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
-        isRead: false,
-        watchlistAuthorId: null,
-        author: null,
-        commentKeywordMatches: [],
-      }),
+      (_, i) =>
+        createMockComment({
+          id: i + 1,
+          text: `Comment ${i + 1}`,
+          publishedAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
+          isRead: false,
+        }),
     );
 
-    const mappedComments: CommentWithAuthorDto[] = comments
-      .slice(0, 10)
-      .map((c) => ({
-        ...c,
-        isWatchlisted: false,
-        matchedKeywords: [],
-      })) as CommentWithAuthorDto[];
+    const mappedComments: CommentWithAuthorDto[] = realMapper.mapMany(
+      comments.slice(0, 10),
+    );
 
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
@@ -211,22 +220,15 @@ describe('CursorPaginationStrategy', () => {
 
   it('должен возвращать null для nextCursor если hasMore = false', async () => {
     const comments: CommentWithRelations[] = [
-      {
+      createMockComment({
         id: 1,
         text: 'Comment',
         publishedAt: new Date(),
         isRead: false,
-        watchlistAuthorId: null,
-        author: null,
-        commentKeywordMatches: [],
-      },
+      }),
     ];
 
-    const mappedComments: CommentWithAuthorDto[] = comments.map((c) => ({
-      ...c,
-      isWatchlisted: false,
-      matchedKeywords: [],
-    })) as CommentWithAuthorDto[];
+    const mappedComments: CommentWithAuthorDto[] = realMapper.mapMany(comments);
 
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});

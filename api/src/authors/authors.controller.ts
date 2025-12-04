@@ -9,6 +9,7 @@ import {
 import { AuthorsService } from './authors.service';
 import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto';
 import { ListAuthorsQueryDto } from './dto/list-authors-query.dto';
+import type { AuthorSortField } from './types/authors.types';
 
 @Controller('authors')
 export class AuthorsController {
@@ -23,7 +24,7 @@ export class AuthorsController {
       limit: query.limit ?? 20,
       search: query.search,
       verified: query.verified,
-      sortBy: query.sortBy ?? null,
+      sortBy: (query.sortBy as AuthorSortField) ?? null,
       sortOrder:
         query.sortOrder === 'asc' || query.sortOrder === 'desc'
           ? query.sortOrder
