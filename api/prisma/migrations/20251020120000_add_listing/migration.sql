@@ -23,6 +23,8 @@ CREATE TABLE "Listing" (
     "contactPhone" TEXT,
     "images" TEXT[] DEFAULT ARRAY[]::TEXT[] NOT NULL,
     "metadata" JSONB,
+    "manualOverrides" JSONB NOT NULL DEFAULT '[]'::jsonb,
+    "manualNote" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
