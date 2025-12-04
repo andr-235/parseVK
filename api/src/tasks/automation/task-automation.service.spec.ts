@@ -1,6 +1,8 @@
 import { TaskAutomationService } from './task-automation.service';
 import { ParsingScope } from '../dto/create-parsing-task.dto';
 import type { SchedulerRegistry } from '@nestjs/schedule';
+import type { PrismaService } from '../../prisma.service';
+import type { TasksService } from '../tasks.service';
 
 const buildSettings = () => ({
   id: 1,
@@ -27,9 +29,25 @@ const buildCompletedTask = (overrides?: Partial<Record<string, unknown>>) => ({
   ...overrides,
 });
 
+type MockPrismaService = {
+  taskAutomationSettings: {
+    findFirst: jest.Mock;
+    create: jest.Mock;
+    update: jest.Mock;
+  };
+  task: {
+    count: jest.Mock;
+    findFirst: jest.Mock;
+  };
+};
+
+type MockTasksService = {
+  createParsingTask: jest.Mock;
+};
+
 describe('TaskAutomationService', () => {
-  let prisma: any;
-  let tasksService: any;
+  let prisma: MockPrismaService;
+  let tasksService: MockTasksService;
   let schedulerRegistry: SchedulerRegistry;
   let schedulerMock: {
     addCronJob: jest.Mock;
@@ -74,8 +92,8 @@ describe('TaskAutomationService', () => {
     schedulerRegistry = schedulerMock as unknown as SchedulerRegistry;
 
     service = new TaskAutomationService(
-      prisma,
-      tasksService,
+      prisma as unknown as PrismaService,
+      tasksService as unknown as TasksService,
       schedulerRegistry,
     );
   });
@@ -110,10 +128,12 @@ describe('TaskAutomationService', () => {
     prisma.taskAutomationSettings.findFirst.mockImplementation(() =>
       Promise.resolve(storedSettings),
     );
-    prisma.taskAutomationSettings.update.mockImplementation(({ data }) => {
-      storedSettings = { ...storedSettings, ...data };
-      return Promise.resolve(storedSettings);
-    });
+    prisma.taskAutomationSettings.update.mockImplementation(
+      ({ data }: { data: Partial<typeof storedSettings> }) => {
+        storedSettings = { ...storedSettings, ...data };
+        return Promise.resolve(storedSettings);
+      },
+    );
     prisma.task.count.mockResolvedValue(0);
     prisma.task.findFirst.mockResolvedValue(buildCompletedTask());
     tasksService.createParsingTask.mockResolvedValue(undefined);
@@ -130,7 +150,7 @@ describe('TaskAutomationService', () => {
     });
     expect(prisma.taskAutomationSettings.update).toHaveBeenCalledWith({
       where: { id: storedSettings.id },
-      data: { lastRunAt: expect.any(Date) },
+      data: { lastRunAt: expect.any(Date) as Date },
     });
     expect(scheduleNextRunSpy).toHaveBeenCalledTimes(1);
     expect(storedSettings.lastRunAt).toBeInstanceOf(Date);
@@ -156,7 +176,11 @@ describe('TaskAutomationService', () => {
       .spyOn(service as any, 'scheduleNextRun')
       .mockResolvedValue(new Date('2025-01-02T03:00:00.000Z'));
 
-    const result = await (service as any).executeAutomation('timer');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const result = (await (service as any).executeAutomation('timer')) as {
+      started: boolean;
+      reason: string | null;
+    };
 
     expect(result.started).toBe(false);
     expect(result.reason).toBe('Нет завершённых задач для повторного запуска');
@@ -175,7 +199,11 @@ describe('TaskAutomationService', () => {
       .spyOn(service as any, 'scheduleNextRun')
       .mockResolvedValue(new Date('2025-01-02T03:00:00.000Z'));
 
-    const result = await (service as any).executeAutomation('timer');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const result = (await (service as any).executeAutomation('timer')) as {
+      started: boolean;
+      reason: string | null;
+    };
 
     expect(result.started).toBe(false);
     expect(result.reason).toBe(
@@ -191,7 +219,11 @@ describe('TaskAutomationService', () => {
     prisma.task.count.mockResolvedValue(1);
     const scheduleRetrySpy = jest.spyOn(service as any, 'scheduleRetry');
 
-    const result = await (service as any).executeAutomation('timer');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const result = (await (service as any).executeAutomation('timer')) as {
+      started: boolean;
+      reason: string | null;
+    };
 
     expect(result.started).toBe(false);
     expect(result.reason).toBe('Есть незавершённые задачи, повторим позже');
@@ -207,6 +239,7 @@ describe('TaskAutomationService', () => {
       running: true,
       stop: stopMock,
     });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     (service as any).clearScheduledRunJob();
 
     expect(stopMock).toHaveBeenCalledTimes(1);

@@ -38,7 +38,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     await this.scheduleNextRun();
   }
 
-  async onModuleDestroy(): Promise<void> {
+  onModuleDestroy(): void {
     this.clearScheduledRunJob();
     this.clearRetryTimeout();
   }
@@ -307,10 +307,8 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       true,
     );
 
-    this.schedulerRegistry.addCronJob(
-      this.nextRunJobName,
-      job as unknown as any,
-    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    this.schedulerRegistry.addCronJob(this.nextRunJobName, job as any);
     job.start();
 
     return nextRun;
@@ -323,10 +321,10 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     const retryAt = new Date(Date.now() + RETRY_DELAY_MS);
     this.nextRunAt = retryAt;
 
-    const timeout = setTimeout(() => {
+    const timeout: NodeJS.Timeout = setTimeout(() => {
       try {
         this.schedulerRegistry.deleteTimeout(this.retryTimeoutName);
-      } catch (error) {
+      } catch {
         // проигнорируем отсутствие таймаута в реестре
       }
       void this.executeAutomation('retry');
@@ -342,7 +340,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   private clearScheduledRunJob(): void {
     try {
       const job = this.schedulerRegistry.getCronJob(this.nextRunJobName);
-      job.stop();
+      void job.stop();
       this.schedulerRegistry.deleteCronJob(this.nextRunJobName);
     } catch (error) {
       this.handleSchedulerNotFound(error);
@@ -351,7 +349,9 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
 
   private clearRetryTimeout(): void {
     try {
-      const timeout = this.schedulerRegistry.getTimeout(this.retryTimeoutName);
+      const timeout = this.schedulerRegistry.getTimeout(
+        this.retryTimeoutName,
+      ) as NodeJS.Timeout;
       clearTimeout(timeout);
       this.schedulerRegistry.deleteTimeout(this.retryTimeoutName);
     } catch (error) {
