@@ -229,64 +229,20 @@ describe('WatchlistService', () => {
       settings: createSettings(),
     } as never;
 
-    prisma.comment.groupBy.mockResolvedValue([
-      {
-        ownerId: 10,
-        postId: 20,
-        _max: { publishedAt: new Date('2024-01-09T00:00:00.000Z') },
-      },
-    ]);
-    prisma.comment.findMany.mockResolvedValue([]);
-    prisma.watchlistAuthor.update.mockResolvedValue({});
-
-    const fetchedComments = [
-      {
-        postId: 20,
-        ownerId: 10,
-        vkCommentId: 300,
-        fromId: 321,
-        text: 'Новый комментарий',
-        publishedAt: new Date('2024-02-01T10:00:00.000Z'),
-        likesCount: 2,
-        parentsStack: [],
-        threadCount: 1,
-        threadItems: [
-          {
-            postId: 20,
-            ownerId: 10,
-            vkCommentId: 301,
-            fromId: 321,
-            text: 'Ответ автора',
-            publishedAt: new Date('2024-03-01T12:00:00.000Z'),
-            likesCount: 0,
-            parentsStack: [],
-            threadCount: 0,
-            threadItems: [],
-            attachments: null,
-            replyToUser: null,
-            replyToComment: null,
-            isDeleted: false,
-          },
-        ],
-        attachments: null,
-        replyToUser: null,
-        replyToComment: null,
-        isDeleted: false,
-      },
-    ];
-
-    vkService.getAuthorCommentsForPost.mockResolvedValue(fetchedComments);
-    authorActivityService.saveComments.mockResolvedValue(undefined);
+    repositoryMock.findActiveAuthors.mockResolvedValue([record]);
     authorRefresherMock.refreshAuthorRecord.mockResolvedValue(2);
 
-    const result = await authorRefresherMock.refreshAuthorRecord(record);
+    await service.refreshActiveAuthors();
 
-    expect(result).toBe(2);
+    expect(repositoryMock.findActiveAuthors).toHaveBeenCalledWith({
+      settingsId: 1,
+      limit: 10,
+    });
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(authorRefresherMock.refreshAuthorRecord).toHaveBeenCalledWith(
       record,
     );
-    // saveComments и update вызываются внутри refreshAuthorRecord, но так как мы используем мок,
-    // реальная реализация не выполняется, поэтому проверки не нужны
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(authorRefresherMock.refreshAuthorRecord).toHaveBeenCalledTimes(1);
   });
 });
