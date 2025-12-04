@@ -9,7 +9,7 @@ const mockKeywordsService = () => ({
   addKeyword: jest.fn(),
   bulkAddKeywords: jest.fn(),
   addKeywordsFromFile: jest.fn(),
-  getAllKeywords: jest.fn(),
+  getKeywords: jest.fn(),
   deleteAllKeywords: jest.fn(),
   deleteKeyword: jest.fn(),
 });
@@ -111,28 +111,36 @@ describe('KeywordsController', () => {
   });
 
   it('должен вернуть все ключевые слова через GET /', async () => {
-    const response = [
-      {
-        id: 1,
-        word: 'one',
-        category: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: 2,
-        word: 'two',
-        category: 'Продажи',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ];
-    keywordsService.getAllKeywords.mockResolvedValue(response);
+    const response = {
+      keywords: [
+        {
+          id: 1,
+          word: 'one',
+          category: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 2,
+          word: 'two',
+          category: 'Продажи',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      total: 2,
+      page: 1,
+      limit: 50,
+    };
+    keywordsService.getKeywords.mockResolvedValue(response);
 
-    const result = await controller.getAllKeywords();
+    const result = await controller.getAllKeywords({});
 
     expect(result).toEqual(response);
-    expect(keywordsService.getAllKeywords).toHaveBeenCalled();
+    expect(keywordsService.getKeywords).toHaveBeenCalledWith({
+      page: 1,
+      limit: 50,
+    });
   });
 
   it('должен удалить все ключевые слова через DELETE /all', async () => {
@@ -147,15 +155,12 @@ describe('KeywordsController', () => {
 
   it('должен удалить ключевое слово по id через DELETE /:id', async () => {
     const response = {
+      success: true,
       id: 1,
-      word: 'one',
-      category: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
     keywordsService.deleteKeyword.mockResolvedValue(response);
 
-    const result = await controller.deleteKeyword('1');
+    const result = await controller.deleteKeyword({ id: 1 });
 
     expect(result).toEqual(response);
     expect(keywordsService.deleteKeyword).toHaveBeenCalledWith(1);

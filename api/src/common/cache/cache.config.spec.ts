@@ -1,11 +1,30 @@
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as redisStoreModule from 'cache-manager-redis-yet';
 import { CacheConfigService } from './cache.config';
+import type { AppConfig } from '../../config/app.config';
 
 describe('CacheConfigService', () => {
   let redisStoreMock: jest.SpyInstance;
   let logSpy: jest.SpyInstance;
   let warnSpy: jest.SpyInstance;
+  let configService: ConfigService<AppConfig>;
+
+  const createConfigService = (): ConfigService<AppConfig> => {
+    return {
+      get: jest.fn((key: string) => {
+        if (key === 'redisHost') {
+          return process.env.REDIS_HOST;
+        }
+        if (key === 'redisPort') {
+          return process.env.REDIS_PORT
+            ? Number(process.env.REDIS_PORT)
+            : undefined;
+        }
+        return undefined;
+      }),
+    } as unknown as ConfigService<AppConfig>;
+  };
 
   beforeAll(() => {
     logSpy = jest
@@ -38,8 +57,9 @@ describe('CacheConfigService', () => {
 
     const redisInstance = { name: 'redis-store' };
     redisStoreMock.mockResolvedValue(redisInstance);
+    configService = createConfigService();
 
-    const service = new CacheConfigService();
+    const service = new CacheConfigService(configService);
     const options = await service.createCacheOptions();
 
     expect(redisStoreMock).toHaveBeenCalledWith({
@@ -56,8 +76,9 @@ describe('CacheConfigService', () => {
 
   it('переходит на in-memory store при ошибке Redis', async () => {
     redisStoreMock.mockRejectedValue(new Error('connect ECONNREFUSED'));
+    configService = createConfigService();
 
-    const service = new CacheConfigService();
+    const service = new CacheConfigService(configService);
     const options = await service.createCacheOptions();
 
     expect(redisStoreMock).toHaveBeenCalledTimes(1);

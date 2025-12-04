@@ -31,8 +31,9 @@ describe('KeywordsService', () => {
     } as jest.Mocked<IKeywordsRepository>;
 
     matchesServiceMock = {
+      repository: repositoryMock,
       recalculateKeywordMatches: jest.fn(),
-    } as jest.Mocked<KeywordsMatchesService>;
+    } as unknown as jest.Mocked<KeywordsMatchesService>;
 
     service = new KeywordsService(repositoryMock, matchesServiceMock);
     jest.clearAllMocks();

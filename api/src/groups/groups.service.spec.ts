@@ -226,7 +226,7 @@ describe('GroupsService', () => {
             (callback as (...args: unknown[]) => void)();
           }
 
-          return 0 as ReturnType<typeof setTimeout>;
+          return 0 as unknown as ReturnType<typeof setTimeout>;
         });
 
       const saveGroupMock = jest
@@ -236,19 +236,19 @@ describe('GroupsService', () => {
           },
           'saveGroup',
         )
-        .mockImplementation(() => {
-          if (identifier === 'errorGroup') {
+        .mockImplementation((id: string | number) => {
+          if (id === 'errorGroup') {
             throw new Error('VK error');
           }
 
-          const numberId = Number(identifier);
+          const numberId = Number(id);
           const sanitizedId = Number.isNaN(numberId) ? 999 : numberId;
 
-          return {
+          return Promise.resolve({
             id: sanitizedId,
             vkId: sanitizedId,
             name: 'Group',
-          } as unknown as IGroupResponse;
+          } as unknown as IGroupResponse);
         });
 
       const result = await service.bulkSaveGroups(identifiers);

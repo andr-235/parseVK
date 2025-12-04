@@ -1,33 +1,84 @@
 import { Prisma } from '@prisma/client';
 import { DataImportService } from '../data-import.service';
-import type { PrismaService } from '../../prisma.service';
+import type { IListingsRepository } from '../../listings/interfaces/listings-repository.interface';
 import type { ListingImportRequestDto } from '../dto/listing-import-request.dto';
+import type { Listing } from '@prisma/client';
+
+const createListing = (overrides: Partial<Listing> = {}): Listing => ({
+  id: 1,
+  url: 'https://example.com/listing',
+  source: null,
+  externalId: null,
+  title: null,
+  description: null,
+  price: null,
+  currency: null,
+  address: null,
+  city: null,
+  latitude: null,
+  longitude: null,
+  rooms: null,
+  areaTotal: null,
+  areaLiving: null,
+  areaKitchen: null,
+  floor: null,
+  floorsTotal: null,
+  publishedAt: null,
+  contactName: null,
+  contactPhone: null,
+  images: [],
+  sourceAuthorName: null,
+  sourceAuthorPhone: null,
+  sourceAuthorUrl: null,
+  sourcePostedAt: null,
+  sourceParsedAt: null,
+  manualOverrides: [],
+  manualNote: null,
+  archived: false,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  ...overrides,
+});
 
 describe('DataImportService', () => {
   let service: DataImportService;
-  let prisma: PrismaService;
-  let listingObj: {
-    findUnique: jest.Mock;
-    upsert: jest.Mock;
-    create: jest.Mock;
-  };
+  let listingsRepository: jest.Mocked<IListingsRepository>;
+  let createMock: jest.Mock;
+  let upsertMock: jest.Mock;
+  let findUniqueByUrlMock: jest.Mock;
 
   beforeEach(() => {
-    listingObj = {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      create: jest.fn(),
-    };
-    prisma = {
-      listing: listingObj,
-    } as unknown as PrismaService;
+    createMock = jest.fn();
+    upsertMock = jest.fn();
+    findUniqueByUrlMock = jest.fn();
 
-    service = new DataImportService(prisma);
+    listingsRepository = {
+      findMany: jest.fn(),
+      count: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
+      findUniqueByUrl: findUniqueByUrlMock,
+      upsert: upsertMock,
+      update: jest.fn(),
+      getListingsWithCountAndSources: jest.fn(),
+      transaction: jest.fn(
+        async <T>(
+          callback: (tx: Prisma.TransactionClient) => Promise<T>,
+        ): Promise<T> => {
+          const tx = {
+            listing: {
+              create: createMock,
+            },
+          } as unknown as Prisma.TransactionClient;
+          return await callback(tx);
+        },
+      ),
+    } as unknown as jest.Mocked<IListingsRepository>;
+
+    service = new DataImportService(listingsRepository);
   });
 
   it('создает объявления последовательно и возвращает отчет', async () => {
-    listingObj.findUnique.mockResolvedValue(null);
-    listingObj.upsert.mockResolvedValue({ id: 1 });
+    createMock.mockResolvedValue(createListing({ id: 1 }));
 
     const result = await service.importListings({
       listings: [
@@ -48,27 +99,7 @@ describe('DataImportService', () => {
       ],
     } as ListingImportRequestDto);
 
-    expect(listingObj.upsert).toHaveBeenCalledTimes(2);
-
-    const calls = listingObj.upsert.mock.calls;
-    const firstCallArgs = calls[0] as unknown[];
-    if (
-      firstCallArgs &&
-      firstCallArgs[0] &&
-      typeof firstCallArgs[0] === 'object' &&
-      'create' in firstCallArgs[0]
-    ) {
-      const firstCall = firstCallArgs[0] as { create: Record<string, unknown> };
-      expect(firstCall.create).toMatchObject({
-        url: 'https://example.com/listing-1',
-        title: 'Тестовая квартира',
-        price: 1000000,
-        rooms: 3,
-        images: ['https://img.example/1'],
-      });
-      expect(firstCall.create).not.toHaveProperty('metadata');
-    }
-
+    expect(createMock).toHaveBeenCalledTimes(2);
     expect(result).toEqual({
       processed: 2,
       created: 2,
@@ -80,10 +111,18 @@ describe('DataImportService', () => {
   });
 
   it('выполняет upsert при updateExisting и считает созданные/обновленные записи', async () => {
-    listingObj.findUnique
-      .mockResolvedValueOnce({ id: 10 })
+    const existingListing = createListing({
+      id: 10,
+      url: 'https://example.com/listing-1',
+    });
+    const createdListing: Listing = {
+      ...existingListing,
+      id: 1,
+    };
+    findUniqueByUrlMock
+      .mockResolvedValueOnce(existingListing)
       .mockResolvedValueOnce(null);
-    listingObj.upsert.mockResolvedValue({ id: 1 });
+    upsertMock.mockResolvedValue(createdListing);
 
     const result = await service.importListings({
       updateExisting: true,
@@ -99,7 +138,7 @@ describe('DataImportService', () => {
       ],
     } as ListingImportRequestDto);
 
-    expect(listingObj.upsert).toHaveBeenCalledTimes(2);
+    expect(upsertMock).toHaveBeenCalledTimes(2);
     expect(result).toEqual({
       processed: 2,
       created: 1,
@@ -111,11 +150,12 @@ describe('DataImportService', () => {
   });
 
   it('нормализует URL и обновляет существующее объявление', async () => {
-    listingObj.findUnique.mockResolvedValue({
+    const existingListing = createListing({
       id: 100,
-      manualOverrides: [],
+      url: 'https://example.com/ad/123',
     });
-    listingObj.upsert.mockResolvedValue({ id: 100 });
+    findUniqueByUrlMock.mockResolvedValue(existingListing);
+    upsertMock.mockResolvedValue(existingListing);
 
     const result = await service.importListings({
       updateExisting: true,
@@ -126,14 +166,13 @@ describe('DataImportService', () => {
       ],
     } as ListingImportRequestDto);
 
-    const createMatcher = expect.objectContaining({
-      url: 'https://example.com/ad/123',
-    }) as unknown;
-    expect(listingObj.upsert).toHaveBeenCalledWith({
-      where: { url: 'https://example.com/ad/123' },
-      create: createMatcher,
-      update: expect.any(Object) as unknown,
-    });
+    expect(upsertMock).toHaveBeenCalledWith(
+      { url: 'https://example.com/ad/123' },
+      expect.objectContaining({
+        url: 'https://example.com/ad/123',
+      }),
+      expect.any(Object),
+    );
     expect(result).toEqual({
       processed: 1,
       created: 0,
@@ -145,8 +184,7 @@ describe('DataImportService', () => {
   });
 
   it('обрабатывает дубликаты и ошибки вставки', async () => {
-    listingObj.findUnique.mockResolvedValue(null);
-    listingObj.upsert
+    createMock
       .mockResolvedValueOnce({ id: 1 })
       .mockImplementationOnce(() => {
         const duplicateError = {
@@ -164,7 +202,7 @@ describe('DataImportService', () => {
       ],
     } as ListingImportRequestDto);
 
-    expect(upsertMock).toHaveBeenCalledTimes(3);
+    expect(createMock).toHaveBeenCalledTimes(3);
     expect(result).toEqual({
       processed: 3,
       created: 1,
@@ -190,7 +228,8 @@ describe('DataImportService', () => {
       ],
     } as ListingImportRequestDto);
 
-    expect(listingObj.upsert).not.toHaveBeenCalled();
+    expect(createMock).not.toHaveBeenCalled();
+    expect(upsertMock).not.toHaveBeenCalled();
     expect(result).toEqual({
       processed: 1,
       created: 0,

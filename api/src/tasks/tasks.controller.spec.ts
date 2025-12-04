@@ -98,8 +98,11 @@ describe('TasksController', () => {
     ];
     tasksService.getTasks.mockResolvedValue(summaries);
 
-    await expect(controller.getTasks()).resolves.toEqual(summaries);
-    expect(tasksService.getTasks).toHaveBeenCalledTimes(1);
+    await expect(controller.getTasks({})).resolves.toEqual(summaries);
+    expect(tasksService.getTasks).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+    });
   });
 
   it('should delegate GET /:taskId to TasksService.getTask', async () => {
