@@ -2,8 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import { json, urlencoded } from 'express';
-import type { RequestHandler } from 'express';
+import { json, urlencoded, type RequestHandler } from 'express';
 import helmet from 'helmet';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -18,7 +17,7 @@ async function bootstrap() {
     const configService = app.get(ConfigService<AppConfig>);
 
     // Security headers
-    const helmetMiddleware = helmet() as unknown as RequestHandler;
+    const helmetMiddleware: RequestHandler = helmet() as RequestHandler;
     app.use(helmetMiddleware);
 
     app.use(json({ limit: '2mb' }));
