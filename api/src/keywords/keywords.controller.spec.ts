@@ -54,6 +54,7 @@ describe('KeywordsController', () => {
     expect(keywordsService.addKeyword).toHaveBeenCalledWith(
       'test',
       'Маркетинг',
+      undefined,
     );
   });
 

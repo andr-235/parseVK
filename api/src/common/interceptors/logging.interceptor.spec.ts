@@ -1,6 +1,7 @@
 import { CallHandler, ExecutionContext, Logger } from '@nestjs/common';
 import { lastValueFrom, of, throwError } from 'rxjs';
 import { LoggingInterceptor } from './logging.interceptor';
+import { CORRELATION_ID_HEADER } from '../middleware/correlation-id.middleware';
 
 describe('LoggingInterceptor', () => {
   let interceptor: LoggingInterceptor;
@@ -26,6 +27,9 @@ describe('LoggingInterceptor', () => {
       originalUrl: '/test',
       ip: '127.0.0.1',
       get: jest.fn().mockReturnValue('jest-agent'),
+      headers: {
+        [CORRELATION_ID_HEADER]: 'test-correlation-id',
+      },
     };
 
     response = {

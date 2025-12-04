@@ -196,10 +196,22 @@ describe('CommentsFilterBuilder', () => {
       });
 
       expect(result).toEqual({
-        text: {
-          contains: 'query',
-          mode: 'insensitive',
-        },
+        OR: [
+          {
+            text: {
+              contains: 'query',
+              mode: 'insensitive',
+            },
+          },
+          {
+            post: {
+              text: {
+                contains: 'query',
+                mode: 'insensitive',
+              },
+            },
+          },
+        ],
       });
     });
   });
