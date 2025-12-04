@@ -53,10 +53,22 @@ describe('CommentsFilterBuilder', () => {
       });
 
       expect(result).toEqual({
-        text: {
-          contains: 'test query',
-          mode: 'insensitive',
-        },
+        OR: [
+          {
+            text: {
+              contains: 'test query',
+              mode: 'insensitive',
+            },
+          },
+          {
+            post: {
+              text: {
+                contains: 'test query',
+                mode: 'insensitive',
+              },
+            },
+          },
+        ],
       });
     });
 
@@ -78,10 +90,22 @@ describe('CommentsFilterBuilder', () => {
             },
           },
           {
-            text: {
-              contains: 'query',
-              mode: 'insensitive',
-            },
+            OR: [
+              {
+                text: {
+                  contains: 'query',
+                  mode: 'insensitive',
+                },
+              },
+              {
+                post: {
+                  text: {
+                    contains: 'query',
+                    mode: 'insensitive',
+                  },
+                },
+              },
+            ],
           },
         ],
       });

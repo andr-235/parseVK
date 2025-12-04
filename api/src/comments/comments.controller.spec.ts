@@ -17,6 +17,7 @@ describe('CommentsController', () => {
     parseKeywords: jest.Mock;
     normalizeReadStatus: jest.Mock;
     normalizeSearch: jest.Mock;
+    normalizeKeywordSource: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -47,6 +48,13 @@ describe('CommentsController', () => {
       normalizeSearch: jest.fn(
         (val: string | undefined) => val?.trim() || undefined,
       ),
+      normalizeKeywordSource: jest.fn((val: string | undefined) => {
+        if (!val) return undefined;
+        const normalized = val.toUpperCase();
+        return normalized === 'COMMENT' || normalized === 'POST'
+          ? normalized
+          : undefined;
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -83,6 +91,7 @@ describe('CommentsController', () => {
       offset: 0,
       limit: 100,
       keywords: undefined,
+      keywordSource: undefined,
       readStatus: 'all',
       search: undefined,
     });
@@ -109,6 +118,7 @@ describe('CommentsController', () => {
       offset: 0,
       limit: 200,
       keywords: undefined,
+      keywordSource: undefined,
       readStatus: 'all',
       search: undefined,
     });
@@ -132,6 +142,7 @@ describe('CommentsController', () => {
       10,
       20,
       [' test ', 'demo'],
+      undefined,
       'unread',
       '  keyword  ',
     );
@@ -146,6 +157,7 @@ describe('CommentsController', () => {
       offset: 10,
       limit: 20,
       keywords: ['test', 'demo'],
+      keywordSource: undefined,
       readStatus: 'unread',
       search: 'keyword',
     });
@@ -178,6 +190,7 @@ describe('CommentsController', () => {
       cursor: 'cursor',
       limit: 50,
       keywords: undefined,
+      keywordSource: undefined,
       readStatus: 'all',
       search: undefined,
     });

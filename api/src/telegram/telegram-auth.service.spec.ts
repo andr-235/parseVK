@@ -44,6 +44,10 @@ describe('TelegramAuthService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
+      telegramSession: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn(),
+      },
     } as unknown as PrismaService;
     const service = new TelegramAuthService(
       configMock as never,
@@ -95,6 +99,10 @@ describe('TelegramAuthService', () => {
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      telegramSession: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn(),
       },
     } as unknown as PrismaService;
     const service = new TelegramAuthService(
@@ -164,6 +172,10 @@ describe('TelegramAuthService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
+      telegramSession: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn(),
+      },
     } as unknown as PrismaService;
     const service = new TelegramAuthService(
       configMock as never,
@@ -213,6 +225,10 @@ describe('TelegramAuthService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
+      telegramSession: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn(),
+      },
     } as unknown as PrismaService;
     const configWithoutApi = {
       get: jest.fn(() => undefined),
@@ -235,6 +251,10 @@ describe('TelegramAuthService', () => {
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      telegramSession: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn(),
       },
     } as unknown as PrismaService;
     const service = new TelegramAuthService(

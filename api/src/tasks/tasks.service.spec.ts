@@ -268,8 +268,8 @@ describe('TasksService', () => {
 
       const result = await service.getTasks();
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual(
+      expect(result.tasks).toHaveLength(1);
+      expect(result.tasks[0]).toEqual(
         expect.objectContaining({
           id: 5,
           scope: ParsingScope.SELECTED,

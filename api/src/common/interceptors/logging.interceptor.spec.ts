@@ -71,11 +71,11 @@ describe('LoggingInterceptor', () => {
     expect(result).toBe('ok');
     expect(logSpy).toHaveBeenNthCalledWith(
       1,
-      'Запрос: GET /test — UA: jest-agent — IP: 127.0.0.1',
+      '[test-correlation-id] Запрос: GET /test — UA: jest-agent — IP: 127.0.0.1',
     );
     expect(logSpy).toHaveBeenNthCalledWith(
       2,
-      'Ответ: GET /test — статус 200 — 456b — 100мс',
+      '[test-correlation-id] Ответ: GET /test — статус 200 — 456b — 100мс',
     );
     expect(errorSpy).not.toHaveBeenCalled();
   });
@@ -96,10 +96,10 @@ describe('LoggingInterceptor', () => {
 
     expect(logSpy).toHaveBeenNthCalledWith(
       1,
-      'Запрос: GET /test — UA: jest-agent — IP: 127.0.0.1',
+      '[test-correlation-id] Запрос: GET /test — UA: jest-agent — IP: 127.0.0.1',
     );
     expect(errorSpy).toHaveBeenCalledWith(
-      'Ошибка: GET /test — статус 500 — 150мс — fail',
+      '[test-correlation-id] Ошибка: GET /test — статус 500 — 150мс — fail',
       expect.any(String),
     );
   });

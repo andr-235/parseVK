@@ -218,6 +218,8 @@ describe('GroupsService', () => {
         ...Array.from({ length: 10 }, (_, index) => `club${index + 2}`),
         'errorGroup',
       ];
+      // Всего 13 идентификаторов: 'club1' и '1' нормализуются в '1' (дубликат),
+      // 'club2'-'club11' (10 штук), 'errorGroup' = 12 уникальных
 
       const setTimeoutSpy = jest
         .spyOn(global, 'setTimeout')
@@ -250,6 +252,18 @@ describe('GroupsService', () => {
             name: 'Group',
           } as unknown as IGroupResponse);
         });
+
+      // Настраиваем мок для нормализации идентификаторов
+      identifierValidatorObj.normalizeIdentifier.mockImplementation(
+        (id: string | number) => {
+          if (typeof id === 'string') {
+            if (id.includes('club')) return id.replace('club', '');
+            if (id.includes('public')) return id.replace('public', '');
+            return id;
+          }
+          return id;
+        },
+      );
 
       const result = await service.bulkSaveGroups(identifiers);
 
@@ -312,9 +326,27 @@ describe('GroupsService', () => {
     );
     identifierValidatorObj.parseVkIdentifier.mockImplementation(
       (input: string) => {
-        if (input.includes('club')) return input.replace('club', '');
-        if (input.includes('public')) return input.replace('public', '');
-        return input;
+        const trimmed = input.trim();
+        // Паттерны из реальной реализации
+        if (/vk\.com\/club(\d+)/.test(trimmed)) {
+          return trimmed.match(/vk\.com\/club(\d+)/)?.[1] || trimmed;
+        }
+        if (/vk\.com\/public(\d+)/.test(trimmed)) {
+          return trimmed.match(/vk\.com\/public(\d+)/)?.[1] || trimmed;
+        }
+        if (/vk\.com\/([a-zA-Z0-9_]+)/.test(trimmed)) {
+          return trimmed.match(/vk\.com\/([a-zA-Z0-9_]+)/)?.[1] || trimmed;
+        }
+        if (/^club(\d+)$/.test(trimmed)) {
+          return trimmed.match(/^club(\d+)$/)?.[1] || trimmed;
+        }
+        if (/^public(\d+)$/.test(trimmed)) {
+          return trimmed.match(/^public(\d+)$/)?.[1] || trimmed;
+        }
+        if (/^(\d+)$/.test(trimmed)) {
+          return trimmed.match(/^(\d+)$/)?.[1] || trimmed;
+        }
+        return trimmed;
       },
     );
     expect(
@@ -327,6 +359,11 @@ describe('GroupsService', () => {
       identifierValidatorObj.normalizeIdentifier('https://vk.com/screen_name'),
     ).toBe('screen_name');
     expect(identifierValidatorObj.normalizeIdentifier('club789')).toBe('789');
+    // 'https://vk.com/123' не содержит club/public, но содержит паттерн /vk\.com\/([a-zA-Z0-9_]+)/
+    // который вернет '123'
+    expect(
+      identifierValidatorObj.normalizeIdentifier('https://vk.com/123'),
+    ).toBe('123');
     expect(identifierValidatorObj.normalizeIdentifier('public101')).toBe('101');
     expect(identifierValidatorObj.normalizeIdentifier('  screen_name  ')).toBe(
       'screen_name',

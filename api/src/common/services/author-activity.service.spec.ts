@@ -1,4 +1,4 @@
-import { CommentSource } from '@prisma/client';
+import { CommentSource, MatchSource } from '@prisma/client';
 import { AuthorActivityService } from './author-activity.service';
 import type { PrismaService } from '../../prisma.service';
 import type { CommentEntity } from '../types/comment-entity.type';
@@ -8,6 +8,7 @@ describe('AuthorActivityService - keyword matches', () => {
   let service: AuthorActivityService;
   let prismaMock: {
     comment: { upsert: jest.Mock };
+    post: { findUnique: jest.Mock };
     keyword: { findMany: jest.Mock };
     commentKeywordMatch: {
       findMany: jest.Mock;
@@ -39,6 +40,11 @@ describe('AuthorActivityService - keyword matches', () => {
       comment: {
         upsert: jest.fn().mockResolvedValue({ id: 42 }),
       },
+      post: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 1, ownerId: 1, postId: 1 }),
+      },
       keyword: {
         findMany: jest.fn().mockResolvedValue([
           { id: 11, word: 'ёжик' },
@@ -68,11 +74,11 @@ describe('AuthorActivityService - keyword matches', () => {
 
     expect(prismaMock.keyword.findMany).toHaveBeenCalledTimes(1);
     expect(prismaMock.commentKeywordMatch.findMany).toHaveBeenCalledWith({
-      where: { commentId: 42 },
+      where: { commentId: 42, source: MatchSource.COMMENT },
       select: { keywordId: true },
     });
     expect(prismaMock.commentKeywordMatch.createMany).toHaveBeenCalledWith({
-      data: [{ commentId: 42, keywordId: 11 }],
+      data: [{ commentId: 42, keywordId: 11, source: MatchSource.COMMENT }],
       skipDuplicates: true,
     });
     expect(prismaMock.commentKeywordMatch.deleteMany).not.toHaveBeenCalled();
@@ -96,6 +102,7 @@ describe('AuthorActivityService - keyword matches', () => {
       where: {
         commentId: 42,
         keywordId: { in: [11] },
+        source: MatchSource.COMMENT,
       },
     });
     expect(prismaMock.commentKeywordMatch.createMany).not.toHaveBeenCalled();

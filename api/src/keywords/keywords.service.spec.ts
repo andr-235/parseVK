@@ -169,7 +169,7 @@ describe('KeywordsService', () => {
   });
 
   it('должен разбирать текстовый файл и сохранять категории из него', async () => {
-    const fileContent = 'first\ncategory; second\nthird, marketing\n';
+    const fileContent = 'first\ncategory; second\nthird; marketing\n';
     const bulkSpy = jest
       .spyOn(
         service as unknown as {

@@ -128,7 +128,11 @@ describe('OffsetPaginationStrategy', () => {
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
     filterBuilderObj.mergeWhere.mockReturnValue({});
-    repositoryObj.transaction.mockResolvedValue([comments, 2, 1, 1]);
+    repositoryObj.findMany.mockResolvedValue(comments);
+    repositoryObj.count
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(1);
     mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute(
@@ -144,9 +148,8 @@ describe('OffsetPaginationStrategy', () => {
       unreadCount: 1,
     });
 
-    expect(repositoryObj.transaction).toHaveBeenCalledTimes(1);
-    const arrayMatcher = expect.any(Array) as unknown;
-    expect(repositoryObj.transaction).toHaveBeenCalledWith(arrayMatcher);
+    expect(repositoryObj.findMany).toHaveBeenCalledTimes(1);
+    expect(repositoryObj.count).toHaveBeenCalledTimes(3);
     const calls = repositoryObj.transaction.mock.calls;
     if (calls[0] && Array.isArray(calls[0])) {
       const firstCall = calls[0] as unknown[];
@@ -174,7 +177,11 @@ describe('OffsetPaginationStrategy', () => {
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
     filterBuilderObj.mergeWhere.mockReturnValue({});
-    repositoryObj.transaction.mockResolvedValue([comments, 20, 10, 10]);
+    repositoryObj.findMany.mockResolvedValue(comments);
+    repositoryObj.count
+      .mockResolvedValueOnce(20)
+      .mockResolvedValueOnce(10)
+      .mockResolvedValueOnce(10);
     mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { offset: 0, limit: 10 });

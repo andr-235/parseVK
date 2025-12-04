@@ -126,7 +126,10 @@ describe('CursorPaginationStrategy', () => {
     filterBuilderObj.mergeWhere.mockReturnValue({});
 
     repositoryObj.findMany.mockResolvedValue(comments);
-    repositoryObj.transaction.mockResolvedValue([10, 5, 5]);
+    repositoryObj.count
+      .mockResolvedValueOnce(10)
+      .mockResolvedValueOnce(5)
+      .mockResolvedValueOnce(5);
     mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { limit: 10 });

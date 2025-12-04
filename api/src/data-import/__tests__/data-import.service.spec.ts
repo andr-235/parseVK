@@ -78,7 +78,8 @@ describe('DataImportService', () => {
   });
 
   it('создает объявления последовательно и возвращает отчет', async () => {
-    createMock.mockResolvedValue(createListing({ id: 1 }));
+    findUniqueByUrlMock.mockResolvedValue(null);
+    upsertMock.mockResolvedValue(createListing({ id: 1 }));
 
     const result = await service.importListings({
       listings: [
@@ -99,7 +100,7 @@ describe('DataImportService', () => {
       ],
     } as ListingImportRequestDto);
 
-    expect(createMock).toHaveBeenCalledTimes(2);
+    expect(upsertMock).toHaveBeenCalledTimes(2);
     expect(result).toEqual({
       processed: 2,
       created: 2,
@@ -184,7 +185,8 @@ describe('DataImportService', () => {
   });
 
   it('обрабатывает дубликаты и ошибки вставки', async () => {
-    createMock
+    findUniqueByUrlMock.mockResolvedValue(null);
+    upsertMock
       .mockResolvedValueOnce({ id: 1 })
       .mockImplementationOnce(() => {
         const duplicateError = {
@@ -202,7 +204,7 @@ describe('DataImportService', () => {
       ],
     } as ListingImportRequestDto);
 
-    expect(createMock).toHaveBeenCalledTimes(3);
+    expect(upsertMock).toHaveBeenCalledTimes(3);
     expect(result).toEqual({
       processed: 3,
       created: 1,
