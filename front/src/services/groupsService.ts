@@ -20,9 +20,14 @@ export const groupsService = {
       const response = await fetch(url)
 
       const data = await handleResponse<IGroupsListResponse>(response, 'Failed to fetch groups')
+      if (!Array.isArray(data.items)) {
+        throw new Error(
+          `Invalid API response: expected 'items' to be an array, got ${typeof data.items}. Response: ${JSON.stringify(data)}`
+        )
+      }
       return {
         ...data,
-        items: Array.isArray(data.items) ? data.items : [],
+        items: data.items,
         total: typeof data.total === 'number' ? data.total : 0,
         page: typeof data.page === 'number' ? data.page : 0,
         limit: typeof data.limit === 'number' ? data.limit : (params?.limit ?? 20),

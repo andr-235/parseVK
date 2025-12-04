@@ -18,8 +18,13 @@ const fetchWatchlistAuthors = async () => {
     limit: WATCHLIST_PAGE_SIZE,
     excludeStopped: true,
   })
+  if (!Array.isArray(response.items)) {
+    throw new Error(
+      `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
+    )
+  }
   return {
-    items: Array.isArray(response.items) ? response.items.map(mapWatchlistAuthor) : [],
+    items: response.items.map(mapWatchlistAuthor),
     total: response.total,
     hasMore: response.hasMore,
   }
@@ -41,8 +46,13 @@ export const useWatchlistAuthorsQuery = (enabled: boolean) => {
       return
     }
 
+    if (!Array.isArray(query.data.items)) {
+      console.error('Invalid query data: items is not an array', query.data)
+      return
+    }
+
     useWatchlistStore.setState((state) => {
-      const incoming = Array.isArray(query.data.items) ? query.data.items : []
+      const incoming = query.data.items
       const existing = state.authors
       const incomingIds = new Set(incoming.map((item) => item.id))
       // сохраняем элементы из уже загруженных страниц, но исключаем STOPPED

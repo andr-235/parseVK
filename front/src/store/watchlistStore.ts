@@ -87,9 +87,12 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         limit: pageSize,
         excludeStopped: true,
       })
-      const mapped: WatchlistAuthorCard[] = Array.isArray(response.items)
-        ? response.items.map(mapWatchlistAuthor)
-        : []
+      if (!Array.isArray(response.items)) {
+        throw new Error(
+          `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
+        )
+      }
+      const mapped: WatchlistAuthorCard[] = response.items.map(mapWatchlistAuthor)
 
       set((prev) => ({
         authors: reset

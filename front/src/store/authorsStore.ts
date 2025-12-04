@@ -74,9 +74,14 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
         sortOrder: state.sortBy ? state.sortOrder : undefined,
       })
 
-      const items = Array.isArray(response.items) ? response.items : []
+      if (!Array.isArray(response.items)) {
+        throw new Error(
+          `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
+        )
+      }
+
       set((prev) => ({
-        authors: offset === 0 ? items : [...prev.authors, ...items],
+        authors: offset === 0 ? response.items : [...prev.authors, ...response.items],
         total: response.total,
         hasMore: response.hasMore,
         isLoading: false,
@@ -86,13 +91,13 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
 
       queryClient.setQueryData<AuthorListResponse>(queryKey, (prevData) => {
         if (!prevData || offset === 0) {
-          return { ...response, items }
+          return response
         }
 
         const existingIds = new Set(prevData.items.map((item) => item.id))
         const mergedItems = [
           ...prevData.items,
-          ...items.filter((item) => !existingIds.has(item.id)),
+          ...response.items.filter((item) => !existingIds.has(item.id)),
         ]
 
         return {

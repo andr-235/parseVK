@@ -60,8 +60,13 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     set({ isLoading: true })
     try {
       const response = await groupsService.fetchGroups({ page: 1, limit: state.limit })
+      if (!Array.isArray(response.items)) {
+        throw new Error(
+          `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
+        )
+      }
       set({
-        groups: Array.isArray(response.items) ? response.items : [],
+        groups: response.items,
         total: response.total,
         page: response.page,
         limit: response.limit,
@@ -86,9 +91,13 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     set({ isLoadingMore: true })
     try {
       const response = await groupsService.fetchGroups({ page: nextPage, limit: state.limit })
+      if (!Array.isArray(response.items)) {
+        throw new Error(
+          `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
+        )
+      }
       set((current) => {
-        const items = Array.isArray(response.items) ? response.items : []
-        const combined = [...current.groups, ...items]
+        const combined = [...current.groups, ...response.items]
         const uniqueMap = new Map<number, (typeof combined)[number]>()
         combined.forEach((group) => {
           uniqueMap.set(group.id, group)
@@ -119,8 +128,12 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
 
       while (hasMore) {
         const response = await groupsService.fetchGroups({ page, limit })
-        const items = Array.isArray(response.items) ? response.items : []
-        allGroups.push(...items)
+        if (!Array.isArray(response.items)) {
+          throw new Error(
+            `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
+          )
+        }
+        allGroups.push(...response.items)
         hasMore = response.hasMore
         page++
       }
