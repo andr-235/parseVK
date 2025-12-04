@@ -5,7 +5,16 @@ module.exports = {
     'bash -c "cd api && npm run format"',
     // 2. Линтинг с автоФиксом и блокировкой при предупреждениях (только для измененных файлов)
     (filenames) => {
-      const relativePaths = filenames.map(f => f.replace(/^api\//, 'src/')).join(' ');
+      const relativePaths = filenames
+        .map((f) => {
+          const match = f.match(/(?:^|\/)api\/(.+)$/);
+          if (match) {
+            const path = match[1];
+            return path.startsWith('src/') ? path : `src/${path}`;
+          }
+          return f.replace(/^api\//, 'src/');
+        })
+        .join(' ');
       return `bash -c "cd api && npx eslint --fix --max-warnings=0 ${relativePaths}"`;
     },
   ],
@@ -13,7 +22,16 @@ module.exports = {
   'api/**/*.spec.ts': [
     'bash -c "cd api && npm run format"',
     (filenames) => {
-      const relativePaths = filenames.map(f => f.replace(/^api\//, 'src/')).join(' ');
+      const relativePaths = filenames
+        .map((f) => {
+          const match = f.match(/(?:^|\/)api\/(.+)$/);
+          if (match) {
+            const path = match[1];
+            return path.startsWith('src/') ? path : `src/${path}`;
+          }
+          return f.replace(/^api\//, 'src/');
+        })
+        .join(' ');
       return `bash -c "cd api && npx eslint --fix --max-warnings=0 ${relativePaths}"`;
     },
   ],
@@ -23,7 +41,16 @@ module.exports = {
     'bash -c "cd front && npm run format"',
     // 2. Линтинг с автоФиксом и блокировкой при предупреждений (только для измененных файлов)
     (filenames) => {
-      const relativePaths = filenames.map(f => f.replace(/^front\//, 'src/')).join(' ');
+      const relativePaths = filenames
+        .map((f) => {
+          const match = f.match(/(?:^|\/)front\/(.+)$/);
+          if (match) {
+            const path = match[1];
+            return path.startsWith('src/') ? path : `src/${path}`;
+          }
+          return f.replace(/^front\//, 'src/');
+        })
+        .join(' ');
       return `bash -c "cd front && npx eslint --fix --max-warnings=0 ${relativePaths}"`;
     },
   ],
@@ -36,4 +63,3 @@ module.exports = {
     'npx prettier --write',
   ],
 };
-
