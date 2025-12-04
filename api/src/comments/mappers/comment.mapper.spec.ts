@@ -16,6 +16,13 @@ const createMockComment = (overrides = {}): CommentWithRelations =>
     fromId: 123,
     text: 'Test',
     publishedAt: new Date(),
+    likesCount: null,
+    parentsStack: null,
+    threadCount: null,
+    threadItems: null,
+    attachments: null,
+    replyToUser: null,
+    replyToComment: null,
     isRead: false,
     isDeleted: false,
     source: 'TASK',
@@ -27,7 +34,7 @@ const createMockComment = (overrides = {}): CommentWithRelations =>
     commentKeywordMatches: [],
     post: createMockPost(),
     ...overrides,
-  } as CommentWithRelations);
+  }) as CommentWithRelations;
 
 describe('CommentMapper', () => {
   let mapper: CommentMapper;

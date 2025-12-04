@@ -16,26 +16,34 @@ const createMockPost = () => ({
   group: null,
 });
 
-const createMockComment = (overrides = {}): CommentWithRelations => ({
-  id: 1,
-  postId: 1,
-  ownerId: -123,
-  vkCommentId: 456,
-  fromId: 123,
-  text: 'Test',
-  publishedAt: new Date(),
-  isRead: false,
-  isDeleted: false,
-  source: 'TASK',
-  watchlistAuthorId: null,
-  authorVkId: null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  author: null,
-  commentKeywordMatches: [],
-  post: createMockPost(),
-  ...overrides,
-});
+const createMockComment = (overrides = {}): CommentWithRelations =>
+  ({
+    id: 1,
+    postId: 1,
+    ownerId: -123,
+    vkCommentId: 456,
+    fromId: 123,
+    text: 'Test',
+    publishedAt: new Date(),
+    likesCount: null,
+    parentsStack: null,
+    threadCount: null,
+    threadItems: null,
+    attachments: null,
+    replyToUser: null,
+    replyToComment: null,
+    isRead: false,
+    isDeleted: false,
+    source: 'TASK',
+    watchlistAuthorId: null,
+    authorVkId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    author: null,
+    commentKeywordMatches: [],
+    post: createMockPost(),
+    ...overrides,
+  }) as CommentWithRelations;
 
 describe('CursorPaginationStrategy', () => {
   let strategy: CursorPaginationStrategy;
