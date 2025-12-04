@@ -97,7 +97,11 @@ describe('TaskDescriptionParser', () => {
       skippedGroupIds: [],
     });
 
-    const parsed = JSON.parse(result);
+    const parsed = JSON.parse(result) as {
+      scope: string;
+      groupIds: number[];
+      postLimit: number;
+    };
     expect(parsed.scope).toBe('all');
     expect(parsed.groupIds).toEqual([1, 2]);
     expect(parsed.postLimit).toBe(10);

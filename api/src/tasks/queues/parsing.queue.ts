@@ -2,11 +2,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import type { ParsingTaskJobData } from '../interfaces/parsing-task-job.interface';
-import {
-  PARSING_QUEUE,
-  PARSING_RETRY_OPTIONS,
-  PARSING_JOB_TIMEOUT,
-} from './parsing.constants';
+import { PARSING_QUEUE, PARSING_RETRY_OPTIONS } from './parsing.constants';
 
 /**
  * Сервис для управления очередью задач парсинга

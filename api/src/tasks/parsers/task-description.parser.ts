@@ -129,10 +129,14 @@ export class TaskDescriptionParser {
       return null;
     }
 
-    if (value === 'all' || value === ParsingScope.ALL) {
+    const normalized = value.toLowerCase();
+    if (normalized === 'all' || normalized === ParsingScope.ALL.toLowerCase()) {
       return ParsingScope.ALL;
     }
-    if (value === 'selected' || value === ParsingScope.SELECTED) {
+    if (
+      normalized === 'selected' ||
+      normalized === ParsingScope.SELECTED.toLowerCase()
+    ) {
       return ParsingScope.SELECTED;
     }
 

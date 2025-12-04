@@ -17,13 +17,7 @@ async function bootstrap() {
     const configService = app.get(ConfigService<AppConfig>);
 
     // Security headers
-    app.use(
-      helmet() as unknown as (
-        req: unknown,
-        res: unknown,
-        next: () => void,
-      ) => void,
-    );
+    app.use(helmet() as any);
 
     app.use(json({ limit: '2mb' }));
     app.use(urlencoded({ limit: '2mb', extended: true }));

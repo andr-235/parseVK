@@ -9,10 +9,7 @@ import { ParsingQueueService } from './parsing-queue.service';
 import { TasksGateway } from './tasks.gateway';
 import { ParsingQueueProducer } from './queues/parsing.queue';
 import { ParsingProcessor } from './queues/parsing.processor';
-import {
-  PARSING_QUEUE,
-  PARSING_RATE_LIMITER,
-} from './queues/parsing.constants';
+import { PARSING_QUEUE } from './queues/parsing.constants';
 import { TaskCancellationService } from './task-cancellation.service';
 import { CommonModule } from '../common/common.module';
 import { TaskAutomationService } from './automation/task-automation.service';

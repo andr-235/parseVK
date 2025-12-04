@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ParsingScope } from '../dto/create-parsing-task.dto';
-import type { ParsingStats } from '../interfaces/parsing-stats.interface';
 import type { ParsedTaskDescription } from '../parsers/task-description.parser';
 import { ParsingTaskRunner } from '../parsing-task.runner';
 import { TaskDescriptionParser } from '../parsers/task-description.parser';

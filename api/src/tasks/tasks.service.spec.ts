@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 jest.mock('vk-io', () => ({
   APIError: class MockApiError extends Error {
     code = 0;
@@ -5,6 +6,7 @@ jest.mock('vk-io', () => ({
 }));
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import type { Task } from '@prisma/client';
 import { TasksService } from './tasks.service';
 import { ParsingScope } from './dto/create-parsing-task.dto';
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
@@ -13,18 +15,26 @@ import { TaskMapper } from './mappers/task.mapper';
 import { TaskDescriptionParser } from './parsers/task-description.parser';
 import { TaskContextBuilder } from './builders/task-context.builder';
 import { TaskCancellationService } from './task-cancellation.service';
+import type { ITasksRepository } from './interfaces/tasks-repository.interface';
+import { ParsingTaskRunner } from './parsing-task.runner';
+import type { ParsedTaskDescription } from './parsers/task-description.parser';
+import type {
+  TaskDetail,
+  TaskSummary,
+  TaskStatus,
+} from './interfaces/task.interface';
 
 describe('TasksService', () => {
   let service: TasksService;
-  let prismaMock: any;
-  let runnerMock: any;
+  let repositoryMock: jest.Mocked<ITasksRepository>;
+  let runnerMock: jest.Mocked<ParsingTaskRunner>;
   let queueMock: jest.Mocked<ParsingQueueService>;
   let taskMapperMock: jest.Mocked<TaskMapper>;
   let descriptionParserMock: jest.Mocked<TaskDescriptionParser>;
   let contextBuilderMock: jest.Mocked<TaskContextBuilder>;
   let cancellationServiceMock: jest.Mocked<TaskCancellationService>;
 
-  const createTaskRecord = (overrides: Partial<any> = {}) => ({
+  const createTaskRecord = (overrides: Partial<Task> = {}): Task => ({
     id: 1,
     title: 'task',
     description: JSON.stringify({
@@ -43,49 +53,53 @@ describe('TasksService', () => {
   });
 
   beforeEach(() => {
-    prismaMock = {
-      task: {
-        create: jest.fn(),
-        findMany: jest.fn(),
-        findUnique: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn(),
-      },
-    };
+    repositoryMock = {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    } as jest.Mocked<ITasksRepository>;
 
     runnerMock = {
       resolveGroups: jest.fn(),
       buildTaskTitle: jest.fn(),
-    };
+    } as jest.Mocked<ParsingTaskRunner>;
 
     queueMock = {
       enqueue: jest.fn(),
       remove: jest.fn(),
-    } as unknown as jest.Mocked<ParsingQueueService>;
+      getStats: jest.fn(),
+      pause: jest.fn(),
+      resume: jest.fn(),
+    } as jest.Mocked<ParsingQueueService>;
 
     taskMapperMock = {
       mapToDetail: jest.fn(),
       mapToSummary: jest.fn(),
       parseTaskStatus: jest.fn(),
       resolveTaskStatus: jest.fn(),
-    } as any;
+    } as jest.Mocked<TaskMapper>;
 
     descriptionParserMock = {
       parse: jest.fn(),
       stringify: jest.fn(),
-    } as any;
+    } as jest.Mocked<TaskDescriptionParser>;
 
     contextBuilderMock = {
       buildResumeContext: jest.fn(),
-    } as any;
+    } as jest.Mocked<TaskContextBuilder>;
 
     cancellationServiceMock = {
       requestCancel: jest.fn(),
       clear: jest.fn(),
-    } as any;
+      isCancelled: jest.fn(),
+      throwIfCancelled: jest.fn(),
+    } as jest.Mocked<TaskCancellationService>;
 
     service = new TasksService(
-      prismaMock,
+      repositoryMock,
       runnerMock,
       queueMock,
       cancellationServiceMock,
@@ -111,7 +125,7 @@ describe('TasksService', () => {
           postLimit: 5,
         }),
       });
-      prismaMock.task.create.mockResolvedValue(createdTask);
+      repositoryMock.create.mockResolvedValue(createdTask);
 
       const parsed = {
         scope: ParsingScope.ALL,
@@ -142,18 +156,16 @@ describe('TasksService', () => {
         error: null,
         skippedGroupsMessage: null,
         description: null,
-      } as any);
+      } as TaskDetail);
 
       const result = await service.createParsingTask({ postLimit: 5 });
 
-      expect(prismaMock.task.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          title: 'title',
-          totalItems: groups.length,
-          status: 'pending',
-        }),
+      expect(repositoryMock.create.mock.calls[0]?.[0]).toMatchObject({
+        title: 'title',
+        totalItems: groups.length,
+        status: 'pending',
       });
-      expect(queueMock.enqueue).toHaveBeenCalledWith({
+      expect(queueMock.enqueue.mock.calls[0]?.[0]).toEqual({
         taskId: createdTask.id,
         scope: ParsingScope.ALL,
         groupIds: [],
@@ -161,8 +173,8 @@ describe('TasksService', () => {
       });
       expect(result.id).toBe(createdTask.id);
       expect(result.status).toBe('pending');
-      expect(descriptionParserMock.parse).toHaveBeenCalled();
-      expect(taskMapperMock.mapToDetail).toHaveBeenCalled();
+      expect(descriptionParserMock.parse.mock.calls.length).toBeGreaterThan(0);
+      expect(taskMapperMock.mapToDetail.mock.calls.length).toBeGreaterThan(0);
     });
 
     it('throws when groups are not available', async () => {
@@ -171,8 +183,8 @@ describe('TasksService', () => {
       await expect(service.createParsingTask({})).rejects.toBeInstanceOf(
         NotFoundException,
       );
-      expect(prismaMock.task.create).not.toHaveBeenCalled();
-      expect(queueMock.enqueue).not.toHaveBeenCalled();
+      expect(repositoryMock.create.mock.calls.length).toBe(0);
+      expect(queueMock.enqueue.mock.calls.length).toBe(0);
     });
   });
 
@@ -197,24 +209,33 @@ describe('TasksService', () => {
           }),
         }),
       ];
-      prismaMock.task.findMany.mockResolvedValue(tasks);
+      repositoryMock.findMany.mockResolvedValue(tasks);
 
-      descriptionParserMock.parse.mockImplementation((task: any) => {
-        const parsed = JSON.parse(task.description || '{}');
+      descriptionParserMock.parse.mockImplementation((task: Task) => {
+        const parsed = JSON.parse(task.description || '{}') as Record<
+          string,
+          unknown
+        >;
         return {
-          scope: parsed.scope || null,
-          groupIds: parsed.groupIds || [],
-          postLimit: parsed.postLimit || null,
-          stats: parsed.stats || null,
-          error: parsed.error || null,
-          skippedGroupsMessage: parsed.skippedGroupsMessage || null,
-          skippedGroupIds: parsed.skippedGroupIds || [],
-        };
+          scope: (parsed.scope as ParsingScope | undefined) || null,
+          groupIds: (parsed.groupIds as number[] | undefined) || [],
+          postLimit: (parsed.postLimit as number | undefined) || null,
+          stats: (parsed.stats as ParsingStats | undefined) || null,
+          error: (parsed.error as string | undefined) || null,
+          skippedGroupsMessage:
+            (parsed.skippedGroupsMessage as string | undefined) || null,
+          skippedGroupIds:
+            (parsed.skippedGroupIds as number[] | undefined) || [],
+        } as ParsedTaskDescription;
       });
       taskMapperMock.parseTaskStatus.mockReturnValue(null);
       taskMapperMock.resolveTaskStatus.mockReturnValue('pending');
       taskMapperMock.mapToSummary.mockImplementation(
-        (task: any, parsed: any, status: any) => ({
+        (
+          task: Task,
+          parsed: ParsedTaskDescription,
+          status: TaskStatus,
+        ): TaskSummary => ({
           id: task.id,
           title: task.title,
           status,
@@ -251,7 +272,7 @@ describe('TasksService', () => {
   describe('getTask', () => {
     it('returns detailed task data', async () => {
       const task = createTaskRecord({ id: 7 });
-      prismaMock.task.findUnique.mockResolvedValue(task);
+      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
 
       const parsed = {
         scope: ParsingScope.ALL,
@@ -282,7 +303,7 @@ describe('TasksService', () => {
         error: null,
         skippedGroupsMessage: null,
         description: task.description,
-      } as any);
+      } as TaskDetail);
 
       const result = await service.getTask(7);
 
@@ -291,7 +312,7 @@ describe('TasksService', () => {
     });
 
     it('throws when task does not exist', async () => {
-      prismaMock.task.findUnique.mockResolvedValue(null);
+      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(service.getTask(123)).rejects.toBeInstanceOf(
         NotFoundException,
@@ -323,9 +344,9 @@ describe('TasksService', () => {
         }),
       });
 
-      prismaMock.task.findUnique.mockResolvedValue(task);
+      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('failed');
-      contextBuilderMock.buildResumeContext.mockResolvedValue({
+      (contextBuilderMock.buildResumeContext as jest.Mock).mockResolvedValue({
         scope: ParsingScope.SELECTED,
         groupIds: [11, 12, 13],
         postLimit: 20,
@@ -353,11 +374,13 @@ describe('TasksService', () => {
         }),
       );
 
-      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
-        ...task,
-        ...data,
-        updatedAt: new Date('2024-01-02T00:00:00Z'),
-      }));
+      repositoryMock.update.mockImplementation((where, data) => {
+        return Promise.resolve({
+          ...task,
+          ...data,
+          updatedAt: new Date('2024-01-02T00:00:00Z'),
+        } as Task);
+      });
 
       taskMapperMock.mapToDetail.mockReturnValue({
         id: 15,
@@ -376,27 +399,29 @@ describe('TasksService', () => {
         error: null,
         skippedGroupsMessage: 'Пропущены группы с отключенной стеной: 999',
         description: task.description,
-      } as any);
+      } as TaskDetail);
 
       const result = await service.resumeTask(task.id);
 
-      expect(prismaMock.task.update).toHaveBeenCalledWith({
-        where: { id: task.id },
-        data: expect.objectContaining({
-          status: 'pending',
-          completed: false,
-          processedItems: 1,
-          totalItems: 3,
-        }),
+      expect(repositoryMock.update.mock.calls[0]?.[0]).toEqual({ id: task.id });
+      expect(repositoryMock.update.mock.calls[0]?.[1]).toMatchObject({
+        status: 'pending',
+        completed: false,
+        processedItems: 1,
+        totalItems: 3,
       });
 
-      const updateCall = prismaMock.task.update.mock.calls[0][0];
-      const savedDescription = JSON.parse(updateCall.data.description);
-      expect(savedDescription.error).toBeUndefined();
-      expect(savedDescription.groupIds).toEqual([11, 12, 13]);
-      expect(savedDescription.skippedGroupIds).toEqual([999]);
+      const updateCall = repositoryMock.update.mock.calls[0];
+      if (updateCall && updateCall[1]) {
+        const savedDescription = JSON.parse(
+          (updateCall[1] as { description?: string }).description || '{}',
+        ) as Record<string, unknown>;
+        expect(savedDescription.error).toBeUndefined();
+        expect(savedDescription.groupIds).toEqual([11, 12, 13]);
+        expect(savedDescription.skippedGroupIds).toEqual([999]);
+      }
 
-      expect(queueMock.enqueue).toHaveBeenCalledWith({
+      expect(queueMock.enqueue.mock.calls[0]?.[0]).toEqual({
         taskId: task.id,
         scope: ParsingScope.SELECTED,
         groupIds: [11, 12, 13],
@@ -419,9 +444,9 @@ describe('TasksService', () => {
           postLimit: 10,
         }),
       });
-      prismaMock.task.findUnique.mockResolvedValue(task);
+      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('running');
-      contextBuilderMock.buildResumeContext.mockResolvedValue({
+      (contextBuilderMock.buildResumeContext as jest.Mock).mockResolvedValue({
         scope: ParsingScope.ALL,
         groupIds: [],
         postLimit: 10,
@@ -445,10 +470,12 @@ describe('TasksService', () => {
           postLimit: 10,
         }),
       );
-      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
-        ...task,
-        ...data,
-      }));
+      repositoryMock.update.mockImplementation((where, data) => {
+        return Promise.resolve({
+          ...task,
+          ...data,
+        } as Task);
+      });
       taskMapperMock.mapToDetail.mockReturnValue({
         id: 21,
         title: task.title,
@@ -466,7 +493,7 @@ describe('TasksService', () => {
         error: null,
         skippedGroupsMessage: null,
         description: task.description,
-      } as any);
+      } as TaskDetail);
 
       await expect(service.resumeTask(task.id)).resolves.toEqual(
         expect.objectContaining({
@@ -475,13 +502,11 @@ describe('TasksService', () => {
         }),
       );
 
-      expect(prismaMock.task.update).toHaveBeenCalledWith({
-        where: { id: task.id },
-        data: expect.objectContaining({
-          status: 'pending',
-        }),
+      expect(repositoryMock.update.mock.calls[0]?.[0]).toEqual({ id: task.id });
+      expect(repositoryMock.update.mock.calls[0]?.[1]).toMatchObject({
+        status: 'pending',
       });
-      expect(queueMock.enqueue).toHaveBeenCalledWith({
+      expect(queueMock.enqueue.mock.calls[0]?.[0]).toEqual({
         taskId: task.id,
         scope: ParsingScope.ALL,
         groupIds: [],
@@ -501,9 +526,9 @@ describe('TasksService', () => {
           postLimit: 15,
         }),
       });
-      prismaMock.task.findUnique.mockResolvedValue(task);
+      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('pending');
-      contextBuilderMock.buildResumeContext.mockResolvedValue({
+      (contextBuilderMock.buildResumeContext as jest.Mock).mockResolvedValue({
         scope: ParsingScope.SELECTED,
         groupIds: [10, 11],
         postLimit: 15,
@@ -527,10 +552,12 @@ describe('TasksService', () => {
           postLimit: 15,
         }),
       );
-      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
-        ...task,
-        ...data,
-      }));
+      repositoryMock.update.mockImplementation((where, data) => {
+        return Promise.resolve({
+          ...task,
+          ...data,
+        } as Task);
+      });
       taskMapperMock.mapToDetail.mockReturnValue({
         id: 22,
         title: task.title,
@@ -548,7 +575,7 @@ describe('TasksService', () => {
         error: null,
         skippedGroupsMessage: null,
         description: task.description,
-      } as any);
+      } as TaskDetail);
 
       await expect(service.resumeTask(task.id)).resolves.toEqual(
         expect.objectContaining({
@@ -557,7 +584,7 @@ describe('TasksService', () => {
         }),
       );
 
-      expect(queueMock.enqueue).toHaveBeenCalledWith({
+      expect(queueMock.enqueue.mock.calls[0]?.[0]).toEqual({
         taskId: task.id,
         scope: ParsingScope.SELECTED,
         groupIds: [10, 11],
@@ -567,7 +594,7 @@ describe('TasksService', () => {
 
     it('throws when task already completed', async () => {
       const task = createTaskRecord({ id: 2, status: 'done', completed: true });
-      prismaMock.task.findUnique.mockResolvedValue(task);
+      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('done');
 
       await expect(service.resumeTask(2)).rejects.toBeInstanceOf(
@@ -586,7 +613,7 @@ describe('TasksService', () => {
         }),
       });
 
-      prismaMock.task.findUnique.mockResolvedValue(task);
+      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('failed');
       contextBuilderMock.buildResumeContext.mockRejectedValue(
         new NotFoundException('Нет доступных групп для парсинга'),
@@ -595,7 +622,7 @@ describe('TasksService', () => {
       await expect(service.resumeTask(3)).rejects.toBeInstanceOf(
         NotFoundException,
       );
-      expect(prismaMock.task.update).not.toHaveBeenCalled();
+      expect(repositoryMock.update.mock.calls.length).toBe(0);
       expect(queueMock.enqueue).not.toHaveBeenCalled();
     });
   });
@@ -614,8 +641,14 @@ describe('TasksService', () => {
         }),
       });
 
-      prismaMock.task.findUnique.mockResolvedValue(task);
-      contextBuilderMock.buildResumeContext.mockResolvedValue({
+      const findUniqueMock = repositoryMock.findUnique as jest.Mock<
+        Promise<Task | null>,
+        [{ id: number }]
+      >;
+      void findUniqueMock.mockResolvedValue(task);
+      const buildResumeContextMock =
+        contextBuilderMock.buildResumeContext as jest.Mock;
+      void buildResumeContextMock.mockResolvedValue({
         scope: ParsingScope.SELECTED,
         groupIds: [1, 2, 3],
         postLimit: 10,
@@ -640,10 +673,12 @@ describe('TasksService', () => {
         }),
       );
 
-      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
-        ...task,
-        ...data,
-      }));
+      repositoryMock.update.mockImplementation((where, data) => {
+        return Promise.resolve({
+          ...task,
+          ...data,
+        } as Task);
+      });
 
       taskMapperMock.mapToDetail.mockReturnValue({
         id: 33,
@@ -662,19 +697,17 @@ describe('TasksService', () => {
         error: null,
         skippedGroupsMessage: null,
         description: task.description,
-      } as any);
+      } as TaskDetail);
 
       const result = await service.refreshTask(task.id);
 
-      expect(prismaMock.task.update).toHaveBeenCalledWith({
-        where: { id: task.id },
-        data: expect.objectContaining({
-          status: 'done',
-          completed: true,
-          progress: 1,
-          processedItems: 3,
-          totalItems: 3,
-        }),
+      expect(repositoryMock.update.mock.calls[0]?.[0]).toEqual({ id: task.id });
+      expect(repositoryMock.update.mock.calls[0]?.[1]).toMatchObject({
+        status: 'done',
+        completed: true,
+        progress: 1,
+        processedItems: 3,
+        totalItems: 3,
       });
       expect(queueMock.enqueue).not.toHaveBeenCalled();
       expect(result.status).toBe('done');
@@ -694,8 +727,14 @@ describe('TasksService', () => {
         }),
       });
 
-      prismaMock.task.findUnique.mockResolvedValue(task);
-      contextBuilderMock.buildResumeContext.mockResolvedValue({
+      const findUniqueMock = repositoryMock.findUnique as jest.Mock<
+        Promise<Task | null>,
+        [{ id: number }]
+      >;
+      void findUniqueMock.mockResolvedValue(task);
+      const buildResumeContextMock =
+        contextBuilderMock.buildResumeContext as jest.Mock;
+      void buildResumeContextMock.mockResolvedValue({
         scope: ParsingScope.ALL,
         groupIds: [],
         postLimit: 5,
@@ -720,10 +759,12 @@ describe('TasksService', () => {
         }),
       );
 
-      prismaMock.task.update.mockImplementation(async ({ data }: any) => ({
-        ...task,
-        ...data,
-      }));
+      repositoryMock.update.mockImplementation((where, data) => {
+        return Promise.resolve({
+          ...task,
+          ...data,
+        } as Task);
+      });
 
       taskMapperMock.mapToDetail.mockReturnValue({
         id: 34,
@@ -742,20 +783,20 @@ describe('TasksService', () => {
         error: null,
         skippedGroupsMessage: null,
         description: task.description,
-      } as any);
+      } as TaskDetail);
 
       const result = await service.refreshTask(task.id);
 
-      expect(prismaMock.task.update).toHaveBeenCalledWith({
-        where: { id: task.id },
-        data: expect.objectContaining({
+      expect(repositoryMock.update).toHaveBeenCalledWith(
+        { id: task.id },
+        expect.objectContaining({
           status: 'pending',
           completed: false,
           processedItems: 1,
           totalItems: 3,
         }),
-      });
-      expect(queueMock.enqueue).toHaveBeenCalledWith({
+      );
+      expect(queueMock.enqueue.mock.calls[0]?.[0]).toEqual({
         taskId: task.id,
         scope: ParsingScope.ALL,
         groupIds: [],

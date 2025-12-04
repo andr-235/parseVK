@@ -16,7 +16,7 @@ describe('TelegramChatMapper', () => {
       username: 'testchannel',
       megagroup: false,
       participantsCount: 1000,
-    } as any);
+    } as Parameters<typeof Api.Channel>[0]);
 
     const result = mapper.resolveChat(channel);
 
@@ -35,7 +35,7 @@ describe('TelegramChatMapper', () => {
       title: 'Test Supergroup',
       megagroup: true,
       participantsCount: 500,
-    } as any);
+    } as Parameters<typeof Api.Channel>[0]);
 
     const result = mapper.resolveChat(supergroup);
 
@@ -52,7 +52,7 @@ describe('TelegramChatMapper', () => {
       id: BigInt(789),
       title: 'Test Chat',
       participantsCount: 50,
-    } as any);
+    } as Parameters<typeof Api.Chat>[0]);
 
     const result = mapper.resolveChat(chat);
 
@@ -70,7 +70,7 @@ describe('TelegramChatMapper', () => {
       firstName: 'John',
       lastName: 'Doe',
       username: 'johndoe',
-    } as any);
+    } as Parameters<typeof Api.User>[0]);
 
     const result = mapper.resolveChat(user);
 

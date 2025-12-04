@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { TelegramMemberMapper } from './telegram-member.mapper';
 import { Api } from 'telegram';
 import { TelegramMemberStatus } from '@prisma/client';
@@ -13,9 +14,15 @@ describe('TelegramMemberMapper', () => {
     it('должен маппить ChannelParticipantCreator', () => {
       const participant = new Api.ChannelParticipantCreator({
         userId: BigInt(123),
-      } as any);
+      } as Parameters<typeof Api.ChannelParticipantCreator>[0]);
 
-      const result = mapper.mapChannelParticipantStatus(participant);
+      const result: {
+        status: TelegramMemberStatus;
+        isAdmin: boolean;
+        isOwner: boolean;
+        joinedAt: Date | null;
+        leftAt: Date | null;
+      } = mapper.mapChannelParticipantStatus(participant);
 
       expect(result).toEqual({
         status: TelegramMemberStatus.CREATOR,
@@ -30,9 +37,15 @@ describe('TelegramMemberMapper', () => {
       const participant = new Api.ChannelParticipantAdmin({
         userId: BigInt(123),
         date: 1609459200,
-      } as any);
+      } as Parameters<typeof Api.ChannelParticipantAdmin>[0]);
 
-      const result = mapper.mapChannelParticipantStatus(participant);
+      const result: {
+        status: TelegramMemberStatus;
+        isAdmin: boolean;
+        isOwner: boolean;
+        joinedAt: Date | null;
+        leftAt: Date | null;
+      } = mapper.mapChannelParticipantStatus(participant);
 
       expect(result).toEqual({
         status: TelegramMemberStatus.ADMINISTRATOR,
@@ -45,12 +58,20 @@ describe('TelegramMemberMapper', () => {
 
     it('должен маппить ChannelParticipantBanned', () => {
       const participant = new Api.ChannelParticipantBanned({
-        peer: new Api.PeerUser({ userId: BigInt(123) }),
+        peer: new Api.PeerUser({ userId: BigInt(123) } as Parameters<
+          typeof Api.PeerUser
+        >[0]),
         left: false,
         date: 1609459200,
-      } as any);
+      } as Parameters<typeof Api.ChannelParticipantBanned>[0]);
 
-      const result = mapper.mapChannelParticipantStatus(participant);
+      const result: {
+        status: TelegramMemberStatus;
+        isAdmin: boolean;
+        isOwner: boolean;
+        joinedAt: Date | null;
+        leftAt: Date | null;
+      } = mapper.mapChannelParticipantStatus(participant);
 
       expect(result.status).toBe(TelegramMemberStatus.RESTRICTED);
       expect(result.isAdmin).toBe(false);

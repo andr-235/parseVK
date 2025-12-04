@@ -4,8 +4,6 @@ import type {
   TaskSummary,
   TaskStatus,
 } from '../interfaces/task.interface';
-import type { ParsingScope } from '../dto/create-parsing-task.dto';
-import type { ParsingStats } from '../interfaces/parsing-stats.interface';
 import type { ParsedTaskDescription } from '../parsers/task-description.parser';
 
 export interface PrismaTaskRecord {

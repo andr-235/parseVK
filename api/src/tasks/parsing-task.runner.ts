@@ -714,7 +714,7 @@ export class ParsingTaskRunner {
         where: { id: group.id },
         data: { wall: 0 },
       });
-    } catch (_error) {
+    } catch {
       // Игнорируем ошибки сохранения, чтобы задача могла продолжить работу.
     }
   }
@@ -801,8 +801,16 @@ export class ParsingTaskRunner {
       const collectedIds = this.collectAuthorIds(items);
       collectedIds.forEach((id) => authorIds.add(id));
 
-      if (response.profiles?.length) {
-        response.profiles.forEach((profile) => authorIds.add(profile.id));
+      if (response.profiles && Array.isArray(response.profiles)) {
+        const profiles = response.profiles as Array<{ id: number }>;
+        for (const profile of profiles) {
+          if (profile && typeof profile === 'object' && 'id' in profile) {
+            const profileId = profile.id;
+            if (typeof profileId === 'number') {
+              authorIds.add(profileId);
+            }
+          }
+        }
       }
 
       offset += items.length;
