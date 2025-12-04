@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ConfigModule } from './config/config.module';
 import { CacheModule } from './common/cache/cache.module';
 import { CommonModule } from './common/common.module';
 import { VkModule } from './vk/vk.module';
@@ -20,10 +20,7 @@ import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: undefined,
-    }),
+    ConfigModule,
     ScheduleModule.forRoot(),
     // BullMQ глобальная конфигурация
     BullModule.forRoot({

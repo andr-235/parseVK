@@ -238,6 +238,7 @@ describe('WatchlistService', () => {
       settingsId: 1,
       limit: 10,
     });
+    expect(authorActivityService.saveAuthors).toHaveBeenCalledWith([321]);
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(authorRefresherMock.refreshAuthorRecord).toHaveBeenCalledWith(
       record,
