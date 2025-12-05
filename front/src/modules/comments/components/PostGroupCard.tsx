@@ -120,28 +120,32 @@ export function PostGroupCard({
       </div>
 
       {/* Comments List */}
-      {/* Show comments only if showKeywordComments is enabled (either alone or with posts) */}
-      {isExpanded && showKeywordComments && (
-        <div className="divide-y divide-border/40">
-          <div className="px-4 py-2 bg-muted/5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Найденные комментарии ({comments.length})
+      {/* Show comments if:
+          - showKeywordComments is true (enabled), OR
+          - both filters are false (no filter mode - show all comments) */}
+      {isExpanded &&
+        (showKeywordComments === true ||
+          (showKeywordComments === false && showKeywordPosts === false)) && (
+          <div className="divide-y divide-border/40">
+            <div className="px-4 py-2 bg-muted/5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Найденные комментарии ({comments.length})
+            </div>
+            {comments.map(({ comment, matchedKeywords, index }) => (
+              <CommentCard
+                key={`post-group-${comment.id}-${index}`}
+                comment={comment}
+                index={index}
+                matchedKeywords={matchedKeywords}
+                toggleReadStatus={toggleReadStatus}
+                onAddToWatchlist={onAddToWatchlist}
+                isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
+                showKeywordComments={showKeywordComments}
+                showKeywordPosts={showKeywordPosts}
+                hidePostContext={true}
+              />
+            ))}
           </div>
-          {comments.map(({ comment, matchedKeywords, index }) => (
-            <CommentCard
-              key={`post-group-${comment.id}-${index}`}
-              comment={comment}
-              index={index}
-              matchedKeywords={matchedKeywords}
-              toggleReadStatus={toggleReadStatus}
-              onAddToWatchlist={onAddToWatchlist}
-              isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
-              showKeywordComments={showKeywordComments}
-              showKeywordPosts={showKeywordPosts}
-              hidePostContext={true}
-            />
-          ))}
-        </div>
-      )}
+        )}
     </div>
   )
 }
