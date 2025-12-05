@@ -4,6 +4,7 @@ import ThemeToggle from '@/components/ThemeToggle'
 import { SidebarCollapseButton } from './SidebarCollapseButton'
 import { getPrimaryNavItemClasses } from './utils'
 import type { SidebarItem } from './types'
+import packageJson from '../../../package.json'
 
 interface SidebarFooterProps {
   items: SidebarItem[]
@@ -33,7 +34,9 @@ export function SidebarFooter({ items, isCollapsed, onExpand }: SidebarFooterPro
       >
         {!isCollapsed && <ThemeToggle />}
         {isCollapsed && <SidebarCollapseButton isCollapsed={isCollapsed} onToggle={onExpand} />}
-        {!isCollapsed && <div className="text-xs text-sidebar-foreground/40">v1.0</div>}
+        {!isCollapsed && (
+          <div className="text-xs text-sidebar-foreground/40">v{packageJson.version}</div>
+        )}
       </div>
       {isCollapsed && (
         <div className="mt-2 flex justify-center">
