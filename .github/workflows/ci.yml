@@ -9,72 +9,58 @@ on:
       - main
 
 jobs:
-  lint-backend:
-    name: Lint Backend
+  lint:
+    name: Lint ${{ matrix.project }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [backend, frontend]
+        include:
+          - project: backend
+            working-directory: api
+            cache-path: api/package-lock.json
+          - project: frontend
+            working-directory: front
+            cache-path: front/package-lock.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: api/package-lock.json
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.cache-path }}
       - name: Install dependencies
-        working-directory: api
+        working-directory: ${{ matrix.working-directory }}
         run: npm ci
       - name: Run ESLint
-        working-directory: api
+        working-directory: ${{ matrix.working-directory }}
         run: npm run lint
 
-  lint-frontend:
-    name: Lint Frontend
+  type-check:
+    name: Type Check ${{ matrix.project }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [backend, frontend]
+        include:
+          - project: backend
+            working-directory: api
+            cache-path: api/package-lock.json
+          - project: frontend
+            working-directory: front
+            cache-path: front/package-lock.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: front/package-lock.json
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.cache-path }}
       - name: Install dependencies
-        working-directory: front
-        run: npm ci
-      - name: Run ESLint
-        working-directory: front
-        run: npm run lint
-
-  type-check-backend:
-    name: Type Check Backend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: api/package-lock.json
-      - name: Install dependencies
-        working-directory: api
+        working-directory: ${{ matrix.working-directory }}
         run: npm ci
       - name: Type check
-        working-directory: api
-        run: npx tsc --noEmit
-
-  type-check-frontend:
-    name: Type Check Frontend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: front/package-lock.json
-      - name: Install dependencies
-        working-directory: front
-        run: npm ci
-      - name: Type check
-        working-directory: front
+        working-directory: ${{ matrix.working-directory }}
         run: npx tsc --noEmit
 
   test-backend:
@@ -112,9 +98,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: api/package-lock.json
+      - name: Cache Prisma Client
+        uses: actions/cache@v4
+        with:
+          path: api/node_modules/.prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('api/prisma/schema.prisma') }}
+          restore-keys: |
+            prisma-${{ runner.os }}-
       - name: Install dependencies
         working-directory: api
         run: npm ci
@@ -135,8 +128,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: front/package-lock.json
       - name: Install dependencies
         working-directory: front
@@ -146,21 +139,27 @@ jobs:
         run: npm test
 
   format-check:
-    name: Format Check
+    name: Format Check ${{ matrix.project }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [backend, frontend]
+        include:
+          - project: backend
+            working-directory: api
+            cache-path: api/package-lock.json
+          - project: frontend
+            working-directory: front
+            cache-path: front/package-lock.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - name: Check backend formatting
-        working-directory: api
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.cache-path }}
+      - name: Check formatting
+        working-directory: ${{ matrix.working-directory }}
         run: |
           npm ci
-          npm run format:check || (echo "Backend code is not formatted. Run 'npm run format' to fix." && exit 1)
-      - name: Check frontend formatting
-        working-directory: front
-        run: |
-          npm ci
-          npm run format:check || (echo "Frontend code is not formatted. Run 'npm run format' to fix." && exit 1)
-
+          npm run format:check || (echo "${{ matrix.project }} code is not formatted. Run 'npm run format' to fix." && exit 1)

@@ -266,50 +266,7 @@ jobs:
         timeout-minutes: 1
         run: |
           STEP_START=$(date +%s)
-          echo "=== Checking port availability ==="
-
-          PORT_ERROR=0
-
-          check_port() {
-            local port=$1
-            local service=$2
-            local is_critical=${3:-false}
-            
-            if command -v netstat > /dev/null 2>&1; then
-              if netstat -tuln 2>/dev/null | grep -q ":$port "; then
-                if [ "$is_critical" = "true" ]; then
-                  echo "Error: Port $port ($service) is already in use and is critical"
-                  PORT_ERROR=1
-                  return 1
-                else
-                  echo "Warning: Port $port is already in use (may be from previous deployment)"
-                  return 0
-                fi
-              fi
-            elif command -v ss > /dev/null 2>&1; then
-              if ss -tuln 2>/dev/null | grep -q ":$port "; then
-                if [ "$is_critical" = "true" ]; then
-                  echo "Error: Port $port ($service) is already in use and is critical"
-                  PORT_ERROR=1
-                  return 1
-                else
-                  echo "Warning: Port $port is already in use (may be from previous deployment)"
-                  return 0
-                fi
-              fi
-            fi
-            echo "Port $port ($service) is available"
-            return 0
-          }
-
-          check_port 3000 "API" true
-          check_port 8080 "Frontend" true
-
-          if [ $PORT_ERROR -eq 1 ]; then
-            echo "Error: Critical ports are in use. Please stop conflicting services."
-            exit 1
-          fi
-
+          bash .github/scripts/check-ports.sh
           STEP_END=$(date +%s)
           echo "Port check completed in $((STEP_END - STEP_START))s"
 
@@ -374,6 +331,9 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Building containers ==="
+
+          export DOCKER_BUILDKIT=1
+          export COMPOSE_DOCKER_CLI_BUILD=1
 
           if ! docker compose build --parallel; then
             echo "Error: Build failed"
@@ -512,82 +472,7 @@ jobs:
         timeout-minutes: 5
         run: |
           STEP_START=$(date +%s)
-          echo "=== Waiting for services to be healthy ==="
-
-          if command -v docker > /dev/null 2>&1 && docker compose version > /dev/null 2>&1; then
-            if docker compose wait --timeout 120 2>/dev/null; then
-              echo "All services with healthchecks are healthy (via docker compose wait)"
-            else
-              echo "Warning: docker compose wait failed or timed out, falling back to manual check"
-              
-              MAX_ATTEMPTS=30
-              ATTEMPT=0
-              ALL_HEALTHY=false
-              
-              while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-                ATTEMPT=$((ATTEMPT + 1))
-                echo "Attempt $ATTEMPT/$MAX_ATTEMPTS"
-                
-                UNHEALTHY_COUNT=0
-                TOTAL_COUNT=0
-                
-                for container in $(docker compose ps -q); do
-                  if [ -z "$container" ]; then
-                    continue
-                  fi
-                  
-                  TOTAL_COUNT=$((TOTAL_COUNT + 1))
-                  STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
-                  HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
-                  HAS_HEALTHCHECK=$(docker inspect --format='{{.Config.Healthcheck}}' "$container" 2>/dev/null | grep -q "Test" && echo "yes" || echo "no")
-                  NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
-                  
-                  if [ "$STATUS" != "running" ]; then
-                    echo "  $NAME: $STATUS (waiting...)"
-                    UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
-                  elif [ "$HAS_HEALTHCHECK" = "yes" ]; then
-                    if [ "$HEALTH" = "healthy" ]; then
-                      echo "  $NAME: running (healthy)"
-                    else
-                      echo "  $NAME: running ($HEALTH - waiting...)"
-                      UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
-                    fi
-                  else
-                    echo "  $NAME: running (no healthcheck)"
-                  fi
-                done
-                
-                if [ $UNHEALTHY_COUNT -eq 0 ] && [ $TOTAL_COUNT -gt 0 ]; then
-                  ALL_HEALTHY=true
-                  break
-                fi
-                
-                sleep 2
-              done
-              
-              if [ "$ALL_HEALTHY" != "true" ]; then
-                echo "Error: Not all containers are healthy"
-                echo "=== Container status ==="
-                docker compose ps
-                echo "=== Failed container logs ==="
-                for container in $(docker compose ps -q); do
-                  STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
-                  HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
-                  NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
-                  if [ "$STATUS" != "running" ] || ([ "$HEALTH" != "healthy" ] && [ "$HEALTH" != "none" ]); then
-                    echo "=== Logs for $NAME ==="
-                    docker compose logs --tail=100 "$(echo $NAME | sed 's/^parsevk-//' | sed 's/-[0-9]*$//')" || docker logs "$container" --tail=100 || true
-                  fi
-                done
-                exit 1
-              fi
-            fi
-          else
-            echo "Error: Docker or docker compose not available"
-            exit 1
-          fi
-
-          echo "All containers are healthy"
+          bash .github/scripts/health-check.sh
           STEP_END=$(date +%s)
           echo "Health wait completed in $((STEP_END - STEP_START))s"
 
@@ -597,101 +482,7 @@ jobs:
         timeout-minutes: 3
         run: |
           STEP_START=$(date +%s)
-          echo "=== Health Checks ==="
-
-          if ! command -v curl > /dev/null 2>&1; then
-            echo "Error: curl is not installed on the host"
-            exit 1
-          fi
-
-          MAX_RETRIES=5
-          RETRY_DELAY=3
-
-          API_CONTAINER=$(docker compose ps -q api 2>/dev/null || echo "")
-          FRONTEND_CONTAINER=$(docker compose ps -q frontend 2>/dev/null || echo "")
-
-          check_api() {
-            local retry=0
-            while [ $retry -lt $MAX_RETRIES ]; do
-              if [ -n "$API_CONTAINER" ]; then
-                if docker exec "$API_CONTAINER" sh -c "command -v curl > /dev/null 2>&1 && curl -f -s -m 10 http://localhost:3000/api/health > /dev/null 2>&1 || wget -q -O- --timeout=10 http://localhost:3000/api/health > /dev/null 2>&1" 2>/dev/null; then
-                  echo "✅ API health check passed (via container)"
-                  return 0
-                fi
-              fi
-              
-              if curl -f -s -m 10 http://localhost:3000/api/health > /dev/null 2>&1; then
-                echo "✅ API health check passed (via localhost)"
-                return 0
-              fi
-              
-              retry=$((retry + 1))
-              if [ $retry -lt $MAX_RETRIES ]; then
-                echo "⚠️ API health check failed, retry $retry/$MAX_RETRIES in ${RETRY_DELAY}s..."
-                sleep $RETRY_DELAY
-              fi
-            done
-            echo "❌ API health check failed after $MAX_RETRIES attempts"
-            return 1
-          }
-
-          check_frontend() {
-            local retry=0
-            while [ $retry -lt $MAX_RETRIES ]; do
-              if [ -n "$FRONTEND_CONTAINER" ]; then
-                if docker exec "$FRONTEND_CONTAINER" sh -c "command -v curl > /dev/null 2>&1 && curl -f -s -m 10 http://localhost:80 > /dev/null 2>&1 || wget -q -O- --timeout=10 http://localhost:80 > /dev/null 2>&1" 2>/dev/null; then
-                  echo "✅ Frontend health check passed (via container)"
-                  return 0
-                fi
-              fi
-              
-              if curl -f -s -m 10 http://localhost:8080 > /dev/null 2>&1; then
-                echo "✅ Frontend health check passed (via localhost)"
-                return 0
-              fi
-              
-              retry=$((retry + 1))
-              if [ $retry -lt $MAX_RETRIES ]; then
-                echo "⚠️ Frontend health check failed, retry $retry/$MAX_RETRIES in ${RETRY_DELAY}s..."
-                sleep $RETRY_DELAY
-              fi
-            done
-            echo "❌ Frontend health check failed after $MAX_RETRIES attempts"
-            return 1
-          }
-
-          API_OK=false
-          FRONTEND_OK=false
-
-          if check_api; then
-            API_OK=true
-          else
-            echo "API health check failed. Container logs:"
-            docker compose logs --tail=20 api 2>/dev/null || true
-          fi
-
-          if check_frontend; then
-            FRONTEND_OK=true
-          else
-            echo "Frontend health check failed. Container logs:"
-            docker compose logs --tail=20 frontend 2>/dev/null || true
-          fi
-
-          echo ""
-          echo "=== Container logs (last 30 lines) ==="
-          docker compose logs --tail=30
-
-          if [ "$API_OK" != "true" ] || [ "$FRONTEND_OK" != "true" ]; then
-            echo ""
-            echo "=== Container status ==="
-            docker compose ps
-            echo ""
-            echo "❌ Health checks failed"
-            exit 1
-          fi
-
-          echo ""
-          echo "✅ All health checks passed"
+          bash .github/scripts/http-health-check.sh
           STEP_END=$(date +%s)
           echo "Health check completed in $((STEP_END - STEP_START))s"
 
@@ -750,81 +541,18 @@ jobs:
             sleep 10
             
             echo "=== Waiting for services to be healthy after rollback ==="
-            MAX_ATTEMPTS=30
-            ATTEMPT=0
-            ALL_HEALTHY=false
-            
-            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-              ATTEMPT=$((ATTEMPT + 1))
-              echo "Health check attempt $ATTEMPT/$MAX_ATTEMPTS"
-              
-              UNHEALTHY_COUNT=0
-              TOTAL_COUNT=0
-              
-              for container in $(docker compose ps -q); do
-                if [ -z "$container" ]; then
-                  continue
-                fi
-                
-                TOTAL_COUNT=$((TOTAL_COUNT + 1))
-                STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
-                HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
-                HAS_HEALTHCHECK=$(docker inspect --format='{{.Config.Healthcheck}}' "$container" 2>/dev/null | grep -q "Test" && echo "yes" || echo "no")
-                NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
-                
-                if [ "$STATUS" != "running" ]; then
-                  echo "  $NAME: $STATUS (waiting...)"
-                  UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
-                elif [ "$HAS_HEALTHCHECK" = "yes" ]; then
-                  if [ "$HEALTH" = "healthy" ]; then
-                    echo "  $NAME: running (healthy)"
-                  else
-                    echo "  $NAME: running ($HEALTH - waiting...)"
-                    UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
-                  fi
-                else
-                  echo "  $NAME: running (no healthcheck)"
-                fi
-              done
-              
-              if [ $UNHEALTHY_COUNT -eq 0 ] && [ $TOTAL_COUNT -gt 0 ]; then
-                ALL_HEALTHY=true
-                break
-              fi
-              
-              sleep 2
-            done
-            
-            if [ "$ALL_HEALTHY" != "true" ]; then
+            set +e
+            bash .github/scripts/health-check.sh || {
               echo "Warning: Not all containers are healthy after rollback"
               docker compose ps
               docker compose logs --tail=30
-            fi
+            }
+            set -e
             
             echo "=== Rollback health check ==="
-            if command -v curl > /dev/null 2>&1; then
-              API_CONTAINER=$(docker compose ps -q api 2>/dev/null || echo "")
-              if [ -n "$API_CONTAINER" ]; then
-                if docker exec "$API_CONTAINER" sh -c "command -v curl > /dev/null 2>&1 && curl -f -s -m 10 http://localhost:3000/api/health > /dev/null 2>&1 || wget -q -O- --timeout=10 http://localhost:3000/api/health > /dev/null 2>&1" 2>/dev/null; then
-                  echo "✅ API health check passed after rollback"
-                elif curl -f -s -m 10 http://localhost:3000/api/health > /dev/null 2>&1; then
-                  echo "✅ API health check passed after rollback (via localhost)"
-                else
-                  echo "⚠️ API health check failed after rollback"
-                fi
-              fi
-              
-              FRONTEND_CONTAINER=$(docker compose ps -q frontend 2>/dev/null || echo "")
-              if [ -n "$FRONTEND_CONTAINER" ]; then
-                if docker exec "$FRONTEND_CONTAINER" sh -c "command -v curl > /dev/null 2>&1 && curl -f -s -m 10 http://localhost:80 > /dev/null 2>&1 || wget -q -O- --timeout=10 http://localhost:80 > /dev/null 2>&1" 2>/dev/null; then
-                  echo "✅ Frontend health check passed after rollback"
-                elif curl -f -s -m 10 http://localhost:8080 > /dev/null 2>&1; then
-                  echo "✅ Frontend health check passed after rollback (via localhost)"
-                else
-                  echo "⚠️ Frontend health check failed after rollback"
-                fi
-              fi
-            fi
+            set +e
+            bash .github/scripts/http-health-check.sh || echo "⚠️ Health checks failed after rollback (non-critical)"
+            set -e
             
             echo "=== Checking rollback status ==="
             docker compose ps
