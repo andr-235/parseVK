@@ -62,7 +62,13 @@ export const keywordsService = {
   async getAllKeywords(): Promise<IKeywordResponse[]> {
     try {
       const response = await fetch(`${API_URL}/keywords`)
-      return await handleResponse<IKeywordResponse[]>(response, 'Failed to fetch keywords')
+      const result = await handleResponse<{
+        keywords: IKeywordResponse[]
+        total: number
+        page: number
+        limit: number
+      }>(response, 'Failed to fetch keywords')
+      return result.keywords
     } catch (error) {
       toast.error('Не удалось загрузить ключевые слова')
       throw error
