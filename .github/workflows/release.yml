@@ -1,0 +1,170 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Тип версии"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Get current version
+        id: get_version
+        run: |
+          API_VERSION=$(node -p "require('./api/package.json').version")
+          FRONT_VERSION=$(node -p "require('./front/package.json').version")
+
+          if [ "$API_VERSION" != "$FRONT_VERSION" ]; then
+            echo "Warning: API version ($API_VERSION) differs from Frontend version ($FRONT_VERSION)"
+            echo "Using API version as base"
+            BASE_VERSION="$API_VERSION"
+          else
+            BASE_VERSION="$API_VERSION"
+          fi
+
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          echo "current_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $BASE_VERSION"
+          if [ -n "$LAST_TAG" ]; then
+            echo "Last tag: $LAST_TAG"
+          fi
+
+      - name: Calculate new version
+        id: calculate_version
+        run: |
+          CURRENT_VERSION="${{ steps.get_version.outputs.current_version }}"
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+
+          case "$VERSION_TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Update version in package.json files
+        run: |
+          NEW_VERSION="${{ steps.calculate_version.outputs.new_version }}"
+
+          cd api
+          npm version $NEW_VERSION --no-git-tag-version
+          cd ..
+
+          cd front
+          npm version $NEW_VERSION --no-git-tag-version
+          cd ..
+
+          echo "Updated versions to $NEW_VERSION"
+
+      - name: Configure git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Create commit with version update
+        id: create_commit
+        run: |
+          git add api/package.json front/package.json
+          git commit -m "chore: bump version to ${{ steps.calculate_version.outputs.new_version }}"
+          COMMIT_SHA=$(git rev-parse HEAD)
+          echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "Created commit: $COMMIT_SHA"
+
+      - name: Create tag
+        id: create_tag
+        run: |
+          NEW_VERSION="${{ steps.calculate_version.outputs.new_version }}"
+          TAG_NAME="v$NEW_VERSION"
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Created tag: $TAG_NAME"
+
+      - name: Generate changelog
+        id: generate_changelog
+        run: |
+          NEW_VERSION="${{ steps.calculate_version.outputs.new_version }}"
+          TAG_NAME="v$NEW_VERSION"
+          LAST_TAG="${{ steps.get_version.outputs.last_tag }}"
+
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tag found, generating changelog from all commits"
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --reverse)
+          else
+            echo "Generating changelog from $LAST_TAG to HEAD"
+            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --reverse)
+          fi
+
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="No changes since last release"
+          fi
+
+          {
+            echo "## Release $TAG_NAME"
+            echo ""
+            echo "### Changes"
+            echo "$CHANGELOG"
+          } > CHANGELOG.md
+
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat CHANGELOG.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Push changes
+        run: |
+          git push origin main
+          git push origin "${{ steps.create_tag.outputs.tag_name }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag_name }}
+          name: Release ${{ steps.calculate_version.outputs.new_version }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
