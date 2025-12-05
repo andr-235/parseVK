@@ -13,8 +13,13 @@ export const tasksService = {
         return []
       }
 
-      const data = await handleResponse<IParsingTaskSummary[]>(response, 'Failed to fetch tasks')
-      return data
+      const data = await handleResponse<{
+        tasks: IParsingTaskSummary[]
+        total: number
+        page: number
+        limit: number
+      }>(response, 'Failed to fetch tasks')
+      return data.tasks
     } catch (error) {
       toast.error('Не удалось загрузить задачи')
       throw error
