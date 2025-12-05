@@ -1,6 +1,9 @@
 name: Create Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       version_type:
@@ -56,11 +59,29 @@ jobs:
             echo "Last tag: $LAST_TAG"
           fi
 
+      - name: Check if should skip release
+        id: check_skip
+        run: |
+          LAST_COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+          if echo "$LAST_COMMIT_MSG" | grep -q "chore: bump version"; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Skipping release: last commit is a version bump"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "Proceeding with release"
+          fi
+
       - name: Calculate new version
         id: calculate_version
+        if: steps.check_skip.outputs.skip != 'true'
         run: |
           CURRENT_VERSION="${{ steps.get_version.outputs.current_version }}"
-          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          else
+            VERSION_TYPE="patch"
+          fi
 
           IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
           MAJOR="${VERSION_PARTS[0]}"
@@ -87,6 +108,7 @@ jobs:
           echo "New version: $NEW_VERSION"
 
       - name: Update version in package.json files
+        if: steps.check_skip.outputs.skip != 'true'
         run: |
           NEW_VERSION="${{ steps.calculate_version.outputs.new_version }}"
 
@@ -101,12 +123,14 @@ jobs:
           echo "Updated versions to $NEW_VERSION"
 
       - name: Configure git
+        if: steps.check_skip.outputs.skip != 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
       - name: Create commit with version update
         id: create_commit
+        if: steps.check_skip.outputs.skip != 'true'
         run: |
           git add api/package.json front/package.json
           git commit -m "chore: bump version to ${{ steps.calculate_version.outputs.new_version }}"
@@ -116,6 +140,7 @@ jobs:
 
       - name: Create tag
         id: create_tag
+        if: steps.check_skip.outputs.skip != 'true'
         run: |
           NEW_VERSION="${{ steps.calculate_version.outputs.new_version }}"
           TAG_NAME="v$NEW_VERSION"
@@ -125,6 +150,7 @@ jobs:
 
       - name: Generate changelog
         id: generate_changelog
+        if: steps.check_skip.outputs.skip != 'true'
         run: |
           NEW_VERSION="${{ steps.calculate_version.outputs.new_version }}"
           TAG_NAME="v$NEW_VERSION"
@@ -154,11 +180,13 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Push changes
+        if: steps.check_skip.outputs.skip != 'true'
         run: |
           git push origin main
           git push origin "${{ steps.create_tag.outputs.tag_name }}"
 
       - name: Create GitHub Release
+        if: steps.check_skip.outputs.skip != 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.create_tag.outputs.tag_name }}
