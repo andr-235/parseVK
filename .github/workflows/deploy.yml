@@ -370,7 +370,7 @@ jobs:
       - name: Build containers
         id: build_containers
         working-directory: /opt/parseVK
-        timeout-minutes: 25
+        timeout-minutes: 60
         run: |
           STEP_START=$(date +%s)
           echo "=== Building containers ==="

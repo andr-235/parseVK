@@ -40,23 +40,22 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chrome
 ENV CHROME_BIN=/usr/bin/chrome
 
-RUN set -eux; \
+RUN set -eux && \
+    apk update && \
     apk add --no-cache \
       chromium \
       nss \
       freetype \
       harfbuzz \
-      ttf-freefont; \
-    CHROMIUM_BIN="$(command -v chromium-browser || true)"; \
-    if [ -z "$CHROMIUM_BIN" ]; then \
-      CHROMIUM_BIN="$(command -v chromium || true)"; \
-    fi; \
+      ttf-freefont && \
+    CHROMIUM_BIN="$(command -v chromium-browser || command -v chromium || true)" && \
     if [ -z "$CHROMIUM_BIN" ]; then \
       echo "Chromium binary not found after installation" >&2; \
       exit 1; \
-    fi; \
-    ln -sf "$CHROMIUM_BIN" /usr/bin/chrome; \
-    ln -sf "$CHROMIUM_BIN" /usr/bin/google-chrome
+    fi && \
+    ln -sf "$CHROMIUM_BIN" /usr/bin/chrome && \
+    ln -sf "$CHROMIUM_BIN" /usr/bin/google-chrome && \
+    rm -rf /var/cache/apk/*
 
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
