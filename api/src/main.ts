@@ -39,15 +39,29 @@ async function bootstrap() {
     const corsOrigins =
       configService.get('corsOrigins', { infer: true }) ||
       'http://localhost:8080,http://localhost:3000';
-    const allowedOrigins = String(corsOrigins).split(',');
+    const allowedOrigins = String(corsOrigins)
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0);
+
+    logger.log(`Разрешённые CORS origins: ${allowedOrigins.join(', ')}`);
+
     app.enableCors({
       origin: (
         origin: string | undefined,
         callback: (err: Error | null, allow?: boolean) => void,
       ) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        // Same-origin запросы (без заголовка Origin) разрешаем
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        // Проверяем наличие origin в списке разрешённых
+        if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
+          logger.warn(`CORS заблокирован для origin: ${origin}`);
           callback(new Error('Not allowed by CORS'));
         }
       },
