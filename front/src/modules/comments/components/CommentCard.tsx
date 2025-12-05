@@ -61,13 +61,16 @@ function CommentCard({
 
   const isFilterActive = showKeywordComments !== undefined || showKeywordPosts !== undefined
 
-  // Show post context if not explicitly hidden
-  // Post context provides important information about where the comment was made
-  const shouldShowPost = !hidePostContext
+  // Show post context logic:
+  // - If hidePostContext is true, never show post (used when comment is inside PostGroupCard)
+  // - If only showKeywordComments filter is active, hide post (show only comments)
+  // - If showKeywordPosts is active (alone or with comments), show post
+  // - If no filters are active, show post by default
+  const shouldShowPost = !hidePostContext && (!isFilterActive || showKeywordPosts === true)
 
-  // Show comment if:
-  // - No filters are active, OR
-  // - showKeywordComments filter is enabled
+  // Show comment logic:
+  // - If only showKeywordPosts is active (without showKeywordComments), hide comment (show only post)
+  // - Otherwise, show comment
   const shouldShowComment = !isFilterActive || showKeywordComments === true
 
   const postAttachments = useMemo(() => {

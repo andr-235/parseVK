@@ -120,7 +120,8 @@ export function PostGroupCard({
       </div>
 
       {/* Comments List */}
-      {isExpanded && (
+      {/* Show comments only if showKeywordComments is enabled (either alone or with posts) */}
+      {isExpanded && showKeywordComments && (
         <div className="divide-y divide-border/40">
           <div className="px-4 py-2 bg-muted/5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Найденные комментарии ({comments.length})

@@ -146,9 +146,10 @@ function CommentsTableCard({
       const hasPostMatch = item.matchedKeywords.some((kw) => kw.source === 'POST')
       const hasPostData = item.comment.postText || item.comment.postGroup
 
-      // Group if we have post matches and want to show posts, or if we have multiple comments from same post
-      const shouldGroupByPost =
-        hasPostMatch && hasPostData && (showKeywordPosts || showKeywordComments)
+      // Group by post only if showKeywordPosts filter is active
+      // - If only showKeywordComments: don't group (show standalone comments)
+      // - If showKeywordPosts (alone or with comments): group by posts
+      const shouldGroupByPost = showKeywordPosts && hasPostMatch && hasPostData
 
       if (shouldGroupByPost) {
         // Create a unique key for the post
