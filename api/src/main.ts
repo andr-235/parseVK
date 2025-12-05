@@ -45,6 +45,7 @@ async function bootstrap() {
       .filter((origin) => origin.length > 0);
 
     logger.log(`Разрешённые CORS origins: ${allowedOrigins.join(', ')}`);
+    logger.log('CORS: разрешены origins из локальной сети (192.168.*)');
 
     app.enableCors({
       origin: (
@@ -60,10 +61,20 @@ async function bootstrap() {
         // Проверяем наличие origin в списке разрешённых
         if (allowedOrigins.includes(origin)) {
           callback(null, true);
-        } else {
-          logger.warn(`CORS заблокирован для origin: ${origin}`);
-          callback(new Error('Not allowed by CORS'));
+          return;
         }
+
+        // Разрешаем origins из локальной сети (192.168.*)
+        if (
+          origin.startsWith('http://192.168.') ||
+          origin.startsWith('https://192.168.')
+        ) {
+          callback(null, true);
+          return;
+        }
+
+        logger.warn(`CORS заблокирован для origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
