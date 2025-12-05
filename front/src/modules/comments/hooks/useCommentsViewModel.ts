@@ -160,9 +160,47 @@ const useCommentsViewModel = () => {
 
   const filteredComments = useMemo(() => {
     return comments.filter((comment) => {
-      return shouldIncludeByRead(comment, readFilter) && matchesSearch(comment, searchLower)
+      // Filter by read status
+      if (!shouldIncludeByRead(comment, readFilter)) {
+        return false
+      }
+
+      // Filter by search term
+      if (!matchesSearch(comment, searchLower)) {
+        return false
+      }
+
+      // Filter by keywords if filters are active
+      const matched = getMatchedKeywords(comment)
+      const hasKeywords = matched.length > 0
+
+      if (shouldFilterByKeywordComments || shouldFilterByKeywordPosts) {
+        if (!hasKeywords) {
+          return false
+        }
+
+        // If filtering by comments only, check if comment has keyword matches
+        if (shouldFilterByKeywordComments && !shouldFilterByKeywordPosts) {
+          const hasCommentMatch = matched.some((kw) => kw.source !== 'POST')
+          if (!hasCommentMatch) {
+            return false
+          }
+        }
+
+        // If filtering by posts only, check if post has keyword matches
+        if (shouldFilterByKeywordPosts && !shouldFilterByKeywordComments) {
+          const hasPostMatch = matched.some((kw) => kw.source === 'POST')
+          if (!hasPostMatch) {
+            return false
+          }
+        }
+
+        // If both filters are active, any keyword match is fine
+      }
+
+      return true
     })
-  }, [comments, readFilter, searchLower])
+  }, [comments, readFilter, searchLower, shouldFilterByKeywordComments, shouldFilterByKeywordPosts])
 
   const commentIndexMap = useMemo(
     () =>
