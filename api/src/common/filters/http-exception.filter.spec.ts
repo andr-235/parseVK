@@ -148,7 +148,7 @@ describe('HttpExceptionFilter', () => {
         timestamp: timestampMatcher,
         path: '/test',
         method: 'GET',
-        message: ['Внутренняя ошибка сервера'],
+        message: ['Произошла непредвиденная ошибка'],
       }),
     );
     expect(errorSpy).toHaveBeenCalledWith(

@@ -1,11 +1,16 @@
-import { renderHook, act } from '@testing-library/react'
-import { useTheme } from '../useTheme'
-import { useThemeStore } from '@/store/themeStore'
+// Мокаем apiConfig перед импортами
+jest.mock('@/lib/apiConfig', () => ({
+  API_URL: '/api',
+}))
 
 // Мокаем store
 jest.mock('@/store/themeStore', () => ({
   useThemeStore: jest.fn(),
 }))
+
+import { renderHook, act } from '@testing-library/react'
+import { useTheme } from '../useTheme'
+import { useThemeStore } from '@/store/themeStore'
 
 describe('useTheme', () => {
   beforeEach(() => {
@@ -61,3 +66,4 @@ describe('useTheme', () => {
     expect(mockToggleTheme).toHaveBeenCalledTimes(1)
   })
 })
+

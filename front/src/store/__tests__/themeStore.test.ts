@@ -1,10 +1,11 @@
 import { renderHook, act } from '@testing-library/react'
+import { useShallow } from 'zustand/react/shallow'
 import { useThemeStore } from '../themeStore'
 
 describe('themeStore', () => {
   beforeEach(() => {
-    // Очищаем localStorage перед каждым тестом
     localStorage.clear()
+    useThemeStore.setState({ isDarkMode: false })
   })
 
   it('should initialize with isDarkMode false', () => {
@@ -15,10 +16,12 @@ describe('themeStore', () => {
 
   it('should toggle theme', () => {
     const { result } = renderHook(() =>
-      useThemeStore((state) => ({
-        isDarkMode: state.isDarkMode,
-        toggleTheme: state.toggleTheme,
-      }))
+      useThemeStore(
+        useShallow((state) => ({
+          isDarkMode: state.isDarkMode,
+          toggleTheme: state.toggleTheme,
+        }))
+      )
     )
 
     expect(result.current.isDarkMode).toBe(false)
@@ -36,10 +39,12 @@ describe('themeStore', () => {
 
   it('should persist theme to localStorage', () => {
     const { result } = renderHook(() =>
-      useThemeStore((state) => ({
-        isDarkMode: state.isDarkMode,
-        toggleTheme: state.toggleTheme,
-      }))
+      useThemeStore(
+        useShallow((state) => ({
+          isDarkMode: state.isDarkMode,
+          toggleTheme: state.toggleTheme,
+        }))
+      )
     )
 
     act(() => {
@@ -56,13 +61,13 @@ describe('themeStore', () => {
   })
 
   it('should restore theme from localStorage', () => {
-    // Устанавливаем значение в localStorage
     localStorage.setItem(
       'theme-storage',
       JSON.stringify({ state: { isDarkMode: true }, version: 0 })
     )
 
-    // Создаем новый store instance
+    useThemeStore.persist.rehydrate()
+
     const { result } = renderHook(() => useThemeStore((state) => state.isDarkMode))
 
     expect(result.current).toBe(true)
