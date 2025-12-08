@@ -23,9 +23,6 @@ export class PrismaService
       );
     }
 
-    // Логируем только факт наличия DATABASE_URL, без самого значения
-    this.logger.log('DATABASE_URL настроен');
-
     super({
       datasources: {
         db: {
@@ -33,6 +30,9 @@ export class PrismaService
         },
       },
     });
+
+    // Логируем только факт наличия DATABASE_URL, без самого значения
+    this.logger.log('DATABASE_URL настроен');
   }
 
   async onModuleInit() {
