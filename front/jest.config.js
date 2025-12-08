@@ -9,7 +9,7 @@ export default {
     '<rootDir>/src/**/*.(test|spec).(js|jsx|ts|tsx)',
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
+    '^.+\\.(ts|tsx)$': ['<rootDir>/jest.transform.cjs', {
       useESM: true,
       tsconfig: '<rootDir>/tsconfig.test.json',
       diagnostics: false,

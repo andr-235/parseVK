@@ -21,3 +21,25 @@ Object.defineProperty(globalThis, 'import', {
 jest.mock('@/lib/apiConfig', () => ({
   API_URL: '/api',
 }))
+
+// Глобальный мок для queryClient, чтобы избежать проблем с import.meta.env в тестах
+jest.mock('@/lib/queryClient', () => {
+  const { QueryClient } = require('@tanstack/react-query')
+  return {
+    queryClient: new QueryClient({
+      defaultOptions: {
+        queries: {
+          staleTime: 30_000,
+          gcTime: 1000 * 60 * 10,
+          refetchOnWindowFocus: false,
+          refetchOnReconnect: true,
+          retry: 1,
+        },
+        mutations: {
+          retry: 1,
+        },
+      },
+    }),
+    getQueryPersister: () => null,
+  }
+})
