@@ -29,9 +29,22 @@ export function validate(config: Record<string, unknown>): AppConfig {
 
   if (errors.length > 0) {
     const errorMessages = errors
-      .map((error) => Object.values(error.constraints || {}).join(', '))
+      .map((error) => {
+        const property = error.property;
+        const constraints = Object.values(error.constraints || {}).join(', ');
+        return `${property}: ${constraints}`;
+      })
       .join('; ');
-    throw new Error(`Configuration validation failed: ${errorMessages}`);
+    throw new Error(
+      `Ошибка валидации конфигурации: ${errorMessages}. Проверьте переменные окружения.`,
+    );
+  }
+
+  // Дополнительная проверка обязательных полей
+  if (!validatedConfig.vkToken) {
+    throw new Error(
+      'VK_TOKEN обязателен для работы приложения. Установите переменную окружения VK_TOKEN.',
+    );
   }
 
   return validatedConfig;

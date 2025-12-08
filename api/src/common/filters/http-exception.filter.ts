@@ -44,8 +44,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         `${request.method} ${request.url}`,
       );
     } else {
+      const errorString = String(exception);
+      message = 'Произошла непредвиденная ошибка';
       this.logger.error(
-        `Необработанная ошибка неизвестного типа: ${String(exception)}`,
+        `Необработанная ошибка неизвестного типа: ${errorString}`,
         undefined,
         `${request.method} ${request.url}`,
       );
