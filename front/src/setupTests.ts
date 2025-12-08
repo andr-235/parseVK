@@ -24,6 +24,7 @@ jest.mock('@/lib/apiConfig', () => ({
 
 // Глобальный мок для queryClient, чтобы избежать проблем с import.meta.env в тестах
 jest.mock('@/lib/queryClient', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { QueryClient } = require('@tanstack/react-query')
   return {
     queryClient: new QueryClient({
