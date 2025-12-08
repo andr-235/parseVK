@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import type {
   PhotoAnalysisItemDto,
@@ -30,6 +30,8 @@ export interface IPhotoAnalysisRepository {
 
 @Injectable()
 export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
+  private readonly logger = new Logger(PhotoAnalysisRepository.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findByAuthorId(authorId: number): Promise<PhotoAnalysisItemDto[]> {
@@ -176,9 +178,9 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       });
     } catch (error) {
       // Логирование ошибки, но не прерываем выполнение
-      console.error(
+      this.logger.warn(
         `Не удалось обновить дату проверки автора ${authorId}`,
-        error,
+        error instanceof Error ? error.stack : undefined,
       );
     }
   }

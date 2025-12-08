@@ -87,7 +87,11 @@ async function bootstrap() {
     await app.listen(port);
     logger.log(`API запущено на порту ${port}`);
   } catch (error) {
-    console.error('Failed to start application:', error);
+    const logger = new Logger('Bootstrap');
+    logger.error(
+      'Не удалось запустить приложение',
+      error instanceof Error ? error.stack : undefined,
+    );
     process.exit(1);
   }
 }

@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
@@ -7,15 +12,19 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  private readonly logger = new Logger(PrismaService.name);
+
   constructor(private readonly configService: ConfigService) {
     const databaseUrl = configService.get<string>('DATABASE_URL');
-    console.log('DATABASE_URL:', databaseUrl);
 
     if (!databaseUrl) {
       throw new Error(
         'DATABASE_URL is not defined. Please set it in your environment variables.',
       );
     }
+
+    // Логируем только факт наличия DATABASE_URL, без самого значения
+    this.logger.log('DATABASE_URL настроен');
 
     super({
       datasources: {
