@@ -36,15 +36,21 @@ async function bootstrap() {
     );
 
     // CORS configuration
-    const corsOrigins =
-      configService.get('corsOrigins', { infer: true }) ||
-      'http://localhost:8080,http://localhost:3000';
-    const allowedOrigins = String(corsOrigins)
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter((origin) => origin.length > 0);
+    const corsOrigins = configService.get('corsOrigins', { infer: true });
+    const allowedOrigins = corsOrigins
+      ? String(corsOrigins)
+          .split(',')
+          .map((origin) => origin.trim())
+          .filter((origin) => origin.length > 0)
+      : [];
 
-    logger.log(`Разрешённые CORS origins: ${allowedOrigins.join(', ')}`);
+    if (allowedOrigins.length > 0) {
+      logger.log(`Разрешённые CORS origins: ${allowedOrigins.join(', ')}`);
+    } else {
+      logger.log(
+        'CORS: явные origins не заданы, используются правила по умолчанию',
+      );
+    }
     logger.log('CORS: разрешены origins из локальной сети (192.168.*)');
 
     app.enableCors({
