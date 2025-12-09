@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { AUTHORS_CONSTANTS } from '../authors.constants';
 
 interface ParsedCounters {
@@ -70,7 +69,7 @@ export class AuthorCountersParser {
     }
 
     if (this.isObject(value) && !Array.isArray(value)) {
-      return this.parseObjectLastSeen(value as Record<string, unknown>);
+      return this.parseObjectLastSeen(value);
     }
 
     return null;
