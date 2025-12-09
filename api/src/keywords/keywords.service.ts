@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { Prisma, type Keyword } from '@prisma/client';
 import {
   IKeywordResponse,
   IDeleteResponse,
@@ -42,9 +43,18 @@ export class KeywordsService {
       throw new Error('Keyword cannot be empty');
     }
 
-    const existing = await this.repository.findUnique({
-      word: normalizedWord,
-    });
+    let existing: Keyword | null = null;
+    try {
+      existing = await this.repository.findUnique({
+        word: normalizedWord,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.NotFoundError) {
+        existing = null;
+      } else {
+        throw error;
+      }
+    }
 
     if (existing) {
       const updated = await this.repository.update(

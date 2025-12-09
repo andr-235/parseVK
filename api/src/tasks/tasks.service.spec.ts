@@ -56,7 +56,7 @@ describe('TasksService', () => {
     repositoryMock = {
       create: jest.fn<Promise<Task>, [unknown]>(),
       findMany: jest.fn<Promise<Task[]>, [unknown?]>(),
-      findUnique: jest.fn<Promise<Task | null>, [{ id: number }]>(),
+      findUnique: jest.fn<Promise<Task>, [{ id: number }]>(),
       update: jest.fn<Promise<Task>, [{ id: number }, unknown]>(),
       delete: jest.fn<Promise<void>, [{ id: number }]>(),
       count: jest.fn<Promise<number>, []>(),
@@ -324,11 +324,15 @@ describe('TasksService', () => {
     });
 
     it('throws when task does not exist', async () => {
-      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(null);
-
-      await expect(service.getTask(123)).rejects.toBeInstanceOf(
-        NotFoundException,
+      class MockNotFoundError extends Error {
+        code = 'P2025';
+        meta = { modelName: 'Task' };
+      }
+      (repositoryMock.findUnique as jest.Mock).mockRejectedValue(
+        new MockNotFoundError('Record to find does not exist.'),
       );
+
+      await expect(service.getTask(123)).rejects.toThrow();
     });
   });
 

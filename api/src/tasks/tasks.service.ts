@@ -120,23 +120,15 @@ export class TasksService {
   }
 
   async getTask(taskId: number): Promise<TaskDetail> {
-    const task: PrismaTaskRecord | null = await this.repository.findUnique({ id: taskId }) as PrismaTaskRecord | null;
+    const task = await this.repository.findUnique({ id: taskId });
 
-    if (!task) {
-      throw new NotFoundException('Task not found');
-    }
-
-    return this.mapTaskToDetail(task);
+    return this.mapTaskToDetail(task as PrismaTaskRecord);
   }
 
   async resumeTask(taskId: number): Promise<ParsingTaskResult> {
-    const task: PrismaTaskRecord | null = await this.repository.findUnique({ id: taskId }) as PrismaTaskRecord | null;
+    const task = await this.repository.findUnique({ id: taskId });
 
-    if (!task) {
-      throw new NotFoundException('Task not found');
-    }
-
-    const taskRecord: PrismaTaskRecord = task;
+    const taskRecord = task as PrismaTaskRecord;
     const status = this.taskMapper.parseTaskStatus(taskRecord.status);
     if (status === 'done' || taskRecord.completed === true) {
       throw new BadRequestException('Задача уже завершена');
@@ -144,22 +136,25 @@ export class TasksService {
 
     const context = await this.contextBuilder.buildResumeContext(taskRecord);
 
-    const updatedTask: PrismaTaskRecord = await this.repository.update({ id: taskId }, {
-      status: 'pending',
-      completed: false,
-      totalItems: context.totalItems,
-      processedItems: context.processedItems,
-      progress: context.progress,
-      description: this.descriptionParser.stringify({
-        scope: context.scope,
-        groupIds: context.groupIds,
-        postLimit: context.postLimit,
-        stats: context.parsed.stats,
-        skippedGroupsMessage: context.parsed.skippedGroupsMessage,
-        skippedGroupIds: context.parsed.skippedGroupIds,
-        current: taskRecord.description,
-      }),
-    } as Prisma.TaskUncheckedUpdateInput) as PrismaTaskRecord;
+    const updatedTask: PrismaTaskRecord = (await this.repository.update(
+      { id: taskId },
+      {
+        status: 'pending',
+        completed: false,
+        totalItems: context.totalItems,
+        processedItems: context.processedItems,
+        progress: context.progress,
+        description: this.descriptionParser.stringify({
+          scope: context.scope,
+          groupIds: context.groupIds,
+          postLimit: context.postLimit,
+          stats: context.parsed.stats,
+          skippedGroupsMessage: context.parsed.skippedGroupsMessage,
+          skippedGroupIds: context.parsed.skippedGroupIds,
+          current: taskRecord.description,
+        }),
+      } as Prisma.TaskUncheckedUpdateInput,
+    )) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
       taskId: task.id,
@@ -173,10 +168,6 @@ export class TasksService {
 
   async refreshTask(taskId: number): Promise<ParsingTaskResult> {
     const task = await this.repository.findUnique({ id: taskId });
-
-    if (!task) {
-      throw new NotFoundException('Task not found');
-    }
 
     const taskRecord = task as PrismaTaskRecord;
     const context = await this.contextBuilder.buildResumeContext(taskRecord);
@@ -213,11 +204,7 @@ export class TasksService {
   }
 
   async deleteTask(taskId: number): Promise<void> {
-    const task = await this.repository.findUnique({ id: taskId });
-
-    if (!task) {
-      throw new NotFoundException('Task not found');
-    }
+    await this.repository.findUnique({ id: taskId });
 
     this.cancellationService.requestCancel(taskId);
 

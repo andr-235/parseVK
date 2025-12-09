@@ -374,7 +374,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     throw error;
   }
 
-  private findLastCompletedTask() {
+  private async findLastCompletedTask() {
     return this.prisma.task.findFirst({
       where: {
         completed: true,

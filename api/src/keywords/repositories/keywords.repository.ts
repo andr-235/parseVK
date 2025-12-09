@@ -7,8 +7,8 @@ import type { IKeywordsRepository } from '../interfaces/keywords-repository.inte
 export class KeywordsRepository implements IKeywordsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findUnique(where: { word: string }): Promise<Keyword | null> {
-    return this.prisma.keyword.findUnique({ where });
+  async findUnique(where: { word: string }): Promise<Keyword> {
+    return this.prisma.keyword.findUniqueOrThrow({ where });
   }
 
   async findMany(

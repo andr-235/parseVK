@@ -10,21 +10,46 @@ describe('KeywordsService', () => {
 
   beforeEach(() => {
     repositoryMock = {
-      findUnique: jest.fn<Promise<unknown | null>, [{ word: string }]>(),
-      findMany: jest.fn<Promise<unknown[]>, [unknown?, unknown?, number?, number?]>(),
+      findUnique: jest.fn<Promise<unknown>, [{ word: string }]>(),
+      findMany: jest.fn<
+        Promise<unknown[]>,
+        [unknown?, unknown?, number?, number?]
+      >(),
       create: jest.fn<Promise<unknown>, [unknown]>(),
       update: jest.fn<Promise<unknown>, [{ id: number }, unknown]>(),
       delete: jest.fn<Promise<void>, [{ id: number }]>(),
       deleteMany: jest.fn<Promise<{ count: number }>, []>(),
-      findManyWithSelect: jest.fn<Promise<Array<{ id: number; word: string; isPhrase: boolean }>>, [unknown]>(),
+      findManyWithSelect: jest.fn<
+        Promise<Array<{ id: number; word: string; isPhrase: boolean }>>,
+        [unknown]
+      >(),
       count: jest.fn<Promise<number>, [unknown?]>(),
       countComments: jest.fn<Promise<number>, []>(),
       countPosts: jest.fn<Promise<number>, []>(),
-      findCommentsBatch: jest.fn<Promise<Array<{ id: number; text: string | null }>>, [unknown]>(),
-      findPostsBatch: jest.fn<Promise<Array<{ id: number; ownerId: number; vkPostId: number; text: string | null }>>, [unknown]>(),
+      findCommentsBatch: jest.fn<
+        Promise<Array<{ id: number; text: string | null }>>,
+        [unknown]
+      >(),
+      findPostsBatch: jest.fn<
+        Promise<
+          Array<{
+            id: number;
+            ownerId: number;
+            vkPostId: number;
+            text: string | null;
+          }>
+        >,
+        [unknown]
+      >(),
       findCommentsByPost: jest.fn<Promise<Array<{ id: number }>>, [unknown]>(),
-      findCommentKeywordMatches: jest.fn<Promise<Array<{ keywordId: number }>>, [unknown]>(),
-      findPostKeywordMatches: jest.fn<Promise<Array<{ commentId: number; keywordId: number }>>, [unknown]>(),
+      findCommentKeywordMatches: jest.fn<
+        Promise<Array<{ keywordId: number }>>,
+        [unknown]
+      >(),
+      findPostKeywordMatches: jest.fn<
+        Promise<Array<{ commentId: number; keywordId: number }>>,
+        [unknown]
+      >(),
       deleteCommentKeywordMatches: jest.fn<Promise<void>, [unknown]>(),
       deletePostKeywordMatches: jest.fn<Promise<void>, [unknown]>(),
       createCommentKeywordMatches: jest.fn<Promise<void>, [unknown]>(),
@@ -49,7 +74,13 @@ describe('KeywordsService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    repositoryMock.findUnique.mockResolvedValue(null);
+    class MockNotFoundError extends Error {
+      code = 'P2025';
+      meta = { modelName: 'Keyword' };
+    }
+    repositoryMock.findUnique.mockRejectedValue(
+      new MockNotFoundError('Record to find does not exist.'),
+    );
     repositoryMock.create.mockResolvedValue(keyword);
 
     const result = await service.addKeyword('  TeSt  ');

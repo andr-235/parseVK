@@ -11,8 +11,8 @@ export class AuthorsRepository implements IAuthorsRepository {
     return this.prisma.author.count({ where });
   }
 
-  async findUnique(where: { vkUserId: number }): Promise<Author | null> {
-    return this.prisma.author.findUnique({ where });
+  async findUnique(where: { vkUserId: number }): Promise<Author> {
+    return this.prisma.author.findUniqueOrThrow({ where });
   }
 
   async queryRaw<T = Author[]>(query: Prisma.Sql): Promise<T> {

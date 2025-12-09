@@ -23,8 +23,8 @@ export class TasksRepository implements ITasksRepository {
     return this.prisma.task.count();
   }
 
-  async findUnique(where: { id: number }): Promise<Task | null> {
-    return this.prisma.task.findUnique({ where });
+  async findUnique(where: { id: number }): Promise<Task> {
+    return this.prisma.task.findUniqueOrThrow({ where });
   }
 
   async update(

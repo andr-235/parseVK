@@ -45,23 +45,24 @@ export class TelegramChatSyncService {
     members: TelegramMemberDto[];
   }> {
     return this.prisma.$transaction(async (tx) => {
-      const chat: { id: number; telegramId: bigint } = await tx.telegramChat.upsert({
-        where: { telegramId: resolved.telegramId },
-        create: {
-          telegramId: resolved.telegramId,
-          type: resolved.type as TelegramChatType,
-          title: resolved.title,
-          username: resolved.username,
-          description: resolved.description,
-        },
-        update: {
-          type: resolved.type as TelegramChatType,
-          title: resolved.title,
-          username: resolved.username,
-          description: resolved.description,
-        },
-        select: { id: true, telegramId: true },
-      }) as { id: number; telegramId: bigint };
+      const chat: { id: number; telegramId: bigint } =
+        (await tx.telegramChat.upsert({
+          where: { telegramId: resolved.telegramId },
+          select: { id: true, telegramId: true },
+          create: {
+            telegramId: resolved.telegramId,
+            type: resolved.type as TelegramChatType,
+            title: resolved.title,
+            username: resolved.username,
+            description: resolved.description,
+          },
+          update: {
+            type: resolved.type as TelegramChatType,
+            title: resolved.title,
+            username: resolved.username,
+            description: resolved.description,
+          },
+        })) as { id: number; telegramId: bigint };
 
       const membersPayload: TelegramMemberDto[] = [];
 
