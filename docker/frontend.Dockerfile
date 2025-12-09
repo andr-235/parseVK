@@ -14,14 +14,13 @@ ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_DEV_MODE=${VITE_DEV_MODE}
 ENV VITE_API_WS_URL=${VITE_API_WS_URL}
 
-COPY front/package*.json ./
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-RUN npm config set registry ${NPM_REGISTRY} \
-    && npm config set fetch-retries 5 \
-    && npm config set fetch-retry-mintimeout 20000 \
-    && npm config set fetch-retry-maxtimeout 120000 \
-    && npm config set fetch-timeout 600000 \
-    && npm ci --no-audit --prefer-offline
+COPY front/package*.json ./
+COPY front/.npmrc ./
+
+RUN pnpm config set registry ${NPM_REGISTRY} \
+    && pnpm install --frozen-lockfile --no-audit
 
 COPY front/ ./
 
@@ -35,7 +34,7 @@ VITE_DEV_MODE=${VITE_DEV_MODE}
 VITE_API_WS_URL=${VITE_API_WS_URL}
 EOF
 
-RUN npm run build
+RUN pnpm run build
 
 # Production stage
 FROM nginx:alpine
