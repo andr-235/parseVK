@@ -23,9 +23,7 @@ COPY api/ ./
 
 RUN rm -f .env
 
-RUN npx prisma generate
-
-RUN npm run build
+RUN npm run prisma:generate && npm run build
 
 # Production stage
 FROM node:22-alpine
