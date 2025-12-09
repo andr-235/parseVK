@@ -9,10 +9,10 @@ import type {
 export class AuthorSortBuilder {
   buildOrderClause(sort: ResolvedAuthorSort): Prisma.Sql {
     const expressions: Prisma.Sql[] = [this.buildPrimarySortExpression(sort)];
-    expressions.push(Prisma.sql`"Author"."updatedAt" DESC` as Prisma.Sql);
-    expressions.push(Prisma.sql`"Author"."id" DESC` as Prisma.Sql);
+    expressions.push(Prisma.sql`"Author"."updatedAt" DESC`);
+    expressions.push(Prisma.sql`"Author"."id" DESC`);
 
-    return Prisma.join(expressions, ', ') as Prisma.Sql;
+    return Prisma.join(expressions, ', ');
   }
 
   private buildPrimarySortExpression(sort: ResolvedAuthorSort): Prisma.Sql {
@@ -30,7 +30,7 @@ export class AuthorSortBuilder {
     };
 
     const handler = handlers[sort.field] ?? handlers.updatedAt;
-    return handler() as Prisma.Sql;
+    return handler();
   }
 
   private buildFullNameSort(order: AuthorSortDirection): Prisma.Sql {
@@ -39,7 +39,7 @@ export class AuthorSortBuilder {
       this.applyDirection(Prisma.sql`LOWER("Author"."firstName")`, order),
       this.applyDirection(Prisma.sql`"Author"."vkUserId"`, order),
     ];
-    return Prisma.join(expressions, ', ') as Prisma.Sql;
+    return Prisma.join(expressions, ', ');
   }
 
   private buildCounterSort(
@@ -77,7 +77,7 @@ export class AuthorSortBuilder {
   ): Prisma.Sql {
     const direction = order === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
     const nulls = options.nullsLast ? Prisma.sql` NULLS LAST` : Prisma.sql``;
-    return Prisma.sql`${expression} ${direction}${nulls}` as Prisma.Sql;
+    return Prisma.sql`${expression} ${direction}${nulls}`;
   }
 
   private buildCounterValueExpression(keys: string[]): Prisma.Sql {
@@ -86,28 +86,28 @@ export class AuthorSortBuilder {
     );
 
     if (expressions.length === 1) {
-      return expressions[0] as Prisma.Sql;
+      return expressions[0];
     }
 
-    return Prisma.sql`COALESCE(${Prisma.join(expressions, ', ')})` as Prisma.Sql;
+    return Prisma.sql`COALESCE(${Prisma.join(expressions, ', ')})`;
   }
 
   private buildCounterValueExpressionForKey(key: string): Prisma.Sql {
-    const keyLiteral = Prisma.raw(`'${key}'`) as Prisma.Sql;
+    const keyLiteral = Prisma.raw(`'${key}'`);
 
     const numericPath = Prisma.sql`
       jsonb_path_query_first(
         "Author"."counters"->${keyLiteral},
         '$.** ? (@.type() == "number")'
       )
-    ` as Prisma.Sql;
+    `;
 
     const stringPath = Prisma.sql`
       jsonb_path_query_first(
         "Author"."counters"->${keyLiteral},
         '$.** ? (@.type() == "string" && @ like_regex "^-?\\\\d+$")'
       )
-    ` as Prisma.Sql;
+    `;
 
     return Prisma.sql`
       CASE
@@ -127,7 +127,7 @@ export class AuthorSortBuilder {
           )
         ELSE NULL
       END
-    ` as Prisma.Sql;
+    `;
   }
 
   private buildFollowersValueExpression(): Prisma.Sql {
@@ -137,18 +137,18 @@ export class AuthorSortBuilder {
         THEN "Author"."followersCount"::numeric
         ELSE NULL
       END
-    ` as Prisma.Sql;
+    `;
 
     const countersValue = this.buildCounterValueExpression([
       'followers',
       'subscribers',
     ]);
 
-    return Prisma.sql`COALESCE(${directValue}, ${countersValue})` as Prisma.Sql;
+    return Prisma.sql`COALESCE(${directValue}, ${countersValue})`;
   }
 
   private buildLastSeenValueExpression(): Prisma.Sql {
-    const trimmedValue = Prisma.sql`NULLIF(trim('"' FROM "Author"."lastSeen"::text), '')` as Prisma.Sql;
+    const trimmedValue = Prisma.sql`NULLIF(trim('"' FROM "Author"."lastSeen"::text), '')`;
 
     const numericFromRoot = this.buildUnixMillisExpression(trimmedValue);
 
@@ -159,10 +159,10 @@ export class AuthorSortBuilder {
           THEN FLOOR(EXTRACT(EPOCH FROM (${trimmedValue})::timestamptz) * 1000)
         ELSE NULL
       END
-    ` as Prisma.Sql;
+    `;
 
     const timeFromObject = this.buildUnixMillisExpression(
-      Prisma.sql`"Author"."lastSeen"->>'time'` as Prisma.Sql,
+      Prisma.sql`"Author"."lastSeen"->>'time'`,
     );
     const dateFromObject = Prisma.sql`
       CASE
@@ -170,7 +170,7 @@ export class AuthorSortBuilder {
         THEN FLOOR(EXTRACT(EPOCH FROM ("Author"."lastSeen"->>'date')::timestamptz) * 1000)
         ELSE NULL
       END
-    ` as Prisma.Sql;
+    `;
 
     return Prisma.sql`
       CASE
@@ -181,7 +181,7 @@ export class AuthorSortBuilder {
           THEN COALESCE(${timeFromObject}, ${dateFromObject})
         ELSE NULL
       END
-    ` as Prisma.Sql;
+    `;
   }
 
   private buildUnixMillisExpression(value: Prisma.Sql): Prisma.Sql {
@@ -195,6 +195,6 @@ export class AuthorSortBuilder {
           END
         ELSE NULL
       END
-    ` as Prisma.Sql;
+    `;
   }
 }

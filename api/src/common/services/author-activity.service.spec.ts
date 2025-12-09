@@ -8,8 +8,14 @@ describe('AuthorActivityService - keyword matches', () => {
   let service: AuthorActivityService;
   let prismaMock: {
     comment: { upsert: jest.Mock<Promise<{ id: number }>> };
-    post: { findUnique: jest.Mock<Promise<{ id: number; ownerId: number; postId: number } | null>> };
-    keyword: { findMany: jest.Mock<Promise<Array<{ id: number; word: string }>>> };
+    post: {
+      findUnique: jest.Mock<
+        Promise<{ id: number; ownerId: number; postId: number } | null>
+      >;
+    };
+    keyword: {
+      findMany: jest.Mock<Promise<Array<{ id: number; word: string }>>>;
+    };
     commentKeywordMatch: {
       findMany: jest.Mock<Promise<Array<{ keywordId: number }>>>;
       deleteMany: jest.Mock<Promise<{ count: number }>>;
@@ -38,23 +44,36 @@ describe('AuthorActivityService - keyword matches', () => {
   beforeEach(() => {
     prismaMock = {
       comment: {
-        upsert: jest.fn().mockResolvedValue({ id: 42 }),
+        upsert: jest
+          .fn<Promise<{ id: number }>, [unknown]>()
+          .mockResolvedValue({ id: 42 }),
       },
       post: {
         findUnique: jest
-          .fn()
+          .fn<
+            Promise<{ id: number; ownerId: number; postId: number } | null>,
+            [unknown]
+          >()
           .mockResolvedValue({ id: 1, ownerId: 1, postId: 1 }),
       },
       keyword: {
-        findMany: jest.fn().mockResolvedValue([
-          { id: 11, word: 'ёжик' },
-          { id: 12, word: 'alert' },
-        ]),
+        findMany: jest
+          .fn<Promise<Array<{ id: number; word: string }>>, [unknown]>()
+          .mockResolvedValue([
+            { id: 11, word: 'ёжик' },
+            { id: 12, word: 'alert' },
+          ]),
       },
       commentKeywordMatch: {
-        findMany: jest.fn().mockResolvedValue([]),
-        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findMany: jest
+          .fn<Promise<Array<{ keywordId: number }>>, [unknown]>()
+          .mockResolvedValue([]),
+        deleteMany: jest
+          .fn<Promise<{ count: number }>, [unknown]>()
+          .mockResolvedValue({ count: 0 }),
+        createMany: jest
+          .fn<Promise<{ count: number }>, [unknown]>()
+          .mockResolvedValue({ count: 0 }),
       },
       $transaction: jest
         .fn<Promise<unknown[]>, [Array<Promise<unknown>>]>()

@@ -10,9 +10,7 @@ export interface IAnalyzePhotosCommandHandler {
   execute(command: AnalyzePhotosCommand): Promise<PhotoAnalysisListDto>;
 }
 
-export abstract class BaseAnalyzePhotosCommand
-  implements IAnalyzePhotosCommandHandler
-{
+export abstract class BaseAnalyzePhotosCommand implements IAnalyzePhotosCommandHandler {
   abstract execute(
     command: AnalyzePhotosCommand,
   ): Promise<PhotoAnalysisListDto>;

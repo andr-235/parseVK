@@ -28,7 +28,10 @@ describe('GroupsService', () => {
     upsert: jest.Mock<Promise<unknown>, [unknown, unknown]>;
     findMany: jest.Mock<Promise<unknown[]>, [unknown?]>;
     count: jest.Mock<Promise<number>, []>;
-    getGroupsWithCount: jest.Mock<Promise<{ items: unknown[]; total: number }>, [unknown]>;
+    getGroupsWithCount: jest.Mock<
+      Promise<{ items: unknown[]; total: number }>,
+      [unknown]
+    >;
     delete: jest.Mock<Promise<unknown>, [{ id: number }]>;
     deleteMany: jest.Mock<Promise<{ count: number }>, []>;
     findManyByVkIds: jest.Mock<Promise<unknown[]>, [number[]]>;
@@ -69,24 +72,27 @@ describe('GroupsService', () => {
 
   beforeEach(() => {
     repositoryObj = {
-      upsert: jest.fn(),
-      findMany: jest.fn(),
-      count: jest.fn(),
-      getGroupsWithCount: jest.fn(),
-      delete: jest.fn(),
-      deleteMany: jest.fn(),
-      findManyByVkIds: jest.fn(),
+      upsert: jest.fn<Promise<unknown>, [unknown, unknown]>(),
+      findMany: jest.fn<Promise<unknown[]>, [unknown?]>(),
+      count: jest.fn<Promise<number>, []>(),
+      getGroupsWithCount: jest.fn<
+        Promise<{ items: unknown[]; total: number }>,
+        [unknown]
+      >(),
+      delete: jest.fn<Promise<unknown>, [{ id: number }]>(),
+      deleteMany: jest.fn<Promise<{ count: number }>, []>(),
+      findManyByVkIds: jest.fn<Promise<unknown[]>, [number[]]>(),
     };
     repository = repositoryObj as never;
 
     vkServiceObj = {
-      getGroups: jest.fn(),
-      searchGroupsByRegion: jest.fn(),
+      getGroups: jest.fn<Promise<IGroup[]>, [number[]]>(),
+      searchGroupsByRegion: jest.fn<Promise<IGroup[]>, [unknown]>(),
     };
     vkService = vkServiceObj as unknown as VkService;
 
     groupMapperObj = {
-      mapGroupData: jest.fn(),
+      mapGroupData: jest.fn<unknown, [IGroup]>(),
     };
     groupMapper = groupMapperObj as never;
 

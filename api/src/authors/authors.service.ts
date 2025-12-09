@@ -268,7 +268,8 @@ export class AuthorsService {
       ? normalizedSummary.total
       : null;
     const photosCount = counters.photos ?? summaryPhotos ?? null;
-    const followers: number | null = author.followersCount ?? counters.followers ?? null;
+    const followers: number | null =
+      author.followersCount ?? counters.followers ?? null;
 
     return {
       id: author.id,

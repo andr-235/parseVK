@@ -70,9 +70,8 @@ export class WatchlistService {
     });
 
     const recordIds: number[] = records.map((record) => record.id);
-    const commentCounts = await this.statsCollector.collectCommentCounts(
-      recordIds,
-    );
+    const commentCounts =
+      await this.statsCollector.collectCommentCounts(recordIds);
     const summaryMap =
       await this.statsCollector.collectAnalysisSummaries(records);
 
@@ -165,8 +164,7 @@ export class WatchlistService {
 
       sourceCommentId = comment.id;
       const fromId: number = comment.fromId;
-      authorVkId =
-        comment.authorVkId ?? (fromId > 0 ? fromId : null);
+      authorVkId = comment.authorVkId ?? (fromId > 0 ? fromId : null);
 
       if (!authorVkId) {
         throw new BadRequestException(
@@ -236,7 +234,7 @@ export class WatchlistService {
     const data: Prisma.WatchlistAuthorUpdateInput = {};
 
     if (dto.status && dto.status !== record.status) {
-      data.status = dto.status as WatchlistStatus;
+      data.status = dto.status;
 
       if (dto.status === WatchlistStatus.ACTIVE) {
         data.monitoringStoppedAt = { set: null };
@@ -294,7 +292,10 @@ export class WatchlistService {
       data.maxAuthors = dto.maxAuthors;
     }
 
-    const updated: WatchlistSettings = await this.repository.updateSettings(settings.id, data);
+    const updated: WatchlistSettings = await this.repository.updateSettings(
+      settings.id,
+      data,
+    );
 
     this.logger.log('Обновлены настройки мониторинга авторов');
 

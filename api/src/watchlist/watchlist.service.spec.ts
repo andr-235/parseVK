@@ -45,13 +45,20 @@ describe('WatchlistService', () => {
   });
 
   let prisma: {
-    watchlistSettings: { upsert: jest.Mock<Promise<WatchlistSettings>>; update: jest.Mock<Promise<WatchlistSettings>> };
+    watchlistSettings: {
+      upsert: jest.Mock<Promise<WatchlistSettings>>;
+      update: jest.Mock<Promise<WatchlistSettings>>;
+    };
     watchlistAuthor: {
       findMany: jest.Mock<Promise<unknown[]>>;
       updateMany: jest.Mock<Promise<{ count: number }>>;
       update: jest.Mock<Promise<unknown>>;
     };
-    comment: { groupBy: jest.Mock<Promise<unknown[]>>; findMany: jest.Mock<Promise<unknown[]>>; findUnique: jest.Mock<Promise<unknown | null>> };
+    comment: {
+      groupBy: jest.Mock<Promise<unknown[]>>;
+      findMany: jest.Mock<Promise<unknown[]>>;
+      findUnique: jest.Mock<Promise<unknown>>;
+    };
     $transaction: jest.Mock<Promise<unknown[]>>;
   };
   let authorActivityService: {
@@ -78,21 +85,21 @@ describe('WatchlistService', () => {
   beforeEach(() => {
     prisma = {
       watchlistSettings: {
-        upsert: jest.fn(),
-        update: jest.fn(),
+        upsert: jest.fn<Promise<WatchlistSettings>, [unknown]>(),
+        update: jest.fn<Promise<WatchlistSettings>, [unknown, unknown]>(),
       },
       watchlistAuthor: {
-        findMany: jest.fn(),
-        updateMany: jest.fn(),
-        update: jest.fn(),
+        findMany: jest.fn<Promise<unknown[]>, [unknown?]>(),
+        updateMany: jest.fn<Promise<{ count: number }>, [unknown]>(),
+        update: jest.fn<Promise<unknown>, [unknown, unknown]>(),
       },
       comment: {
-        groupBy: jest.fn(),
-        findMany: jest.fn(),
-        findUnique: jest.fn(),
+        groupBy: jest.fn<Promise<unknown[]>, [unknown]>(),
+        findMany: jest.fn<Promise<unknown[]>, [unknown?]>(),
+        findUnique: jest.fn<Promise<unknown>, [unknown]>(),
       },
-      $transaction: jest.fn<Promise<unknown[]>, [Array<Promise<unknown>>]>(async (operations: Array<Promise<unknown>>) =>
-        Promise.all(operations),
+      $transaction: jest.fn<Promise<unknown[]>, [Array<Promise<unknown>>]>(
+        async (operations: Array<Promise<unknown>>) => Promise.all(operations),
       ),
     };
 

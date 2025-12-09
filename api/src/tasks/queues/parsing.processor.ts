@@ -103,10 +103,16 @@ export class ParsingProcessor extends WorkerHost {
     status: 'running' | 'failed',
   ): Promise<void> {
     try {
-      const updatedTask = await this.prisma.task.update({
+      const updatedTask = (await this.prisma.task.update({
         where: { id: taskId },
         data: { status } as Prisma.TaskUncheckedUpdateInput,
-      }) as { completed: boolean | null; totalItems: number | null; processedItems: number | null; progress: number | null; description: string | null };
+      })) as {
+        completed: boolean | null;
+        totalItems: number | null;
+        processedItems: number | null;
+        progress: number | null;
+        description: string | null;
+      };
 
       const payload = {
         id: taskId,

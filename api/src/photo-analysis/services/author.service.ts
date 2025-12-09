@@ -9,10 +9,11 @@ export class AuthorService implements IAuthorService {
   async findAuthorByVkId(
     vkUserId: number,
   ): Promise<{ id: number; vkUserId: number }> {
-    const author: { id: number; vkUserId: number } | null = await this.prisma.author.findUnique({
-      where: { vkUserId },
-      select: { id: true, vkUserId: true },
-    });
+    const author: { id: number; vkUserId: number } | null =
+      await this.prisma.author.findUnique({
+        where: { vkUserId },
+        select: { id: true, vkUserId: true },
+      });
 
     if (!author) {
       throw new NotFoundException(`Автор с vkUserId=${vkUserId} не найден`);

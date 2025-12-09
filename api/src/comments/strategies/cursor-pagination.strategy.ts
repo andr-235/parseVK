@@ -34,10 +34,10 @@ export class CursorPaginationStrategy implements IPaginationStrategy {
       }
     }
 
-    const baseWhere: Prisma.CommentWhereInput = this.filterBuilder.buildBaseWhere(filters);
-    const readStatusWhere: Prisma.CommentWhereInput = this.filterBuilder.buildReadStatusWhere(
-      filters.readStatus,
-    );
+    const baseWhere: Prisma.CommentWhereInput =
+      this.filterBuilder.buildBaseWhere(filters);
+    const readStatusWhere: Prisma.CommentWhereInput =
+      this.filterBuilder.buildReadStatusWhere(filters.readStatus);
 
     const paginationWhere: Prisma.CommentWhereInput = cursorData
       ? {
@@ -66,12 +66,18 @@ export class CursorPaginationStrategy implements IPaginationStrategy {
       baseWhere,
       readStatusWhere,
     );
-    const readWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, {
-      isRead: true,
-    });
-    const unreadWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, {
-      isRead: false,
-    });
+    const readWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(
+      baseWhere,
+      {
+        isRead: true,
+      },
+    );
+    const unreadWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(
+      baseWhere,
+      {
+        isRead: false,
+      },
+    );
 
     const comments = await this.repository.findMany({
       where: listWhere as unknown,

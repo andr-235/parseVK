@@ -25,21 +25,30 @@ export class OffsetPaginationStrategy implements IPaginationStrategy {
   ): Promise<CommentsListDto> {
     const { offset, limit } = options;
 
-    const baseWhere: Prisma.CommentWhereInput = this.filterBuilder.buildBaseWhere(filters);
-    const readStatusWhere: Prisma.CommentWhereInput = this.filterBuilder.buildReadStatusWhere(
-      filters.readStatus,
+    const baseWhere: Prisma.CommentWhereInput =
+      this.filterBuilder.buildBaseWhere(filters);
+    const readStatusWhere: Prisma.CommentWhereInput =
+      this.filterBuilder.buildReadStatusWhere(filters.readStatus);
+    const listWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(
+      baseWhere,
+      readStatusWhere,
     );
-    const listWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, readStatusWhere);
     const totalWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(
       baseWhere,
       readStatusWhere,
     );
-    const readWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, {
-      isRead: true,
-    });
-    const unreadWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, {
-      isRead: false,
-    });
+    const readWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(
+      baseWhere,
+      {
+        isRead: true,
+      },
+    );
+    const unreadWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(
+      baseWhere,
+      {
+        isRead: false,
+      },
+    );
 
     const [comments, total, readCount, unreadCount] = await Promise.all([
       this.repository.findMany({

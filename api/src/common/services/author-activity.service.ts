@@ -81,9 +81,7 @@ const toUpdateJsonValue = (
   return value as Prisma.InputJsonValue;
 };
 
-const toCreateJsonValue = (
-  value: unknown,
-): Prisma.InputJsonValue => {
+const toCreateJsonValue = (value: unknown): Prisma.InputJsonValue => {
   if (value === undefined || value === null) {
     return Prisma.JsonNull;
   }
@@ -104,11 +102,12 @@ export class AuthorActivityService {
   ) {}
 
   async refreshAllAuthors(batchSize = 500): Promise<number> {
-    const existingAuthors: Array<{ vkUserId: number }> = await this.prisma.author.findMany({
-      select: { vkUserId: true },
-      where: { vkUserId: { gt: 0 } },
-      orderBy: { vkUserId: 'asc' },
-    });
+    const existingAuthors: Array<{ vkUserId: number }> =
+      await this.prisma.author.findMany({
+        select: { vkUserId: true },
+        where: { vkUserId: { gt: 0 } },
+        orderBy: { vkUserId: 'asc' },
+      });
 
     if (!existingAuthors.length) {
       return 0;
@@ -412,9 +411,10 @@ export class AuthorActivityService {
   }
 
   private async loadKeywordMatchCandidates(): Promise<KeywordMatchCandidate[]> {
-    const keywords: Array<{ id: number; word: string; isPhrase: boolean }> = await this.prisma.keyword.findMany({
-      select: { id: true, word: true, isPhrase: true },
-    });
+    const keywords: Array<{ id: number; word: string; isPhrase: boolean }> =
+      await this.prisma.keyword.findMany({
+        select: { id: true, word: true, isPhrase: true },
+      });
 
     return keywords
       .map((keyword) => {
@@ -456,10 +456,11 @@ export class AuthorActivityService {
         .map((keyword) => keyword.id),
     );
 
-    const existingMatches: Array<{ keywordId: number }> = await this.prisma.commentKeywordMatch.findMany({
-      where: { commentId, source },
-      select: { keywordId: true },
-    });
+    const existingMatches: Array<{ keywordId: number }> =
+      await this.prisma.commentKeywordMatch.findMany({
+        where: { commentId, source },
+        select: { keywordId: true },
+      });
 
     const existingKeywordIds = new Set(
       existingMatches.map((match) => match.keywordId),
