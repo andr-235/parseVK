@@ -27,12 +27,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: ${{ matrix.cache-path }}
+      - name: Enable corepack
+        run: corepack enable
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        run: corepack prepare pnpm@latest --activate
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
         with:
-          version: latest
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles(format('{0}/pnpm-lock.yaml', matrix.working-directory)) }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       - name: Install dependencies
         working-directory: ${{ matrix.working-directory }}
         run: pnpm install --frozen-lockfile
@@ -58,12 +67,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: ${{ matrix.cache-path }}
+      - name: Enable corepack
+        run: corepack enable
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        run: corepack prepare pnpm@latest --activate
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
         with:
-          version: latest
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles(format('{0}/pnpm-lock.yaml', matrix.working-directory)) }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       - name: Install dependencies
         working-directory: ${{ matrix.working-directory }}
         run: pnpm install --frozen-lockfile
@@ -107,12 +125,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: api/pnpm-lock.yaml
+      - name: Enable corepack
+        run: corepack enable
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        run: corepack prepare pnpm@latest --activate
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
         with:
-          version: latest
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('api/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       - name: Cache Prisma Client
         uses: actions/cache@v4
         with:
@@ -141,12 +168,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: front/pnpm-lock.yaml
+      - name: Enable corepack
+        run: corepack enable
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        run: corepack prepare pnpm@latest --activate
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
         with:
-          version: latest
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('front/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       - name: Install dependencies
         working-directory: front
         run: pnpm install --frozen-lockfile
@@ -172,12 +208,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: ${{ matrix.cache-path }}
+      - name: Enable corepack
+        run: corepack enable
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        run: corepack prepare pnpm@latest --activate
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
         with:
-          version: latest
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles(format('{0}/pnpm-lock.yaml', matrix.working-directory)) }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       - name: Check formatting
         working-directory: ${{ matrix.working-directory }}
         run: |
