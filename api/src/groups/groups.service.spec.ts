@@ -25,24 +25,24 @@ describe('GroupsService', () => {
   let groupMapper: jest.Mocked<GroupMapper>;
   let identifierValidator: jest.Mocked<GroupIdentifierValidator>;
   let repositoryObj: {
-    upsert: jest.Mock;
-    findMany: jest.Mock;
-    count: jest.Mock;
-    getGroupsWithCount: jest.Mock;
-    delete: jest.Mock;
-    deleteMany: jest.Mock;
-    findManyByVkIds: jest.Mock;
+    upsert: jest.Mock<Promise<unknown>, [unknown, unknown]>;
+    findMany: jest.Mock<Promise<unknown[]>, [unknown?]>;
+    count: jest.Mock<Promise<number>, []>;
+    getGroupsWithCount: jest.Mock<Promise<{ items: unknown[]; total: number }>, [unknown]>;
+    delete: jest.Mock<Promise<unknown>, [{ id: number }]>;
+    deleteMany: jest.Mock<Promise<{ count: number }>, []>;
+    findManyByVkIds: jest.Mock<Promise<unknown[]>, [number[]]>;
   };
   let vkServiceObj: {
-    getGroups: jest.Mock;
-    searchGroupsByRegion: jest.Mock;
+    getGroups: jest.Mock<Promise<IGroup[]>, [number[]]>;
+    searchGroupsByRegion: jest.Mock<Promise<IGroup[]>, [unknown]>;
   };
   let groupMapperObj: {
-    mapGroupData: jest.Mock;
+    mapGroupData: jest.Mock<unknown, [IGroup]>;
   };
   let identifierValidatorObj: {
-    normalizeIdentifier: jest.Mock;
-    parseVkIdentifier: jest.Mock;
+    normalizeIdentifier: jest.Mock<string, [string]>;
+    parseVkIdentifier: jest.Mock<string, [string]>;
   };
 
   const vkGroup = {

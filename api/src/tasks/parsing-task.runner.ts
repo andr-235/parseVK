@@ -62,7 +62,7 @@ export class ParsingTaskRunner {
     );
 
     if (!groups.length) {
-      const updatedTask = (await this.prisma.task.update({
+      const updatedTask: PrismaTaskRecord = await this.prisma.task.update({
         where: { id: taskId },
         data: {
           status: 'failed',
@@ -73,7 +73,7 @@ export class ParsingTaskRunner {
             error: 'Нет доступных групп для парсинга',
           }),
         } as Prisma.TaskUncheckedUpdateInput,
-      })) as PrismaTaskRecord;
+      }) as PrismaTaskRecord;
       this.tasksGateway.broadcastStatus({
         id: taskId,
         status: 'failed',
@@ -151,7 +151,7 @@ export class ParsingTaskRunner {
               : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
-      })) as PrismaTaskRecord;
+      }) as PrismaTaskRecord;
 
       this.tasksGateway.broadcastProgress({
         id: taskId,
@@ -212,7 +212,7 @@ export class ParsingTaskRunner {
               : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
-      })) as PrismaTaskRecord;
+      }) as PrismaTaskRecord;
 
       const normalizedError =
         error instanceof Error ? error.message : String(error);
@@ -587,7 +587,7 @@ export class ParsingTaskRunner {
           progress,
           status: 'running',
         } as Prisma.TaskUncheckedUpdateInput,
-      })) as PrismaTaskRecord;
+      }) as PrismaTaskRecord;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

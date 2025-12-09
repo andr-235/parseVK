@@ -54,12 +54,12 @@ describe('TasksService', () => {
 
   beforeEach(() => {
     repositoryMock = {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      count: jest.fn(),
+      create: jest.fn<Promise<Task>, [unknown]>(),
+      findMany: jest.fn<Promise<Task[]>, [unknown?]>(),
+      findUnique: jest.fn<Promise<Task | null>, [{ id: number }]>(),
+      update: jest.fn<Promise<Task>, [{ id: number }, unknown]>(),
+      delete: jest.fn<Promise<void>, [{ id: number }]>(),
+      count: jest.fn<Promise<number>, []>(),
     } as jest.Mocked<ITasksRepository>;
 
     runnerMock = {

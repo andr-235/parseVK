@@ -35,7 +35,18 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findByAuthorId(authorId: number): Promise<PhotoAnalysisItemDto[]> {
-    const analyses = await this.prisma.photoAnalysis.findMany({
+    const analyses: Array<{
+      id: number;
+      authorId: number;
+      photoUrl: string;
+      photoVkId: string;
+      hasSuspicious: boolean;
+      suspicionLevel: string;
+      categories: unknown;
+      confidence: unknown;
+      explanation: string | null;
+      analyzedAt: Date;
+    }> = await this.prisma.photoAnalysis.findMany({
       where: { authorId },
       orderBy: { analyzedAt: 'desc' },
     });
@@ -58,7 +69,18 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
   async findSuspiciousByAuthorId(
     authorId: number,
   ): Promise<PhotoAnalysisItemDto[]> {
-    const analyses = await this.prisma.photoAnalysis.findMany({
+    const analyses: Array<{
+      id: number;
+      authorId: number;
+      photoUrl: string;
+      photoVkId: string;
+      hasSuspicious: boolean;
+      suspicionLevel: string;
+      categories: unknown;
+      confidence: unknown;
+      explanation: string | null;
+      analyzedAt: Date;
+    }> = await this.prisma.photoAnalysis.findMany({
       where: {
         authorId,
         hasSuspicious: true,
@@ -149,7 +171,18 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       return [];
     }
 
-    const analyses = await this.prisma.photoAnalysis.findMany({
+    const analyses: Array<{
+      id: number;
+      authorId: number;
+      photoUrl: string;
+      photoVkId: string;
+      hasSuspicious: boolean;
+      suspicionLevel: string;
+      categories: unknown;
+      confidence: unknown;
+      explanation: string | null;
+      analyzedAt: Date;
+    }> = await this.prisma.photoAnalysis.findMany({
       where: {
         authorId: { in: authorIds },
       },

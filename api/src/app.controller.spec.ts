@@ -14,8 +14,8 @@ describe('AppController', () => {
         {
           provide: HealthService,
           useValue: {
-            checkHealth: jest.fn(),
-            checkReadiness: jest.fn(),
+            checkHealth: jest.fn<Promise<unknown>, []>(),
+            checkReadiness: jest.fn<Promise<unknown>, []>(),
           },
         },
       ],

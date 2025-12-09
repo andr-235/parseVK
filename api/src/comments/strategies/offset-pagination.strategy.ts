@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
 import type {
   IPaginationStrategy,
@@ -24,19 +25,19 @@ export class OffsetPaginationStrategy implements IPaginationStrategy {
   ): Promise<CommentsListDto> {
     const { offset, limit } = options;
 
-    const baseWhere = this.filterBuilder.buildBaseWhere(filters);
-    const readStatusWhere = this.filterBuilder.buildReadStatusWhere(
+    const baseWhere: Prisma.CommentWhereInput = this.filterBuilder.buildBaseWhere(filters);
+    const readStatusWhere: Prisma.CommentWhereInput = this.filterBuilder.buildReadStatusWhere(
       filters.readStatus,
     );
-    const listWhere = this.filterBuilder.mergeWhere(baseWhere, readStatusWhere);
-    const totalWhere = this.filterBuilder.mergeWhere(
+    const listWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, readStatusWhere);
+    const totalWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(
       baseWhere,
       readStatusWhere,
     );
-    const readWhere = this.filterBuilder.mergeWhere(baseWhere, {
+    const readWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, {
       isRead: true,
     });
-    const unreadWhere = this.filterBuilder.mergeWhere(baseWhere, {
+    const unreadWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, {
       isRead: false,
     });
 

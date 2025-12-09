@@ -15,20 +15,20 @@ describe('CommentsService', () => {
   let cursorStrategy: jest.Mocked<CursorPaginationStrategy>;
   let mapper: jest.Mocked<CommentMapper>;
   let repositoryObj: {
-    findMany: jest.Mock;
-    count: jest.Mock;
-    update: jest.Mock;
-    transaction: jest.Mock;
+    findMany: jest.Mock<Promise<CommentWithRelations[]>, [unknown]>;
+    count: jest.Mock<Promise<number>, [unknown]>;
+    update: jest.Mock<Promise<CommentWithRelations>, [unknown]>;
+    transaction: jest.Mock<Promise<unknown[]>, [unknown[]]>;
   };
   let offsetStrategyObj: {
-    execute: jest.Mock;
+    execute: jest.Mock<Promise<CommentsListDto>, [unknown, unknown]>;
   };
   let cursorStrategyObj: {
-    execute: jest.Mock;
+    execute: jest.Mock<Promise<CommentsCursorListDto>, [unknown, unknown]>;
   };
   let mapperObj: {
-    map: jest.Mock;
-    mapMany: jest.Mock;
+    map: jest.Mock<CommentWithAuthorDto, [CommentWithRelations]>;
+    mapMany: jest.Mock<CommentWithAuthorDto[], [CommentWithRelations[]]>;
   };
 
   beforeEach(() => {

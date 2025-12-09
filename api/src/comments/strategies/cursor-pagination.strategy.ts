@@ -1,4 +1,5 @@
 import { Inject, Injectable, BadRequestException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
 import type {
   IPaginationStrategy,
@@ -33,12 +34,12 @@ export class CursorPaginationStrategy implements IPaginationStrategy {
       }
     }
 
-    const baseWhere = this.filterBuilder.buildBaseWhere(filters);
-    const readStatusWhere = this.filterBuilder.buildReadStatusWhere(
+    const baseWhere: Prisma.CommentWhereInput = this.filterBuilder.buildBaseWhere(filters);
+    const readStatusWhere: Prisma.CommentWhereInput = this.filterBuilder.buildReadStatusWhere(
       filters.readStatus,
     );
 
-    const paginationWhere = cursorData
+    const paginationWhere: Prisma.CommentWhereInput = cursorData
       ? {
           OR: [
             {
@@ -56,19 +57,19 @@ export class CursorPaginationStrategy implements IPaginationStrategy {
         }
       : {};
 
-    const listWhere = this.filterBuilder.mergeWhere(
+    const listWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(
       baseWhere,
       readStatusWhere,
       paginationWhere,
     );
-    const totalWhere = this.filterBuilder.mergeWhere(
+    const totalWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(
       baseWhere,
       readStatusWhere,
     );
-    const readWhere = this.filterBuilder.mergeWhere(baseWhere, {
+    const readWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, {
       isRead: true,
     });
-    const unreadWhere = this.filterBuilder.mergeWhere(baseWhere, {
+    const unreadWhere: Prisma.CommentWhereInput = this.filterBuilder.mergeWhere(baseWhere, {
       isRead: false,
     });
 
@@ -91,13 +92,13 @@ export class CursorPaginationStrategy implements IPaginationStrategy {
 
     const [total, readCount, unreadCount] = await Promise.all([
       this.repository.count({
-        where: totalWhere as unknown,
+        where: totalWhere,
       }),
       this.repository.count({
-        where: readWhere as unknown,
+        where: readWhere,
       }),
       this.repository.count({
-        where: unreadWhere as unknown,
+        where: unreadWhere,
       }),
     ]);
 

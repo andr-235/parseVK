@@ -7,15 +7,15 @@ import type { VkService } from '../../vk/vk.service';
 describe('AuthorActivityService - keyword matches', () => {
   let service: AuthorActivityService;
   let prismaMock: {
-    comment: { upsert: jest.Mock };
-    post: { findUnique: jest.Mock };
-    keyword: { findMany: jest.Mock };
+    comment: { upsert: jest.Mock<Promise<{ id: number }>> };
+    post: { findUnique: jest.Mock<Promise<{ id: number; ownerId: number; postId: number } | null>> };
+    keyword: { findMany: jest.Mock<Promise<Array<{ id: number; word: string }>>> };
     commentKeywordMatch: {
-      findMany: jest.Mock;
-      deleteMany: jest.Mock;
-      createMany: jest.Mock;
+      findMany: jest.Mock<Promise<Array<{ keywordId: number }>>>;
+      deleteMany: jest.Mock<Promise<{ count: number }>>;
+      createMany: jest.Mock<Promise<{ count: number }>>;
     };
-    $transaction: jest.Mock;
+    $transaction: jest.Mock<Promise<unknown[]>>;
   };
 
   const baseComment: CommentEntity = {
@@ -57,7 +57,7 @@ describe('AuthorActivityService - keyword matches', () => {
         createMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       $transaction: jest
-        .fn()
+        .fn<Promise<unknown[]>, [Array<Promise<unknown>>]>()
         .mockImplementation(async (operations: Array<Promise<unknown>>) =>
           Promise.all(operations),
         ),

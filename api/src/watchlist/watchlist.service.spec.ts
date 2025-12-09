@@ -45,14 +45,14 @@ describe('WatchlistService', () => {
   });
 
   let prisma: {
-    watchlistSettings: { upsert: jest.Mock; update: jest.Mock };
+    watchlistSettings: { upsert: jest.Mock<Promise<WatchlistSettings>>; update: jest.Mock<Promise<WatchlistSettings>> };
     watchlistAuthor: {
-      findMany: jest.Mock;
-      updateMany: jest.Mock;
-      update: jest.Mock;
+      findMany: jest.Mock<Promise<unknown[]>>;
+      updateMany: jest.Mock<Promise<{ count: number }>>;
+      update: jest.Mock<Promise<unknown>>;
     };
-    comment: { groupBy: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock };
-    $transaction: jest.Mock;
+    comment: { groupBy: jest.Mock<Promise<unknown[]>>; findMany: jest.Mock<Promise<unknown[]>>; findUnique: jest.Mock<Promise<unknown | null>> };
+    $transaction: jest.Mock<Promise<unknown[]>>;
   };
   let authorActivityService: {
     saveAuthors: jest.Mock;
@@ -91,7 +91,7 @@ describe('WatchlistService', () => {
         findMany: jest.fn(),
         findUnique: jest.fn(),
       },
-      $transaction: jest.fn(async (operations: Array<Promise<unknown>>) =>
+      $transaction: jest.fn<Promise<unknown[]>, [Array<Promise<unknown>>]>(async (operations: Array<Promise<unknown>>) =>
         Promise.all(operations),
       ),
     };

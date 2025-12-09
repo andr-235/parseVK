@@ -9,8 +9,9 @@ export class AuthorService implements IAuthorService {
   async findAuthorByVkId(
     vkUserId: number,
   ): Promise<{ id: number; vkUserId: number }> {
-    const author = await this.prisma.author.findUnique({
+    const author: { id: number; vkUserId: number } | null = await this.prisma.author.findUnique({
       where: { vkUserId },
+      select: { id: true, vkUserId: true },
     });
 
     if (!author) {
