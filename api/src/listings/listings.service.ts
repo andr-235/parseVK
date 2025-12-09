@@ -7,7 +7,9 @@ import type { ListingsResponseDto } from './dto/listings-response.dto';
 import type { ListingDto } from './dto/listing.dto';
 import type { UpdateListingDto } from './dto/update-listing.dto';
 
-type ListingWithOverrides = ListingEntity & { manualOverrides?: unknown };
+interface ListingWithOverrides extends ListingEntity {
+  manualOverrides?: unknown;
+}
 
 interface GetListingsOptions {
   page: number;

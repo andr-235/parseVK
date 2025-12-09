@@ -71,7 +71,7 @@ const matchesKeyword = (
 
 const toUpdateJsonValue = (
   value: unknown,
-): Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue | undefined => {
+): Prisma.InputJsonValue | undefined => {
   if (value === undefined) {
     return undefined;
   }
@@ -83,7 +83,7 @@ const toUpdateJsonValue = (
 
 const toCreateJsonValue = (
   value: unknown,
-): Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue => {
+): Prisma.InputJsonValue => {
   if (value === undefined || value === null) {
     return Prisma.JsonNull;
   }
@@ -104,7 +104,7 @@ export class AuthorActivityService {
   ) {}
 
   async refreshAllAuthors(batchSize = 500): Promise<number> {
-    const existingAuthors = await this.prisma.author.findMany({
+    const existingAuthors: Array<{ vkUserId: number }> = await this.prisma.author.findMany({
       select: { vkUserId: true },
       where: { vkUserId: { gt: 0 } },
       orderBy: { vkUserId: 'asc' },
@@ -117,7 +117,7 @@ export class AuthorActivityService {
     let totalUpdated = 0;
 
     for (let index = 0; index < existingAuthors.length; index += batchSize) {
-      const chunk = existingAuthors
+      const chunk: number[] = existingAuthors
         .slice(index, index + batchSize)
         .map((author) => author.vkUserId);
 
@@ -280,27 +280,20 @@ export class AuthorActivityService {
     comment: CommentEntity,
     options: SaveCommentsOptions,
   ): Promise<number> {
-    const threadItemsJson:
-      | Prisma.NullableJsonNullValueInput
-      | Prisma.InputJsonValue = comment.threadItems?.length
+    const threadItemsJson: Prisma.InputJsonValue = comment.threadItems?.length
       ? (comment.threadItems.map((item) =>
           this.serializeComment(item),
         ) as Prisma.InputJsonValue)
       : Prisma.JsonNull;
 
-    const attachmentsJson:
-      | Prisma.NullableJsonNullValueInput
-      | Prisma.InputJsonValue
-      | undefined =
+    const attachmentsJson: Prisma.InputJsonValue | undefined =
       comment.attachments === null
         ? Prisma.JsonNull
         : comment.attachments === undefined
           ? undefined
           : (comment.attachments as Prisma.InputJsonValue);
 
-    const parentsStackJson:
-      | Prisma.NullableJsonNullValueInput
-      | Prisma.InputJsonValue =
+    const parentsStackJson: Prisma.InputJsonValue =
       comment.parentsStack === null
         ? Prisma.JsonNull
         : (comment.parentsStack as Prisma.InputJsonValue);
@@ -419,7 +412,7 @@ export class AuthorActivityService {
   }
 
   private async loadKeywordMatchCandidates(): Promise<KeywordMatchCandidate[]> {
-    const keywords = await this.prisma.keyword.findMany({
+    const keywords: Array<{ id: number; word: string; isPhrase: boolean }> = await this.prisma.keyword.findMany({
       select: { id: true, word: true, isPhrase: true },
     });
 
@@ -463,7 +456,7 @@ export class AuthorActivityService {
         .map((keyword) => keyword.id),
     );
 
-    const existingMatches = await this.prisma.commentKeywordMatch.findMany({
+    const existingMatches: Array<{ keywordId: number }> = await this.prisma.commentKeywordMatch.findMany({
       where: { commentId, source },
       select: { keywordId: true },
     });

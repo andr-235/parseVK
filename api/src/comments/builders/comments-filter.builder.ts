@@ -24,7 +24,7 @@ export class CommentsFilterBuilder {
     );
 
     if (normalizedKeywords.length > 0) {
-      const matchSource = keywordSource
+      const matchSource: MatchSource | undefined = keywordSource
         ? keywordSource === 'COMMENT'
           ? MatchSource.COMMENT
           : MatchSource.POST

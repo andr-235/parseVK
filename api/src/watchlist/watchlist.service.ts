@@ -5,8 +5,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, WatchlistSettings } from '@prisma/client';
 import { WatchlistStatus, CommentSource } from '@prisma/client';
+import type { WatchlistAuthorWithRelations } from './interfaces/watchlist-repository.interface';
 import type {
   WatchlistAuthorCardDto,
   WatchlistAuthorDetailsDto,
@@ -68,8 +69,9 @@ export class WatchlistService {
       limit,
     });
 
+    const recordIds: number[] = records.map((record) => record.id);
     const commentCounts = await this.statsCollector.collectCommentCounts(
-      records.map((record) => record.id),
+      recordIds,
     );
     const summaryMap =
       await this.statsCollector.collectAnalysisSummaries(records);
@@ -162,8 +164,9 @@ export class WatchlistService {
       }
 
       sourceCommentId = comment.id;
+      const fromId: number = comment.fromId;
       authorVkId =
-        comment.authorVkId ?? (comment.fromId > 0 ? comment.fromId : null);
+        comment.authorVkId ?? (fromId > 0 ? fromId : null);
 
       if (!authorVkId) {
         throw new BadRequestException(
@@ -191,11 +194,11 @@ export class WatchlistService {
 
     await this.authorActivityService.saveAuthors([authorVkId]);
 
-    const record = await this.repository.create({
+    const record: WatchlistAuthorWithRelations = await this.repository.create({
       authorVkId,
       sourceCommentId,
       settingsId: settings.id,
-      status: WatchlistStatus.ACTIVE,
+      status: WatchlistStatus.ACTIVE as const,
     });
 
     if (sourceCommentId) {
@@ -233,7 +236,7 @@ export class WatchlistService {
     const data: Prisma.WatchlistAuthorUpdateInput = {};
 
     if (dto.status && dto.status !== record.status) {
-      data.status = dto.status;
+      data.status = dto.status as WatchlistStatus;
 
       if (dto.status === WatchlistStatus.ACTIVE) {
         data.monitoringStoppedAt = { set: null };
@@ -291,7 +294,7 @@ export class WatchlistService {
       data.maxAuthors = dto.maxAuthors;
     }
 
-    const updated = await this.repository.updateSettings(settings.id, data);
+    const updated: WatchlistSettings = await this.repository.updateSettings(settings.id, data);
 
     this.logger.log('Обновлены настройки мониторинга авторов');
 

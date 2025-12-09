@@ -1,7 +1,7 @@
 import type { Keyword, Prisma, MatchSource } from '@prisma/client';
 
 export interface IKeywordsRepository {
-  findUnique(where: { word: string }): Promise<Keyword | null>;
+  findUnique(where: { word: string }): Promise<Keyword>;
   findMany(
     where?: Prisma.KeywordWhereInput,
     orderBy?: Prisma.KeywordOrderByWithRelationInput,

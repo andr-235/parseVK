@@ -106,7 +106,7 @@ export class ParsingProcessor extends WorkerHost {
       const updatedTask = await this.prisma.task.update({
         where: { id: taskId },
         data: { status } as Prisma.TaskUncheckedUpdateInput,
-      });
+      }) as { completed: boolean | null; totalItems: number | null; processedItems: number | null; progress: number | null; description: string | null };
 
       const payload = {
         id: taskId,

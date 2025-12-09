@@ -50,7 +50,7 @@ export class AuthorsService {
     );
 
     const [total, authors] = await Promise.all([
-      this.prisma.author.count({ where }),
+      this.prisma.author.count({ where }) as Promise<number>,
       this.queryAuthors({
         sqlConditions,
         offset,
@@ -59,7 +59,7 @@ export class AuthorsService {
       }),
     ]);
 
-    const authorIds = authors.map((author) => author.id);
+    const authorIds: number[] = authors.map((author) => author.id);
     const summaryMap =
       await this.photoAnalysisService.getSummariesByAuthorIds(authorIds);
 
@@ -87,7 +87,7 @@ export class AuthorsService {
       'updatedAt',
     ]);
 
-  private async queryAuthors(options: QueryAuthorsOptions): Promise<Author[]> {
+  private queryAuthors(options: QueryAuthorsOptions): Promise<Author[]> {
     const whereClause = options.sqlConditions.length
       ? Prisma.sql`WHERE ${Prisma.join(options.sqlConditions, ' AND ')}`
       : Prisma.sql``;
@@ -199,7 +199,7 @@ export class AuthorsService {
   }
 
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetailsDto> {
-    const author = await this.prisma.author.findUnique({
+    const author: Author | null = await this.prisma.author.findUnique({
       where: { vkUserId },
     });
 
@@ -215,8 +215,8 @@ export class AuthorsService {
 
     return {
       ...card,
-      city: (author.city as Record<string, unknown>) ?? null,
-      country: (author.country as Record<string, unknown>) ?? null,
+      city: (author.city as Record<string, unknown> | null) ?? null,
+      country: (author.country as Record<string, unknown> | null) ?? null,
       createdAt: author.createdAt.toISOString(),
       updatedAt: author.updatedAt.toISOString(),
     };
@@ -268,7 +268,7 @@ export class AuthorsService {
       ? normalizedSummary.total
       : null;
     const photosCount = counters.photos ?? summaryPhotos ?? null;
-    const followers = author.followersCount ?? counters.followers ?? null;
+    const followers: number | null = author.followersCount ?? counters.followers ?? null;
 
     return {
       id: author.id,

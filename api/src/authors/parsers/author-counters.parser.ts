@@ -10,7 +10,7 @@ interface ParsedCounters {
 }
 
 export class AuthorCountersParser {
-  extractCounters(value: Prisma.JsonValue | null): ParsedCounters {
+  extractCounters(value: unknown): ParsedCounters {
     if (!this.isValidObject(value)) {
       return this.getEmptyCounters();
     }
@@ -56,7 +56,7 @@ export class AuthorCountersParser {
     return null;
   }
 
-  extractLastSeenAt(value: Prisma.JsonValue | null): string | null {
+  extractLastSeenAt(value: unknown): string | null {
     if (this.isNullish(value)) {
       return null;
     }

@@ -10,7 +10,7 @@ import type {
 export class ListingsRepository implements IListingsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findMany(params: {
+  findMany(params: {
     where?: Prisma.ListingWhereInput;
     skip?: number;
     take?: number;
@@ -22,19 +22,19 @@ export class ListingsRepository implements IListingsRepository {
     return this.prisma.listing.findMany(params);
   }
 
-  async count(where?: Prisma.ListingWhereInput): Promise<number> {
+  count(where?: Prisma.ListingWhereInput): Promise<number> {
     return this.prisma.listing.count({ where });
   }
 
-  async findUniqueOrThrow(where: { id: number }): Promise<Listing> {
+  findUniqueOrThrow(where: { id: number }): Promise<Listing> {
     return this.prisma.listing.findUniqueOrThrow({ where });
   }
 
-  async findUniqueByUrl(where: { url: string }): Promise<Listing | null> {
+  findUniqueByUrl(where: { url: string }): Promise<Listing | null> {
     return this.prisma.listing.findUnique({ where });
   }
 
-  async upsert(
+  upsert(
     where: { url: string },
     create: Prisma.ListingCreateInput,
     update?: Prisma.ListingUpdateInput,
@@ -46,7 +46,7 @@ export class ListingsRepository implements IListingsRepository {
     });
   }
 
-  async update(
+  update(
     where: { id: number },
     data: Prisma.ListingUpdateInput,
   ): Promise<Listing> {
@@ -76,7 +76,7 @@ export class ListingsRepository implements IListingsRepository {
     });
   }
 
-  async transaction<T>(
+  transaction<T>(
     callback: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
     return this.prisma.$transaction(callback);

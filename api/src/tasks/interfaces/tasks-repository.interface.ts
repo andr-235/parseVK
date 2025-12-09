@@ -8,7 +8,7 @@ export interface ITasksRepository {
     orderBy?: Prisma.TaskOrderByWithRelationInput;
   }): Promise<Task[]>;
   count(): Promise<number>;
-  findUnique(where: { id: number }): Promise<Task | null>;
+  findUnique(where: { id: number }): Promise<Task>;
   update(
     where: { id: number },
     data: Prisma.TaskUncheckedUpdateInput,

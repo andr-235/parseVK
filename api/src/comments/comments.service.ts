@@ -56,7 +56,7 @@ export class CommentsService {
     const comment = await this.repository.update({
       where: { id },
       data: { isRead },
-    });
+    }) as Awaited<ReturnType<typeof this.repository.update>>;
 
     return this.mapper.map(comment);
   }

@@ -22,11 +22,11 @@ export interface PostGroupDto {
   photo: string | null;
 }
 
-export type CommentWithAuthorDto = Comment & {
+export interface CommentWithAuthorDto extends Comment {
   author: CommentAuthorDto | null;
   isWatchlisted: boolean;
   matchedKeywords: CommentMatchedKeywordDto[];
   postText: string | null;
   postAttachments: unknown;
   postGroup: PostGroupDto | null;
-};
+}

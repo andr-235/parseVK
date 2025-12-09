@@ -35,11 +35,11 @@ export class PrismaService
     this.logger.log('DATABASE_URL настроен');
   }
 
-  async onModuleInit() {
+  async onModuleInit(): Promise<void> {
     await this.$connect();
   }
 
-  async onModuleDestroy() {
+  async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
   }
 }

@@ -44,6 +44,8 @@ export class TasksGateway {
       updatedAt: payload.updatedAt ?? new Date().toISOString(),
     };
 
-    this.server?.emit(event, enriched);
+    if (this.server) {
+      this.server.emit(event, enriched);
+    }
   }
 }

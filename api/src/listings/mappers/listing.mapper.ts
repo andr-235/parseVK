@@ -1,7 +1,9 @@
 import type { Listing } from '@prisma/client';
 import type { ListingDto } from '../dto/listing.dto';
 
-type ListingWithOverrides = Listing & { manualOverrides?: unknown };
+interface ListingWithOverrides extends Listing {
+  manualOverrides?: unknown;
+}
 
 export class ListingMapper {
   static toDto(listing: ListingWithOverrides): ListingDto {

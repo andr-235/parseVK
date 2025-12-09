@@ -120,23 +120,23 @@ export class TasksService {
   }
 
   async getTask(taskId: number): Promise<TaskDetail> {
-    const task = await this.repository.findUnique({ id: taskId });
+    const task: PrismaTaskRecord | null = await this.repository.findUnique({ id: taskId }) as PrismaTaskRecord | null;
 
     if (!task) {
       throw new NotFoundException('Task not found');
     }
 
-    return this.mapTaskToDetail(task as PrismaTaskRecord);
+    return this.mapTaskToDetail(task);
   }
 
   async resumeTask(taskId: number): Promise<ParsingTaskResult> {
-    const task = await this.repository.findUnique({ id: taskId });
+    const task: PrismaTaskRecord | null = await this.repository.findUnique({ id: taskId }) as PrismaTaskRecord | null;
 
     if (!task) {
       throw new NotFoundException('Task not found');
     }
 
-    const taskRecord = task as PrismaTaskRecord;
+    const taskRecord: PrismaTaskRecord = task;
     const status = this.taskMapper.parseTaskStatus(taskRecord.status);
     if (status === 'done' || taskRecord.completed === true) {
       throw new BadRequestException('Задача уже завершена');
@@ -144,7 +144,7 @@ export class TasksService {
 
     const context = await this.contextBuilder.buildResumeContext(taskRecord);
 
-    const updatedTask = (await this.repository.update({ id: taskId }, {
+    const updatedTask: PrismaTaskRecord = await this.repository.update({ id: taskId }, {
       status: 'pending',
       completed: false,
       totalItems: context.totalItems,
@@ -159,7 +159,7 @@ export class TasksService {
         skippedGroupIds: context.parsed.skippedGroupIds,
         current: taskRecord.description,
       }),
-    } as Prisma.TaskUncheckedUpdateInput)) as PrismaTaskRecord;
+    } as Prisma.TaskUncheckedUpdateInput) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
       taskId: task.id,

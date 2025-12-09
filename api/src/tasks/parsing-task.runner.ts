@@ -46,9 +46,9 @@ export class ParsingTaskRunner {
 
     this.cancellationService.throwIfCancelled(taskId);
 
-    const task = (await this.prisma.task.findUnique({
+    const task: PrismaTaskRecord | null = await this.prisma.task.findUnique({
       where: { id: taskId },
-    })) as PrismaTaskRecord | null;
+    }) as PrismaTaskRecord | null;
     if (!task) {
       this.logger.warn(
         `Задача ${taskId} не найдена в базе данных, парсинг пропущен`,
@@ -133,7 +133,7 @@ export class ParsingTaskRunner {
         context.skippedGroupVkIds,
       );
 
-      const updatedTask = (await this.prisma.task.update({
+      const updatedTask: PrismaTaskRecord = await this.prisma.task.update({
         where: { id: taskId },
         data: {
           completed: true,
@@ -196,7 +196,7 @@ export class ParsingTaskRunner {
         context.skippedGroupVkIds,
       );
 
-      const updatedTask = (await this.prisma.task.update({
+      const updatedTask: PrismaTaskRecord = await this.prisma.task.update({
         where: { id: taskId },
         data: {
           status: 'failed',
@@ -424,7 +424,7 @@ export class ParsingTaskRunner {
         const savedCount = await this.authorActivityService.saveComments(
           comments,
           {
-            source: CommentSource.TASK,
+            source: CommentSource.TASK as const,
           },
         );
         context.stats.comments += savedCount;
@@ -657,11 +657,11 @@ export class ParsingTaskRunner {
     groupIds: number[],
   ): Promise<PrismaGroupRecord[]> {
     if (scope === ParsingScope.ALL) {
-      const groups = await this.prisma.group.findMany({
+      const groups: PrismaGroupRecord[] = await this.prisma.group.findMany({
         orderBy: { updatedAt: 'desc' },
-      });
+      }) as PrismaGroupRecord[];
 
-      return groups as PrismaGroupRecord[];
+      return groups;
     }
 
     if (!groupIds?.length) {
@@ -670,7 +670,7 @@ export class ParsingTaskRunner {
       );
     }
 
-    const groups = (await this.prisma.group.findMany({
+    const groups: PrismaGroupRecord[] = await this.prisma.group.findMany({
       where: { id: { in: groupIds } },
     })) as PrismaGroupRecord[];
 
@@ -721,7 +721,7 @@ export class ParsingTaskRunner {
 
   private async savePost(post: IPost, group: PrismaGroupRecord): Promise<void> {
     const postedAt = new Date(post.date * 1000);
-    const attachmentsJson = post.attachments
+    const attachmentsJson: Prisma.InputJsonValue | undefined = post.attachments
       ? (post.attachments as Prisma.InputJsonValue)
       : undefined;
 
