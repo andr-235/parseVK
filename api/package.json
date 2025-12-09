@@ -34,6 +34,7 @@
     "@nestjs/schedule": "^6.0.1",
     "@nestjs/websockets": "^11.1.6",
     "@prisma/client": "^6.16.3",
+    "big-integer": "^1.6.52",
     "bullmq": "^5.61.0",
     "cache-manager": "^7.2.4",
     "cache-manager-redis-yet": "^5.1.5",
