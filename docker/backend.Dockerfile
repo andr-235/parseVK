@@ -46,7 +46,7 @@ COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/src ./src
 COPY --from=build /app/tsconfig*.json ./
 
-RUN npx prisma generate || echo "Warning: Prisma generate failed, using pre-generated client"
+RUN npx prisma generate
 
 EXPOSE 3000
 
