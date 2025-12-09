@@ -5,7 +5,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { Prisma as PrismaTypes } from '@prisma/client';
 import {
   CreateParsingTaskDto,
   ParsingScope,
@@ -72,7 +73,7 @@ export class TasksService {
       processedItems: 0,
       progress: 0,
       status: 'pending',
-    } as Prisma.TaskUncheckedCreateInput)) as PrismaTaskRecord;
+    } as PrismaTypes.TaskUncheckedCreateInput)) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
       taskId: task.id,
@@ -120,15 +121,37 @@ export class TasksService {
   }
 
   async getTask(taskId: number): Promise<TaskDetail> {
-    const task = await this.repository.findUnique({ id: taskId });
-
-    return this.mapTaskToDetail(task as PrismaTaskRecord);
+    try {
+      const task = await this.repository.findUnique({ id: taskId });
+      return this.mapTaskToDetail(task as PrismaTaskRecord);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Задача с id=${taskId} не найдена`);
+      }
+      throw error;
+    }
   }
 
   async resumeTask(taskId: number): Promise<ParsingTaskResult> {
-    const task = await this.repository.findUnique({ id: taskId });
+    let task: PrismaTaskRecord;
+    try {
+      task = (await this.repository.findUnique({
+        id: taskId,
+      })) as PrismaTaskRecord;
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Задача с id=${taskId} не найдена`);
+      }
+      throw error;
+    }
 
-    const taskRecord = task as PrismaTaskRecord;
+    const taskRecord = task;
     const status = this.taskMapper.parseTaskStatus(taskRecord.status);
     if (status === 'done' || taskRecord.completed === true) {
       throw new BadRequestException('Задача уже завершена');
@@ -153,7 +176,7 @@ export class TasksService {
           skippedGroupIds: context.parsed.skippedGroupIds,
           current: taskRecord.description,
         }),
-      } as Prisma.TaskUncheckedUpdateInput,
+      } as PrismaTypes.TaskUncheckedUpdateInput,
     )) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
@@ -167,9 +190,22 @@ export class TasksService {
   }
 
   async refreshTask(taskId: number): Promise<ParsingTaskResult> {
-    const task = await this.repository.findUnique({ id: taskId });
+    let task: PrismaTaskRecord;
+    try {
+      task = (await this.repository.findUnique({
+        id: taskId,
+      })) as PrismaTaskRecord;
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Задача с id=${taskId} не найдена`);
+      }
+      throw error;
+    }
 
-    const taskRecord = task as PrismaTaskRecord;
+    const taskRecord = task;
     const context = await this.contextBuilder.buildResumeContext(taskRecord);
     const shouldComplete =
       context.totalItems > 0 && context.processedItems >= context.totalItems;
@@ -189,7 +225,7 @@ export class TasksService {
         skippedGroupIds: context.parsed.skippedGroupIds,
         current: taskRecord.description,
       }),
-    } as Prisma.TaskUncheckedUpdateInput)) as PrismaTaskRecord;
+    } as PrismaTypes.TaskUncheckedUpdateInput)) as PrismaTaskRecord;
 
     if (!shouldComplete) {
       await this.parsingQueue.enqueue({
@@ -204,7 +240,17 @@ export class TasksService {
   }
 
   async deleteTask(taskId: number): Promise<void> {
-    await this.repository.findUnique({ id: taskId });
+    try {
+      await this.repository.findUnique({ id: taskId });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Задача с id=${taskId} не найдена`);
+      }
+      throw error;
+    }
 
     this.cancellationService.requestCancel(taskId);
 

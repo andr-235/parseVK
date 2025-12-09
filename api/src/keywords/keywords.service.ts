@@ -49,7 +49,10 @@ export class KeywordsService {
         word: normalizedWord,
       });
     } catch (error) {
-      if (error instanceof Prisma.NotFoundError) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         existing = null;
       } else {
         throw error;
