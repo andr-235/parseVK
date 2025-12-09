@@ -8,6 +8,5 @@
     "isolatedModules": false
   },
   "include": ["src", "jest.config.js", "src/setupTests.ts"],
-  "exclude": []
+  "exclude": ["src/**/*.test.*", "src/**/*.spec.*", "src/**/__tests__/**"]
 }
-
