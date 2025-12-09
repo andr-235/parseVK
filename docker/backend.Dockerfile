@@ -43,10 +43,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
-COPY --from=build /app/src ./src
-COPY --from=build /app/tsconfig*.json ./
 
-RUN npx prisma generate
+RUN npx prisma generate || echo "Warning: Prisma generate failed, using pre-generated client"
 
 EXPOSE 3000
 
