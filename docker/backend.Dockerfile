@@ -23,6 +23,8 @@ COPY api/ ./
 
 RUN rm -f .env
 
+RUN npx prisma generate
+
 RUN npm run build
 
 # Production stage
