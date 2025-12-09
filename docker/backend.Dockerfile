@@ -37,12 +37,18 @@ ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 COPY --from=build /app/package*.json ./
-COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
 
-RUN npx prisma generate || echo "Warning: Prisma generate failed, using pre-generated client"
+RUN npm config set registry ${NPM_REGISTRY} \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm config set fetch-timeout 600000 \
+    && npm ci --no-audit --legacy-peer-deps
+
+RUN npx prisma generate
 
 EXPOSE 3000
 
