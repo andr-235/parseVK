@@ -37,6 +37,9 @@ importers:
       '@prisma/client':
         specifier: ^6.16.3
         version: 6.19.0(prisma@6.19.0(typescript@5.9.3))(typescript@5.9.3)
+      big-integer:
+        specifier: ^1.6.52
+        version: 1.6.52
       bullmq:
         specifier: ^5.61.0
         version: 5.65.1
