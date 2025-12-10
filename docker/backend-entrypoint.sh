@@ -31,18 +31,24 @@ if command -v getent >/dev/null 2>&1; then
 fi
 
 echo "Ожидание доступности базы данных ${DB_HOST}:${DB_PORT}..."
+SUCCESS=false
 for i in $(seq 1 30); do
   if nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; then
     echo "База данных доступна!"
+    SUCCESS=true
     break
   fi
-  echo "БД недоступна, попытка $i/30..."
+  echo "БД недоступна, попытка $i/30 (проверка через nc -z $DB_HOST $DB_PORT)..."
   sleep 2
 done
 
-if ! nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; then
+# Финальная проверка
+if [ "$SUCCESS" = "false" ]; then
   echo "ОШИБКА: База данных недоступна после 30 попыток, останавливаемся."
   echo "Проверьте, что сервис БД запущен и доступен по адресу ${DB_HOST}:${DB_PORT}"
+  echo "Проверка DNS: $(getent hosts "$DB_HOST" 2>/dev/null || echo 'DNS не резолвится')"
+  echo "Проверка порта:"
+  nc -z -v "$DB_HOST" "$DB_PORT" 2>&1 || true
   exit 1
 fi
 
