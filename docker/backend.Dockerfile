@@ -44,6 +44,7 @@ WORKDIR /app
 
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV NODE_ENV=production
 
 # Копируем собранное приложение и node_modules из build stage
 COPY --from=build /app/package*.json ./
@@ -57,4 +58,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
 
-CMD ["pnpm", "run", "start:prod"]
+CMD ["node", "dist/src/main.js"]
