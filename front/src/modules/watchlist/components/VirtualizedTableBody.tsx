@@ -68,7 +68,7 @@ export const VirtualizedTableBody = memo(
     }: RowComponentProps<WatchlistRowProps>) => {
       const author = authors[index]
       if (!author) {
-        return null
+        return <div style={style} {...ariaAttributes} />
       }
 
       logger.debug('Rendering row', { index, authorId: author.id })
