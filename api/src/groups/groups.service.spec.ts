@@ -37,7 +37,10 @@ describe('GroupsService', () => {
     findManyByVkIds: jest.Mock<Promise<unknown[]>, [number[]]>;
   };
   let vkServiceObj: {
-    getGroups: jest.Mock<Promise<IGroup[]>, [number[]]>;
+    getGroups: jest.Mock<
+      Promise<{ groups: IGroup[]; profiles: unknown[] }>,
+      [string | number]
+    >;
     searchGroupsByRegion: jest.Mock<Promise<IGroup[]>, [unknown]>;
   };
   let groupMapperObj: {
@@ -86,7 +89,10 @@ describe('GroupsService', () => {
     repository = repositoryObj as never;
 
     vkServiceObj = {
-      getGroups: jest.fn<Promise<IGroup[]>, [number[]]>(),
+      getGroups: jest.fn<
+        Promise<{ groups: IGroup[]; profiles: unknown[] }>,
+        [string | number]
+      >(),
       searchGroupsByRegion: jest.fn<Promise<IGroup[]>, [unknown]>(),
     };
     vkService = vkServiceObj as unknown as VkService;
@@ -112,7 +118,10 @@ describe('GroupsService', () => {
 
   describe('saveGroup', () => {
     it('должен успешно сохранять и маппить данные группы', async () => {
-      vkServiceObj.getGroups.mockResolvedValue([vkGroup]);
+      vkServiceObj.getGroups.mockResolvedValue({
+        groups: [vkGroup],
+        profiles: [],
+      });
 
       const mappedData = {
         name: vkGroup.name,
@@ -164,7 +173,7 @@ describe('GroupsService', () => {
     });
 
     it('должен выбрасывать NotFoundException, если группа не найдена', async () => {
-      vkServiceObj.getGroups.mockResolvedValue([]);
+      vkServiceObj.getGroups.mockResolvedValue({ groups: [], profiles: [] });
 
       await expect(service.saveGroup('123')).rejects.toThrow(
         new NotFoundException('Group 123 not found'),
