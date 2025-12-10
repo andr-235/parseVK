@@ -42,22 +42,15 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-ARG PNPM_VERSION=10.25.0
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
-
+# Копируем собранное приложение и node_modules из build stage
 COPY --from=build /app/package*.json ./
-COPY --from=build /app/pnpm-lock.yaml ./
-COPY --from=build /app/.npmrc ./
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
-
-RUN pnpm install --frozen-lockfile --prod
-
-RUN pnpm add -D prisma@6.19.0 && pnpm exec prisma generate && pnpm remove prisma
+COPY --from=build /app/node_modules ./node_modules
 
 EXPOSE 3000
 
