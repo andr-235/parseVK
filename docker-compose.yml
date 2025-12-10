@@ -59,6 +59,8 @@ services:
       dockerfile: docker/backend.Dockerfile
       args:
         DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/vk_api?schema=public}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
+        NPM_REGISTRY_FALLBACK: ${NPM_REGISTRY_FALLBACK:-https://registry.npmmirror.com}
     depends_on:
       db:
         condition: service_healthy

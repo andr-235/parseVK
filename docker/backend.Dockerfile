@@ -24,7 +24,7 @@ COPY api/.npmrc ./
 RUN pnpm config set registry ${NPM_REGISTRY} \
     && pnpm config set fetch-retries 5 \
     && pnpm config set fetch-timeout 600000 \
-    && pnpm install
+    && (pnpm install || (pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install))
 
 COPY api/ ./
 
