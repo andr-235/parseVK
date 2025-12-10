@@ -31,7 +31,7 @@
 $ npm install
 ```
 
-## Database setup
+## Database setuлшлгнлнлн
 
 ```bash
 # 1. Copy env template and adjust credentials if needed
