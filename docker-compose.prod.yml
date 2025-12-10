@@ -1,25 +1,12 @@
 # Production docker-compose для Dokploy
 # Использует готовые образы из GitHub Container Registry
 # Замените andr-235/parseVK на ваш репозиторий
+#
+# ВАЖНО: База данных должна быть развернута отдельно.
+# Укажите DATABASE_URL в environment переменных Dokploy для сервиса api.
+# Пример: postgresql://user:password@host:5432/vk_api?schema=public
 
 services:
-  db:
-    image: postgres:15-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-vk_api}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    expose:
-      - "5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d vk_api"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:7-alpine
     restart: always
@@ -35,12 +22,10 @@ services:
     pull_policy: always
     restart: always
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/vk_api?schema=public}
+      DATABASE_URL: ${DATABASE_URL}
       VK_TOKEN: ${VK_TOKEN}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       REDIS_HOST: redis
@@ -75,7 +60,3 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-
-volumes:
-  postgres_data:
-    name: parsevk_postgres_data

@@ -12,9 +12,20 @@ if [ -n "$DATABASE_URL" ]; then
   DB_PORT="${DB_PORT:-$(echo "$AFTER_AT" | cut -d: -f2 | cut -d/ -f1)}"
 fi
 
-# Fallback значения
-[ -z "$DB_HOST" ] && DB_HOST="db"
+# Fallback значения (только порт, хост должен быть указан в DATABASE_URL)
 [ -z "$DB_PORT" ] && DB_PORT="5432"
+
+# Проверка наличия DATABASE_URL
+if [ -z "$DATABASE_URL" ]; then
+  echo "ОШИБКА: DATABASE_URL не установлен. Укажите его в environment переменных."
+  exit 1
+fi
+
+# Проверка наличия хоста
+if [ -z "$DB_HOST" ]; then
+  echo "ОШИБКА: Не удалось извлечь DB_HOST из DATABASE_URL. Проверьте формат: postgresql://user:password@host:port/database"
+  exit 1
+fi
 
 echo "DATABASE_URL: ${DATABASE_URL:+установлен (скрыт)}"
 echo "Извлеченный DB_HOST: $DB_HOST"
