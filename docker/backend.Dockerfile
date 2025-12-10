@@ -49,7 +49,7 @@ RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retry-factor 2 \
     && npm config set fetch-retry-mintimeout 20000 \
     && npm config set fetch-timeout 600000 \
-    && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY})
+    && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK})
 
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/pnpm-lock.yaml ./
