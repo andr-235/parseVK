@@ -6,31 +6,30 @@ WORKDIR /app
 ARG DATABASE_URL
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 ARG NPM_REGISTRY_FALLBACK=https://registry.npmjs.org/
-ARG PNPM_VERSION=9.12.1
-ENV PNPM_FETCH_TIMEOUT=120000
-ENV PNPM_FETCH_RETRIES=2
-ENV PNPM_FETCH_RETRY_FACTOR=2
-ENV PNPM_FETCH_RETRY_MINTIMEOUT=20000
-ENV PRISMA_CLI_QUERY_ENGINE_BINARY_HOST=https://registry.npmmirror.com/-/binary/prisma/
-ENV PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma/
+ARG PNPM_VERSION=10.25.0
+
+# Переменные окружения для pnpm и prisma
 ENV DATABASE_URL=${DATABASE_URL}
 ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+# Prisma engines mirror - используем официальный CDN
+ENV PRISMA_ENGINES_MIRROR=https://binaries.prisma.sh
 
 RUN npm config set registry ${NPM_REGISTRY} \
-    && npm config set fetch-retries 5 \
+    && npm config set fetch-retries 3 \
     && npm config set fetch-retry-factor 2 \
-    && npm config set fetch-retry-mintimeout 20000 \
-    && npm config set fetch-timeout 120000 \
+    && npm config set fetch-retry-mintimeout 10000 \
+    && npm config set fetch-timeout 60000 \
     && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK})
 
 COPY api/package*.json ./
 COPY api/.npmrc ./
 
+# Устанавливаем зависимости с fallback на npmjs
 RUN pnpm config set registry ${NPM_REGISTRY} \
-    && pnpm config set fetch-retries 5 \
-    && pnpm config set fetch-timeout 120000 \
-    && (pnpm install || (pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install))
+    && pnpm config set fetch-retries 3 \
+    && pnpm config set fetch-timeout 60000 \
+    && (pnpm install || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install))
 
 COPY api/ ./
 
