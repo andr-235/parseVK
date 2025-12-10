@@ -46,6 +46,9 @@ ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
 
+# Устанавливаем prisma CLI для миграций
+RUN npm install -g prisma@^6.16.3
+
 # Копируем собранное приложение и node_modules из build stage
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/dist ./dist
@@ -53,9 +56,13 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/node_modules ./node_modules
 
+# Копируем entrypoint скрипт
+COPY docker/backend-entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 3000
 
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=60s \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
 
-CMD ["node", "dist/src/main.js"]
+ENTRYPOINT ["/app/entrypoint.sh"]

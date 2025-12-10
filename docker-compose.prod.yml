@@ -54,7 +54,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 60s
 
   frontend:
     image: ghcr.io/andr-235/parsevk/frontend:latest
