@@ -37,19 +37,11 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-ARG NPM_REGISTRY=https://registry.npmjs.org/
-ARG NPM_REGISTRY_FALLBACK=https://registry.npmmirror.com
 ARG PNPM_VERSION=10.25.0
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
-ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-RUN npm config set registry ${NPM_REGISTRY} \
-    && npm config set fetch-retries 5 \
-    && npm config set fetch-retry-factor 2 \
-    && npm config set fetch-retry-mintimeout 20000 \
-    && npm config set fetch-timeout 600000 \
-    && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK})
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/pnpm-lock.yaml ./
@@ -58,10 +50,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
 
-RUN pnpm config set registry ${NPM_REGISTRY} \
-    && pnpm config set fetch-retries 5 \
-    && pnpm config set fetch-timeout 600000 \
-    && pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --prod
 
 RUN pnpm exec prisma generate
 
