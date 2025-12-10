@@ -7,9 +7,9 @@ import type { ListingsResponseDto } from './dto/listings-response.dto';
 import type { ListingDto } from './dto/listing.dto';
 import type { UpdateListingDto } from './dto/update-listing.dto';
 
-interface ListingWithOverrides extends ListingEntity {
-  manualOverrides?: unknown;
-}
+type ListingWithOverrides = ListingEntity & {
+  manualOverrides?: Prisma.JsonValue | null;
+};
 
 interface GetListingsOptions {
   page: number;

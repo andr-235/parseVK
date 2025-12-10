@@ -153,12 +153,10 @@ export class TelegramAuthService {
     const apiId =
       payload.apiId ??
       (savedSettings as { apiId: number | null } | null)?.apiId ??
-      null ??
       this.defaultApiId;
     const apiHash =
       payload.apiHash ??
       (savedSettings as { apiHash: string | null } | null)?.apiHash ??
-      null ??
       this.defaultApiHash;
 
     if (!apiId || !apiHash) {

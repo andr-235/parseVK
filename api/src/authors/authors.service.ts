@@ -44,10 +44,13 @@ export class AuthorsService {
       options.sortOrder,
       options.verified,
     );
-    const { where, sqlConditions } = this.buildFilters(
-      search,
-      options.verified,
-    );
+    const {
+      where,
+      sqlConditions,
+    }: {
+      where?: Prisma.AuthorWhereInput;
+      sqlConditions: Prisma.Sql[];
+    } = this.buildFilters(search, options.verified);
 
     const [total, authors] = await Promise.all([
       this.prisma.author.count({ where }) as Promise<number>,
@@ -88,9 +91,10 @@ export class AuthorsService {
     ]);
 
   private queryAuthors(options: QueryAuthorsOptions): Promise<Author[]> {
-    const whereClause: Prisma.Sql = options.sqlConditions.length
-      ? Prisma.sql`WHERE ${Prisma.join(options.sqlConditions, ' AND ')}`
-      : Prisma.sql``;
+    const whereClause: Prisma.Sql =
+      options.sqlConditions.length > 0
+        ? Prisma.sql`WHERE ${Prisma.join(options.sqlConditions, ' AND ')}`
+        : Prisma.sql``;
 
     const orderClause: Prisma.Sql = this.sortBuilder.buildOrderClause(
       options.sort,
@@ -122,7 +126,7 @@ export class AuthorsService {
         { lastName: { contains: search, mode: 'insensitive' } },
         { domain: { contains: search, mode: 'insensitive' } },
         { screenName: { contains: search, mode: 'insensitive' } },
-      ] as Prisma.AuthorWhereInput[];
+      ];
 
       const searchTerm = `%${search.toLowerCase()}%`;
       const searchSqlParts: Prisma.Sql[] = [
@@ -137,20 +141,20 @@ export class AuthorsService {
         searchSqlParts.push(Prisma.sql`"Author"."vkUserId" = ${numericId}`);
       }
 
-      filters.push({ OR: orFilters } as Prisma.AuthorWhereInput);
+      filters.push({ OR: orFilters });
       sqlConditions.push(Prisma.sql`(${Prisma.join(searchSqlParts, ' OR ')})`);
     }
 
     if (verified === true) {
-      filters.push({ verifiedAt: { not: null } } as Prisma.AuthorWhereInput);
+      filters.push({ verifiedAt: { not: null } });
       sqlConditions.push(Prisma.sql`"Author"."verifiedAt" IS NOT NULL`);
     } else if (verified === false) {
-      filters.push({ verifiedAt: null } as Prisma.AuthorWhereInput);
+      filters.push({ verifiedAt: null });
       sqlConditions.push(Prisma.sql`"Author"."verifiedAt" IS NULL`);
     }
 
     const where: Prisma.AuthorWhereInput | undefined = filters.length
-      ? ({ AND: filters } as Prisma.AuthorWhereInput)
+      ? { AND: filters }
       : undefined;
 
     return {

@@ -185,9 +185,9 @@ export class TelegramChatSyncService {
           photoDcId: number | null;
           photoHasVideo: boolean;
           commonChatsCount: number | null;
-          usernames: unknown;
-          personal: unknown;
-          botInfo: unknown;
+          usernames: PrismaType.JsonValue | null;
+          personal: PrismaType.JsonValue | null;
+          botInfo: PrismaType.JsonValue | null;
           blocked: boolean;
           contactRequirePremium: boolean;
           spam: boolean;

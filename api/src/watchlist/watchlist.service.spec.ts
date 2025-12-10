@@ -2,7 +2,10 @@ import { WatchlistService } from './watchlist.service';
 import { WatchlistStatus, type WatchlistSettings } from '@prisma/client';
 import type { PrismaService } from '../prisma.service';
 import type { AuthorActivityService } from '../common/services/author-activity.service';
-import type { IWatchlistRepository } from './interfaces/watchlist-repository.interface';
+import type {
+  IWatchlistRepository,
+  WatchlistAuthorWithRelations,
+} from './interfaces/watchlist-repository.interface';
 import type { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper';
 import type { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper';
 import type { WatchlistStatsCollectorService } from './services/watchlist-stats-collector.service';
@@ -43,6 +46,35 @@ describe('WatchlistService', () => {
     updatedAt: new Date('2024-01-01T00:00:00.000Z'),
     ...overrides,
   });
+  const createAuthor = (
+    overrides: Partial<WatchlistAuthorWithRelations> = {},
+  ): WatchlistAuthorWithRelations => ({
+    id: 1,
+    authorVkId: 1,
+    sourceCommentId: null,
+    settingsId: 1,
+    status: WatchlistStatus.ACTIVE,
+    lastCheckedAt: null,
+    lastActivityAt: null,
+    foundCommentsCount: 0,
+    monitoringStartedAt: new Date('2024-01-01T00:00:00.000Z'),
+    monitoringStoppedAt: null,
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+    author: {
+      id: 1,
+      vkUserId: 1,
+      firstName: null,
+      lastName: null,
+      photo50: null,
+      photo100: null,
+      photo200Orig: null,
+      screenName: null,
+      domain: null,
+    },
+    settings: createSettings(),
+    ...overrides,
+  });
 
   let prisma: {
     watchlistSettings: {
@@ -66,19 +98,7 @@ describe('WatchlistService', () => {
     saveComments: jest.Mock;
   };
   let vkService: { getAuthorCommentsForPost: jest.Mock };
-  let repositoryMock: {
-    ensureSettings: jest.Mock;
-    findMany: jest.Mock;
-    findActiveAuthors: jest.Mock;
-    findById: jest.Mock;
-    update: jest.Mock;
-    updateMany: jest.Mock;
-    countComments: jest.Mock;
-    getAuthorComments: jest.Mock;
-    create: jest.Mock;
-    findByAuthorVkIdAndSettingsId: jest.Mock;
-    updateComment: jest.Mock;
-  };
+  let repositoryMock: jest.Mocked<IWatchlistRepository>;
   let authorRefresherMock: jest.Mocked<WatchlistAuthorRefresherService>;
   let service: WatchlistService;
 
@@ -124,16 +144,21 @@ describe('WatchlistService', () => {
       create: jest.fn(),
       findByAuthorVkIdAndSettingsId: jest.fn(),
       updateComment: jest.fn(),
+      getTrackedPosts: jest.fn(),
+      loadExistingCommentKeys: jest.fn(),
+      getSettings: jest.fn(),
+      updateSettings: jest.fn(),
+      findCommentById: jest.fn(),
     };
 
-    const authorMapperMock = {
+    const authorMapperMock: jest.Mocked<WatchlistAuthorMapper> = {
       mapAuthor: jest.fn(),
       mapProfile: jest.fn(),
       mapComment: jest.fn(),
       buildCommentUrl: jest.fn(),
     };
 
-    const settingsMapperMock = {
+    const settingsMapperMock: jest.Mocked<WatchlistSettingsMapper> = {
       map: jest.fn(),
     };
 
@@ -162,9 +187,9 @@ describe('WatchlistService', () => {
     };
 
     service = new WatchlistService(
-      repositoryMock as unknown as jest.Mocked<IWatchlistRepository>,
-      authorMapperMock as unknown as jest.Mocked<WatchlistAuthorMapper>,
-      settingsMapperMock as jest.Mocked<WatchlistSettingsMapper>,
+      repositoryMock,
+      authorMapperMock,
+      settingsMapperMock,
       statsCollectorMock,
       authorRefresherMock,
       queryValidatorMock,
@@ -186,6 +211,7 @@ describe('WatchlistService', () => {
 
     await service.refreshActiveAuthors();
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repositoryMock.findActiveAuthors).toHaveBeenCalledTimes(1);
 
     repositoryMock.findActiveAuthors.mockClear();
@@ -193,6 +219,7 @@ describe('WatchlistService', () => {
 
     await service.refreshActiveAuthors();
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repositoryMock.findActiveAuthors).not.toHaveBeenCalled();
   });
 
@@ -201,11 +228,7 @@ describe('WatchlistService', () => {
       createSettings({ trackAllComments: false, pollIntervalMinutes: 1 }),
     );
     const authors = [
-      {
-        id: 1,
-        authorVkId: 123,
-        status: WatchlistStatus.ACTIVE,
-      },
+      createAuthor({ id: 1, authorVkId: 123, status: WatchlistStatus.ACTIVE }),
     ];
 
     repositoryMock.findActiveAuthors.mockResolvedValue(authors);
@@ -214,14 +237,16 @@ describe('WatchlistService', () => {
     await service.refreshActiveAuthors();
 
     expect(authorActivityService.saveAuthors).toHaveBeenCalledWith([123]);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repositoryMock.updateMany).toHaveBeenCalledWith([1], {
       lastCheckedAt: expect.any(Date) as Date,
     });
+
     expect(vkService.getAuthorCommentsForPost).not.toHaveBeenCalled();
   });
 
   it('сохраняет новые комментарии автора и обновляет статистику записи', async () => {
-    const record = {
+    const record: WatchlistAuthorWithRelations = {
       id: 1,
       authorVkId: 321,
       status: WatchlistStatus.ACTIVE,
@@ -234,13 +259,16 @@ describe('WatchlistService', () => {
       sourceCommentId: null,
       author: null,
       settings: createSettings(),
-    } as never;
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+    };
 
     repositoryMock.findActiveAuthors.mockResolvedValue([record]);
     authorRefresherMock.refreshAuthorRecord.mockResolvedValue(2);
 
     await service.refreshActiveAuthors();
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repositoryMock.findActiveAuthors).toHaveBeenCalledWith({
       settingsId: 1,
       limit: 10,

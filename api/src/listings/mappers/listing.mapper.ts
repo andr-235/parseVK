@@ -1,13 +1,14 @@
-import type { Listing } from '@prisma/client';
+import type { Listing, Prisma } from '@prisma/client';
 import type { ListingDto } from '../dto/listing.dto';
 
-interface ListingWithOverrides extends Listing {
-  manualOverrides?: unknown;
-}
+type ListingWithOverrides = Listing & {
+  manualOverrides?: Prisma.JsonValue | null;
+};
 
 export class ListingMapper {
   static toDto(listing: ListingWithOverrides): ListingDto {
     const overrides = this.normalizeManualOverrides(listing.manualOverrides);
+    const sourcePostedAt = this.normalizeDateValue(listing.sourcePostedAt);
 
     return {
       id: listing.id,
@@ -37,7 +38,7 @@ export class ListingMapper {
       sourceAuthorName: listing.sourceAuthorName ?? null,
       sourceAuthorPhone: listing.sourceAuthorPhone ?? null,
       sourceAuthorUrl: listing.sourceAuthorUrl ?? null,
-      sourcePostedAt: (listing.sourcePostedAt as Date | null) ?? null,
+      sourcePostedAt,
       sourceParsedAt: listing.sourceParsedAt
         ? listing.sourceParsedAt.toISOString()
         : null,
@@ -57,5 +58,17 @@ export class ListingMapper {
     return value
       .map((item) => (typeof item === 'string' ? item.trim() : ''))
       .filter((item): item is string => item.length > 0);
+  }
+
+  private static normalizeDateValue(value: unknown): string | null {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    return null;
   }
 }

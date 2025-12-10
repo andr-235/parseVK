@@ -14,6 +14,7 @@ import { TelegramExcelExporterService } from './services/telegram-excel-exporter
 import { TelegramChatRepository } from './repositories/telegram-chat.repository';
 import { TelegramChatType } from '@prisma/client';
 import type { ParticipantCollection } from './interfaces/telegram-client.interface';
+import type { TelegramMemberDto } from './dto/telegram-member.dto';
 
 @Injectable()
 export class TelegramService {
@@ -92,7 +93,7 @@ export class TelegramService {
       syncedMembers: collection.members.length,
       totalMembers: collection.total ?? null,
       fetchedMembers: collection.members.length,
-      members: (persisted as { members: unknown }).members,
+      members: (persisted as { members: TelegramMemberDto[] }).members,
     };
   }
 

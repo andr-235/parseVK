@@ -54,7 +54,7 @@ export class WatchlistService {
       excludeStopped?: boolean;
     } = {},
   ): Promise<WatchlistAuthorListDto> {
-    const settings = (await this.repository.ensureSettings()) as { id: number };
+    const settings = await this.repository.ensureSettings();
     const offset = this.queryValidator.normalizeOffset(params.offset);
     const limit = this.queryValidator.normalizeLimit(params.limit);
     const excludeStopped = this.queryValidator.normalizeExcludeStopped(
@@ -149,7 +149,7 @@ export class WatchlistService {
       throw new BadRequestException('Нужно указать commentId или authorVkId');
     }
 
-    const settings = (await this.repository.ensureSettings()) as { id: number };
+    const settings = await this.repository.ensureSettings();
 
     let authorVkId = dto.authorVkId ?? null;
     let sourceCommentId: number | null = null;
@@ -161,11 +161,9 @@ export class WatchlistService {
         throw new NotFoundException('Комментарий не найден');
       }
 
-      sourceCommentId = (comment as { id: number }).id;
-      const fromId = (comment as { fromId: number }).fromId;
-      authorVkId =
-        (comment as { authorVkId: number | null }).authorVkId ??
-        (fromId > 0 ? fromId : null);
+      sourceCommentId = comment.id;
+      const fromId = comment.fromId;
+      authorVkId = comment.authorVkId ?? (fromId > 0 ? fromId : null);
 
       if (!authorVkId) {
         throw new BadRequestException(
@@ -182,7 +180,7 @@ export class WatchlistService {
 
     const existing = await this.repository.findByAuthorVkIdAndSettingsId(
       authorVkId,
-      (settings as { id: number }).id,
+      settings.id,
     );
 
     if (existing) {
@@ -196,20 +194,18 @@ export class WatchlistService {
     const record = await this.repository.create({
       authorVkId,
       sourceCommentId,
-      settingsId: (settings as { id: number }).id,
-      status: WatchlistStatus.ACTIVE as unknown as WatchlistStatus,
+      settingsId: settings.id,
+      status: WatchlistStatus.ACTIVE,
     });
 
     if (sourceCommentId) {
       await this.repository.updateComment(sourceCommentId, {
-        watchlistAuthorId: (record as { id: number }).id,
-        source: CommentSource.WATCHLIST as unknown as string,
+        watchlistAuthorId: record.id,
+        source: CommentSource.WATCHLIST,
       });
     }
 
-    const commentsCount = await this.repository.countComments(
-      (record as { id: number }).id,
-    );
+    const commentsCount = await this.repository.countComments(record.id);
 
     this.logger.log(`Добавлен автор ${authorVkId} в список "На карандаше"`);
 
@@ -236,16 +232,12 @@ export class WatchlistService {
 
     const data: Prisma.WatchlistAuthorUpdateInput = {};
 
-    if (dto.status && dto.status !== (record as { status: string }).status) {
+    if (dto.status && dto.status !== record.status) {
       data.status = dto.status;
 
-      if (
-        dto.status === (WatchlistStatus.ACTIVE as unknown as WatchlistStatus)
-      ) {
+      if (dto.status === WatchlistStatus.ACTIVE) {
         data.monitoringStoppedAt = { set: null };
-      } else if (
-        dto.status === (WatchlistStatus.STOPPED as unknown as WatchlistStatus)
-      ) {
+      } else if (dto.status === WatchlistStatus.STOPPED) {
         data.monitoringStoppedAt = { set: new Date() };
       }
     }
@@ -276,26 +268,14 @@ export class WatchlistService {
   }
 
   async getSettings(): Promise<WatchlistSettingsDto> {
-    const settings = (await this.repository.ensureSettings()) as {
-      id: number;
-      trackAllComments: boolean;
-      pollIntervalMinutes: number;
-      maxAuthors: number;
-      createdAt: Date;
-      updatedAt: Date;
-    };
+    const settings = await this.repository.ensureSettings();
     return this.settingsMapper.map(settings);
   }
 
   async updateSettings(
     dto: UpdateWatchlistSettingsDto,
   ): Promise<WatchlistSettingsDto> {
-    const settings = (await this.repository.ensureSettings()) as {
-      id: number;
-      trackAllComments: boolean;
-      pollIntervalMinutes: number;
-      maxAuthors: number;
-    };
+    const settings = await this.repository.ensureSettings();
 
     const data: Prisma.WatchlistSettingsUpdateInput = {};
 
@@ -311,17 +291,7 @@ export class WatchlistService {
       data.maxAuthors = dto.maxAuthors;
     }
 
-    const updated = (await this.repository.updateSettings(
-      (settings as { id: number }).id,
-      data,
-    )) as {
-      id: number;
-      trackAllComments: boolean;
-      pollIntervalMinutes: number;
-      maxAuthors: number;
-      createdAt: Date;
-      updatedAt: Date;
-    };
+    const updated = await this.repository.updateSettings(settings.id, data);
 
     this.logger.log('Обновлены настройки мониторинга авторов');
 
@@ -329,26 +299,17 @@ export class WatchlistService {
   }
 
   async refreshActiveAuthors(): Promise<void> {
-    const settings = (await this.repository.ensureSettings()) as {
-      pollIntervalMinutes: number;
-      id: number;
-      maxAuthors: number;
-      trackAllComments: boolean;
-    };
+    const settings = await this.repository.ensureSettings();
 
-    if (
-      this.shouldSkipRefresh(
-        (settings as { pollIntervalMinutes: number }).pollIntervalMinutes,
-      )
-    ) {
+    if (this.shouldSkipRefresh(settings.pollIntervalMinutes)) {
       return;
     }
 
     this.lastRefreshTimestamp = Date.now();
 
     const activeAuthors = await this.repository.findActiveAuthors({
-      settingsId: (settings as { id: number }).id,
-      limit: Math.max((settings as { maxAuthors: number }).maxAuthors, 1),
+      settingsId: settings.id,
+      limit: Math.max(settings.maxAuthors, 1),
     });
 
     if (!activeAuthors.length) {
@@ -356,15 +317,13 @@ export class WatchlistService {
     }
 
     await this.authorActivityService.saveAuthors(
-      activeAuthors.map(
-        (author) => (author as { authorVkId: number }).authorVkId,
-      ),
+      activeAuthors.map((author) => author.authorVkId),
     );
 
-    if (!(settings as { trackAllComments: boolean }).trackAllComments) {
+    if (!settings.trackAllComments) {
       const timestamp = new Date();
       await this.repository.updateMany(
-        activeAuthors.map((author) => (author as { id: number }).id),
+        activeAuthors.map((author) => author.id),
         { lastCheckedAt: timestamp },
       );
       this.logger.debug(

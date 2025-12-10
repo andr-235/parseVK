@@ -97,11 +97,9 @@ export class TelegramClientManagerService
 
     const apiIdRaw =
       (settingsRecord as { apiId: number | null } | null)?.apiId ??
-      null ??
       this.configService.get<string | number>('TELEGRAM_API_ID');
     const apiHash =
       (settingsRecord as { apiHash: string | null } | null)?.apiHash ??
-      null ??
       this.configService.get<string>('TELEGRAM_API_HASH');
 
     const apiId =
@@ -124,7 +122,6 @@ export class TelegramClientManagerService
 
     const sessionString =
       (sessionRecord as { session: string } | null)?.session ??
-      null ??
       this.configService.get<string>('TELEGRAM_SESSION');
 
     if (!sessionString) {

@@ -38,10 +38,8 @@ export class ListingsRepository implements IListingsRepository {
     return this.prisma.listing.findUniqueOrThrow({ where });
   }
 
-  findUniqueByUrl(where: {
-    url: string;
-  }): Promise<{ id: number; url: string; [key: string]: unknown } | null> {
-    return this.prisma.listing.findUnique({ where }) as Promise<Listing | null>;
+  findUniqueByUrl(where: { url: string }): Promise<Listing | null> {
+    return this.prisma.listing.findUnique({ where });
   }
 
   upsert(

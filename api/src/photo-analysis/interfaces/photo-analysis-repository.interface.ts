@@ -58,7 +58,7 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       photoVkId: analysis.photoVkId,
       hasSuspicious: analysis.hasSuspicious,
       suspicionLevel: analysis.suspicionLevel as PhotoSuspicionLevel,
-      categories: analysis.categories ?? [],
+      categories: this.normalizeCategories(analysis.categories),
       confidence:
         typeof analysis.confidence === 'number' ? analysis.confidence : null,
       explanation: analysis.explanation,
@@ -95,7 +95,7 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       photoVkId: analysis.photoVkId,
       hasSuspicious: analysis.hasSuspicious,
       suspicionLevel: analysis.suspicionLevel as PhotoSuspicionLevel,
-      categories: analysis.categories ?? [],
+      categories: this.normalizeCategories(analysis.categories),
       confidence:
         typeof analysis.confidence === 'number' ? analysis.confidence : null,
       explanation: analysis.explanation,
@@ -195,7 +195,7 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
       photoVkId: analysis.photoVkId,
       hasSuspicious: analysis.hasSuspicious,
       suspicionLevel: analysis.suspicionLevel as PhotoSuspicionLevel,
-      categories: analysis.categories ?? [],
+      categories: this.normalizeCategories(analysis.categories),
       confidence:
         typeof analysis.confidence === 'number' ? analysis.confidence : null,
       explanation: analysis.explanation,
@@ -210,11 +210,20 @@ export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {
         data: { verifiedAt: new Date() },
       });
     } catch (error) {
-      // Логирование ошибки, но не прерываем выполнение
       this.logger.warn(
         `Не удалось обновить дату проверки автора ${authorId}`,
         error instanceof Error ? error.stack : undefined,
       );
     }
+  }
+
+  private normalizeCategories(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter((item): item is string => item.length > 0);
   }
 }

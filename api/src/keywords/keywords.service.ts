@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import {
   IKeywordResponse,
   IDeleteResponse,
@@ -50,8 +49,9 @@ export class KeywordsService {
       })) as { id: number; word: string; isPhrase: boolean } | null;
     } catch (error) {
       if (
-        error instanceof
-          (Prisma.PrismaClientKnownRequestError as unknown as typeof Error) &&
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
         (error as { code?: string }).code === 'P2025'
       ) {
         existing = null;

@@ -29,9 +29,6 @@ export class WatchlistAuthorRefresherService {
     record: WatchlistAuthorWithRelations,
   ): Promise<number> {
     const checkTimestamp = new Date();
-    const updateData: Prisma.WatchlistAuthorUpdateInput = {
-      lastCheckedAt: checkTimestamp,
-    };
 
     let newComments = 0;
     let latestActivity: Date | null = record.lastActivityAt ?? null;
@@ -68,17 +65,6 @@ export class WatchlistAuthorRefresherService {
       }
 
       if (newComments > 0) {
-        updateData.foundCommentsCount = { increment: newComments };
-      }
-
-      if (
-        latestActivity &&
-        (!record.lastActivityAt || latestActivity > record.lastActivityAt)
-      ) {
-        updateData.lastActivityAt = latestActivity;
-      }
-
-      if (newComments > 0) {
         this.logger.log(
           `Мониторинг автора ${record.authorVkId}: найдено ${newComments} новых комментариев`,
         );
@@ -89,6 +75,17 @@ export class WatchlistAuthorRefresherService {
         error instanceof Error ? error.stack : undefined,
       );
     } finally {
+      const updateData: Prisma.WatchlistAuthorUpdateInput = {
+        lastCheckedAt: checkTimestamp,
+        ...(newComments > 0
+          ? { foundCommentsCount: { increment: newComments } }
+          : {}),
+        ...(latestActivity &&
+        (!record.lastActivityAt || latestActivity > record.lastActivityAt)
+          ? { lastActivityAt: latestActivity }
+          : {}),
+      };
+
       await this.repository.update(record.id, updateData);
     }
 

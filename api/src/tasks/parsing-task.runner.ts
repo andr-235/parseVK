@@ -424,7 +424,7 @@ export class ParsingTaskRunner {
         const savedCount = await this.authorActivityService.saveComments(
           comments,
           {
-            source: CommentSource.TASK as const,
+            source: CommentSource.TASK,
           },
         );
         context.stats.comments += savedCount;

@@ -3,6 +3,7 @@ import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repos
 import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
 import { PhotoAnalysisService } from '../../photo-analysis/photo-analysis.service';
 import { PrismaService } from '../../prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class WatchlistStatsCollectorService {
@@ -20,11 +21,22 @@ export class WatchlistStatsCollectorService {
       return map;
     }
 
-    const grouped = await this.prisma.comment.groupBy({
-      by: ['watchlistAuthorId'],
+    const grouped = (await (
+      this.prisma.comment.groupBy as unknown as (args: unknown) => Promise<
+        Array<{
+          watchlistAuthorId: number | null;
+          _count: { watchlistAuthorId: number };
+        }>
+      >
+    )({
+      by: [Prisma.CommentScalarFieldEnum.watchlistAuthorId],
       where: { watchlistAuthorId: { in: authorIds } },
       _count: { watchlistAuthorId: true },
-    });
+      orderBy: { watchlistAuthorId: 'asc' },
+    })) as Array<{
+      watchlistAuthorId: number | null;
+      _count: { watchlistAuthorId: number };
+    }>;
 
     for (const group of grouped) {
       if (typeof group.watchlistAuthorId === 'number') {

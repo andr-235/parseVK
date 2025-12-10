@@ -4,7 +4,13 @@ import type {
   IWatchlistRepository,
   WatchlistAuthorWithRelations,
 } from '../interfaces/watchlist-repository.interface';
-import type { CommentSource, Prisma, WatchlistStatus } from '@prisma/client';
+import type {
+  Comment,
+  CommentSource,
+  Prisma,
+  WatchlistStatus,
+  WatchlistSettings,
+} from '@prisma/client';
 import { WatchlistStatus as WS } from '@prisma/client';
 import { composeCommentKey } from '../utils/watchlist-comment.utils';
 
@@ -18,7 +24,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     return this.prisma.watchlistAuthor.findUnique({
       where: { id },
       include: { author: true, settings: true },
-    }) as Promise<WatchlistAuthorWithRelations | null>;
+    });
   }
 
   findByAuthorVkIdAndSettingsId(
@@ -33,7 +39,7 @@ export class WatchlistRepository implements IWatchlistRepository {
         },
       },
       include: { author: true, settings: true },
-    }) as Promise<WatchlistAuthorWithRelations | null>;
+    });
   }
 
   async findMany(params: {
@@ -65,7 +71,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     ]);
 
     return {
-      items: items as WatchlistAuthorWithRelations[],
+      items,
       total,
     };
   }
@@ -79,7 +85,7 @@ export class WatchlistRepository implements IWatchlistRepository {
       include: { author: true, settings: true },
       orderBy: [{ lastCheckedAt: 'asc' }, { updatedAt: 'asc' }],
       take: Math.max(params.limit, 1),
-    }) as Promise<WatchlistAuthorWithRelations[]>;
+    });
   }
 
   create(data: {
@@ -91,7 +97,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     return this.prisma.watchlistAuthor.create({
       data,
       include: { author: true, settings: true },
-    }) as Promise<WatchlistAuthorWithRelations>;
+    });
   }
 
   update(
@@ -102,7 +108,7 @@ export class WatchlistRepository implements IWatchlistRepository {
       where: { id },
       data,
       include: { author: true, settings: true },
-    }) as Promise<WatchlistAuthorWithRelations>;
+    });
   }
 
   async updateMany(
@@ -160,9 +166,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     return keys;
   }
 
-  ensureSettings(): Promise<
-    Prisma.WatchlistSettingsGetPayload<Record<string, never>>
-  > {
+  ensureSettings(): Promise<WatchlistSettings> {
     return this.prisma.watchlistSettings.upsert({
       where: { id: DEFAULT_SETTINGS_ID },
       update: {},
@@ -175,55 +179,27 @@ export class WatchlistRepository implements IWatchlistRepository {
     });
   }
 
-  getSettings(): Promise<{
-    id: number;
-    trackAllComments: boolean;
-    pollIntervalMinutes: number;
-    maxAuthors: number;
-    createdAt: Date;
-    updatedAt: Date;
-  } | null> {
+  getSettings(): Promise<WatchlistSettings | null> {
     return this.prisma.watchlistSettings.findUnique({
       where: { id: DEFAULT_SETTINGS_ID },
-    }) as Promise<{
-      id: number;
-      trackAllComments: boolean;
-      pollIntervalMinutes: number;
-      maxAuthors: number;
-      createdAt: Date;
-      updatedAt: Date;
-    } | null>;
+    });
   }
 
   updateSettings(
     id: number,
     data: Prisma.WatchlistSettingsUpdateInput,
-  ): Promise<{
-    id: number;
-    trackAllComments: boolean;
-    pollIntervalMinutes: number;
-    maxAuthors: number;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
+  ): Promise<WatchlistSettings> {
     return this.prisma.watchlistSettings.update({
       where: { id },
       data,
-    }) as Promise<{
-      id: number;
-      trackAllComments: boolean;
-      pollIntervalMinutes: number;
-      maxAuthors: number;
-      createdAt: Date;
-      updatedAt: Date;
-    }>;
+    });
   }
 
   async getAuthorComments(params: {
     watchlistAuthorId: number;
     offset: number;
     limit: number;
-  }): Promise<{ items: unknown[]; total: number }> {
+  }): Promise<{ items: Comment[]; total: number }> {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.comment.findMany({
         where: { watchlistAuthorId: params.watchlistAuthorId },
@@ -241,13 +217,13 @@ export class WatchlistRepository implements IWatchlistRepository {
 
   async updateComment(
     id: number,
-    data: { watchlistAuthorId: number; source: string },
+    data: { watchlistAuthorId: number; source: CommentSource },
   ): Promise<void> {
     await this.prisma.comment.update({
       where: { id },
       data: {
         watchlistAuthorId: data.watchlistAuthorId,
-        source: data.source as CommentSource,
+        source: data.source,
       },
     });
   }

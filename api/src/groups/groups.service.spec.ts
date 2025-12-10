@@ -112,9 +112,7 @@ describe('GroupsService', () => {
 
   describe('saveGroup', () => {
     it('должен успешно сохранять и маппить данные группы', async () => {
-      vkServiceObj.getGroups.mockResolvedValue({
-        groups: [vkGroup],
-      });
+      vkServiceObj.getGroups.mockResolvedValue([vkGroup]);
 
       const mappedData = {
         name: vkGroup.name,
@@ -166,7 +164,7 @@ describe('GroupsService', () => {
     });
 
     it('должен выбрасывать NotFoundException, если группа не найдена', async () => {
-      vkServiceObj.getGroups.mockResolvedValue({ groups: [] });
+      vkServiceObj.getGroups.mockResolvedValue([]);
 
       await expect(service.saveGroup('123')).rejects.toThrow(
         new NotFoundException('Group 123 not found'),
@@ -261,13 +259,11 @@ describe('GroupsService', () => {
 
       // Настраиваем мок для нормализации идентификаторов
       identifierValidatorObj.normalizeIdentifier.mockImplementation(
-        (id: string | number) => {
-          if (typeof id === 'string') {
-            if (id.includes('club')) return id.replace('club', '');
-            if (id.includes('public')) return id.replace('public', '');
-            return id;
-          }
-          return id;
+        (id: string) => {
+          const value = id.toString();
+          if (value.includes('club')) return value.replace('club', '');
+          if (value.includes('public')) return value.replace('public', '');
+          return value;
         },
       );
 
@@ -321,13 +317,8 @@ describe('GroupsService', () => {
 
   it('должен корректно нормализовывать различные идентификаторы', () => {
     identifierValidatorObj.normalizeIdentifier.mockImplementation(
-      (id: string | number) => {
-        if (typeof id === 'string') {
-          return identifierValidatorObj.parseVkIdentifier(id) as
-            | string
-            | number;
-        }
-        return id;
+      (id: string) => {
+        return identifierValidatorObj.parseVkIdentifier(id);
       },
     );
     identifierValidatorObj.parseVkIdentifier.mockImplementation(
