@@ -20,15 +20,29 @@ echo "DATABASE_URL: ${DATABASE_URL:+установлен (скрыт)}"
 echo "Извлеченный DB_HOST: $DB_HOST"
 echo "Извлеченный DB_PORT: $DB_PORT"
 
+# Диагностика DNS (если доступно)
+if command -v getent >/dev/null 2>&1; then
+  echo "Проверка DNS для $DB_HOST..."
+  if getent hosts "$DB_HOST" >/dev/null 2>&1; then
+    echo "DNS резолвинг успешен: $(getent hosts "$DB_HOST")"
+  else
+    echo "Предупреждение: DNS не смог разрешить $DB_HOST, но продолжаем попытки подключения"
+  fi
+fi
+
 echo "Ожидание доступности базы данных ${DB_HOST}:${DB_PORT}..."
 for i in $(seq 1 30); do
-  nc -z "$DB_HOST" "$DB_PORT" && break
+  if nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; then
+    echo "База данных доступна!"
+    break
+  fi
   echo "БД недоступна, попытка $i/30..."
   sleep 2
 done
 
-if ! nc -z "$DB_HOST" "$DB_PORT"; then
-  echo "База данных недоступна, останавливаемся."
+if ! nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; then
+  echo "ОШИБКА: База данных недоступна после 30 попыток, останавливаемся."
+  echo "Проверьте, что сервис БД запущен и доступен по адресу ${DB_HOST}:${DB_PORT}"
   exit 1
 fi
 
