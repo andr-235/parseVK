@@ -4,8 +4,8 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 ARG DATABASE_URL
-ARG NPM_REGISTRY=https://registry.npmjs.org/
-ARG NPM_REGISTRY_FALLBACK=https://registry.npmmirror.com
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+ARG NPM_REGISTRY_FALLBACK=https://registry.npmjs.org/
 ARG PNPM_VERSION=9.12.1
 ENV PNPM_FETCH_TIMEOUT=120000
 ENV PNPM_FETCH_RETRIES=2
@@ -21,7 +21,7 @@ RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retries 5 \
     && npm config set fetch-retry-factor 2 \
     && npm config set fetch-retry-mintimeout 20000 \
-    && npm config set fetch-timeout 600000 \
+    && npm config set fetch-timeout 120000 \
     && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK})
 
 COPY api/package*.json ./
@@ -29,7 +29,7 @@ COPY api/.npmrc ./
 
 RUN pnpm config set registry ${NPM_REGISTRY} \
     && pnpm config set fetch-retries 5 \
-    && pnpm config set fetch-timeout 600000 \
+    && pnpm config set fetch-timeout 120000 \
     && (pnpm install || (pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install))
 
 COPY api/ ./

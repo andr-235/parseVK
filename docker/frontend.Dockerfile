@@ -7,8 +7,8 @@ ARG VITE_APP_TITLE
 ARG VITE_API_URL
 ARG VITE_DEV_MODE
 ARG VITE_API_WS_URL
-ARG NPM_REGISTRY=https://registry.npmjs.org/
-ARG NPM_REGISTRY_FALLBACK=https://registry.npmmirror.com
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+ARG NPM_REGISTRY_FALLBACK=https://registry.npmjs.org/
 ARG PNPM_VERSION=10.25.0
 ENV PNPM_FETCH_TIMEOUT=120000
 ENV PNPM_FETCH_RETRIES=2
@@ -24,7 +24,7 @@ RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retries 5 \
     && npm config set fetch-retry-factor 2 \
     && npm config set fetch-retry-mintimeout 20000 \
-    && npm config set fetch-timeout 600000 \
+    && npm config set fetch-timeout 120000 \
     && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK})
 
 COPY front/package*.json ./
@@ -33,7 +33,7 @@ COPY front/.npmrc ./
 
 RUN pnpm config set registry ${NPM_REGISTRY} \
     && pnpm config set fetch-retries 5 \
-    && pnpm config set fetch-timeout 600000 \
+    && pnpm config set fetch-timeout 120000 \
     && (pnpm install --frozen-lockfile || (pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile))
 
 COPY front/ ./
