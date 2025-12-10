@@ -7,7 +7,17 @@ export class CommentMapper {
   map(comment: CommentWithRelations): CommentWithAuthorDto {
     const { author, watchlistAuthorId, commentKeywordMatches, post } = comment;
 
-    const matchedKeywords = commentKeywordMatches.map((match) => ({
+    const matchedKeywords = (
+      commentKeywordMatches as Array<{
+        keyword: {
+          id: number;
+          word: string;
+          category: string | null;
+          isPhrase: boolean;
+        };
+        source: string;
+      }>
+    ).map((match) => ({
       id: match.keyword.id,
       word: match.keyword.word,
       category: match.keyword.category,
@@ -17,29 +27,61 @@ export class CommentMapper {
 
     return {
       ...comment,
-      postText: post?.text ?? null,
-      postAttachments: post?.attachments ?? null,
-      postGroup: post?.group
+      postText: (post as { text: string | null } | undefined)?.text ?? null,
+      postAttachments:
+        (post as { attachments: unknown } | undefined)?.attachments ?? null,
+      postGroup: (
+        post as
+          | {
+              group: {
+                id: number;
+                vkId: number;
+                name: string;
+                screenName: string | null;
+                photo200: string | null;
+                photo100: string | null;
+              } | null;
+            }
+          | undefined
+      )?.group
         ? {
-            id: post.group.id,
-            vkId: post.group.vkId,
-            name: post.group.name,
-            screenName: post.group.screenName,
-            photo: post.group.photo200 ?? post.group.photo100 ?? null,
+            id: (post as { group: { id: number } }).group.id,
+            vkId: (post as { group: { vkId: number } }).group.vkId,
+            name: (post as { group: { name: string } }).group.name,
+            screenName: (post as { group: { screenName: string | null } }).group
+              .screenName,
+            photo:
+              (
+                post as {
+                  group: { photo200: string | null; photo100: string | null };
+                }
+              ).group.photo200 ??
+              (post as { group: { photo100: string | null } }).group.photo100 ??
+              null,
           }
         : null,
-      author: author
+      author: (author as {
+        vkUserId: number;
+        firstName: string;
+        lastName: string;
+        photo200Orig: string | null;
+        photo100: string | null;
+        photo50: string | null;
+      } | null)
         ? {
-            vkUserId: author.vkUserId,
-            firstName: author.firstName,
-            lastName: author.lastName,
+            vkUserId: (author as { vkUserId: number }).vkUserId,
+            firstName: (author as { firstName: string }).firstName,
+            lastName: (author as { lastName: string }).lastName,
             logo:
-              author.photo200Orig ?? author.photo100 ?? author.photo50 ?? null,
+              (author as { photo200Orig: string | null }).photo200Orig ??
+              (author as { photo100: string | null }).photo100 ??
+              (author as { photo50: string | null }).photo50 ??
+              null,
           }
         : null,
       isWatchlisted: watchlistAuthorId != null,
       matchedKeywords,
-    };
+    } as CommentWithAuthorDto;
   }
 
   mapMany(comments: CommentWithRelations[]): CommentWithAuthorDto[] {

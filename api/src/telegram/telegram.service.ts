@@ -84,15 +84,15 @@ export class TelegramService {
     );
 
     return {
-      chatId: persisted.chatId,
-      telegramId: persisted.telegramId.toString(),
-      type: resolved.type as TelegramChatType,
+      chatId: (persisted as { chatId: number }).chatId,
+      telegramId: (persisted as { telegramId: bigint }).telegramId.toString(),
+      type: resolved.type as unknown as TelegramChatType,
       title: resolved.title,
       username: resolved.username,
       syncedMembers: collection.members.length,
       totalMembers: collection.total ?? null,
       fetchedMembers: collection.members.length,
-      members: persisted.members,
+      members: (persisted as { members: unknown }).members,
     };
   }
 
@@ -100,7 +100,7 @@ export class TelegramService {
     return this.excelExporter.exportChatToExcel(chatId);
   }
 
-  async getChatInfo(chatId: number) {
+  async getChatInfo(chatId: number): Promise<unknown> {
     const chat = await this.chatRepository.findById(chatId);
 
     if (!chat) {

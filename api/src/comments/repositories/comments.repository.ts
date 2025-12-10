@@ -58,7 +58,7 @@ const commentInclude = {
 export class CommentsRepository implements ICommentsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findMany(params: FindCommentsParams): Promise<CommentWithRelations[]> {
+  findMany(params: FindCommentsParams): Promise<CommentWithRelations[]> {
     return this.prisma.comment.findMany({
       where: params.where as Prisma.CommentWhereInput,
       skip: params.skip,
@@ -68,13 +68,13 @@ export class CommentsRepository implements ICommentsRepository {
     });
   }
 
-  async count(params: CountCommentsParams): Promise<number> {
+  count(params: CountCommentsParams): Promise<number> {
     return this.prisma.comment.count({
       where: params.where as Prisma.CommentWhereInput,
     });
   }
 
-  async update(params: UpdateCommentParams): Promise<CommentWithRelations> {
+  update(params: UpdateCommentParams): Promise<CommentWithRelations> {
     return this.prisma.comment.update({
       where: params.where,
       data: params.data,
@@ -82,7 +82,7 @@ export class CommentsRepository implements ICommentsRepository {
     });
   }
 
-  async transaction<T>(queries: Prisma.PrismaPromise<T>[]): Promise<T[]> {
+  transaction<T>(queries: Prisma.PrismaPromise<T>[]): Promise<T[]> {
     return this.prisma.$transaction(queries);
   }
 }

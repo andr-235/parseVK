@@ -10,7 +10,7 @@ import type {
 export class GroupsRepository implements IGroupsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async upsert(
+  upsert(
     where: { vkId: number },
     data: Prisma.GroupCreateInput,
   ): Promise<Group> {
@@ -21,7 +21,7 @@ export class GroupsRepository implements IGroupsRepository {
     });
   }
 
-  async findMany(params: {
+  findMany(params: {
     skip?: number;
     take?: number;
     orderBy?: Prisma.GroupOrderByWithRelationInput;
@@ -29,7 +29,7 @@ export class GroupsRepository implements IGroupsRepository {
     return this.prisma.group.findMany(params);
   }
 
-  async count(): Promise<number> {
+  count(): Promise<number> {
     return this.prisma.group.count();
   }
 
@@ -48,15 +48,15 @@ export class GroupsRepository implements IGroupsRepository {
     });
   }
 
-  async delete(where: { id: number }): Promise<Group> {
+  delete(where: { id: number }): Promise<Group> {
     return this.prisma.group.delete({ where });
   }
 
-  async deleteMany(): Promise<{ count: number }> {
+  deleteMany(): Promise<{ count: number }> {
     return this.prisma.group.deleteMany({});
   }
 
-  async findManyByVkIds(vkIds: number[]): Promise<Group[]> {
+  findManyByVkIds(vkIds: number[]): Promise<Group[]> {
     return this.prisma.group.findMany({
       where: {
         vkId: {

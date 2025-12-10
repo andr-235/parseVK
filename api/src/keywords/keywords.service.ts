@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Prisma, type Keyword } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   IKeywordResponse,
   IDeleteResponse,
@@ -43,15 +43,16 @@ export class KeywordsService {
       throw new Error('Keyword cannot be empty');
     }
 
-    let existing: Keyword | null = null;
+    let existing: { id: number; word: string; isPhrase: boolean } | null = null;
     try {
-      existing = await this.repository.findUnique({
+      existing = (await this.repository.findUnique({
         word: normalizedWord,
-      });
+      })) as { id: number; word: string; isPhrase: boolean } | null;
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
+        error instanceof
+          (Prisma.PrismaClientKnownRequestError as unknown as typeof Error) &&
+        (error as { code?: string }).code === 'P2025'
       ) {
         existing = null;
       } else {
@@ -60,21 +61,22 @@ export class KeywordsService {
     }
 
     if (existing) {
-      const updated = await this.repository.update(
-        { id: existing.id },
+      const updated = (await this.repository.update(
+        { id: (existing as { id: number }).id },
         {
           category: normalizedCategory,
-          isPhrase: isPhrase ?? existing.isPhrase ?? false,
+          isPhrase:
+            isPhrase ?? (existing as { isPhrase: boolean }).isPhrase ?? false,
         },
-      );
+      )) as IKeywordResponse;
       return updated;
     }
 
-    const created = await this.repository.create({
+    const created = (await this.repository.create({
       word: normalizedWord,
       category: normalizedCategory,
       isPhrase: isPhrase ?? false,
-    });
+    })) as IKeywordResponse;
 
     return created;
   }
@@ -129,8 +131,8 @@ export class KeywordsService {
         })) ?? [])
       : [];
 
-    const existedBeforeImport = new Set(
-      existingKeywords.map((keyword) => keyword.word),
+    const existedBeforeImport = new Set<string>(
+      existingKeywords.map((keyword) => (keyword as { word: string }).word),
     );
     const processedInBatch = new Set<string>();
 

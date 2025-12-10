@@ -37,7 +37,7 @@ export class ListingMapper {
       sourceAuthorName: listing.sourceAuthorName ?? null,
       sourceAuthorPhone: listing.sourceAuthorPhone ?? null,
       sourceAuthorUrl: listing.sourceAuthorUrl ?? null,
-      sourcePostedAt: listing.sourcePostedAt ?? null,
+      sourcePostedAt: (listing.sourcePostedAt as Date | null) ?? null,
       sourceParsedAt: listing.sourceParsedAt
         ? listing.sourceParsedAt.toISOString()
         : null,

@@ -14,14 +14,14 @@ const DEFAULT_SETTINGS_ID = 1;
 export class WatchlistRepository implements IWatchlistRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findById(id: number): Promise<WatchlistAuthorWithRelations | null> {
+  findById(id: number): Promise<WatchlistAuthorWithRelations | null> {
     return this.prisma.watchlistAuthor.findUnique({
       where: { id },
       include: { author: true, settings: true },
     }) as Promise<WatchlistAuthorWithRelations | null>;
   }
 
-  async findByAuthorVkIdAndSettingsId(
+  findByAuthorVkIdAndSettingsId(
     authorVkId: number,
     settingsId: number,
   ): Promise<WatchlistAuthorWithRelations | null> {
@@ -70,7 +70,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     };
   }
 
-  async findActiveAuthors(params: {
+  findActiveAuthors(params: {
     settingsId: number;
     limit: number;
   }): Promise<WatchlistAuthorWithRelations[]> {
@@ -82,7 +82,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     }) as Promise<WatchlistAuthorWithRelations[]>;
   }
 
-  async create(data: {
+  create(data: {
     authorVkId: number;
     sourceCommentId: number | null;
     settingsId: number;
@@ -94,7 +94,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     }) as Promise<WatchlistAuthorWithRelations>;
   }
 
-  async update(
+  update(
     id: number,
     data: Prisma.WatchlistAuthorUpdateInput,
   ): Promise<WatchlistAuthorWithRelations> {
@@ -115,7 +115,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     });
   }
 
-  async countComments(watchlistAuthorId: number): Promise<number> {
+  countComments(watchlistAuthorId: number): Promise<number> {
     return this.prisma.comment.count({
       where: { watchlistAuthorId },
     });
@@ -160,7 +160,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     return keys;
   }
 
-  async ensureSettings(): Promise<
+  ensureSettings(): Promise<
     Prisma.WatchlistSettingsGetPayload<Record<string, never>>
   > {
     return this.prisma.watchlistSettings.upsert({
@@ -175,22 +175,48 @@ export class WatchlistRepository implements IWatchlistRepository {
     });
   }
 
-  async getSettings(): Promise<Prisma.WatchlistSettingsGetPayload<
-    Record<string, never>
-  > | null> {
+  getSettings(): Promise<{
+    id: number;
+    trackAllComments: boolean;
+    pollIntervalMinutes: number;
+    maxAuthors: number;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null> {
     return this.prisma.watchlistSettings.findUnique({
       where: { id: DEFAULT_SETTINGS_ID },
-    });
+    }) as Promise<{
+      id: number;
+      trackAllComments: boolean;
+      pollIntervalMinutes: number;
+      maxAuthors: number;
+      createdAt: Date;
+      updatedAt: Date;
+    } | null>;
   }
 
-  async updateSettings(
+  updateSettings(
     id: number,
     data: Prisma.WatchlistSettingsUpdateInput,
-  ): Promise<Prisma.WatchlistSettingsGetPayload<Record<string, never>>> {
+  ): Promise<{
+    id: number;
+    trackAllComments: boolean;
+    pollIntervalMinutes: number;
+    maxAuthors: number;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     return this.prisma.watchlistSettings.update({
       where: { id },
       data,
-    });
+    }) as Promise<{
+      id: number;
+      trackAllComments: boolean;
+      pollIntervalMinutes: number;
+      maxAuthors: number;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
   }
 
   async getAuthorComments(params: {
@@ -226,7 +252,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     });
   }
 
-  async findCommentById(id: number): Promise<{
+  findCommentById(id: number): Promise<{
     id: number;
     authorVkId: number | null;
     fromId: number;

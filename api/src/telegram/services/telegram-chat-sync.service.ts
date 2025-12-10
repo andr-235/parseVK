@@ -9,7 +9,12 @@ import { TelegramChatRepository } from '../repositories/telegram-chat.repository
 import { TelegramMemberRepository } from '../repositories/telegram-member.repository';
 import { TelegramMemberMapper } from '../mappers/telegram-member.mapper';
 import { PrismaService } from '../../prisma.service';
-import { TelegramChatType, TelegramMemberStatus } from '@prisma/client';
+import {
+  TelegramChatType,
+  TelegramMemberStatus,
+  type TelegramChatMember,
+  type Prisma as PrismaType,
+} from '@prisma/client';
 
 interface TelegramUserPersonal {
   flags?: number;
@@ -34,7 +39,7 @@ export class TelegramChatSyncService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async persistChat(
+  persistChat(
     resolved: ResolvedChat,
     members: MemberRecord[],
     client: TelegramClient,
@@ -45,24 +50,23 @@ export class TelegramChatSyncService {
     members: TelegramMemberDto[];
   }> {
     return this.prisma.$transaction(async (tx) => {
-      const chat: { id: number; telegramId: bigint } =
-        (await tx.telegramChat.upsert({
-          where: { telegramId: resolved.telegramId },
-          select: { id: true, telegramId: true },
-          create: {
-            telegramId: resolved.telegramId,
-            type: resolved.type as TelegramChatType,
-            title: resolved.title,
-            username: resolved.username,
-            description: resolved.description,
-          },
-          update: {
-            type: resolved.type as TelegramChatType,
-            title: resolved.title,
-            username: resolved.username,
-            description: resolved.description,
-          },
-        })) as { id: number; telegramId: bigint };
+      const chat = (await tx.telegramChat.upsert({
+        where: { telegramId: resolved.telegramId },
+        select: { id: true, telegramId: true },
+        create: {
+          telegramId: resolved.telegramId,
+          type: resolved.type as unknown as TelegramChatType,
+          title: resolved.title,
+          username: resolved.username,
+          description: resolved.description,
+        },
+        update: {
+          type: resolved.type as unknown as TelegramChatType,
+          title: resolved.title,
+          username: resolved.username,
+          description: resolved.description,
+        },
+      })) as { id: number; telegramId: bigint };
 
       const membersPayload: TelegramMemberDto[] = [];
 
@@ -88,33 +92,67 @@ export class TelegramChatSyncService {
           } as typeof userData;
         }
 
-        const userRecord = await tx.telegramUser.upsert({
+        const userRecord = (await tx.telegramUser.upsert({
           where: { telegramId: this.memberMapper.toBigInt(member.user.id) },
           create: userData,
           update: userData,
-        });
+        })) as {
+          id: number;
+          telegramId: bigint;
+          firstName: string | null;
+          lastName: string | null;
+          username: string | null;
+          phoneNumber: string | null;
+          bio: string | null;
+          languageCode: string | null;
+          isBot: boolean;
+          isPremium: boolean;
+          deleted: boolean;
+          restricted: boolean;
+          verified: boolean;
+          scam: boolean;
+          fake: boolean;
+          min: boolean;
+          self: boolean;
+          contact: boolean;
+          mutualContact: boolean;
+          accessHash: string | null;
+          photoId: bigint | null;
+          photoDcId: number | null;
+          photoHasVideo: boolean;
+          commonChatsCount: number | null;
+          usernames: unknown;
+          personal: unknown;
+          botInfo: unknown;
+          blocked: boolean;
+          contactRequirePremium: boolean;
+          spam: boolean;
+          closeFriend: boolean;
+          createdAt: Date;
+          updatedAt: Date;
+        };
 
         const joinedAt = member.joinedAt ?? null;
         const leftAt = member.leftAt ?? null;
 
-        const memberRecord = await tx.telegramChatMember.upsert({
+        const memberRecordResult = await tx.telegramChatMember.upsert({
           where: {
             chatId_userId: {
               chatId: chat.id,
-              userId: userRecord.id,
+              userId: (userRecord as { id: number }).id,
             },
           },
           create: {
             chatId: chat.id,
-            userId: userRecord.id,
-            status: member.status as TelegramMemberStatus,
+            userId: (userRecord as { id: number }).id,
+            status: member.status as unknown as TelegramMemberStatus,
             isAdmin: member.isAdmin,
             isOwner: member.isOwner,
             joinedAt,
             leftAt,
           },
           update: {
-            status: member.status as TelegramMemberStatus,
+            status: member.status as unknown as TelegramMemberStatus,
             isAdmin: member.isAdmin,
             isOwner: member.isOwner,
             joinedAt,
@@ -122,8 +160,66 @@ export class TelegramChatSyncService {
           },
         });
 
+        const typedUserRecord = userRecord as {
+          id: number;
+          telegramId: bigint;
+          firstName: string | null;
+          lastName: string | null;
+          username: string | null;
+          phoneNumber: string | null;
+          bio: string | null;
+          languageCode: string | null;
+          isBot: boolean;
+          isPremium: boolean;
+          deleted: boolean;
+          restricted: boolean;
+          verified: boolean;
+          scam: boolean;
+          fake: boolean;
+          min: boolean;
+          self: boolean;
+          contact: boolean;
+          mutualContact: boolean;
+          accessHash: string | null;
+          photoId: bigint | null;
+          photoDcId: number | null;
+          photoHasVideo: boolean;
+          commonChatsCount: number | null;
+          usernames: unknown;
+          personal: unknown;
+          botInfo: unknown;
+          blocked: boolean;
+          contactRequirePremium: boolean;
+          spam: boolean;
+          closeFriend: boolean;
+          createdAt: Date;
+          updatedAt: Date;
+        };
+        const typedMemberRecord = {
+          id: (memberRecordResult as { id: unknown }).id as number,
+          chatId: (memberRecordResult as { chatId: unknown }).chatId as number,
+          userId: (memberRecordResult as { userId: unknown }).userId as number,
+          status: (memberRecordResult as { status: unknown })
+            .status as TelegramMemberStatus,
+          isAdmin: (memberRecordResult as { isAdmin: unknown })
+            .isAdmin as boolean,
+          isOwner: (memberRecordResult as { isOwner: unknown })
+            .isOwner as boolean,
+          joinedAt: (memberRecordResult as { joinedAt: unknown })
+            .joinedAt as Date | null,
+          leftAt: (memberRecordResult as { leftAt: unknown })
+            .leftAt as Date | null,
+          importedAt:
+            ((memberRecordResult as { importedAt?: unknown }).importedAt as
+              | Date
+              | undefined) ?? new Date(),
+          rawPayload:
+            ((memberRecordResult as { rawPayload?: unknown }).rawPayload as
+              | PrismaType.JsonValue
+              | undefined) ?? null,
+        } satisfies TelegramChatMember;
         membersPayload.push(
-          this.memberMapper.mapToMemberDto(userRecord, memberRecord),
+          this.memberMapper.mapToMemberDto(typedUserRecord, typedMemberRecord),
         );
       }
 

@@ -59,11 +59,11 @@ export class AuthorsService {
       }),
     ]);
 
-    const authorIds: number[] = authors.map((author) => author.id);
+    const authorIds: number[] = authors.map((author: Author) => author.id);
     const summaryMap =
       await this.photoAnalysisService.getSummariesByAuthorIds(authorIds);
 
-    const items: AuthorCardDto[] = authors.map((author) =>
+    const items: AuthorCardDto[] = authors.map((author: Author) =>
       this.buildAuthorCard(author, summaryMap.get(author.id)),
     );
 
@@ -88,13 +88,15 @@ export class AuthorsService {
     ]);
 
   private queryAuthors(options: QueryAuthorsOptions): Promise<Author[]> {
-    const whereClause = options.sqlConditions.length
+    const whereClause: Prisma.Sql = options.sqlConditions.length
       ? Prisma.sql`WHERE ${Prisma.join(options.sqlConditions, ' AND ')}`
       : Prisma.sql``;
 
-    const orderClause = this.sortBuilder.buildOrderClause(options.sort);
+    const orderClause: Prisma.Sql = this.sortBuilder.buildOrderClause(
+      options.sort,
+    );
 
-    const query = Prisma.sql`
+    const query: Prisma.Sql = Prisma.sql`
       SELECT *
       FROM "Author"
       ${whereClause}
@@ -120,7 +122,7 @@ export class AuthorsService {
         { lastName: { contains: search, mode: 'insensitive' } },
         { domain: { contains: search, mode: 'insensitive' } },
         { screenName: { contains: search, mode: 'insensitive' } },
-      ];
+      ] as Prisma.AuthorWhereInput[];
 
       const searchTerm = `%${search.toLowerCase()}%`;
       const searchSqlParts: Prisma.Sql[] = [
@@ -135,19 +137,21 @@ export class AuthorsService {
         searchSqlParts.push(Prisma.sql`"Author"."vkUserId" = ${numericId}`);
       }
 
-      filters.push({ OR: orFilters });
+      filters.push({ OR: orFilters } as Prisma.AuthorWhereInput);
       sqlConditions.push(Prisma.sql`(${Prisma.join(searchSqlParts, ' OR ')})`);
     }
 
     if (verified === true) {
-      filters.push({ verifiedAt: { not: null } });
+      filters.push({ verifiedAt: { not: null } } as Prisma.AuthorWhereInput);
       sqlConditions.push(Prisma.sql`"Author"."verifiedAt" IS NOT NULL`);
     } else if (verified === false) {
-      filters.push({ verifiedAt: null });
+      filters.push({ verifiedAt: null } as Prisma.AuthorWhereInput);
       sqlConditions.push(Prisma.sql`"Author"."verifiedAt" IS NULL`);
     }
 
-    const where = filters.length ? { AND: filters } : undefined;
+    const where: Prisma.AuthorWhereInput | undefined = filters.length
+      ? ({ AND: filters } as Prisma.AuthorWhereInput)
+      : undefined;
 
     return {
       where,
@@ -199,7 +203,7 @@ export class AuthorsService {
   }
 
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetailsDto> {
-    const author: Author | null = await this.prisma.author.findUnique({
+    const author = await this.prisma.author.findUnique({
       where: { vkUserId },
     });
 
@@ -282,7 +286,11 @@ export class AuthorsService {
       photo200: author.photo200Orig ?? null,
       domain: author.domain ?? null,
       screenName: author.screenName ?? null,
-      profileUrl: this.buildProfileUrl(author),
+      profileUrl: this.buildProfileUrl({
+        vkUserId: author.vkUserId,
+        domain: author.domain ?? null,
+        screenName: author.screenName ?? null,
+      }),
       summary: normalizedSummary,
       photosCount,
       audiosCount: counters.audios,
@@ -295,7 +303,13 @@ export class AuthorsService {
     };
   }
 
-  private extractCounters(value: Prisma.JsonValue | null) {
+  private extractCounters(value: Prisma.JsonValue | null): {
+    photos: number | null;
+    audios: number | null;
+    videos: number | null;
+    friends: number | null;
+    followers: number | null;
+  } {
     return this.countersParser.extractCounters(value);
   }
 

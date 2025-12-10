@@ -76,14 +76,14 @@ const toUpdateJsonValue = (
     return undefined;
   }
   if (value === null) {
-    return Prisma.JsonNull;
+    return Prisma.JsonNull as unknown as Prisma.InputJsonValue;
   }
   return value as Prisma.InputJsonValue;
 };
 
 const toCreateJsonValue = (value: unknown): Prisma.InputJsonValue => {
   if (value === undefined || value === null) {
-    return Prisma.JsonNull;
+    return Prisma.JsonNull as unknown as Prisma.InputJsonValue;
   }
   return value as Prisma.InputJsonValue;
 };
@@ -102,12 +102,11 @@ export class AuthorActivityService {
   ) {}
 
   async refreshAllAuthors(batchSize = 500): Promise<number> {
-    const existingAuthors: Array<{ vkUserId: number }> =
-      await this.prisma.author.findMany({
-        select: { vkUserId: true },
-        where: { vkUserId: { gt: 0 } },
-        orderBy: { vkUserId: 'asc' },
-      });
+    const existingAuthors = (await this.prisma.author.findMany({
+      select: { vkUserId: true },
+      where: { vkUserId: { gt: 0 } },
+      orderBy: { vkUserId: 'asc' },
+    })) as Array<{ vkUserId: number }>;
 
     if (!existingAuthors.length) {
       return 0;
@@ -283,18 +282,18 @@ export class AuthorActivityService {
       ? (comment.threadItems.map((item) =>
           this.serializeComment(item),
         ) as Prisma.InputJsonValue)
-      : Prisma.JsonNull;
+      : (Prisma.JsonNull as unknown as Prisma.InputJsonValue);
 
     const attachmentsJson: Prisma.InputJsonValue | undefined =
       comment.attachments === null
-        ? Prisma.JsonNull
+        ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
         : comment.attachments === undefined
           ? undefined
           : (comment.attachments as Prisma.InputJsonValue);
 
     const parentsStackJson: Prisma.InputJsonValue =
       comment.parentsStack === null
-        ? Prisma.JsonNull
+        ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
         : (comment.parentsStack as Prisma.InputJsonValue);
 
     const authorVkId = comment.fromId > 0 ? comment.fromId : null;
@@ -329,8 +328,8 @@ export class AuthorActivityService {
       updateData.watchlistAuthorId = watchlistAuthorId;
     }
 
-    if (options.source === CommentSource.WATCHLIST) {
-      updateData.source = CommentSource.WATCHLIST;
+    if (options.source === (CommentSource.WATCHLIST as CommentSource)) {
+      updateData.source = CommentSource.WATCHLIST as CommentSource;
     }
 
     const createData: Prisma.CommentUncheckedCreateInput = {
@@ -411,10 +410,9 @@ export class AuthorActivityService {
   }
 
   private async loadKeywordMatchCandidates(): Promise<KeywordMatchCandidate[]> {
-    const keywords: Array<{ id: number; word: string; isPhrase: boolean }> =
-      await this.prisma.keyword.findMany({
-        select: { id: true, word: true, isPhrase: true },
-      });
+    const keywords = (await this.prisma.keyword.findMany({
+      select: { id: true, word: true, isPhrase: true },
+    })) as Array<{ id: number; word: string; isPhrase: boolean }>;
 
     return keywords
       .map((keyword) => {
@@ -450,17 +448,16 @@ export class AuthorActivityService {
       return;
     }
 
-    const matchedKeywordIds = new Set(
+    const matchedKeywordIds = new Set<number>(
       keywordMatches
         .filter((keyword) => matchesKeyword(normalizedText, keyword))
         .map((keyword) => keyword.id),
     );
 
-    const existingMatches: Array<{ keywordId: number }> =
-      await this.prisma.commentKeywordMatch.findMany({
-        where: { commentId, source },
-        select: { keywordId: true },
-      });
+    const existingMatches = (await this.prisma.commentKeywordMatch.findMany({
+      where: { commentId, source },
+      select: { keywordId: true },
+    })) as Array<{ keywordId: number }>;
 
     const existingKeywordIds = new Set(
       existingMatches.map((match) => match.keywordId),
@@ -514,7 +511,7 @@ export class AuthorActivityService {
     postId: number,
     keywordMatches: KeywordMatchCandidate[],
   ): Promise<void> {
-    const post = await this.prisma.post.findUnique({
+    const post = (await this.prisma.post.findUnique({
       where: {
         ownerId_vkPostId: {
           ownerId,
@@ -522,7 +519,7 @@ export class AuthorActivityService {
         },
       },
       select: { text: true },
-    });
+    })) as { text: string | null } | null;
 
     if (!post || !post.text) {
       return;
@@ -541,26 +538,26 @@ export class AuthorActivityService {
     );
 
     if (matchedKeywordIds.size === 0) {
-      const comments = await this.prisma.comment.findMany({
+      const comments = (await this.prisma.comment.findMany({
         where: { ownerId, postId },
         select: { id: true },
-      });
+      })) as Array<{ id: number }>;
 
       if (comments.length > 0) {
         await this.prisma.commentKeywordMatch.deleteMany({
           where: {
             commentId: { in: comments.map((c) => c.id) },
-            source: MatchSource.POST,
+            source: MatchSource.POST as MatchSource,
           },
         });
       }
       return;
     }
 
-    const comments = await this.prisma.comment.findMany({
+    const comments = (await this.prisma.comment.findMany({
       where: { ownerId, postId },
       select: { id: true },
-    });
+    })) as Array<{ id: number }>;
 
     if (comments.length === 0) {
       return;
@@ -568,13 +565,13 @@ export class AuthorActivityService {
 
     const commentIds = comments.map((c) => c.id);
 
-    const existingMatches = await this.prisma.commentKeywordMatch.findMany({
+    const existingMatches = (await this.prisma.commentKeywordMatch.findMany({
       where: {
         commentId: { in: commentIds },
-        source: MatchSource.POST,
+        source: MatchSource.POST as MatchSource,
       },
       select: { commentId: true, keywordId: true },
-    });
+    })) as Array<{ commentId: number; keywordId: number }>;
 
     const existingKeys = new Set(
       existingMatches.map((m) => `${m.commentId}-${m.keywordId}`),
@@ -611,7 +608,7 @@ export class AuthorActivityService {
             where: {
               commentId,
               keywordId,
-              source: MatchSource.POST,
+              source: MatchSource.POST as MatchSource,
             },
           }),
         );
@@ -624,7 +621,7 @@ export class AuthorActivityService {
           data: toCreate.map(({ commentId, keywordId }) => ({
             commentId,
             keywordId,
-            source: MatchSource.POST,
+            source: MatchSource.POST as MatchSource,
           })),
           skipDuplicates: true,
         }),

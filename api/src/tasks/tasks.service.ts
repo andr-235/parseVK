@@ -122,12 +122,15 @@ export class TasksService {
 
   async getTask(taskId: number): Promise<TaskDetail> {
     try {
-      const task = await this.repository.findUnique({ id: taskId });
-      return this.mapTaskToDetail(task as PrismaTaskRecord);
+      const task = (await this.repository.findUnique({
+        id: taskId,
+      })) as PrismaTaskRecord;
+      return this.mapTaskToDetail(task);
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
+        error instanceof
+          (Prisma.PrismaClientKnownRequestError as unknown as typeof Error) &&
+        (error as { code?: string }).code === 'P2025'
       ) {
         throw new NotFoundException(`Задача с id=${taskId} не найдена`);
       }
@@ -143,8 +146,9 @@ export class TasksService {
       })) as PrismaTaskRecord;
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
+        error instanceof
+          (Prisma.PrismaClientKnownRequestError as unknown as typeof Error) &&
+        (error as { code?: string }).code === 'P2025'
       ) {
         throw new NotFoundException(`Задача с id=${taskId} не найдена`);
       }
@@ -159,25 +163,22 @@ export class TasksService {
 
     const context = await this.contextBuilder.buildResumeContext(taskRecord);
 
-    const updatedTask: PrismaTaskRecord = (await this.repository.update(
-      { id: taskId },
-      {
-        status: 'pending',
-        completed: false,
-        totalItems: context.totalItems,
-        processedItems: context.processedItems,
-        progress: context.progress,
-        description: this.descriptionParser.stringify({
-          scope: context.scope,
-          groupIds: context.groupIds,
-          postLimit: context.postLimit,
-          stats: context.parsed.stats,
-          skippedGroupsMessage: context.parsed.skippedGroupsMessage,
-          skippedGroupIds: context.parsed.skippedGroupIds,
-          current: taskRecord.description,
-        }),
-      } as PrismaTypes.TaskUncheckedUpdateInput,
-    )) as PrismaTaskRecord;
+    const updatedTask = (await this.repository.update({ id: taskId }, {
+      status: 'pending',
+      completed: false,
+      totalItems: context.totalItems,
+      processedItems: context.processedItems,
+      progress: context.progress,
+      description: this.descriptionParser.stringify({
+        scope: context.scope,
+        groupIds: context.groupIds,
+        postLimit: context.postLimit,
+        stats: context.parsed.stats,
+        skippedGroupsMessage: context.parsed.skippedGroupsMessage,
+        skippedGroupIds: context.parsed.skippedGroupIds,
+        current: taskRecord.description,
+      }),
+    } as PrismaTypes.TaskUncheckedUpdateInput)) as PrismaTaskRecord;
 
     await this.parsingQueue.enqueue({
       taskId: task.id,
@@ -197,8 +198,9 @@ export class TasksService {
       })) as PrismaTaskRecord;
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
+        error instanceof
+          (Prisma.PrismaClientKnownRequestError as unknown as typeof Error) &&
+        (error as { code?: string }).code === 'P2025'
       ) {
         throw new NotFoundException(`Задача с id=${taskId} не найдена`);
       }
@@ -244,8 +246,9 @@ export class TasksService {
       await this.repository.findUnique({ id: taskId });
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
+        error instanceof
+          (Prisma.PrismaClientKnownRequestError as unknown as typeof Error) &&
+        (error as { code?: string }).code === 'P2025'
       ) {
         throw new NotFoundException(`Задача с id=${taskId} не найдена`);
       }

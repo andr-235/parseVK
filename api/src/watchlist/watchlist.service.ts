@@ -5,9 +5,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma, WatchlistSettings } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { WatchlistStatus, CommentSource } from '@prisma/client';
-import type { WatchlistAuthorWithRelations } from './interfaces/watchlist-repository.interface';
 import type {
   WatchlistAuthorCardDto,
   WatchlistAuthorDetailsDto,
@@ -55,7 +54,7 @@ export class WatchlistService {
       excludeStopped?: boolean;
     } = {},
   ): Promise<WatchlistAuthorListDto> {
-    const settings = await this.repository.ensureSettings();
+    const settings = (await this.repository.ensureSettings()) as { id: number };
     const offset = this.queryValidator.normalizeOffset(params.offset);
     const limit = this.queryValidator.normalizeLimit(params.limit);
     const excludeStopped = this.queryValidator.normalizeExcludeStopped(
@@ -150,7 +149,7 @@ export class WatchlistService {
       throw new BadRequestException('Нужно указать commentId или authorVkId');
     }
 
-    const settings = await this.repository.ensureSettings();
+    const settings = (await this.repository.ensureSettings()) as { id: number };
 
     let authorVkId = dto.authorVkId ?? null;
     let sourceCommentId: number | null = null;
@@ -162,9 +161,11 @@ export class WatchlistService {
         throw new NotFoundException('Комментарий не найден');
       }
 
-      sourceCommentId = comment.id;
-      const fromId: number = comment.fromId;
-      authorVkId = comment.authorVkId ?? (fromId > 0 ? fromId : null);
+      sourceCommentId = (comment as { id: number }).id;
+      const fromId = (comment as { fromId: number }).fromId;
+      authorVkId =
+        (comment as { authorVkId: number | null }).authorVkId ??
+        (fromId > 0 ? fromId : null);
 
       if (!authorVkId) {
         throw new BadRequestException(
@@ -181,7 +182,7 @@ export class WatchlistService {
 
     const existing = await this.repository.findByAuthorVkIdAndSettingsId(
       authorVkId,
-      settings.id,
+      (settings as { id: number }).id,
     );
 
     if (existing) {
@@ -192,21 +193,23 @@ export class WatchlistService {
 
     await this.authorActivityService.saveAuthors([authorVkId]);
 
-    const record: WatchlistAuthorWithRelations = await this.repository.create({
+    const record = await this.repository.create({
       authorVkId,
       sourceCommentId,
-      settingsId: settings.id,
-      status: WatchlistStatus.ACTIVE as const,
+      settingsId: (settings as { id: number }).id,
+      status: WatchlistStatus.ACTIVE as unknown as WatchlistStatus,
     });
 
     if (sourceCommentId) {
       await this.repository.updateComment(sourceCommentId, {
-        watchlistAuthorId: record.id,
-        source: CommentSource.WATCHLIST,
+        watchlistAuthorId: (record as { id: number }).id,
+        source: CommentSource.WATCHLIST as unknown as string,
       });
     }
 
-    const commentsCount = await this.repository.countComments(record.id);
+    const commentsCount = await this.repository.countComments(
+      (record as { id: number }).id,
+    );
 
     this.logger.log(`Добавлен автор ${authorVkId} в список "На карандаше"`);
 
@@ -233,12 +236,16 @@ export class WatchlistService {
 
     const data: Prisma.WatchlistAuthorUpdateInput = {};
 
-    if (dto.status && dto.status !== record.status) {
+    if (dto.status && dto.status !== (record as { status: string }).status) {
       data.status = dto.status;
 
-      if (dto.status === WatchlistStatus.ACTIVE) {
+      if (
+        dto.status === (WatchlistStatus.ACTIVE as unknown as WatchlistStatus)
+      ) {
         data.monitoringStoppedAt = { set: null };
-      } else if (dto.status === WatchlistStatus.STOPPED) {
+      } else if (
+        dto.status === (WatchlistStatus.STOPPED as unknown as WatchlistStatus)
+      ) {
         data.monitoringStoppedAt = { set: new Date() };
       }
     }
@@ -269,14 +276,26 @@ export class WatchlistService {
   }
 
   async getSettings(): Promise<WatchlistSettingsDto> {
-    const settings = await this.repository.ensureSettings();
+    const settings = (await this.repository.ensureSettings()) as {
+      id: number;
+      trackAllComments: boolean;
+      pollIntervalMinutes: number;
+      maxAuthors: number;
+      createdAt: Date;
+      updatedAt: Date;
+    };
     return this.settingsMapper.map(settings);
   }
 
   async updateSettings(
     dto: UpdateWatchlistSettingsDto,
   ): Promise<WatchlistSettingsDto> {
-    const settings = await this.repository.ensureSettings();
+    const settings = (await this.repository.ensureSettings()) as {
+      id: number;
+      trackAllComments: boolean;
+      pollIntervalMinutes: number;
+      maxAuthors: number;
+    };
 
     const data: Prisma.WatchlistSettingsUpdateInput = {};
 
@@ -292,10 +311,17 @@ export class WatchlistService {
       data.maxAuthors = dto.maxAuthors;
     }
 
-    const updated: WatchlistSettings = await this.repository.updateSettings(
-      settings.id,
+    const updated = (await this.repository.updateSettings(
+      (settings as { id: number }).id,
       data,
-    );
+    )) as {
+      id: number;
+      trackAllComments: boolean;
+      pollIntervalMinutes: number;
+      maxAuthors: number;
+      createdAt: Date;
+      updatedAt: Date;
+    };
 
     this.logger.log('Обновлены настройки мониторинга авторов');
 
@@ -303,17 +329,26 @@ export class WatchlistService {
   }
 
   async refreshActiveAuthors(): Promise<void> {
-    const settings = await this.repository.ensureSettings();
+    const settings = (await this.repository.ensureSettings()) as {
+      pollIntervalMinutes: number;
+      id: number;
+      maxAuthors: number;
+      trackAllComments: boolean;
+    };
 
-    if (this.shouldSkipRefresh(settings.pollIntervalMinutes)) {
+    if (
+      this.shouldSkipRefresh(
+        (settings as { pollIntervalMinutes: number }).pollIntervalMinutes,
+      )
+    ) {
       return;
     }
 
     this.lastRefreshTimestamp = Date.now();
 
     const activeAuthors = await this.repository.findActiveAuthors({
-      settingsId: settings.id,
-      limit: Math.max(settings.maxAuthors, 1),
+      settingsId: (settings as { id: number }).id,
+      limit: Math.max((settings as { maxAuthors: number }).maxAuthors, 1),
     });
 
     if (!activeAuthors.length) {
@@ -321,13 +356,15 @@ export class WatchlistService {
     }
 
     await this.authorActivityService.saveAuthors(
-      activeAuthors.map((author) => author.authorVkId),
+      activeAuthors.map(
+        (author) => (author as { authorVkId: number }).authorVkId,
+      ),
     );
 
-    if (!settings.trackAllComments) {
+    if (!(settings as { trackAllComments: boolean }).trackAllComments) {
       const timestamp = new Date();
       await this.repository.updateMany(
-        activeAuthors.map((author) => author.id),
+        activeAuthors.map((author) => (author as { id: number }).id),
         { lastCheckedAt: timestamp },
       );
       this.logger.debug(

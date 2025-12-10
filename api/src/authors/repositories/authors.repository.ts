@@ -7,15 +7,15 @@ import type { IAuthorsRepository } from '../interfaces/authors-repository.interf
 export class AuthorsRepository implements IAuthorsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async count(where?: Prisma.AuthorWhereInput): Promise<number> {
+  count(where?: Prisma.AuthorWhereInput): Promise<number> {
     return this.prisma.author.count({ where });
   }
 
-  async findUnique(where: { vkUserId: number }): Promise<Author> {
+  findUnique(where: { vkUserId: number }): Promise<Author> {
     return this.prisma.author.findUniqueOrThrow({ where });
   }
 
-  async queryRaw<T = Author[]>(query: Prisma.Sql): Promise<T> {
+  queryRaw<T = Author[]>(query: Prisma.Sql): Promise<T> {
     return this.prisma.$queryRaw<T>(query);
   }
 }

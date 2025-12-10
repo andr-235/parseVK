@@ -21,7 +21,7 @@ export interface TelegramChatUpdateData {
 export class TelegramChatRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findById(id: number) {
+  findById(id: number) {
     return this.prisma.telegramChat.findUnique({
       where: { id },
       include: {
@@ -34,13 +34,13 @@ export class TelegramChatRepository {
     });
   }
 
-  async findByTelegramId(telegramId: bigint) {
+  findByTelegramId(telegramId: bigint) {
     return this.prisma.telegramChat.findUnique({
       where: { telegramId },
     });
   }
 
-  async upsert(
+  upsert(
     telegramId: bigint,
     create: TelegramChatCreateData,
     update: TelegramChatUpdateData,

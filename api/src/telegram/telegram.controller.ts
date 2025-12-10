@@ -32,8 +32,10 @@ export class TelegramController {
     @Res() res: Response,
   ): Promise<void> {
     const buffer = await this.telegramService.exportChatToExcel(chatId);
-    const chat = await this.telegramService.getChatInfo(chatId);
-    const filename = `telegram_${chat.telegramId}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const chat = (await this.telegramService.getChatInfo(chatId)) as {
+      telegramId: bigint;
+    };
+    const filename = `telegram_${(chat as { telegramId: bigint }).telegramId.toString()}_${new Date().toISOString().split('T')[0]}.xlsx`;
 
     res.setHeader(
       'Content-Type',

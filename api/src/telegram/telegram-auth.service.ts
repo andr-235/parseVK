@@ -61,72 +61,105 @@ export class TelegramAuthService {
   }
 
   async getSettings(): Promise<TelegramSettingsResponseDto | null> {
-    const settings = await this.prisma.telegramSettings.findFirst({
+    const settings = (await this.prisma.telegramSettings.findFirst({
       orderBy: { updatedAt: 'desc' },
-    });
+    })) as {
+      phoneNumber: string | null;
+      apiId: number | null;
+      apiHash: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    } | null;
 
     if (!settings) {
       return null;
     }
 
     return {
-      phoneNumber: settings.phoneNumber,
-      apiId: settings.apiId,
-      apiHash: settings.apiHash,
-      createdAt: settings.createdAt.toISOString(),
-      updatedAt: settings.updatedAt.toISOString(),
+      phoneNumber: (settings as { phoneNumber: string | null }).phoneNumber,
+      apiId: (settings as { apiId: number | null }).apiId,
+      apiHash: (settings as { apiHash: string | null }).apiHash,
+      createdAt: (settings as { createdAt: Date }).createdAt.toISOString(),
+      updatedAt: (settings as { updatedAt: Date }).updatedAt.toISOString(),
     };
   }
 
   async updateSettings(
     payload: TelegramSettingsDto,
   ): Promise<TelegramSettingsResponseDto> {
-    const existing = await this.prisma.telegramSettings.findFirst({
+    const existing = (await this.prisma.telegramSettings.findFirst({
       orderBy: { updatedAt: 'desc' },
-    });
+    })) as { id: number } | null;
 
     const settings = existing
-      ? await this.prisma.telegramSettings.update({
-          where: { id: existing.id },
+      ? ((await this.prisma.telegramSettings.update({
+          where: { id: (existing as { id: number }).id },
           data: {
             phoneNumber: payload.phoneNumber ?? undefined,
             apiId: payload.apiId ?? undefined,
             apiHash: payload.apiHash ?? undefined,
           },
+        })) as {
+          phoneNumber: string | null;
+          apiId: number | null;
+          apiHash: string | null;
+          createdAt: Date;
+          updatedAt: Date;
         })
-      : await this.prisma.telegramSettings.create({
+      : ((await this.prisma.telegramSettings.create({
           data: {
             phoneNumber: payload.phoneNumber ?? null,
             apiId: payload.apiId ?? null,
             apiHash: payload.apiHash ?? null,
           },
+        })) as {
+          phoneNumber: string | null;
+          apiId: number | null;
+          apiHash: string | null;
+          createdAt: Date;
+          updatedAt: Date;
         });
 
     return {
-      phoneNumber: settings.phoneNumber,
-      apiId: settings.apiId,
-      apiHash: settings.apiHash,
-      createdAt: settings.createdAt.toISOString(),
-      updatedAt: settings.updatedAt.toISOString(),
+      phoneNumber: (settings as { phoneNumber: string | null }).phoneNumber,
+      apiId: (settings as { apiId: number | null }).apiId,
+      apiHash: (settings as { apiHash: string | null }).apiHash,
+      createdAt: (settings as { createdAt: Date }).createdAt.toISOString(),
+      updatedAt: (settings as { updatedAt: Date }).updatedAt.toISOString(),
     };
   }
 
   async startSession(
     payload: StartTelegramSessionDto,
   ): Promise<StartTelegramSessionResponseDto> {
-    const savedSettings = await this.prisma.telegramSettings.findFirst({
+    const savedSettings = (await this.prisma.telegramSettings.findFirst({
       orderBy: { updatedAt: 'desc' },
-    });
+    })) as {
+      phoneNumber: string | null;
+      apiId: number | null;
+      apiHash: string | null;
+    } | null;
 
     const phoneNumber =
-      payload.phoneNumber?.trim() ?? savedSettings?.phoneNumber?.trim();
+      payload.phoneNumber?.trim() ??
+      (
+        savedSettings as { phoneNumber: string | null } | null
+      )?.phoneNumber?.trim() ??
+      null;
     if (!phoneNumber) {
       throw new BadRequestException('PHONE_NUMBER_REQUIRED');
     }
 
-    const apiId = payload.apiId ?? savedSettings?.apiId ?? this.defaultApiId;
+    const apiId =
+      payload.apiId ??
+      (savedSettings as { apiId: number | null } | null)?.apiId ??
+      null ??
+      this.defaultApiId;
     const apiHash =
-      payload.apiHash ?? savedSettings?.apiHash ?? this.defaultApiHash;
+      payload.apiHash ??
+      (savedSettings as { apiHash: string | null } | null)?.apiHash ??
+      null ??
+      this.defaultApiHash;
 
     if (!apiId || !apiHash) {
       throw new BadRequestException('API_ID_AND_HASH_REQUIRED');
@@ -186,20 +219,26 @@ export class TelegramAuthService {
   }
 
   async getCurrentSession(): Promise<ConfirmTelegramSessionResponseDto | null> {
-    const sessionRecord = await this.prisma.telegramSession.findFirst({
+    const sessionRecord = (await this.prisma.telegramSession.findFirst({
       orderBy: { updatedAt: 'desc' },
-    });
+    })) as {
+      session: string;
+      userId: number | null;
+      username: string | null;
+      phoneNumber: string | null;
+    } | null;
 
     if (!sessionRecord) {
       return null;
     }
 
     return {
-      session: sessionRecord.session,
+      session: (sessionRecord as { session: string }).session,
       expiresAt: null,
-      userId: sessionRecord.userId ?? 0,
-      username: sessionRecord.username ?? null,
-      phoneNumber: sessionRecord.phoneNumber ?? null,
+      userId: (sessionRecord as { userId: number | null }).userId ?? 0,
+      username: (sessionRecord as { username: string | null }).username,
+      phoneNumber: (sessionRecord as { phoneNumber: string | null })
+        .phoneNumber,
     };
   }
 
@@ -351,8 +390,10 @@ export class TelegramAuthService {
   }
 
   private async deleteExistingSession(): Promise<void> {
-    const deleted = await this.prisma.telegramSession.deleteMany({});
-    if (deleted.count > 0) {
+    const deleted = (await this.prisma.telegramSession.deleteMany({})) as {
+      count: number;
+    };
+    if ((deleted as { count: number }).count > 0) {
       this.logger.log('Existing Telegram session deleted');
     }
   }

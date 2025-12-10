@@ -7,11 +7,11 @@ import type { IKeywordsRepository } from '../interfaces/keywords-repository.inte
 export class KeywordsRepository implements IKeywordsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findUnique(where: { word: string }): Promise<Keyword> {
+  findUnique(where: { word: string }): Promise<Keyword> {
     return this.prisma.keyword.findUniqueOrThrow({ where });
   }
 
-  async findMany(
+  findMany(
     where?: Prisma.KeywordWhereInput,
     orderBy?: Prisma.KeywordOrderByWithRelationInput,
     skip?: number,
@@ -20,11 +20,11 @@ export class KeywordsRepository implements IKeywordsRepository {
     return this.prisma.keyword.findMany({ where, orderBy, skip, take });
   }
 
-  async count(where?: Prisma.KeywordWhereInput): Promise<number> {
+  count(where?: Prisma.KeywordWhereInput): Promise<number> {
     return this.prisma.keyword.count({ where });
   }
 
-  async create(data: {
+  create(data: {
     word: string;
     category: string | null;
     isPhrase: boolean;
@@ -32,7 +32,7 @@ export class KeywordsRepository implements IKeywordsRepository {
     return this.prisma.keyword.create({ data });
   }
 
-  async update(
+  update(
     where: { id: number },
     data: {
       category?: string | null;
@@ -46,11 +46,11 @@ export class KeywordsRepository implements IKeywordsRepository {
     await this.prisma.keyword.delete({ where });
   }
 
-  async deleteMany(): Promise<{ count: number }> {
+  deleteMany(): Promise<{ count: number }> {
     return this.prisma.keyword.deleteMany({});
   }
 
-  async findManyWithSelect(select: {
+  findManyWithSelect(select: {
     id: true;
     word: true;
     isPhrase: true;
@@ -58,15 +58,15 @@ export class KeywordsRepository implements IKeywordsRepository {
     return this.prisma.keyword.findMany({ select });
   }
 
-  async countComments(): Promise<number> {
+  countComments(): Promise<number> {
     return this.prisma.comment.count();
   }
 
-  async countPosts(): Promise<number> {
+  countPosts(): Promise<number> {
     return this.prisma.post.count();
   }
 
-  async findCommentsBatch(params: {
+  findCommentsBatch(params: {
     skip: number;
     take: number;
   }): Promise<Array<{ id: number; text: string | null }>> {
@@ -77,7 +77,7 @@ export class KeywordsRepository implements IKeywordsRepository {
     });
   }
 
-  async findPostsBatch(params: { skip: number; take: number }): Promise<
+  findPostsBatch(params: { skip: number; take: number }): Promise<
     Array<{
       id: number;
       ownerId: number;
@@ -92,7 +92,7 @@ export class KeywordsRepository implements IKeywordsRepository {
     });
   }
 
-  async findCommentsByPost(params: {
+  findCommentsByPost(params: {
     ownerId: number;
     postId: number;
   }): Promise<Array<{ id: number }>> {
@@ -102,7 +102,7 @@ export class KeywordsRepository implements IKeywordsRepository {
     });
   }
 
-  async findCommentKeywordMatches(params: {
+  findCommentKeywordMatches(params: {
     commentId: number;
     source: MatchSource;
   }): Promise<Array<{ keywordId: number }>> {
@@ -112,7 +112,7 @@ export class KeywordsRepository implements IKeywordsRepository {
     });
   }
 
-  async findPostKeywordMatches(params: {
+  findPostKeywordMatches(params: {
     commentIds: number[];
     source: MatchSource;
   }): Promise<Array<{ commentId: number; keywordId: number }>> {

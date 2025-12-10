@@ -50,7 +50,7 @@ export interface TelegramChatMemberCreateData {
 export class TelegramMemberRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async upsertUser(telegramId: bigint, data: TelegramUserCreateData) {
+  upsertUser(telegramId: bigint, data: TelegramUserCreateData) {
     return this.prisma.telegramUser.upsert({
       where: { telegramId },
       create: data,
@@ -58,7 +58,7 @@ export class TelegramMemberRepository {
     });
   }
 
-  async upsertChatMember(data: TelegramChatMemberCreateData) {
+  upsertChatMember(data: TelegramChatMemberCreateData) {
     return this.prisma.telegramChatMember.upsert({
       where: {
         chatId_userId: {

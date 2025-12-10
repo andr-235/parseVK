@@ -7,11 +7,11 @@ import type { ITasksRepository } from '../interfaces/tasks-repository.interface'
 export class TasksRepository implements ITasksRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: Prisma.TaskUncheckedCreateInput): Promise<Task> {
+  create(data: Prisma.TaskUncheckedCreateInput): Promise<Task> {
     return this.prisma.task.create({ data });
   }
 
-  async findMany(params?: {
+  findMany(params?: {
     skip?: number;
     take?: number;
     orderBy?: Prisma.TaskOrderByWithRelationInput;
@@ -19,15 +19,15 @@ export class TasksRepository implements ITasksRepository {
     return this.prisma.task.findMany(params);
   }
 
-  async count(): Promise<number> {
+  count(): Promise<number> {
     return this.prisma.task.count();
   }
 
-  async findUnique(where: { id: number }): Promise<Task> {
+  findUnique(where: { id: number }): Promise<Task> {
     return this.prisma.task.findUniqueOrThrow({ where });
   }
 
-  async update(
+  update(
     where: { id: number },
     data: Prisma.TaskUncheckedUpdateInput,
   ): Promise<Task> {

@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { TelegramChatRepository } from '../repositories/telegram-chat.repository';
 import { TelegramMemberMapper } from '../mappers/telegram-member.mapper';
+import { TelegramMemberStatus } from '@prisma/client';
 
 @Injectable()
 export class TelegramExcelExporterService {
@@ -11,7 +12,40 @@ export class TelegramExcelExporterService {
   ) {}
 
   async exportChatToExcel(chatId: number): Promise<Buffer> {
-    const chat = await this.chatRepository.findById(chatId);
+    const chat = (await this.chatRepository.findById(chatId)) as {
+      members: Array<{
+        user: {
+          id: number;
+          telegramId: bigint;
+          firstName: string | null;
+          lastName: string | null;
+          username: string | null;
+          phoneNumber: string | null;
+          bio: string | null;
+          languageCode: string | null;
+          isBot: boolean;
+          isPremium: boolean;
+          verified: boolean;
+          deleted: boolean;
+          restricted: boolean;
+          scam: boolean;
+          fake: boolean;
+          min: boolean;
+          contact: boolean;
+          mutualContact: boolean;
+          commonChatsCount: number | null;
+          blocked: boolean;
+          contactRequirePremium: boolean;
+          spam: boolean;
+          closeFriend: boolean;
+        };
+        status: string;
+        isAdmin: boolean;
+        isOwner: boolean;
+        joinedAt: Date | null;
+        leftAt: Date | null;
+      }>;
+    } | null;
 
     if (!chat) {
       throw new BadRequestException('Chat not found');
@@ -58,38 +92,78 @@ export class TelegramExcelExporterService {
       fgColor: { argb: 'FFE0E0E0' },
     };
 
-    for (const member of chat.members) {
+    for (const member of (chat as { members: Array<unknown> }).members) {
+      const memberData = member as {
+        user: {
+          id: number;
+          telegramId: bigint;
+          firstName: string | null;
+          lastName: string | null;
+          username: string | null;
+          phoneNumber: string | null;
+          bio: string | null;
+          languageCode: string | null;
+          isBot: boolean;
+          isPremium: boolean;
+          verified: boolean;
+          deleted: boolean;
+          restricted: boolean;
+          scam: boolean;
+          fake: boolean;
+          min: boolean;
+          contact: boolean;
+          mutualContact: boolean;
+          commonChatsCount: number | null;
+          blocked: boolean;
+          contactRequirePremium: boolean;
+          spam: boolean;
+          closeFriend: boolean;
+        };
+        status: string;
+        isAdmin: boolean;
+        isOwner: boolean;
+        joinedAt: Date | null;
+        leftAt: Date | null;
+      };
       worksheet.addRow({
-        id: member.user.id,
-        telegramId: member.user.telegramId.toString(),
-        firstName: member.user.firstName ?? '',
-        lastName: member.user.lastName ?? '',
-        username: member.user.username ? `@${member.user.username}` : '',
-        phoneNumber: member.user.phoneNumber ?? '',
-        bio: member.user.bio ?? '',
-        languageCode: member.user.languageCode ?? '',
-        isBot: member.user.isBot ? 'Да' : 'Нет',
-        isPremium: member.user.isPremium ? 'Да' : 'Нет',
-        verified: member.user.verified ? 'Да' : 'Нет',
-        deleted: member.user.deleted ? 'Да' : 'Нет',
-        restricted: member.user.restricted ? 'Да' : 'Нет',
-        scam: member.user.scam ? 'Да' : 'Нет',
-        fake: member.user.fake ? 'Да' : 'Нет',
-        min: member.user.min ? 'Да' : 'Нет',
-        contact: member.user.contact ? 'Да' : 'Нет',
-        mutualContact: member.user.mutualContact ? 'Да' : 'Нет',
-        commonChatsCount: member.user.commonChatsCount ?? '',
-        blocked: member.user.blocked ? 'Да' : 'Нет',
-        contactRequirePremium: member.user.contactRequirePremium ? 'Да' : 'Нет',
-        spam: member.user.spam ? 'Да' : 'Нет',
-        closeFriend: member.user.closeFriend ? 'Да' : 'Нет',
-        status: this.memberMapper.formatMemberStatus(member.status),
-        isAdmin: member.isAdmin ? 'Да' : 'Нет',
-        isOwner: member.isOwner ? 'Да' : 'Нет',
-        joinedAt: member.joinedAt
-          ? member.joinedAt.toLocaleString('ru-RU')
+        id: memberData.user.id,
+        telegramId: memberData.user.telegramId.toString(),
+        firstName: memberData.user.firstName ?? '',
+        lastName: memberData.user.lastName ?? '',
+        username: memberData.user.username
+          ? `@${memberData.user.username}`
           : '',
-        leftAt: member.leftAt ? member.leftAt.toLocaleString('ru-RU') : '',
+        phoneNumber: memberData.user.phoneNumber ?? '',
+        bio: memberData.user.bio ?? '',
+        languageCode: memberData.user.languageCode ?? '',
+        isBot: memberData.user.isBot ? 'Да' : 'Нет',
+        isPremium: memberData.user.isPremium ? 'Да' : 'Нет',
+        verified: memberData.user.verified ? 'Да' : 'Нет',
+        deleted: memberData.user.deleted ? 'Да' : 'Нет',
+        restricted: memberData.user.restricted ? 'Да' : 'Нет',
+        scam: memberData.user.scam ? 'Да' : 'Нет',
+        fake: memberData.user.fake ? 'Да' : 'Нет',
+        min: memberData.user.min ? 'Да' : 'Нет',
+        contact: memberData.user.contact ? 'Да' : 'Нет',
+        mutualContact: memberData.user.mutualContact ? 'Да' : 'Нет',
+        commonChatsCount: memberData.user.commonChatsCount ?? '',
+        blocked: memberData.user.blocked ? 'Да' : 'Нет',
+        contactRequirePremium: memberData.user.contactRequirePremium
+          ? 'Да'
+          : 'Нет',
+        spam: memberData.user.spam ? 'Да' : 'Нет',
+        closeFriend: memberData.user.closeFriend ? 'Да' : 'Нет',
+        status: this.memberMapper.formatMemberStatus(
+          memberData.status as unknown as TelegramMemberStatus,
+        ),
+        isAdmin: memberData.isAdmin ? 'Да' : 'Нет',
+        isOwner: memberData.isOwner ? 'Да' : 'Нет',
+        joinedAt: memberData.joinedAt
+          ? memberData.joinedAt.toLocaleString('ru-RU')
+          : '',
+        leftAt: memberData.leftAt
+          ? memberData.leftAt.toLocaleString('ru-RU')
+          : '',
       });
     }
 

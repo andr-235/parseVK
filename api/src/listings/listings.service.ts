@@ -46,12 +46,12 @@ export class ListingsService {
     const { page, pageSize, search, source, archived } = options;
     const skip = (page - 1) * pageSize;
 
-    const where: Prisma.ListingWhereInput = {};
+    const where: Prisma.ListingWhereInput = {} as Prisma.ListingWhereInput;
 
     if (search) {
       const term = search.trim();
       if (term.length > 0) {
-        where.OR = [
+        (where as { OR?: unknown[] }).OR = [
           { title: { contains: term, mode: 'insensitive' } },
           { description: { contains: term, mode: 'insensitive' } },
           { address: { contains: term, mode: 'insensitive' } },
@@ -59,33 +59,41 @@ export class ListingsService {
           { externalId: { contains: term, mode: 'insensitive' } },
           { contactName: { contains: term, mode: 'insensitive' } },
           { contactPhone: { contains: term, mode: 'insensitive' } },
-        ];
+        ] as Prisma.ListingWhereInput[];
       }
     }
 
     if (source) {
-      where.source = { equals: source, mode: 'insensitive' };
+      (where as { source?: unknown }).source = {
+        equals: source,
+        mode: 'insensitive',
+      } as Prisma.StringFilter;
     }
 
     if (archived !== undefined) {
-      where.archived = archived;
+      (where as { archived?: boolean }).archived = archived;
     } else {
-      where.archived = false;
+      (where as { archived: boolean }).archived = false;
     }
 
-    const { listings, total, distinctSources } =
-      await this.repository.getListingsWithCountAndSources({
-        where,
-        skip,
-        take: pageSize,
-      });
+    const result = await this.repository.getListingsWithCountAndSources({
+      where,
+      skip,
+      take: pageSize,
+    });
+
+    const listings = (result as { listings: ListingEntity[] }).listings;
+    const total = (result as { total: number }).total;
+    const distinctSources = (
+      result as { distinctSources: Array<{ source: string | null }> }
+    ).distinctSources;
 
     const items: ListingDto[] = listings.map((listing) =>
       ListingMapper.toDto(listing as ListingWithOverrides),
     );
 
     const sources = distinctSources
-      .map((entry) => entry.source)
+      .map((entry) => (entry as { source: string | null }).source)
       .filter((value): value is string =>
         Boolean(value && value.trim().length > 0),
       );

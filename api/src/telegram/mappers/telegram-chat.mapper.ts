@@ -7,44 +7,46 @@ import type { ResolvedChat } from '../interfaces/telegram-client.interface';
 export class TelegramChatMapper {
   resolveChat(entity: unknown): ResolvedChat | null {
     if (entity instanceof Api.Channel) {
-      const type = entity.megagroup
-        ? TelegramChatType.SUPERGROUP
-        : TelegramChatType.CHANNEL;
+      const type = (entity as { megagroup?: boolean }).megagroup
+        ? (TelegramChatType.SUPERGROUP as unknown as TelegramChatType)
+        : (TelegramChatType.CHANNEL as unknown as TelegramChatType);
       return {
-        telegramId: this.toBigInt(entity.id),
+        telegramId: this.toBigInt((entity as { id: unknown }).id),
         type,
-        title: entity.title ?? null,
-        username: entity.username ?? null,
+        title: (entity as { title?: string }).title ?? null,
+        username: (entity as { username?: string }).username ?? null,
         description: null,
         entity,
         totalMembers:
-          typeof entity.participantsCount === 'number'
-            ? entity.participantsCount
+          typeof (entity as { participantsCount?: unknown })
+            .participantsCount === 'number'
+            ? (entity as { participantsCount: number }).participantsCount
             : null,
       };
     }
 
     if (entity instanceof Api.Chat) {
       return {
-        telegramId: this.toBigInt(entity.id),
-        type: TelegramChatType.GROUP,
-        title: entity.title ?? null,
+        telegramId: this.toBigInt((entity as { id: unknown }).id),
+        type: TelegramChatType.GROUP as unknown as TelegramChatType,
+        title: (entity as { title?: string }).title ?? null,
         username: null,
         description: null,
         entity,
         totalMembers:
-          typeof entity.participantsCount === 'number'
-            ? entity.participantsCount
+          typeof (entity as { participantsCount?: unknown })
+            .participantsCount === 'number'
+            ? (entity as { participantsCount: number }).participantsCount
             : null,
       };
     }
 
     if (entity instanceof Api.User) {
       return {
-        telegramId: this.toBigInt(entity.id),
-        type: TelegramChatType.PRIVATE,
+        telegramId: this.toBigInt((entity as { id: unknown }).id),
+        type: TelegramChatType.PRIVATE as unknown as TelegramChatType,
         title: this.composeUserTitle(entity),
-        username: entity.username ?? null,
+        username: (entity as { username?: string }).username ?? null,
         description: null,
         entity,
         totalMembers: 1,

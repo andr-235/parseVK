@@ -21,7 +21,7 @@ export class TelegramMemberMapper {
   } {
     if (participant instanceof Api.ChannelParticipantCreator) {
       return {
-        status: TelegramMemberStatus.CREATOR,
+        status: TelegramMemberStatus.CREATOR as unknown as TelegramMemberStatus,
         isAdmin: true,
         isOwner: true,
         joinedAt: null,
@@ -31,7 +31,8 @@ export class TelegramMemberMapper {
 
     if (participant instanceof Api.ChannelParticipantAdmin) {
       return {
-        status: TelegramMemberStatus.ADMINISTRATOR,
+        status:
+          TelegramMemberStatus.ADMINISTRATOR as unknown as TelegramMemberStatus,
         isAdmin: true,
         isOwner: false,
         joinedAt: this.extractDate(
@@ -42,9 +43,9 @@ export class TelegramMemberMapper {
     }
 
     if (participant instanceof Api.ChannelParticipantBanned) {
-      const status = participant.left
-        ? TelegramMemberStatus.LEFT
-        : TelegramMemberStatus.RESTRICTED;
+      const status = (participant as { left?: boolean }).left
+        ? (TelegramMemberStatus.LEFT as unknown as TelegramMemberStatus)
+        : (TelegramMemberStatus.RESTRICTED as unknown as TelegramMemberStatus);
       return {
         status,
         isAdmin: false,
@@ -52,13 +53,16 @@ export class TelegramMemberMapper {
         joinedAt: this.extractDate(
           (participant as { date?: number | bigint }).date,
         ),
-        leftAt: this.extractDate(participant.bannedRights?.untilDate),
+        leftAt: this.extractDate(
+          (participant as { bannedRights?: { untilDate?: unknown } })
+            .bannedRights?.untilDate,
+        ),
       };
     }
 
     if (participant instanceof Api.ChannelParticipantLeft) {
       return {
-        status: TelegramMemberStatus.LEFT,
+        status: TelegramMemberStatus.LEFT as unknown as TelegramMemberStatus,
         isAdmin: false,
         isOwner: false,
         joinedAt: null,
@@ -67,7 +71,7 @@ export class TelegramMemberMapper {
     }
 
     return {
-      status: TelegramMemberStatus.MEMBER,
+      status: TelegramMemberStatus.MEMBER as unknown as TelegramMemberStatus,
       isAdmin: false,
       isOwner: false,
       joinedAt: this.extractDate(
@@ -86,7 +90,7 @@ export class TelegramMemberMapper {
   } {
     if (participant instanceof Api.ChatParticipantCreator) {
       return {
-        status: TelegramMemberStatus.CREATOR,
+        status: TelegramMemberStatus.CREATOR as unknown as TelegramMemberStatus,
         isAdmin: true,
         isOwner: true,
         joinedAt: null,
@@ -96,7 +100,8 @@ export class TelegramMemberMapper {
 
     if (participant instanceof Api.ChatParticipantAdmin) {
       return {
-        status: TelegramMemberStatus.ADMINISTRATOR,
+        status:
+          TelegramMemberStatus.ADMINISTRATOR as unknown as TelegramMemberStatus,
         isAdmin: true,
         isOwner: false,
         joinedAt: this.extractDate(
@@ -107,7 +112,7 @@ export class TelegramMemberMapper {
     }
 
     return {
-      status: TelegramMemberStatus.MEMBER,
+      status: TelegramMemberStatus.MEMBER as unknown as TelegramMemberStatus,
       isAdmin: false,
       isOwner: false,
       joinedAt: this.extractDate(
@@ -187,9 +192,9 @@ export class TelegramMemberMapper {
           : null,
       usernames: usernames
         ? (JSON.parse(JSON.stringify(usernames)) as Prisma.InputJsonValue)
-        : Prisma.JsonNull,
-      personal: Prisma.JsonNull,
-      botInfo: Prisma.JsonNull,
+        : (Prisma.JsonNull as unknown as Prisma.InputJsonValue),
+      personal: Prisma.JsonNull as unknown as Prisma.InputJsonValue,
+      botInfo: Prisma.JsonNull as unknown as Prisma.InputJsonValue,
       blocked: false,
       contactRequirePremium: false,
       spam: false,
@@ -213,53 +218,66 @@ export class TelegramMemberMapper {
         : null;
 
     return {
-      userId: userRecord.id,
-      telegramId: userRecord.telegramId.toString(),
-      firstName: userRecord.firstName,
-      lastName: userRecord.lastName,
-      username: userRecord.username,
-      phoneNumber: userRecord.phoneNumber,
-      bio: userRecord.bio,
-      languageCode: userRecord.languageCode,
-      isBot: userRecord.isBot,
-      isPremium: userRecord.isPremium,
-      deleted: userRecord.deleted,
-      restricted: userRecord.restricted,
-      verified: userRecord.verified,
-      scam: userRecord.scam,
-      fake: userRecord.fake,
-      min: userRecord.min,
-      self: userRecord.self,
-      contact: userRecord.contact,
-      mutualContact: userRecord.mutualContact,
-      accessHash: userRecord.accessHash,
-      photoId: userRecord.photoId ? userRecord.photoId.toString() : null,
-      photoDcId: userRecord.photoDcId,
-      photoHasVideo: userRecord.photoHasVideo,
-      commonChatsCount: userRecord.commonChatsCount,
+      userId: (userRecord as { id: number }).id,
+      telegramId: (userRecord as { telegramId: bigint }).telegramId.toString(),
+      firstName: (userRecord as { firstName: string | null }).firstName,
+      lastName: (userRecord as { lastName: string | null }).lastName,
+      username: (userRecord as { username: string | null }).username,
+      phoneNumber: (userRecord as { phoneNumber: string | null }).phoneNumber,
+      bio: (userRecord as { bio: string | null }).bio,
+      languageCode: (userRecord as { languageCode: string | null })
+        .languageCode,
+      isBot: (userRecord as { isBot: boolean }).isBot,
+      isPremium: (userRecord as { isPremium: boolean }).isPremium,
+      deleted: (userRecord as { deleted: boolean }).deleted,
+      restricted: (userRecord as { restricted: boolean }).restricted,
+      verified: (userRecord as { verified: boolean }).verified,
+      scam: (userRecord as { scam: boolean }).scam,
+      fake: (userRecord as { fake: boolean }).fake,
+      min: (userRecord as { min: boolean }).min,
+      self: (userRecord as { self: boolean }).self,
+      contact: (userRecord as { contact: boolean }).contact,
+      mutualContact: (userRecord as { mutualContact: boolean }).mutualContact,
+      accessHash: (userRecord as { accessHash: string | null }).accessHash,
+      photoId: (userRecord as { photoId: bigint | null }).photoId
+        ? (userRecord as { photoId: bigint }).photoId.toString()
+        : null,
+      photoDcId: (userRecord as { photoDcId: number | null }).photoDcId,
+      photoHasVideo: (userRecord as { photoHasVideo: boolean }).photoHasVideo,
+      commonChatsCount: (userRecord as { commonChatsCount: number | null })
+        .commonChatsCount,
       usernames,
       personal:
-        userRecord.personal && typeof userRecord.personal === 'object'
-          ? (userRecord.personal as TelegramMemberDto['personal'])
+        (userRecord as { personal?: unknown }).personal &&
+        typeof (userRecord as { personal?: unknown }).personal === 'object'
+          ? ((userRecord as { personal: unknown })
+              .personal as TelegramMemberDto['personal'])
           : null,
       botInfo:
-        userRecord.botInfo && typeof userRecord.botInfo === 'object'
-          ? (userRecord.botInfo as TelegramMemberDto['botInfo'])
+        (userRecord as { botInfo?: unknown }).botInfo &&
+        typeof (userRecord as { botInfo?: unknown }).botInfo === 'object'
+          ? ((userRecord as { botInfo: unknown })
+              .botInfo as TelegramMemberDto['botInfo'])
           : null,
-      blocked: userRecord.blocked,
-      contactRequirePremium: userRecord.contactRequirePremium,
-      spam: userRecord.spam,
-      closeFriend: userRecord.closeFriend,
-      status: member.status,
-      isAdmin: member.isAdmin,
-      isOwner: member.isOwner,
-      joinedAt: member.joinedAt ? member.joinedAt.toISOString() : null,
-      leftAt: member.leftAt ? member.leftAt.toISOString() : null,
+      blocked: (userRecord as { blocked: boolean }).blocked,
+      contactRequirePremium: (userRecord as { contactRequirePremium: boolean })
+        .contactRequirePremium,
+      spam: (userRecord as { spam: boolean }).spam,
+      closeFriend: (userRecord as { closeFriend: boolean }).closeFriend,
+      status: (member as { status: TelegramMemberStatus }).status,
+      isAdmin: (member as { isAdmin: boolean }).isAdmin,
+      isOwner: (member as { isOwner: boolean }).isOwner,
+      joinedAt: (member as { joinedAt: Date | null }).joinedAt
+        ? (member as { joinedAt: Date }).joinedAt.toISOString()
+        : null,
+      leftAt: (member as { leftAt: Date | null }).leftAt
+        ? (member as { leftAt: Date }).leftAt.toISOString()
+        : null,
     };
   }
 
   formatMemberStatus(status: TelegramMemberStatus): string {
-    const statusMap: Record<TelegramMemberStatus, string> = {
+    const statusMap: Record<string, string> = {
       CREATOR: 'Создатель',
       ADMINISTRATOR: 'Администратор',
       MEMBER: 'Участник',
@@ -267,7 +285,7 @@ export class TelegramMemberMapper {
       LEFT: 'Покинул',
       KICKED: 'Исключен',
     };
-    return statusMap[status] ?? status;
+    return statusMap[status as string] ?? (status as string);
   }
 
   toBigInt(value: unknown): bigint {

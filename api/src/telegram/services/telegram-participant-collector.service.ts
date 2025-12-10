@@ -19,8 +19,10 @@ export class TelegramParticipantCollectorService {
     limit: number,
   ): Promise<ParticipantCollection> {
     if (
-      resolved.type === TelegramChatType.CHANNEL ||
-      resolved.type === TelegramChatType.SUPERGROUP
+      resolved.type ===
+        (TelegramChatType.CHANNEL as unknown as TelegramChatType) ||
+      resolved.type ===
+        (TelegramChatType.SUPERGROUP as unknown as TelegramChatType)
     ) {
       return this.collectChannelParticipants(
         client,
@@ -29,7 +31,9 @@ export class TelegramParticipantCollectorService {
       );
     }
 
-    if (resolved.type === TelegramChatType.GROUP) {
+    if (
+      resolved.type === (TelegramChatType.GROUP as unknown as TelegramChatType)
+    ) {
       return this.collectChatParticipants(
         client,
         resolved.entity as Api.Chat,
