@@ -1,10 +1,24 @@
 #!/bin/sh
 set -e
 
-DB_HOST="${DB_HOST:-$(echo "$DATABASE_URL" | sed -n 's@.*//\([^:/]*\).*@\1@p')}"
-DB_PORT="${DB_PORT:-$(echo "$DATABASE_URL" | sed -n 's@.*://[^:/]*:\([0-9]*\).*@\1@p')}"
+# Парсим DATABASE_URL для извлечения хоста и порта
+# Формат: postgresql://user:password@host:port/database?params
+if [ -n "$DATABASE_URL" ]; then
+  # Извлекаем часть после @ (host:port/database)
+  AFTER_AT=$(echo "$DATABASE_URL" | sed 's/.*@//' | sed 's/[?#].*//')
+  # Извлекаем хост (до : или /)
+  DB_HOST="${DB_HOST:-$(echo "$AFTER_AT" | cut -d: -f1 | cut -d/ -f1)}"
+  # Извлекаем порт (после : и до /)
+  DB_PORT="${DB_PORT:-$(echo "$AFTER_AT" | cut -d: -f2 | cut -d/ -f1)}"
+fi
+
+# Fallback значения
 [ -z "$DB_HOST" ] && DB_HOST="db"
 [ -z "$DB_PORT" ] && DB_PORT="5432"
+
+echo "DATABASE_URL: ${DATABASE_URL:+установлен (скрыт)}"
+echo "Извлеченный DB_HOST: $DB_HOST"
+echo "Извлеченный DB_PORT: $DB_PORT"
 
 echo "Ожидание доступности базы данных ${DB_HOST}:${DB_PORT}..."
 for i in $(seq 1 30); do
