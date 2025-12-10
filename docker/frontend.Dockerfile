@@ -9,7 +9,6 @@ ARG VITE_DEV_MODE
 ARG VITE_API_WS_URL
 ARG NPM_REGISTRY=https://registry.npmjs.org/
 
-ENV npm_config_audit=false
 ENV VITE_APP_TITLE=${VITE_APP_TITLE}
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_DEV_MODE=${VITE_DEV_MODE}
@@ -18,6 +17,7 @@ ENV VITE_API_WS_URL=${VITE_API_WS_URL}
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY front/package*.json ./
+COPY front/pnpm-lock.yaml ./
 COPY front/.npmrc ./
 
 RUN pnpm config set registry ${NPM_REGISTRY} \
