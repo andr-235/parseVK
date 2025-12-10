@@ -38,6 +38,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 ARG NPM_REGISTRY=https://registry.npmjs.org/
+ARG NPM_REGISTRY_FALLBACK=https://registry.npmmirror.com
 ARG PNPM_VERSION=10.25
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV npm_config_registry=${NPM_REGISTRY}
@@ -48,7 +49,7 @@ RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retry-factor 2 \
     && npm config set fetch-retry-mintimeout 20000 \
     && npm config set fetch-timeout 600000 \
-    && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK})
+    && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY})
 
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/pnpm-lock.yaml ./
