@@ -5,11 +5,13 @@ WORKDIR /app
 
 ARG DATABASE_URL
 ARG NPM_REGISTRY=https://registry.npmjs.org/
+ARG PNPM_VERSION=9.12.1
 ENV DATABASE_URL=${DATABASE_URL}
 ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm config set registry ${NPM_REGISTRY} \
+    && npm install -g pnpm@${PNPM_VERSION}
 
 COPY api/package*.json ./
 COPY api/.npmrc ./
@@ -29,11 +31,13 @@ FROM node:22-alpine
 WORKDIR /app
 
 ARG NPM_REGISTRY=https://registry.npmjs.org/
+ARG PNPM_VERSION=9.12.1
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm config set registry ${NPM_REGISTRY} \
+    && npm install -g pnpm@${PNPM_VERSION}
 
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/pnpm-lock.yaml ./
