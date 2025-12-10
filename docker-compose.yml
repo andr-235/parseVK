@@ -59,8 +59,8 @@ services:
       dockerfile: docker/backend.Dockerfile
       args:
         DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/vk_api?schema=public}
-        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
-        NPM_REGISTRY_FALLBACK: ${NPM_REGISTRY_FALLBACK:-https://registry.npmmirror.com}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+        NPM_REGISTRY_FALLBACK: ${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org/}
     depends_on:
       db:
         condition: service_healthy
@@ -92,7 +92,8 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_API_WS_URL: ${VITE_API_WS_URL:-auto}
         VITE_DEV_MODE: ${VITE_DEV_MODE:-false}
-        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+        NPM_REGISTRY_FALLBACK: ${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org/}
     depends_on:
       api:
         condition: service_healthy
