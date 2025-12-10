@@ -39,7 +39,7 @@ WORKDIR /app
 
 ARG NPM_REGISTRY=https://registry.npmjs.org/
 ARG NPM_REGISTRY_FALLBACK=https://registry.npmmirror.com
-ARG PNPM_VERSION=10.25
+ARG PNPM_VERSION=10.25.0
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
