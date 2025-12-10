@@ -57,7 +57,7 @@ COPY --from=build /app/scripts ./scripts
 
 RUN pnpm install --frozen-lockfile --prod
 
-RUN pnpm exec prisma generate
+RUN pnpm add -D prisma@6.19.0 && pnpm exec prisma generate && pnpm remove prisma
 
 EXPOSE 3000
 
