@@ -20,7 +20,7 @@ COPY front/package*.json ./
 COPY front/.npmrc ./
 
 RUN pnpm config set registry ${NPM_REGISTRY} \
-    && pnpm install --frozen-lockfile --no-audit
+    && pnpm install --frozen-lockfile
 
 COPY front/ ./
 

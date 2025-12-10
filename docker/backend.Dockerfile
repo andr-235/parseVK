@@ -16,7 +16,7 @@ COPY api/package*.json ./
 COPY api/.npmrc ./
 
 RUN pnpm config set registry ${NPM_REGISTRY} \
-    && pnpm install --no-audit
+    && pnpm install
 
 COPY api/ ./
 
