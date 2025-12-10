@@ -10,6 +10,10 @@ ARG VITE_API_WS_URL
 ARG NPM_REGISTRY=https://registry.npmjs.org/
 ARG NPM_REGISTRY_FALLBACK=https://registry.npmmirror.com
 ARG PNPM_VERSION=10.25.0
+ENV PNPM_FETCH_TIMEOUT=120000
+ENV PNPM_FETCH_RETRIES=2
+ENV PNPM_FETCH_RETRY_FACTOR=2
+ENV PNPM_FETCH_RETRY_MINTIMEOUT=20000
 
 ENV VITE_APP_TITLE=${VITE_APP_TITLE}
 ENV VITE_API_URL=${VITE_API_URL}
@@ -30,7 +34,7 @@ COPY front/.npmrc ./
 RUN pnpm config set registry ${NPM_REGISTRY} \
     && pnpm config set fetch-retries 5 \
     && pnpm config set fetch-timeout 600000 \
-    && pnpm install --frozen-lockfile
+    && (pnpm install --frozen-lockfile || (pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile))
 
 COPY front/ ./
 
