@@ -33,26 +33,26 @@ describe('CommentsService', () => {
 
   beforeEach(() => {
     repositoryObj = {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      update: jest.fn(),
-      transaction: jest.fn(),
+      findMany: jest.fn<Promise<CommentWithRelations[]>, [unknown]>(),
+      count: jest.fn<Promise<number>, [unknown]>(),
+      update: jest.fn<Promise<CommentWithRelations>, [unknown]>(),
+      transaction: jest.fn<Promise<unknown[]>, [unknown[]]>(),
     };
     repository = repositoryObj as never;
 
     offsetStrategyObj = {
-      execute: jest.fn(),
+      execute: jest.fn<Promise<CommentsListDto>, [unknown, unknown]>(),
     };
     offsetStrategy = offsetStrategyObj as never;
 
     cursorStrategyObj = {
-      execute: jest.fn(),
+      execute: jest.fn<Promise<CommentsCursorListDto>, [unknown, unknown]>(),
     };
     cursorStrategy = cursorStrategyObj as never;
 
     mapperObj = {
-      map: jest.fn(),
-      mapMany: jest.fn(),
+      map: jest.fn<CommentWithAuthorDto, [CommentWithRelations]>(),
+      mapMany: jest.fn<CommentWithAuthorDto[], [CommentWithRelations[]]>(),
     };
     mapper = mapperObj as never;
 
