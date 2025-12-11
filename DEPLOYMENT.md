@@ -78,6 +78,7 @@ docker compose version
 ```
 
 **Ожидаемый результат:**
+
 ```
 Docker version 24.x.x, build xxxxx
 Docker Compose version v2.x.x
@@ -289,6 +290,7 @@ REDIS_URL=redis://redis:6379
 ```
 
 **ВАЖНО:**
+
 - Замените `MySecurePassword123!` на **сильный** пароль
 - Замените `ВАSШ_РЕАЛЬНЫЙ_ТОКЕН_ОТ_ВК` на реальный токен VK
 - Сохраните изменения: `Ctrl+O`, затем `Enter`, затем `Ctrl+X`
@@ -316,13 +318,13 @@ ls -la .env
 
 **Добавьте следующие секреты:**
 
-| Имя секрета | Значение | Описание |
-|------------|----------|----------|
-| `SERVER_HOST` | `192.168.1.100` | IP адрес вашего сервера |
-| `SERVER_USER` | `deployer` | Имя пользователя на сервере |
-| `SERVER_PORT` | `22` | SSH порт (обычно 22) |
-| `SSH_PRIVATE_KEY` | Содержимое `~/.ssh/github_actions_deploy` | Приватный SSH ключ |
-| `PROJECT_PATH` | `/opt/parseVK` | Путь к проекту на сервере |
+| Имя секрета       | Значение                                  | Описание                    |
+| ----------------- | ----------------------------------------- | --------------------------- |
+| `SERVER_HOST`     | `192.168.1.100`                           | IP адрес вашего сервера     |
+| `SERVER_USER`     | `deployer`                                | Имя пользователя на сервере |
+| `SERVER_PORT`     | `22`                                      | SSH порт (обычно 22)        |
+| `SSH_PRIVATE_KEY` | Содержимое `~/.ssh/github_actions_deploy` | Приватный SSH ключ          |
+| `PROJECT_PATH`    | `/opt/parseVK`                            | Путь к проекту на сервере   |
 
 **Как добавить SSH_PRIVATE_KEY:**
 
@@ -373,6 +375,7 @@ docker compose logs -f
 ```
 
 **Что вы увидите:**
+
 1. Скачивание образов (postgres, redis, node, nginx)
 2. Сборка backend (установка зависимостей, генерация Prisma, сборка)
 3. Сборка frontend (установка зависимостей, сборка Vite)
@@ -509,24 +512,28 @@ docker exec -it postgres_db psql -U postgres -d vk_api
 ### 9.1. Основные команды
 
 **Остановка приложения:**
+
 ```bash
 cd /opt/parseVK
 docker compose down
 ```
 
 **Запуск приложения:**
+
 ```bash
 cd /opt/parseVK
 docker compose up -d
 ```
 
 **Перезапуск:**
+
 ```bash
 cd /opt/parseVK
 docker compose restart
 ```
 
 **Пересборка с нуля:**
+
 ```bash
 cd /opt/parseVK
 docker compose down
@@ -536,10 +543,12 @@ docker compose up -d --build --force-recreate
 ### 9.2. Обновление кода
 
 **Автоматически:**
+
 - Просто сделайте `git push` в main ветку
 - GitHub Actions автоматически задеплоит изменения
 
 **Вручную:**
+
 ```bash
 cd /opt/parseVK
 git pull origin main
@@ -564,6 +573,7 @@ docker compose logs -f --tail=50
 Контейнер `db_backup` автоматически сохраняет дамп PostgreSQL каждый день в 03:00 и хранит копии за последние 7 дней. Файлы попадают в volume `parsevk_postgres_backups` в формате `vk_api_ГГГГММДД_ЧЧММСС.sql.gz`.
 
 **Параметры по умолчанию** можно изменить через переменные окружения в `docker-compose.yml`:
+
 - `BACKUP_SCHEDULE` — расписание cron (например, `"0 */6 * * *"` для бэкапа каждые 6 часов).
 - `BACKUP_KEEP_DAYS` — сколько дней хранить файлы.
 - `BACKUP_DIR` — путь внутри контейнера (оставьте `/backups`, чтобы не менять volume).
@@ -674,11 +684,13 @@ docker compose restart frontend
    - Правильные ли значения?
 
 2. **Проверьте SSH подключение вручную:**
+
 ```bash
 ssh -i ~/.ssh/github_actions_deploy deployer@ВАШ_IP
 ```
 
 3. **Проверьте права deployer на сервере:**
+
 ```bash
 # На сервере
 groups deployer
@@ -689,6 +701,7 @@ sudo usermod -aG docker deployer
 ```
 
 4. **Проверьте путь к проекту:**
+
 ```bash
 ls -la /opt/parseVK
 ```
@@ -765,6 +778,121 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 #     mem_limit: 512m
 ```
 
+### 10.8. Ошибка "invalid checkpoint record" в PostgreSQL
+
+**Проблема:** База данных не запускается с ошибкой `PANIC: could not locate a valid checkpoint record`
+
+**Причина:** Поврежденные WAL (Write-Ahead Logging) файлы или несовместимость volume между проектами Docker Compose.
+
+**Решение: Настройка чистой базы данных**
+
+#### Вариант 1: Через интерфейс Dokploy
+
+1. **Остановите сервис базы данных:**
+   - В интерфейсе Dokploy перейдите в настройки сервиса базы данных
+   - Нажмите "Stop"
+
+2. **Удалите поврежденный volume:**
+   - В разделе "Volumes" найдите существующий volume (например, `parsevk-db-fy1arz-data`)
+   - Нажмите иконку удаления (корзина) рядом с volume
+   - Подтвердите удаление (⚠️ **ВНИМАНИЕ:** это удалит все данные!)
+   - Если volume не отображается в интерфейсе, удалите его через Docker CLI (см. Вариант 2)
+
+3. **Создайте новый volume:**
+   - В разделе "Volumes" нажмите "Add Volume"
+   - В модальном окне "Volumes / Mounts":
+     - **Select the Mount Type:** выберите "Volume Mount" (не Bind Mount)
+     - **Host Path:** оставьте пустым (не требуется для Volume Mount)
+     - **Mount Path (In the container):**
+       - Для PostgreSQL 18+: введите `/var/lib/postgresql`
+       - Для PostgreSQL 15 и ниже: введите `/var/lib/postgresql/data`
+   - Нажмите "Create"
+   - Сохраните настройки (кнопка "Save")
+   - Выполните "Redeploy" сервиса для применения изменений
+
+   **Важно:** PostgreSQL 18+ требует монтирование в `/var/lib/postgresql` (без `/data`), чтобы создать версионную поддиректорию автоматически.
+
+4. **Запустите сервис базы данных:**
+   - Нажмите "Deploy" или "Start"
+   - Дождитесь успешного запуска (статус "Healthy")
+   - Проверьте логи: база данных должна быть "ready to accept connections"
+
+5. **Настройте DATABASE_URL в API сервисе:**
+   - Откройте настройки API сервиса в Dokploy
+   - Перейдите в раздел "Environment"
+   - Найдите переменную `DATABASE_URL`
+   - Убедитесь, что хост в URL соответствует имени сервиса базы данных:
+     - Формат: `postgresql://postgres:password@<имя-сервиса-бд>:5432/vk_api?schema=public`
+     - Пример: `postgresql://postgres:your_password@db:5432/vk_api?schema=public`
+   - **Важно:** Имя хоста должно совпадать с именем сервиса БД в Dokploy (обычно `db` или имя из docker-compose)
+   - Если имя сервиса БД отличается, замените `db` на правильное имя
+   - Сохраните изменения и выполните "Redeploy" API сервиса
+
+6. **Проверьте применение миграций:**
+   - API контейнер автоматически применит миграции Prisma при старте
+   - Проверьте логи API: должны увидеть "База данных доступна!" и "Запуск миграций базы данных..."
+   - Должно быть сообщение о успешном применении миграций
+
+#### Вариант 2: Через Docker CLI (если есть доступ к серверу)
+
+```bash
+# 1. Остановите контейнер базы данных
+docker stop <db-container-name>
+
+# 2. Удалите контейнер (не volume)
+docker rm <db-container-name>
+
+# 3. Найдите и удалите поврежденный volume
+docker volume ls | grep postgres
+docker volume rm <volume-name>
+
+# 4. Создайте новый volume (опционально, если нужен конкретный name)
+docker volume create <new-volume-name>
+
+# 5. Запустите сервис базы данных через Dokploy или docker-compose
+# При запуске будет создан новый volume автоматически
+```
+
+#### Проверка успешного запуска
+
+```bash
+# Проверьте статус контейнера
+docker ps | grep postgres
+
+# Проверьте логи
+docker logs <db-container-name>
+
+# Должны увидеть:
+# - "database system is ready to accept connections"
+# - Нет ошибок "invalid checkpoint record"
+
+# Проверьте подключение
+docker exec -it <db-container-name> psql -U postgres -d vk_api -c "\dt"
+# Должны увидеть список таблиц (после применения миграций)
+```
+
+#### Применение миграций вручную (если нужно)
+
+Если миграции не применились автоматически:
+
+```bash
+# Подключитесь к контейнеру API
+docker exec -it <api-container-name> sh
+
+# Внутри контейнера выполните:
+cd /app
+npx prisma migrate deploy
+
+# Или для разработки:
+npx prisma migrate dev
+```
+
+**Важно:**
+
+- ⚠️ Удаление volume **безвозвратно удалит все данные** базы данных
+- Убедитесь, что у вас есть бэкап, если данные критичны
+- После создания чистой БД все миграции Prisma применятся автоматически при старте API
+
 ---
 
 ## Дополнительные рекомендации
@@ -772,6 +900,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ### Безопасность
 
 1. **Firewall (UFW):**
+
 ```bash
 # Установка
 sudo apt install ufw
@@ -793,6 +922,7 @@ sudo ufw status
 ```
 
 2. **Регулярные обновления:**
+
 ```bash
 # Создаем скрипт обновления
 sudo nano /usr/local/bin/update-system.sh
@@ -812,6 +942,7 @@ sudo crontab -e
 ```
 
 3. **Изменение SSH порта (опционально):**
+
 ```bash
 sudo nano /etc/ssh/sshd_config
 # Измените: Port 22 на Port 2222
