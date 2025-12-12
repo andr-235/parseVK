@@ -46,12 +46,21 @@ services:
     depends_on:
       - db
       - redis
+    ports:
+      - 3000
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-vk_api}?schema=public}
       VK_TOKEN: ${VK_TOKEN}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.parsevk-api.rule=Host(`192.168.88.12`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.parsevk-api.entrypoints=web"
+      - "traefik.http.services.parsevk-api.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.parsevk-api-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.routers.parsevk-api.middlewares=parsevk-api-stripprefix"
     healthcheck:
       test:
         [
@@ -74,6 +83,13 @@ services:
       - .env
     depends_on:
       - api
+    ports:
+      - 80
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.parsevk-frontend.rule=Host(`192.168.88.12`)"
+      - "traefik.http.routers.parsevk-frontend.entrypoints=web"
+      - "traefik.http.services.parsevk-frontend.loadbalancer.server.port=80"
     healthcheck:
       test:
         [
