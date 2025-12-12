@@ -401,9 +401,14 @@ jobs:
           echo "=== Checking volumes ==="
 
           if ! docker volume inspect parsevk_postgres_data > /dev/null 2>&1; then
-            echo "Error: External volume 'parsevk_postgres_data' does not exist"
-            echo "Please create it manually: docker volume create parsevk_postgres_data"
-            exit 1
+            echo "Volume 'parsevk_postgres_data' does not exist, creating it..."
+            docker volume create parsevk_postgres_data || {
+              echo "Error: Failed to create volume 'parsevk_postgres_data'"
+              exit 1
+            }
+            echo "Volume 'parsevk_postgres_data' created successfully"
+          else
+            echo "Volume 'parsevk_postgres_data' already exists"
           fi
 
           if ! docker volume inspect parsevk_postgres_backups > /dev/null 2>&1; then
@@ -412,6 +417,9 @@ jobs:
               echo "Error: Failed to create volume 'parsevk_postgres_backups'"
               exit 1
             }
+            echo "Volume 'parsevk_postgres_backups' created successfully"
+          else
+            echo "Volume 'parsevk_postgres_backups' already exists"
           fi
 
           echo "All volumes are ready"
