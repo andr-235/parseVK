@@ -541,7 +541,7 @@ jobs:
       - name: Start all containers
         id: start_containers
         working-directory: /opt/parseVK
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
           STEP_START=$(date +%s)
           echo "=== Starting all containers ==="
