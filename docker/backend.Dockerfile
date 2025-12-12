@@ -47,8 +47,11 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
 
 # Устанавливаем prisma CLI для миграций
-RUN npm install -g prisma@^6.16.3 \
-  && apk add --no-cache netcat-openbsd
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm config set fetch-retries 3 \
+    && npm config set fetch-timeout 60000 \
+    && (npm install -g prisma@^6.16.3 || (npm config set registry https://registry.npmjs.org/ && npm install -g prisma@^6.16.3)) \
+    && apk add --no-cache netcat-openbsd
 
 # Копируем собранное приложение и node_modules из build stage
 COPY --from=build /app/package*.json ./
