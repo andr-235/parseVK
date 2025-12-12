@@ -139,24 +139,6 @@ jobs:
           STEP_END=$(date +%s)
           echo "Environment check completed in $((STEP_END - STEP_START))s"
 
-      - name: Validate docker-compose
-        id: validate_compose
-        working-directory: /opt/parseVK
-        timeout-minutes: 1
-        run: |
-          STEP_START=$(date +%s)
-          if [ ! -f "docker-compose.deploy.yml" ]; then
-            echo "Error: docker-compose.deploy.yml not found"
-            exit 1
-          fi
-          if ! docker compose -f docker-compose.deploy.yml config > /dev/null 2>&1; then
-            echo "Error: Invalid docker-compose.deploy.yml"
-            docker compose -f docker-compose.deploy.yml config
-            exit 1
-          fi
-          STEP_END=$(date +%s)
-          echo "Docker compose validation completed in $((STEP_END - STEP_START))s"
-
       - name: Save current version for rollback
         id: save_version
         working-directory: /opt/parseVK
@@ -225,6 +207,24 @@ jobs:
           echo "new_commit=$NEW_COMMIT" >> $GITHUB_OUTPUT
           STEP_END=$(date +%s)
           echo "Code update completed in $((STEP_END - STEP_START))s"
+
+      - name: Validate docker-compose
+        id: validate_compose
+        working-directory: /opt/parseVK
+        timeout-minutes: 1
+        run: |
+          STEP_START=$(date +%s)
+          if [ ! -f "docker-compose.deploy.yml" ]; then
+            echo "Error: docker-compose.deploy.yml not found"
+            exit 1
+          fi
+          if ! docker compose -f docker-compose.deploy.yml config > /dev/null 2>&1; then
+            echo "Error: Invalid docker-compose.deploy.yml"
+            docker compose -f docker-compose.deploy.yml config
+            exit 1
+          fi
+          STEP_END=$(date +%s)
+          echo "Docker compose validation completed in $((STEP_END - STEP_START))s"
 
       - name: Stop containers
         id: stop_containers
