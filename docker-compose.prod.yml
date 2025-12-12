@@ -35,6 +35,8 @@ services:
   api:
     image: ghcr.io/andr-235/parsevk-api:latest
     restart: always
+    env_file:
+      - .env
     depends_on:
       - db
       - redis
@@ -60,6 +62,8 @@ services:
   frontend:
     image: ghcr.io/andr-235/parsevk-frontend:latest
     restart: always
+    env_file:
+      - .env
     depends_on:
       - api
     healthcheck:
