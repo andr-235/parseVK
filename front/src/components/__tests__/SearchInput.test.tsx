@@ -68,4 +68,3 @@ describe('SearchInput', () => {
     expect(icon).toBeInTheDocument()
   })
 })
-
