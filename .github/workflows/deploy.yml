@@ -674,27 +674,34 @@ jobs:
               exit 1
             fi
             
-            echo "=== Validating docker-compose.deploy.yml for rollback ==="
+            echo "=== Determining compose file for rollback ==="
+            ROLLBACK_COMPOSE_FILE="docker-compose.deploy.yml"
             if [ ! -f "docker-compose.deploy.yml" ]; then
-              echo "Error: docker-compose.deploy.yml not found in previous commit"
-              exit 1
+              echo "Warning: docker-compose.deploy.yml not found in previous commit, falling back to docker-compose.yml"
+              if [ ! -f "docker-compose.yml" ]; then
+                echo "Error: Neither docker-compose.deploy.yml nor docker-compose.yml found in previous commit"
+                exit 1
+              fi
+              ROLLBACK_COMPOSE_FILE="docker-compose.yml"
             fi
             
-            if ! docker compose -f docker-compose.deploy.yml config > /dev/null 2>&1; then
-              echo "Error: Invalid docker-compose.deploy.yml in previous commit"
-              docker compose -f docker-compose.deploy.yml config
+            echo "Using compose file: $ROLLBACK_COMPOSE_FILE"
+            
+            if ! docker compose -f "$ROLLBACK_COMPOSE_FILE" config > /dev/null 2>&1; then
+              echo "Error: Invalid $ROLLBACK_COMPOSE_FILE in previous commit"
+              docker compose -f "$ROLLBACK_COMPOSE_FILE" config
               exit 1
             fi
             
             echo "=== Pulling images and restarting ==="
-            docker compose -f docker-compose.deploy.yml down --timeout 30 || true
+            docker compose -f "$ROLLBACK_COMPOSE_FILE" down --timeout 30 || true
             
             MAX_RETRIES=3
             RETRY=0
             PULL_SUCCESS=false
             
             while [ $RETRY -lt $MAX_RETRIES ]; do
-              if docker compose -f docker-compose.deploy.yml pull 2>&1; then
+              if docker compose -f "$ROLLBACK_COMPOSE_FILE" pull 2>&1; then
                 PULL_SUCCESS=true
                 break
               fi
@@ -707,7 +714,7 @@ jobs:
             
             if [ "$PULL_SUCCESS" != "true" ]; then
               echo "Error: Failed to pull images during rollback after $MAX_RETRIES attempts"
-              docker compose -f docker-compose.deploy.yml pull 2>&1 | tail -50
+              docker compose -f "$ROLLBACK_COMPOSE_FILE" pull 2>&1 | tail -50
               exit 1
             fi
             
@@ -716,7 +723,7 @@ jobs:
             START_SUCCESS=false
             
             while [ $RETRY -lt $MAX_RETRIES ]; do
-              if docker compose -f docker-compose.deploy.yml up -d 2>&1; then
+              if docker compose -f "$ROLLBACK_COMPOSE_FILE" up -d 2>&1; then
                 START_SUCCESS=true
                 break
               fi
@@ -729,7 +736,7 @@ jobs:
             
             if [ "$START_SUCCESS" != "true" ]; then
               echo "Error: Failed to start containers during rollback after $MAX_RETRIES attempts"
-              docker compose -f docker-compose.deploy.yml ps
+              docker compose -f "$ROLLBACK_COMPOSE_FILE" ps
               exit 1
             fi
             
@@ -738,20 +745,20 @@ jobs:
             
             echo "=== Waiting for services to be healthy after rollback ==="
             set +e
-            COMPOSE_FILE="docker-compose.deploy.yml" bash .github/scripts/health-check.sh || {
+            COMPOSE_FILE="$ROLLBACK_COMPOSE_FILE" bash .github/scripts/health-check.sh || {
               echo "Warning: Not all containers are healthy after rollback"
-              docker compose -f docker-compose.deploy.yml ps
-              docker compose -f docker-compose.deploy.yml logs --tail=30
+              docker compose -f "$ROLLBACK_COMPOSE_FILE" ps
+              docker compose -f "$ROLLBACK_COMPOSE_FILE" logs --tail=30
             }
             set -e
             
             echo "=== Rollback health check ==="
             set +e
-            COMPOSE_FILE="docker-compose.deploy.yml" bash .github/scripts/http-health-check.sh || echo "⚠️ Health checks failed after rollback (non-critical)"
+            COMPOSE_FILE="$ROLLBACK_COMPOSE_FILE" bash .github/scripts/http-health-check.sh || echo "⚠️ Health checks failed after rollback (non-critical)"
             set -e
             
             echo "=== Checking rollback status ==="
-            docker compose -f docker-compose.deploy.yml ps
+            docker compose -f "$ROLLBACK_COMPOSE_FILE" ps
             
             ROLLBACK_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
             echo "Rolled back to commit: $ROLLBACK_COMMIT"
