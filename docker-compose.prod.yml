@@ -12,8 +12,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-vk_api}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - default
     healthcheck:
       test:
         [
@@ -28,8 +26,6 @@ services:
     image: redis:7-alpine
     restart: always
     command: ["redis-server", "--appendonly", "no"]
-    networks:
-      - default
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -40,18 +36,14 @@ services:
     image: ghcr.io/andr-235/parsevk-api:latest
     restart: always
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - db
+      - redis
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-vk_api}?schema=public}
       VK_TOKEN: ${VK_TOKEN}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-    networks:
-      - default
     healthcheck:
       test:
         [
@@ -69,10 +61,7 @@ services:
     image: ghcr.io/andr-235/parsevk-frontend:latest
     restart: always
     depends_on:
-      api:
-        condition: service_healthy
-    networks:
-      - default
+      - api
     healthcheck:
       test:
         [
