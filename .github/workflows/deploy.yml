@@ -546,11 +546,6 @@ jobs:
           STEP_START=$(date +%s)
           echo "=== Starting all containers ==="
 
-          if [ -z "${VK_TOKEN:-}" ]; then
-            echo "Error: VK_TOKEN is not set. Cannot start containers."
-            exit 1
-          fi
-
           if [ "${{ steps.run_migrations.outputs.api_was_running }}" = "true" ]; then
             echo "API container was already running for migrations, pulling latest images and restarting if needed"
             MAX_RETRIES=2
