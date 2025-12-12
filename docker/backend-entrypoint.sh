@@ -97,6 +97,28 @@ if command -v hostname >/dev/null 2>&1; then
   log_debug "Hostname контейнера: $HOSTNAME"
 fi
 
+# Проверка Docker сетей через /proc/net/route
+if [ -f /proc/net/route ]; then
+  log_debug "=== Сетевые маршруты ==="
+  cat /proc/net/route | head -5 | while read line; do
+    log_debug "Route: $line"
+  done
+fi
+
+# Попытка найти БД через сканирование сети (если доступны инструменты)
+if command -v arp >/dev/null 2>&1; then
+  log_debug "=== ARP таблица ==="
+  arp -a | head -10 | while read line; do
+    log_debug "ARP: $line"
+  done
+fi
+
+# Проверка переменных окружения Dokploy
+log_debug "=== Переменные окружения Dokploy ==="
+env | grep -i "dokploy\|database\|db\|postgres" | while read line; do
+  log_debug "Env: $(echo "$line" | sed 's/=.*/=****/')"
+done
+
 # Проверка доступности порта с детальной диагностикой
 log_debug "=== Проверка доступности порта ==="
 if command -v nc >/dev/null 2>&1; then

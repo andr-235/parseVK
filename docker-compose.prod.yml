@@ -5,12 +5,19 @@
 # ВАЖНО: База данных должна быть развернута отдельно.
 # Укажите DATABASE_URL в environment переменных Dokploy для сервиса api.
 # Пример: postgresql://user:password@host:5432/vk_api?schema=public
+#
+# Для связи с БД через общую сеть:
+# 1. Создайте внешнюю сеть в Dokploy (или используйте существующую)
+# 2. Укажите имя сети в переменной окружения DOKPLOY_NETWORK
+# 3. Убедитесь, что БД также подключена к этой же сети
 
 services:
   redis:
     image: redis:7-alpine
     restart: always
     command: ["redis-server", "--appendonly", "no"]
+    networks:
+      - default
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -30,6 +37,9 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+    networks:
+      - default
+      - dokploy-network
     healthcheck:
       test:
         [
@@ -50,6 +60,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    networks:
+      - default
     healthcheck:
       test:
         [
@@ -60,3 +72,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+networks:
+  dokploy-network:
+    external: true
+    name: ${DOKPLOY_NETWORK:-dokploy-network}
