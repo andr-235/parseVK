@@ -145,13 +145,13 @@ jobs:
         timeout-minutes: 1
         run: |
           STEP_START=$(date +%s)
-          if [ ! -f "docker-compose.yml" ]; then
-            echo "Error: docker-compose.yml not found"
+          if [ ! -f "docker-compose.deploy.yml" ]; then
+            echo "Error: docker-compose.deploy.yml not found"
             exit 1
           fi
-          if ! docker compose config > /dev/null 2>&1; then
-            echo "Error: Invalid docker-compose.yml"
-            docker compose config
+          if ! docker compose -f docker-compose.deploy.yml config > /dev/null 2>&1; then
+            echo "Error: Invalid docker-compose.deploy.yml"
+            docker compose -f docker-compose.deploy.yml config
             exit 1
           fi
           STEP_END=$(date +%s)
@@ -234,16 +234,16 @@ jobs:
           STEP_START=$(date +%s)
           echo "=== Stopping containers ==="
 
-          if ! docker compose down --timeout 30; then
+          if ! docker compose -f docker-compose.deploy.yml down --timeout 30; then
             echo "Warning: docker compose down failed, forcing stop"
-            docker compose kill || true
-            docker compose down --remove-orphans || true
+            docker compose -f docker-compose.deploy.yml kill || true
+            docker compose -f docker-compose.deploy.yml down --remove-orphans || true
           fi
 
           MAX_WAIT=30
           WAIT_COUNT=0
           while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-            RUNNING=$(docker compose ps -q 2>/dev/null | wc -l)
+            RUNNING=$(docker compose -f docker-compose.deploy.yml ps -q 2>/dev/null | wc -l)
             if [ "$RUNNING" -eq 0 ]; then
               echo "All containers stopped"
               break
@@ -255,7 +255,7 @@ jobs:
 
           if [ "$RUNNING" -gt 0 ]; then
             echo "Warning: Some containers may still be running"
-            docker compose ps
+            docker compose -f docker-compose.deploy.yml ps
           fi
 
           STEP_END=$(date +%s)
@@ -307,9 +307,9 @@ jobs:
           STEP_START=$(date +%s)
           echo "=== Cleaning up old images ==="
 
-          docker compose down --rmi local --remove-orphans 2>/dev/null || true
+          docker compose -f docker-compose.deploy.yml down --rmi local --remove-orphans 2>/dev/null || true
 
-          CURRENT_IMAGES=$(docker compose config --images 2>/dev/null || echo "")
+          CURRENT_IMAGES=$(docker compose -f docker-compose.deploy.yml config --images 2>/dev/null || echo "")
 
           if [ -n "$CURRENT_IMAGES" ]; then
             docker images --format "{{.Repository}}:{{.Tag}}" | grep -iE "(parsevk|postgres|redis)" | while read image; do
@@ -324,13 +324,24 @@ jobs:
           STEP_END=$(date +%s)
           echo "Image cleanup completed in $((STEP_END - STEP_START))s"
 
-      - name: Pre-pull base images
-        id: prepull_images
+      - name: Login to GitHub Container Registry
+        id: login_ghcr
         working-directory: /opt/parseVK
-        timeout-minutes: 10
+        timeout-minutes: 2
         run: |
           STEP_START=$(date +%s)
-          echo "=== Pre-pulling base images ==="
+          echo "=== Logging in to GitHub Container Registry ==="
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          STEP_END=$(date +%s)
+          echo "Login completed in $((STEP_END - STEP_START))s"
+
+      - name: Pull application images
+        id: pull_images
+        working-directory: /opt/parseVK
+        timeout-minutes: 15
+        run: |
+          STEP_START=$(date +%s)
+          echo "=== Pulling application images from GHCR ==="
 
           pull_with_retry() {
             local image=$1
@@ -346,60 +357,28 @@ jobs:
               echo "Failed to pull $image, attempt $attempt/$max_attempts"
               attempt=$((attempt + 1))
               if [ $attempt -le $max_attempts ]; then
-                sleep 5
+                sleep 10
               fi
             done
 
-            echo "Warning: Failed to pull $image after $max_attempts attempts, will try during build"
+            echo "Error: Failed to pull $image after $max_attempts attempts"
             return 1
           }
 
-          pull_with_retry "node:22-alpine" || true
-          pull_with_retry "nginx:alpine" || true
-          pull_with_retry "postgres:15-alpine" || true
-
-          STEP_END=$(date +%s)
-          echo "Pre-pull completed in $((STEP_END - STEP_START))s"
-
-      - name: Build containers
-        id: build_containers
-        working-directory: /opt/parseVK
-        timeout-minutes: 60
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Building containers ==="
-
-          export DOCKER_BUILDKIT=1
-          export COMPOSE_DOCKER_CLI_BUILD=1
-
-          MAX_BUILD_ATTEMPTS=3
-          ATTEMPT=1
-          BUILD_SUCCESS=false
-
-          while [ $ATTEMPT -le $MAX_BUILD_ATTEMPTS ]; do
-            echo "Build attempt $ATTEMPT/$MAX_BUILD_ATTEMPTS"
-            if docker compose build --parallel; then
-              BUILD_SUCCESS=true
-              break
-            fi
-
-            if [ $ATTEMPT -lt $MAX_BUILD_ATTEMPTS ]; then
-              echo "Build failed, retrying in 10 seconds..."
-              sleep 10
-            fi
-            ATTEMPT=$((ATTEMPT + 1))
-          done
-
-          if [ "$BUILD_SUCCESS" = false ]; then
-            echo "Error: Build failed after $MAX_BUILD_ATTEMPTS attempts"
-            docker compose build 2>&1 | tail -50
+          if ! pull_with_retry "ghcr.io/andr-235/parsevk-api:latest"; then
+            echo "Error: Failed to pull API image"
             exit 1
           fi
 
-          echo "=== Built images ==="
-          docker compose images
+          if ! pull_with_retry "ghcr.io/andr-235/parsevk-frontend:latest"; then
+            echo "Error: Failed to pull Frontend image"
+            exit 1
+          fi
+
+          echo "=== Pulled images ==="
+          docker images | grep -E "(parsevk-api|parsevk-frontend)" || true
           STEP_END=$(date +%s)
-          echo "Container build completed in $((STEP_END - STEP_START))s"
+          echo "Image pull completed in $((STEP_END - STEP_START))s"
 
       - name: Start database and dependencies
         id: start_db
@@ -408,13 +387,13 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Starting database and dependencies ==="
-          docker compose up -d db redis
+          docker compose -f docker-compose.deploy.yml up -d db redis
 
           echo "=== Waiting for database to be ready ==="
           MAX_WAIT=60
           WAIT_COUNT=0
           while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-            if docker compose exec -T db pg_isready -U postgres -d vk_api > /dev/null 2>&1; then
+            if docker compose -f docker-compose.deploy.yml exec -T db pg_isready -U postgres -d vk_api > /dev/null 2>&1; then
               echo "Database is ready"
               break
             fi
@@ -425,7 +404,7 @@ jobs:
 
           if [ $WAIT_COUNT -eq $MAX_WAIT ]; then
             echo "Error: Database did not become ready in time"
-            docker compose logs db
+            docker compose -f docker-compose.deploy.yml logs db
             exit 1
           fi
 
@@ -443,7 +422,7 @@ jobs:
           CLEAN_SCRIPT="DELETE FROM _prisma_migrations WHERE migration_name = '20251128142604_add_post_attachments' AND finished_at IS NULL;"
 
           echo "Removing failed migration record from database..."
-          docker compose exec -T db psql -U postgres -d vk_api -c "$CLEAN_SCRIPT" || {
+          docker compose -f docker-compose.deploy.yml exec -T db psql -U postgres -d vk_api -c "$CLEAN_SCRIPT" || {
             echo "Warning: Failed to clean migration record (may not exist)"
           }
 
@@ -458,27 +437,27 @@ jobs:
           STEP_START=$(date +%s)
           echo "=== Running database migrations ==="
 
-          API_CONTAINER_ID=$(docker compose ps -q api 2>/dev/null || echo "")
+          API_CONTAINER_ID=$(docker compose -f docker-compose.deploy.yml ps -q api 2>/dev/null || echo "")
 
           if [ -n "$API_CONTAINER_ID" ] && [ "$(docker inspect --format='{{.State.Status}}' "$API_CONTAINER_ID" 2>/dev/null)" = "running" ]; then
             echo "Using existing API container for migrations"
-            if docker compose exec -T api sh -c "command -v npx > /dev/null 2>&1 && npx prisma migrate deploy" 2>/dev/null; then
+            if docker compose -f docker-compose.deploy.yml exec -T api sh -c "command -v npx > /dev/null 2>&1 && npx prisma migrate deploy" 2>/dev/null; then
               echo "Migrations completed via existing container"
             else
-              echo "Warning: Failed to run migrations via existing container, will build and run temporary container"
-              docker compose run --rm api npx prisma migrate deploy || {
-                echo "Error: Migrations failed"
-                exit 1
-              }
+              echo "Error: Failed to run migrations via existing container"
+              exit 1
             fi
           else
-            echo "Building temporary API container for migrations"
-            docker compose build api || {
-              echo "Error: Failed to build API container for migrations"
+            echo "Starting API container for migrations"
+            docker compose -f docker-compose.deploy.yml up -d api || {
+              echo "Error: Failed to start API container for migrations"
               exit 1
             }
             
-            docker compose run --rm api npx prisma migrate deploy || {
+            echo "Waiting for API container to be ready..."
+            sleep 10
+            
+            docker compose -f docker-compose.deploy.yml exec -T api npx prisma migrate deploy || {
               echo "Error: Migrations failed"
               exit 1
             }
@@ -494,10 +473,10 @@ jobs:
         run: |
           STEP_START=$(date +%s)
           echo "=== Starting all containers ==="
-          if ! docker compose up -d; then
+          if ! docker compose -f docker-compose.deploy.yml up -d; then
             echo "Error: Failed to start containers"
             echo "=== Container logs ==="
-            docker compose logs --tail=50
+            docker compose -f docker-compose.deploy.yml logs --tail=50
             exit 1
           fi
 
@@ -505,16 +484,16 @@ jobs:
           sleep 5
 
           echo "=== Container status ==="
-          docker compose ps
+          docker compose -f docker-compose.deploy.yml ps
 
-          FAILED_CONTAINERS=$(docker compose ps --format json | jq -r 'select(.State != "running" and .State != "healthy") | .Name' 2>/dev/null || docker compose ps | grep -E "(Exit|Error|unhealthy)" || echo "")
+          FAILED_CONTAINERS=$(docker compose -f docker-compose.deploy.yml ps --format json | jq -r 'select(.State != "running" and .State != "healthy") | .Name' 2>/dev/null || docker compose -f docker-compose.deploy.yml ps | grep -E "(Exit|Error|unhealthy)" || echo "")
           if [ -n "$FAILED_CONTAINERS" ]; then
             echo "Error: Some containers failed to start"
             echo "Failed containers: $FAILED_CONTAINERS"
             echo "=== API container logs ==="
-            docker compose logs --tail=100 api || true
+            docker compose -f docker-compose.deploy.yml logs --tail=100 api || true
             echo "=== All container logs ==="
-            docker compose logs --tail=50
+            docker compose -f docker-compose.deploy.yml logs --tail=50
             exit 1
           fi
 
