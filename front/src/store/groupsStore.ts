@@ -308,8 +308,31 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         : `club${group.id}`
       // #region agent log
       if (import.meta.env.DEV) {
-        console.log('[DEBUG] addSelectedRegionSearchGroups identifier:', identifier, 'group:', group)
-        fetch('http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'groupsStore.ts:304',message:'addSelectedRegionSearchGroups identifier',data:{identifier,groupId:group.id,screenName:group.screen_name,identifierType:typeof identifier,identifierLength:identifier?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{})
+        console.log(
+          '[DEBUG] addSelectedRegionSearchGroups identifier:',
+          identifier,
+          'group:',
+          group
+        )
+        fetch('http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'groupsStore.ts:304',
+            message: 'addSelectedRegionSearchGroups identifier',
+            data: {
+              identifier,
+              groupId: group.id,
+              screenName: group.screen_name,
+              identifierType: typeof identifier,
+              identifierLength: identifier?.length,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }).catch(() => {})
       }
       // #endregion
       const success = await get().addGroup(identifier, group.description ?? '', { silent: true })
