@@ -6,15 +6,10 @@ on:
       - main
   workflow_dispatch:
     inputs:
-      version_type:
-        description: "Тип версии"
+      version:
+        description: "Версия для релиза (например, 0.3.8)"
         required: true
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-        default: patch
+        type: string
 
 permissions:
   contents: write
@@ -37,172 +32,136 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Get current version
-        id: get_version
+      - name: Extract version from commit footer
+        id: extract_version
         run: |
-          API_VERSION=$(node -p "require('./api/package.json').version")
-          FRONT_VERSION=$(node -p "require('./front/package.json').version")
-
-          if [ "$API_VERSION" != "$FRONT_VERSION" ]; then
-            echo "Warning: API version ($API_VERSION) differs from Frontend version ($FRONT_VERSION)"
-            echo "Using API version as base"
-            BASE_VERSION="$API_VERSION"
-          else
-            BASE_VERSION="$API_VERSION"
-          fi
-
+          # Ищем footer "Release: vX.Y.Z" в коммитах с последнего тега
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-          echo "current_version=$BASE_VERSION" >> $GITHUB_OUTPUT
-          echo "Current version: $BASE_VERSION"
+          RELEASE_VERSION=""
+
           if [ -n "$LAST_TAG" ]; then
-            echo "Last tag: $LAST_TAG"
-          fi
-
-      - name: Check if should skip release
-        id: check_skip
-        run: |
-          echo "skip=false" >> $GITHUB_OUTPUT
-          LAST_COMMIT_MSG=$(git log -1 --pretty=format:"%s" 2>/dev/null || echo "")
-          if echo "$LAST_COMMIT_MSG" | grep -q "chore: bump version"; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Skipping release: last commit is a version bump"
+            # Ищем в коммитах после последнего тега
+            COMMITS=$(git log ${LAST_TAG}..HEAD --format="%B")
           else
-            echo "Proceeding with release"
+            # Если тегов нет, ищем в последних 20 коммитах
+            COMMITS=$(git log -20 --format="%B")
           fi
 
-      - name: Detect version type from commits
-        id: detect_version_type
-        if: steps.check_skip.outcome == 'success' && steps.check_skip.outputs.skip == 'false'
-        run: |
-          LAST_TAG="${{ steps.get_version.outputs.last_tag }}"
-
-          if [ -z "$LAST_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"%s" --reverse)
+          # Проверяем через workflow_dispatch
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            RELEASE_VERSION="${{ github.event.inputs.version }}"
+            echo "Using manual version from workflow_dispatch: $RELEASE_VERSION"
           else
-            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" --reverse)
+            # Ищем footer "Release: vX.Y.Z" в коммитах
+            while IFS= read -r commit_body; do
+              if echo "$commit_body" | grep -qE "^Release: v[0-9]+\.[0-9]+\.[0-9]+$"; then
+                RELEASE_VERSION=$(echo "$commit_body" | grep -E "^Release: v[0-9]+\.[0-9]+\.[0-9]+$" | head -1 | sed 's/Release: v//')
+                break
+              fi
+            done <<< "$COMMITS"
           fi
 
-          VERSION_TYPE="patch"
-          HAS_BREAKING=false
-          HAS_FEAT=false
-
-          while IFS= read -r commit_msg; do
-            if echo "$commit_msg" | grep -qiE "BREAKING CHANGE|!:"; then
-              HAS_BREAKING=true
-              break
+          if [ -z "$RELEASE_VERSION" ]; then
+            echo "No release version found in commit footers"
+            echo "has_release=false" >> $GITHUB_OUTPUT
+            echo "Skipping release: no 'Release: vX.Y.Z' footer found in commits"
+          else
+            # Проверяем формат версии
+            if ! echo "$RELEASE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "Error: Invalid version format: $RELEASE_VERSION"
+              exit 1
             fi
-            if echo "$commit_msg" | grep -qE "^feat:"; then
-              HAS_FEAT=true
+            
+            # Проверяем, не существует ли уже такой тег
+            if git rev-parse "v$RELEASE_VERSION" >/dev/null 2>&1; then
+              echo "Tag v$RELEASE_VERSION already exists, skipping release"
+              echo "has_release=false" >> $GITHUB_OUTPUT
+            else
+              echo "has_release=true" >> $GITHUB_OUTPUT
+              echo "version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+              echo "tag_name=v$RELEASE_VERSION" >> $GITHUB_OUTPUT
+              echo "Found release version: $RELEASE_VERSION"
             fi
-          done <<< "$COMMITS"
-
-          if [ "$HAS_BREAKING" = true ]; then
-            VERSION_TYPE="major"
-            echo "Detected MAJOR version bump (breaking changes found)"
-          elif [ "$HAS_FEAT" = true ]; then
-            VERSION_TYPE="minor"
-            echo "Detected MINOR version bump (new features found)"
-          else
-            VERSION_TYPE="patch"
-            echo "Detected PATCH version bump (bugfixes or other changes)"
           fi
 
-          echo "version_type=$VERSION_TYPE" >> $GITHUB_OUTPUT
-
-      - name: Calculate new version
-        id: calculate_version
-        if: steps.check_skip.outcome == 'success' && steps.check_skip.outputs.skip == 'false'
-        run: |
-          CURRENT_VERSION="${{ steps.get_version.outputs.current_version }}"
-
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            VERSION_TYPE="${{ github.event.inputs.version_type }}"
-            echo "Using manual version type: $VERSION_TYPE"
-          else
-            VERSION_TYPE="${{ steps.detect_version_type.outputs.version_type }}"
-            echo "Using auto-detected version type: $VERSION_TYPE"
-          fi
-
-          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
-          MAJOR="${VERSION_PARTS[0]}"
-          MINOR="${VERSION_PARTS[1]}"
-          PATCH="${VERSION_PARTS[2]}"
-
-          case "$VERSION_TYPE" in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
-
-          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
 
       - name: Update version in package.json files
-        if: steps.check_skip.outputs.skip != 'true'
+        if: steps.extract_version.outputs.has_release == 'true'
         run: |
-          NEW_VERSION="${{ steps.calculate_version.outputs.new_version }}"
+          RELEASE_VERSION="${{ steps.extract_version.outputs.version }}"
 
           cd api
-          npm version $NEW_VERSION --no-git-tag-version
+          npm version $RELEASE_VERSION --no-git-tag-version
           cd ..
 
           cd front
-          npm version $NEW_VERSION --no-git-tag-version
+          npm version $RELEASE_VERSION --no-git-tag-version
           cd ..
 
-          echo "Updated versions to $NEW_VERSION"
+          if [ -f "package.json" ]; then
+            node -e "
+              const fs = require('fs');
+              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              pkg.version = '$RELEASE_VERSION';
+              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            "
+          fi
+
+          echo "Updated versions to $RELEASE_VERSION"
 
       - name: Configure git
-        if: steps.check_skip.outputs.skip != 'true'
+        if: steps.extract_version.outputs.has_release == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
       - name: Create commit with version update
         id: create_commit
-        if: steps.check_skip.outputs.skip != 'true'
+        if: steps.extract_version.outputs.has_release == 'true'
         run: |
-          git add api/package.json front/package.json
-          git commit -m "chore: bump version to ${{ steps.calculate_version.outputs.new_version }}"
-          COMMIT_SHA=$(git rev-parse HEAD)
-          echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
-          echo "Created commit: $COMMIT_SHA"
+          RELEASE_VERSION="${{ steps.extract_version.outputs.version }}"
+
+          git add api/package.json front/package.json package.json 2>/dev/null || git add api/package.json front/package.json
+
+          if git diff --staged --quiet; then
+            echo "No version changes to commit (versions already match)"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            git commit -m "chore: bump version to $RELEASE_VERSION"
+            COMMIT_SHA=$(git rev-parse HEAD)
+            echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Created commit: $COMMIT_SHA"
+          fi
 
       - name: Create tag
         id: create_tag
-        if: steps.check_skip.outputs.skip != 'true'
+        if: steps.extract_version.outputs.has_release == 'true'
         run: |
-          NEW_VERSION="${{ steps.calculate_version.outputs.new_version }}"
-          TAG_NAME="v$NEW_VERSION"
-          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+
+          if [ "${{ steps.create_commit.outputs.has_changes }}" == "true" ]; then
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          else
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          fi
+
           echo "Created tag: $TAG_NAME"
 
       - name: Generate changelog
         id: generate_changelog
-        if: steps.check_skip.outputs.skip != 'true'
+        if: steps.extract_version.outputs.has_release == 'true'
         run: |
-          NEW_VERSION="${{ steps.calculate_version.outputs.new_version }}"
-          TAG_NAME="v$NEW_VERSION"
-          LAST_TAG="${{ steps.get_version.outputs.last_tag }}"
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+          LAST_TAG="${{ steps.extract_version.outputs.last_tag }}"
 
           if [ -z "$LAST_TAG" ]; then
             echo "No previous tag found, generating changelog from all commits"
             CHANGELOG=$(git log --pretty=format:"- %s (%h)" --reverse)
           else
-            echo "Generating changelog from $LAST_TAG to HEAD"
-            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --reverse)
+            echo "Generating changelog from $LAST_TAG to $TAG_NAME"
+            CHANGELOG=$(git log ${LAST_TAG}..${TAG_NAME} --pretty=format:"- %s (%h)" --reverse)
           fi
 
           if [ -z "$CHANGELOG" ]; then
@@ -221,17 +180,22 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Push changes
-        if: steps.check_skip.outputs.skip != 'true'
+        if: steps.extract_version.outputs.has_release == 'true'
         run: |
-          git push origin main
-          git push origin "${{ steps.create_tag.outputs.tag_name }}"
+          TAG_NAME="${{ steps.extract_version.outputs.tag_name }}"
+
+          if [ "${{ steps.create_commit.outputs.has_changes }}" == "true" ]; then
+            git push origin main
+          fi
+
+          git push origin "$TAG_NAME"
 
       - name: Create GitHub Release
-        if: steps.check_skip.outputs.skip != 'true'
+        if: steps.extract_version.outputs.has_release == 'true'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.create_tag.outputs.tag_name }}
-          name: Release ${{ steps.calculate_version.outputs.new_version }}
+          tag_name: ${{ steps.extract_version.outputs.tag_name }}
+          name: Release ${{ steps.extract_version.outputs.version }}
           body_path: CHANGELOG.md
           draft: false
           prerelease: false
