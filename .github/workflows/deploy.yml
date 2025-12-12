@@ -335,51 +335,6 @@ jobs:
           STEP_END=$(date +%s)
           echo "Login completed in $((STEP_END - STEP_START))s"
 
-      - name: Pull application images
-        id: pull_images
-        working-directory: /opt/parseVK
-        timeout-minutes: 15
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Pulling application images from GHCR ==="
-
-          pull_with_retry() {
-            local image=$1
-            local max_attempts=3
-            local attempt=1
-
-            while [ $attempt -le $max_attempts ]; do
-              echo "Attempt $attempt/$max_attempts: Pulling $image"
-              if docker pull "$image"; then
-                echo "Successfully pulled $image"
-                return 0
-              fi
-              echo "Failed to pull $image, attempt $attempt/$max_attempts"
-              attempt=$((attempt + 1))
-              if [ $attempt -le $max_attempts ]; then
-                sleep 10
-              fi
-            done
-
-            echo "Error: Failed to pull $image after $max_attempts attempts"
-            return 1
-          }
-
-          if ! pull_with_retry "ghcr.io/andr-235/parsevk-api:latest"; then
-            echo "Error: Failed to pull API image"
-            exit 1
-          fi
-
-          if ! pull_with_retry "ghcr.io/andr-235/parsevk-frontend:latest"; then
-            echo "Error: Failed to pull Frontend image"
-            exit 1
-          fi
-
-          echo "=== Pulled images ==="
-          docker images | grep -E "(parsevk-api|parsevk-frontend)" || true
-          STEP_END=$(date +%s)
-          echo "Image pull completed in $((STEP_END - STEP_START))s"
-
       - name: Start database and dependencies
         id: start_db
         working-directory: /opt/parseVK
