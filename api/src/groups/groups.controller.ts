@@ -32,6 +32,9 @@ export class GroupsController {
 
   @Post('save')
   async saveGroup(@Body() dto: SaveGroupDto): Promise<IGroupResponse> {
+    // #region agent log
+    this.logger.debug(`[DEBUG] saveGroup called with dto: ${JSON.stringify(dto)}`);
+    // #endregion
     return this.groupsService.saveGroup(dto.identifier);
   }
 
