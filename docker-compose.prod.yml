@@ -37,8 +37,7 @@ services:
       retries: 5
 
   api:
-    image: ghcr.io/andr-235/parsevk/api:latest
-    pull_policy: always
+    image: ghcr.io/andr-235/parsevk-api:latest
     restart: always
     depends_on:
       db:
@@ -67,8 +66,7 @@ services:
       start_period: 60s
 
   frontend:
-    image: ghcr.io/andr-235/parsevk/frontend:latest
-    pull_policy: always
+    image: ghcr.io/andr-235/parsevk-frontend:latest
     restart: always
     depends_on:
       api:
