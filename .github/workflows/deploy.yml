@@ -107,13 +107,15 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Trigger Dokploy deployment
+      - name: Trigger Dokploy deployment via webhook
         run: |
           if [ -n "${{ secrets.DOKPLOY_WEBHOOK_URL }}" ]; then
+            echo "Triggering deployment via webhook..."
             curl -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
               -H "Content-Type: application/json" \
               --fail --silent --show-error
-            echo "Deployment triggered successfully"
+            echo "✓ Deployment triggered successfully"
           else
-            echo "DOKPLOY_WEBHOOK_URL not set, skipping deployment trigger"
+            echo "⚠ DOKPLOY_WEBHOOK_URL not set, skipping deployment"
+            echo "Note: If Auto Deploy is enabled in Dokploy, deployment may trigger automatically via GitHub webhook"
           fi
