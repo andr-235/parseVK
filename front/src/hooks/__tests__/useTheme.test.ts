@@ -66,3 +66,4 @@ describe('useTheme', () => {
     expect(mockToggleTheme).toHaveBeenCalledTimes(1)
   })
 })
+

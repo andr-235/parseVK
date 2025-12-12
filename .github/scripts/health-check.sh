@@ -5,6 +5,12 @@ MAX_ATTEMPTS=${MAX_ATTEMPTS:-30}
 ATTEMPT=0
 ALL_HEALTHY=false
 
+COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml}
+COMPOSE_CMD="docker compose"
+if [ -n "${COMPOSE_FILE:-}" ]; then
+  COMPOSE_CMD="docker compose -f $COMPOSE_FILE"
+fi
+
 echo "=== Waiting for services to be healthy ==="
 
 if ! command -v docker > /dev/null 2>&1 || ! docker compose version > /dev/null 2>&1; then
@@ -12,7 +18,7 @@ if ! command -v docker > /dev/null 2>&1 || ! docker compose version > /dev/null 
   exit 1
 fi
 
-if docker compose wait --timeout 120 2>/dev/null; then
+if $COMPOSE_CMD wait --timeout 120 2>/dev/null; then
   echo "All services with healthchecks are healthy (via docker compose wait)"
   exit 0
 fi
@@ -26,7 +32,7 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
   UNHEALTHY_COUNT=0
   TOTAL_COUNT=0
   
-  for container in $(docker compose ps -q); do
+  for container in $($COMPOSE_CMD ps -q); do
     if [ -z "$container" ]; then
       continue
     fi
@@ -63,15 +69,15 @@ done
 if [ "$ALL_HEALTHY" != "true" ]; then
   echo "Error: Not all containers are healthy"
   echo "=== Container status ==="
-  docker compose ps
+  $COMPOSE_CMD ps
   echo "=== Failed container logs ==="
-  for container in $(docker compose ps -q); do
+  for container in $($COMPOSE_CMD ps -q); do
     STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
     HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
     NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
     if [ "$STATUS" != "running" ] || ([ "$HEALTH" != "healthy" ] && [ "$HEALTH" != "none" ]); then
       echo "=== Logs for $NAME ==="
-      docker compose logs --tail=100 "$(echo $NAME | sed 's/^parsevk-//' | sed 's/-[0-9]*$//')" || docker logs "$container" --tail=100 || true
+      $COMPOSE_CMD logs --tail=100 "$(echo $NAME | sed 's/^parsevk-//' | sed 's/-[0-9]*$//')" || docker logs "$container" --tail=100 || true
     fi
   done
   exit 1
