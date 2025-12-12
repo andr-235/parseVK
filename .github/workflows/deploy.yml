@@ -324,6 +324,43 @@ jobs:
           STEP_END=$(date +%s)
           echo "Image cleanup completed in $((STEP_END - STEP_START))s"
 
+      - name: Pre-pull base images
+        id: prepull_images
+        working-directory: /opt/parseVK
+        timeout-minutes: 10
+        run: |
+          STEP_START=$(date +%s)
+          echo "=== Pre-pulling base images ==="
+
+          pull_with_retry() {
+            local image=$1
+            local max_attempts=3
+            local attempt=1
+
+            while [ $attempt -le $max_attempts ]; do
+              echo "Attempt $attempt/$max_attempts: Pulling $image"
+              if docker pull "$image"; then
+                echo "Successfully pulled $image"
+                return 0
+              fi
+              echo "Failed to pull $image, attempt $attempt/$max_attempts"
+              attempt=$((attempt + 1))
+              if [ $attempt -le $max_attempts ]; then
+                sleep 5
+              fi
+            done
+
+            echo "Warning: Failed to pull $image after $max_attempts attempts, will try during build"
+            return 1
+          }
+
+          pull_with_retry "node:22-alpine" || true
+          pull_with_retry "nginx:alpine" || true
+          pull_with_retry "postgres:15-alpine" || true
+
+          STEP_END=$(date +%s)
+          echo "Pre-pull completed in $((STEP_END - STEP_START))s"
+
       - name: Build containers
         id: build_containers
         working-directory: /opt/parseVK
@@ -335,8 +372,26 @@ jobs:
           export DOCKER_BUILDKIT=1
           export COMPOSE_DOCKER_CLI_BUILD=1
 
-          if ! docker compose build --parallel; then
-            echo "Error: Build failed"
+          MAX_BUILD_ATTEMPTS=3
+          ATTEMPT=1
+          BUILD_SUCCESS=false
+
+          while [ $ATTEMPT -le $MAX_BUILD_ATTEMPTS ]; do
+            echo "Build attempt $ATTEMPT/$MAX_BUILD_ATTEMPTS"
+            if docker compose build --parallel; then
+              BUILD_SUCCESS=true
+              break
+            fi
+
+            if [ $ATTEMPT -lt $MAX_BUILD_ATTEMPTS ]; then
+              echo "Build failed, retrying in 10 seconds..."
+              sleep 10
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          if [ "$BUILD_SUCCESS" = false ]; then
+            echo "Error: Build failed after $MAX_BUILD_ATTEMPTS attempts"
             docker compose build 2>&1 | tail -50
             exit 1
           fi
