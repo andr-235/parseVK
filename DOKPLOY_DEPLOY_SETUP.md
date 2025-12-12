@@ -1,48 +1,26 @@
-# Настройка автоматического деплоя в Dokploy через GitHub Actions
+# Автоматический деплой в Dokploy
 
-## Использование Webhook URL
+## Как это работает
 
-Этот метод использует webhook URL для запуска деплоя после успешной сборки образов в GitHub Container Registry.
-
-### Шаги настройки
-
-1. **Получите Webhook URL из Dokploy:**
-   - Откройте ваш Docker Compose проект в Dokploy (ParseVK → fullstack)
-   - Перейдите во вкладку "Deployments"
-   - В логах деплоя найдите строку с "Webhook URL" или используйте refreshToken
-   - Webhook URL имеет формат: `http://192.168.88.12:3000/api/deploy/<refreshToken>`
-   - Текущий refreshToken: `4ILIVV_OVu3MWCksJhpSy`
-   - **Итого Webhook URL:** `http://192.168.88.12:3000/api/deploy/4ILIVV_OVu3MWCksJhpSy`
-
-2. **Добавьте секрет в GitHub:**
-   - Перейдите в репозиторий на GitHub
-   - Settings → Secrets and variables → Actions
-   - Нажмите "New repository secret"
-   - Добавьте секрет:
-
-   | Имя секрета           | Значение                                                     | Описание                        |
-   | --------------------- | ------------------------------------------------------------ | ------------------------------- |
-   | `DOKPLOY_WEBHOOK_URL` | `http://192.168.88.12:3000/api/deploy/4ILIVV_OVu3MWCksJhpSy` | Webhook URL для триггера деплоя |
-
-### Как это работает
-
-После успешной сборки образов API и Frontend в GitHub Container Registry, workflow отправляет POST запрос на webhook URL, который триггерит деплой Docker Compose проекта в Dokploy.
+GitHub Actions workflow собирает образы API и Frontend, затем пушит их в GitHub Container Registry. Деплой в Dokploy происходит автоматически через встроенный механизм авто-деплоя.
 
 **Последовательность:**
 
 1. Push в `main` ветку
 2. GitHub Actions запускает workflow
 3. Собираются образы API и Frontend, пушатся в GitHub Container Registry
-4. После успешной сборки отправляется POST на `DOKPLOY_WEBHOOK_URL`
-5. Dokploy запускает деплой Docker Compose проекта
+4. Dokploy автоматически обнаруживает изменения через GitHub webhook (встроенный авто-деплой)
+5. Dokploy запускает деплой Docker Compose проекта с новыми образами
 
-**Примечание:** У вас также включен `autoDeploy: true` в Dokploy, что означает, что при пуше в GitHub автоматически запускается деплой через встроенный webhook. Workflow в GitHub Actions дополнительно триггерит деплой после сборки образов, что гарантирует деплой с актуальными образами.
+**Важно:** Не нужно настраивать webhook URL в GitHub Actions, так как:
+
+- Dokploy находится на локальном IP (`192.168.88.12`)
+- GitHub Actions не может обратиться к локальному IP адресу
+- Встроенный авто-деплой Dokploy работает напрямую через GitHub webhook (Dokploy сам настраивает webhook на GitHub при включении Auto Deploy)
 
 ## Текущая конфигурация проекта
 
 - **Compose ID:** `rQEo-wbeW7HINBzkFLhsW`
-- **Refresh Token:** `4ILIVV_OVu3MWCksJhpSy`
-- **Webhook URL:** `http://192.168.88.12:3000/api/deploy/4ILIVV_OVu3MWCksJhpSy`
 - **Auto Deploy:** `true` - встроенный GitHub авто-деплой включен
 - **Source Type:** `github`
 - **Repository:** `andr-235/parseVK`
@@ -50,39 +28,39 @@
 
 ## Встроенный авто-деплой GitHub
 
-У вас включен встроенный авто-деплой в Dokploy (`autoDeploy: true`), который автоматически запускает деплой при пуше в `main` через GitHub webhook. Workflow в GitHub Actions дополнительно триггерит деплой после сборки образов, что гарантирует, что деплой произойдет только после успешной сборки новых образов в GitHub Container Registry.
+В Dokploy включен встроенный авто-деплой (`autoDeploy: true`), который:
+
+- Автоматически настраивает webhook на GitHub при включении
+- При пуше в `main` GitHub отправляет webhook в Dokploy
+- Dokploy запускает деплой Docker Compose проекта
+
+**Важно:** Так как Dokploy находится на локальном IP, webhook от GitHub должен быть доступен из интернета. Если у вас нет публичного IP или туннеля, авто-деплой может не работать.
 
 ## Проверка
 
-После настройки секрета `DOKPLOY_WEBHOOK_URL`:
-
 1. Сделайте push в `main` ветку
-2. Проверьте выполнение workflow в GitHub Actions
-3. В логах шага "Deploy to Dokploy" должны увидеть:
-   - "Triggering deployment via webhook..."
-   - "✓ Deployment triggered successfully"
-4. Проверьте в Dokploy во вкладке "Deployments", что деплой запустился
+2. Проверьте выполнение workflow в GitHub Actions (должны собраться образы)
+3. Проверьте в Dokploy во вкладке "Deployments" - должен появиться новый деплой
+
+Если деплой не запустился автоматически, запустите его вручную из интерфейса Dokploy.
 
 ## Устранение проблем
 
-### "⚠ DOKPLOY_WEBHOOK_URL not set"
+### Деплой не запускается автоматически
 
-- Убедитесь, что добавили секрет `DOKPLOY_WEBHOOK_URL` в GitHub
-- Проверьте правильность значения секрета
+- Проверьте, что `autoDeploy: true` в настройках проекта Dokploy
+- Убедитесь, что Dokploy доступен из интернета (для получения webhook от GitHub)
+- Если Dokploy на локальном IP без публичного доступа - авто-деплой не будет работать
+- В этом случае запускайте деплой вручную из интерфейса Dokploy после успешной сборки образов
 
-### Webhook возвращает ошибку 404
+### Деплой запускается, но использует старые образы
 
-- Проверьте правильность webhook URL
-- Убедитесь, что refreshToken актуален (может измениться при пересоздании проекта)
-- Получите актуальный webhook URL из вкладки "Deployments" в Dokploy
+- Убедитесь, что образы собрались в GitHub Container Registry
+- Проверьте, что Docker Compose использует правильные теги образов
+- В Dokploy при деплое должны подтягиваться образы из `ghcr.io/andr-235/parseVK/api:latest` и `ghcr.io/andr-235/parseVK/frontend:latest`
 
-### Webhook не триггерит деплой
+### "No deployments found" в Dokploy
 
-- Проверьте логи деплоя в Dokploy
-- Убедитесь, что Docker Compose проект активен
-- Проверьте, что webhook URL доступен из GitHub Actions (может быть проблема с доступностью локального IP из интернета)
-
-**Важно:** Если Dokploy находится на локальном IP (`192.168.88.12`), webhook может не работать из GitHub Actions, так как GitHub не может обратиться к локальному IP адресу. В этом случае:
-
-- Используйте встроенный авто-деплой GitHub (уже включен)
-- Или настройте туннель/прокси для доступа к Dokploy из интернета
+- Это нормально, если деплои ещё не запускались
+- Запустите деплой вручную из интерфейса Dokploy
+- После первого деплоя он появится в списке
