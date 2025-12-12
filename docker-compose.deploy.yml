@@ -81,6 +81,8 @@ services:
   frontend:
     image: ghcr.io/andr-235/parsevk-frontend:latest
     restart: always
+    ports:
+      - "8080:80"
     depends_on:
       api:
         condition: service_healthy
