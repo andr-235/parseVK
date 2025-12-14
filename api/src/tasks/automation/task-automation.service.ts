@@ -87,7 +87,40 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   private async executeAutomation(
     source: 'manual' | 'timer' | 'retry',
   ): Promise<{ started: boolean; reason: string | null }> {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'task-automation.service.ts:87',
+        message: 'executeAutomation ENTRY',
+        data: { source, isExecuting: this.isExecuting },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H2,H3,H4,H5',
+      }),
+    }).catch(() => {});
+    // #endregion
     if (this.isExecuting) {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'task-automation.service.ts:90',
+            message: 'executeAutomation BLOCKED_BY_ISEXECUTING',
+            data: { source, isExecuting: this.isExecuting },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H2',
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
       if (source !== 'manual') {
         this.logger.log('Автозапуск уже выполняется, перезапланируем попытку');
         this.scheduleRetry();
@@ -98,6 +131,24 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     const settings = await this.getOrCreateSettings();
 
     if (!settings.enabled && source !== 'manual') {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'task-automation.service.ts:100',
+            message: 'executeAutomation DISABLED',
+            data: { source, enabled: settings.enabled },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H3',
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
       this.logger.log('Автоматический запуск выключен — таймер остановлен');
       return { started: false, reason: 'Автозапуск отключён' };
     }
@@ -105,7 +156,26 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     this.isExecuting = true;
 
     try {
-      if (await this.hasActiveTasks()) {
+      const hasActive = await this.hasActiveTasks();
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'task-automation.service.ts:108',
+            message: 'executeAutomation HAS_ACTIVE_TASKS_CHECK',
+            data: { source, hasActive },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H3',
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
+      if (hasActive) {
         this.logger.log('Обнаружены активные задачи, автозапуск отложен');
         if (source !== 'manual') {
           this.scheduleRetry();
@@ -117,6 +187,24 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       }
 
       const lastCompleted = await this.findLastCompletedTask();
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'task-automation.service.ts:119',
+            message: 'executeAutomation LAST_COMPLETED_TASK',
+            data: { source, hasLastCompleted: !!lastCompleted },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H4',
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
 
       if (!lastCompleted) {
         this.logger.warn('Не найдено завершённых задач для автозапуска');
@@ -128,6 +216,24 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       }
 
       const taskConfig = this.extractTaskConfig(lastCompleted);
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'task-automation.service.ts:130',
+            message: 'executeAutomation TASK_CONFIG',
+            data: { source, hasTaskConfig: !!taskConfig },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H5',
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
 
       if (!taskConfig) {
         this.logger.error(
@@ -155,10 +261,51 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log(`Автоматический запуск выполнен успешно (${source})`);
 
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'task-automation.service.ts:156',
+            message: 'executeAutomation SUCCESS',
+            data: { source },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H3,H4,H5',
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
+
       await this.scheduleNextRun();
 
       return { started: true, reason: null };
     } catch (error) {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'task-automation.service.ts:161',
+            message: 'executeAutomation ERROR',
+            data: {
+              source,
+              errorMessage:
+                error instanceof Error ? error.message : String(error),
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H6',
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
       this.logger.error(
         'Не удалось выполнить автоматический запуск задач',
         error as Error,
@@ -176,6 +323,24 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       };
     } finally {
       this.isExecuting = false;
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'task-automation.service.ts:177',
+            message: 'executeAutomation FINALLY',
+            data: { source, isExecuting: this.isExecuting },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H2',
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
     }
   }
 
@@ -257,6 +422,25 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   }
 
   private calculateNextRunDate(settings: TaskAutomationSettings): Date {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'task-automation.service.ts:259',
+        message: 'calculateNextRunDate ENTRY',
+        data: {
+          runHour: settings.runHour,
+          runMinute: settings.runMinute,
+          timezoneOffsetMinutes: settings.timezoneOffsetMinutes,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H7',
+      }),
+    }).catch(() => {});
+    // #endregion
     const now = new Date();
     const next = new Date(now);
     next.setUTCSeconds(0, 0);
@@ -273,18 +457,73 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
       next.setUTCDate(next.getUTCDate() + 1);
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'task-automation.service.ts:276',
+        message: 'calculateNextRunDate EXIT',
+        data: {
+          now: now.toISOString(),
+          next: next.toISOString(),
+          runUtcHour,
+          runUtcMinute,
+          offset,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H7',
+      }),
+    }).catch(() => {});
+    // #endregion
+
     return next;
   }
 
   private async scheduleNextRun(
     settings?: TaskAutomationSettings,
   ): Promise<Date | null> {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'task-automation.service.ts:279',
+        message: 'scheduleNextRun ENTRY',
+        data: { hasSettings: !!settings },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
+    // #endregion
     const record = settings ?? (await this.getOrCreateSettings());
 
     this.clearRetryTimeout();
     this.clearScheduledRunJob();
 
     if (!record.enabled) {
+      // #region agent log
+      fetch(
+        'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'task-automation.service.ts:287',
+            message: 'scheduleNextRun DISABLED',
+            data: { enabled: record.enabled },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H1',
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
       this.nextRunAt = null;
       return null;
     }
@@ -293,9 +532,46 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
 
     this.nextRunAt = nextRun;
 
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'task-automation.service.ts:294',
+        message: 'scheduleNextRun CREATING_JOB',
+        data: { nextRun: nextRun.toISOString(), now: new Date().toISOString() },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
+    // #endregion
+
     const job = new CronJob(
       nextRun,
       () => {
+        // #region agent log
+        fetch(
+          'http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location: 'task-automation.service.ts:298',
+              message: 'CronJob CALLBACK TRIGGERED',
+              data: {
+                scheduledTime: nextRun.toISOString(),
+                currentTime: new Date().toISOString(),
+              },
+              timestamp: Date.now(),
+              sessionId: 'debug-session',
+              runId: 'run1',
+              hypothesisId: 'H1',
+            }),
+          },
+        ).catch(() => {});
+        // #endregion
         void this.executeAutomation('timer');
       },
       undefined,
@@ -310,6 +586,22 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     this.schedulerRegistry.addCronJob(this.nextRunJobName, job as any);
     job.start();
+
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'task-automation.service.ts:312',
+        message: 'scheduleNextRun JOB_STARTED',
+        data: { nextRun: nextRun.toISOString() },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
+    // #endregion
 
     return nextRun;
   }
