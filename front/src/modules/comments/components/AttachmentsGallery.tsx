@@ -8,18 +8,6 @@ interface AttachmentsGalleryProps {
   className?: string
 }
 
-interface PhotoAttachment {
-  type: 'photo'
-  url: string
-  alt?: string
-}
-
-function isPhotoAttachment(att: unknown): att is PhotoAttachment {
-  if (!att || typeof att !== 'object') return false
-  const obj = att as Record<string, unknown>
-  return obj.type === 'photo' && typeof obj.url === 'string'
-}
-
 function extractPhotoUrl(attachment: unknown): string | null {
   if (!attachment || typeof attachment !== 'object') return null
 

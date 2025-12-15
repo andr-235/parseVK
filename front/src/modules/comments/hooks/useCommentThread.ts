@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import type { Comment, ThreadItem } from '@/types'
+import type { Comment } from '@/types'
 import { normalizeThreadItems, countThreadItems, getMaxThreadDepth } from '@/modules/comments/utils/threadUtils'
 
 interface UseCommentThreadOptions {
