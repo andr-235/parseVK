@@ -1,6 +1,7 @@
 import { Type, Transform } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Min, Max, IsIn } from 'class-validator';
-import { AUTHORS_CONSTANTS } from '../authors.constants';
+import { IsInt, IsOptional, IsString, Min, Max } from 'class-validator';
+import { AUTHORS_CONSTANTS, SORTABLE_FIELDS } from '../authors.constants';
+import type { AuthorSortField } from '../types/authors.types';
 
 export class ListAuthorsQueryDto {
   @Type(() => Number)
@@ -40,23 +41,22 @@ export class ListAuthorsQueryDto {
   @IsOptional()
   verified?: boolean;
 
-  @IsString()
-  @IsIn([
-    'fullName',
-    'photosCount',
-    'audiosCount',
-    'videosCount',
-    'friendsCount',
-    'followersCount',
-    'lastSeenAt',
-    'verifiedAt',
-    'updatedAt',
-  ])
+  @Transform(({ value }) => {
+    if (!value || typeof value !== 'string') {
+      return null;
+    }
+    const field = value as AuthorSortField;
+    return SORTABLE_FIELDS.has(field) ? field : null;
+  })
   @IsOptional()
-  sortBy?: string;
+  sortBy?: AuthorSortField | null;
 
-  @IsString()
-  @IsIn(['asc', 'desc'])
+  @Transform(({ value }) => {
+    if (!value || typeof value !== 'string') {
+      return null;
+    }
+    return value === 'asc' || value === 'desc' ? value : null;
+  })
   @IsOptional()
-  sortOrder?: string;
+  sortOrder?: 'asc' | 'desc' | null;
 }

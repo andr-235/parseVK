@@ -7,9 +7,9 @@ import {
   Query,
 } from '@nestjs/common';
 import { AuthorsService } from './authors.service';
+import { AUTHORS_CONSTANTS } from './authors.constants';
 import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto';
 import { ListAuthorsQueryDto } from './dto/list-authors-query.dto';
-import type { AuthorSortField } from './types/authors.types';
 
 @Controller('authors')
 export class AuthorsController {
@@ -21,14 +21,11 @@ export class AuthorsController {
   ): Promise<AuthorListDto> {
     return this.authorsService.listAuthors({
       offset: query.offset ?? 0,
-      limit: query.limit ?? 20,
+      limit: query.limit ?? AUTHORS_CONSTANTS.DEFAULT_LIMIT,
       search: query.search,
       verified: query.verified,
-      sortBy: (query.sortBy as AuthorSortField) ?? null,
-      sortOrder:
-        query.sortOrder === 'asc' || query.sortOrder === 'desc'
-          ? query.sortOrder
-          : null,
+      sortBy: query.sortBy ?? null,
+      sortOrder: query.sortOrder ?? null,
     });
   }
 
