@@ -294,7 +294,7 @@ describe('GroupsService', () => {
           }),
         ]),
       );
-      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 500);
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 1500);
       setTimeoutSpy.mockRestore();
       saveGroupMock.mockRestore();
     });

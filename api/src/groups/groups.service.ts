@@ -118,7 +118,7 @@ export class GroupsService {
   async bulkSaveGroups(identifiers: string[]): Promise<IBulkSaveGroupsResult> {
     const success: IGroupResponse[] = [];
     const failed: IBulkSaveGroupError[] = [];
-    const batchSize = 10;
+    const batchSize = 3;
 
     const seen = new Set<string>();
     const uniqueEntries: Array<{
@@ -168,7 +168,7 @@ export class GroupsService {
       await Promise.all(batchPromises);
 
       if (i + batchSize < uniqueEntries.length) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       }
     }
 
