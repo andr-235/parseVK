@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { ConfigModule } from './config/config.module';
 import { CacheModule } from './common/cache/cache.module';
 import { CommonModule } from './common/common.module';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { VkModule } from './vk/vk.module';
 import { GroupsModule } from './groups/groups.module';
 import { KeywordsModule } from './keywords/keywords.module';
@@ -46,4 +47,8 @@ import { TelegramModule } from './telegram/telegram.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}
