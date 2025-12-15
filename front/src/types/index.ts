@@ -19,6 +19,24 @@ export interface PostGroup {
   photo: string | null
 }
 
+export interface ThreadItem {
+  vkCommentId: number
+  fromId: number
+  text: string
+  publishedAt: string
+  likesCount?: number | null
+  threadItems?: ThreadItem[]
+  replyToComment?: number | null
+  replyToUser?: number | null
+  attachments?: unknown
+  author?: {
+    vkUserId: number
+    firstName: string
+    lastName: string
+    logo: string | null
+  } | null
+}
+
 export interface Comment {
   id: number
   author: string
@@ -37,6 +55,12 @@ export interface Comment {
   watchlistAuthorId?: number | null
   isWatchlisted: boolean
   matchedKeywords: Keyword[]
+  threadCount?: number | null
+  threadItems?: ThreadItem[]
+  replyToComment?: number | null
+  replyToUser?: number | null
+  attachments?: unknown
+  likesCount?: number | null
 }
 
 export interface Group {

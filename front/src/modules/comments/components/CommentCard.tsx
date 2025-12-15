@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { Comment, Keyword } from '@/types'
 import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
-import { CheckCircle2, ExternalLink, BookmarkPlus, Eye } from 'lucide-react'
+import { CheckCircle2, ExternalLink, BookmarkPlus, Eye, Maximize2 } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { getAuthorInitials } from '@/modules/comments/utils/getAuthorInitials'
 import { formatDateTime } from '@/modules/comments/utils/formatDateTime'
@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
 import { CommentAttachments } from './CommentAttachments'
+import { CommentThread } from './CommentThread'
+import { PostPreviewModal } from './PostPreviewModal'
 
 interface CommentCardProps {
   comment: Comment
@@ -37,6 +39,7 @@ function CommentCard({
 }: CommentCardProps) {
   const [isPostExpanded, setIsPostExpanded] = useState(false)
   const [isCommentExpanded, setIsCommentExpanded] = useState(false)
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false)
 
   // Helper to check if a keyword is actually present in the text
   const isKeywordInText = (text: string | undefined, keyword: Keyword) => {
@@ -176,21 +179,32 @@ function CommentCard({
           (comment.postText || comment.postGroup || postAttachments.length > 0) && (
             <div className="relative pl-4 border-l-[3px] border-primary/20 bg-muted/20 rounded-r-xl py-3 pr-3 space-y-3 my-2">
               {/* Label 'Context' */}
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 select-none">
-                Контекст поста
-                {keywordsFromPost.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {keywordsFromPost.map((kw) => (
-                      <Badge
-                        key={kw.id}
-                        variant="secondary"
-                        className="h-5 px-1.5 text-[9px] bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-0"
-                      >
-                        {kw.word}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 select-none">
+                <div className="flex items-center gap-2">
+                  Контекст поста
+                  {keywordsFromPost.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {keywordsFromPost.map((kw) => (
+                        <Badge
+                          key={kw.id}
+                          variant="secondary"
+                          className="h-5 px-1.5 text-[9px] bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border-0"
+                        >
+                          {kw.word}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsPostModalOpen(true)}
+                  title="Открыть полный текст поста"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
 
               {/* Группа поста */}
@@ -307,7 +321,26 @@ function CommentCard({
             </Button>
           )}
         </div>
+
+        {/* Тред комментариев */}
+        <CommentThread
+          comment={comment}
+          keywords={allUniqueKeywords}
+          maxDepth={3}
+          defaultExpanded={false}
+        />
       </div>
+
+      {/* Модальное окно превью поста */}
+      <PostPreviewModal
+        isOpen={isPostModalOpen}
+        postText={comment.postText ?? null}
+        postAttachments={comment.postAttachments ?? null}
+        postGroup={comment.postGroup ?? null}
+        postUrl={comment.commentUrl ? comment.commentUrl.replace(/\/wall-\d+_\d+\?reply=\d+/, '').replace(/#reply\d+/, '') : null}
+        keywords={keywordsFromPost.length > 0 ? keywordsFromPost : allUniqueKeywords}
+        onClose={() => setIsPostModalOpen(false)}
+      />
     </div>
   )
 }
