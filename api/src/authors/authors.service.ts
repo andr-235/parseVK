@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Author } from '@prisma/client';
 import { PhotoAnalysisService } from '../photo-analysis/photo-analysis.service';
@@ -30,24 +30,21 @@ export class AuthorsService {
   ) {}
 
   async listAuthors(options: ListAuthorsOptions = {}): Promise<AuthorListDto> {
-    const offset = Math.max(options.offset ?? 0, 0);
-    const limit = Math.min(
-      Math.max(options.limit ?? AUTHORS_CONSTANTS.DEFAULT_LIMIT, 1),
-      AUTHORS_CONSTANTS.MAX_LIMIT,
-    );
-    const search = options.search?.trim();
+    const offset = this.normalizeOffset(options.offset);
+    const limit = this.normalizeLimit(options.limit);
+    const search = this.normalizeSearch(options.search);
     const sort = this.resolveSort(
       options.sortBy,
-      options.sortOrder,
+      options.sortOrder ?? null,
       options.verified,
     );
-    const { where, sqlConditions } = this.filtersBuilder.buildFilters(
+    const { sqlConditions } = this.filtersBuilder.buildFilters(
       search,
       options.verified,
     );
 
     const [total, authors] = await Promise.all([
-      this.repository.count(where),
+      this.countAuthors(sqlConditions),
       this.queryAuthors({
         sqlConditions,
         offset,
@@ -71,15 +68,28 @@ export class AuthorsService {
     };
   }
 
-  private queryAuthors(options: QueryAuthorsOptions): Promise<Author[]> {
-    const whereClause: Prisma.Sql =
-      options.sqlConditions.length > 0
-        ? Prisma.sql`WHERE ${Prisma.join(options.sqlConditions, ' AND ')}`
-        : Prisma.sql``;
+  private buildWhereClause(sqlConditions: Prisma.Sql[]): Prisma.Sql {
+    return sqlConditions.length > 0
+      ? Prisma.sql`WHERE ${Prisma.join(sqlConditions, ' AND ')}`
+      : Prisma.sql``;
+  }
 
-    const orderClause: Prisma.Sql = this.sortBuilder.buildOrderClause(
-      options.sort,
-    );
+  private async countAuthors(sqlConditions: Prisma.Sql[]): Promise<number> {
+    const whereClause = this.buildWhereClause(sqlConditions);
+
+    const query: Prisma.Sql = Prisma.sql`
+      SELECT COUNT(*)::int
+      FROM "Author"
+      ${whereClause}
+    `;
+
+    const result = await this.repository.queryRaw<[{ count: number }]>(query);
+    return result[0]?.count ?? 0;
+  }
+
+  private queryAuthors(options: QueryAuthorsOptions): Promise<Author[]> {
+    const whereClause = this.buildWhereClause(options.sqlConditions);
+    const orderClause = this.sortBuilder.buildOrderClause(options.sort);
 
     const query: Prisma.Sql = Prisma.sql`
       SELECT *
@@ -93,19 +103,23 @@ export class AuthorsService {
     return this.repository.queryRaw<Author[]>(query);
   }
 
+  private normalizeSortOrder(
+    value: AuthorSortDirection | null,
+  ): AuthorSortDirection {
+    return value === 'asc' || value === 'desc' ? value : 'desc';
+  }
+
   private resolveSort(
     sortBy: AuthorSortField | null | undefined,
-    sortOrder: AuthorSortDirection | null | undefined,
+    sortOrder: AuthorSortDirection | null,
     verified?: boolean,
   ): ResolvedAuthorSort {
     const normalizedField = this.normalizeSortField(sortBy);
-    const normalizedOrder: AuthorSortDirection =
-      sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc';
 
     if (normalizedField) {
       return {
         field: normalizedField,
-        order: normalizedOrder,
+        order: this.normalizeSortOrder(sortOrder),
       };
     }
 
@@ -120,6 +134,23 @@ export class AuthorsService {
       field: 'updatedAt',
       order: 'desc',
     };
+  }
+
+  private normalizeOffset(value: number | null | undefined): number {
+    return Math.max(value ?? 0, 0);
+  }
+
+  private normalizeLimit(value: number | null | undefined): number {
+    return Math.min(
+      Math.max(value ?? AUTHORS_CONSTANTS.DEFAULT_LIMIT, 1),
+      AUTHORS_CONSTANTS.MAX_LIMIT,
+    );
+  }
+
+  private normalizeSearch(
+    value: string | null | undefined,
+  ): string | null | undefined {
+    return value?.trim() || undefined;
   }
 
   private normalizeSortField(
@@ -137,14 +168,27 @@ export class AuthorsService {
   }
 
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetailsDto> {
-    const author = await this.repository.findUnique({ vkUserId });
+    try {
+      const author = await this.repository.findUnique({ vkUserId });
 
-    const summaries = await this.photoAnalysisService.getSummariesByAuthorIds([
-      author.id,
-    ]);
-    const summary = summaries.get(author.id);
+      const summaries = await this.photoAnalysisService.getSummariesByAuthorIds(
+        [author.id],
+      );
+      const summary = summaries.get(author.id);
 
-    return AuthorMapper.toDetailsDto(author, summary);
+      return AuthorMapper.toDetailsDto(author, summary);
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        typeof (error as { code: unknown }).code === 'string' &&
+        (error as { code: string }).code === 'P2025'
+      ) {
+        throw new NotFoundException(`Автор с VK ID ${vkUserId} не найден`);
+      }
+      throw error;
+    }
   }
 
   async refreshAuthors(): Promise<number> {

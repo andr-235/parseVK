@@ -1,7 +1,10 @@
 import { Type, Transform } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min, Max } from 'class-validator';
 import { AUTHORS_CONSTANTS, SORTABLE_FIELDS } from '../authors.constants';
-import type { AuthorSortField } from '../types/authors.types';
+import type {
+  AuthorSortField,
+  AuthorSortDirection,
+} from '../types/authors.types';
 
 export class ListAuthorsQueryDto {
   @Type(() => Number)
@@ -58,5 +61,5 @@ export class ListAuthorsQueryDto {
     return value === 'asc' || value === 'desc' ? value : null;
   })
   @IsOptional()
-  sortOrder?: 'asc' | 'desc' | null;
+  sortOrder?: AuthorSortDirection | null;
 }
