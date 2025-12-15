@@ -254,6 +254,13 @@ const useCommentsViewModel = () => {
     })
   }, [fetchKeywords, keywords.length])
 
+  useEffect(() => {
+    if (readFilter === 'all') {
+      setShowKeywordComments(false)
+      setShowKeywordPosts(false)
+    }
+  }, [readFilter])
+
   const handleLoadMore = useCallback(() => {
     fetchCommentsCursor({ reset: false }).catch((error) => {
       console.error('Failed to load more comments', error)
