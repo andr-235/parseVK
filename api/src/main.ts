@@ -1,4 +1,4 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
@@ -24,6 +24,7 @@ async function bootstrap() {
     app.useLogger(logger);
     app.useGlobalInterceptors(new LoggingInterceptor());
     app.useGlobalFilters(new HttpExceptionFilter());
+    const validationLogger = new Logger('ValidationPipe');
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -31,6 +32,22 @@ async function bootstrap() {
         transform: true,
         transformOptions: {
           enableImplicitConversion: true,
+        },
+        exceptionFactory: (errors) => {
+          const messages = errors.map((error) => {
+            const constraints = error.constraints
+              ? Object.values(error.constraints).join(', ')
+              : 'Validation failed';
+            return `${error.property}: ${constraints}`;
+          });
+          validationLogger.error(
+            `Validation failed: ${messages.join('; ')}`,
+            JSON.stringify(errors, null, 2),
+          );
+          return new BadRequestException({
+            message: 'Ошибка валидации',
+            errors: messages,
+          });
         },
       }),
     );
