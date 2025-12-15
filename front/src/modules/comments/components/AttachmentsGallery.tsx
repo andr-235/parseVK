@@ -102,9 +102,7 @@ export function AttachmentsGallery({ attachments, className }: AttachmentsGaller
                   size="icon"
                   className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
                   onClick={() =>
-                    setSelectedIndex(
-                      selectedIndex > 0 ? selectedIndex - 1 : photos.length - 1
-                    )
+                    setSelectedIndex(selectedIndex > 0 ? selectedIndex - 1 : photos.length - 1)
                   }
                 >
                   <ChevronLeft className="h-6 w-6" />
@@ -114,9 +112,7 @@ export function AttachmentsGallery({ attachments, className }: AttachmentsGaller
                   size="icon"
                   className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
                   onClick={() =>
-                    setSelectedIndex(
-                      selectedIndex < photos.length - 1 ? selectedIndex + 1 : 0
-                    )
+                    setSelectedIndex(selectedIndex < photos.length - 1 ? selectedIndex + 1 : 0)
                   }
                 >
                   <ChevronRight className="h-6 w-6" />
@@ -133,4 +129,3 @@ export function AttachmentsGallery({ attachments, className }: AttachmentsGaller
     </>
   )
 }
-

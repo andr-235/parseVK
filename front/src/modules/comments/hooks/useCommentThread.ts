@@ -1,16 +1,17 @@
 import { useState, useMemo } from 'react'
 import type { Comment } from '@/types'
-import { normalizeThreadItems, countThreadItems, getMaxThreadDepth } from '@/modules/comments/utils/threadUtils'
+import {
+  normalizeThreadItems,
+  countThreadItems,
+  getMaxThreadDepth,
+} from '@/modules/comments/utils/threadUtils'
 
 interface UseCommentThreadOptions {
   maxDepth?: number
   defaultExpanded?: boolean
 }
 
-export function useCommentThread(
-  comment: Comment,
-  options: UseCommentThreadOptions = {}
-) {
+export function useCommentThread(comment: Comment, options: UseCommentThreadOptions = {}) {
   const { maxDepth = 3, defaultExpanded = false } = options
 
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
@@ -57,4 +58,3 @@ export function useCommentThread(
     maxDepth,
   }
 }
-

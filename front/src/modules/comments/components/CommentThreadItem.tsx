@@ -37,12 +37,7 @@ export function CommentThreadItem({
     <div className={cn('relative', depth > 0 && 'ml-6')}>
       {/* Линия связи для вложенных элементов */}
       {depth > 0 && (
-        <div
-          className={cn(
-            'absolute left-0 top-0 bottom-0 w-px bg-border/40',
-            '-translate-x-6'
-          )}
-        />
+        <div className={cn('absolute left-0 top-0 bottom-0 w-px bg-border/40', '-translate-x-6')} />
       )}
 
       <div
@@ -77,9 +72,7 @@ export function CommentThreadItem({
                   className="h-6 w-6 rounded-full border border-border/40"
                 />
               )}
-              <span className="text-sm font-semibold text-foreground truncate">
-                {authorName}
-              </span>
+              <span className="text-sm font-semibold text-foreground truncate">{authorName}</span>
               {item.replyToUser && item.replyToUser !== item.fromId && (
                 <span className="text-xs text-muted-foreground">
                   → ответ на ID{item.replyToUser}
@@ -90,14 +83,9 @@ export function CommentThreadItem({
 
           <div className="flex items-center gap-2 shrink-0">
             {item.likesCount !== null && item.likesCount > 0 && (
-              <span className="text-xs text-muted-foreground">
-                ❤️ {item.likesCount}
-              </span>
+              <span className="text-xs text-muted-foreground">❤️ {item.likesCount}</span>
             )}
-            <time
-              dateTime={item.publishedAt}
-              className="text-xs text-muted-foreground"
-            >
+            <time dateTime={item.publishedAt} className="text-xs text-muted-foreground">
               {formatDateTime(item.publishedAt)}
             </time>
           </div>
@@ -147,4 +135,3 @@ export function CommentThreadItem({
     </div>
   )
 }
-

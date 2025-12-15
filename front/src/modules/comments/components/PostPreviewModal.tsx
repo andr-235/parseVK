@@ -46,15 +46,10 @@ export function PostPreviewModal({
         {/* Header */}
         <header className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border">
           <div className="space-y-1">
-            <h2
-              id="post-preview-modal-title"
-              className="text-xl font-bold tracking-tight"
-            >
+            <h2 id="post-preview-modal-title" className="text-xl font-bold tracking-tight">
               Превью поста
             </h2>
-            <p className="text-sm text-muted-foreground">
-              Полный текст поста и вложения
-            </p>
+            <p className="text-sm text-muted-foreground">Полный текст поста и вложения</p>
           </div>
           <button
             type="button"
@@ -81,9 +76,7 @@ export function PostPreviewModal({
                 <div>
                   <div className="font-semibold text-foreground">{postGroup.name}</div>
                   {postGroup.screenName && (
-                    <div className="text-xs text-muted-foreground">
-                      @{postGroup.screenName}
-                    </div>
+                    <div className="text-xs text-muted-foreground">@{postGroup.screenName}</div>
                   )}
                 </div>
               </div>
@@ -111,16 +104,8 @@ export function PostPreviewModal({
             {/* Кнопка открыть в VK */}
             {postUrl && (
               <div className="pt-4 border-t">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  asChild
-                >
-                  <a
-                    href={postUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                <Button variant="outline" className="w-full" asChild>
+                  <a href={postUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Открыть в VK
                   </a>
@@ -133,4 +118,3 @@ export function PostPreviewModal({
     </div>
   )
 }
-

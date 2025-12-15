@@ -337,7 +337,11 @@ function CommentCard({
         postText={comment.postText ?? null}
         postAttachments={comment.postAttachments ?? null}
         postGroup={comment.postGroup ?? null}
-        postUrl={comment.commentUrl ? comment.commentUrl.replace(/\/wall-\d+_\d+\?reply=\d+/, '').replace(/#reply\d+/, '') : null}
+        postUrl={
+          comment.commentUrl
+            ? comment.commentUrl.replace(/\/wall-\d+_\d+\?reply=\d+/, '').replace(/#reply\d+/, '')
+            : null
+        }
         keywords={keywordsFromPost.length > 0 ? keywordsFromPost : allUniqueKeywords}
         onClose={() => setIsPostModalOpen(false)}
       />

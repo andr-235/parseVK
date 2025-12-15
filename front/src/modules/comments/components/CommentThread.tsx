@@ -47,10 +47,7 @@ export function CommentThread({
           )}
           <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
           Ответы в треде
-          <Badge
-            variant="secondary"
-            className="ml-2 h-5 px-1.5 text-[10px] font-normal"
-          >
+          <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] font-normal">
             {threadCount}
           </Badge>
         </Button>
@@ -73,4 +70,3 @@ export function CommentThread({
     </div>
   )
 }
-

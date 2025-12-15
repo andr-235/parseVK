@@ -3,9 +3,7 @@ import type { ThreadItem } from '@/types'
 /**
  * Нормализует threadItems из JSON в структурированный формат
  */
-export function normalizeThreadItems(
-  threadItems: unknown,
-): ThreadItem[] | null {
+export function normalizeThreadItems(threadItems: unknown): ThreadItem[] | null {
   if (!threadItems || !Array.isArray(threadItems)) {
     return null
   }
@@ -19,9 +17,7 @@ export function normalizeThreadItems(
     replyToComment: item.replyToComment ?? item.reply_to_comment ?? null,
     replyToUser: item.replyToUser ?? item.reply_to_user ?? null,
     attachments: item.attachments ?? null,
-    threadItems: item.threadItems
-      ? normalizeThreadItems(item.threadItems)
-      : undefined,
+    threadItems: item.threadItems ? normalizeThreadItems(item.threadItems) : undefined,
     author: item.author
       ? {
           vkUserId: item.author.vkUserId ?? item.author.vk_user_id ?? 0,
@@ -51,7 +47,7 @@ export function countThreadItems(threadItems: ThreadItem[] | null | undefined): 
  */
 export function hasUnreadInThread(
   threadItems: ThreadItem[] | null | undefined,
-  readCommentIds: Set<number>,
+  readCommentIds: Set<number>
 ): boolean {
   if (!threadItems) {
     return false
@@ -71,7 +67,7 @@ export function hasUnreadInThread(
  */
 export function getMaxThreadDepth(
   threadItems: ThreadItem[] | null | undefined,
-  currentDepth = 0,
+  currentDepth = 0
 ): number {
   if (!threadItems || threadItems.length === 0) {
     return currentDepth
@@ -79,10 +75,7 @@ export function getMaxThreadDepth(
 
   return Math.max(
     ...threadItems.map((item) =>
-      item.threadItems
-        ? getMaxThreadDepth(item.threadItems, currentDepth + 1)
-        : currentDepth + 1,
-    ),
+      item.threadItems ? getMaxThreadDepth(item.threadItems, currentDepth + 1) : currentDepth + 1
+    )
   )
 }
-
