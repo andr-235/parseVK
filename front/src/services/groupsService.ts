@@ -41,6 +41,7 @@ export const groupsService = {
 
   async addGroup(
     name: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     description = '',
     options?: { silent?: boolean }
   ): Promise<IGroupResponse | null> {
@@ -48,9 +49,6 @@ export const groupsService = {
 
     try {
       const dto: SaveGroupDto = { identifier: name.trim() }
-      if (description.trim()) {
-        dto.description = description.trim()
-      }
       const response = await createRequest(`${API_URL}/groups/save`, {
         method: 'POST',
         body: JSON.stringify(dto),
