@@ -24,4 +24,5 @@ export type TaskProcessingContext = {
   stats: ParsingStats;
   skippedGroupVkIds: number[];
   processedAuthorIds: Set<number>;
+  failedGroups: Array<{ vkId: number; name: string; error: string }>;
 };

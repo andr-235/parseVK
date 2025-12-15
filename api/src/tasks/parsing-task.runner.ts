@@ -149,6 +149,10 @@ export class ParsingTaskRunner {
             skippedGroupIds: context.skippedGroupVkIds.length
               ? context.skippedGroupVkIds
               : undefined,
+            failedGroups:
+              context.failedGroups.length > 0
+                ? context.failedGroups
+                : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       })) as PrismaTaskRecord;
@@ -183,9 +187,20 @@ export class ParsingTaskRunner {
         description: updatedTask.description ?? null,
       });
 
+      const failedGroupsInfo =
+        context.failedGroups.length > 0
+          ? `, ошибок в группах: ${context.failedGroups.length}`
+          : '';
       this.logger.log(
-        `Задача ${taskId} успешно завершена: группы=${context.stats.groups}, посты=${context.stats.posts}, комментарии=${context.stats.comments}, авторы=${context.stats.authors}`,
+        `Задача ${taskId} успешно завершена: группы=${context.stats.groups}, посты=${context.stats.posts}, комментарии=${context.stats.comments}, авторы=${context.stats.authors}${failedGroupsInfo}`,
       );
+      if (context.failedGroups.length > 0) {
+        context.failedGroups.forEach((failedGroup) => {
+          this.logger.warn(
+            `Задача ${taskId}: ошибка в группе ${failedGroup.vkId} (${failedGroup.name}): ${failedGroup.error}`,
+          );
+        });
+      }
     } catch (error) {
       if (error instanceof TaskCancelledError) {
         this.logger.warn(`Задача ${taskId} отменена пользователем`);
@@ -210,6 +225,10 @@ export class ParsingTaskRunner {
             skippedGroupIds: context.skippedGroupVkIds.length
               ? context.skippedGroupVkIds
               : undefined,
+            failedGroups:
+              context.failedGroups.length > 0
+                ? context.failedGroups
+                : undefined,
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       })) as PrismaTaskRecord;
@@ -257,10 +276,21 @@ export class ParsingTaskRunner {
         error: normalizedError,
       });
 
+      const failedGroupsInfo =
+        context.failedGroups.length > 0
+          ? `, ошибок в группах: ${context.failedGroups.length}`
+          : '';
       this.logger.error(
-        `Задача ${taskId} завершилась с ошибкой: ${error instanceof Error ? error.message : error}`,
+        `Задача ${taskId} завершилась с ошибкой: ${error instanceof Error ? error.message : error}${failedGroupsInfo}`,
         error instanceof Error ? error.stack : undefined,
       );
+      if (context.failedGroups.length > 0) {
+        context.failedGroups.forEach((failedGroup) => {
+          this.logger.warn(
+            `Задача ${taskId}: ошибка в группе ${failedGroup.vkId} (${failedGroup.name}): ${failedGroup.error}`,
+          );
+        });
+      }
 
       throw error;
     } finally {
@@ -298,6 +328,7 @@ export class ParsingTaskRunner {
       stats,
       skippedGroupVkIds: normalizedSkipped,
       processedAuthorIds: new Set<number>(),
+      failedGroups: [],
     };
   }
 
@@ -356,85 +387,106 @@ export class ParsingTaskRunner {
     const { group, postLimit, context, taskId } = params;
     const ownerId = this.toGroupOwnerId(group.vkId);
 
-    this.cancellationService.throwIfCancelled(taskId);
-
-    if (this.isGroupWallDisabled(group)) {
-      this.handleSkippedGroup(context, group);
-      this.logger.warn(
-        `Стена группы ${group.vkId} отключена, группа будет пропущена`,
-      );
-      return false;
-    }
-
-    let posts: IPost[];
-
     try {
-      posts = await this.vkService.getGroupRecentPosts({
-        ownerId,
-        count: postLimit,
-      });
-    } catch (error) {
-      if (this.isWallDisabledApiError(error)) {
+      this.cancellationService.throwIfCancelled(taskId);
+
+      if (this.isGroupWallDisabled(group)) {
         this.handleSkippedGroup(context, group);
-        await this.markGroupWallDisabled(group);
         this.logger.warn(
-          `Группа ${group.vkId} имеет отключенную стену (по данным API), группа будет пропущена`,
+          `Стена группы ${group.vkId} отключена, группа будет пропущена`,
         );
         return false;
       }
 
-      throw error;
-    }
+      let posts: IPost[];
 
-    this.logger.log(
-      `Задача ${taskId}: получено ${posts.length} постов для группы ${group.vkId}`,
-    );
+      try {
+        posts = await this.vkService.getGroupRecentPosts({
+          ownerId,
+          count: postLimit,
+        });
+      } catch (error) {
+        if (this.isWallDisabledApiError(error)) {
+          this.handleSkippedGroup(context, group);
+          await this.markGroupWallDisabled(group);
+          this.logger.warn(
+            `Группа ${group.vkId} имеет отключенную стену (по данным API), группа будет пропущена`,
+          );
+          return false;
+        }
 
-    for (const post of posts) {
-      this.cancellationService.throwIfCancelled(taskId);
-
-      await this.savePost(post, group);
-      context.stats.posts += 1;
-
-      const { comments, authorIds } = await this.fetchAllComments(
-        ownerId,
-        post.id,
-        taskId,
-      );
-      const newAuthorIds = this.extractNewAuthorIds(
-        authorIds,
-        context.processedAuthorIds,
-      );
-
-      if (newAuthorIds.length) {
-        this.cancellationService.throwIfCancelled(taskId);
-
-        const createdOrUpdated =
-          await this.authorActivityService.saveAuthors(newAuthorIds);
-        context.stats.authors += createdOrUpdated;
-        newAuthorIds.forEach((id) => context.processedAuthorIds.add(id));
-        this.logger.debug(
-          `Задача ${taskId}: обновлено ${createdOrUpdated} авторов после поста ${post.id} группы ${group.vkId}`,
-        );
+        throw error;
       }
 
-      if (comments.length) {
+      this.logger.log(
+        `Задача ${taskId}: получено ${posts.length} постов для группы ${group.vkId}`,
+      );
+
+      for (const post of posts) {
         this.cancellationService.throwIfCancelled(taskId);
 
-        const savedCount = await this.authorActivityService.saveComments(
-          comments,
-          {
-            source: CommentSource.TASK,
-          },
-        );
-        context.stats.comments += savedCount;
-        this.logger.debug(
-          `Задача ${taskId}: сохранено ${savedCount} комментариев для поста ${post.id} группы ${group.vkId}`,
-        );
-      }
-    }
+        await this.savePost(post, group);
+        context.stats.posts += 1;
 
-    return true;
+        const { comments, authorIds } = await this.fetchAllComments(
+          ownerId,
+          post.id,
+          taskId,
+        );
+        const newAuthorIds = this.extractNewAuthorIds(
+          authorIds,
+          context.processedAuthorIds,
+        );
+
+        if (newAuthorIds.length) {
+          this.cancellationService.throwIfCancelled(taskId);
+
+          const createdOrUpdated =
+            await this.authorActivityService.saveAuthors(newAuthorIds);
+          context.stats.authors += createdOrUpdated;
+          newAuthorIds.forEach((id) => context.processedAuthorIds.add(id));
+          this.logger.debug(
+            `Задача ${taskId}: обновлено ${createdOrUpdated} авторов после поста ${post.id} группы ${group.vkId}`,
+          );
+        }
+
+        if (comments.length) {
+          this.cancellationService.throwIfCancelled(taskId);
+
+          const savedCount = await this.authorActivityService.saveComments(
+            comments,
+            {
+              source: CommentSource.TASK,
+            },
+          );
+          context.stats.comments += savedCount;
+          this.logger.debug(
+            `Задача ${taskId}: сохранено ${savedCount} комментариев для поста ${post.id} группы ${group.vkId}`,
+          );
+        }
+      }
+
+      return true;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const errorText = this.isTemporaryVkApiError(error)
+        ? `Временная ошибка VK API: ${errorMessage}`
+        : errorMessage;
+
+      context.failedGroups.push({
+        vkId: group.vkId,
+        name: group.name,
+        error: errorText,
+      });
+
+      this.logger.error(
+        `Группа ${group.vkId} (${group.name}): ${errorText}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
+      return false;
+    }
   }
 
   private extractStoredMetadata(description: string | null): {
@@ -702,6 +754,10 @@ export class ParsingTaskRunner {
 
   private isWallDisabledApiError(error: unknown): boolean {
     return error instanceof APIError && error.code === 15;
+  }
+
+  private isTemporaryVkApiError(error: unknown): boolean {
+    return error instanceof APIError && error.code === 10;
   }
 
   private async markGroupWallDisabled(group: PrismaGroupRecord): Promise<void> {
