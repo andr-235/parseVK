@@ -18,7 +18,7 @@ export function normalizeThreadItems(threadItems: unknown): ThreadItem[] | null 
     replyToUser: item.replyToUser ?? item.reply_to_user ?? null,
     attachments: item.attachments ?? null,
     threadItems: item.threadItems
-      ? normalizeThreadItems(item.threadItems) ?? undefined
+      ? (normalizeThreadItems(item.threadItems) ?? undefined)
       : undefined,
     author: item.author
       ? {

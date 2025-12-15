@@ -83,9 +83,7 @@ export function CommentThreadItem({
 
           <div className="flex items-center gap-2 shrink-0">
             {item.likesCount != null && item.likesCount > 0 && (
-              <span className="text-xs text-muted-foreground">
-                ❤️ {item.likesCount}
-              </span>
+              <span className="text-xs text-muted-foreground">❤️ {item.likesCount}</span>
             )}
             <time dateTime={item.publishedAt} className="text-xs text-muted-foreground">
               {formatDateTime(item.publishedAt)}
