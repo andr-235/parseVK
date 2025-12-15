@@ -1,7 +1,6 @@
 import { Prisma } from '@prisma/client';
 
 export interface AuthorFiltersResult {
-  where?: Prisma.AuthorWhereInput;
   sqlConditions: Prisma.Sql[];
 }
 
@@ -10,43 +9,23 @@ export class AuthorFiltersBuilder {
     search: string | null | undefined,
     verified?: boolean,
   ): AuthorFiltersResult {
-    const filters: Prisma.AuthorWhereInput[] = [];
     const sqlConditions: Prisma.Sql[] = [];
 
     if (search) {
-      const searchFilters = this.buildSearchFilters(search);
-      filters.push(searchFilters.prisma);
-      sqlConditions.push(searchFilters.sql);
+      sqlConditions.push(this.buildSearchFilter(search));
     }
 
     if (verified !== undefined) {
-      const verifiedFilters = this.buildVerifiedFilters(verified);
-      filters.push(verifiedFilters.prisma);
-      sqlConditions.push(verifiedFilters.sql);
+      sqlConditions.push(this.buildVerifiedFilter(verified));
     }
 
-    const where: Prisma.AuthorWhereInput | undefined = filters.length
-      ? { AND: filters }
-      : undefined;
-
     return {
-      where,
       sqlConditions,
     };
   }
 
-  private buildSearchFilters(search: string): {
-    prisma: Prisma.AuthorWhereInput;
-    sql: Prisma.Sql;
-  } {
+  private buildSearchFilter(search: string): Prisma.Sql {
     const numericId = Number.parseInt(search, 10);
-    const orFilters: Prisma.AuthorWhereInput[] = [
-      { firstName: { contains: search, mode: 'insensitive' } },
-      { lastName: { contains: search, mode: 'insensitive' } },
-      { domain: { contains: search, mode: 'insensitive' } },
-      { screenName: { contains: search, mode: 'insensitive' } },
-    ];
-
     const searchTerm = `%${search.toLowerCase()}%`;
     const searchSqlParts: Prisma.Sql[] = [
       Prisma.sql`LOWER("Author"."firstName") LIKE ${searchTerm}`,
@@ -56,30 +35,17 @@ export class AuthorFiltersBuilder {
     ];
 
     if (!Number.isNaN(numericId)) {
-      orFilters.push({ vkUserId: numericId });
       searchSqlParts.push(Prisma.sql`"Author"."vkUserId" = ${numericId}`);
     }
 
-    return {
-      prisma: { OR: orFilters },
-      sql: Prisma.sql`(${Prisma.join(searchSqlParts, ' OR ')})`,
-    };
+    return Prisma.sql`(${Prisma.join(searchSqlParts, ' OR ')})`;
   }
 
-  private buildVerifiedFilters(verified: boolean): {
-    prisma: Prisma.AuthorWhereInput;
-    sql: Prisma.Sql;
-  } {
+  private buildVerifiedFilter(verified: boolean): Prisma.Sql {
     if (verified) {
-      return {
-        prisma: { verifiedAt: { not: null } },
-        sql: Prisma.sql`"Author"."verifiedAt" IS NOT NULL`,
-      };
+      return Prisma.sql`"Author"."verifiedAt" IS NOT NULL`;
     }
 
-    return {
-      prisma: { verifiedAt: null },
-      sql: Prisma.sql`"Author"."verifiedAt" IS NULL`,
-    };
+    return Prisma.sql`"Author"."verifiedAt" IS NULL`;
   }
 }
