@@ -1,18 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Author } from '@prisma/client';
-import { PrismaService } from '../prisma.service';
 import { PhotoAnalysisService } from '../photo-analysis/photo-analysis.service';
-import type {
-  AuthorCardDto,
-  AuthorDetailsDto,
-  AuthorListDto,
-} from './dto/author.dto';
-import type { PhotoAnalysisSummaryDto } from '../photo-analysis/dto/photo-analysis-response.dto';
+import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto';
 import { AuthorActivityService } from '../common/services/author-activity.service';
-import { AUTHORS_CONSTANTS } from './authors.constants';
+import { AUTHORS_CONSTANTS, SORTABLE_FIELDS } from './authors.constants';
 import { AuthorSortBuilder } from './builders/author-sort.builder';
-import { AuthorCountersParser } from './parsers/author-counters.parser';
+import { AuthorFiltersBuilder } from './builders/author-filters.builder';
+import { AuthorMapper } from './mappers/author.mapper';
+import type { IAuthorsRepository } from './interfaces/authors-repository.interface';
 import type {
   AuthorSortDirection,
   AuthorSortField,
@@ -24,10 +20,11 @@ import type {
 @Injectable()
 export class AuthorsService {
   private readonly sortBuilder = new AuthorSortBuilder();
-  private readonly countersParser = new AuthorCountersParser();
+  private readonly filtersBuilder = new AuthorFiltersBuilder();
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject('IAuthorsRepository')
+    private readonly repository: IAuthorsRepository,
     private readonly photoAnalysisService: PhotoAnalysisService,
     private readonly authorActivityService: AuthorActivityService,
   ) {}
@@ -44,16 +41,13 @@ export class AuthorsService {
       options.sortOrder,
       options.verified,
     );
-    const {
-      where,
-      sqlConditions,
-    }: {
-      where?: Prisma.AuthorWhereInput;
-      sqlConditions: Prisma.Sql[];
-    } = this.buildFilters(search, options.verified);
+    const { where, sqlConditions } = this.filtersBuilder.buildFilters(
+      search,
+      options.verified,
+    );
 
     const [total, authors] = await Promise.all([
-      this.prisma.author.count({ where }) as Promise<number>,
+      this.repository.count(where),
       this.queryAuthors({
         sqlConditions,
         offset,
@@ -66,8 +60,8 @@ export class AuthorsService {
     const summaryMap =
       await this.photoAnalysisService.getSummariesByAuthorIds(authorIds);
 
-    const items: AuthorCardDto[] = authors.map((author: Author) =>
-      this.buildAuthorCard(author, summaryMap.get(author.id)),
+    const items = authors.map((author: Author) =>
+      AuthorMapper.toCardDto(author, summaryMap.get(author.id)),
     );
 
     return {
@@ -76,19 +70,6 @@ export class AuthorsService {
       hasMore: offset + limit < total,
     };
   }
-
-  private static readonly SORTABLE_FIELDS: ReadonlySet<AuthorSortField> =
-    new Set<AuthorSortField>([
-      'fullName',
-      'photosCount',
-      'audiosCount',
-      'videosCount',
-      'friendsCount',
-      'followersCount',
-      'lastSeenAt',
-      'verifiedAt',
-      'updatedAt',
-    ]);
 
   private queryAuthors(options: QueryAuthorsOptions): Promise<Author[]> {
     const whereClause: Prisma.Sql =
@@ -109,58 +90,7 @@ export class AuthorsService {
       LIMIT ${options.limit}
     `;
 
-    return this.prisma.$queryRaw<Author[]>(query);
-  }
-
-  private buildFilters(
-    search: string | null | undefined,
-    verified?: boolean,
-  ): { where?: Prisma.AuthorWhereInput; sqlConditions: Prisma.Sql[] } {
-    const filters: Prisma.AuthorWhereInput[] = [];
-    const sqlConditions: Prisma.Sql[] = [];
-
-    if (search) {
-      const numericId = Number.parseInt(search, 10);
-      const orFilters: Prisma.AuthorWhereInput[] = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { domain: { contains: search, mode: 'insensitive' } },
-        { screenName: { contains: search, mode: 'insensitive' } },
-      ];
-
-      const searchTerm = `%${search.toLowerCase()}%`;
-      const searchSqlParts: Prisma.Sql[] = [
-        Prisma.sql`LOWER("Author"."firstName") LIKE ${searchTerm}`,
-        Prisma.sql`LOWER("Author"."lastName") LIKE ${searchTerm}`,
-        Prisma.sql`LOWER("Author"."domain") LIKE ${searchTerm}`,
-        Prisma.sql`LOWER("Author"."screenName") LIKE ${searchTerm}`,
-      ];
-
-      if (!Number.isNaN(numericId)) {
-        orFilters.push({ vkUserId: numericId });
-        searchSqlParts.push(Prisma.sql`"Author"."vkUserId" = ${numericId}`);
-      }
-
-      filters.push({ OR: orFilters });
-      sqlConditions.push(Prisma.sql`(${Prisma.join(searchSqlParts, ' OR ')})`);
-    }
-
-    if (verified === true) {
-      filters.push({ verifiedAt: { not: null } });
-      sqlConditions.push(Prisma.sql`"Author"."verifiedAt" IS NOT NULL`);
-    } else if (verified === false) {
-      filters.push({ verifiedAt: null });
-      sqlConditions.push(Prisma.sql`"Author"."verifiedAt" IS NULL`);
-    }
-
-    const where: Prisma.AuthorWhereInput | undefined = filters.length
-      ? { AND: filters }
-      : undefined;
-
-    return {
-      where,
-      sqlConditions,
-    };
+    return this.repository.queryRaw<Author[]>(query);
   }
 
   private resolveSort(
@@ -199,7 +129,7 @@ export class AuthorsService {
       return null;
     }
 
-    if (AuthorsService.SORTABLE_FIELDS.has(value)) {
+    if (SORTABLE_FIELDS.has(value)) {
       return value;
     }
 
@@ -207,117 +137,17 @@ export class AuthorsService {
   }
 
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetailsDto> {
-    const author = await this.prisma.author.findUnique({
-      where: { vkUserId },
-    });
-
-    if (!author) {
-      throw new NotFoundException(`Автор с vkUserId=${vkUserId} не найден`);
-    }
+    const author = await this.repository.findUnique({ vkUserId });
 
     const summaries = await this.photoAnalysisService.getSummariesByAuthorIds([
       author.id,
     ]);
     const summary = summaries.get(author.id);
-    const card = this.buildAuthorCard(author, summary);
 
-    return {
-      ...card,
-      city: (author.city as Record<string, unknown> | null) ?? null,
-      country: (author.country as Record<string, unknown> | null) ?? null,
-      createdAt: author.createdAt.toISOString(),
-      updatedAt: author.updatedAt.toISOString(),
-    };
+    return AuthorMapper.toDetailsDto(author, summary);
   }
 
   async refreshAuthors(): Promise<number> {
     return this.authorActivityService.refreshAllAuthors();
-  }
-
-  private buildProfileUrl(author: {
-    vkUserId: number;
-    domain: string | null;
-    screenName: string | null;
-  }): string | null {
-    if (author.domain) {
-      return `https://vk.com/${author.domain}`;
-    }
-
-    if (author.screenName) {
-      return `https://vk.com/${author.screenName}`;
-    }
-
-    return `https://vk.com/id${author.vkUserId}`;
-  }
-
-  private cloneSummary(
-    summary?: PhotoAnalysisSummaryDto,
-  ): PhotoAnalysisSummaryDto {
-    if (!summary) {
-      return this.photoAnalysisService.getEmptySummary();
-    }
-
-    return {
-      total: summary.total,
-      suspicious: summary.suspicious,
-      lastAnalyzedAt: summary.lastAnalyzedAt,
-      categories: summary.categories.map((item) => ({ ...item })),
-      levels: summary.levels.map((item) => ({ ...item })),
-    };
-  }
-
-  private buildAuthorCard(
-    author: Author,
-    summary?: PhotoAnalysisSummaryDto,
-  ): AuthorCardDto {
-    const normalizedSummary = this.cloneSummary(summary);
-    const counters = this.extractCounters(author.counters);
-    const summaryPhotos = Number.isFinite(normalizedSummary.total)
-      ? normalizedSummary.total
-      : null;
-    const photosCount = counters.photos ?? summaryPhotos ?? null;
-    const followers: number | null =
-      author.followersCount ?? counters.followers ?? null;
-
-    return {
-      id: author.id,
-      vkUserId: author.vkUserId,
-      firstName: author.firstName,
-      lastName: author.lastName,
-      fullName: `${author.firstName} ${author.lastName}`.trim(),
-      photo50: author.photo50 ?? null,
-      photo100: author.photo100 ?? null,
-      photo200: author.photo200Orig ?? null,
-      domain: author.domain ?? null,
-      screenName: author.screenName ?? null,
-      profileUrl: this.buildProfileUrl({
-        vkUserId: author.vkUserId,
-        domain: author.domain ?? null,
-        screenName: author.screenName ?? null,
-      }),
-      summary: normalizedSummary,
-      photosCount,
-      audiosCount: counters.audios,
-      videosCount: counters.videos,
-      friendsCount: counters.friends,
-      followersCount: followers,
-      lastSeenAt: this.extractLastSeenAt(author.lastSeen),
-      verifiedAt: author.verifiedAt ? author.verifiedAt.toISOString() : null,
-      isVerified: Boolean(author.verifiedAt),
-    };
-  }
-
-  private extractCounters(value: Prisma.JsonValue | null): {
-    photos: number | null;
-    audios: number | null;
-    videos: number | null;
-    friends: number | null;
-    followers: number | null;
-  } {
-    return this.countersParser.extractCounters(value);
-  }
-
-  private extractLastSeenAt(value: Prisma.JsonValue | null): string | null {
-    return this.countersParser.extractLastSeenAt(value);
   }
 }
