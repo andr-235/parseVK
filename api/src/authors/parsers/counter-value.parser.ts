@@ -1,17 +1,17 @@
 import { AUTHORS_CONSTANTS } from '../authors.constants';
-import { ParserUtils } from './parser-utils';
+import { isNullish, isFiniteNumber, isString, isObject } from './parser-utils';
 
 export class CounterValueParser {
   parse(value: unknown, depth = 0): number | null {
-    if (ParserUtils.isNullish(value)) {
+    if (isNullish(value)) {
       return null;
     }
 
-    if (ParserUtils.isFiniteNumber(value)) {
+    if (isFiniteNumber(value)) {
       return value;
     }
 
-    if (ParserUtils.isString(value)) {
+    if (isString(value)) {
       return this.parseStringValue(value);
     }
 
@@ -23,7 +23,7 @@ export class CounterValueParser {
       return this.parseArrayValue(value, depth);
     }
 
-    if (ParserUtils.isObject(value)) {
+    if (isObject(value)) {
       return this.parseObjectValue(value, depth);
     }
 

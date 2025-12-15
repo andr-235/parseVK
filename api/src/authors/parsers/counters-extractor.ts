@@ -1,5 +1,5 @@
 import { CounterValueParser } from './counter-value.parser';
-import { ParserUtils } from './parser-utils';
+import { isValidObject } from './parser-utils';
 
 export interface ParsedCounters {
   photos: number | null;
@@ -13,7 +13,7 @@ export class CountersExtractor {
   private readonly counterParser = new CounterValueParser();
 
   extract(value: unknown): ParsedCounters {
-    if (!ParserUtils.isValidObject(value)) {
+    if (!isValidObject(value)) {
       return this.getEmptyCounters();
     }
 

@@ -1,21 +1,21 @@
 import { AUTHORS_CONSTANTS } from '../authors.constants';
-import { ParserUtils } from './parser-utils';
+import { isNullish, isFiniteNumber, isString, isObject } from './parser-utils';
 
 export class LastSeenParser {
   extract(value: unknown): string | null {
-    if (ParserUtils.isNullish(value)) {
+    if (isNullish(value)) {
       return null;
     }
 
-    if (ParserUtils.isFiniteNumber(value)) {
+    if (isFiniteNumber(value)) {
       return this.toIsoDate(value);
     }
 
-    if (ParserUtils.isString(value)) {
+    if (isString(value)) {
       return this.parseStringDate(value);
     }
 
-    if (ParserUtils.isObject(value) && !Array.isArray(value)) {
+    if (isObject(value) && !Array.isArray(value)) {
       return this.parseObjectLastSeen(value);
     }
 
@@ -39,11 +39,11 @@ export class LastSeenParser {
   private parseObjectLastSeen(data: Record<string, unknown>): string | null {
     const time = data.time;
 
-    if (ParserUtils.isFiniteNumber(time)) {
+    if (isFiniteNumber(time)) {
       return this.toIsoDate(time);
     }
 
-    if (ParserUtils.isString(time)) {
+    if (isString(time)) {
       const numeric = Number.parseInt(time, 10);
       if (!Number.isNaN(numeric)) {
         return this.toIsoDate(numeric);
@@ -51,7 +51,7 @@ export class LastSeenParser {
     }
 
     const dateValue = data.date;
-    if (ParserUtils.isString(dateValue)) {
+    if (isString(dateValue)) {
       const date = new Date(dateValue);
       if (!Number.isNaN(date.getTime())) {
         return date.toISOString();

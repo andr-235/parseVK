@@ -4,14 +4,12 @@ import { AuthorCardDto, AuthorDetailsDto } from '../dto/author.dto';
 import { AuthorCountersParser } from '../parsers/author-counters.parser';
 
 export class AuthorMapper {
-  private static readonly countersParser = new AuthorCountersParser();
-
   static toCardDto(
     author: Author,
     summary?: PhotoAnalysisSummaryDto,
   ): AuthorCardDto {
     const normalizedSummary = this.cloneSummary(summary);
-    const counters = this.countersParser.extractCounters(author.counters);
+    const counters = AuthorCountersParser.extractCounters(author.counters);
     const summaryPhotos = Number.isFinite(normalizedSummary.total)
       ? normalizedSummary.total
       : null;
@@ -36,7 +34,7 @@ export class AuthorMapper {
     card.videosCount = counters.videos;
     card.friendsCount = counters.friends;
     card.followersCount = followers;
-    card.lastSeenAt = this.countersParser.extractLastSeenAt(author.lastSeen);
+    card.lastSeenAt = AuthorCountersParser.extractLastSeenAt(author.lastSeen);
     card.verifiedAt = author.verifiedAt
       ? author.verifiedAt.toISOString()
       : null;
