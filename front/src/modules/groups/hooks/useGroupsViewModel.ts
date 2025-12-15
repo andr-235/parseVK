@@ -65,7 +65,11 @@ export const useGroupsViewModel = () => {
             return
           }
 
-          void loadMoreGroups().catch(() => {})
+          void loadMoreGroups().catch((error) => {
+            if (import.meta.env.DEV) {
+              console.error('Failed to load more groups:', error)
+            }
+          })
         })
       },
       { root: null, threshold: 0.1 }

@@ -51,29 +51,6 @@ export const groupsService = {
       if (description.trim()) {
         dto.description = description.trim()
       }
-      // #region agent log
-      if (import.meta.env.DEV) {
-        console.log('[DEBUG] addGroup sending dto:', JSON.stringify(dto))
-        fetch('http://127.0.0.1:7243/ingest/9c77233f-5471-48cc-82db-7489c762f6fc', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'groupsService.ts:54',
-            message: 'addGroup sending dto',
-            data: {
-              dto,
-              identifier: dto.identifier,
-              identifierType: typeof dto.identifier,
-              identifierLength: dto.identifier?.length,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'A',
-          }),
-        }).catch(() => {})
-      }
-      // #endregion
       const response = await createRequest(`${API_URL}/groups/save`, {
         method: 'POST',
         body: JSON.stringify(dto),

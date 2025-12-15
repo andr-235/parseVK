@@ -87,7 +87,11 @@ export function ListingsInfinite({
         (entries) => {
           const [entry] = entries
           if (entry?.isIntersecting && !loading) {
-            handleLoadMore().catch(() => {})
+            handleLoadMore().catch((error) => {
+              if (import.meta.env.DEV) {
+                console.error('Failed to load more listings:', error)
+              }
+            })
           }
         },
         { root: null, rootMargin: '0px 0px 300px 0px', threshold: 0 }

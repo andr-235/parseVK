@@ -171,7 +171,11 @@ export function useInfiniteListings<T, M = unknown, P = Record<string, unknown>>
     reset()
 
     const schedule = requestAnimationFrame(() => {
-      loadMore().catch(() => {})
+      loadMore().catch((error) => {
+        if (import.meta.env.DEV) {
+          console.error('Failed to load more listings:', error)
+        }
+      })
     })
 
     return () => {

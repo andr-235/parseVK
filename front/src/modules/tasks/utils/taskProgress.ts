@@ -168,23 +168,14 @@ export const calculateTaskProgress = (task: Task): TaskProgressInfo => {
     }
   }
 
-  // Debug logging отключён в продакшене
   if (import.meta.env.DEV) {
-    console.log('calculateTaskProgress for task', task.id, ':', {
-      task: {
-        groupsCount: task.groupsCount,
-        groupIds: task.groupIds?.length,
-        stats: task.stats,
-      },
-      calculated: {
-        total,
-        processed,
-        success,
-        failed,
-        processing,
-        pending,
-        hasTotals: total > 0,
-      },
+    console.log(`[TaskProgress] Task ${task.id}:`, {
+      total,
+      processed,
+      success,
+      failed,
+      processing,
+      pending,
     })
   }
 
