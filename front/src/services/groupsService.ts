@@ -42,7 +42,7 @@ export const groupsService = {
   async addGroup(
     name: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    description = '',
+    _description = '',
     options?: { silent?: boolean }
   ): Promise<IGroupResponse | null> {
     if (!name.trim()) return null
