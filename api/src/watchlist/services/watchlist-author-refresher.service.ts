@@ -5,7 +5,7 @@ import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repos
 import type { CommentEntity } from '../../common/types/comment-entity.type';
 import { AuthorActivityService } from '../../common/services/author-activity.service';
 import { VkService } from '../../vk/vk.service';
-import { normalizeComment } from '../../common/utils/comment-normalizer';
+import { normalizeComment } from '../../common/utils/comment-normalizer.utils';
 import {
   composeCommentKey,
   walkCommentTree,

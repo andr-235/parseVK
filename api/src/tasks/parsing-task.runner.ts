@@ -20,7 +20,7 @@ import type {
 } from './interfaces/parsing-task-runner.types';
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
 import { AuthorActivityService } from '../common/services/author-activity.service';
-import { normalizeComment } from '../common/utils/comment-normalizer';
+import { normalizeComment } from '../common/utils/comment-normalizer.utils';
 import { TasksGateway } from './tasks.gateway';
 import { TaskCancellationService } from './task-cancellation.service';
 import { TaskCancelledError } from './errors/task-cancelled.error';

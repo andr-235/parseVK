@@ -2,91 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { CommentSource, MatchSource, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 import { VkService } from '../../vk/vk.service';
+import type { IAuthor } from '../../vk/interfaces/author.interfaces';
 import type { CommentEntity } from '../types/comment-entity.type';
+import {
+  normalizeForKeywordMatch,
+  matchesKeyword,
+  type KeywordMatchCandidate,
+} from '../utils/keyword-normalization.utils';
+import {
+  toUpdateJsonValue,
+  toCreateJsonValue,
+} from '../utils/prisma-json.utils';
 
 interface SaveCommentsOptions {
   source: CommentSource;
   watchlistAuthorId?: number | null;
   keywordMatches?: KeywordMatchCandidate[];
 }
-
-interface KeywordMatchCandidate {
-  id: number;
-  normalizedWord: string;
-  isPhrase: boolean;
-}
-
-const NBSP_REGEX = /\u00a0/g;
-const SOFT_HYPHEN_REGEX = /\u00ad/g;
-const INVISIBLE_SPACE_REGEX = /[\u2000-\u200f\u2028\u2029\u202f\u205f\u3000]/g;
-const WHITESPACE_REGEX = /\s+/g;
-
-// Определяем символы, которые считаются частью слова (латиница, кириллица, цифры, подчеркивание)
-const WORD_CHARS_PATTERN = '[a-zA-Z0-9_\\u0400-\\u04FF]';
-const WORD_CHAR_TEST = new RegExp(WORD_CHARS_PATTERN);
-
-const normalizeForKeywordMatch = (value: string | null | undefined): string => {
-  if (!value) {
-    return '';
-  }
-
-  return value
-    .toLowerCase()
-    .replace(NBSP_REGEX, ' ')
-    .replace(INVISIBLE_SPACE_REGEX, ' ')
-    .replace(SOFT_HYPHEN_REGEX, '')
-    .replace(/ё/g, 'е')
-    .replace(WHITESPACE_REGEX, ' ')
-    .trim();
-};
-
-const escapeRegExp = (value: string): string => {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-};
-
-const matchesKeyword = (
-  text: string,
-  keyword: KeywordMatchCandidate,
-): boolean => {
-  const escaped = escapeRegExp(keyword.normalizedWord);
-
-  const startsWithWordChar = WORD_CHAR_TEST.test(keyword.normalizedWord[0]);
-  const endsWithWordChar = WORD_CHAR_TEST.test(
-    keyword.normalizedWord[keyword.normalizedWord.length - 1],
-  );
-
-  const boundaryStart = startsWithWordChar ? `(?<!${WORD_CHARS_PATTERN})` : '';
-  const boundaryEnd = endsWithWordChar ? `(?!${WORD_CHARS_PATTERN})` : '';
-
-  if (keyword.isPhrase) {
-    const pattern = `${boundaryStart}${escaped}${boundaryEnd}`;
-    const regex = new RegExp(pattern, 'i');
-    return regex.test(text);
-  } else {
-    const pattern = `${boundaryStart}${escaped}`;
-    const regex = new RegExp(pattern, 'i');
-    return regex.test(text);
-  }
-};
-
-const toUpdateJsonValue = (
-  value: unknown,
-): Prisma.InputJsonValue | undefined => {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (value === null) {
-    return Prisma.JsonNull as unknown as Prisma.InputJsonValue;
-  }
-  return value as Prisma.InputJsonValue;
-};
-
-const toCreateJsonValue = (value: unknown): Prisma.InputJsonValue => {
-  if (value === undefined || value === null) {
-    return Prisma.JsonNull as unknown as Prisma.InputJsonValue;
-  }
-  return value as Prisma.InputJsonValue;
-};
 
 /**
  * Сервис для сохранения авторов и комментариев
@@ -102,11 +34,11 @@ export class AuthorActivityService {
   ) {}
 
   async refreshAllAuthors(batchSize = 500): Promise<number> {
-    const existingAuthors = (await this.prisma.author.findMany({
+    const existingAuthors = await this.prisma.author.findMany({
       select: { vkUserId: true },
       where: { vkUserId: { gt: 0 } },
       orderBy: { vkUserId: 'asc' },
-    })) as Array<{ vkUserId: number }>;
+    });
 
     if (!existingAuthors.length) {
       return 0;
@@ -142,104 +74,8 @@ export class AuthorActivityService {
     const authors = await this.vkService.getAuthors(uniqueIds);
 
     for (const author of authors) {
-      const updateData: Prisma.AuthorUncheckedUpdateInput = {
-        firstName: author.first_name,
-        lastName: author.last_name,
-        deactivated: author.deactivated,
-        domain: author.domain,
-        screenName: author.screen_name,
-        isClosed: author.is_closed,
-        canAccessClosed: author.can_access_closed,
-        photo50: author.photo_50,
-        photo100: author.photo_100,
-        photo200: author.photo_200,
-        photo200Orig: author.photo_200_orig,
-        photo400Orig: author.photo_400_orig,
-        photoMax: author.photo_max,
-        photoMaxOrig: author.photo_max_orig,
-        photoId: author.photo_id,
-        city: toUpdateJsonValue(author.city),
-        country: toUpdateJsonValue(author.country),
-        about: author.about ?? null,
-        activities: author.activities ?? null,
-        bdate: author.bdate ?? null,
-        books: author.books ?? null,
-        career: toUpdateJsonValue(author.career),
-        connections: toUpdateJsonValue(author.connections),
-        contacts: toUpdateJsonValue(author.contacts),
-        counters: toUpdateJsonValue(author.counters),
-        education: toUpdateJsonValue(author.education),
-        followersCount: author.followers_count ?? null,
-        homeTown: author.home_town ?? null,
-        interests: author.interests ?? null,
-        lastSeen: toUpdateJsonValue(author.last_seen),
-        maidenName: author.maiden_name ?? null,
-        military: toUpdateJsonValue(author.military),
-        movies: author.movies ?? null,
-        music: author.music ?? null,
-        nickname: author.nickname ?? null,
-        occupation: toUpdateJsonValue(author.occupation),
-        personal: toUpdateJsonValue(author.personal),
-        relatives: toUpdateJsonValue(author.relatives),
-        relation: author.relation ?? null,
-        schools: toUpdateJsonValue(author.schools),
-        sex: author.sex ?? null,
-        site: author.site ?? null,
-        status: author.status ?? null,
-        timezone: author.timezone ?? null,
-        tv: author.tv ?? null,
-        universities: toUpdateJsonValue(author.universities),
-      };
-
-      const createData: Prisma.AuthorUncheckedCreateInput = {
-        vkUserId: author.id,
-        firstName: author.first_name,
-        lastName: author.last_name,
-        deactivated: author.deactivated ?? null,
-        domain: author.domain ?? null,
-        screenName: author.screen_name ?? null,
-        isClosed: author.is_closed ?? null,
-        canAccessClosed: author.can_access_closed ?? null,
-        photo50: author.photo_50 ?? null,
-        photo100: author.photo_100 ?? null,
-        photo200: author.photo_200 ?? null,
-        photo200Orig: author.photo_200_orig ?? null,
-        photo400Orig: author.photo_400_orig ?? null,
-        photoMax: author.photo_max ?? null,
-        photoMaxOrig: author.photo_max_orig ?? null,
-        photoId: author.photo_id ?? null,
-        city: toCreateJsonValue(author.city),
-        country: toCreateJsonValue(author.country),
-        about: author.about ?? null,
-        activities: author.activities ?? null,
-        bdate: author.bdate ?? null,
-        books: author.books ?? null,
-        career: toCreateJsonValue(author.career),
-        connections: toCreateJsonValue(author.connections),
-        contacts: toCreateJsonValue(author.contacts),
-        counters: toCreateJsonValue(author.counters),
-        education: toCreateJsonValue(author.education),
-        followersCount: author.followers_count ?? null,
-        homeTown: author.home_town ?? null,
-        interests: author.interests ?? null,
-        lastSeen: toCreateJsonValue(author.last_seen),
-        maidenName: author.maiden_name ?? null,
-        military: toCreateJsonValue(author.military),
-        movies: author.movies ?? null,
-        music: author.music ?? null,
-        nickname: author.nickname ?? null,
-        occupation: toCreateJsonValue(author.occupation),
-        personal: toCreateJsonValue(author.personal),
-        relatives: toCreateJsonValue(author.relatives),
-        relation: author.relation ?? null,
-        schools: toCreateJsonValue(author.schools),
-        sex: author.sex ?? null,
-        site: author.site ?? null,
-        status: author.status ?? null,
-        timezone: author.timezone ?? null,
-        tv: author.tv ?? null,
-        universities: toCreateJsonValue(author.universities),
-      };
+      const updateData = this.buildAuthorUpdateData(author);
+      const createData = this.buildAuthorCreateData(author);
 
       await this.prisma.author.upsert({
         where: { vkUserId: author.id },
@@ -261,14 +97,12 @@ export class AuthorActivityService {
 
     const keywordMatches =
       options.keywordMatches ?? (await this.loadKeywordMatchCandidates());
-    const nextOptions: SaveCommentsOptions = options.keywordMatches
-      ? options
-      : { ...options, keywordMatches };
+    const saveOptions: SaveCommentsOptions = { ...options, keywordMatches };
 
     let saved = 0;
 
     for (const comment of comments) {
-      saved += await this.saveComment(comment, nextOptions);
+      saved += await this.saveComment(comment, saveOptions);
     }
 
     return saved;
@@ -278,82 +112,17 @@ export class AuthorActivityService {
     comment: CommentEntity,
     options: SaveCommentsOptions,
   ): Promise<number> {
-    const threadItemsJson: Prisma.InputJsonValue = comment.threadItems?.length
-      ? (comment.threadItems.map((item) =>
-          this.serializeComment(item),
-        ) as Prisma.InputJsonValue)
-      : (Prisma.JsonNull as unknown as Prisma.InputJsonValue);
-
-    const attachmentsJson: Prisma.InputJsonValue | undefined =
-      comment.attachments === null
-        ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
-        : comment.attachments === undefined
-          ? undefined
-          : (comment.attachments as Prisma.InputJsonValue);
-
-    const parentsStackJson: Prisma.InputJsonValue =
-      comment.parentsStack === null
-        ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
-        : (comment.parentsStack as Prisma.InputJsonValue);
-
-    const authorVkId = comment.fromId > 0 ? comment.fromId : null;
-    const baseUpdateData: Prisma.CommentUncheckedUpdateInput = {
-      postId: comment.postId,
-      ownerId: comment.ownerId,
-      vkCommentId: comment.vkCommentId,
-      fromId: comment.fromId,
-      authorVkId,
-      text: comment.text,
-      publishedAt: comment.publishedAt,
-      likesCount: comment.likesCount,
-      parentsStack: parentsStackJson,
-      threadCount: comment.threadCount,
-      threadItems: threadItemsJson,
-      replyToUser: comment.replyToUser,
-      replyToComment: comment.replyToComment,
-      isDeleted: comment.isDeleted,
-    };
-
-    const watchlistAuthorId = options.watchlistAuthorId ?? null;
-
-    if (attachmentsJson !== undefined) {
-      baseUpdateData.attachments = attachmentsJson;
-    }
-
-    const updateData: Prisma.CommentUncheckedUpdateInput = {
-      ...baseUpdateData,
-    };
-
-    if (options.watchlistAuthorId !== undefined) {
-      updateData.watchlistAuthorId = watchlistAuthorId;
-    }
-
-    if (options.source === (CommentSource.WATCHLIST as CommentSource)) {
-      updateData.source = CommentSource.WATCHLIST as CommentSource;
-    }
-
-    const createData: Prisma.CommentUncheckedCreateInput = {
-      postId: comment.postId,
-      ownerId: comment.ownerId,
-      vkCommentId: comment.vkCommentId,
-      fromId: comment.fromId,
-      text: comment.text,
-      publishedAt: comment.publishedAt,
-      likesCount: comment.likesCount,
-      parentsStack: parentsStackJson,
-      threadCount: comment.threadCount,
-      threadItems: threadItemsJson,
-      replyToUser: comment.replyToUser,
-      replyToComment: comment.replyToComment,
-      authorVkId: authorVkId ?? undefined,
-      isDeleted: comment.isDeleted,
-      source: options.source,
-      watchlistAuthorId,
-    };
-
-    if (attachmentsJson !== undefined) {
-      createData.attachments = attachmentsJson;
-    }
+    const jsonFields = this.buildCommentJsonFields(comment);
+    const updateData = this.buildCommentUpdateData(
+      comment,
+      jsonFields,
+      options,
+    );
+    const createData = this.buildCommentCreateData(
+      comment,
+      jsonFields,
+      options,
+    );
 
     const savedComment = await this.prisma.comment.upsert({
       where: {
@@ -380,12 +149,189 @@ export class AuthorActivityService {
     );
 
     let saved = 1;
-    const threadItems = comment.threadItems;
-    if (threadItems?.length) {
-      saved += await this.saveComments(threadItems, options);
+    if (comment.threadItems?.length) {
+      saved += await this.saveComments(comment.threadItems, options);
     }
 
     return saved;
+  }
+
+  private buildCommentJsonFields(comment: CommentEntity): {
+    threadItems: Prisma.InputJsonValue;
+    attachments: Prisma.InputJsonValue | undefined;
+    parentsStack: Prisma.InputJsonValue;
+  } {
+    const threadItemsJson: Prisma.InputJsonValue = comment.threadItems?.length
+      ? (comment.threadItems.map((item) =>
+          this.serializeComment(item),
+        ) as Prisma.InputJsonValue)
+      : (Prisma.JsonNull as unknown as Prisma.InputJsonValue);
+
+    const attachmentsJson: Prisma.InputJsonValue | undefined =
+      comment.attachments === null
+        ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
+        : comment.attachments === undefined
+          ? undefined
+          : (comment.attachments as Prisma.InputJsonValue);
+
+    const parentsStackJson: Prisma.InputJsonValue =
+      comment.parentsStack === null
+        ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
+        : (comment.parentsStack as Prisma.InputJsonValue);
+
+    return {
+      threadItems: threadItemsJson,
+      attachments: attachmentsJson,
+      parentsStack: parentsStackJson,
+    };
+  }
+
+  private buildCommentBaseFields(
+    comment: CommentEntity,
+    jsonFields: {
+      threadItems: Prisma.InputJsonValue;
+      attachments: Prisma.InputJsonValue | undefined;
+      parentsStack: Prisma.InputJsonValue;
+    },
+  ): Record<string, unknown> {
+    return {
+      postId: comment.postId,
+      ownerId: comment.ownerId,
+      vkCommentId: comment.vkCommentId,
+      fromId: comment.fromId,
+      text: comment.text,
+      publishedAt: comment.publishedAt,
+      likesCount: comment.likesCount,
+      parentsStack: jsonFields.parentsStack,
+      threadCount: comment.threadCount,
+      threadItems: jsonFields.threadItems,
+      replyToUser: comment.replyToUser,
+      replyToComment: comment.replyToComment,
+      isDeleted: comment.isDeleted,
+      ...(jsonFields.attachments !== undefined && {
+        attachments: jsonFields.attachments,
+      }),
+    };
+  }
+
+  private buildCommentUpdateData(
+    comment: CommentEntity,
+    jsonFields: {
+      threadItems: Prisma.InputJsonValue;
+      attachments: Prisma.InputJsonValue | undefined;
+      parentsStack: Prisma.InputJsonValue;
+    },
+    options: SaveCommentsOptions,
+  ): Prisma.CommentUncheckedUpdateInput {
+    const authorVkId = comment.fromId > 0 ? comment.fromId : null;
+
+    return {
+      ...this.buildCommentBaseFields(comment, jsonFields),
+      authorVkId,
+      ...(options.watchlistAuthorId !== undefined && {
+        watchlistAuthorId: options.watchlistAuthorId ?? null,
+      }),
+      ...(options.source === CommentSource.WATCHLIST && {
+        source: CommentSource.WATCHLIST,
+      }),
+    } as Prisma.CommentUncheckedUpdateInput;
+  }
+
+  private buildCommentCreateData(
+    comment: CommentEntity,
+    jsonFields: {
+      threadItems: Prisma.InputJsonValue;
+      attachments: Prisma.InputJsonValue | undefined;
+      parentsStack: Prisma.InputJsonValue;
+    },
+    options: SaveCommentsOptions,
+  ): Prisma.CommentUncheckedCreateInput {
+    const authorVkId = comment.fromId > 0 ? comment.fromId : null;
+
+    return {
+      ...this.buildCommentBaseFields(comment, jsonFields),
+      authorVkId: authorVkId ?? undefined,
+      source: options.source,
+      watchlistAuthorId: options.watchlistAuthorId ?? null,
+    } as Prisma.CommentUncheckedCreateInput;
+  }
+
+  private buildAuthorBaseFields(
+    author: IAuthor,
+    jsonValueConverter: (value: unknown) => Prisma.InputJsonValue | undefined,
+    useNullCoalescing: boolean,
+  ): Record<string, unknown> {
+    const getValue = <T>(value: T | undefined): T | null => {
+      return useNullCoalescing ? (value ?? null) : (value as T);
+    };
+
+    return {
+      firstName: author.first_name,
+      lastName: author.last_name,
+      deactivated: getValue(author.deactivated),
+      domain: getValue(author.domain),
+      screenName: getValue(author.screen_name),
+      isClosed: getValue(author.is_closed),
+      canAccessClosed: getValue(author.can_access_closed),
+      photo50: getValue(author.photo_50),
+      photo100: getValue(author.photo_100),
+      photo200: getValue(author.photo_200),
+      photo200Orig: getValue(author.photo_200_orig),
+      photo400Orig: getValue(author.photo_400_orig),
+      photoMax: getValue(author.photo_max),
+      photoMaxOrig: getValue(author.photo_max_orig),
+      photoId: getValue(author.photo_id),
+      city: jsonValueConverter(author.city),
+      country: jsonValueConverter(author.country),
+      about: author.about ?? null,
+      activities: author.activities ?? null,
+      bdate: author.bdate ?? null,
+      books: author.books ?? null,
+      career: jsonValueConverter(author.career),
+      connections: jsonValueConverter(author.connections),
+      contacts: jsonValueConverter(author.contacts),
+      counters: jsonValueConverter(author.counters),
+      education: jsonValueConverter(author.education),
+      followersCount: author.followers_count ?? null,
+      homeTown: author.home_town ?? null,
+      interests: author.interests ?? null,
+      lastSeen: jsonValueConverter(author.last_seen),
+      maidenName: author.maiden_name ?? null,
+      military: jsonValueConverter(author.military),
+      movies: author.movies ?? null,
+      music: author.music ?? null,
+      nickname: author.nickname ?? null,
+      occupation: jsonValueConverter(author.occupation),
+      personal: jsonValueConverter(author.personal),
+      relatives: jsonValueConverter(author.relatives),
+      relation: author.relation ?? null,
+      schools: jsonValueConverter(author.schools),
+      sex: author.sex ?? null,
+      site: author.site ?? null,
+      status: author.status ?? null,
+      timezone: author.timezone ?? null,
+      tv: author.tv ?? null,
+      universities: jsonValueConverter(author.universities),
+    };
+  }
+
+  private buildAuthorUpdateData(
+    author: IAuthor,
+  ): Prisma.AuthorUncheckedUpdateInput {
+    return this.buildAuthorBaseFields(
+      author,
+      toUpdateJsonValue,
+      false,
+    ) as Prisma.AuthorUncheckedUpdateInput;
+  }
+
+  private buildAuthorCreateData(
+    author: IAuthor,
+  ): Prisma.AuthorUncheckedCreateInput {
+    return {
+      vkUserId: author.id,
+      ...this.buildAuthorBaseFields(author, toCreateJsonValue, true),
+    } as Prisma.AuthorUncheckedCreateInput;
   }
 
   private serializeComment(comment: CommentEntity): Record<string, unknown> {
@@ -410,9 +356,9 @@ export class AuthorActivityService {
   }
 
   private async loadKeywordMatchCandidates(): Promise<KeywordMatchCandidate[]> {
-    const keywords = (await this.prisma.keyword.findMany({
+    const keywords = await this.prisma.keyword.findMany({
       select: { id: true, word: true, isPhrase: true },
-    })) as Array<{ id: number; word: string; isPhrase: boolean }>;
+    });
 
     return keywords
       .map((keyword) => {
@@ -432,32 +378,66 @@ export class AuthorActivityService {
     keywordMatches: KeywordMatchCandidate[],
     source: MatchSource = MatchSource.COMMENT,
   ): Promise<void> {
-    if (!keywordMatches.length) {
-      await this.prisma.commentKeywordMatch.deleteMany({
-        where: { commentId, source },
-      });
-      return;
-    }
-
     const normalizedText = normalizeForKeywordMatch(text);
 
-    if (!normalizedText) {
-      await this.prisma.commentKeywordMatch.deleteMany({
-        where: { commentId, source },
-      });
+    if (!normalizedText || !keywordMatches.length) {
+      await this.deleteCommentKeywordMatches(commentId, source);
       return;
     }
 
-    const matchedKeywordIds = new Set<number>(
+    const matchedKeywordIds = this.findMatchedKeywordIdsInText(
+      normalizedText,
+      keywordMatches,
+    );
+
+    const { toCreate, toDelete } = await this.calculateKeywordMatchDiff(
+      commentId,
+      matchedKeywordIds,
+      source,
+    );
+
+    if (toCreate.length === 0 && toDelete.length === 0) {
+      return;
+    }
+
+    await this.applyKeywordMatchChanges(commentId, toCreate, toDelete, source);
+  }
+
+  /**
+   * Удаляет все совпадения ключевых слов для комментария
+   */
+  private async deleteCommentKeywordMatches(
+    commentId: number,
+    source: MatchSource,
+  ): Promise<void> {
+    await this.prisma.commentKeywordMatch.deleteMany({
+      where: { commentId, source },
+    });
+  }
+
+  private findMatchedKeywordIdsInText(
+    normalizedText: string,
+    keywordMatches: KeywordMatchCandidate[],
+  ): Set<number> {
+    return new Set(
       keywordMatches
         .filter((keyword) => matchesKeyword(normalizedText, keyword))
         .map((keyword) => keyword.id),
     );
+  }
 
-    const existingMatches = (await this.prisma.commentKeywordMatch.findMany({
+  private async calculateKeywordMatchDiff(
+    commentId: number,
+    matchedKeywordIds: Set<number>,
+    source: MatchSource,
+  ): Promise<{
+    toCreate: number[];
+    toDelete: number[];
+  }> {
+    const existingMatches = await this.prisma.commentKeywordMatch.findMany({
       where: { commentId, source },
       select: { keywordId: true },
-    })) as Array<{ keywordId: number }>;
+    });
 
     const existingKeywordIds = new Set(
       existingMatches.map((match) => match.keywordId),
@@ -470,10 +450,15 @@ export class AuthorActivityService {
       (keywordId) => !matchedKeywordIds.has(keywordId),
     );
 
-    if (toCreate.length === 0 && toDelete.length === 0) {
-      return;
-    }
+    return { toCreate, toDelete };
+  }
 
+  private async applyKeywordMatchChanges(
+    commentId: number,
+    toCreate: number[],
+    toDelete: number[],
+    source: MatchSource,
+  ): Promise<void> {
     const operations: Prisma.PrismaPromise<unknown>[] = [];
 
     if (toDelete.length > 0) {
@@ -511,7 +496,7 @@ export class AuthorActivityService {
     postId: number,
     keywordMatches: KeywordMatchCandidate[],
   ): Promise<void> {
-    const post = (await this.prisma.post.findUnique({
+    const post = await this.prisma.post.findUnique({
       where: {
         ownerId_vkPostId: {
           ownerId,
@@ -519,45 +504,21 @@ export class AuthorActivityService {
         },
       },
       select: { text: true },
-    })) as { text: string | null } | null;
+    });
 
-    if (!post || !post.text) {
+    if (!post?.text) {
       return;
     }
 
-    const normalizedText = normalizeForKeywordMatch(post.text);
+    const normalizedPostText = normalizeForKeywordMatch(post.text);
+    const matchedKeywordIds = normalizedPostText
+      ? this.findMatchedKeywordIdsInText(normalizedPostText, keywordMatches)
+      : new Set<number>();
 
-    if (!normalizedText) {
-      return;
-    }
-
-    const matchedKeywordIds = new Set(
-      keywordMatches
-        .filter((keyword) => matchesKeyword(normalizedText, keyword))
-        .map((keyword) => keyword.id),
-    );
-
-    if (matchedKeywordIds.size === 0) {
-      const comments = (await this.prisma.comment.findMany({
-        where: { ownerId, postId },
-        select: { id: true },
-      })) as Array<{ id: number }>;
-
-      if (comments.length > 0) {
-        await this.prisma.commentKeywordMatch.deleteMany({
-          where: {
-            commentId: { in: comments.map((c) => c.id) },
-            source: MatchSource.POST as MatchSource,
-          },
-        });
-      }
-      return;
-    }
-
-    const comments = (await this.prisma.comment.findMany({
+    const comments = await this.prisma.comment.findMany({
       where: { ownerId, postId },
       select: { id: true },
-    })) as Array<{ id: number }>;
+    });
 
     if (comments.length === 0) {
       return;
@@ -565,20 +526,57 @@ export class AuthorActivityService {
 
     const commentIds = comments.map((c) => c.id);
 
-    const existingMatches = (await this.prisma.commentKeywordMatch.findMany({
+    if (matchedKeywordIds.size === 0) {
+      await this.deleteAllPostKeywordMatches(commentIds);
+      return;
+    }
+
+    const { toCreate, toDelete } = await this.calculatePostKeywordMatchDiff(
+      commentIds,
+      matchedKeywordIds,
+    );
+
+    await this.applyPostKeywordMatchChanges(toCreate, toDelete);
+  }
+
+  /**
+   * Удаляет все совпадения ключевых слов для комментариев поста
+   */
+  private async deleteAllPostKeywordMatches(
+    commentIds: number[],
+  ): Promise<void> {
+    if (commentIds.length === 0) {
+      return;
+    }
+
+    await this.prisma.commentKeywordMatch.deleteMany({
       where: {
         commentId: { in: commentIds },
-        source: MatchSource.POST as MatchSource,
+        source: MatchSource.POST,
+      },
+    });
+  }
+
+  private async calculatePostKeywordMatchDiff(
+    commentIds: number[],
+    matchedKeywordIds: Set<number>,
+  ): Promise<{
+    toCreate: Array<{ commentId: number; keywordId: number }>;
+    toDelete: Array<{ commentId: number; keywordId: number }>;
+  }> {
+    const existingMatches = await this.prisma.commentKeywordMatch.findMany({
+      where: {
+        commentId: { in: commentIds },
+        source: MatchSource.POST,
       },
       select: { commentId: true, keywordId: true },
-    })) as Array<{ commentId: number; keywordId: number }>;
+    });
 
     const existingKeys = new Set(
       existingMatches.map((m) => `${m.commentId}-${m.keywordId}`),
     );
 
     const toCreate: Array<{ commentId: number; keywordId: number }> = [];
-
     for (const commentId of commentIds) {
       for (const keywordId of matchedKeywordIds) {
         const key = `${commentId}-${keywordId}`;
@@ -588,31 +586,38 @@ export class AuthorActivityService {
       }
     }
 
-    const toDelete: Array<{ commentId: number; keywordId: number }> = [];
-
-    for (const match of existingMatches) {
-      if (!matchedKeywordIds.has(match.keywordId)) {
-        toDelete.push({
+    const toDelete: Array<{ commentId: number; keywordId: number }> =
+      existingMatches
+        .filter((match) => !matchedKeywordIds.has(match.keywordId))
+        .map((match) => ({
           commentId: match.commentId,
           keywordId: match.keywordId,
-        });
-      }
+        }));
+
+    return { toCreate, toDelete };
+  }
+
+  private async applyPostKeywordMatchChanges(
+    toCreate: Array<{ commentId: number; keywordId: number }>,
+    toDelete: Array<{ commentId: number; keywordId: number }>,
+  ): Promise<void> {
+    if (toCreate.length === 0 && toDelete.length === 0) {
+      return;
     }
 
     const operations: Prisma.PrismaPromise<unknown>[] = [];
 
     if (toDelete.length > 0) {
-      for (const { commentId, keywordId } of toDelete) {
-        operations.push(
-          this.prisma.commentKeywordMatch.deleteMany({
-            where: {
-              commentId,
-              keywordId,
-              source: MatchSource.POST as MatchSource,
-            },
-          }),
-        );
-      }
+      const deleteOperations = toDelete.map(({ commentId, keywordId }) =>
+        this.prisma.commentKeywordMatch.deleteMany({
+          where: {
+            commentId,
+            keywordId,
+            source: MatchSource.POST,
+          },
+        }),
+      );
+      operations.push(...deleteOperations);
     }
 
     if (toCreate.length > 0) {
@@ -621,15 +626,13 @@ export class AuthorActivityService {
           data: toCreate.map(({ commentId, keywordId }) => ({
             commentId,
             keywordId,
-            source: MatchSource.POST as MatchSource,
+            source: MatchSource.POST,
           })),
           skipDuplicates: true,
         }),
       );
     }
 
-    if (operations.length > 0) {
-      await this.prisma.$transaction(operations);
-    }
+    await this.prisma.$transaction(operations);
   }
 }
