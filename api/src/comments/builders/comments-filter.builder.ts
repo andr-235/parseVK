@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { MatchSource } from '@prisma/client';
+import { MatchSource, type Prisma } from '@prisma/client';
 import type {
   CommentsFilters,
   ReadStatusFilter,
@@ -8,6 +7,16 @@ import type {
 
 @Injectable()
 export class CommentsFilterBuilder {
+  /**
+   * Строит базовое where условие на основе фильтров комментариев
+   *
+   * Поддерживает фильтрацию по:
+   * - Ключевым словам (keywords) с опциональным источником (COMMENT/POST)
+   * - Поисковому запросу (search) в тексте комментария или поста
+   *
+   * @param filters - Фильтры комментариев (keywords, keywordSource, search)
+   * @returns Prisma where условие для фильтрации комментариев
+   */
   buildBaseWhere({
     keywords,
     keywordSource,
@@ -83,6 +92,12 @@ export class CommentsFilterBuilder {
     return { AND: conditions };
   }
 
+  /**
+   * Строит where условие для фильтрации по статусу прочтения
+   *
+   * @param readStatus - Статус прочтения: 'all' (все), 'read' (прочитанные), 'unread' (непрочитанные)
+   * @returns Prisma where условие или пустой объект для 'all'
+   */
   buildReadStatusWhere(
     readStatus?: ReadStatusFilter,
   ): Prisma.CommentWhereInput {
@@ -97,19 +112,20 @@ export class CommentsFilterBuilder {
     return {};
   }
 
-  private isWhereEmpty(where?: Prisma.CommentWhereInput): boolean {
-    if (!where) {
-      return true;
-    }
-
-    return Object.keys(where).length === 0;
-  }
-
+  /**
+   * Объединяет несколько where условий через AND
+   *
+   * Игнорирует пустые и undefined условия.
+   * Если остается одно условие, возвращает его напрямую (без AND).
+   *
+   * @param wheres - Массив where условий для объединения
+   * @returns Объединенное where условие или пустой объект
+   */
   mergeWhere(
     ...wheres: Array<Prisma.CommentWhereInput | undefined>
   ): Prisma.CommentWhereInput {
     const normalized = wheres.filter(
-      (where) => where && !this.isWhereEmpty(where),
+      (where) => where && Object.keys(where).length > 0,
     ) as Prisma.CommentWhereInput[];
 
     if (normalized.length === 0) {
@@ -123,6 +139,12 @@ export class CommentsFilterBuilder {
     return { AND: normalized };
   }
 
+  /**
+   * Строит полное where условие, объединяя базовые фильтры и фильтр по статусу прочтения
+   *
+   * @param filters - Все фильтры комментариев включая readStatus
+   * @returns Полное Prisma where условие для фильтрации комментариев
+   */
   buildWhere(filters: CommentsFilters): Prisma.CommentWhereInput {
     const baseWhere = this.buildBaseWhere(filters);
     const readStatusWhere = this.buildReadStatusWhere(filters.readStatus);

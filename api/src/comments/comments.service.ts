@@ -1,15 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ICommentsRepository } from './interfaces/comments-repository.interface';
+import { CommentMapper } from './mappers/comment.mapper';
+import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
+import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
 import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
 import type { CommentsListDto } from './dto/comments-list.dto';
 import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
+import type { ICommentsRepository } from './interfaces/comments-repository.interface';
 import type {
   CommentsQueryOptions,
   CommentsCursorOptions,
 } from './types/comments-filters.type';
-import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
-import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
-import { CommentMapper } from './mappers/comment.mapper';
 
 @Injectable()
 export class CommentsService {
@@ -49,6 +49,13 @@ export class CommentsService {
     return this.cursorStrategy.execute(filters, { cursor, limit });
   }
 
+  /**
+   * Устанавливает статус прочтения комментария
+   *
+   * @param id - ID комментария
+   * @param isRead - Статус прочтения (true - прочитано, false - не прочитано)
+   * @returns Обновленный комментарий с автором
+   */
   async setReadStatus(
     id: number,
     isRead: boolean,

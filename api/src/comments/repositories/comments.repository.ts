@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 import type {
-  ICommentsRepository,
   CommentWithRelations,
-  FindCommentsParams,
   CountCommentsParams,
+  FindCommentsParams,
+  ICommentsRepository,
   UpdateCommentParams,
 } from '../interfaces/comments-repository.interface';
 
@@ -60,17 +60,17 @@ export class CommentsRepository implements ICommentsRepository {
 
   findMany(params: FindCommentsParams): Promise<CommentWithRelations[]> {
     return this.prisma.comment.findMany({
-      where: params.where as Prisma.CommentWhereInput,
+      where: params.where,
       skip: params.skip,
       take: params.take,
-      orderBy: params.orderBy as Prisma.CommentOrderByWithRelationInput,
+      orderBy: params.orderBy,
       include: commentInclude,
     });
   }
 
   count(params: CountCommentsParams): Promise<number> {
     return this.prisma.comment.count({
-      where: params.where as Prisma.CommentWhereInput,
+      where: params.where,
     });
   }
 

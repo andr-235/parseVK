@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
-import { CommentsController } from './comments.controller';
-import { CommentsService } from './comments.service';
 import { PrismaService } from '../prisma.service';
-import { CommentsRepository } from './repositories/comments.repository';
-import { CommentMapper } from './mappers/comment.mapper';
 import { CommentsFilterBuilder } from './builders/comments-filter.builder';
-import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
+import { CommentsController } from './comments.controller';
+import { CommentMapper } from './mappers/comment.mapper';
+import { CommentsRepository } from './repositories/comments.repository';
+import { CommentsStatsService } from './services/comments-stats.service';
+import { CommentsService } from './comments.service';
 import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
+import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
 import { CommentsQueryValidator } from './validators/comments-query.validator';
 
 @Module({
@@ -21,6 +22,7 @@ import { CommentsQueryValidator } from './validators/comments-query.validator';
     },
     CommentMapper,
     CommentsFilterBuilder,
+    CommentsStatsService,
     OffsetPaginationStrategy,
     CursorPaginationStrategy,
     CommentsQueryValidator,

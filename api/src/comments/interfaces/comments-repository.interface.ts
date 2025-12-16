@@ -1,4 +1,8 @@
 import type { Prisma } from '@prisma/client';
+import type {
+  CommentOrderByInput,
+  CommentWhereInput,
+} from '../types/comment-structures.type';
 
 export type CommentWithRelations = Prisma.CommentGetPayload<{
   include: {
@@ -44,14 +48,14 @@ export type CommentWithRelations = Prisma.CommentGetPayload<{
 }>;
 
 export interface FindCommentsParams {
-  where: unknown;
+  where: CommentWhereInput;
   skip?: number;
   take?: number;
-  orderBy?: unknown;
+  orderBy?: CommentOrderByInput | CommentOrderByInput[];
 }
 
 export interface CountCommentsParams {
-  where: unknown;
+  where: CommentWhereInput;
 }
 
 export interface UpdateCommentParams {
@@ -63,5 +67,5 @@ export interface ICommentsRepository {
   findMany(params: FindCommentsParams): Promise<CommentWithRelations[]>;
   count(params: CountCommentsParams): Promise<number>;
   update(params: UpdateCommentParams): Promise<CommentWithRelations>;
-  transaction<T>(queries: any[]): Promise<T[]>;
+  transaction<T>(queries: Prisma.PrismaPromise<T>[]): Promise<T[]>;
 }

@@ -3,6 +3,7 @@ import { OffsetPaginationStrategy } from './offset-pagination.strategy';
 import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
 import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
 import { CommentMapper } from '../mappers/comment.mapper';
+import { CommentsStatsService } from '../services/comments-stats.service';
 import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
 import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
 
@@ -48,6 +49,7 @@ describe('OffsetPaginationStrategy', () => {
   let repositoryMock: jest.Mocked<ICommentsRepository>;
   let filterBuilderMock: jest.Mocked<CommentsFilterBuilder>;
   let mapperMock: jest.Mocked<CommentMapper>;
+  let statsServiceMock: jest.Mocked<CommentsStatsService>;
   let repositoryObj: {
     findMany: jest.Mock;
     count: jest.Mock;
@@ -55,13 +57,14 @@ describe('OffsetPaginationStrategy', () => {
     transaction: jest.Mock;
   };
   let filterBuilderObj: {
-    buildBaseWhere: jest.Mock;
-    buildReadStatusWhere: jest.Mock;
-    mergeWhere: jest.Mock;
+    buildWhere: jest.Mock;
   };
   let mapperObj: {
     map: jest.Mock;
     mapMany: jest.Mock;
+  };
+  let statsServiceObj: {
+    calculateStats: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -74,9 +77,7 @@ describe('OffsetPaginationStrategy', () => {
     repositoryMock = repositoryObj as never;
 
     filterBuilderObj = {
-      buildBaseWhere: jest.fn(),
-      buildReadStatusWhere: jest.fn(),
-      mergeWhere: jest.fn(),
+      buildWhere: jest.fn(),
     };
     filterBuilderMock = filterBuilderObj as never;
 
@@ -85,6 +86,11 @@ describe('OffsetPaginationStrategy', () => {
       mapMany: jest.fn(),
     };
     mapperMock = mapperObj as never;
+
+    statsServiceObj = {
+      calculateStats: jest.fn(),
+    };
+    statsServiceMock = statsServiceObj as never;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -100,6 +106,10 @@ describe('OffsetPaginationStrategy', () => {
         {
           provide: CommentMapper,
           useValue: mapperMock,
+        },
+        {
+          provide: CommentsStatsService,
+          useValue: statsServiceMock,
         },
       ],
     }).compile();
@@ -125,14 +135,13 @@ describe('OffsetPaginationStrategy', () => {
 
     const mappedComments: CommentWithAuthorDto[] = realMapper.mapMany(comments);
 
-    filterBuilderObj.buildBaseWhere.mockReturnValue({});
-    filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
-    filterBuilderObj.mergeWhere.mockReturnValue({});
+    filterBuilderObj.buildWhere.mockReturnValue({});
     repositoryObj.findMany.mockResolvedValue(comments);
-    repositoryObj.count
-      .mockResolvedValueOnce(2)
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(1);
+    statsServiceObj.calculateStats.mockResolvedValue({
+      total: 2,
+      readCount: 1,
+      unreadCount: 1,
+    });
     mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute(
@@ -148,15 +157,15 @@ describe('OffsetPaginationStrategy', () => {
       unreadCount: 1,
     });
 
+    expect(filterBuilderObj.buildWhere).toHaveBeenCalledWith({
+      keywords: ['test'],
+      readStatus: 'all',
+    });
     expect(repositoryObj.findMany).toHaveBeenCalledTimes(1);
-    expect(repositoryObj.count).toHaveBeenCalledTimes(3);
-    const calls = repositoryObj.transaction.mock.calls;
-    if (calls[0] && Array.isArray(calls[0])) {
-      const firstCall = calls[0] as unknown[];
-      if (firstCall[0] && Array.isArray(firstCall[0])) {
-        expect(firstCall[0]).toHaveLength(4);
-      }
-    }
+    expect(statsServiceObj.calculateStats).toHaveBeenCalledWith(
+      { keywords: ['test'], readStatus: 'all' },
+      'all',
+    );
     expect(mapperObj.mapMany).toHaveBeenCalledWith(comments);
   });
 
@@ -174,14 +183,13 @@ describe('OffsetPaginationStrategy', () => {
 
     const mappedComments: CommentWithAuthorDto[] = realMapper.mapMany(comments);
 
-    filterBuilderObj.buildBaseWhere.mockReturnValue({});
-    filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
-    filterBuilderObj.mergeWhere.mockReturnValue({});
+    filterBuilderObj.buildWhere.mockReturnValue({});
     repositoryObj.findMany.mockResolvedValue(comments);
-    repositoryObj.count
-      .mockResolvedValueOnce(20)
-      .mockResolvedValueOnce(10)
-      .mockResolvedValueOnce(10);
+    statsServiceObj.calculateStats.mockResolvedValue({
+      total: 20,
+      readCount: 10,
+      unreadCount: 10,
+    });
     mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { offset: 0, limit: 10 });
@@ -191,13 +199,16 @@ describe('OffsetPaginationStrategy', () => {
   });
 
   it('должен использовать фильтры для построения where условий', async () => {
-    filterBuilderObj.buildBaseWhere.mockReturnValue({ keywords: ['test'] });
-    filterBuilderObj.buildReadStatusWhere.mockReturnValue({ isRead: false });
-    filterBuilderObj.mergeWhere.mockReturnValue({
+    filterBuilderObj.buildWhere.mockReturnValue({
       keywords: ['test'],
       isRead: false,
     });
-    repositoryObj.transaction.mockResolvedValue([[], 0, 0, 0]);
+    repositoryObj.findMany.mockResolvedValue([]);
+    statsServiceObj.calculateStats.mockResolvedValue({
+      total: 0,
+      readCount: 0,
+      unreadCount: 0,
+    });
     mapperObj.mapMany.mockReturnValue([]);
 
     await strategy.execute(
@@ -205,11 +216,12 @@ describe('OffsetPaginationStrategy', () => {
       { offset: 0, limit: 10 },
     );
 
-    expect(filterBuilderObj.buildBaseWhere).toHaveBeenCalledWith({
+    expect(filterBuilderObj.buildWhere).toHaveBeenCalledWith({
       keywords: ['test'],
       readStatus: 'unread',
     });
-    expect(filterBuilderObj.buildReadStatusWhere).toHaveBeenCalledWith(
+    expect(statsServiceObj.calculateStats).toHaveBeenCalledWith(
+      { keywords: ['test'], readStatus: 'unread' },
       'unread',
     );
   });

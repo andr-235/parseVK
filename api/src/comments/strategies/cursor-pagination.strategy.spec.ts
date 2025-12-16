@@ -4,6 +4,7 @@ import { CursorPaginationStrategy } from './cursor-pagination.strategy';
 import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
 import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
 import { CommentMapper } from '../mappers/comment.mapper';
+import { CommentsStatsService } from '../services/comments-stats.service';
 import { CursorUtils } from '../dto/comments-cursor.dto';
 import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
 import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
@@ -50,6 +51,7 @@ describe('CursorPaginationStrategy', () => {
   let repository: jest.Mocked<ICommentsRepository>;
   let filterBuilder: jest.Mocked<CommentsFilterBuilder>;
   let mapper: jest.Mocked<CommentMapper>;
+  let statsService: jest.Mocked<CommentsStatsService>;
   let repositoryObj: {
     findMany: jest.Mock;
     count: jest.Mock;
@@ -64,6 +66,9 @@ describe('CursorPaginationStrategy', () => {
   let mapperObj: {
     map: jest.Mock;
     mapMany: jest.Mock;
+  };
+  let statsServiceObj: {
+    calculateStats: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -88,6 +93,11 @@ describe('CursorPaginationStrategy', () => {
     };
     mapper = mapperObj as never;
 
+    statsServiceObj = {
+      calculateStats: jest.fn(),
+    };
+    statsService = statsServiceObj as never;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CursorPaginationStrategy,
@@ -102,6 +112,10 @@ describe('CursorPaginationStrategy', () => {
         {
           provide: CommentMapper,
           useValue: mapper,
+        },
+        {
+          provide: CommentsStatsService,
+          useValue: statsService,
         },
       ],
     }).compile();
@@ -124,12 +138,12 @@ describe('CursorPaginationStrategy', () => {
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
     filterBuilderObj.mergeWhere.mockReturnValue({});
-
     repositoryObj.findMany.mockResolvedValue(comments);
-    repositoryObj.count
-      .mockResolvedValueOnce(10)
-      .mockResolvedValueOnce(5)
-      .mockResolvedValueOnce(5);
+    statsServiceObj.calculateStats.mockResolvedValue({
+      total: 10,
+      readCount: 5,
+      unreadCount: 5,
+    });
     mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { limit: 10 });
@@ -148,6 +162,7 @@ describe('CursorPaginationStrategy', () => {
       take: 11,
       orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
     });
+    expect(statsServiceObj.calculateStats).toHaveBeenCalledWith({}, undefined);
   });
 
   it('должен декодировать cursor и использовать его для пагинации', async () => {
@@ -175,7 +190,11 @@ describe('CursorPaginationStrategy', () => {
       ],
     });
     repositoryObj.findMany.mockResolvedValue(comments);
-    repositoryObj.transaction.mockResolvedValue([10, 5, 5]);
+    statsServiceObj.calculateStats.mockResolvedValue({
+      total: 10,
+      readCount: 5,
+      unreadCount: 5,
+    });
     mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { cursor, limit: 10 });
@@ -189,6 +208,7 @@ describe('CursorPaginationStrategy', () => {
         OR: orMatcher,
       }),
     );
+    expect(statsServiceObj.calculateStats).toHaveBeenCalledWith({}, undefined);
   });
 
   it('должен выбрасывать BadRequestException для невалидного cursor', async () => {
@@ -219,7 +239,11 @@ describe('CursorPaginationStrategy', () => {
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
     filterBuilderObj.mergeWhere.mockReturnValue({});
     repositoryObj.findMany.mockResolvedValue(comments);
-    repositoryObj.transaction.mockResolvedValue([20, 10, 10]);
+    statsServiceObj.calculateStats.mockResolvedValue({
+      total: 20,
+      readCount: 10,
+      unreadCount: 10,
+    });
     mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { limit: 10 });
@@ -245,7 +269,11 @@ describe('CursorPaginationStrategy', () => {
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
     filterBuilderObj.mergeWhere.mockReturnValue({});
     repositoryObj.findMany.mockResolvedValue(comments);
-    repositoryObj.transaction.mockResolvedValue([1, 0, 1]);
+    statsServiceObj.calculateStats.mockResolvedValue({
+      total: 1,
+      readCount: 0,
+      unreadCount: 1,
+    });
     mapperObj.mapMany.mockReturnValue(mappedComments);
 
     const result = await strategy.execute({}, { limit: 10 });
@@ -262,7 +290,11 @@ describe('CursorPaginationStrategy', () => {
       isRead: false,
     });
     repositoryObj.findMany.mockResolvedValue([]);
-    repositoryObj.transaction.mockResolvedValue([0, 0, 0]);
+    statsServiceObj.calculateStats.mockResolvedValue({
+      total: 0,
+      readCount: 0,
+      unreadCount: 0,
+    });
     mapperObj.mapMany.mockReturnValue([]);
 
     await strategy.execute(
@@ -275,6 +307,10 @@ describe('CursorPaginationStrategy', () => {
       readStatus: 'unread',
     });
     expect(filterBuilderObj.buildReadStatusWhere).toHaveBeenCalledWith(
+      'unread',
+    );
+    expect(statsServiceObj.calculateStats).toHaveBeenCalledWith(
+      { keywords: ['test'], readStatus: 'unread' },
       'unread',
     );
   });
