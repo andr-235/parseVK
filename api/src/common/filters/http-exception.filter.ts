@@ -17,41 +17,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message: string | string[] = 'Внутренняя ошибка сервера';
-    let error: string | undefined;
-
-    if (exception instanceof HttpException) {
-      status = exception.getStatus();
-      const exceptionResponse = exception.getResponse();
-
-      if (typeof exceptionResponse === 'string') {
-        message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object') {
-        const responseObj = exceptionResponse as {
-          message?: string | string[];
-          error?: string;
-          errors?: unknown;
-        };
-        message = responseObj.message ?? message;
-        error = responseObj.error;
-      }
-    } else if (exception instanceof Error) {
-      message = exception.message;
-      this.logger.error(
-        `Необработанная ошибка: ${exception.message}`,
-        exception.stack,
-        `${request.method} ${request.url}`,
-      );
-    } else {
-      const errorString = String(exception);
-      message = 'Произошла непредвиденная ошибка';
-      this.logger.error(
-        `Необработанная ошибка неизвестного типа: ${errorString}`,
-        undefined,
-        `${request.method} ${request.url}`,
-      );
-    }
+    const { status, message, error } = this.extractExceptionInfo(
+      exception,
+      request,
+    );
 
     const errorResponse = {
       statusCode: status,
@@ -63,5 +32,82 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
 
     response.status(status).json(errorResponse);
+  }
+
+  /**
+   * Извлекает информацию об исключении
+   */
+  private extractExceptionInfo(
+    exception: unknown,
+    request: Request,
+  ): {
+    status: number;
+    message: string | string[];
+    error?: string;
+  } {
+    if (exception instanceof HttpException) {
+      return this.extractHttpExceptionInfo(exception);
+    }
+
+    if (exception instanceof Error) {
+      this.logger.error(
+        `Необработанная ошибка: ${exception.message}`,
+        exception.stack,
+        `${request.method} ${request.url}`,
+      );
+      return {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: exception.message,
+      };
+    }
+
+    const errorString = String(exception);
+    this.logger.error(
+      `Необработанная ошибка неизвестного типа: ${errorString}`,
+      undefined,
+      `${request.method} ${request.url}`,
+    );
+    return {
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+      message: 'Произошла непредвиденная ошибка',
+    };
+  }
+
+  /**
+   * Извлекает информацию из HttpException
+   */
+  private extractHttpExceptionInfo(exception: HttpException): {
+    status: number;
+    message: string | string[];
+    error?: string;
+  } {
+    const status = exception.getStatus();
+    const exceptionResponse = exception.getResponse();
+    const defaultMessage = 'Внутренняя ошибка сервера';
+
+    if (typeof exceptionResponse === 'string') {
+      return {
+        status,
+        message: exceptionResponse,
+      };
+    }
+
+    if (typeof exceptionResponse === 'object') {
+      const responseObj = exceptionResponse as {
+        message?: string | string[];
+        error?: string;
+        errors?: unknown;
+      };
+      return {
+        status,
+        message: responseObj.message ?? defaultMessage,
+        error: responseObj.error,
+      };
+    }
+
+    return {
+      status,
+      message: defaultMessage,
+    };
   }
 }
