@@ -124,20 +124,22 @@ describe('CommentsRepository', () => {
         data: { isRead: true },
       };
 
-      const mockComment: CommentWithRelations = createMockComment({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const mockComment = createMockComment({
         id: 1,
         isRead: true,
-      });
+      }) as unknown as CommentWithRelations;
 
       prismaService.comment.update.mockResolvedValue(mockComment);
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await repository.update(params);
 
       expect(result).toBe(mockComment);
 
       expect(prismaService.comment.update).toHaveBeenCalledWith({
         ...params,
-        include: expect.any(Object),
+        include: expect.any(Object) as unknown,
       });
     });
   });

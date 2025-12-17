@@ -104,10 +104,15 @@ describe('VkService', () => {
 
       const responseMock = { groups: [{ id: 1 }], profiles: [] };
       api.groups.getById.mockResolvedValue(responseMock);
-      requestManager.execute.mockResolvedValue(responseMock);
+      requestManager.execute.mockImplementation(
+        (fn: () => Promise<unknown>) => {
+          return Promise.resolve(fn());
+        },
+      );
 
       const result = await service.getGroups(123);
 
+      expect(requestManager.execute).toHaveBeenCalled();
       expect(api.groups.getById).toHaveBeenCalledWith({
         group_ids: [123],
         fields: [
@@ -146,7 +151,11 @@ describe('VkService', () => {
         groups: [{ id: 3 }],
       };
       api.wall.getById.mockResolvedValue(responseMock);
-      requestManager.execute.mockResolvedValue(responseMock);
+      requestManager.execute.mockImplementation(
+        (fn: () => Promise<unknown>) => {
+          return Promise.resolve(fn());
+        },
+      );
 
       const posts = [
         { ownerId: 1, postId: 2 },
@@ -155,6 +164,7 @@ describe('VkService', () => {
 
       const result = await service.getPosts(posts);
 
+      expect(requestManager.execute).toHaveBeenCalled();
       expect(api.wall.getById).toHaveBeenCalledWith({
         posts: ['1_2', '-3_4'],
         extended: 1,
@@ -268,7 +278,11 @@ describe('VkService', () => {
       };
 
       api.wall.get.mockResolvedValue(responseMock);
-      requestManager.execute.mockResolvedValue(responseMock);
+      requestManager.execute.mockImplementation(
+        (fn: () => Promise<unknown>) => {
+          return Promise.resolve(fn());
+        },
+      );
 
       const result = await service.getGroupRecentPosts({
         ownerId: -1,
@@ -348,7 +362,11 @@ describe('VkService', () => {
       };
 
       api.wall.getComments.mockResolvedValue(responseMock);
-      requestManager.execute.mockResolvedValue(responseMock);
+      requestManager.execute.mockImplementation(
+        (fn: () => Promise<unknown>) => {
+          return Promise.resolve(fn());
+        },
+      );
 
       const result = await service.getAuthorCommentsForPost({
         ownerId: 1,
@@ -359,6 +377,7 @@ describe('VkService', () => {
         threadItemsCount: 5,
       });
 
+      expect(requestManager.execute).toHaveBeenCalled();
       expect(api.wall.getComments).toHaveBeenCalledWith({
         owner_id: 1,
         post_id: 2,
@@ -443,7 +462,11 @@ describe('VkService', () => {
       };
 
       api.wall.getComments.mockResolvedValue(responseMock);
-      requestManager.execute.mockResolvedValue(responseMock);
+      requestManager.execute.mockImplementation(
+        (fn: () => Promise<unknown>) => {
+          return Promise.resolve(fn());
+        },
+      );
 
       const result = await service.getAuthorCommentsForPost({
         ownerId: 1,
@@ -454,6 +477,7 @@ describe('VkService', () => {
         maxPages: 3,
       });
 
+      expect(requestManager.execute).toHaveBeenCalled();
       expect(api.wall.getComments).toHaveBeenCalledTimes(1);
       expect(result).toEqual([]);
     });
@@ -516,7 +540,11 @@ describe('VkService', () => {
       };
 
       api.wall.getComments.mockResolvedValue(responseMock);
-      requestManager.execute.mockResolvedValue(responseMock);
+      requestManager.execute.mockImplementation(
+        (fn: () => Promise<unknown>) => {
+          return Promise.resolve(fn());
+        },
+      );
 
       const response = await service.getComments({ ownerId: -100, postId: 55 });
 
