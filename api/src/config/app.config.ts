@@ -45,4 +45,50 @@ export class AppConfig {
   @IsString()
   @IsOptional()
   corsOrigins?: string = 'http://localhost:8080,http://localhost:3000';
+
+  // VK API Request Manager configuration
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  vkApiRateLimitRequests?: number = 3; // requests per second
+
+  @IsNumber()
+  @Min(1000)
+  @IsOptional()
+  vkApiRateLimitWindowMs?: number = 1000; // 1 second window
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  vkApiRetryMaxAttempts?: number = 3;
+
+  @IsNumber()
+  @Min(100)
+  @IsOptional()
+  vkApiRetryInitialDelayMs?: number = 1000;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  vkApiRetryMaxDelayMs?: number = 10000;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  vkApiRetryMultiplier?: number = 2;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  vkApiCircuitBreakerFailureThreshold?: number = 5;
+
+  @IsNumber()
+  @Min(1000)
+  @IsOptional()
+  vkApiCircuitBreakerResetTimeoutMs?: number = 60000; // 1 minute
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  vkApiCircuitBreakerHalfOpenMaxCalls?: number = 3;
 }

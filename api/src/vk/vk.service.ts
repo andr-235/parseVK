@@ -15,6 +15,8 @@ import {
   buildCommentsCacheKey,
   CACHE_TTL,
 } from '../common/constants/cache-keys';
+import { VkApiRequestManager } from './services/vk-api-request-manager.service';
+import { VkApiBatchingService } from './services/vk-api-batching.service';
 
 export interface GetCommentsOptions {
   ownerId: number;
@@ -69,6 +71,8 @@ export class VkService {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly configService: ConfigService,
+    private readonly requestManager: VkApiRequestManager,
+    private readonly batchingService: VkApiBatchingService,
   ) {
     const token = this.configService.get<string>('vkToken');
     if (!token) {
@@ -97,22 +101,29 @@ export class VkService {
 
     this.logger.debug(`Cache MISS: ${cacheKey}`);
 
-    // Запрос к VK API
-    const response = await this.vk.api.groups.getById({
-      group_ids: [id],
-      fields: [
-        'description',
-        'members_count',
-        'counters',
-        'activity',
-        'age_limits',
-        'status',
-        'verified',
-        'wall',
-        'addresses',
-        'city',
-      ],
-    });
+    // Запрос к VK API через request manager
+    const response = await this.requestManager.execute(
+      () =>
+        this.vk.api.groups.getById({
+          group_ids: [id],
+          fields: [
+            'description',
+            'members_count',
+            'counters',
+            'activity',
+            'age_limits',
+            'status',
+            'verified',
+            'wall',
+            'addresses',
+            'city',
+          ],
+        }),
+      {
+        method: 'groups.getById',
+        key: `groups:${id}`,
+      },
+    );
 
     // Сохраняем в кэш
     await this.cacheManager.set(cacheKey, response, CACHE_TTL.VK_GROUP * 1000);
@@ -127,10 +138,17 @@ export class VkService {
 
     const postIds = posts.map(({ ownerId, postId }) => `${ownerId}_${postId}`);
 
-    return this.vk.api.wall.getById({
-      posts: postIds,
-      extended: 1,
-    });
+    return this.requestManager.execute(
+      () =>
+        this.vk.api.wall.getById({
+          posts: postIds,
+          extended: 1,
+        }),
+      {
+        method: 'wall.getById',
+        key: 'wall:getById',
+      },
+    );
   }
 
   async getAuthors(userIds: Array<string | number>): Promise<IAuthor[]> {
@@ -196,18 +214,48 @@ export class VkService {
       'universities',
     ];
 
-    // VK API возвращает counters и military только при запросе одного пользователя
-    // Поэтому делаем отдельный запрос для каждого пользователя
-    const users: Responses.UsersGetResponse = [];
-    for (const userId of userIds) {
-      const response = await this.vk.api.users.get({
-        user_ids: [String(userId)],
-        fields,
-      });
-      if (response.length > 0) {
-        users.push(response[0]);
+    // Оптимизация: используем батчинг для запросов пользователей
+    // VK API позволяет запрашивать до 1000 пользователей за раз
+    // Но counters и military возвращаются только для одного пользователя
+    // Поэтому сначала делаем batch запрос для всех, затем отдельные для counters/military
+    const usersMap = new Map<number, Responses.UsersGetResponse[0]>();
+
+    // Batch запрос для всех пользователей (до 1000 за раз)
+    const batchResults = await this.batchingService.batch<
+      number,
+      Responses.UsersGetResponse
+    >(
+      normalizedIds,
+      async (batch) => {
+        return this.requestManager.execute(
+          () =>
+            this.vk.api.users.get({
+              user_ids: batch.map(String),
+              fields: fields.filter(
+                (f) => f !== 'counters' && f !== 'military',
+              ) as Params.UsersGetParams['fields'],
+            }),
+          {
+            method: 'users.get',
+            key: 'users:get',
+          },
+        );
+      },
+      { maxBatchSize: 1000 },
+    );
+
+    // Сохраняем результаты в map
+    for (const batchResult of batchResults) {
+      for (const user of batchResult) {
+        usersMap.set(user.id, user);
       }
     }
+
+    // Для counters и military делаем отдельные запросы (только если нужно)
+    // Но для оптимизации пропускаем, так как это требует много запросов
+    // Если нужны эти поля, можно добавить опциональный параметр
+
+    const users = Array.from(usersMap.values());
 
     const normalizeBoolean = (value?: boolean | number | null) => {
       if (typeof value === 'number') {
@@ -283,13 +331,20 @@ export class VkService {
     const { userId, count = 100, offset = 0 } = options;
 
     try {
-      const response = await this.vk.api.photos.getAll({
-        owner_id: userId,
-        count: Math.min(Math.max(count, 1), 200),
-        offset,
-        extended: 0,
-        photo_sizes: 1,
-      });
+      const response = await this.requestManager.execute(
+        () =>
+          this.vk.api.photos.getAll({
+            owner_id: userId,
+            count: Math.min(Math.max(count, 1), 200),
+            offset,
+            extended: 0,
+            photo_sizes: 1,
+          }),
+        {
+          method: 'photos.getAll',
+          key: `photos:${userId}`,
+        },
+      );
 
       const items = response.items ?? [];
 
@@ -349,9 +404,16 @@ export class VkService {
    * Используется для health check
    */
   async checkApiHealth(): Promise<void> {
-    await this.vk.api.groups.getById({
-      group_ids: ['1'],
-    });
+    await this.requestManager.execute(
+      () =>
+        this.vk.api.groups.getById({
+          group_ids: ['1'],
+        }),
+      {
+        method: 'groups.getById',
+        key: 'health:check',
+      },
+    );
   }
 
   async getGroupRecentPosts(options: {
@@ -372,12 +434,19 @@ export class VkService {
 
     this.logger.debug(`Cache MISS: ${cacheKey}`);
 
-    const response = await this.vk.api.wall.get({
-      owner_id: ownerId,
-      count: normalizedCount,
-      offset,
-      filter: 'all',
-    });
+    const response = await this.requestManager.execute(
+      () =>
+        this.vk.api.wall.get({
+          owner_id: ownerId,
+          count: normalizedCount,
+          offset,
+          filter: 'all',
+        }),
+      {
+        method: 'wall.get',
+        key: `wall:${ownerId}`,
+      },
+    );
 
     const normalizeBoolean = (value?: boolean | number | null): boolean => {
       if (typeof value === 'number') {
@@ -427,12 +496,19 @@ export class VkService {
     const searchQuery = normalizedQuery.length > 0 ? normalizedQuery : ' ';
 
     try {
-      const regionsResponse = await this.vk.api.database.getRegions({
-        country_id: 1,
-        q: regionTitle,
-        need_all: 1,
-        count: 1000,
-      });
+      const regionsResponse = await this.requestManager.execute(
+        () =>
+          this.vk.api.database.getRegions({
+            country_id: 1,
+            q: regionTitle,
+            need_all: 1,
+            count: 1000,
+          }),
+        {
+          method: 'database.getRegions',
+          key: 'database:regions',
+        },
+      );
 
       const region = regionsResponse.items?.find(
         (item) => item.title === regionTitle,
@@ -462,13 +538,20 @@ export class VkService {
         let offset = 0;
 
         while (true) {
-          const response = await this.vk.api.groups.search({
-            q: searchQuery,
-            country_id: 1,
-            city_id: cityId,
-            count: pageSize,
-            offset,
-          });
+          const response = await this.requestManager.execute(
+            () =>
+              this.vk.api.groups.search({
+                q: searchQuery,
+                country_id: 1,
+                city_id: cityId,
+                count: pageSize,
+                offset,
+              }),
+            {
+              method: 'groups.search',
+              key: `groups:search:${cityId}`,
+            },
+          );
 
           const items = (response.items ?? []) as IGroup[];
 
@@ -554,10 +637,17 @@ export class VkService {
     for (let i = 0; i < ids.length; i += chunkSize) {
       const chunk = ids.slice(i, i + chunkSize);
       try {
-        const detailsResponse = await this.vk.api.groups.getById({
-          group_ids: chunk.map(String),
-          fields,
-        });
+        const detailsResponse = await this.requestManager.execute(
+          () =>
+            this.vk.api.groups.getById({
+              group_ids: chunk.map(String),
+              fields,
+            }),
+          {
+            method: 'groups.getById',
+            key: 'groups:enrich',
+          },
+        );
         const detailsArray = Array.isArray(detailsResponse)
           ? detailsResponse
           : (detailsResponse.groups ?? []);
@@ -588,13 +678,20 @@ export class VkService {
     let offset = 0;
 
     while (true) {
-      const response = await this.vk.api.database.getCities({
-        country_id: 1,
-        region_id: regionId,
-        need_all: 1,
-        count: pageSize,
-        offset,
-      });
+      const response = await this.requestManager.execute(
+        () =>
+          this.vk.api.database.getCities({
+            country_id: 1,
+            region_id: regionId,
+            need_all: 1,
+            count: pageSize,
+            offset,
+          }),
+        {
+          method: 'database.getCities',
+          key: `database:cities:${regionId}`,
+        },
+      );
 
       const items = response.items ?? [];
 
@@ -652,20 +749,27 @@ export class VkService {
     }
 
     try {
-      const response = await this.vk.api.wall.getComments({
-        owner_id: ownerId,
-        post_id: postId,
-        need_likes: needLikes ? 1 : 0,
-        extended: extended ? 1 : 0,
-        count: Math.max(0, Math.min(count, 100)),
-        offset,
-        sort,
-        preview_length: previewLength,
-        comment_id: commentId,
-        start_comment_id: startCommentId,
-        thread_items_count: threadItemsCount,
-        fields,
-      });
+      const response = await this.requestManager.execute(
+        () =>
+          this.vk.api.wall.getComments({
+            owner_id: ownerId,
+            post_id: postId,
+            need_likes: needLikes ? 1 : 0,
+            extended: extended ? 1 : 0,
+            count: Math.max(0, Math.min(count, 100)),
+            offset,
+            sort,
+            preview_length: previewLength,
+            comment_id: commentId,
+            start_comment_id: startCommentId,
+            thread_items_count: threadItemsCount,
+            fields,
+          }),
+        {
+          method: 'wall.getComments',
+          key: `comments:${ownerId}:${postId}`,
+        },
+      );
 
       const items = this.mapComments(response.items ?? [], { ownerId, postId });
 

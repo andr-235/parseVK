@@ -21,6 +21,42 @@ export function validate(config: Record<string, unknown>): AppConfig {
       : undefined,
     corsOrigins:
       config.CORS_ORIGINS || 'http://localhost:8080,http://localhost:3000',
+    vkApiRateLimitRequests: config.VK_API_RATE_LIMIT_REQUESTS
+      ? parseInt(config.VK_API_RATE_LIMIT_REQUESTS as string, 10)
+      : 3,
+    vkApiRateLimitWindowMs: config.VK_API_RATE_LIMIT_WINDOW_MS
+      ? parseInt(config.VK_API_RATE_LIMIT_WINDOW_MS as string, 10)
+      : 1000,
+    vkApiRetryMaxAttempts: config.VK_API_RETRY_MAX_ATTEMPTS
+      ? parseInt(config.VK_API_RETRY_MAX_ATTEMPTS as string, 10)
+      : 3,
+    vkApiRetryInitialDelayMs: config.VK_API_RETRY_INITIAL_DELAY_MS
+      ? parseInt(config.VK_API_RETRY_INITIAL_DELAY_MS as string, 10)
+      : 1000,
+    vkApiRetryMaxDelayMs: config.VK_API_RETRY_MAX_DELAY_MS
+      ? parseInt(config.VK_API_RETRY_MAX_DELAY_MS as string, 10)
+      : 10000,
+    vkApiRetryMultiplier: config.VK_API_RETRY_MULTIPLIER
+      ? parseFloat(config.VK_API_RETRY_MULTIPLIER as string)
+      : 2,
+    vkApiCircuitBreakerFailureThreshold:
+      config.VK_API_CIRCUIT_BREAKER_FAILURE_THRESHOLD
+        ? parseInt(
+            config.VK_API_CIRCUIT_BREAKER_FAILURE_THRESHOLD as string,
+            10,
+          )
+        : 5,
+    vkApiCircuitBreakerResetTimeoutMs:
+      config.VK_API_CIRCUIT_BREAKER_RESET_TIMEOUT_MS
+        ? parseInt(config.VK_API_CIRCUIT_BREAKER_RESET_TIMEOUT_MS as string, 10)
+        : 60000,
+    vkApiCircuitBreakerHalfOpenMaxCalls:
+      config.VK_API_CIRCUIT_BREAKER_HALF_OPEN_MAX_CALLS
+        ? parseInt(
+            config.VK_API_CIRCUIT_BREAKER_HALF_OPEN_MAX_CALLS as string,
+            10,
+          )
+        : 3,
   });
 
   const errors = validateSync(validatedConfig, {
