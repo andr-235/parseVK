@@ -1,0 +1,126 @@
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  Registry,
+  Counter,
+  Histogram,
+  Gauge,
+  collectDefaultMetrics,
+} from 'prom-client';
+
+@Injectable()
+export class MetricsService implements OnModuleInit {
+  private readonly register: Registry;
+  private readonly httpRequestDuration: Histogram<string>;
+  private readonly httpRequestTotal: Counter<string>;
+  private readonly tasksTotal: Counter<string>;
+  private readonly tasksActive: Gauge<string>;
+  private readonly watchlistAuthorsActive: Gauge<string>;
+  private readonly vkApiRequests: Counter<string>;
+  private readonly vkApiDuration: Histogram<string>;
+
+  constructor() {
+    this.register = new Registry();
+    this.register.setDefaultLabels({ app: 'parsevk-api' });
+
+    this.httpRequestDuration = new Histogram({
+      name: 'http_request_duration_seconds',
+      help: 'HTTP request duration in seconds',
+      labelNames: ['method', 'route', 'status'],
+      buckets: [0.1, 0.5, 1, 2, 5, 10],
+      registers: [this.register],
+    });
+
+    this.httpRequestTotal = new Counter({
+      name: 'http_requests_total',
+      help: 'Total number of HTTP requests',
+      labelNames: ['method', 'route', 'status'],
+      registers: [this.register],
+    });
+
+    this.tasksTotal = new Counter({
+      name: 'tasks_total',
+      help: 'Total number of parsing tasks',
+      labelNames: ['status'],
+      registers: [this.register],
+    });
+
+    this.tasksActive = new Gauge({
+      name: 'tasks_active',
+      help: 'Number of active parsing tasks',
+      registers: [this.register],
+    });
+
+    this.watchlistAuthorsActive = new Gauge({
+      name: 'watchlist_authors_active',
+      help: 'Number of active watchlist authors',
+      registers: [this.register],
+    });
+
+    this.vkApiRequests = new Counter({
+      name: 'vk_api_requests_total',
+      help: 'Total number of VK API requests',
+      labelNames: ['method', 'status'],
+      registers: [this.register],
+    });
+
+    this.vkApiDuration = new Histogram({
+      name: 'vk_api_request_duration_seconds',
+      help: 'VK API request duration in seconds',
+      labelNames: ['method'],
+      buckets: [0.1, 0.5, 1, 2, 5],
+      registers: [this.register],
+    });
+  }
+
+  onModuleInit(): void {
+    collectDefaultMetrics({ register: this.register });
+  }
+
+  recordHttpRequest(
+    method: string,
+    route: string,
+    status: number,
+    duration: number,
+  ): void {
+    const labels = {
+      method,
+      route: this.normalizeRoute(route),
+      status: status.toString(),
+    };
+    this.httpRequestDuration.observe(labels, duration / 1000);
+    this.httpRequestTotal.inc(labels);
+  }
+
+  recordTask(status: 'pending' | 'running' | 'done' | 'failed'): void {
+    this.tasksTotal.inc({ status });
+  }
+
+  setActiveTasks(count: number): void {
+    this.tasksActive.set(count);
+  }
+
+  setActiveWatchlistAuthors(count: number): void {
+    this.watchlistAuthorsActive.set(count);
+  }
+
+  recordVkApiRequest(
+    method: string,
+    status: 'success' | 'error',
+    duration: number,
+  ): void {
+    this.vkApiRequests.inc({ method, status });
+    this.vkApiDuration.observe({ method }, duration / 1000);
+  }
+
+  async getMetrics(): Promise<string> {
+    return this.register.metrics();
+  }
+
+  private normalizeRoute(route: string): string {
+    return route
+      .split('?')[0]
+      .replace(/\/\d+/g, '/:id')
+      .replace(/\/api\//, '/')
+      .replace(/^\/+/, '/');
+  }
+}

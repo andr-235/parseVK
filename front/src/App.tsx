@@ -17,6 +17,7 @@ const Authors = lazy(() => import('@/pages/Authors'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const Listings = lazy(() => import('@/pages/Listings'))
 const Telegram = lazy(() => import('@/pages/Telegram'))
+const Metrics = lazy(() => import('@/pages/Metrics'))
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 function App() {
@@ -61,6 +62,7 @@ function App() {
               <Route path="/authors" element={<Authors />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/telegram" element={<Telegram />} />
+              <Route path="/metrics" element={<Metrics />} />
             </Routes>
           </Suspense>
         </MainContent>

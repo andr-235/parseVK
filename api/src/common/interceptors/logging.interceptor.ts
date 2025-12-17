@@ -1,14 +1,17 @@
 import {
   CallHandler,
   ExecutionContext,
+  Inject,
   Injectable,
   Logger,
   NestInterceptor,
+  Optional,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { CORRELATION_ID_HEADER } from '../middleware/correlation-id.middleware';
+import type { MetricsService } from '../../metrics/metrics.service';
 
 interface LogEntry {
   correlationId: string;
@@ -27,6 +30,12 @@ interface LogEntry {
 export class LoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HTTP');
   private readonly isProduction = process.env.NODE_ENV === 'production';
+
+  constructor(
+    @Optional()
+    @Inject('MetricsService')
+    private readonly metricsService?: MetricsService,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -93,6 +102,15 @@ export class LoggingInterceptor implements NestInterceptor {
       contentLength,
       duration,
     };
+
+    if (this.metricsService) {
+      this.metricsService.recordHttpRequest(
+        request.method,
+        request.originalUrl,
+        response.statusCode,
+        duration,
+      );
+    }
 
     if (this.isProduction) {
       this.logger.log(JSON.stringify({ ...responseLog, event: 'response' }));
