@@ -44,9 +44,11 @@ describe('VkApiRetryService', () => {
   });
 
   it('должен повторять запрос при retryable ошибке', async () => {
+    const error = new APIError({ message: 'Too many requests' } as never);
+    error.code = 6;
     const fn = jest
       .fn()
-      .mockRejectedValueOnce(new APIError({ code: 6 }))
+      .mockRejectedValueOnce(error)
       .mockResolvedValue('success');
 
     const result = await service.executeWithRetry(fn, {
@@ -59,7 +61,8 @@ describe('VkApiRetryService', () => {
   });
 
   it('должен выбрасывать ошибку при non-retryable ошибке', async () => {
-    const error = new APIError({ code: 15 }); // Access denied
+    const error = new APIError({ message: 'Access denied' } as never);
+    error.code = 15;
     const fn = jest.fn().mockRejectedValue(error);
 
     await expect(service.executeWithRetry(fn)).rejects.toThrow(error);

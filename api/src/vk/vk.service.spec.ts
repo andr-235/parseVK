@@ -72,20 +72,39 @@ describe('VkService', () => {
         return undefined;
       }),
     } as unknown as { get: jest.Mock };
+
+    const requestManagerMock = {
+      execute: jest.fn(),
+    };
+
+    const batchingServiceMock = {
+      batch: jest.fn(),
+    };
+
     const service = new VkService(
       mockCacheManager as unknown as Cache,
       configServiceMock as never,
+      requestManagerMock as never,
+      batchingServiceMock as never,
     );
+
     const { api } = getLastVkInstance();
-    return { service, api, cacheManager: mockCacheManager as unknown as Cache };
+    return {
+      service,
+      api,
+      cacheManager: mockCacheManager as unknown as Cache,
+      requestManager: requestManagerMock,
+      batchingService: batchingServiceMock,
+    };
   };
 
   describe('getGroups', () => {
     it('передает идентификаторы и поля и возвращает ответ без изменений', async () => {
-      const { service, api } = createService();
+      const { service, api, requestManager } = createService();
 
       const responseMock = { groups: [{ id: 1 }], profiles: [] };
       api.groups.getById.mockResolvedValue(responseMock);
+      requestManager.execute.mockResolvedValue(responseMock);
 
       const result = await service.getGroups(123);
 
@@ -119,7 +138,7 @@ describe('VkService', () => {
     });
 
     it('запрашивает wall.getById с корректными идентификаторами и возвращает ответ', async () => {
-      const { service, api } = createService();
+      const { service, api, requestManager } = createService();
 
       const responseMock = {
         items: [{ id: 1 }],
@@ -127,6 +146,7 @@ describe('VkService', () => {
         groups: [{ id: 3 }],
       };
       api.wall.getById.mockResolvedValue(responseMock);
+      requestManager.execute.mockResolvedValue(responseMock);
 
       const posts = [
         { ownerId: 1, postId: 2 },
@@ -145,9 +165,9 @@ describe('VkService', () => {
 
   describe('getAuthors', () => {
     it('нормализует булевы флаги и опциональные поля', async () => {
-      const { service, api } = createService();
+      const { service, api, requestManager, batchingService } = createService();
 
-      api.users.get.mockResolvedValue([
+      const userResponse = [
         {
           id: 1,
           first_name: 'Ivan',
@@ -162,7 +182,11 @@ describe('VkService', () => {
           city: { id: 10, title: 'City' },
           country: null,
         },
-      ]);
+      ];
+
+      api.users.get.mockResolvedValue(userResponse);
+      requestManager.execute.mockResolvedValue(userResponse);
+      batchingService.batch.mockResolvedValue(userResponse);
 
       const result = await service.getAuthors([1]);
 
@@ -222,9 +246,9 @@ describe('VkService', () => {
 
   describe('getGroupRecentPosts', () => {
     it('нормализует поля comments и булевы флаги', async () => {
-      const { service, api } = createService();
+      const { service, api, requestManager } = createService();
 
-      api.wall.get.mockResolvedValue({
+      const responseMock = {
         items: [
           {
             id: 11,
@@ -241,7 +265,10 @@ describe('VkService', () => {
             },
           },
         ],
-      });
+      };
+
+      api.wall.get.mockResolvedValue(responseMock);
+      requestManager.execute.mockResolvedValue(responseMock);
 
       const result = await service.getGroupRecentPosts({
         ownerId: -1,
@@ -269,9 +296,9 @@ describe('VkService', () => {
 
   describe('getAuthorCommentsForPost', () => {
     it('возвращает только комментарии указанного автора и сохраняет вложенность', async () => {
-      const { service, api } = createService();
+      const { service, api, requestManager } = createService();
 
-      api.wall.getComments.mockResolvedValue({
+      const responseMock = {
         count: 50,
         current_level_count: 2,
         can_post: 0,
@@ -318,7 +345,10 @@ describe('VkService', () => {
         ],
         profiles: [],
         groups: [],
-      });
+      };
+
+      api.wall.getComments.mockResolvedValue(responseMock);
+      requestManager.execute.mockResolvedValue(responseMock);
 
       const result = await service.getAuthorCommentsForPost({
         ownerId: 1,
@@ -382,9 +412,9 @@ describe('VkService', () => {
     });
 
     it('останавливает пагинацию при достижении baseline', async () => {
-      const { service, api } = createService();
+      const { service, api, requestManager } = createService();
 
-      api.wall.getComments.mockResolvedValue({
+      const responseMock = {
         count: 200,
         current_level_count: 2,
         can_post: 0,
@@ -410,7 +440,10 @@ describe('VkService', () => {
         ],
         profiles: [],
         groups: [],
-      });
+      };
+
+      api.wall.getComments.mockResolvedValue(responseMock);
+      requestManager.execute.mockResolvedValue(responseMock);
 
       const result = await service.getAuthorCommentsForPost({
         ownerId: 1,
@@ -428,9 +461,9 @@ describe('VkService', () => {
 
   describe('getComments', () => {
     it('преобразует вложенные треды и даты', async () => {
-      const { service, api } = createService();
+      const { service, api, requestManager } = createService();
 
-      api.wall.getComments.mockResolvedValue({
+      const responseMock = {
         count: 2,
         current_level_count: 2,
         can_post: 1,
@@ -480,7 +513,10 @@ describe('VkService', () => {
             },
           },
         ],
-      });
+      };
+
+      api.wall.getComments.mockResolvedValue(responseMock);
+      requestManager.execute.mockResolvedValue(responseMock);
 
       const response = await service.getComments({ ownerId: -100, postId: 55 });
 
@@ -512,11 +548,13 @@ describe('VkService', () => {
     });
 
     it('возвращает пустой ответ при APIError с кодом 15', async () => {
-      const { service, api } = createService();
+      const { service, requestManager } = createService();
 
-      api.wall.getComments.mockRejectedValue(
-        new APIError({ code: 15, message: 'Access denied' } as never),
-      );
+      const apiError = new APIError({
+        code: 15,
+        message: 'Access denied',
+      } as never);
+      requestManager.execute.mockRejectedValue(apiError);
 
       await expect(
         service.getComments({ ownerId: -100, postId: 55 }),

@@ -39,7 +39,7 @@ export class MetricsUpdaterService implements OnModuleInit, OnModuleDestroy {
 
       this.metricsService.setActiveTasks(activeTasks);
       this.metricsService.setActiveWatchlistAuthors(watchlistCount);
-    } catch (error) {
+    } catch {
       // Игнорируем ошибки обновления метрик
     }
   }

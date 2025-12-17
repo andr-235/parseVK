@@ -79,7 +79,7 @@ describe('CommentsRepository', () => {
         where: { isRead: true },
         skip: 0,
         take: 10,
-        orderBy: { publishedAt: 'desc' },
+        orderBy: { publishedAt: 'desc' as const },
       };
 
       const mockComments: CommentWithRelations[] = [
@@ -137,7 +137,7 @@ describe('CommentsRepository', () => {
 
       expect(prismaService.comment.update).toHaveBeenCalledWith({
         ...params,
-        include: expect.any(Object) as unknown,
+        include: expect.any(Object),
       });
     });
   });

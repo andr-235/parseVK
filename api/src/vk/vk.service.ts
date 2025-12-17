@@ -223,11 +223,11 @@ export class VkService {
     // Batch запрос для всех пользователей (до 1000 за раз)
     const batchResults = await this.batchingService.batch<
       number,
-      Responses.UsersGetResponse
+      Responses.UsersGetResponse[0]
     >(
       normalizedIds,
       async (batch) => {
-        return this.requestManager.execute(
+        const result = await this.requestManager.execute(
           () =>
             this.vk.api.users.get({
               user_ids: batch.map(String),
@@ -240,15 +240,14 @@ export class VkService {
             key: 'users:get',
           },
         );
+        return result;
       },
       { maxBatchSize: 1000 },
     );
 
     // Сохраняем результаты в map
-    for (const batchResult of batchResults) {
-      for (const user of batchResult) {
-        usersMap.set(user.id, user);
-      }
+    for (const user of batchResults) {
+      usersMap.set(user.id, user);
     }
 
     // Для counters и military делаем отдельные запросы (только если нужно)
