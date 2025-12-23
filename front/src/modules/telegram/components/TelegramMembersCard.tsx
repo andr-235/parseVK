@@ -11,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import type { TelegramMember, TelegramSyncResponse } from '@/types/api'
 import { Users, Shield, UserX, Ban, CheckCircle2, Star } from 'lucide-react'
+import { getChatTypeInfo } from '@/modules/telegram/utils/telegramChatType.utils'
 
 interface TelegramMembersCardProps {
   data: TelegramSyncResponse | null
@@ -64,6 +65,11 @@ export default function TelegramMembersCard({ data }: TelegramMembersCardProps) 
     return 'outline'
   }
 
+  const typeInfo = useMemo(() => {
+    if (!data?.type) return null
+    return getChatTypeInfo(data.type)
+  }, [data?.type])
+
   if (!data) {
     return (
       <Card className="h-full border-dashed">
@@ -83,8 +89,22 @@ export default function TelegramMembersCard({ data }: TelegramMembersCardProps) 
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <CardTitle>Участники</CardTitle>
-            <CardDescription>Найдено {members.length} участников</CardDescription>
+            <div className="flex items-center gap-2">
+              <CardTitle>Участники</CardTitle>
+              {typeInfo && (
+                <Badge variant="outline" className="flex items-center gap-1.5">
+                  {(() => {
+                    const Icon = typeInfo.icon
+                    return <Icon className={`h-3.5 w-3.5 ${typeInfo.color}`} />
+                  })()}
+                  <span>{typeInfo.label}</span>
+                </Badge>
+              )}
+            </div>
+            <CardDescription>
+              Найдено {members.length} участников
+              {data?.title && ` • ${data.title}`}
+            </CardDescription>
           </div>
         </div>
       </CardHeader>

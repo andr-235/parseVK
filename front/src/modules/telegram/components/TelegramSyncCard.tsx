@@ -1,9 +1,11 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import type { TelegramSyncResponse } from '@/types/api'
 import { Users, Download, Search, ArrowRight } from 'lucide-react'
 import { useTelegramSync } from '@/modules/telegram/hooks/useTelegramSync'
+import { getChatTypeInfo } from '@/modules/telegram/utils/telegramChatType.utils'
 
 interface TelegramSyncCardProps {
   onDataLoaded: (data: TelegramSyncResponse) => void
@@ -74,8 +76,17 @@ export default function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs uppercase">Тип</p>
-                <p className="font-medium">{lastSyncData.type}</p>
+                <p className="text-muted-foreground text-xs uppercase mb-1.5">Тип источника</p>
+                {(() => {
+                  const typeInfo = getChatTypeInfo(lastSyncData.type)
+                  const Icon = typeInfo.icon
+                  return (
+                    <Badge variant="outline" className="flex items-center gap-1.5 w-fit">
+                      <Icon className={`h-3.5 w-3.5 ${typeInfo.color}`} />
+                      <span>{typeInfo.label}</span>
+                    </Badge>
+                  )
+                })()}
               </div>
               <div>
                 <p className="text-muted-foreground text-xs uppercase">Всего</p>
