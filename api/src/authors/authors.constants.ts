@@ -1,4 +1,7 @@
-import type { AuthorSortField } from './types/authors.types';
+import type {
+  AuthorSortDirection,
+  AuthorSortField,
+} from './types/authors.types';
 
 export const AUTHORS_CONSTANTS = {
   DEFAULT_LIMIT: 20,
@@ -19,3 +22,9 @@ export const SORTABLE_FIELDS: ReadonlySet<AuthorSortField> =
     'verifiedAt',
     'updatedAt',
   ]);
+
+export const DEFAULT_SORT_FIELD: AuthorSortField = 'updatedAt';
+export const VERIFIED_SORT_FIELD: AuthorSortField = 'verifiedAt';
+export const DEFAULT_SORT_ORDER: AuthorSortDirection = 'desc';
+export const DEFAULT_OFFSET = 0;
+export const MIN_LIMIT = 1;
