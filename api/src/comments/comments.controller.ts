@@ -11,17 +11,13 @@ import {
 import { DEFAULT_LIMIT } from './constants/comments.constants';
 import { CommentsService } from './comments.service';
 import { UpdateCommentReadDto } from './dto/update-comment-read.dto';
-import { CommentsQueryValidator } from './validators/comments-query.validator';
 import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
 import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
 import type { CommentsListDto } from './dto/comments-list.dto';
 
 @Controller('comments')
 export class CommentsController {
-  constructor(
-    private readonly commentsService: CommentsService,
-    private readonly queryValidator: CommentsQueryValidator,
-  ) {}
+  constructor(private readonly commentsService: CommentsService) {}
 
   @Get()
   async getComments(
@@ -33,22 +29,14 @@ export class CommentsController {
     @Query('readStatus') readStatusParam?: string,
     @Query('search') search?: string,
   ): Promise<CommentsListDto> {
-    const normalizedOffset = this.queryValidator.normalizeOffset(offset);
-    const normalizedLimit = this.queryValidator.normalizeLimit(limit);
-    const keywords = this.queryValidator.parseKeywords(keywordsParam);
-    const keywordSource =
-      this.queryValidator.normalizeKeywordSource(keywordSourceParam);
-    const readStatus = this.queryValidator.normalizeReadStatus(readStatusParam);
-    const normalizedSearch = this.queryValidator.normalizeSearch(search);
-
-    return this.commentsService.getComments({
-      offset: normalizedOffset,
-      limit: normalizedLimit,
-      keywords,
-      keywordSource,
-      readStatus,
-      search: normalizedSearch,
-    });
+    return this.commentsService.getCommentsFromRequest(
+      offset,
+      limit,
+      keywordsParam,
+      keywordSourceParam,
+      readStatusParam,
+      search,
+    );
   }
 
   /**
@@ -69,22 +57,14 @@ export class CommentsController {
     @Query('readStatus') readStatusParam?: string,
     @Query('search') search?: string,
   ): Promise<CommentsCursorListDto> {
-    const normalizedLimit =
-      this.queryValidator.normalizeLimitWithDefault(limit);
-    const keywords = this.queryValidator.parseKeywords(keywordsParam);
-    const keywordSource =
-      this.queryValidator.normalizeKeywordSource(keywordSourceParam);
-    const readStatus = this.queryValidator.normalizeReadStatus(readStatusParam);
-    const normalizedSearch = this.queryValidator.normalizeSearch(search);
-
-    return this.commentsService.getCommentsCursor({
+    return this.commentsService.getCommentsCursorFromRequest(
       cursor,
-      limit: normalizedLimit,
-      keywords,
-      keywordSource,
-      readStatus,
-      search: normalizedSearch,
-    });
+      limit,
+      keywordsParam,
+      keywordSourceParam,
+      readStatusParam,
+      search,
+    );
   }
 
   /**
