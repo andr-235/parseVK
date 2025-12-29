@@ -511,7 +511,7 @@ jobs:
           if [ -n "$API_CONTAINER_ID" ] && [ "$(docker inspect --format='{{.State.Status}}' "$API_CONTAINER_ID" 2>/dev/null)" = "running" ]; then
             echo "Using existing API container for migrations"
             API_WAS_RUNNING=true
-            if docker compose -f "$COMPOSE_FILE" exec -T api sh -c "command -v npx > /dev/null 2>&1 && npx prisma migrate deploy" 2>/dev/null; then
+            if docker compose -f "$COMPOSE_FILE" exec -T api sh -c "command -v ./node_modules/.bin/prisma > /dev/null 2>&1 && ./node_modules/.bin/prisma migrate deploy || (command -v prisma > /dev/null 2>&1 && prisma migrate deploy)" 2>/dev/null; then
               echo "Migrations completed via existing container"
             else
               echo "Error: Failed to run migrations via existing container"
@@ -527,7 +527,7 @@ jobs:
             echo "Waiting for API container to be ready..."
             sleep 10
             
-            docker compose -f "$COMPOSE_FILE" exec -T api npx prisma migrate deploy || {
+            docker compose -f "$COMPOSE_FILE" exec -T api sh -c "./node_modules/.bin/prisma migrate deploy || prisma migrate deploy" || {
               echo "Error: Migrations failed"
               exit 1
             }
