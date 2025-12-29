@@ -214,7 +214,19 @@ if [ "$SUCCESS" = "false" ]; then
 fi
 
 echo "Запуск миграций базы данных..."
-if ! npx prisma migrate deploy; then
+if [ ! -x "./node_modules/.bin/prisma" ]; then
+  echo "Prisma CLI не найден в ./node_modules/.bin/prisma, пробуем глобальный..."
+  if ! command -v prisma >/dev/null 2>&1; then
+    echo "Глобальный Prisma CLI тоже не найден, останавливаемся."
+    exit 1
+  fi
+  PRISMA_CMD="prisma"
+else
+  PRISMA_CMD="./node_modules/.bin/prisma"
+fi
+
+echo "Используем Prisma CLI: $PRISMA_CMD"
+if ! $PRISMA_CMD migrate deploy; then
   echo "Ошибка при выполнении миграций, останавливаемся."
   exit 1
 fi
