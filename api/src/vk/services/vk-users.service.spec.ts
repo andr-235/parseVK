@@ -231,7 +231,9 @@ describe('VkUsersService', () => {
 
   describe('getAuthorsWithExtendedFields', () => {
     it('should warn about extended fields for multiple users', async () => {
-      const loggerWarnSpy = jest.spyOn(service['logger'], 'warn').mockImplementation();
+      const loggerWarnSpy = jest
+        .spyOn(service['logger'], 'warn')
+        .mockImplementation();
 
       const userIds = [123, 456];
       const mockUsers: any[] = [
