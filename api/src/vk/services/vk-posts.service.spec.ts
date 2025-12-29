@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { VK } from 'vk-io';
 import { VkPostsService } from './vk-posts.service';
@@ -6,7 +7,6 @@ import { VkApiRequestManager } from './vk-api-request-manager.service';
 
 describe('VkPostsService', () => {
   let service: VkPostsService;
-  let vk: jest.Mocked<VK>;
   let cacheService: jest.Mocked<VkCacheService>;
   let requestManager: jest.Mocked<VkApiRequestManager>;
 
@@ -47,7 +47,6 @@ describe('VkPostsService', () => {
     }).compile();
 
     service = module.get<VkPostsService>(VkPostsService);
-    vk = module.get(VK);
     cacheService = module.get(VkCacheService);
     requestManager = module.get(VkApiRequestManager);
   });

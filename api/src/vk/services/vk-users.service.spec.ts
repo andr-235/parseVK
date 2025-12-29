@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { VK } from 'vk-io';
-import type { Responses } from 'vk-io';
 import { VkUsersService } from './vk-users.service';
 import { VkCacheService } from './vk-cache.service';
 import { VkApiRequestManager } from './vk-api-request-manager.service';
@@ -8,7 +8,6 @@ import { VkApiBatchingService } from './vk-api-batching.service';
 
 describe('VkUsersService', () => {
   let service: VkUsersService;
-  let vk: jest.Mocked<VK>;
   let cacheService: jest.Mocked<VkCacheService>;
   let requestManager: jest.Mocked<VkApiRequestManager>;
   let batchingService: jest.Mocked<VkApiBatchingService>;
@@ -57,7 +56,6 @@ describe('VkUsersService', () => {
     }).compile();
 
     service = module.get<VkUsersService>(VkUsersService);
-    vk = module.get(VK);
     cacheService = module.get(VkCacheService);
     requestManager = module.get(VkApiRequestManager);
     batchingService = module.get(VkApiBatchingService);

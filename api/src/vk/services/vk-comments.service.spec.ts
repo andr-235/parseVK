@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { VK } from 'vk-io';
-import type { Objects } from 'vk-io';
 import { VkCommentsService } from './vk-comments.service';
 import { VkCacheService } from './vk-cache.service';
 import { VkApiRequestManager } from './vk-api-request-manager.service';
@@ -8,7 +8,6 @@ import { APIError } from 'vk-io';
 
 describe('VkCommentsService', () => {
   let service: VkCommentsService;
-  let vk: jest.Mocked<VK>;
   let cacheService: jest.Mocked<VkCacheService>;
   let requestManager: jest.Mocked<VkApiRequestManager>;
 
@@ -49,7 +48,6 @@ describe('VkCommentsService', () => {
     }).compile();
 
     service = module.get<VkCommentsService>(VkCommentsService);
-    vk = module.get(VK);
     cacheService = module.get(VkCacheService);
     requestManager = module.get(VkApiRequestManager);
   });
@@ -173,7 +171,7 @@ describe('VkCommentsService', () => {
       expect(cacheService.set).not.toHaveBeenCalled();
     });
 
-    it.skip('should handle access denied error', async () => {
+    it.skip('should handle access denied error', () => {
       // Test skipped due to APIError mock issues
       expect(true).toBe(true);
     });
@@ -440,7 +438,7 @@ describe('VkCommentsService', () => {
       expect(result[0].vkCommentId).toBe(101);
     });
 
-    it.skip('should handle thread comments', async () => {
+    it.skip('should handle thread comments', () => {
       // Test is too complex to mock properly, skipping for now
       expect(true).toBe(true);
     });

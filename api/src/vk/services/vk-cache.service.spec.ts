@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
@@ -13,14 +14,14 @@ describe('VkCacheService', () => {
       set: jest.fn(),
       del: jest.fn(),
       reset: jest.fn(),
-    } as any;
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VkCacheService,
         {
           provide: CACHE_MANAGER,
-          useValue: mockCacheManager,
+          useValue: mockCacheManager as any,
         },
       ],
     }).compile();

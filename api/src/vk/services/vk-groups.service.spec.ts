@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { VK } from 'vk-io';
 import { VkGroupsService } from './vk-groups.service';
@@ -7,10 +8,8 @@ import { VkApiBatchingService } from './vk-api-batching.service';
 
 describe('VkGroupsService', () => {
   let service: VkGroupsService;
-  let vk: jest.Mocked<VK>;
   let cacheService: jest.Mocked<VkCacheService>;
   let requestManager: jest.Mocked<VkApiRequestManager>;
-  let batchingService: jest.Mocked<VkApiBatchingService>;
 
   beforeEach(async () => {
     const mockVk = {
@@ -59,10 +58,8 @@ describe('VkGroupsService', () => {
     }).compile();
 
     service = module.get<VkGroupsService>(VkGroupsService);
-    vk = module.get(VK);
     cacheService = module.get(VkCacheService);
     requestManager = module.get(VkApiRequestManager);
-    batchingService = module.get(VkApiBatchingService);
   });
 
   it('should be defined', () => {
@@ -133,7 +130,7 @@ describe('VkGroupsService', () => {
   });
 
   describe('searchGroupsByRegion', () => {
-    it.skip('should search groups by region with default parameters', async () => {
+    it.skip('should search groups by region with default parameters', () => {
       // Test is too complex to mock properly, skipping for now
       expect(true).toBe(true);
     });

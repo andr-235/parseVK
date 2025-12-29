@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { VK } from 'vk-io';
 import { VkPhotosService } from './vk-photos.service';
 import { VkApiRequestManager } from './vk-api-request-manager.service';
+import type { VkPhotoSize } from '../vk.service';
 
 describe('VkPhotosService', () => {
   let service: VkPhotosService;
-  let vk: jest.Mocked<VK>;
   let requestManager: jest.Mocked<VkApiRequestManager>;
 
   beforeEach(async () => {
@@ -36,7 +37,6 @@ describe('VkPhotosService', () => {
     }).compile();
 
     service = module.get<VkPhotosService>(VkPhotosService);
-    vk = module.get(VK);
     requestManager = module.get(VkApiRequestManager);
   });
 
@@ -236,8 +236,12 @@ describe('VkPhotosService', () => {
     });
 
     it('should return null for null/undefined sizes', () => {
-      expect(service.getMaxPhotoSize(null as any)).toBeNull();
-      expect(service.getMaxPhotoSize(undefined as any)).toBeNull();
+      expect(
+        service.getMaxPhotoSize(null as unknown as VkPhotoSize[]),
+      ).toBeNull();
+      expect(
+        service.getMaxPhotoSize(undefined as unknown as VkPhotoSize[]),
+      ).toBeNull();
     });
 
     it('should skip sizes without URLs', () => {

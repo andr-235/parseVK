@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import {
   createAccessDeniedResponse,
   handleVkApiError,
@@ -23,12 +24,15 @@ describe('VkErrorHandlerUtils', () => {
   });
 
   describe('handleVkApiError', () => {
-    let logger: any;
+    let logger: {
+      error: jest.MockedFunction<any>;
+      warn: jest.MockedFunction<any>;
+    };
 
     beforeEach(() => {
       logger = {
-        error: jest.fn(),
-        warn: jest.fn(),
+        error: jest.fn() as any,
+        warn: jest.fn() as any,
       };
     });
 
@@ -64,8 +68,8 @@ describe('VkErrorHandlerUtils', () => {
 
     beforeEach(() => {
       logger = {
-        error: jest.fn(),
-        warn: jest.fn(),
+        error: jest.fn() as any,
+        warn: jest.fn() as any,
       };
     });
 

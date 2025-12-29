@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
@@ -81,11 +82,10 @@ export class VkCacheService {
    */
   async clear(): Promise<void> {
     try {
-      // @ts-expect-error - cache-manager reset method typing issue
-      await this.cacheManager.reset();
+      await (this.cacheManager as any).reset();
       this.logger.debug('Cache CLEARED');
     } catch (error) {
-      this.logger.error('Cache clear error', String(error));
+      this.logger.error(`Cache clear error: ${String(error)}`);
     }
   }
 
