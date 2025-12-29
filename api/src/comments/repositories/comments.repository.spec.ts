@@ -124,7 +124,6 @@ describe('CommentsRepository', () => {
         data: { isRead: true },
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const mockComment = createMockComment({
         id: 1,
         isRead: true,
@@ -132,7 +131,6 @@ describe('CommentsRepository', () => {
 
       prismaService.comment.update.mockResolvedValue(mockComment);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const result = await repository.update(params);
 
       expect(result).toBe(mockComment);

@@ -4,9 +4,14 @@ import type { CommentWithRelations } from './interfaces/comments-repository.inte
 import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
 import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
 import { CommentMapper } from './mappers/comment.mapper';
+import { CommentsQueryValidator } from './validators/comments-query.validator';
 import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
 import type { CommentsListDto } from './dto/comments-list.dto';
 import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
+import type {
+  ReadStatusFilter,
+  KeywordSourceFilter,
+} from './types/comments-filters.type';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -14,6 +19,7 @@ describe('CommentsService', () => {
   let offsetStrategy: jest.Mocked<OffsetPaginationStrategy>;
   let cursorStrategy: jest.Mocked<CursorPaginationStrategy>;
   let mapper: jest.Mocked<CommentMapper>;
+  let queryValidator: jest.Mocked<CommentsQueryValidator>;
   let repositoryObj: {
     findMany: jest.Mock<Promise<CommentWithRelations[]>, [unknown]>;
     count: jest.Mock<Promise<number>, [unknown]>;
@@ -29,6 +35,21 @@ describe('CommentsService', () => {
   let mapperObj: {
     map: jest.Mock<CommentWithAuthorDto, [CommentWithRelations]>;
     mapMany: jest.Mock<CommentWithAuthorDto[], [CommentWithRelations[]]>;
+  };
+  let queryValidatorObj: {
+    parseKeywords: jest.Mock<
+      string[] | undefined,
+      [string | string[] | undefined]
+    >;
+    normalizeReadStatus: jest.Mock<ReadStatusFilter, [string | undefined]>;
+    normalizeSearch: jest.Mock<string | undefined, [string | undefined]>;
+    normalizeOffset: jest.Mock<number, [number]>;
+    normalizeLimit: jest.Mock<number, [number]>;
+    normalizeLimitWithDefault: jest.Mock<number, [number | undefined]>;
+    normalizeKeywordSource: jest.Mock<
+      KeywordSourceFilter | undefined,
+      [string | undefined]
+    >;
   };
 
   beforeEach(() => {
@@ -56,11 +77,29 @@ describe('CommentsService', () => {
     };
     mapper = mapperObj as never;
 
+    queryValidatorObj = {
+      parseKeywords: jest.fn<
+        string[] | undefined,
+        [string | string[] | undefined]
+      >(),
+      normalizeReadStatus: jest.fn<ReadStatusFilter, [string | undefined]>(),
+      normalizeSearch: jest.fn<string | undefined, [string | undefined]>(),
+      normalizeOffset: jest.fn<number, [number]>(),
+      normalizeLimit: jest.fn<number, [number]>(),
+      normalizeLimitWithDefault: jest.fn<number, [number | undefined]>(),
+      normalizeKeywordSource: jest.fn<
+        KeywordSourceFilter | undefined,
+        [string | undefined]
+      >(),
+    };
+    queryValidator = queryValidatorObj as never;
+
     service = new CommentsService(
       repository,
       offsetStrategy,
       cursorStrategy,
       mapper,
+      queryValidator,
     );
   });
 
