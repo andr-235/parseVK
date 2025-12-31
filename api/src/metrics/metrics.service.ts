@@ -17,6 +17,10 @@ export class MetricsService implements OnModuleInit {
   private readonly watchlistAuthorsActive: Gauge<string>;
   private readonly vkApiRequests: Counter<string>;
   private readonly vkApiDuration: Histogram<string>;
+  private readonly redisKeysTotal: Gauge<string>;
+  private readonly redisAvgTtlSeconds: Gauge<string>;
+  private readonly redisMemoryBytes: Gauge<string>;
+  private readonly redisKeyspaceHitRate: Gauge<string>;
 
   constructor() {
     this.register = new Registry();
@@ -70,6 +74,30 @@ export class MetricsService implements OnModuleInit {
       buckets: [0.1, 0.5, 1, 2, 5],
       registers: [this.register],
     });
+
+    this.redisKeysTotal = new Gauge({
+      name: 'redis_keys_total',
+      help: 'Total number of keys in Redis',
+      registers: [this.register],
+    });
+
+    this.redisAvgTtlSeconds = new Gauge({
+      name: 'redis_avg_ttl_seconds',
+      help: 'Average TTL of keys in Redis (seconds)',
+      registers: [this.register],
+    });
+
+    this.redisMemoryBytes = new Gauge({
+      name: 'redis_memory_bytes',
+      help: 'Redis memory usage in bytes',
+      registers: [this.register],
+    });
+
+    this.redisKeyspaceHitRate = new Gauge({
+      name: 'redis_keyspace_hit_rate',
+      help: 'Redis keyspace hit rate (0-1)',
+      registers: [this.register],
+    });
   }
 
   onModuleInit(): void {
@@ -110,6 +138,30 @@ export class MetricsService implements OnModuleInit {
   ): void {
     this.vkApiRequests.inc({ method, status });
     this.vkApiDuration.observe({ method }, duration / 1000);
+  }
+
+  setRedisKeysTotal(count: number): void {
+    if (Number.isFinite(count)) {
+      this.redisKeysTotal.set(count);
+    }
+  }
+
+  setRedisAverageTtlSeconds(ttlSeconds: number): void {
+    if (Number.isFinite(ttlSeconds)) {
+      this.redisAvgTtlSeconds.set(ttlSeconds);
+    }
+  }
+
+  setRedisMemoryBytes(bytes: number): void {
+    if (Number.isFinite(bytes)) {
+      this.redisMemoryBytes.set(bytes);
+    }
+  }
+
+  setRedisKeyspaceHitRate(rate: number): void {
+    if (Number.isFinite(rate)) {
+      this.redisKeyspaceHitRate.set(rate);
+    }
   }
 
   async getMetrics(): Promise<string> {

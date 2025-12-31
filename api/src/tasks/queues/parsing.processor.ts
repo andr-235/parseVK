@@ -110,7 +110,6 @@ export class ParsingProcessor extends WorkerHost {
         completed: boolean | null;
         totalItems: number | null;
         processedItems: number | null;
-        progress: number | null;
         description: string | null;
       };
 
@@ -121,7 +120,6 @@ export class ParsingProcessor extends WorkerHost {
           status === 'failed' ? false : (updatedTask.completed ?? false),
         totalItems: updatedTask.totalItems ?? null,
         processedItems: updatedTask.processedItems ?? null,
-        progress: updatedTask.progress ?? null,
         description: updatedTask.description ?? null,
       } as const;
 

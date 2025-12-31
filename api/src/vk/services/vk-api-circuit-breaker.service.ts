@@ -48,6 +48,17 @@ export class VkApiCircuitBreaker {
       }) ?? 3;
   }
 
+  private resolveStateTtlMs(options: CircuitBreakerOptions): number {
+    const resetTimeoutMs = options.resetTimeoutMs ?? this.defaultResetTimeoutMs;
+    const bufferMs = Math.max(1000, Math.round(resetTimeoutMs * 0.2));
+    return resetTimeoutMs + bufferMs;
+  }
+
+  private resolveHalfOpenTtlMs(options: CircuitBreakerOptions): number {
+    const resetTimeoutMs = options.resetTimeoutMs ?? this.defaultResetTimeoutMs;
+    return Math.max(resetTimeoutMs, 1000);
+  }
+
   /**
    * Выполняет функцию через circuit breaker
    * @param fn Функция для выполнения
@@ -97,6 +108,7 @@ export class VkApiCircuitBreaker {
     const failureThreshold =
       options.failureThreshold ?? this.defaultFailureThreshold;
     const resetTimeoutMs = options.resetTimeoutMs ?? this.defaultResetTimeoutMs;
+    const stateTtlMs = this.resolveStateTtlMs(options);
 
     try {
       const stateKey = `circuit-breaker:state:${key}`;
@@ -111,7 +123,11 @@ export class VkApiCircuitBreaker {
       if (cachedState === CircuitBreakerState.OPEN) {
         if (lastFailure && Date.now() - lastFailure >= resetTimeoutMs) {
           // Переходим в HALF_OPEN для тестирования
-          await this.cacheManager.set(stateKey, CircuitBreakerState.HALF_OPEN);
+          await this.cacheManager.set(
+            stateKey,
+            CircuitBreakerState.HALF_OPEN,
+            stateTtlMs,
+          );
           return CircuitBreakerState.HALF_OPEN;
         }
         return CircuitBreakerState.OPEN;
@@ -124,8 +140,12 @@ export class VkApiCircuitBreaker {
 
       // Если количество ошибок превышает порог, открываем цепь
       if (failures >= failureThreshold) {
-        await this.cacheManager.set(stateKey, CircuitBreakerState.OPEN);
-        await this.cacheManager.set(lastFailureKey, Date.now());
+        await this.cacheManager.set(
+          stateKey,
+          CircuitBreakerState.OPEN,
+          stateTtlMs,
+        );
+        await this.cacheManager.set(lastFailureKey, Date.now(), stateTtlMs);
         this.logger.warn(
           `Circuit breaker opened for ${key} after ${failures} failures`,
         );
@@ -156,12 +176,14 @@ export class VkApiCircuitBreaker {
     currentState: CircuitBreakerState,
   ): Promise<void> {
     try {
+      const stateTtlMs = this.resolveStateTtlMs(options);
+      const halfOpenTtlMs = this.resolveHalfOpenTtlMs(options);
       const failureKey = `circuit-breaker:failures:${key}`;
       const stateKey = `circuit-breaker:state:${key}`;
       const halfOpenCallsKey = `circuit-breaker:half-open-calls:${key}`;
 
       // Сбрасываем счетчик ошибок
-      await this.cacheManager.set(failureKey, 0);
+      await this.cacheManager.set(failureKey, 0, stateTtlMs);
 
       // Если были в HALF_OPEN и успешно выполнили запросы, закрываем цепь
       if (currentState === CircuitBreakerState.HALF_OPEN) {
@@ -171,19 +193,27 @@ export class VkApiCircuitBreaker {
           options.halfOpenMaxCalls ?? this.defaultHalfOpenMaxCalls;
 
         if (halfOpenCalls + 1 >= maxCalls) {
-          await this.cacheManager.set(stateKey, CircuitBreakerState.CLOSED);
+          await this.cacheManager.set(
+            stateKey,
+            CircuitBreakerState.CLOSED,
+            stateTtlMs,
+          );
           await this.cacheManager.del(halfOpenCallsKey);
           this.logger.log(`Circuit breaker closed for ${key} after recovery`);
         } else {
           await this.cacheManager.set(
             halfOpenCallsKey,
             halfOpenCalls + 1,
-            60000,
+            halfOpenTtlMs,
           );
         }
       } else {
         // Убеждаемся, что цепь закрыта
-        await this.cacheManager.set(stateKey, CircuitBreakerState.CLOSED);
+        await this.cacheManager.set(
+          stateKey,
+          CircuitBreakerState.CLOSED,
+          stateTtlMs,
+        );
       }
     } catch (error) {
       this.logger.warn(
@@ -205,6 +235,7 @@ export class VkApiCircuitBreaker {
     currentState: CircuitBreakerState,
   ): Promise<void> {
     try {
+      const stateTtlMs = this.resolveStateTtlMs(options);
       const failureKey = `circuit-breaker:failures:${key}`;
       const lastFailureKey = `circuit-breaker:last-failure:${key}`;
       const stateKey = `circuit-breaker:state:${key}`;
@@ -214,12 +245,16 @@ export class VkApiCircuitBreaker {
         (await this.cacheManager.get<number>(failureKey)) ?? 0;
       const newFailures = currentFailures + 1;
 
-      await this.cacheManager.set(failureKey, newFailures);
-      await this.cacheManager.set(lastFailureKey, Date.now());
+      await this.cacheManager.set(failureKey, newFailures, stateTtlMs);
+      await this.cacheManager.set(lastFailureKey, Date.now(), stateTtlMs);
 
       // Если были в HALF_OPEN и получили ошибку, снова открываем цепь
       if (currentState === CircuitBreakerState.HALF_OPEN) {
-        await this.cacheManager.set(stateKey, CircuitBreakerState.OPEN);
+        await this.cacheManager.set(
+          stateKey,
+          CircuitBreakerState.OPEN,
+          stateTtlMs,
+        );
         await this.cacheManager.del(halfOpenCallsKey);
         this.logger.warn(
           `Circuit breaker reopened for ${key} after failure in HALF_OPEN state`,
