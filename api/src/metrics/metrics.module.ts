@@ -1,8 +1,9 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MetricsService } from './metrics.service';
 import { MetricsController } from './metrics.controller';
 import { MetricsUpdaterService } from './metrics-updater.service';
 import { PrismaService } from '../prisma.service';
+import { MetricsSecurityMiddleware } from '../common/middleware/metrics-security.middleware';
 
 @Global()
 @Module({
@@ -18,4 +19,8 @@ import { PrismaService } from '../prisma.service';
   controllers: [MetricsController],
   exports: [MetricsService, 'MetricsService'],
 })
-export class MetricsModule {}
+export class MetricsModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(MetricsSecurityMiddleware).forRoutes('metrics');
+  }
+}

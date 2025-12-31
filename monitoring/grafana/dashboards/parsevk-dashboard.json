@@ -1,0 +1,130 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "ParseVK Analytics",
+    "tags": ["parsevk"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "HTTP Requests Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{route}} {{status}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "HTTP Request Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "Active Tasks",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "tasks_active",
+            "legendFormat": "Active Tasks"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 }
+      },
+      {
+        "id": 4,
+        "title": "Active Watchlist Authors",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "watchlist_authors_active",
+            "legendFormat": "Active Authors"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 }
+      },
+      {
+        "id": 5,
+        "title": "Tasks Created",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(tasks_total[5m])",
+            "legendFormat": "{{status}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 }
+      },
+      {
+        "id": 6,
+        "title": "VK API Requests",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(vk_api_requests_total[5m])",
+            "legendFormat": "{{method}} {{status}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+      },
+      {
+        "id": 7,
+        "title": "VK API Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(vk_api_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+      },
+      {
+        "id": 8,
+        "title": "Redis Metrics",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "redis_keys_total",
+            "legendFormat": "Total Keys"
+          },
+          {
+            "expr": "redis_memory_bytes",
+            "legendFormat": "Memory Usage (bytes)"
+          },
+          {
+            "expr": "redis_avg_ttl_seconds",
+            "legendFormat": "Avg TTL (seconds)"
+          },
+          {
+            "expr": "redis_keyspace_hit_rate",
+            "legendFormat": "Hit Rate"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 }
+      }
+    ],
+    "time": { "from": "now-1h", "to": "now" },
+    "timepicker": {},
+    "templating": { "list": [] },
+    "annotations": { "list": [] },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}
