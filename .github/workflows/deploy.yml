@@ -509,28 +509,20 @@ jobs:
           API_WAS_RUNNING=false
 
           if [ -n "$API_CONTAINER_ID" ] && [ "$(docker inspect --format='{{.State.Status}}' "$API_CONTAINER_ID" 2>/dev/null)" = "running" ]; then
-            echo "Using existing API container for migrations"
+            echo "API container is already running"
             API_WAS_RUNNING=true
-            if docker compose -f "$COMPOSE_FILE" exec -T api sh -c "command -v ./node_modules/.bin/prisma > /dev/null 2>&1 && ./node_modules/.bin/prisma migrate deploy || (command -v prisma > /dev/null 2>&1 && prisma migrate deploy)" 2>/dev/null; then
-              echo "Migrations completed via existing container"
-            else
-              echo "Error: Failed to run migrations via existing container"
-              exit 1
-            fi
+          fi
+
+          echo "Running migrations in a one-off container"
+          if docker compose -f "$COMPOSE_FILE" run --rm --no-deps --entrypoint sh api -c "command -v ./node_modules/.bin/prisma > /dev/null 2>&1 && ./node_modules/.bin/prisma migrate deploy || prisma migrate deploy"; then
+            echo "Migrations completed"
           else
-            echo "Starting API container for migrations"
-            docker compose -f "$COMPOSE_FILE" up -d api || {
-              echo "Error: Failed to start API container for migrations"
-              exit 1
-            }
-            
-            echo "Waiting for API container to be ready..."
-            sleep 10
-            
-            docker compose -f "$COMPOSE_FILE" exec -T api sh -c "./node_modules/.bin/prisma migrate deploy || prisma migrate deploy" || {
-              echo "Error: Migrations failed"
-              exit 1
-            }
+            echo "Error: Migrations failed"
+            echo "=== API logs (tail) ==="
+            docker compose -f "$COMPOSE_FILE" logs --tail=100 api || true
+            echo "=== DB logs (tail) ==="
+            docker compose -f "$COMPOSE_FILE" logs --tail=100 db || true
+            exit 1
           fi
 
           echo "api_was_running=$API_WAS_RUNNING" >> $GITHUB_OUTPUT
