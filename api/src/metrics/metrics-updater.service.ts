@@ -75,13 +75,16 @@ export class MetricsUpdaterService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async updateRedisMetrics(): Promise<void> {
-    const client = this.resolveRedisClient();
+    const client = await this.resolveRedisClient();
 
     if (!client) {
       return;
     }
 
-    const keysTotal = await client.dbSize();
+    const keysTotal = await this.getRedisDbSize(client);
+    if (keysTotal === null) {
+      return;
+    }
     this.metricsService.setRedisKeysTotal(keysTotal);
 
     const infoMemory = await client.info('memory');
@@ -104,8 +107,9 @@ export class MetricsUpdaterService implements OnModuleInit, OnModuleDestroy {
     this.metricsService.setRedisAverageTtlSeconds(avgTtlSeconds);
   }
 
-  private resolveRedisClient(): {
-    dbSize: () => Promise<number>;
+  private async resolveRedisClient(): Promise<{
+    dbSize?: () => Promise<number>;
+    dbsize?: () => Promise<number>;
     info: (section?: string) => Promise<string>;
     scan: (
       cursor: string,
@@ -115,32 +119,78 @@ export class MetricsUpdaterService implements OnModuleInit, OnModuleDestroy {
       pttl: (key: string) => unknown;
       exec: () => Promise<Array<[Error | null, number] | null> | null>;
     };
-  } | null {
-    const stores = this.cacheManager.stores ?? [];
+  } | null> {
+    const stores: unknown[] = [];
 
-    for (const keyvStore of stores) {
-      const store = (keyvStore as { store?: unknown }).store as
+    if (Array.isArray(this.cacheManager.stores)) {
+      stores.push(...this.cacheManager.stores);
+    }
+
+    const singleStore = (this.cacheManager as { store?: unknown }).store;
+    if (singleStore) {
+      stores.push(singleStore);
+    }
+
+    for (const entry of stores) {
+      const candidate = (entry as { store?: unknown }).store ?? entry;
+      const store = candidate as
         | RedisStore
-        | undefined;
-      const client = store?.client as
         | {
-            dbSize: () => Promise<number>;
-            info: (section?: string) => Promise<string>;
-            scan: (
-              cursor: string,
-              options?: { MATCH?: string; COUNT?: number },
-            ) => Promise<unknown>;
-            multi: () => {
-              pttl: (key: string) => unknown;
-              exec: () => Promise<Array<[Error | null, number] | null> | null>;
-            };
-          }
-        | undefined;
-      if (client) {
-        return client;
+            client?: unknown;
+            redis?: unknown;
+            getClient?: () => unknown;
+          };
+
+      let client =
+        (store as { client?: unknown }).client ??
+        (store as { redis?: unknown }).redis;
+
+      if (
+        !client &&
+        typeof (store as { getClient?: () => unknown }).getClient === 'function'
+      ) {
+        const maybeClient = (
+          store as { getClient?: () => unknown }
+        ).getClient?.();
+        client =
+          maybeClient instanceof Promise ? await maybeClient : maybeClient;
+      }
+
+      if (
+        client &&
+        typeof (client as { info?: unknown }).info === 'function' &&
+        typeof (client as { scan?: unknown }).scan === 'function' &&
+        typeof (client as { multi?: unknown }).multi === 'function'
+      ) {
+        return client as {
+          dbSize?: () => Promise<number>;
+          dbsize?: () => Promise<number>;
+          info: (section?: string) => Promise<string>;
+          scan: (
+            cursor: string,
+            options?: { MATCH?: string; COUNT?: number },
+          ) => Promise<unknown>;
+          multi: () => {
+            pttl: (key: string) => unknown;
+            exec: () => Promise<Array<[Error | null, number] | null> | null>;
+          };
+        };
       }
     }
 
+    return null;
+  }
+
+  private async getRedisDbSize(client: {
+    dbSize?: () => Promise<number>;
+    dbsize?: () => Promise<number>;
+  }): Promise<number | null> {
+    if (client.dbSize) {
+      return await client.dbSize();
+    }
+    if (client.dbsize) {
+      return await client.dbsize();
+    }
     return null;
   }
 
