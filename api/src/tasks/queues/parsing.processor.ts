@@ -6,7 +6,11 @@ import { PrismaService } from '../../prisma.service';
 import { ParsingTaskRunner } from '../parsing-task.runner';
 import { TasksGateway } from '../tasks.gateway';
 import type { ParsingTaskJobData } from '../interfaces/parsing-task-job.interface';
-import { PARSING_QUEUE, PARSING_CONCURRENCY } from './parsing.constants';
+import {
+  PARSING_QUEUE,
+  PARSING_CONCURRENCY,
+  PARSING_JOB_TIMEOUT,
+} from './parsing.constants';
 import { TaskCancellationService } from '../task-cancellation.service';
 import { TaskCancelledError } from '../errors/task-cancelled.error';
 import { MetricsService } from '../../metrics/metrics.service';
@@ -42,12 +46,32 @@ export class ParsingProcessor extends WorkerHost {
       `Начало обработки задачи ${taskId} (scope: ${scope}, groups: ${groupIds.length}, postLimit: ${postLimit})`,
     );
 
+    let timeoutHandle: NodeJS.Timeout | null = null;
+
     try {
       // Обновляем статус на "running"
       await this.markStatus(taskId, 'running');
 
+      const runnerPromise = this.runner.execute(job.data);
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          this.cancellationService.requestCancel(taskId);
+          void runnerPromise.catch(() => undefined);
+          reject(
+            new Error(
+              `Задача ${taskId} превысила лимит времени выполнения (${PARSING_JOB_TIMEOUT}мс)`,
+            ),
+          );
+        }, PARSING_JOB_TIMEOUT);
+
+        if (timeoutHandle && typeof timeoutHandle.unref === 'function') {
+          timeoutHandle.unref();
+        }
+      });
+
       // Выполняем парсинг
-      await this.runner.execute(job.data);
+      await Promise.race([runnerPromise, timeoutPromise]);
 
       this.logger.log(`Задача ${taskId} успешно завершена`);
     } catch (error) {
@@ -66,6 +90,9 @@ export class ParsingProcessor extends WorkerHost {
 
       throw error; // BullMQ обработает retry
     } finally {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
       this.cancellationService.clear(taskId);
     }
   }

@@ -66,27 +66,48 @@ rule_files:
   - "alert_rules.yml"
 ```
 
-Пример файла `monitoring/alert_rules.yml`:
+Файл `monitoring/alert_rules.yml` уже добавлен с базовыми алертами VK API:
 
 ```yaml
 groups:
   - name: parsevk
     rules:
-      - alert: HighErrorRate
-        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.1
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High error rate detected"
-
-      - alert: TasksStuck
-        expr: tasks_active > 10
+      - alert: VkApiP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(vk_api_request_duration_seconds_bucket[5m])) by (le)
+          ) > 30
         for: 10m
         labels:
           severity: critical
         annotations:
-          summary: "Too many active tasks"
+          summary: "VK API p95 превышает 30s"
+          description: "p95 длительности запросов VK API > 30s в течение 10 минут"
+
+      - alert: VkApiTimeoutRateHigh
+        expr: |
+          sum(rate(vk_api_timeouts_total[5m]))
+            /
+          sum(rate(vk_api_requests_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая доля таймаутов VK API"
+          description: "Доля таймаутов VK API > 5% в течение 10 минут"
+
+      - alert: VkApiRetryRateHigh
+        expr: |
+          sum(rate(vk_api_retries_total[5m]))
+            /
+          sum(rate(vk_api_requests_total[5m])) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая доля ретраев VK API"
+          description: "Доля ретраев VK API > 20% в течение 10 минут"
 ```
 
 ## Кастомные дашборды

@@ -1,0 +1,39 @@
+groups:
+  - name: parsevk
+    rules:
+      - alert: VkApiP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(vk_api_request_duration_seconds_bucket[5m])) by (le)
+          ) > 30
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "VK API p95 превышает 30s"
+          description: "p95 длительности запросов VK API > 30s в течение 10 минут"
+
+      - alert: VkApiTimeoutRateHigh
+        expr: |
+          sum(rate(vk_api_timeouts_total[5m]))
+            /
+          sum(rate(vk_api_requests_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая доля таймаутов VK API"
+          description: "Доля таймаутов VK API > 5% в течение 10 минут"
+
+      - alert: VkApiRetryRateHigh
+        expr: |
+          sum(rate(vk_api_retries_total[5m]))
+            /
+          sum(rate(vk_api_requests_total[5m])) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокая доля ретраев VK API"
+          description: "Доля ретраев VK API > 20% в течение 10 минут"

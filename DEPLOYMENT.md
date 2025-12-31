@@ -271,6 +271,11 @@ DATABASE_URL=postgresql://postgres:MySecurePassword123!@db:5432/vk_api?schema=pu
 # VK API TOKEN
 # Получить токен: https://vkhost.github.io/
 VK_TOKEN=vk1.a.ВАSШ_РЕАЛЬНЫЙ_ТОКЕН_ОТ_ВК
+VK_API_TIMEOUT_MS=30000
+VK_API_RETRY_MAX_ATTEMPTS=2
+VK_API_RETRY_INITIAL_DELAY_MS=500
+VK_API_RETRY_MAX_DELAY_MS=2000
+VK_API_RETRY_MULTIPLIER=2
 
 # FRONTEND
 VITE_APP_TITLE=Центр аналитики
