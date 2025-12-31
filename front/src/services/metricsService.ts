@@ -59,52 +59,91 @@ export const metricsService = {
   },
 
   parsePrometheusMetrics(text: string): ParsedMetrics {
-    const lines = text.split('\n').filter((line) => line && !line.startsWith('#'))
+    const lines = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
     const metrics: Record<string, PrometheusMetric> = {}
+    const pendingHelp: Record<string, string> = {}
 
     let currentMetric: PrometheusMetric | null = null
 
     for (const line of lines) {
+      if (line.startsWith('# HELP ')) {
+        const match = line.match(/^# HELP ([^ ]+) (.+)$/)
+        if (match) {
+          const [, name, help] = match
+          pendingHelp[name] = help
+          if (metrics[name]) {
+            metrics[name].help = help
+          }
+        }
+        continue
+      }
+
       if (line.startsWith('# TYPE ')) {
-        const match = line.match(/# TYPE (\w+) (\w+)/)
+        const match = line.match(/^# TYPE ([^ ]+) (\w+)$/)
         if (match) {
           const [, name, type] = match
-          currentMetric = {
+          currentMetric = metrics[name] ?? {
             name,
-            help: '',
+            help: pendingHelp[name] || '',
             type: type as PrometheusMetric['type'],
             samples: [],
           }
+          currentMetric.type = type as PrometheusMetric['type']
+          currentMetric.help = currentMetric.help || pendingHelp[name] || ''
           metrics[name] = currentMetric
         }
-      } else if (line.startsWith('# HELP ')) {
-        const match = line.match(/# HELP (\w+) (.+)/)
-        if (match && currentMetric) {
-          const [, , help] = match
-          currentMetric.help = help
-        }
-      } else if (currentMetric && line.includes(' ')) {
-        const parts = line.split(' ')
-        if (parts.length >= 2) {
-          const valueStr = parts[parts.length - 1]
-          const labelsStr = parts.slice(0, -1).join(' ')
-          const value = parseFloat(valueStr)
+        continue
+      }
 
-          if (!isNaN(value)) {
-            const labels: Record<string, string> = {}
-            const labelMatch = labelsStr.match(/\{([^}]+)\}/)
-            if (labelMatch) {
-              labelMatch[1].split(',').forEach((pair) => {
-                const [key, val] = pair.split('=')
-                if (key && val) {
-                  labels[key.trim()] = val.trim().replace(/^"|"$/g, '')
-                }
-              })
-            }
+      if (!line.includes(' ')) {
+        continue
+      }
 
-            currentMetric.samples.push({ labels, value })
+      const parts = line.split(' ')
+      if (parts.length < 2) {
+        continue
+      }
+
+      const valueStr = parts[parts.length - 1]
+      const labelsStr = parts.slice(0, -1).join(' ')
+      const value = parseFloat(valueStr)
+
+      if (isNaN(value)) {
+        continue
+      }
+
+      const labels: Record<string, string> = {}
+      const labelMatch = labelsStr.match(/\{([^}]+)\}/)
+      if (labelMatch) {
+        labelMatch[1].split(',').forEach((pair) => {
+          const [key, val] = pair.split('=')
+          if (key && val) {
+            labels[key.trim()] = val.trim().replace(/^"|"$/g, '')
           }
+        })
+      }
+
+      const nameMatch = labelsStr.match(/^([^{\s]+)/)
+      const metricName = nameMatch ? nameMatch[1] : null
+      let targetMetric = currentMetric
+
+      if (metricName && metrics[metricName]) {
+        targetMetric = metrics[metricName]
+      } else if (!targetMetric && metricName) {
+        targetMetric = {
+          name: metricName,
+          help: pendingHelp[metricName] || '',
+          type: 'gauge',
+          samples: [],
         }
+        metrics[metricName] = targetMetric
+      }
+
+      if (targetMetric) {
+        targetMetric.samples.push({ labels, value })
       }
     }
 
