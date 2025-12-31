@@ -762,7 +762,45 @@ export class ParsingTaskRunner {
   }
 
   private isTemporaryVkApiError(error: unknown): boolean {
-    return error instanceof APIError && error.code === 10;
+    if (this.isTimeoutError(error)) {
+      return true;
+    }
+
+    if (error instanceof APIError) {
+      return error.code === 6 || error.code === 9 || error.code === 10;
+    }
+
+    return false;
+  }
+
+  private isTimeoutError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+      return false;
+    }
+
+    if (error instanceof Error) {
+      const err = error as Error & {
+        code?: string;
+        cause?: { code?: string };
+      };
+      const code = err.code ?? err.cause?.code;
+      const name = err.name?.toLowerCase() ?? '';
+      const message = err.message.toLowerCase();
+
+      if (name === 'aborterror') {
+        return true;
+      }
+
+      if (code === 'ETIMEDOUT' || code === 'ECONNABORTED') {
+        return true;
+      }
+
+      if (message.includes('timeout') || message.includes('timed out')) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private async markGroupWallDisabled(group: PrismaGroupRecord): Promise<void> {

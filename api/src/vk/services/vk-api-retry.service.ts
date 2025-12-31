@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APIError } from 'vk-io';
 import type { AppConfig } from '../../config/app.config';
+import { MetricsService } from '../../metrics/metrics.service';
 
 export interface RetryOptions {
   maxAttempts?: number;
@@ -9,6 +10,7 @@ export interface RetryOptions {
   maxDelayMs?: number;
   multiplier?: number;
   retryableErrors?: number[];
+  method?: string;
 }
 
 /**
@@ -34,14 +36,17 @@ export class VkApiRetryService {
     13, // Response processing failed
   ];
 
-  constructor(private readonly configService: ConfigService<AppConfig>) {
+  constructor(
+    private readonly configService: ConfigService<AppConfig>,
+    @Optional() private readonly metricsService?: MetricsService,
+  ) {
     this.defaultMaxAttempts =
-      this.configService.get('vkApiRetryMaxAttempts', { infer: true }) ?? 3;
+      this.configService.get('vkApiRetryMaxAttempts', { infer: true }) ?? 2;
     this.defaultInitialDelayMs =
       this.configService.get('vkApiRetryInitialDelayMs', { infer: true }) ??
-      1000;
+      500;
     this.defaultMaxDelayMs =
-      this.configService.get('vkApiRetryMaxDelayMs', { infer: true }) ?? 10000;
+      this.configService.get('vkApiRetryMaxDelayMs', { infer: true }) ?? 2000;
     this.defaultMultiplier =
       this.configService.get('vkApiRetryMultiplier', { infer: true }) ?? 2;
   }
@@ -62,6 +67,7 @@ export class VkApiRetryService {
     const multiplier = options.multiplier ?? this.defaultMultiplier;
     const retryableErrors =
       options.retryableErrors ?? this.defaultRetryableErrors;
+    const method = options.method ?? 'unknown';
 
     let lastError: Error | null = null;
     let delay = initialDelayMs;
@@ -71,11 +77,22 @@ export class VkApiRetryService {
         return await fn();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
+        const isTimeout = this.isTimeoutError(error);
+
+        if (isTimeout) {
+          const message = `VK API timeout on attempt ${attempt}/${maxAttempts} (method: ${method})`;
+          if (attempt >= maxAttempts) {
+            this.logger.warn(message);
+          } else {
+            this.logger.debug(message);
+          }
+          this.metricsService?.recordVkApiTimeout(method, attempt);
+        }
 
         // Проверяем, можно ли повторять эту ошибку
         if (!this.isRetryableError(error, retryableErrors)) {
           this.logger.debug(
-            `Non-retryable error on attempt ${attempt}: ${lastError.message}`,
+            `Non-retryable error on attempt ${attempt} (method: ${method}): ${lastError.message}`,
           );
           throw lastError;
         }
@@ -90,8 +107,12 @@ export class VkApiRetryService {
 
         // Вычисляем задержку с exponential backoff
         const actualDelay = Math.min(delay, maxDelayMs);
+        this.metricsService?.recordVkApiRetry(
+          method,
+          this.getRetryReason(error),
+        );
         this.logger.debug(
-          `Retry attempt ${attempt}/${maxAttempts} after ${actualDelay}ms: ${lastError.message}`,
+          `Retry attempt ${attempt}/${maxAttempts} after ${actualDelay}ms (method: ${method}): ${lastError.message}`,
         );
 
         await this.sleep(actualDelay);
@@ -114,10 +135,11 @@ export class VkApiRetryService {
     if (error instanceof Error && !(error instanceof APIError)) {
       const message = error.message.toLowerCase();
       if (
-        message.includes('timeout') ||
+        this.isTimeoutError(error) ||
         message.includes('network') ||
         message.includes('econnreset') ||
-        message.includes('enotfound')
+        message.includes('enotfound') ||
+        message.includes('eai_again')
       ) {
         return true;
       }
@@ -134,6 +156,71 @@ export class VkApiRetryService {
 
     // По умолчанию не повторяем неизвестные ошибки
     return false;
+  }
+
+  private isTimeoutError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+      return false;
+    }
+
+    if (error instanceof Error) {
+      const err = error as Error & {
+        code?: string;
+        cause?: { code?: string };
+      };
+      const code = err.code ?? err.cause?.code;
+      const name = err.name?.toLowerCase() ?? '';
+      const message = err.message.toLowerCase();
+
+      if (name === 'aborterror') {
+        return true;
+      }
+
+      if (
+        code === 'ETIMEDOUT' ||
+        code === 'ECONNABORTED' ||
+        code === 'ESOCKETTIMEDOUT'
+      ) {
+        return true;
+      }
+
+      if (message.includes('timeout') || message.includes('timed out')) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private getRetryReason(error: unknown): string {
+    if (this.isTimeoutError(error)) {
+      return 'timeout';
+    }
+
+    if (error instanceof APIError) {
+      const errorCode =
+        typeof error.code === 'number'
+          ? error.code
+          : Number.parseInt(String(error.code), 10);
+      if (errorCode === 6 || errorCode === 9) {
+        return 'rate_limit';
+      }
+      return 'vk_api';
+    }
+
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+      if (
+        message.includes('network') ||
+        message.includes('econnreset') ||
+        message.includes('enotfound') ||
+        message.includes('eai_again')
+      ) {
+        return 'network';
+      }
+    }
+
+    return 'unknown';
   }
 
   /**

@@ -34,6 +34,8 @@ docker-compose up prometheus grafana node-exporter
 
 - `vk_api_requests_total` - запросы к VK API
 - `vk_api_request_duration_seconds` - длительность запросов к VK API
+- `vk_api_timeouts_total` - таймауты запросов к VK API
+- `vk_api_retries_total` - количество повторных попыток VK API
 
 ### Redis метрики
 

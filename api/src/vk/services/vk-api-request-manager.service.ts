@@ -76,7 +76,11 @@ export class VkApiRequestManager {
         }
 
         // 3. Выполняем запрос с retry
-        return await this.retryService.executeWithRetry(fn, options.retry);
+        const retryOptions = {
+          ...options.retry,
+          method,
+        };
+        return await this.retryService.executeWithRetry(fn, retryOptions);
       }, options.circuitBreaker ?? { key });
 
       // 4. Записываем успешный запрос

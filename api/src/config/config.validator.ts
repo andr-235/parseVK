@@ -13,7 +13,7 @@ export function validate(config: Record<string, unknown>): AppConfig {
     vkToken: config.VK_TOKEN,
     vkApiTimeoutMs: config.VK_API_TIMEOUT_MS
       ? parseInt(config.VK_API_TIMEOUT_MS as string, 10)
-      : 60000,
+      : 30000,
     imageModerationWebhookUrl: config.IMAGE_MODERATION_WEBHOOK_URL,
     imageModerationAllowSelfSigned: config.IMAGE_MODERATION_ALLOW_SELF_SIGNED,
     imageModerationTimeoutMs: config.IMAGE_MODERATION_TIMEOUT_MS
@@ -29,13 +29,13 @@ export function validate(config: Record<string, unknown>): AppConfig {
       : 1000,
     vkApiRetryMaxAttempts: config.VK_API_RETRY_MAX_ATTEMPTS
       ? parseInt(config.VK_API_RETRY_MAX_ATTEMPTS as string, 10)
-      : 3,
+      : 2,
     vkApiRetryInitialDelayMs: config.VK_API_RETRY_INITIAL_DELAY_MS
       ? parseInt(config.VK_API_RETRY_INITIAL_DELAY_MS as string, 10)
-      : 1000,
+      : 500,
     vkApiRetryMaxDelayMs: config.VK_API_RETRY_MAX_DELAY_MS
       ? parseInt(config.VK_API_RETRY_MAX_DELAY_MS as string, 10)
-      : 10000,
+      : 2000,
     vkApiRetryMultiplier: config.VK_API_RETRY_MULTIPLIER
       ? parseFloat(config.VK_API_RETRY_MULTIPLIER as string)
       : 2,

@@ -1000,7 +1000,7 @@ export class VkService {
   }
 
   private resolveApiTimeout(): number {
-    const fallback = 60_000; // VK API часто отвечает дольше стандартных 10 секунд.
+    const fallback = 30_000; // VK API часто отвечает дольше стандартных 10 секунд.
     const timeout = this.configService.get<number>('vkApiTimeoutMs');
     return timeout ?? fallback;
   }

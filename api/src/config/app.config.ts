@@ -27,7 +27,7 @@ export class AppConfig {
   @IsNumber()
   @Min(1000)
   @IsOptional()
-  vkApiTimeoutMs?: number = 60000;
+  vkApiTimeoutMs?: number = 30000;
 
   @IsString()
   @IsOptional()
@@ -60,17 +60,17 @@ export class AppConfig {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  vkApiRetryMaxAttempts?: number = 3;
+  vkApiRetryMaxAttempts?: number = 2;
 
   @IsNumber()
   @Min(100)
   @IsOptional()
-  vkApiRetryInitialDelayMs?: number = 1000;
+  vkApiRetryInitialDelayMs?: number = 500;
 
   @IsNumber()
   @Min(1)
   @IsOptional()
-  vkApiRetryMaxDelayMs?: number = 10000;
+  vkApiRetryMaxDelayMs?: number = 2000;
 
   @IsNumber()
   @Min(0)

@@ -17,6 +17,8 @@ export class MetricsService implements OnModuleInit {
   private readonly watchlistAuthorsActive: Gauge<string>;
   private readonly vkApiRequests: Counter<string>;
   private readonly vkApiDuration: Histogram<string>;
+  private readonly vkApiTimeouts: Counter<string>;
+  private readonly vkApiRetries: Counter<string>;
   private readonly redisKeysTotal: Gauge<string>;
   private readonly redisAvgTtlSeconds: Gauge<string>;
   private readonly redisMemoryBytes: Gauge<string>;
@@ -71,7 +73,21 @@ export class MetricsService implements OnModuleInit {
       name: 'vk_api_request_duration_seconds',
       help: 'VK API request duration in seconds',
       labelNames: ['method'],
-      buckets: [0.1, 0.5, 1, 2, 5],
+      buckets: [0.1, 0.5, 1, 2, 5, 10, 20, 30, 45],
+      registers: [this.register],
+    });
+
+    this.vkApiTimeouts = new Counter({
+      name: 'vk_api_timeouts_total',
+      help: 'Total number of VK API timeouts',
+      labelNames: ['method', 'attempt'],
+      registers: [this.register],
+    });
+
+    this.vkApiRetries = new Counter({
+      name: 'vk_api_retries_total',
+      help: 'Total number of VK API retry attempts',
+      labelNames: ['method', 'reason'],
       registers: [this.register],
     });
 
@@ -138,6 +154,14 @@ export class MetricsService implements OnModuleInit {
   ): void {
     this.vkApiRequests.inc({ method, status });
     this.vkApiDuration.observe({ method }, duration / 1000);
+  }
+
+  recordVkApiTimeout(method: string, attempt: number): void {
+    this.vkApiTimeouts.inc({ method, attempt: attempt.toString() });
+  }
+
+  recordVkApiRetry(method: string, reason: string): void {
+    this.vkApiRetries.inc({ method, reason });
   }
 
   setRedisKeysTotal(count: number): void {

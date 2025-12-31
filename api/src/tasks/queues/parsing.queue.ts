@@ -2,7 +2,11 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import type { ParsingTaskJobData } from '../interfaces/parsing-task-job.interface';
-import { PARSING_QUEUE, PARSING_RETRY_OPTIONS } from './parsing.constants';
+import {
+  PARSING_QUEUE,
+  PARSING_RETRY_OPTIONS,
+  PARSING_JOB_TIMEOUT,
+} from './parsing.constants';
 
 /**
  * Сервис для управления очередью задач парсинга
@@ -29,6 +33,7 @@ export class ParsingQueueProducer {
       {
         attempts: PARSING_RETRY_OPTIONS.attempts,
         backoff: PARSING_RETRY_OPTIONS.backoff,
+        timeout: PARSING_JOB_TIMEOUT,
         removeOnComplete: {
           age: 24 * 60 * 60, // Удалять завершенные задачи через 24 часа
           count: 100, // Хранить максимум 100 завершенных задач
