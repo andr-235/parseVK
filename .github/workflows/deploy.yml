@@ -487,7 +487,7 @@ jobs:
           STEP_START=$(date +%s)
           echo "=== Cleaning failed migrations ==="
 
-          CLEAN_SCRIPT="DELETE FROM _prisma_migrations WHERE migration_name = '20251128142604_add_post_attachments' AND finished_at IS NULL;"
+          CLEAN_SCRIPT="DELETE FROM _prisma_migrations WHERE migration_name IN ('20251128142604_add_post_attachments', '20251020120000_add_task_automation_settings') AND finished_at IS NULL;"
 
           echo "Removing failed migration record from database..."
           docker compose -f "$COMPOSE_FILE" exec -T db psql -U postgres -d vk_api -c "$CLEAN_SCRIPT" || {
