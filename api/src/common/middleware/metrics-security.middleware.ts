@@ -8,9 +8,13 @@ export class MetricsSecurityMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction) {
     const clientIp = req.ip || req.socket?.remoteAddress;
+    const normalizedIp =
+      clientIp && clientIp.startsWith('::ffff:')
+        ? clientIp.replace('::ffff:', '')
+        : clientIp;
 
     // Блокируем доступ если IP не определён
-    if (!clientIp) {
+    if (!normalizedIp) {
       this.logger.warn('Доступ к метрикам заблокирован: IP не определён');
       return res.status(403).json({
         error: 'Access denied',
@@ -30,13 +34,15 @@ export class MetricsSecurityMiddleware implements NestMiddleware {
 
     const isAllowed = allowedNetworks.some((network) => {
       if (typeof network === 'string') {
-        return clientIp === network;
+        return normalizedIp === network;
       }
-      return network.test(clientIp);
+      return network.test(normalizedIp);
     });
 
     if (!isAllowed) {
-      this.logger.warn(`Доступ к метрикам заблокирован для IP: ${clientIp}`);
+      this.logger.warn(
+        `Доступ к метрикам заблокирован для IP: ${normalizedIp}`,
+      );
       return res.status(403).json({
         error: 'Access denied',
         message: 'Metrics endpoint is only accessible from internal network',
