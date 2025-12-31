@@ -7,3 +7,10 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: true
+    # === МЕСТО ДЛЯ ВАШИХ НАСТРОЕК ПОДКЛЮЧЕНИЯ ===
+    # Если требуется аутентификация для Prometheus, добавьте:
+    # basicAuth: true
+    # basicAuthUser: your_username
+    # secureJsonData:
+    #   basicAuthPassword: your_password
+    # === КОНЕЦ ПОЛЬЗОВАТЕЛЬСКИХ НАСТРОЕК ===

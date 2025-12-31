@@ -5,7 +5,7 @@
 echo "🚀 Запуск системы мониторинга ParseVK..."
 
 # Запуск сервисов мониторинга
-docker-compose up -d prometheus grafana node-exporter
+docker-compose -f docker-compose.deploy.yml up -d prometheus grafana node-exporter
 
 echo "✅ Сервисы запущены!"
 echo ""

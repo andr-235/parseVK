@@ -97,9 +97,86 @@ services:
       retries: 5
       start_period: 10s
 
+  prometheus:
+    image: prom/prometheus:latest
+    # Keep Prometheus running after failures or host restarts.
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+    # Healthcheck is used by Grafana dependency and for readiness visibility.
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - default
+    # Ensure Prometheus starts after API is healthy and exporter is available.
+    depends_on:
+      api:
+        condition: service_healthy
+      node-exporter:
+        condition: service_started
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    command:
+      - "--path.rootfs=/host"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - default
+
+  grafana:
+    image: grafana/grafana:latest
+    # Keep Grafana running after failures or host restarts.
+    restart: always
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      # === МЕСТО ДЛЯ ВАШЕГО ПАРОЛЯ ===
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      # === КОНЕЦ ПОЛЬЗОВАТЕЛЬСКИХ НАСТРОЕК ===
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - default
+    # Wait for Prometheus to become healthy before Grafana starts.
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
 volumes:
   postgres_data:
     external: true
     name: parsevk_postgres_data
   postgres_backups:
     name: parsevk_postgres_backups
+  prometheus_data:
+    name: parsevk_prometheus_data
+  grafana_data:
+    name: parsevk_grafana_data
