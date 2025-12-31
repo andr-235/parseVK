@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { APIError } from 'vk-io';
 import { CommentSource, Prisma } from '@prisma/client';
@@ -24,6 +25,7 @@ import { normalizeComment } from '../common/utils/comment-normalizer.utils';
 import { TasksGateway } from './tasks.gateway';
 import { TaskCancellationService } from './task-cancellation.service';
 import { TaskCancelledError } from './errors/task-cancelled.error';
+import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class ParsingTaskRunner {
@@ -35,6 +37,7 @@ export class ParsingTaskRunner {
     private readonly authorActivityService: AuthorActivityService,
     private readonly tasksGateway: TasksGateway,
     private readonly cancellationService: TaskCancellationService,
+    @Optional() private readonly metricsService?: MetricsService,
   ) {}
 
   async execute(job: ParsingTaskJobData): Promise<void> {
@@ -156,6 +159,8 @@ export class ParsingTaskRunner {
           }),
         } as Prisma.TaskUncheckedUpdateInput,
       })) as PrismaTaskRecord;
+
+      this.metricsService?.recordTask('done');
 
       this.tasksGateway.broadcastProgress({
         id: taskId,

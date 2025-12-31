@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Prisma as PrismaTypes } from '@prisma/client';
@@ -20,6 +21,7 @@ import { TaskCancellationService } from './task-cancellation.service';
 import { TaskMapper } from './mappers/task.mapper';
 import { TaskDescriptionParser } from './parsers/task-description.parser';
 import { TaskContextBuilder } from './builders/task-context.builder';
+import { MetricsService } from '../metrics/metrics.service';
 import type { PrismaTaskRecord } from './mappers/task.mapper';
 
 /**
@@ -41,6 +43,7 @@ export class TasksService {
     private readonly taskMapper: TaskMapper,
     private readonly descriptionParser: TaskDescriptionParser,
     private readonly contextBuilder: TaskContextBuilder,
+    @Optional() private readonly metricsService?: MetricsService,
   ) {}
 
   /**
@@ -74,6 +77,8 @@ export class TasksService {
       progress: 0,
       status: 'pending',
     } as PrismaTypes.TaskUncheckedCreateInput)) as PrismaTaskRecord;
+
+    this.metricsService?.recordTask('pending');
 
     await this.parsingQueue.enqueue({
       taskId: task.id,

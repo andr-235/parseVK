@@ -22,7 +22,7 @@ async function bootstrap() {
     app.use(json({ limit: '2mb' }));
     app.use(urlencoded({ limit: '2mb', extended: true }));
     app.useLogger(logger);
-    app.useGlobalInterceptors(new LoggingInterceptor());
+    app.useGlobalInterceptors(app.get(LoggingInterceptor));
     app.useGlobalFilters(new HttpExceptionFilter());
     const validationLogger = new Logger('ValidationPipe');
     app.useGlobalPipes(

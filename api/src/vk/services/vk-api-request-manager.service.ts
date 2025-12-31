@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { VkApiRateLimiter } from './vk-api-rate-limiter.service';
 import { VkApiRetryService } from './vk-api-retry.service';
 import {
@@ -6,6 +6,7 @@ import {
   CircuitBreakerState,
 } from './vk-api-circuit-breaker.service';
 import { VkApiMetricsService } from './vk-api-metrics.service';
+import { MetricsService } from '../../metrics/metrics.service';
 import type { RateLimitOptions } from './vk-api-rate-limiter.service';
 import type { RetryOptions } from './vk-api-retry.service';
 import type { CircuitBreakerOptions } from './vk-api-circuit-breaker.service';
@@ -37,7 +38,8 @@ export class VkApiRequestManager {
     private readonly rateLimiter: VkApiRateLimiter,
     private readonly retryService: VkApiRetryService,
     private readonly circuitBreaker: VkApiCircuitBreaker,
-    private readonly metricsService: VkApiMetricsService,
+    private readonly vkMetricsService: VkApiMetricsService,
+    @Optional() private readonly metricsService?: MetricsService,
   ) {}
 
   /**
@@ -52,7 +54,7 @@ export class VkApiRequestManager {
   ): Promise<T> {
     const method = options.method ?? 'unknown';
     const key = options.key ?? 'vk-api:global';
-    const timing = this.metricsService.startRequest();
+    const timing = this.vkMetricsService.startRequest();
 
     try {
       // 1. Проверяем circuit breaker
@@ -63,7 +65,7 @@ export class VkApiRequestManager {
         );
 
         if (!rateLimitAllowed) {
-          await this.metricsService.recordRateLimitHit();
+          await this.vkMetricsService.recordRateLimitHit();
           this.logger.debug(`Rate limit hit for ${key}, waiting for slot`);
 
           // Ждем освобождения слота
@@ -78,13 +80,27 @@ export class VkApiRequestManager {
       }, options.circuitBreaker ?? { key });
 
       // 4. Записываем успешный запрос
-      await this.metricsService.recordSuccess(method, timing);
+      await this.vkMetricsService.recordSuccess(method, timing);
+      if (this.metricsService) {
+        this.metricsService.recordVkApiRequest(
+          method,
+          'success',
+          timing.duration ?? 0,
+        );
+      }
 
       return result;
     } catch (error) {
       // Записываем неудачный запрос
       const err = error instanceof Error ? error : new Error(String(error));
-      await this.metricsService.recordFailure(method, timing);
+      await this.vkMetricsService.recordFailure(method, timing);
+      if (this.metricsService) {
+        this.metricsService.recordVkApiRequest(
+          method,
+          'error',
+          timing.duration ?? 0,
+        );
+      }
 
       // Если circuit breaker открыт, записываем это в метрики
       const state = await this.circuitBreaker.getState(
@@ -92,7 +108,7 @@ export class VkApiRequestManager {
         options.circuitBreaker,
       );
       if (state === CircuitBreakerState.OPEN) {
-        await this.metricsService.recordCircuitBreakerOpen();
+        await this.vkMetricsService.recordCircuitBreakerOpen();
       }
 
       throw err;
@@ -111,7 +127,7 @@ export class VkApiRequestManager {
   ): Promise<T> {
     const method = options.method ?? 'unknown';
     const key = options.key ?? 'vk-api:global';
-    const timing = this.metricsService.startRequest();
+    const timing = this.vkMetricsService.startRequest();
 
     try {
       const result = await this.circuitBreaker.execute(async () => {
@@ -120,7 +136,7 @@ export class VkApiRequestManager {
         );
 
         if (!rateLimitAllowed) {
-          await this.metricsService.recordRateLimitHit();
+          await this.vkMetricsService.recordRateLimitHit();
           await this.rateLimiter.waitForSlot(
             options.rateLimit ?? { key },
             10000,
@@ -130,18 +146,32 @@ export class VkApiRequestManager {
         return await fn();
       }, options.circuitBreaker ?? { key });
 
-      await this.metricsService.recordSuccess(method, timing);
+      await this.vkMetricsService.recordSuccess(method, timing);
+      if (this.metricsService) {
+        this.metricsService.recordVkApiRequest(
+          method,
+          'success',
+          timing.duration ?? 0,
+        );
+      }
       return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      await this.metricsService.recordFailure(method, timing);
+      await this.vkMetricsService.recordFailure(method, timing);
+      if (this.metricsService) {
+        this.metricsService.recordVkApiRequest(
+          method,
+          'error',
+          timing.duration ?? 0,
+        );
+      }
 
       const state = await this.circuitBreaker.getState(
         key,
         options.circuitBreaker,
       );
       if (state === CircuitBreakerState.OPEN) {
-        await this.metricsService.recordCircuitBreakerOpen();
+        await this.vkMetricsService.recordCircuitBreakerOpen();
       }
 
       throw err;
@@ -153,7 +183,7 @@ export class VkApiRequestManager {
    * @returns Текущие метрики
    */
   async getMetrics() {
-    return await this.metricsService.getMetrics();
+    return await this.vkMetricsService.getMetrics();
   }
 
   /**

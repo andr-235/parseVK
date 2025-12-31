@@ -7,6 +7,7 @@ import { ConfigModule } from './config/config.module';
 import { CacheModule } from './common/cache/cache.module';
 import { CommonModule } from './common/common.module';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { VkModule } from './vk/vk.module';
 import { GroupsModule } from './groups/groups.module';
 import { KeywordsModule } from './keywords/keywords.module';
@@ -47,7 +48,7 @@ import { MetricsModule } from './metrics/metrics.module';
     TelegramModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, LoggingInterceptor],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

@@ -1,5 +1,5 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { Logger, Optional } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
@@ -9,6 +9,7 @@ import type { ParsingTaskJobData } from '../interfaces/parsing-task-job.interfac
 import { PARSING_QUEUE, PARSING_CONCURRENCY } from './parsing.constants';
 import { TaskCancellationService } from '../task-cancellation.service';
 import { TaskCancelledError } from '../errors/task-cancelled.error';
+import { MetricsService } from '../../metrics/metrics.service';
 
 /**
  * Worker для обработки задач парсинга
@@ -29,6 +30,7 @@ export class ParsingProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly tasksGateway: TasksGateway,
     private readonly cancellationService: TaskCancellationService,
+    @Optional() private readonly metricsService?: MetricsService,
   ) {
     super();
   }
@@ -125,6 +127,8 @@ export class ParsingProcessor extends WorkerHost {
 
       this.tasksGateway.broadcastStatus(payload);
       this.tasksGateway.broadcastProgress(payload);
+
+      this.metricsService?.recordTask(status);
     } catch (error) {
       this.logger.warn(
         `Не удалось обновить статус задачи ${taskId} на ${status}: ${error instanceof Error ? error.message : error}`,
