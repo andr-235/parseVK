@@ -15,7 +15,17 @@ describe('TasksController', () => {
   let controller: TasksController;
   const tasksService = {
     createParsingTask: jest.fn<Promise<ParsingTaskResult>, any>(),
-    getTasks: jest.fn<Promise<TaskSummary[]>, any>(),
+    getTasks: jest.fn<
+      Promise<{
+        tasks: TaskSummary[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+        hasMore: boolean;
+      }>,
+      any
+    >(),
     getTask: jest.fn<Promise<TaskDetail>, any>(),
     resumeTask: jest.fn<Promise<ParsingTaskResult>, any>(),
     refreshTask: jest.fn<Promise<ParsingTaskResult>, any>(),
@@ -96,9 +106,23 @@ describe('TasksController', () => {
         skippedGroupsMessage: null,
       },
     ];
-    tasksService.getTasks.mockResolvedValue(summaries);
+    tasksService.getTasks.mockResolvedValue({
+      tasks: summaries,
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+      hasMore: false,
+    });
 
-    await expect(controller.getTasks({})).resolves.toEqual(summaries);
+    await expect(controller.getTasks({})).resolves.toEqual({
+      tasks: summaries,
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+      hasMore: false,
+    });
     expect(tasksService.getTasks).toHaveBeenCalledWith({
       page: 1,
       limit: 20,

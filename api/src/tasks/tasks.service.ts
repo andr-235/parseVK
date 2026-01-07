@@ -101,9 +101,11 @@ export class TasksService {
     total: number;
     page: number;
     limit: number;
+    totalPages: number;
+    hasMore: boolean;
   }> {
-    const page = options?.page ?? 1;
-    const limit = options?.limit ?? 20;
+    const page = Math.max(options?.page ?? 1, 1);
+    const limit = Math.min(Math.max(options?.limit ?? 20, 1), 100);
     const skip = (page - 1) * limit;
 
     const [tasks, total] = await Promise.all([
@@ -115,6 +117,9 @@ export class TasksService {
       this.repository.count(),
     ]);
 
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+    const hasMore = page < totalPages;
+
     return {
       tasks: tasks.map((task) =>
         this.mapTaskToSummary(task as PrismaTaskRecord),
@@ -122,6 +127,8 @@ export class TasksService {
       total,
       page,
       limit,
+      totalPages,
+      hasMore,
     };
   }
 

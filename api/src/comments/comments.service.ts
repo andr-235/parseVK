@@ -38,9 +38,9 @@ export class CommentsService {
    * Преимущества:
    * - Быстрее на больших offset'ах (использует индекс вместо OFFSET scan)
    * - Нет проблемы "missing rows" при добавлении новых данных
-   * - Работает с индексом [publishedAt DESC]
+   * - Работает с индексом [createdAt DESC]
    *
-   * Cursor format: base64("publishedAt:id")
+   * Cursor format: base64("createdAt:id")
    */
   async getCommentsCursor(
     options: CommentsCursorOptions,

@@ -128,7 +128,7 @@ describe('CursorPaginationStrategy', () => {
       createMockComment({
         id: 1,
         text: 'Comment 1',
-        publishedAt: new Date('2024-01-01'),
+        createdAt: new Date('2024-01-01'),
         isRead: false,
       }),
     ];
@@ -160,21 +160,21 @@ describe('CursorPaginationStrategy', () => {
     expect(repositoryObj.findMany).toHaveBeenCalledWith({
       where: {},
       take: 11,
-      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
     expect(statsServiceObj.calculateStats).toHaveBeenCalledWith({}, undefined);
   });
 
   it('должен декодировать cursor и использовать его для пагинации', async () => {
-    const publishedAt = new Date('2024-01-01');
+    const createdAt = new Date('2024-01-01');
     const id = 123;
-    const cursor = CursorUtils.encode(publishedAt, id);
+    const cursor = CursorUtils.encode(createdAt, id);
 
     const comments: CommentWithRelations[] = [
       createMockComment({
         id: 124,
         text: 'Comment',
-        publishedAt: new Date('2024-01-02'),
+        createdAt: new Date('2024-01-02'),
         isRead: false,
       }),
     ];
@@ -184,10 +184,7 @@ describe('CursorPaginationStrategy', () => {
     filterBuilderObj.buildBaseWhere.mockReturnValue({});
     filterBuilderObj.buildReadStatusWhere.mockReturnValue({});
     filterBuilderObj.mergeWhere.mockReturnValue({
-      OR: [
-        { publishedAt: { lt: publishedAt } },
-        { publishedAt, id: { lt: id } },
-      ],
+      OR: [{ createdAt: { lt: createdAt } }, { createdAt, id: { lt: id } }],
     });
     repositoryObj.findMany.mockResolvedValue(comments);
     statsServiceObj.calculateStats.mockResolvedValue({
@@ -226,7 +223,7 @@ describe('CursorPaginationStrategy', () => {
         createMockComment({
           id: i + 1,
           text: `Comment ${i + 1}`,
-          publishedAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
+          createdAt: new Date(`2024-01-${String(i + 1).padStart(2, '0')}`),
           isRead: false,
         }),
     );
@@ -258,7 +255,7 @@ describe('CursorPaginationStrategy', () => {
       createMockComment({
         id: 1,
         text: 'Comment',
-        publishedAt: new Date(),
+        createdAt: new Date(),
         isRead: false,
       }),
     ];

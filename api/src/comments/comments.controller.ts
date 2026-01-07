@@ -57,7 +57,7 @@ export class CommentsController {
    * Преимущества:
    * - Быстрее на больших offset'ах (использует индекс)
    * - Нет проблемы "missing rows" при добавлении новых данных
-   * - Работает с индексом [publishedAt DESC]
+   * - Работает с индексом [createdAt DESC]
    */
   @Get('cursor')
   async getCommentsCursor(

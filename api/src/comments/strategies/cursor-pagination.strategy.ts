@@ -32,7 +32,7 @@ export class CursorPaginationStrategy implements ICursorPaginationStrategy {
     const { cursor, limit } = options;
 
     // Декодируем cursor если он предоставлен
-    let cursorData: { publishedAt: Date; id: number } | null = null;
+    let cursorData: { createdAt: Date; id: number } | null = null;
     if (cursor) {
       cursorData = CursorUtils.decode(cursor);
       if (!cursorData) {
@@ -51,12 +51,12 @@ export class CursorPaginationStrategy implements ICursorPaginationStrategy {
       ? {
           OR: [
             {
-              publishedAt: {
-                lt: cursorData.publishedAt,
+              createdAt: {
+                lt: cursorData.createdAt,
               },
             },
             {
-              publishedAt: cursorData.publishedAt,
+              createdAt: cursorData.createdAt,
               id: {
                 lt: cursorData.id,
               },
@@ -76,7 +76,7 @@ export class CursorPaginationStrategy implements ICursorPaginationStrategy {
     const comments = await this.repository.findMany({
       where: listWhere,
       take: limit + 1,
-      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
 
     const hasMore = comments.length > limit;
@@ -86,7 +86,7 @@ export class CursorPaginationStrategy implements ICursorPaginationStrategy {
     const nextCursor =
       hasMore && items.length > 0
         ? CursorUtils.encode(
-            items[items.length - 1].publishedAt,
+            items[items.length - 1].createdAt,
             items[items.length - 1].id,
           )
         : null;

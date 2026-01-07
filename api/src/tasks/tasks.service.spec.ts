@@ -222,6 +222,7 @@ describe('TasksService', () => {
         }),
       ];
       repositoryMock.findMany.mockResolvedValue(tasks);
+      repositoryMock.count.mockResolvedValue(1);
 
       descriptionParserMock.parse.mockImplementation((task: Task) => {
         const parsed = JSON.parse(task.description || '{}') as Record<
@@ -278,6 +279,9 @@ describe('TasksService', () => {
           stats,
         }),
       );
+      expect(result.total).toBe(1);
+      expect(result.totalPages).toBe(1);
+      expect(result.hasMore).toBe(false);
     });
   });
 

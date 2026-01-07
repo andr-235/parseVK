@@ -168,6 +168,7 @@ model Comment {
   @@index([authorVkId])
   @@index([watchlistAuthorId])
   @@index([publishedAt(sort: Desc)]) // для сортировки по времени публикации
+  @@index([createdAt, id]) // для cursor-based пагинации
   @@index([source]) // для фильтрации TASK/WATCHLIST
   @@index([isRead]) // для фильтра прочитанных
   @@index([postId, authorVkId]) // для поиска комментариев автора в посте

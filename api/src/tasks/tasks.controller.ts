@@ -31,6 +31,8 @@ export class TasksController {
     total: number;
     page: number;
     limit: number;
+    totalPages: number;
+    hasMore: boolean;
   }> {
     return this.tasksService.getTasks({
       page: query.page ?? 1,
