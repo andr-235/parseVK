@@ -25,7 +25,9 @@ const shouldSyncGroups = (pathname: string): boolean => {
 function AppSyncProvider(): null {
   const location = useLocation()
   const pathname = location.pathname
-  const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
+  const isAuthenticated = useAuthStore((state) =>
+    Boolean(state.accessToken && state.user && !state.user.isTemporaryPassword)
+  )
 
   const syncGroups = useMemo(() => shouldSyncGroups(pathname), [pathname])
   const syncKeywords = useMemo(() => shouldSyncKeywords(pathname), [pathname])

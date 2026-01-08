@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Users, Building, Send, Settings, UserCog, LogOut } from 'lucide-react'
+import { Users, Building, Send, Settings, UserCog, LogOut, KeyRound } from 'lucide-react'
 import { useSidebarState } from '@/hooks/useSidebarState'
 import { useSidebarData } from '@/hooks/useSidebarData'
 import { useAuthStore } from '@/store'
@@ -54,6 +54,11 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
 
   const secondaryItems = useMemo<SidebarItem[]>(
     () => [
+      {
+        label: 'Смена пароля',
+        path: '/change-password',
+        icon: <KeyRound className="h-4 w-4" />,
+      },
       ...(isAdmin
         ? [
             {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Trash2, UserPlus } from 'lucide-react'
+import { KeyRound, RefreshCw, Trash2, UserPlus } from 'lucide-react'
+import toast from 'react-hot-toast'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,7 @@ const roleLabelMap: Record<UserRole, string> = {
   admin: 'Администратор',
   user: 'Пользователь',
 }
+const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$/
 
 function AdminUsers() {
   const currentUser = useAuthStore((state) => state.user)
@@ -37,6 +39,7 @@ function AdminUsers() {
   const [role, setRole] = useState<UserRole>('user')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [passwordActionId, setPasswordActionId] = useState<number | null>(null)
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => a.username.localeCompare(b.username))
@@ -71,6 +74,10 @@ function AdminUsers() {
     }
     if (password.length < 8) {
       setFormError('Пароль должен содержать минимум 8 символов')
+      return
+    }
+    if (!PASSWORD_COMPLEXITY_REGEX.test(password)) {
+      setFormError('Пароль должен содержать заглавные и строчные буквы, а также цифры')
       return
     }
 
@@ -115,6 +122,47 @@ function AdminUsers() {
     }
   }
 
+  const showTemporaryPassword = async (user: AdminUser, temporaryPassword: string) => {
+    try {
+      await navigator.clipboard.writeText(temporaryPassword)
+      toast.success('Временный пароль скопирован')
+    } catch {
+      toast('Скопируйте временный пароль вручную')
+    }
+
+    window.prompt(`Временный пароль для ${user.username}`, temporaryPassword)
+  }
+
+  const handleTemporaryPassword = async (user: AdminUser, mode: 'set' | 'reset') => {
+    const confirmed =
+      mode === 'reset'
+        ? window.confirm('Сбросить пароль и выдать временный? Пользователь будет вынужден сменить его.')
+        : window.confirm('Выдать временный пароль пользователю?')
+
+    if (!confirmed) {
+      return
+    }
+
+    setPasswordActionId(user.id)
+    setSubmitError(null)
+    try {
+      const result =
+        mode === 'reset'
+          ? await adminUsersService.resetPassword(user.id)
+          : await adminUsersService.setTemporaryPassword(user.id)
+      setUsers((prev) =>
+        prev.map((item) =>
+          item.id === user.id ? { ...item, isTemporaryPassword: true } : item
+        )
+      )
+      await showTemporaryPassword(user, result.temporaryPassword)
+    } catch {
+      setSubmitError('Не удалось выдать временный пароль')
+    } finally {
+      setPasswordActionId(null)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 pb-8">
       <PageHeroCard
@@ -155,6 +203,9 @@ function AdminUsers() {
                 disabled={isSubmitting}
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                Минимум 8 символов, заглавные и строчные буквы, цифры.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-role">Роль</Label>
@@ -197,6 +248,7 @@ function AdminUsers() {
                 <TableRow>
                   <TableHead>Логин</TableHead>
                   <TableHead>Роль</TableHead>
+                  <TableHead>Статус</TableHead>
                   <TableHead>Создан</TableHead>
                   <TableHead className="text-right">Действия</TableHead>
                 </TableRow>
@@ -204,6 +256,7 @@ function AdminUsers() {
               <TableBody>
                 {sortedUsers.map((user) => {
                   const isCurrent = currentUser?.id === user.id
+                  const isTemporarilyBlocked = Boolean(user.isTemporaryPassword)
                   return (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium text-text-primary">
@@ -214,17 +267,44 @@ function AdminUsers() {
                           {roleLabelMap[user.role]}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        {isTemporarilyBlocked ? (
+                          <Badge variant="outline">Нужна смена пароля</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Активен</span>
+                        )}
+                      </TableCell>
                       <TableCell>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={deletingId === user.id || isCurrent}
-                          onClick={() => handleDeleteUser(user.id)}
-                          title={isCurrent ? 'Нельзя удалить себя' : 'Удалить пользователя'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={passwordActionId === user.id}
+                            onClick={() => handleTemporaryPassword(user, 'set')}
+                            title="Выдать временный пароль"
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={passwordActionId === user.id}
+                            onClick={() => handleTemporaryPassword(user, 'reset')}
+                            title="Сбросить пароль"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={deletingId === user.id || isCurrent}
+                            onClick={() => handleDeleteUser(user.id)}
+                            title={isCurrent ? 'Нельзя удалить себя' : 'Удалить пользователя'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )

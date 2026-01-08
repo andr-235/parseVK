@@ -19,4 +19,18 @@ export const authService = {
       throw error
     }
   },
+
+  async changePassword(oldPassword: string, newPassword: string): Promise<AuthResponse> {
+    try {
+      const response = await createRequest(`${API_URL}/auth/change-password`, {
+        method: 'POST',
+        body: JSON.stringify({ oldPassword, newPassword }),
+      })
+
+      return await handleResponse<AuthResponse>(response, 'Failed to change password')
+    } catch (error) {
+      toast.error('Не удалось сменить пароль')
+      throw error
+    }
+  },
 }

@@ -4,6 +4,7 @@ export interface AuthUser {
   id: number
   username: string
   role: UserRole
+  isTemporaryPassword: boolean
 }
 
 export interface AuthResponse {
@@ -15,6 +16,10 @@ export interface AuthResponse {
 export interface AdminUser extends AuthUser {
   createdAt: string
   updatedAt: string
+}
+
+export interface TemporaryPasswordResponse {
+  temporaryPassword: string
 }
 
 export interface CreateUserPayload {

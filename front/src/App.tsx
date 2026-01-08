@@ -21,6 +21,7 @@ const Telegram = lazy(() => import('@/pages/Telegram'))
 const Metrics = lazy(() => import('@/pages/Metrics'))
 const Login = lazy(() => import('@/pages/Login'))
 const AdminUsers = lazy(() => import('@/pages/AdminUsers'))
+const ChangePassword = lazy(() => import('@/pages/ChangePassword'))
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 const RequireAuth = ({ children }: { children: ReactNode }) => {
@@ -39,6 +40,17 @@ const RequireAdmin = ({ children }: { children: ReactNode }) => {
 
   if (!user || user.role !== 'admin') {
     return <Navigate to="/tasks" replace />
+  }
+
+  return <>{children}</>
+}
+
+const RequirePasswordChange = ({ children }: { children: ReactNode }) => {
+  const user = useAuthStore((state) => state.user)
+  const location = useLocation()
+
+  if (user?.isTemporaryPassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
   }
 
   return <>{children}</>
@@ -89,7 +101,9 @@ function App() {
           <Route
             element={
               <RequireAuth>
-                <AppLayout />
+                <RequirePasswordChange>
+                  <AppLayout />
+                </RequirePasswordChange>
               </RequireAuth>
             }
           >
@@ -105,6 +119,7 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/telegram" element={<Telegram />} />
             <Route path="/metrics" element={<Metrics />} />
+            <Route path="/change-password" element={<ChangePassword />} />
             <Route
               path="/admin/users"
               element={

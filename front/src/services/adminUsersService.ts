@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { API_URL } from '@/lib/apiConfig'
 import { createRequest, handleResponse } from '@/lib/apiUtils'
-import type { AdminUser, CreateUserPayload } from '@/types/auth'
+import type { AdminUser, CreateUserPayload, TemporaryPasswordResponse } from '@/types/auth'
 
 export const adminUsersService = {
   async listUsers(): Promise<AdminUser[]> {
@@ -40,5 +40,19 @@ export const adminUsersService = {
       toast.error('Не удалось удалить пользователя')
       throw error
     }
+  },
+
+  async setTemporaryPassword(userId: number): Promise<TemporaryPasswordResponse> {
+    const response = await createRequest(`${API_URL}/admin/users/${userId}/set-temporary-password`, {
+      method: 'POST',
+    })
+    return handleResponse<TemporaryPasswordResponse>(response, 'Failed to set temporary password')
+  },
+
+  async resetPassword(userId: number): Promise<TemporaryPasswordResponse> {
+    const response = await createRequest(`${API_URL}/admin/users/${userId}/reset-password`, {
+      method: 'POST',
+    })
+    return handleResponse<TemporaryPasswordResponse>(response, 'Failed to reset password')
   },
 }
