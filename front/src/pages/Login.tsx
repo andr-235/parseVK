@@ -12,6 +12,7 @@ function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const setAuth = useAuthStore((state) => state.setAuth)
+  const authUser = useAuthStore((state) => state.user)
   const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
 
   const [username, setUsername] = useState('')
@@ -21,9 +22,13 @@ function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/tasks', { replace: true })
+      if (authUser?.isTemporaryPassword) {
+        navigate('/change-password', { replace: true })
+      } else {
+        navigate('/tasks', { replace: true })
+      }
     }
-  }, [isAuthenticated, navigate])
+  }, [authUser?.isTemporaryPassword, isAuthenticated, navigate])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -33,6 +38,11 @@ function Login() {
     try {
       const data = await authService.login(username.trim(), password)
       setAuth(data)
+
+      if (data.user.isTemporaryPassword) {
+        navigate('/change-password', { replace: true })
+        return
+      }
 
       const redirectTo =
         (location.state as { from?: { pathname?: string } })?.from?.pathname ?? '/tasks'
