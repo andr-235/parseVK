@@ -71,7 +71,7 @@ export const commentsService = {
 
       const query = searchParams.toString()
       const url = query ? `${API_URL}/comments?${query}` : `${API_URL}/comments`
-      const response = await fetch(url)
+      const response = await createRequest(url)
 
       return await handleResponse<IGetCommentsResponse>(response, 'Failed to fetch comments')
     } catch (error) {
@@ -104,7 +104,7 @@ export const commentsService = {
 
       const query = searchParams.toString()
       const url = query ? `${API_URL}/comments/cursor?${query}` : `${API_URL}/comments/cursor`
-      const response = await fetch(url)
+      const response = await createRequest(url)
 
       return await handleResponse<IGetCommentsCursorResponse>(
         response,

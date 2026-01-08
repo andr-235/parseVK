@@ -46,6 +46,32 @@ export class AppConfig {
   @IsOptional()
   corsOrigins?: string = 'http://localhost:8080,http://localhost:3000';
 
+  @IsString()
+  jwtAccessSecret!: string;
+
+  @IsString()
+  jwtRefreshSecret!: string;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  jwtAccessExpiresInMinutes?: number = 15;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  jwtRefreshExpiresInDays?: number = 7;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  authLoginRateLimitTtlSeconds?: number = 60;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  authLoginRateLimitMaxAttempts?: number = 5;
+
   // VK API Request Manager configuration
   @IsNumber()
   @Min(1)

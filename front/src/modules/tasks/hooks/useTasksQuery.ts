@@ -19,7 +19,12 @@ const mapSummariesToTasks = (summaries: IParsingTaskSummary[]) => {
   return summaries.map((summary) => mapSummaryToTask(summary))
 }
 
-export const useTasksQuery = () => {
+interface UseTasksQueryOptions {
+  enabled?: boolean
+}
+
+export const useTasksQuery = (options?: UseTasksQueryOptions) => {
+  const enabled = options?.enabled ?? true
   const previousDataRef = useRef<IParsingTaskSummary[] | null>(null)
   const isSocketConnected = useTasksStore((s) => s.isSocketConnected)
 
@@ -32,10 +37,11 @@ export const useTasksQuery = () => {
     staleTime: 10_000,
     retry: 1,
     refetchOnWindowFocus: false,
+    enabled,
   })
 
   useEffect(() => {
-    if (!query.data) {
+    if (!enabled || !query.data) {
       return
     }
 
@@ -50,24 +56,35 @@ export const useTasksQuery = () => {
     useTasksStore.setState((state) => {
       replaceTasksCollection(state, mapped)
     })
-  }, [query.data])
+  }, [enabled, query.data])
 
   useEffect(() => {
+    if (!enabled) {
+      useTasksStore.setState((state) => {
+        state.isLoading = false
+      })
+      return
+    }
+
     const hasTasks = useTasksStore.getState().taskIds.length > 0
     const shouldShowInitialLoading = query.isPending || (!hasTasks && query.isFetching)
 
     useTasksStore.setState((state) => {
       state.isLoading = shouldShowInitialLoading
     })
-  }, [query.isFetching, query.isPending])
+  }, [enabled, query.isFetching, query.isPending])
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
     if (query.isError) {
       useTasksStore.setState((state) => {
         state.isLoading = false
       })
     }
-  }, [query.isError])
+  }, [enabled, query.isError])
 
   return query
 }

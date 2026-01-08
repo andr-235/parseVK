@@ -7,26 +7,38 @@ import { taskAutomationService } from '@/services/taskAutomationService'
 import { useTaskAutomationStore } from '@/store'
 import { queryKeys } from '@/hooks/queryKeys'
 
-export const useTaskAutomationQuery = () => {
+interface UseTaskAutomationQueryOptions {
+  enabled?: boolean
+}
+
+export const useTaskAutomationQuery = (options?: UseTaskAutomationQueryOptions) => {
+  const enabled = options?.enabled ?? true
+
   const query = useQuery({
     queryKey: queryKeys.taskAutomation,
     queryFn: taskAutomationService.fetchSettings,
     staleTime: 60_000,
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
+    enabled,
   })
 
   useEffect(() => {
-    if (!query.data) {
+    if (!enabled || !query.data) {
       return
     }
 
     useTaskAutomationStore.setState({ settings: query.data })
-  }, [query.data])
+  }, [enabled, query.data])
 
   useEffect(() => {
+    if (!enabled) {
+      useTaskAutomationStore.setState({ isLoading: false })
+      return
+    }
+
     useTaskAutomationStore.setState({ isLoading: query.isFetching })
-  }, [query.isFetching])
+  }, [enabled, query.isFetching])
 
   return query
 }

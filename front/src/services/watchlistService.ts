@@ -24,7 +24,7 @@ export const watchlistService = {
         excludeStopped: params?.excludeStopped,
       })
       const url = query ? `${API_URL}/watchlist/authors?${query}` : `${API_URL}/watchlist/authors`
-      const response = await fetch(url)
+      const response = await createRequest(url)
 
       return await handleResponse<IWatchlistAuthorListResponse>(
         response,
@@ -71,7 +71,7 @@ export const watchlistService = {
         ? `${API_URL}/watchlist/authors/${id}?${query}`
         : `${API_URL}/watchlist/authors/${id}`
 
-      const response = await fetch(url)
+      const response = await createRequest(url)
 
       return await handleResponse<IWatchlistAuthorDetailsResponse>(
         response,
@@ -105,7 +105,7 @@ export const watchlistService = {
 
   async getSettings(): Promise<IWatchlistSettingsResponse> {
     try {
-      const response = await fetch(`${API_URL}/watchlist/settings`)
+      const response = await createRequest(`${API_URL}/watchlist/settings`)
 
       return await handleResponse<IWatchlistSettingsResponse>(
         response,

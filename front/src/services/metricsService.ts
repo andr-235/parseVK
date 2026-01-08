@@ -1,4 +1,5 @@
 import { API_URL } from '@/lib/apiConfig'
+import { createRequest } from '@/lib/apiUtils'
 
 export interface PrometheusMetric {
   name: string
@@ -51,7 +52,7 @@ export interface ParsedMetrics {
 
 export const metricsService = {
   async fetchMetrics(): Promise<string> {
-    const response = await fetch(`${API_URL}/metrics`)
+    const response = await createRequest(`${API_URL}/metrics`)
     if (!response.ok) {
       throw new Error('Failed to fetch metrics')
     }

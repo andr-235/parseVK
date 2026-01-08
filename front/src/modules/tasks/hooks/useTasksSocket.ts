@@ -27,6 +27,7 @@ export interface TaskSocketPayload {
 }
 
 export interface UseTasksSocketOptions {
+  enabled?: boolean
   onConnect?: () => void
   onDisconnect?: () => void
   onConnectError?: () => void
@@ -213,9 +214,16 @@ const applyTaskUpdate = (payload: TaskSocketPayload, source: string): void => {
 }
 
 export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
-  const { onConnect, onDisconnect, onConnectError } = options ?? {}
+  const { enabled = true, onConnect, onDisconnect, onConnectError } = options ?? {}
 
   useEffect(() => {
+    if (!enabled) {
+      useTasksStore.setState((state) => {
+        state.isSocketConnected = false
+      })
+      return
+    }
+
     const resolveBaseUrl = (): string | null => {
       const raw = import.meta.env.VITE_API_WS_URL
       const trimmed = typeof raw === 'string' ? raw.trim() : ''
@@ -308,5 +316,5 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
       })
       socket.disconnect()
     }
-  }, [onConnect, onConnectError, onDisconnect])
+  }, [enabled, onConnect, onConnectError, onDisconnect])
 }

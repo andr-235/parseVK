@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { HealthService } from './common/services/health.service';
 import type { HealthCheckResult } from './common/services/health.service';
+import { Public } from './auth/decorators/public.decorator';
 
 /**
  * Основной контроллер приложения
@@ -21,6 +22,7 @@ export class AppController {
   }
 
   @Get('health')
+  @Public()
   async getHealth(): Promise<HealthCheckResult> {
     return this.healthService.checkHealth();
   }

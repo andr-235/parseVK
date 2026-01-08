@@ -62,7 +62,7 @@ export const listingsService = {
     try {
       const { signal, ...rest } = options
       const query = buildQueryString(rest)
-      const response = await fetch(`${API_URL}/listings?${query}`, { signal })
+      const response = await createRequest(`${API_URL}/listings?${query}`, { signal })
 
       return await handleResponse<IListingsResponse>(response, 'Failed to load listings')
     } catch (error) {
@@ -165,7 +165,7 @@ export const listingsService = {
 
       const query = buildQueryString(queryParams)
       const url = `${API_URL}/listings/export${query ? `?${query}` : ''}`
-      const response = await fetch(url)
+      const response = await createRequest(url)
 
       if (!response.ok) {
         const text = await response.text().catch(() => '')

@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast'
 import { API_URL } from '@/lib/apiConfig'
-import { buildQueryString, handleResponse } from '@/lib/apiUtils'
+import { buildQueryString, createRequest, handleResponse } from '@/lib/apiUtils'
 import { createEmptyPhotoAnalysisSummary } from '@/types'
 import type {
   AuthorCard,
@@ -95,7 +95,7 @@ export const authorsService = {
         sortOrder: params.sortOrder,
       })
       const url = query ? `${API_URL}/authors?${query}` : `${API_URL}/authors`
-      const response = await fetch(url)
+      const response = await createRequest(url)
 
       const data = await handleResponse<AuthorsListResponse>(
         response,
@@ -114,7 +114,7 @@ export const authorsService = {
 
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetails> {
     try {
-      const response = await fetch(`${API_URL}/authors/${vkUserId}`)
+      const response = await createRequest(`${API_URL}/authors/${vkUserId}`)
       const data = await handleResponse<AuthorDetailsResponse>(
         response,
         'Не удалось загрузить данные пользователя'
@@ -128,7 +128,7 @@ export const authorsService = {
 
   async refreshAuthors(): Promise<number> {
     try {
-      const response = await fetch(`${API_URL}/authors/refresh`, {
+      const response = await createRequest(`${API_URL}/authors/refresh`, {
         method: 'POST',
       })
 

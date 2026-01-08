@@ -45,7 +45,7 @@ export const keywordsService = {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch(`${API_URL}/keywords/upload`, {
+      const response = await createRequest(`${API_URL}/keywords/upload`, {
         method: 'POST',
         body: formData,
       })
@@ -61,7 +61,7 @@ export const keywordsService = {
 
   async getAllKeywords(): Promise<IKeywordResponse[]> {
     try {
-      const response = await fetch(`${API_URL}/keywords`)
+      const response = await createRequest(`${API_URL}/keywords`)
       const result = await handleResponse<{
         keywords: IKeywordResponse[]
         total: number
@@ -77,7 +77,7 @@ export const keywordsService = {
 
   async deleteAllKeywords(): Promise<IDeleteResponse> {
     try {
-      const response = await fetch(`${API_URL}/keywords/all`, {
+      const response = await createRequest(`${API_URL}/keywords/all`, {
         method: 'DELETE',
       })
 
@@ -92,7 +92,7 @@ export const keywordsService = {
 
   async deleteKeyword(id: number): Promise<IKeywordResponse> {
     try {
-      const response = await fetch(`${API_URL}/keywords/${id}`, {
+      const response = await createRequest(`${API_URL}/keywords/${id}`, {
         method: 'DELETE',
       })
 

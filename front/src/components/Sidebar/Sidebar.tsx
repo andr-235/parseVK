@@ -1,8 +1,10 @@
 import { useMemo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Users, Building, Send, Settings } from 'lucide-react'
+import { Users, Building, Send, Settings, UserCog, LogOut } from 'lucide-react'
 import { useSidebarState } from '@/hooks/useSidebarState'
 import { useSidebarData } from '@/hooks/useSidebarData'
+import { useAuthStore } from '@/store'
+import { Button } from '@/components/ui/button'
 import {
   createVkSubItems,
   createParsingSubItems,
@@ -10,12 +12,17 @@ import {
   SECONDARY_ITEMS_CONFIG,
 } from './constants'
 import { getSidebarClasses, getPrimaryNavItemClasses } from './utils'
+import { cn } from '@/lib/utils'
 import { SidebarHeader } from './SidebarHeader'
 import { SidebarSection } from './SidebarSection'
 import { SidebarFooter } from './SidebarFooter'
 import type { SidebarProps, SidebarItem } from './types'
 
 export function Sidebar({ title = 'Центр аналитики' }: SidebarProps) {
+  const user = useAuthStore((state) => state.user)
+  const clearAuth = useAuthStore((state) => state.clearAuth)
+  const isAdmin = user?.role === 'admin'
+
   const {
     isCollapsed,
     toggleCollapse,
@@ -47,13 +54,22 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
 
   const secondaryItems = useMemo<SidebarItem[]>(
     () => [
+      ...(isAdmin
+        ? [
+            {
+              label: 'Пользователи',
+              path: '/admin/users',
+              icon: <UserCog className="h-4 w-4" />,
+            },
+          ]
+        : []),
       {
         label: SECONDARY_ITEMS_CONFIG[0].label,
         path: SECONDARY_ITEMS_CONFIG[0].path,
         icon: <Settings className="h-4 w-4" />,
       },
     ],
-    []
+    [isAdmin]
   )
 
   const vkPaths = useMemo(() => vkSubItems.map((item) => item.path), [vkSubItems])
@@ -127,7 +143,22 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
         </nav>
       </div>
 
-      <SidebarFooter items={secondaryItems} isCollapsed={isCollapsed} onExpand={handleExpand} />
+      <SidebarFooter
+        items={secondaryItems}
+        isCollapsed={isCollapsed}
+        onExpand={handleExpand}
+        footerAction={
+          <Button
+            variant="ghost"
+            size={isCollapsed ? 'icon-sm' : 'sm'}
+            onClick={clearAuth}
+            className={cn(isCollapsed ? 'h-8 w-8' : 'w-full justify-start')}
+          >
+            <LogOut className="h-4 w-4" />
+            {!isCollapsed && <span>Выйти</span>}
+          </Button>
+        }
+      />
     </aside>
   )
 }

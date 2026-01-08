@@ -20,6 +20,7 @@ import { DataImportModule } from './data-import/data-import.module';
 import { ListingsModule } from './listings/listings.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { MetricsModule } from './metrics/metrics.module';
     }),
     CacheModule,
     CommonModule,
+    AuthModule,
     MetricsModule,
     VkModule,
     GroupsModule,

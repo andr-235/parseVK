@@ -28,7 +28,7 @@ export const photoAnalysisService = {
 
   async getResults(vkUserId: number): Promise<PhotoAnalysisResponse> {
     try {
-      const response = await fetch(`${API_URL}/photo-analysis/vk/${vkUserId}`)
+      const response = await createRequest(`${API_URL}/photo-analysis/vk/${vkUserId}`)
       return await handleResponse<PhotoAnalysisResponse>(
         response,
         'Не удалось загрузить результаты анализа фотографий'
@@ -41,7 +41,7 @@ export const photoAnalysisService = {
 
   async getSuspicious(vkUserId: number): Promise<PhotoAnalysisResponse> {
     try {
-      const response = await fetch(`${API_URL}/photo-analysis/vk/${vkUserId}/suspicious`)
+      const response = await createRequest(`${API_URL}/photo-analysis/vk/${vkUserId}/suspicious`)
       return await handleResponse<PhotoAnalysisResponse>(
         response,
         'Не удалось загрузить список подозрительных фотографий'
@@ -54,7 +54,7 @@ export const photoAnalysisService = {
 
   async getSummary(vkUserId: number): Promise<PhotoAnalysisSummary> {
     try {
-      const response = await fetch(`${API_URL}/photo-analysis/vk/${vkUserId}/summary`)
+      const response = await createRequest(`${API_URL}/photo-analysis/vk/${vkUserId}/summary`)
       return await handleResponse<PhotoAnalysisSummary>(
         response,
         'Не удалось загрузить сводку по анализу фотографий'
@@ -67,7 +67,7 @@ export const photoAnalysisService = {
 
   async deleteResults(vkUserId: number): Promise<{ message: string }> {
     try {
-      const response = await fetch(`${API_URL}/photo-analysis/vk/${vkUserId}`, {
+      const response = await createRequest(`${API_URL}/photo-analysis/vk/${vkUserId}`, {
         method: 'DELETE',
       })
 

@@ -21,6 +21,23 @@ export function validate(config: Record<string, unknown>): AppConfig {
       : undefined,
     corsOrigins:
       config.CORS_ORIGINS || 'http://localhost:8080,http://localhost:3000',
+    jwtAccessSecret: config.JWT_ACCESS_SECRET,
+    jwtRefreshSecret: config.JWT_REFRESH_SECRET,
+    jwtAccessExpiresInMinutes: config.JWT_ACCESS_EXPIRES_IN_MINUTES
+      ? parseInt(config.JWT_ACCESS_EXPIRES_IN_MINUTES as string, 10)
+      : 15,
+    jwtRefreshExpiresInDays: config.JWT_REFRESH_EXPIRES_IN_DAYS
+      ? parseInt(config.JWT_REFRESH_EXPIRES_IN_DAYS as string, 10)
+      : 7,
+    authLoginRateLimitTtlSeconds: config.AUTH_LOGIN_RATE_LIMIT_TTL_SECONDS
+      ? parseInt(config.AUTH_LOGIN_RATE_LIMIT_TTL_SECONDS as string, 10)
+      : 60,
+    authLoginRateLimitMaxAttempts: config.AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS
+      ? parseInt(
+          config.AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS as string,
+          10,
+        )
+      : 5,
     vkApiRateLimitRequests: config.VK_API_RATE_LIMIT_REQUESTS
       ? parseInt(config.VK_API_RATE_LIMIT_REQUESTS as string, 10)
       : 3,
@@ -80,6 +97,18 @@ export function validate(config: Record<string, unknown>): AppConfig {
   if (!validatedConfig.vkToken) {
     throw new Error(
       'VK_TOKEN обязателен для работы приложения. Установите переменную окружения VK_TOKEN.',
+    );
+  }
+
+  if (!validatedConfig.jwtAccessSecret) {
+    throw new Error(
+      'JWT_ACCESS_SECRET обязателен для работы приложения. Установите переменную окружения JWT_ACCESS_SECRET.',
+    );
+  }
+
+  if (!validatedConfig.jwtRefreshSecret) {
+    throw new Error(
+      'JWT_REFRESH_SECRET обязателен для работы приложения. Установите переменную окружения JWT_REFRESH_SECRET.',
     );
   }
 

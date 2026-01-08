@@ -14,7 +14,7 @@ export interface UpdateTaskAutomationSettingsRequest {
 export const taskAutomationService = {
   async fetchSettings(): Promise<ITaskAutomationSettings> {
     try {
-      const response = await fetch(`${API_URL}/tasks/automation/settings`)
+      const response = await createRequest(`${API_URL}/tasks/automation/settings`)
       return await handleResponse<ITaskAutomationSettings>(
         response,
         'Failed to load automation settings'
@@ -48,7 +48,7 @@ export const taskAutomationService = {
 
   async runAutomation(): Promise<ITaskAutomationRunResponse> {
     try {
-      const response = await fetch(`${API_URL}/tasks/automation/run`, {
+      const response = await createRequest(`${API_URL}/tasks/automation/run`, {
         method: 'POST',
       })
 

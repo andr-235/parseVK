@@ -12,6 +12,7 @@ import {
   useWatchlistSettingsQuery,
 } from '@/modules/watchlist/hooks/useWatchlistQueries'
 import { useTasksSocket } from '@/modules/tasks/hooks/useTasksSocket'
+import { useAuthStore } from '@/store'
 
 const shouldSyncKeywords = (pathname: string): boolean => {
   return pathname.startsWith('/keywords') || pathname.startsWith('/comments')
@@ -24,6 +25,7 @@ const shouldSyncGroups = (pathname: string): boolean => {
 function AppSyncProvider(): null {
   const location = useLocation()
   const pathname = location.pathname
+  const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
 
   const syncGroups = useMemo(() => shouldSyncGroups(pathname), [pathname])
   const syncKeywords = useMemo(() => shouldSyncKeywords(pathname), [pathname])
@@ -31,16 +33,16 @@ function AppSyncProvider(): null {
   const syncAuthors = useMemo(() => pathname.startsWith('/authors'), [pathname])
   const syncWatchlist = useMemo(() => pathname.startsWith('/watchlist'), [pathname])
 
-  useTasksQuery()
-  useTaskAutomationQuery()
-  useGroupsQuery({ enabled: syncGroups })
-  useKeywordsQuery({ enabled: syncKeywords })
-  useCommentsQuery({ enabled: syncComments })
-  useAuthorsQuery(syncAuthors)
-  useWatchlistAuthorsQuery(syncWatchlist)
-  useWatchlistSettingsQuery(syncWatchlist)
+  useTasksQuery({ enabled: isAuthenticated })
+  useTaskAutomationQuery({ enabled: isAuthenticated })
+  useGroupsQuery({ enabled: isAuthenticated && syncGroups })
+  useKeywordsQuery({ enabled: isAuthenticated && syncKeywords })
+  useCommentsQuery({ enabled: isAuthenticated && syncComments })
+  useAuthorsQuery(isAuthenticated && syncAuthors)
+  useWatchlistAuthorsQuery(isAuthenticated && syncWatchlist)
+  useWatchlistSettingsQuery(isAuthenticated && syncWatchlist)
 
-  useTasksSocket()
+  useTasksSocket({ enabled: isAuthenticated })
 
   return null
 }

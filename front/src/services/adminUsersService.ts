@@ -1,0 +1,44 @@
+import toast from 'react-hot-toast'
+import { API_URL } from '@/lib/apiConfig'
+import { createRequest, handleResponse } from '@/lib/apiUtils'
+import type { AdminUser, CreateUserPayload } from '@/types/auth'
+
+export const adminUsersService = {
+  async listUsers(): Promise<AdminUser[]> {
+    const response = await createRequest(`${API_URL}/admin/users`)
+    return handleResponse<AdminUser[]>(response, 'Failed to fetch users')
+  },
+
+  async createUser(payload: CreateUserPayload): Promise<AdminUser> {
+    try {
+      const response = await createRequest(`${API_URL}/admin/users`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+
+      const result = await handleResponse<AdminUser>(response, 'Failed to create user')
+      toast.success('Пользователь добавлен')
+      return result
+    } catch (error) {
+      toast.error('Не удалось добавить пользователя')
+      throw error
+    }
+  },
+
+  async deleteUser(userId: number): Promise<void> {
+    try {
+      const response = await createRequest(`${API_URL}/admin/users/${userId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete user')
+      }
+
+      toast.success('Пользователь удалён')
+    } catch (error) {
+      toast.error('Не удалось удалить пользователя')
+      throw error
+    }
+  },
+}

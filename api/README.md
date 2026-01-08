@@ -47,6 +47,35 @@ $ npx prisma migrate deploy
 $ npx prisma generate
 ```
 
+## Auth bootstrap
+
+Set JWT secrets in your environment:
+
+```bash
+export JWT_ACCESS_SECRET="replace-with-strong-secret"
+export JWT_REFRESH_SECRET="replace-with-strong-secret"
+```
+
+Optional auth tuning:
+
+- `JWT_ACCESS_EXPIRES_IN_MINUTES` (default: 15)
+- `JWT_REFRESH_EXPIRES_IN_DAYS` (default: 7)
+- `AUTH_LOGIN_RATE_LIMIT_TTL_SECONDS` (default: 60)
+- `AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS` (default: 5)
+
+Seed the first admin user:
+
+```bash
+$ npm run seed:admin
+```
+
+Default admin credentials (change on first login):
+
+- username: `admin`
+- password: `change_me_123`
+
+You can override them with `ADMIN_SEED_USERNAME` and `ADMIN_SEED_PASSWORD`.
+
 ## Compile and run the project
 
 ```bash

@@ -17,7 +17,7 @@ export const groupsService = {
         limit: params?.limit,
       })
       const url = `${API_URL}/groups${query ? `?${query}` : ''}`
-      const response = await fetch(url)
+      const response = await createRequest(url)
 
       const data = await handleResponse<IGroupsListResponse>(response, 'Failed to fetch groups')
       if (!Array.isArray(data.items)) {
@@ -69,7 +69,7 @@ export const groupsService = {
 
   async deleteGroup(id: number): Promise<void> {
     try {
-      const response = await fetch(`${API_URL}/groups/${id}`, {
+      const response = await createRequest(`${API_URL}/groups/${id}`, {
         method: 'DELETE',
       })
 
@@ -83,7 +83,7 @@ export const groupsService = {
 
   async deleteAllGroups(): Promise<number> {
     try {
-      const response = await fetch(`${API_URL}/groups/all`, {
+      const response = await createRequest(`${API_URL}/groups/all`, {
         method: 'DELETE',
       })
 
@@ -104,7 +104,7 @@ export const groupsService = {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch(`${API_URL}/groups/upload`, {
+      const response = await createRequest(`${API_URL}/groups/upload`, {
         method: 'POST',
         body: formData,
       })
@@ -147,7 +147,7 @@ export const groupsService = {
 
   async searchRegionGroups(): Promise<IRegionGroupSearchResponse> {
     try {
-      const response = await fetch(`${API_URL}/groups/search/region`)
+      const response = await createRequest(`${API_URL}/groups/search/region`)
       return await handleResponse<IRegionGroupSearchResponse>(
         response,
         'Failed to search region groups'

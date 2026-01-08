@@ -7,7 +7,7 @@ import type { IParsingTaskResult, IParsingTaskSummary } from '@/types/api'
 export const tasksService = {
   async fetchTasks(): Promise<IParsingTaskSummary[]> {
     try {
-      const response = await fetch(`${API_URL}/tasks`)
+      const response = await createRequest(`${API_URL}/tasks`)
 
       if (response.status === 404) {
         return []
@@ -28,7 +28,7 @@ export const tasksService = {
 
   async fetchTaskDetails(taskId: number | string): Promise<IParsingTaskResult> {
     try {
-      const response = await fetch(`${API_URL}/tasks/${taskId}`)
+      const response = await createRequest(`${API_URL}/tasks/${taskId}`)
       return await handleResponse<IParsingTaskResult>(response, 'Failed to fetch task details')
     } catch (error) {
       toast.error('Не удалось загрузить детали задачи')
@@ -58,7 +58,7 @@ export const tasksService = {
   async resumeTask(taskId: number | string): Promise<IParsingTaskResult> {
     try {
       const id = encodeURIComponent(String(taskId))
-      const response = await fetch(`${API_URL}/tasks/${id}/resume`, {
+      const response = await createRequest(`${API_URL}/tasks/${id}/resume`, {
         method: 'POST',
       })
 
@@ -74,7 +74,7 @@ export const tasksService = {
   async checkTask(taskId: number | string): Promise<IParsingTaskResult> {
     try {
       const id = encodeURIComponent(String(taskId))
-      const response = await fetch(`${API_URL}/tasks/${id}/check`, {
+      const response = await createRequest(`${API_URL}/tasks/${id}/check`, {
         method: 'POST',
       })
 
@@ -94,7 +94,7 @@ export const tasksService = {
   async deleteTask(taskId: number | string): Promise<void> {
     try {
       const id = encodeURIComponent(String(taskId))
-      const response = await fetch(`${API_URL}/tasks/${id}`, {
+      const response = await createRequest(`${API_URL}/tasks/${id}`, {
         method: 'DELETE',
       })
 
