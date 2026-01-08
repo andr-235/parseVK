@@ -48,10 +48,12 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
             infer: true,
           }) ?? 5;
 
-        return {
-          ttl: Math.max(1, ttl),
-          limit: Math.max(1, limit),
-        };
+        return [
+          {
+            ttl: Math.max(1, ttl),
+            limit: Math.max(1, limit),
+          },
+        ];
       },
     }),
   ],

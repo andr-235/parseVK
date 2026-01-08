@@ -48,7 +48,7 @@ function AdminUsers() {
     try {
       const data = await adminUsersService.listUsers()
       setUsers(data)
-    } catch (error) {
+    } catch {
       setSubmitError('Не удалось загрузить пользователей')
     } finally {
       setIsLoading(false)
@@ -85,7 +85,7 @@ function AdminUsers() {
       setUsername('')
       setPassword('')
       setRole('user')
-    } catch (error) {
+    } catch {
       setFormError('Не удалось создать пользователя')
     } finally {
       setIsSubmitting(false)
@@ -108,7 +108,7 @@ function AdminUsers() {
     try {
       await adminUsersService.deleteUser(userId)
       setUsers((prev) => prev.filter((user) => user.id !== userId))
-    } catch (error) {
+    } catch {
       setSubmitError('Не удалось удалить пользователя')
     } finally {
       setDeletingId(null)

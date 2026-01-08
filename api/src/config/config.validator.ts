@@ -33,10 +33,7 @@ export function validate(config: Record<string, unknown>): AppConfig {
       ? parseInt(config.AUTH_LOGIN_RATE_LIMIT_TTL_SECONDS as string, 10)
       : 60,
     authLoginRateLimitMaxAttempts: config.AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS
-      ? parseInt(
-          config.AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS as string,
-          10,
-        )
+      ? parseInt(config.AUTH_LOGIN_RATE_LIMIT_MAX_ATTEMPTS as string, 10)
       : 5,
     vkApiRateLimitRequests: config.VK_API_RATE_LIMIT_REQUESTS
       ? parseInt(config.VK_API_RATE_LIMIT_REQUESTS as string, 10)

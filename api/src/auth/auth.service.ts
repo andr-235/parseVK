@@ -18,7 +18,10 @@ export class AuthService {
   async login(username: string, password: string): Promise<AuthResponse> {
     const user = await this.validateUser(username, password);
     const tokens = await this.issueTokens(user);
-    await this.usersService.updateRefreshTokenHash(user.id, tokens.refreshToken);
+    await this.usersService.updateRefreshTokenHash(
+      user.id,
+      tokens.refreshToken,
+    );
     return this.buildAuthResponse(user, tokens);
   }
 
@@ -37,7 +40,10 @@ export class AuthService {
     }
 
     const tokens = await this.issueTokens(user);
-    await this.usersService.updateRefreshTokenHash(user.id, tokens.refreshToken);
+    await this.usersService.updateRefreshTokenHash(
+      user.id,
+      tokens.refreshToken,
+    );
     return this.buildAuthResponse(user, tokens);
   }
 

@@ -37,7 +37,7 @@ function Login() {
       const redirectTo =
         (location.state as { from?: { pathname?: string } })?.from?.pathname ?? '/tasks'
       navigate(redirectTo, { replace: true })
-    } catch (err) {
+    } catch {
       setError('Неверный логин или пароль')
     } finally {
       setIsSubmitting(false)

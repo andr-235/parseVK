@@ -10,7 +10,9 @@ import {
 import { UserRole } from '@prisma/client';
 
 export class CreateUserDto {
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(3)
   @MaxLength(64)
