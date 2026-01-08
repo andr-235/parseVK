@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
 import { CommentsFilterBuilder } from './builders/comments-filter.builder';
 import { CommentsController } from './comments.controller';
 import { CommentMapper } from './mappers/comment.mapper';
@@ -14,7 +13,6 @@ import { CommentsQueryValidator } from './validators/comments-query.validator';
   controllers: [CommentsController],
   providers: [
     CommentsService,
-    PrismaService,
     CommentsRepository,
     {
       provide: 'ICommentsRepository',

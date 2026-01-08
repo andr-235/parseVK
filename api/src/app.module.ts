@@ -8,6 +8,7 @@ import { CacheModule } from './common/cache/cache.module';
 import { CommonModule } from './common/common.module';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { PrismaModule } from './prisma.module';
 import { VkModule } from './vk/vk.module';
 import { GroupsModule } from './groups/groups.module';
 import { KeywordsModule } from './keywords/keywords.module';
@@ -25,6 +26,7 @@ import { AuthModule } from './auth/auth.module';
 @Module({
   imports: [
     ConfigModule,
+    PrismaModule,
     ScheduleModule.forRoot(),
     // BullMQ глобальная конфигурация
     BullModule.forRoot({

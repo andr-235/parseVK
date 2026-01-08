@@ -44,7 +44,15 @@ export class AppConfig {
 
   @IsString()
   @IsOptional()
-  corsOrigins?: string = 'http://localhost:8080,http://localhost:3000';
+  corsOrigins?: string = 'http://192.168.88.12:8080';
+
+  @IsString()
+  @IsOptional()
+  corsCredentialsOrigins?: string;
+
+  @IsString()
+  @IsOptional()
+  corsCredentialsRoutes?: string;
 
   @IsString()
   jwtAccessSecret!: string;

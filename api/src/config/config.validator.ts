@@ -19,8 +19,9 @@ export function validate(config: Record<string, unknown>): AppConfig {
     imageModerationTimeoutMs: config.IMAGE_MODERATION_TIMEOUT_MS
       ? parseInt(config.IMAGE_MODERATION_TIMEOUT_MS as string, 10)
       : undefined,
-    corsOrigins:
-      config.CORS_ORIGINS || 'http://localhost:8080,http://localhost:3000',
+    corsOrigins: config.CORS_ORIGINS || 'http://192.168.88.12:8080',
+    corsCredentialsOrigins: config.CORS_CREDENTIALS_ORIGINS || '',
+    corsCredentialsRoutes: config.CORS_CREDENTIALS_ROUTES || '',
     jwtAccessSecret: config.JWT_ACCESS_SECRET,
     jwtRefreshSecret: config.JWT_REFRESH_SECRET,
     jwtAccessExpiresInMinutes: config.JWT_ACCESS_EXPIRES_IN_MINUTES

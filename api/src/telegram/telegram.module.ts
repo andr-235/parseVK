@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TelegramController } from './telegram.controller';
 import { TelegramService } from './telegram.service';
-import { PrismaService } from '../prisma.service';
 import { TelegramAuthService } from './telegram-auth.service';
 import { TelegramAuthController } from './telegram-auth.controller';
 import { TelegramClientManagerService } from './services/telegram-client-manager.service';
@@ -18,7 +17,6 @@ import { TelegramMemberRepository } from './repositories/telegram-member.reposit
   providers: [
     TelegramService,
     TelegramAuthService,
-    PrismaService,
     TelegramClientManagerService,
     TelegramChatMapper,
     TelegramMemberMapper,

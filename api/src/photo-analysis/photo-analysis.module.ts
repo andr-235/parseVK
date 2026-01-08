@@ -11,7 +11,6 @@ import { PhotoAnalysisSummaryBuilder } from './builders/photo-analysis-summary.b
 import { PhotoAnalysisRepository } from './interfaces/photo-analysis-repository.interface';
 import { WebhookModerationStrategy } from './strategies/webhook-moderation.strategy';
 import { WebhookModerationAdapter } from './adapters/webhook-moderation.adapter';
-import { PrismaService } from '../prisma.service';
 import { VkModule } from '../vk/vk.module';
 
 @Module({
@@ -56,7 +55,6 @@ import { VkModule } from '../vk/vk.module';
       provide: 'IModerationAdapter',
       useExisting: WebhookModerationAdapter,
     },
-    PrismaService,
   ],
   exports: [PhotoAnalysisService],
 })

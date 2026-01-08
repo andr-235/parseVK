@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
-import { PrismaService } from '../prisma.service';
 import { VkModule } from '../vk/vk.module';
 import { ParsingTaskRunner } from './parsing-task.runner';
 import { ParsingQueueService } from './parsing-queue.service';
@@ -39,7 +38,6 @@ import { TasksRepository } from './repositories/tasks.repository';
   controllers: [TasksController, TaskAutomationController],
   providers: [
     TasksService,
-    PrismaService,
     {
       provide: 'ITasksRepository',
       useClass: TasksRepository,

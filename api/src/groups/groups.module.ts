@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
 import { VkModule } from '../vk/vk.module';
-import { PrismaService } from '../prisma.service';
 import { GroupsRepository } from './repositories/groups.repository';
 import { GroupMapper } from './mappers/group.mapper';
 import { GroupIdentifierValidator } from './validators/group-identifier.validator';
@@ -12,7 +11,6 @@ import { GroupIdentifierValidator } from './validators/group-identifier.validato
   controllers: [GroupsController],
   providers: [
     GroupsService,
-    PrismaService,
     {
       provide: 'IGroupsRepository',
       useClass: GroupsRepository,
