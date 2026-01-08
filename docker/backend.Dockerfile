@@ -15,6 +15,8 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 # Prisma engines mirror - используем официальный CDN
 ENV PRISMA_ENGINES_MIRROR=https://binaries.prisma.sh
 
+RUN apk add --no-cache --virtual .build-deps python3 build-base
+
 RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retries 3 \
     && npm config set fetch-retry-factor 2 \
