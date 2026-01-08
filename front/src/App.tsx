@@ -49,8 +49,8 @@ const RequirePasswordChange = ({ children }: { children: ReactNode }) => {
   const user = useAuthStore((state) => state.user)
   const location = useLocation()
 
-  if (user?.isTemporaryPassword && location.pathname !== '/change-password') {
-    return <Navigate to="/change-password" replace />
+  if (user?.isTemporaryPassword && location.pathname !== '/login') {
+    return <Navigate to="/login" replace />
   }
 
   return <>{children}</>
