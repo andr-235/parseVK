@@ -19,6 +19,8 @@ function Login() {
   const authUser = useAuthStore((state) => state.user)
   const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
   const mustChangePassword = Boolean(authUser?.isTemporaryPassword)
+  const [isManualChangeMode, setIsManualChangeMode] = useState(false)
+  const isManualChangePassword = isManualChangeMode && !mustChangePassword
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -30,10 +32,10 @@ function Login() {
   const [isChanging, setIsChanging] = useState(false)
 
   useEffect(() => {
-    if (isAuthenticated && !mustChangePassword) {
+    if (isAuthenticated && !mustChangePassword && !isManualChangePassword) {
       navigate('/tasks', { replace: true })
     }
-  }, [isAuthenticated, mustChangePassword, navigate])
+  }, [isAuthenticated, isManualChangePassword, mustChangePassword, navigate])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -65,6 +67,11 @@ function Login() {
     event.preventDefault()
     setError(null)
 
+    if (isManualChangePassword && !username.trim()) {
+      setError('Введите логин')
+      return
+    }
+
     if (newPassword.length < 8) {
       setError('Новый пароль должен содержать минимум 8 символов')
       return
@@ -82,6 +89,16 @@ function Login() {
 
     setIsChanging(true)
     try {
+      if (isManualChangePassword) {
+        try {
+          const loginData = await authService.login(username.trim(), oldPassword)
+          setAuth(loginData)
+        } catch {
+          setError('Неверный логин или текущий пароль')
+          return
+        }
+      }
+
       const data = await authService.changePassword(oldPassword, newPassword)
       setAuth(data)
       navigate('/tasks', { replace: true })
@@ -100,6 +117,22 @@ function Login() {
     setError(null)
   }
 
+  const handleSwitchToChangePassword = () => {
+    setIsManualChangeMode(true)
+    setError(null)
+    if (!oldPassword && password) {
+      setOldPassword(password)
+    }
+  }
+
+  const handleSwitchToLogin = () => {
+    setIsManualChangeMode(false)
+    setError(null)
+    setOldPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+  }
+
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-background-primary px-4 py-10">
       <div
@@ -111,7 +144,8 @@ function Login() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent-primary/10 via-transparent to-transparent"
         />
-        <CardHeader className="relative z-10 items-center space-y-3 text-center">
+        <CardHeader className="relative z-10 items-center space-y-4 text-center">
+          <BrandLogo size="xl" className="drop-shadow-[0_22px_60px_rgba(37,99,235,0.25)]" />
           <CardTitle className="text-3xl font-semibold text-text-primary">
             {mustChangePassword ? 'Смена пароля' : 'Вход в систему'}
           </CardTitle>
@@ -122,11 +156,22 @@ function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent className="relative z-10">
-          <div className="mb-8 flex justify-center">
-            <BrandLogo size="xl" className="drop-shadow-[0_22px_60px_rgba(37,99,235,0.25)]" />
-          </div>
-          {mustChangePassword ? (
+          {mustChangePassword || isManualChangePassword ? (
             <form className="space-y-5" onSubmit={handleChangePassword}>
+              {isManualChangePassword && (
+                <div className="space-y-2">
+                  <Label htmlFor="username">Логин</Label>
+                  <Input
+                    id="username"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    placeholder="Введите логин"
+                    disabled={isChanging}
+                    required
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="old-password">Текущий пароль</Label>
                 <Input
@@ -181,9 +226,15 @@ function Login() {
                     'Сменить пароль'
                   )}
                 </Button>
-                <Button type="button" variant="ghost" onClick={handleLogout}>
-                  Выйти
-                </Button>
+                {mustChangePassword ? (
+                  <Button type="button" variant="ghost" onClick={handleLogout}>
+                    Выйти
+                  </Button>
+                ) : (
+                  <Button type="button" variant="ghost" onClick={handleSwitchToLogin}>
+                    Вернуться ко входу
+                  </Button>
+                )}
               </div>
             </form>
           ) : (
@@ -215,16 +266,21 @@ function Login() {
                 <p className="text-xs text-muted-foreground">Минимум 8 символов.</p>
               </div>
               {error && <div className="text-sm text-destructive">{error}</div>}
-              <Button className="w-full" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Spinner className="size-4" />
-                    Входим...
-                  </>
-                ) : (
-                  'Войти'
-                )}
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button className="w-full" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Spinner className="size-4" />
+                      Входим...
+                    </>
+                  ) : (
+                    'Войти'
+                  )}
+                </Button>
+                <Button type="button" variant="ghost" onClick={handleSwitchToChangePassword}>
+                  Сменить пароль
+                </Button>
+              </div>
             </form>
           )}
         </CardContent>
