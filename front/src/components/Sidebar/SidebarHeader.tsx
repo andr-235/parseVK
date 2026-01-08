@@ -1,5 +1,5 @@
-import { LayoutGrid } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { BrandLogo } from '@/components/BrandLogo'
 import { SidebarCollapseButton } from './SidebarCollapseButton'
 
 interface SidebarHeaderProps {
@@ -25,9 +25,7 @@ export function SidebarHeader({
         onClick={isCollapsed ? onExpand : undefined}
         title={isCollapsed ? 'Развернуть' : undefined}
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <LayoutGrid className="h-5 w-5" />
-        </div>
+        <BrandLogo size={isCollapsed ? 'sm' : 'md'} className="rounded-lg" alt={title} />
         {!isCollapsed && <span className="font-semibold truncate text-sm">{title}</span>}
       </div>
       {!isCollapsed && (

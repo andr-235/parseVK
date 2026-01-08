@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { BrandLogo } from '@/components/BrandLogo'
 import { authService } from '@/services/authService'
 import { useAuthStore } from '@/store'
 
@@ -113,6 +114,9 @@ function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-6 flex justify-center">
+            <BrandLogo size="lg" />
+          </div>
           {mustChangePassword ? (
             <form className="space-y-5" onSubmit={handleChangePassword}>
               <div className="space-y-2">
