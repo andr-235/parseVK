@@ -32,7 +32,7 @@ RUN pnpm config set registry ${NPM_REGISTRY} \
     && pnpm config set fetch-retries 3 \
     && pnpm config set fetch-timeout 60000 \
     && (pnpm install || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install)) \
-    && pnpm rebuild bcrypt --build-from-source
+    && npm rebuild bcrypt --build-from-source
 
 COPY api/ ./
 
