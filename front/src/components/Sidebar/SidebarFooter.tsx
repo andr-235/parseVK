@@ -14,12 +14,7 @@ interface SidebarFooterProps {
   footerAction?: ReactNode
 }
 
-export function SidebarFooter({
-  items,
-  isCollapsed,
-  onExpand,
-  footerAction,
-}: SidebarFooterProps) {
+export function SidebarFooter({ items, isCollapsed, onExpand, footerAction }: SidebarFooterProps) {
   return (
     <div className="border-t border-sidebar-border p-4">
       <div className="space-y-1">
