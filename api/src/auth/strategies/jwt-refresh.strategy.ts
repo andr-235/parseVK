@@ -7,7 +7,10 @@ import { UsersService } from '../../users/users.service';
 import type { AuthenticatedUser, JwtPayload } from '../auth.types';
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh',
+) {
   constructor(
     configService: ConfigService<AppConfig>,
     private readonly usersService: UsersService,
