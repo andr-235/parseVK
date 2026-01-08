@@ -8,7 +8,14 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { LoadingState } from '@/components/LoadingState'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import { adminUsersService } from '@/services/adminUsersService'
 import { useAuthStore } from '@/store'
@@ -174,10 +181,7 @@ function AdminUsers() {
           </form>
         </SectionCard>
 
-        <SectionCard
-          title="Список пользователей"
-          description="Все зарегистрированные аккаунты."
-        >
+        <SectionCard title="Список пользователей" description="Все зарегистрированные аккаунты.">
           {isLoading ? (
             <LoadingState message="Загрузка пользователей..." />
           ) : sortedUsers.length === 0 ? (
@@ -202,15 +206,15 @@ function AdminUsers() {
                   const isCurrent = currentUser?.id === user.id
                   return (
                     <TableRow key={user.id}>
-                      <TableCell className="font-medium text-text-primary">{user.username}</TableCell>
+                      <TableCell className="font-medium text-text-primary">
+                        {user.username}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={user.role === 'admin' ? 'highlight' : 'secondary'}>
                           {roleLabelMap[user.role]}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        {new Date(user.createdAt).toLocaleDateString('ru-RU')}
-                      </TableCell>
+                      <TableCell>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
