@@ -54,14 +54,16 @@ module.exports = {
           return match[1];
         }
         return f.replace(/^front\//, '');
-      })
+      });
+    const quotedPaths = relativePaths
+      .map((file) => `'${file.replace(/'/g, "'\\''")}'`)
       .join(' ');
     
     return [
       // 1. Автоматическое форматирование
-      `bash -c "cd front && npx prettier --write '${relativePaths}'"`,
+      `bash -c "cd front && npx prettier --write ${quotedPaths}"`,
       // 2. Линтинг с автоФиксом и блокировкой при предупреждений
-      `bash -c "cd front && npx eslint --fix --max-warnings=0 --no-warn-ignored '${relativePaths}'"`,
+      `bash -c "cd front && npx eslint --fix --max-warnings=0 --no-warn-ignored ${quotedPaths}"`,
     ];
   },
   // Тестовые файлы frontend: только форматирование

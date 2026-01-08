@@ -136,7 +136,9 @@ function AdminUsers() {
   const handleTemporaryPassword = async (user: AdminUser, mode: 'set' | 'reset') => {
     const confirmed =
       mode === 'reset'
-        ? window.confirm('Сбросить пароль и выдать временный? Пользователь будет вынужден сменить его.')
+        ? window.confirm(
+            'Сбросить пароль и выдать временный? Пользователь будет вынужден сменить его.'
+          )
         : window.confirm('Выдать временный пароль пользователю?')
 
     if (!confirmed) {
@@ -151,9 +153,7 @@ function AdminUsers() {
           ? await adminUsersService.resetPassword(user.id)
           : await adminUsersService.setTemporaryPassword(user.id)
       setUsers((prev) =>
-        prev.map((item) =>
-          item.id === user.id ? { ...item, isTemporaryPassword: true } : item
-        )
+        prev.map((item) => (item.id === user.id ? { ...item, isTemporaryPassword: true } : item))
       )
       await showTemporaryPassword(user, result.temporaryPassword)
     } catch {

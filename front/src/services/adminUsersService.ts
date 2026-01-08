@@ -43,9 +43,12 @@ export const adminUsersService = {
   },
 
   async setTemporaryPassword(userId: number): Promise<TemporaryPasswordResponse> {
-    const response = await createRequest(`${API_URL}/admin/users/${userId}/set-temporary-password`, {
-      method: 'POST',
-    })
+    const response = await createRequest(
+      `${API_URL}/admin/users/${userId}/set-temporary-password`,
+      {
+        method: 'POST',
+      }
+    )
     return handleResponse<TemporaryPasswordResponse>(response, 'Failed to set temporary password')
   },
 
