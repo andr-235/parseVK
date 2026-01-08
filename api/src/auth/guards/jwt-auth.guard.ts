@@ -42,28 +42,15 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest<TUser = any>(
-    err: any,
-    user: any,
-    _info: any,
-    _context: ExecutionContext,
-    _status?: any,
-  ): TUser {
-    void _info;
-    void _context;
-    void _status;
-    if (err) {
+  handleRequest(err: unknown, user: unknown): unknown {
+    if (err || !user) {
       if (err instanceof Error) {
         throw err;
       }
       throw new UnauthorizedException('Unauthorized');
     }
 
-    if (!user) {
-      throw new UnauthorizedException('Unauthorized');
-    }
-
-    return user as TUser;
+    return user;
   }
 
   private isPublicRoute(context: ExecutionContext): boolean {
