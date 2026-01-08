@@ -6,11 +6,17 @@ import {
 import { UserRole } from '@prisma/client';
 import type { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 
 const PASSWORD_SALT_ROUNDS = 12;
+const TEMP_PASSWORD_LENGTH = 12;
+const LOWERCASE_CHARS = 'abcdefghijklmnopqrstuvwxyz';
+const UPPERCASE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const DIGIT_CHARS = '0123456789';
+const TEMP_PASSWORD_CHARS = `${LOWERCASE_CHARS}${UPPERCASE_CHARS}${DIGIT_CHARS}`;
 
 @Injectable()
 export class UsersService {
@@ -31,6 +37,7 @@ export class UsersService {
         id: true,
         username: true,
         role: true,
+        isTemporaryPassword: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -54,6 +61,7 @@ export class UsersService {
         id: true,
         username: true,
         role: true,
+        isTemporaryPassword: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -83,5 +91,73 @@ export class UsersService {
       where: { id: userId },
       data: { refreshTokenHash },
     });
+  }
+
+  async setPassword(
+    userId: number,
+    passwordHash: string,
+    isTemporaryPassword: boolean,
+  ): Promise<User> {
+    const existing = await this.findById(userId);
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        isTemporaryPassword,
+        refreshTokenHash: null,
+      },
+    });
+  }
+
+  async createTemporaryPassword(
+    userId: number,
+    adminId: number,
+  ): Promise<{ temporaryPassword: string }> {
+    void adminId;
+    const temporaryPassword = this.generateTemporaryPassword();
+    const passwordHash = await bcrypt.hash(
+      temporaryPassword,
+      PASSWORD_SALT_ROUNDS,
+    );
+    await this.setPassword(userId, passwordHash, true);
+    return { temporaryPassword };
+  }
+
+  async resetUserPassword(
+    userId: number,
+    adminId: number,
+  ): Promise<{ temporaryPassword: string }> {
+    return this.createTemporaryPassword(userId, adminId);
+  }
+
+  private generateTemporaryPassword(length = TEMP_PASSWORD_LENGTH): string {
+    const normalizedLength = Math.max(8, length);
+    const required = [
+      this.randomChar(LOWERCASE_CHARS),
+      this.randomChar(UPPERCASE_CHARS),
+      this.randomChar(DIGIT_CHARS),
+    ];
+    const remainingLength = Math.max(0, normalizedLength - required.length);
+    const rest = Array.from({ length: remainingLength }, () =>
+      this.randomChar(TEMP_PASSWORD_CHARS),
+    );
+    const password = [...required, ...rest];
+
+    for (let index = password.length - 1; index > 0; index -= 1) {
+      const swapIndex = randomInt(index + 1);
+      const temp = password[index];
+      password[index] = password[swapIndex];
+      password[swapIndex] = temp;
+    }
+
+    return password.join('');
+  }
+
+  private randomChar(chars: string): string {
+    return chars[randomInt(chars.length)] ?? chars[0];
   }
 }

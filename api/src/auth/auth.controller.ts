@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { Public } from './decorators/public.decorator';
+import { AllowTemporaryPassword } from './decorators/allow-temporary-password.decorator';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
@@ -39,5 +41,22 @@ export class AuthController {
       throw new UnauthorizedException('Unauthorized');
     }
     return this.authService.refreshTokens(request.user.id, dto.refreshToken);
+  }
+
+  @AllowTemporaryPassword()
+  @Post('change-password')
+  @HttpCode(200)
+  async changePassword(
+    @Body() dto: ChangePasswordDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<AuthResponse> {
+    if (!request.user) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+    return this.authService.changePassword(
+      request.user.id,
+      dto.oldPassword,
+      dto.newPassword,
+    );
   }
 }

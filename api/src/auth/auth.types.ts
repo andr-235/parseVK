@@ -11,6 +11,7 @@ export interface AuthenticatedUser {
   id: number;
   username: string;
   role: UserRole;
+  isTemporaryPassword: boolean;
 }
 
 export interface AuthTokens {

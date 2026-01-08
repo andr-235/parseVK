@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { User } from '@prisma/client';
@@ -6,6 +10,8 @@ import * as bcrypt from 'bcrypt';
 import type { AppConfig } from '../config/app.config';
 import { UsersService } from '../users/users.service';
 import type { AuthResponse, AuthTokens, JwtPayload } from './auth.types';
+
+const PASSWORD_SALT_ROUNDS = 12;
 
 @Injectable()
 export class AuthService {
@@ -45,6 +51,43 @@ export class AuthService {
       tokens.refreshToken,
     );
     return this.buildAuthResponse(user, tokens);
+  }
+
+  async changePassword(
+    userId: number,
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<AuthResponse> {
+    if (oldPassword === newPassword) {
+      throw new BadRequestException(
+        'New password must differ from old password',
+      );
+    }
+
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    const matches = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!matches) {
+      throw new BadRequestException('Invalid current password');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS);
+    const updatedUser = await this.usersService.setPassword(
+      user.id,
+      passwordHash,
+      false,
+    );
+
+    const tokens = await this.issueTokens(updatedUser);
+    await this.usersService.updateRefreshTokenHash(
+      updatedUser.id,
+      tokens.refreshToken,
+    );
+
+    return this.buildAuthResponse(updatedUser, tokens);
   }
 
   private async validateUser(
@@ -97,6 +140,7 @@ export class AuthService {
         id: user.id,
         username: user.username,
         role: user.role,
+        isTemporaryPassword: user.isTemporaryPassword,
       },
     };
   }

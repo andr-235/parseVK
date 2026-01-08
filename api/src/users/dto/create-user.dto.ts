@@ -9,6 +9,8 @@ import {
 } from 'class-validator';
 import { UserRole } from '@prisma/client';
 
+const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$/;
+
 export class CreateUserDto {
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
@@ -22,6 +24,7 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
+  @Matches(PASSWORD_COMPLEXITY_REGEX)
   password!: string;
 
   @IsOptional()

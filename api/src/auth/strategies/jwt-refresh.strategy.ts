@@ -33,6 +33,11 @@ export class JwtRefreshStrategy extends PassportStrategy(
       throw new UnauthorizedException('Unauthorized');
     }
 
-    return { id: user.id, username: user.username, role: user.role };
+    return {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      isTemporaryPassword: user.isTemporaryPassword,
+    };
   }
 }
