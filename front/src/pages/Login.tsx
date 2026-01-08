@@ -101,21 +101,29 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background-primary px-4 py-10">
-      <Card className="w-full max-w-md border-border/60 bg-background-secondary/90 shadow-soft-lg">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl text-text-primary">
+    <div className="relative flex min-h-screen w-full items-center justify-center bg-background-primary px-4 py-10">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(37,99,235,0.18),transparent_60%),radial-gradient(120%_80%_at_100%_100%,rgba(14,165,233,0.12),transparent_55%)]"
+      />
+      <Card className="relative w-full max-w-xl overflow-hidden border-border/60 bg-background-secondary/90 shadow-soft-lg backdrop-blur">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent-primary/10 via-transparent to-transparent"
+        />
+        <CardHeader className="relative z-10 items-center space-y-3 text-center">
+          <CardTitle className="text-3xl font-semibold text-text-primary">
             {mustChangePassword ? 'Смена пароля' : 'Вход в систему'}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base text-text-secondary">
             {mustChangePassword
               ? `Пользователь ${authUser?.username ?? ''} должен сменить временный пароль.`
               : 'Используйте учетную запись администратора или пользователя, выданную администратором.'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="mb-6 flex justify-center">
-            <BrandLogo size="lg" />
+        <CardContent className="relative z-10">
+          <div className="mb-8 flex justify-center">
+            <BrandLogo size="xl" className="drop-shadow-[0_22px_60px_rgba(37,99,235,0.25)]" />
           </div>
           {mustChangePassword ? (
             <form className="space-y-5" onSubmit={handleChangePassword}>
