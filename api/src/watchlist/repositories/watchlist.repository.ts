@@ -8,29 +8,36 @@ import type {
   WatchlistSettingsUpdateData,
 } from '../interfaces/watchlist-repository.interface';
 import type { Comment, Prisma } from '@prisma/client';
-import { WatchlistStatus as WS } from '@prisma/client';
+import {
+  CommentSource as PrismaCommentSource,
+  WatchlistStatus as WS,
+} from '@prisma/client';
 import { composeCommentKey } from '../utils/watchlist-comment.utils';
 import type { CommentSource } from '../../common/types/comment-source.enum';
 import type { WatchlistStatus } from '../types/watchlist-status.enum';
 
 const DEFAULT_SETTINGS_ID = 1;
+type WatchlistAuthorRecord = Omit<WatchlistAuthorWithRelations, 'status'> & {
+  status: WS;
+};
 
 @Injectable()
 export class WatchlistRepository implements IWatchlistRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findById(id: number): Promise<WatchlistAuthorWithRelations | null> {
-    return this.prisma.watchlistAuthor.findUnique({
+  async findById(id: number): Promise<WatchlistAuthorWithRelations | null> {
+    const record = await this.prisma.watchlistAuthor.findUnique({
       where: { id },
       include: { author: true, settings: true },
     });
+    return this.mapWatchlistAuthor(record as WatchlistAuthorRecord | null);
   }
 
-  findByAuthorVkIdAndSettingsId(
+  async findByAuthorVkIdAndSettingsId(
     authorVkId: number,
     settingsId: number,
   ): Promise<WatchlistAuthorWithRelations | null> {
-    return this.prisma.watchlistAuthor.findUnique({
+    const record = await this.prisma.watchlistAuthor.findUnique({
       where: {
         authorVkId_settingsId: {
           authorVkId,
@@ -39,6 +46,7 @@ export class WatchlistRepository implements IWatchlistRepository {
       },
       include: { author: true, settings: true },
     });
+    return this.mapWatchlistAuthor(record as WatchlistAuthorRecord | null);
   }
 
   async findMany(params: {
@@ -70,48 +78,55 @@ export class WatchlistRepository implements IWatchlistRepository {
     ]);
 
     return {
-      items,
+      items: this.mapWatchlistAuthors(items as WatchlistAuthorRecord[]),
       total,
     };
   }
 
-  findActiveAuthors(params: {
+  async findActiveAuthors(params: {
     settingsId: number;
     limit: number;
   }): Promise<WatchlistAuthorWithRelations[]> {
-    return this.prisma.watchlistAuthor.findMany({
+    const items = await this.prisma.watchlistAuthor.findMany({
       where: { settingsId: params.settingsId, status: WS.ACTIVE },
       include: { author: true, settings: true },
       orderBy: [{ lastCheckedAt: 'asc' }, { updatedAt: 'asc' }],
       take: Math.max(params.limit, 1),
     });
+    return this.mapWatchlistAuthors(items as WatchlistAuthorRecord[]);
   }
 
-  create(data: {
+  async create(data: {
     authorVkId: number;
     sourceCommentId: number | null;
     settingsId: number;
     status: WatchlistStatus;
   }): Promise<WatchlistAuthorWithRelations> {
-    return this.prisma.watchlistAuthor.create({
+    const record = await this.prisma.watchlistAuthor.create({
       data: {
         ...data,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        status: data.status as Prisma.WatchlistStatus,
+
+        status: data.status as WS,
       },
       include: { author: true, settings: true },
     });
+    return this.mapWatchlistAuthor(
+      record as WatchlistAuthorRecord,
+    ) as WatchlistAuthorWithRelations;
   }
 
-  update(
+  async update(
     id: number,
     data: WatchlistAuthorUpdateData,
   ): Promise<WatchlistAuthorWithRelations> {
-    return this.prisma.watchlistAuthor.update({
+    const record = await this.prisma.watchlistAuthor.update({
       where: { id },
       data: this.toWatchlistAuthorUpdateInput(data),
       include: { author: true, settings: true },
     });
+    return this.mapWatchlistAuthor(
+      record as WatchlistAuthorRecord,
+    ) as WatchlistAuthorWithRelations;
   }
 
   async updateMany(
@@ -226,8 +241,8 @@ export class WatchlistRepository implements IWatchlistRepository {
       where: { id },
       data: {
         watchlistAuthorId: data.watchlistAuthorId,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        source: data.source as Prisma.CommentSource,
+
+        source: data.source as PrismaCommentSource,
       },
     });
   }
@@ -253,8 +268,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     const update: Prisma.WatchlistAuthorUpdateInput = {};
 
     if (data.status !== undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      update.status = data.status as Prisma.WatchlistStatus;
+      update.status = data.status as WS;
     }
 
     if (data.monitoringStoppedAt !== undefined) {
@@ -276,5 +290,26 @@ export class WatchlistRepository implements IWatchlistRepository {
     }
 
     return update;
+  }
+
+  private mapWatchlistAuthor(
+    record: WatchlistAuthorRecord | null,
+  ): WatchlistAuthorWithRelations | null {
+    if (!record) {
+      return null;
+    }
+    return {
+      ...record,
+      status: record.status as WatchlistStatus,
+    };
+  }
+
+  private mapWatchlistAuthors(
+    records: WatchlistAuthorRecord[],
+  ): WatchlistAuthorWithRelations[] {
+    return records.map((record) => ({
+      ...record,
+      status: record.status as WatchlistStatus,
+    }));
   }
 }

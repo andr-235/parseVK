@@ -86,8 +86,7 @@ export class TelegramService {
     return {
       chatId: (persisted as { chatId: number }).chatId,
       telegramId: (persisted as { telegramId: bigint }).telegramId.toString(),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      type: resolved.type as TelegramChatType,
+      type: resolved.type,
       title: resolved.title,
       username: resolved.username,
       syncedMembers: collection.members.length,

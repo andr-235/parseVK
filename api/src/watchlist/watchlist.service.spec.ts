@@ -78,8 +78,8 @@ describe('WatchlistService', () => {
 
   let prisma: {
     watchlistSettings: {
-      upsert: jest.Mock<Promise<WatchlistSettings>>;
-      update: jest.Mock<Promise<WatchlistSettings>>;
+      upsert: jest.Mock<Promise<WatchlistSettingsRecord>>;
+      update: jest.Mock<Promise<WatchlistSettingsRecord>>;
     };
     watchlistAuthor: {
       findMany: jest.Mock<Promise<unknown[]>>;
@@ -105,8 +105,8 @@ describe('WatchlistService', () => {
   beforeEach(() => {
     prisma = {
       watchlistSettings: {
-        upsert: jest.fn<Promise<WatchlistSettings>, [unknown]>(),
-        update: jest.fn<Promise<WatchlistSettings>, [unknown, unknown]>(),
+        upsert: jest.fn<Promise<WatchlistSettingsRecord>, [unknown]>(),
+        update: jest.fn<Promise<WatchlistSettingsRecord>, [unknown, unknown]>(),
       },
       watchlistAuthor: {
         findMany: jest.fn<Promise<unknown[]>, [unknown?]>(),

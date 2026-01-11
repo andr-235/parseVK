@@ -401,7 +401,7 @@ describe('TasksService', () => {
           ...task,
           ...data,
           updatedAt: new Date('2024-01-02T00:00:00Z'),
-        } as Task);
+        } as TaskRecord);
       });
 
       taskMapperMock.mapToDetail.mockReturnValue({
@@ -496,7 +496,7 @@ describe('TasksService', () => {
         return Promise.resolve({
           ...task,
           ...data,
-        } as Task);
+        } as TaskRecord);
       });
       taskMapperMock.mapToDetail.mockReturnValue({
         id: 21,
@@ -578,7 +578,7 @@ describe('TasksService', () => {
         return Promise.resolve({
           ...task,
           ...data,
-        } as Task);
+        } as TaskRecord);
       });
       taskMapperMock.mapToDetail.mockReturnValue({
         id: 22,
@@ -699,7 +699,7 @@ describe('TasksService', () => {
         return Promise.resolve({
           ...task,
           ...data,
-        } as Task);
+        } as TaskRecord);
       });
 
       taskMapperMock.mapToDetail.mockReturnValue({
@@ -785,7 +785,7 @@ describe('TasksService', () => {
         return Promise.resolve({
           ...task,
           ...data,
-        } as Task);
+        } as TaskRecord);
       });
 
       taskMapperMock.mapToDetail.mockReturnValue({

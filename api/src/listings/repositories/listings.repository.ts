@@ -97,8 +97,8 @@ export class ListingsRepository implements IListingsRepository {
   transaction<T>(
     callback: (tx: ListingsTransactionClient) => Promise<T>,
   ): Promise<T> {
-    return this.prisma.$transaction(
-      callback as (tx: Prisma.TransactionClient) => Promise<T>,
+    return this.prisma.$transaction(async (tx) =>
+      callback(tx as unknown as ListingsTransactionClient),
     );
   }
 }

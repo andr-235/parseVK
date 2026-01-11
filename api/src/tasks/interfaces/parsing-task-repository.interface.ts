@@ -20,9 +20,9 @@ export type TaskUpdateData = {
   status?: string;
   description?: string | null;
   completed?: boolean;
-  totalItems?: number | null;
-  processedItems?: number | null;
-  progress?: number | null;
+  totalItems?: number;
+  processedItems?: number;
+  progress?: number;
 };
 
 export type PostUpsertData = {
@@ -33,7 +33,7 @@ export type PostUpsertData = {
   postedAt: Date;
   text: string;
   commentsCount: number;
-  commentsCanPost: boolean;
+  commentsCanPost: number;
   commentsGroupsCanPost: boolean;
   commentsCanClose: boolean;
   commentsCanOpen: boolean;

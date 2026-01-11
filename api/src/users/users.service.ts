@@ -23,15 +23,17 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: number): Promise<UserRecord | null> {
-    return this.prisma.user.findUnique({ where: { id } });
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    return this.mapUserRecord(user);
   }
 
   async findByUsername(username: string): Promise<UserRecord | null> {
-    return this.prisma.user.findUnique({ where: { username } });
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    return this.mapUserRecord(user);
   }
 
   async listUsers(): Promise<UserResponseDto[]> {
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -42,6 +44,10 @@ export class UsersService {
         updatedAt: true,
       },
     });
+    return users.map((user) => ({
+      ...user,
+      role: this.mapUserRole(user.role),
+    }));
   }
 
   async createUser(dto: CreateUserDto): Promise<UserResponseDto> {
@@ -67,7 +73,10 @@ export class UsersService {
       },
     });
 
-    return user;
+    return {
+      ...user,
+      role: this.mapUserRole(user.role),
+    };
   }
 
   async deleteUser(id: number): Promise<void> {
@@ -103,7 +112,7 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
         passwordHash,
@@ -111,6 +120,7 @@ export class UsersService {
         refreshTokenHash: null,
       },
     });
+    return this.mapUserRecord(user) as UserRecord;
   }
 
   async createTemporaryPassword(
@@ -159,5 +169,21 @@ export class UsersService {
 
   private randomChar(chars: string): string {
     return chars[randomInt(chars.length)] ?? chars[0];
+  }
+
+  private mapUserRole(value: unknown): UserRole {
+    return value as UserRole;
+  }
+
+  private mapUserRecord<T extends { role: unknown }>(
+    record: T | null,
+  ): (Omit<T, 'role'> & { role: UserRole }) | null {
+    if (!record) {
+      return null;
+    }
+    return {
+      ...record,
+      role: this.mapUserRole(record.role),
+    };
   }
 }

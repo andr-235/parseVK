@@ -22,7 +22,7 @@ describe('AuthorActivityService - keyword matches', () => {
       deleteMany: jest.Mock<Promise<{ count: number }>>;
       createMany: jest.Mock<Promise<{ count: number }>>;
     };
-    $transaction: jest.Mock<Promise<unknown[]>>;
+    $transaction: jest.Mock<Promise<unknown>, [unknown]>;
   };
 
   const baseComment: CommentEntity = {
@@ -77,10 +77,18 @@ describe('AuthorActivityService - keyword matches', () => {
           .mockResolvedValue({ count: 0 }),
       },
       $transaction: jest
-        .fn<Promise<unknown[]>, [Array<Promise<unknown>>]>()
-        .mockImplementation(async (operations: Array<Promise<unknown>>) =>
-          Promise.all(operations),
-        ),
+        .fn<Promise<unknown>, [unknown]>()
+        .mockImplementation(async (arg: unknown) => {
+          if (typeof arg === 'function') {
+            return (arg as (tx: typeof prismaMock) => Promise<unknown>)(
+              prismaMock as unknown as typeof prismaMock,
+            );
+          }
+          if (Array.isArray(arg)) {
+            return Promise.all(arg);
+          }
+          throw new Error('Unsupported transaction input');
+        }),
     };
 
     service = new AuthorActivityService(

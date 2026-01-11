@@ -9,6 +9,10 @@ import type {
   TaskUpdateData,
 } from '../interfaces/parsing-task-repository.interface';
 import { ParsingScope } from '../dto/create-parsing-task.dto';
+import {
+  toCreateJsonValue,
+  toUpdateJsonValue,
+} from '../../common/utils/prisma-json.utils';
 
 @Injectable()
 export class ParsingTaskRepository implements IParsingTaskRepository {
@@ -92,6 +96,14 @@ export class ParsingTaskRepository implements IParsingTaskRepository {
   }
 
   async upsertPost(data: PostUpsertData): Promise<void> {
+    const attachmentsUpdate =
+      data.attachments !== undefined
+        ? toUpdateJsonValue(data.attachments)
+        : undefined;
+    const attachmentsCreate =
+      data.attachments !== undefined
+        ? toCreateJsonValue(data.attachments)
+        : undefined;
     const baseData = {
       groupId: data.groupId,
       fromId: data.fromId,
@@ -106,14 +118,18 @@ export class ParsingTaskRepository implements IParsingTaskRepository {
 
     const updateData = {
       ...baseData,
-      ...(data.attachments !== undefined && { attachments: data.attachments }),
+      ...(attachmentsUpdate !== undefined && {
+        attachments: attachmentsUpdate,
+      }),
     };
 
     const createData = {
       ownerId: data.ownerId,
       vkPostId: data.vkPostId,
       ...baseData,
-      ...(data.attachments !== undefined && { attachments: data.attachments }),
+      ...(attachmentsCreate !== undefined && {
+        attachments: attachmentsCreate,
+      }),
     };
 
     await this.prisma.post.upsert({

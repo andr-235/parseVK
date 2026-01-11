@@ -13,11 +13,11 @@ export type TaskCreateData = {
 export type TaskUpdateData = {
   title?: string;
   description?: string | null;
-  totalItems?: number | null;
-  processedItems?: number | null;
-  progress?: number | null;
-  status?: string | null;
-  completed?: boolean | null;
+  totalItems?: number;
+  processedItems?: number;
+  progress?: number;
+  status?: string;
+  completed?: boolean;
 };
 
 export type TaskOrderByInput = Record<string, 'asc' | 'desc'>;

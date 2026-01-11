@@ -15,6 +15,8 @@ import {
   toCreateJsonValue,
 } from '../utils/prisma-json.utils';
 
+type JsonUpdateValue = ReturnType<typeof toUpdateJsonValue>;
+
 interface SaveCommentsOptions {
   source: CommentSource;
   watchlistAuthorId?: number | null;
@@ -158,13 +160,15 @@ export class AuthorActivityService {
   }
 
   private buildCommentJsonFields(comment: CommentEntity): {
-    threadItems: unknown;
-    attachments: unknown;
-    parentsStack: unknown;
+    threadItems: JsonUpdateValue;
+    attachments: JsonUpdateValue;
+    parentsStack: JsonUpdateValue;
   } {
     const threadItemsJson = toUpdateJsonValue(
       comment.threadItems?.length
-        ? comment.threadItems.map((item) => this.serializeComment(item))
+        ? comment.threadItems.map(
+            (item) => this.serializeComment(item) as unknown,
+          )
         : null,
     );
 
@@ -173,20 +177,20 @@ export class AuthorActivityService {
     const parentsStackJson = toUpdateJsonValue(comment.parentsStack);
 
     return {
-      threadItems: threadItemsJson ?? null,
+      threadItems: threadItemsJson,
       attachments: attachmentsJson,
-      parentsStack: parentsStackJson ?? null,
+      parentsStack: parentsStackJson,
     };
   }
 
   private buildCommentBaseFields(
     comment: CommentEntity,
     jsonFields: {
-      threadItems: unknown;
-      attachments: unknown;
-      parentsStack: unknown;
+      threadItems: JsonUpdateValue;
+      attachments: JsonUpdateValue;
+      parentsStack: JsonUpdateValue;
     },
-  ): Record<string, unknown> {
+  ) {
     return {
       postId: comment.postId,
       ownerId: comment.ownerId,
@@ -210,12 +214,12 @@ export class AuthorActivityService {
   private buildCommentUpdateData(
     comment: CommentEntity,
     jsonFields: {
-      threadItems: unknown;
-      attachments: unknown;
-      parentsStack: unknown;
+      threadItems: JsonUpdateValue;
+      attachments: JsonUpdateValue;
+      parentsStack: JsonUpdateValue;
     },
     options: SaveCommentsOptions,
-  ): Record<string, unknown> {
+  ) {
     const authorVkId = comment.fromId > 0 ? comment.fromId : null;
 
     return {
@@ -233,12 +237,12 @@ export class AuthorActivityService {
   private buildCommentCreateData(
     comment: CommentEntity,
     jsonFields: {
-      threadItems: unknown;
-      attachments: unknown;
-      parentsStack: unknown;
+      threadItems: JsonUpdateValue;
+      attachments: JsonUpdateValue;
+      parentsStack: JsonUpdateValue;
     },
     options: SaveCommentsOptions,
-  ): Record<string, unknown> {
+  ) {
     const authorVkId = comment.fromId > 0 ? comment.fromId : null;
 
     return {
@@ -249,11 +253,11 @@ export class AuthorActivityService {
     };
   }
 
-  private buildAuthorBaseFields(
+  private buildAuthorBaseFields<T>(
     author: IAuthor,
-    jsonValueConverter: (value: unknown) => unknown,
+    jsonValueConverter: (value: unknown) => T,
     useNullCoalescing: boolean,
-  ): Record<string, unknown> {
+  ) {
     const getValue = <T>(value: T | undefined): T | null => {
       return useNullCoalescing ? (value ?? null) : (value as T);
     };
@@ -308,18 +312,18 @@ export class AuthorActivityService {
     };
   }
 
-  private buildAuthorUpdateData(author: IAuthor): Record<string, unknown> {
+  private buildAuthorUpdateData(author: IAuthor) {
     return this.buildAuthorBaseFields(author, toUpdateJsonValue, false);
   }
 
-  private buildAuthorCreateData(author: IAuthor): Record<string, unknown> {
+  private buildAuthorCreateData(author: IAuthor) {
     return {
       vkUserId: author.id,
       ...this.buildAuthorBaseFields(author, toCreateJsonValue, true),
     };
   }
 
-  private serializeComment(comment: CommentEntity): Record<string, unknown> {
+  private serializeComment(comment: CommentEntity) {
     return {
       vkCommentId: comment.vkCommentId,
       ownerId: comment.ownerId,
@@ -331,7 +335,9 @@ export class AuthorActivityService {
       parentsStack: comment.parentsStack ?? null,
       threadCount: comment.threadCount ?? null,
       threadItems: comment.threadItems?.length
-        ? comment.threadItems.map((item) => this.serializeComment(item))
+        ? comment.threadItems.map(
+            (item) => this.serializeComment(item) as unknown,
+          )
         : null,
       attachments: comment.attachments ?? null,
       replyToUser: comment.replyToUser ?? null,

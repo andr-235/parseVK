@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { MatchSource as PrismaMatchSource } from '@prisma/client';
 import type { Keyword, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 import type { IKeywordsRepository } from '../interfaces/keywords-repository.interface';
@@ -110,8 +111,8 @@ export class KeywordsRepository implements IKeywordsRepository {
     return this.prisma.commentKeywordMatch.findMany({
       where: {
         commentId: params.commentId,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        source: params.source as Prisma.MatchSource,
+
+        source: params.source as PrismaMatchSource,
       },
       select: { keywordId: true },
     });
@@ -124,8 +125,8 @@ export class KeywordsRepository implements IKeywordsRepository {
     return this.prisma.commentKeywordMatch.findMany({
       where: {
         commentId: { in: params.commentIds },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        source: params.source as Prisma.MatchSource,
+
+        source: params.source as PrismaMatchSource,
       },
       select: { commentId: true, keywordId: true },
     });
@@ -139,8 +140,8 @@ export class KeywordsRepository implements IKeywordsRepository {
     await this.prisma.commentKeywordMatch.deleteMany({
       where: {
         commentId: params.commentId,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        source: params.source as Prisma.MatchSource,
+
+        source: params.source as PrismaMatchSource,
         ...(params.keywordIds ? { keywordId: { in: params.keywordIds } } : {}),
       },
     });
@@ -155,8 +156,8 @@ export class KeywordsRepository implements IKeywordsRepository {
       where: {
         commentId: params.commentId,
         keywordId: params.keywordId,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        source: params.source as Prisma.MatchSource,
+
+        source: params.source as PrismaMatchSource,
       },
     });
   }
@@ -171,8 +172,8 @@ export class KeywordsRepository implements IKeywordsRepository {
     await this.prisma.commentKeywordMatch.createMany({
       data: data.map((item) => ({
         ...item,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        source: item.source as Prisma.MatchSource,
+
+        source: item.source as PrismaMatchSource,
       })),
       skipDuplicates: true,
     });
