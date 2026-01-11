@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { TelegramMemberMapper } from './telegram-member.mapper';
 import { Api } from 'telegram';
-import { TelegramMemberStatus } from '@prisma/client';
+import { TelegramMemberStatus } from '../types/telegram.enums';
 
 describe('TelegramMemberMapper', () => {
   let mapper: TelegramMemberMapper;

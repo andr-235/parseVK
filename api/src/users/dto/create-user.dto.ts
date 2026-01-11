@@ -7,7 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '../types/user-role.enum';
 
 const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$/;
 

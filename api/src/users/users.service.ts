@@ -3,13 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
-import type { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { UserRole } from './types/user-role.enum';
+import type { UserRecord } from './types/user.types';
 
 const PASSWORD_SALT_ROUNDS = 12;
 const TEMP_PASSWORD_LENGTH = 12;
@@ -22,11 +22,11 @@ const TEMP_PASSWORD_CHARS = `${LOWERCASE_CHARS}${UPPERCASE_CHARS}${DIGIT_CHARS}`
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findById(id: number): Promise<User | null> {
+  async findById(id: number): Promise<UserRecord | null> {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async findByUsername(username: string): Promise<User | null> {
+  async findByUsername(username: string): Promise<UserRecord | null> {
     return this.prisma.user.findUnique({ where: { username } });
   }
 
@@ -97,7 +97,7 @@ export class UsersService {
     userId: number,
     passwordHash: string,
     isTemporaryPassword: boolean,
-  ): Promise<User> {
+  ): Promise<UserRecord> {
     const existing = await this.findById(userId);
     if (!existing) {
       throw new NotFoundException('User not found');

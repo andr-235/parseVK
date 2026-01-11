@@ -1,4 +1,4 @@
-import type { UserRole } from '@prisma/client';
+import type { UserRole } from '../types/user-role.enum';
 
 export class UserResponseDto {
   id!: number;

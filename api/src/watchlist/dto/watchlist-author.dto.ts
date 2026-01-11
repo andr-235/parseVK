@@ -1,4 +1,5 @@
-import type { CommentSource, WatchlistStatus } from '@prisma/client';
+import type { CommentSource } from '../../common/types/comment-source.enum';
+import type { WatchlistStatus } from '../types/watchlist-status.enum';
 import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
 
 export interface WatchlistAuthorProfileDto {

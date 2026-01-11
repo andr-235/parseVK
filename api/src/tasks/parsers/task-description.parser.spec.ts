@@ -1,5 +1,5 @@
 import { TaskDescriptionParser } from './task-description.parser';
-import type { PrismaTaskRecord } from './task-description.parser';
+import type { TaskRecord } from '../types/task-record.type';
 import { ParsingScope } from '../dto/create-parsing-task.dto';
 
 describe('TaskDescriptionParser', () => {
@@ -10,7 +10,7 @@ describe('TaskDescriptionParser', () => {
   });
 
   it('должен парсить валидное описание', () => {
-    const task: PrismaTaskRecord = {
+    const task: TaskRecord = {
       id: 1,
       title: 'Test',
       description: JSON.stringify({
@@ -47,7 +47,7 @@ describe('TaskDescriptionParser', () => {
   });
 
   it('должен возвращать пустое описание для null', () => {
-    const task: PrismaTaskRecord = {
+    const task: TaskRecord = {
       id: 1,
       title: 'Test',
       description: null,
@@ -68,7 +68,7 @@ describe('TaskDescriptionParser', () => {
   });
 
   it('должен обрабатывать невалидный JSON', () => {
-    const task: PrismaTaskRecord = {
+    const task: TaskRecord = {
       id: 1,
       title: 'Test',
       description: 'invalid json',

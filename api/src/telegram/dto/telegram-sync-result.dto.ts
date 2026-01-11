@@ -1,4 +1,4 @@
-import { TelegramChatType } from '@prisma/client';
+import { TelegramChatType } from '../types/telegram.enums';
 import { TelegramMemberDto } from './telegram-member.dto';
 
 export class TelegramSyncResultDto {

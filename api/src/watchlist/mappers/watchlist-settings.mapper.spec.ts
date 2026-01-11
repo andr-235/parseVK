@@ -1,5 +1,5 @@
 import { WatchlistSettingsMapper } from './watchlist-settings.mapper';
-import { WatchlistSettings } from '@prisma/client';
+import type { WatchlistSettingsRecord } from '../interfaces/watchlist-repository.interface';
 
 describe('WatchlistSettingsMapper', () => {
   let mapper: WatchlistSettingsMapper;
@@ -9,7 +9,7 @@ describe('WatchlistSettingsMapper', () => {
   });
 
   it('должен маппить настройки', () => {
-    const settings: WatchlistSettings = {
+    const settings: WatchlistSettingsRecord = {
       id: 1,
       trackAllComments: true,
       pollIntervalMinutes: 5,

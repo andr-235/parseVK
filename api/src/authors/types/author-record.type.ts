@@ -1,0 +1,19 @@
+export type AuthorRecord = {
+  id: number;
+  vkUserId: number;
+  firstName: string;
+  lastName: string;
+  photo50: string | null;
+  photo100: string | null;
+  photo200Orig: string | null;
+  domain: string | null;
+  screenName: string | null;
+  counters: unknown;
+  followersCount: number | null;
+  lastSeen: unknown;
+  verifiedAt: Date | null;
+  city: unknown;
+  country: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+};

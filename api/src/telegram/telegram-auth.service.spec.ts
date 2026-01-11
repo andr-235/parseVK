@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { TelegramAuthService } from './telegram-auth.service';
 import { Api } from 'telegram';
-import type { PrismaService } from '../prisma.service';
+import type { ITelegramAuthRepository } from './interfaces/telegram-auth-repository.interface';
 
 const createCacheMock = () => {
   const store = new Map<string, unknown>();
@@ -22,10 +22,10 @@ const createCacheMock = () => {
 describe('TelegramAuthService', () => {
   const configMock = {
     get: jest.fn((key: string) => {
-      if (key === 'TELEGRAM_API_ID') {
+      if (key === 'telegramApiId') {
         return 123456;
       }
-      if (key === 'TELEGRAM_API_HASH') {
+      if (key === 'telegramApiHash') {
         return 'hash';
       }
       return undefined;
@@ -38,21 +38,17 @@ describe('TelegramAuthService', () => {
 
   it('starts session and stores transaction', async () => {
     const cache = createCacheMock();
-    const prismaMock = {
-      telegramSettings: {
-        findFirst: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-      },
-      telegramSession: {
-        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-        create: jest.fn(),
-      },
-    } as unknown as PrismaService;
+    const repositoryMock = {
+      findLatestSettings: jest.fn(),
+      upsertSettings: jest.fn(),
+      findLatestSession: jest.fn(),
+      replaceSession: jest.fn(),
+      deleteAllSessions: jest.fn().mockResolvedValue(0),
+    } as unknown as ITelegramAuthRepository;
     const service = new TelegramAuthService(
       configMock as never,
       cache as never,
-      prismaMock,
+      repositoryMock,
     );
 
     const sendCodeResponse = {
@@ -94,21 +90,17 @@ describe('TelegramAuthService', () => {
 
   it('confirms session and returns final data', async () => {
     const cache = createCacheMock();
-    const prismaMock = {
-      telegramSettings: {
-        findFirst: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-      },
-      telegramSession: {
-        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-        create: jest.fn(),
-      },
-    } as unknown as PrismaService;
+    const repositoryMock = {
+      findLatestSettings: jest.fn(),
+      upsertSettings: jest.fn(),
+      findLatestSession: jest.fn(),
+      replaceSession: jest.fn(),
+      deleteAllSessions: jest.fn().mockResolvedValue(0),
+    } as unknown as ITelegramAuthRepository;
     const service = new TelegramAuthService(
       configMock as never,
       cache as never,
-      prismaMock,
+      repositoryMock,
     );
 
     const transactionId = 'tx-1';
@@ -166,21 +158,17 @@ describe('TelegramAuthService', () => {
 
   it('uses provided apiId and apiHash instead of env', async () => {
     const cache = createCacheMock();
-    const prismaMock = {
-      telegramSettings: {
-        findFirst: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-      },
-      telegramSession: {
-        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-        create: jest.fn(),
-      },
-    } as unknown as PrismaService;
+    const repositoryMock = {
+      findLatestSettings: jest.fn(),
+      upsertSettings: jest.fn(),
+      findLatestSession: jest.fn(),
+      replaceSession: jest.fn(),
+      deleteAllSessions: jest.fn().mockResolvedValue(0),
+    } as unknown as ITelegramAuthRepository;
     const service = new TelegramAuthService(
       configMock as never,
       cache as never,
-      prismaMock,
+      repositoryMock,
     );
 
     const sendCodeResponse = {
@@ -219,24 +207,20 @@ describe('TelegramAuthService', () => {
 
   it('throws error when apiId and apiHash are missing', async () => {
     const cache = createCacheMock();
-    const prismaMock = {
-      telegramSettings: {
-        findFirst: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-      },
-      telegramSession: {
-        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-        create: jest.fn(),
-      },
-    } as unknown as PrismaService;
+    const repositoryMock = {
+      findLatestSettings: jest.fn(),
+      upsertSettings: jest.fn(),
+      findLatestSession: jest.fn(),
+      replaceSession: jest.fn(),
+      deleteAllSessions: jest.fn().mockResolvedValue(0),
+    } as unknown as ITelegramAuthRepository;
     const configWithoutApi = {
       get: jest.fn(() => undefined),
     };
     const service = new TelegramAuthService(
       configWithoutApi as never,
       cache as never,
-      prismaMock,
+      repositoryMock,
     );
 
     await expect(
@@ -246,21 +230,17 @@ describe('TelegramAuthService', () => {
 
   it('requires password when session password needed', async () => {
     const cache = createCacheMock();
-    const prismaMock = {
-      telegramSettings: {
-        findFirst: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-      },
-      telegramSession: {
-        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-        create: jest.fn(),
-      },
-    } as unknown as PrismaService;
+    const repositoryMock = {
+      findLatestSettings: jest.fn(),
+      upsertSettings: jest.fn(),
+      findLatestSession: jest.fn(),
+      replaceSession: jest.fn(),
+      deleteAllSessions: jest.fn().mockResolvedValue(0),
+    } as unknown as ITelegramAuthRepository;
     const service = new TelegramAuthService(
       configMock as never,
       cache as never,
-      prismaMock,
+      repositoryMock,
     );
     const transactionId = 'tx-2';
     await cache.set(

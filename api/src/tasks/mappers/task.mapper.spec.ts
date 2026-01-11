@@ -1,5 +1,5 @@
 import { TaskMapper } from './task.mapper';
-import type { PrismaTaskRecord } from './task.mapper';
+import type { TaskRecord } from '../types/task-record.type';
 import type { ParsedTaskDescription } from '../parsers/task-description.parser';
 
 describe('TaskMapper', () => {
@@ -10,7 +10,7 @@ describe('TaskMapper', () => {
   });
 
   it('должен маппить задачу в summary', () => {
-    const task: PrismaTaskRecord = {
+    const task: TaskRecord = {
       id: 1,
       title: 'Test Task',
       description: null,
@@ -62,7 +62,7 @@ describe('TaskMapper', () => {
 
   describe('resolveTaskStatus', () => {
     it('должен возвращать done для завершенных задач', () => {
-      const task: PrismaTaskRecord = {
+      const task: TaskRecord = {
         id: 1,
         title: 'Test',
         description: null,
@@ -89,7 +89,7 @@ describe('TaskMapper', () => {
     });
 
     it('должен возвращать failed для задач с ошибкой', () => {
-      const task: PrismaTaskRecord = {
+      const task: TaskRecord = {
         id: 1,
         title: 'Test',
         description: null,

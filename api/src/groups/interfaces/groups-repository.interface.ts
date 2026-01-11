@@ -1,26 +1,33 @@
-import type { Group, Prisma } from '@prisma/client';
+import type { IGroupResponse } from './group.interface';
+
+export type GroupOrderByInput = Record<string, 'asc' | 'desc'>;
+
+export type GroupUpsertData = Omit<
+  IGroupResponse,
+  'id' | 'createdAt' | 'updatedAt'
+>;
 
 export interface GetGroupsWithCountResult {
-  items: Group[];
+  items: IGroupResponse[];
   total: number;
 }
 
 export interface IGroupsRepository {
   upsert(
     where: { vkId: number },
-    data: Prisma.GroupCreateInput,
-  ): Promise<Group>;
+    data: GroupUpsertData,
+  ): Promise<IGroupResponse>;
   findMany(params: {
     skip?: number;
     take?: number;
-    orderBy?: Prisma.GroupOrderByWithRelationInput;
-  }): Promise<Group[]>;
+    orderBy?: GroupOrderByInput;
+  }): Promise<IGroupResponse[]>;
   count(): Promise<number>;
   getGroupsWithCount(params: {
     skip: number;
     take: number;
   }): Promise<GetGroupsWithCountResult>;
-  delete(where: { id: number }): Promise<Group>;
+  delete(where: { id: number }): Promise<IGroupResponse>;
   deleteMany(): Promise<{ count: number }>;
-  findManyByVkIds(vkIds: number[]): Promise<Group[]>;
+  findManyByVkIds(vkIds: number[]): Promise<IGroupResponse[]>;
 }

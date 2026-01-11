@@ -1,11 +1,11 @@
 import {
+  Inject,
   Injectable,
   Logger,
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { PrismaService } from '../../prisma.service';
 import { TasksService } from '../tasks.service';
 import { ParsingScope } from '../dto/create-parsing-task.dto';
 import type {
@@ -14,6 +14,7 @@ import type {
   TaskAutomationSettingsResponse,
 } from './task-automation.interface';
 import { UpdateTaskAutomationSettingsDto } from './dto/update-task-automation-settings.dto';
+import type { ITaskAutomationRepository } from '../interfaces/task-automation-repository.interface';
 
 const RETRY_DELAY_MS = 60 * 60 * 1000; // 1 час
 const DEFAULT_POST_LIMIT = 10;
@@ -27,7 +28,8 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   private isExecuting = false;
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject('ITaskAutomationRepository')
+    private readonly repository: ITaskAutomationRepository,
     private readonly tasksService: TasksService,
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
@@ -56,15 +58,12 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   ): Promise<TaskAutomationSettingsResponse> {
     const current = await this.getOrCreateSettings();
 
-    const updated = (await this.prisma.taskAutomationSettings.update({
-      where: { id: current.id },
-      data: {
-        enabled: dto.enabled,
-        runHour: dto.runHour,
-        runMinute: dto.runMinute,
-        postLimit: dto.postLimit,
-        timezoneOffsetMinutes: dto.timezoneOffsetMinutes,
-      },
+    const updated = (await this.repository.updateSettings(current.id, {
+      enabled: dto.enabled,
+      runHour: dto.runHour,
+      runMinute: dto.runMinute,
+      postLimit: dto.postLimit,
+      timezoneOffsetMinutes: dto.timezoneOffsetMinutes,
     })) as TaskAutomationSettings;
 
     const nextRun = await this.scheduleNextRun(updated);
@@ -148,10 +147,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
           settings.postLimit ?? taskConfig.postLimit ?? DEFAULT_POST_LIMIT,
       });
 
-      await this.prisma.taskAutomationSettings.update({
-        where: { id: settings.id },
-        data: { lastRunAt: new Date() },
-      });
+      await this.repository.updateLastRunAt(settings.id, new Date());
 
       this.logger.log(`Автоматический запуск выполнен успешно (${source})`);
 
@@ -180,59 +176,15 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async hasActiveTasks(): Promise<boolean> {
-    const count = await this.prisma.task.count({
-      where: {
-        OR: [
-          { status: { in: ['pending', 'running'] } },
-          {
-            AND: [
-              { completed: { equals: false } },
-              { status: { notIn: ['done', 'failed'] } },
-            ],
-          },
-        ],
-      },
-    });
-
-    return count > 0;
+    return this.repository.hasActiveTasks();
   }
 
   private async ensureSettingsExists(): Promise<void> {
-    const existing = await this.prisma.taskAutomationSettings.findFirst();
-
-    if (existing) {
-      return;
-    }
-
-    await this.prisma.taskAutomationSettings.create({
-      data: {
-        enabled: false,
-        runHour: 3,
-        runMinute: 0,
-        postLimit: 10,
-        timezoneOffsetMinutes: 0,
-      },
-    });
+    await this.repository.ensureSettingsExists();
   }
 
   private async getOrCreateSettings(): Promise<TaskAutomationSettings> {
-    const settings = await this.prisma.taskAutomationSettings.findFirst();
-
-    if (settings) {
-      return settings as TaskAutomationSettings;
-    }
-
-    const created = (await this.prisma.taskAutomationSettings.create({
-      data: {
-        enabled: false,
-        runHour: 3,
-        runMinute: 0,
-        postLimit: 10,
-        timezoneOffsetMinutes: 0,
-      },
-    })) as TaskAutomationSettings;
-
-    return created;
+    return (await this.repository.getOrCreateSettings()) as TaskAutomationSettings;
   }
 
   private mapToResponse(
@@ -389,13 +341,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async findLastCompletedTask() {
-    return this.prisma.task.findFirst({
-      where: {
-        completed: true,
-        status: 'done',
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+    return this.repository.findLastCompletedTask();
   }
 
   private extractTaskConfig(task: { description: string | null }) {

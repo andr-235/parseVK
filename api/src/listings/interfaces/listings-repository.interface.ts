@@ -1,39 +1,50 @@
-import type { Listing, Prisma } from '@prisma/client';
+import type { ListingRecord } from '../types/listing-record.type';
+
+export type ListingWhereInput = Record<string, unknown>;
+export type ListingOrderByInput =
+  | Record<string, 'asc' | 'desc'>
+  | Array<Record<string, 'asc' | 'desc'>>;
+export type ListingWhereUniqueInput = { id?: number; url?: string };
+export type ListingCreateData = Record<string, unknown>;
+export type ListingUpdateData = Record<string, unknown>;
+export type ListingsTransactionClient = {
+  listing: {
+    create(params: { data: ListingCreateData }): Promise<ListingRecord>;
+  };
+};
 
 export interface GetListingsTransactionResult {
-  listings: Listing[];
+  listings: ListingRecord[];
   total: number;
   distinctSources: Array<{ source: string | null }>;
 }
 
 export interface IListingsRepository {
   findMany(params: {
-    where?: Prisma.ListingWhereInput;
+    where?: ListingWhereInput;
     skip?: number;
     take?: number;
-    orderBy?:
-      | Prisma.ListingOrderByWithRelationInput
-      | Prisma.ListingOrderByWithRelationInput[];
-    cursor?: Prisma.ListingWhereUniqueInput;
-  }): Promise<Listing[]>;
-  count(where?: Prisma.ListingWhereInput): Promise<number>;
-  findUniqueOrThrow(where: { id: number }): Promise<Listing>;
-  findUniqueByUrl(where: { url: string }): Promise<Listing | null>;
+    orderBy?: ListingOrderByInput;
+    cursor?: ListingWhereUniqueInput;
+  }): Promise<ListingRecord[]>;
+  count(where?: ListingWhereInput): Promise<number>;
+  findUniqueOrThrow(where: { id: number }): Promise<ListingRecord>;
+  findUniqueByUrl(where: { url: string }): Promise<ListingRecord | null>;
   upsert(
     where: { url: string },
-    create: Prisma.ListingCreateInput,
-    update?: Prisma.ListingUpdateInput,
-  ): Promise<Listing>;
+    create: ListingCreateData,
+    update?: ListingUpdateData,
+  ): Promise<ListingRecord>;
   update(
     where: { id: number },
-    data: Prisma.ListingUpdateInput,
-  ): Promise<Listing>;
+    data: ListingUpdateData,
+  ): Promise<ListingRecord>;
   getListingsWithCountAndSources(params: {
-    where: Prisma.ListingWhereInput;
+    where: ListingWhereInput;
     skip: number;
     take: number;
   }): Promise<GetListingsTransactionResult>;
   transaction<T>(
-    callback: (tx: Prisma.TransactionClient) => Promise<T>,
+    callback: (tx: ListingsTransactionClient) => Promise<T>,
   ): Promise<T>;
 }

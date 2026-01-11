@@ -17,6 +17,8 @@ import { TaskMapper } from './mappers/task.mapper';
 import { TaskDescriptionParser } from './parsers/task-description.parser';
 import { TaskContextBuilder } from './builders/task-context.builder';
 import { TasksRepository } from './repositories/tasks.repository';
+import { ParsingTaskRepository } from './repositories/parsing-task.repository';
+import { TaskAutomationRepository } from './repositories/task-automation.repository';
 
 @Module({
   imports: [
@@ -41,6 +43,14 @@ import { TasksRepository } from './repositories/tasks.repository';
     {
       provide: 'ITasksRepository',
       useClass: TasksRepository,
+    },
+    {
+      provide: 'IParsingTaskRepository',
+      useClass: ParsingTaskRepository,
+    },
+    {
+      provide: 'ITaskAutomationRepository',
+      useClass: TaskAutomationRepository,
     },
     ParsingTaskRunner,
     ParsingQueueService,

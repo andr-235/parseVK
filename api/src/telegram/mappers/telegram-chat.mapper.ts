@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { Api } from 'telegram';
-import { TelegramChatType } from '@prisma/client';
 import type { ResolvedChat } from '../interfaces/telegram-client.interface';
+import { TelegramChatType } from '../types/telegram.enums';
 
 @Injectable()
 export class TelegramChatMapper {
   resolveChat(entity: unknown): ResolvedChat | null {
     if (entity instanceof Api.Channel) {
       const type = (entity as { megagroup?: boolean }).megagroup
-        ? (TelegramChatType.SUPERGROUP as unknown as TelegramChatType)
-        : (TelegramChatType.CHANNEL as unknown as TelegramChatType);
+        ? TelegramChatType.SUPERGROUP
+        : TelegramChatType.CHANNEL;
       return {
         telegramId: this.toBigInt((entity as { id: unknown }).id),
         type,
@@ -28,7 +28,7 @@ export class TelegramChatMapper {
     if (entity instanceof Api.Chat) {
       return {
         telegramId: this.toBigInt((entity as { id: unknown }).id),
-        type: TelegramChatType.GROUP as unknown as TelegramChatType,
+        type: TelegramChatType.GROUP,
         title: (entity as { title?: string }).title ?? null,
         username: null,
         description: null,
@@ -44,7 +44,7 @@ export class TelegramChatMapper {
     if (entity instanceof Api.User) {
       return {
         telegramId: this.toBigInt((entity as { id: unknown }).id),
-        type: TelegramChatType.PRIVATE as unknown as TelegramChatType,
+        type: TelegramChatType.PRIVATE,
         title: this.composeUserTitle(entity),
         username: (entity as { username?: string }).username ?? null,
         description: null,

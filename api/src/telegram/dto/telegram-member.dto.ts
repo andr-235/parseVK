@@ -1,4 +1,4 @@
-import { TelegramMemberStatus } from '@prisma/client';
+import { TelegramMemberStatus } from '../types/telegram.enums';
 
 export class TelegramMemberDto {
   userId!: number;

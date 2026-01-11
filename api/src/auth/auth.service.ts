@@ -5,10 +5,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import type { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import type { AppConfig } from '../config/app.config';
 import { UsersService } from '../users/users.service';
+import type { UserAuthRecord } from '../users/types/user.types';
 import type { AuthResponse, AuthTokens, JwtPayload } from './auth.types';
 
 const PASSWORD_SALT_ROUNDS = 12;
@@ -93,7 +93,7 @@ export class AuthService {
   private async validateUser(
     username: string,
     password: string,
-  ): Promise<User> {
+  ): Promise<UserAuthRecord> {
     const user = await this.usersService.findByUsername(username);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -107,7 +107,7 @@ export class AuthService {
     return user;
   }
 
-  private async issueTokens(user: User): Promise<AuthTokens> {
+  private async issueTokens(user: UserAuthRecord): Promise<AuthTokens> {
     const payload: JwtPayload = {
       sub: user.id,
       username: user.username,
@@ -133,7 +133,10 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private buildAuthResponse(user: User, tokens: AuthTokens): AuthResponse {
+  private buildAuthResponse(
+    user: UserAuthRecord,
+    tokens: AuthTokens,
+  ): AuthResponse {
     return {
       ...tokens,
       user: {

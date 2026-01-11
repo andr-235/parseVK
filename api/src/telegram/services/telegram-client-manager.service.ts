@@ -9,6 +9,7 @@ import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import { PrismaService } from '../../prisma.service';
 import type { ITelegramClient } from '../interfaces/telegram-client.interface';
+import type { AppConfig } from '../../config/app.config';
 
 @Injectable()
 export class TelegramClientManagerService
@@ -21,7 +22,7 @@ export class TelegramClientManagerService
   private unhandledRejectionHandler: ((reason: unknown) => void) | null = null;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AppConfig>,
     private readonly prisma: PrismaService,
   ) {
     this.setupErrorHandling();
@@ -97,10 +98,10 @@ export class TelegramClientManagerService
 
     const apiIdRaw =
       (settingsRecord as { apiId: number | null } | null)?.apiId ??
-      this.configService.get<string | number>('TELEGRAM_API_ID');
+      this.configService.get('telegramApiId', { infer: true });
     const apiHash =
       (settingsRecord as { apiHash: string | null } | null)?.apiHash ??
-      this.configService.get<string>('TELEGRAM_API_HASH');
+      this.configService.get('telegramApiHash', { infer: true });
 
     const apiId =
       typeof apiIdRaw === 'string' ? Number.parseInt(apiIdRaw, 10) : apiIdRaw;
@@ -122,7 +123,7 @@ export class TelegramClientManagerService
 
     const sessionString =
       (sessionRecord as { session: string } | null)?.session ??
-      this.configService.get<string>('TELEGRAM_SESSION');
+      this.configService.get('telegramSession', { infer: true });
 
     if (!sessionString) {
       throw new InternalServerErrorException(

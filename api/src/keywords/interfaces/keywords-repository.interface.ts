@@ -1,4 +1,5 @@
-import type { Keyword, Prisma, MatchSource } from '@prisma/client';
+import type { Keyword, Prisma } from '@prisma/client';
+import type { MatchSource } from '../../common/types/match-source.enum';
 
 export interface IKeywordsRepository {
   findUnique(where: { word: string }): Promise<Keyword>;

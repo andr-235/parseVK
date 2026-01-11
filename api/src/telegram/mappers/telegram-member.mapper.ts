@@ -1,14 +1,52 @@
 import { Injectable } from '@nestjs/common';
 import { Api } from 'telegram';
-import {
-  TelegramMemberStatus,
-  Prisma,
-  type TelegramUser,
-  type TelegramChatMember,
-} from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import type { MemberRecord } from '../interfaces/telegram-client.interface';
 import type { TelegramMemberDto } from '../dto/telegram-member.dto';
 import bigInt, { type BigInteger } from 'big-integer';
+import { TelegramMemberStatus } from '../types/telegram.enums';
+
+export type TelegramUserRecord = {
+  id: number;
+  telegramId: bigint;
+  firstName: string | null;
+  lastName: string | null;
+  username: string | null;
+  phoneNumber: string | null;
+  bio: string | null;
+  languageCode: string | null;
+  isBot: boolean;
+  isPremium: boolean;
+  deleted: boolean;
+  restricted: boolean;
+  verified: boolean;
+  scam: boolean;
+  fake: boolean;
+  min: boolean;
+  self: boolean;
+  contact: boolean;
+  mutualContact: boolean;
+  accessHash: string | null;
+  photoId: bigint | null;
+  photoDcId: number | null;
+  photoHasVideo: boolean;
+  commonChatsCount: number | null;
+  usernames: unknown;
+  personal: unknown;
+  botInfo: unknown;
+  blocked: boolean;
+  contactRequirePremium: boolean;
+  spam: boolean;
+  closeFriend: boolean;
+};
+
+export type TelegramChatMemberRecord = {
+  status: TelegramMemberStatus;
+  isAdmin: boolean;
+  isOwner: boolean;
+  joinedAt: Date | null;
+  leftAt: Date | null;
+};
 
 @Injectable()
 export class TelegramMemberMapper {
@@ -21,7 +59,7 @@ export class TelegramMemberMapper {
   } {
     if (participant instanceof Api.ChannelParticipantCreator) {
       return {
-        status: TelegramMemberStatus.CREATOR as unknown as TelegramMemberStatus,
+        status: TelegramMemberStatus.CREATOR,
         isAdmin: true,
         isOwner: true,
         joinedAt: null,
@@ -31,8 +69,7 @@ export class TelegramMemberMapper {
 
     if (participant instanceof Api.ChannelParticipantAdmin) {
       return {
-        status:
-          TelegramMemberStatus.ADMINISTRATOR as unknown as TelegramMemberStatus,
+        status: TelegramMemberStatus.ADMINISTRATOR,
         isAdmin: true,
         isOwner: false,
         joinedAt: this.extractDate(
@@ -44,8 +81,8 @@ export class TelegramMemberMapper {
 
     if (participant instanceof Api.ChannelParticipantBanned) {
       const status = (participant as { left?: boolean }).left
-        ? (TelegramMemberStatus.LEFT as unknown as TelegramMemberStatus)
-        : (TelegramMemberStatus.RESTRICTED as unknown as TelegramMemberStatus);
+        ? TelegramMemberStatus.LEFT
+        : TelegramMemberStatus.RESTRICTED;
       return {
         status,
         isAdmin: false,
@@ -62,7 +99,7 @@ export class TelegramMemberMapper {
 
     if (participant instanceof Api.ChannelParticipantLeft) {
       return {
-        status: TelegramMemberStatus.LEFT as unknown as TelegramMemberStatus,
+        status: TelegramMemberStatus.LEFT,
         isAdmin: false,
         isOwner: false,
         joinedAt: null,
@@ -71,7 +108,7 @@ export class TelegramMemberMapper {
     }
 
     return {
-      status: TelegramMemberStatus.MEMBER as unknown as TelegramMemberStatus,
+      status: TelegramMemberStatus.MEMBER,
       isAdmin: false,
       isOwner: false,
       joinedAt: this.extractDate(
@@ -90,7 +127,7 @@ export class TelegramMemberMapper {
   } {
     if (participant instanceof Api.ChatParticipantCreator) {
       return {
-        status: TelegramMemberStatus.CREATOR as unknown as TelegramMemberStatus,
+        status: TelegramMemberStatus.CREATOR,
         isAdmin: true,
         isOwner: true,
         joinedAt: null,
@@ -100,8 +137,7 @@ export class TelegramMemberMapper {
 
     if (participant instanceof Api.ChatParticipantAdmin) {
       return {
-        status:
-          TelegramMemberStatus.ADMINISTRATOR as unknown as TelegramMemberStatus,
+        status: TelegramMemberStatus.ADMINISTRATOR,
         isAdmin: true,
         isOwner: false,
         joinedAt: this.extractDate(
@@ -112,7 +148,7 @@ export class TelegramMemberMapper {
     }
 
     return {
-      status: TelegramMemberStatus.MEMBER as unknown as TelegramMemberStatus,
+      status: TelegramMemberStatus.MEMBER,
       isAdmin: false,
       isOwner: false,
       joinedAt: this.extractDate(
@@ -203,8 +239,8 @@ export class TelegramMemberMapper {
   }
 
   mapToMemberDto(
-    userRecord: TelegramUser,
-    member: TelegramChatMember,
+    userRecord: TelegramUserRecord,
+    member: TelegramChatMemberRecord,
   ): TelegramMemberDto {
     const usernames =
       userRecord.usernames &&

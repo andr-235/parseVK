@@ -11,12 +11,17 @@ import { TelegramChatSyncService } from './services/telegram-chat-sync.service';
 import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service';
 import { TelegramChatRepository } from './repositories/telegram-chat.repository';
 import { TelegramMemberRepository } from './repositories/telegram-member.repository';
+import { TelegramAuthRepository } from './repositories/telegram-auth.repository';
 
 @Module({
   controllers: [TelegramController, TelegramAuthController],
   providers: [
     TelegramService,
     TelegramAuthService,
+    {
+      provide: 'ITelegramAuthRepository',
+      useClass: TelegramAuthRepository,
+    },
     TelegramClientManagerService,
     TelegramChatMapper,
     TelegramMemberMapper,

@@ -10,6 +10,18 @@ export function validate(config: Record<string, unknown>): AppConfig {
     redisPort: config.REDIS_PORT
       ? parseInt(config.REDIS_PORT as string, 10)
       : 6379,
+    bullMqHost: config.BULLMQ_HOST || config.REDIS_HOST || 'redis',
+    bullMqPort: config.BULLMQ_PORT
+      ? parseInt(config.BULLMQ_PORT as string, 10)
+      : config.REDIS_PORT
+        ? parseInt(config.REDIS_PORT as string, 10)
+        : 6379,
+    bullMqPrefix: config.BULLMQ_PREFIX,
+    telegramApiId: config.TELEGRAM_API_ID
+      ? parseInt(config.TELEGRAM_API_ID as string, 10)
+      : undefined,
+    telegramApiHash: config.TELEGRAM_API_HASH,
+    telegramSession: config.TELEGRAM_SESSION,
     vkToken: config.VK_TOKEN,
     vkApiTimeoutMs: config.VK_API_TIMEOUT_MS
       ? parseInt(config.VK_API_TIMEOUT_MS as string, 10)

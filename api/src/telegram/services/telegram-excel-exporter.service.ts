@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { TelegramChatRepository } from '../repositories/telegram-chat.repository';
 import { TelegramMemberMapper } from '../mappers/telegram-member.mapper';
-import { TelegramMemberStatus } from '@prisma/client';
+import { TelegramMemberStatus } from '../types/telegram.enums';
 
 @Injectable()
 export class TelegramExcelExporterService {
@@ -154,7 +154,7 @@ export class TelegramExcelExporterService {
         spam: memberData.user.spam ? 'Да' : 'Нет',
         closeFriend: memberData.user.closeFriend ? 'Да' : 'Нет',
         status: this.memberMapper.formatMemberStatus(
-          memberData.status as unknown as TelegramMemberStatus,
+          memberData.status as TelegramMemberStatus,
         ),
         isAdmin: memberData.isAdmin ? 'Да' : 'Нет',
         isOwner: memberData.isOwner ? 'Да' : 'Нет',

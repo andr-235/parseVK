@@ -1,7 +1,14 @@
-import type { Author, Prisma } from '@prisma/client';
+import type { AuthorRecord } from '../types/author-record.type';
+import type { ResolvedAuthorSort, SqlFragment } from '../types/authors.types';
 
 export interface IAuthorsRepository {
-  count(where?: Prisma.AuthorWhereInput): Promise<number>;
-  findUnique(where: { vkUserId: number }): Promise<Author>;
-  queryRaw<T = Author[]>(query: Prisma.Sql): Promise<T>;
+  countByFilters(sqlConditions: SqlFragment[]): Promise<number>;
+  findByFilters(params: {
+    sqlConditions: SqlFragment[];
+    offset: number;
+    limit: number;
+    sort: ResolvedAuthorSort;
+  }): Promise<AuthorRecord[]>;
+  findUnique(where: { vkUserId: number }): Promise<AuthorRecord | null>;
+  queryRaw<T = AuthorRecord[]>(query: SqlFragment): Promise<T>;
 }

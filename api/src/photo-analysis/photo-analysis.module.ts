@@ -8,7 +8,8 @@ import { PhotoLoaderService } from './services/photo-loader.service';
 import { AuthorService } from './services/author.service';
 import { PhotoAnalysisFactory } from './factories/photo-analysis.factory';
 import { PhotoAnalysisSummaryBuilder } from './builders/photo-analysis-summary.builder';
-import { PhotoAnalysisRepository } from './interfaces/photo-analysis-repository.interface';
+import { PhotoAnalysisRepository } from './repositories/photo-analysis.repository';
+import { PhotoAnalysisAuthorRepository } from './repositories/photo-analysis-author.repository';
 import { WebhookModerationStrategy } from './strategies/webhook-moderation.strategy';
 import { WebhookModerationAdapter } from './adapters/webhook-moderation.adapter';
 import { VkModule } from '../vk/vk.module';
@@ -38,6 +39,10 @@ import { VkModule } from '../vk/vk.module';
     {
       provide: 'IAuthorService',
       useExisting: AuthorService,
+    },
+    {
+      provide: 'IPhotoAnalysisAuthorRepository',
+      useClass: PhotoAnalysisAuthorRepository,
     },
     PhotoAnalysisFactory,
     PhotoAnalysisSummaryBuilder,

@@ -1,7 +1,8 @@
 import { Prisma } from '@prisma/client';
+import type { SqlFragment } from '../types/authors.types';
 
 export interface AuthorFiltersResult {
-  sqlConditions: Prisma.Sql[];
+  sqlConditions: SqlFragment[];
 }
 
 export class AuthorFiltersBuilder {
@@ -9,7 +10,7 @@ export class AuthorFiltersBuilder {
     search: string | null | undefined,
     verified?: boolean,
   ): AuthorFiltersResult {
-    const sqlConditions: Prisma.Sql[] = [];
+    const sqlConditions: SqlFragment[] = [];
 
     if (search) {
       sqlConditions.push(this.buildSearchFilter(search));
@@ -24,7 +25,7 @@ export class AuthorFiltersBuilder {
     };
   }
 
-  private buildSearchFilter(search: string): Prisma.Sql {
+  private buildSearchFilter(search: string): SqlFragment {
     const numericId = Number.parseInt(search, 10);
     const searchTerm = `%${search.toLowerCase()}%`;
     const searchSqlParts: Prisma.Sql[] = [
@@ -38,14 +39,14 @@ export class AuthorFiltersBuilder {
       searchSqlParts.push(Prisma.sql`"Author"."vkUserId" = ${numericId}`);
     }
 
-    return Prisma.sql`(${Prisma.join(searchSqlParts, ' OR ')})`;
+    return Prisma.sql`(${Prisma.join(searchSqlParts, ' OR ')})` as SqlFragment;
   }
 
-  private buildVerifiedFilter(verified: boolean): Prisma.Sql {
+  private buildVerifiedFilter(verified: boolean): SqlFragment {
     if (verified) {
-      return Prisma.sql`"Author"."verifiedAt" IS NOT NULL`;
+      return Prisma.sql`"Author"."verifiedAt" IS NOT NULL` as SqlFragment;
     }
 
-    return Prisma.sql`"Author"."verifiedAt" IS NULL`;
+    return Prisma.sql`"Author"."verifiedAt" IS NULL` as SqlFragment;
   }
 }

@@ -1,6 +1,6 @@
 import { TelegramChatMapper } from './telegram-chat.mapper';
 import { Api } from 'telegram';
-import { TelegramChatType } from '@prisma/client';
+import { TelegramChatType } from '../types/telegram.enums';
 
 describe('TelegramChatMapper', () => {
   let mapper: TelegramChatMapper;

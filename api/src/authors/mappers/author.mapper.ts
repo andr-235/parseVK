@@ -1,11 +1,11 @@
-import type { Author } from '@prisma/client';
 import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
 import { AuthorCardDto, AuthorDetailsDto } from '../dto/author.dto';
 import { AuthorCountersParser } from '../parsers/author-counters.parser';
+import type { AuthorRecord } from '../types/author-record.type';
 
 export class AuthorMapper {
   static toCardDto(
-    author: Author,
+    author: AuthorRecord,
     summary?: PhotoAnalysisSummaryDto,
   ): AuthorCardDto {
     const normalizedSummary = this.cloneSummary(summary);
@@ -44,7 +44,7 @@ export class AuthorMapper {
   }
 
   static toDetailsDto(
-    author: Author,
+    author: AuthorRecord,
     summary?: PhotoAnalysisSummaryDto,
   ): AuthorDetailsDto {
     const card = this.toCardDto(author, summary);

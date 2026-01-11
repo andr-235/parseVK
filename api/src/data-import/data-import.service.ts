@@ -1,6 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import type { IListingsRepository } from '../listings/interfaces/listings-repository.interface';
+import type {
+  IListingsRepository,
+  ListingCreateData,
+  ListingUpdateData,
+} from '../listings/interfaces/listings-repository.interface';
 import type { ListingImportDto } from './dto/listing-import.dto';
 import type {
   ListingImportErrorDto,
@@ -107,9 +110,7 @@ export class DataImportService {
     return report;
   }
 
-  private buildListingData(
-    listing: ListingImportDto,
-  ): Prisma.ListingCreateInput {
+  private buildListingData(listing: ListingImportDto): ListingCreateData {
     const images = Array.isArray(listing.images)
       ? listing.images.filter(
           (image) => typeof image === 'string' && image.trim().length > 0,
@@ -276,11 +277,11 @@ export class DataImportService {
   }
 
   private excludeManualOverrides(
-    data: Prisma.ListingCreateInput,
+    data: ListingCreateData,
     overrides: string[],
-  ): Prisma.ListingUpdateInput {
+  ): ListingUpdateData {
     const manualFields = new Set(overrides);
-    const update: Prisma.ListingUpdateInput = { ...data };
+    const update: ListingUpdateData = { ...data };
 
     for (const field of manualFields) {
       if (field in update) {
@@ -352,35 +353,11 @@ export class DataImportService {
   }
 
   private isUniqueViolation(error: unknown): boolean {
-    const KnownError = (
-      Prisma as unknown as {
-        PrismaClientKnownRequestError?: typeof Prisma.PrismaClientKnownRequestError;
-      }
-    ).PrismaClientKnownRequestError;
-
-    if (
-      typeof KnownError === 'function' &&
-      error instanceof KnownError &&
-      error.code === 'P2002'
-    ) {
-      return true;
-    }
-
-    if (typeof error === 'object' && error && 'code' in error) {
-      return (error as { code?: unknown }).code === 'P2002';
-    }
-
-    return false;
+    return this.isPrismaKnownError(error) && error.code === 'P2002';
   }
 
   private mapPrismaError(error: unknown): string {
-    const KnownError = (
-      Prisma as unknown as {
-        PrismaClientKnownRequestError?: typeof Prisma.PrismaClientKnownRequestError;
-      }
-    ).PrismaClientKnownRequestError;
-
-    if (typeof KnownError === 'function' && error instanceof KnownError) {
+    if (this.isPrismaKnownError(error)) {
       return `Prisma error ${error.code}`;
     }
 
@@ -389,5 +366,15 @@ export class DataImportService {
     }
 
     return 'Неизвестная ошибка базы данных';
+  }
+
+  private isPrismaKnownError(error: unknown): error is { code: string } {
+    if (!error || typeof error !== 'object') {
+      return false;
+    }
+    if (!('code' in error)) {
+      return false;
+    }
+    return typeof (error as { code?: unknown }).code === 'string';
   }
 }

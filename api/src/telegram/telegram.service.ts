@@ -12,7 +12,6 @@ import { TelegramParticipantCollectorService } from './services/telegram-partici
 import { TelegramChatSyncService } from './services/telegram-chat-sync.service';
 import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service';
 import { TelegramChatRepository } from './repositories/telegram-chat.repository';
-import { TelegramChatType } from '@prisma/client';
 import type { ParticipantCollection } from './interfaces/telegram-client.interface';
 import type { TelegramMemberDto } from './dto/telegram-member.dto';
 
@@ -87,7 +86,8 @@ export class TelegramService {
     return {
       chatId: (persisted as { chatId: number }).chatId,
       telegramId: (persisted as { telegramId: bigint }).telegramId.toString(),
-      type: resolved.type as unknown as TelegramChatType,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      type: resolved.type as TelegramChatType,
       title: resolved.title,
       username: resolved.username,
       syncedMembers: collection.members.length,

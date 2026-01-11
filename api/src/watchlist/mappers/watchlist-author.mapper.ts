@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { CommentSource } from '@prisma/client';
+import type { CommentSource } from '../../common/types/comment-source.enum';
 import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
 import type {
   WatchlistAuthorCardDto,

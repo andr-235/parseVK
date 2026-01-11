@@ -5,7 +5,6 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { VkService } from '../vk/vk.service';
 import { IGroup } from '../vk/interfaces/group.interfaces';
 import {
@@ -67,9 +66,9 @@ export class GroupsService {
       {
         vkId: groupData.id,
         ...mappedData,
-        addresses: mappedData.addresses as Prisma.InputJsonValue | undefined,
-        city: mappedData.city as Prisma.InputJsonValue | undefined,
-        counters: mappedData.counters as Prisma.InputJsonValue | undefined,
+        addresses: mappedData.addresses ?? undefined,
+        city: mappedData.city ?? undefined,
+        counters: mappedData.counters ?? undefined,
       },
     );
 

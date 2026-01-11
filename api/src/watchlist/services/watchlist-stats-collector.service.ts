@@ -3,7 +3,6 @@ import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repos
 import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
 import { PhotoAnalysisService } from '../../photo-analysis/photo-analysis.service';
 import { PrismaService } from '../../prisma.service';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class WatchlistStatsCollectorService {
@@ -29,7 +28,7 @@ export class WatchlistStatsCollectorService {
         }>
       >
     )({
-      by: [Prisma.CommentScalarFieldEnum.watchlistAuthorId],
+      by: ['watchlistAuthorId'],
       where: { watchlistAuthorId: { in: authorIds } },
       _count: { watchlistAuthorId: true },
       orderBy: { watchlistAuthorId: 'asc' },

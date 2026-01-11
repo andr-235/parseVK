@@ -5,24 +5,12 @@ import type {
   TaskStatus,
 } from '../interfaces/task.interface';
 import type { ParsedTaskDescription } from '../parsers/task-description.parser';
-
-export interface PrismaTaskRecord {
-  id: number;
-  title: string;
-  description: string | null;
-  completed: boolean | null;
-  totalItems?: number | null;
-  processedItems?: number | null;
-  progress?: number | null;
-  status?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import type { TaskRecord } from '../types/task-record.type';
 
 @Injectable()
 export class TaskMapper {
   mapToDetail(
-    task: PrismaTaskRecord,
+    task: TaskRecord,
     parsed: ParsedTaskDescription,
     status: TaskStatus,
   ): TaskDetail {
@@ -33,7 +21,7 @@ export class TaskMapper {
   }
 
   mapToSummary(
-    task: PrismaTaskRecord,
+    task: TaskRecord,
     parsed: ParsedTaskDescription,
     status: TaskStatus,
   ): TaskSummary {
@@ -71,7 +59,7 @@ export class TaskMapper {
   }
 
   resolveTaskStatus(
-    task: PrismaTaskRecord,
+    task: TaskRecord,
     parsed: ParsedTaskDescription,
   ): TaskStatus {
     if (task.completed === true) {

@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -22,6 +23,7 @@ import { ListingsModule } from './listings/listings.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { AuthModule } from './auth/auth.module';
+import type { AppConfig } from './config/app.config';
 
 @Module({
   imports: [
@@ -29,11 +31,15 @@ import { AuthModule } from './auth/auth.module';
     PrismaModule,
     ScheduleModule.forRoot(),
     // BullMQ глобальная конфигурация
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'redis',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      },
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<AppConfig>) => ({
+        connection: {
+          host: configService.get('bullMqHost', { infer: true }) ?? 'redis',
+          port: configService.get('bullMqPort', { infer: true }) ?? 6379,
+        },
+        prefix: configService.get('bullMqPrefix', { infer: true }) ?? undefined,
+      }),
     }),
     CacheModule,
     CommonModule,

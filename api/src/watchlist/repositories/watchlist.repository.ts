@@ -3,16 +3,15 @@ import { PrismaService } from '../../prisma.service';
 import type {
   IWatchlistRepository,
   WatchlistAuthorWithRelations,
+  WatchlistAuthorUpdateData,
+  WatchlistSettingsRecord,
+  WatchlistSettingsUpdateData,
 } from '../interfaces/watchlist-repository.interface';
-import type {
-  Comment,
-  CommentSource,
-  Prisma,
-  WatchlistStatus,
-  WatchlistSettings,
-} from '@prisma/client';
+import type { Comment, Prisma } from '@prisma/client';
 import { WatchlistStatus as WS } from '@prisma/client';
 import { composeCommentKey } from '../utils/watchlist-comment.utils';
+import type { CommentSource } from '../../common/types/comment-source.enum';
+import type { WatchlistStatus } from '../types/watchlist-status.enum';
 
 const DEFAULT_SETTINGS_ID = 1;
 
@@ -95,29 +94,33 @@ export class WatchlistRepository implements IWatchlistRepository {
     status: WatchlistStatus;
   }): Promise<WatchlistAuthorWithRelations> {
     return this.prisma.watchlistAuthor.create({
-      data,
+      data: {
+        ...data,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        status: data.status as Prisma.WatchlistStatus,
+      },
       include: { author: true, settings: true },
     });
   }
 
   update(
     id: number,
-    data: Prisma.WatchlistAuthorUpdateInput,
+    data: WatchlistAuthorUpdateData,
   ): Promise<WatchlistAuthorWithRelations> {
     return this.prisma.watchlistAuthor.update({
       where: { id },
-      data,
+      data: this.toWatchlistAuthorUpdateInput(data),
       include: { author: true, settings: true },
     });
   }
 
   async updateMany(
     ids: number[],
-    data: Prisma.WatchlistAuthorUpdateInput,
+    data: WatchlistAuthorUpdateData,
   ): Promise<void> {
     await this.prisma.watchlistAuthor.updateMany({
       where: { id: { in: ids } },
-      data,
+      data: this.toWatchlistAuthorUpdateInput(data),
     });
   }
 
@@ -166,7 +169,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     return keys;
   }
 
-  ensureSettings(): Promise<WatchlistSettings> {
+  ensureSettings(): Promise<WatchlistSettingsRecord> {
     return this.prisma.watchlistSettings.upsert({
       where: { id: DEFAULT_SETTINGS_ID },
       update: {},
@@ -179,7 +182,7 @@ export class WatchlistRepository implements IWatchlistRepository {
     });
   }
 
-  getSettings(): Promise<WatchlistSettings | null> {
+  getSettings(): Promise<WatchlistSettingsRecord | null> {
     return this.prisma.watchlistSettings.findUnique({
       where: { id: DEFAULT_SETTINGS_ID },
     });
@@ -187,8 +190,8 @@ export class WatchlistRepository implements IWatchlistRepository {
 
   updateSettings(
     id: number,
-    data: Prisma.WatchlistSettingsUpdateInput,
-  ): Promise<WatchlistSettings> {
+    data: WatchlistSettingsUpdateData,
+  ): Promise<WatchlistSettingsRecord> {
     return this.prisma.watchlistSettings.update({
       where: { id },
       data,
@@ -223,7 +226,8 @@ export class WatchlistRepository implements IWatchlistRepository {
       where: { id },
       data: {
         watchlistAuthorId: data.watchlistAuthorId,
-        source: data.source,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        source: data.source as Prisma.CommentSource,
       },
     });
   }
@@ -241,5 +245,36 @@ export class WatchlistRepository implements IWatchlistRepository {
         fromId: true,
       },
     });
+  }
+
+  private toWatchlistAuthorUpdateInput(
+    data: WatchlistAuthorUpdateData,
+  ): Prisma.WatchlistAuthorUpdateInput {
+    const update: Prisma.WatchlistAuthorUpdateInput = {};
+
+    if (data.status !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      update.status = data.status as Prisma.WatchlistStatus;
+    }
+
+    if (data.monitoringStoppedAt !== undefined) {
+      update.monitoringStoppedAt = data.monitoringStoppedAt;
+    }
+
+    if (data.lastCheckedAt !== undefined) {
+      update.lastCheckedAt = data.lastCheckedAt;
+    }
+
+    if (data.lastActivityAt !== undefined) {
+      update.lastActivityAt = data.lastActivityAt;
+    }
+
+    if (data.incrementFoundCommentsCount !== undefined) {
+      update.foundCommentsCount = {
+        increment: data.incrementFoundCommentsCount,
+      };
+    }
+
+    return update;
   }
 }

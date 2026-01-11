@@ -1,37 +1,55 @@
 import { Injectable } from '@nestjs/common';
-import type { Task, Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
-import type { ITasksRepository } from '../interfaces/tasks-repository.interface';
+import type {
+  ITasksRepository,
+  TaskCreateData,
+  TaskOrderByInput,
+  TaskUpdateData,
+} from '../interfaces/tasks-repository.interface';
+import type { TaskRecord } from '../types/task-record.type';
 
 @Injectable()
 export class TasksRepository implements ITasksRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: Prisma.TaskUncheckedCreateInput): Promise<Task> {
+  create(data: TaskCreateData): Promise<TaskRecord> {
     return this.prisma.task.create({ data });
   }
 
   findMany(params?: {
     skip?: number;
     take?: number;
-    orderBy?: Prisma.TaskOrderByWithRelationInput;
-  }): Promise<Task[]> {
-    return this.prisma.task.findMany(params);
+    orderBy?: TaskOrderByInput;
+  }): Promise<TaskRecord[]> {
+    return this.prisma.task.findMany({
+      skip: params?.skip,
+      take: params?.take,
+      orderBy: params?.orderBy as Prisma.TaskOrderByWithRelationInput,
+    });
   }
 
   count(): Promise<number> {
     return this.prisma.task.count();
   }
 
-  findUnique(where: { id: number }): Promise<Task> {
-    return this.prisma.task.findUniqueOrThrow({ where });
+  findUnique(where: { id: number }): Promise<TaskRecord | null> {
+    return this.prisma.task.findUnique({ where });
   }
 
   update(
     where: { id: number },
-    data: Prisma.TaskUncheckedUpdateInput,
-  ): Promise<Task> {
-    return this.prisma.task.update({ where, data });
+    data: TaskUpdateData,
+  ): Promise<TaskRecord | null> {
+    return this.prisma.task.update({ where, data }).catch((error: unknown) => {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        return null;
+      }
+      throw error;
+    });
   }
 
   async delete(where: { id: number }): Promise<void> {

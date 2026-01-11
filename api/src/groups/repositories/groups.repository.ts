@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import type { Group, Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 import type {
   GetGroupsWithCountResult,
+  GroupOrderByInput,
+  GroupUpsertData,
   IGroupsRepository,
 } from '../interfaces/groups-repository.interface';
+import type { IGroupResponse } from '../interfaces/group.interface';
 
 @Injectable()
 export class GroupsRepository implements IGroupsRepository {
@@ -12,21 +15,25 @@ export class GroupsRepository implements IGroupsRepository {
 
   upsert(
     where: { vkId: number },
-    data: Prisma.GroupCreateInput,
-  ): Promise<Group> {
+    data: GroupUpsertData,
+  ): Promise<IGroupResponse> {
     return this.prisma.group.upsert({
       where,
-      update: data,
-      create: data,
+      update: data as Prisma.GroupCreateInput,
+      create: data as Prisma.GroupCreateInput,
     });
   }
 
   findMany(params: {
     skip?: number;
     take?: number;
-    orderBy?: Prisma.GroupOrderByWithRelationInput;
-  }): Promise<Group[]> {
-    return this.prisma.group.findMany(params);
+    orderBy?: GroupOrderByInput;
+  }): Promise<IGroupResponse[]> {
+    return this.prisma.group.findMany({
+      skip: params.skip,
+      take: params.take,
+      orderBy: params.orderBy as Prisma.GroupOrderByWithRelationInput,
+    });
   }
 
   count(): Promise<number> {
@@ -48,7 +55,7 @@ export class GroupsRepository implements IGroupsRepository {
     });
   }
 
-  delete(where: { id: number }): Promise<Group> {
+  delete(where: { id: number }): Promise<IGroupResponse> {
     return this.prisma.group.delete({ where });
   }
 
@@ -56,7 +63,7 @@ export class GroupsRepository implements IGroupsRepository {
     return this.prisma.group.deleteMany({});
   }
 
-  findManyByVkIds(vkIds: number[]): Promise<Group[]> {
+  findManyByVkIds(vkIds: number[]): Promise<IGroupResponse[]> {
     return this.prisma.group.findMany({
       where: {
         vkId: {

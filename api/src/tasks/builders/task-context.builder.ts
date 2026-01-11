@@ -7,19 +7,7 @@ import { ParsingScope } from '../dto/create-parsing-task.dto';
 import type { ParsedTaskDescription } from '../parsers/task-description.parser';
 import { ParsingTaskRunner } from '../parsing-task.runner';
 import { TaskDescriptionParser } from '../parsers/task-description.parser';
-
-export interface PrismaTaskRecord {
-  id: number;
-  title: string;
-  description: string | null;
-  completed: boolean | null;
-  totalItems?: number | null;
-  processedItems?: number | null;
-  progress?: number | null;
-  status?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import type { TaskRecord } from '../types/task-record.type';
 
 export interface TaskResumeContext {
   scope: ParsingScope;
@@ -38,7 +26,7 @@ export class TaskContextBuilder {
     private readonly parser: TaskDescriptionParser,
   ) {}
 
-  async buildResumeContext(task: PrismaTaskRecord): Promise<TaskResumeContext> {
+  async buildResumeContext(task: TaskRecord): Promise<TaskResumeContext> {
     const parsed = this.parser.parse(task);
     const scope =
       parsed.scope ??

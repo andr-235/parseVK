@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import type {
   AuthorSortField,
   ResolvedAuthorSort,
+  SqlFragment,
 } from '../types/authors.types';
 import { CounterSortExpression } from './sort-expressions/counter-sort.expression';
 import { FollowersSortExpression } from './sort-expressions/followers-sort.expression';
@@ -26,12 +27,12 @@ export class AuthorSortBuilder {
     updatedAt: new SimpleSortExpression('updatedAt'),
   };
 
-  buildOrderClause(sort: ResolvedAuthorSort): Prisma.Sql {
+  buildOrderClause(sort: ResolvedAuthorSort): SqlFragment {
     const expressions: Prisma.Sql[] = [this.buildPrimarySortExpression(sort)];
     expressions.push(Prisma.sql`"Author"."updatedAt" DESC`);
     expressions.push(Prisma.sql`"Author"."id" DESC`);
 
-    return Prisma.join(expressions, ', ');
+    return Prisma.join(expressions, ', ') as SqlFragment;
   }
 
   private buildPrimarySortExpression(sort: ResolvedAuthorSort): Prisma.Sql {

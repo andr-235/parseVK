@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { BadRequestException } from '@nestjs/common';
-import { TelegramChatType, TelegramMemberStatus } from '@prisma/client';
+import { TelegramChatType, TelegramMemberStatus } from './types/telegram.enums';
 import type { Api } from 'telegram';
 import type { TelegramMemberDto } from './dto/telegram-member.dto';
 import { TelegramService } from './telegram.service';

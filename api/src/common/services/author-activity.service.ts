@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CommentSource, MatchSource, Prisma } from '@prisma/client';
+import { CommentSource } from '../types/comment-source.enum';
+import { MatchSource } from '../types/match-source.enum';
 import { PrismaService } from '../../prisma.service';
 import { VkService } from '../../vk/vk.service';
 import type { IAuthor } from '../../vk/interfaces/author.interfaces';
@@ -157,41 +158,33 @@ export class AuthorActivityService {
   }
 
   private buildCommentJsonFields(comment: CommentEntity): {
-    threadItems: Prisma.InputJsonValue;
-    attachments: Prisma.InputJsonValue | undefined;
-    parentsStack: Prisma.InputJsonValue;
+    threadItems: unknown;
+    attachments: unknown;
+    parentsStack: unknown;
   } {
-    const threadItemsJson: Prisma.InputJsonValue = comment.threadItems?.length
-      ? (comment.threadItems.map((item) =>
-          this.serializeComment(item),
-        ) as Prisma.InputJsonValue)
-      : (Prisma.JsonNull as unknown as Prisma.InputJsonValue);
+    const threadItemsJson = toUpdateJsonValue(
+      comment.threadItems?.length
+        ? comment.threadItems.map((item) => this.serializeComment(item))
+        : null,
+    );
 
-    const attachmentsJson: Prisma.InputJsonValue | undefined =
-      comment.attachments === null
-        ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
-        : comment.attachments === undefined
-          ? undefined
-          : (comment.attachments as Prisma.InputJsonValue);
+    const attachmentsJson = toUpdateJsonValue(comment.attachments);
 
-    const parentsStackJson: Prisma.InputJsonValue =
-      comment.parentsStack === null
-        ? (Prisma.JsonNull as unknown as Prisma.InputJsonValue)
-        : (comment.parentsStack as Prisma.InputJsonValue);
+    const parentsStackJson = toUpdateJsonValue(comment.parentsStack);
 
     return {
-      threadItems: threadItemsJson,
+      threadItems: threadItemsJson ?? null,
       attachments: attachmentsJson,
-      parentsStack: parentsStackJson,
+      parentsStack: parentsStackJson ?? null,
     };
   }
 
   private buildCommentBaseFields(
     comment: CommentEntity,
     jsonFields: {
-      threadItems: Prisma.InputJsonValue;
-      attachments: Prisma.InputJsonValue | undefined;
-      parentsStack: Prisma.InputJsonValue;
+      threadItems: unknown;
+      attachments: unknown;
+      parentsStack: unknown;
     },
   ): Record<string, unknown> {
     return {
@@ -217,12 +210,12 @@ export class AuthorActivityService {
   private buildCommentUpdateData(
     comment: CommentEntity,
     jsonFields: {
-      threadItems: Prisma.InputJsonValue;
-      attachments: Prisma.InputJsonValue | undefined;
-      parentsStack: Prisma.InputJsonValue;
+      threadItems: unknown;
+      attachments: unknown;
+      parentsStack: unknown;
     },
     options: SaveCommentsOptions,
-  ): Prisma.CommentUncheckedUpdateInput {
+  ): Record<string, unknown> {
     const authorVkId = comment.fromId > 0 ? comment.fromId : null;
 
     return {
@@ -234,18 +227,18 @@ export class AuthorActivityService {
       ...(options.source === CommentSource.WATCHLIST && {
         source: CommentSource.WATCHLIST,
       }),
-    } as Prisma.CommentUncheckedUpdateInput;
+    };
   }
 
   private buildCommentCreateData(
     comment: CommentEntity,
     jsonFields: {
-      threadItems: Prisma.InputJsonValue;
-      attachments: Prisma.InputJsonValue | undefined;
-      parentsStack: Prisma.InputJsonValue;
+      threadItems: unknown;
+      attachments: unknown;
+      parentsStack: unknown;
     },
     options: SaveCommentsOptions,
-  ): Prisma.CommentUncheckedCreateInput {
+  ): Record<string, unknown> {
     const authorVkId = comment.fromId > 0 ? comment.fromId : null;
 
     return {
@@ -253,12 +246,12 @@ export class AuthorActivityService {
       authorVkId: authorVkId ?? undefined,
       source: options.source,
       watchlistAuthorId: options.watchlistAuthorId ?? null,
-    } as Prisma.CommentUncheckedCreateInput;
+    };
   }
 
   private buildAuthorBaseFields(
     author: IAuthor,
-    jsonValueConverter: (value: unknown) => Prisma.InputJsonValue | undefined,
+    jsonValueConverter: (value: unknown) => unknown,
     useNullCoalescing: boolean,
   ): Record<string, unknown> {
     const getValue = <T>(value: T | undefined): T | null => {
@@ -315,23 +308,15 @@ export class AuthorActivityService {
     };
   }
 
-  private buildAuthorUpdateData(
-    author: IAuthor,
-  ): Prisma.AuthorUncheckedUpdateInput {
-    return this.buildAuthorBaseFields(
-      author,
-      toUpdateJsonValue,
-      false,
-    ) as Prisma.AuthorUncheckedUpdateInput;
+  private buildAuthorUpdateData(author: IAuthor): Record<string, unknown> {
+    return this.buildAuthorBaseFields(author, toUpdateJsonValue, false);
   }
 
-  private buildAuthorCreateData(
-    author: IAuthor,
-  ): Prisma.AuthorUncheckedCreateInput {
+  private buildAuthorCreateData(author: IAuthor): Record<string, unknown> {
     return {
       vkUserId: author.id,
       ...this.buildAuthorBaseFields(author, toCreateJsonValue, true),
-    } as Prisma.AuthorUncheckedCreateInput;
+    };
   }
 
   private serializeComment(comment: CommentEntity): Record<string, unknown> {
@@ -459,36 +444,32 @@ export class AuthorActivityService {
     toDelete: number[],
     source: MatchSource,
   ): Promise<void> {
-    const operations: Prisma.PrismaPromise<unknown>[] = [];
+    if (toDelete.length === 0 && toCreate.length === 0) {
+      return;
+    }
 
-    if (toDelete.length > 0) {
-      operations.push(
-        this.prisma.commentKeywordMatch.deleteMany({
+    await this.prisma.$transaction(async (tx) => {
+      if (toDelete.length > 0) {
+        await tx.commentKeywordMatch.deleteMany({
           where: {
             commentId,
             source,
             keywordId: { in: toDelete },
           },
-        }),
-      );
-    }
+        });
+      }
 
-    if (toCreate.length > 0) {
-      operations.push(
-        this.prisma.commentKeywordMatch.createMany({
+      if (toCreate.length > 0) {
+        await tx.commentKeywordMatch.createMany({
           data: toCreate.map((keywordId) => ({
             commentId,
             keywordId,
             source,
           })),
           skipDuplicates: true,
-        }),
-      );
-    }
-
-    if (operations.length > 0) {
-      await this.prisma.$transaction(operations);
-    }
+        });
+      }
+    });
   }
 
   private async syncPostKeywordMatches(
@@ -605,34 +586,29 @@ export class AuthorActivityService {
       return;
     }
 
-    const operations: Prisma.PrismaPromise<unknown>[] = [];
+    await this.prisma.$transaction(async (tx) => {
+      if (toDelete.length > 0) {
+        for (const { commentId, keywordId } of toDelete) {
+          await tx.commentKeywordMatch.deleteMany({
+            where: {
+              commentId,
+              keywordId,
+              source: MatchSource.POST,
+            },
+          });
+        }
+      }
 
-    if (toDelete.length > 0) {
-      const deleteOperations = toDelete.map(({ commentId, keywordId }) =>
-        this.prisma.commentKeywordMatch.deleteMany({
-          where: {
-            commentId,
-            keywordId,
-            source: MatchSource.POST,
-          },
-        }),
-      );
-      operations.push(...deleteOperations);
-    }
-
-    if (toCreate.length > 0) {
-      operations.push(
-        this.prisma.commentKeywordMatch.createMany({
+      if (toCreate.length > 0) {
+        await tx.commentKeywordMatch.createMany({
           data: toCreate.map(({ commentId, keywordId }) => ({
             commentId,
             keywordId,
             source: MatchSource.POST,
           })),
           skipDuplicates: true,
-        }),
-      );
-    }
-
-    await this.prisma.$transaction(operations);
+        });
+      }
+    });
   }
 }

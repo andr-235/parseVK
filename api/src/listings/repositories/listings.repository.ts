@@ -1,79 +1,89 @@
 import { Injectable } from '@nestjs/common';
-import type { Listing, Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma.service';
 import type {
   GetListingsTransactionResult,
   IListingsRepository,
+  ListingCreateData,
+  ListingOrderByInput,
+  ListingUpdateData,
+  ListingWhereInput,
+  ListingWhereUniqueInput,
+  ListingsTransactionClient,
 } from '../interfaces/listings-repository.interface';
+import type { ListingRecord } from '../types/listing-record.type';
 
 @Injectable()
 export class ListingsRepository implements IListingsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   findMany(params: {
-    where?: Prisma.ListingWhereInput;
+    where?: ListingWhereInput;
     skip?: number;
     take?: number;
-    orderBy?: unknown;
-    cursor?: Prisma.ListingWhereUniqueInput;
-  }): Promise<Listing[]> {
-    return this.prisma.listing.findMany(
-      params as {
-        where?: Prisma.ListingWhereInput;
-        skip?: number;
-        take?: number;
-        orderBy?:
-          | Prisma.ListingOrderByWithRelationInput
-          | Prisma.ListingOrderByWithRelationInput[];
-        cursor?: Prisma.ListingWhereUniqueInput;
-      },
-    );
+    orderBy?: ListingOrderByInput;
+    cursor?: ListingWhereUniqueInput;
+  }): Promise<ListingRecord[]> {
+    return this.prisma.listing.findMany({
+      where: params.where as Prisma.ListingWhereInput,
+      skip: params.skip,
+      take: params.take,
+      orderBy: params.orderBy as Prisma.ListingOrderByWithRelationInput,
+      cursor: params.cursor as Prisma.ListingWhereUniqueInput,
+    });
   }
 
-  count(where?: Prisma.ListingWhereInput): Promise<number> {
-    return this.prisma.listing.count({ where });
+  count(where?: ListingWhereInput): Promise<number> {
+    return this.prisma.listing.count({
+      where: where as Prisma.ListingWhereInput,
+    });
   }
 
-  findUniqueOrThrow(where: { id: number }): Promise<Listing> {
+  findUniqueOrThrow(where: { id: number }): Promise<ListingRecord> {
     return this.prisma.listing.findUniqueOrThrow({ where });
   }
 
-  findUniqueByUrl(where: { url: string }): Promise<Listing | null> {
+  findUniqueByUrl(where: { url: string }): Promise<ListingRecord | null> {
     return this.prisma.listing.findUnique({ where });
   }
 
   upsert(
     where: { url: string },
-    create: Prisma.ListingCreateInput,
-    update?: Prisma.ListingUpdateInput,
-  ): Promise<Listing> {
+    create: ListingCreateData,
+    update?: ListingUpdateData,
+  ): Promise<ListingRecord> {
     return this.prisma.listing.upsert({
       where,
-      update: update ?? create,
-      create,
+      update: (update ?? create) as Prisma.ListingUpdateInput,
+      create: create as Prisma.ListingCreateInput,
     });
   }
 
   update(
     where: { id: number },
-    data: Prisma.ListingUpdateInput,
-  ): Promise<Listing> {
-    return this.prisma.listing.update({ where, data });
+    data: ListingUpdateData,
+  ): Promise<ListingRecord> {
+    return this.prisma.listing.update({
+      where,
+      data: data as Prisma.ListingUpdateInput,
+    });
   }
 
   async getListingsWithCountAndSources(params: {
-    where: Prisma.ListingWhereInput;
+    where: ListingWhereInput;
     skip: number;
     take: number;
   }): Promise<GetListingsTransactionResult> {
     return this.prisma.$transaction(async (tx) => {
       const listings = await tx.listing.findMany({
-        where: params.where,
+        where: params.where as Prisma.ListingWhereInput,
         skip: params.skip,
         take: params.take,
         orderBy: { createdAt: 'desc' },
       });
-      const total = await tx.listing.count({ where: params.where });
+      const total = await tx.listing.count({
+        where: params.where as Prisma.ListingWhereInput,
+      });
       const distinctSources = await tx.listing.findMany({
         where: { source: { not: null, notIn: [''] } },
         distinct: ['source'],
@@ -85,8 +95,10 @@ export class ListingsRepository implements IListingsRepository {
   }
 
   transaction<T>(
-    callback: (tx: Prisma.TransactionClient) => Promise<T>,
+    callback: (tx: ListingsTransactionClient) => Promise<T>,
   ): Promise<T> {
-    return this.prisma.$transaction(callback);
+    return this.prisma.$transaction(
+      callback as (tx: Prisma.TransactionClient) => Promise<T>,
+    );
   }
 }

@@ -1,9 +1,9 @@
 import { WatchlistService } from './watchlist.service';
-import { WatchlistStatus, type WatchlistSettings } from '@prisma/client';
-import type { PrismaService } from '../prisma.service';
+import { WatchlistStatus } from './types/watchlist-status.enum';
 import type { AuthorActivityService } from '../common/services/author-activity.service';
 import type {
   IWatchlistRepository,
+  WatchlistSettingsRecord,
   WatchlistAuthorWithRelations,
 } from './interfaces/watchlist-repository.interface';
 import type { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper';
@@ -36,8 +36,8 @@ jest.mock('@prisma/client', () => {
 
 describe('WatchlistService', () => {
   const createSettings = (
-    overrides: Partial<WatchlistSettings> = {},
-  ): WatchlistSettings => ({
+    overrides: Partial<WatchlistSettingsRecord> = {},
+  ): WatchlistSettingsRecord => ({
     id: 1,
     trackAllComments: true,
     pollIntervalMinutes: 5,
@@ -166,7 +166,6 @@ describe('WatchlistService', () => {
       collectCommentCounts: jest.fn().mockResolvedValue(new Map()),
       collectAnalysisSummaries: jest.fn().mockResolvedValue(new Map()),
       resolveSummary: jest.fn(),
-      prisma: {} as unknown as PrismaService,
       photoAnalysisService: {} as unknown as never,
       cloneSummary: jest.fn(),
     } as unknown as jest.Mocked<WatchlistStatsCollectorService>;
@@ -175,7 +174,6 @@ describe('WatchlistService', () => {
       refreshAuthorRecord: jest.fn(),
       logger: {} as unknown as never,
       repository: {} as unknown as IWatchlistRepository,
-      prisma: {} as unknown as PrismaService,
       authorActivityService: {} as unknown as AuthorActivityService,
       vkService: {} as unknown as never,
     } as unknown as jest.Mocked<WatchlistAuthorRefresherService>;

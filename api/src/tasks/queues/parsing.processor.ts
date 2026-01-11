@@ -1,8 +1,6 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
-import { Logger, Optional } from '@nestjs/common';
+import { Inject, Logger, Optional } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma.service';
 import { ParsingTaskRunner } from '../parsing-task.runner';
 import { TasksGateway } from '../tasks.gateway';
 import type { ParsingTaskJobData } from '../interfaces/parsing-task-job.interface';
@@ -14,6 +12,7 @@ import {
 import { TaskCancellationService } from '../task-cancellation.service';
 import { TaskCancelledError } from '../errors/task-cancelled.error';
 import { MetricsService } from '../../metrics/metrics.service';
+import type { IParsingTaskRepository } from '../interfaces/parsing-task-repository.interface';
 
 /**
  * Worker для обработки задач парсинга
@@ -31,7 +30,8 @@ export class ParsingProcessor extends WorkerHost {
 
   constructor(
     private readonly runner: ParsingTaskRunner,
-    private readonly prisma: PrismaService,
+    @Inject('IParsingTaskRepository')
+    private readonly repository: IParsingTaskRepository,
     private readonly tasksGateway: TasksGateway,
     private readonly cancellationService: TaskCancellationService,
     @Optional() private readonly metricsService?: MetricsService,
@@ -132,15 +132,16 @@ export class ParsingProcessor extends WorkerHost {
     status: 'running' | 'failed',
   ): Promise<void> {
     try {
-      const updatedTask = (await this.prisma.task.update({
-        where: { id: taskId },
-        data: { status } as Prisma.TaskUncheckedUpdateInput,
-      })) as {
-        completed: boolean | null;
-        totalItems: number | null;
-        processedItems: number | null;
-        description: string | null;
-      };
+      const updatedTask = await this.repository.updateTaskStatus(
+        taskId,
+        status,
+      );
+      if (!updatedTask) {
+        this.logger.warn(
+          `Не удалось обновить статус задачи ${taskId} на ${status}: задача не найдена`,
+        );
+        return;
+      }
 
       const payload = {
         id: taskId,

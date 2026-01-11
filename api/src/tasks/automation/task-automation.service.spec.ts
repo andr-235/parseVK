@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TaskAutomationService } from './task-automation.service';
-import { PrismaService } from '../../prisma.service';
 import { TasksService } from '../tasks.service';
 import { SchedulerRegistry } from '@nestjs/schedule';
 
@@ -12,8 +11,15 @@ describe('TaskAutomationService', () => {
       providers: [
         TaskAutomationService,
         {
-          provide: PrismaService,
-          useValue: {},
+          provide: 'ITaskAutomationRepository',
+          useValue: {
+            ensureSettingsExists: jest.fn(),
+            getOrCreateSettings: jest.fn(),
+            updateSettings: jest.fn(),
+            updateLastRunAt: jest.fn(),
+            hasActiveTasks: jest.fn(),
+            findLastCompletedTask: jest.fn(),
+          },
         },
         {
           provide: TasksService,

@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+export type SqlFragment = unknown;
 
 export type AuthorSortField =
   | 'fullName'
@@ -28,7 +28,7 @@ export interface ResolvedAuthorSort {
 }
 
 export interface QueryAuthorsOptions {
-  sqlConditions: Prisma.Sql[];
+  sqlConditions: SqlFragment[];
   offset: number;
   limit: number;
   sort: ResolvedAuthorSort;

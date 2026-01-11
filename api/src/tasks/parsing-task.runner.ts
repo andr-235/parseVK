@@ -1,13 +1,13 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
   Optional,
 } from '@nestjs/common';
 import { APIError } from 'vk-io';
-import { CommentSource, Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma.service';
+import { CommentSource } from '../common/types/comment-source.enum';
 import { VkService } from '../vk/vk.service';
 import type { IPost } from '../vk/interfaces/post.interfaces';
 import type { IComment } from '../vk/interfaces/comment.interfaces';
@@ -15,8 +15,6 @@ import { ParsingScope } from './dto/create-parsing-task.dto';
 import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface';
 import type {
   CommentEntity,
-  PrismaGroupRecord,
-  PrismaTaskRecord,
   TaskProcessingContext,
 } from './interfaces/parsing-task-runner.types';
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
@@ -26,13 +24,18 @@ import { TasksGateway } from './tasks.gateway';
 import { TaskCancellationService } from './task-cancellation.service';
 import { TaskCancelledError } from './errors/task-cancelled.error';
 import { MetricsService } from '../metrics/metrics.service';
+import type {
+  IParsingTaskRepository,
+  ParsingGroupRecord,
+} from './interfaces/parsing-task-repository.interface';
 
 @Injectable()
 export class ParsingTaskRunner {
   private readonly logger = new Logger(ParsingTaskRunner.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject('IParsingTaskRepository')
+    private readonly repository: IParsingTaskRepository,
     private readonly vkService: VkService,
     private readonly authorActivityService: AuthorActivityService,
     private readonly tasksGateway: TasksGateway,
@@ -49,9 +52,7 @@ export class ParsingTaskRunner {
 
     this.cancellationService.throwIfCancelled(taskId);
 
-    const task: PrismaTaskRecord | null = (await this.prisma.task.findUnique({
-      where: { id: taskId },
-    })) as PrismaTaskRecord | null;
+    const task = await this.repository.findTaskById(taskId);
     if (!task) {
       this.logger.warn(
         `Задача ${taskId} не найдена в базе данных, парсинг пропущен`,
@@ -65,18 +66,18 @@ export class ParsingTaskRunner {
     );
 
     if (!groups.length) {
-      const updatedTask: PrismaTaskRecord = (await this.prisma.task.update({
-        where: { id: taskId },
-        data: {
-          status: 'failed',
-          description: JSON.stringify({
-            scope,
-            groupIds,
-            postLimit,
-            error: 'Нет доступных групп для парсинга',
-          }),
-        } as Prisma.TaskUncheckedUpdateInput,
-      })) as PrismaTaskRecord;
+      const updatedTask = await this.repository.updateTask(taskId, {
+        status: 'failed',
+        description: JSON.stringify({
+          scope,
+          groupIds,
+          postLimit,
+          error: 'Нет доступных групп для парсинга',
+        }),
+      });
+      if (!updatedTask) {
+        throw new NotFoundException(`Задача ${taskId} не найдена`);
+      }
       this.tasksGateway.broadcastStatus({
         id: taskId,
         status: 'failed',
@@ -136,29 +137,27 @@ export class ParsingTaskRunner {
         context.skippedGroupVkIds,
       );
 
-      const updatedTask: PrismaTaskRecord = (await this.prisma.task.update({
-        where: { id: taskId },
-        data: {
-          completed: true,
-          processedItems: context.totalGroups,
-          progress: 1,
-          status: 'done',
-          description: JSON.stringify({
-            scope,
-            groupIds,
-            postLimit,
-            stats: context.stats,
-            skippedGroupsMessage: skippedGroupsMessage ?? undefined,
-            skippedGroupIds: context.skippedGroupVkIds.length
-              ? context.skippedGroupVkIds
-              : undefined,
-            failedGroups:
-              context.failedGroups.length > 0
-                ? context.failedGroups
-                : undefined,
-          }),
-        } as Prisma.TaskUncheckedUpdateInput,
-      })) as PrismaTaskRecord;
+      const updatedTask = await this.repository.updateTask(taskId, {
+        completed: true,
+        processedItems: context.totalGroups,
+        progress: 1,
+        status: 'done',
+        description: JSON.stringify({
+          scope,
+          groupIds,
+          postLimit,
+          stats: context.stats,
+          skippedGroupsMessage: skippedGroupsMessage ?? undefined,
+          skippedGroupIds: context.skippedGroupVkIds.length
+            ? context.skippedGroupVkIds
+            : undefined,
+          failedGroups:
+            context.failedGroups.length > 0 ? context.failedGroups : undefined,
+        }),
+      });
+      if (!updatedTask) {
+        throw new NotFoundException(`Задача ${taskId} не найдена`);
+      }
 
       this.metricsService?.recordTask('done');
 
@@ -216,27 +215,25 @@ export class ParsingTaskRunner {
         context.skippedGroupVkIds,
       );
 
-      const updatedTask: PrismaTaskRecord = (await this.prisma.task.update({
-        where: { id: taskId },
-        data: {
-          status: 'failed',
-          description: JSON.stringify({
-            scope,
-            groupIds,
-            postLimit,
-            error: error instanceof Error ? error.message : String(error),
-            skippedGroupsMessage: skippedGroupsMessage ?? undefined,
-            stats: context.stats,
-            skippedGroupIds: context.skippedGroupVkIds.length
-              ? context.skippedGroupVkIds
-              : undefined,
-            failedGroups:
-              context.failedGroups.length > 0
-                ? context.failedGroups
-                : undefined,
-          }),
-        } as Prisma.TaskUncheckedUpdateInput,
-      })) as PrismaTaskRecord;
+      const updatedTask = await this.repository.updateTask(taskId, {
+        status: 'failed',
+        description: JSON.stringify({
+          scope,
+          groupIds,
+          postLimit,
+          error: error instanceof Error ? error.message : String(error),
+          skippedGroupsMessage: skippedGroupsMessage ?? undefined,
+          stats: context.stats,
+          skippedGroupIds: context.skippedGroupVkIds.length
+            ? context.skippedGroupVkIds
+            : undefined,
+          failedGroups:
+            context.failedGroups.length > 0 ? context.failedGroups : undefined,
+        }),
+      });
+      if (!updatedTask) {
+        throw new NotFoundException(`Задача ${taskId} не найдена`);
+      }
 
       const normalizedError =
         error instanceof Error ? error.message : String(error);
@@ -338,7 +335,7 @@ export class ParsingTaskRunner {
   }
 
   private async processGroups(params: {
-    groups: PrismaGroupRecord[];
+    groups: ParsingGroupRecord[];
     postLimit: number;
     context: TaskProcessingContext;
     taskId: number;
@@ -384,7 +381,7 @@ export class ParsingTaskRunner {
   }
 
   private async processGroup(params: {
-    group: PrismaGroupRecord;
+    group: ParsingGroupRecord;
     postLimit: number;
     context: TaskProcessingContext;
     taskId: number;
@@ -610,7 +607,7 @@ export class ParsingTaskRunner {
 
   private handleSkippedGroup(
     context: TaskProcessingContext,
-    group: PrismaGroupRecord,
+    group: ParsingGroupRecord,
   ): void {
     if (!context.skippedGroupVkIds.includes(group.vkId)) {
       context.skippedGroupVkIds.push(group.vkId);
@@ -634,27 +631,16 @@ export class ParsingTaskRunner {
 
     this.cancellationService.throwIfCancelled(taskId);
 
-    let updatedTask: PrismaTaskRecord;
-
-    try {
-      updatedTask = (await this.prisma.task.update({
-        where: { id: taskId },
-        data: {
-          processedItems: context.processedGroups,
-          progress,
-          status: 'running',
-        } as Prisma.TaskUncheckedUpdateInput,
-      })) as PrismaTaskRecord;
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025' &&
-        this.cancellationService.isCancelled(taskId)
-      ) {
+    const updatedTask = await this.repository.updateTask(taskId, {
+      processedItems: context.processedGroups,
+      progress,
+      status: 'running',
+    });
+    if (!updatedTask) {
+      if (this.cancellationService.isCancelled(taskId)) {
         throw new TaskCancelledError(taskId);
       }
-
-      throw error;
+      throw new NotFoundException(`Задача ${taskId} не найдена`);
     }
 
     this.tasksGateway.broadcastProgress({
@@ -675,11 +661,11 @@ export class ParsingTaskRunner {
   async resolveGroups(
     scope: ParsingScope,
     groupIds: number[],
-  ): Promise<PrismaGroupRecord[]> {
+  ): Promise<ParsingGroupRecord[]> {
     return this.doResolveGroups(scope, groupIds);
   }
 
-  buildTaskTitle(scope: ParsingScope, groups: PrismaGroupRecord[]): string {
+  buildTaskTitle(scope: ParsingScope, groups: ParsingGroupRecord[]): string {
     if (scope === ParsingScope.ALL) {
       return `Парсинг всех групп (${groups.length})`;
     }
@@ -694,7 +680,7 @@ export class ParsingTaskRunner {
   private async safeResolveGroups(
     scope: ParsingScope,
     groupIds: number[],
-  ): Promise<PrismaGroupRecord[]> {
+  ): Promise<ParsingGroupRecord[]> {
     try {
       return await this.doResolveGroups(scope, groupIds);
     } catch (error) {
@@ -712,13 +698,9 @@ export class ParsingTaskRunner {
   private async doResolveGroups(
     scope: ParsingScope,
     groupIds: number[],
-  ): Promise<PrismaGroupRecord[]> {
+  ): Promise<ParsingGroupRecord[]> {
     if (scope === ParsingScope.ALL) {
-      const groups: PrismaGroupRecord[] = (await this.prisma.group.findMany({
-        orderBy: { updatedAt: 'desc' },
-      })) as PrismaGroupRecord[];
-
-      return groups;
+      return this.repository.findGroups(scope, groupIds);
     }
 
     if (!groupIds?.length) {
@@ -727,9 +709,7 @@ export class ParsingTaskRunner {
       );
     }
 
-    const groups: PrismaGroupRecord[] = (await this.prisma.group.findMany({
-      where: { id: { in: groupIds } },
-    })) as PrismaGroupRecord[];
+    const groups = await this.repository.findGroups(scope, groupIds);
 
     if (groups.length !== groupIds.length) {
       const foundIds = new Set(groups.map((group) => group.id));
@@ -753,7 +733,7 @@ export class ParsingTaskRunner {
     return `Пропущены группы с отключенной стеной: ${formattedIds}`;
   }
 
-  private isGroupWallDisabled(group: PrismaGroupRecord): boolean {
+  private isGroupWallDisabled(group: ParsingGroupRecord): boolean {
     return typeof group.wall === 'number' && group.wall === 0;
   }
 
@@ -803,28 +783,30 @@ export class ParsingTaskRunner {
     return false;
   }
 
-  private async markGroupWallDisabled(group: PrismaGroupRecord): Promise<void> {
+  private async markGroupWallDisabled(
+    group: ParsingGroupRecord,
+  ): Promise<void> {
     if (group.wall === 0) {
       return;
     }
 
     try {
-      await this.prisma.group.update({
-        where: { id: group.id },
-        data: { wall: 0 },
-      });
+      await this.repository.updateGroupWall(group.id, 0);
     } catch {
       // Игнорируем ошибки сохранения, чтобы задача могла продолжить работу.
     }
   }
 
-  private async savePost(post: IPost, group: PrismaGroupRecord): Promise<void> {
+  private async savePost(
+    post: IPost,
+    group: ParsingGroupRecord,
+  ): Promise<void> {
     const postedAt = new Date(post.date * 1000);
-    const attachmentsJson: Prisma.InputJsonValue | undefined = post.attachments
-      ? (post.attachments as Prisma.InputJsonValue)
-      : undefined;
+    const attachments = post.attachments ?? undefined;
 
-    const baseData = {
+    await this.repository.upsertPost({
+      ownerId: post.owner_id,
+      vkPostId: post.id,
       groupId: group.id,
       fromId: post.from_id,
       postedAt,
@@ -834,35 +816,7 @@ export class ParsingTaskRunner {
       commentsGroupsCanPost: post.comments.groups_can_post,
       commentsCanClose: post.comments.can_close,
       commentsCanOpen: post.comments.can_open,
-    };
-
-    const updateData: Prisma.PostUpdateInput = {
-      ...baseData,
-    };
-
-    if (attachmentsJson !== undefined) {
-      updateData.attachments = attachmentsJson;
-    }
-
-    const createData: Prisma.PostUncheckedCreateInput = {
-      ownerId: post.owner_id,
-      vkPostId: post.id,
-      ...baseData,
-    };
-
-    if (attachmentsJson !== undefined) {
-      createData.attachments = attachmentsJson;
-    }
-
-    await this.prisma.post.upsert({
-      where: {
-        ownerId_vkPostId: {
-          ownerId: post.owner_id,
-          vkPostId: post.id,
-        },
-      },
-      update: updateData,
-      create: createData,
+      attachments,
     });
   }
 

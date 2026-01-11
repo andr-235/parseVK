@@ -1,17 +1,39 @@
-import type { Task, Prisma } from '@prisma/client';
+import type { TaskRecord } from '../types/task-record.type';
+
+export type TaskCreateData = {
+  title: string;
+  description: string | null;
+  totalItems: number;
+  processedItems: number;
+  progress: number;
+  status: string;
+  completed?: boolean;
+};
+
+export type TaskUpdateData = {
+  title?: string;
+  description?: string | null;
+  totalItems?: number | null;
+  processedItems?: number | null;
+  progress?: number | null;
+  status?: string | null;
+  completed?: boolean | null;
+};
+
+export type TaskOrderByInput = Record<string, 'asc' | 'desc'>;
 
 export interface ITasksRepository {
-  create(data: Prisma.TaskUncheckedCreateInput): Promise<Task>;
+  create(data: TaskCreateData): Promise<TaskRecord>;
   findMany(params?: {
     skip?: number;
     take?: number;
-    orderBy?: Prisma.TaskOrderByWithRelationInput;
-  }): Promise<Task[]>;
+    orderBy?: TaskOrderByInput;
+  }): Promise<TaskRecord[]>;
   count(): Promise<number>;
-  findUnique(where: { id: number }): Promise<Task>;
+  findUnique(where: { id: number }): Promise<TaskRecord | null>;
   update(
     where: { id: number },
-    data: Prisma.TaskUncheckedUpdateInput,
-  ): Promise<Task>;
+    data: TaskUpdateData,
+  ): Promise<TaskRecord | null>;
   delete(where: { id: number }): Promise<void>;
 }

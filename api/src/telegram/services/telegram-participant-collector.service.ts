@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { TelegramClient, Api } from 'telegram';
 import bigInt from 'big-integer';
-import { TelegramChatType } from '@prisma/client';
+import {
+  TelegramChatType,
+  TelegramMemberStatus,
+} from '../types/telegram.enums';
 import type {
   ResolvedChat,
   MemberRecord,
@@ -19,10 +22,8 @@ export class TelegramParticipantCollectorService {
     limit: number,
   ): Promise<ParticipantCollection> {
     if (
-      resolved.type ===
-        (TelegramChatType.CHANNEL as unknown as TelegramChatType) ||
-      resolved.type ===
-        (TelegramChatType.SUPERGROUP as unknown as TelegramChatType)
+      resolved.type === TelegramChatType.CHANNEL ||
+      resolved.type === TelegramChatType.SUPERGROUP
     ) {
       return this.collectChannelParticipants(
         client,
@@ -31,9 +32,7 @@ export class TelegramParticipantCollectorService {
       );
     }
 
-    if (
-      resolved.type === (TelegramChatType.GROUP as unknown as TelegramChatType)
-    ) {
+    if (resolved.type === TelegramChatType.GROUP) {
       return this.collectChatParticipants(
         client,
         resolved.entity as Api.Chat,
@@ -169,7 +168,7 @@ export class TelegramParticipantCollectorService {
   private collectPrivateParticipant(user: Api.User): ParticipantCollection {
     const member: MemberRecord = {
       user,
-      status: 'MEMBER',
+      status: TelegramMemberStatus.MEMBER,
       isAdmin: false,
       isOwner: false,
       joinedAt: null,

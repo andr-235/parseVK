@@ -7,14 +7,17 @@ import type {
 import type { TelegramMemberDto } from '../dto/telegram-member.dto';
 import { TelegramChatRepository } from '../repositories/telegram-chat.repository';
 import { TelegramMemberRepository } from '../repositories/telegram-member.repository';
-import { TelegramMemberMapper } from '../mappers/telegram-member.mapper';
+import {
+  TelegramMemberMapper,
+  type TelegramChatMemberRecord,
+  type TelegramUserRecord,
+} from '../mappers/telegram-member.mapper';
 import { PrismaService } from '../../prisma.service';
 import {
-  TelegramChatType,
   TelegramMemberStatus,
-  type TelegramChatMember,
-  type Prisma as PrismaType,
-} from '@prisma/client';
+  type TelegramChatTypeValue,
+  type TelegramMemberStatusValue,
+} from '../types/telegram.enums';
 
 interface TelegramUserPersonal {
   flags?: number;
@@ -55,13 +58,13 @@ export class TelegramChatSyncService {
         select: { id: true, telegramId: true },
         create: {
           telegramId: resolved.telegramId,
-          type: resolved.type as unknown as TelegramChatType,
+          type: resolved.type as unknown as TelegramChatTypeValue,
           title: resolved.title,
           username: resolved.username,
           description: resolved.description,
         },
         update: {
-          type: resolved.type as unknown as TelegramChatType,
+          type: resolved.type as unknown as TelegramChatTypeValue,
           title: resolved.title,
           username: resolved.username,
           description: resolved.description,
@@ -145,14 +148,14 @@ export class TelegramChatSyncService {
           create: {
             chatId: chat.id,
             userId: (userRecord as { id: number }).id,
-            status: member.status as unknown as TelegramMemberStatus,
+            status: member.status as unknown as TelegramMemberStatusValue,
             isAdmin: member.isAdmin,
             isOwner: member.isOwner,
             joinedAt,
             leftAt,
           },
           update: {
-            status: member.status as unknown as TelegramMemberStatus,
+            status: member.status as unknown as TelegramMemberStatusValue,
             isAdmin: member.isAdmin,
             isOwner: member.isOwner,
             joinedAt,
@@ -160,45 +163,8 @@ export class TelegramChatSyncService {
           },
         });
 
-        const typedUserRecord = userRecord as {
-          id: number;
-          telegramId: bigint;
-          firstName: string | null;
-          lastName: string | null;
-          username: string | null;
-          phoneNumber: string | null;
-          bio: string | null;
-          languageCode: string | null;
-          isBot: boolean;
-          isPremium: boolean;
-          deleted: boolean;
-          restricted: boolean;
-          verified: boolean;
-          scam: boolean;
-          fake: boolean;
-          min: boolean;
-          self: boolean;
-          contact: boolean;
-          mutualContact: boolean;
-          accessHash: string | null;
-          photoId: bigint | null;
-          photoDcId: number | null;
-          photoHasVideo: boolean;
-          commonChatsCount: number | null;
-          usernames: PrismaType.JsonValue | null;
-          personal: PrismaType.JsonValue | null;
-          botInfo: PrismaType.JsonValue | null;
-          blocked: boolean;
-          contactRequirePremium: boolean;
-          spam: boolean;
-          closeFriend: boolean;
-          createdAt: Date;
-          updatedAt: Date;
-        };
+        const typedUserRecord = userRecord as TelegramUserRecord;
         const typedMemberRecord = {
-          id: (memberRecordResult as { id: unknown }).id as number,
-          chatId: (memberRecordResult as { chatId: unknown }).chatId as number,
-          userId: (memberRecordResult as { userId: unknown }).userId as number,
           status: (memberRecordResult as { status: unknown })
             .status as TelegramMemberStatus,
           isAdmin: (memberRecordResult as { isAdmin: unknown })
@@ -209,15 +175,7 @@ export class TelegramChatSyncService {
             .joinedAt as Date | null,
           leftAt: (memberRecordResult as { leftAt: unknown })
             .leftAt as Date | null,
-          importedAt:
-            ((memberRecordResult as { importedAt?: unknown }).importedAt as
-              | Date
-              | undefined) ?? new Date(),
-          rawPayload:
-            ((memberRecordResult as { rawPayload?: unknown }).rawPayload as
-              | PrismaType.JsonValue
-              | undefined) ?? null,
-        } satisfies TelegramChatMember;
+        } satisfies TelegramChatMemberRecord;
         membersPayload.push(
           this.memberMapper.mapToMemberDto(typedUserRecord, typedMemberRecord),
         );

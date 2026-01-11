@@ -22,6 +22,32 @@ export class AppConfig {
   redisPort?: number = 6379;
 
   @IsString()
+  @IsOptional()
+  bullMqHost?: string = 'redis';
+
+  @IsNumber()
+  @Min(1)
+  @Max(65535)
+  @IsOptional()
+  bullMqPort?: number = 6379;
+
+  @IsString()
+  @IsOptional()
+  bullMqPrefix?: string;
+
+  @IsNumber()
+  @IsOptional()
+  telegramApiId?: number;
+
+  @IsString()
+  @IsOptional()
+  telegramApiHash?: string;
+
+  @IsString()
+  @IsOptional()
+  telegramSession?: string;
+
+  @IsString()
   vkToken!: string;
 
   @IsNumber()

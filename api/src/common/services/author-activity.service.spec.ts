@@ -1,4 +1,5 @@
-import { CommentSource, MatchSource } from '@prisma/client';
+import { CommentSource } from '../types/comment-source.enum';
+import { MatchSource } from '../types/match-source.enum';
 import { AuthorActivityService } from './author-activity.service';
 import type { PrismaService } from '../../prisma.service';
 import type { CommentEntity } from '../types/comment-entity.type';

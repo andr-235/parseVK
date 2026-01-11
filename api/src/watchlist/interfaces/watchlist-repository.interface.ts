@@ -1,8 +1,27 @@
-import type {
-  Prisma,
-  WatchlistStatus,
-  WatchlistSettings,
-} from '@prisma/client';
+import type { WatchlistStatus } from '../types/watchlist-status.enum';
+
+export type WatchlistSettingsRecord = {
+  id: number;
+  trackAllComments: boolean;
+  pollIntervalMinutes: number;
+  maxAuthors: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type WatchlistAuthorUpdateData = {
+  status?: WatchlistStatus;
+  monitoringStoppedAt?: Date | null;
+  lastCheckedAt?: Date | null;
+  lastActivityAt?: Date | null;
+  incrementFoundCommentsCount?: number;
+};
+
+export type WatchlistSettingsUpdateData = {
+  trackAllComments?: boolean;
+  pollIntervalMinutes?: number;
+  maxAuthors?: number;
+};
 
 export interface WatchlistAuthorWithRelations {
   id: number;
@@ -28,7 +47,7 @@ export interface WatchlistAuthorWithRelations {
     screenName: string | null;
     domain: string | null;
   } | null;
-  settings: WatchlistSettings;
+  settings: WatchlistSettingsRecord;
 }
 
 export interface IWatchlistRepository {
@@ -55,12 +74,9 @@ export interface IWatchlistRepository {
   }): Promise<WatchlistAuthorWithRelations>;
   update(
     id: number,
-    data: Prisma.WatchlistAuthorUpdateInput,
+    data: WatchlistAuthorUpdateData,
   ): Promise<WatchlistAuthorWithRelations>;
-  updateMany(
-    ids: number[],
-    data: Prisma.WatchlistAuthorUpdateInput,
-  ): Promise<void>;
+  updateMany(ids: number[], data: WatchlistAuthorUpdateData): Promise<void>;
   countComments(watchlistAuthorId: number): Promise<number>;
   getTrackedPosts(
     watchlistAuthorId: number,
@@ -75,12 +91,12 @@ export interface IWatchlistRepository {
     watchlistAuthorId: number,
     authorVkId: number,
   ): Promise<Set<string>>;
-  ensureSettings(): Promise<WatchlistSettings>;
-  getSettings(): Promise<WatchlistSettings | null>;
+  ensureSettings(): Promise<WatchlistSettingsRecord>;
+  getSettings(): Promise<WatchlistSettingsRecord | null>;
   updateSettings(
     id: number,
-    data: Prisma.WatchlistSettingsUpdateInput,
-  ): Promise<WatchlistSettings>;
+    data: WatchlistSettingsUpdateData,
+  ): Promise<WatchlistSettingsRecord>;
   getAuthorComments(params: {
     watchlistAuthorId: number;
     offset: number;

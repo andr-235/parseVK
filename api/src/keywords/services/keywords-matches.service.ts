@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MatchSource } from '@prisma/client';
+import { MatchSource } from '../../common/types/match-source.enum';
 import type { IKeywordsRepository } from '../interfaces/keywords-repository.interface';
 
 const WORD_CHARS_PATTERN = '[a-zA-Z0-9_\\u0400-\\u04FF]';

@@ -5,8 +5,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { WatchlistStatus, CommentSource } from '@prisma/client';
+import { CommentSource } from '../common/types/comment-source.enum';
+import { WatchlistStatus } from './types/watchlist-status.enum';
 import type {
   WatchlistAuthorCardDto,
   WatchlistAuthorDetailsDto,
@@ -16,7 +16,11 @@ import type {
 import { CreateWatchlistAuthorDto } from './dto/create-watchlist-author.dto';
 import { UpdateWatchlistAuthorDto } from './dto/update-watchlist-author.dto';
 import { UpdateWatchlistSettingsDto } from './dto/update-watchlist-settings.dto';
-import type { IWatchlistRepository } from './interfaces/watchlist-repository.interface';
+import type {
+  IWatchlistRepository,
+  WatchlistAuthorUpdateData,
+  WatchlistSettingsUpdateData,
+} from './interfaces/watchlist-repository.interface';
 import { Inject } from '@nestjs/common';
 import { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper';
 import { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper';
@@ -230,15 +234,15 @@ export class WatchlistService {
       throw new NotFoundException('Автор списка "На карандаше" не найден');
     }
 
-    const data: Prisma.WatchlistAuthorUpdateInput = {};
+    const data: WatchlistAuthorUpdateData = {};
 
     if (dto.status && dto.status !== record.status) {
       data.status = dto.status;
 
       if (dto.status === WatchlistStatus.ACTIVE) {
-        data.monitoringStoppedAt = { set: null };
+        data.monitoringStoppedAt = null;
       } else if (dto.status === WatchlistStatus.STOPPED) {
-        data.monitoringStoppedAt = { set: new Date() };
+        data.monitoringStoppedAt = new Date();
       }
     }
 
@@ -277,7 +281,7 @@ export class WatchlistService {
   ): Promise<WatchlistSettingsDto> {
     const settings = await this.repository.ensureSettings();
 
-    const data: Prisma.WatchlistSettingsUpdateInput = {};
+    const data: WatchlistSettingsUpdateData = {};
 
     if (typeof dto.trackAllComments === 'boolean') {
       data.trackAllComments = dto.trackAllComments;

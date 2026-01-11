@@ -11,7 +11,8 @@ import { Inject } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { TelegramClient, Api } from 'telegram';
 import { StringSession } from 'telegram/sessions';
-import { PrismaService } from '../prisma.service';
+import type { ITelegramAuthRepository } from './interfaces/telegram-auth-repository.interface';
+import type { AppConfig } from '../config/app.config';
 import type {
   ConfirmTelegramSessionDto,
   ConfirmTelegramSessionResponseDto,
@@ -45,12 +46,13 @@ export class TelegramAuthService {
   private readonly defaultApiHash: string | null;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AppConfig>,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
-    private readonly prisma: PrismaService,
+    @Inject('ITelegramAuthRepository')
+    private readonly repository: ITelegramAuthRepository,
   ) {
-    const apiIdRaw = this.configService.get<string | number>('TELEGRAM_API_ID');
-    const apiHash = this.configService.get<string>('TELEGRAM_API_HASH');
+    const apiIdRaw = this.configService.get('telegramApiId', { infer: true });
+    const apiHash = this.configService.get('telegramApiHash', { infer: true });
 
     const parsedApiId =
       typeof apiIdRaw === 'string' ? Number.parseInt(apiIdRaw, 10) : apiIdRaw;
@@ -61,15 +63,7 @@ export class TelegramAuthService {
   }
 
   async getSettings(): Promise<TelegramSettingsResponseDto | null> {
-    const settings = (await this.prisma.telegramSettings.findFirst({
-      orderBy: { updatedAt: 'desc' },
-    })) as {
-      phoneNumber: string | null;
-      apiId: number | null;
-      apiHash: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-    } | null;
+    const settings = await this.repository.findLatestSettings();
 
     if (!settings) {
       return null;
@@ -87,38 +81,11 @@ export class TelegramAuthService {
   async updateSettings(
     payload: TelegramSettingsDto,
   ): Promise<TelegramSettingsResponseDto> {
-    const existing = (await this.prisma.telegramSettings.findFirst({
-      orderBy: { updatedAt: 'desc' },
-    })) as { id: number } | null;
-
-    const settings = existing
-      ? ((await this.prisma.telegramSettings.update({
-          where: { id: (existing as { id: number }).id },
-          data: {
-            phoneNumber: payload.phoneNumber ?? undefined,
-            apiId: payload.apiId ?? undefined,
-            apiHash: payload.apiHash ?? undefined,
-          },
-        })) as {
-          phoneNumber: string | null;
-          apiId: number | null;
-          apiHash: string | null;
-          createdAt: Date;
-          updatedAt: Date;
-        })
-      : ((await this.prisma.telegramSettings.create({
-          data: {
-            phoneNumber: payload.phoneNumber ?? null,
-            apiId: payload.apiId ?? null,
-            apiHash: payload.apiHash ?? null,
-          },
-        })) as {
-          phoneNumber: string | null;
-          apiId: number | null;
-          apiHash: string | null;
-          createdAt: Date;
-          updatedAt: Date;
-        });
+    const settings = await this.repository.upsertSettings({
+      phoneNumber: payload.phoneNumber ?? undefined,
+      apiId: payload.apiId ?? undefined,
+      apiHash: payload.apiHash ?? undefined,
+    });
 
     return {
       phoneNumber: (settings as { phoneNumber: string | null }).phoneNumber,
@@ -132,32 +99,17 @@ export class TelegramAuthService {
   async startSession(
     payload: StartTelegramSessionDto,
   ): Promise<StartTelegramSessionResponseDto> {
-    const savedSettings = (await this.prisma.telegramSettings.findFirst({
-      orderBy: { updatedAt: 'desc' },
-    })) as {
-      phoneNumber: string | null;
-      apiId: number | null;
-      apiHash: string | null;
-    } | null;
+    const savedSettings = await this.repository.findLatestSettings();
 
     const phoneNumber =
-      payload.phoneNumber?.trim() ??
-      (
-        savedSettings as { phoneNumber: string | null } | null
-      )?.phoneNumber?.trim() ??
-      null;
+      payload.phoneNumber?.trim() ?? savedSettings?.phoneNumber?.trim() ?? null;
     if (!phoneNumber) {
       throw new BadRequestException('PHONE_NUMBER_REQUIRED');
     }
 
-    const apiId =
-      payload.apiId ??
-      (savedSettings as { apiId: number | null } | null)?.apiId ??
-      this.defaultApiId;
+    const apiId = payload.apiId ?? savedSettings?.apiId ?? this.defaultApiId;
     const apiHash =
-      payload.apiHash ??
-      (savedSettings as { apiHash: string | null } | null)?.apiHash ??
-      this.defaultApiHash;
+      payload.apiHash ?? savedSettings?.apiHash ?? this.defaultApiHash;
 
     if (!apiId || !apiHash) {
       throw new BadRequestException('API_ID_AND_HASH_REQUIRED');
@@ -217,14 +169,7 @@ export class TelegramAuthService {
   }
 
   async getCurrentSession(): Promise<ConfirmTelegramSessionResponseDto | null> {
-    const sessionRecord = (await this.prisma.telegramSession.findFirst({
-      orderBy: { updatedAt: 'desc' },
-    })) as {
-      session: string;
-      userId: number | null;
-      username: string | null;
-      phoneNumber: string | null;
-    } | null;
+    const sessionRecord = await this.repository.findLatestSession();
 
     if (!sessionRecord) {
       return null;
@@ -375,23 +320,18 @@ export class TelegramAuthService {
     username: string | null,
     phoneNumber: string | null,
   ): Promise<void> {
-    await this.prisma.telegramSession.deleteMany({});
-    await this.prisma.telegramSession.create({
-      data: {
-        session,
-        userId: userId > 0 ? userId : null,
-        username,
-        phoneNumber,
-      },
+    await this.repository.replaceSession({
+      session,
+      userId: userId > 0 ? userId : null,
+      username,
+      phoneNumber,
     });
     this.logger.log('Telegram session saved to database');
   }
 
   private async deleteExistingSession(): Promise<void> {
-    const deleted = (await this.prisma.telegramSession.deleteMany({})) as {
-      count: number;
-    };
-    if ((deleted as { count: number }).count > 0) {
+    const deleted = await this.repository.deleteAllSessions();
+    if (deleted > 0) {
       this.logger.log('Existing Telegram session deleted');
     }
   }

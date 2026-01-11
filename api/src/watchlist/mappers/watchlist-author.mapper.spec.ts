@@ -1,6 +1,6 @@
 import { WatchlistAuthorMapper } from './watchlist-author.mapper';
 import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
-import { WatchlistStatus } from '@prisma/client';
+import { WatchlistStatus } from '../types/watchlist-status.enum';
 import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
 
 describe('WatchlistAuthorMapper', () => {

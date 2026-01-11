@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ParsingScope } from '../dto/create-parsing-task.dto';
 import type { ParsingStats } from '../interfaces/parsing-stats.interface';
+import type { TaskRecord } from '../types/task-record.type';
 
 export interface ParsedTaskDescription {
   scope: ParsingScope | null;
@@ -12,22 +13,9 @@ export interface ParsedTaskDescription {
   skippedGroupIds: number[];
 }
 
-export interface PrismaTaskRecord {
-  id: number;
-  title: string;
-  description: string | null;
-  completed: boolean | null;
-  totalItems?: number | null;
-  processedItems?: number | null;
-  progress?: number | null;
-  status?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 @Injectable()
 export class TaskDescriptionParser {
-  parse(task: PrismaTaskRecord): ParsedTaskDescription {
+  parse(task: TaskRecord): ParsedTaskDescription {
     const empty = this.createEmpty();
 
     if (!task.description) {

@@ -1,8 +1,8 @@
-import type { Listing, Prisma } from '@prisma/client';
 import type { ListingDto } from '../dto/listing.dto';
+import type { ListingRecord } from '../types/listing-record.type';
 
-type ListingWithOverrides = Listing & {
-  manualOverrides?: Prisma.JsonValue | null;
+type ListingWithOverrides = ListingRecord & {
+  manualOverrides?: unknown;
 };
 
 export class ListingMapper {

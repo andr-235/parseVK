@@ -1,14 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import type { Listing as ListingEntity } from '@prisma/client';
-import type { IListingsRepository } from './interfaces/listings-repository.interface';
+import type {
+  IListingsRepository,
+  ListingOrderByInput,
+  ListingWhereInput,
+  ListingUpdateData,
+} from './interfaces/listings-repository.interface';
 import { ListingMapper } from './mappers/listing.mapper';
 import type { ListingsResponseDto } from './dto/listings-response.dto';
 import type { ListingDto } from './dto/listing.dto';
 import type { UpdateListingDto } from './dto/update-listing.dto';
+import type { ListingRecord } from './types/listing-record.type';
 
-type ListingWithOverrides = ListingEntity & {
-  manualOverrides?: Prisma.JsonValue | null;
+type ListingWithOverrides = ListingRecord & {
+  manualOverrides?: unknown;
 };
 
 interface GetListingsOptions {
@@ -46,7 +50,7 @@ export class ListingsService {
     const { page, pageSize, search, source, archived } = options;
     const skip = (page - 1) * pageSize;
 
-    const where: Prisma.ListingWhereInput = {} as Prisma.ListingWhereInput;
+    const where: ListingWhereInput = {};
 
     if (search) {
       const term = search.trim();
@@ -59,7 +63,7 @@ export class ListingsService {
           { externalId: { contains: term, mode: 'insensitive' } },
           { contactName: { contains: term, mode: 'insensitive' } },
           { contactPhone: { contains: term, mode: 'insensitive' } },
-        ] as Prisma.ListingWhereInput[];
+        ];
       }
     }
 
@@ -67,7 +71,7 @@ export class ListingsService {
       (where as { source?: unknown }).source = {
         equals: source,
         mode: 'insensitive',
-      } as Prisma.StringFilter;
+      };
     }
 
     if (archived !== undefined) {
@@ -82,7 +86,7 @@ export class ListingsService {
       take: pageSize,
     });
 
-    const listings = (result as { listings: ListingEntity[] }).listings;
+    const listings = (result as { listings: ListingRecord[] }).listings;
     const total = (result as { total: number }).total;
     const distinctSources = (
       result as { distinctSources: Array<{ source: string | null }> }
@@ -114,8 +118,8 @@ export class ListingsService {
     const { search, source, archived } = options;
     const limit = this.normalizeLimit(options.limit);
 
-    const where: Prisma.ListingWhereInput = {};
-    const orderBy: Prisma.ListingOrderByWithRelationInput[] = [
+    const where: ListingWhereInput = {};
+    const orderBy: ListingOrderByInput = [
       { sourceAuthorName: 'asc' },
       { contactName: 'asc' },
       { id: 'asc' },
@@ -176,8 +180,8 @@ export class ListingsService {
     const { search, source, archived } = options;
     const batchSize = this.normalizeBatchSize(options.batchSize);
 
-    const where: Prisma.ListingWhereInput = {};
-    const orderBy: Prisma.ListingOrderByWithRelationInput[] = [
+    const where: ListingWhereInput = {};
+    const orderBy: ListingOrderByInput = [
       { sourceAuthorName: 'asc' },
       { contactName: 'asc' },
       { id: 'asc' },
@@ -247,8 +251,8 @@ export class ListingsService {
   private buildUpdateData(
     payload: UpdateListingDto,
     existing: ListingWithOverrides,
-  ): Prisma.ListingUpdateInput {
-    const data: Prisma.ListingUpdateInput = {};
+  ): ListingUpdateData {
+    const data: ListingUpdateData = {};
     const currentOverrides = this.normalizeManualOverrides(
       existing.manualOverrides,
     );

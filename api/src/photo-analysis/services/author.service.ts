@@ -1,19 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../prisma.service';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { IAuthorService } from '../interfaces/photo-loader.interface';
+import type { IPhotoAnalysisAuthorRepository } from '../interfaces/photo-analysis-author-repository.interface';
 
 @Injectable()
 export class AuthorService implements IAuthorService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject('IPhotoAnalysisAuthorRepository')
+    private readonly repository: IPhotoAnalysisAuthorRepository,
+  ) {}
 
   async findAuthorByVkId(
     vkUserId: number,
   ): Promise<{ id: number; vkUserId: number }> {
-    const author: { id: number; vkUserId: number } | null =
-      await this.prisma.author.findUnique({
-        where: { vkUserId },
-        select: { id: true, vkUserId: true },
-      });
+    const author = await this.repository.findByVkId(vkUserId);
 
     if (!author) {
       throw new NotFoundException(`Автор с vkUserId=${vkUserId} не найден`);

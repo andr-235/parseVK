@@ -6,7 +6,7 @@ jest.mock('vk-io', () => ({
 }));
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { Task } from '@prisma/client';
+import type { TaskRecord } from './types/task-record.type';
 import { TasksService } from './tasks.service';
 import { ParsingScope } from './dto/create-parsing-task.dto';
 import type { ParsingStats } from './interfaces/parsing-stats.interface';
@@ -34,7 +34,9 @@ describe('TasksService', () => {
   let contextBuilderMock: jest.Mocked<TaskContextBuilder>;
   let cancellationServiceMock: jest.Mocked<TaskCancellationService>;
 
-  const createTaskRecord = (overrides: Partial<Task> = {}): Task => ({
+  const createTaskRecord = (
+    overrides: Partial<TaskRecord> = {},
+  ): TaskRecord => ({
     id: 1,
     title: 'task',
     description: JSON.stringify({
@@ -54,10 +56,10 @@ describe('TasksService', () => {
 
   beforeEach(() => {
     repositoryMock = {
-      create: jest.fn<Promise<Task>, [unknown]>(),
-      findMany: jest.fn<Promise<Task[]>, [unknown?]>(),
-      findUnique: jest.fn<Promise<Task>, [{ id: number }]>(),
-      update: jest.fn<Promise<Task>, [{ id: number }, unknown]>(),
+      create: jest.fn<Promise<TaskRecord>, [unknown]>(),
+      findMany: jest.fn<Promise<TaskRecord[]>, [unknown?]>(),
+      findUnique: jest.fn<Promise<TaskRecord | null>, [{ id: number }]>(),
+      update: jest.fn<Promise<TaskRecord | null>, [{ id: number }, unknown]>(),
       delete: jest.fn<Promise<void>, [{ id: number }]>(),
       count: jest.fn<Promise<number>, []>(),
     } as jest.Mocked<ITasksRepository>;
@@ -224,7 +226,7 @@ describe('TasksService', () => {
       repositoryMock.findMany.mockResolvedValue(tasks);
       repositoryMock.count.mockResolvedValue(1);
 
-      descriptionParserMock.parse.mockImplementation((task: Task) => {
+      descriptionParserMock.parse.mockImplementation((task: TaskRecord) => {
         const parsed = JSON.parse(task.description || '{}') as Record<
           string,
           unknown
@@ -245,7 +247,7 @@ describe('TasksService', () => {
       taskMapperMock.resolveTaskStatus.mockReturnValue('pending');
       taskMapperMock.mapToSummary.mockImplementation(
         (
-          task: Task,
+          task: TaskRecord,
           parsed: ParsedTaskDescription,
           status: TaskStatus,
         ): TaskSummary => ({
@@ -662,7 +664,7 @@ describe('TasksService', () => {
       });
 
       const findUniqueMock = repositoryMock.findUnique as jest.Mock<
-        Promise<Task | null>,
+        Promise<TaskRecord | null>,
         [{ id: number }]
       >;
       void findUniqueMock.mockResolvedValue(task);
@@ -748,7 +750,7 @@ describe('TasksService', () => {
       });
 
       const findUniqueMock = repositoryMock.findUnique as jest.Mock<
-        Promise<Task | null>,
+        Promise<TaskRecord | null>,
         [{ id: number }]
       >;
       void findUniqueMock.mockResolvedValue(task);

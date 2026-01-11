@@ -1,6 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { CommentSource } from '@prisma/client';
+import { CommentSource } from '../../common/types/comment-source.enum';
 import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
 import type { CommentEntity } from '../../common/types/comment-entity.type';
 import { AuthorActivityService } from '../../common/services/author-activity.service';
@@ -10,7 +9,6 @@ import {
   composeCommentKey,
   walkCommentTree,
 } from '../utils/watchlist-comment.utils';
-import { PrismaService } from '../../prisma.service';
 import type { IWatchlistRepository } from '../interfaces/watchlist-repository.interface';
 
 @Injectable()
@@ -20,7 +18,6 @@ export class WatchlistAuthorRefresherService {
   constructor(
     @Inject('IWatchlistRepository')
     private readonly repository: IWatchlistRepository,
-    private readonly prisma: PrismaService,
     private readonly authorActivityService: AuthorActivityService,
     private readonly vkService: VkService,
   ) {}
@@ -75,10 +72,10 @@ export class WatchlistAuthorRefresherService {
         error instanceof Error ? error.stack : undefined,
       );
     } finally {
-      const updateData: Prisma.WatchlistAuthorUpdateInput = {
+      const updateData = {
         lastCheckedAt: checkTimestamp,
         ...(newComments > 0
-          ? { foundCommentsCount: { increment: newComments } }
+          ? { incrementFoundCommentsCount: newComments }
           : {}),
         ...(latestActivity &&
         (!record.lastActivityAt || latestActivity > record.lastActivityAt)

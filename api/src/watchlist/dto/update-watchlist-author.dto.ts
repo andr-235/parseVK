@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional } from 'class-validator';
-import { WatchlistStatus } from '@prisma/client';
+import { WatchlistStatus } from '../types/watchlist-status.enum';
 
 export class UpdateWatchlistAuthorDto {
   @IsOptional()
