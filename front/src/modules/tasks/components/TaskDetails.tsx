@@ -467,12 +467,12 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
       onClick={onClose}
     >
       <div
-        className="flex w-full max-h-[90vh] max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/85 text-foreground shadow-soft-lg ring-1 ring-white/40 backdrop-blur-xl dark:border-white/10 dark:bg-[#0f0f0f]/85 dark:text-white"
+        className="flex w-full max-h-[90vh] max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/85 text-foreground shadow-soft-lg ring-1 ring-white/40 backdrop-blur-xl dark:border-white/10 dark:bg-[#0f172a]/85"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <header className="flex items-center justify-between gap-4 border-b border-border/60 px-8 py-6">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground dark:text-white">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
             Детали задачи #{task.id}
           </h2>
           <div className="flex items-center gap-3">

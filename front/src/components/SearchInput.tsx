@@ -25,7 +25,7 @@ interface SearchInputProps {
 }
 
 const GLASS_WRAPPER_CLASSES =
-  'overflow-hidden rounded-2xl border border-white/50 bg-white/70 px-3 py-1.5 shadow-soft-md backdrop-blur-md focus-within:border-accent-primary/50 focus-within:shadow-soft-md dark:border-white/20 dark:bg-white/10'
+  'overflow-hidden rounded-2xl border border-white/50 bg-white/70 px-3 py-1.5 shadow-soft-md backdrop-blur-md focus-within:border-accent-primary/50 focus-within:shadow-soft-md dark:border-white/15 dark:bg-[#0f172a]/60'
 
 const GLASS_INPUT_CLASSES =
   'h-12 w-full rounded-[1.75rem] border-0 bg-transparent text-base font-medium text-text-primary caret-accent-primary placeholder:text-text-secondary/70 selection:bg-accent-primary/20 selection:text-text-primary focus:outline-none focus:ring-0 dark:text-text-light dark:placeholder:text-text-light/60 dark:selection:bg-accent-primary/40'

@@ -48,7 +48,7 @@ function CreateParseTaskModal({
       onClick={onClose}
     >
       <div
-        className="flex w-full max-h-[90vh] max-w-4xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/80 text-foreground shadow-soft-lg ring-1 ring-white/40 backdrop-blur-xl dark:border-white/10 dark:bg-[#0f0f0f]/80 dark:text-white"
+        className="flex w-full max-h-[90vh] max-w-4xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/80 text-foreground shadow-soft-lg ring-1 ring-white/40 backdrop-blur-xl dark:border-white/10 dark:bg-[#0f172a]/80"
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-parse-modal-title"
@@ -59,7 +59,7 @@ function CreateParseTaskModal({
           <div className="space-y-1">
             <h2
               id="create-parse-modal-title"
-              className="text-2xl font-bold tracking-tight text-foreground dark:text-white"
+              className="text-2xl font-bold tracking-tight text-foreground"
             >
               Создание задачи на парсинг групп
             </h2>
@@ -82,9 +82,7 @@ function CreateParseTaskModal({
           {/* Stats & Actions */}
           <section className="mb-6 flex flex-col gap-4 rounded-2xl border border-border/50 bg-background-primary/70 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <span className="text-4xl font-bold text-foreground dark:text-white">
-                {selectedIds.size}
-              </span>
+              <span className="text-4xl font-bold text-foreground">{selectedIds.size}</span>
               <div className="flex flex-col">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Выбрано групп

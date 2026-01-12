@@ -215,8 +215,7 @@ function AdminUsers() {
                 onChange={(event) => setRole(event.target.value as UserRole)}
                 className={cn(
                   'border-border/60 h-10 w-full rounded-xl border bg-background-secondary px-3 py-2 text-sm shadow-soft-sm',
-                  'focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-2',
-                  'dark:bg-[#141414] dark:text-text-primary'
+                  'focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-2'
                 )}
                 disabled={isSubmitting}
               >

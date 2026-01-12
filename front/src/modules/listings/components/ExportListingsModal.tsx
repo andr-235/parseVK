@@ -110,7 +110,7 @@ function ExportListingsModal({
       onClick={onClose}
     >
       <div
-        className="flex w-full max-h-[90vh] max-w-4xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/80 text-foreground shadow-soft-lg ring-1 ring-white/40 backdrop-blur-xl transition-colors duration-300 dark:border-white/10 dark:bg-[#0f0f0f]/80 dark:text-white"
+        className="flex w-full max-h-[90vh] max-w-4xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/80 text-foreground shadow-soft-lg ring-1 ring-white/40 backdrop-blur-xl transition-colors duration-300 dark:border-white/10 dark:bg-[#0f172a]/80"
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-listings-title"
