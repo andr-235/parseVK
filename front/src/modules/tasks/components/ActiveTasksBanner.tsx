@@ -26,15 +26,18 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
   }
 
   return (
-    <Card className="border border-accent-primary/30 bg-background-secondary/90">
-      <CardHeader className="pb-0">
+    <Card>
+      <CardHeader className="pb-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <CardTitle className="text-xl">Активные процессы парсинга</CardTitle>
             <CardDescription>{subtitle}</CardDescription>
           </div>
           {indicatorText && (
-            <Badge className="gap-2 bg-accent-primary/15 text-accent-primary">
+            <Badge
+              variant="outline"
+              className="gap-2 rounded-full border border-accent-primary/20 bg-accent-primary/10 text-accent-primary"
+            >
               <span
                 className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent-primary"
                 aria-hidden
@@ -45,7 +48,7 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 pt-0">
         <ProgressBar
           current={processed}
           total={progressTotal}

@@ -15,7 +15,7 @@ const TasksList = ({ onTaskSelect, emptyMessage }: TasksListProps) => {
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="h-[220px] rounded-xl bg-card/50 animate-pulse border border-border/50"
+            className="h-[220px] rounded-card border border-border/40 bg-background-secondary/60 shadow-soft-sm animate-pulse"
           />
         ))}
       </div>
@@ -24,9 +24,9 @@ const TasksList = ({ onTaskSelect, emptyMessage }: TasksListProps) => {
 
   if (tasks.length === 0) {
     return (
-      <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center">
-        <div className="p-4 rounded-full bg-background/50 mb-2">
-          <div className="w-8 h-8 rounded-full border-2 border-muted-foreground/20" />
+      <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border/50 bg-background-secondary/60 p-10 text-center shadow-soft-sm">
+        <div className="mb-2 rounded-full bg-background/50 p-4">
+          <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/20" />
         </div>
         <p className="text-muted-foreground max-w-[300px]">{emptyMessage}</p>
       </div>

@@ -1,6 +1,7 @@
 import { Plus, Play, Settings, Calendar, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 interface TasksHeroAutomationInfo {
@@ -83,66 +84,70 @@ function TasksHero({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-1 bg-muted/30 rounded-2xl border border-border/40">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* Automation Status Card */}
-        <div className="p-5 rounded-xl bg-card border border-border/50 shadow-sm flex flex-col justify-between gap-4 md:col-span-2">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground">Автоматизация</h3>
-                <Badge
-                  variant={automationEnabled ? 'default' : 'secondary'}
-                  className={cn(
-                    'uppercase text-[10px] tracking-wider font-bold',
-                    automationEnabled ? 'bg-emerald-500 hover:bg-emerald-600' : ''
-                  )}
-                >
-                  {automationEnabled ? 'Включено' : 'Выключено'}
-                </Badge>
+        <Card className="md:col-span-2">
+          <div className="flex flex-col justify-between gap-5 p-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-foreground">Автоматизация</h3>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'uppercase text-[10px] tracking-wider font-semibold rounded-full',
+                      automationEnabled
+                        ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-500'
+                        : 'border border-border/60 bg-muted/60 text-muted-foreground'
+                    )}
+                  >
+                    {automationEnabled ? 'Включено' : 'Выключено'}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Настройте регулярный сбор данных без вашего участия
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Настройте регулярный сбор данных без вашего участия
-              </p>
+              <Button variant="ghost" size="icon" onClick={onOpenAutomationSettings}>
+                <Settings className="w-5 h-5 text-muted-foreground" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={onOpenAutomationSettings}>
-              <Settings className="w-5 h-5 text-muted-foreground" />
-            </Button>
+
+            <div className="flex flex-wrap items-center gap-6 pt-2">
+              <div className="flex items-center gap-2.5 text-sm">
+                <div className="p-2 rounded-full bg-sky-500/10 text-sky-500">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                    Следующий запуск
+                  </span>
+                  <span className="font-semibold text-foreground">{nextRunText}</span>
+                </div>
+              </div>
+
+              <div className="w-px h-8 bg-border" />
+
+              <div className="flex items-center gap-2.5 text-sm">
+                <div className="p-2 rounded-full bg-purple-500/10 text-purple-500">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                    Последний запуск
+                  </span>
+                  <span className="font-semibold text-foreground">{lastRunText}</span>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <div className="flex items-center gap-6 pt-2">
-            <div className="flex items-center gap-2.5 text-sm">
-              <div className="p-2 rounded-full bg-sky-500/10 text-sky-500">
-                <Clock className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                  Следующий запуск
-                </span>
-                <span className="font-semibold text-foreground">{nextRunText}</span>
-              </div>
-            </div>
-
-            <div className="w-px h-8 bg-border" />
-
-            <div className="flex items-center gap-2.5 text-sm">
-              <div className="p-2 rounded-full bg-purple-500/10 text-purple-500">
-                <Calendar className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                  Последний запуск
-                </span>
-                <span className="font-semibold text-foreground">{lastRunText}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        </Card>
 
         {/* Quick Action Card */}
-        <div className="p-5 rounded-xl bg-card border border-border/50 shadow-sm flex flex-col justify-center items-center text-center gap-3">
+        <Card className="flex flex-col items-center justify-center gap-3 p-6 text-center">
           <Button
             variant="outline"
-            className="w-full h-12 text-base font-medium border-primary/20 hover:bg-primary/5 hover:text-primary"
+            className="h-12 w-full text-base font-medium"
             onClick={onAutomationRun}
             disabled={isAutomationLoading || isAutomationTriggering || automation?.isRunning}
           >
@@ -156,7 +161,7 @@ function TasksHero({
           <p className="text-xs text-muted-foreground px-4">
             Принудительный запуск парсинга всех активных групп
           </p>
-        </div>
+        </Card>
       </div>
     </div>
   )

@@ -18,7 +18,7 @@ import {
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
+import ProgressBar from '@/components/ProgressBar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +50,8 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
   const commentsCount = task.stats?.comments || 0
 
   const percent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0
+  const progressTone =
+    task.status === 'failed' ? 'danger' : task.status === 'completed' ? 'success' : 'primary'
 
   const handleResume = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -99,20 +101,9 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
   return (
     <Card
       onClick={() => onSelect(task.id)}
-      className="group relative overflow-hidden border-border/50 hover:border-border hover:shadow-md transition-all duration-300 cursor-pointer bg-card/50 hover:bg-card"
+      className="group relative overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-soft-md hover:border-border/80"
     >
-      {/* Status Stripe */}
-      <div
-        className={cn(
-          'absolute left-0 top-0 bottom-0 w-1',
-          task.status === 'completed' && 'bg-emerald-500',
-          task.status === 'failed' && 'bg-rose-500',
-          (task.status === 'running' || task.status === 'processing') && 'bg-sky-500',
-          task.status === 'pending' && 'bg-amber-500'
-        )}
-      />
-
-      <div className="p-5 pl-7 flex flex-col gap-4">
+      <div className="flex flex-col gap-4 p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1.5 min-w-0">
@@ -122,7 +113,10 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
               </h3>
               <Badge
                 variant="outline"
-                className={cn('gap-1.5 font-normal py-0.5 h-6', getStatusColor(task.status))}
+                className={cn(
+                  'gap-1.5 h-6 rounded-full text-[11px] font-semibold tracking-wide',
+                  getStatusColor(task.status)
+                )}
               >
                 {getStatusIcon(task.status)}
                 {getTaskStatusText(task.status)}
@@ -188,7 +182,14 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
               <span>Прогресс</span>
               <span>{percent}%</span>
             </div>
-            <Progress value={percent} className="h-2 bg-muted/50" />
+            <ProgressBar
+              current={progress.processed}
+              total={progress.total}
+              tone={progressTone}
+              size="small"
+              showLabel={false}
+              className="gap-1.5"
+            />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>
                 Обработано: {progress.processed} из {progress.total}
@@ -199,7 +200,7 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
             </div>
           </div>
         ) : (
-          <Separator className="bg-border/40" />
+          <Separator className="bg-border/50" />
         )}
 
         {/* Stats Grid */}
@@ -212,7 +213,7 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
             <span className="text-sm font-medium">{groupsCount}</span>
           </div>
 
-          <div className="flex flex-col gap-1 border-l border-border/40 pl-4">
+          <div className="flex flex-col gap-1 border-l border-border/30 pl-4">
             <span className="text-xs text-muted-foreground flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5" />
               Посты
@@ -220,7 +221,7 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
             <span className="text-sm font-medium">{postsCount}</span>
           </div>
 
-          <div className="flex flex-col gap-1 border-l border-border/40 pl-4">
+          <div className="flex flex-col gap-1 border-l border-border/30 pl-4">
             <span className="text-xs text-muted-foreground flex items-center gap-1.5">
               <MessageSquare className="w-3.5 h-3.5" />
               Комменты
