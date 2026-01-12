@@ -51,7 +51,8 @@ describe('SearchInput', () => {
     const { container } = render(<SearchInput value="" onChange={handleChange} variant="glass" />)
 
     const wrapper = container.firstChild
-    expect(wrapper).toHaveClass('bg-background-secondary')
+    expect(wrapper).toHaveClass('backdrop-blur-md')
+    expect(wrapper).toHaveClass('bg-white/70')
   })
 
   it('should render with leading icon', () => {
