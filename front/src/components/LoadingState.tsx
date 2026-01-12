@@ -16,7 +16,7 @@ export function LoadingState({
   const content = (
     <div
       className={cn(
-        'flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-[20px] bg-background-primary p-10 text-center text-text-secondary md:p-12',
+        'flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-2xl border border-border/40 bg-background-secondary/60 p-10 text-center text-text-secondary shadow-soft-sm md:p-12',
         className
       )}
       aria-live="polite"
@@ -32,7 +32,7 @@ export function LoadingState({
       <Card className="border-0" aria-live="polite" aria-busy="true">
         <div
           className={cn(
-            'flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-[20px] bg-background-primary p-10 text-center text-text-secondary md:p-12',
+            'flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-2xl border border-border/40 bg-background-secondary/60 p-10 text-center text-text-secondary shadow-soft-sm md:p-12',
             className
           )}
         >

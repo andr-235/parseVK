@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 
 export const getNavItemClasses = (isActive: boolean) => {
   return cn(
-    'flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors',
+    'flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors',
     isActive
       ? 'text-sidebar-primary font-medium'
       : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
@@ -11,7 +11,7 @@ export const getNavItemClasses = (isActive: boolean) => {
 
 export const getPrimaryNavItemClasses = (isActive: boolean, isCollapsed: boolean) => {
   return cn(
-    'group flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+    'group flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors',
     isActive
       ? 'bg-sidebar-accent text-sidebar-accent-foreground'
       : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
@@ -21,7 +21,7 @@ export const getPrimaryNavItemClasses = (isActive: boolean, isCollapsed: boolean
 
 export const getSectionButtonClasses = (isCollapsed: boolean, isActive: boolean) => {
   return cn(
-    'group flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+    'group flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
     isCollapsed && 'justify-center px-0',
     isCollapsed && isActive && 'bg-sidebar-accent text-sidebar-accent-foreground'
   )

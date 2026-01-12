@@ -214,8 +214,8 @@ function AdminUsers() {
                 value={role}
                 onChange={(event) => setRole(event.target.value as UserRole)}
                 className={cn(
-                  'border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs',
-                  'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+                  'border-border/60 h-10 w-full rounded-xl border bg-background-secondary px-3 py-2 text-sm shadow-soft-sm',
+                  'focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-2',
                   'dark:bg-[#141414] dark:text-text-primary'
                 )}
                 disabled={isSubmitting}
@@ -236,7 +236,7 @@ function AdminUsers() {
           {isLoading ? (
             <LoadingState message="Загрузка пользователей..." />
           ) : sortedUsers.length === 0 ? (
-            <Empty className="border border-dashed border-border/70 bg-background-primary/40">
+            <Empty className="border border-dashed border-border/50 bg-background-secondary/60">
               <EmptyHeader>
                 <EmptyTitle>Пользователей нет</EmptyTitle>
                 <EmptyDescription>Создайте первого пользователя администратора.</EmptyDescription>

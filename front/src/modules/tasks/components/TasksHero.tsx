@@ -66,7 +66,7 @@ function TasksHero({
         <Button
           onClick={onCreateTask}
           size="lg"
-          className="shadow-lg shadow-primary/20 shrink-0"
+          className="shadow-soft-md shrink-0"
           disabled={isCreating || areGroupsLoading || !hasGroups}
         >
           {isCreating ? (

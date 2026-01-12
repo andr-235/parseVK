@@ -21,14 +21,14 @@ export function EmptyState({
     return (
       <div
         className={cn(
-          'flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-[20px] bg-background-primary p-10 text-center text-text-secondary md:p-12',
+          'flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-2xl bg-background-secondary/70 p-10 text-center text-text-secondary shadow-soft-sm md:p-12',
           className
         )}
         role="status"
       >
         {icon && (
-          <div className="grid place-items-center rounded-[30px] border border-dashed border-[rgba(52,152,219,0.35)] bg-[linear-gradient(135deg,rgba(52,152,219,0.16),rgba(52,152,219,0.04))] p-6">
-            <div className="flex h-[clamp(56px,16vw,68px)] w-[clamp(56px,16vw,68px)] items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(52,152,219,0.2),rgba(52,152,219,0.05))] text-[clamp(28px,8vw,36px)] text-[#3498db]">
+          <div className="grid place-items-center rounded-2xl border border-border/40 bg-background-primary/80 p-6">
+            <div className="flex h-[clamp(56px,16vw,68px)] w-[clamp(56px,16vw,68px)] items-center justify-center rounded-full bg-accent-primary/10 text-[clamp(28px,8vw,36px)] text-accent-primary">
               {typeof icon === 'string' ? icon : icon}
             </div>
           </div>

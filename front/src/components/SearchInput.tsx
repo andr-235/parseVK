@@ -25,13 +25,13 @@ interface SearchInputProps {
 }
 
 const GLASS_WRAPPER_CLASSES =
-  'overflow-hidden rounded-2xl border border-white/10 bg-background-secondary px-3 py-1.5 shadow-soft-lg backdrop-blur-sm focus-within:border-accent-primary/70 focus-within:shadow-soft-lg dark:border-white/15 dark:bg-white/10'
+  'overflow-hidden rounded-2xl border border-white/50 bg-white/70 px-3 py-1.5 shadow-soft-md backdrop-blur-md focus-within:border-accent-primary/50 focus-within:shadow-soft-md dark:border-white/20 dark:bg-white/10'
 
 const GLASS_INPUT_CLASSES =
   'h-12 w-full rounded-[1.75rem] border-0 bg-transparent text-base font-medium text-text-primary caret-accent-primary placeholder:text-text-secondary/70 selection:bg-accent-primary/20 selection:text-text-primary focus:outline-none focus:ring-0 dark:text-text-light dark:placeholder:text-text-light/60 dark:selection:bg-accent-primary/40'
 
 const DEFAULT_INPUT_CLASSES =
-  'w-full rounded-xl border border-border bg-background-primary text-sm text-text-primary caret-accent-primary shadow-soft-sm transition-colors duration-200 selection:bg-accent-primary/20 selection:text-text-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/40 dark:selection:bg-accent-primary/40 dark:selection:text-text-light'
+  'w-full rounded-xl border border-border/60 bg-background-secondary text-sm text-text-primary caret-accent-primary shadow-soft-sm transition-colors duration-200 selection:bg-accent-primary/20 selection:text-text-primary focus:border-accent-primary/60 focus:outline-none focus:ring-2 focus:ring-accent-primary/25 dark:selection:bg-accent-primary/40 dark:selection:text-text-light'
 
 const GLASS_CLEAR_BUTTON_CLASSES =
   'right-3 size-8 bg-white/10 text-text-secondary hover:bg-white/20 hover:text-text-primary focus-visible:ring-accent-primary/50 dark:bg-white/15 dark:hover:bg-white/25 dark:text-text-light'

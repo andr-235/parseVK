@@ -155,7 +155,7 @@ function App() {
           }}
           toastOptions={{
             duration: 3000,
-            className: 'bg-background-sidebar text-text-light pointer-events-auto',
+            className: 'bg-foreground text-background pointer-events-auto shadow-soft-sm',
           }}
         />
       </BrowserRouter>

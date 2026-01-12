@@ -15,12 +15,12 @@ function PageHeroCard({ title, description, actions, footer, className }: PageHe
   return (
     <Card
       className={cn(
-        'relative overflow-hidden border-none',
-        'bg-gradient-to-br from-accent-primary/15 via-background-secondary to-background-secondary/90',
+        'relative overflow-hidden border border-border/60 shadow-soft-sm',
+        'bg-gradient-to-br from-accent-primary/10 via-background-secondary to-background-secondary/95',
         className
       )}
     >
-      <div className="pointer-events-none absolute -right-24 top-1/2 hidden h-64 w-64 -translate-y-1/2 rounded-full bg-accent-primary/20 blur-3xl md:block" />
+      <div className="pointer-events-none absolute -right-24 top-1/2 hidden h-64 w-64 -translate-y-1/2 rounded-full bg-accent-primary/15 blur-3xl md:block" />
 
       <CardHeader className="relative z-10 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <div className="space-y-3">

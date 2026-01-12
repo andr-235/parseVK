@@ -26,7 +26,7 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
 
   return (
     <Card
-      className="rounded-[26px] bg-background-secondary shadow-[0_24px_48px_-34px_rgba(0,0,0,0.28)] dark:shadow-[0_28px_56px_-34px_rgba(93,173,226,0.5)]"
+      className="rounded-card border-border/60 bg-background-secondary shadow-soft-md"
       aria-label="Список задач"
     >
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-6 space-y-0 p-6 md:p-8">
@@ -40,7 +40,7 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
         <div className="flex min-w-[220px] flex-col items-end gap-3">
           <Badge
             variant="secondary"
-            className="bg-[rgba(52,152,219,0.12)] text-[#3498db] dark:text-[#5dade2]"
+            className="border border-accent-primary/20 bg-accent-primary/10 text-accent-primary"
           >
             {tasks.length} задач
           </Badge>
@@ -49,11 +49,11 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
 
       <CardContent className="p-6 pt-0 md:px-8 md:pb-8">
         {!hasTasks ? (
-          <div className="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-[20px] bg-background-primary p-10 text-center text-text-secondary md:p-12">
+          <div className="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border/50 bg-background-secondary/60 p-10 text-center text-text-secondary md:p-12">
             {emptyMessage}
           </div>
         ) : (
-          <Card className="relative w-full overflow-hidden rounded-[20px] p-0">
+          <Card className="relative w-full overflow-hidden rounded-2xl border border-border/50 p-0 shadow-none">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>

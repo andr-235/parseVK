@@ -110,25 +110,25 @@ function ExportListingsModal({
       onClick={onClose}
     >
       <div
-        className="flex w-full max-h-[90vh] max-w-4xl flex-col overflow-hidden rounded-3xl bg-background-secondary text-text-primary shadow-2xl transition-colors duration-300"
+        className="flex w-full max-h-[90vh] max-w-4xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/80 text-foreground shadow-soft-lg ring-1 ring-white/40 backdrop-blur-xl transition-colors duration-300 dark:border-white/10 dark:bg-[#0f0f0f]/80 dark:text-white"
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-listings-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-white/10 px-8 py-6">
+        <header className="flex items-start justify-between gap-4 border-b border-border/60 px-8 py-6">
           <div className="space-y-2">
             <h2 id="export-listings-title" className="text-2xl font-semibold tracking-tight">
               Экспорт объявлений в CSV
             </h2>
-            <p className="max-w-md text-sm leading-relaxed text-white/80">
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
               Выберите поля и область выгрузки. По умолчанию учитываются текущие фильтры, но можно
               выгрузить все.
             </p>
           </div>
           <button
             type="button"
-            className="rounded-full bg-background-primary/40 p-2 text-2xl leading-none text-text-secondary transition-colors duration-200 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60"
+            className="rounded-full bg-background-primary/60 p-2 text-2xl leading-none text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/40"
             onClick={onClose}
             aria-label="Закрыть модальное окно"
           >
@@ -138,14 +138,14 @@ function ExportListingsModal({
 
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8">
           <section className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-white/10">
-              <h3 className="text-base font-semibold text-white">Область выгрузки</h3>
+            <div className="flex items-center gap-2 pb-2 border-b border-border/60">
+              <h3 className="text-base font-semibold text-foreground">Область выгрузки</h3>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     aria-label="Подсказка"
-                    className="text-white/60 hover:text-white/80 transition-colors"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Info className="size-4" />
                   </button>
@@ -156,18 +156,18 @@ function ExportListingsModal({
               </Tooltip>
             </div>
 
-            <div className="relative rounded-xl border border-white/10 bg-white/5 p-1 w-full max-w-xl">
+            <div className="relative w-full max-w-xl rounded-xl border border-border/50 bg-background-primary/70 p-1">
               <div className="grid grid-cols-2 gap-1">
                 <button
                   type="button"
-                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${scope === 'filtered' ? 'bg-white/10 text-white' : 'text-white/75 hover:text-white'}`}
+                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${scope === 'filtered' ? 'bg-accent-primary/10 text-accent-primary' : 'text-text-secondary hover:text-text-primary'}`}
                   onClick={() => setScope('filtered')}
                 >
                   Учитывать текущие фильтры
                 </button>
                 <button
                   type="button"
-                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${scope === 'all' ? 'bg-white/10 text-white' : 'text-white/75 hover:text-white'}`}
+                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${scope === 'all' ? 'bg-accent-primary/10 text-accent-primary' : 'text-text-secondary hover:text-text-primary'}`}
                   onClick={() => setScope('all')}
                 >
                   Выгрузить все
@@ -177,12 +177,12 @@ function ExportListingsModal({
           </section>
 
           <section className="space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+            <div className="flex items-center justify-between pb-2 border-b border-border/60">
               <div>
-                <h3 className="text-base font-semibold text-white">
+                <h3 className="text-base font-semibold text-foreground">
                   Поля ({selectedCount}/{ALL_FIELDS.length})
                 </h3>
-                <div className="text-xs text-white/60">
+                <div className="text-xs text-muted-foreground">
                   Выбрано: {selectedCount} из {ALL_FIELDS.length}
                 </div>
               </div>
@@ -190,14 +190,14 @@ function ExportListingsModal({
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="text-sky-400 hover:text-sky-300 font-medium text-xs"
+                  className="text-accent-primary hover:text-accent-primary/80 font-medium text-xs"
                 >
                   ВЫБРАТЬ ВСЕ
                 </button>
                 <button
                   type="button"
                   onClick={handleDeselectAll}
-                  className="text-sky-400 hover:text-sky-300 font-medium text-xs"
+                  className="text-accent-primary hover:text-accent-primary/80 font-medium text-xs"
                 >
                   СНЯТЬ
                 </button>
@@ -228,9 +228,9 @@ function ExportListingsModal({
                   {groups.map((g) => (
                     <div
                       key={g.title}
-                      className="rounded-xl bg-neutral-900/40 border border-white/10 p-4"
+                      className="rounded-xl border border-border/50 bg-background-primary/70 p-4"
                     >
-                      <h4 className="text-white/90 font-medium mb-2">{g.title}</h4>
+                      <h4 className="text-foreground font-medium mb-2">{g.title}</h4>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                         {g.keys.map((key) => {
                           const checked = selected.has(key)
@@ -239,8 +239,8 @@ function ExportListingsModal({
                               key={key}
                               className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${
                                 checked
-                                  ? 'border-accent-primary/60 bg-white/5'
-                                  : 'border-white/10 hover:bg-white/5'
+                                  ? 'border-accent-primary/40 bg-accent-primary/10'
+                                  : 'border-border/50 hover:bg-muted/40'
                               }`}
                             >
                               <input
@@ -249,7 +249,7 @@ function ExportListingsModal({
                                 onChange={() => handleToggleField(key)}
                                 className="h-4 w-4 rounded border-border text-accent-primary focus:ring-accent-primary"
                               />
-                              <span className="text-sm text-white/90">{labelByKey[key]}</span>
+                              <span className="text-sm text-foreground">{labelByKey[key]}</span>
                             </label>
                           )
                         })}
