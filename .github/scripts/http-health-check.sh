@@ -10,6 +10,27 @@ if [ -n "${COMPOSE_FILE:-}" ]; then
   COMPOSE_CMD="docker compose -f $COMPOSE_FILE"
 fi
 
+TARGET_SERVICES=${TARGET_SERVICES:-}
+FULL_DEPLOY=${FULL_DEPLOY:-false}
+if [ "$FULL_DEPLOY" = "true" ]; then
+  TARGET_SERVICES=""
+fi
+CHECK_API=true
+CHECK_FRONTEND=true
+
+if [ -n "$TARGET_SERVICES" ]; then
+  CHECK_API=false
+  CHECK_FRONTEND=false
+  for svc in $TARGET_SERVICES; do
+    if [ "$svc" = "api" ]; then
+      CHECK_API=true
+    fi
+    if [ "$svc" = "frontend" ]; then
+      CHECK_FRONTEND=true
+    fi
+  done
+fi
+
 if ! command -v curl > /dev/null 2>&1; then
   echo "Error: curl is not installed on the host"
   exit 1
@@ -68,28 +89,46 @@ echo "=== Health Checks ==="
 API_OK=false
 FRONTEND_OK=false
 
-if check_api; then
-  API_OK=true
+if [ "$CHECK_API" = "true" ]; then
+  if check_api; then
+    API_OK=true
+  else
+    echo "API health check failed. Container logs:"
+    $COMPOSE_CMD logs --tail=20 api 2>/dev/null || true
+  fi
 else
-  echo "API health check failed. Container logs:"
-  $COMPOSE_CMD logs --tail=20 api 2>/dev/null || true
+  echo "Skipping API health check (not in target services)"
+  API_OK=true
 fi
 
-if check_frontend; then
-  FRONTEND_OK=true
+if [ "$CHECK_FRONTEND" = "true" ]; then
+  if check_frontend; then
+    FRONTEND_OK=true
+  else
+    echo "Frontend health check failed. Container logs:"
+    $COMPOSE_CMD logs --tail=20 frontend 2>/dev/null || true
+  fi
 else
-  echo "Frontend health check failed. Container logs:"
-  $COMPOSE_CMD logs --tail=20 frontend 2>/dev/null || true
+  echo "Skipping Frontend health check (not in target services)"
+  FRONTEND_OK=true
 fi
 
 echo ""
 echo "=== Container logs (last 30 lines) ==="
-$COMPOSE_CMD logs --tail=30
+if [ -n "$TARGET_SERVICES" ]; then
+  $COMPOSE_CMD logs --tail=30 $TARGET_SERVICES
+else
+  $COMPOSE_CMD logs --tail=30
+fi
 
 if [ "$API_OK" != "true" ] || [ "$FRONTEND_OK" != "true" ]; then
   echo ""
   echo "=== Container status ==="
-  $COMPOSE_CMD ps
+  if [ -n "$TARGET_SERVICES" ]; then
+    $COMPOSE_CMD ps $TARGET_SERVICES
+  else
+    $COMPOSE_CMD ps
+  fi
   echo ""
   echo "❌ Health checks failed"
   exit 1
@@ -97,4 +136,3 @@ fi
 
 echo ""
 echo "✅ All health checks passed"
-

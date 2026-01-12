@@ -227,10 +227,97 @@ jobs:
           STEP_END=$(date +%s)
           echo "Docker compose validation completed in $((STEP_END - STEP_START))s"
 
-      - name: Stop containers
+      - name: Detect changed services
+        id: detect_changes
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          PREV_COMMIT="${{ steps.save_version.outputs.current_commit }}"
+          NEW_COMMIT="${{ steps.update_code.outputs.new_commit }}"
+          ALL_SERVICES="db redis db_backup api frontend prometheus node-exporter grafana"
+          TARGET_SERVICES=""
+          FULL_DEPLOY=false
+          NEEDS_MIGRATIONS=false
+          CHANGED_FILES=""
+
+          add_service() {
+            local svc="$1"
+            case " $TARGET_SERVICES " in
+              *" $svc "*) ;;
+              *) TARGET_SERVICES="$TARGET_SERVICES $svc" ;;
+            esac
+          }
+
+          if [ -z "$PREV_COMMIT" ] || [ "$PREV_COMMIT" = "unknown" ] || [ -z "$NEW_COMMIT" ]; then
+            echo "Previous commit unknown; will deploy all services"
+            TARGET_SERVICES="$ALL_SERVICES"
+            FULL_DEPLOY=true
+            NEEDS_MIGRATIONS=true
+          elif [ "$PREV_COMMIT" = "$NEW_COMMIT" ]; then
+            echo "No commit changes detected ($NEW_COMMIT)"
+          elif ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
+            echo "Previous commit $PREV_COMMIT not found; will deploy all services"
+            TARGET_SERVICES="$ALL_SERVICES"
+            FULL_DEPLOY=true
+            NEEDS_MIGRATIONS=true
+          else
+            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$NEW_COMMIT" || true)
+            if [ -z "$CHANGED_FILES" ]; then
+              echo "No file changes detected"
+            else
+              echo "Changed files:"
+              echo "$CHANGED_FILES"
+            fi
+
+            if echo "$CHANGED_FILES" | grep -qE '(^|/)(docker-compose\.deploy\.yml|docker-compose\.yml|docker-compose\.prod\.yml)$'; then
+              TARGET_SERVICES="$ALL_SERVICES"
+              FULL_DEPLOY=true
+              NEEDS_MIGRATIONS=true
+            else
+              if echo "$CHANGED_FILES" | grep -qE '^api/|^prisma/|^create-session\.js'; then
+                add_service api
+              fi
+              if echo "$CHANGED_FILES" | grep -qE '^front/'; then
+                add_service frontend
+              fi
+              if echo "$CHANGED_FILES" | grep -qE '^docker/db-backup/'; then
+                add_service db_backup
+              fi
+              if echo "$CHANGED_FILES" | grep -qE '^monitoring/prometheus|^monitoring/alert_rules\.yml'; then
+                add_service prometheus
+              fi
+              if echo "$CHANGED_FILES" | grep -qE '^monitoring/grafana/'; then
+                add_service grafana
+              fi
+              if echo "$CHANGED_FILES" | grep -qE '^prisma/|^api/prisma/'; then
+                NEEDS_MIGRATIONS=true
+                add_service api
+              fi
+            fi
+          fi
+
+          TARGET_SERVICES=$(echo "$TARGET_SERVICES" | xargs)
+          if [ -z "$TARGET_SERVICES" ]; then
+            HAS_CHANGES=false
+          else
+            HAS_CHANGES=true
+          fi
+
+          echo "Selected services: ${TARGET_SERVICES:-none}"
+          echo "full_deploy=$FULL_DEPLOY"
+          echo "needs_migrations=$NEEDS_MIGRATIONS"
+          echo "has_changes=$HAS_CHANGES"
+
+          echo "services=$TARGET_SERVICES" >> $GITHUB_OUTPUT
+          echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
+          echo "full_deploy=$FULL_DEPLOY" >> $GITHUB_OUTPUT
+          echo "needs_migrations=$NEEDS_MIGRATIONS" >> $GITHUB_OUTPUT
+
+      - name: Stop containers (full deploy)
         id: stop_containers
         working-directory: /opt/parseVK
         timeout-minutes: 5
+        if: steps.detect_changes.outputs.full_deploy == 'true'
         run: |
           STEP_START=$(date +%s)
           echo "=== Stopping containers ==="
@@ -371,11 +458,18 @@ jobs:
         id: cleanup_images
         working-directory: /opt/parseVK
         timeout-minutes: 5
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        env:
+          FULL_DEPLOY: ${{ steps.detect_changes.outputs.full_deploy }}
         run: |
           STEP_START=$(date +%s)
           echo "=== Cleaning up old images and cache ==="
 
-          docker compose -f "$COMPOSE_FILE" down --rmi local --remove-orphans 2>/dev/null || true
+          if [ "$FULL_DEPLOY" = "true" ]; then
+            docker compose -f "$COMPOSE_FILE" down --rmi local --remove-orphans 2>/dev/null || true
+          else
+            echo "Skipping full docker compose down for partial deploy"
+          fi
 
           CURRENT_IMAGES=$(docker compose -f "$COMPOSE_FILE" config --images 2>/dev/null || echo "")
 
@@ -432,6 +526,7 @@ jobs:
         id: start_db
         working-directory: /opt/parseVK
         timeout-minutes: 5
+        if: steps.detect_changes.outputs.needs_migrations == 'true'
         run: |
           STEP_START=$(date +%s)
           echo "=== Starting database and dependencies ==="
@@ -483,6 +578,7 @@ jobs:
         id: clean_migrations
         working-directory: /opt/parseVK
         timeout-minutes: 2
+        if: steps.detect_changes.outputs.needs_migrations == 'true'
         run: |
           STEP_START=$(date +%s)
           echo "=== Cleaning failed migrations ==="
@@ -501,6 +597,7 @@ jobs:
         id: run_migrations
         working-directory: /opt/parseVK
         timeout-minutes: 5
+        if: steps.detect_changes.outputs.needs_migrations == 'true'
         run: |
           STEP_START=$(date +%s)
           echo "=== Running database migrations ==="
@@ -530,84 +627,54 @@ jobs:
           STEP_END=$(date +%s)
           echo "Migrations completed in $((STEP_END - STEP_START))s"
 
-      - name: Start all containers
+      - name: Start changed containers
         id: start_containers
         working-directory: /opt/parseVK
-        timeout-minutes: 10
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        env:
+          TARGET_SERVICES: ${{ steps.detect_changes.outputs.services }}
+          FULL_DEPLOY: ${{ steps.detect_changes.outputs.full_deploy }}
         run: |
           STEP_START=$(date +%s)
-          echo "=== Starting all containers ==="
+          echo "=== Starting changed containers ==="
 
-          if [ "${{ steps.run_migrations.outputs.api_was_running }}" = "true" ]; then
-            echo "API container was already running for migrations, pulling latest images and restarting if needed"
-            MAX_RETRIES=2
-            RETRY=0
-            PULL_SUCCESS=false
-            
-            while [ $RETRY -lt $MAX_RETRIES ]; do
-              if docker compose -f "$COMPOSE_FILE" pull --ignore-pull-failures 2>&1; then
-                PULL_SUCCESS=true
-                break
-              fi
-              RETRY=$((RETRY + 1))
-              if [ $RETRY -lt $MAX_RETRIES ]; then
-                echo "Pull failed, retry $RETRY/$MAX_RETRIES in 3s..."
-                sleep 3
-              fi
-            done
-            
-            if [ "$PULL_SUCCESS" != "true" ]; then
-              echo "Warning: Failed to pull images after $MAX_RETRIES attempts, continuing with existing images"
-            fi
-            
-            MAX_RETRIES=2
-            RETRY=0
-            START_SUCCESS=false
-            
-            while [ $RETRY -lt $MAX_RETRIES ]; do
-              if docker compose -f "$COMPOSE_FILE" pull --ignore-pull-failures && docker compose -f "$COMPOSE_FILE" up -d --pull always 2>&1; then
+          if [ -z "$TARGET_SERVICES" ]; then
+            echo "No services to start"
+            STEP_END=$(date +%s)
+            echo "Container start completed in $((STEP_END - STEP_START))s"
+            exit 0
+          fi
+
+          echo "Target services: $TARGET_SERVICES"
+
+          MAX_RETRIES=2
+          RETRY=0
+          START_SUCCESS=false
+
+          while [ $RETRY -lt $MAX_RETRIES ]; do
+            if [ "$FULL_DEPLOY" = "true" ]; then
+              if docker compose -f "$COMPOSE_FILE" up -d --pull always --build --remove-orphans 2>&1; then
                 START_SUCCESS=true
                 break
               fi
-              RETRY=$((RETRY + 1))
-              if [ $RETRY -lt $MAX_RETRIES ]; then
-                echo "Start failed, retry $RETRY/$MAX_RETRIES in 3s..."
-                sleep 3
-              fi
-            done
-            
-            if [ "$START_SUCCESS" != "true" ]; then
-              echo "Error: Failed to start containers after $MAX_RETRIES attempts"
-              echo "=== Container logs ==="
-              docker compose -f "$COMPOSE_FILE" logs --tail=50
-              exit 1
-            fi
-          else
-            echo "Pulling latest images before starting..."
-            docker compose -f "$COMPOSE_FILE" pull --ignore-pull-failures || echo "Warning: Some images failed to pull, continuing..."
-            
-            MAX_RETRIES=2
-            RETRY=0
-            START_SUCCESS=false
-            
-            while [ $RETRY -lt $MAX_RETRIES ]; do
-              if docker compose -f "$COMPOSE_FILE" up -d --pull always 2>&1; then
+            else
+              if docker compose -f "$COMPOSE_FILE" up -d --pull always --build $TARGET_SERVICES 2>&1; then
                 START_SUCCESS=true
                 break
               fi
-              RETRY=$((RETRY + 1))
-              if [ $RETRY -lt $MAX_RETRIES ]; then
-                echo "Start failed, retry $RETRY/$MAX_RETRIES in 3s..."
-                sleep 3
-              fi
-            done
-            
-            if [ "$START_SUCCESS" != "true" ]; then
-              echo "Error: Failed to start containers after $MAX_RETRIES attempts"
-              echo "=== Container logs ==="
-              docker compose -f "$COMPOSE_FILE" logs --tail=50
-              exit 1
             fi
+            RETRY=$((RETRY + 1))
+            if [ $RETRY -lt $MAX_RETRIES ]; then
+              echo "Start failed, retry $RETRY/$MAX_RETRIES in 3s..."
+              sleep 3
+            fi
+          done
+
+          if [ "$START_SUCCESS" != "true" ]; then
+            echo "Error: Failed to start containers after $MAX_RETRIES attempts"
+            echo "=== Container logs ==="
+            docker compose -f "$COMPOSE_FILE" logs --tail=50
+            exit 1
           fi
 
           echo "=== Waiting for containers to start ==="
@@ -616,7 +683,11 @@ jobs:
           echo "=== Container status ==="
           docker compose -f "$COMPOSE_FILE" ps
 
-          FAILED_CONTAINERS=$(docker compose -f "$COMPOSE_FILE" ps --format json | jq -r 'select(.State != "running" and .State != "healthy") | .Name' 2>/dev/null || docker compose -f "$COMPOSE_FILE" ps | grep -E "(Exit|Error|unhealthy)" || echo "")
+          if [ "$FULL_DEPLOY" = "true" ]; then
+            FAILED_CONTAINERS=$(docker compose -f "$COMPOSE_FILE" ps --format json | jq -r 'select(.State != "running" and .State != "healthy") | .Name' 2>/dev/null || docker compose -f "$COMPOSE_FILE" ps | grep -E "(Exit|Error|unhealthy)" || echo "")
+          else
+            FAILED_CONTAINERS=$(docker compose -f "$COMPOSE_FILE" ps --format json $TARGET_SERVICES | jq -r 'select(.State != "running" and .State != "healthy") | .Name' 2>/dev/null || docker compose -f "$COMPOSE_FILE" ps $TARGET_SERVICES | grep -E "(Exit|Error|unhealthy)" || echo "")
+          fi
           if [ -n "$FAILED_CONTAINERS" ]; then
             echo "Error: Some containers failed to start"
             echo "Failed containers: $FAILED_CONTAINERS"
@@ -634,6 +705,10 @@ jobs:
         id: wait_healthy
         working-directory: /opt/parseVK
         timeout-minutes: 5
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        env:
+          TARGET_SERVICES: ${{ steps.detect_changes.outputs.services }}
+          FULL_DEPLOY: ${{ steps.detect_changes.outputs.full_deploy }}
         run: |
           STEP_START=$(date +%s)
           COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/health-check.sh
@@ -644,6 +719,10 @@ jobs:
         id: health_check
         working-directory: /opt/parseVK
         timeout-minutes: 3
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        env:
+          TARGET_SERVICES: ${{ steps.detect_changes.outputs.services }}
+          FULL_DEPLOY: ${{ steps.detect_changes.outputs.full_deploy }}
         run: |
           STEP_START=$(date +%s)
           COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/http-health-check.sh

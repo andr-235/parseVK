@@ -11,6 +11,15 @@ if [ -n "${COMPOSE_FILE:-}" ]; then
   COMPOSE_CMD="docker compose -f $COMPOSE_FILE"
 fi
 
+TARGET_SERVICES=${TARGET_SERVICES:-}
+FULL_DEPLOY=${FULL_DEPLOY:-false}
+if [ "$FULL_DEPLOY" = "true" ]; then
+  TARGET_SERVICES=""
+fi
+if [ -n "$TARGET_SERVICES" ]; then
+  echo "Target services: $TARGET_SERVICES"
+fi
+
 echo "=== Waiting for services to be healthy ==="
 
 if ! command -v docker > /dev/null 2>&1 || ! docker compose version > /dev/null 2>&1; then
@@ -18,9 +27,16 @@ if ! command -v docker > /dev/null 2>&1 || ! docker compose version > /dev/null 
   exit 1
 fi
 
-if $COMPOSE_CMD wait --timeout 120 2>/dev/null; then
-  echo "All services with healthchecks are healthy (via docker compose wait)"
-  exit 0
+if [ -n "$TARGET_SERVICES" ]; then
+  if $COMPOSE_CMD wait --timeout 120 $TARGET_SERVICES 2>/dev/null; then
+    echo "All services with healthchecks are healthy (via docker compose wait)"
+    exit 0
+  fi
+else
+  if $COMPOSE_CMD wait --timeout 120 2>/dev/null; then
+    echo "All services with healthchecks are healthy (via docker compose wait)"
+    exit 0
+  fi
 fi
 
 echo "Warning: docker compose wait failed or timed out, falling back to manual check"
@@ -32,7 +48,13 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
   UNHEALTHY_COUNT=0
   TOTAL_COUNT=0
   
-  for container in $($COMPOSE_CMD ps -q); do
+  if [ -n "$TARGET_SERVICES" ]; then
+    CONTAINERS=$($COMPOSE_CMD ps -q $TARGET_SERVICES)
+  else
+    CONTAINERS=$($COMPOSE_CMD ps -q)
+  fi
+
+  for container in $CONTAINERS; do
     if [ -z "$container" ]; then
       continue
     fi
@@ -69,9 +91,18 @@ done
 if [ "$ALL_HEALTHY" != "true" ]; then
   echo "Error: Not all containers are healthy"
   echo "=== Container status ==="
-  $COMPOSE_CMD ps
+  if [ -n "$TARGET_SERVICES" ]; then
+    $COMPOSE_CMD ps $TARGET_SERVICES
+  else
+    $COMPOSE_CMD ps
+  fi
   echo "=== Failed container logs ==="
-  for container in $($COMPOSE_CMD ps -q); do
+  if [ -n "$TARGET_SERVICES" ]; then
+    CONTAINERS=$($COMPOSE_CMD ps -q $TARGET_SERVICES)
+  else
+    CONTAINERS=$($COMPOSE_CMD ps -q)
+  fi
+  for container in $CONTAINERS; do
     STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
     HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
     NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
@@ -84,4 +115,3 @@ if [ "$ALL_HEALTHY" != "true" ]; then
 fi
 
 echo "All containers are healthy"
-
