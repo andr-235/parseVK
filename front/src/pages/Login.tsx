@@ -139,7 +139,7 @@ function Login() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(37,99,235,0.14),transparent_60%),radial-gradient(120%_80%_at_100%_100%,rgba(14,165,233,0.08),transparent_55%)]"
       />
-      <Card className="relative w-full max-w-xl overflow-hidden border border-white/60 bg-white/75 shadow-soft-lg backdrop-blur-xl dark:border-white/10 dark:bg-[#0f172a]/70">
+      <Card className="relative w-full max-w-xl overflow-hidden glassmorphic-card">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent-primary/8 via-transparent to-transparent"

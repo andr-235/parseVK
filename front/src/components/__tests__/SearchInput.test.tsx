@@ -51,8 +51,7 @@ describe('SearchInput', () => {
     const { container } = render(<SearchInput value="" onChange={handleChange} variant="glass" />)
 
     const wrapper = container.firstChild
-    expect(wrapper).toHaveClass('backdrop-blur-md')
-    expect(wrapper).toHaveClass('bg-white/70')
+    expect(wrapper).toHaveClass('glassmorphic-surface')
   })
 
   it('should render with leading icon', () => {
