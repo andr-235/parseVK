@@ -25,7 +25,6 @@ export class AuthorCardDto {
 }
 
 export class AuthorDetailsDto extends AuthorCardDto {
-  city!: Record<string, unknown> | null;
   country!: Record<string, unknown> | null;
   createdAt!: string;
   updatedAt!: string;
