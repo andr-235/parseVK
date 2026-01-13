@@ -13,6 +13,7 @@ export type AuthorRecord = {
   lastSeen: unknown;
   verifiedAt: Date | null;
   city: unknown;
+  homeTown: string | null;
   country: unknown;
   createdAt: Date;
   updatedAt: Date;

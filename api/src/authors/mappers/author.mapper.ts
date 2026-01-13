@@ -28,7 +28,7 @@ export class AuthorMapper {
     card.domain = author.domain ?? null;
     card.screenName = author.screenName ?? null;
     card.profileUrl = this.buildProfileUrl(author);
-    card.city = (author.city as Record<string, unknown>) ?? null;
+    card.city = this.resolveCity(author.city, author.homeTown ?? null);
     card.summary = normalizedSummary;
     card.photosCount = photosCount;
     card.audiosCount = counters.audios;
@@ -51,11 +51,35 @@ export class AuthorMapper {
     const card = this.toCardDto(author, summary);
     const details = new AuthorDetailsDto();
     Object.assign(details, card);
-    details.city = (author.city as Record<string, unknown>) ?? null;
     details.country = (author.country as Record<string, unknown>) ?? null;
     details.createdAt = author.createdAt.toISOString();
     details.updatedAt = author.updatedAt.toISOString();
     return details;
+  }
+
+  private static resolveCity(
+    city: unknown,
+    homeTown: string | null,
+  ): Record<string, unknown> | string | null {
+    if (city && typeof city === 'object') {
+      const payload = city as Record<string, unknown>;
+      const title =
+        typeof payload.title === 'string' ? payload.title.trim() : '';
+      const name = typeof payload.name === 'string' ? payload.name.trim() : '';
+      if (title || name) {
+        return payload;
+      }
+    }
+
+    if (typeof city === 'string' && city.trim()) {
+      return city.trim();
+    }
+
+    if (homeTown && homeTown.trim()) {
+      return homeTown.trim();
+    }
+
+    return null;
   }
 
   private static buildProfileUrl(author: {

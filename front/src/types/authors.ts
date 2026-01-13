@@ -12,7 +12,7 @@ export interface AuthorCard {
   domain: string | null
   screenName: string | null
   profileUrl: string | null
-  city: Record<string, unknown> | null
+  city: Record<string, unknown> | string | null
   summary: PhotoAnalysisSummary
   photosCount: number | null
   audiosCount: number | null
@@ -25,7 +25,7 @@ export interface AuthorCard {
 }
 
 export interface AuthorDetails extends AuthorCard {
-  city: Record<string, unknown> | null
+  city: Record<string, unknown> | string | null
   country: Record<string, unknown> | null
   createdAt: string
   updatedAt: string

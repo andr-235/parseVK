@@ -12,7 +12,7 @@ export class AuthorCardDto {
   domain!: string | null;
   screenName!: string | null;
   profileUrl!: string | null;
-  city!: Record<string, unknown> | null;
+  city!: Record<string, unknown> | string | null;
   summary!: PhotoAnalysisSummaryDto;
   photosCount!: number | null;
   audiosCount!: number | null;

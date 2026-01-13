@@ -378,7 +378,7 @@ export interface AuthorCardResponse {
   domain: string | null
   screenName: string | null
   profileUrl: string | null
-  city: Record<string, unknown> | null
+  city: Record<string, unknown> | string | null
   summary: PhotoAnalysisSummary
   photosCount: number | null
   audiosCount: number | null
@@ -391,7 +391,7 @@ export interface AuthorCardResponse {
 }
 
 export interface AuthorDetailsResponse extends AuthorCardResponse {
-  city: Record<string, unknown> | null
+  city: Record<string, unknown> | string | null
   country: Record<string, unknown> | null
   createdAt: string
   updatedAt: string
