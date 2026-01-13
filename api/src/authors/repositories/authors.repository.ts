@@ -52,6 +52,31 @@ export class AuthorsRepository implements IAuthorsRepository {
     return this.prisma.author.findUnique({ where });
   }
 
+  async deleteAuthorAndComments(vkUserId: number): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const watchlistAuthors = await tx.watchlistAuthor.findMany({
+        where: { authorVkId: vkUserId },
+        select: { id: true },
+      });
+      const watchlistIds = watchlistAuthors.map((item) => item.id);
+
+      const commentConditions: Prisma.CommentWhereInput[] = [
+        { authorVkId: vkUserId },
+      ];
+      if (watchlistIds.length > 0) {
+        commentConditions.push({ watchlistAuthorId: { in: watchlistIds } });
+      }
+
+      await tx.comment.deleteMany({
+        where: { OR: commentConditions },
+      });
+
+      await tx.author.delete({
+        where: { vkUserId },
+      });
+    });
+  }
+
   queryRaw<T = AuthorRecord[]>(query: SqlFragment): Promise<T> {
     return this.prisma.$queryRaw<T>(query as Prisma.Sql);
   }

@@ -144,4 +144,5 @@ export interface AuthorsState {
   setSort: (value: AuthorSortField) => void
   markAuthorVerified: (vkUserId: number, verifiedAt: string | null) => void
   refreshAuthors: () => Promise<void>
+  deleteAuthor: (vkUserId: number) => Promise<void>
 }

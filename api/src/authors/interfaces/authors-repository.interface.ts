@@ -11,4 +11,5 @@ export interface IAuthorsRepository {
   }): Promise<AuthorRecord[]>;
   findUnique(where: { vkUserId: number }): Promise<AuthorRecord | null>;
   queryRaw<T = AuthorRecord[]>(query: SqlFragment): Promise<T>;
+  deleteAuthorAndComments(vkUserId: number): Promise<void>;
 }

@@ -24,6 +24,8 @@ function Authors() {
     handleRefresh,
     handleOpenDetails,
     handleAnalyzePhotos,
+    handleDeleteAuthor,
+    deletingVkUserId,
     handleSortChange,
   } = useAuthorsViewModel()
 
@@ -53,6 +55,8 @@ function Authors() {
           onSortChange={handleSortChange}
           onOpenDetails={handleOpenDetails}
           onAnalyzePhotos={handleAnalyzePhotos}
+          onDeleteAuthor={handleDeleteAuthor}
+          deletingVkUserId={deletingVkUserId}
           analyzingVkUserId={analyzingVkUserId}
           isAnalyzing={isAnalyzing}
           hasMore={hasMore}

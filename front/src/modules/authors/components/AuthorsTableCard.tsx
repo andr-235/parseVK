@@ -11,7 +11,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { AuthorCard, AuthorSortField } from '@/types'
-import { ArrowRight, Camera, Search } from 'lucide-react'
+import { ArrowRight, Camera, Search, Trash2 } from 'lucide-react'
 
 interface AuthorsTableCardProps {
   authors: AuthorCard[]
@@ -21,6 +21,8 @@ interface AuthorsTableCardProps {
   onSortChange: (field: AuthorSortField) => void
   onOpenDetails: (author: AuthorCard) => void
   onAnalyzePhotos: (author: AuthorCard) => void
+  onDeleteAuthor: (author: AuthorCard) => void
+  deletingVkUserId: number | null
   analyzingVkUserId: number | null
   isAnalyzing: boolean
   hasMore: boolean
@@ -83,7 +85,9 @@ export function AuthorsTableCard({
   onSortChange,
   onOpenDetails,
   onAnalyzePhotos,
+  onDeleteAuthor,
   analyzingVkUserId,
+  deletingVkUserId,
   isAnalyzing,
   hasMore,
   isLoadingMore,
@@ -266,6 +270,20 @@ export function AuthorsTableCard({
                           <Spinner className="h-3.5 w-3.5" />
                         ) : (
                           <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-8 w-8 p-0 rounded-full"
+                        onClick={() => onDeleteAuthor(author)}
+                        disabled={deletingVkUserId === author.vkUserId}
+                        title="Удалить автора и его комментарии"
+                      >
+                        {deletingVkUserId === author.vkUserId ? (
+                          <Spinner className="h-3.5 w-3.5" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5 text-destructive-foreground" />
                         )}
                       </Button>
                       <Button

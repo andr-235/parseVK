@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -39,5 +40,13 @@ export class AuthorsController {
   async refreshAuthors(): Promise<{ updated: number }> {
     const updated = await this.authorsService.refreshAuthors();
     return { updated };
+  }
+
+  @Delete(':vkUserId')
+  async deleteAuthor(
+    @Param('vkUserId', ParseIntPipe) vkUserId: number,
+  ): Promise<{ deleted: boolean }> {
+    await this.authorsService.deleteAuthor(vkUserId);
+    return { deleted: true };
   }
 }

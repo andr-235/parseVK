@@ -211,4 +211,17 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
       set({ isRefreshing: false })
     }
   },
+  deleteAuthor: async (vkUserId: number) => {
+    await authorsService.deleteAuthor(vkUserId)
+    set((state) => ({
+      authors: state.authors.filter((item) => item.vkUserId !== vkUserId),
+      total: Math.max(0, state.total - 1),
+    }))
+
+    const updatedState = get()
+    const params = buildAuthorsQueryParams(updatedState, updatedState.search.trim())
+    const queryKey = queryKeys.authors.list(params)
+
+    await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
+  },
 }))

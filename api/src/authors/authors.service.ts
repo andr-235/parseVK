@@ -147,4 +147,13 @@ export class AuthorsService {
   async refreshAuthors(): Promise<number> {
     return this.authorActivityService.refreshAllAuthors();
   }
+
+  async deleteAuthor(vkUserId: number): Promise<void> {
+    const author = await this.repository.findUnique({ vkUserId });
+    if (!author) {
+      throw new NotFoundException(`Автор с VK ID ${vkUserId} не найден`);
+    }
+
+    await this.repository.deleteAuthorAndComments(vkUserId);
+  }
 }

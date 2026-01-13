@@ -21,11 +21,13 @@ export const useAuthorsViewModel = () => {
   const sortBy = useAuthorsStore((state) => state.sortBy)
   const sortOrder = useAuthorsStore((state) => state.sortOrder)
   const setSort = useAuthorsStore((state) => state.setSort)
+  const deleteAuthor = useAuthorsStore((state) => state.deleteAuthor)
   const analyzeAuthor = usePhotoAnalysisStore((state) => state.analyzeAuthor)
   const isAnalyzing = usePhotoAnalysisStore((state) => state.isAnalyzing)
 
   const navigate = useNavigate()
   const [analyzingVkUserId, setAnalyzingVkUserId] = useState<number | null>(null)
+  const [deletingVkUserId, setDeletingVkUserId] = useState<number | null>(null)
   const [searchValue, setSearchValue] = useState(storeSearch)
   const isInitialSearch = useRef(true)
 
@@ -183,6 +185,21 @@ export const useAuthorsViewModel = () => {
     [setSort]
   )
 
+  const handleDeleteAuthor = useCallback(
+    async (author: AuthorCard) => {
+      setDeletingVkUserId(author.vkUserId)
+      try {
+        await deleteAuthor(author.vkUserId)
+        toast.success('Автор и его комментарии удалены')
+      } catch (error) {
+        console.error('Не удалось удалить автора', error)
+      } finally {
+        setDeletingVkUserId(null)
+      }
+    },
+    [deleteAuthor]
+  )
+
   const emptyTitle =
     statusFilter === 'unverified' ? 'Нет авторов для проверки' : 'Авторы не найдены'
   const emptyDescription =
@@ -202,6 +219,7 @@ export const useAuthorsViewModel = () => {
     sortOrder,
     analyzingVkUserId,
     isAnalyzing,
+    deletingVkUserId,
     emptyTitle,
     emptyDescription,
     handleSearchChange,
@@ -210,6 +228,7 @@ export const useAuthorsViewModel = () => {
     handleRefresh,
     handleOpenDetails,
     handleAnalyzePhotos,
+    handleDeleteAuthor,
     handleSortChange,
   }
 }

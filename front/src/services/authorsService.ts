@@ -143,4 +143,16 @@ export const authorsService = {
       throw error
     }
   },
+  async deleteAuthor(vkUserId: number): Promise<void> {
+    try {
+      const response = await createRequest(`${API_URL}/authors/${vkUserId}`, {
+        method: 'DELETE',
+      })
+
+      await handleResponse<{ deleted: boolean }>(response, 'Не удалось удалить автора')
+    } catch (error) {
+      toast.error('Не удалось удалить автора')
+      throw error
+    }
+  },
 }

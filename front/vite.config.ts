@@ -46,9 +46,36 @@ const storybookProjects: TestProjectConfiguration[] = hasStorybookConfig
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: [
+      {
+        find: '@/components/ui',
+        replacement: path.resolve(__dirname, './src/shared/ui'),
+      },
+      {
+        find: '@/components',
+        replacement: path.resolve(__dirname, './src/shared/components'),
+      },
+      {
+        find: '@/hooks',
+        replacement: path.resolve(__dirname, './src/shared/hooks'),
+      },
+      {
+        find: '@/lib',
+        replacement: path.resolve(__dirname, './src/shared/lib'),
+      },
+      {
+        find: '@/utils',
+        replacement: path.resolve(__dirname, './src/shared/utils'),
+      },
+      {
+        find: '@/types',
+        replacement: path.resolve(__dirname, './src/shared/types'),
+      },
+      {
+        find: '@',
+        replacement: path.resolve(__dirname, './src'),
+      },
+    ],
   },
   server: {
     proxy: {

@@ -75,9 +75,15 @@ export const getCommentTableColumns = (
       }
 
       const handleOpenVk = () => {
-        if (item.commentUrl) {
-          window.open(item.commentUrl, '_blank', 'noopener,noreferrer')
+        if (!item.commentUrl) {
+          return
         }
+
+        if (!item.isRead) {
+          void toggleReadStatus(item.id)
+        }
+
+        window.open(item.commentUrl, '_blank', 'noopener,noreferrer')
       }
 
       return (
