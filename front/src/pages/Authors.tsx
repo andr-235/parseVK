@@ -26,6 +26,7 @@ function Authors() {
     handleAnalyzePhotos,
     handleDeleteAuthor,
     deletingVkUserId,
+    handleVerifyAuthor,
     handleSortChange,
   } = useAuthorsViewModel()
 
@@ -56,6 +57,7 @@ function Authors() {
           onOpenDetails={handleOpenDetails}
           onAnalyzePhotos={handleAnalyzePhotos}
           onDeleteAuthor={handleDeleteAuthor}
+          onVerifyAuthor={handleVerifyAuthor}
           deletingVkUserId={deletingVkUserId}
           analyzingVkUserId={analyzingVkUserId}
           isAnalyzing={isAnalyzing}

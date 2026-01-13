@@ -77,6 +77,16 @@ export class AuthorsRepository implements IAuthorsRepository {
     });
   }
 
+  async markAuthorVerified(vkUserId: number, verifiedAt: Date): Promise<Date> {
+    const updated = await this.prisma.author.update({
+      where: { vkUserId },
+      data: { verifiedAt },
+      select: { verifiedAt: true },
+    });
+
+    return updated.verifiedAt ?? verifiedAt;
+  }
+
   queryRaw<T = AuthorRecord[]>(query: SqlFragment): Promise<T> {
     return this.prisma.$queryRaw<T>(query as Prisma.Sql);
   }

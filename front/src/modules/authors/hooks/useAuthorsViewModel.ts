@@ -22,6 +22,7 @@ export const useAuthorsViewModel = () => {
   const sortOrder = useAuthorsStore((state) => state.sortOrder)
   const setSort = useAuthorsStore((state) => state.setSort)
   const deleteAuthor = useAuthorsStore((state) => state.deleteAuthor)
+  const verifyAuthor = useAuthorsStore((state) => state.verifyAuthor)
   const analyzeAuthor = usePhotoAnalysisStore((state) => state.analyzeAuthor)
   const isAnalyzing = usePhotoAnalysisStore((state) => state.isAnalyzing)
 
@@ -200,6 +201,21 @@ export const useAuthorsViewModel = () => {
     [deleteAuthor]
   )
 
+  const handleVerifyAuthor = useCallback(
+    async (author: AuthorCard) => {
+      if (author.isVerified) {
+        return
+      }
+
+      try {
+        await verifyAuthor(author.vkUserId)
+      } catch (error) {
+        console.error('Не удалось отметить автора как проверенного', error)
+      }
+    },
+    [verifyAuthor]
+  )
+
   const emptyTitle =
     statusFilter === 'unverified' ? 'Нет авторов для проверки' : 'Авторы не найдены'
   const emptyDescription =
@@ -229,6 +245,7 @@ export const useAuthorsViewModel = () => {
     handleOpenDetails,
     handleAnalyzePhotos,
     handleDeleteAuthor,
+    handleVerifyAuthor,
     handleSortChange,
   }
 }

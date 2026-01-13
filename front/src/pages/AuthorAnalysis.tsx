@@ -5,7 +5,7 @@ import { AnalysisSummarySection } from '@/modules/authorAnalysis/components/Anal
 import { PhotosSection } from '@/modules/authorAnalysis/components/PhotosSection'
 
 function AuthorAnalysis() {
-  const { author, isAuthorLoading, vkUserId, isValidAuthor } = useAuthorData()
+  const { author, isAuthorLoading, vkUserId, isValidAuthor, handleVerifyAuthor } = useAuthorData()
   const {
     analyses,
     summary,
@@ -28,7 +28,12 @@ function AuthorAnalysis() {
         onDelete={handleDelete}
       />
 
-      <AnalysisSummarySection author={author} summary={summary} isAuthorLoading={isAuthorLoading} />
+      <AnalysisSummarySection
+        author={author}
+        summary={summary}
+        isAuthorLoading={isAuthorLoading}
+        onVerifyAuthor={handleVerifyAuthor}
+      />
 
       <PhotosSection
         analyses={analyses}

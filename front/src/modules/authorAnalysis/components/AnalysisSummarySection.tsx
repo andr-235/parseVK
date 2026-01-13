@@ -10,6 +10,7 @@ interface AnalysisSummarySectionProps {
   author: AuthorDetails | null
   summary: PhotoAnalysisSummary | null
   isAuthorLoading: boolean
+  onVerifyAuthor?: () => void
 }
 
 /**
@@ -20,6 +21,7 @@ export const AnalysisSummarySection = ({
   author,
   summary,
   isAuthorLoading,
+  onVerifyAuthor,
 }: AnalysisSummarySectionProps) => {
   const categories = useMemo(() => summary?.categories ?? [], [summary?.categories])
 
@@ -62,6 +64,12 @@ export const AnalysisSummarySection = ({
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex w-fit items-center gap-2 text-sm text-accent-primary hover:underline"
+                onClick={() => onVerifyAuthor?.()}
+                onAuxClick={(event) => {
+                  if (event.button === 1) {
+                    onVerifyAuthor?.()
+                  }
+                }}
               >
                 Открыть профиль VK
               </a>

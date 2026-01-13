@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 // Использование services для одноразовой операции (загрузка данных автора)
@@ -20,6 +20,7 @@ export const useAuthorData = () => {
 
   const locationState = location.state as AuthorAnalysisLocationState | null
   const markAuthorVerified = useAuthorsStore((state) => state.markAuthorVerified)
+  const verifyAuthor = useAuthorsStore((state) => state.verifyAuthor)
 
   useEffect(() => {
     if (!locationState?.author || author) {
@@ -86,10 +87,24 @@ export const useAuthorData = () => {
     markAuthorVerified(author.vkUserId, author.verifiedAt)
   }, [author?.vkUserId, author?.verifiedAt, markAuthorVerified])
 
+  const handleVerifyAuthor = useCallback(async () => {
+    if (!author || author.verifiedAt) {
+      return
+    }
+
+    try {
+      const verifiedAt = await verifyAuthor(author.vkUserId)
+      setAuthor((prev) => (prev ? { ...prev, verifiedAt, isVerified: true } : prev))
+    } catch (error) {
+      console.error('Не удалось отметить автора как проверенного', error)
+    }
+  }, [author, verifyAuthor])
+
   return {
     author,
     isAuthorLoading,
     vkUserId,
     isValidAuthor,
+    handleVerifyAuthor,
   }
 }

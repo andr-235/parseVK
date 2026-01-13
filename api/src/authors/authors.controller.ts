@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -48,5 +49,12 @@ export class AuthorsController {
   ): Promise<{ deleted: boolean }> {
     await this.authorsService.deleteAuthor(vkUserId);
     return { deleted: true };
+  }
+
+  @Patch(':vkUserId/verify')
+  async verifyAuthor(
+    @Param('vkUserId', ParseIntPipe) vkUserId: number,
+  ): Promise<{ verifiedAt: string }> {
+    return this.authorsService.markAuthorVerified(vkUserId);
   }
 }

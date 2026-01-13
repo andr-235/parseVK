@@ -193,6 +193,19 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
     })
   },
 
+  verifyAuthor: async (vkUserId: number) => {
+    const verifiedAt = await authorsService.verifyAuthor(vkUserId)
+    get().markAuthorVerified(vkUserId, verifiedAt)
+
+    const updatedState = get()
+    const params = buildAuthorsQueryParams(updatedState, updatedState.search.trim())
+    const queryKey = queryKeys.authors.list(params)
+
+    await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
+
+    return verifiedAt
+  },
+
   refreshAuthors: async () => {
     const state = get()
     if (state.isRefreshing) {

@@ -143,6 +143,7 @@ export interface AuthorsState {
   setStatusFilter: (value: 'all' | 'verified' | 'unverified') => void
   setSort: (value: AuthorSortField) => void
   markAuthorVerified: (vkUserId: number, verifiedAt: string | null) => void
+  verifyAuthor: (vkUserId: number) => Promise<string>
   refreshAuthors: () => Promise<void>
   deleteAuthor: (vkUserId: number) => Promise<void>
 }

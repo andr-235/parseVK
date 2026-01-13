@@ -156,4 +156,22 @@ export class AuthorsService {
 
     await this.repository.deleteAuthorAndComments(vkUserId);
   }
+
+  async markAuthorVerified(vkUserId: number): Promise<{ verifiedAt: string }> {
+    const author = await this.repository.findUnique({ vkUserId });
+    if (!author) {
+      throw new NotFoundException(`Автор с VK ID ${vkUserId} не найден`);
+    }
+
+    if (author.verifiedAt) {
+      return { verifiedAt: author.verifiedAt.toISOString() };
+    }
+
+    const verifiedAt = await this.repository.markAuthorVerified(
+      vkUserId,
+      new Date(),
+    );
+
+    return { verifiedAt: verifiedAt.toISOString() };
+  }
 }

@@ -22,6 +22,7 @@ interface AuthorsTableCardProps {
   onOpenDetails: (author: AuthorCard) => void
   onAnalyzePhotos: (author: AuthorCard) => void
   onDeleteAuthor: (author: AuthorCard) => void
+  onVerifyAuthor: (author: AuthorCard) => void
   deletingVkUserId: number | null
   analyzingVkUserId: number | null
   isAnalyzing: boolean
@@ -104,6 +105,7 @@ export function AuthorsTableCard({
   onOpenDetails,
   onAnalyzePhotos,
   onDeleteAuthor,
+  onVerifyAuthor,
   analyzingVkUserId,
   deletingVkUserId,
   isAnalyzing,
@@ -237,7 +239,17 @@ export function AuthorsTableCard({
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[10px] text-primary/80 hover:text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onVerifyAuthor(author)
+                            }}
+                            onAuxClick={(e) => {
+                              if (e.button !== 1) {
+                                return
+                              }
+                              e.stopPropagation()
+                              onVerifyAuthor(author)
+                            }}
                           >
                             VK
                           </a>

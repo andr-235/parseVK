@@ -156,4 +156,20 @@ export const authorsService = {
       throw error
     }
   },
+  async verifyAuthor(vkUserId: number): Promise<string> {
+    try {
+      const response = await createRequest(`${API_URL}/authors/${vkUserId}/verify`, {
+        method: 'PATCH',
+      })
+
+      const data = await handleResponse<{ verifiedAt: string }>(
+        response,
+        'Не удалось отметить автора как проверенного'
+      )
+      return data.verifiedAt
+    } catch (error) {
+      toast.error('Не удалось отметить автора как проверенного')
+      throw error
+    }
+  },
 }
