@@ -132,6 +132,7 @@ export function AuthorsTableCard({
                   Автор
                 </TableSortButton>
               </TableHead>
+              <TableHead className="w-[200px]">Город</TableHead>
               <TableHead>
                 <TableSortButton
                   onClick={() => onSortChange('photosCount')}
@@ -196,7 +197,7 @@ export function AuthorsTableCard({
           <TableBody>
             {isLoading && authors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9}>
+                <TableCell colSpan={10}>
                   <div className="flex w-full justify-center py-12">
                     <Spinner className="h-8 w-8 text-primary/60" />
                   </div>
@@ -241,13 +242,13 @@ export function AuthorsTableCard({
                             VK
                           </a>
                         </div>
-                        {cityLabel ? (
-                          <span className="text-xs text-muted-foreground">Город: {cityLabel}</span>
-                        ) : null}
                       </div>
                     </div>
                   </TableCell>
 
+                  <TableCell className="text-sm text-muted-foreground">
+                    {cityLabel ?? '—'}
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <span className="text-sm font-medium">
@@ -325,7 +326,7 @@ export function AuthorsTableCard({
 
             {showEmptyState ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-[300px]">
+                <TableCell colSpan={10} className="h-[300px]">
                   <div className="flex flex-col items-center justify-center gap-3 text-center">
                     <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
                       <Search className="h-6 w-6 text-muted-foreground/50" />
