@@ -28,6 +28,7 @@ export class AuthorMapper {
     card.domain = author.domain ?? null;
     card.screenName = author.screenName ?? null;
     card.profileUrl = this.buildProfileUrl(author);
+    card.city = (author.city as Record<string, unknown>) ?? null;
     card.summary = normalizedSummary;
     card.photosCount = photosCount;
     card.audiosCount = counters.audios;

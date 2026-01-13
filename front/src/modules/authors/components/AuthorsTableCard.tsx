@@ -77,6 +77,24 @@ const resolveProfileUrl = (author: AuthorCard): string => {
   return `https://vk.com/id${author.vkUserId}`
 }
 
+const resolveCityLabel = (city: AuthorCard['city']): string | null => {
+  if (!city) {
+    return null
+  }
+
+  if (typeof city === 'string') {
+    const trimmed = city.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  const cityRecord = city as { title?: unknown; name?: unknown }
+  const title = typeof cityRecord.title === 'string' ? cityRecord.title.trim() : ''
+  const name = typeof cityRecord.name === 'string' ? cityRecord.name.trim() : ''
+  const resolved = title || name
+
+  return resolved.length > 0 ? resolved : null
+}
+
 export function AuthorsTableCard({
   authors,
   isLoading,
@@ -189,6 +207,7 @@ export function AuthorsTableCard({
             {authors.map((author) => {
               const profileUrl = resolveProfileUrl(author)
               const avatarUrl = author.photo200 ?? author.photo100 ?? author.photo50 ?? undefined
+              const cityLabel = resolveCityLabel(author.city)
 
               return (
                 <TableRow key={author.id} className="group">
@@ -222,6 +241,9 @@ export function AuthorsTableCard({
                             VK
                           </a>
                         </div>
+                        {cityLabel ? (
+                          <span className="text-xs text-muted-foreground">Город: {cityLabel}</span>
+                        ) : null}
                       </div>
                     </div>
                   </TableCell>

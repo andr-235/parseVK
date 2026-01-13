@@ -378,6 +378,7 @@ export interface AuthorCardResponse {
   domain: string | null
   screenName: string | null
   profileUrl: string | null
+  city: Record<string, unknown> | null
   summary: PhotoAnalysisSummary
   photosCount: number | null
   audiosCount: number | null

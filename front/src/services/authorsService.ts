@@ -55,6 +55,7 @@ const mapAuthorCard = (author: AuthorCardResponse): AuthorCard => ({
   domain: author.domain ?? null,
   screenName: author.screenName ?? null,
   profileUrl: author.profileUrl ?? null,
+  city: author.city ?? null,
   summary: normalizeSummary(author.summary),
   photosCount: author.photosCount ?? null,
   audiosCount: author.audiosCount ?? null,
