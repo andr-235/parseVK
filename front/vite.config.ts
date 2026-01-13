@@ -49,27 +49,27 @@ export default defineConfig({
     alias: [
       {
         find: '@/components/ui',
-        replacement: path.resolve(__dirname, './src/shared/ui'),
+        replacement: path.resolve(__dirname, './src/components/ui'),
       },
       {
         find: '@/components',
-        replacement: path.resolve(__dirname, './src/shared/components'),
+        replacement: path.resolve(__dirname, './src/components'),
       },
       {
         find: '@/hooks',
-        replacement: path.resolve(__dirname, './src/shared/hooks'),
+        replacement: path.resolve(__dirname, './src/hooks'),
       },
       {
         find: '@/lib',
-        replacement: path.resolve(__dirname, './src/shared/lib'),
+        replacement: path.resolve(__dirname, './src/lib'),
       },
       {
         find: '@/utils',
-        replacement: path.resolve(__dirname, './src/shared/utils'),
+        replacement: path.resolve(__dirname, './src/utils'),
       },
       {
         find: '@/types',
-        replacement: path.resolve(__dirname, './src/shared/types'),
+        replacement: path.resolve(__dirname, './src/types'),
       },
       {
         find: '@',
