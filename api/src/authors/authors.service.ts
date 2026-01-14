@@ -29,14 +29,15 @@ export class AuthorsService {
     const offset = this.normalizeOffset(options.offset);
     const limit = this.normalizeLimit(options.limit);
     const search = this.normalizeSearch(options.search);
+    const verified = this.normalizeVerified(options.verified as unknown);
     const sort = this.resolveSort(
       options.sortBy,
       options.sortOrder ?? null,
-      options.verified,
+      verified,
     );
     const { sqlConditions } = this.filtersBuilder.buildFilters(
       search,
-      options.verified,
+      verified,
     );
 
     const [total, authors] = await Promise.all([
@@ -114,6 +115,16 @@ export class AuthorsService {
     value: string | null | undefined,
   ): string | null | undefined {
     return value?.trim() || undefined;
+  }
+
+  private normalizeVerified(value: unknown): boolean | undefined {
+    if (value === true || value === 'true' || value === 1 || value === '1') {
+      return true;
+    }
+    if (value === false || value === 'false' || value === 0 || value === '0') {
+      return false;
+    }
+    return undefined;
   }
 
   private normalizeSortField(
