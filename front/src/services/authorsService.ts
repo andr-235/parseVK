@@ -160,6 +160,7 @@ export const authorsService = {
     try {
       const response = await createRequest(`${API_URL}/authors/${vkUserId}/verify`, {
         method: 'PATCH',
+        keepalive: true,
       })
 
       const data = await handleResponse<{ verifiedAt: string }>(

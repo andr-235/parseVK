@@ -22,6 +22,7 @@ export const useAuthorsViewModel = () => {
   const sortOrder = useAuthorsStore((state) => state.sortOrder)
   const setSort = useAuthorsStore((state) => state.setSort)
   const deleteAuthor = useAuthorsStore((state) => state.deleteAuthor)
+  const markAuthorVerified = useAuthorsStore((state) => state.markAuthorVerified)
   const verifyAuthor = useAuthorsStore((state) => state.verifyAuthor)
   const analyzeAuthor = usePhotoAnalysisStore((state) => state.analyzeAuthor)
   const isAnalyzing = usePhotoAnalysisStore((state) => state.isAnalyzing)
@@ -207,13 +208,24 @@ export const useAuthorsViewModel = () => {
         return
       }
 
+      const optimisticVerifiedAt = new Date().toISOString()
+      markAuthorVerified(author.vkUserId, optimisticVerifiedAt)
+
       try {
-        await verifyAuthor(author.vkUserId)
+        const verifiedAt = await verifyAuthor(author.vkUserId)
+        if (verifiedAt && verifiedAt !== optimisticVerifiedAt) {
+          markAuthorVerified(author.vkUserId, verifiedAt)
+        }
       } catch (error) {
         console.error('Не удалось отметить автора как проверенного', error)
+        try {
+          await fetchAuthors({ reset: true })
+        } catch (fetchError) {
+          console.error('Не удалось обновить список авторов после ошибки проверки', fetchError)
+        }
       }
     },
-    [verifyAuthor]
+    [fetchAuthors, markAuthorVerified, verifyAuthor]
   )
 
   const emptyTitle =
