@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -215,7 +222,7 @@ function Login() {
                 />
               </div>
               {error && <div className="text-sm text-destructive">{error}</div>}
-              <div className="flex flex-col gap-2">
+              <CardFooter className="flex flex-col gap-2 px-0 pt-0">
                 <Button className="w-full" type="submit" disabled={isChanging}>
                   {isChanging ? (
                     <>
@@ -235,7 +242,7 @@ function Login() {
                     Вернуться ко входу
                   </Button>
                 )}
-              </div>
+              </CardFooter>
             </form>
           ) : (
             <form className="space-y-5" onSubmit={handleSubmit}>
@@ -266,7 +273,7 @@ function Login() {
                 <p className="text-xs text-muted-foreground">Минимум 8 символов.</p>
               </div>
               {error && <div className="text-sm text-destructive">{error}</div>}
-              <div className="flex flex-col gap-2">
+              <CardFooter className="flex flex-col gap-2 px-0 pt-0">
                 <Button className="w-full" type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
@@ -280,7 +287,7 @@ function Login() {
                 <Button type="button" variant="ghost" onClick={handleSwitchToChangePassword}>
                   Сменить пароль
                 </Button>
-              </div>
+              </CardFooter>
             </form>
           )}
         </CardContent>
