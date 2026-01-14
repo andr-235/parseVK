@@ -33,10 +33,10 @@ export class ListAuthorsQueryDto {
     ) {
       return undefined;
     }
-    if (value === 'true') {
+    if (value === true || value === 'true') {
       return true;
     }
-    if (value === 'false') {
+    if (value === false || value === 'false') {
       return false;
     }
     return undefined;
