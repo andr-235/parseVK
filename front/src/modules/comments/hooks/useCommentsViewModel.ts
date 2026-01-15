@@ -241,11 +241,10 @@ const useCommentsViewModel = () => {
   }, [isLoading, readFilter, showKeywordComments, showKeywordPosts, trimmedSearch])
 
   useEffect(() => {
-    if (comments.length > 0 && !hasKeywords) return
     fetchCommentsCursor({ reset: true, filters: fetchFilters }).catch((error) => {
       console.error('Failed to fetch comments with filters', error)
     })
-  }, [comments.length, fetchCommentsCursor, fetchFilters, hasKeywords])
+  }, [fetchCommentsCursor, fetchFilters])
 
   useEffect(() => {
     if (keywords.length > 0) return
