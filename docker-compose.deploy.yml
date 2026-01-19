@@ -67,21 +67,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      VK_TOKEN: ${VK_TOKEN}
-      CORS_ORIGINS: ${CORS_ORIGINS}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      MONITOR_DATABASE_URL: ${MONITOR_DATABASE_URL}
-      MONITOR_MESSAGES_TABLE: ${MONITOR_MESSAGES_TABLE}
-      MONITOR_MESSAGE_ID_COLUMN: ${MONITOR_MESSAGE_ID_COLUMN}
-      MONITOR_MESSAGE_TEXT_COLUMN: ${MONITOR_MESSAGE_TEXT_COLUMN}
-      MONITOR_MESSAGE_CREATED_AT_COLUMN: ${MONITOR_MESSAGE_CREATED_AT_COLUMN}
-      MONITOR_MESSAGE_AUTHOR_COLUMN: ${MONITOR_MESSAGE_AUTHOR_COLUMN}
-      MONITOR_MESSAGE_CHAT_COLUMN: ${MONITOR_MESSAGE_CHAT_COLUMN}
-      MONITOR_KEYWORDS_TABLE: ${MONITOR_KEYWORDS_TABLE}
-      MONITOR_KEYWORD_WORD_COLUMN: ${MONITOR_KEYWORD_WORD_COLUMN}
+    env_file:
+      - .env
+    networks:
+      - default
+      - monitor_net
     healthcheck:
       test:
         [
@@ -94,9 +84,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    networks:
-      - default
-      - monitor_net
 
   frontend:
     image: ghcr.io/andr-235/parsevk-frontend:latest
