@@ -151,4 +151,40 @@ export class AppConfig {
   @Min(0)
   @IsOptional()
   vkApiCircuitBreakerHalfOpenMaxCalls?: number = 3;
+
+  @IsString()
+  @IsOptional()
+  monitorDatabaseUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorMessagesTable?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorMessageIdColumn?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorMessageTextColumn?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorMessageCreatedAtColumn?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorMessageAuthorColumn?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorMessageChatColumn?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorKeywordsTable?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorKeywordWordColumn?: string;
 }

@@ -169,6 +169,21 @@ export interface IGetCommentsCursorResponse {
   unreadCount: number
 }
 
+export interface IMonitorMessageResponse {
+  id: number | string
+  text: string | null
+  createdAt: string | null
+  author?: string | null
+  chat?: string | null
+}
+
+export interface IMonitorMessagesResponse {
+  items: IMonitorMessageResponse[]
+  total: number
+  usedKeywords: string[]
+  lastSyncAt: string
+}
+
 export interface IParsingTaskGroup {
   groupId: number | string
   groupName: string

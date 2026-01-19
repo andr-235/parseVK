@@ -84,6 +84,16 @@ export function validate(config: Record<string, unknown>): AppConfig {
             10,
           )
         : 3,
+    monitorDatabaseUrl: config.MONITOR_DATABASE_URL,
+    monitorMessagesTable: config.MONITOR_MESSAGES_TABLE || 'messages',
+    monitorMessageIdColumn: config.MONITOR_MESSAGE_ID_COLUMN || 'id',
+    monitorMessageTextColumn: config.MONITOR_MESSAGE_TEXT_COLUMN || 'text',
+    monitorMessageCreatedAtColumn:
+      config.MONITOR_MESSAGE_CREATED_AT_COLUMN || 'created_at',
+    monitorMessageAuthorColumn: config.MONITOR_MESSAGE_AUTHOR_COLUMN,
+    monitorMessageChatColumn: config.MONITOR_MESSAGE_CHAT_COLUMN,
+    monitorKeywordsTable: config.MONITOR_KEYWORDS_TABLE,
+    monitorKeywordWordColumn: config.MONITOR_KEYWORD_WORD_COLUMN,
   });
 
   const errors = validateSync(validatedConfig, {

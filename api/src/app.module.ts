@@ -23,6 +23,7 @@ import { ListingsModule } from './listings/listings.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { AuthModule } from './auth/auth.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 import type { AppConfig } from './config/app.config';
 
 @Module({
@@ -50,6 +51,7 @@ import type { AppConfig } from './config/app.config';
     KeywordsModule,
     TasksModule,
     CommentsModule,
+    MonitoringModule,
     WatchlistModule,
     PhotoAnalysisModule,
     AuthorsModule,

@@ -234,6 +234,20 @@ export class KeywordsService {
     };
   }
 
+  async getKeywordWords(): Promise<string[]> {
+    const keywords = await this.repository.findManyWithSelect({
+      id: true,
+      word: true,
+      isPhrase: true,
+    });
+
+    const normalized = keywords
+      .map((keyword) => keyword.word.trim())
+      .filter((value) => value.length > 0);
+
+    return Array.from(new Set(normalized));
+  }
+
   async recalculateKeywordMatches(): Promise<{
     processed: number;
     updated: number;
