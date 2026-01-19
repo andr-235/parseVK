@@ -18,7 +18,7 @@ export type MonitorMessageRow = {
   author?: string | null;
   chat?: string | null;
   source?: string | null;
-  metadata?: unknown | null;
+  metadata?: unknown;
 };
 
 @Injectable()
