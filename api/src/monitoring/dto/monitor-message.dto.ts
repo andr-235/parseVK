@@ -4,4 +4,7 @@ export interface MonitorMessageDto {
   createdAt: string | null;
   author?: string | null;
   chat?: string | null;
+  source?: string | null;
+  contentUrl?: string | null;
+  contentType?: string | null;
 }

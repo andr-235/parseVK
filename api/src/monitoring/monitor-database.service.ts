@@ -17,6 +17,8 @@ export type MonitorMessageRow = {
   createdAt: Date | string | null;
   author?: string | null;
   chat?: string | null;
+  source?: string | null;
+  metadata?: unknown | null;
 };
 
 @Injectable()
@@ -30,6 +32,7 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
   private readonly createdAtColumn: string;
   private readonly authorColumn?: string;
   private readonly chatColumn?: string;
+  private readonly metadataColumn?: string;
   private readonly keywordsTableName?: string;
   private readonly keywordWordColumn?: string;
 
@@ -68,6 +71,16 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
     });
     this.chatColumn = chatColumn
       ? this.normalizeIdentifier(chatColumn, 'MONITOR_MESSAGE_CHAT_COLUMN')
+      : undefined;
+
+    const metadataColumn = configService.get('monitorMessageMetadataColumn', {
+      infer: true,
+    });
+    this.metadataColumn = metadataColumn
+      ? this.normalizeIdentifier(
+          metadataColumn,
+          'MONITOR_MESSAGE_METADATA_COLUMN',
+        )
       : undefined;
 
     const keywordsTable = configService.get('monitorKeywordsTable', {
@@ -143,7 +156,8 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
     const values: Array<string | number> = [];
     const conditions: string[] = [];
 
-    const tableNames = this.tableNames.map((table) =>
+    const rawTableNames = this.tableNames;
+    const tableNames = rawTableNames.map((table) =>
       this.formatIdentifier(table),
     );
     const idColumn = this.formatIdentifier(this.idColumn);
@@ -154,6 +168,9 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
       : undefined;
     const chatColumn = this.chatColumn
       ? this.formatIdentifier(this.chatColumn)
+      : undefined;
+    const metadataColumn = this.metadataColumn
+      ? this.formatIdentifier(this.metadataColumn)
       : undefined;
 
     params.keywords.forEach((keyword) => {
@@ -178,20 +195,32 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
       selectColumns.push(`${chatColumn} as chat`);
     }
 
+    if (metadataColumn) {
+      selectColumns.push(`${metadataColumn} as metadata`);
+    }
+
     const whereParts = [`${textColumn} IS NOT NULL`];
     if (conditions.length > 0) {
       whereParts.push(`(${conditions.join(' OR ')})`);
     }
 
-    const baseSelect = (tableName: string) =>
-      `SELECT ${selectColumns.join(', ')} FROM ${tableName} WHERE ${whereParts.join(
+    const baseSelect = (tableName: string, sourceName: string) => {
+      const safeSource = sourceName.replace(/'/g, "''");
+      return `SELECT ${selectColumns.join(', ')}, '${safeSource}' as source FROM ${tableName} WHERE ${whereParts.join(
         ' AND ',
       )}`;
+    };
 
     const query =
       tableNames.length === 1
-        ? `${baseSelect(tableNames[0])} ORDER BY ${createdAtColumn} DESC LIMIT $${limitIndex}`
-        : `SELECT * FROM (${tableNames.map(baseSelect).join(' UNION ALL ')}) AS combined ORDER BY "createdAt" DESC LIMIT $${limitIndex}`;
+        ? `${baseSelect(tableNames[0], this.getSourceName(rawTableNames[0]))} ORDER BY ${createdAtColumn} DESC LIMIT $${limitIndex}`
+        : `SELECT * FROM (${tableNames
+            .map((tableName, index) =>
+              baseSelect(tableName, this.getSourceName(rawTableNames[index])),
+            )
+            .join(
+              ' UNION ALL ',
+            )}) AS combined ORDER BY "createdAt" DESC LIMIT $${limitIndex}`;
 
     return this.client.$queryRawUnsafe<MonitorMessageRow[]>(query, ...values);
   }
@@ -244,5 +273,10 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
       .split('.')
       .map((part) => `"${part}"`)
       .join('.');
+  }
+
+  private getSourceName(tableName: string): string {
+    const parts = tableName.split('.');
+    return parts[parts.length - 1] ?? tableName;
   }
 }

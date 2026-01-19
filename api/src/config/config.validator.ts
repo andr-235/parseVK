@@ -92,6 +92,8 @@ export function validate(config: Record<string, unknown>): AppConfig {
       config.MONITOR_MESSAGE_CREATED_AT_COLUMN || 'created_at',
     monitorMessageAuthorColumn: config.MONITOR_MESSAGE_AUTHOR_COLUMN,
     monitorMessageChatColumn: config.MONITOR_MESSAGE_CHAT_COLUMN,
+    monitorMessageMetadataColumn:
+      config.MONITOR_MESSAGE_METADATA_COLUMN || 'metadata',
     monitorKeywordsTable: config.MONITOR_KEYWORDS_TABLE,
     monitorKeywordWordColumn: config.MONITOR_KEYWORD_WORD_COLUMN,
   });

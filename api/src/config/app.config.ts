@@ -182,6 +182,10 @@ export class AppConfig {
 
   @IsString()
   @IsOptional()
+  monitorMessageMetadataColumn?: string;
+
+  @IsString()
+  @IsOptional()
   monitorKeywordsTable?: string;
 
   @IsString()
