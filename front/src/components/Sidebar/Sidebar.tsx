@@ -1,11 +1,12 @@
 import { useMemo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Users, Building, Send, Settings, UserCog, LogOut } from 'lucide-react'
+import { Users, Building, Send, Settings, UserCog, LogOut, Activity } from 'lucide-react'
 import { useSidebarState } from '@/hooks/useSidebarState'
 import { useSidebarData } from '@/hooks/useSidebarData'
 import { useAuthStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import {
+  createMonitoringSubItems,
   createVkSubItems,
   createParsingSubItems,
   PRIMARY_ITEMS_CONFIG,
@@ -38,6 +39,8 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
     () => createVkSubItems(tasksCount, commentsCount, watchlistCount, authorsTotal),
     [tasksCount, commentsCount, watchlistCount, authorsTotal]
   )
+
+  const monitoringSubItems = useMemo(() => createMonitoringSubItems(), [])
 
   const parsingSubItems = useMemo(() => createParsingSubItems(), [])
 
@@ -73,11 +76,17 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
   )
 
   const vkPaths = useMemo(() => vkSubItems.map((item) => item.path), [vkSubItems])
+  const monitoringPaths = useMemo(
+    () => monitoringSubItems.map((item) => item.path),
+    [monitoringSubItems]
+  )
   const parsingPaths = useMemo(() => parsingSubItems.map((item) => item.path), [parsingSubItems])
 
   const isVkActive = isSectionActive(vkPaths)
+  const isMonitoringActive = isSectionActive(monitoringPaths)
   const isParsingActive = isSectionActive(parsingPaths)
   const isVkExpanded = isSectionExpanded('vk')
+  const isMonitoringExpanded = isSectionExpanded('monitoring')
   const isParsingExpanded = isSectionExpanded('parsing')
 
   const handleVkToggle = useCallback(() => {
@@ -86,6 +95,10 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
 
   const handleParsingToggle = useCallback(() => {
     toggleSection('parsing')
+  }, [toggleSection])
+
+  const handleMonitoringToggle = useCallback(() => {
+    toggleSection('monitoring')
   }, [toggleSection])
 
   const handleExpand = useCallback(() => {
@@ -112,6 +125,17 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
             isCollapsed={isCollapsed}
             isActive={isVkActive}
             collapsedLabel="Основное"
+          />
+
+          <SidebarSection
+            title="Мониторинг"
+            icon={<Activity className="h-4 w-4" />}
+            items={monitoringSubItems}
+            isExpanded={isMonitoringExpanded}
+            onToggle={handleMonitoringToggle}
+            isCollapsed={isCollapsed}
+            isActive={isMonitoringActive}
+            collapsedLabel="Мониторинг"
           />
 
           <SidebarSection

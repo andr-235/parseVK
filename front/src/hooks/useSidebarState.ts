@@ -1,13 +1,14 @@
 import { useCallback, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 
-type SectionKey = 'vk' | 'parsing'
+type SectionKey = 'vk' | 'monitoring' | 'parsing'
 
 export const useSidebarState = () => {
   const location = useLocation()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
     vk: true,
+    monitoring: true,
     parsing: false,
   })
 

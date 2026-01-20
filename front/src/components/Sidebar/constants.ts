@@ -17,8 +17,11 @@ export const createVkSubItems = (
     { label: 'Авторы', path: '/authors', badge: formatCount(authorsTotal) },
     { label: 'На карандаше', path: '/watchlist', badge: formatCount(watchlistCount) },
     { label: 'Ключевые слова', path: '/keywords' },
-    { label: 'Мониторинг', path: '/monitoring' },
   ]
+}
+
+export const createMonitoringSubItems = (): SidebarNavItem[] => {
+  return [{ label: 'Мониторинг', path: '/monitoring' }]
 }
 
 export const createParsingSubItems = (): SidebarNavItem[] => {
