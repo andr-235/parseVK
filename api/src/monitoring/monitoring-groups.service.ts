@@ -44,7 +44,7 @@ type MonitoringGroupUpsertArgs = {
   };
   update: {
     name: string;
-    category: string | null;
+    category?: string | null;
   };
 };
 
