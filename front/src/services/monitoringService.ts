@@ -21,6 +21,7 @@ type MonitorGroupsParams = {
   messenger?: MonitoringMessenger
   search?: string
   category?: string
+  sync?: boolean
 }
 
 const buildQuery = (params?: MonitorMessagesParams): string => {
@@ -76,6 +77,10 @@ const buildGroupsQuery = (params?: MonitorGroupsParams): string => {
 
   if (params.category && params.category.trim().length > 0) {
     searchParams.set('category', params.category.trim())
+  }
+
+  if (params.sync) {
+    searchParams.set('sync', 'true')
   }
 
   return searchParams.toString()

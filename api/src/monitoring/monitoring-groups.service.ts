@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { MonitorDatabaseService } from './monitor-database.service';
 import type { MonitorGroupDto } from './dto/monitor-group.dto';
 import type { MonitorGroupsDto } from './dto/monitor-groups.dto';
 import type { CreateMonitorGroupDto } from './dto/create-monitor-group.dto';
 import type { UpdateMonitorGroupDto } from './dto/update-monitor-group.dto';
-import type { MonitoringMessenger } from './types/monitoring-messenger.enum';
+import { MonitoringMessenger } from './types/monitoring-messenger.enum';
 
 type MonitoringGroupWhereInput = {
   messenger?: MonitoringMessenger;
@@ -98,7 +99,12 @@ const normalizeFilter = (value?: string): string | undefined => {
 
 @Injectable()
 export class MonitoringGroupsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(MonitoringGroupsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly monitorDb: MonitorDatabaseService,
+  ) {}
 
   private get monitoringGroup(): MonitoringGroupRepository {
     return (this.prisma as unknown as MonitoringGroupClient).monitoringGroup;
@@ -108,7 +114,12 @@ export class MonitoringGroupsService {
     messenger?: MonitoringMessenger;
     search?: string;
     category?: string;
+    sync?: boolean;
   }): Promise<MonitorGroupsDto> {
+    if (options?.sync && options.messenger === MonitoringMessenger.whatsapp) {
+      await this.syncExternalGroups(options.messenger);
+    }
+
     const search = normalizeFilter(options?.search);
     const category = normalizeFilter(options?.category);
 
@@ -204,5 +215,54 @@ export class MonitoringGroupsService {
   async deleteGroup(id: number): Promise<{ success: boolean; id: number }> {
     await this.monitoringGroup.delete({ where: { id } });
     return { success: true, id };
+  }
+
+  private async syncExternalGroups(
+    messenger: MonitoringMessenger,
+  ): Promise<void> {
+    if (!this.monitorDb.isReady) {
+      return;
+    }
+
+    try {
+      const sources =
+        messenger === MonitoringMessenger.whatsapp
+          ? ['messages']
+          : messenger === MonitoringMessenger.max
+            ? ['messages_max']
+            : undefined;
+      const groups = await this.monitorDb.findGroups({ sources });
+      if (!groups || groups.length === 0) {
+        return;
+      }
+
+      for (const group of groups) {
+        const chatId = normalizeRequiredString(group.chatId);
+        const name = normalizeRequiredString(group.name);
+
+        await this.monitoringGroup.upsert({
+          where: {
+            messenger_chatId: {
+              messenger,
+              chatId,
+            },
+          },
+          create: {
+            messenger,
+            chatId,
+            name,
+            category: null,
+          },
+          update: {
+            name,
+          },
+        });
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Не удалось синхронизировать группы из внешней базы мониторинга.',
+      );
+      this.logger.debug(error instanceof Error ? error.stack : String(error));
+    }
   }
 }

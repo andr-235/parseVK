@@ -17,7 +17,13 @@ import { cn } from '@/lib/utils'
 import { SidebarHeader } from './SidebarHeader'
 import { SidebarSection } from './SidebarSection'
 import { SidebarFooter } from './SidebarFooter'
-import type { SidebarProps, SidebarItem } from './types'
+import type { SidebarNavEntry, SidebarProps, SidebarItem } from './types'
+
+const collectNavPaths = (items: SidebarNavEntry[]): string[] => {
+  return items.flatMap((item) =>
+    'items' in item ? item.items.map((entry) => entry.path) : [item.path]
+  )
+}
 
 export function Sidebar({ title = 'Центр аналитики' }: SidebarProps) {
   const user = useAuthStore((state) => state.user)
@@ -75,12 +81,9 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
     [isAdmin]
   )
 
-  const vkPaths = useMemo(() => vkSubItems.map((item) => item.path), [vkSubItems])
-  const monitoringPaths = useMemo(
-    () => monitoringSubItems.map((item) => item.path),
-    [monitoringSubItems]
-  )
-  const parsingPaths = useMemo(() => parsingSubItems.map((item) => item.path), [parsingSubItems])
+  const vkPaths = useMemo(() => collectNavPaths(vkSubItems), [vkSubItems])
+  const monitoringPaths = useMemo(() => collectNavPaths(monitoringSubItems), [monitoringSubItems])
+  const parsingPaths = useMemo(() => collectNavPaths(parsingSubItems), [parsingSubItems])
 
   const isVkActive = isSectionActive(vkPaths)
   const isMonitoringActive = isSectionActive(monitoringPaths)

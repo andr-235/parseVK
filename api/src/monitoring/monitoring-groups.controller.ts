@@ -30,6 +30,7 @@ export class MonitoringGroupsController {
       messenger: query.messenger,
       search: query.search,
       category: query.category,
+      sync: query.sync,
     });
   }
 

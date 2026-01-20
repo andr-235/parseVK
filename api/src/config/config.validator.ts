@@ -94,6 +94,9 @@ export function validate(config: Record<string, unknown>): AppConfig {
     monitorMessageChatColumn: config.MONITOR_MESSAGE_CHAT_COLUMN,
     monitorMessageMetadataColumn:
       config.MONITOR_MESSAGE_METADATA_COLUMN || 'metadata',
+    monitorGroupsTable: config.MONITOR_GROUPS_TABLE,
+    monitorGroupChatIdColumn: config.MONITOR_GROUP_CHAT_ID_COLUMN,
+    monitorGroupNameColumn: config.MONITOR_GROUP_NAME_COLUMN,
     monitorKeywordsTable: config.MONITOR_KEYWORDS_TABLE,
     monitorKeywordWordColumn: config.MONITOR_KEYWORD_WORD_COLUMN,
   });

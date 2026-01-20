@@ -1,4 +1,4 @@
-import type { SidebarNavItem } from './types'
+import type { SidebarNavEntry } from './types'
 
 export const formatCount = (count: number): string | undefined => {
   return count > 0 ? String(count) : undefined
@@ -9,7 +9,7 @@ export const createVkSubItems = (
   commentsCount: number,
   watchlistCount: number,
   authorsTotal: number
-): SidebarNavItem[] => {
+): SidebarNavEntry[] => {
   return [
     { label: 'Задачи', path: '/tasks', badge: formatCount(tasksCount) },
     { label: 'Группы', path: '/groups' },
@@ -20,16 +20,26 @@ export const createVkSubItems = (
   ]
 }
 
-export const createMonitoringSubItems = (): SidebarNavItem[] => {
+export const createMonitoringSubItems = (): SidebarNavEntry[] => {
   return [
-    { label: 'WhatsApp сообщения', path: '/monitoring/whatsapp' },
-    { label: 'WhatsApp группы', path: '/monitoring/whatsapp/groups' },
-    { label: 'Max сообщения', path: '/monitoring/max' },
-    { label: 'Max группы', path: '/monitoring/max/groups' },
+    {
+      label: 'WhatsApp',
+      items: [
+        { label: 'Группы', path: '/monitoring/whatsapp/groups' },
+        { label: 'Сообщения', path: '/monitoring/whatsapp' },
+      ],
+    },
+    {
+      label: 'Max',
+      items: [
+        { label: 'Группы', path: '/monitoring/max/groups' },
+        { label: 'Сообщения', path: '/monitoring/max' },
+      ],
+    },
   ]
 }
 
-export const createParsingSubItems = (): SidebarNavItem[] => {
+export const createParsingSubItems = (): SidebarNavEntry[] => {
   return [{ label: 'Недвижимость', path: '/listings' }]
 }
 

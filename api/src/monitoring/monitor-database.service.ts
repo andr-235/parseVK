@@ -33,6 +33,9 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
   private readonly authorColumn?: string;
   private readonly chatColumn?: string;
   private readonly metadataColumn?: string;
+  private readonly groupsTableName?: string;
+  private readonly groupChatIdColumn?: string;
+  private readonly groupNameColumn?: string;
   private readonly keywordsTableName?: string;
   private readonly keywordWordColumn?: string;
 
@@ -82,6 +85,45 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
           'MONITOR_MESSAGE_METADATA_COLUMN',
         )
       : undefined;
+
+    const groupsTable = configService.get('monitorGroupsTable', {
+      infer: true,
+    });
+    const groupChatIdColumn = configService.get('monitorGroupChatIdColumn', {
+      infer: true,
+    });
+    const groupNameColumn = configService.get('monitorGroupNameColumn', {
+      infer: true,
+    });
+
+    if (groupsTable) {
+      this.groupsTableName = this.normalizeIdentifier(
+        groupsTable,
+        'MONITOR_GROUPS_TABLE',
+      );
+      const chatIdColumn = groupChatIdColumn ?? 'chat_id';
+      this.groupChatIdColumn = this.normalizeIdentifier(
+        chatIdColumn,
+        'MONITOR_GROUP_CHAT_ID_COLUMN',
+      );
+      const nameColumn = groupNameColumn ?? 'name';
+      this.groupNameColumn = this.normalizeIdentifier(
+        nameColumn,
+        'MONITOR_GROUP_NAME_COLUMN',
+      );
+    } else {
+      const chatIdColumn = groupChatIdColumn ?? 'chat_id';
+      this.groupChatIdColumn = this.normalizeIdentifier(
+        chatIdColumn,
+        'MONITOR_GROUP_CHAT_ID_COLUMN',
+      );
+      if (groupNameColumn) {
+        this.groupNameColumn = this.normalizeIdentifier(
+          groupNameColumn,
+          'MONITOR_GROUP_NAME_COLUMN',
+        );
+      }
+    }
 
     const keywordsTable = configService.get('monitorKeywordsTable', {
       infer: true,
@@ -236,6 +278,145 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
             )}) AS combined ORDER BY "createdAt" DESC LIMIT $${limitIndex} OFFSET $${offsetIndex}`;
 
     return this.client.$queryRawUnsafe<MonitorMessageRow[]>(query, ...values);
+  }
+
+  async findGroups(params?: {
+    sources?: string[];
+  }): Promise<Array<{ chatId: string; name: string }> | null> {
+    if (!this.client) {
+      throw new Error('Monitoring database is not configured.');
+    }
+
+    if (
+      this.groupsTableName &&
+      this.groupChatIdColumn &&
+      this.groupNameColumn
+    ) {
+      const tableName = this.formatIdentifier(this.groupsTableName);
+      const chatIdColumn = this.formatIdentifier(this.groupChatIdColumn);
+      const nameColumn = this.formatIdentifier(this.groupNameColumn);
+      const query = `SELECT DISTINCT ${chatIdColumn}::text as "chatId", ${nameColumn}::text as "name" FROM ${tableName} WHERE ${chatIdColumn} IS NOT NULL AND ${nameColumn} IS NOT NULL`;
+
+      const rows =
+        await this.client.$queryRawUnsafe<
+          Array<{ chatId: string | null; name: string | null }>
+        >(query);
+
+      return this.normalizeGroups(rows);
+    }
+
+    return this.findGroupsFromMessages({ sources: params?.sources });
+  }
+
+  private async findGroupsFromMessages(params?: {
+    sources?: string[];
+  }): Promise<Array<{ chatId: string; name: string }> | null> {
+    if (!this.client) {
+      throw new Error('Monitoring database is not configured.');
+    }
+
+    const rawTableNames = this.resolveSourceTables(params?.sources);
+    if (rawTableNames.length === 0) {
+      return null;
+    }
+
+    if (!this.groupChatIdColumn && !this.metadataColumn) {
+      return null;
+    }
+
+    const tableNames = rawTableNames.map((table) =>
+      this.formatIdentifier(table),
+    );
+    const chatIdColumn = this.groupChatIdColumn
+      ? this.formatIdentifier(this.groupChatIdColumn)
+      : null;
+    const nameColumn = this.groupNameColumn
+      ? this.formatIdentifier(this.groupNameColumn)
+      : null;
+    const metadataColumn = this.metadataColumn
+      ? this.formatIdentifier(this.metadataColumn)
+      : null;
+
+    const chatIdExpressions: string[] = [];
+    if (chatIdColumn) {
+      chatIdExpressions.push(`${chatIdColumn}::text`);
+    }
+    if (metadataColumn) {
+      chatIdExpressions.push(`${metadataColumn}::jsonb->>'chat_id'`);
+      chatIdExpressions.push(`${metadataColumn}::jsonb->>'chatId'`);
+      chatIdExpressions.push(`${metadataColumn}::jsonb->'raw'->>'chat_id'`);
+      chatIdExpressions.push(`${metadataColumn}::jsonb->'raw'->>'chatId'`);
+    }
+
+    const nameExpressions: string[] = [];
+    if (nameColumn) {
+      nameExpressions.push(`${nameColumn}::text`);
+    }
+    if (metadataColumn) {
+      nameExpressions.push(`${metadataColumn}::jsonb->>'chat_name'`);
+      nameExpressions.push(`${metadataColumn}::jsonb->>'chatName'`);
+      nameExpressions.push(`${metadataColumn}::jsonb->>'title'`);
+      nameExpressions.push(`${metadataColumn}::jsonb->'raw'->>'chat_name'`);
+      nameExpressions.push(`${metadataColumn}::jsonb->'raw'->>'chatName'`);
+      nameExpressions.push(`${metadataColumn}::jsonb->'raw'->>'title'`);
+    }
+
+    const chatIdExpr = this.buildCoalescedExpression(chatIdExpressions);
+    const nameExpr = this.buildCoalescedExpression(nameExpressions);
+
+    if (!chatIdExpr || !nameExpr) {
+      return null;
+    }
+
+    const baseSelect = (tableName: string) =>
+      `SELECT ${chatIdExpr} as "chatId", ${nameExpr} as "name" FROM ${tableName}`;
+
+    const query =
+      tableNames.length === 1
+        ? `SELECT DISTINCT "chatId", "name" FROM (${baseSelect(
+            tableNames[0],
+          )}) AS source WHERE "chatId" IS NOT NULL AND "name" IS NOT NULL`
+        : `SELECT DISTINCT "chatId", "name" FROM (${tableNames
+            .map((tableName) => baseSelect(tableName))
+            .join(
+              ' UNION ALL ',
+            )}) AS source WHERE "chatId" IS NOT NULL AND "name" IS NOT NULL`;
+
+    const rows =
+      await this.client.$queryRawUnsafe<
+        Array<{ chatId: string | null; name: string | null }>
+      >(query);
+
+    return this.normalizeGroups(rows);
+  }
+
+  private normalizeGroups(
+    rows: Array<{ chatId: string | null; name: string | null }>,
+  ): Array<{ chatId: string; name: string }> {
+    const normalized = new Map<string, string>();
+    rows.forEach((row) => {
+      const chatId = (row.chatId ?? '').trim();
+      const name = (row.name ?? '').trim();
+      if (chatId.length > 0 && name.length > 0) {
+        normalized.set(chatId, name);
+      }
+    });
+
+    return Array.from(normalized.entries()).map(([chatId, name]) => ({
+      chatId,
+      name,
+    }));
+  }
+
+  private buildCoalescedExpression(expressions: string[]): string | null {
+    const unique = expressions.filter(Boolean);
+    if (unique.length === 0) {
+      return null;
+    }
+    if (unique.length === 1) {
+      return `NULLIF(BTRIM(${unique[0]}), '')`;
+    }
+    return `NULLIF(BTRIM(COALESCE(${unique.join(', ')})), '')`;
   }
 
   async findKeywords(): Promise<string[] | null> {

@@ -2,17 +2,21 @@ import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getSectionButtonClasses } from './utils'
 import { SidebarNavItem } from './SidebarNavItem'
-import type { SidebarNavItem as SidebarNavItemType } from './types'
+import type { SidebarNavEntry, SidebarNavGroup } from './types'
 
 interface SidebarSectionProps {
   title: string
   icon: React.ReactNode
-  items: SidebarNavItemType[]
+  items: SidebarNavEntry[]
   isExpanded: boolean
   onToggle: () => void
   isCollapsed: boolean
   isActive: boolean
   collapsedLabel?: string
+}
+
+const isNavGroup = (item: SidebarNavEntry): item is SidebarNavGroup => {
+  return 'items' in item
 }
 
 export function SidebarSection({
@@ -51,9 +55,22 @@ export function SidebarSection({
 
       {!isCollapsed && isExpanded && (
         <div className="ml-4 space-y-1 mt-1 border-l border-sidebar-border/50 pl-2">
-          {items.map((item) => (
-            <SidebarNavItem key={item.path} item={item} />
-          ))}
+          {items.map((item) =>
+            isNavGroup(item) ? (
+              <div key={item.label} className="space-y-1 pt-2 first:pt-0">
+                <div className="px-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-sidebar-foreground/50">
+                  {item.label}
+                </div>
+                <div className="ml-2 space-y-1">
+                  {item.items.map((subItem) => (
+                    <SidebarNavItem key={subItem.path} item={subItem} />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <SidebarNavItem key={item.path} item={item} />
+            )
+          )}
         </div>
       )}
     </div>

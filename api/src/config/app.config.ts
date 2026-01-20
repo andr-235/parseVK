@@ -186,6 +186,18 @@ export class AppConfig {
 
   @IsString()
   @IsOptional()
+  monitorGroupsTable?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorGroupChatIdColumn?: string;
+
+  @IsString()
+  @IsOptional()
+  monitorGroupNameColumn?: string;
+
+  @IsString()
+  @IsOptional()
   monitorKeywordsTable?: string;
 
   @IsString()

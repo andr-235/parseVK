@@ -6,6 +6,13 @@ export interface SidebarNavItem {
   badge?: string
 }
 
+export interface SidebarNavGroup {
+  label: string
+  items: SidebarNavItem[]
+}
+
+export type SidebarNavEntry = SidebarNavItem | SidebarNavGroup
+
 export interface SidebarItem {
   label: string
   path: string
@@ -16,7 +23,7 @@ export interface SidebarItem {
 export interface SidebarSectionConfig {
   title: string
   icon: ReactNode
-  items: SidebarNavItem[]
+  items: SidebarNavEntry[]
   defaultExpanded?: boolean
 }
 

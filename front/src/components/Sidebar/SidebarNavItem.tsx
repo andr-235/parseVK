@@ -1,13 +1,10 @@
 import { NavLink } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { getNavItemClasses } from './utils'
+import type { SidebarNavItem as SidebarNavItemType } from './types'
 
 interface SidebarNavItemProps {
-  item: {
-    label: string
-    path: string
-    badge?: string
-  }
+  item: SidebarNavItemType
 }
 
 export function SidebarNavItem({ item }: SidebarNavItemProps) {

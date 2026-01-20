@@ -35,7 +35,10 @@ export const useMonitoringGroupsViewModel = ({ messenger }: MonitoringGroupsView
     setIsLoading(true)
     setError(null)
     try {
-      const response = await monitoringService.fetchGroups({ messenger })
+      const response = await monitoringService.fetchGroups({
+        messenger,
+        sync: messenger === 'whatsapp' || messenger === 'max',
+      })
       setGroups(response.items)
       setTotalGroups(response.total)
     } catch (err) {
