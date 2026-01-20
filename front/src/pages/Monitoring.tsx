@@ -37,57 +37,80 @@ function Monitoring() {
   }, [lastUpdatedAt])
 
   return (
-    <div className="flex flex-col gap-8 pb-10 pt-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-1.5">
-          <PageTitle>Мониторинг сообщений</PageTitle>
-          <p className="max-w-2xl text-muted-foreground">
-            Автоматический поиск сообщений по ключевым словам в подключённой базе. Можно задать
-            собственный список ключей вручную.
-          </p>
-        </div>
+    <div className="flex flex-col gap-10 pb-12 pt-6 font-monitoring-body text-text-primary">
+      <Card className="relative overflow-hidden rounded-[28px] border-border/50 bg-[linear-gradient(135deg,rgba(14,165,233,0.12)_0%,rgba(34,197,94,0.08)_40%,rgba(251,191,36,0.1)_100%)] shadow-soft-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-6 dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.9)_0%,rgba(12,74,110,0.45)_40%,rgba(120,53,15,0.35)_100%)]">
+        <div className="pointer-events-none absolute inset-0 opacity-50 [background-image:radial-gradient(circle_at_1px_1px,rgba(148,163,184,0.35)_1px,transparent_0)] [background-size:26px_26px] dark:opacity-20" />
+        <div className="pointer-events-none absolute -right-24 -top-20 h-72 w-72 rounded-full bg-sky-400/25 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 bottom-0 h-64 w-64 rounded-full bg-amber-300/25 blur-3xl" />
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refreshNow()}
-            disabled={isLoading || isRefreshing}
-            className="h-9"
-          >
-            <RefreshCw className={`mr-2 size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Обновить
-          </Button>
-          <Button
-            variant={autoRefresh ? 'default' : 'outline'}
-            size="sm"
-            onClick={toggleAutoRefresh}
-            className="h-9"
-          >
-            {autoRefresh ? (
-              <>
-                <Pause className="mr-2 size-4" />
-                Автообновление
-              </>
-            ) : (
-              <>
-                <Play className="mr-2 size-4" />
-                Автообновление
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+        <CardContent className="relative z-10 flex flex-col gap-6 p-6 md:p-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.4em] text-muted-foreground">
+                Мониторинг
+              </div>
+              <PageTitle className="font-monitoring-display text-3xl sm:text-4xl md:text-5xl">
+                Мониторинг сообщений
+              </PageTitle>
+              <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
+                Автоматический поиск сообщений по ключевым словам в подключённой базе. Можно задать
+                собственный список ключей вручную и быстро сверить обновления.
+              </p>
+            </div>
 
-      <Card className="border-border/60">
-        <CardContent className="flex flex-col gap-4 pt-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end">
-            <div className="flex-1 space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs text-muted-foreground shadow-soft-sm backdrop-blur">
+                <span
+                  className={`size-2 rounded-full ${
+                    autoRefresh
+                      ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)] motion-safe:animate-pulse'
+                      : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]'
+                  }`}
+                />
+                <span>{autoRefresh ? 'Автообновление включено' : 'Автообновление выключено'}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshNow()}
+                disabled={isLoading || isRefreshing}
+                className="h-10 rounded-full border-border/60 bg-background/70 px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary shadow-soft-sm backdrop-blur transition hover:bg-background/90"
+              >
+                <RefreshCw className={`mr-2 size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Обновить
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleAutoRefresh}
+                className={`h-10 rounded-full px-4 text-[11px] font-semibold uppercase tracking-[0.2em] shadow-soft-sm transition ${
+                  autoRefresh
+                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-200'
+                    : 'border-border/60 bg-background/70 text-text-primary hover:bg-background/90'
+                }`}
+              >
+                {autoRefresh ? (
+                  <>
+                    <Pause className="mr-2 size-4" />
+                    Автообновление
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 size-4" />
+                    Автообновление
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Ручной поиск по ключевым словам
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
@@ -97,42 +120,71 @@ function Monitoring() {
                     }
                   }}
                   placeholder="Ключевые слова через запятую или новую строку"
-                  className="pl-9"
+                  className="h-12 rounded-2xl border-border/50 bg-background/70 pl-11 text-sm shadow-soft-sm backdrop-blur"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Подсказка: нажмите Enter, чтобы применить набор ключей.
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={applyManualSearch}>
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <Button
+                size="sm"
+                onClick={applyManualSearch}
+                className="h-11 rounded-2xl bg-gradient-to-r from-sky-500 to-emerald-500 px-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white shadow-soft-md transition hover:from-sky-500/90 hover:to-emerald-500/90"
+              >
                 Применить
               </Button>
-              <Button size="sm" variant="outline" onClick={clearManualSearch}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={clearManualSearch}
+                className="h-11 rounded-2xl border-border/60 bg-background/70 px-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary shadow-soft-sm backdrop-blur transition hover:bg-background/90"
+              >
                 Сброс
               </Button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="secondary" className="bg-muted">
-              Сообщений: {stats.total}
-            </Badge>
-            <Badge variant="secondary" className="bg-muted">
-              Ключей: {stats.usedKeywordsCount}
-            </Badge>
-            <Badge variant="secondary" className="bg-muted">
-              Обновлено: {lastUpdatedLabel}
-            </Badge>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4 shadow-soft-sm backdrop-blur">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
+                Сообщений
+              </p>
+              <p className="mt-2 font-monitoring-display text-3xl">{stats.total}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4 shadow-soft-sm backdrop-blur">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">Ключей</p>
+              <p className="mt-2 font-monitoring-display text-3xl">{stats.usedKeywordsCount}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4 shadow-soft-sm backdrop-blur">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground">
+                Обновлено
+              </p>
+              <p className="mt-2 text-sm font-semibold text-text-primary">{lastUpdatedLabel}</p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {usedKeywords.length > 0 ? (
-              usedKeywords.map((keyword) => (
-                <Badge key={keyword} variant="outline" className="text-xs">
-                  {keyword}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground">Нет активных ключевых слов</span>
-            )}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="uppercase tracking-[0.3em]">Активные ключи</span>
+              <span>{usedKeywords.length ? `${usedKeywords.length} активны` : 'нет'}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {usedKeywords.length > 0 ? (
+                usedKeywords.map((keyword) => (
+                  <Badge
+                    key={keyword}
+                    variant="outline"
+                    className="rounded-full border-border/60 bg-background/70 px-3 py-1 text-[11px] font-semibold text-text-primary shadow-soft-sm backdrop-blur"
+                  >
+                    {keyword}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-xs text-muted-foreground">Нет активных ключевых слов</span>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
