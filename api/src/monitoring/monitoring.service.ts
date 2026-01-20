@@ -115,6 +115,7 @@ export class MonitoringService {
     keywords?: string[];
     limit: number;
     page: number;
+    from?: Date | null;
   }): Promise<MonitorMessagesDto> {
     if (!this.monitorDb.isReady) {
       throw new ServiceUnavailableException(
@@ -128,6 +129,7 @@ export class MonitoringService {
 
     const limit = Math.max(options.limit, 1);
     const page = Math.max(options.page, 1);
+    const from = options.from ?? null;
 
     if (keywords.length === 0) {
       return {
@@ -146,6 +148,7 @@ export class MonitoringService {
       keywords,
       limit: limit + 1,
       offset,
+      from: from ?? undefined,
     });
 
     const hasMore = rows.length > limit;

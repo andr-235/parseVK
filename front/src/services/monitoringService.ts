@@ -7,6 +7,7 @@ type MonitorMessagesParams = {
   keywords?: string[]
   limit?: number
   page?: number
+  from?: string
 }
 
 const buildQuery = (params?: MonitorMessagesParams): string => {
@@ -29,6 +30,10 @@ const buildQuery = (params?: MonitorMessagesParams): string => {
 
   if (typeof params.page === 'number') {
     searchParams.set('page', String(params.page))
+  }
+
+  if (typeof params.from === 'string' && params.from.length > 0) {
+    searchParams.set('from', params.from)
   }
 
   return searchParams.toString()

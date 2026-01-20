@@ -5,7 +5,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useMonitoringViewModel } from '@/modules/monitoring/hooks/useMonitoringViewModel'
+import {
+  MONITORING_TIME_RANGES,
+  useMonitoringViewModel,
+} from '@/modules/monitoring/hooks/useMonitoringViewModel'
 import { MonitoringMessagesCard } from '@/modules/monitoring/components/MonitoringMessagesCard'
 
 function Monitoring() {
@@ -16,6 +19,7 @@ function Monitoring() {
     searchInput,
     setSearchInput,
     usedKeywords,
+    timeRange,
     isLoading,
     isRefreshing,
     isLoadingMore,
@@ -28,6 +32,7 @@ function Monitoring() {
     applyManualSearch,
     clearManualSearch,
     toggleAutoRefresh,
+    changeTimeRange,
     loadMore,
     refreshNow,
   } = useMonitoringViewModel()
@@ -163,6 +168,33 @@ function Monitoring() {
               >
                 Сброс
               </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              Период
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {MONITORING_TIME_RANGES.map((option) => {
+                const isActive = timeRange === option.value
+                return (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => changeTimeRange(option.value)}
+                    className={`h-9 rounded-full px-4 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                      isActive
+                        ? 'border-transparent bg-foreground text-background shadow-soft-sm hover:bg-foreground/90'
+                        : 'border-border/60 bg-background/70 text-text-primary shadow-soft-sm backdrop-blur hover:bg-background/90'
+                    }`}
+                  >
+                    {option.label}
+                  </Button>
+                )
+              })}
             </div>
           </div>
 

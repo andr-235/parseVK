@@ -145,6 +145,7 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
     keywords: string[];
     limit: number;
     offset?: number;
+    from?: Date;
   }): Promise<MonitorMessageRow[]> {
     if (!this.client) {
       throw new Error('Monitoring database is not configured.');
@@ -206,6 +207,10 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
     const whereParts = [`${textColumn} IS NOT NULL`];
     if (conditions.length > 0) {
       whereParts.push(`(${conditions.join(' OR ')})`);
+    }
+    if (params.from) {
+      values.push(params.from);
+      whereParts.push(`${createdAtColumn} >= $${values.length}`);
     }
 
     const baseSelect = (tableName: string, sourceName: string) => {

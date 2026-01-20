@@ -5,6 +5,36 @@ import type { IMonitorMessageResponse } from '@/types/api'
 const POLL_INTERVAL_MS = 15000
 const DEFAULT_LIMIT = 100
 
+export type MonitoringTimeRange = 'day' | 'week' | 'month' | 'quarter' | 'all'
+
+const TIME_RANGE_DAYS: Record<MonitoringTimeRange, number | null> = {
+  day: 1,
+  week: 7,
+  month: 30,
+  quarter: 90,
+  all: null,
+}
+
+export const MONITORING_TIME_RANGES: Array<{
+  value: MonitoringTimeRange
+  label: string
+}> = [
+  { value: 'day', label: 'День' },
+  { value: 'week', label: 'Неделя' },
+  { value: 'month', label: 'Месяц' },
+  { value: 'quarter', label: '3 месяца' },
+  { value: 'all', label: 'Всё время' },
+]
+
+const resolveFromDate = (range: MonitoringTimeRange): string | undefined => {
+  const days = TIME_RANGE_DAYS[range]
+  if (!days) return undefined
+
+  const from = new Date()
+  from.setDate(from.getDate() - days)
+  return from.toISOString()
+}
+
 const parseKeywordsInput = (value: string): string[] | undefined => {
   const tokens = value
     .split(/[,;\n]+/g)
@@ -23,6 +53,7 @@ export const useMonitoringViewModel = () => {
   const [searchInput, setSearchInput] = useState('')
   const [appliedKeywords, setAppliedKeywords] = useState<string[] | undefined>(undefined)
   const [usedKeywords, setUsedKeywords] = useState<string[]>([])
+  const [timeRange, setTimeRange] = useState<MonitoringTimeRange>('month')
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -40,6 +71,7 @@ export const useMonitoringViewModel = () => {
     overrideKeywords?: string[]
     page?: number
     append?: boolean
+    overrideTimeRange?: MonitoringTimeRange
   }
 
   const fetchMessages = useCallback(
@@ -47,9 +79,12 @@ export const useMonitoringViewModel = () => {
       overrideKeywords,
       page: requestedPage = 1,
       append = false,
+      overrideTimeRange,
     }: FetchMessagesOptions = {}) => {
       if (isFetchingRef.current) return
 
+      const activeTimeRange = overrideTimeRange ?? timeRange
+      const from = resolveFromDate(activeTimeRange)
       const isInitial = !hasLoadedRef.current && !append
       isFetchingRef.current = true
       setError(null)
@@ -66,6 +101,7 @@ export const useMonitoringViewModel = () => {
           limit,
           page: requestedPage,
           keywords: overrideKeywords ?? appliedKeywords,
+          from,
         })
 
         setMessages((current) => (append ? [...current, ...response.items] : response.items))
@@ -87,7 +123,7 @@ export const useMonitoringViewModel = () => {
         isFetchingRef.current = false
       }
     },
-    [appliedKeywords, limit]
+    [appliedKeywords, limit, timeRange]
   )
 
   useEffect(() => {
@@ -120,6 +156,16 @@ export const useMonitoringViewModel = () => {
     setAutoRefresh((value) => !value)
   }, [])
 
+  const changeTimeRange = useCallback(
+    (nextRange: MonitoringTimeRange) => {
+      if (nextRange === timeRange) return
+      setTimeRange(nextRange)
+      setPage(1)
+      void fetchMessages({ page: 1, overrideTimeRange: nextRange })
+    },
+    [fetchMessages, timeRange]
+  )
+
   const loadMore = useCallback(() => {
     if (isLoading || isRefreshing || isLoadingMore || !hasMore) return
     void fetchMessages({ page: page + 1, append: true })
@@ -142,6 +188,7 @@ export const useMonitoringViewModel = () => {
     searchInput,
     setSearchInput,
     usedKeywords,
+    timeRange,
     isLoading,
     isRefreshing,
     isLoadingMore,
@@ -154,6 +201,7 @@ export const useMonitoringViewModel = () => {
     applyManualSearch,
     clearManualSearch,
     toggleAutoRefresh,
+    changeTimeRange,
     loadMore,
     refreshNow,
   }

@@ -23,16 +23,19 @@ export class MonitoringController {
     limit: number,
     @Query('page', new DefaultValuePipe(DEFAULT_PAGE), ParseIntPipe)
     page: number,
+    @Query('from') from?: string,
     @Query('keywords') keywordsParam?: string | string[],
   ): Promise<MonitorMessagesDto> {
     const normalizedLimit = this.queryValidator.normalizeLimit(limit);
     const normalizedPage = this.queryValidator.normalizePage(page);
     const keywords = this.queryValidator.parseKeywords(keywordsParam);
+    const fromDate = this.queryValidator.parseFromDate(from);
 
     return this.monitoringService.getMessages({
       limit: normalizedLimit,
       page: normalizedPage,
       keywords,
+      from: fromDate ?? undefined,
     });
   }
 }
