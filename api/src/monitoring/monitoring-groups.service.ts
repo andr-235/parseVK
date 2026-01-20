@@ -116,8 +116,22 @@ export class MonitoringGroupsService {
     category?: string;
     sync?: boolean;
   }): Promise<MonitorGroupsDto> {
-    if (options?.sync && options.messenger === MonitoringMessenger.whatsapp) {
-      await this.syncExternalGroups(options.messenger);
+    if (options?.sync) {
+      if (!options.messenger) {
+        this.logger.warn('Синхронизация групп пропущена: messenger не указан.');
+      } else if (
+        options.messenger === MonitoringMessenger.whatsapp ||
+        options.messenger === MonitoringMessenger.max
+      ) {
+        this.logger.log(
+          `Запрос синхронизации групп: messenger=${options.messenger}`,
+        );
+        await this.syncExternalGroups(options.messenger);
+      } else {
+        this.logger.warn(
+          'Синхронизация групп пропущена: messenger не поддерживается.',
+        );
+      }
     }
 
     const search = normalizeFilter(options?.search);
@@ -221,6 +235,9 @@ export class MonitoringGroupsService {
     messenger: MonitoringMessenger,
   ): Promise<void> {
     if (!this.monitorDb.isReady) {
+      this.logger.warn(
+        `Синхронизация групп пропущена: мониторинг БД не готов (messenger=${messenger}).`,
+      );
       return;
     }
 
@@ -231,11 +248,23 @@ export class MonitoringGroupsService {
           : messenger === MonitoringMessenger.max
             ? ['messages_max']
             : undefined;
+      const sourcesLabel = sources?.join(',') ?? 'auto';
+      this.logger.log(
+        `Синхронизация групп: messenger=${messenger}, sources=${sourcesLabel}`,
+      );
+
       const groups = await this.monitorDb.findGroups({ sources });
       if (!groups || groups.length === 0) {
+        this.logger.warn(
+          `Синхронизация групп: внешние группы не найдены (messenger=${messenger}).`,
+        );
         return;
       }
+      this.logger.log(
+        `Синхронизация групп: найдено ${groups.length} записей (messenger=${messenger}).`,
+      );
 
+      let synced = 0;
       for (const group of groups) {
         const chatId = normalizeRequiredString(group.chatId);
         const name = normalizeRequiredString(group.name);
@@ -257,7 +286,12 @@ export class MonitoringGroupsService {
             name,
           },
         });
+        synced += 1;
       }
+
+      this.logger.log(
+        `Синхронизация групп завершена: сохранено=${synced} (messenger=${messenger}).`,
+      );
     } catch (error) {
       this.logger.warn(
         'Не удалось синхронизировать группы из внешней базы мониторинга.',

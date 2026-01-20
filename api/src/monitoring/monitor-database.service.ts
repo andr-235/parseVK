@@ -293,6 +293,9 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
       this.groupChatIdColumn &&
       this.groupNameColumn
     ) {
+      this.logger.log(
+        `Синхронизация групп: таблица=${this.groupsTableName}, chatId=${this.groupChatIdColumn}, name=${this.groupNameColumn}`,
+      );
       const tableName = this.formatIdentifier(this.groupsTableName);
       const chatIdColumn = this.formatIdentifier(this.groupChatIdColumn);
       const nameColumn = this.formatIdentifier(this.groupNameColumn);
@@ -303,7 +306,11 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
           Array<{ chatId: string | null; name: string | null }>
         >(query);
 
-      return this.normalizeGroups(rows);
+      const normalized = this.normalizeGroups(rows);
+      this.logger.log(
+        `Синхронизация групп: получено ${normalized.length} записей из ${this.groupsTableName}`,
+      );
+      return normalized;
     }
 
     return this.findGroupsFromMessages({ sources: params?.sources });
@@ -318,12 +325,24 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
 
     const rawTableNames = this.resolveSourceTables(params?.sources);
     if (rawTableNames.length === 0) {
+      this.logger.warn('Синхронизация групп: таблицы сообщений не определены.');
       return null;
     }
 
     if (!this.groupChatIdColumn && !this.metadataColumn) {
+      this.logger.warn(
+        'Синхронизация групп: отсутствуют источники chat_id (колонка/metadata).',
+      );
       return null;
     }
+
+    this.logger.log(
+      `Синхронизация групп: таблицы сообщений=${rawTableNames.join(
+        ',',
+      )}, chatId=${this.groupChatIdColumn ?? 'metadata'}, metadata=${
+        this.metadataColumn ?? 'нет'
+      }`,
+    );
 
     const tableNames = rawTableNames.map((table) =>
       this.formatIdentifier(table),
@@ -388,7 +407,11 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
         Array<{ chatId: string | null; name: string | null }>
       >(query);
 
-    return this.normalizeGroups(rows);
+    const normalized = this.normalizeGroups(rows);
+    this.logger.log(
+      `Синхронизация групп: получено ${normalized.length} записей из сообщений`,
+    );
+    return normalized;
   }
 
   private normalizeGroups(
