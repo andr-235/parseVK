@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { MonitoringService } from './monitoring.service';
 import { MonitoringQueryValidator } from './validators/monitoring-query.validator';
-import { DEFAULT_LIMIT } from './monitoring.constants';
+import { DEFAULT_LIMIT, DEFAULT_PAGE } from './monitoring.constants';
 import type { MonitorMessagesDto } from './dto/monitor-messages.dto';
 
 @Controller('monitoring')
@@ -21,13 +21,17 @@ export class MonitoringController {
   async getMessages(
     @Query('limit', new DefaultValuePipe(DEFAULT_LIMIT), ParseIntPipe)
     limit: number,
+    @Query('page', new DefaultValuePipe(DEFAULT_PAGE), ParseIntPipe)
+    page: number,
     @Query('keywords') keywordsParam?: string | string[],
   ): Promise<MonitorMessagesDto> {
     const normalizedLimit = this.queryValidator.normalizeLimit(limit);
+    const normalizedPage = this.queryValidator.normalizePage(page);
     const keywords = this.queryValidator.parseKeywords(keywordsParam);
 
     return this.monitoringService.getMessages({
       limit: normalizedLimit,
+      page: normalizedPage,
       keywords,
     });
   }

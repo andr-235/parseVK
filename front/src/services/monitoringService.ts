@@ -6,6 +6,7 @@ import type { IMonitorMessagesResponse } from '@/types/api'
 type MonitorMessagesParams = {
   keywords?: string[]
   limit?: number
+  page?: number
 }
 
 const buildQuery = (params?: MonitorMessagesParams): string => {
@@ -24,6 +25,10 @@ const buildQuery = (params?: MonitorMessagesParams): string => {
 
   if (typeof params.limit === 'number') {
     searchParams.set('limit', String(params.limit))
+  }
+
+  if (typeof params.page === 'number') {
+    searchParams.set('page', String(params.page))
   }
 
   return searchParams.toString()

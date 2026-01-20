@@ -63,10 +63,15 @@ const parseMetadata = (value: unknown): Record<string, unknown> | null => {
 
 const extractMetadata = (
   value: unknown,
-): { text: string | null; url: string | null; type: string | null } => {
+): {
+  text: string | null;
+  url: string | null;
+  type: string | null;
+  chatName: string | null;
+} => {
   const metadata = parseMetadata(value);
   if (!metadata) {
-    return { text: null, url: null, type: null };
+    return { text: null, url: null, type: null, chatName: null };
   }
 
   const raw = isRecord(metadata.raw) ? metadata.raw : null;
@@ -87,8 +92,16 @@ const extractMetadata = (
     metadata.url,
   );
   const type = pickStringValue(raw?.mimetype, raw?.type, metadata.type);
+  const chatName = pickStringValue(
+    metadata.chat_name,
+    metadata.chatName,
+    raw?.chat_name,
+    raw?.chatName,
+    raw?.chat,
+    raw?.title,
+  );
 
-  return { text, url, type };
+  return { text, url, type, chatName };
 };
 
 @Injectable()
@@ -101,6 +114,7 @@ export class MonitoringService {
   async getMessages(options: {
     keywords?: string[];
     limit: number;
+    page: number;
   }): Promise<MonitorMessagesDto> {
     if (!this.monitorDb.isReady) {
       throw new ServiceUnavailableException(
@@ -112,21 +126,32 @@ export class MonitoringService {
       ? normalizeKeywords(options.keywords)
       : await this.getDefaultKeywords();
 
+    const limit = Math.max(options.limit, 1);
+    const page = Math.max(options.page, 1);
+
     if (keywords.length === 0) {
       return {
         items: [],
         total: 0,
         usedKeywords: [],
         lastSyncAt: new Date().toISOString(),
+        page,
+        limit,
+        hasMore: false,
       };
     }
 
+    const offset = (page - 1) * limit;
     const rows = await this.monitorDb.findMessages({
       keywords,
-      limit: options.limit,
+      limit: limit + 1,
+      offset,
     });
 
-    const items: MonitorMessageDto[] = rows.map((row) => {
+    const hasMore = rows.length > limit;
+    const slicedRows = hasMore ? rows.slice(0, limit) : rows;
+
+    const items: MonitorMessageDto[] = slicedRows.map((row) => {
       const metadata = extractMetadata(row.metadata);
       const text = getStringValue(row.text) ?? metadata.text ?? null;
 
@@ -138,7 +163,7 @@ export class MonitoringService {
         text,
         createdAt: normalizeDate(row.createdAt ?? null),
         author: row.author ?? null,
-        chat: row.chat ?? null,
+        chat: row.chat ?? metadata.chatName ?? null,
         source: row.source ?? null,
         contentUrl: metadata.url ?? null,
         contentType: metadata.type ?? null,
@@ -150,6 +175,9 @@ export class MonitoringService {
       total: items.length,
       usedKeywords: keywords,
       lastSyncAt: new Date().toISOString(),
+      page,
+      limit,
+      hasMore,
     };
   }
 

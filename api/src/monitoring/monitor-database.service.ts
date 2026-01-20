@@ -144,6 +144,7 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
   async findMessages(params: {
     keywords: string[];
     limit: number;
+    offset?: number;
   }): Promise<MonitorMessageRow[]> {
     if (!this.client) {
       throw new Error('Monitoring database is not configured.');
@@ -177,6 +178,9 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
       values.push(`%${keyword}%`);
       conditions.push(`${textColumn} ILIKE $${values.length}`);
     });
+
+    const offsetIndex = values.length + 1;
+    values.push(Math.max(params.offset ?? 0, 0));
 
     const limitIndex = values.length + 1;
     values.push(params.limit);
@@ -213,14 +217,14 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
 
     const query =
       tableNames.length === 1
-        ? `${baseSelect(tableNames[0], this.getSourceName(rawTableNames[0]))} ORDER BY ${createdAtColumn} DESC LIMIT $${limitIndex}`
+        ? `${baseSelect(tableNames[0], this.getSourceName(rawTableNames[0]))} ORDER BY ${createdAtColumn} DESC LIMIT $${limitIndex} OFFSET $${offsetIndex}`
         : `SELECT * FROM (${tableNames
             .map((tableName, index) =>
               baseSelect(tableName, this.getSourceName(rawTableNames[index])),
             )
             .join(
               ' UNION ALL ',
-            )}) AS combined ORDER BY "createdAt" DESC LIMIT $${limitIndex}`;
+            )}) AS combined ORDER BY "createdAt" DESC LIMIT $${limitIndex} OFFSET $${offsetIndex}`;
 
     return this.client.$queryRawUnsafe<MonitorMessageRow[]>(query, ...values);
   }

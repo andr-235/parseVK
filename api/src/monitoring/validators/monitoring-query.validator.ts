@@ -24,6 +24,14 @@ export class MonitoringQueryValidator {
     return Math.min(Math.max(limit, 1), MAX_LIMIT);
   }
 
+  normalizePage(page: number): number {
+    if (!Number.isFinite(page)) {
+      return 1;
+    }
+
+    return Math.max(page, 1);
+  }
+
   normalizeLimitWithDefault(limit?: number): number {
     return this.normalizeLimit(limit ?? DEFAULT_LIMIT);
   }

@@ -16,15 +16,26 @@ function Monitoring() {
     usedKeywords,
     isLoading,
     isRefreshing,
+    isLoadingMore,
     error,
     autoRefresh,
+    page,
+    hasMore,
     lastUpdatedAt,
     stats,
     applyManualSearch,
     clearManualSearch,
     toggleAutoRefresh,
+    loadMore,
     refreshNow,
   } = useMonitoringViewModel()
+
+  const isAutoRefreshActive = autoRefresh && page === 1
+  const autoRefreshLabel = autoRefresh
+    ? page > 1
+      ? 'Автообновление приостановлено'
+      : 'Автообновление включено'
+    : 'Автообновление выключено'
 
   const lastUpdatedLabel = useMemo(() => {
     if (!lastUpdatedAt) return '—'
@@ -62,12 +73,14 @@ function Monitoring() {
               <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs text-muted-foreground shadow-soft-sm backdrop-blur">
                 <span
                   className={`size-2 rounded-full ${
-                    autoRefresh
+                    isAutoRefreshActive
                       ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)] motion-safe:animate-pulse'
-                      : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]'
+                      : autoRefresh
+                        ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]'
+                        : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]'
                   }`}
                 />
-                <span>{autoRefresh ? 'Автообновление включено' : 'Автообновление выключено'}</span>
+                <span>{autoRefreshLabel}</span>
               </div>
               <Button
                 variant="outline"
@@ -193,7 +206,10 @@ function Monitoring() {
         messages={messages}
         isLoading={isLoading}
         isRefreshing={isRefreshing}
+        isLoadingMore={isLoadingMore}
         error={error}
+        hasMore={hasMore}
+        onLoadMore={loadMore}
       />
     </div>
   )

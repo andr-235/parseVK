@@ -185,6 +185,9 @@ export interface IMonitorMessagesResponse {
   total: number
   usedKeywords: string[]
   lastSyncAt: string
+  page: number
+  limit: number
+  hasMore: boolean
 }
 
 export interface IParsingTaskGroup {

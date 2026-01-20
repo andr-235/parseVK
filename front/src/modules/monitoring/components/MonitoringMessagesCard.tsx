@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { IMonitorMessageResponse } from '@/types/api'
 
@@ -7,7 +8,10 @@ interface MonitoringMessagesCardProps {
   messages: IMonitorMessageResponse[]
   isLoading: boolean
   isRefreshing: boolean
+  isLoadingMore: boolean
   error: string | null
+  hasMore: boolean
+  onLoadMore: () => void
 }
 
 const formatFallback = '—'
@@ -45,7 +49,10 @@ export function MonitoringMessagesCard({
   messages,
   isLoading,
   isRefreshing,
+  isLoadingMore,
   error,
+  hasMore,
+  onLoadMore,
 }: MonitoringMessagesCardProps) {
   const formatter = useMemo(
     () =>
@@ -77,11 +84,6 @@ export function MonitoringMessagesCard({
     return sourceLabels[tableName] ?? tableName
   }
 
-  const formatId = (value: string | number) => {
-    if (value === null || value === undefined) return formatFallback
-    return String(value)
-  }
-
   return (
     <Card className="overflow-hidden">
       <CardHeader className="flex flex-col gap-3 border-b border-border/60 bg-muted/20 p-6 md:flex-row md:items-center md:justify-between">
@@ -96,7 +98,7 @@ export function MonitoringMessagesCard({
             variant="outline"
             className="rounded-full border-border/60 bg-background/70 px-3 py-1 text-[11px] font-semibold shadow-soft-sm backdrop-blur"
           >
-            Всего: {messages.length}
+            Показано: {messages.length}
           </Badge>
           {isRefreshing && !isLoading && (
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -147,9 +149,14 @@ export function MonitoringMessagesCard({
                         variant="outline"
                         className="rounded-full border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-200"
                       >
-                        Источник: {formatSource(message.source)}
+                        Площадка: {formatSource(message.source)}
                       </Badge>
-                      <span>Чат: {formatMetaValue(message.chat)}</span>
+                      <Badge
+                        variant="outline"
+                        className="rounded-full border-border/60 bg-background/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary shadow-soft-sm backdrop-blur"
+                      >
+                        Чат: {formatMetaValue(message.chat)}
+                      </Badge>
                       <span>Автор: {formatMetaValue(message.author)}</span>
                     </div>
                     <span>{formatDate(message.createdAt)}</span>
@@ -160,7 +167,6 @@ export function MonitoringMessagesCard({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                    <span className="uppercase tracking-[0.2em]">ID {formatId(message.id)}</span>
                     {contentUrl && (
                       <Badge
                         variant="outline"
@@ -213,6 +219,23 @@ export function MonitoringMessagesCard({
               </div>
             )
           })}
+        {!isLoading && !error && messages.length > 0 && (
+          <div className="flex flex-col items-center gap-3 pt-2">
+            {hasMore ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onLoadMore}
+                disabled={isLoadingMore}
+                className="h-10 rounded-full border-border/60 bg-background/70 px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary shadow-soft-sm backdrop-blur transition hover:bg-background/90"
+              >
+                {isLoadingMore ? 'Загружаем…' : 'Показать ещё'}
+              </Button>
+            ) : (
+              <span className="text-xs text-muted-foreground">Это все найденные сообщения</span>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
