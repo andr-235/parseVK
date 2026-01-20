@@ -61,7 +61,7 @@ function Monitoring() {
     changeTimeRange,
     loadMore,
     refreshNow,
-  } = useMonitoringViewModel({ sources: activeSource.sources })
+  } = useMonitoringViewModel({ sources: [...activeSource.sources] })
 
   const messagesPath = `/monitoring/${activeSourceKey}`
   const groupsPath = `/monitoring/${activeSourceKey}/groups`
