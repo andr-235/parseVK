@@ -25,17 +25,20 @@ export class MonitoringController {
     page: number,
     @Query('from') from?: string,
     @Query('keywords') keywordsParam?: string | string[],
+    @Query('sources') sourcesParam?: string | string[],
   ): Promise<MonitorMessagesDto> {
     const normalizedLimit = this.queryValidator.normalizeLimit(limit);
     const normalizedPage = this.queryValidator.normalizePage(page);
     const keywords = this.queryValidator.parseKeywords(keywordsParam);
     const fromDate = this.queryValidator.parseFromDate(from);
+    const sources = this.queryValidator.parseSources(sourcesParam);
 
     return this.monitoringService.getMessages({
       limit: normalizedLimit,
       page: normalizedPage,
       keywords,
       from: fromDate ?? undefined,
+      sources,
     });
   }
 }

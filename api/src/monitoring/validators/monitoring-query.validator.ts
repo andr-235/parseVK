@@ -33,6 +33,23 @@ export class MonitoringQueryValidator {
     return date;
   }
 
+  parseSources(sources?: string | string[]): string[] | undefined {
+    if (!sources) {
+      return undefined;
+    }
+
+    const values = Array.isArray(sources) ? sources : sources.split(',');
+    const normalized = values
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+
+    if (normalized.length === 0) {
+      return undefined;
+    }
+
+    return Array.from(new Set(normalized));
+  }
+
   normalizeLimit(limit: number): number {
     return Math.min(Math.max(limit, 1), MAX_LIMIT);
   }

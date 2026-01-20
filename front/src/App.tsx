@@ -120,7 +120,8 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/telegram" element={<Telegram />} />
             <Route path="/metrics" element={<Metrics />} />
-            <Route path="/monitoring" element={<Monitoring />} />
+            <Route path="/monitoring" element={<Navigate to="/monitoring/whatsapp" replace />} />
+            <Route path="/monitoring/:sourceKey" element={<Monitoring />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route
               path="/admin/users"

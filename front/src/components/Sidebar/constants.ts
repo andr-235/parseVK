@@ -21,7 +21,10 @@ export const createVkSubItems = (
 }
 
 export const createMonitoringSubItems = (): SidebarNavItem[] => {
-  return [{ label: 'Мониторинг', path: '/monitoring' }]
+  return [
+    { label: 'WhatsApp', path: '/monitoring/whatsapp' },
+    { label: 'Max', path: '/monitoring/max' },
+  ]
 }
 
 export const createParsingSubItems = (): SidebarNavItem[] => {

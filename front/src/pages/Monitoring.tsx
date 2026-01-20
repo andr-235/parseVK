@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { Pause, Play, RefreshCw, Search } from 'lucide-react'
 import PageTitle from '@/components/PageTitle'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +12,22 @@ import {
 } from '@/modules/monitoring/hooks/useMonitoringViewModel'
 import { MonitoringMessagesCard } from '@/modules/monitoring/components/MonitoringMessagesCard'
 
+const MONITORING_SOURCES = {
+  whatsapp: {
+    label: 'WhatsApp',
+    sources: ['messages'],
+  },
+  max: {
+    label: 'Max',
+    sources: ['messages_max'],
+  },
+} as const
+
 function Monitoring() {
+  const { sourceKey } = useParams()
+  const normalizedSourceKey = sourceKey?.toLowerCase()
+  const activeSource =
+    normalizedSourceKey === 'max' ? MONITORING_SOURCES.max : MONITORING_SOURCES.whatsapp
   const [isKeywordsExpanded, setIsKeywordsExpanded] = useState(false)
   const keywordsPreviewCount = 8
   const {
@@ -35,7 +51,7 @@ function Monitoring() {
     changeTimeRange,
     loadMore,
     refreshNow,
-  } = useMonitoringViewModel()
+  } = useMonitoringViewModel({ sources: activeSource.sources })
 
   const isAutoRefreshActive = autoRefresh && page === 1
   const autoRefreshLabel = autoRefresh
@@ -70,10 +86,10 @@ function Monitoring() {
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div className="space-y-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.4em] text-muted-foreground">
-                Мониторинг
+                Мониторинг {activeSource.label}
               </div>
               <PageTitle className="font-monitoring-display text-3xl sm:text-4xl md:text-5xl">
-                Мониторинг сообщений
+                Мониторинг сообщений {activeSource.label}
               </PageTitle>
               <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
                 Автоматический поиск сообщений по ключевым словам в подключённой базе. Можно задать

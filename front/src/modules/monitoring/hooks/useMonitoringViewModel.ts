@@ -48,7 +48,11 @@ const parseKeywordsInput = (value: string): string[] | undefined => {
   return Array.from(new Set(tokens))
 }
 
-export const useMonitoringViewModel = () => {
+type MonitoringViewModelOptions = {
+  sources?: string[]
+}
+
+export const useMonitoringViewModel = ({ sources }: MonitoringViewModelOptions = {}) => {
   const [messages, setMessages] = useState<IMonitorMessageResponse[]>([])
   const [searchInput, setSearchInput] = useState('')
   const [appliedKeywords, setAppliedKeywords] = useState<string[] | undefined>(undefined)
@@ -102,6 +106,7 @@ export const useMonitoringViewModel = () => {
           page: requestedPage,
           keywords: overrideKeywords ?? appliedKeywords,
           from,
+          sources,
         })
 
         setMessages((current) => (append ? [...current, ...response.items] : response.items))
@@ -123,7 +128,7 @@ export const useMonitoringViewModel = () => {
         isFetchingRef.current = false
       }
     },
-    [appliedKeywords, limit, timeRange]
+    [appliedKeywords, limit, sources, timeRange]
   )
 
   useEffect(() => {

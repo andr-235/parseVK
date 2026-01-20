@@ -146,6 +146,7 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
     limit: number;
     offset?: number;
     from?: Date;
+    sources?: string[];
   }): Promise<MonitorMessageRow[]> {
     if (!this.client) {
       throw new Error('Monitoring database is not configured.');
@@ -158,7 +159,10 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
     const values: Array<string | number | Date> = [];
     const conditions: string[] = [];
 
-    const rawTableNames = this.tableNames;
+    const rawTableNames = this.resolveSourceTables(params.sources);
+    if (rawTableNames.length === 0) {
+      return [];
+    }
     const tableNames = rawTableNames.map((table) =>
       this.formatIdentifier(table),
     );
@@ -262,6 +266,31 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
       throw new Error(`Некорректное значение ${label}.`);
     }
     return trimmed;
+  }
+
+  private resolveSourceTables(sources?: string[]): string[] {
+    if (!sources || sources.length === 0) {
+      return this.tableNames;
+    }
+
+    const normalizedSources = sources
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+      .map((value) => value.toLowerCase());
+
+    if (normalizedSources.length === 0) {
+      return this.tableNames;
+    }
+
+    const sourcesSet = new Set(normalizedSources);
+
+    return this.tableNames.filter((tableName) => {
+      const normalizedTable = tableName.toLowerCase();
+      const normalizedSource = this.getSourceName(tableName).toLowerCase();
+      return (
+        sourcesSet.has(normalizedTable) || sourcesSet.has(normalizedSource)
+      );
+    });
   }
 
   private normalizeIdentifierList(value: string, label: string): string[] {
