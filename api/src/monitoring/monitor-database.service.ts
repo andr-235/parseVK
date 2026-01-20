@@ -112,11 +112,12 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
         'MONITOR_GROUP_NAME_COLUMN',
       );
     } else {
-      const chatIdColumn = groupChatIdColumn ?? 'chat_id';
-      this.groupChatIdColumn = this.normalizeIdentifier(
-        chatIdColumn,
-        'MONITOR_GROUP_CHAT_ID_COLUMN',
-      );
+      if (groupChatIdColumn) {
+        this.groupChatIdColumn = this.normalizeIdentifier(
+          groupChatIdColumn,
+          'MONITOR_GROUP_CHAT_ID_COLUMN',
+        );
+      }
       if (groupNameColumn) {
         this.groupNameColumn = this.normalizeIdentifier(
           groupNameColumn,
