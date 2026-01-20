@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
+import type { Keyword } from '@/types'
 import type { IMonitorMessageResponse } from '@/types/api'
 
 interface MonitoringMessagesCardProps {
@@ -12,12 +14,17 @@ interface MonitoringMessagesCardProps {
   error: string | null
   hasMore: boolean
   onLoadMore: () => void
+  usedKeywords: string[]
 }
 
 const formatFallback = '—'
 const sourceLabels: Record<string, string> = {
   messages: 'WhatsApp',
   messages_max: 'Max',
+}
+const sourceLogos: Record<string, { src: string; label: string }> = {
+  whatsapp: { src: '/WhatsApp.svg', label: 'WhatsApp' },
+  max: { src: '/Логотип_MAX.svg', label: 'Max' },
 }
 const contentKindLabels: Record<string, string> = {
   image: 'Изображение',
@@ -53,7 +60,14 @@ export function MonitoringMessagesCard({
   error,
   hasMore,
   onLoadMore,
+  usedKeywords,
 }: MonitoringMessagesCardProps) {
+  const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({})
+  const observerTargetRef = useRef<HTMLDivElement>(null)
+  const onLoadMoreRef = useRef(onLoadMore)
+  const hasMoreRef = useRef(hasMore)
+  const isBusyRef = useRef(isLoading || isRefreshing || isLoadingMore)
+
   const formatter = useMemo(
     () =>
       new Intl.DateTimeFormat('ru-RU', {
@@ -62,6 +76,18 @@ export function MonitoringMessagesCard({
       }),
     []
   )
+
+  const highlightKeywordEntries = useMemo<Keyword[]>(() => {
+    const unique = Array.from(
+      new Set(usedKeywords.map((value) => value.trim()).filter((value) => value.length > 0))
+    )
+
+    return unique.map((word, index) => ({
+      id: index + 1,
+      word,
+      isPhrase: /\s/.test(word),
+    }))
+  }, [usedKeywords])
 
   const formatDate = (value: string | null) => {
     if (!value) return formatFallback
@@ -82,6 +108,72 @@ export function MonitoringMessagesCard({
     if (trimmed.length === 0) return formatFallback
     const tableName = trimmed.split('.').pop() ?? trimmed
     return sourceLabels[tableName] ?? tableName
+  }
+
+  const resolveSourceVisual = (value?: string | null) => {
+    const label = formatSource(value)
+    const key = label.toLowerCase()
+    const logo = sourceLogos[key]
+    return { label, logo }
+  }
+
+  useEffect(() => {
+    onLoadMoreRef.current = onLoadMore
+    hasMoreRef.current = hasMore
+    isBusyRef.current = isLoading || isRefreshing || isLoadingMore
+  }, [hasMore, isLoading, isLoadingMore, isRefreshing, onLoadMore])
+
+  useEffect(() => {
+    if (isLoading || isRefreshing || isLoadingMore || !hasMore) return
+
+    const target = observerTargetRef.current
+    if (!target) return
+
+    const timeoutId = setTimeout(() => {
+      const rect = target.getBoundingClientRect()
+      const isInViewport = rect.top < window.innerHeight + 200
+
+      if (isInViewport && hasMoreRef.current && !isBusyRef.current) {
+        onLoadMoreRef.current()
+      }
+    }, 100)
+
+    return () => clearTimeout(timeoutId)
+  }, [hasMore, isLoading, isLoadingMore, isRefreshing, messages.length])
+
+  useEffect(() => {
+    if (isLoading || isRefreshing || isLoadingMore || !hasMore) return
+
+    const target = observerTargetRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreRef.current && !isBusyRef.current) {
+          onLoadMoreRef.current()
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    )
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [hasMore, isLoading, isLoadingMore, isRefreshing])
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      setExpandedMessages({})
+    }
+  }, [messages.length])
+
+  const toggleExpanded = (messageId: string) => {
+    setExpandedMessages((current) => ({
+      ...current,
+      [messageId]: !current[messageId],
+    }))
   }
 
   return (
@@ -134,10 +226,17 @@ export function MonitoringMessagesCard({
             const contentBadgeStyle =
               contentKindBadgeStyles[contentKind] ?? contentKindBadgeStyles.link
             const delay = Math.min(index, 6) * 80
+            const sourceVisual = resolveSourceVisual(message.source)
+            const messageId = String(message.id)
+            const isExpanded = Boolean(expandedMessages[messageId])
+            const shouldToggleText =
+              hasText &&
+              ((message.text?.length ?? 0) > 140 || (message.text?.includes('\n') ?? false))
+            const shouldClampText = shouldToggleText && !isExpanded
 
             return (
               <div
-                key={String(message.id)}
+                key={messageId}
                 className="group relative overflow-hidden rounded-2xl border border-border/60 bg-background/70 p-4 shadow-soft-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-soft-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4"
                 style={{ animationDelay: `${delay}ms` }}
               >
@@ -148,8 +247,19 @@ export function MonitoringMessagesCard({
                       <Badge
                         variant="outline"
                         className="rounded-full border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-200"
+                        title={sourceVisual.label}
+                        aria-label={`Площадка: ${sourceVisual.label}`}
                       >
-                        Площадка: {formatSource(message.source)}
+                        {sourceVisual.logo ? (
+                          <img
+                            src={sourceVisual.logo.src}
+                            alt={sourceVisual.logo.label}
+                            className="h-4 w-auto"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span>{sourceVisual.label}</span>
+                        )}
                       </Badge>
                       <Badge
                         variant="outline"
@@ -162,9 +272,28 @@ export function MonitoringMessagesCard({
                     <span>{formatDate(message.createdAt)}</span>
                   </div>
 
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-                    {hasText ? message.text : !contentUrl ? 'Сообщение без текста' : null}
+                  <div
+                    className={`whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 ${
+                      shouldClampText ? 'line-clamp-4' : ''
+                    }`}
+                  >
+                    {hasText
+                      ? highlightKeywords(message.text ?? '', highlightKeywordEntries)
+                      : !contentUrl
+                        ? 'Сообщение без текста'
+                        : null}
                   </div>
+                  {shouldToggleText && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleExpanded(messageId)}
+                      className="h-8 px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-text-primary"
+                    >
+                      {isExpanded ? 'Свернуть текст' : 'Развернуть текст'}
+                    </Button>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                     {contentUrl && (
@@ -221,6 +350,7 @@ export function MonitoringMessagesCard({
           })}
         {!isLoading && !error && messages.length > 0 && (
           <div className="flex flex-col items-center gap-3 pt-2">
+            <div ref={observerTargetRef} className="h-1 w-full" />
             {hasMore ? (
               <Button
                 variant="outline"

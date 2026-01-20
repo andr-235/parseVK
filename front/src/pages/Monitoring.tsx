@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Pause, Play, RefreshCw, Search } from 'lucide-react'
 import PageTitle from '@/components/PageTitle'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +9,8 @@ import { useMonitoringViewModel } from '@/modules/monitoring/hooks/useMonitoring
 import { MonitoringMessagesCard } from '@/modules/monitoring/components/MonitoringMessagesCard'
 
 function Monitoring() {
+  const [isKeywordsExpanded, setIsKeywordsExpanded] = useState(false)
+  const keywordsPreviewCount = 8
   const {
     messages,
     searchInput,
@@ -46,6 +48,11 @@ function Monitoring() {
       timeStyle: 'short',
     }).format(date)
   }, [lastUpdatedAt])
+
+  const visibleKeywords = isKeywordsExpanded
+    ? usedKeywords
+    : usedKeywords.slice(0, keywordsPreviewCount)
+  const hiddenKeywordsCount = Math.max(usedKeywords.length - visibleKeywords.length, 0)
 
   return (
     <div className="flex flex-col gap-10 pb-12 pt-6 font-monitoring-body text-text-primary">
@@ -184,8 +191,8 @@ function Monitoring() {
               <span>{usedKeywords.length ? `${usedKeywords.length} активны` : 'нет'}</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {usedKeywords.length > 0 ? (
-                usedKeywords.map((keyword) => (
+              {visibleKeywords.length > 0 ? (
+                visibleKeywords.map((keyword) => (
                   <Badge
                     key={keyword}
                     variant="outline"
@@ -198,6 +205,19 @@ function Monitoring() {
                 <span className="text-xs text-muted-foreground">Нет активных ключевых слов</span>
               )}
             </div>
+            {hiddenKeywordsCount > 0 && (
+              <div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsKeywordsExpanded((value) => !value)}
+                  className="h-8 px-2 text-xs font-semibold text-text-primary"
+                >
+                  {isKeywordsExpanded ? 'Свернуть список' : `Показать ещё ${hiddenKeywordsCount}`}
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -210,6 +230,7 @@ function Monitoring() {
         error={error}
         hasMore={hasMore}
         onLoadMore={loadMore}
+        usedKeywords={usedKeywords}
       />
     </div>
   )
