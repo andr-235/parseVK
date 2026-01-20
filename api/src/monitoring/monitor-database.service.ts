@@ -155,7 +155,7 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
       return [];
     }
 
-    const values: Array<string | number> = [];
+    const values: Array<string | number | Date> = [];
     const conditions: string[] = [];
 
     const rawTableNames = this.tableNames;
