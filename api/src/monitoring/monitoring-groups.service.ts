@@ -1,0 +1,208 @@
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma.service';
+import type { MonitorGroupDto } from './dto/monitor-group.dto';
+import type { MonitorGroupsDto } from './dto/monitor-groups.dto';
+import type { CreateMonitorGroupDto } from './dto/create-monitor-group.dto';
+import type { UpdateMonitorGroupDto } from './dto/update-monitor-group.dto';
+import type { MonitoringMessenger } from './types/monitoring-messenger.enum';
+
+type MonitoringGroupWhereInput = {
+  messenger?: MonitoringMessenger;
+  category?: {
+    equals: string;
+    mode: 'insensitive';
+  };
+  OR?: Array<{
+    name?: { contains: string; mode: 'insensitive' };
+    chatId?: { contains: string; mode: 'insensitive' };
+    category?: { contains: string; mode: 'insensitive' };
+  }>;
+};
+
+type MonitoringGroupFindManyArgs = {
+  where?: MonitoringGroupWhereInput;
+  orderBy?: { name: 'asc' | 'desc' };
+};
+
+type MonitoringGroupCountArgs = {
+  where?: MonitoringGroupWhereInput;
+};
+
+type MonitoringGroupUpsertArgs = {
+  where: {
+    messenger_chatId: {
+      messenger: MonitoringMessenger;
+      chatId: string;
+    };
+  };
+  create: {
+    messenger: MonitoringMessenger;
+    chatId: string;
+    name: string;
+    category: string | null;
+  };
+  update: {
+    name: string;
+    category: string | null;
+  };
+};
+
+type MonitoringGroupUpdateInput = {
+  chatId?: string;
+  name?: string;
+  category?: string | null;
+  messenger?: MonitoringMessenger;
+};
+
+type MonitoringGroupUpdateArgs = {
+  where: { id: number };
+  data: MonitoringGroupUpdateInput;
+};
+
+type MonitoringGroupDeleteArgs = {
+  where: { id: number };
+};
+
+type MonitoringGroupRepository = {
+  findMany: (args: MonitoringGroupFindManyArgs) => Promise<MonitorGroupDto[]>;
+  count: (args: MonitoringGroupCountArgs) => Promise<number>;
+  upsert: (args: MonitoringGroupUpsertArgs) => Promise<MonitorGroupDto>;
+  update: (args: MonitoringGroupUpdateArgs) => Promise<MonitorGroupDto>;
+  delete: (args: MonitoringGroupDeleteArgs) => Promise<MonitorGroupDto>;
+};
+
+type MonitoringGroupClient = {
+  monitoringGroup: MonitoringGroupRepository;
+};
+
+const normalizeRequiredString = (value: string): string => value.trim();
+
+const normalizeOptionalString = (
+  value: string | null | undefined,
+): string | null | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeFilter = (value?: string): string | undefined => {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+@Injectable()
+export class MonitoringGroupsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private get monitoringGroup(): MonitoringGroupRepository {
+    return (this.prisma as unknown as MonitoringGroupClient).monitoringGroup;
+  }
+
+  async getGroups(options?: {
+    messenger?: MonitoringMessenger;
+    search?: string;
+    category?: string;
+  }): Promise<MonitorGroupsDto> {
+    const search = normalizeFilter(options?.search);
+    const category = normalizeFilter(options?.category);
+
+    const where: MonitoringGroupWhereInput = {
+      ...(options?.messenger ? { messenger: options.messenger } : {}),
+      ...(category
+        ? {
+            category: {
+              equals: category,
+              mode: 'insensitive',
+            },
+          }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { chatId: { contains: search, mode: 'insensitive' } },
+              { category: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      this.monitoringGroup.findMany({
+        where,
+        orderBy: { name: 'asc' },
+      }),
+      this.monitoringGroup.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  createGroup(dto: CreateMonitorGroupDto): Promise<MonitorGroupDto> {
+    const chatId = normalizeRequiredString(dto.chatId);
+    const name = normalizeRequiredString(dto.name);
+    const category = normalizeOptionalString(dto.category) ?? null;
+
+    return this.monitoringGroup.upsert({
+      where: {
+        messenger_chatId: {
+          messenger: dto.messenger,
+          chatId,
+        },
+      },
+      create: {
+        messenger: dto.messenger,
+        chatId,
+        name,
+        category,
+      },
+      update: {
+        name,
+        category,
+      },
+    });
+  }
+
+  updateGroup(
+    id: number,
+    dto: UpdateMonitorGroupDto,
+  ): Promise<MonitorGroupDto> {
+    const data: MonitoringGroupUpdateInput = {};
+
+    if (dto.chatId !== undefined) {
+      data.chatId = normalizeRequiredString(dto.chatId);
+    }
+
+    if (dto.name !== undefined) {
+      data.name = normalizeRequiredString(dto.name);
+    }
+
+    if (dto.category !== undefined) {
+      data.category = normalizeOptionalString(dto.category);
+    }
+
+    if (dto.messenger !== undefined) {
+      data.messenger = dto.messenger;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('Нет данных для обновления группы.');
+    }
+
+    return this.monitoringGroup.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async deleteGroup(id: number): Promise<{ success: boolean; id: number }> {
+    await this.monitoringGroup.delete({ where: { id } });
+    return { success: true, id };
+  }
+}

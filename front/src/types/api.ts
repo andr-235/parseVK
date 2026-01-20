@@ -190,6 +190,28 @@ export interface IMonitorMessagesResponse {
   hasMore: boolean
 }
 
+export type MonitoringMessenger = 'whatsapp' | 'max'
+
+export interface IMonitorGroupResponse {
+  id: number
+  messenger: MonitoringMessenger
+  chatId: string
+  name: string
+  category?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface IMonitorGroupsResponse {
+  items: IMonitorGroupResponse[]
+  total: number
+}
+
+export interface IMonitorGroupDeleteResponse {
+  success: boolean
+  id: number
+}
+
 export interface IParsingTaskGroup {
   groupId: number | string
   groupName: string

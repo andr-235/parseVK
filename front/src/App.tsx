@@ -20,6 +20,7 @@ const Listings = lazy(() => import('@/pages/Listings'))
 const Telegram = lazy(() => import('@/pages/Telegram'))
 const Metrics = lazy(() => import('@/pages/Metrics'))
 const Monitoring = lazy(() => import('@/pages/Monitoring'))
+const MonitoringGroups = lazy(() => import('@/pages/MonitoringGroups'))
 const Login = lazy(() => import('@/pages/Login'))
 const AdminUsers = lazy(() => import('@/pages/AdminUsers'))
 const ChangePassword = lazy(() => import('@/pages/ChangePassword'))
@@ -122,6 +123,7 @@ function App() {
             <Route path="/metrics" element={<Metrics />} />
             <Route path="/monitoring" element={<Navigate to="/monitoring/whatsapp" replace />} />
             <Route path="/monitoring/:sourceKey" element={<Monitoring />} />
+            <Route path="/monitoring/:sourceKey/groups" element={<MonitoringGroups />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route
               path="/admin/users"

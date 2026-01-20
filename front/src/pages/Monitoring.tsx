@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { NavLink, useParams } from 'react-router-dom'
 import { Pause, Play, RefreshCw, Search } from 'lucide-react'
 import PageTitle from '@/components/PageTitle'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import {
   MONITORING_TIME_RANGES,
   useMonitoringViewModel,
@@ -23,11 +24,20 @@ const MONITORING_SOURCES = {
   },
 } as const
 
+const getNavButtonClasses = (isActive: boolean) =>
+  cn(
+    'inline-flex h-9 items-center justify-center rounded-full border px-4 text-[11px] font-semibold uppercase tracking-[0.2em] transition',
+    isActive
+      ? 'border-transparent bg-foreground text-background shadow-soft-sm'
+      : 'border-border/60 bg-background/70 text-text-primary shadow-soft-sm backdrop-blur hover:bg-background/90'
+  )
+
 function Monitoring() {
   const { sourceKey } = useParams()
   const normalizedSourceKey = sourceKey?.toLowerCase()
   const activeSource =
     normalizedSourceKey === 'max' ? MONITORING_SOURCES.max : MONITORING_SOURCES.whatsapp
+  const activeSourceKey = normalizedSourceKey === 'max' ? 'max' : 'whatsapp'
   const [isKeywordsExpanded, setIsKeywordsExpanded] = useState(false)
   const keywordsPreviewCount = 8
   const {
@@ -52,6 +62,9 @@ function Monitoring() {
     loadMore,
     refreshNow,
   } = useMonitoringViewModel({ sources: activeSource.sources })
+
+  const messagesPath = `/monitoring/${activeSourceKey}`
+  const groupsPath = `/monitoring/${activeSourceKey}/groups`
 
   const isAutoRefreshActive = autoRefresh && page === 1
   const autoRefreshLabel = autoRefresh
@@ -97,51 +110,67 @@ function Monitoring() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs text-muted-foreground shadow-soft-sm backdrop-blur">
-                <span
-                  className={`size-2 rounded-full ${
-                    isAutoRefreshActive
-                      ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)] motion-safe:animate-pulse'
-                      : autoRefresh
-                        ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]'
-                        : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]'
-                  }`}
-                />
-                <span>{autoRefreshLabel}</span>
+            <div className="flex flex-col gap-3 md:items-end">
+              <div className="flex flex-wrap items-center gap-2">
+                <NavLink
+                  to={messagesPath}
+                  className={({ isActive }) => getNavButtonClasses(isActive)}
+                >
+                  Сообщения
+                </NavLink>
+                <NavLink
+                  to={groupsPath}
+                  className={({ isActive }) => getNavButtonClasses(isActive)}
+                >
+                  Группы
+                </NavLink>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refreshNow()}
-                disabled={isLoading || isRefreshing}
-                className="h-10 rounded-full border-border/60 bg-background/70 px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary shadow-soft-sm backdrop-blur transition hover:bg-background/90"
-              >
-                <RefreshCw className={`mr-2 size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Обновить
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleAutoRefresh}
-                className={`h-10 rounded-full px-4 text-[11px] font-semibold uppercase tracking-[0.2em] shadow-soft-sm transition ${
-                  autoRefresh
-                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-200'
-                    : 'border-border/60 bg-background/70 text-text-primary hover:bg-background/90'
-                }`}
-              >
-                {autoRefresh ? (
-                  <>
-                    <Pause className="mr-2 size-4" />
-                    Автообновление
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 size-4" />
-                    Автообновление
-                  </>
-                )}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs text-muted-foreground shadow-soft-sm backdrop-blur">
+                  <span
+                    className={`size-2 rounded-full ${
+                      isAutoRefreshActive
+                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)] motion-safe:animate-pulse'
+                        : autoRefresh
+                          ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]'
+                          : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]'
+                    }`}
+                  />
+                  <span>{autoRefreshLabel}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refreshNow()}
+                  disabled={isLoading || isRefreshing}
+                  className="h-10 rounded-full border-border/60 bg-background/70 px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-text-primary shadow-soft-sm backdrop-blur transition hover:bg-background/90"
+                >
+                  <RefreshCw className={`mr-2 size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Обновить
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleAutoRefresh}
+                  className={`h-10 rounded-full px-4 text-[11px] font-semibold uppercase tracking-[0.2em] shadow-soft-sm transition ${
+                    autoRefresh
+                      ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-200'
+                      : 'border-border/60 bg-background/70 text-text-primary hover:bg-background/90'
+                  }`}
+                >
+                  {autoRefresh ? (
+                    <>
+                      <Pause className="mr-2 size-4" />
+                      Автообновление
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 size-4" />
+                      Автообновление
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
 

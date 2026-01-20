@@ -22,8 +22,10 @@ export const createVkSubItems = (
 
 export const createMonitoringSubItems = (): SidebarNavItem[] => {
   return [
-    { label: 'WhatsApp', path: '/monitoring/whatsapp' },
-    { label: 'Max', path: '/monitoring/max' },
+    { label: 'WhatsApp сообщения', path: '/monitoring/whatsapp' },
+    { label: 'WhatsApp группы', path: '/monitoring/whatsapp/groups' },
+    { label: 'Max сообщения', path: '/monitoring/max' },
+    { label: 'Max группы', path: '/monitoring/max/groups' },
   ]
 }
 

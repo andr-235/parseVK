@@ -57,6 +57,11 @@ enum UserRole {
   user
 }
 
+enum MonitoringMessenger {
+  whatsapp
+  max
+}
+
 model Task {
   id             Int      @id @default(autoincrement())
   title          String
@@ -324,6 +329,20 @@ model Keyword {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   commentKeywordMatches CommentKeywordMatch[]
+}
+
+model MonitoringGroup {
+  id        Int                 @id @default(autoincrement())
+  messenger MonitoringMessenger
+  chatId    String
+  name      String
+  category  String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([messenger, chatId])
+  @@index([messenger])
+  @@index([category])
 }
 
 model CommentKeywordMatch {
