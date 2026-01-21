@@ -54,6 +54,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      MONITOR_DATABASE_URL: ${MONITOR_DATABASE_URL:-}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.parsevk-api.rule=Host(`192.168.88.12`) && PathPrefix(`/api`)"

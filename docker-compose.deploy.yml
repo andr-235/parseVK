@@ -69,6 +69,8 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      MONITOR_DATABASE_URL: ${MONITOR_DATABASE_URL:-}
     networks:
       - default
       - monitor_net

@@ -8,6 +8,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import type { AppConfig } from './config/app.config';
 import type { CorsOptionsDelegate } from '@nestjs/common/interfaces/external/cors-options.interface';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   try {
@@ -19,6 +20,7 @@ async function bootstrap() {
 
     // Security headers
     app.use(helmet());
+    app.use(cookieParser());
 
     app.use(json({ limit: '2mb' }));
     app.use(urlencoded({ limit: '2mb', extended: true }));
