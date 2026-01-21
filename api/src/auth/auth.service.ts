@@ -23,11 +23,7 @@ export class AuthService {
 
   async login(username: string, password: string): Promise<AuthResponse> {
     const user = await this.validateUser(username, password);
-    const tokens = await this.issueTokens(user);
-    await this.usersService.updateRefreshTokenHash(
-      user.id,
-      tokens.refreshToken,
-    );
+    const tokens = await this.issueAndStoreTokens(user);
     return this.buildAuthResponse(user, tokens);
   }
 
@@ -35,21 +31,8 @@ export class AuthService {
     userId: number,
     refreshToken: string,
   ): Promise<AuthResponse> {
-    const user = await this.usersService.findById(userId);
-    if (!user || !user.refreshTokenHash) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
-    if (!matches) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    const tokens = await this.issueTokens(user);
-    await this.usersService.updateRefreshTokenHash(
-      user.id,
-      tokens.refreshToken,
-    );
+    const user = await this.validateRefreshToken(userId, refreshToken);
+    const tokens = await this.issueAndStoreTokens(user);
     return this.buildAuthResponse(user, tokens);
   }
 
@@ -81,12 +64,7 @@ export class AuthService {
       false,
     );
 
-    const tokens = await this.issueTokens(updatedUser);
-    await this.usersService.updateRefreshTokenHash(
-      updatedUser.id,
-      tokens.refreshToken,
-    );
-
+    const tokens = await this.issueAndStoreTokens(updatedUser);
     return this.buildAuthResponse(updatedUser, tokens);
   }
 
@@ -105,6 +83,32 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  private async validateRefreshToken(
+    userId: number,
+    refreshToken: string,
+  ): Promise<UserAuthRecord> {
+    const user = await this.usersService.findById(userId);
+    if (!user || !user.refreshTokenHash) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+    if (!matches) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return user;
+  }
+
+  private async issueAndStoreTokens(user: UserAuthRecord): Promise<AuthTokens> {
+    const tokens = await this.issueTokens(user);
+    await this.usersService.updateRefreshTokenHash(
+      user.id,
+      tokens.refreshToken,
+    );
+    return tokens;
   }
 
   private async issueTokens(user: UserAuthRecord): Promise<AuthTokens> {
