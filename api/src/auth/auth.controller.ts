@@ -1,21 +1,15 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  Post,
-  Req,
-  UnauthorizedException,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { Public } from './decorators/public.decorator';
 import { AllowTemporaryPassword } from './decorators/allow-temporary-password.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { RequireUserPipe } from './pipes/require-user.pipe';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { AuthService } from './auth.service';
-import type { AuthResponse, AuthenticatedRequest } from './auth.types';
+import type { AuthResponse, AuthenticatedUser } from './auth.types';
 
 @Controller('auth')
 export class AuthController {
@@ -35,12 +29,9 @@ export class AuthController {
   @HttpCode(200)
   async refresh(
     @Body() dto: RefreshTokenDto,
-    @Req() request: AuthenticatedRequest,
+    @CurrentUser(RequireUserPipe) user: AuthenticatedUser,
   ): Promise<AuthResponse> {
-    if (!request.user) {
-      throw new UnauthorizedException('Unauthorized');
-    }
-    return this.authService.refreshTokens(request.user.id, dto.refreshToken);
+    return this.authService.refreshTokens(user.id, dto.refreshToken);
   }
 
   @AllowTemporaryPassword()
@@ -48,13 +39,10 @@ export class AuthController {
   @HttpCode(200)
   async changePassword(
     @Body() dto: ChangePasswordDto,
-    @Req() request: AuthenticatedRequest,
+    @CurrentUser(RequireUserPipe) user: AuthenticatedUser,
   ): Promise<AuthResponse> {
-    if (!request.user) {
-      throw new UnauthorizedException('Unauthorized');
-    }
     return this.authService.changePassword(
-      request.user.id,
+      user.id,
       dto.oldPassword,
       dto.newPassword,
     );
