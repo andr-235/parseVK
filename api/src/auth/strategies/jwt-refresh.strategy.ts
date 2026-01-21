@@ -1,10 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { AppConfig } from '../../config/app.config';
 import { UsersService } from '../../users/users.service';
 import type { AuthenticatedUser, JwtPayload } from '../auth.types';
+import { toAuthenticatedUser } from '../auth.mappers';
+import { getUserOrThrow } from '../auth.helpers';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
@@ -16,28 +18,20 @@ export class JwtRefreshStrategy extends PassportStrategy(
     private readonly usersService: UsersService,
   ) {
     const secret = configService.get('jwtRefreshSecret', { infer: true });
-    if (!secret) {
-      throw new Error('JWT refresh secret is not configured');
-    }
+    if (!secret) throw new Error('JWT access secret is not configured');
 
     super({
-      jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: secret,
     });
   }
 
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
-    const user = await this.usersService.findById(payload.sub);
-    if (!user) {
-      throw new UnauthorizedException('Unauthorized');
-    }
-
-    return {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      isTemporaryPassword: user.isTemporaryPassword,
-    };
+    const user = await getUserOrThrow(
+      this.usersService,
+      payload.sub.toString(),
+    );
+    return toAuthenticatedUser(user);
   }
 }
