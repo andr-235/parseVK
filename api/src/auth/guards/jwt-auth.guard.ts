@@ -6,62 +6,32 @@ import {
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request } from 'express';
-import { IS_PUBLIC_KEY } from '../auth.constants';
+import { IS_PUBLIC_KEY, PUBLIC_PATHS } from '../auth.constants';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  private readonly publicPaths = new Set([
-    '/health',
-    '/metrics',
-    '/api/health',
-    '/api/metrics',
-  ]);
-
   constructor(private readonly reflector: Reflector) {
     super();
   }
 
   canActivate(context: ExecutionContext) {
-    if (this.isPublicRoute(context)) {
-      return true;
-    }
+    if (this.isPublicRoute(context)) return true;
 
-    if (context.getType() !== 'http') {
-      return true;
-    }
+    if (context.getType() !== 'http') return true;
 
     const request = context.switchToHttp().getRequest<Request>();
-    if (this.isPublicPath(request)) {
-      return true;
-    }
 
-    if (request.method === 'OPTIONS') {
-      return true;
-    }
+    if (request.method === 'OPTIONS') return true;
+
+    if (this.isPublicPath(request)) return true;
 
     return super.canActivate(context);
   }
 
-  handleRequest<TUser = any>(
-    err: any,
-    user: any,
-    _info: any,
-    _context: ExecutionContext,
-    _status?: any,
-  ): TUser {
-    void _info;
-    void _context;
-    void _status;
-    if (err) {
-      if (err instanceof Error) {
-        throw err;
-      }
-      throw new UnauthorizedException('Unauthorized');
-    }
+  handleRequest<TUser = any>(err: unknown, user: unknown): TUser {
+    if (err instanceof Error) throw err;
 
-    if (!user) {
-      throw new UnauthorizedException('Unauthorized');
-    }
+    if (!user) throw new UnauthorizedException(); // единообразно
 
     return user as TUser;
   }
@@ -77,7 +47,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   private isPublicPath(request: Request): boolean {
     const rawPath = request.path || request.url || '';
+    // убираем query и trailing slash
     const normalizedPath = rawPath.split('?')[0].replace(/\/$/, '');
-    return this.publicPaths.has(normalizedPath);
+    return PUBLIC_PATHS.includes(normalizedPath);
   }
 }
