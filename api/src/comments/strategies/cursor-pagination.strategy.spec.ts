@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { CursorPaginationStrategy } from './cursor-pagination.strategy';
-import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
+import {
+  COMMENTS_REPOSITORY,
+  type ICommentsRepository,
+} from '../interfaces/comments-repository.interface';
 import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
 import { CommentMapper } from '../mappers/comment.mapper';
 import { CommentsStatsService } from '../services/comments-stats.service';
@@ -102,7 +105,7 @@ describe('CursorPaginationStrategy', () => {
       providers: [
         CursorPaginationStrategy,
         {
-          provide: 'ICommentsRepository',
+          provide: COMMENTS_REPOSITORY,
           useValue: repository,
         },
         {

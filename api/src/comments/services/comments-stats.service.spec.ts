@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsStatsService } from './comments-stats.service';
-import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
+import {
+  COMMENTS_REPOSITORY,
+  type ICommentsRepository,
+} from '../interfaces/comments-repository.interface';
 import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
 
 describe('CommentsStatsService', () => {
@@ -39,7 +42,7 @@ describe('CommentsStatsService', () => {
       providers: [
         CommentsStatsService,
         {
-          provide: 'ICommentsRepository',
+          provide: COMMENTS_REPOSITORY,
           useValue: repository,
         },
         {
