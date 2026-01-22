@@ -1,16 +1,14 @@
 import type { AuthorRecord } from '../types/author-record.type';
-import type { ResolvedAuthorSort, SqlFragment } from '../types/authors.types';
+import type { QueryAuthorsOptions, SqlFragment } from '../types/authors.types';
 
 export interface IAuthorsRepository {
   countByFilters(sqlConditions: SqlFragment[]): Promise<number>;
-  findByFilters(params: {
-    sqlConditions: SqlFragment[];
-    offset: number;
-    limit: number;
-    sort: ResolvedAuthorSort;
-  }): Promise<AuthorRecord[]>;
+
+  findByFilters(params: QueryAuthorsOptions): Promise<AuthorRecord[]>;
+
   findUnique(where: { vkUserId: number }): Promise<AuthorRecord | null>;
-  queryRaw<T = AuthorRecord[]>(query: SqlFragment): Promise<T>;
+
   deleteAuthorAndComments(vkUserId: number): Promise<void>;
+
   markAuthorVerified(vkUserId: number, verifiedAt: Date): Promise<Date>;
 }
