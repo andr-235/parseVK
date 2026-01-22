@@ -10,35 +10,47 @@ export class AuthorMapper {
   ): AuthorCardDto {
     const normalizedSummary = this.cloneSummary(summary);
     const counters = AuthorCountersParser.extractCounters(author.counters);
-    const summaryPhotos = Number.isFinite(normalizedSummary.total)
-      ? normalizedSummary.total
-      : null;
-    const photosCount = counters.photos ?? summaryPhotos ?? null;
-    const followers = author.followersCount ?? counters.followers ?? null;
 
     const card = new AuthorCardDto();
     card.id = author.id;
     card.vkUserId = author.vkUserId;
     card.firstName = author.firstName;
     card.lastName = author.lastName;
-    card.fullName = `${author.firstName} ${author.lastName}`.trim();
+
+    card.fullName = this.buildFullName(author.firstName, author.lastName);
+    card.profileUrl = this.buildProfileUrl({
+      vkUserId: author.vkUserId,
+      domain: author.domain,
+      screenName: author.screenName,
+    });
+
     card.photo50 = author.photo50 ?? null;
     card.photo100 = author.photo100 ?? null;
     card.photo200 = author.photo200Orig ?? null;
+
     card.domain = author.domain ?? null;
     card.screenName = author.screenName ?? null;
-    card.profileUrl = this.buildProfileUrl(author);
+
     card.city = this.resolveCity(author.city, author.homeTown ?? null);
+
     card.summary = normalizedSummary;
-    card.photosCount = photosCount;
+
+    card.photosCount = this.resolvePhotosCount(
+      counters.photos,
+      normalizedSummary,
+    );
     card.audiosCount = counters.audios;
     card.videosCount = counters.videos;
     card.friendsCount = counters.friends;
-    card.followersCount = followers;
+
+    card.followersCount = this.resolveFollowersCount(
+      author.followersCount,
+      counters.followers,
+    );
+
     card.lastSeenAt = AuthorCountersParser.extractLastSeenAt(author.lastSeen);
-    card.verifiedAt = author.verifiedAt
-      ? author.verifiedAt.toISOString()
-      : null;
+
+    card.verifiedAt = this.toIsoOrNull(author.verifiedAt);
     card.isVerified = Boolean(author.verifiedAt);
 
     return card;
@@ -49,12 +61,53 @@ export class AuthorMapper {
     summary?: PhotoAnalysisSummaryDto,
   ): AuthorDetailsDto {
     const card = this.toCardDto(author, summary);
+
     const details = new AuthorDetailsDto();
     Object.assign(details, card);
-    details.country = (author.country as Record<string, unknown>) ?? null;
+
+    // оставляю как было (unknown -> объект), но изолируем в одном месте
+    details.country = this.toObjectOrNull(author.country);
+
     details.createdAt = author.createdAt.toISOString();
     details.updatedAt = author.updatedAt.toISOString();
+
     return details;
+  }
+
+  /* =======================
+     Small helpers
+     ======================= */
+
+  private static buildFullName(firstName: string, lastName: string): string {
+    return `${firstName} ${lastName}`.trim();
+  }
+
+  private static resolvePhotosCount(
+    countersPhotos: number | null | undefined,
+    summary: PhotoAnalysisSummaryDto,
+  ): number | null {
+    const summaryPhotos = Number.isFinite(summary.total) ? summary.total : null;
+    return countersPhotos ?? summaryPhotos ?? null;
+  }
+
+  private static resolveFollowersCount(
+    followersCount: number | null,
+    countersFollowers: number | null | undefined,
+  ): number | null {
+    return followersCount ?? countersFollowers ?? null;
+  }
+
+  private static toIsoOrNull(value: Date | null): string | null {
+    return value ? value.toISOString() : null;
+  }
+
+  private static toObjectOrNull(
+    value: unknown,
+  ): Record<string, unknown> | null {
+    if (value && typeof value === 'object') {
+      return value as Record<string, unknown>;
+    }
+    return null;
   }
 
   private static resolveCity(
@@ -66,6 +119,7 @@ export class AuthorMapper {
       const title =
         typeof payload.title === 'string' ? payload.title.trim() : '';
       const name = typeof payload.name === 'string' ? payload.name.trim() : '';
+
       if (title || name) {
         return payload;
       }
@@ -86,7 +140,7 @@ export class AuthorMapper {
     vkUserId: number;
     domain: string | null;
     screenName: string | null;
-  }): string | null {
+  }): string {
     if (author.domain) {
       return `https://vk.com/${author.domain}`;
     }
@@ -101,22 +155,20 @@ export class AuthorMapper {
   private static cloneSummary(
     summary?: PhotoAnalysisSummaryDto,
   ): PhotoAnalysisSummaryDto {
-    if (!summary) {
-      return {
-        total: 0,
-        suspicious: 0,
-        lastAnalyzedAt: null,
-        categories: [],
-        levels: [],
-      };
-    }
+    const safe = summary ?? {
+      total: 0,
+      suspicious: 0,
+      lastAnalyzedAt: null,
+      categories: [],
+      levels: [],
+    };
 
     return {
-      total: summary.total ?? 0,
-      suspicious: summary.suspicious ?? 0,
-      lastAnalyzedAt: summary.lastAnalyzedAt ?? null,
-      categories: (summary.categories ?? []).map((item) => ({ ...item })),
-      levels: (summary.levels ?? []).map((item) => ({ ...item })),
+      total: safe.total ?? 0,
+      suspicious: safe.suspicious ?? 0,
+      lastAnalyzedAt: safe.lastAnalyzedAt ?? null,
+      categories: (safe.categories ?? []).map((item) => ({ ...item })),
+      levels: (safe.levels ?? []).map((item) => ({ ...item })),
     };
   }
 }
