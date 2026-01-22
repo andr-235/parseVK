@@ -8,13 +8,14 @@ import {
   Patch,
   Query,
 } from '@nestjs/common';
+
 import { DEFAULT_LIMIT } from './constants/comments.constants';
 import { CommentsService } from './comments.service';
-import { UpdateCommentReadDto } from './dto/update-comment-read.dto';
-import { CommentsQueryValidator } from './validators/comments-query.validator';
 import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
 import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
 import type { CommentsListDto } from './dto/comments-list.dto';
+import { UpdateCommentReadDto } from './dto/update-comment-read.dto';
+import { CommentsQueryValidator } from './validators/comments-query.validator';
 
 @Controller('comments')
 export class CommentsController {

@@ -1,21 +1,26 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+
 import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
 import { CursorUtils } from '../dto/comments-cursor.dto';
+import type { CommentsCursorListDto } from '../dto/comments-cursor-list.dto';
 import { CommentMapper } from '../mappers/comment.mapper';
 import { CommentsStatsService } from '../services/comments-stats.service';
-import type { CommentsCursorListDto } from '../dto/comments-cursor-list.dto';
-import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
+
 import type {
-  ICursorPaginationStrategy,
   CursorPaginationOptions,
+  ICursorPaginationStrategy,
 } from '../interfaces/pagination-strategy.interface';
 import type { CommentsFilters } from '../types/comments-filters.type';
+import {
+  COMMENTS_REPOSITORY,
+  type ICommentsRepository,
+} from '../interfaces/comments-repository.interface';
 
 @Injectable()
 export class CursorPaginationStrategy implements ICursorPaginationStrategy {
   constructor(
-    @Inject('ICommentsRepository')
+    @Inject(COMMENTS_REPOSITORY)
     private readonly repository: ICommentsRepository,
     private readonly filterBuilder: CommentsFilterBuilder,
     private readonly mapper: CommentMapper,
@@ -83,15 +88,13 @@ export class CursorPaginationStrategy implements ICursorPaginationStrategy {
     const items = this.mapper.mapMany(comments.slice(0, limit));
 
     // Генерируем nextCursor если есть еще элементы
+    const lastItem = items.at(-1);
     const nextCursor =
-      hasMore && items.length > 0
-        ? CursorUtils.encode(
-            items[items.length - 1].createdAt,
-            items[items.length - 1].id,
-          )
+      hasMore && lastItem
+        ? CursorUtils.encode(lastItem.createdAt, lastItem.id)
         : null;
 
-    // Получаем статистику параллельно (без учета paginationWhere, чтобы показать общую статистику)
+    // Получаем статистику (без paginationWhere, чтобы показать общую статистику)
     const stats = await this.statsService.calculateStats(
       filters,
       filters.readStatus,

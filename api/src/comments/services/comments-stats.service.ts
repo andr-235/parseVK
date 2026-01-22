@@ -1,8 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
+
 import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
-import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
+
 import type { CommentWhereInput } from '../types/comment-structures.type';
 import type { CommentsFilters } from '../types/comments-filters.type';
+import {
+  COMMENTS_REPOSITORY,
+  type ICommentsRepository,
+} from '../interfaces/comments-repository.interface';
 
 export interface CommentsStats {
   total: number;
@@ -13,7 +18,7 @@ export interface CommentsStats {
 @Injectable()
 export class CommentsStatsService {
   constructor(
-    @Inject('ICommentsRepository')
+    @Inject(COMMENTS_REPOSITORY)
     private readonly repository: ICommentsRepository,
     private readonly filterBuilder: CommentsFilterBuilder,
   ) {}
@@ -54,11 +59,7 @@ export class CommentsStatsService {
       this.repository.count({ where: unreadWhere }),
     ]);
 
-    return {
-      total,
-      readCount,
-      unreadCount,
-    };
+    return { total, readCount, unreadCount };
   }
 
   /**

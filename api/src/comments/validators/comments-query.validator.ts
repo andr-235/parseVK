@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import { DEFAULT_LIMIT, MAX_LIMIT } from '../constants/comments.constants';
 import type {
   KeywordSourceFilter,
@@ -25,7 +26,9 @@ export class CommentsQueryValidator {
 
     const normalized = values
       .map((value) => value.trim())
-      .filter((value) => value.length > 0);
+      .filter((value) => value.length > 0)
+      // Если регистр важен — удали следующую строку
+      .map((value) => value.toLowerCase());
 
     if (normalized.length === 0) {
       return undefined;
@@ -60,8 +63,7 @@ export class CommentsQueryValidator {
    * @returns Обрезанная строка или undefined если пусто
    */
   normalizeSearch(search?: string): string | undefined {
-    const trimmed = search?.trim();
-    return trimmed ? trimmed : undefined;
+    return search?.trim() || undefined;
   }
 
   /**
