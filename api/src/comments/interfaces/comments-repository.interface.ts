@@ -4,6 +4,8 @@ import type {
   CommentWhereInput,
 } from '../types/comment-structures.type';
 
+export const COMMENTS_REPOSITORY = Symbol('COMMENTS_REPOSITORY');
+
 export type CommentWithRelations = Prisma.CommentGetPayload<{
   include: {
     author: {
