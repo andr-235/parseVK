@@ -3,7 +3,10 @@ import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
 import { CommentMapper } from '../mappers/comment.mapper';
 import { CommentsStatsService } from '../services/comments-stats.service';
 import type { CommentsListDto } from '../dto/comments-list.dto';
-import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
+import {
+  COMMENTS_REPOSITORY,
+  type ICommentsRepository,
+} from '../interfaces/comments-repository.interface';
 import type {
   IOffsetPaginationStrategy,
   OffsetPaginationOptions,
@@ -13,7 +16,7 @@ import type { CommentsFilters } from '../types/comments-filters.type';
 @Injectable()
 export class OffsetPaginationStrategy implements IOffsetPaginationStrategy {
   constructor(
-    @Inject('ICommentsRepository')
+    @Inject(COMMENTS_REPOSITORY)
     private readonly repository: ICommentsRepository,
     private readonly filterBuilder: CommentsFilterBuilder,
     private readonly mapper: CommentMapper,

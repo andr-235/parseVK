@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OffsetPaginationStrategy } from './offset-pagination.strategy';
-import type { ICommentsRepository } from '../interfaces/comments-repository.interface';
+import {
+  COMMENTS_REPOSITORY,
+  type ICommentsRepository,
+} from '../interfaces/comments-repository.interface';
 import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
 import { CommentMapper } from '../mappers/comment.mapper';
 import { CommentsStatsService } from '../services/comments-stats.service';
@@ -96,7 +99,7 @@ describe('OffsetPaginationStrategy', () => {
       providers: [
         OffsetPaginationStrategy,
         {
-          provide: 'ICommentsRepository',
+          provide: COMMENTS_REPOSITORY,
           useValue: repositoryMock,
         },
         {
