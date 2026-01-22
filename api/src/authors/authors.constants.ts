@@ -19,3 +19,5 @@ export const SORTABLE_FIELDS: ReadonlySet<AuthorSortField> =
     'verifiedAt',
     'updatedAt',
   ]);
+
+export const AUTHORS_REPOSITORY = Symbol('AUTHORS_REPOSITORY');

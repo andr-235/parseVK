@@ -8,6 +8,7 @@ import { AuthorSortBuilder } from '../builders/author-sort.builder';
 
 @Injectable()
 export class AuthorsRepository implements IAuthorsRepository {
+  // TODO: лучше внедрить через DI (Injectable AuthorSortBuilder)
   private readonly sortBuilder = new AuthorSortBuilder();
 
   constructor(private readonly prisma: PrismaService) {}
@@ -32,9 +33,9 @@ export class AuthorsRepository implements IAuthorsRepository {
     sort: ResolvedAuthorSort;
   }): Promise<AuthorRecord[]> {
     const whereClause = this.buildWhereClause(params.sqlConditions);
-    const orderClause = this.sortBuilder.buildOrderClause(
-      params.sort,
-    ) as Prisma.Sql;
+
+    // ВАЖНО: buildOrderClause должен быть безопасным (whitelist, без raw user input)
+    const orderClause = this.sortBuilder.buildOrderClause(params.sort);
 
     const query: Prisma.Sql = Prisma.sql`
       SELECT *
@@ -58,11 +59,13 @@ export class AuthorsRepository implements IAuthorsRepository {
         where: { authorVkId: vkUserId },
         select: { id: true },
       });
+
       const watchlistIds = watchlistAuthors.map((item) => item.id);
 
       const commentConditions: Prisma.CommentWhereInput[] = [
         { authorVkId: vkUserId },
       ];
+
       if (watchlistIds.length > 0) {
         commentConditions.push({ watchlistAuthorId: { in: watchlistIds } });
       }
@@ -87,12 +90,12 @@ export class AuthorsRepository implements IAuthorsRepository {
     return updated.verifiedAt ?? verifiedAt;
   }
 
-  queryRaw<T = AuthorRecord[]>(query: SqlFragment): Promise<T> {
-    return this.prisma.$queryRaw<T>(query as Prisma.Sql);
+  private queryRaw<T>(query: SqlFragment): Promise<T> {
+    return this.prisma.$queryRaw<T>(query);
   }
 
   private buildWhereClause(sqlConditions: SqlFragment[]): Prisma.Sql {
-    const conditions = sqlConditions as Prisma.Sql[];
+    const conditions = sqlConditions;
     return conditions.length > 0
       ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
       : Prisma.sql``;
