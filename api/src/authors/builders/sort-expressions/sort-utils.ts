@@ -26,30 +26,31 @@ export class SortUtils {
   }
 
   private static buildCounterValueExpressionForKey(key: string): Prisma.Sql {
-    const keyLiteral = Prisma.raw(`'${key}'`);
+    // параметризуем ключ (без Prisma.raw с кавычками)
+    const keyParam = Prisma.sql`${key}`;
 
     const numericPath = Prisma.sql`
       jsonb_path_query_first(
-        "Author"."counters"->${keyLiteral},
+        "Author"."counters"->${keyParam},
         '$.** ? (@.type() == "number")'
       )
     `;
 
     const stringPath = Prisma.sql`
       jsonb_path_query_first(
-        "Author"."counters"->${keyLiteral},
+        "Author"."counters"->${keyParam},
         '$.** ? (@.type() == "string" && @ like_regex "^-?\\\\d+$")'
       )
     `;
 
     return Prisma.sql`
       CASE
-        WHEN jsonb_typeof("Author"."counters"->${keyLiteral}) = 'number'
-          THEN ("Author"."counters"->>${keyLiteral})::numeric
-        WHEN jsonb_typeof("Author"."counters"->${keyLiteral}) = 'string'
-          AND ("Author"."counters"->>${keyLiteral}) ~ '^-?\\d+$'
-          THEN ("Author"."counters"->>${keyLiteral})::numeric
-        WHEN jsonb_typeof("Author"."counters"->${keyLiteral}) = 'object'
+        WHEN jsonb_typeof("Author"."counters"->${keyParam}) = 'number'
+          THEN ("Author"."counters"->>${keyParam})::numeric
+        WHEN jsonb_typeof("Author"."counters"->${keyParam}) = 'string'
+          AND ("Author"."counters"->>${keyParam}) ~ '^-?\\d+$'
+          THEN ("Author"."counters"->>${keyParam})::numeric
+        WHEN jsonb_typeof("Author"."counters"->${keyParam}) = 'object'
           THEN COALESCE(
             (${numericPath})::text::numeric,
             CASE
@@ -69,7 +70,8 @@ export class SortUtils {
         WHEN ${value} IS NULL THEN NULL
         WHEN ${value} ~ '^-?\\d+$' THEN
           CASE
-            WHEN (${value})::numeric > ${AUTHORS_CONSTANTS.MILLISECONDS_THRESHOLD} THEN (${value})::numeric
+            WHEN (${value})::numeric > ${AUTHORS_CONSTANTS.MILLISECONDS_THRESHOLD}
+              THEN (${value})::numeric
             ELSE (${value})::numeric * 1000
           END
         ELSE NULL

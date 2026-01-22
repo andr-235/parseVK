@@ -10,6 +10,7 @@ export class FullNameSortExpression implements ISortExpression {
       SortUtils.applyDirection(Prisma.sql`LOWER("Author"."firstName")`, order),
       SortUtils.applyDirection(Prisma.sql`"Author"."vkUserId"`, order),
     ];
+
     return Prisma.join(expressions, ', ');
   }
 }

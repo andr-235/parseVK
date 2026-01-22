@@ -12,9 +12,14 @@ import { SimpleSortExpression } from './sort-expressions/simple-sort.expression'
 import type { ISortExpression } from './sort-expressions/sort-expression.interface';
 
 export class AuthorSortBuilder {
-  private static readonly expressions: Record<
-    AuthorSortField,
-    ISortExpression
+  private static readonly TIE_BREAKERS: Prisma.Sql[] = [
+    Prisma.sql`"Author"."updatedAt" DESC`,
+    Prisma.sql`"Author"."id" DESC`,
+  ];
+
+  // Partial — чтобы fallback имел смысл, если поле появится, а мапу забудут обновить
+  private static readonly expressions: Partial<
+    Record<AuthorSortField, ISortExpression>
   > = {
     fullName: new FullNameSortExpression(),
     photosCount: new CounterSortExpression(['photos', 'photos_count']),
@@ -28,17 +33,22 @@ export class AuthorSortBuilder {
   };
 
   buildOrderClause(sort: ResolvedAuthorSort): SqlFragment {
-    const expressions: Prisma.Sql[] = [this.buildPrimarySortExpression(sort)];
-    expressions.push(Prisma.sql`"Author"."updatedAt" DESC`);
-    expressions.push(Prisma.sql`"Author"."id" DESC`);
+    const expressions: Prisma.Sql[] = [
+      this.buildPrimarySortExpression(sort),
+      ...AuthorSortBuilder.TIE_BREAKERS,
+    ];
 
-    return Prisma.join(expressions, ', ') as SqlFragment;
+    return Prisma.join(expressions, ', ');
   }
 
   private buildPrimarySortExpression(sort: ResolvedAuthorSort): Prisma.Sql {
     const expression =
       AuthorSortBuilder.expressions[sort.field] ??
       AuthorSortBuilder.expressions.updatedAt;
-    return expression.build(sort.order);
+
+    // updatedAt всегда определён в таблице выражений
+    return (expression ?? new SimpleSortExpression('updatedAt')).build(
+      sort.order,
+    );
   }
 }
