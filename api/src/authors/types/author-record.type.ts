@@ -1,3 +1,5 @@
+import type { Prisma } from '@prisma/client';
+
 export type AuthorRecord = {
   id: number;
   vkUserId: number;
@@ -8,13 +10,15 @@ export type AuthorRecord = {
   photo200Orig: string | null;
   domain: string | null;
   screenName: string | null;
-  counters: unknown;
+
+  counters: Prisma.JsonValue;
   followersCount: number | null;
-  lastSeen: unknown;
+  lastSeen: Prisma.JsonValue;
   verifiedAt: Date | null;
-  city: unknown;
+  city: Prisma.JsonValue;
   homeTown: string | null;
-  country: unknown;
+  country: Prisma.JsonValue;
+
   createdAt: Date;
   updatedAt: Date;
 };

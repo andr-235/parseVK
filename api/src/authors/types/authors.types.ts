@@ -1,4 +1,10 @@
-export type SqlFragment = unknown;
+import type { Prisma } from '@prisma/client';
+
+/**
+ * Prisma.Sql совместим с Prisma.sql`...` и Prisma.join(...)
+ * Это то, что реально используется в репозитории.
+ */
+export type SqlFragment = Prisma.Sql;
 
 export type AuthorSortField =
   | 'fullName'
@@ -17,7 +23,13 @@ export interface ListAuthorsOptions {
   offset?: number;
   limit?: number;
   search?: string | null;
+
+  /**
+   * Важно: делаем строго boolean | undefined.
+   * Никаких 'true'/'1' тут быть не должно — это зона контроллера/пайпа.
+   */
   verified?: boolean;
+
   sortBy?: AuthorSortField | null;
   sortOrder?: AuthorSortDirection | null;
 }
