@@ -62,7 +62,13 @@ export class ListAuthorsQueryDto {
   @IsOptional()
   search?: string;
 
-  @Transform(({ value }) => toOptionalBoolean(value))
+  @Transform(({ value, obj }: { value: unknown; obj: unknown }) => {
+    const rawVerified =
+      obj && typeof obj === 'object' && 'verified' in obj
+        ? (obj as { verified?: unknown }).verified
+        : value;
+    return toOptionalBoolean(rawVerified);
+  })
   @IsOptional()
   verified?: boolean;
 
