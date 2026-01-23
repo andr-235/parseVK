@@ -23,35 +23,12 @@ import {
   type FriendFlatDto,
   type JobLogLevel,
   type VkFriendsJobLog,
-  type VkFriendsNameCase,
-  type VkFriendsOrder,
   type VkFriendsParams,
   type VkFriendsStreamEvent,
 } from '@/services/vkFriendsExportService'
 
 const PREVIEW_LIMIT = 100
 const MAX_LOGS = 50
-
-const selectClass =
-  'h-10 rounded-lg border border-border/60 bg-background-secondary px-3 py-2 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary'
-
-const textareaClass =
-  'min-h-28 w-full resize-y rounded-lg border border-border/60 bg-background-secondary px-3 py-2 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary'
-
-const ORDER_OPTIONS: Array<{ value: VkFriendsOrder; label: string }> = [
-  { value: 'hints', label: 'hints' },
-  { value: 'random', label: 'random' },
-  { value: 'name', label: 'name' },
-]
-
-const NAME_CASE_OPTIONS: Array<{ value: VkFriendsNameCase; label: string }> = [
-  { value: 'nom', label: 'nom' },
-  { value: 'gen', label: 'gen' },
-  { value: 'dat', label: 'dat' },
-  { value: 'acc', label: 'acc' },
-  { value: 'ins', label: 'ins' },
-  { value: 'abl', label: 'abl' },
-]
 
 const PREVIEW_COLUMNS: Array<{ key: keyof FriendFlatDto; label: string }> = [
   { key: 'id', label: 'ID' },
@@ -126,15 +103,6 @@ const toOptionalNumber = (value: string): number | undefined => {
   return Math.trunc(numeric)
 }
 
-const parseFields = (value: string): string[] | undefined => {
-  const items = value
-    .split(/[,\n]+/)
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-
-  return items.length > 0 ? items : undefined
-}
-
 const formatCellValue = (value: unknown): string => {
   if (value === null || value === undefined || value === '') {
     return '—'
@@ -182,13 +150,6 @@ const formatLogTime = (value?: string): string => {
 
 type FormState = {
   userId: string
-  order: VkFriendsOrder | ''
-  listId: string
-  count: string
-  offset: string
-  nameCase: VkFriendsNameCase | ''
-  ref: string
-  fields: string
   includeRawJson: boolean
   exportXlsx: boolean
   exportDocx: boolean
@@ -225,13 +186,6 @@ const createLogId = (): string => {
 function VkFriendsExportPage() {
   const [formState, setFormState] = useState<FormState>({
     userId: '',
-    order: '',
-    listId: '',
-    count: '',
-    offset: '',
-    nameCase: '',
-    ref: '',
-    fields: '',
     includeRawJson: false,
     exportXlsx: true,
     exportDocx: false,
@@ -281,39 +235,6 @@ function VkFriendsExportPage() {
     const userId = toOptionalNumber(formState.userId)
     if (userId !== undefined) {
       params.user_id = userId
-    }
-
-    if (formState.order) {
-      params.order = formState.order
-    }
-
-    const listId = toOptionalNumber(formState.listId)
-    if (listId !== undefined) {
-      params.list_id = listId
-    }
-
-    const count = toOptionalNumber(formState.count)
-    if (count !== undefined) {
-      params.count = count
-    }
-
-    const offset = toOptionalNumber(formState.offset)
-    if (offset !== undefined) {
-      params.offset = offset
-    }
-
-    const fields = parseFields(formState.fields)
-    if (fields) {
-      params.fields = fields
-    }
-
-    if (formState.nameCase) {
-      params.name_case = formState.nameCase
-    }
-
-    const ref = formState.ref.trim()
-    if (ref) {
-      params.ref = ref
     }
 
     return params
@@ -501,118 +422,19 @@ function VkFriendsExportPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
         <SectionCard
           title="Параметры friends.get"
-          description="Заполните параметры запроса и выберите опции экспорта."
+          description="Введите user_id. count и fields задаются автоматически как “все”."
         >
           <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="vk-user-id">user_id</Label>
-                <Input
-                  id="vk-user-id"
-                  type="number"
-                  value={formState.userId}
-                  onChange={(event) => updateField('userId', event.target.value)}
-                  placeholder="123456"
-                  min={0}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vk-order">order</Label>
-                <select
-                  id="vk-order"
-                  value={formState.order}
-                  onChange={(event) =>
-                    updateField('order', event.target.value as FormState['order'])
-                  }
-                  className={selectClass}
-                >
-                  <option value="">Не задано</option>
-                  {ORDER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vk-list-id">list_id</Label>
-                <Input
-                  id="vk-list-id"
-                  type="number"
-                  value={formState.listId}
-                  onChange={(event) => updateField('listId', event.target.value)}
-                  placeholder="0"
-                  min={0}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vk-count">count</Label>
-                <Input
-                  id="vk-count"
-                  type="number"
-                  value={formState.count}
-                  onChange={(event) => updateField('count', event.target.value)}
-                  placeholder="100"
-                  min={0}
-                  max={5000}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vk-offset">offset</Label>
-                <Input
-                  id="vk-offset"
-                  type="number"
-                  value={formState.offset}
-                  onChange={(event) => updateField('offset', event.target.value)}
-                  placeholder="0"
-                  min={0}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vk-name-case">name_case</Label>
-                <select
-                  id="vk-name-case"
-                  value={formState.nameCase}
-                  onChange={(event) =>
-                    updateField('nameCase', event.target.value as FormState['nameCase'])
-                  }
-                  className={selectClass}
-                >
-                  <option value="">Не задано</option>
-                  {NAME_CASE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="vk-ref">ref</Label>
-                <Input
-                  id="vk-ref"
-                  value={formState.ref}
-                  onChange={(event) => updateField('ref', event.target.value)}
-                  placeholder="ref"
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="vk-fields">fields</Label>
-                <textarea
-                  id="vk-fields"
-                  value={formState.fields}
-                  onChange={(event) => updateField('fields', event.target.value)}
-                  placeholder="photo_100, city, country"
-                  className={textareaClass}
-                />
-                <p className="text-xs text-text-secondary">Через запятую или новую строку</p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="vk-user-id">user_id</Label>
+              <Input
+                id="vk-user-id"
+                type="number"
+                value={formState.userId}
+                onChange={(event) => updateField('userId', event.target.value)}
+                placeholder="123456"
+                min={0}
+              />
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
