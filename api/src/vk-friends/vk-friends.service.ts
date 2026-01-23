@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Responses } from 'vk-io';
 import { VkApiService } from './vk-api.service';
 import type { VkFriendsGetParams } from './vk-api.service';
 import {
@@ -32,8 +33,10 @@ export interface FetchAllFriendsResult {
   totalCount: number;
   fetchedCount: number;
   warning?: string;
-  rawItems: unknown[];
+  rawItems: VkFriendItem[];
 }
+
+type VkFriendItem = Responses.FriendsGetResponse['items'][number];
 
 const DEFAULT_PAGE_SIZE = 1000;
 const MAX_PAGE_SIZE = 5000;
@@ -63,7 +66,7 @@ export class VkFriendsService {
     const baseOffset = this.normalizeOffset(params.offset);
     const hasFields = Array.isArray(params.fields) && params.fields.length > 0;
 
-    const rawItems: unknown[] = [];
+    const rawItems: VkFriendItem[] = [];
     let totalCount = 0;
     let fetchedCount = 0;
     let warning: string | undefined;
