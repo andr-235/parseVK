@@ -18,7 +18,7 @@ import path from 'path';
 import { defer, from, of, type Observable } from 'rxjs';
 import { mergeMap } from 'rxjs/operators';
 import { VkFriendsService } from './vk-friends.service';
-import { FriendMapper } from './mappers/friend.mapper';
+import { FriendMapper, type VkUserInput } from './mappers/friend.mapper';
 import {
   VkFriendsExportRequestDto,
   VkFriendsParamsDto,
@@ -456,7 +456,10 @@ export class VkFriendsController {
     }
 
     const friendRows = records.map((record) =>
-      this.friendMapper.mapVkUserToFlatDto(record.payload, includeRawJson),
+      this.friendMapper.mapVkUserToFlatDto(
+        record.payload as VkUserInput,
+        includeRawJson,
+      ),
     );
 
     const filePath = await this.exporter.writeDocxFile(job.id, friendRows);
