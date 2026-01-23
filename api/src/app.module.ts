@@ -11,6 +11,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PrismaModule } from './prisma.module';
 import { VkModule } from './vk/vk.module';
+import { VkFriendsModule } from './vk-friends/vk-friends.module';
 import { GroupsModule } from './groups/groups.module';
 import { KeywordsModule } from './keywords/keywords.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -47,6 +48,7 @@ import type { AppConfig } from './config/app.config';
     AuthModule,
     MetricsModule,
     VkModule,
+    VkFriendsModule,
     GroupsModule,
     KeywordsModule,
     TasksModule,
