@@ -191,9 +191,29 @@ const parseSseEvent = (raw: string): VkFriendsStreamEvent | null => {
     parsed = rawData
   }
 
-  return {
-    type: eventType,
-    data: parsed as VkFriendsStreamEvent['data'],
+  switch (eventType) {
+    case 'progress':
+      return {
+        type: 'progress',
+        data: parsed as Extract<VkFriendsStreamEvent, { type: 'progress' }>['data'],
+      }
+    case 'log':
+      return {
+        type: 'log',
+        data: parsed as Extract<VkFriendsStreamEvent, { type: 'log' }>['data'],
+      }
+    case 'done':
+      return {
+        type: 'done',
+        data: parsed as Extract<VkFriendsStreamEvent, { type: 'done' }>['data'],
+      }
+    case 'error':
+      return {
+        type: 'error',
+        data: parsed as Extract<VkFriendsStreamEvent, { type: 'error' }>['data'],
+      }
+    default:
+      return null
   }
 }
 
