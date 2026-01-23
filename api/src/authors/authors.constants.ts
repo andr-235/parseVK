@@ -10,6 +10,7 @@ export const AUTHORS_CONSTANTS = {
 export const SORTABLE_FIELDS: ReadonlySet<AuthorSortField> =
   new Set<AuthorSortField>([
     'fullName',
+    'city',
     'photosCount',
     'audiosCount',
     'videosCount',

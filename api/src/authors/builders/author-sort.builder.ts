@@ -5,6 +5,7 @@ import type {
   SqlFragment,
 } from '../types/authors.types';
 import { CounterSortExpression } from './sort-expressions/counter-sort.expression';
+import { CitySortExpression } from './sort-expressions/city-sort.expression';
 import { FollowersSortExpression } from './sort-expressions/followers-sort.expression';
 import { FullNameSortExpression } from './sort-expressions/fullname-sort.expression';
 import { LastSeenSortExpression } from './sort-expressions/lastseen-sort.expression';
@@ -22,6 +23,7 @@ export class AuthorSortBuilder {
     Record<AuthorSortField, ISortExpression>
   > = {
     fullName: new FullNameSortExpression(),
+    city: new CitySortExpression(),
     photosCount: new CounterSortExpression(['photos', 'photos_count']),
     audiosCount: new CounterSortExpression(['audios', 'audio']),
     videosCount: new CounterSortExpression(['videos', 'video']),

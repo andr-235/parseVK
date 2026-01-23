@@ -39,6 +39,7 @@ export interface AuthorListResponse {
 
 export type AuthorSortField =
   | 'fullName'
+  | 'city'
   | 'photosCount'
   | 'audiosCount'
   | 'videosCount'

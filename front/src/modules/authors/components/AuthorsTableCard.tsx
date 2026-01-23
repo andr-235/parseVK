@@ -134,7 +134,15 @@ export function AuthorsTableCard({
                   Автор
                 </TableSortButton>
               </TableHead>
-              <TableHead className="w-[200px]">Город</TableHead>
+              <TableHead className="w-[200px]">
+                <TableSortButton
+                  onClick={() => onSortChange('city')}
+                  direction={resolveSortDirection('city')}
+                  className="justify-start"
+                >
+                  Город
+                </TableSortButton>
+              </TableHead>
               <TableHead>
                 <TableSortButton
                   onClick={() => onSortChange('photosCount')}

@@ -8,6 +8,7 @@ export type SqlFragment = Prisma.Sql;
 
 export type AuthorSortField =
   | 'fullName'
+  | 'city'
   | 'photosCount'
   | 'audiosCount'
   | 'videosCount'
