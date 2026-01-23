@@ -60,6 +60,7 @@ export const useVkFriendsExport = () => {
   const [isExportLoading, setIsExportLoading] = useState(false)
 
   const streamCloseRef = useRef<null | (() => void)>(null)
+  const pendingDownloadRef = useRef(false)
 
   const closeStream = useCallback(() => {
     if (streamCloseRef.current) {
@@ -221,20 +222,34 @@ export const useVkFriendsExport = () => {
     }
   }, [jobId])
 
-  const { jobStatusLabel, jobStatusVariant, isJobDone, progressLabel, isProgressIndeterminate } =
-    useMemo(
-      () => ({
-        jobStatusLabel: jobStatus ? STATUS_LABELS[jobStatus] : '—',
-        jobStatusVariant: jobStatus ? STATUS_VARIANTS[jobStatus] : 'outline',
-        isJobDone: jobStatus === 'DONE',
-        progressLabel:
-          jobProgress.totalCount > 0
-            ? `Обработано ${jobProgress.fetchedCount} из ${jobProgress.totalCount}`
-            : `Обработано ${jobProgress.fetchedCount}`,
-        isProgressIndeterminate: jobStatus === 'RUNNING' && jobProgress.totalCount === 0,
-      }),
-      [jobProgress.fetchedCount, jobProgress.totalCount, jobStatus]
-    )
+  useEffect(() => {
+    if (!pendingDownloadRef.current || !jobId || jobStatus !== 'DONE' || !hasDocx) {
+      return
+    }
+
+    pendingDownloadRef.current = false
+    void handleDownloadDocx().catch(() => {
+      // toast already shown in service
+    })
+  }, [handleDownloadDocx, hasDocx, jobId, jobStatus])
+
+  const { jobStatusLabel, jobStatusVariant, progressLabel, isProgressIndeterminate } = useMemo(
+    () => ({
+      jobStatusLabel: jobStatus ? STATUS_LABELS[jobStatus] : '—',
+      jobStatusVariant: jobStatus ? STATUS_VARIANTS[jobStatus] : 'outline',
+      progressLabel:
+        jobProgress.totalCount > 0
+          ? `Обработано ${jobProgress.fetchedCount} из ${jobProgress.totalCount}`
+          : `Обработано ${jobProgress.fetchedCount}`,
+      isProgressIndeterminate: jobStatus === 'RUNNING' && jobProgress.totalCount === 0,
+    }),
+    [jobProgress.fetchedCount, jobProgress.totalCount, jobStatus]
+  )
+
+  const handleGenerateDocx = useCallback(async () => {
+    pendingDownloadRef.current = true
+    await handleExport()
+  }, [handleExport])
 
   return {
     formState,
@@ -247,9 +262,7 @@ export const useVkFriendsExport = () => {
     jobStatusVariant,
     progressLabel,
     isProgressIndeterminate,
-    canDownloadDocx: isJobDone && hasDocx,
     isExportLoading,
-    handleExport,
-    handleDownloadDocx,
+    handleGenerateDocx,
   }
 }

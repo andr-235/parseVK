@@ -27,20 +27,18 @@ function VkFriendsExportPage() {
     jobStatusVariant,
     progressLabel,
     isProgressIndeterminate,
-    canDownloadDocx,
     isExportLoading,
-    handleExport,
-    handleDownloadDocx,
+    handleGenerateDocx,
   } = useVkFriendsExport()
 
   return (
     <div className="flex flex-col gap-6 pb-8">
       <PageHeroCard
         title="Экспорт друзей ВКонтакте"
-        description="Запускайте экспорт friends.get и скачивайте DOCX с прогрессом и логами."
+        description="Формируйте DOCX отчёт по friends.get с прогрессом и логами."
         actions={
           <div className="flex flex-col gap-2 text-sm text-text-secondary">
-            <span>Export сохраняет данные и формирует DOCX.</span>
+            <span>Нажмите кнопку, чтобы собрать данные и скачать DOCX.</span>
           </div>
         }
       />
@@ -80,14 +78,14 @@ function VkFriendsExportPage() {
             </div>
 
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <Button onClick={handleExport} disabled={isExportLoading}>
+              <Button onClick={handleGenerateDocx} disabled={isExportLoading}>
                 {isExportLoading ? (
                   <span className="inline-flex items-center gap-2">
                     <Spinner className="size-4" />
-                    Run export...
+                    Формируем DOCX...
                   </span>
                 ) : (
-                  'Run export'
+                  'Загрузить DOCX'
                 )}
               </Button>
             </div>
@@ -100,17 +98,6 @@ function VkFriendsExportPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-text-secondary">Статус:</span>
                 <Badge variant={jobStatusVariant}>{jobStatusLabel}</Badge>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownloadDocx}
-                  disabled={!canDownloadDocx}
-                >
-                  Download DOCX
-                </Button>
               </div>
             </div>
 
