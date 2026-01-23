@@ -1,317 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
 import ProgressBar from '@/components/ProgressBar'
-import { Badge, type BadgeProps } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { useVkFriendsExport } from '@/modules/vkFriendsExport/hooks/useVkFriendsExport'
 import {
-  vkFriendsExportService,
-  type ExportJobStatus,
-  type JobLogLevel,
-  type VkFriendsJobLog,
-  type VkFriendsParams,
-  type VkFriendsStreamEvent,
-} from '@/services/vkFriendsExportService'
-
-const MAX_LOGS = 50
-
-const STATUS_LABELS: Record<ExportJobStatus, string> = {
-  PENDING: 'В ожидании',
-  RUNNING: 'В работе',
-  DONE: 'Готово',
-  FAILED: 'Ошибка',
-}
-
-const STATUS_VARIANTS: Record<ExportJobStatus, BadgeProps['variant']> = {
-  PENDING: 'outline',
-  RUNNING: 'secondary',
-  DONE: 'default',
-  FAILED: 'destructive',
-}
-
-const LOG_LEVEL_LABELS: Record<JobLogLevel, string> = {
-  info: 'INFO',
-  warn: 'WARN',
-  error: 'ERROR',
-}
-
-const LOG_LEVEL_CLASSES: Record<JobLogLevel, string> = {
-  info: 'text-text-secondary',
-  warn: 'text-accent-warning',
-  error: 'text-destructive',
-}
-
-const toOptionalNumber = (value: string): number | undefined => {
-  const normalized = value.trim()
-  if (!normalized) {
-    return undefined
-  }
-
-  const numeric = Number(normalized)
-  if (!Number.isFinite(numeric)) {
-    return undefined
-  }
-
-  return Math.trunc(numeric)
-}
-
-const formatCellValue = (value: unknown): string => {
-  if (value === null || value === undefined || value === '') {
-    return '—'
-  }
-
-  if (typeof value === 'boolean') {
-    return value ? 'Да' : 'Нет'
-  }
-
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value)
-    } catch {
-      return '—'
-    }
-  }
-
-  return String(value)
-}
-
-const truncateValue = (value: string, limit = 120): string => {
-  if (value.length <= limit) {
-    return value
-  }
-
-  return `${value.slice(0, limit - 3)}...`
-}
-
-const formatLogTime = (value?: string): string => {
-  if (!value) {
-    return ''
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return ''
-  }
-
-  return date.toLocaleTimeString('ru-RU', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-}
-
-type FormState = {
-  userId: string
-  includeRawJson: boolean
-}
-
-type JobLogEntry = {
-  id: string
-  level: JobLogLevel
-  message: string
-  meta?: unknown
-  createdAt?: string
-}
-
-const normalizeLogs = (logs: VkFriendsJobLog[]): JobLogEntry[] => {
-  const sorted = [...logs].sort((a, b) => {
-    const timeA = new Date(a.createdAt).getTime()
-    const timeB = new Date(b.createdAt).getTime()
-    return timeA - timeB
-  })
-
-  return sorted.slice(-MAX_LOGS).map((log) => ({
-    id: log.id,
-    level: log.level,
-    message: log.message,
-    meta: log.meta,
-    createdAt: log.createdAt,
-  }))
-}
-
-const createLogId = (): string => {
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
-}
+  formatCellValue,
+  formatLogTime,
+  LOG_LEVEL_CLASSES,
+  LOG_LEVEL_LABELS,
+  truncateValue,
+} from '@/modules/vkFriendsExport/utils/vkFriendsExportUtils'
 
 function VkFriendsExportPage() {
-  const [formState, setFormState] = useState<FormState>({
-    userId: '',
-    includeRawJson: false,
-  })
-
-  const [jobId, setJobId] = useState<string | null>(null)
-  const [jobStatus, setJobStatus] = useState<ExportJobStatus | null>(null)
-  const [jobWarning, setJobWarning] = useState<string | null>(null)
-  const [jobError, setJobError] = useState<string | null>(null)
-  const [jobProgress, setJobProgress] = useState({ fetchedCount: 0, totalCount: 0 })
-  const [jobLogs, setJobLogs] = useState<JobLogEntry[]>([])
-  const [hasDocx, setHasDocx] = useState(false)
-  const [isExportLoading, setIsExportLoading] = useState(false)
-
-  const streamCloseRef = useRef<null | (() => void)>(null)
-
-  const closeStream = useCallback(() => {
-    if (streamCloseRef.current) {
-      streamCloseRef.current()
-      streamCloseRef.current = null
-    }
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      closeStream()
-    }
-  }, [closeStream])
-
-  const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setFormState((prev) => ({
-      ...prev,
-      [key]: value,
-    }))
-  }
-
-  const buildParams = (): VkFriendsParams => {
-    const params: VkFriendsParams = {}
-
-    const userId = toOptionalNumber(formState.userId)
-    if (userId !== undefined) {
-      params.user_id = userId
-    }
-
-    return params
-  }
-
-  const appendJobLog = (entry: JobLogEntry) => {
-    setJobLogs((prev) => {
-      const next = [...prev, entry]
-      if (next.length > MAX_LOGS) {
-        return next.slice(-MAX_LOGS)
-      }
-      return next
-    })
-  }
-
-  const handleStreamEvent = (event: VkFriendsStreamEvent) => {
-    if (event.type === 'progress') {
-      setJobStatus('RUNNING')
-      setJobProgress({
-        fetchedCount: event.data.fetchedCount,
-        totalCount: event.data.totalCount,
-      })
-      return
-    }
-
-    if (event.type === 'log') {
-      appendJobLog({
-        id: createLogId(),
-        level: event.data.level,
-        message: event.data.message,
-        meta: event.data.meta,
-        createdAt: new Date().toISOString(),
-      })
-      return
-    }
-
-    if (event.type === 'done') {
-      setJobStatus('DONE')
-      setJobWarning(event.data.warning ?? null)
-      setJobProgress((prev) => ({
-        fetchedCount: event.data.fetchedCount,
-        totalCount: event.data.totalCount ?? prev.totalCount,
-      }))
-      setHasDocx(Boolean(event.data.docxPath))
-      closeStream()
-      return
-    }
-
-    if (event.type === 'error') {
-      setJobStatus('FAILED')
-      setJobError(event.data.message)
-      closeStream()
-    }
-  }
-
-  const connectStream = (id: string) => {
-    closeStream()
-    const { close } = vkFriendsExportService.streamJob(id, {
-      onEvent: handleStreamEvent,
-      onError: (error) => {
-        setJobStatus('FAILED')
-        setJobError(error.message)
-      },
-    })
-
-    streamCloseRef.current = close
-  }
-
-  const loadJob = async (id: string) => {
-    try {
-      const response = await vkFriendsExportService.getJob(id)
-      setJobStatus(response.job.status)
-      setJobWarning(response.job.warning ?? null)
-      setJobError(response.job.error ?? null)
-      setJobProgress({
-        fetchedCount: response.job.fetchedCount ?? 0,
-        totalCount: response.job.totalCount ?? 0,
-      })
-      setHasDocx(Boolean(response.job.docxPath))
-      setJobLogs(normalizeLogs(response.logs))
-    } catch {
-      setJobError('Не удалось получить данные экспорта')
-    }
-  }
-
-  const handleExport = async () => {
-    setJobError(null)
-    setJobWarning(null)
-    setJobLogs([])
-    setHasDocx(false)
-    setJobProgress({ fetchedCount: 0, totalCount: 0 })
-    setIsExportLoading(true)
-
-    try {
-      const params = buildParams()
-      const response = await vkFriendsExportService.export({
-        params,
-        includeRawJson: formState.includeRawJson,
-      })
-
-      setJobId(response.jobId)
-      setJobStatus(response.status)
-      await loadJob(response.jobId)
-      connectStream(response.jobId)
-    } catch {
-      setJobStatus('FAILED')
-      setJobError('Не удалось запустить экспорт')
-    } finally {
-      setIsExportLoading(false)
-    }
-  }
-
-  const handleDownloadDocx = async () => {
-    if (!jobId) {
-      return
-    }
-
-    try {
-      await vkFriendsExportService.downloadJobFile(jobId, 'docx')
-    } catch {
-      // errors are already surfaced via toast
-    }
-  }
-
-  const jobStatusLabel = jobStatus ? STATUS_LABELS[jobStatus] : '—'
-  const jobStatusVariant = jobStatus ? STATUS_VARIANTS[jobStatus] : 'outline'
-  const isJobDone = jobStatus === 'DONE'
-  const canDownloadDocx = isJobDone && hasDocx
-  const progressLabel =
-    jobProgress.totalCount > 0
-      ? `Обработано ${jobProgress.fetchedCount} из ${jobProgress.totalCount}`
-      : `Обработано ${jobProgress.fetchedCount}`
-  const isProgressIndeterminate = jobStatus === 'RUNNING' && jobProgress.totalCount === 0
+  const {
+    formState,
+    updateField,
+    jobWarning,
+    jobError,
+    jobLogs,
+    jobProgress,
+    jobStatusLabel,
+    jobStatusVariant,
+    progressLabel,
+    isProgressIndeterminate,
+    canDownloadDocx,
+    isExportLoading,
+    handleExport,
+    handleDownloadDocx,
+  } = useVkFriendsExport()
 
   return (
     <div className="flex flex-col gap-6 pb-8">
