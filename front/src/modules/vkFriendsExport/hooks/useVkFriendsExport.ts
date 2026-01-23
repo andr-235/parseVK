@@ -13,7 +13,6 @@ const MAX_LOGS = 50
 
 type FormState = {
   userId: string
-  includeRawJson: boolean
 }
 
 export type JobLogEntry = {
@@ -47,7 +46,6 @@ const createLogId = (): string => {
 export const useVkFriendsExport = () => {
   const [formState, setFormState] = useState<FormState>({
     userId: '',
-    includeRawJson: false,
   })
 
   const [jobId, setJobId] = useState<string | null>(null)
@@ -60,7 +58,6 @@ export const useVkFriendsExport = () => {
   const [isExportLoading, setIsExportLoading] = useState(false)
 
   const streamCloseRef = useRef<null | (() => void)>(null)
-  const pendingDownloadRef = useRef(false)
 
   const closeStream = useCallback(() => {
     if (streamCloseRef.current) {
@@ -195,7 +192,6 @@ export const useVkFriendsExport = () => {
       const params = buildParams()
       const response = await vkFriendsExportService.export({
         params,
-        includeRawJson: formState.includeRawJson,
       })
 
       setJobId(response.jobId)
@@ -208,7 +204,7 @@ export const useVkFriendsExport = () => {
     } finally {
       setIsExportLoading(false)
     }
-  }, [buildParams, connectStream, formState.includeRawJson, loadJob, resetJobState])
+  }, [buildParams, connectStream, loadJob, resetJobState])
 
   const handleDownloadDocx = useCallback(async () => {
     if (!jobId) {
@@ -221,17 +217,6 @@ export const useVkFriendsExport = () => {
       // errors are already surfaced via toast
     }
   }, [jobId])
-
-  useEffect(() => {
-    if (!pendingDownloadRef.current || !jobId || jobStatus !== 'DONE' || !hasDocx) {
-      return
-    }
-
-    pendingDownloadRef.current = false
-    void handleDownloadDocx().catch(() => {
-      // toast already shown in service
-    })
-  }, [handleDownloadDocx, hasDocx, jobId, jobStatus])
 
   const { jobStatusLabel, jobStatusVariant, progressLabel, isProgressIndeterminate } = useMemo(
     () => ({
@@ -247,7 +232,6 @@ export const useVkFriendsExport = () => {
   )
 
   const handleGenerateDocx = useCallback(async () => {
-    pendingDownloadRef.current = true
     await handleExport()
   }, [handleExport])
 
@@ -264,5 +248,8 @@ export const useVkFriendsExport = () => {
     isProgressIndeterminate,
     isExportLoading,
     handleGenerateDocx,
+    handleDownloadDocx,
+    hasDocx,
+    jobStatus,
   }
 }

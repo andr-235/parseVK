@@ -24,7 +24,6 @@ export interface FetchAllFriendsProgress {
 }
 
 export interface FetchAllFriendsOptions {
-  includeRawJson: boolean;
   pageSize?: number;
   onProgress?: (progress: FetchAllFriendsProgress) => void;
   onLog?: (log: string) => void;
@@ -58,7 +57,6 @@ export class VkFriendsService {
     params: VkFriendsGetParams,
     options: FetchAllFriendsOptions,
   ): Promise<FetchAllFriendsResult> {
-    const includeRawJson = options.includeRawJson === true;
     const onProgress = options.onProgress;
     const onLog = options.onLog;
 
@@ -156,7 +154,7 @@ export class VkFriendsService {
         }
       }
 
-      if (includeRawJson && pageItems.length > 0) {
+      if (pageItems.length > 0) {
         rawItems.push(...pageItems);
       }
       fetchedCount += pageItems.length;

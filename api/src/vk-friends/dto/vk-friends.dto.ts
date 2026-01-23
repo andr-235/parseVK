@@ -1,7 +1,6 @@
 import { Type, Transform } from 'class-transformer';
 import {
   IsArray,
-  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -44,7 +43,6 @@ export interface FriendFlatDto {
   education_faculty: number | null;
   education_graduation: number | null;
   universities: string | null;
-  raw_json: string | null;
 }
 
 const FRIENDS_ORDER_VALUES = [
@@ -114,12 +112,4 @@ export class VkFriendsExportRequestDto {
   @ValidateNested()
   @Type(() => VkFriendsParamsDto)
   params!: VkFriendsParamsDto;
-
-  @IsOptional()
-  @IsBoolean()
-  exportDocx?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  includeRawJson?: boolean;
 }

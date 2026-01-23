@@ -12,10 +12,7 @@ export type VkUserInput =
 
 @Injectable()
 export class FriendMapper {
-  mapVkUserToFlatDto(
-    vkUser: VkUserInput,
-    includeRawJson: boolean,
-  ): FriendFlatDto {
+  mapVkUserToFlatDto(vkUser: VkUserInput): FriendFlatDto {
     const userRecord = this.asRecord(vkUser);
     const id =
       typeof vkUser === 'number' ? vkUser : this.toNumber(userRecord?.id);
@@ -65,7 +62,6 @@ export class FriendMapper {
         userRecord?.graduation ?? education?.graduation,
       ),
       universities: this.toJsonString(userRecord?.universities),
-      raw_json: includeRawJson ? this.toJsonString(vkUser) : null,
     };
   }
 

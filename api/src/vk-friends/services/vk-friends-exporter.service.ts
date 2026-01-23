@@ -37,7 +37,6 @@ const FRIEND_FIELDS: Array<keyof FriendFlatDto> = [
   'education_faculty',
   'education_graduation',
   'universities',
-  'raw_json',
 ];
 
 const CONTENT_TYPES_XML =

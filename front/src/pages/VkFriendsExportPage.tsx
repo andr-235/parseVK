@@ -29,6 +29,9 @@ function VkFriendsExportPage() {
     isProgressIndeterminate,
     isExportLoading,
     handleGenerateDocx,
+    handleDownloadDocx,
+    hasDocx,
+    jobStatus,
   } = useVkFriendsExport()
 
   return (
@@ -61,22 +64,6 @@ function VkFriendsExportPage() {
               />
             </div>
 
-            <div className="grid gap-3">
-              <label
-                htmlFor="vk-include-raw"
-                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/50 bg-background-secondary/70 px-3 py-2 text-sm"
-              >
-                <input
-                  id="vk-include-raw"
-                  type="checkbox"
-                  checked={formState.includeRawJson}
-                  onChange={(event) => updateField('includeRawJson', event.target.checked)}
-                  className="h-5 w-5 rounded border-border bg-background text-accent-primary focus:ring-accent-primary focus:ring-offset-0"
-                />
-                includeRawJson
-              </label>
-            </div>
-
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <Button onClick={handleGenerateDocx} disabled={isExportLoading}>
                 {isExportLoading ? (
@@ -88,6 +75,11 @@ function VkFriendsExportPage() {
                   'Загрузить DOCX'
                 )}
               </Button>
+              {jobStatus === 'DONE' && hasDocx && (
+                <Button onClick={handleDownloadDocx} variant="outline">
+                  Скачать DOCX
+                </Button>
+              )}
             </div>
           </div>
         </SectionCard>

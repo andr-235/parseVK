@@ -214,10 +214,7 @@ const readSseStream = async (
 }
 
 export const vkFriendsExportService = {
-  async export(payload: {
-    params: VkFriendsParams
-    includeRawJson?: boolean
-  }): Promise<VkFriendsExportResponse> {
+  async export(payload: { params: VkFriendsParams }): Promise<VkFriendsExportResponse> {
     try {
       const response = await createRequest(`${API_URL}/vk/friends/export`, {
         method: 'POST',

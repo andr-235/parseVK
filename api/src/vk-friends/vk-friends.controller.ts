@@ -75,18 +75,8 @@ export class VkFriendsController {
     }
 
     const params = this.buildParams(body.params);
-    const exportDocx = body.exportDocx !== false;
-    const includeRawJson = body.includeRawJson === true;
-    const jobParams = {
-      ...params,
-      _export: {
-        includeRawJson,
-        exportDocx,
-      },
-    };
-
     const job = await this.vkFriendsService.createJob({
-      params: jobParams,
+      params,
       status: 'RUNNING',
       vkUserId: params.user_id ?? null,
     });
@@ -96,10 +86,7 @@ export class VkFriendsController {
       data: { fetchedCount: 0, totalCount: 0, limitApplied: false },
     });
 
-    void this.runExportJob(job.id, params, {
-      exportDocx,
-      includeRawJson,
-    });
+    void this.runExportJob(job.id, params);
 
     return {
       jobId: job.id,
@@ -171,10 +158,6 @@ export class VkFriendsController {
   private async runExportJob(
     jobId: string,
     params: VkFriendsParamsDto,
-    options: {
-      exportDocx: boolean;
-      includeRawJson: boolean;
-    },
   ): Promise<void> {
     const progressState = {
       fetchedCount: 0,
@@ -235,7 +218,6 @@ export class VkFriendsController {
 
       const { totalCount, fetchedCount, warning, rawItems } =
         await this.vkFriendsService.fetchAllFriends(params, {
-          includeRawJson: true,
           onProgress: (progress) => {
             reportProgress(progress);
           },
@@ -276,19 +258,12 @@ export class VkFriendsController {
 
       await log('info', `Saved friend records: ${inserted}`);
 
-      const shouldBuildFiles = options.exportDocx;
-      const friendRows = shouldBuildFiles
-        ? rawItems.map((item) =>
-            this.friendMapper.mapVkUserToFlatDto(item, options.includeRawJson),
-          )
-        : [];
+      const friendRows = rawItems.map((item) =>
+        this.friendMapper.mapVkUserToFlatDto(item),
+      );
 
-      let docxPath: string | undefined;
-
-      if (options.exportDocx) {
-        docxPath = await this.exporter.writeDocxFile(jobId, friendRows);
-        await log('info', 'DOCX generated', { path: docxPath });
-      }
+      const docxPath = await this.exporter.writeDocxFile(jobId, friendRows);
+      await log('info', 'DOCX generated', { path: docxPath });
 
       const completedJob = await this.vkFriendsService.completeJob(jobId, {
         fetchedCount,
@@ -448,7 +423,6 @@ export class VkFriendsController {
     xlsxPath: string | null;
     docxPath: string | null;
   }): Promise<string> {
-    const includeRawJson = this.resolveIncludeRawJson(job.params);
     const records = await this.vkFriendsService.getFriendRecordPayloads(job.id);
 
     if (records.length === 0) {
@@ -456,10 +430,7 @@ export class VkFriendsController {
     }
 
     const friendRows = records.map((record) =>
-      this.friendMapper.mapVkUserToFlatDto(
-        record.payload as VkUserInput,
-        includeRawJson,
-      ),
+      this.friendMapper.mapVkUserToFlatDto(record.payload as VkUserInput),
     );
 
     const filePath = await this.exporter.writeDocxFile(job.id, friendRows);
@@ -474,20 +445,5 @@ export class VkFriendsController {
     this.logger.warn(`Export file regenerated for job ${job.id}`);
 
     return filePath;
-  }
-
-  private resolveIncludeRawJson(params: unknown): boolean {
-    if (!params || typeof params !== 'object') {
-      return false;
-    }
-
-    const exportOptions = (params as { _export?: { includeRawJson?: boolean } })
-      ._export;
-    if (exportOptions?.includeRawJson === true) {
-      return true;
-    }
-
-    const legacyFlag = (params as { includeRawJson?: boolean }).includeRawJson;
-    return legacyFlag === true;
   }
 }
