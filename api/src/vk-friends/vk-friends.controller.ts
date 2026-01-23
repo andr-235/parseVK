@@ -120,9 +120,17 @@ export class VkFriendsController {
     const exportXlsx = body.exportXlsx === true;
     const exportDocx = body.exportDocx === true;
     const includeRawJson = body.includeRawJson === true;
+    const jobParams = {
+      ...params,
+      _export: {
+        includeRawJson,
+        exportXlsx,
+        exportDocx,
+      },
+    };
 
     const job = await this.vkFriendsService.createJob({
-      params,
+      params: jobParams,
       status: 'RUNNING',
       vkUserId: params.user_id ?? null,
     });
@@ -507,10 +515,69 @@ export class VkFriendsController {
       throw new BadRequestException('Invalid export file path');
     }
 
-    await fs.stat(resolvedPath).catch(() => {
-      throw new NotFoundException('Export file not found');
-    });
+    try {
+      await fs.stat(resolvedPath);
+    } catch {
+      const rebuiltPath = await this.rebuildExportFile(job, type);
+      return { filePath: rebuiltPath };
+    }
 
     return { filePath: resolvedPath };
+  }
+
+  private async rebuildExportFile(
+    job: {
+      id: string;
+      fetchedCount: number;
+      totalCount: number | null;
+      warning: string | null;
+      params: unknown;
+      xlsxPath: string | null;
+      docxPath: string | null;
+    },
+    type: 'xlsx' | 'docx',
+  ): Promise<string> {
+    const includeRawJson = this.resolveIncludeRawJson(job.params);
+    const records = await this.vkFriendsService.getFriendRecordPayloads(job.id);
+
+    if (records.length === 0) {
+      throw new NotFoundException('Export file not found');
+    }
+
+    const friendRows = records.map((record) =>
+      this.friendMapper.mapVkUserToFlatDto(record.payload, includeRawJson),
+    );
+
+    const filePath =
+      type === 'xlsx'
+        ? await this.exporter.writeXlsxFile(job.id, friendRows)
+        : await this.exporter.writeDocxFile(job.id, friendRows);
+
+    await this.vkFriendsService.completeJob(job.id, {
+      fetchedCount: job.fetchedCount,
+      totalCount: job.totalCount ?? undefined,
+      warning: job.warning ?? undefined,
+      xlsxPath: type === 'xlsx' ? filePath : (job.xlsxPath ?? undefined),
+      docxPath: type === 'docx' ? filePath : (job.docxPath ?? undefined),
+    });
+
+    this.logger.warn(`Export file regenerated for job ${job.id} (${type})`);
+
+    return filePath;
+  }
+
+  private resolveIncludeRawJson(params: unknown): boolean {
+    if (!params || typeof params !== 'object') {
+      return false;
+    }
+
+    const exportOptions = (params as { _export?: { includeRawJson?: boolean } })
+      ._export;
+    if (exportOptions?.includeRawJson === true) {
+      return true;
+    }
+
+    const legacyFlag = (params as { includeRawJson?: boolean }).includeRawJson;
+    return legacyFlag === true;
   }
 }

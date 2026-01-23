@@ -51,6 +51,10 @@ export interface FriendRecordInput {
   payload: unknown;
 }
 
+export interface FriendRecordPayload {
+  payload: unknown;
+}
+
 const DEFAULT_BATCH_SIZE = 1000;
 const MIN_BATCH_SIZE = 500;
 const MAX_BATCH_SIZE = 1000;
@@ -196,6 +200,14 @@ export class VkFriendsRepository {
     }
 
     return inserted;
+  }
+
+  getFriendRecordPayloads(jobId: string): Promise<FriendRecordPayload[]> {
+    return this.prisma.friendRecord.findMany({
+      where: { jobId },
+      orderBy: { createdAt: 'asc' },
+      select: { payload: true },
+    });
   }
 
   private normalizeBatchSize(batchSize: number): number {

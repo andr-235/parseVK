@@ -10,6 +10,7 @@ import {
   type JobFailureInput,
   type JobLogInput,
   type JobProgressUpdateInput,
+  type FriendRecordPayload,
 } from './repositories/vk-friends.repository';
 
 export interface VkFriendsStatusResponse {
@@ -252,6 +253,10 @@ export class VkFriendsService {
     batchSize?: number,
   ): Promise<number> {
     return this.repository.saveFriendsBatch(jobId, records, batchSize);
+  }
+
+  getFriendRecordPayloads(jobId: string): Promise<FriendRecordPayload[]> {
+    return this.repository.getFriendRecordPayloads(jobId);
   }
 
   getJobById(jobId: string) {
