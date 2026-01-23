@@ -110,31 +110,10 @@ export class VkFriendsParamsDto {
   ref?: string;
 }
 
-export class VkFriendsPreviewRequestDto {
-  @ValidateNested()
-  @Type(() => VkFriendsParamsDto)
-  params!: VkFriendsParamsDto;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(5000)
-  limit?: number;
-
-  @IsOptional()
-  @IsBoolean()
-  includeRawJson?: boolean;
-}
-
 export class VkFriendsExportRequestDto {
   @ValidateNested()
   @Type(() => VkFriendsParamsDto)
   params!: VkFriendsParamsDto;
-
-  @IsOptional()
-  @IsBoolean()
-  exportXlsx?: boolean;
 
   @IsOptional()
   @IsBoolean()

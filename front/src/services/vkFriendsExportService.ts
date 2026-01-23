@@ -19,47 +19,6 @@ export interface VkFriendsParams {
   ref?: string
 }
 
-export interface FriendFlatDto {
-  id: number | null
-  first_name: string | null
-  last_name: string | null
-  nickname: string | null
-  domain: string | null
-  bdate: string | null
-  sex: number | null
-  status: string | null
-  online: boolean | null
-  last_seen_time: string | null
-  last_seen_platform: number | null
-  city_id: number | null
-  city_title: string | null
-  country_id: number | null
-  country_title: string | null
-  has_mobile: boolean | null
-  can_post: boolean | null
-  can_see_all_posts: boolean | null
-  can_write_private_message: boolean | null
-  timezone: number | null
-  photo_50: string | null
-  photo_100: string | null
-  photo_200_orig: string | null
-  photo_id: string | null
-  relation: number | null
-  contacts_mobile_phone: string | null
-  contacts_home_phone: string | null
-  education_university: number | null
-  education_faculty: number | null
-  education_graduation: number | null
-  universities: string | null
-  raw_json: string | null
-}
-
-export interface VkFriendsPreviewResponse {
-  totalCount: number
-  warning?: string
-  items: FriendFlatDto[]
-}
-
 export interface VkFriendsExportResponse {
   jobId: string
   status: ExportJobStatus
@@ -72,7 +31,6 @@ export interface VkFriendsJob {
   fetchedCount: number
   warning?: string | null
   error?: string | null
-  xlsxPath?: string | null
   docxPath?: string | null
 }
 
@@ -114,7 +72,6 @@ export type VkFriendsStreamEvent =
         fetchedCount: number
         totalCount?: number
         warning?: string
-        xlsxPath?: string
         docxPath?: string
       }
     }
@@ -257,28 +214,8 @@ const readSseStream = async (
 }
 
 export const vkFriendsExportService = {
-  async preview(payload: {
-    params: VkFriendsParams
-    limit?: number
-    includeRawJson?: boolean
-  }): Promise<VkFriendsPreviewResponse> {
-    try {
-      const response = await createRequest(`${API_URL}/vk/friends/preview`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-
-      return await handleResponse<VkFriendsPreviewResponse>(response, 'Failed to load preview')
-    } catch (error) {
-      toast.error('Не удалось получить превью друзей')
-      throw error
-    }
-  },
-
   async export(payload: {
     params: VkFriendsParams
-    exportXlsx?: boolean
-    exportDocx?: boolean
     includeRawJson?: boolean
   }): Promise<VkFriendsExportResponse> {
     try {
@@ -340,7 +277,7 @@ export const vkFriendsExportService = {
     }
   },
 
-  async downloadJobFile(jobId: string, type: 'xlsx' | 'docx'): Promise<void> {
+  async downloadJobFile(jobId: string, type: 'docx'): Promise<void> {
     try {
       const response = await createRequest(`${API_URL}/vk/friends/jobs/${jobId}/download/${type}`)
 

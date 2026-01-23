@@ -1,67 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import PageHeroCard from '@/components/PageHeroCard'
 import SectionCard from '@/components/SectionCard'
-import { LoadingState } from '@/components/LoadingState'
 import ProgressBar from '@/components/ProgressBar'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
   vkFriendsExportService,
   type ExportJobStatus,
-  type FriendFlatDto,
   type JobLogLevel,
   type VkFriendsJobLog,
   type VkFriendsParams,
   type VkFriendsStreamEvent,
 } from '@/services/vkFriendsExportService'
 
-const PREVIEW_LIMIT = 100
 const MAX_LOGS = 50
-
-const PREVIEW_COLUMNS: Array<{ key: keyof FriendFlatDto; label: string }> = [
-  { key: 'id', label: 'ID' },
-  { key: 'first_name', label: 'Имя' },
-  { key: 'last_name', label: 'Фамилия' },
-  { key: 'nickname', label: 'Ник' },
-  { key: 'domain', label: 'Домен' },
-  { key: 'bdate', label: 'ДР' },
-  { key: 'sex', label: 'Пол' },
-  { key: 'status', label: 'Статус' },
-  { key: 'online', label: 'Онлайн' },
-  { key: 'last_seen_time', label: 'Последний визит' },
-  { key: 'last_seen_platform', label: 'Платформа' },
-  { key: 'city_title', label: 'Город' },
-  { key: 'country_title', label: 'Страна' },
-  { key: 'has_mobile', label: 'Моб.' },
-  { key: 'can_post', label: 'Посты' },
-  { key: 'can_see_all_posts', label: 'Видит посты' },
-  { key: 'can_write_private_message', label: 'Можно писать' },
-  { key: 'timezone', label: 'TZ' },
-  { key: 'photo_50', label: 'Фото 50' },
-  { key: 'photo_100', label: 'Фото 100' },
-  { key: 'photo_200_orig', label: 'Фото 200' },
-  { key: 'photo_id', label: 'Фото ID' },
-  { key: 'relation', label: 'Отношения' },
-  { key: 'contacts_mobile_phone', label: 'Тел. моб.' },
-  { key: 'contacts_home_phone', label: 'Тел. дом.' },
-  { key: 'education_university', label: 'Университет' },
-  { key: 'education_faculty', label: 'Факультет' },
-  { key: 'education_graduation', label: 'Год выпуска' },
-  { key: 'universities', label: 'ВУЗы' },
-  { key: 'raw_json', label: 'Raw JSON' },
-]
 
 const STATUS_LABELS: Record<ExportJobStatus, string> = {
   PENDING: 'В ожидании',
@@ -151,8 +106,6 @@ const formatLogTime = (value?: string): string => {
 type FormState = {
   userId: string
   includeRawJson: boolean
-  exportXlsx: boolean
-  exportDocx: boolean
 }
 
 type JobLogEntry = {
@@ -187,15 +140,7 @@ function VkFriendsExportPage() {
   const [formState, setFormState] = useState<FormState>({
     userId: '',
     includeRawJson: false,
-    exportXlsx: true,
-    exportDocx: false,
   })
-
-  const [previewItems, setPreviewItems] = useState<FriendFlatDto[]>([])
-  const [previewTotalCount, setPreviewTotalCount] = useState<number | null>(null)
-  const [previewWarning, setPreviewWarning] = useState<string | null>(null)
-  const [previewError, setPreviewError] = useState<string | null>(null)
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
 
   const [jobId, setJobId] = useState<string | null>(null)
   const [jobStatus, setJobStatus] = useState<ExportJobStatus | null>(null)
@@ -203,7 +148,6 @@ function VkFriendsExportPage() {
   const [jobError, setJobError] = useState<string | null>(null)
   const [jobProgress, setJobProgress] = useState({ fetchedCount: 0, totalCount: 0 })
   const [jobLogs, setJobLogs] = useState<JobLogEntry[]>([])
-  const [hasXlsx, setHasXlsx] = useState(false)
   const [hasDocx, setHasDocx] = useState(false)
   const [isExportLoading, setIsExportLoading] = useState(false)
 
@@ -278,7 +222,6 @@ function VkFriendsExportPage() {
         fetchedCount: event.data.fetchedCount,
         totalCount: event.data.totalCount ?? prev.totalCount,
       }))
-      setHasXlsx(Boolean(event.data.xlsxPath))
       setHasDocx(Boolean(event.data.docxPath))
       closeStream()
       return
@@ -314,7 +257,6 @@ function VkFriendsExportPage() {
         fetchedCount: response.job.fetchedCount ?? 0,
         totalCount: response.job.totalCount ?? 0,
       })
-      setHasXlsx(Boolean(response.job.xlsxPath))
       setHasDocx(Boolean(response.job.docxPath))
       setJobLogs(normalizeLogs(response.logs))
     } catch {
@@ -322,34 +264,10 @@ function VkFriendsExportPage() {
     }
   }
 
-  const handlePreview = async () => {
-    setPreviewError(null)
-    setPreviewWarning(null)
-    setIsPreviewLoading(true)
-
-    try {
-      const params = buildParams()
-      const response = await vkFriendsExportService.preview({
-        params,
-        limit: PREVIEW_LIMIT,
-        includeRawJson: formState.includeRawJson,
-      })
-
-      setPreviewItems(response.items)
-      setPreviewTotalCount(response.totalCount)
-      setPreviewWarning(response.warning ?? null)
-    } catch {
-      setPreviewError('Не удалось получить превью')
-    } finally {
-      setIsPreviewLoading(false)
-    }
-  }
-
   const handleExport = async () => {
     setJobError(null)
     setJobWarning(null)
     setJobLogs([])
-    setHasXlsx(false)
     setHasDocx(false)
     setJobProgress({ fetchedCount: 0, totalCount: 0 })
     setIsExportLoading(true)
@@ -359,8 +277,6 @@ function VkFriendsExportPage() {
       const response = await vkFriendsExportService.export({
         params,
         includeRawJson: formState.includeRawJson,
-        exportXlsx: formState.exportXlsx,
-        exportDocx: formState.exportDocx,
       })
 
       setJobId(response.jobId)
@@ -375,30 +291,21 @@ function VkFriendsExportPage() {
     }
   }
 
-  const handleDownload = async (type: 'xlsx' | 'docx') => {
+  const handleDownloadDocx = async () => {
     if (!jobId) {
       return
     }
 
     try {
-      await vkFriendsExportService.downloadJobFile(jobId, type)
+      await vkFriendsExportService.downloadJobFile(jobId, 'docx')
     } catch {
       // errors are already surfaced via toast
     }
   }
 
-  const previewRows = useMemo(() => previewItems.slice(0, PREVIEW_LIMIT), [previewItems])
-  const totalCountLabel = useMemo(() => {
-    if (previewTotalCount === null) {
-      return '—'
-    }
-    return String(previewTotalCount)
-  }, [previewTotalCount])
-
   const jobStatusLabel = jobStatus ? STATUS_LABELS[jobStatus] : '—'
   const jobStatusVariant = jobStatus ? STATUS_VARIANTS[jobStatus] : 'outline'
   const isJobDone = jobStatus === 'DONE'
-  const canDownloadXlsx = isJobDone && hasXlsx
   const canDownloadDocx = isJobDone && hasDocx
   const progressLabel =
     jobProgress.totalCount > 0
@@ -410,11 +317,10 @@ function VkFriendsExportPage() {
     <div className="flex flex-col gap-6 pb-8">
       <PageHeroCard
         title="Экспорт друзей ВКонтакте"
-        description="Формируйте превью, запускайте экспорт и скачивайте отчёты по friends.get с прогрессом и логами."
+        description="Запускайте экспорт friends.get и скачивайте DOCX с прогрессом и логами."
         actions={
           <div className="flex flex-col gap-2 text-sm text-text-secondary">
-            <span>Preview показывает до {PREVIEW_LIMIT} записей.</span>
-            <span>Export сохраняет данные и формирует XLSX/DOCX.</span>
+            <span>Export сохраняет данные и формирует DOCX.</span>
           </div>
         }
       />
@@ -437,7 +343,7 @@ function VkFriendsExportPage() {
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3">
               <label
                 htmlFor="vk-include-raw"
                 className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/50 bg-background-secondary/70 px-3 py-2 text-sm"
@@ -451,48 +357,9 @@ function VkFriendsExportPage() {
                 />
                 includeRawJson
               </label>
-
-              <label
-                htmlFor="vk-export-xlsx"
-                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/50 bg-background-secondary/70 px-3 py-2 text-sm"
-              >
-                <input
-                  id="vk-export-xlsx"
-                  type="checkbox"
-                  checked={formState.exportXlsx}
-                  onChange={(event) => updateField('exportXlsx', event.target.checked)}
-                  className="h-5 w-5 rounded border-border bg-background text-accent-primary focus:ring-accent-primary focus:ring-offset-0"
-                />
-                exportXlsx
-              </label>
-
-              <label
-                htmlFor="vk-export-docx"
-                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/50 bg-background-secondary/70 px-3 py-2 text-sm"
-              >
-                <input
-                  id="vk-export-docx"
-                  type="checkbox"
-                  checked={formState.exportDocx}
-                  onChange={(event) => updateField('exportDocx', event.target.checked)}
-                  className="h-5 w-5 rounded border-border bg-background text-accent-primary focus:ring-accent-primary focus:ring-offset-0"
-                />
-                exportDocx
-              </label>
             </div>
 
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <Button onClick={handlePreview} disabled={isPreviewLoading} variant="secondary">
-                {isPreviewLoading ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Spinner className="size-4" />
-                    Preview...
-                  </span>
-                ) : (
-                  'Preview'
-                )}
-              </Button>
-
               <Button onClick={handleExport} disabled={isExportLoading}>
                 {isExportLoading ? (
                   <span className="inline-flex items-center gap-2">
@@ -503,8 +370,6 @@ function VkFriendsExportPage() {
                   'Run export'
                 )}
               </Button>
-
-              {previewError && <span className="text-sm text-destructive">{previewError}</span>}
             </div>
           </div>
         </SectionCard>
@@ -521,15 +386,7 @@ function VkFriendsExportPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDownload('xlsx')}
-                  disabled={!canDownloadXlsx}
-                >
-                  Download XLSX
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDownload('docx')}
+                  onClick={handleDownloadDocx}
                   disabled={!canDownloadDocx}
                 >
                   Download DOCX
@@ -592,64 +449,6 @@ function VkFriendsExportPage() {
           </div>
         </SectionCard>
       </div>
-
-      <SectionCard title="Preview" description={`Первые ${PREVIEW_LIMIT} записей из friends.get.`}>
-        {isPreviewLoading ? (
-          <LoadingState message="Загрузка preview..." />
-        ) : previewRows.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyTitle>Превью пока нет</EmptyTitle>
-              <EmptyDescription>
-                Заполните параметры и нажмите Preview, чтобы увидеть первые записи.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-text-secondary">
-              <span>Всего: {totalCountLabel}</span>
-              <span>Показано: {previewRows.length}</span>
-              {previewWarning && <Badge variant="highlight">{previewWarning}</Badge>}
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {PREVIEW_COLUMNS.map((column) => (
-                    <TableHead key={column.key} className="whitespace-nowrap">
-                      {column.label}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {previewRows.map((row, rowIndex) => (
-                  <TableRow key={`${row.id ?? 'row'}-${rowIndex}`}>
-                    {PREVIEW_COLUMNS.map((column) => {
-                      const rawValue = row[column.key]
-                      const formatted = formatCellValue(rawValue)
-                      const truncated = truncateValue(formatted)
-                      const showTitle = formatted !== truncated
-
-                      return (
-                        <TableCell key={`${column.key}-${rowIndex}`} className="max-w-[220px]">
-                          <span
-                            title={showTitle ? formatted : undefined}
-                            className="block truncate"
-                          >
-                            {truncated}
-                          </span>
-                        </TableCell>
-                      )
-                    })}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </SectionCard>
     </div>
   )
 }

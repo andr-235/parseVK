@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import ExcelJS from 'exceljs';
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { FriendFlatDto } from '../dto/vk-friends.dto';
@@ -41,20 +40,6 @@ const FRIEND_FIELDS: Array<keyof FriendFlatDto> = [
   'raw_json',
 ];
 
-const FRIEND_COLUMN_WIDTHS: Partial<Record<keyof FriendFlatDto, number>> = {
-  first_name: 20,
-  last_name: 20,
-  nickname: 20,
-  domain: 20,
-  status: 30,
-  city_title: 24,
-  country_title: 24,
-  contacts_mobile_phone: 20,
-  contacts_home_phone: 20,
-  universities: 40,
-  raw_json: 60,
-};
-
 const CONTENT_TYPES_XML =
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
   '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
@@ -83,31 +68,6 @@ const CRC_TABLE = (() => {
 
 @Injectable()
 export class VkFriendsExporterService {
-  async writeXlsxFile(jobId: string, rows: FriendFlatDto[]): Promise<string> {
-    await fs.mkdir(EXPORT_DIR, { recursive: true });
-
-    const filePath = path.join(EXPORT_DIR, `vk_friends_${jobId}.xlsx`);
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Friends');
-
-    worksheet.columns = FRIEND_FIELDS.map((field) => ({
-      header: field,
-      key: field,
-      width: FRIEND_COLUMN_WIDTHS[field] ?? 18,
-    }));
-
-    worksheet.getRow(1).font = { bold: true };
-
-    for (const row of rows) {
-      worksheet.addRow(row);
-    }
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    await fs.writeFile(filePath, Buffer.from(buffer));
-
-    return filePath;
-  }
-
   async writeDocxFile(jobId: string, rows: FriendFlatDto[]): Promise<string> {
     await fs.mkdir(EXPORT_DIR, { recursive: true });
 

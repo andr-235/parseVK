@@ -22,8 +22,6 @@ import { FriendMapper } from './mappers/friend.mapper';
 import {
   VkFriendsExportRequestDto,
   VkFriendsParamsDto,
-  VkFriendsPreviewRequestDto,
-  type FriendFlatDto,
 } from './dto/vk-friends.dto';
 import { VkFriendsExporterService } from './services/vk-friends-exporter.service';
 import { VkFriendsJobStreamService } from './services/vk-friends-job-stream.service';
@@ -32,8 +30,6 @@ import type {
   JobLogLevel,
 } from './repositories/vk-friends.repository';
 
-const DEFAULT_PREVIEW_LIMIT = 100;
-const MAX_PREVIEW_LIMIT = 5000;
 const EXPORT_BATCH_SIZE = 1000;
 const EXPORT_DIR = path.resolve(process.cwd(), '.temp', 'vk-friends');
 const DEFAULT_FRIEND_FIELDS: VkFriendsParamsDto['fields'] = [
@@ -72,44 +68,6 @@ export class VkFriendsController {
     private readonly jobStream: VkFriendsJobStreamService,
   ) {}
 
-  @Post('preview')
-  async preview(@Body() body: VkFriendsPreviewRequestDto): Promise<{
-    totalCount: number;
-    warning?: string;
-    items: FriendFlatDto[];
-  }> {
-    if (!body.params) {
-      throw new BadRequestException('params is required');
-    }
-
-    const includeRawJson = body.includeRawJson === true;
-    const limit = this.normalizePreviewLimit(body.limit);
-    const paramsLimit = this.normalizeCount(body.params.count);
-    const effectiveLimit =
-      paramsLimit !== undefined ? Math.min(paramsLimit, limit) : limit;
-    const params = this.buildParams(body.params, {
-      count: effectiveLimit,
-    });
-
-    const { totalCount, warning, rawItems } =
-      await this.vkFriendsService.fetchAllFriends(params, {
-        includeRawJson: true,
-        pageSize: Math.min(effectiveLimit, EXPORT_BATCH_SIZE),
-      });
-
-    const items = rawItems
-      .slice(0, effectiveLimit)
-      .map((item) =>
-        this.friendMapper.mapVkUserToFlatDto(item, includeRawJson),
-      );
-
-    return {
-      totalCount,
-      warning,
-      items,
-    };
-  }
-
   @Post('export')
   async export(@Body() body: VkFriendsExportRequestDto) {
     if (!body.params) {
@@ -117,14 +75,12 @@ export class VkFriendsController {
     }
 
     const params = this.buildParams(body.params);
-    const exportXlsx = body.exportXlsx === true;
-    const exportDocx = body.exportDocx === true;
+    const exportDocx = body.exportDocx !== false;
     const includeRawJson = body.includeRawJson === true;
     const jobParams = {
       ...params,
       _export: {
         includeRawJson,
-        exportXlsx,
         exportDocx,
       },
     };
@@ -141,7 +97,6 @@ export class VkFriendsController {
     });
 
     void this.runExportJob(job.id, params, {
-      exportXlsx,
       exportDocx,
       includeRawJson,
     });
@@ -169,21 +124,12 @@ export class VkFriendsController {
     };
   }
 
-  @Get('jobs/:jobId/download/xlsx')
-  async downloadXlsx(
-    @Param('jobId', new ParseUUIDPipe({ version: '4' })) jobId: string,
-    @Res() res: Response,
-  ): Promise<void> {
-    const { filePath } = await this.resolveDownloadPath(jobId, 'xlsx');
-    res.download(filePath, path.basename(filePath));
-  }
-
   @Get('jobs/:jobId/download/docx')
   async downloadDocx(
     @Param('jobId', new ParseUUIDPipe({ version: '4' })) jobId: string,
     @Res() res: Response,
   ): Promise<void> {
-    const { filePath } = await this.resolveDownloadPath(jobId, 'docx');
+    const { filePath } = await this.resolveDownloadPath(jobId);
     res.download(filePath, path.basename(filePath));
   }
 
@@ -205,7 +151,6 @@ export class VkFriendsController {
               fetchedCount: job.fetchedCount,
               totalCount: job.totalCount ?? undefined,
               warning: job.warning ?? undefined,
-              xlsxPath: job.xlsxPath ?? undefined,
               docxPath: job.docxPath ?? undefined,
             },
           });
@@ -227,7 +172,6 @@ export class VkFriendsController {
     jobId: string,
     params: VkFriendsParamsDto,
     options: {
-      exportXlsx: boolean;
       exportDocx: boolean;
       includeRawJson: boolean;
     },
@@ -332,20 +276,14 @@ export class VkFriendsController {
 
       await log('info', `Saved friend records: ${inserted}`);
 
-      const shouldBuildFiles = options.exportXlsx || options.exportDocx;
+      const shouldBuildFiles = options.exportDocx;
       const friendRows = shouldBuildFiles
         ? rawItems.map((item) =>
             this.friendMapper.mapVkUserToFlatDto(item, options.includeRawJson),
           )
         : [];
 
-      let xlsxPath: string | undefined;
       let docxPath: string | undefined;
-
-      if (options.exportXlsx) {
-        xlsxPath = await this.exporter.writeXlsxFile(jobId, friendRows);
-        await log('info', 'XLSX generated', { path: xlsxPath });
-      }
 
       if (options.exportDocx) {
         docxPath = await this.exporter.writeDocxFile(jobId, friendRows);
@@ -356,7 +294,6 @@ export class VkFriendsController {
         fetchedCount,
         totalCount,
         warning,
-        xlsxPath,
         docxPath,
       });
 
@@ -370,7 +307,6 @@ export class VkFriendsController {
           fetchedCount: completedJob.fetchedCount,
           totalCount: completedJob.totalCount,
           warning: completedJob.warning ?? undefined,
-          xlsxPath: completedJob.xlsxPath ?? undefined,
           docxPath: completedJob.docxPath ?? undefined,
         },
       });
@@ -471,30 +407,8 @@ export class VkFriendsController {
     return fields;
   }
 
-  private normalizePreviewLimit(limit?: number): number {
-    if (typeof limit !== 'number' || Number.isNaN(limit)) {
-      return DEFAULT_PREVIEW_LIMIT;
-    }
-
-    const normalized = Math.floor(limit);
-    if (normalized <= 0) {
-      return DEFAULT_PREVIEW_LIMIT;
-    }
-
-    return Math.min(normalized, MAX_PREVIEW_LIMIT);
-  }
-
-  private normalizeCount(limit?: number): number | undefined {
-    if (typeof limit !== 'number' || Number.isNaN(limit)) {
-      return undefined;
-    }
-
-    return Math.max(0, Math.floor(limit));
-  }
-
   private async resolveDownloadPath(
     jobId: string,
-    type: 'xlsx' | 'docx',
   ): Promise<{ filePath: string }> {
     const job = await this.vkFriendsService.getJobById(jobId);
     if (!job) {
@@ -505,7 +419,7 @@ export class VkFriendsController {
       throw new BadRequestException('Export job is not completed');
     }
 
-    const filePath = type === 'xlsx' ? job.xlsxPath : job.docxPath;
+    const filePath = job.docxPath;
     if (!filePath) {
       throw new NotFoundException('Export file not found');
     }
@@ -518,25 +432,22 @@ export class VkFriendsController {
     try {
       await fs.stat(resolvedPath);
     } catch {
-      const rebuiltPath = await this.rebuildExportFile(job, type);
+      const rebuiltPath = await this.rebuildExportFile(job);
       return { filePath: rebuiltPath };
     }
 
     return { filePath: resolvedPath };
   }
 
-  private async rebuildExportFile(
-    job: {
-      id: string;
-      fetchedCount: number;
-      totalCount: number | null;
-      warning: string | null;
-      params: unknown;
-      xlsxPath: string | null;
-      docxPath: string | null;
-    },
-    type: 'xlsx' | 'docx',
-  ): Promise<string> {
+  private async rebuildExportFile(job: {
+    id: string;
+    fetchedCount: number;
+    totalCount: number | null;
+    warning: string | null;
+    params: unknown;
+    xlsxPath: string | null;
+    docxPath: string | null;
+  }): Promise<string> {
     const includeRawJson = this.resolveIncludeRawJson(job.params);
     const records = await this.vkFriendsService.getFriendRecordPayloads(job.id);
 
@@ -548,20 +459,16 @@ export class VkFriendsController {
       this.friendMapper.mapVkUserToFlatDto(record.payload, includeRawJson),
     );
 
-    const filePath =
-      type === 'xlsx'
-        ? await this.exporter.writeXlsxFile(job.id, friendRows)
-        : await this.exporter.writeDocxFile(job.id, friendRows);
+    const filePath = await this.exporter.writeDocxFile(job.id, friendRows);
 
     await this.vkFriendsService.completeJob(job.id, {
       fetchedCount: job.fetchedCount,
       totalCount: job.totalCount ?? undefined,
       warning: job.warning ?? undefined,
-      xlsxPath: type === 'xlsx' ? filePath : (job.xlsxPath ?? undefined),
-      docxPath: type === 'docx' ? filePath : (job.docxPath ?? undefined),
+      docxPath: filePath,
     });
 
-    this.logger.warn(`Export file regenerated for job ${job.id} (${type})`);
+    this.logger.warn(`Export file regenerated for job ${job.id}`);
 
     return filePath;
   }
