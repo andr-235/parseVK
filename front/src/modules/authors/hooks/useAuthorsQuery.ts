@@ -12,6 +12,7 @@ const createFetchAuthors = (params: AuthorsQueryParams) => () => {
     offset: 0,
     limit: params.pageSize,
     search: params.search || undefined,
+    city: params.city || undefined,
     verified: params.status === 'all' ? undefined : params.status === 'verified',
     sortBy: params.sortBy ?? undefined,
     sortOrder: params.sortBy ? params.sortOrder : undefined,
@@ -21,6 +22,7 @@ const createFetchAuthors = (params: AuthorsQueryParams) => () => {
 export const useAuthorsQuery = (enabled: boolean) => {
   const statusFilter = useAuthorsStore((state) => state.statusFilter)
   const rawSearch = useAuthorsStore((state) => state.search)
+  const cityFilter = useAuthorsStore((state) => state.cityFilter)
   const sortBy = useAuthorsStore((state) => state.sortBy)
   const sortOrder = useAuthorsStore((state) => state.sortOrder)
   const pageSize = useAuthorsStore((state) => state.pageSize)
@@ -29,11 +31,12 @@ export const useAuthorsQuery = (enabled: boolean) => {
     () => ({
       status: statusFilter,
       search: rawSearch.trim(),
+      city: cityFilter.trim(),
       sortBy,
       sortOrder: sortBy ? sortOrder : 'desc',
       pageSize,
     }),
-    [statusFilter, rawSearch, sortBy, sortOrder, pageSize]
+    [statusFilter, rawSearch, cityFilter, sortBy, sortOrder, pageSize]
   )
 
   const queryKey = useMemo(() => queryKeys.authors.list(params), [params])

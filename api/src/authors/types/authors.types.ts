@@ -24,6 +24,7 @@ export interface ListAuthorsOptions {
   offset?: number;
   limit?: number;
   search?: string | null;
+  city?: string | null;
 
   /**
    * Важно: делаем строго boolean | undefined.

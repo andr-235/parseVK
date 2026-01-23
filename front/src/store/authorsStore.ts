@@ -7,9 +7,14 @@ import { queryKeys, type AuthorsQueryParams } from '@/hooks/queryKeys'
 
 const DEFAULT_PAGE_SIZE = 24
 
-const buildAuthorsQueryParams = (state: AuthorsState, search: string): AuthorsQueryParams => ({
+const buildAuthorsQueryParams = (
+  state: AuthorsState,
+  search: string,
+  city: string
+): AuthorsQueryParams => ({
   status: state.statusFilter,
   search,
+  city,
   sortBy: state.sortBy,
   sortOrder: state.sortBy ? state.sortOrder : 'desc',
   pageSize: state.pageSize,
@@ -23,6 +28,7 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
   isLoadingMore: false,
   isRefreshing: false,
   search: '',
+  cityFilter: '',
   statusFilter: 'unverified',
   pageSize: DEFAULT_PAGE_SIZE,
   sortBy: null,
@@ -36,7 +42,8 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
     const shouldReset = reset === true || search !== undefined
     const offset = shouldReset ? 0 : state.authors.length
 
-    const queryParams = buildAuthorsQueryParams(state, trimmedSearch)
+    const trimmedCity = state.cityFilter.trim()
+    const queryParams = buildAuthorsQueryParams(state, trimmedSearch, trimmedCity)
     const queryKey = queryKeys.authors.list(queryParams)
 
     if (shouldReset) {
@@ -69,6 +76,7 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
         offset,
         limit: state.pageSize,
         search: trimmedSearch || undefined,
+        city: trimmedCity || undefined,
         verified: state.statusFilter === 'all' ? undefined : state.statusFilter === 'verified',
         sortBy: state.sortBy ?? undefined,
         sortOrder: state.sortBy ? state.sortOrder : undefined,
@@ -121,6 +129,17 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
 
   setSearch: (value: string) => {
     set({ search: value })
+  },
+
+  setCityFilter: (value: string) => {
+    set(() => ({
+      cityFilter: value,
+      authors: [],
+      total: 0,
+      hasMore: false,
+      isLoading: true,
+      isLoadingMore: false,
+    }))
   },
 
   setStatusFilter: (value) => {
@@ -198,7 +217,11 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
     get().markAuthorVerified(vkUserId, verifiedAt)
 
     const updatedState = get()
-    const params = buildAuthorsQueryParams(updatedState, updatedState.search.trim())
+    const params = buildAuthorsQueryParams(
+      updatedState,
+      updatedState.search.trim(),
+      updatedState.cityFilter.trim()
+    )
     const queryKey = queryKeys.authors.list(params)
 
     await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
@@ -217,7 +240,11 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
     try {
       await authorsService.refreshAuthors()
       const stateAfterRefresh = get()
-      const params = buildAuthorsQueryParams(stateAfterRefresh, stateAfterRefresh.search.trim())
+      const params = buildAuthorsQueryParams(
+        stateAfterRefresh,
+        stateAfterRefresh.search.trim(),
+        stateAfterRefresh.cityFilter.trim()
+      )
       const queryKey = queryKeys.authors.list(params)
       await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
     } finally {
@@ -232,7 +259,11 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
     }))
 
     const updatedState = get()
-    const params = buildAuthorsQueryParams(updatedState, updatedState.search.trim())
+    const params = buildAuthorsQueryParams(
+      updatedState,
+      updatedState.search.trim(),
+      updatedState.cityFilter.trim()
+    )
     const queryKey = queryKeys.authors.list(params)
 
     await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })

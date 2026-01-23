@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuthorsStore, usePhotoAnalysisStore } from '@/store'
 import type { AuthorCard, AuthorSortField, PhotoAnalysisSummary } from '@/types'
-import { resolveProfileUrl } from '@/modules/authors/utils/authorUtils'
+import { resolveCityLabel, resolveProfileUrl } from '@/modules/authors/utils/authorUtils'
 
 export const useAuthorsViewModel = () => {
   const authors = useAuthorsStore((state) => state.authors)
@@ -18,6 +18,8 @@ export const useAuthorsViewModel = () => {
   const setStoreSearch = useAuthorsStore((state) => state.setSearch)
   const statusFilter = useAuthorsStore((state) => state.statusFilter)
   const setStatusFilter = useAuthorsStore((state) => state.setStatusFilter)
+  const cityFilter = useAuthorsStore((state) => state.cityFilter)
+  const setCityFilter = useAuthorsStore((state) => state.setCityFilter)
   const sortBy = useAuthorsStore((state) => state.sortBy)
   const sortOrder = useAuthorsStore((state) => state.sortOrder)
   const setSort = useAuthorsStore((state) => state.setSort)
@@ -31,7 +33,9 @@ export const useAuthorsViewModel = () => {
   const [analyzingVkUserId, setAnalyzingVkUserId] = useState<number | null>(null)
   const [deletingVkUserId, setDeletingVkUserId] = useState<number | null>(null)
   const [searchValue, setSearchValue] = useState(storeSearch)
+  const [cityValue, setCityValue] = useState(cityFilter)
   const isInitialSearch = useRef(true)
+  const isInitialCity = useRef(true)
 
   useEffect(() => {
     if (isInitialSearch.current) {
@@ -48,6 +52,22 @@ export const useAuthorsViewModel = () => {
       window.clearTimeout(timeoutId)
     }
   }, [searchValue, setStoreSearch])
+
+  useEffect(() => {
+    if (isInitialCity.current) {
+      isInitialCity.current = false
+      setCityFilter(cityValue)
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCityFilter(cityValue)
+    }, 300)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [cityValue, setCityFilter])
 
   const navigateToAuthorDetails = useCallback(
     (author: AuthorCard, summary: PhotoAnalysisSummary) => {
@@ -93,6 +113,10 @@ export const useAuthorsViewModel = () => {
     },
     [setStatusFilter, statusFilter]
   )
+
+  const handleCityFilterChange = useCallback((value: string) => {
+    setCityValue(value)
+  }, [])
 
   const handleLoadMore = useCallback(() => {
     loadMore().catch((error) => {
@@ -235,6 +259,19 @@ export const useAuthorsViewModel = () => {
       ? 'Все найденные авторы уже отмечены как проверенные. Попробуйте сменить фильтр или обновить данные.'
       : 'Попробуйте изменить фильтр или уточнить поисковый запрос.'
 
+  const cityOptions = useMemo(() => {
+    const unique = new Set<string>()
+
+    for (const author of authors) {
+      const label = resolveCityLabel(author.city)
+      if (label) {
+        unique.add(label)
+      }
+    }
+
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'ru'))
+  }, [authors])
+
   return {
     authors,
     hasMore,
@@ -243,6 +280,8 @@ export const useAuthorsViewModel = () => {
     isRefreshing,
     searchValue,
     statusFilter,
+    cityValue,
+    cityOptions,
     sortBy,
     sortOrder,
     analyzingVkUserId,
@@ -252,6 +291,7 @@ export const useAuthorsViewModel = () => {
     emptyDescription,
     handleSearchChange,
     handleStatusFilterChange,
+    handleCityFilterChange,
     handleLoadMore,
     handleRefresh,
     handleOpenDetails,

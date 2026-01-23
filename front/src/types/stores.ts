@@ -133,6 +133,7 @@ export interface AuthorsState {
   isLoadingMore: boolean
   isRefreshing: boolean
   search: string
+  cityFilter: string
   statusFilter: 'all' | 'verified' | 'unverified'
   pageSize: number
   sortBy: AuthorSortField | null
@@ -140,6 +141,7 @@ export interface AuthorsState {
   fetchAuthors: (options?: { search?: string; reset?: boolean }) => Promise<void>
   loadMore: () => Promise<void>
   setSearch: (value: string) => void
+  setCityFilter: (value: string) => void
   setStatusFilter: (value: 'all' | 'verified' | 'unverified') => void
   setSort: (value: AuthorSortField) => void
   markAuthorVerified: (vkUserId: number, verifiedAt: string | null) => void

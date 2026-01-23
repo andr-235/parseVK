@@ -8,6 +8,7 @@ export interface AuthorFiltersResult {
 export class AuthorFiltersBuilder {
   buildFilters(
     search: string | null | undefined,
+    city: string | null | undefined,
     verified?: boolean,
   ): AuthorFiltersResult {
     const sqlConditions: SqlFragment[] = [];
@@ -19,6 +20,11 @@ export class AuthorFiltersBuilder {
 
     if (verified !== undefined) {
       sqlConditions.push(this.buildVerifiedFilter(verified));
+    }
+
+    const normalizedCity = this.normalizeSearch(city);
+    if (normalizedCity) {
+      sqlConditions.push(this.buildCityFilter(normalizedCity));
     }
 
     return { sqlConditions };
@@ -53,5 +59,17 @@ export class AuthorFiltersBuilder {
     return verified
       ? Prisma.sql`"Author"."verifiedAt" IS NOT NULL`
       : Prisma.sql`"Author"."verifiedAt" IS NULL`;
+  }
+
+  private buildCityFilter(city: string): SqlFragment {
+    const likeTerm = `%${city.toLowerCase()}%`;
+    const cityValue = Prisma.sql`COALESCE(
+      NULLIF("Author"."city"->>'title', ''),
+      NULLIF("Author"."city"->>'name', ''),
+      NULLIF(TRIM(BOTH '"' FROM "Author"."city"::text), ''),
+      NULLIF("Author"."homeTown", '')
+    )`;
+
+    return Prisma.sql`LOWER(${cityValue}) LIKE ${likeTerm}`;
   }
 }

@@ -32,11 +32,12 @@ export class AuthorsService {
   ) {}
 
   async listAuthors(options: ListAuthorsOptions = {}): Promise<AuthorListDto> {
-    const { offset, limit, search, verified, sort } =
+    const { offset, limit, search, city, verified, sort } =
       this.normalizeListOptions(options);
 
     const { sqlConditions } = this.filtersBuilder.buildFilters(
       search,
+      city,
       verified,
     );
 
@@ -119,6 +120,7 @@ export class AuthorsService {
     const offset = this.normalizeOffset(options.offset);
     const limit = this.normalizeLimit(options.limit);
     const search = this.normalizeSearch(options.search);
+    const city = this.normalizeSearch(options.city);
 
     // verified уже boolean | undefined (после ListAuthorsQueryDto)
     const verified = options.verified;
@@ -129,7 +131,7 @@ export class AuthorsService {
       verified,
     );
 
-    return { offset, limit, search, verified, sort };
+    return { offset, limit, search, city, verified, sort };
   }
 
   private normalizeOffset(value: number | null | undefined): number {

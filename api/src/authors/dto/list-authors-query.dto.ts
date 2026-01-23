@@ -44,6 +44,15 @@ function toSortDirection(value: unknown): AuthorSortDirection | null {
   return value === 'asc' || value === 'desc' ? value : null;
 }
 
+function toOptionalString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export class ListAuthorsQueryDto {
   @Type(() => Number)
   @IsInt()
@@ -61,6 +70,11 @@ export class ListAuthorsQueryDto {
   @IsString()
   @IsOptional()
   search?: string;
+
+  @Transform(({ value }) => toOptionalString(value))
+  @IsOptional()
+  @IsString()
+  city?: string;
 
   @Transform(({ value, obj }: { value: unknown; obj: unknown }) => {
     const rawVerified =

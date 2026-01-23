@@ -12,6 +12,8 @@ function Authors() {
     isRefreshing,
     searchValue,
     statusFilter,
+    cityValue,
+    cityOptions,
     sortBy,
     sortOrder,
     analyzingVkUserId,
@@ -20,6 +22,7 @@ function Authors() {
     emptyDescription,
     handleSearchChange,
     handleStatusFilterChange,
+    handleCityFilterChange,
     handleLoadMore,
     handleRefresh,
     handleOpenDetails,
@@ -44,6 +47,9 @@ function Authors() {
           onSearchChange={handleSearchChange}
           statusFilter={statusFilter}
           onStatusFilterChange={handleStatusFilterChange}
+          cityFilter={cityValue}
+          onCityFilterChange={handleCityFilterChange}
+          cityOptions={cityOptions}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing || isLoading}
         />

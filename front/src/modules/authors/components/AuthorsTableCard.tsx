@@ -11,6 +11,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { AuthorCard, AuthorSortField } from '@/types'
+import { resolveCityLabel } from '@/modules/authors/utils/authorUtils'
 import { ArrowRight, Camera, Search, Trash2 } from 'lucide-react'
 
 interface AuthorsTableCardProps {
@@ -76,24 +77,6 @@ const resolveProfileUrl = (author: AuthorCard): string => {
     return `https://vk.com/${author.screenName}`
   }
   return `https://vk.com/id${author.vkUserId}`
-}
-
-const resolveCityLabel = (city: AuthorCard['city']): string | null => {
-  if (!city) {
-    return null
-  }
-
-  if (typeof city === 'string') {
-    const trimmed = city.trim()
-    return trimmed.length > 0 ? trimmed : null
-  }
-
-  const cityRecord = city as { title?: unknown; name?: unknown }
-  const title = typeof cityRecord.title === 'string' ? cityRecord.title.trim() : ''
-  const name = typeof cityRecord.name === 'string' ? cityRecord.name.trim() : ''
-  const resolved = title || name
-
-  return resolved.length > 0 ? resolved : null
 }
 
 export function AuthorsTableCard({

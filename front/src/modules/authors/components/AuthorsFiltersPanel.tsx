@@ -8,6 +8,9 @@ interface AuthorsFiltersPanelProps {
   onSearchChange: (value: string) => void
   statusFilter: 'unverified' | 'verified' | 'all'
   onStatusFilterChange: (value: 'unverified' | 'verified' | 'all') => void
+  cityFilter: string
+  onCityFilterChange: (value: string) => void
+  cityOptions: string[]
   onRefresh: () => void
   isRefreshing: boolean
 }
@@ -17,6 +20,9 @@ export function AuthorsFiltersPanel({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
+  cityFilter,
+  onCityFilterChange,
+  cityOptions,
   onRefresh,
   isRefreshing,
 }: AuthorsFiltersPanelProps) {
@@ -67,6 +73,22 @@ export function AuthorsFiltersPanel({
               {filter === 'all' ? 'Все' : filter === 'verified' ? 'Проверенные' : 'Непроверенные'}
             </Button>
           ))}
+        </div>
+
+        <div className="flex min-w-[220px] flex-1 items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Город</span>
+          <Input
+            value={cityFilter}
+            onChange={(event) => onCityFilterChange(event.target.value)}
+            placeholder="Любой"
+            list="authors-city-options"
+            className="h-9 rounded-lg border-muted bg-muted/20 text-sm focus-visible:ring-1 focus-visible:ring-primary/30"
+          />
+          <datalist id="authors-city-options">
+            {cityOptions.map((city) => (
+              <option key={city} value={city} />
+            ))}
+          </datalist>
         </div>
       </div>
     </div>

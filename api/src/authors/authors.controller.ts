@@ -24,6 +24,7 @@ export class AuthorsController {
       offset: query.offset,
       limit: query.limit,
       search: query.search,
+      city: query.city,
       verified: query.verified,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,

@@ -15,3 +15,21 @@ export const resolveProfileUrl = (author: AuthorCard): string => {
 
   return `https://vk.com/id${author.vkUserId}`
 }
+
+export const resolveCityLabel = (city: AuthorCard['city']): string | null => {
+  if (!city) {
+    return null
+  }
+
+  if (typeof city === 'string') {
+    const trimmed = city.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  const cityRecord = city as { title?: unknown; name?: unknown }
+  const title = typeof cityRecord.title === 'string' ? cityRecord.title.trim() : ''
+  const name = typeof cityRecord.name === 'string' ? cityRecord.name.trim() : ''
+  const resolved = title || name
+
+  return resolved.length > 0 ? resolved : null
+}

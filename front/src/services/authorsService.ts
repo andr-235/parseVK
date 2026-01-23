@@ -81,6 +81,7 @@ export const authorsService = {
       offset?: number
       limit?: number
       search?: string
+      city?: string
       verified?: boolean
       sortBy?: AuthorSortField
       sortOrder?: AuthorSortOrder
@@ -91,6 +92,7 @@ export const authorsService = {
         offset: params.offset,
         limit: params.limit,
         search: params.search,
+        city: params.city,
         verified: params.verified,
         sortBy: params.sortBy,
         sortOrder: params.sortOrder,

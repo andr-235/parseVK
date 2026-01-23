@@ -13,6 +13,7 @@ const buildListingsKey = (params: ListingsQueryParams) =>
 type AuthorsQueryParams = {
   status: 'all' | 'verified' | 'unverified'
   search: string
+  city: string
   sortBy: AuthorSortField | null
   sortOrder: AuthorSortOrder
   pageSize: number
@@ -23,6 +24,7 @@ const buildAuthorsKey = (params: AuthorsQueryParams) =>
     'authors',
     params.status,
     params.search,
+    params.city,
     params.sortBy ?? 'none',
     params.sortOrder,
     params.pageSize,
