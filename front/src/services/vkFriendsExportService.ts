@@ -280,17 +280,25 @@ export const vkFriendsExportService = {
 
       if (!response.ok) {
         const text = await response.text().catch(() => '')
-        throw new Error(text || 'Failed to download export file')
+        const errorMessage = text || 'Failed to download export file'
+        throw new Error(errorMessage)
       }
 
       const blob = await response.blob()
+
+      // Проверка, что blob не пустой
+      if (blob.size === 0) {
+        throw new Error('Downloaded file is empty')
+      }
+
       const fallbackName = `vk_friends_${jobId}.${type}`
       const filename = extractFilename(response.headers.get('Content-Disposition'), fallbackName)
 
       saveReportBlob(blob, filename)
       toast.success(`Файл ${type.toUpperCase()} сохранён`)
     } catch (error) {
-      toast.error(`Не удалось скачать ${type.toUpperCase()}`)
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
+      toast.error(`Не удалось скачать ${type.toUpperCase()}: ${errorMessage}`)
       throw error
     }
   },

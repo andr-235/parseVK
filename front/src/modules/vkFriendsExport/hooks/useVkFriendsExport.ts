@@ -139,6 +139,13 @@ export const useVkFriendsExport = () => {
         }))
         setHasDocx(Boolean(event.data.docxPath))
         closeStream()
+
+        // Автоматическое скачивание после завершения
+        if (event.data.docxPath && event.data.jobId) {
+          void vkFriendsExportService.downloadJobFile(event.data.jobId, 'docx').catch(() => {
+            // Ошибки уже обрабатываются через toast в сервисе
+          })
+        }
         return
       }
 

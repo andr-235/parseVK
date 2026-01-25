@@ -116,8 +116,32 @@ export class VkFriendsController {
     @Param('jobId', new ParseUUIDPipe({ version: '4' })) jobId: string,
     @Res() res: Response,
   ): Promise<void> {
-    const { filePath } = await this.resolveDownloadPath(jobId);
-    res.download(filePath, path.basename(filePath));
+    try {
+      const { filePath } = await this.resolveDownloadPath(jobId);
+
+      // Проверка существования файла
+      await fs.access(filePath);
+
+      res.download(filePath, path.basename(filePath), (err) => {
+        if (err) {
+          this.logger.error(`Failed to download file: ${filePath}`, err);
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to download file' });
+          }
+        }
+      });
+    } catch (error) {
+      this.logger.error(`Error downloading file for job ${jobId}`, error);
+      if (!res.headersSent) {
+        if (
+          error instanceof NotFoundException ||
+          error instanceof BadRequestException
+        ) {
+          throw error;
+        }
+        throw new NotFoundException('Export file not found');
+      }
+    }
   }
 
   @Sse('jobs/:jobId/stream')
