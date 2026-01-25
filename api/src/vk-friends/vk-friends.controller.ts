@@ -118,43 +118,17 @@ export class VkFriendsController {
   ): Promise<void> {
     try {
       const { filePath } = await this.resolveDownloadPath(jobId);
-
-      // Финальная проверка существования файла перед скачиванием
-      try {
-        const stats = await fs.stat(filePath);
-        if (!stats.isFile()) {
-          throw new Error('Path is not a file');
-        }
-      } catch (accessError) {
-        this.logger.error(
-          `File not accessible before download: ${filePath}`,
-          accessError,
-        );
-        throw new NotFoundException('Export file not accessible');
-      }
-
-      this.logger.debug(`Downloading file: ${filePath}`);
-
+      const buffer = await fs.readFile(filePath);
       const fileName = path.basename(filePath);
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${fileName}"`,
-      );
-      res.setHeader(
-        'Content-Type',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      );
 
-      res.sendFile(filePath, (err) => {
-        if (err) {
-          this.logger.error(`Failed to send file: ${filePath}`, err);
-          if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to download file' });
-          }
-        } else {
-          this.logger.debug(`File sent successfully: ${filePath}`);
-        }
+      res.set({
+        'Content-Type':
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+        'Content-Length': String(buffer.length),
       });
+      res.end(buffer);
+      this.logger.debug(`File sent successfully: ${filePath}`);
     } catch (error) {
       this.logger.error(`Error downloading file for job ${jobId}`, error);
       if (!res.headersSent) {
