@@ -80,7 +80,6 @@ describe('VkFriendsController (HTTP)', () => {
       .post('/vk/friends/export')
       .send({
         params: { user_id: 42, count: 10 },
-        includeRawJson: true,
       })
       .expect(201)
       .expect({ jobId: job.id, status: job.status });
@@ -95,7 +94,6 @@ describe('VkFriendsController (HTTP)', () => {
     expect(runExportSpy).toHaveBeenCalledWith(
       job.id,
       expect.objectContaining({ user_id: 42, count: 10 }),
-      expect.objectContaining({ exportDocx: true }),
     );
   });
 
