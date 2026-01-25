@@ -1,8 +1,8 @@
+import { Cloud } from 'lucide-react'
 import PageHeroCard from '@/components/PageHeroCard'
-import SectionCard from '@/components/SectionCard'
-import ProgressBar from '@/components/ProgressBar'
-import { Badge } from '@/components/ui/badge'
+import CircularProgress from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
@@ -15,6 +15,9 @@ import {
   truncateValue,
 } from '@/modules/vkFriendsExport/utils/vkFriendsExportUtils'
 
+const PANEL_CLASS =
+  'overflow-hidden rounded-2xl border border-border/60 bg-background/70 shadow-soft-sm backdrop-blur'
+
 function VkFriendsExportPage() {
   const {
     formState,
@@ -23,8 +26,6 @@ function VkFriendsExportPage() {
     jobError,
     jobLogs,
     jobProgress,
-    jobStatusLabel,
-    jobStatusVariant,
     progressLabel,
     isProgressIndeterminate,
     isExportLoading,
@@ -39,19 +40,46 @@ function VkFriendsExportPage() {
       <PageHeroCard
         title="Экспорт друзей ВКонтакте"
         description="Формируйте DOCX отчёт по friends.get с прогрессом и логами."
+        className={PANEL_CLASS}
         actions={
-          <div className="flex flex-col gap-2 text-sm text-text-secondary">
-            <span>Нажмите кнопку, чтобы собрать данные и скачать DOCX.</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={handleGenerateDocx}
+              disabled={isExportLoading}
+              className="shadow-[0_0_20px_rgba(59,130,246,0.35)]"
+            >
+              {isExportLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner className="size-4" />
+                  Формируем DOCX...
+                </span>
+              ) : (
+                'Создать и скачать DOCX'
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleDownloadDocx}
+              disabled={!hasDocx || jobStatus !== 'DONE'}
+              title="Скачать DOCX"
+              aria-label="Скачать DOCX"
+            >
+              <Cloud className="size-4" />
+            </Button>
           </div>
         }
       />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
-        <SectionCard
-          title="Параметры friends.get"
-          description="Введите user_id. count и fields задаются автоматически как “все”."
-        >
-          <div className="space-y-6">
+        <Card className={PANEL_CLASS}>
+          <CardHeader className="gap-1 border-b border-border/50 pb-5">
+            <CardTitle className="text-xl text-text-primary">Параметры friends.get</CardTitle>
+            <CardDescription>
+              Введите user_id. count и fields задаются автоматически как «все».
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 pt-5">
             <div className="space-y-2">
               <Label htmlFor="vk-user-id">user_id</Label>
               <Input
@@ -61,9 +89,9 @@ function VkFriendsExportPage() {
                 onChange={(event) => updateField('userId', event.target.value)}
                 placeholder="123456"
                 min={0}
+                className="rounded-xl border-border/60 bg-background/70 backdrop-blur"
               />
             </div>
-
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <Button onClick={handleGenerateDocx} disabled={isExportLoading}>
                 {isExportLoading ? (
@@ -75,37 +103,34 @@ function VkFriendsExportPage() {
                   'Загрузить DOCX'
                 )}
               </Button>
-              {jobStatus === 'DONE' && hasDocx && (
-                <Button onClick={handleDownloadDocx} variant="outline">
-                  Скачать DOCX
-                </Button>
-              )}
+              <Button variant="outline" onClick={handleDownloadDocx} disabled={!hasDocx}>
+                Скачать DOCX
+              </Button>
             </div>
-          </div>
-        </SectionCard>
+          </CardContent>
+        </Card>
 
-        <SectionCard title="Прогресс и логи" description="Состояние текущего экспорта и события.">
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-text-secondary">Статус:</span>
-                <Badge variant={jobStatusVariant}>{jobStatusLabel}</Badge>
-              </div>
+        <Card className={PANEL_CLASS}>
+          <CardHeader className="gap-1 border-b border-border/50 pb-5">
+            <CardTitle className="text-xl text-text-primary">Прогресс и логи</CardTitle>
+            <CardDescription>Состояние текущего экспорта и события.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5 pt-5">
+            <div className="space-y-3">
+              <span className="text-sm text-text-secondary">Статус:</span>
+              <CircularProgress
+                current={jobProgress.fetchedCount}
+                total={jobProgress.totalCount}
+                label={progressLabel}
+                indeterminate={isProgressIndeterminate}
+              />
             </div>
-
-            <ProgressBar
-              current={jobProgress.fetchedCount}
-              total={jobProgress.totalCount}
-              label={progressLabel}
-              indeterminate={isProgressIndeterminate}
-            />
 
             {jobWarning && (
               <div className="rounded-lg border border-border/60 bg-background-secondary/80 px-3 py-2 text-sm text-text-secondary">
                 <span className="font-medium text-accent-warning">Внимание:</span> {jobWarning}
               </div>
             )}
-
             {jobError && (
               <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {jobError}
@@ -115,20 +140,18 @@ function VkFriendsExportPage() {
             <div className="space-y-2">
               <div className="text-sm font-medium text-text-secondary">Последние логи</div>
               {jobLogs.length === 0 ? (
-                <div className="rounded-lg border border-border/50 bg-background-secondary/70 px-4 py-6 text-center text-sm text-text-secondary">
+                <div className="max-h-72 overflow-auto rounded-lg border border-border/50 bg-background-secondary/70 px-4 py-6 text-center text-sm text-text-secondary">
                   Логи появятся после запуска экспорта.
                 </div>
               ) : (
-                <div className="max-h-72 space-y-3 overflow-auto rounded-lg border border-border/60 bg-background-secondary/70 p-4">
+                <div className="max-h-72 space-y-2 overflow-auto rounded-lg border border-border/60 bg-background-secondary/70 p-4">
                   {jobLogs.map((log) => (
-                    <div key={log.id} className="space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-semibold ${LOG_LEVEL_CLASSES[log.level]}`}>
-                            {LOG_LEVEL_LABELS[log.level]}
-                          </span>
-                          <span className="text-sm text-text-primary">{log.message}</span>
-                        </div>
+                    <div key={log.id} className="space-y-0.5">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+                        <span className={`shrink-0 font-semibold ${LOG_LEVEL_CLASSES[log.level]}`}>
+                          {LOG_LEVEL_LABELS[log.level]}
+                        </span>
+                        <span className="text-text-primary">{log.message}</span>
                         {log.createdAt && (
                           <span className="text-xs text-text-tertiary">
                             {formatLogTime(log.createdAt)}
@@ -145,8 +168,8 @@ function VkFriendsExportPage() {
                 </div>
               )}
             </div>
-          </div>
-        </SectionCard>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

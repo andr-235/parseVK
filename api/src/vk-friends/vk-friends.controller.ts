@@ -135,14 +135,24 @@ export class VkFriendsController {
 
       this.logger.debug(`Downloading file: ${filePath}`);
 
-      res.download(filePath, path.basename(filePath), (err) => {
+      const fileName = path.basename(filePath);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${fileName}"`,
+      );
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      );
+
+      res.sendFile(filePath, (err) => {
         if (err) {
-          this.logger.error(`Failed to download file: ${filePath}`, err);
+          this.logger.error(`Failed to send file: ${filePath}`, err);
           if (!res.headersSent) {
             res.status(500).json({ error: 'Failed to download file' });
           }
         } else {
-          this.logger.debug(`File downloaded successfully: ${filePath}`);
+          this.logger.debug(`File sent successfully: ${filePath}`);
         }
       });
     } catch (error) {
