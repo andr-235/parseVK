@@ -75,6 +75,21 @@ export class VkFriendsExporterService {
     const buffer = this.buildDocxBuffer(rows);
     await fs.writeFile(filePath, buffer);
 
+    // Проверяем, что файл действительно создан и доступен
+    try {
+      const stats = await fs.stat(filePath);
+      if (!stats.isFile()) {
+        throw new Error(`Path ${filePath} is not a file`);
+      }
+      if (stats.size === 0) {
+        throw new Error(`File ${filePath} is empty`);
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to verify file creation: ${filePath}. ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
     return filePath;
   }
 

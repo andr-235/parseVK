@@ -302,6 +302,24 @@ export class VkFriendsController {
       );
 
       const docxPath = await this.exporter.writeDocxFile(jobId, friendRows);
+
+      // Финальная проверка существования файла перед сохранением пути в БД
+      try {
+        const stats = await fs.stat(docxPath);
+        if (!stats.isFile() || stats.size === 0) {
+          throw new Error(`File verification failed: ${docxPath}`);
+        }
+        this.logger.debug(
+          `DOCX file verified: ${docxPath}, size: ${stats.size} bytes`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to verify DOCX file before saving path: ${docxPath}`,
+          error,
+        );
+        throw new Error(`DOCX file not accessible after creation: ${docxPath}`);
+      }
+
       await log('info', 'DOCX generated', { path: docxPath });
 
       const completedJob = await this.vkFriendsService.completeJob(jobId, {
@@ -462,10 +480,12 @@ export class VkFriendsController {
       if (!stats.isFile()) {
         throw new Error('Path is not a file');
       }
-      this.logger.debug(`File found: ${normalizedResolvedPath}`);
-    } catch {
+      this.logger.debug(
+        `File found: ${normalizedResolvedPath}, size: ${stats.size} bytes`,
+      );
+    } catch (error) {
       this.logger.warn(
-        `File not found at ${normalizedResolvedPath}, attempting to rebuild`,
+        `File not found at ${normalizedResolvedPath}, attempting to rebuild. Error: ${error instanceof Error ? error.message : String(error)}`,
       );
       const rebuiltPath = await this.rebuildExportFile(job);
       return { filePath: path.resolve(rebuiltPath) };
