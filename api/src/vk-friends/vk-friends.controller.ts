@@ -119,8 +119,21 @@ export class VkFriendsController {
     try {
       const { filePath } = await this.resolveDownloadPath(jobId);
 
-      // Проверка существования файла
-      await fs.access(filePath);
+      // Финальная проверка существования файла перед скачиванием
+      try {
+        const stats = await fs.stat(filePath);
+        if (!stats.isFile()) {
+          throw new Error('Path is not a file');
+        }
+      } catch (accessError) {
+        this.logger.error(
+          `File not accessible before download: ${filePath}`,
+          accessError,
+        );
+        throw new NotFoundException('Export file not accessible');
+      }
+
+      this.logger.debug(`Downloading file: ${filePath}`);
 
       res.download(filePath, path.basename(filePath), (err) => {
         if (err) {
@@ -128,6 +141,8 @@ export class VkFriendsController {
           if (!res.headersSent) {
             res.status(500).json({ error: 'Failed to download file' });
           }
+        } else {
+          this.logger.debug(`File downloaded successfully: ${filePath}`);
         }
       });
     } catch (error) {
@@ -423,19 +438,40 @@ export class VkFriendsController {
       throw new NotFoundException('Export file not found');
     }
 
-    const resolvedPath = path.resolve(filePath);
-    if (!resolvedPath.startsWith(EXPORT_DIR + path.sep)) {
+    // Нормализуем путь - убираем относительные компоненты и приводим к абсолютному
+    let resolvedPath = path.resolve(filePath);
+
+    // Если путь относительный, делаем его абсолютным относительно EXPORT_DIR
+    if (!path.isAbsolute(resolvedPath)) {
+      resolvedPath = path.resolve(EXPORT_DIR, resolvedPath);
+    }
+
+    // Проверяем, что путь находится в EXPORT_DIR
+    const normalizedExportDir = path.resolve(EXPORT_DIR);
+    const normalizedResolvedPath = path.resolve(resolvedPath);
+
+    if (!normalizedResolvedPath.startsWith(normalizedExportDir + path.sep)) {
+      this.logger.warn(
+        `Invalid export file path: ${normalizedResolvedPath} (expected in ${normalizedExportDir})`,
+      );
       throw new BadRequestException('Invalid export file path');
     }
 
     try {
-      await fs.stat(resolvedPath);
+      const stats = await fs.stat(normalizedResolvedPath);
+      if (!stats.isFile()) {
+        throw new Error('Path is not a file');
+      }
+      this.logger.debug(`File found: ${normalizedResolvedPath}`);
     } catch {
+      this.logger.warn(
+        `File not found at ${normalizedResolvedPath}, attempting to rebuild`,
+      );
       const rebuiltPath = await this.rebuildExportFile(job);
-      return { filePath: rebuiltPath };
+      return { filePath: path.resolve(rebuiltPath) };
     }
 
-    return { filePath: resolvedPath };
+    return { filePath: normalizedResolvedPath };
   }
 
   private async rebuildExportFile(job: {
