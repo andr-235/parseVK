@@ -70,7 +70,8 @@ export class VkFriendsExporterService {
   async writeDocxFile(jobId: string, rows: FriendFlatDto[]): Promise<string> {
     await fs.mkdir(EXPORT_DIR, { recursive: true });
 
-    const filePath = path.join(EXPORT_DIR, `vk_friends_${jobId}.docx`);
+    const fileName = `vk_friends_${jobId}.docx`;
+    const filePath = path.resolve(EXPORT_DIR, fileName);
     const buffer = this.buildDocxBuffer(rows);
     await fs.writeFile(filePath, buffer);
 
