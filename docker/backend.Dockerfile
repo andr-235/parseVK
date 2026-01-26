@@ -19,6 +19,9 @@ ENV PRISMA_ENGINES_MIRROR=https://binaries.prisma.sh
 # Настройки для node-gyp (сборка нативных модулей)
 ENV NODEJS_ORG_MIRROR=https://nodejs.org/dist/
 ENV npm_config_node_gyp_timeout=300000
+# Увеличение таймаутов для Prisma
+ENV PRISMA_GENERATE_DATAPROXY=false
+ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
 
 RUN apk add --no-cache --virtual .build-deps python3 build-base
 
@@ -49,8 +52,12 @@ COPY api/ ./
 RUN rm -f .env
 
 # Generate Prisma Client and build with cache
+# Добавляем retry логику для Prisma generate из-за возможных сетевых проблем
 RUN --mount=type=cache,target=/app/node_modules/.prisma \
-    pnpm run prisma:generate && pnpm run build
+    (pnpm run prisma:generate || \
+     (echo "Prisma generate failed, retrying..." && sleep 5 && pnpm run prisma:generate) || \
+     (echo "Prisma generate failed again, retrying one more time..." && sleep 10 && pnpm run prisma:generate)) \
+    && pnpm run build
 
 # Production stage
 FROM node:22-alpine
