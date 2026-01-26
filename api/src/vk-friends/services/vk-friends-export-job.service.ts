@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { promises as fs } from 'fs';
-import type { VkFriendsParamsDto } from '../dto/vk-friends.dto';
+import type { Params } from 'vk-io';
 import { FriendMapper } from '../mappers/friend.mapper';
 import type {
   FriendRecordInput,
@@ -28,7 +28,7 @@ export class VkFriendsExportJobService {
     private readonly jobStream: VkFriendsJobStreamService,
   ) {}
 
-  async run(jobId: string, params: VkFriendsParamsDto): Promise<void> {
+  async run(jobId: string, params: Params.FriendsGetParams): Promise<void> {
     const progressState = {
       fetchedCount: 0,
       totalCount: 0,

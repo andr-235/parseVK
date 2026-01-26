@@ -8,8 +8,10 @@ import { VkFriendsExporterService } from './services/vk-friends-exporter.service
 import { VkFriendsJobStreamService } from './services/vk-friends-job-stream.service';
 import { VkFriendsExportJobService } from './services/vk-friends-export-job.service';
 import { VkFriendsFileService } from './services/vk-friends-file.service';
+import { VkModule } from '../vk/vk.module';
 
 @Module({
+  imports: [VkModule],
   controllers: [VkFriendsController],
   providers: [
     VkFriendsService,

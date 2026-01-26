@@ -1,3 +1,4 @@
+import type { Params } from 'vk-io';
 import type { VkFriendsParamsDto } from './dto/vk-friends.dto';
 
 const DEFAULT_FRIEND_FIELDS: VkFriendsParamsDto['fields'] = [
@@ -37,7 +38,7 @@ export function resolveFields(
 export function buildParams(
   dto: VkFriendsParamsDto,
   overrides?: Partial<VkFriendsParamsDto>,
-): VkFriendsParamsDto {
+): Params.FriendsGetParams {
   const fields = overrides?.fields ?? dto.fields;
   return {
     user_id: overrides?.user_id ?? dto.user_id,

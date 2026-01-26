@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { Responses } from 'vk-io';
+import type { Params, Responses } from 'vk-io';
 import { VkApiService } from './vk-api.service';
-import type { VkFriendsGetParams } from './vk-api.service';
 import {
   VkFriendsRepository,
   type ExportJobCreateInput,
@@ -54,7 +53,7 @@ export class VkFriendsService {
   }
 
   async fetchAllFriends(
-    params: VkFriendsGetParams,
+    params: Params.FriendsGetParams,
     options: FetchAllFriendsOptions,
   ): Promise<FetchAllFriendsResult> {
     const onProgress = options.onProgress;
