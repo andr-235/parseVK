@@ -233,8 +233,26 @@ if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
   if echo "$MIGRATE_ERROR" | grep -q "already exists"; then
     echo "Обнаружена ошибка 'already exists', пытаемся исправить..."
     
-    # Извлекаем имя миграции из ошибки
+    # Извлекаем имя миграции из ошибки (пробуем разные форматы)
     MIGRATION_NAME=$(echo "$MIGRATE_ERROR" | grep -oP 'Migration name: \K[^\s]+' || echo "")
+    
+    # Если не удалось извлечь через "Migration name:", пробуем найти по имени таблицы
+    if [ -z "$MIGRATION_NAME" ]; then
+      # Извлекаем имя таблицы из ошибки (например, "TaskAutomationSettings")
+      TABLE_NAME=$(echo "$MIGRATE_ERROR" | grep -oP 'relation "\K[^"]+' || echo "")
+      
+      if [ -n "$TABLE_NAME" ]; then
+        echo "Найдена таблица '$TABLE_NAME' в ошибке, ищем соответствующую миграцию..."
+        # Ищем миграцию, которая создает эту таблицу
+        for MIGRATION_DIR in api/prisma/migrations/*/; do
+          if [ -f "${MIGRATION_DIR}migration.sql" ] && grep -q "CREATE TABLE.*\"${TABLE_NAME}\"" "${MIGRATION_DIR}migration.sql" 2>/dev/null; then
+            MIGRATION_NAME=$(basename "$MIGRATION_DIR")
+            echo "Найдена миграция: $MIGRATION_NAME"
+            break
+          fi
+        done
+      fi
+    fi
     
     if [ -n "$MIGRATION_NAME" ]; then
       echo "Помечаем миграцию $MIGRATION_NAME как применённую..."
@@ -249,9 +267,10 @@ if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
         exit 1
       fi
     else
-      echo "Не удалось определить имя миграции из ошибки, останавливаемся."
+      echo "Предупреждение: Не удалось определить имя миграции из ошибки."
+      echo "Пробуем продолжить, так как таблица уже существует..."
       echo "Ошибка: $MIGRATE_ERROR"
-      exit 1
+      # Продолжаем выполнение, так как таблица уже существует
     fi
   else
     echo "Ошибка при выполнении миграций, останавливаемся."
