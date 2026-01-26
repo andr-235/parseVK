@@ -1,0 +1,178 @@
+name: Security Scanning
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 * * 1" # Weekly on Monday
+
+jobs:
+  dependency-scan:
+    name: Scan Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup pnpm
+        run: corepack prepare pnpm@latest --activate
+
+      - name: Scan API dependencies
+        id: scan-api
+        continue-on-error: true
+        working-directory: api
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm audit --audit-level=moderate --json > audit-api.json || true
+          if [ -f audit-api.json ]; then
+            VULN_COUNT=$(cat audit-api.json | jq -r '.metadata.vulnerabilities.total // 0')
+            echo "vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT
+            if [ "$VULN_COUNT" -gt 0 ]; then
+              echo "Found $VULN_COUNT vulnerabilities in API dependencies"
+              cat audit-api.json | jq -r '.vulnerabilities | to_entries[] | "\(.key): \(.value.severity)"' || true
+            fi
+          fi
+
+      - name: Scan Frontend dependencies
+        id: scan-frontend
+        continue-on-error: true
+        working-directory: front
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm audit --audit-level=moderate --json > audit-frontend.json || true
+          if [ -f audit-frontend.json ]; then
+            VULN_COUNT=$(cat audit-frontend.json | jq -r '.metadata.vulnerabilities.total // 0')
+            echo "vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT
+            if [ "$VULN_COUNT" -gt 0 ]; then
+              echo "Found $VULN_COUNT vulnerabilities in Frontend dependencies"
+              cat audit-frontend.json | jq -r '.vulnerabilities | to_entries[] | "\(.key): \(.value.severity)"' || true
+            fi
+          fi
+
+      - name: Upload API audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-audit-results
+          path: api/audit-api.json
+          if-no-files-found: ignore
+
+      - name: Upload Frontend audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-audit-results
+          path: front/audit-frontend.json
+          if-no-files-found: ignore
+
+      - name: Fail on critical vulnerabilities
+        if: steps.scan-api.outputs.vulnerabilities > 0 || steps.scan-frontend.outputs.vulnerabilities > 0
+        run: |
+          echo "⚠️ Security vulnerabilities detected!"
+          echo "API vulnerabilities: ${steps.scan-api.outputs.vulnerabilities:-0}"
+          echo "Frontend vulnerabilities: ${steps.scan-frontend.outputs.vulnerabilities:-0}"
+          echo "Please review and fix critical vulnerabilities before merging."
+          exit 1
+
+  docker-scan:
+    name: Scan Docker Images
+    runs-on: ubuntu-latest
+    needs: []
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image for scanning
+        if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'api') || contains(github.event.head_commit.message, 'backend')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: false
+          tags: parsevk-api:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
+
+      - name: Build Frontend image for scanning
+        if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'frontend') || contains(github.event.head_commit.message, 'front')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/frontend.Dockerfile
+          push: false
+          tags: parsevk-frontend:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VITE_APP_TITLE=Центр аналитики
+            VITE_API_URL=/api
+            VITE_API_WS_URL=auto
+            VITE_DEV_MODE=false
+
+      - name: Run Trivy vulnerability scanner on API image
+        if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'api') || contains(github.event.head_commit.message, 'backend')
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: parsevk-api:scan
+          format: "sarif"
+          output: "trivy-api-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Run Trivy vulnerability scanner on Frontend image
+        if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'frontend') || contains(github.event.head_commit.message, 'front')
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: parsevk-frontend:scan
+          format: "sarif"
+          output: "trivy-frontend-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-api-results.sarif"
+          wait-for-processing: false
+        continue-on-error: true
+
+      - name: Upload Trivy results to GitHub Security (Frontend)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-frontend-results.sarif"
+          wait-for-processing: false
+        continue-on-error: true
+
+  secret-scan:
+    name: Scan for Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-path: .gitleaksignore
+          no-git: false
+          exit-code: 1
+          redact: true

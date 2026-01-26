@@ -1,6 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
+# Source logging helper if available
+if [ -f "$(dirname "$0")/log-helper.sh" ]; then
+  source "$(dirname "$0")/log-helper.sh"
+else
+  log_info() { echo "[INFO] $1"; }
+  log_error() { echo "[ERROR] $1" >&2; }
+  log_warn() { echo "[WARN] $1"; }
+fi
+
 MAX_RETRIES=${MAX_RETRIES:-5}
 RETRY_DELAY=${RETRY_DELAY:-3}
 

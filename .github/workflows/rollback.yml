@@ -1,0 +1,271 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_commit:
+        description: "Commit hash to rollback to (leave empty for last successful deployment)"
+        required: false
+        type: string
+      skip_health_check:
+        description: "Skip health checks after rollback"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: production-rollback
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Rollback to Previous Version
+    runs-on: [self-hosted]
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      DOCKER_BUILDKIT: 1
+      COMPOSE_DOCKER_CLI_BUILD: 1
+      COMPOSE_FILE: docker-compose.deploy.yml
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load deployment metadata
+        id: load_metadata
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+
+          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
+          if [ -f "$METADATA_FILE" ]; then
+            LAST_SUCCESSFUL_COMMIT=$(jq -r '.last_successful_commit // empty' "$METADATA_FILE" 2>/dev/null || echo "")
+            LAST_SUCCESSFUL_DEPLOY_TIME=$(jq -r '.last_successful_deploy_time // empty' "$METADATA_FILE" 2>/dev/null || echo "")
+            echo "last_successful_commit=$LAST_SUCCESSFUL_COMMIT" >> $GITHUB_OUTPUT
+            echo "last_successful_deploy_time=$LAST_SUCCESSFUL_DEPLOY_TIME" >> $GITHUB_OUTPUT
+          else
+            echo "No deployment metadata found"
+          fi
+
+      - name: Determine target commit
+        id: determine_commit
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+
+          TARGET_COMMIT="${{ github.event.inputs.target_commit }}"
+
+          if [ -z "$TARGET_COMMIT" ]; then
+            TARGET_COMMIT="${{ steps.load_metadata.outputs.last_successful_commit }}"
+          fi
+
+          if [ -z "$TARGET_COMMIT" ] || [ "$TARGET_COMMIT" = "null" ] || [ "$TARGET_COMMIT" = "" ]; then
+            echo "Error: No target commit specified and no previous successful deployment found"
+            echo "Please specify a commit hash or ensure deployment metadata exists"
+            exit 1
+          fi
+
+          # Verify commit exists
+          if ! git cat-file -e "${TARGET_COMMIT}^{commit}" 2>/dev/null; then
+            echo "Error: Commit $TARGET_COMMIT does not exist"
+            exit 1
+          fi
+
+          echo "target_commit=$TARGET_COMMIT" >> $GITHUB_OUTPUT
+          echo "Rolling back to commit: $TARGET_COMMIT"
+
+      - name: Save current deployment state
+        id: save_state
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+
+          CURRENT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          STATE_FILE="/opt/parseVK/.rollback-state.json"
+          cat > "$STATE_FILE" <<EOF
+          {
+            "rollback_from_commit": "$CURRENT_COMMIT",
+            "rollback_to_commit": "${{ steps.determine_commit.outputs.target_commit }}",
+            "rollback_time": "$CURRENT_TIME",
+            "rollback_triggered_by": "${{ github.actor }}",
+            "rollback_run_id": "${{ github.run_id }}"
+          }
+          EOF
+
+          echo "Saved rollback state to $STATE_FILE"
+
+      - name: Checkout target commit
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+
+          TARGET_COMMIT="${{ steps.determine_commit.outputs.target_commit }}"
+
+          if ! git fetch origin; then
+            echo "Error: Failed to fetch from origin"
+            exit 1
+          fi
+
+          if ! git checkout -f "$TARGET_COMMIT"; then
+            echo "Error: Failed to checkout commit $TARGET_COMMIT"
+            exit 1
+          fi
+
+          echo "Checked out commit: $TARGET_COMMIT"
+
+      - name: Validate docker-compose
+        working-directory: /opt/parseVK
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+
+          if [ ! -f "$COMPOSE_FILE" ]; then
+            echo "Error: $COMPOSE_FILE not found in target commit"
+            exit 1
+          fi
+
+          if ! docker compose -f "$COMPOSE_FILE" config > /dev/null 2>&1; then
+            echo "Error: Invalid $COMPOSE_FILE in target commit"
+            docker compose -f "$COMPOSE_FILE" config
+            exit 1
+          fi
+
+      - name: Stop current containers
+        working-directory: /opt/parseVK
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+
+          echo "=== Stopping current containers ==="
+
+          if ! docker compose -f "$COMPOSE_FILE" down --timeout 30; then
+            echo "Warning: docker compose down failed, forcing stop"
+            docker compose -f "$COMPOSE_FILE" kill || true
+            docker compose -f "$COMPOSE_FILE" down --remove-orphans || true
+          fi
+
+      - name: Login to GitHub Container Registry
+        working-directory: /opt/parseVK
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+
+          MAX_RETRIES=3
+          RETRY=0
+          LOGIN_SUCCESS=false
+
+          while [ $RETRY -lt $MAX_RETRIES ]; do
+            if echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>&1; then
+              echo "Login successful"
+              LOGIN_SUCCESS=true
+              break
+            fi
+            RETRY=$((RETRY + 1))
+            if [ $RETRY -lt $MAX_RETRIES ]; then
+              echo "Login failed, retry $RETRY/$MAX_RETRIES in 2s..."
+              sleep 2
+            fi
+          done
+
+          if [ "$LOGIN_SUCCESS" != "true" ]; then
+            echo "Error: Failed to login to GHCR after $MAX_RETRIES attempts"
+            exit 1
+          fi
+
+      - name: Pull and start containers
+        working-directory: /opt/parseVK
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+
+          echo "=== Pulling images and starting containers ==="
+
+          MAX_RETRIES=2
+          RETRY=0
+          START_SUCCESS=false
+
+          while [ $RETRY -lt $MAX_RETRIES ]; do
+            if docker compose -f "$COMPOSE_FILE" pull --ignore-pull-failures && \
+               docker compose -f "$COMPOSE_FILE" up -d --pull always; then
+              START_SUCCESS=true
+              break
+            fi
+            RETRY=$((RETRY + 1))
+            if [ $RETRY -lt $MAX_RETRIES ]; then
+              echo "Start failed, retry $RETRY/$MAX_RETRIES in 3s..."
+              sleep 3
+            fi
+          done
+
+          if [ "$START_SUCCESS" != "true" ]; then
+            echo "Error: Failed to start containers after $MAX_RETRIES attempts"
+            docker compose -f "$COMPOSE_FILE" ps
+            exit 1
+          fi
+
+      - name: Wait for services to be healthy
+        if: github.event.inputs.skip_health_check != 'true'
+        working-directory: /opt/parseVK
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+
+          COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/health-check.sh || {
+            echo "Warning: Not all containers are healthy after rollback"
+            docker compose -f "$COMPOSE_FILE" ps
+            docker compose -f "$COMPOSE_FILE" logs --tail=30
+            exit 1
+          }
+
+      - name: Health check
+        if: github.event.inputs.skip_health_check != 'true'
+        working-directory: /opt/parseVK
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+
+          COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/http-health-check.sh || {
+            echo "Warning: Health checks failed after rollback"
+            exit 1
+          }
+
+      - name: Update deployment metadata
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+
+          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
+          TARGET_COMMIT="${{ steps.determine_commit.outputs.target_commit }}"
+          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          if [ -f "$METADATA_FILE" ]; then
+            jq --arg commit "$TARGET_COMMIT" \
+               --arg time "$CURRENT_TIME" \
+               '.last_successful_commit = $commit | .last_successful_deploy_time = $time' \
+               "$METADATA_FILE" > "${METADATA_FILE}.tmp" && \
+            mv "${METADATA_FILE}.tmp" "$METADATA_FILE"
+          else
+            cat > "$METADATA_FILE" <<EOF
+          {
+            "last_successful_commit": "$TARGET_COMMIT",
+            "last_successful_deploy_time": "$CURRENT_TIME"
+          }
+          EOF
+          fi
+
+          echo "Updated deployment metadata"
+
+      - name: Rollback summary
+        if: always()
+        run: |
+          echo "=== Rollback Summary ==="
+          echo "Target commit: ${{ steps.determine_commit.outputs.target_commit }}"
+          echo "Rollback time: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Run ID: ${{ github.run_id }}"

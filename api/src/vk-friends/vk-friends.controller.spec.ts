@@ -19,7 +19,7 @@ describe('VkFriendsController (HTTP)', () => {
     getJobLogs: jest.Mock;
   };
   let friendMapper: { mapVkUserToFlatDto: jest.Mock };
-  let exporter: { writeDocxFile: jest.Mock };
+  let exporter: { writeXlsxFile: jest.Mock };
   let jobStream: { emit: jest.Mock; getStream: jest.Mock };
 
   beforeEach(async () => {
@@ -33,7 +33,7 @@ describe('VkFriendsController (HTTP)', () => {
       mapVkUserToFlatDto: jest.fn(),
     };
     exporter = {
-      writeDocxFile: jest.fn(),
+      writeXlsxFile: jest.fn(),
     };
     jobStream = {
       emit: jest.fn(),

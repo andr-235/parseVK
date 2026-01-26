@@ -1,0 +1,16 @@
+# Gitleaks ignore patterns
+# Add patterns here to exclude false positives
+
+# Example: Ignore test files with fake tokens
+**/*.test.ts
+**/*.spec.ts
+**/test/**
+**/tests/**
+
+# Ignore example files
+**/*.example.*
+**/.env.example
+
+# Ignore documentation
+**/*.md
+**/docs/**

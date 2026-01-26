@@ -111,8 +111,8 @@ export class VkFriendsController {
     };
   }
 
-  @Get('jobs/:jobId/download/docx')
-  async downloadDocx(
+  @Get('jobs/:jobId/download/xlsx')
+  async downloadXlsx(
     @Param('jobId', new ParseUUIDPipe({ version: '4' })) jobId: string,
     @Res() res: Response,
   ): Promise<void> {
@@ -123,7 +123,7 @@ export class VkFriendsController {
 
       res.set({
         'Content-Type':
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="${fileName}"`,
         'Content-Length': String(buffer.length),
       });
@@ -161,7 +161,7 @@ export class VkFriendsController {
               fetchedCount: job.fetchedCount,
               totalCount: job.totalCount ?? undefined,
               warning: job.warning ?? undefined,
-              docxPath: job.docxPath ?? undefined,
+              xlsxPath: job.xlsxPath ?? undefined,
             },
           });
         }
@@ -285,32 +285,31 @@ export class VkFriendsController {
         this.friendMapper.mapVkUserToFlatDto(item),
       );
 
-      const docxPath = await this.exporter.writeDocxFile(jobId, friendRows);
+      const xlsxPath = await this.exporter.writeXlsxFile(jobId, friendRows);
 
-      // Финальная проверка существования файла перед сохранением пути в БД
       try {
-        const stats = await fs.stat(docxPath);
+        const stats = await fs.stat(xlsxPath);
         if (!stats.isFile() || stats.size === 0) {
-          throw new Error(`File verification failed: ${docxPath}`);
+          throw new Error(`File verification failed: ${xlsxPath}`);
         }
         this.logger.debug(
-          `DOCX file verified: ${docxPath}, size: ${stats.size} bytes`,
+          `XLSX file verified: ${xlsxPath}, size: ${stats.size} bytes`,
         );
       } catch (error) {
         this.logger.error(
-          `Failed to verify DOCX file before saving path: ${docxPath}`,
+          `Failed to verify XLSX file before saving path: ${xlsxPath}`,
           error,
         );
-        throw new Error(`DOCX file not accessible after creation: ${docxPath}`);
+        throw new Error(`XLSX file not accessible after creation: ${xlsxPath}`);
       }
 
-      await log('info', 'DOCX generated', { path: docxPath });
+      await log('info', 'XLSX generated', { path: xlsxPath });
 
       const completedJob = await this.vkFriendsService.completeJob(jobId, {
         fetchedCount,
         totalCount,
         warning,
-        docxPath,
+        xlsxPath,
       });
 
       await log('info', 'Export completed');
@@ -323,7 +322,7 @@ export class VkFriendsController {
           fetchedCount: completedJob.fetchedCount,
           totalCount: completedJob.totalCount,
           warning: completedJob.warning ?? undefined,
-          docxPath: completedJob.docxPath ?? undefined,
+          xlsxPath: completedJob.xlsxPath ?? undefined,
         },
       });
 
@@ -435,7 +434,7 @@ export class VkFriendsController {
       throw new BadRequestException('Export job is not completed');
     }
 
-    const filePath = job.docxPath;
+    const filePath = job.xlsxPath;
     if (!filePath) {
       throw new NotFoundException('Export file not found');
     }
@@ -497,13 +496,13 @@ export class VkFriendsController {
       this.friendMapper.mapVkUserToFlatDto(record.payload as VkUserInput),
     );
 
-    const filePath = await this.exporter.writeDocxFile(job.id, friendRows);
+    const filePath = await this.exporter.writeXlsxFile(job.id, friendRows);
 
     await this.vkFriendsService.completeJob(job.id, {
       fetchedCount: job.fetchedCount,
       totalCount: job.totalCount ?? undefined,
       warning: job.warning ?? undefined,
-      docxPath: filePath,
+      xlsxPath: filePath,
     });
 
     this.logger.warn(`Export file regenerated for job ${job.id}`);

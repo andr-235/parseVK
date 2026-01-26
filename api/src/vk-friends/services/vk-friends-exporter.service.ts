@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import ExcelJS from 'exceljs';
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { FriendFlatDto } from '../dto/vk-friends.dto';
@@ -39,205 +40,59 @@ const FRIEND_FIELDS: Array<keyof FriendFlatDto> = [
   'universities',
 ];
 
-const CONTENT_TYPES_XML =
-  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-  '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
-  '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
-  '<Default Extension="xml" ContentType="application/xml"/>' +
-  '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
-  '</Types>';
-
-const RELS_XML =
-  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-  '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
-  '</Relationships>';
-
-const CRC_TABLE = (() => {
-  const table = new Uint32Array(256);
-  for (let i = 0; i < 256; i += 1) {
-    let c = i;
-    for (let k = 0; k < 8; k += 1) {
-      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    }
-    table[i] = c >>> 0;
-  }
-  return table;
-})();
-
 @Injectable()
 export class VkFriendsExporterService {
-  async writeDocxFile(jobId: string, rows: FriendFlatDto[]): Promise<string> {
+  async writeXlsxFile(jobId: string, rows: FriendFlatDto[]): Promise<string> {
     await fs.mkdir(EXPORT_DIR, { recursive: true });
 
-    const fileName = `vk_friends_${jobId}.docx`;
+    const fileName = `vk_friends_${jobId}.xlsx`;
     const filePath = path.resolve(EXPORT_DIR, fileName);
-    const buffer = this.buildDocxBuffer(rows);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Друзья', {
+      headerFooter: { firstHeader: '', firstFooter: '' },
+    });
+
+    const columns = FRIEND_FIELDS.map((key) => ({
+      header: String(key),
+      key: String(key),
+      width: 14,
+    }));
+    worksheet.columns = columns;
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' },
+    };
+
+    for (const row of rows) {
+      const cells = FRIEND_FIELDS.map((field) => this.formatCell(row[field]));
+      worksheet.addRow(cells);
+    }
+
+    const buf = await workbook.xlsx.writeBuffer();
+    const buffer = Buffer.isBuffer(buf) ? buf : Buffer.from(buf as ArrayBuffer);
     await fs.writeFile(filePath, buffer);
 
-    // Проверяем, что файл действительно создан и доступен
-    try {
-      const stats = await fs.stat(filePath);
-      if (!stats.isFile()) {
-        throw new Error(`Path ${filePath} is not a file`);
-      }
-      if (stats.size === 0) {
-        throw new Error(`File ${filePath} is empty`);
-      }
-    } catch (error) {
+    const stats = await fs.stat(filePath);
+    if (!stats.isFile() || stats.size === 0) {
       throw new Error(
-        `Failed to verify file creation: ${filePath}. ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to verify file creation: ${filePath}. File missing or empty.`,
       );
     }
 
     return filePath;
   }
 
-  private buildDocxBuffer(rows: FriendFlatDto[]): Buffer {
-    const headerRow = this.buildTableRow(FRIEND_FIELDS.map(String), true);
-    const bodyRows = rows.map((row) =>
-      this.buildTableRow(
-        FRIEND_FIELDS.map((field) => this.formatCell(row[field])),
-        false,
-      ),
-    );
-
-    const tableXml = [headerRow, ...bodyRows].join('');
-    const documentXml =
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-      '<w:body>' +
-      '<w:tbl>' +
-      '<w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>' +
-      tableXml +
-      '</w:tbl>' +
-      '<w:sectPr>' +
-      '<w:pgSz w:w="12240" w:h="15840"/>' +
-      '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>' +
-      '</w:sectPr>' +
-      '</w:body>' +
-      '</w:document>';
-
-    const entries = [
-      { name: '[Content_Types].xml', data: Buffer.from(CONTENT_TYPES_XML) },
-      { name: '_rels/.rels', data: Buffer.from(RELS_XML) },
-      { name: 'word/document.xml', data: Buffer.from(documentXml) },
-    ];
-
-    return this.buildZip(entries);
-  }
-
-  private buildTableRow(values: string[], isHeader: boolean): string {
-    const cells = values
-      .map((value) => this.buildTableCell(value, isHeader))
-      .join('');
-    return `<w:tr>${cells}</w:tr>`;
-  }
-
-  private buildTableCell(value: string, isHeader: boolean): string {
-    const escaped = this.escapeXml(value);
-    const textNode = `<w:t xml:space="preserve">${escaped}</w:t>`;
-    const runProps = isHeader ? '<w:rPr><w:b/></w:rPr>' : '';
-    return (
-      '<w:tc>' +
-      '<w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr>' +
-      `<w:p><w:r>${runProps}${textNode}</w:r></w:p>` +
-      '</w:tc>'
-    );
-  }
-
-  private escapeXml(value: string): string {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
-  }
-
   private formatCell(value: FriendFlatDto[keyof FriendFlatDto]): string {
     if (value === null || value === undefined) {
       return '';
     }
-
     if (typeof value === 'boolean') {
       return value ? 'true' : 'false';
     }
-
     return String(value);
-  }
-
-  private buildZip(entries: Array<{ name: string; data: Buffer }>): Buffer {
-    // Minimal ZIP writer (store mode) to wrap the DOCX XML parts.
-    const fileParts: Buffer[] = [];
-    const centralParts: Buffer[] = [];
-    let offset = 0;
-
-    for (const entry of entries) {
-      const nameBuffer = Buffer.from(entry.name, 'utf8');
-      const data = entry.data;
-      const crc = this.crc32(data);
-
-      const localHeader = Buffer.alloc(30);
-      localHeader.writeUInt32LE(0x04034b50, 0);
-      localHeader.writeUInt16LE(20, 4);
-      localHeader.writeUInt16LE(0, 6);
-      localHeader.writeUInt16LE(0, 8);
-      localHeader.writeUInt16LE(0, 10);
-      localHeader.writeUInt16LE(0, 12);
-      localHeader.writeUInt32LE(crc, 14);
-      localHeader.writeUInt32LE(data.length, 18);
-      localHeader.writeUInt32LE(data.length, 22);
-      localHeader.writeUInt16LE(nameBuffer.length, 26);
-      localHeader.writeUInt16LE(0, 28);
-
-      fileParts.push(localHeader, nameBuffer, data);
-
-      const centralHeader = Buffer.alloc(46);
-      centralHeader.writeUInt32LE(0x02014b50, 0);
-      centralHeader.writeUInt16LE(20, 4);
-      centralHeader.writeUInt16LE(20, 6);
-      centralHeader.writeUInt16LE(0, 8);
-      centralHeader.writeUInt16LE(0, 10);
-      centralHeader.writeUInt16LE(0, 12);
-      centralHeader.writeUInt16LE(0, 14);
-      centralHeader.writeUInt32LE(crc, 16);
-      centralHeader.writeUInt32LE(data.length, 20);
-      centralHeader.writeUInt32LE(data.length, 24);
-      centralHeader.writeUInt16LE(nameBuffer.length, 28);
-      centralHeader.writeUInt16LE(0, 30);
-      centralHeader.writeUInt16LE(0, 32);
-      centralHeader.writeUInt16LE(0, 34);
-      centralHeader.writeUInt16LE(0, 36);
-      centralHeader.writeUInt32LE(0, 38);
-      centralHeader.writeUInt32LE(offset, 42);
-
-      centralParts.push(centralHeader, nameBuffer);
-
-      offset += localHeader.length + nameBuffer.length + data.length;
-    }
-
-    const centralDirectory = Buffer.concat(centralParts);
-    const endRecord = Buffer.alloc(22);
-    endRecord.writeUInt32LE(0x06054b50, 0);
-    endRecord.writeUInt16LE(0, 4);
-    endRecord.writeUInt16LE(0, 6);
-    endRecord.writeUInt16LE(entries.length, 8);
-    endRecord.writeUInt16LE(entries.length, 10);
-    endRecord.writeUInt32LE(centralDirectory.length, 12);
-    endRecord.writeUInt32LE(offset, 16);
-    endRecord.writeUInt16LE(0, 20);
-
-    return Buffer.concat([...fileParts, centralDirectory, endRecord]);
-  }
-
-  private crc32(data: Buffer): number {
-    let crc = 0xffffffff;
-
-    for (const byte of data) {
-      crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
-    }
-
-    return (crc ^ 0xffffffff) >>> 0;
   }
 }

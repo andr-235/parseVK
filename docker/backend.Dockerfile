@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # Build stage
 FROM node:22-alpine AS build
 
@@ -7,6 +8,7 @@ ARG DATABASE_URL
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 ARG NPM_REGISTRY_FALLBACK=https://registry.npmjs.org/
 ARG PNPM_VERSION=10.25.0
+ARG BUILDKIT_INLINE_CACHE=1
 
 # Переменные окружения для pnpm и prisma
 ENV DATABASE_URL=${DATABASE_URL}
@@ -24,21 +26,28 @@ RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-timeout 60000 \
     && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK})
 
+# Copy package files first for better layer caching
 COPY api/package*.json ./
 COPY api/.npmrc ./
+COPY api/pnpm-lock.yaml* ./
 
-# Устанавливаем зависимости с fallback на npmjs
-RUN pnpm config set registry ${NPM_REGISTRY} \
+# Install dependencies with BuildKit cache mount
+RUN --mount=type=cache,target=/root/.pnpm-store \
+    --mount=type=cache,target=/app/node_modules/.cache \
+    pnpm config set registry ${NPM_REGISTRY} \
     && pnpm config set fetch-retries 3 \
     && pnpm config set fetch-timeout 60000 \
-    && (pnpm install || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install)) \
+    && (pnpm install --frozen-lockfile || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile)) \
     && npm rebuild bcrypt --build-from-source
 
+# Copy source code after dependencies are installed
 COPY api/ ./
 
 RUN rm -f .env
 
-RUN pnpm run prisma:generate && pnpm run build
+# Generate Prisma Client and build with cache
+RUN --mount=type=cache,target=/app/node_modules/.prisma \
+    pnpm run prisma:generate && pnpm run build
 
 # Production stage
 FROM node:22-alpine

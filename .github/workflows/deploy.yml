@@ -729,6 +729,63 @@ jobs:
           STEP_END=$(date +%s)
           echo "Health check completed in $((STEP_END - STEP_START))s"
 
+      - name: Smoke tests
+        id: smoke_tests
+        working-directory: /opt/parseVK
+        timeout-minutes: 5
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        env:
+          COMPOSE_FILE: ${{ env.COMPOSE_FILE }}
+          API_URL: http://localhost:3000
+          FRONTEND_URL: http://localhost:80
+        run: |
+          STEP_START=$(date +%s)
+          COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/smoke-tests.sh
+          STEP_END=$(date +%s)
+          echo "Smoke tests completed in $((STEP_END - STEP_START))s"
+
+      - name: Save deployment metadata
+        id: save_metadata
+        working-directory: /opt/parseVK
+        if: steps.detect_changes.outputs.has_changes == 'true'
+        run: |
+          set -euo pipefail
+
+          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
+          CURRENT_COMMIT="${{ steps.update_code.outputs.new_commit }}"
+          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          DEPLOYED_SERVICES="${{ steps.detect_changes.outputs.services }}"
+
+          cat > "$METADATA_FILE" <<EOF
+          {
+            "last_successful_commit": "$CURRENT_COMMIT",
+            "last_successful_deploy_time": "$CURRENT_TIME",
+            "deployed_services": "$DEPLOYED_SERVICES",
+            "full_deploy": "${{ steps.detect_changes.outputs.full_deploy }}",
+            "deployment_triggered_by": "${{ github.actor }}",
+            "deployment_run_id": "${{ github.run_id }}"
+          }
+          EOF
+
+          echo "Saved deployment metadata to $METADATA_FILE"
+
+      - name: Export deployment metrics
+        if: always()
+        working-directory: /opt/parseVK
+        run: |
+          STATUS="${{ job.status }}"
+          DURATION="${DEPLOYMENT_DURATION:-0}"
+          COMMIT="${DEPLOYMENT_COMMIT:-unknown}"
+          DEPLOYED_SERVICES="${{ steps.detect_changes.outputs.services }}"
+          FULL_DEPLOY="${{ steps.detect_changes.outputs.full_deploy }}"
+
+          bash .github/scripts/export-metrics.sh \
+            "$STATUS" \
+            "$DURATION" \
+            "$COMMIT" \
+            "$DEPLOYED_SERVICES" \
+            "$FULL_DEPLOY"
+
       - name: Rollback on failure
         if: failure()
         id: rollback
@@ -879,45 +936,26 @@ jobs:
         if: always()
         id: send_notification
         timeout-minutes: 1
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           STATUS="${{ job.status }}"
           COMMIT="${DEPLOYMENT_COMMIT:-unknown}"
           AUTHOR="${DEPLOYMENT_AUTHOR:-unknown}"
           DURATION="${DEPLOYMENT_DURATION:-0}"
+          DEPLOYED_SERVICES="${{ steps.detect_changes.outputs.services }}"
+          FULL_DEPLOY="${{ steps.detect_changes.outputs.full_deploy }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          if [ "$STATUS" == "success" ]; then
-            MESSAGE="✅ Deployment successful!
-            Commit: $COMMIT
-            Author: $AUTHOR
-            Duration: ${DURATION}s
-            Repository: ${{ github.repository }}
-            Workflow: ${{ github.workflow }}"
-          else
-            MESSAGE="❌ Deployment failed!
-            Commit: $COMMIT
-            Author: $AUTHOR
-            Duration: ${DURATION}s
-            Repository: ${{ github.repository }}
-            Workflow: ${{ github.workflow }}
-            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          fi
-
-          echo "$MESSAGE"
-
-          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-            echo "Sending Telegram notification..."
-            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-              -d "chat_id=${TELEGRAM_CHAT_ID}" \
-              -d "text=$(echo "$MESSAGE" | sed 's/$/\\n/' | tr -d '\n')" \
-              -d "parse_mode=HTML" > /dev/null 2>&1 || echo "Warning: Failed to send Telegram notification"
-          elif [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
-            echo "Sending Slack notification..."
-            MESSAGE_ESCAPED=$(echo "$MESSAGE" | sed 's/"/\\"/g' | tr '\n' ' ')
-            PAYLOAD="{\"text\": \"$MESSAGE_ESCAPED\", \"username\": \"Deployment Bot\"}"
-            curl -s -X POST "${SLACK_WEBHOOK_URL}" \
-              -H "Content-Type: application/json" \
-              -d "$PAYLOAD" > /dev/null 2>&1 || echo "Warning: Failed to send Slack notification"
-          else
-            echo "Notification settings not configured (TELEGRAM_BOT_TOKEN/CHAT_ID or SLACK_WEBHOOK_URL)"
-            echo "To enable notifications, set these as GitHub Secrets or environment variables"
-          fi
+          bash .github/scripts/send-notification.sh \
+            "$STATUS" \
+            "$COMMIT" \
+            "$AUTHOR" \
+            "$DURATION" \
+            "${{ github.repository }}" \
+            "${{ github.workflow }}" \
+            "$RUN_URL" \
+            "$DEPLOYED_SERVICES" \
+            "$FULL_DEPLOY"
