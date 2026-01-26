@@ -12,6 +12,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PrismaModule } from './prisma.module';
 import { VkModule } from './vk/vk.module';
 import { VkFriendsModule } from './vk-friends/vk-friends.module';
+import { OkFriendsModule } from './ok-friends/ok-friends.module';
 import { GroupsModule } from './groups/groups.module';
 import { KeywordsModule } from './keywords/keywords.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -49,6 +50,7 @@ import type { AppConfig } from './config/app.config';
     MetricsModule,
     VkModule,
     VkFriendsModule,
+    OkFriendsModule,
     GroupsModule,
     KeywordsModule,
     TasksModule,

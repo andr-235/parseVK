@@ -99,6 +99,9 @@ export function validate(config: Record<string, unknown>): AppConfig {
     monitorGroupNameColumn: config.MONITOR_GROUP_NAME_COLUMN,
     monitorKeywordsTable: config.MONITOR_KEYWORDS_TABLE,
     monitorKeywordWordColumn: config.MONITOR_KEYWORD_WORD_COLUMN,
+    okAccessToken: config.OK_ACCESS_TOKEN,
+    okApplicationKey: config.OK_APPLICATION_KEY,
+    okApplicationSecretKey: config.OK_APPLICATION_SECRET_KEY,
   });
 
   const errors = validateSync(validatedConfig, {

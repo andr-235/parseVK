@@ -203,4 +203,22 @@ export class AppConfig {
   @IsString()
   @IsOptional()
   monitorKeywordWordColumn?: string;
+
+  // OK API credentials
+  // Получить в настройках приложения на https://apiok.ru/dev/app/
+  // OK_ACCESS_TOKEN - вечный access_token из раздела "Access token"
+  // OK_APPLICATION_KEY - публичный ключ приложения (application_key) из основных настроек
+  // OK_APPLICATION_SECRET_KEY - секретный ключ приложения (application_secret_key) из основных настроек
+  // Примечание: session_secret_key вычисляется автоматически, его не нужно указывать отдельно
+  @IsString()
+  @IsOptional()
+  okAccessToken?: string;
+
+  @IsString()
+  @IsOptional()
+  okApplicationKey?: string;
+
+  @IsString()
+  @IsOptional()
+  okApplicationSecretKey?: string;
 }
