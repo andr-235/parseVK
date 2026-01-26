@@ -226,9 +226,38 @@ else
 fi
 
 echo "Используем Prisma CLI: $PRISMA_CMD"
-if ! $PRISMA_CMD migrate deploy; then
-  echo "Ошибка при выполнении миграций, останавливаемся."
-  exit 1
+if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
+  MIGRATE_ERROR=$(cat /tmp/migrate.log)
+  
+  # Проверяем, если ошибка связана с уже существующей таблицей
+  if echo "$MIGRATE_ERROR" | grep -q "already exists"; then
+    echo "Обнаружена ошибка 'already exists', пытаемся исправить..."
+    
+    # Извлекаем имя миграции из ошибки
+    MIGRATION_NAME=$(echo "$MIGRATE_ERROR" | grep -oP 'Migration name: \K[^\s]+' || echo "")
+    
+    if [ -n "$MIGRATION_NAME" ]; then
+      echo "Помечаем миграцию $MIGRATION_NAME как применённую..."
+      if $PRISMA_CMD migrate resolve --applied "$MIGRATION_NAME" 2>&1; then
+        echo "Миграция $MIGRATION_NAME помечена как применённая, повторяем deploy..."
+        if ! $PRISMA_CMD migrate deploy; then
+          echo "Ошибка при повторном выполнении миграций, останавливаемся."
+          exit 1
+        fi
+      else
+        echo "Не удалось пометить миграцию как применённую, останавливаемся."
+        exit 1
+      fi
+    else
+      echo "Не удалось определить имя миграции из ошибки, останавливаемся."
+      echo "Ошибка: $MIGRATE_ERROR"
+      exit 1
+    fi
+  else
+    echo "Ошибка при выполнении миграций, останавливаемся."
+    echo "Ошибка: $MIGRATE_ERROR"
+    exit 1
+  fi
 fi
 
 echo "Генерация Prisma Client..."
