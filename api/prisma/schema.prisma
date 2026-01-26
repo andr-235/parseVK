@@ -93,31 +93,34 @@ model Task {
 }
 
 model ExportJob {
-  id           String         @id @default(uuid()) @db.Uuid
-  createdAt    DateTime       @default(now())
-  status       ExportJobStatus @default(PENDING)
-  params       Json
-  vkUserId     Int?
-  totalCount   Int?
-  fetchedCount Int            @default(0)
-  warning      String?        @db.Text
-  error        String?        @db.Text
-  xlsxPath     String?        @db.Text
-  docxPath     String?        @db.Text
+  id            String          @id @default(uuid()) @db.Uuid
+  createdAt     DateTime        @default(now())
+  status        ExportJobStatus @default(PENDING)
+  params        Json
+  vkUserId      Int?
+  okUserId      BigInt?
+  totalCount    Int?
+  fetchedCount  Int             @default(0)
+  warning       String?         @db.Text
+  error         String?         @db.Text
+  xlsxPath      String?         @db.Text
+  docxPath      String?         @db.Text
   friendRecords FriendRecord[]
-  logs         JobLog[]
+  logs          JobLog[]
 }
 
 model FriendRecord {
-  id         String   @id @default(uuid()) @db.Uuid
-  jobId      String   @db.Uuid
-  vkFriendId Int
+  id         String    @id @default(uuid()) @db.Uuid
+  jobId      String    @db.Uuid
+  vkFriendId Int?
+  okFriendId BigInt?
   payload    Json
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
   job        ExportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([jobId])
   @@index([vkFriendId])
+  @@index([okFriendId])
 }
 
 model JobLog {
@@ -134,28 +137,28 @@ model JobLog {
 }
 
 model User {
-  id               Int       @id @default(autoincrement())
-  username         String    @unique
-  passwordHash     String
-  role             UserRole  @default(user)
-  isTemporaryPassword Boolean @default(false)
-  refreshTokenHash String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                  Int      @id @default(autoincrement())
+  username            String   @unique
+  passwordHash        String
+  role                UserRole @default(user)
+  isTemporaryPassword Boolean  @default(false)
+  refreshTokenHash    String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([role])
 }
 
 model TaskAutomationSettings {
-  id        Int      @id @default(autoincrement())
-  enabled   Boolean  @default(false)
-  runHour   Int      @default(3)
-  runMinute Int      @default(0)
-  postLimit Int      @default(10)
-  timezoneOffsetMinutes Int @default(0)
-  lastRunAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    Int       @id @default(autoincrement())
+  enabled               Boolean   @default(false)
+  runHour               Int       @default(3)
+  runMinute             Int       @default(0)
+  postLimit             Int       @default(10)
+  timezoneOffsetMinutes Int       @default(0)
+  lastRunAt             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 model Group {
@@ -213,31 +216,31 @@ model Post {
 }
 
 model Comment {
-  id                Int              @id @default(autoincrement())
-  postId            Int
-  ownerId           Int
-  vkCommentId       Int
-  fromId            Int
-  text              String           @db.Text
-  publishedAt       DateTime
-  likesCount        Int?
-  parentsStack      Json?
-  threadCount       Int?
-  threadItems       Json?
-  attachments       Json?
-  replyToUser       Int?
-  replyToComment    Int?
-  authorVkId        Int?
-  author            Author?          @relation(fields: [authorVkId], references: [vkUserId], onDelete: SetNull)
-  isDeleted         Boolean          @default(false)
-  isRead            Boolean          @default(false)
-  source            CommentSource    @default(TASK)
-  watchlistAuthorId Int?
-  watchlistAuthor   WatchlistAuthor? @relation(fields: [watchlistAuthorId], references: [id], onDelete: SetNull)
-  watchlistSource   WatchlistAuthor? @relation("WatchlistSourceComment")
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  post              Post             @relation(fields: [ownerId, postId], references: [ownerId, vkPostId], onDelete: Cascade)
+  id                    Int                   @id @default(autoincrement())
+  postId                Int
+  ownerId               Int
+  vkCommentId           Int
+  fromId                Int
+  text                  String                @db.Text
+  publishedAt           DateTime
+  likesCount            Int?
+  parentsStack          Json?
+  threadCount           Int?
+  threadItems           Json?
+  attachments           Json?
+  replyToUser           Int?
+  replyToComment        Int?
+  authorVkId            Int?
+  author                Author?               @relation(fields: [authorVkId], references: [vkUserId], onDelete: SetNull)
+  isDeleted             Boolean               @default(false)
+  isRead                Boolean               @default(false)
+  source                CommentSource         @default(TASK)
+  watchlistAuthorId     Int?
+  watchlistAuthor       WatchlistAuthor?      @relation(fields: [watchlistAuthorId], references: [id], onDelete: SetNull)
+  watchlistSource       WatchlistAuthor?      @relation("WatchlistSourceComment")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  post                  Post                  @relation(fields: [ownerId, postId], references: [ownerId, vkPostId], onDelete: Cascade)
   commentKeywordMatches CommentKeywordMatch[]
 
   @@unique([ownerId, vkCommentId])
@@ -254,38 +257,38 @@ model Comment {
 }
 
 model Listing {
-  id            Int      @id @default(autoincrement())
-  source        String?
-  externalId    String?
-  title         String?
-  description   String?  @db.Text
-  url           String   @unique
-  price         Int?
-  currency      String?
-  address       String?
-  city          String?
-  latitude      Float?
-  longitude     Float?
-  rooms         Int?
-  areaTotal     Float?
-  areaLiving    Float?
-  areaKitchen   Float?
-  floor         Int?
-  floorsTotal   Int?
-  publishedAt   DateTime?
-  contactName   String?
-  contactPhone  String?
-  images        String[] @default([])
-  sourceAuthorName String?
+  id                Int       @id @default(autoincrement())
+  source            String?
+  externalId        String?
+  title             String?
+  description       String?   @db.Text
+  url               String    @unique
+  price             Int?
+  currency          String?
+  address           String?
+  city              String?
+  latitude          Float?
+  longitude         Float?
+  rooms             Int?
+  areaTotal         Float?
+  areaLiving        Float?
+  areaKitchen       Float?
+  floor             Int?
+  floorsTotal       Int?
+  publishedAt       DateTime?
+  contactName       String?
+  contactPhone      String?
+  images            String[]  @default([])
+  sourceAuthorName  String?
   sourceAuthorPhone String?
-  sourceAuthorUrl String?
-  sourcePostedAt String? @db.Text
-  sourceParsedAt DateTime?
-  manualOverrides Json? @default("[]")
-  manualNote    String?  @db.Text
-  archived      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  sourceAuthorUrl   String?
+  sourcePostedAt    String?   @db.Text
+  sourceParsedAt    DateTime?
+  manualOverrides   Json?     @default("[]")
+  manualNote        String?   @db.Text
+  archived          Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([city])
   @@index([price])
@@ -376,12 +379,12 @@ model PhotoAnalysis {
 }
 
 model Keyword {
-  id        Int      @id @default(autoincrement())
-  word      String   @unique
-  category  String?
-  isPhrase  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    Int                   @id @default(autoincrement())
+  word                  String                @unique
+  category              String?
+  isPhrase              Boolean               @default(false)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
   commentKeywordMatches CommentKeywordMatch[]
 }
 
@@ -448,15 +451,15 @@ model WatchlistAuthor {
 }
 
 model TelegramChat {
-  id          Int               @id @default(autoincrement())
-  telegramId  BigInt            @unique
+  id          Int                  @id @default(autoincrement())
+  telegramId  BigInt               @unique
   type        TelegramChatType
   title       String?
   username    String?
   photoUrl    String?
-  description String?           @db.Text
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  description String?              @db.Text
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
   members     TelegramChatMember[]
 
   @@index([type])
@@ -464,39 +467,39 @@ model TelegramChat {
 }
 
 model TelegramUser {
-  id                    Int               @id @default(autoincrement())
-  telegramId            BigInt            @unique
+  id                    Int                  @id @default(autoincrement())
+  telegramId            BigInt               @unique
   firstName             String?
   lastName              String?
   username              String?
   phoneNumber           String?
-  bio                   String?           @db.Text
+  bio                   String?              @db.Text
   languageCode          String?
-  isBot                 Boolean           @default(false)
-  isPremium             Boolean           @default(false)
-  deleted               Boolean           @default(false)
-  restricted            Boolean           @default(false)
-  verified              Boolean           @default(false)
-  scam                 Boolean           @default(false)
-  fake                  Boolean           @default(false)
-  min                   Boolean           @default(false)
-  self                  Boolean           @default(false)
-  contact               Boolean           @default(false)
-  mutualContact         Boolean           @default(false)
+  isBot                 Boolean              @default(false)
+  isPremium             Boolean              @default(false)
+  deleted               Boolean              @default(false)
+  restricted            Boolean              @default(false)
+  verified              Boolean              @default(false)
+  scam                  Boolean              @default(false)
+  fake                  Boolean              @default(false)
+  min                   Boolean              @default(false)
+  self                  Boolean              @default(false)
+  contact               Boolean              @default(false)
+  mutualContact         Boolean              @default(false)
   accessHash            String?
   photoId               BigInt?
   photoDcId             Int?
-  photoHasVideo         Boolean           @default(false)
+  photoHasVideo         Boolean              @default(false)
   commonChatsCount      Int?
   usernames             Json?
   personal              Json?
   botInfo               Json?
-  blocked               Boolean           @default(false)
-  contactRequirePremium Boolean           @default(false)
-  spam                  Boolean           @default(false)
-  closeFriend           Boolean           @default(false)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  blocked               Boolean              @default(false)
+  contactRequirePremium Boolean              @default(false)
+  spam                  Boolean              @default(false)
+  closeFriend           Boolean              @default(false)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   memberships           TelegramChatMember[]
 
   @@index([username])
@@ -506,18 +509,18 @@ model TelegramUser {
 }
 
 model TelegramChatMember {
-  id              Int                  @id @default(autoincrement())
-  chatId          Int
-  userId          Int
-  status          TelegramMemberStatus
-  isAdmin         Boolean              @default(false)
-  isOwner         Boolean              @default(false)
-  joinedAt        DateTime?
-  leftAt          DateTime?
-  importedAt      DateTime             @default(now())
-  rawPayload      Json?
-  chat            TelegramChat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  user            TelegramUser         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         Int                  @id @default(autoincrement())
+  chatId     Int
+  userId     Int
+  status     TelegramMemberStatus
+  isAdmin    Boolean              @default(false)
+  isOwner    Boolean              @default(false)
+  joinedAt   DateTime?
+  leftAt     DateTime?
+  importedAt DateTime             @default(now())
+  rawPayload Json?
+  chat       TelegramChat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user       TelegramUser         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([chatId, userId])
   @@index([userId])

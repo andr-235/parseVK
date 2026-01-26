@@ -71,7 +71,7 @@ export class OkFriendsRepository {
       data: {
         status,
         params: toCreateJsonValue(input.params),
-        vkUserId: input.okUserId ? Number.parseInt(input.okUserId, 10) : null,
+        okUserId: input.okUserId ? BigInt(input.okUserId) : null,
         totalCount: input.totalCount ?? null,
         fetchedCount,
         warning: input.warning ?? null,
@@ -188,7 +188,7 @@ export class OkFriendsRepository {
       const chunk = records.slice(i, i + normalizedBatchSize);
       const data = chunk.map((record) => ({
         jobId,
-        vkFriendId: Number.parseInt(record.okFriendId, 10),
+        okFriendId: BigInt(record.okFriendId),
         payload: toCreateJsonValue(record.payload),
       }));
 
