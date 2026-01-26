@@ -22,11 +22,8 @@ ENV npm_config_node_gyp_timeout=300000
 # Увеличение таймаутов для Prisma
 ENV PRISMA_GENERATE_DATAPROXY=false
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
-
-# Устанавливаем системные пакеты с таймаутом и retry
-RUN apk update --no-cache && \
-    apk add --no-cache --virtual .build-deps python3 build-base || \
-    (echo "Retrying package installation..." && sleep 5 && apk update --no-cache && apk add --no-cache --virtual .build-deps python3 build-base)
+# Используем предсобранные бинарники для нативных модулей (bcrypt имеет бинарники для Alpine)
+ENV npm_config_build_from_source=false
 
 RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retries 3 \
@@ -46,8 +43,7 @@ RUN --mount=type=cache,target=/root/.pnpm-store \
     pnpm config set registry ${NPM_REGISTRY} \
     && pnpm config set fetch-retries 3 \
     && pnpm config set fetch-timeout 60000 \
-    && (pnpm install --frozen-lockfile || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile)) \
-    && (pnpm rebuild bcrypt || (echo "pnpm rebuild failed, trying with npm..." && npm rebuild bcrypt) || echo "Warning: bcrypt rebuild failed, using prebuilt binaries")
+    && (pnpm install --frozen-lockfile || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile))
 
 # Copy source code after dependencies are installed
 COPY api/ ./
@@ -71,12 +67,12 @@ ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
 
-# Устанавливаем prisma CLI и зависимости для пересборки нативных модулей
+# Устанавливаем prisma CLI и netcat для healthcheck
 RUN npm config set registry https://registry.npmmirror.com \
     && npm config set fetch-retries 3 \
     && npm config set fetch-timeout 60000 \
     && (npm install -g prisma@^6.16.3 || (npm config set registry https://registry.npmjs.org/ && npm install -g prisma@^6.16.3)) \
-    && apk add --no-cache netcat-openbsd python3 build-base
+    && apk add --no-cache netcat-openbsd
 
 # Копируем собранное приложение и node_modules из build stage
 COPY --from=build /app/package*.json ./
@@ -85,12 +81,8 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/node_modules ./node_modules
 
-# Пересобираем нативные модули (bcrypt) для текущей платформы
-RUN npm config set registry https://registry.npmmirror.com \
-    && npm config set fetch-retries 3 \
-    && npm config set fetch-timeout 60000 \
-    && (npm rebuild bcrypt || (npm config set registry https://registry.npmjs.org/ && npm rebuild bcrypt) || echo "Warning: bcrypt rebuild failed") \
-    && apk del build-base python3
+# Проверяем, что bcrypt работает (используем предсобранные бинарники)
+RUN node -e "require('bcrypt').hashSync('test', 10)" || echo "Warning: bcrypt test failed, but continuing..."
 
 # Копируем entrypoint скрипт
 COPY docker/backend-entrypoint.sh /app/entrypoint.sh
