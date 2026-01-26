@@ -23,7 +23,10 @@ ENV npm_config_node_gyp_timeout=300000
 ENV PRISMA_GENERATE_DATAPROXY=false
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
 
-RUN apk add --no-cache --virtual .build-deps python3 build-base
+# Устанавливаем системные пакеты с таймаутом и retry
+RUN apk update --no-cache && \
+    apk add --no-cache --virtual .build-deps python3 build-base || \
+    (echo "Retrying package installation..." && sleep 5 && apk update --no-cache && apk add --no-cache --virtual .build-deps python3 build-base)
 
 RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retries 3 \
