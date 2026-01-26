@@ -1,4 +1,3 @@
-import { Cloud } from 'lucide-react'
 import PageHeroCard from '@/components/PageHeroCard'
 import CircularProgress from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
@@ -30,9 +29,6 @@ function VkFriendsExportPage() {
     isProgressIndeterminate,
     isExportLoading,
     handleGenerateXlsx,
-    handleDownloadXlsx,
-    hasXlsx,
-    jobStatus,
   } = useVkFriendsExport()
 
   return (
@@ -41,34 +37,6 @@ function VkFriendsExportPage() {
         title="Экспорт друзей ВКонтакте"
         description="Формируйте XLSX отчёт по friends.get с прогрессом и логами."
         className={PANEL_CLASS}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              onClick={handleGenerateXlsx}
-              disabled={isExportLoading}
-              className="shadow-[0_0_20px_rgba(59,130,246,0.35)]"
-            >
-              {isExportLoading ? (
-                <span className="inline-flex items-center gap-2">
-                  <Spinner className="size-4" />
-                  Формируем XLSX...
-                </span>
-              ) : (
-                'Создать и скачать XLSX'
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleDownloadXlsx}
-              disabled={!hasXlsx || jobStatus !== 'DONE'}
-              title="Скачать XLSX"
-              aria-label="Скачать XLSX"
-            >
-              <Cloud className="size-4" />
-            </Button>
-          </div>
-        }
       />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
@@ -102,9 +70,6 @@ function VkFriendsExportPage() {
                 ) : (
                   'Загрузить XLSX'
                 )}
-              </Button>
-              <Button variant="outline" onClick={handleDownloadXlsx} disabled={!hasXlsx}>
-                Скачать XLSX
               </Button>
             </div>
           </CardContent>
