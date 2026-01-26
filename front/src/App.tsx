@@ -25,6 +25,7 @@ const Login = lazy(() => import('@/pages/Login'))
 const AdminUsers = lazy(() => import('@/pages/AdminUsers'))
 const ChangePassword = lazy(() => import('@/pages/ChangePassword'))
 const VkFriendsExportPage = lazy(() => import('@/pages/VkFriendsExportPage'))
+const OkFriendsExportPage = lazy(() => import('@/pages/OkFriendsExportPage'))
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 const RequireAuth = ({ children }: { children: ReactNode }) => {
@@ -126,6 +127,7 @@ function App() {
             <Route path="/monitoring/:sourceKey" element={<Monitoring />} />
             <Route path="/monitoring/:sourceKey/groups" element={<MonitoringGroups />} />
             <Route path="/vk/friends-export" element={<VkFriendsExportPage />} />
+            <Route path="/ok/friends-export" element={<OkFriendsExportPage />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route
               path="/admin/users"

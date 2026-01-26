@@ -17,7 +17,8 @@ export const createVkSubItems = (
     { label: 'Авторы', path: '/authors', badge: formatCount(authorsTotal) },
     { label: 'На карандаше', path: '/watchlist', badge: formatCount(watchlistCount) },
     { label: 'Ключевые слова', path: '/keywords' },
-    { label: 'Экспорт друзей', path: '/vk/friends-export' },
+    { label: 'Экспорт друзей VK', path: '/vk/friends-export' },
+    { label: 'Экспорт друзей OK', path: '/ok/friends-export' },
   ]
 }
 
