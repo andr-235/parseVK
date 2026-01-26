@@ -17,7 +17,7 @@ if [ -n "${COMPOSE_FILE:-}" ]; then
 fi
 
 API_URL=${API_URL:-http://localhost:3000}
-FRONTEND_URL=${FRONTEND_URL:-http://localhost:80}
+FRONTEND_URL=${FRONTEND_URL:-http://localhost:8080}
 MAX_RETRIES=${MAX_RETRIES:-5}
 RETRY_DELAY=${RETRY_DELAY:-3}
 

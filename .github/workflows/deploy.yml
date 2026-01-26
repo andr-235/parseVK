@@ -737,7 +737,7 @@ jobs:
         env:
           COMPOSE_FILE: ${{ env.COMPOSE_FILE }}
           API_URL: http://localhost:3000
-          FRONTEND_URL: http://localhost:80
+          FRONTEND_URL: http://localhost:8080
         run: |
           STEP_START=$(date +%s)
           COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/smoke-tests.sh
