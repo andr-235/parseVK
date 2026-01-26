@@ -92,12 +92,48 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed files
+        id: detect-changes
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+
+          API_CHANGED=false
+          FRONTEND_CHANGED=false
+
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            API_CHANGED=true
+            FRONTEND_CHANGED=true
+          else
+            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
+            
+            if echo "$CHANGED_FILES" | grep -qE '^api/|^docker/backend\.Dockerfile|^docker/backend-entrypoint\.sh'; then
+              API_CHANGED=true
+            fi
+            if echo "$CHANGED_FILES" | grep -qE '^front/|^docker/frontend\.Dockerfile|^docker/frontend-entrypoint\.sh|^docker/frontend\.nginx\.conf'; then
+              FRONTEND_CHANGED=true
+            fi
+          fi
+
+          echo "api_changed=$API_CHANGED" >> $GITHUB_OUTPUT
+          echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build API image for scanning
-        if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'api') || contains(github.event.head_commit.message, 'backend')
+        id: build-api
+        if: steps.detect-changes.outputs.api_changed == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -110,7 +146,8 @@ jobs:
             DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 
       - name: Build Frontend image for scanning
-        if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'frontend') || contains(github.event.head_commit.message, 'front')
+        id: build-frontend
+        if: steps.detect-changes.outputs.frontend_changed == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -126,7 +163,7 @@ jobs:
             VITE_DEV_MODE=false
 
       - name: Run Trivy vulnerability scanner on API image
-        if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'api') || contains(github.event.head_commit.message, 'backend')
+        if: steps.build-api.outcome == 'success'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: parsevk-api:scan
@@ -135,7 +172,7 @@ jobs:
           severity: "CRITICAL,HIGH"
 
       - name: Run Trivy vulnerability scanner on Frontend image
-        if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, 'frontend') || contains(github.event.head_commit.message, 'front')
+        if: steps.build-frontend.outcome == 'success'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: parsevk-frontend:scan
@@ -143,8 +180,8 @@ jobs:
           output: "trivy-frontend-results.sarif"
           severity: "CRITICAL,HIGH"
 
-      - name: Upload Trivy results to GitHub Security
-        if: always()
+      - name: Upload Trivy results to GitHub Security (API)
+        if: always() && steps.build-api.outcome == 'success'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "trivy-api-results.sarif"
@@ -152,7 +189,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Trivy results to GitHub Security (Frontend)
-        if: always()
+        if: always() && steps.build-frontend.outcome == 'success'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "trivy-frontend-results.sarif"
