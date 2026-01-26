@@ -229,8 +229,42 @@ echo "Используем Prisma CLI: $PRISMA_CMD"
 if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
   MIGRATE_ERROR=$(cat /tmp/migrate.log)
   
+  # Проверяем, если ошибка связана с неудачной миграцией (P3009)
+  if echo "$MIGRATE_ERROR" | grep -q "P3009\|failed migrations\|migration.*failed"; then
+    echo "Обнаружена неудачная миграция, пытаемся исправить..."
+    
+    # Извлекаем имя миграции из ошибки (формат: `20251020120000_add_task_automation_settings`)
+    MIGRATION_NAME=$(echo "$MIGRATE_ERROR" | grep -oP '`\K[^`]+' | head -1 || echo "")
+    
+    if [ -z "$MIGRATION_NAME" ]; then
+      # Пробуем другой формат - ищем имя миграции после "The `"
+      MIGRATION_NAME=$(echo "$MIGRATE_ERROR" | grep -oP 'The `\K[^`]+' | head -1 || echo "")
+    fi
+    
+    if [ -z "$MIGRATION_NAME" ]; then
+      # Пробуем найти по паттерну даты и имени (формат: 20251020120000_add_task_automation_settings)
+      MIGRATION_NAME=$(echo "$MIGRATE_ERROR" | grep -oP '\d{14}_[a-zA-Z0-9_]+' | head -1 || echo "")
+    fi
+    
+    if [ -n "$MIGRATION_NAME" ]; then
+      echo "Помечаем неудачную миграцию $MIGRATION_NAME как применённую..."
+      if $PRISMA_CMD migrate resolve --applied "$MIGRATION_NAME" 2>&1; then
+        echo "Миграция $MIGRATION_NAME помечена как применённая, повторяем deploy..."
+        if ! $PRISMA_CMD migrate deploy; then
+          echo "Ошибка при повторном выполнении миграций, останавливаемся."
+          exit 1
+        fi
+      else
+        echo "Не удалось пометить миграцию как применённую, останавливаемся."
+        exit 1
+      fi
+    else
+      echo "Предупреждение: Не удалось определить имя неудачной миграции из ошибки."
+      echo "Ошибка: $MIGRATE_ERROR"
+      exit 1
+    fi
   # Проверяем, если ошибка связана с уже существующей таблицей
-  if echo "$MIGRATE_ERROR" | grep -q "already exists"; then
+  elif echo "$MIGRATE_ERROR" | grep -q "already exists"; then
     echo "Обнаружена ошибка 'already exists', пытаемся исправить..."
     
     # Извлекаем имя миграции из ошибки (пробуем разные форматы)
