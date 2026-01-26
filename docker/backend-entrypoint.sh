@@ -231,6 +231,12 @@ if ! $PRISMA_CMD migrate deploy; then
   exit 1
 fi
 
+echo "Генерация Prisma Client..."
+if ! $PRISMA_CMD generate; then
+  echo "Ошибка при генерации Prisma Client, останавливаемся."
+  exit 1
+fi
+
 echo "Запуск приложения..."
 exec node dist/src/main.js
 
