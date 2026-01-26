@@ -22,16 +22,14 @@ scrape_configs:
     static_configs:
       - targets: ["node-exporter:9100"]
 
-  # Опциональная конфигурация для метрик деплоя (используется в CI/CD)
-  # Раскомментируйте, если файл /opt/parseVK/.deployment-metrics.prom существует
+  # === МЕСТО ДЛЯ ВАШИХ НАСТРОЕК ===
+  # Для добавления метрик деплоя раскомментируйте следующую секцию:
   # - job_name: "deployment-metrics"
   #   file_sd_configs:
   #     - files:
   #         - /opt/parseVK/.deployment-metrics.prom
   #   scrape_interval: 30s
   #   scrape_timeout: 10s
-
-  # === МЕСТО ДЛЯ ВАШИХ НАСТРОЕК ===
   # Добавьте здесь дополнительные targets для мониторинга
   # Пример:
   # - job_name: 'my_custom_service'
