@@ -61,12 +61,12 @@ ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
 
-# Устанавливаем prisma CLI для миграций
+# Устанавливаем prisma CLI и зависимости для пересборки нативных модулей
 RUN npm config set registry https://registry.npmmirror.com \
     && npm config set fetch-retries 3 \
     && npm config set fetch-timeout 60000 \
     && (npm install -g prisma@^6.16.3 || (npm config set registry https://registry.npmjs.org/ && npm install -g prisma@^6.16.3)) \
-    && apk add --no-cache netcat-openbsd
+    && apk add --no-cache netcat-openbsd python3 build-base
 
 # Копируем собранное приложение и node_modules из build stage
 COPY --from=build /app/package*.json ./
@@ -74,6 +74,13 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/node_modules ./node_modules
+
+# Пересобираем нативные модули (bcrypt) для текущей платформы
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm config set fetch-retries 3 \
+    && npm config set fetch-timeout 60000 \
+    && (npm rebuild bcrypt || (npm config set registry https://registry.npmjs.org/ && npm rebuild bcrypt) || echo "Warning: bcrypt rebuild failed") \
+    && apk del build-base python3
 
 # Копируем entrypoint скрипт
 COPY docker/backend-entrypoint.sh /app/entrypoint.sh
