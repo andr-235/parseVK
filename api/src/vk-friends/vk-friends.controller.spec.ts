@@ -4,8 +4,8 @@ import * as http from 'http';
 import request from 'supertest';
 import { VkFriendsController } from './vk-friends.controller';
 import { VkFriendsService } from './vk-friends.service';
-import { FriendMapper } from './mappers/friend.mapper';
-import { VkFriendsExporterService } from './services/vk-friends-exporter.service';
+import { VkFriendsExportJobService } from './services/vk-friends-export-job.service';
+import { VkFriendsFileService } from './services/vk-friends-file.service';
 import { VkFriendsJobStreamService } from './services/vk-friends-job-stream.service';
 import { firstValueFrom, of } from 'rxjs';
 
@@ -13,39 +13,30 @@ describe('VkFriendsController (HTTP)', () => {
   let app: INestApplication;
   let controller: VkFriendsController;
   let vkFriendsService: {
-    fetchAllFriends: jest.Mock;
     createJob: jest.Mock;
     getJobById: jest.Mock;
     getJobLogs: jest.Mock;
   };
-  let friendMapper: { mapVkUserToFlatDto: jest.Mock };
-  let exporter: { writeXlsxFile: jest.Mock };
+  let exportJobService: { run: jest.Mock };
+  let fileService: { getExportFilePath: jest.Mock };
   let jobStream: { emit: jest.Mock; getStream: jest.Mock };
 
   beforeEach(async () => {
     vkFriendsService = {
-      fetchAllFriends: jest.fn(),
       createJob: jest.fn(),
       getJobById: jest.fn(),
       getJobLogs: jest.fn(),
     };
-    friendMapper = {
-      mapVkUserToFlatDto: jest.fn(),
-    };
-    exporter = {
-      writeXlsxFile: jest.fn(),
-    };
-    jobStream = {
-      emit: jest.fn(),
-      getStream: jest.fn(),
-    };
+    exportJobService = { run: jest.fn().mockResolvedValue(undefined) };
+    fileService = { getExportFilePath: jest.fn() };
+    jobStream = { emit: jest.fn(), getStream: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [VkFriendsController],
       providers: [
         { provide: VkFriendsService, useValue: vkFriendsService },
-        { provide: FriendMapper, useValue: friendMapper },
-        { provide: VkFriendsExporterService, useValue: exporter },
+        { provide: VkFriendsExportJobService, useValue: exportJobService },
+        { provide: VkFriendsFileService, useValue: fileService },
         { provide: VkFriendsJobStreamService, useValue: jobStream },
       ],
     }).compile();
@@ -72,9 +63,6 @@ describe('VkFriendsController (HTTP)', () => {
       status: 'RUNNING',
     };
     vkFriendsService.createJob.mockResolvedValue(job);
-    const runExportSpy = jest
-      .spyOn(controller as any, 'runExportJob')
-      .mockResolvedValue(undefined);
 
     await request(app.getHttpServer() as http.Server)
       .post('/vk/friends/export')
@@ -91,7 +79,7 @@ describe('VkFriendsController (HTTP)', () => {
       }),
     );
     expect(jobStream.emit).toHaveBeenCalledWith(job.id, expect.any(Object));
-    expect(runExportSpy).toHaveBeenCalledWith(
+    expect(exportJobService.run).toHaveBeenCalledWith(
       job.id,
       expect.objectContaining({ user_id: 42, count: 10 }),
     );

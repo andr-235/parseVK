@@ -3,8 +3,7 @@ import ExcelJS from 'exceljs';
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { FriendFlatDto } from '../dto/vk-friends.dto';
-
-const EXPORT_DIR = path.resolve(process.cwd(), '.temp', 'vk-friends');
+import { EXPORT_DIR } from '../vk-friends.constants';
 
 const FRIEND_FIELDS: Array<keyof FriendFlatDto> = [
   'id',
