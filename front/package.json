@@ -39,7 +39,7 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.9.3",
+    "react-router-dom": "^7.13.0",
     "react-window": "^2.2.1",
     "russian-nouns-js": "^1.5.0",
     "socket.io-client": "^4.8.1",
