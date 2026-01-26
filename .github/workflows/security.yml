@@ -134,7 +134,7 @@ jobs:
       - name: Build API image for scanning
         id: build-api
         if: steps.detect-changes.outputs.api_changed == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/backend.Dockerfile
@@ -148,7 +148,7 @@ jobs:
       - name: Build Frontend image for scanning
         id: build-frontend
         if: steps.detect-changes.outputs.frontend_changed == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/frontend.Dockerfile

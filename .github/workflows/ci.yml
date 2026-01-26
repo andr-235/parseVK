@@ -341,7 +341,7 @@ jobs:
 
       - name: Build and push API image
         if: needs.changes.outputs.backend_image_changed == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/backend.Dockerfile
@@ -365,7 +365,7 @@ jobs:
 
       - name: Build and push Frontend image
         if: needs.changes.outputs.frontend_image_changed == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/frontend.Dockerfile
