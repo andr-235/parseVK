@@ -16,6 +16,9 @@ ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 # Prisma engines mirror - используем официальный CDN
 ENV PRISMA_ENGINES_MIRROR=https://binaries.prisma.sh
+# Настройки для node-gyp (сборка нативных модулей)
+ENV NODEJS_ORG_MIRROR=https://nodejs.org/dist/
+ENV npm_config_node_gyp_timeout=300000
 
 RUN apk add --no-cache --virtual .build-deps python3 build-base
 
@@ -38,7 +41,7 @@ RUN --mount=type=cache,target=/root/.pnpm-store \
     && pnpm config set fetch-retries 3 \
     && pnpm config set fetch-timeout 60000 \
     && (pnpm install --frozen-lockfile || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile)) \
-    && npm rebuild bcrypt --build-from-source
+    && (pnpm rebuild bcrypt || (echo "pnpm rebuild failed, trying with npm..." && npm rebuild bcrypt) || echo "Warning: bcrypt rebuild failed, using prebuilt binaries")
 
 # Copy source code after dependencies are installed
 COPY api/ ./
