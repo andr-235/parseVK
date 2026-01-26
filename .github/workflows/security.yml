@@ -62,7 +62,7 @@ jobs:
 
       - name: Upload API audit results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: api-audit-results
           path: api/audit-api.json
@@ -70,7 +70,7 @@ jobs:
 
       - name: Upload Frontend audit results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: frontend-audit-results
           path: front/audit-frontend.json
