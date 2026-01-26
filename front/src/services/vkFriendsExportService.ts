@@ -31,7 +31,7 @@ export interface VkFriendsJob {
   fetchedCount: number
   warning?: string | null
   error?: string | null
-  docxPath?: string | null
+  xlsxPath?: string | null
 }
 
 export interface VkFriendsJobLog {
@@ -72,7 +72,7 @@ export type VkFriendsStreamEvent =
         fetchedCount: number
         totalCount?: number
         warning?: string
-        docxPath?: string
+        xlsxPath?: string
       }
     }
   | {
@@ -274,7 +274,7 @@ export const vkFriendsExportService = {
     }
   },
 
-  async downloadJobFile(jobId: string, type: 'docx'): Promise<void> {
+  async downloadJobFile(jobId: string, type: 'xlsx'): Promise<void> {
     try {
       const response = await createRequest(`${API_URL}/vk/friends/jobs/${jobId}/download/${type}`)
 

@@ -29,9 +29,9 @@ function VkFriendsExportPage() {
     progressLabel,
     isProgressIndeterminate,
     isExportLoading,
-    handleGenerateDocx,
-    handleDownloadDocx,
-    hasDocx,
+    handleGenerateXlsx,
+    handleDownloadXlsx,
+    hasXlsx,
     jobStatus,
   } = useVkFriendsExport()
 
@@ -39,31 +39,31 @@ function VkFriendsExportPage() {
     <div className="flex flex-col gap-6 pb-8">
       <PageHeroCard
         title="Экспорт друзей ВКонтакте"
-        description="Формируйте DOCX отчёт по friends.get с прогрессом и логами."
+        description="Формируйте XLSX отчёт по friends.get с прогрессом и логами."
         className={PANEL_CLASS}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              onClick={handleGenerateDocx}
+              onClick={handleGenerateXlsx}
               disabled={isExportLoading}
               className="shadow-[0_0_20px_rgba(59,130,246,0.35)]"
             >
               {isExportLoading ? (
                 <span className="inline-flex items-center gap-2">
                   <Spinner className="size-4" />
-                  Формируем DOCX...
+                  Формируем XLSX...
                 </span>
               ) : (
-                'Создать и скачать DOCX'
+                'Создать и скачать XLSX'
               )}
             </Button>
             <Button
               variant="outline"
               size="icon"
-              onClick={handleDownloadDocx}
-              disabled={!hasDocx || jobStatus !== 'DONE'}
-              title="Скачать DOCX"
-              aria-label="Скачать DOCX"
+              onClick={handleDownloadXlsx}
+              disabled={!hasXlsx || jobStatus !== 'DONE'}
+              title="Скачать XLSX"
+              aria-label="Скачать XLSX"
             >
               <Cloud className="size-4" />
             </Button>
@@ -93,18 +93,18 @@ function VkFriendsExportPage() {
               />
             </div>
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <Button onClick={handleGenerateDocx} disabled={isExportLoading}>
+              <Button onClick={handleGenerateXlsx} disabled={isExportLoading}>
                 {isExportLoading ? (
                   <span className="inline-flex items-center gap-2">
                     <Spinner className="size-4" />
-                    Формируем DOCX...
+                    Формируем XLSX...
                   </span>
                 ) : (
-                  'Загрузить DOCX'
+                  'Загрузить XLSX'
                 )}
               </Button>
-              <Button variant="outline" onClick={handleDownloadDocx} disabled={!hasDocx}>
-                Скачать DOCX
+              <Button variant="outline" onClick={handleDownloadXlsx} disabled={!hasXlsx}>
+                Скачать XLSX
               </Button>
             </div>
           </CardContent>

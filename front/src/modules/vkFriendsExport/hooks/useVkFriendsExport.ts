@@ -54,7 +54,7 @@ export const useVkFriendsExport = () => {
   const [jobError, setJobError] = useState<string | null>(null)
   const [jobProgress, setJobProgress] = useState({ fetchedCount: 0, totalCount: 0 })
   const [jobLogs, setJobLogs] = useState<JobLogEntry[]>([])
-  const [hasDocx, setHasDocx] = useState(false)
+  const [hasXlsx, setHasXlsx] = useState(false)
   const [isExportLoading, setIsExportLoading] = useState(false)
 
   const streamCloseRef = useRef<null | (() => void)>(null)
@@ -104,7 +104,7 @@ export const useVkFriendsExport = () => {
     setJobError(null)
     setJobWarning(null)
     setJobLogs([])
-    setHasDocx(false)
+    setHasXlsx(false)
     setJobProgress({ fetchedCount: 0, totalCount: 0 })
   }, [])
 
@@ -137,14 +137,11 @@ export const useVkFriendsExport = () => {
           fetchedCount: event.data.fetchedCount,
           totalCount: event.data.totalCount ?? prev.totalCount,
         }))
-        setHasDocx(Boolean(event.data.docxPath))
+        setHasXlsx(Boolean(event.data.xlsxPath))
         closeStream()
 
-        // Автоматическое скачивание после завершения
-        if (event.data.docxPath && event.data.jobId) {
-          void vkFriendsExportService.downloadJobFile(event.data.jobId, 'docx').catch(() => {
-            // Ошибки уже обрабатываются через toast в сервисе
-          })
+        if (event.data.xlsxPath && event.data.jobId) {
+          void vkFriendsExportService.downloadJobFile(event.data.jobId, 'xlsx').catch(() => {})
         }
         return
       }
@@ -184,7 +181,7 @@ export const useVkFriendsExport = () => {
         fetchedCount: response.job.fetchedCount ?? 0,
         totalCount: response.job.totalCount ?? 0,
       })
-      setHasDocx(Boolean(response.job.docxPath))
+      setHasXlsx(Boolean(response.job.xlsxPath))
       setJobLogs(normalizeLogs(response.logs))
     } catch {
       setJobError('Не удалось получить данные экспорта')
@@ -213,15 +210,12 @@ export const useVkFriendsExport = () => {
     }
   }, [buildParams, connectStream, loadJob, resetJobState])
 
-  const handleDownloadDocx = useCallback(async () => {
-    if (!jobId) {
-      return
-    }
-
+  const handleDownloadXlsx = useCallback(async () => {
+    if (!jobId) return
     try {
-      await vkFriendsExportService.downloadJobFile(jobId, 'docx')
+      await vkFriendsExportService.downloadJobFile(jobId, 'xlsx')
     } catch {
-      // errors are already surfaced via toast
+      // Ошибки показываются через toast в сервисе
     }
   }, [jobId])
 
@@ -238,7 +232,7 @@ export const useVkFriendsExport = () => {
     [jobProgress.fetchedCount, jobProgress.totalCount, jobStatus]
   )
 
-  const handleGenerateDocx = useCallback(async () => {
+  const handleGenerateXlsx = useCallback(async () => {
     await handleExport()
   }, [handleExport])
 
@@ -254,9 +248,9 @@ export const useVkFriendsExport = () => {
     progressLabel,
     isProgressIndeterminate,
     isExportLoading,
-    handleGenerateDocx,
-    handleDownloadDocx,
-    hasDocx,
+    handleGenerateXlsx,
+    handleDownloadXlsx,
+    hasXlsx,
     jobStatus,
   }
 }
