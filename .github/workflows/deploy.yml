@@ -27,145 +27,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        id: checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Log deployment info
-        run: |
-          START_TIME=$(date +%s)
-          echo "START_TIME=$START_TIME" >> $GITHUB_ENV
-          echo "=== Deployment Information ==="
-          echo "Commit: $(git rev-parse --short HEAD)"
-          echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
-          echo "Author: $(git log -1 --pretty=format:'%an <%ae>')"
-          echo "Message: $(git log -1 --pretty=format:'%s')"
-          echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-
-      - name: Validate environment variables
-        id: validate_env
-        working-directory: /opt/parseVK
-        timeout-minutes: 1
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Validating environment variables ==="
-
-          MISSING_VARS=0
-
-          if [ ! -f ".env" ] && [ -z "${DATABASE_URL:-}" ] && [ -z "${VK_TOKEN:-}" ]; then
-            echo "Warning: .env file not found and no environment variables set"
-            echo "Checking for docker-compose.yml with default values..."
-          fi
-
-          if [ -f ".env" ]; then
-            echo ".env file exists"
-            source .env 2>/dev/null || true
-          fi
-
-          if [ -z "${DATABASE_URL:-}" ] && [ -z "${POSTGRES_PASSWORD:-}" ]; then
-            echo "Warning: DATABASE_URL not set, will use default from docker-compose.yml"
-          fi
-
-          if [ -z "${VK_TOKEN:-}" ]; then
-            echo "Error: VK_TOKEN is required but not set"
-            MISSING_VARS=1
-          fi
-
-          if [ $MISSING_VARS -eq 1 ]; then
-            echo "Error: Required environment variables are missing"
-            exit 1
-          fi
-
-          echo "Environment variables validated"
-          STEP_END=$(date +%s)
-          echo "Environment validation completed in $((STEP_END - STEP_START))s"
-
-      - name: Check environment
-        id: env_check
-        timeout-minutes: 2
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Environment Check ==="
-          echo "User: $(whoami)"
-          echo "Working directory: $(pwd)"
-
-          DOCKER_VERSION=$(docker --version 2>/dev/null || echo "not installed")
-          COMPOSE_VERSION=$(docker compose version 2>/dev/null || echo "not installed")
-
-          if [ "$DOCKER_VERSION" = "not installed" ]; then
-            echo "Error: Docker is not installed"
-            exit 1
-          fi
-
-          if [ "$COMPOSE_VERSION" = "not installed" ]; then
-            echo "Error: Docker Compose is not installed"
-            exit 1
-          fi
-
-          echo "Docker version: $DOCKER_VERSION"
-          echo "Docker Compose version: $COMPOSE_VERSION"
-
-          MIN_DOCKER_VERSION="20.10"
-          MIN_COMPOSE_VERSION="2.0"
-
-          DOCKER_VER_NUM=$(echo "$DOCKER_VERSION" | grep -oE '[0-9]+\.[0-9]+' | head -1)
-          COMPOSE_VER_NUM=$(echo "$COMPOSE_VERSION" | grep -oE '[0-9]+\.[0-9]+' | head -1)
-
-          if [ -n "$DOCKER_VER_NUM" ] && [ "$(printf '%s\n' "$MIN_DOCKER_VERSION" "$DOCKER_VER_NUM" | sort -V | head -1)" != "$MIN_DOCKER_VERSION" ]; then
-            echo "Warning: Docker version $DOCKER_VER_NUM is below recommended $MIN_DOCKER_VERSION"
-          fi
-
-          if [ -n "$COMPOSE_VER_NUM" ] && [ "$(printf '%s\n' "$MIN_COMPOSE_VERSION" "$COMPOSE_VER_NUM" | sort -V | head -1)" != "$MIN_COMPOSE_VERSION" ]; then
-            echo "Warning: Docker Compose version $COMPOSE_VER_NUM is below recommended $MIN_COMPOSE_VERSION"
-          fi
-
-          AVAILABLE_SPACE=$(df -BG /opt 2>/dev/null | tail -1 | awk '{print $4}' | sed 's/G//')
-          if [ -n "$AVAILABLE_SPACE" ] && [ "$AVAILABLE_SPACE" -lt 10 ]; then
-            echo "Error: Insufficient disk space. Available: ${AVAILABLE_SPACE}GB, required: at least 10GB"
-            exit 1
-          fi
-          echo "Available disk space: ${AVAILABLE_SPACE}GB"
-
-          if [ ! -d "/opt/parseVK" ]; then
-            echo "Error: /opt/parseVK directory does not exist"
-            exit 1
-          fi
-
-          if [ ! -d "/opt/parseVK/.git" ]; then
-            echo "Error: /opt/parseVK is not a git repository"
-            exit 1
-          fi
-
-          STEP_END=$(date +%s)
-          echo "Environment check completed in $((STEP_END - STEP_START))s"
-
-      - name: Save current version for rollback
-        id: save_version
-        working-directory: /opt/parseVK
-        run: |
-          STEP_START=$(date +%s)
-          if ! git rev-parse --git-dir > /dev/null 2>&1; then
-            echo "Error: Not a valid git repository"
-            exit 1
-          fi
-
-          CURRENT_COMMIT=$(git rev-parse HEAD 2>/dev/null)
-          if [ -z "$CURRENT_COMMIT" ] || [ "$CURRENT_COMMIT" = "HEAD" ]; then
-            CURRENT_COMMIT=$(git rev-parse origin/main 2>/dev/null || echo "unknown")
-          fi
-
-          echo "current_commit=$CURRENT_COMMIT" >> $GITHUB_OUTPUT
-          echo "Saved current commit: $CURRENT_COMMIT"
-          STEP_END=$(date +%s)
-          echo "Version save completed in $((STEP_END - STEP_START))s"
-
       - name: Update code
-        id: update_code
         working-directory: /opt/parseVK
         timeout-minutes: 5
         run: |
-          STEP_START=$(date +%s)
           echo "=== Updating code ==="
 
           if ! git remote get-url origin > /dev/null 2>&1; then
@@ -181,376 +50,47 @@ jobs:
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
           echo "Current branch: $CURRENT_BRANCH"
 
-          if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-            echo "Warning: Working directory has uncommitted changes"
-            git status --short
-          fi
-
           if [ "$CURRENT_BRANCH" != "main" ]; then
             echo "Switching to main branch..."
-            if ! git checkout -f main 2>/dev/null; then
-              echo "Warning: Could not checkout main, trying to create tracking branch"
-              git checkout -b main origin/main 2>/dev/null || {
-                echo "Error: Failed to switch to main branch"
-                exit 1
-              }
-            fi
+            git checkout -f main 2>/dev/null || git checkout -b main origin/main
           fi
 
           if ! git reset --hard origin/main; then
             echo "Error: Failed to reset to origin/main"
-            echo "Current branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
             exit 1
           fi
 
-          NEW_COMMIT=$(git rev-parse HEAD)
-          echo "Updated to commit: $NEW_COMMIT"
-          echo "new_commit=$NEW_COMMIT" >> $GITHUB_OUTPUT
-          STEP_END=$(date +%s)
-          echo "Code update completed in $((STEP_END - STEP_START))s"
+          echo "Updated to commit: $(git rev-parse HEAD)"
 
-      - name: Validate docker-compose
-        id: validate_compose
-        working-directory: /opt/parseVK
-        timeout-minutes: 1
-        run: |
-          STEP_START=$(date +%s)
-          if [ ! -f "$COMPOSE_FILE" ]; then
-            echo "Error: $COMPOSE_FILE not found"
-            exit 1
-          fi
-          if ! docker compose -f "$COMPOSE_FILE" config > /dev/null 2>&1; then
-            echo "Error: Invalid $COMPOSE_FILE"
-            docker compose -f "$COMPOSE_FILE" config
-            exit 1
-          fi
-          STEP_END=$(date +%s)
-          echo "Docker compose validation completed in $((STEP_END - STEP_START))s"
-
-      - name: Detect changed services
-        id: detect_changes
+      - name: Check for migrations
+        id: check_migrations
         working-directory: /opt/parseVK
         run: |
-          set -euo pipefail
-          PREV_COMMIT="${{ steps.save_version.outputs.current_commit }}"
-          NEW_COMMIT="${{ steps.update_code.outputs.new_commit }}"
-          ALL_SERVICES="db redis db_backup api frontend prometheus node-exporter grafana"
-          TARGET_SERVICES=""
-          FULL_DEPLOY=false
-          NEEDS_MIGRATIONS=false
-          CHANGED_FILES=""
+          PREV_COMMIT=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+          CURRENT_COMMIT=$(git rev-parse HEAD)
 
-          add_service() {
-            local svc="$1"
-            case " $TARGET_SERVICES " in
-              *" $svc "*) ;;
-              *) TARGET_SERVICES="$TARGET_SERVICES $svc" ;;
-            esac
-          }
-
-          if [ -z "$PREV_COMMIT" ] || [ "$PREV_COMMIT" = "unknown" ] || [ -z "$NEW_COMMIT" ]; then
-            echo "Previous commit unknown; will deploy all services"
-            TARGET_SERVICES="$ALL_SERVICES"
-            FULL_DEPLOY=true
-            NEEDS_MIGRATIONS=true
-          elif [ "$PREV_COMMIT" = "$NEW_COMMIT" ]; then
-            echo "No commit changes detected ($NEW_COMMIT)"
-          elif ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
-            echo "Previous commit $PREV_COMMIT not found; will deploy all services"
-            TARGET_SERVICES="$ALL_SERVICES"
-            FULL_DEPLOY=true
-            NEEDS_MIGRATIONS=true
+          if [ -z "$PREV_COMMIT" ] || ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
+            echo "needs_migrations=true" >> $GITHUB_OUTPUT
+            echo "No previous commit found, will run migrations"
           else
-            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$NEW_COMMIT" || true)
-            if [ -z "$CHANGED_FILES" ]; then
-              echo "No file changes detected"
+            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$CURRENT_COMMIT" || true)
+            if echo "$CHANGED_FILES" | grep -qE '^api/|^prisma/'; then
+              echo "needs_migrations=true" >> $GITHUB_OUTPUT
+              echo "API or Prisma files changed, migrations needed"
             else
-              echo "Changed files:"
-              echo "$CHANGED_FILES"
-            fi
-
-            if echo "$CHANGED_FILES" | grep -qE '(^|/)(docker-compose\.deploy\.yml|docker-compose\.yml|docker-compose\.prod\.yml)$'; then
-              TARGET_SERVICES="$ALL_SERVICES"
-              FULL_DEPLOY=true
-              NEEDS_MIGRATIONS=true
-            else
-              if echo "$CHANGED_FILES" | grep -qE '^api/|^prisma/|^create-session\.js'; then
-                add_service api
-              fi
-              if echo "$CHANGED_FILES" | grep -qE '^front/'; then
-                add_service frontend
-              fi
-              if echo "$CHANGED_FILES" | grep -qE '^docker/db-backup/'; then
-                add_service db_backup
-              fi
-              if echo "$CHANGED_FILES" | grep -qE '^monitoring/prometheus|^monitoring/alert_rules\.yml'; then
-                add_service prometheus
-              fi
-              if echo "$CHANGED_FILES" | grep -qE '^monitoring/grafana/'; then
-                add_service grafana
-              fi
-              if echo "$CHANGED_FILES" | grep -qE '^prisma/|^api/prisma/'; then
-                NEEDS_MIGRATIONS=true
-                add_service api
-              fi
+              echo "needs_migrations=false" >> $GITHUB_OUTPUT
+              echo "No API or Prisma changes, skipping migrations"
             fi
           fi
-
-          TARGET_SERVICES=$(echo "$TARGET_SERVICES" | xargs)
-          if [ -z "$TARGET_SERVICES" ]; then
-            HAS_CHANGES=false
-          else
-            HAS_CHANGES=true
-          fi
-
-          echo "Selected services: ${TARGET_SERVICES:-none}"
-          echo "full_deploy=$FULL_DEPLOY"
-          echo "needs_migrations=$NEEDS_MIGRATIONS"
-          echo "has_changes=$HAS_CHANGES"
-
-          echo "services=$TARGET_SERVICES" >> $GITHUB_OUTPUT
-          echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
-          echo "full_deploy=$FULL_DEPLOY" >> $GITHUB_OUTPUT
-          echo "needs_migrations=$NEEDS_MIGRATIONS" >> $GITHUB_OUTPUT
-
-      - name: Stop containers (full deploy)
-        id: stop_containers
-        working-directory: /opt/parseVK
-        timeout-minutes: 5
-        if: steps.detect_changes.outputs.full_deploy == 'true'
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Stopping containers ==="
-
-          if ! docker compose -f "$COMPOSE_FILE" down --timeout 30; then
-            echo "Warning: docker compose down failed, forcing stop"
-            docker compose -f "$COMPOSE_FILE" kill || true
-            docker compose -f "$COMPOSE_FILE" down --remove-orphans || true
-          fi
-
-          MAX_WAIT=30
-          WAIT_COUNT=0
-          while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-            RUNNING=$(docker compose -f "$COMPOSE_FILE" ps -q 2>/dev/null | wc -l)
-            if [ "$RUNNING" -eq 0 ]; then
-              echo "All containers stopped"
-              break
-            fi
-            echo "Waiting for containers to stop... ($WAIT_COUNT/$MAX_WAIT)"
-            sleep 1
-            WAIT_COUNT=$((WAIT_COUNT + 1))
-          done
-
-          if [ "$RUNNING" -gt 0 ]; then
-            echo "Warning: Some containers may still be running"
-            docker compose -f "$COMPOSE_FILE" ps
-          fi
-
-          STEP_END=$(date +%s)
-          echo "Container stop completed in $((STEP_END - STEP_START))s"
-
-      - name: Check port availability
-        id: check_ports
-        timeout-minutes: 1
-        run: |
-          STEP_START=$(date +%s)
-          bash .github/scripts/check-ports.sh
-          STEP_END=$(date +%s)
-          echo "Port check completed in $((STEP_END - STEP_START))s"
-
-      - name: Check database availability
-        id: check_db
-        working-directory: /opt/parseVK
-        timeout-minutes: 2
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Checking database availability ==="
-
-          if command -v pg_isready > /dev/null 2>&1; then
-            if pg_isready -h localhost -p 5433 -U postgres -d vk_api > /dev/null 2>&1; then
-              echo "Database is available on port 5433"
-            else
-              echo "Warning: Database on port 5433 is not accessible (may be starting)"
-            fi
-          fi
-
-          DB_CONTAINER_ID=$(docker compose -f "$COMPOSE_FILE" ps -q db 2>/dev/null || echo "")
-          if [ -n "$DB_CONTAINER_ID" ]; then
-            echo "PostgreSQL container exists"
-            if docker inspect "$DB_CONTAINER_ID" --format='{{.State.Status}}' 2>/dev/null | grep -q "running"; then
-              echo "PostgreSQL container is running"
-            else
-              echo "PostgreSQL container is not running, will be started with docker-compose"
-            fi
-          else
-            echo "PostgreSQL container does not exist, will be created"
-          fi
-
-          STEP_END=$(date +%s)
-          echo "Database check completed in $((STEP_END - STEP_START))s"
-
-      - name: Check GHCR availability
-        id: check_ghcr
-        timeout-minutes: 1
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Checking GHCR availability ==="
-
-          MAX_RETRIES=3
-          RETRY=0
-          GHCR_AVAILABLE=false
-
-          while [ $RETRY -lt $MAX_RETRIES ]; do
-            if curl -f -s -m 5 https://ghcr.io > /dev/null 2>&1; then
-              echo "GHCR is available"
-              GHCR_AVAILABLE=true
-              break
-            fi
-            RETRY=$((RETRY + 1))
-            if [ $RETRY -lt $MAX_RETRIES ]; then
-              echo "GHCR check failed, retry $RETRY/$MAX_RETRIES in 2s..."
-              sleep 2
-            fi
-          done
-
-          if [ "$GHCR_AVAILABLE" != "true" ]; then
-            echo "Error: GHCR is not available after $MAX_RETRIES attempts"
-            exit 1
-          fi
-
-          STEP_END=$(date +%s)
-          echo "GHCR check completed in $((STEP_END - STEP_START))s"
-
-      - name: Login to GitHub Container Registry
-        id: login_ghcr
-        working-directory: /opt/parseVK
-        timeout-minutes: 2
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Logging in to GitHub Container Registry ==="
-
-          MAX_RETRIES=3
-          RETRY=0
-          LOGIN_SUCCESS=false
-
-          while [ $RETRY -lt $MAX_RETRIES ]; do
-            if echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>&1; then
-              echo "Login successful"
-              LOGIN_SUCCESS=true
-              break
-            fi
-            RETRY=$((RETRY + 1))
-            if [ $RETRY -lt $MAX_RETRIES ]; then
-              echo "Login failed, retry $RETRY/$MAX_RETRIES in 2s..."
-              sleep 2
-            fi
-          done
-
-          if [ "$LOGIN_SUCCESS" != "true" ]; then
-            echo "Error: Failed to login to GHCR after $MAX_RETRIES attempts"
-            exit 1
-          fi
-
-          STEP_END=$(date +%s)
-          echo "Login completed in $((STEP_END - STEP_START))s"
-
-      - name: Cleanup old images
-        id: cleanup_images
-        working-directory: /opt/parseVK
-        timeout-minutes: 5
-        if: steps.detect_changes.outputs.has_changes == 'true'
-        env:
-          FULL_DEPLOY: ${{ steps.detect_changes.outputs.full_deploy }}
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Cleaning up old images and cache ==="
-
-          if [ "$FULL_DEPLOY" = "true" ]; then
-            docker compose -f "$COMPOSE_FILE" down --rmi local --remove-orphans 2>/dev/null || true
-          else
-            echo "Skipping full docker compose down for partial deploy"
-          fi
-
-          CURRENT_IMAGES=$(docker compose -f "$COMPOSE_FILE" config --images 2>/dev/null || echo "")
-
-          if [ -n "$CURRENT_IMAGES" ]; then
-            docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "(ghcr\.io/andr-235/parsevk|postgres|redis)" | while read image; do
-              if ! echo "$CURRENT_IMAGES" | grep -q "$image"; then
-                echo "Removing unused image: $image"
-                docker rmi "$image" 2>/dev/null || true
-              fi
-            done
-          fi
-
-          echo "Clearing Docker build cache to ensure fresh pulls..."
-          docker builder prune -af --filter "until=1h" || true
-          docker image prune -f --filter "dangling=true" || true
-          STEP_END=$(date +%s)
-          echo "Image cleanup completed in $((STEP_END - STEP_START))s"
-
-      - name: Check volumes
-        id: check_volumes
-        working-directory: /opt/parseVK
-        timeout-minutes: 1
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Checking volumes ==="
-
-          if ! docker volume inspect parsevk_postgres_data > /dev/null 2>&1; then
-            echo "Volume 'parsevk_postgres_data' does not exist, creating it..."
-            docker volume create parsevk_postgres_data || {
-              echo "Error: Failed to create volume 'parsevk_postgres_data'"
-              exit 1
-            }
-            echo "Volume 'parsevk_postgres_data' created successfully"
-          else
-            echo "Volume 'parsevk_postgres_data' already exists"
-          fi
-
-          if ! docker volume inspect parsevk_postgres_backups > /dev/null 2>&1; then
-            echo "Creating volume 'parsevk_postgres_backups'..."
-            docker volume create parsevk_postgres_backups || {
-              echo "Error: Failed to create volume 'parsevk_postgres_backups'"
-              exit 1
-            }
-            echo "Volume 'parsevk_postgres_backups' created successfully"
-          else
-            echo "Volume 'parsevk_postgres_backups' already exists"
-          fi
-
-          echo "All volumes are ready"
-          STEP_END=$(date +%s)
-          echo "Volume check completed in $((STEP_END - STEP_START))s"
 
       - name: Start database and dependencies
-        id: start_db
         working-directory: /opt/parseVK
         timeout-minutes: 5
-        if: steps.detect_changes.outputs.needs_migrations == 'true'
+        if: steps.check_migrations.outputs.needs_migrations == 'true'
         run: |
-          STEP_START=$(date +%s)
           echo "=== Starting database and dependencies ==="
 
-          MAX_RETRIES=2
-          RETRY=0
-          START_SUCCESS=false
-
-          while [ $RETRY -lt $MAX_RETRIES ]; do
-            if docker compose -f "$COMPOSE_FILE" up -d db redis 2>&1; then
-              START_SUCCESS=true
-              break
-            fi
-            RETRY=$((RETRY + 1))
-            if [ $RETRY -lt $MAX_RETRIES ]; then
-              echo "Start failed, retry $RETRY/$MAX_RETRIES in 3s..."
-              sleep 3
-            fi
-          done
-
-          if [ "$START_SUCCESS" != "true" ]; then
-            echo "Error: Failed to start db and redis after $MAX_RETRIES attempts"
-            exit 1
-          fi
+          docker compose -f "$COMPOSE_FILE" up -d db redis
 
           echo "=== Waiting for database to be ready ==="
           MAX_WAIT=60
@@ -571,391 +111,48 @@ jobs:
             exit 1
           fi
 
-          STEP_END=$(date +%s)
-          echo "Database start completed in $((STEP_END - STEP_START))s"
-
-      - name: Clean failed migrations
-        id: clean_migrations
-        working-directory: /opt/parseVK
-        timeout-minutes: 2
-        if: steps.detect_changes.outputs.needs_migrations == 'true'
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Cleaning failed migrations ==="
-
-          CLEAN_SCRIPT="DELETE FROM _prisma_migrations WHERE migration_name IN ('20251128142604_add_post_attachments', '20251020120000_add_task_automation_settings') AND finished_at IS NULL;"
-
-          echo "Removing failed migration record from database..."
-          docker compose -f "$COMPOSE_FILE" exec -T db psql -U postgres -d vk_api -c "$CLEAN_SCRIPT" || {
-            echo "Warning: Failed to clean migration record (may not exist)"
-          }
-
-          STEP_END=$(date +%s)
-          echo "Migration cleanup completed in $((STEP_END - STEP_START))s"
-
       - name: Run database migrations
-        id: run_migrations
         working-directory: /opt/parseVK
         timeout-minutes: 5
-        if: steps.detect_changes.outputs.needs_migrations == 'true'
+        if: steps.check_migrations.outputs.needs_migrations == 'true'
         run: |
-          STEP_START=$(date +%s)
           echo "=== Running database migrations ==="
 
-          API_CONTAINER_ID=$(docker compose -f "$COMPOSE_FILE" ps -q api 2>/dev/null || echo "")
-          API_WAS_RUNNING=false
-
-          if [ -n "$API_CONTAINER_ID" ] && [ "$(docker inspect --format='{{.State.Status}}' "$API_CONTAINER_ID" 2>/dev/null)" = "running" ]; then
-            echo "API container is already running"
-            API_WAS_RUNNING=true
-          fi
-
-          echo "Running migrations in a one-off container"
           if docker compose -f "$COMPOSE_FILE" run --rm --no-deps --entrypoint sh api -c "command -v ./node_modules/.bin/prisma > /dev/null 2>&1 && ./node_modules/.bin/prisma migrate deploy || prisma migrate deploy"; then
             echo "Migrations completed"
           else
             echo "Error: Migrations failed"
-            echo "=== API logs (tail) ==="
-            docker compose -f "$COMPOSE_FILE" logs --tail=100 api || true
-            echo "=== DB logs (tail) ==="
-            docker compose -f "$COMPOSE_FILE" logs --tail=100 db || true
+            docker compose -f "$COMPOSE_FILE" logs --tail=100 api
+            docker compose -f "$COMPOSE_FILE" logs --tail=100 db
             exit 1
           fi
 
-          echo "api_was_running=$API_WAS_RUNNING" >> $GITHUB_OUTPUT
-
-          STEP_END=$(date +%s)
-          echo "Migrations completed in $((STEP_END - STEP_START))s"
-
-      - name: Start changed containers
-        id: start_containers
+      - name: Build and start containers
         working-directory: /opt/parseVK
-        if: steps.detect_changes.outputs.has_changes == 'true'
-        env:
-          TARGET_SERVICES: ${{ steps.detect_changes.outputs.services }}
-          FULL_DEPLOY: ${{ steps.detect_changes.outputs.full_deploy }}
+        timeout-minutes: 30
         run: |
-          STEP_START=$(date +%s)
-          echo "=== Starting changed containers ==="
+          echo "=== Building and starting containers ==="
 
-          if [ -z "$TARGET_SERVICES" ]; then
-            echo "No services to start"
-            STEP_END=$(date +%s)
-            echo "Container start completed in $((STEP_END - STEP_START))s"
-            exit 0
-          fi
+          docker compose -f "$COMPOSE_FILE" build
 
-          echo "Target services: $TARGET_SERVICES"
-
-          MAX_RETRIES=2
-          RETRY=0
-          START_SUCCESS=false
-
-          while [ $RETRY -lt $MAX_RETRIES ]; do
-            if [ "$FULL_DEPLOY" = "true" ]; then
-              if docker compose -f "$COMPOSE_FILE" up -d --pull always --build --remove-orphans 2>&1; then
-                START_SUCCESS=true
-                break
-              fi
-            else
-              if docker compose -f "$COMPOSE_FILE" up -d --pull always --build $TARGET_SERVICES 2>&1; then
-                START_SUCCESS=true
-                break
-              fi
-            fi
-            RETRY=$((RETRY + 1))
-            if [ $RETRY -lt $MAX_RETRIES ]; then
-              echo "Start failed, retry $RETRY/$MAX_RETRIES in 3s..."
-              sleep 3
-            fi
-          done
-
-          if [ "$START_SUCCESS" != "true" ]; then
-            echo "Error: Failed to start containers after $MAX_RETRIES attempts"
-            echo "=== Container logs ==="
+          if docker compose -f "$COMPOSE_FILE" up -d; then
+            echo "Containers started successfully"
+          else
+            echo "Error: Failed to start containers"
             docker compose -f "$COMPOSE_FILE" logs --tail=50
             exit 1
           fi
-
-          echo "=== Waiting for containers to start ==="
-          sleep 5
 
           echo "=== Container status ==="
           docker compose -f "$COMPOSE_FILE" ps
 
-          if [ "$FULL_DEPLOY" = "true" ]; then
-            FAILED_CONTAINERS=$(docker compose -f "$COMPOSE_FILE" ps --format json | jq -r 'select(.State != "running" and .State != "healthy") | .Name' 2>/dev/null || docker compose -f "$COMPOSE_FILE" ps | grep -E "(Exit|Error|unhealthy)" || echo "")
-          else
-            FAILED_CONTAINERS=$(docker compose -f "$COMPOSE_FILE" ps --format json $TARGET_SERVICES | jq -r 'select(.State != "running" and .State != "healthy") | .Name' 2>/dev/null || docker compose -f "$COMPOSE_FILE" ps $TARGET_SERVICES | grep -E "(Exit|Error|unhealthy)" || echo "")
-          fi
-          if [ -n "$FAILED_CONTAINERS" ]; then
-            echo "Error: Some containers failed to start"
-            echo "Failed containers: $FAILED_CONTAINERS"
-            echo "=== API container logs ==="
-            docker compose -f "$COMPOSE_FILE" logs --tail=100 api || true
-            echo "=== All container logs ==="
-            docker compose -f "$COMPOSE_FILE" logs --tail=50
-            exit 1
-          fi
-
-          STEP_END=$(date +%s)
-          echo "Container start completed in $((STEP_END - STEP_START))s"
-
-      - name: Wait for services to be healthy
-        id: wait_healthy
-        working-directory: /opt/parseVK
-        timeout-minutes: 5
-        if: steps.detect_changes.outputs.has_changes == 'true'
-        env:
-          TARGET_SERVICES: ${{ steps.detect_changes.outputs.services }}
-          FULL_DEPLOY: ${{ steps.detect_changes.outputs.full_deploy }}
-        run: |
-          STEP_START=$(date +%s)
-          COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/health-check.sh
-          STEP_END=$(date +%s)
-          echo "Health wait completed in $((STEP_END - STEP_START))s"
-
-      - name: Health check
-        id: health_check
-        working-directory: /opt/parseVK
-        timeout-minutes: 3
-        if: steps.detect_changes.outputs.has_changes == 'true'
-        env:
-          TARGET_SERVICES: ${{ steps.detect_changes.outputs.services }}
-          FULL_DEPLOY: ${{ steps.detect_changes.outputs.full_deploy }}
-        run: |
-          STEP_START=$(date +%s)
-          COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/http-health-check.sh
-          STEP_END=$(date +%s)
-          echo "Health check completed in $((STEP_END - STEP_START))s"
-
-      - name: Smoke tests
-        id: smoke_tests
-        working-directory: /opt/parseVK
-        timeout-minutes: 5
-        if: steps.detect_changes.outputs.has_changes == 'true'
-        env:
-          COMPOSE_FILE: ${{ env.COMPOSE_FILE }}
-          API_URL: http://localhost:3000
-          FRONTEND_URL: http://localhost:8080
-        run: |
-          STEP_START=$(date +%s)
-          COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/smoke-tests.sh
-          STEP_END=$(date +%s)
-          echo "Smoke tests completed in $((STEP_END - STEP_START))s"
-
-      - name: Save deployment metadata
-        id: save_metadata
-        working-directory: /opt/parseVK
-        if: steps.detect_changes.outputs.has_changes == 'true'
-        run: |
-          set -euo pipefail
-
-          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
-          CURRENT_COMMIT="${{ steps.update_code.outputs.new_commit }}"
-          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          DEPLOYED_SERVICES="${{ steps.detect_changes.outputs.services }}"
-
-          cat > "$METADATA_FILE" <<EOF
-          {
-            "last_successful_commit": "$CURRENT_COMMIT",
-            "last_successful_deploy_time": "$CURRENT_TIME",
-            "deployed_services": "$DEPLOYED_SERVICES",
-            "full_deploy": "${{ steps.detect_changes.outputs.full_deploy }}",
-            "deployment_triggered_by": "${{ github.actor }}",
-            "deployment_run_id": "${{ github.run_id }}"
-          }
-          EOF
-
-          echo "Saved deployment metadata to $METADATA_FILE"
-
-      - name: Export deployment metrics
-        if: always()
-        working-directory: /opt/parseVK
-        run: |
-          STATUS="${{ job.status }}"
-          DURATION="${DEPLOYMENT_DURATION:-0}"
-          COMMIT="${DEPLOYMENT_COMMIT:-unknown}"
-          DEPLOYED_SERVICES="${{ steps.detect_changes.outputs.services }}"
-          FULL_DEPLOY="${{ steps.detect_changes.outputs.full_deploy }}"
-
-          bash .github/scripts/export-metrics.sh \
-            "$STATUS" \
-            "$DURATION" \
-            "$COMMIT" \
-            "$DEPLOYED_SERVICES" \
-            "$FULL_DEPLOY"
-
-      - name: Rollback on failure
-        if: failure()
-        id: rollback
-        working-directory: /opt/parseVK
-        timeout-minutes: 15
-        run: |
-          STEP_START=$(date +%s)
-          echo "=== Rolling back to previous version ==="
-
-          PREVIOUS_COMMIT="${{ steps.save_version.outputs.current_commit }}"
-
-          if [ "$PREVIOUS_COMMIT" != "unknown" ] && [ -n "$PREVIOUS_COMMIT" ] && [ "$PREVIOUS_COMMIT" != "HEAD" ]; then
-            echo "Rolling back to commit: $PREVIOUS_COMMIT"
-            
-            if ! git fetch origin; then
-              echo "Error: Failed to fetch from origin during rollback"
-              exit 1
-            fi
-            
-            if ! git checkout -f "$PREVIOUS_COMMIT"; then
-              echo "Error: Failed to checkout previous commit $PREVIOUS_COMMIT"
-              exit 1
-            fi
-            
-            echo "=== Determining compose file for rollback ==="
-            ROLLBACK_COMPOSE_FILE="docker-compose.deploy.yml"
-            if [ ! -f "docker-compose.deploy.yml" ]; then
-              echo "Warning: docker-compose.deploy.yml not found in previous commit, falling back to docker-compose.yml"
-              if [ ! -f "docker-compose.yml" ]; then
-                echo "Error: Neither docker-compose.deploy.yml nor docker-compose.yml found in previous commit"
-                exit 1
-              fi
-              ROLLBACK_COMPOSE_FILE="docker-compose.yml"
-            fi
-            
-            echo "Using compose file: $ROLLBACK_COMPOSE_FILE"
-            
-            if ! docker compose -f "$ROLLBACK_COMPOSE_FILE" config > /dev/null 2>&1; then
-              echo "Error: Invalid $ROLLBACK_COMPOSE_FILE in previous commit"
-              docker compose -f "$ROLLBACK_COMPOSE_FILE" config
-              exit 1
-            fi
-            
-            echo "=== Pulling images and restarting ==="
-            docker compose -f "$ROLLBACK_COMPOSE_FILE" down --timeout 30 || true
-            
-            MAX_RETRIES=3
-            RETRY=0
-            PULL_SUCCESS=false
-            
-            while [ $RETRY -lt $MAX_RETRIES ]; do
-              if docker compose -f "$ROLLBACK_COMPOSE_FILE" pull --ignore-pull-failures 2>&1; then
-                PULL_SUCCESS=true
-                break
-              fi
-              RETRY=$((RETRY + 1))
-              if [ $RETRY -lt $MAX_RETRIES ]; then
-                echo "Pull failed, retry $RETRY/$MAX_RETRIES in 3s..."
-                sleep 3
-              fi
-            done
-            
-            if [ "$PULL_SUCCESS" != "true" ]; then
-              echo "Warning: Failed to pull some images during rollback, continuing with available images"
-            fi
-            
-            MAX_RETRIES=2
-            RETRY=0
-            START_SUCCESS=false
-            
-            while [ $RETRY -lt $MAX_RETRIES ]; do
-              if docker compose -f "$ROLLBACK_COMPOSE_FILE" up -d --pull always 2>&1; then
-                START_SUCCESS=true
-                break
-              fi
-              RETRY=$((RETRY + 1))
-              if [ $RETRY -lt $MAX_RETRIES ]; then
-                echo "Start failed, retry $RETRY/$MAX_RETRIES in 3s..."
-                sleep 3
-              fi
-            done
-            
-            if [ "$START_SUCCESS" != "true" ]; then
-              echo "Error: Failed to start containers during rollback after $MAX_RETRIES attempts"
-              docker compose -f "$ROLLBACK_COMPOSE_FILE" ps
-              exit 1
-            fi
-            
-            echo "Waiting for services..."
-            sleep 10
-            
-            echo "=== Waiting for services to be healthy after rollback ==="
-            set +e
-            COMPOSE_FILE="$ROLLBACK_COMPOSE_FILE" bash .github/scripts/health-check.sh || {
-              echo "Warning: Not all containers are healthy after rollback"
-              docker compose -f "$ROLLBACK_COMPOSE_FILE" ps
-              docker compose -f "$ROLLBACK_COMPOSE_FILE" logs --tail=30
-            }
-            set -e
-            
-            echo "=== Rollback health check ==="
-            set +e
-            COMPOSE_FILE="$ROLLBACK_COMPOSE_FILE" bash .github/scripts/http-health-check.sh || echo "⚠️ Health checks failed after rollback (non-critical)"
-            set -e
-            
-            echo "=== Checking rollback status ==="
-            docker compose -f "$ROLLBACK_COMPOSE_FILE" ps
-            
-            ROLLBACK_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-            echo "Rolled back to commit: $ROLLBACK_COMMIT"
-          else
-            echo "⚠️ Could not determine previous commit, skipping rollback"
-            echo "Previous commit was: $PREVIOUS_COMMIT"
-          fi
-          STEP_END=$(date +%s)
-          echo "Rollback completed in $((STEP_END - STEP_START))s"
-
       - name: Deployment status
         if: always()
-        id: deployment_status
         run: |
-          END_TIME=$(date +%s)
-          START_TIME=${START_TIME:-$END_TIME}
-          DURATION=$((END_TIME - START_TIME))
-
-          DEPLOYMENT_COMMIT=$(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')
-          DEPLOYMENT_AUTHOR=$(cd /opt/parseVK && git log -1 --pretty=format:'%an' 2>/dev/null || echo 'unknown')
-
           if [ "${{ job.status }}" == "success" ]; then
             echo "✅ Deployment successful!"
-            echo "Commit: $DEPLOYMENT_COMMIT"
-            echo "Author: $DEPLOYMENT_AUTHOR"
-            echo "Total deployment time: ${DURATION}s"
-            echo "DEPLOYMENT_STATUS=success" >> $GITHUB_ENV
+            echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
           else
             echo "❌ Deployment failed!"
-            echo "Commit: $DEPLOYMENT_COMMIT"
-            echo "Author: $DEPLOYMENT_AUTHOR"
-            echo "Total deployment time: ${DURATION}s"
-            echo "DEPLOYMENT_STATUS=failed" >> $GITHUB_ENV
+            echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
           fi
-
-          echo "DEPLOYMENT_COMMIT=$DEPLOYMENT_COMMIT" >> $GITHUB_ENV
-          echo "DEPLOYMENT_AUTHOR=$DEPLOYMENT_AUTHOR" >> $GITHUB_ENV
-          echo "DEPLOYMENT_DURATION=$DURATION" >> $GITHUB_ENV
-
-      - name: Send deployment notification
-        if: always()
-        id: send_notification
-        timeout-minutes: 1
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          STATUS="${{ job.status }}"
-          COMMIT="${DEPLOYMENT_COMMIT:-unknown}"
-          AUTHOR="${DEPLOYMENT_AUTHOR:-unknown}"
-          DURATION="${DEPLOYMENT_DURATION:-0}"
-          DEPLOYED_SERVICES="${{ steps.detect_changes.outputs.services }}"
-          FULL_DEPLOY="${{ steps.detect_changes.outputs.full_deploy }}"
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          bash .github/scripts/send-notification.sh \
-            "$STATUS" \
-            "$COMMIT" \
-            "$AUTHOR" \
-            "$DURATION" \
-            "${{ github.repository }}" \
-            "${{ github.workflow }}" \
-            "$RUN_URL" \
-            "$DEPLOYED_SERVICES" \
-            "$FULL_DEPLOY"
