@@ -306,6 +306,9 @@ export class OkApiService {
     // Если fields не указан, используем список всех доступных полей из документации
     if (params.fields && params.fields.length > 0) {
       apiParams.fields = params.fields.join(',');
+      this.logger.log(
+        `OK API users.getInfo: using provided fields (${params.fields.length} fields)`,
+      );
     } else {
       // Список всех доступных полей из документации OK API users.getInfo
       // Для получения всей доступной информации передаем все поля
@@ -438,10 +441,153 @@ export class OkApiService {
         'vk_id',
       ];
       apiParams.fields = allFields.join(',');
+      this.logger.log(
+        `OK API users.getInfo: using all available fields (${allFields.length} fields)`,
+      );
     }
 
     if (params.emptyPictures !== undefined) {
       apiParams.emptyPictures = params.emptyPictures ? 'true' : 'false';
+    }
+
+    // Проверяем, что fields установлен перед вычислением подписи
+    if (!apiParams.fields) {
+      this.logger.error(
+        'OK API users.getInfo: fields is missing before signature calculation!',
+      );
+      // Fallback: используем минимальный набор полей
+      const allFields = [
+        'uid',
+        'first_name',
+        'last_name',
+        'name',
+        'pic50x50',
+        'pic128x128',
+        'pic190x190',
+        'pic640x480',
+        'location',
+        'age',
+        'gender',
+        'birthday',
+        'online',
+        'last_online',
+        'status',
+        'current_status',
+        'url_profile',
+        'url_profile_mobile',
+        'url_chat',
+        'url_chat_mobile',
+        'email',
+        'mobile',
+        'has_email',
+        'has_phone',
+        'friends_count',
+        'followers_count',
+        'common_friends_count',
+        'registered_date',
+        'locale',
+        'vip',
+        'premium',
+        'private',
+        'blocked',
+        'friend',
+        'friend_invitation',
+        'bookmarked',
+        'can_vcall',
+        'can_vmail',
+        'location_of_birth',
+        'city_of_birth',
+        'current_location',
+        'relations',
+        'relationship',
+        'skill',
+        'social_aliases',
+        'presents',
+        'profile_cover',
+        'nn_photo_set_ids',
+        'rkn_mark',
+        'status',
+        'business',
+        'executor',
+        'ref',
+        'shortname',
+        'login',
+        'bio',
+        'badge_id',
+        'badge_img',
+        'badge_link',
+        'badge_title',
+        'accessible',
+        'allow_add_to_friend',
+        'allowed_for_ads_vk',
+        'allows_anonym_access',
+        'allows_messaging_only_for_friends',
+        'block_on_demand_reason',
+        'block_on_demand_reason_tokens',
+        'blocks',
+        'can_use_referral_invite',
+        'capabilities',
+        'close_comments_allowed',
+        'current_status_date',
+        'current_status_date_ms',
+        'current_status_id',
+        'current_status_mood',
+        'current_status_track_id',
+        'external_share_link',
+        'feed_subscription',
+        'first_name_instrumental',
+        'forbids_mentioning',
+        'has_daily_photo',
+        'has_extended_stats',
+        'has_groups_to_comment',
+        'has_moderating_groups',
+        'has_pinned_feed',
+        'has_products',
+        'has_service_invisible',
+        'has_unseen_daily_photo',
+        'invited_by_friend',
+        'is_hobby_expert',
+        'is_merchant',
+        'is_new_user',
+        'is_returning',
+        'last_name_instrumental',
+        'last_online_ms',
+        'mobile_activation_date_ms',
+        'modified_ms',
+        'name_instrumental',
+        'notifications_subscription',
+        'partner_link_create_allowed',
+        'photo_id',
+        'pic1024x768',
+        'pic128max',
+        'pic180min',
+        'pic224x224',
+        'pic240min',
+        'pic288x288',
+        'pic320min',
+        'pic600x600',
+        'pic_1',
+        'pic_2',
+        'pic_3',
+        'pic_4',
+        'pic_5',
+        'pic_base',
+        'pic_full',
+        'pic_max',
+        'picgif',
+        'picmp4',
+        'picwebm',
+        'possible_relations',
+        'profile_buttons',
+        'registered_date_ms',
+        'show_lock',
+        'total_photos_count',
+        'vk_id',
+      ];
+      apiParams.fields = allFields.join(',');
+      this.logger.log(
+        `OK API users.getInfo: fields set via fallback (${allFields.length} fields)`,
+      );
     }
 
     // Вычисляем подпись
@@ -465,11 +611,35 @@ export class OkApiService {
 
     // Формируем query параметры для запроса
     const queryParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(apiParams)) {
-      if (value !== undefined) {
-        queryParams.append(key, String(value));
-      }
+
+    // Явно добавляем все обязательные параметры
+    queryParams.append('application_key', this.applicationKey);
+    queryParams.append('method', 'users.getInfo');
+    queryParams.append('format', 'json');
+    queryParams.append('uids', params.uids.join(','));
+
+    // Параметр fields обязателен - явно добавляем его
+    if (!apiParams.fields) {
+      this.logger.error(
+        'OK API users.getInfo: fields is missing in apiParams, this should not happen!',
+      );
+      // Fallback: используем минимальный набор полей
+      apiParams.fields = 'uid,first_name,last_name';
     }
+    queryParams.append('fields', apiParams.fields);
+    this.logger.log(
+      `OK API users.getInfo: fields parameter explicitly added: ${apiParams.fields.substring(0, 100)}...`,
+    );
+
+    // Добавляем остальные опциональные параметры
+    if (apiParams.emptyPictures !== undefined) {
+      const emptyPicturesValue =
+        typeof apiParams.emptyPictures === 'string'
+          ? apiParams.emptyPictures
+          : String(apiParams.emptyPictures);
+      queryParams.append('emptyPictures', emptyPicturesValue);
+    }
+
     queryParams.append('sig', sig);
     if (this.accessToken) {
       queryParams.append('session_key', this.accessToken);
