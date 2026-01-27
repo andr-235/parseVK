@@ -86,14 +86,17 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/node_modules ./node_modules
 
-# Пересобираем bcrypt для текущей платформы (production stage)
-# Важно: пересборка должна быть успешной, иначе приложение не запустится
-RUN npm config set registry https://registry.npmmirror.com \
-    && npm config set fetch-retries 3 \
-    && npm config set fetch-timeout 60000 \
-    && (npm rebuild bcrypt || (npm config set registry https://registry.npmjs.org/ && npm rebuild bcrypt)) \
-    && apk del build-base python3 \
-    && node -e "require('bcrypt')" || (echo "ERROR: bcrypt module verification failed" && exit 1)
+# Проверяем, что bcrypt собран в build stage и работает
+# Если bcrypt не работает, пробуем пересобрать (но это редко нужно, т.к. уже собрано в build stage)
+RUN node -e "require('bcrypt')" || ( \
+    echo "WARNING: bcrypt not working, trying to rebuild..." && \
+    npm config set registry https://registry.npmmirror.com && \
+    npm config set fetch-retries 3 && \
+    npm config set fetch-timeout 60000 && \
+    (npm rebuild bcrypt || (npm config set registry https://registry.npmjs.org/ && npm rebuild bcrypt)) && \
+    node -e "require('bcrypt')" || (echo "ERROR: bcrypt module verification failed" && exit 1) \
+  ) && \
+  apk del build-base python3 || true
 
 # Копируем entrypoint скрипт
 COPY docker/backend-entrypoint.sh /app/entrypoint.sh
