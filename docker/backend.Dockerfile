@@ -87,11 +87,13 @@ COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/node_modules ./node_modules
 
 # Пересобираем bcrypt для текущей платформы (production stage)
+# Важно: пересборка должна быть успешной, иначе приложение не запустится
 RUN npm config set registry https://registry.npmmirror.com \
     && npm config set fetch-retries 3 \
     && npm config set fetch-timeout 60000 \
-    && (npm rebuild bcrypt || (npm config set registry https://registry.npmjs.org/ && npm rebuild bcrypt) || echo "Warning: bcrypt rebuild failed") \
-    && apk del build-base python3
+    && (npm rebuild bcrypt || (npm config set registry https://registry.npmjs.org/ && npm rebuild bcrypt)) \
+    && apk del build-base python3 \
+    && node -e "require('bcrypt')" || (echo "ERROR: bcrypt module verification failed" && exit 1)
 
 # Копируем entrypoint скрипт
 COPY docker/backend-entrypoint.sh /app/entrypoint.sh

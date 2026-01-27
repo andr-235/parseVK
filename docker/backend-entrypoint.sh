@@ -263,6 +263,14 @@ if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
       echo "Ошибка: $MIGRATE_ERROR"
       exit 1
     fi
+  # Проверяем, если ошибка связана с отсутствующей колонкой (миграция не была применена)
+  elif echo "$MIGRATE_ERROR" | grep -q "column.*does not exist\|does not exist.*column"; then
+    echo "Обнаружена ошибка 'column does not exist', возможно миграция не была применена..."
+    echo "Повторяем попытку применения миграций..."
+    if ! $PRISMA_CMD migrate deploy; then
+      echo "Ошибка при повторном выполнении миграций, останавливаемся."
+      exit 1
+    fi
   # Проверяем, если ошибка связана с уже существующей таблицей
   elif echo "$MIGRATE_ERROR" | grep -q "already exists"; then
     echo "Обнаружена ошибка 'already exists', пытаемся исправить..."
