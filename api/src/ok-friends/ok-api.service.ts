@@ -120,6 +120,9 @@ export class OkApiService {
       const data = (await response.json()) as unknown;
 
       if (!data || typeof data !== 'object') {
+        this.logger.error(
+          `OK API returned invalid response type: ${typeof data}`,
+        );
         throw new Error('OK API returned invalid response');
       }
 
@@ -136,15 +139,51 @@ export class OkApiService {
         );
       }
 
-      if (!('friends' in data) || !Array.isArray(data.friends)) {
-        this.logger.error('OK API returned invalid friends array');
+      // Логируем структуру ответа для отладки
+      this.logger.debug(
+        `OK API response keys: ${Object.keys(data).join(', ')}`,
+      );
+      this.logger.debug(
+        `OK API response sample: ${JSON.stringify(data).substring(0, 500)}`,
+      );
+
+      // OK API может возвращать друзей в разных форматах
+      // Проверяем различные возможные варианты структуры ответа
+      let friendsArray: unknown[] | null = null;
+
+      if ('friends' in data && Array.isArray(data.friends)) {
+        friendsArray = data.friends;
+      } else if ('uids' in data && Array.isArray(data.uids)) {
+        // Альтернативный формат ответа
+        friendsArray = data.uids;
+      } else if (Array.isArray(data)) {
+        // Прямой массив ID
+        friendsArray = data;
+      }
+
+      if (!friendsArray) {
+        this.logger.error(
+          `OK API returned invalid friends array. Response structure: ${JSON.stringify(data).substring(0, 500)}`,
+        );
         throw new Error('OK API returned invalid response format');
       }
 
       return {
-        friends: (data.friends as string[]).filter(
-          (id): id is string => typeof id === 'string',
-        ),
+        friends: friendsArray
+          .map((id) => {
+            // Преобразуем ID в строку (OK API может возвращать числа или строки)
+            if (typeof id === 'number') {
+              return String(id);
+            }
+            if (typeof id === 'string') {
+              return id;
+            }
+            if (typeof id === 'bigint') {
+              return id.toString();
+            }
+            return null;
+          })
+          .filter((id): id is string => id !== null),
       };
     } catch (error) {
       if (error instanceof Error) {
