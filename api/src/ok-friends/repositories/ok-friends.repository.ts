@@ -78,14 +78,23 @@ export class OkFriendsRepository {
         error: input.error ?? null,
         xlsxPath: input.xlsxPath ?? null,
         docxPath: input.docxPath ?? null,
-      },
+      } as Prisma.ExportJobCreateInput,
     });
   }
 
-  getJobById(jobId: string) {
-    return this.prisma.exportJob.findUnique({
+  async getJobById(jobId: string) {
+    const job = await this.prisma.exportJob.findUnique({
       where: { id: jobId },
     });
+    if (!job) {
+      return null;
+    }
+    return {
+      ...job,
+      okUserId: (job as { okUserId?: bigint | null }).okUserId
+        ? (job as { okUserId: bigint }).okUserId.toString()
+        : null,
+    };
   }
 
   getJobLogs(jobId: string, take = 200) {
@@ -188,6 +197,7 @@ export class OkFriendsRepository {
       const chunk = records.slice(i, i + normalizedBatchSize);
       const data = chunk.map((record) => ({
         jobId,
+        vkFriendId: null,
         okFriendId: BigInt(record.okFriendId),
         payload: toCreateJsonValue(record.payload),
       }));
