@@ -95,8 +95,15 @@ export class OkApiService {
 
     const url = `${OK_API_BASE_URL}/friends/get?${queryParams.toString()}`;
 
+    // Детальное логирование для отладки (без секретных данных)
     this.logger.debug(
       `OK API request: ${url.replace(/access_token=[^&]+/, 'access_token=***')}`,
+    );
+    this.logger.debug(
+      `OK API params: application_key=${this.applicationKey}, method=${apiParams.method}, format=${apiParams.format}, fid=${params.fid ?? 'undefined'}, offset=${params.offset ?? 'undefined'}, limit=${params.limit ?? 'undefined'}`,
+    );
+    this.logger.debug(
+      `OK API credentials check: accessToken=${this.accessToken ? 'set' : 'NOT SET'}, applicationKey=${this.applicationKey ? 'set' : 'NOT SET'}, applicationSecretKey=${this.applicationSecretKey ? 'set' : 'NOT SET'}`,
     );
 
     try {
