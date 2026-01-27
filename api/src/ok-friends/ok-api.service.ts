@@ -18,16 +18,17 @@ export interface OkFriendsGetResponse {
  * Сервис для работы с OK API
  *
  * Требуемые переменные окружения:
- * - OK_ACCESS_TOKEN - вечный access_token из настроек приложения OK.ru
- *   (получить в разделе "Access token" настроек приложения)
+ * - OK_ACCESS_TOKEN - вечный session_key из раздела "Access token" настроек приложения OK.ru
+ *   (это "Вечный session_key", а не access_token - для приложений типа "Игра" используется session_key)
  * - OK_APPLICATION_KEY - публичный ключ приложения (application_key)
  *   (находится в основных настройках приложения)
  * - OK_APPLICATION_SECRET_KEY - секретный ключ приложения (application_secret_key)
- *   (находится в основных настройках приложения)
+ *   (находится в основных настройках приложения, можно восстановить через "Восстановить секретный ключ")
  *
  * Важно:
- * - session_secret_key вычисляется автоматически как MD5(access_token + application_secret_key).toLowerCase()
- * - access_token не включается в параметры для подписи запроса
+ * - session_secret_key вычисляется автоматически как MD5(session_key + application_secret_key).toLowerCase()
+ * - session_key не включается в параметры для подписи запроса
+ * - Для приложений типа "Игра" используется session_key, а не access_token
  */
 @Injectable()
 export class OkApiService {
@@ -71,7 +72,7 @@ export class OkApiService {
       !this.applicationSecretKey
     ) {
       this.logger.error(
-        'OK API credentials not configured. Set OK_ACCESS_TOKEN, OK_APPLICATION_KEY, OK_APPLICATION_SECRET_KEY',
+        'OK API credentials not configured. Set OK_ACCESS_TOKEN (вечный session_key), OK_APPLICATION_KEY, OK_APPLICATION_SECRET_KEY',
       );
       this.logger.error(
         `Current values: accessToken=${this.accessToken ? 'set' : 'empty'}, applicationKey=${this.applicationKey || 'empty'}, applicationSecretKey=${this.applicationSecretKey ? 'set' : 'empty'}`,
@@ -86,8 +87,8 @@ export class OkApiService {
       throw new Error('OK_APPLICATION_KEY is not configured');
     }
     if (!this.accessToken) {
-      this.logger.error('OK_ACCESS_TOKEN is not set!');
-      throw new Error('OK_ACCESS_TOKEN is not configured');
+      this.logger.error('OK_ACCESS_TOKEN (вечный session_key) is not set!');
+      throw new Error('OK_ACCESS_TOKEN (вечный session_key) is not configured');
     }
     if (!this.applicationSecretKey) {
       this.logger.error('OK_APPLICATION_SECRET_KEY is not set!');
@@ -128,9 +129,11 @@ export class OkApiService {
       }
     }
     queryParams.append('sig', sig);
-    // Для приложений типа "Игра" используется session_key, а не access_token
-    // OK API принимает оба параметра, но для не-EXTERNAL приложений нужен session_key
-    queryParams.append('session_key', this.accessToken);
+    // Для приложений типа "Игра" используется session_key из настроек приложения
+    // Это "Вечный session_key" из раздела "Access token" настроек приложения
+    if (this.accessToken) {
+      queryParams.append('session_key', this.accessToken);
+    }
 
     const url = `${OK_API_BASE_URL}/friends/get?${queryParams.toString()}`;
 
@@ -199,10 +202,8 @@ export class OkApiService {
       }
 
       // Логируем структуру ответа для отладки
-      this.logger.debug(
-        `OK API response keys: ${Object.keys(data).join(', ')}`,
-      );
-      this.logger.debug(
+      this.logger.log(`OK API response keys: ${Object.keys(data).join(', ')}`);
+      this.logger.log(
         `OK API response sample: ${JSON.stringify(data).substring(0, 500)}`,
       );
 
