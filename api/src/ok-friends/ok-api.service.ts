@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/app.config';
 import { OK_API_BASE_URL } from './ok-friends.constants';
-import { signOkRequest, type OkApiParams } from './ok-friends-signature.util';
+import {
+  signOkRequest,
+  signOkRequestForUsersGetInfo,
+  type OkApiParams,
+} from './ok-friends-signature.util';
 
 export interface OkFriendsGetParams {
   fid?: string;
@@ -298,43 +302,42 @@ export class OkApiService {
       uids: params.uids.join(','),
     };
 
-    // Параметр fields обязателен для users.getInfo
-    // Если fields не указан, передаем пустую строку для получения всех полей
+    // Параметр fields для users.getInfo
+    // Если fields не указан, не передаем параметр (OK API вернет базовые поля)
+    // Если указан, передаем список полей через запятую
     if (params.fields && params.fields.length > 0) {
       apiParams.fields = params.fields.join(',');
-    } else {
-      // Передаем пустую строку для получения всех доступных полей
-      apiParams.fields = '';
     }
+    // Если fields не указан, не добавляем параметр в apiParams
 
     if (params.emptyPictures !== undefined) {
       apiParams.emptyPictures = params.emptyPictures ? 'true' : 'false';
     }
 
     // Вычисляем подпись
+    // ВАЖНО: для users.getInfo session_key ВКЛЮЧАЕТСЯ в подпись (в отличие от friends.get)
+    // Добавляем session_key в параметры для подписи
+    const paramsForSignature: OkApiParams = {
+      ...apiParams,
+      session_key: this.accessToken,
+    };
+
     // Логируем параметры для подписи для отладки
     this.logger.log(
-      `OK API users.getInfo params for signature: ${JSON.stringify(apiParams)}`,
+      `OK API users.getInfo params for signature: ${JSON.stringify(paramsForSignature)}`,
     );
-    const sig = signOkRequest(
-      apiParams,
+    const sig = signOkRequestForUsersGetInfo(
+      paramsForSignature,
       this.accessToken,
       this.applicationSecretKey,
     );
     this.logger.log(`OK API users.getInfo sig: ${sig.substring(0, 8)}...`);
 
     // Формируем query параметры для запроса
-    // Важно: URLSearchParams может не добавить параметр с пустой строкой
-    // Поэтому для fields с пустой строкой явно добавляем параметр
     const queryParams = new URLSearchParams();
     for (const [key, value] of Object.entries(apiParams)) {
       if (value !== undefined) {
-        // Для fields с пустой строкой явно добавляем параметр
-        if (key === 'fields' && value === '') {
-          queryParams.append(key, '');
-        } else {
-          queryParams.append(key, String(value));
-        }
+        queryParams.append(key, String(value));
       }
     }
     queryParams.append('sig', sig);
@@ -342,16 +345,14 @@ export class OkApiService {
       queryParams.append('session_key', this.accessToken);
     }
 
-    const url = `${OK_API_BASE_URL}/users/getInfo?${queryParams.toString()}`;
+    // Для users.getInfo используется fb.do, а не /users/getInfo
+    const url = `https://api.ok.ru/fb.do?${queryParams.toString()}`;
 
     // Детальное логирование для отладки
-    const maskedUrl = url.replace(/session_key=[^&]+/, 'session_key=***');
+    const maskedUrl = url.replace(/session_key=[^&]+/g, 'session_key=***');
     this.logger.log(`OK API users.getInfo request URL: ${maskedUrl}`);
     this.logger.log(
-      `OK API users.getInfo params: application_key=${this.applicationKey}, method=users.getInfo, format=json, uids count=${params.uids.length}, fields=${apiParams.fields || 'NOT SET'}, fields type=${typeof apiParams.fields}, fields value=${JSON.stringify(apiParams.fields)}`,
-    );
-    this.logger.log(
-      `OK API users.getInfo queryParams has fields: ${queryParams.has('fields')}, fields value in queryParams: ${queryParams.get('fields')}`,
+      `OK API users.getInfo params: application_key=${this.applicationKey}, method=users.getInfo, format=json, uids count=${params.uids.length}, fields=${apiParams.fields || 'NOT SET'}`,
     );
 
     try {
