@@ -9,6 +9,8 @@ import { OkFriendsJobStreamService } from './ok-friends-job-stream.service';
 import { OkFriendsService } from '../ok-friends.service';
 import { EXPORT_BATCH_SIZE } from '../ok-friends.constants';
 import type { OkFriendsGetParams } from '../ok-api.service';
+import { flattenUserInfo } from '../utils/flatten-user-info.util';
+import type { FriendFlatDto } from '../dto/ok-friends.dto';
 
 export interface ExportJobProgress {
   fetchedCount: number;
@@ -92,7 +94,31 @@ export class OkFriendsExportJobService {
 
       await log('info', 'Fetch completed', { totalCount, fetchedCount });
 
-      const { records, skipped } = this.buildFriendRecords(rawItems);
+      // Получаем полную информацию о пользователях через users.getInfo
+      await log('info', 'Fetching user details via users.getInfo...');
+
+      const usersInfo = await this.okFriendsService.fetchUsersInfo(rawItems, {
+        onProgress: (progress) => {
+          const percentage = Math.round(
+            (progress.processed / progress.total) * 100,
+          );
+          void log(
+            'info',
+            `users.getInfo progress: ${progress.processed}/${progress.total} (${percentage}%)`,
+          );
+        },
+        onLog: (msg) => {
+          void log('info', msg);
+        },
+      });
+
+      await log('info', `Fetched user details: ${usersInfo.length} users`);
+
+      // Обновляем записи с полной информацией о пользователях
+      const { records, skipped } = this.buildFriendRecordsWithUserInfo(
+        rawItems,
+        usersInfo,
+      );
       if (skipped > 0) {
         await log('warn', `Skipped friends without id: ${skipped}`);
       }
@@ -104,7 +130,16 @@ export class OkFriendsExportJobService {
       );
       await log('info', `Saved friend records: ${inserted}`);
 
-      const friendRows = rawItems.map((id) => ({ id }));
+      // Расплющиваем данные для экспорта
+      const friendRows: FriendFlatDto[] = usersInfo.map((user) =>
+        flattenUserInfo(user),
+      );
+
+      await log(
+        'info',
+        `Flattened ${friendRows.length} user records for export`,
+      );
+
       const xlsxPath = await this.exporter.writeXlsxFile(jobId, friendRows);
 
       const stats = await fs.stat(xlsxPath);
@@ -173,18 +208,36 @@ export class OkFriendsExportJobService {
     });
   }
 
-  private buildFriendRecords(rawItems: string[]): {
+  private buildFriendRecordsWithUserInfo(
+    rawItems: string[],
+    usersInfo: Array<Record<string, unknown>>,
+  ): {
     records: FriendRecordInput[];
     skipped: number;
   } {
     const records: FriendRecordInput[] = [];
     let skipped = 0;
+
+    // Создаем map для быстрого поиска информации о пользователе по uid
+    const usersMap = new Map<string, Record<string, unknown>>();
+    for (const user of usersInfo) {
+      const uid = user.uid as string | undefined;
+      if (uid) {
+        usersMap.set(String(uid), user);
+      }
+    }
+
     for (const item of rawItems) {
       if (!item || typeof item !== 'string' || item.trim().length === 0) {
         skipped += 1;
         continue;
       }
-      records.push({ okFriendId: item, payload: { id: item } });
+
+      // Ищем информацию о пользователе, если есть
+      const userInfo = usersMap.get(item);
+      const payload = userInfo || { id: item };
+
+      records.push({ okFriendId: item, payload });
     }
     return { records, skipped };
   }

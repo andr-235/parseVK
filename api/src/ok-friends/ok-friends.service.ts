@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { OkApiService, type OkFriendsGetParams } from './ok-api.service';
+import {
+  OkApiService,
+  type OkFriendsGetParams,
+  type OkUsersGetInfoParams,
+  type OkUserInfo,
+} from './ok-api.service';
 import {
   OkFriendsRepository,
   type ExportJobCreateInput,
@@ -190,5 +195,71 @@ export class OkFriendsService {
 
   getJobLogs(jobId: string, take?: number) {
     return this.repository.getJobLogs(jobId, take);
+  }
+
+  async fetchUsersInfo(
+    userIds: string[],
+    options: {
+      fields?: string[];
+      emptyPictures?: boolean;
+      onProgress?: (progress: { processed: number; total: number }) => void;
+      onLog?: (log: string) => void;
+    },
+  ): Promise<OkUserInfo[]> {
+    const onProgress = options.onProgress;
+    const onLog = options.onLog;
+
+    if (!userIds || userIds.length === 0) {
+      return [];
+    }
+
+    const MAX_BATCH_SIZE = 100; // Лимит OK API для users.getInfo
+    const allUsers: OkUserInfo[] = [];
+    const total = userIds.length;
+    let processed = 0;
+
+    onLog?.(`users.getInfo start (total users: ${total})`);
+
+    // Разбиваем на батчи по 100 ID
+    for (let i = 0; i < userIds.length; i += MAX_BATCH_SIZE) {
+      const batch = userIds.slice(i, i + MAX_BATCH_SIZE);
+      const batchNumber = Math.floor(i / MAX_BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(userIds.length / MAX_BATCH_SIZE);
+
+      onLog?.(
+        `users.getInfo batch ${batchNumber}/${totalBatches} (${batch.length} users)`,
+      );
+
+      try {
+        const params: OkUsersGetInfoParams = {
+          uids: batch,
+          fields: options.fields,
+          emptyPictures: options.emptyPictures,
+        };
+
+        const users = await this.okApiService.usersGetInfo(params);
+        allUsers.push(...users);
+        processed += batch.length;
+
+        onProgress?.({ processed, total });
+        onLog?.(
+          `users.getInfo batch ${batchNumber}/${totalBatches} completed (${users.length} users returned)`,
+        );
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        onLog?.(
+          `users.getInfo batch ${batchNumber}/${totalBatches} failed: ${errorMessage}`,
+        );
+        // Продолжаем обработку следующих батчей, даже если один упал
+        // Можно добавить опцию для остановки при ошибке, если нужно
+      }
+    }
+
+    onLog?.(
+      `users.getInfo finish (processed: ${processed}, returned: ${allUsers.length})`,
+    );
+
+    return allUsers;
   }
 }

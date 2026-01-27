@@ -14,6 +14,14 @@ export interface OkFriendsGetResponse {
   friends: string[];
 }
 
+export interface OkUsersGetInfoParams {
+  uids: string[];
+  fields?: string[];
+  emptyPictures?: boolean;
+}
+
+export type OkUserInfo = Record<string, unknown>;
+
 /**
  * Сервис для работы с OK API
  *
@@ -254,6 +262,159 @@ export class OkApiService {
         throw error;
       }
       throw new Error('OK API request failed: Unknown error');
+    }
+  }
+
+  async usersGetInfo(params: OkUsersGetInfoParams): Promise<OkUserInfo[]> {
+    // Проверка наличия всех необходимых данных перед запросом
+    if (!this.applicationKey) {
+      this.logger.error('OK_APPLICATION_KEY is not set!');
+      throw new Error('OK_APPLICATION_KEY is not configured');
+    }
+    if (!this.accessToken) {
+      this.logger.error('OK_ACCESS_TOKEN (вечный session_key) is not set!');
+      throw new Error('OK_ACCESS_TOKEN (вечный session_key) is not configured');
+    }
+    if (!this.applicationSecretKey) {
+      this.logger.error('OK_APPLICATION_SECRET_KEY is not set!');
+      throw new Error('OK_APPLICATION_SECRET_KEY is not configured');
+    }
+
+    if (!params.uids || params.uids.length === 0) {
+      throw new Error('uids parameter is required and must not be empty');
+    }
+
+    if (params.uids.length > 100) {
+      throw new Error(
+        'uids parameter must contain at most 100 user IDs per request',
+      );
+    }
+
+    // Формируем параметры запроса
+    const apiParams: OkApiParams = {
+      application_key: this.applicationKey,
+      method: 'users.getInfo',
+      format: 'json',
+      uids: params.uids.join(','),
+    };
+
+    // Поля запрашиваем по умолчанию все доступные
+    // Если fields не указан, запрашиваем все поля (пустая строка или не указываем)
+    if (params.fields && params.fields.length > 0) {
+      apiParams.fields = params.fields.join(',');
+    }
+
+    if (params.emptyPictures !== undefined) {
+      apiParams.emptyPictures = params.emptyPictures ? 'true' : 'false';
+    }
+
+    // Вычисляем подпись
+    const sig = signOkRequest(
+      apiParams,
+      this.accessToken,
+      this.applicationSecretKey,
+    );
+
+    // Формируем query параметры для запроса
+    const queryParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(apiParams)) {
+      if (value !== undefined) {
+        queryParams.append(key, String(value));
+      }
+    }
+    queryParams.append('sig', sig);
+    if (this.accessToken) {
+      queryParams.append('session_key', this.accessToken);
+    }
+
+    const url = `${OK_API_BASE_URL}/users/getInfo?${queryParams.toString()}`;
+
+    this.logger.log(
+      `OK API users.getInfo request: uids count=${params.uids.length}, fields=${params.fields?.length ?? 'all'}`,
+    );
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(
+          `OK API users.getInfo error: ${response.status} ${response.statusText} - ${errorText}`,
+        );
+        throw new Error(
+          `OK API users.getInfo request failed: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = (await response.json()) as unknown;
+
+      if (!data || typeof data !== 'object') {
+        this.logger.error(
+          `OK API users.getInfo returned invalid response type: ${typeof data}`,
+        );
+        throw new Error('OK API users.getInfo returned invalid response');
+      }
+
+      // Проверяем формат ошибки OK API
+      if ('error' in data && data.error) {
+        const errorData = data.error as {
+          error_code?: number;
+          error_msg?: string;
+        };
+        this.logger.error(
+          `OK API users.getInfo error: ${errorData.error_code} - ${errorData.error_msg}`,
+        );
+        throw new Error(
+          `OK API users.getInfo error: ${errorData.error_msg ?? 'Unknown error'}`,
+        );
+      }
+
+      if ('error_code' in data && data.error_code) {
+        const errorResponse = data as {
+          error_code: number;
+          error_msg?: string;
+          error_data?: unknown;
+        };
+        const errorCode = errorResponse.error_code;
+        const errorMsg = errorResponse.error_msg ?? 'Unknown error';
+        this.logger.error(
+          `OK API users.getInfo error: ${errorCode} - ${errorMsg}`,
+        );
+        throw new Error(`OK API users.getInfo error: ${errorMsg}`);
+      }
+
+      // users.getInfo возвращает массив объектов с информацией о пользователях
+      if (Array.isArray(data)) {
+        this.logger.log(`OK API users.getInfo returned ${data.length} users`);
+        return data as OkUserInfo[];
+      }
+
+      // Если ответ не массив, но содержит данные пользователей
+      if ('users' in data && Array.isArray(data.users)) {
+        this.logger.log(
+          `OK API users.getInfo returned ${(data.users as unknown[]).length} users`,
+        );
+        return data.users as OkUserInfo[];
+      }
+
+      this.logger.error(
+        `OK API users.getInfo returned invalid response format. Response structure: ${JSON.stringify(data).substring(0, 500)}`,
+      );
+      throw new Error('OK API users.getInfo returned invalid response format');
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          `OK API users.getInfo request failed: ${error.message}`,
+          error.stack,
+        );
+        throw error;
+      }
+      throw new Error('OK API users.getInfo request failed: Unknown error');
     }
   }
 }
