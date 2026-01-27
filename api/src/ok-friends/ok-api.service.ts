@@ -312,17 +312,29 @@ export class OkApiService {
     }
 
     // Вычисляем подпись
+    // Логируем параметры для подписи для отладки
+    this.logger.log(
+      `OK API users.getInfo params for signature: ${JSON.stringify(apiParams)}`,
+    );
     const sig = signOkRequest(
       apiParams,
       this.accessToken,
       this.applicationSecretKey,
     );
+    this.logger.log(`OK API users.getInfo sig: ${sig.substring(0, 8)}...`);
 
     // Формируем query параметры для запроса
+    // Важно: URLSearchParams может не добавить параметр с пустой строкой
+    // Поэтому для fields с пустой строкой явно добавляем параметр
     const queryParams = new URLSearchParams();
     for (const [key, value] of Object.entries(apiParams)) {
       if (value !== undefined) {
-        queryParams.append(key, String(value));
+        // Для fields с пустой строкой явно добавляем параметр
+        if (key === 'fields' && value === '') {
+          queryParams.append(key, '');
+        } else {
+          queryParams.append(key, String(value));
+        }
       }
     }
     queryParams.append('sig', sig);
@@ -332,8 +344,14 @@ export class OkApiService {
 
     const url = `${OK_API_BASE_URL}/users/getInfo?${queryParams.toString()}`;
 
+    // Детальное логирование для отладки
+    const maskedUrl = url.replace(/session_key=[^&]+/, 'session_key=***');
+    this.logger.log(`OK API users.getInfo request URL: ${maskedUrl}`);
     this.logger.log(
-      `OK API users.getInfo request: uids count=${params.uids.length}, fields=${params.fields?.length ?? 'all'}`,
+      `OK API users.getInfo params: application_key=${this.applicationKey}, method=users.getInfo, format=json, uids count=${params.uids.length}, fields=${apiParams.fields || 'NOT SET'}, fields type=${typeof apiParams.fields}, fields value=${JSON.stringify(apiParams.fields)}`,
+    );
+    this.logger.log(
+      `OK API users.getInfo queryParams has fields: ${queryParams.has('fields')}, fields value in queryParams: ${queryParams.get('fields')}`,
     );
 
     try {

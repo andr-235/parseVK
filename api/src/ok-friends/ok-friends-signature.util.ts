@@ -30,8 +30,10 @@ export function signOkRequest(
   const stringParams: Record<string, string> = {};
 
   // Конвертируем все параметры в строки
+  // Важно: пустая строка должна быть включена в подпись
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null) {
+      // Для пустой строки явно сохраняем пустую строку
       stringParams[key] = String(value);
     }
   }
