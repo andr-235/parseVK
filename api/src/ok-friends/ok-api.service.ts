@@ -298,10 +298,13 @@ export class OkApiService {
       uids: params.uids.join(','),
     };
 
-    // Поля запрашиваем по умолчанию все доступные
-    // Если fields не указан, запрашиваем все поля (пустая строка или не указываем)
+    // Параметр fields обязателен для users.getInfo
+    // Если fields не указан, передаем пустую строку для получения всех полей
     if (params.fields && params.fields.length > 0) {
       apiParams.fields = params.fields.join(',');
+    } else {
+      // Передаем пустую строку для получения всех доступных полей
+      apiParams.fields = '';
     }
 
     if (params.emptyPictures !== undefined) {
