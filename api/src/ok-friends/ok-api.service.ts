@@ -44,9 +44,25 @@ export class OkApiService {
     this.applicationSecretKey =
       this.configService.get('okApplicationSecretKey', { infer: true }) ?? '';
 
+    // Валидация application_key - не должен содержать кириллицу
+    if (this.applicationKey && /[А-Яа-яЁё]/.test(this.applicationKey)) {
+      this.logger.error(
+        `OK_APPLICATION_KEY contains Cyrillic characters! Current value: ${this.applicationKey}. This is invalid. Please update OK_APPLICATION_KEY to the correct value without Cyrillic characters.`,
+      );
+      throw new Error(
+        'OK_APPLICATION_KEY contains invalid characters (Cyrillic). Please update the environment variable.',
+      );
+    }
+
     // Детальное логирование для диагностики
     this.logger.log(
-      `OK API credentials check: accessToken=${this.accessToken ? `set (length: ${this.accessToken.length})` : 'NOT SET'}, applicationKey=${this.applicationKey ? `set (${this.applicationKey})` : 'NOT SET'}, applicationSecretKey=${this.applicationSecretKey ? `set (length: ${this.applicationSecretKey.length})` : 'NOT SET'}`,
+      `[OK API INIT] accessToken=${this.accessToken ? `set (length: ${this.accessToken.length}, starts with: ${this.accessToken.substring(0, 5)})` : 'NOT SET'}`,
+    );
+    this.logger.log(
+      `[OK API INIT] applicationKey=${this.applicationKey ? `set (${this.applicationKey})` : 'NOT SET'}`,
+    );
+    this.logger.log(
+      `[OK API INIT] applicationSecretKey=${this.applicationSecretKey ? `set (length: ${this.applicationSecretKey.length})` : 'NOT SET'}`,
     );
 
     if (
@@ -112,8 +128,9 @@ export class OkApiService {
       }
     }
     queryParams.append('sig', sig);
-    // access_token добавляется отдельно, после вычисления подписи
-    queryParams.append('access_token', this.accessToken);
+    // Для приложений типа "Игра" используется session_key, а не access_token
+    // OK API принимает оба параметра, но для не-EXTERNAL приложений нужен session_key
+    queryParams.append('session_key', this.accessToken);
 
     const url = `${OK_API_BASE_URL}/friends/get?${queryParams.toString()}`;
 
