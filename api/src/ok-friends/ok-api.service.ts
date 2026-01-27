@@ -44,18 +44,40 @@ export class OkApiService {
     this.applicationSecretKey =
       this.configService.get('okApplicationSecretKey', { infer: true }) ?? '';
 
+    // Детальное логирование для диагностики
+    this.logger.log(
+      `OK API credentials check: accessToken=${this.accessToken ? `set (length: ${this.accessToken.length})` : 'NOT SET'}, applicationKey=${this.applicationKey ? `set (${this.applicationKey})` : 'NOT SET'}, applicationSecretKey=${this.applicationSecretKey ? `set (length: ${this.applicationSecretKey.length})` : 'NOT SET'}`,
+    );
+
     if (
       !this.accessToken ||
       !this.applicationKey ||
       !this.applicationSecretKey
     ) {
-      this.logger.warn(
+      this.logger.error(
         'OK API credentials not configured. Set OK_ACCESS_TOKEN, OK_APPLICATION_KEY, OK_APPLICATION_SECRET_KEY',
+      );
+      this.logger.error(
+        `Current values: accessToken=${this.accessToken ? 'set' : 'empty'}, applicationKey=${this.applicationKey || 'empty'}, applicationSecretKey=${this.applicationSecretKey ? 'set' : 'empty'}`,
       );
     }
   }
 
   async friendsGet(params: OkFriendsGetParams): Promise<OkFriendsGetResponse> {
+    // Проверка наличия всех необходимых данных перед запросом
+    if (!this.applicationKey) {
+      this.logger.error('OK_APPLICATION_KEY is not set!');
+      throw new Error('OK_APPLICATION_KEY is not configured');
+    }
+    if (!this.accessToken) {
+      this.logger.error('OK_ACCESS_TOKEN is not set!');
+      throw new Error('OK_ACCESS_TOKEN is not configured');
+    }
+    if (!this.applicationSecretKey) {
+      this.logger.error('OK_APPLICATION_SECRET_KEY is not set!');
+      throw new Error('OK_APPLICATION_SECRET_KEY is not configured');
+    }
+
     // Формируем параметры запроса (без access_token - он добавляется отдельно)
     const apiParams: OkApiParams = {
       application_key: this.applicationKey,
@@ -96,14 +118,13 @@ export class OkApiService {
     const url = `${OK_API_BASE_URL}/friends/get?${queryParams.toString()}`;
 
     // Детальное логирование для отладки (без секретных данных)
-    this.logger.debug(
-      `OK API request: ${url.replace(/access_token=[^&]+/, 'access_token=***')}`,
+    const maskedUrl = url.replace(/access_token=[^&]+/, 'access_token=***');
+    this.logger.log(`OK API request URL: ${maskedUrl}`);
+    this.logger.log(
+      `OK API params: application_key=${this.applicationKey}, method=${apiParams.method}, format=${apiParams.format}, fid=${params.fid ?? 'undefined'}, offset=${params.offset ?? 'undefined'}, limit=${params.limit ?? 'undefined'}, sig=${sig.substring(0, 8)}...`,
     );
-    this.logger.debug(
-      `OK API params: application_key=${this.applicationKey}, method=${apiParams.method}, format=${apiParams.format}, fid=${params.fid ?? 'undefined'}, offset=${params.offset ?? 'undefined'}, limit=${params.limit ?? 'undefined'}`,
-    );
-    this.logger.debug(
-      `OK API credentials check: accessToken=${this.accessToken ? 'set' : 'NOT SET'}, applicationKey=${this.applicationKey ? 'set' : 'NOT SET'}, applicationSecretKey=${this.applicationSecretKey ? 'set' : 'NOT SET'}`,
+    this.logger.log(
+      `OK API credentials: accessToken=${this.accessToken ? `set (${this.accessToken.substring(0, 10)}...)` : 'NOT SET'}, applicationKey=${this.applicationKey || 'NOT SET'}, applicationSecretKey=${this.applicationSecretKey ? 'set' : 'NOT SET'}`,
     );
 
     try {
