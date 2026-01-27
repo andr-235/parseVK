@@ -126,6 +126,7 @@ export class OkApiService {
         throw new Error('OK API returned invalid response');
       }
 
+      // Проверяем формат ошибки OK API (может быть в разных форматах)
       if ('error' in data && data.error) {
         const errorData = data.error as {
           error_code?: number;
@@ -137,6 +138,19 @@ export class OkApiService {
         throw new Error(
           `OK API error: ${errorData.error_msg ?? 'Unknown error'}`,
         );
+      }
+
+      // OK API может возвращать ошибки напрямую в объекте ответа
+      if ('error_code' in data && data.error_code) {
+        const errorResponse = data as {
+          error_code: number;
+          error_msg?: string;
+          error_data?: unknown;
+        };
+        const errorCode = errorResponse.error_code;
+        const errorMsg = errorResponse.error_msg ?? 'Unknown error';
+        this.logger.error(`OK API error: ${errorCode} - ${errorMsg}`);
+        throw new Error(`OK API error: ${errorMsg}`);
       }
 
       // Логируем структуру ответа для отладки
