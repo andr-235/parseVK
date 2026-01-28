@@ -10,7 +10,7 @@ module.exports = {
           const match = f.match(/(?:^|\/)api\/(.+)$/);
           if (match) {
             const path = match[1];
-            return path.startsWith('src/') ? path : `src/${path}`;
+            return path;
           }
           return f.replace(/^api\//, 'src/');
         })
@@ -27,7 +27,7 @@ module.exports = {
           const match = f.match(/(?:^|\/)api\/(.+)$/);
           if (match) {
             const path = match[1];
-            return path.startsWith('src/') ? path : `src/${path}`;
+            return path;
           }
           return f.replace(/^api\//, 'src/');
         })

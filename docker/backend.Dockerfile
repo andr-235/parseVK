@@ -35,20 +35,13 @@ COPY api/package*.json ./
 COPY api/.npmrc ./
 COPY api/pnpm-lock.yaml* ./
 
-# Устанавливаем build-base и python3 только для сборки bcrypt
-RUN apk add --no-cache --virtual .build-deps python3 build-base
-
 # Install dependencies with BuildKit cache mount
 RUN --mount=type=cache,target=/root/.pnpm-store \
     --mount=type=cache,target=/app/node_modules/.cache \
     pnpm config set registry ${NPM_REGISTRY} \
     && pnpm config set fetch-retries 3 \
     && pnpm config set fetch-timeout 60000 \
-    && (pnpm install --frozen-lockfile || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile)) \
-    && (pnpm rebuild bcrypt || (echo "pnpm rebuild failed, trying with npm..." && npm rebuild bcrypt) || echo "Warning: bcrypt rebuild failed, using prebuilt binaries")
-
-# Удаляем build-deps после установки зависимостей
-RUN apk del .build-deps
+    && (pnpm install --frozen-lockfile || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile))
 
 # Copy source code after dependencies are installed
 COPY api/ ./
@@ -72,12 +65,12 @@ ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
 
-# Устанавливаем prisma CLI, netcat и зависимости для пересборки bcrypt
+# Устанавливаем prisma CLI и netcat для healthcheck/миграций
 RUN npm config set registry https://registry.npmmirror.com \
     && npm config set fetch-retries 3 \
     && npm config set fetch-timeout 60000 \
     && (npm install -g prisma@^6.16.3 || (npm config set registry https://registry.npmjs.org/ && npm install -g prisma@^6.16.3)) \
-    && apk add --no-cache netcat-openbsd python3 build-base
+    && apk add --no-cache netcat-openbsd
 
 # Копируем собранное приложение и node_modules из build stage
 COPY --from=build /app/package*.json ./
@@ -85,18 +78,6 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/node_modules ./node_modules
-
-# Проверяем, что bcrypt собран в build stage и работает
-# Если bcrypt не работает, пробуем пересобрать (но это редко нужно, т.к. уже собрано в build stage)
-RUN node -e "require('bcrypt')" || ( \
-    echo "WARNING: bcrypt not working, trying to rebuild..." && \
-    npm config set registry https://registry.npmmirror.com && \
-    npm config set fetch-retries 3 && \
-    npm config set fetch-timeout 60000 && \
-    (npm rebuild bcrypt || (npm config set registry https://registry.npmjs.org/ && npm rebuild bcrypt)) && \
-    node -e "require('bcrypt')" || (echo "ERROR: bcrypt module verification failed" && exit 1) \
-  ) && \
-  apk del build-base python3 || true
 
 # Копируем entrypoint скрипт
 COPY docker/backend-entrypoint.sh /app/entrypoint.sh

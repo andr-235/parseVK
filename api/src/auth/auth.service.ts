@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import type { AppConfig } from '../config/app.config';
 import { UsersService } from '../users/users.service';
 import type { UserAuthRecord } from '../users/types/user.types';

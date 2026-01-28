@@ -1,5 +1,5 @@
 import { PrismaClient, UserRole } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 const PASSWORD_SALT_ROUNDS = 12;
@@ -14,7 +14,7 @@ async function main() {
 
   const existing = await prisma.user.findUnique({ where: { username } });
   if (existing) {
-    console.log(`Admin user "${username}" already exists.`);
+    console.warn(`Admin user "${username}" already exists.`);
     return;
   }
 
@@ -27,7 +27,7 @@ async function main() {
     },
   });
 
-  console.log(
+  console.warn(
     `Admin user "${username}" created. Change the password on first login.`,
   );
 }
