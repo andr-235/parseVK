@@ -3,7 +3,9 @@
   "compilerOptions": {
     "rootDir": "./src",
     "noEmit": false,
-    "emitDeclarationOnly": false
+    "emitDeclarationOnly": false,
+    "moduleResolution": "node",
+    "resolvePackageJsonExports": false
   },
   "exclude": [
     "node_modules",
