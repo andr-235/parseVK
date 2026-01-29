@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { TelegramMemberMapper } from './telegram-member.mapper.js';
 import { Api } from 'telegram';
 import { TelegramMemberStatus } from '../types/telegram.enums.js';
