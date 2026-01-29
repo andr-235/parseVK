@@ -1,18 +1,19 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { vi } from 'vitest';
 import * as redisStoreModule from 'cache-manager-redis-yet';
 import { CacheConfigService } from './cache.config.js';
 import type { AppConfig } from '../../config/app.config.js';
 
 describe('CacheConfigService', () => {
-  let redisStoreMock: jest.SpyInstance;
-  let logSpy: jest.SpyInstance;
-  let warnSpy: jest.SpyInstance;
+  let redisStoreMock: vi.SpyInstance;
+  let logSpy: vi.SpyInstance;
+  let warnSpy: vi.SpyInstance;
   let configService: ConfigService<AppConfig>;
 
   const createConfigService = (): ConfigService<AppConfig> => {
     return {
-      get: jest.fn((key: string) => {
+      get: vi.fn((key: string) => {
         if (key === 'redisHost') {
           return process.env.REDIS_HOST;
         }
@@ -27,10 +28,10 @@ describe('CacheConfigService', () => {
   };
 
   beforeAll(() => {
-    logSpy = jest
+    logSpy = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
-    warnSpy = jest
+    warnSpy = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
   });
@@ -42,7 +43,7 @@ describe('CacheConfigService', () => {
   });
 
   beforeEach(() => {
-    redisStoreMock = jest.spyOn(redisStoreModule, 'redisStore');
+    redisStoreMock = vi.spyOn(redisStoreModule, 'redisStore');
   });
 
   afterEach(() => {

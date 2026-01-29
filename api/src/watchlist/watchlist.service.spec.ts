@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { WatchlistService } from './watchlist.service.js';
 import { WatchlistStatus } from './types/watchlist-status.enum.js';
 import type { AuthorActivityService } from '../common/services/author-activity.service.js';
@@ -12,16 +13,16 @@ import type { WatchlistStatsCollectorService } from './services/watchlist-stats-
 import type { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service.js';
 import type { WatchlistQueryValidator } from './validators/watchlist-query.validator.js';
 
-jest.mock('vk-io', () => {
+vi.mock('vk-io', () => {
   class APIErrorMock extends Error {}
 
   return {
-    VK: jest.fn().mockImplementation(() => ({ api: {} })),
+    VK: vi.fn().mockImplementation(() => ({ api: {} })),
     APIError: APIErrorMock,
   };
 });
 
-jest.mock('@/generated/prisma/client', () => {
+vi.mock('@/generated/prisma/client', () => {
   class PrismaClientMock {
     constructor() {}
   }
@@ -78,110 +79,110 @@ describe('WatchlistService', () => {
 
   let prisma: {
     watchlistSettings: {
-      upsert: jest.Mock<Promise<WatchlistSettingsRecord>>;
-      update: jest.Mock<Promise<WatchlistSettingsRecord>>;
+      upsert: vi.Mock<Promise<WatchlistSettingsRecord>>;
+      update: vi.Mock<Promise<WatchlistSettingsRecord>>;
     };
     watchlistAuthor: {
-      findMany: jest.Mock<Promise<unknown[]>>;
-      updateMany: jest.Mock<Promise<{ count: number }>>;
-      update: jest.Mock<Promise<unknown>>;
+      findMany: vi.Mock<Promise<unknown[]>>;
+      updateMany: vi.Mock<Promise<{ count: number }>>;
+      update: vi.Mock<Promise<unknown>>;
     };
     comment: {
-      groupBy: jest.Mock<Promise<unknown[]>>;
-      findMany: jest.Mock<Promise<unknown[]>>;
-      findUnique: jest.Mock<Promise<unknown>>;
+      groupBy: vi.Mock<Promise<unknown[]>>;
+      findMany: vi.Mock<Promise<unknown[]>>;
+      findUnique: vi.Mock<Promise<unknown>>;
     };
-    $transaction: jest.Mock<Promise<unknown[]>>;
+    $transaction: vi.Mock<Promise<unknown[]>>;
   };
   let authorActivityService: {
-    saveAuthors: jest.Mock;
-    saveComments: jest.Mock;
+    saveAuthors: vi.Mock;
+    saveComments: vi.Mock;
   };
-  let vkService: { getAuthorCommentsForPost: jest.Mock };
-  let repositoryMock: jest.Mocked<IWatchlistRepository>;
-  let authorRefresherMock: jest.Mocked<WatchlistAuthorRefresherService>;
+  let vkService: { getAuthorCommentsForPost: vi.Mock };
+  let repositoryMock: vi.Mocked<IWatchlistRepository>;
+  let authorRefresherMock: vi.Mocked<WatchlistAuthorRefresherService>;
   let service: WatchlistService;
 
   beforeEach(() => {
     prisma = {
       watchlistSettings: {
-        upsert: jest.fn<Promise<WatchlistSettingsRecord>, [unknown]>(),
-        update: jest.fn<Promise<WatchlistSettingsRecord>, [unknown, unknown]>(),
+        upsert: vi.fn<Promise<WatchlistSettingsRecord>, [unknown]>(),
+        update: vi.fn<Promise<WatchlistSettingsRecord>, [unknown, unknown]>(),
       },
       watchlistAuthor: {
-        findMany: jest.fn<Promise<unknown[]>, [unknown?]>(),
-        updateMany: jest.fn<Promise<{ count: number }>, [unknown]>(),
-        update: jest.fn<Promise<unknown>, [unknown, unknown]>(),
+        findMany: vi.fn<Promise<unknown[]>, [unknown?]>(),
+        updateMany: vi.fn<Promise<{ count: number }>, [unknown]>(),
+        update: vi.fn<Promise<unknown>, [unknown, unknown]>(),
       },
       comment: {
-        groupBy: jest.fn<Promise<unknown[]>, [unknown]>(),
-        findMany: jest.fn<Promise<unknown[]>, [unknown?]>(),
-        findUnique: jest.fn<Promise<unknown>, [unknown]>(),
+        groupBy: vi.fn<Promise<unknown[]>, [unknown]>(),
+        findMany: vi.fn<Promise<unknown[]>, [unknown?]>(),
+        findUnique: vi.fn<Promise<unknown>, [unknown]>(),
       },
-      $transaction: jest.fn<Promise<unknown[]>, [Array<Promise<unknown>>]>(
+      $transaction: vi.fn<Promise<unknown[]>, [Array<Promise<unknown>>]>(
         async (operations: Array<Promise<unknown>>) => Promise.all(operations),
       ),
     };
 
     authorActivityService = {
-      saveAuthors: jest.fn(),
-      saveComments: jest.fn(),
+      saveAuthors: vi.fn(),
+      saveComments: vi.fn(),
     };
 
     vkService = {
-      getAuthorCommentsForPost: jest.fn(),
+      getAuthorCommentsForPost: vi.fn(),
     };
 
     repositoryMock = {
-      ensureSettings: jest.fn().mockResolvedValue(createSettings()),
-      findMany: jest.fn(),
-      findActiveAuthors: jest.fn(),
-      findById: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      countComments: jest.fn(),
-      getAuthorComments: jest.fn(),
-      create: jest.fn(),
-      findByAuthorVkIdAndSettingsId: jest.fn(),
-      updateComment: jest.fn(),
-      getTrackedPosts: jest.fn(),
-      loadExistingCommentKeys: jest.fn(),
-      getSettings: jest.fn(),
-      updateSettings: jest.fn(),
-      findCommentById: jest.fn(),
+      ensureSettings: vi.fn().mockResolvedValue(createSettings()),
+      findMany: vi.fn(),
+      findActiveAuthors: vi.fn(),
+      findById: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      countComments: vi.fn(),
+      getAuthorComments: vi.fn(),
+      create: vi.fn(),
+      findByAuthorVkIdAndSettingsId: vi.fn(),
+      updateComment: vi.fn(),
+      getTrackedPosts: vi.fn(),
+      loadExistingCommentKeys: vi.fn(),
+      getSettings: vi.fn(),
+      updateSettings: vi.fn(),
+      findCommentById: vi.fn(),
     };
 
-    const authorMapperMock: jest.Mocked<WatchlistAuthorMapper> = {
-      mapAuthor: jest.fn(),
-      mapProfile: jest.fn(),
-      mapComment: jest.fn(),
-      buildCommentUrl: jest.fn(),
+    const authorMapperMock: vi.Mocked<WatchlistAuthorMapper> = {
+      mapAuthor: vi.fn(),
+      mapProfile: vi.fn(),
+      mapComment: vi.fn(),
+      buildCommentUrl: vi.fn(),
     };
 
-    const settingsMapperMock: jest.Mocked<WatchlistSettingsMapper> = {
-      map: jest.fn(),
+    const settingsMapperMock: vi.Mocked<WatchlistSettingsMapper> = {
+      map: vi.fn(),
     };
 
     const statsCollectorMock = {
-      collectCommentCounts: jest.fn().mockResolvedValue(new Map()),
-      collectAnalysisSummaries: jest.fn().mockResolvedValue(new Map()),
-      resolveSummary: jest.fn(),
+      collectCommentCounts: vi.fn().mockResolvedValue(new Map()),
+      collectAnalysisSummaries: vi.fn().mockResolvedValue(new Map()),
+      resolveSummary: vi.fn(),
       photoAnalysisService: {} as unknown as never,
-      cloneSummary: jest.fn(),
-    } as unknown as jest.Mocked<WatchlistStatsCollectorService>;
+      cloneSummary: vi.fn(),
+    } as unknown as vi.Mocked<WatchlistStatsCollectorService>;
 
     authorRefresherMock = {
-      refreshAuthorRecord: jest.fn(),
+      refreshAuthorRecord: vi.fn(),
       logger: {} as unknown as never,
       repository: {} as unknown as IWatchlistRepository,
       authorActivityService: {} as unknown as AuthorActivityService,
       vkService: {} as unknown as never,
-    } as unknown as jest.Mocked<WatchlistAuthorRefresherService>;
+    } as unknown as vi.Mocked<WatchlistAuthorRefresherService>;
 
-    const queryValidatorMock: jest.Mocked<WatchlistQueryValidator> = {
-      normalizeOffset: jest.fn((v?: number): number => v ?? 0),
-      normalizeLimit: jest.fn((v?: number): number => v ?? 20),
-      normalizeExcludeStopped: jest.fn((v?: boolean): boolean => v !== false),
+    const queryValidatorMock: vi.Mocked<WatchlistQueryValidator> = {
+      normalizeOffset: vi.fn((v?: number): number => v ?? 0),
+      normalizeLimit: vi.fn((v?: number): number => v ?? 20),
+      normalizeExcludeStopped: vi.fn((v?: boolean): boolean => v !== false),
     };
 
     service = new WatchlistService(
@@ -198,18 +199,17 @@ describe('WatchlistService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('не повторяет обновление авторов чаще заданного интервала', async () => {
     repositoryMock.findActiveAuthors.mockResolvedValue([]);
 
-    const dateSpy = jest.spyOn(Date, 'now');
+    const dateSpy = vi.spyOn(Date, 'now');
     dateSpy.mockReturnValue(1_000_000);
 
     await service.refreshActiveAuthors();
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repositoryMock.findActiveAuthors).toHaveBeenCalledTimes(1);
 
     repositoryMock.findActiveAuthors.mockClear();
@@ -217,7 +217,6 @@ describe('WatchlistService', () => {
 
     await service.refreshActiveAuthors();
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repositoryMock.findActiveAuthors).not.toHaveBeenCalled();
   });
 
@@ -235,7 +234,7 @@ describe('WatchlistService', () => {
     await service.refreshActiveAuthors();
 
     expect(authorActivityService.saveAuthors).toHaveBeenCalledWith([123]);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(repositoryMock.updateMany).toHaveBeenCalledWith([1], {
       lastCheckedAt: expect.any(Date) as Date,
     });
@@ -266,17 +265,16 @@ describe('WatchlistService', () => {
 
     await service.refreshActiveAuthors();
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repositoryMock.findActiveAuthors).toHaveBeenCalledWith({
       settingsId: 1,
       limit: 10,
     });
     expect(authorActivityService.saveAuthors).toHaveBeenCalledWith([321]);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(authorRefresherMock.refreshAuthorRecord).toHaveBeenCalledWith(
       record,
     );
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     expect(authorRefresherMock.refreshAuthorRecord).toHaveBeenCalledTimes(1);
   });
 });

@@ -15,11 +15,11 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "node --import ./jest-shims/register.mjs ./node_modules/jest/bin/jest.js",
-    "test:watch": "node --import ./jest-shims/register.mjs ./node_modules/jest/bin/jest.js --watch",
-    "test:cov": "node --import ./jest-shims/register.mjs ./node_modules/jest/bin/jest.js --coverage",
-    "test:debug": "node --inspect-brk --import ./jest-shims/register.mjs -r tsconfig-paths/register -r ts-node/register ./node_modules/jest/bin/jest.js --runInBand",
-    "test:e2e": "node --import ./jest-shims/register.mjs ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
+    "test:debug": "NODE_OPTIONS='--inspect-brk' vitest run --no-file-parallelism",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate && node scripts/add-js-extensions.mjs src",
     "recalculate-keywords": "tsx scripts/recalculate-keyword-matches.ts",
@@ -73,7 +73,6 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
-    "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",
     "@types/passport": "^1.0.16",
@@ -84,56 +83,17 @@
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
-    "jest": "^30.0.0",
+    "vitest": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4",
     "prettier": "^3.4.2",
     "prisma": "^7.0.0",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
-    "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "<rootDir>/../jest-shims/ts-transform.mjs"
-    },
-    "moduleNameMapper": {
-      "^@/generated/prisma/client$": "<rootDir>/../jest-shims/node_modules/@prisma/client/index.js",
-      "^@/(.*)$": "<rootDir>/$1",
-      "^vk-io$": "<rootDir>/../jest-shims/node_modules/vk-io/index.js",
-      "^@nestjs/cache-manager$": "<rootDir>/../jest-shims/node_modules/@nestjs/cache-manager/index.js",
-      "^@nestjs/bullmq$": "<rootDir>/../jest-shims/node_modules/@nestjs/bullmq/index.js",
-      "^bullmq$": "<rootDir>/../jest-shims/node_modules/bullmq/index.js",
-      "^libphonenumber-js/max$": "<rootDir>/../jest-shims/node_modules/libphonenumber-js/max.js",
-      "^got$": "<rootDir>/../jest-shims/node_modules/got/index.js"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "coveragePathIgnorePatterns": [
-      "/node_modules/",
-      "\\.module\\.ts$",
-      "main.ts"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "functions": 90,
-        "lines": 90,
-        "statements": 90
-      }
-    }
   }
 }

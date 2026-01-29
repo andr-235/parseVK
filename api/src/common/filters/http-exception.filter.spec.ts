@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import {
   ArgumentsHost,
   BadRequestException,
@@ -16,10 +17,10 @@ describe('HttpExceptionFilter', () => {
     url: string;
   };
   let response: {
-    status: jest.Mock;
-    json: jest.Mock;
+    status: vi.Mock;
+    json: vi.Mock;
   };
-  let errorSpy: jest.SpyInstance;
+  let errorSpy: vi.SpyInstance;
 
   beforeEach(() => {
     filter = new HttpExceptionFilter();
@@ -29,8 +30,8 @@ describe('HttpExceptionFilter', () => {
       url: '/test',
     };
 
-    const statusMock = jest.fn().mockReturnThis();
-    const jsonMock = jest.fn();
+    const statusMock = vi.fn().mockReturnThis();
+    const jsonMock = vi.fn();
     response = {
       status: statusMock,
       json: jsonMock,
@@ -42,16 +43,14 @@ describe('HttpExceptionFilter', () => {
     };
 
     host = {
-      switchToHttp: jest.fn().mockReturnValue(httpContext),
+      switchToHttp: vi.fn().mockReturnValue(httpContext),
     } as unknown as ArgumentsHost;
 
-    errorSpy = jest
-      .spyOn(Logger.prototype, 'error')
-      .mockImplementation(jest.fn());
+    errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(vi.fn());
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('обрабатывает HttpException со строковым сообщением', () => {

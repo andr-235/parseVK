@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsController } from './comments.controller.js';
 import { CommentsService } from './comments.service.js';
@@ -6,49 +7,49 @@ import { CommentsQueryValidator } from './validators/comments-query.validator.js
 describe('CommentsController', () => {
   let controller: CommentsController;
   let commentsService: {
-    getComments: jest.Mock;
-    getCommentsCursor: jest.Mock;
-    setReadStatus: jest.Mock;
+    getComments: vi.Mock;
+    getCommentsCursor: vi.Mock;
+    setReadStatus: vi.Mock;
   };
   let queryValidator: {
-    normalizeOffset: jest.Mock;
-    normalizeLimit: jest.Mock;
-    normalizeLimitWithDefault: jest.Mock;
-    parseKeywords: jest.Mock;
-    normalizeReadStatus: jest.Mock;
-    normalizeSearch: jest.Mock;
-    normalizeKeywordSource: jest.Mock;
+    normalizeOffset: vi.Mock;
+    normalizeLimit: vi.Mock;
+    normalizeLimitWithDefault: vi.Mock;
+    parseKeywords: vi.Mock;
+    normalizeReadStatus: vi.Mock;
+    normalizeSearch: vi.Mock;
+    normalizeKeywordSource: vi.Mock;
   };
 
   beforeEach(async () => {
     commentsService = {
-      getComments: jest.fn(),
-      getCommentsCursor: jest.fn(),
-      setReadStatus: jest.fn(),
+      getComments: vi.fn(),
+      getCommentsCursor: vi.fn(),
+      setReadStatus: vi.fn(),
     };
 
     queryValidator = {
-      normalizeOffset: jest.fn((val: number) => Math.max(val, 0)),
-      normalizeLimit: jest.fn((val: number) => Math.min(Math.max(val, 1), 200)),
-      normalizeLimitWithDefault: jest.fn((val: number | undefined) =>
+      normalizeOffset: vi.fn((val: number) => Math.max(val, 0)),
+      normalizeLimit: vi.fn((val: number) => Math.min(Math.max(val, 1), 200)),
+      normalizeLimitWithDefault: vi.fn((val: number | undefined) =>
         Math.min(Math.max(val ?? 100, 1), 200),
       ),
-      parseKeywords: jest.fn((val: string | string[] | undefined) => {
+      parseKeywords: vi.fn((val: string | string[] | undefined) => {
         if (!val) return undefined;
         const values = Array.isArray(val) ? val : val.split(',');
         return values.map((v: string) => v.trim()).filter((v: string) => v);
       }),
-      normalizeReadStatus: jest.fn((val: string | undefined) => {
+      normalizeReadStatus: vi.fn((val: string | undefined) => {
         if (!val) return 'all';
         const normalized = val.toLowerCase();
         return normalized === 'read' || normalized === 'unread'
           ? normalized
           : 'all';
       }),
-      normalizeSearch: jest.fn(
+      normalizeSearch: vi.fn(
         (val: string | undefined) => val?.trim() || undefined,
       ),
-      normalizeKeywordSource: jest.fn((val: string | undefined) => {
+      normalizeKeywordSource: vi.fn((val: string | undefined) => {
         if (!val) return undefined;
         const normalized = val.toUpperCase();
         return normalized === 'COMMENT' || normalized === 'POST'

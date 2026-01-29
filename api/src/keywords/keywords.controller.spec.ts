@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { KeywordsController } from './keywords.controller.js';
@@ -6,12 +7,12 @@ import { AddKeywordDto } from './dto/add-keyword.dto.js';
 import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto.js';
 
 const mockKeywordsService = () => ({
-  addKeyword: jest.fn(),
-  bulkAddKeywords: jest.fn(),
-  addKeywordsFromFile: jest.fn(),
-  getKeywords: jest.fn(),
-  deleteAllKeywords: jest.fn(),
-  deleteKeyword: jest.fn(),
+  addKeyword: vi.fn(),
+  bulkAddKeywords: vi.fn(),
+  addKeywordsFromFile: vi.fn(),
+  getKeywords: vi.fn(),
+  deleteAllKeywords: vi.fn(),
+  deleteKeyword: vi.fn(),
 });
 
 describe('KeywordsController', () => {
@@ -34,7 +35,7 @@ describe('KeywordsController', () => {
       KeywordsService,
     ) as unknown as ReturnType<typeof mockKeywordsService>;
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('должен добавить ключевое слово через POST /add', async () => {

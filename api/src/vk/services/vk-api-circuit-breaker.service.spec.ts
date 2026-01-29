@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
@@ -9,20 +10,20 @@ import {
 describe('VkApiCircuitBreaker', () => {
   let service: VkApiCircuitBreaker;
   let mockCacheManager: {
-    get: jest.Mock;
-    set: jest.Mock;
-    del: jest.Mock;
+    get: vi.Mock;
+    set: vi.Mock;
+    del: vi.Mock;
   };
 
   beforeEach(async () => {
     mockCacheManager = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue(undefined),
-      del: jest.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue(undefined),
+      del: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockConfigService = {
-      get: jest.fn((key: string) => {
+      get: vi.fn((key: string) => {
         if (key === 'vkApiCircuitBreakerFailureThreshold') return 5;
         if (key === 'vkApiCircuitBreakerResetTimeoutMs') return 60000;
         if (key === 'vkApiCircuitBreakerHalfOpenMaxCalls') return 3;
@@ -53,7 +54,7 @@ describe('VkApiCircuitBreaker', () => {
 
   it('должен выполнять запрос при закрытом circuit breaker', async () => {
     mockCacheManager.get.mockResolvedValue(CircuitBreakerState.CLOSED);
-    const fn = jest.fn().mockResolvedValue('success');
+    const fn = vi.fn().mockResolvedValue('success');
 
     const result = await service.execute(fn);
 
@@ -63,7 +64,7 @@ describe('VkApiCircuitBreaker', () => {
 
   it('должен блокировать запросы при открытом circuit breaker', async () => {
     mockCacheManager.get.mockResolvedValue(CircuitBreakerState.OPEN);
-    const fn = jest.fn().mockResolvedValue('success');
+    const fn = vi.fn().mockResolvedValue('success');
 
     await expect(service.execute(fn)).rejects.toThrow(
       'Circuit breaker is OPEN',

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import {
   InternalServerErrorException,
   NotFoundException,
@@ -14,41 +15,41 @@ import type { IGroupsRepository } from './interfaces/groups-repository.interface
 import { GroupMapper } from './mappers/group.mapper.js';
 import { GroupIdentifierValidator } from './validators/group-identifier.validator.js';
 
-jest.mock('../vk/vk.service', () => ({
-  VkService: jest.fn(),
+vi.mock('../vk/vk.service', () => ({
+  VkService: vi.fn(),
 }));
 
 describe('GroupsService', () => {
   let service: GroupsService;
-  let repository: jest.Mocked<IGroupsRepository>;
+  let repository: vi.Mocked<IGroupsRepository>;
   let vkService: VkService;
-  let groupMapper: jest.Mocked<GroupMapper>;
-  let identifierValidator: jest.Mocked<GroupIdentifierValidator>;
+  let groupMapper: vi.Mocked<GroupMapper>;
+  let identifierValidator: vi.Mocked<GroupIdentifierValidator>;
   let repositoryObj: {
-    upsert: jest.Mock<Promise<unknown>, [unknown, unknown]>;
-    findMany: jest.Mock<Promise<unknown[]>, [unknown?]>;
-    count: jest.Mock<Promise<number>, []>;
-    getGroupsWithCount: jest.Mock<
+    upsert: vi.Mock<Promise<unknown>, [unknown, unknown]>;
+    findMany: vi.Mock<Promise<unknown[]>, [unknown?]>;
+    count: vi.Mock<Promise<number>, []>;
+    getGroupsWithCount: vi.Mock<
       Promise<{ items: unknown[]; total: number }>,
       [unknown]
     >;
-    delete: jest.Mock<Promise<unknown>, [{ id: number }]>;
-    deleteMany: jest.Mock<Promise<{ count: number }>, []>;
-    findManyByVkIds: jest.Mock<Promise<unknown[]>, [number[]]>;
+    delete: vi.Mock<Promise<unknown>, [{ id: number }]>;
+    deleteMany: vi.Mock<Promise<{ count: number }>, []>;
+    findManyByVkIds: vi.Mock<Promise<unknown[]>, [number[]]>;
   };
   let vkServiceObj: {
-    getGroups: jest.Mock<
+    getGroups: vi.Mock<
       Promise<{ groups: IGroup[]; profiles: unknown[] }>,
       [string | number]
     >;
-    searchGroupsByRegion: jest.Mock<Promise<IGroup[]>, [unknown]>;
+    searchGroupsByRegion: vi.Mock<Promise<IGroup[]>, [unknown]>;
   };
   let groupMapperObj: {
-    mapGroupData: jest.Mock<unknown, [IGroup]>;
+    mapGroupData: vi.Mock<unknown, [IGroup]>;
   };
   let identifierValidatorObj: {
-    normalizeIdentifier: jest.Mock<string, [string]>;
-    parseVkIdentifier: jest.Mock<string, [string]>;
+    normalizeIdentifier: vi.Mock<string, [string]>;
+    parseVkIdentifier: vi.Mock<string, [string]>;
   };
 
   const vkGroup = {
@@ -75,36 +76,36 @@ describe('GroupsService', () => {
 
   beforeEach(() => {
     repositoryObj = {
-      upsert: jest.fn<Promise<unknown>, [unknown, unknown]>(),
-      findMany: jest.fn<Promise<unknown[]>, [unknown?]>(),
-      count: jest.fn<Promise<number>, []>(),
-      getGroupsWithCount: jest.fn<
+      upsert: vi.fn<Promise<unknown>, [unknown, unknown]>(),
+      findMany: vi.fn<Promise<unknown[]>, [unknown?]>(),
+      count: vi.fn<Promise<number>, []>(),
+      getGroupsWithCount: vi.fn<
         Promise<{ items: unknown[]; total: number }>,
         [unknown]
       >(),
-      delete: jest.fn<Promise<unknown>, [{ id: number }]>(),
-      deleteMany: jest.fn<Promise<{ count: number }>, []>(),
-      findManyByVkIds: jest.fn<Promise<unknown[]>, [number[]]>(),
+      delete: vi.fn<Promise<unknown>, [{ id: number }]>(),
+      deleteMany: vi.fn<Promise<{ count: number }>, []>(),
+      findManyByVkIds: vi.fn<Promise<unknown[]>, [number[]]>(),
     };
     repository = repositoryObj as never;
 
     vkServiceObj = {
-      getGroups: jest.fn<
+      getGroups: vi.fn<
         Promise<{ groups: IGroup[]; profiles: unknown[] }>,
         [string | number]
       >(),
-      searchGroupsByRegion: jest.fn<Promise<IGroup[]>, [unknown]>(),
+      searchGroupsByRegion: vi.fn<Promise<IGroup[]>, [unknown]>(),
     };
     vkService = vkServiceObj as unknown as VkService;
 
     groupMapperObj = {
-      mapGroupData: jest.fn<unknown, [IGroup]>(),
+      mapGroupData: vi.fn<unknown, [IGroup]>(),
     };
     groupMapper = groupMapperObj as never;
 
     identifierValidatorObj = {
-      normalizeIdentifier: jest.fn((id: string) => id),
-      parseVkIdentifier: jest.fn((id: string) => id),
+      normalizeIdentifier: vi.fn((id: string) => id),
+      parseVkIdentifier: vi.fn((id: string) => id),
     };
     identifierValidator = identifierValidatorObj as never;
 
@@ -234,7 +235,7 @@ describe('GroupsService', () => {
       // Всего 13 идентификаторов: 'club1' и '1' нормализуются в '1' (дубликат),
       // 'club2'-'club11' (10 штук), 'errorGroup' = 12 уникальных
 
-      const setTimeoutSpy = jest
+      const setTimeoutSpy = vi
         .spyOn(global, 'setTimeout')
         .mockImplementation((callback: Parameters<typeof setTimeout>[0]) => {
           if (typeof callback === 'function') {
@@ -244,7 +245,7 @@ describe('GroupsService', () => {
           return 0 as unknown as ReturnType<typeof setTimeout>;
         });
 
-      const saveGroupMock = jest
+      const saveGroupMock = vi
         .spyOn(
           service as unknown as {
             saveGroup: (id: string | number) => Promise<IGroupResponse>;
@@ -309,7 +310,7 @@ describe('GroupsService', () => {
       failedCount: 0,
     } satisfies IBulkSaveGroupsResult;
 
-    const bulkSaveSpy = jest
+    const bulkSaveSpy = vi
       .spyOn(
         service as unknown as {
           bulkSaveGroups: (ids: string[]) => Promise<IBulkSaveGroupsResult>;

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { APIError } from 'vk-io';
@@ -8,7 +9,7 @@ describe('VkApiRetryService', () => {
 
   beforeEach(async () => {
     const mockConfigService = {
-      get: jest.fn((key: string) => {
+      get: vi.fn((key: string) => {
         if (key === 'vkApiRetryMaxAttempts') return 3;
         if (key === 'vkApiRetryInitialDelayMs') return 100;
         if (key === 'vkApiRetryMaxDelayMs') return 1000;
@@ -35,7 +36,7 @@ describe('VkApiRetryService', () => {
   });
 
   it('должен выполнять успешный запрос без retry', async () => {
-    const fn = jest.fn().mockResolvedValue('success');
+    const fn = vi.fn().mockResolvedValue('success');
 
     const result = await service.executeWithRetry(fn);
 
@@ -46,7 +47,7 @@ describe('VkApiRetryService', () => {
   it('должен повторять запрос при retryable ошибке', async () => {
     const error = new APIError({ message: 'Too many requests' } as never);
     error.code = 6;
-    const fn = jest
+    const fn = vi
       .fn()
       .mockRejectedValueOnce(error)
       .mockResolvedValue('success');
@@ -63,7 +64,7 @@ describe('VkApiRetryService', () => {
   it('должен выбрасывать ошибку при non-retryable ошибке', async () => {
     const error = new APIError({ message: 'Access denied' } as never);
     error.code = 15;
-    const fn = jest.fn().mockRejectedValue(error);
+    const fn = vi.fn().mockRejectedValue(error);
 
     await expect(service.executeWithRetry(fn)).rejects.toThrow(error);
     expect(fn).toHaveBeenCalledTimes(1);

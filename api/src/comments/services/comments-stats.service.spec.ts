@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsStatsService } from './comments-stats.service.js';
 import {
@@ -8,33 +9,33 @@ import { CommentsFilterBuilder } from '../builders/comments-filter.builder.js';
 
 describe('CommentsStatsService', () => {
   let service: CommentsStatsService;
-  let repository: jest.Mocked<ICommentsRepository>;
-  let filterBuilder: jest.Mocked<CommentsFilterBuilder>;
+  let repository: vi.Mocked<ICommentsRepository>;
+  let filterBuilder: vi.Mocked<CommentsFilterBuilder>;
   let repositoryObj: {
-    findMany: jest.Mock;
-    count: jest.Mock;
-    update: jest.Mock;
-    transaction: jest.Mock;
+    findMany: vi.Mock;
+    count: vi.Mock;
+    update: vi.Mock;
+    transaction: vi.Mock;
   };
   let filterBuilderObj: {
-    buildBaseWhere: jest.Mock;
-    buildReadStatusWhere: jest.Mock;
-    mergeWhere: jest.Mock;
+    buildBaseWhere: vi.Mock;
+    buildReadStatusWhere: vi.Mock;
+    mergeWhere: vi.Mock;
   };
 
   beforeEach(async () => {
     repositoryObj = {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      update: jest.fn(),
-      transaction: jest.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+      update: vi.fn(),
+      transaction: vi.fn(),
     };
     repository = repositoryObj as never;
 
     filterBuilderObj = {
-      buildBaseWhere: jest.fn(),
-      buildReadStatusWhere: jest.fn(),
-      mergeWhere: jest.fn(),
+      buildBaseWhere: vi.fn(),
+      buildReadStatusWhere: vi.fn(),
+      mergeWhere: vi.fn(),
     };
     filterBuilder = filterBuilderObj as never;
 

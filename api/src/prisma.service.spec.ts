@@ -1,10 +1,11 @@
+import { vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from './prisma.service.js';
 
 describe('PrismaService', () => {
   it('должен выбрасывать исключение при отсутствии DATABASE_URL', () => {
     const configService = {
-      get: jest.fn<string | undefined, [string]>().mockReturnValue(undefined),
+      get: vi.fn<string | undefined, [string]>().mockReturnValue(undefined),
     } as unknown as ConfigService;
 
     expect(() => new PrismaService(configService)).toThrow(

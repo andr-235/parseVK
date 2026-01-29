@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as http from 'http';
 import request from 'supertest';
@@ -13,23 +14,23 @@ describe('VkFriendsController (HTTP)', () => {
   let app: INestApplication;
   let controller: VkFriendsController;
   let vkFriendsService: {
-    createJob: jest.Mock;
-    getJobById: jest.Mock;
-    getJobLogs: jest.Mock;
+    createJob: vi.Mock;
+    getJobById: vi.Mock;
+    getJobLogs: vi.Mock;
   };
-  let exportJobService: { run: jest.Mock };
-  let fileService: { getExportFilePath: jest.Mock };
-  let jobStream: { emit: jest.Mock; getStream: jest.Mock };
+  let exportJobService: { run: vi.Mock };
+  let fileService: { getExportFilePath: vi.Mock };
+  let jobStream: { emit: vi.Mock; getStream: vi.Mock };
 
   beforeEach(async () => {
     vkFriendsService = {
-      createJob: jest.fn(),
-      getJobById: jest.fn(),
-      getJobLogs: jest.fn(),
+      createJob: vi.fn(),
+      getJobById: vi.fn(),
+      getJobLogs: vi.fn(),
     };
-    exportJobService = { run: jest.fn().mockResolvedValue(undefined) };
-    fileService = { getExportFilePath: jest.fn() };
-    jobStream = { emit: jest.fn(), getStream: jest.fn() };
+    exportJobService = { run: vi.fn().mockResolvedValue(undefined) };
+    fileService = { getExportFilePath: vi.fn() };
+    jobStream = { emit: vi.fn(), getStream: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [VkFriendsController],

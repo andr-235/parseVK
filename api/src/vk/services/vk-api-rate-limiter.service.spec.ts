@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
@@ -6,20 +7,20 @@ import { VkApiRateLimiter } from './vk-api-rate-limiter.service.js';
 describe('VkApiRateLimiter', () => {
   let service: VkApiRateLimiter;
   let mockCacheManager: {
-    get: jest.Mock;
-    set: jest.Mock;
-    del: jest.Mock;
+    get: vi.Mock;
+    set: vi.Mock;
+    del: vi.Mock;
   };
 
   beforeEach(async () => {
     mockCacheManager = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue(undefined),
-      del: jest.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue(undefined),
+      del: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockConfigService = {
-      get: jest.fn((key: string) => {
+      get: vi.fn((key: string) => {
         if (key === 'vkApiRateLimitRequests') return 3;
         if (key === 'vkApiRateLimitWindowMs') return 1000;
         return undefined;

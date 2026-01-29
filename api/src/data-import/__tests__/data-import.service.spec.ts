@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Prisma, type Listing } from '../../generated/prisma/client.js';
 import { DataImportService } from '../data-import.service.js';
 import type { IListingsRepository } from '../../listings/interfaces/listings-repository.interface.js';
@@ -41,25 +42,25 @@ const createListing = (overrides: Partial<Listing> = {}): Listing => ({
 
 describe('DataImportService', () => {
   let service: DataImportService;
-  let listingsRepository: jest.Mocked<IListingsRepository>;
-  let createMock: jest.Mock;
-  let upsertMock: jest.Mock;
-  let findUniqueByUrlMock: jest.Mock;
+  let listingsRepository: vi.Mocked<IListingsRepository>;
+  let createMock: vi.Mock;
+  let upsertMock: vi.Mock;
+  let findUniqueByUrlMock: vi.Mock;
 
   beforeEach(() => {
-    createMock = jest.fn();
-    upsertMock = jest.fn();
-    findUniqueByUrlMock = jest.fn();
+    createMock = vi.fn();
+    upsertMock = vi.fn();
+    findUniqueByUrlMock = vi.fn();
 
     listingsRepository = {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      findUniqueOrThrow: jest.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
       findUniqueByUrl: findUniqueByUrlMock,
       upsert: upsertMock,
-      update: jest.fn(),
-      getListingsWithCountAndSources: jest.fn(),
-      transaction: jest.fn(
+      update: vi.fn(),
+      getListingsWithCountAndSources: vi.fn(),
+      transaction: vi.fn(
         async <T>(
           callback: (tx: Prisma.TransactionClient) => Promise<T>,
         ): Promise<T> => {
@@ -71,7 +72,7 @@ describe('DataImportService', () => {
           return await callback(tx);
         },
       ),
-    } as unknown as jest.Mocked<IListingsRepository>;
+    } as unknown as vi.Mocked<IListingsRepository>;
 
     service = new DataImportService(listingsRepository);
   });

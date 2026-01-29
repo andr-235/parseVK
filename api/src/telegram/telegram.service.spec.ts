@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method */
+import { vi } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
 import {
   TelegramChatType,
@@ -21,43 +22,43 @@ import type { TelegramClient } from 'telegram';
 
 describe('TelegramService', () => {
   let service: TelegramService;
-  let clientManagerMock: jest.Mocked<TelegramClientManagerService>;
-  let chatMapperMock: jest.Mocked<TelegramChatMapper>;
-  let participantCollectorMock: jest.Mocked<TelegramParticipantCollectorService>;
-  let chatSyncMock: jest.Mocked<TelegramChatSyncService>;
-  let excelExporterMock: jest.Mocked<TelegramExcelExporterService>;
-  let chatRepositoryMock: jest.Mocked<TelegramChatRepository>;
+  let clientManagerMock: vi.Mocked<TelegramClientManagerService>;
+  let chatMapperMock: vi.Mocked<TelegramChatMapper>;
+  let participantCollectorMock: vi.Mocked<TelegramParticipantCollectorService>;
+  let chatSyncMock: vi.Mocked<TelegramChatSyncService>;
+  let excelExporterMock: vi.Mocked<TelegramExcelExporterService>;
+  let chatRepositoryMock: vi.Mocked<TelegramChatRepository>;
 
   beforeEach(() => {
     clientManagerMock = {
-      getClient: jest.fn(),
-      disconnect: jest.fn(),
-      onModuleDestroy: jest.fn(),
-    } as unknown as jest.Mocked<TelegramClientManagerService>;
+      getClient: vi.fn(),
+      disconnect: vi.fn(),
+      onModuleDestroy: vi.fn(),
+    } as unknown as vi.Mocked<TelegramClientManagerService>;
 
     chatMapperMock = {
-      resolveChat: jest.fn(),
-      composeUserTitle: jest.fn(),
-      toBigInt: jest.fn(),
-    } as unknown as jest.Mocked<TelegramChatMapper>;
+      resolveChat: vi.fn(),
+      composeUserTitle: vi.fn(),
+      toBigInt: vi.fn(),
+    } as unknown as vi.Mocked<TelegramChatMapper>;
 
     participantCollectorMock = {
-      collectParticipants: jest.fn(),
-    } as unknown as jest.Mocked<TelegramParticipantCollectorService>;
+      collectParticipants: vi.fn(),
+    } as unknown as vi.Mocked<TelegramParticipantCollectorService>;
 
     chatSyncMock = {
-      persistChat: jest.fn(),
-    } as unknown as jest.Mocked<TelegramChatSyncService>;
+      persistChat: vi.fn(),
+    } as unknown as vi.Mocked<TelegramChatSyncService>;
 
     excelExporterMock = {
-      exportChatToExcel: jest.fn(),
-    } as unknown as jest.Mocked<TelegramExcelExporterService>;
+      exportChatToExcel: vi.fn(),
+    } as unknown as vi.Mocked<TelegramExcelExporterService>;
 
     chatRepositoryMock = {
-      findById: jest.fn(),
-      findByTelegramId: jest.fn(),
-      upsert: jest.fn(),
-    } as unknown as jest.Mocked<TelegramChatRepository>;
+      findById: vi.fn(),
+      findByTelegramId: vi.fn(),
+      upsert: vi.fn(),
+    } as unknown as vi.Mocked<TelegramChatRepository>;
 
     service = new TelegramService(
       clientManagerMock,
@@ -70,7 +71,7 @@ describe('TelegramService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('throws BadRequestException when identifier is empty', async () => {
@@ -82,7 +83,7 @@ describe('TelegramService', () => {
   it('returns sync result with persisted data', async () => {
     const fakeEntity = {};
     const mockClient = {
-      getEntity: jest.fn().mockResolvedValue(fakeEntity),
+      getEntity: vi.fn().mockResolvedValue(fakeEntity),
     } as unknown as TelegramClient;
 
     clientManagerMock.getClient.mockResolvedValue(mockClient);

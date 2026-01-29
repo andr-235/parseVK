@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import {
   INestApplication,
   NotFoundException,
@@ -9,27 +10,27 @@ import request from 'supertest';
 import { GroupsController } from './groups.controller.js';
 import { GroupsService } from './groups.service.js';
 
-jest.mock('../vk/vk.service', () => ({
-  VkService: jest.fn(),
+vi.mock('../vk/vk.service', () => ({
+  VkService: vi.fn(),
 }));
 
 describe('GroupsController (HTTP)', () => {
   let app: INestApplication;
   let groupsService: {
-    saveGroup: jest.Mock;
-    uploadGroupsFromFile: jest.Mock;
-    getAllGroups: jest.Mock;
-    deleteAllGroups: jest.Mock;
-    deleteGroup: jest.Mock;
+    saveGroup: vi.Mock;
+    uploadGroupsFromFile: vi.Mock;
+    getAllGroups: vi.Mock;
+    deleteAllGroups: vi.Mock;
+    deleteGroup: vi.Mock;
   };
 
   beforeEach(async () => {
     groupsService = {
-      saveGroup: jest.fn(),
-      uploadGroupsFromFile: jest.fn(),
-      getAllGroups: jest.fn(),
-      deleteAllGroups: jest.fn(),
-      deleteGroup: jest.fn(),
+      saveGroup: vi.fn(),
+      uploadGroupsFromFile: vi.fn(),
+      getAllGroups: vi.fn(),
+      deleteAllGroups: vi.fn(),
+      deleteGroup: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

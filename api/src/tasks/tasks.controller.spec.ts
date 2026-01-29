@@ -1,4 +1,6 @@
-jest.mock('vk-io', () => ({
+import { vi } from 'vitest';
+
+vi.mock('vk-io', () => ({
   APIError: class MockApiError extends Error {
     code = 0;
   },
@@ -14,8 +16,8 @@ import type { TaskDetail, TaskSummary } from './interfaces/task.interface.js';
 describe('TasksController', () => {
   let controller: TasksController;
   const tasksService = {
-    createParsingTask: jest.fn<Promise<ParsingTaskResult>, any>(),
-    getTasks: jest.fn<
+    createParsingTask: vi.fn<Promise<ParsingTaskResult>, any>(),
+    getTasks: vi.fn<
       Promise<{
         tasks: TaskSummary[];
         total: number;
@@ -26,9 +28,9 @@ describe('TasksController', () => {
       }>,
       any
     >(),
-    getTask: jest.fn<Promise<TaskDetail>, any>(),
-    resumeTask: jest.fn<Promise<ParsingTaskResult>, any>(),
-    refreshTask: jest.fn<Promise<ParsingTaskResult>, any>(),
+    getTask: vi.fn<Promise<TaskDetail>, any>(),
+    resumeTask: vi.fn<Promise<ParsingTaskResult>, any>(),
+    refreshTask: vi.fn<Promise<ParsingTaskResult>, any>(),
   };
 
   beforeEach(async () => {

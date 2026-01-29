@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { CommentSource } from '../types/comment-source.enum.js';
 import { MatchSource } from '../types/match-source.enum.js';
 import { AuthorActivityService } from './author-activity.service.js';
@@ -8,21 +9,21 @@ import type { VkService } from '../../vk/vk.service.js';
 describe('AuthorActivityService - keyword matches', () => {
   let service: AuthorActivityService;
   let prismaMock: {
-    comment: { upsert: jest.Mock<Promise<{ id: number }>> };
+    comment: { upsert: vi.Mock<Promise<{ id: number }>> };
     post: {
-      findUnique: jest.Mock<
+      findUnique: vi.Mock<
         Promise<{ id: number; ownerId: number; postId: number } | null>
       >;
     };
     keyword: {
-      findMany: jest.Mock<Promise<Array<{ id: number; word: string }>>>;
+      findMany: vi.Mock<Promise<Array<{ id: number; word: string }>>>;
     };
     commentKeywordMatch: {
-      findMany: jest.Mock<Promise<Array<{ keywordId: number }>>>;
-      deleteMany: jest.Mock<Promise<{ count: number }>>;
-      createMany: jest.Mock<Promise<{ count: number }>>;
+      findMany: vi.Mock<Promise<Array<{ keywordId: number }>>>;
+      deleteMany: vi.Mock<Promise<{ count: number }>>;
+      createMany: vi.Mock<Promise<{ count: number }>>;
     };
-    $transaction: jest.Mock<Promise<unknown>, [unknown]>;
+    $transaction: vi.Mock<Promise<unknown>, [unknown]>;
   };
 
   const baseComment: CommentEntity = {
@@ -45,12 +46,12 @@ describe('AuthorActivityService - keyword matches', () => {
   beforeEach(() => {
     prismaMock = {
       comment: {
-        upsert: jest
+        upsert: vi
           .fn<Promise<{ id: number }>, [unknown]>()
           .mockResolvedValue({ id: 42 }),
       },
       post: {
-        findUnique: jest
+        findUnique: vi
           .fn<
             Promise<{ id: number; ownerId: number; postId: number } | null>,
             [unknown]
@@ -58,7 +59,7 @@ describe('AuthorActivityService - keyword matches', () => {
           .mockResolvedValue({ id: 1, ownerId: 1, postId: 1 }),
       },
       keyword: {
-        findMany: jest
+        findMany: vi
           .fn<Promise<Array<{ id: number; word: string }>>, [unknown]>()
           .mockResolvedValue([
             { id: 11, word: 'ёжик' },
@@ -66,17 +67,17 @@ describe('AuthorActivityService - keyword matches', () => {
           ]),
       },
       commentKeywordMatch: {
-        findMany: jest
+        findMany: vi
           .fn<Promise<Array<{ keywordId: number }>>, [unknown]>()
           .mockResolvedValue([]),
-        deleteMany: jest
+        deleteMany: vi
           .fn<Promise<{ count: number }>, [unknown]>()
           .mockResolvedValue({ count: 0 }),
-        createMany: jest
+        createMany: vi
           .fn<Promise<{ count: number }>, [unknown]>()
           .mockResolvedValue({ count: 0 }),
       },
-      $transaction: jest
+      $transaction: vi
         .fn<Promise<unknown>, [unknown]>()
         .mockImplementation(async (arg: unknown) => {
           if (typeof arg === 'function') {

@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-jest.mock('vk-io', () => ({
+import { vi } from 'vitest';
+
+vi.mock('vk-io', () => ({
   APIError: class MockApiError extends Error {
     code = 0;
   },
@@ -26,13 +27,13 @@ import type {
 
 describe('TasksService', () => {
   let service: TasksService;
-  let repositoryMock: jest.Mocked<ITasksRepository>;
-  let runnerMock: jest.Mocked<ParsingTaskRunner>;
-  let queueMock: jest.Mocked<ParsingQueueService>;
-  let taskMapperMock: jest.Mocked<TaskMapper>;
-  let descriptionParserMock: jest.Mocked<TaskDescriptionParser>;
-  let contextBuilderMock: jest.Mocked<TaskContextBuilder>;
-  let cancellationServiceMock: jest.Mocked<TaskCancellationService>;
+  let repositoryMock: vi.Mocked<ITasksRepository>;
+  let runnerMock: vi.Mocked<ParsingTaskRunner>;
+  let queueMock: vi.Mocked<ParsingQueueService>;
+  let taskMapperMock: vi.Mocked<TaskMapper>;
+  let descriptionParserMock: vi.Mocked<TaskDescriptionParser>;
+  let contextBuilderMock: vi.Mocked<TaskContextBuilder>;
+  let cancellationServiceMock: vi.Mocked<TaskCancellationService>;
 
   const createTaskRecord = (
     overrides: Partial<TaskRecord> = {},
@@ -56,61 +57,61 @@ describe('TasksService', () => {
 
   beforeEach(() => {
     repositoryMock = {
-      create: jest.fn<Promise<TaskRecord>, [unknown]>(),
-      findMany: jest.fn<Promise<TaskRecord[]>, [unknown?]>(),
-      findUnique: jest.fn<Promise<TaskRecord | null>, [{ id: number }]>(),
-      update: jest.fn<Promise<TaskRecord | null>, [{ id: number }, unknown]>(),
-      delete: jest.fn<Promise<void>, [{ id: number }]>(),
-      count: jest.fn<Promise<number>, []>(),
-    } as jest.Mocked<ITasksRepository>;
+      create: vi.fn<Promise<TaskRecord>, [unknown]>(),
+      findMany: vi.fn<Promise<TaskRecord[]>, [unknown?]>(),
+      findUnique: vi.fn<Promise<TaskRecord | null>, [{ id: number }]>(),
+      update: vi.fn<Promise<TaskRecord | null>, [{ id: number }, unknown]>(),
+      delete: vi.fn<Promise<void>, [{ id: number }]>(),
+      count: vi.fn<Promise<number>, []>(),
+    } as vi.Mocked<ITasksRepository>;
 
     runnerMock = {
-      execute: jest.fn(),
-      resolveGroups: jest.fn(),
-      buildTaskTitle: jest.fn(),
-    } as unknown as jest.Mocked<ParsingTaskRunner>;
+      execute: vi.fn(),
+      resolveGroups: vi.fn(),
+      buildTaskTitle: vi.fn(),
+    } as unknown as vi.Mocked<ParsingTaskRunner>;
 
     queueMock = {
-      enqueue: jest.fn(),
-      remove: jest.fn(),
-      getStats: jest.fn(),
-      pause: jest.fn(),
-      resume: jest.fn(),
-    } as unknown as jest.Mocked<ParsingQueueService>;
+      enqueue: vi.fn(),
+      remove: vi.fn(),
+      getStats: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+    } as unknown as vi.Mocked<ParsingQueueService>;
 
     taskMapperMock = {
-      mapToDetail: jest.fn(),
-      mapToSummary: jest.fn(),
-      parseTaskStatus: jest.fn(),
-      resolveTaskStatus: jest.fn(),
-    } as jest.Mocked<TaskMapper>;
+      mapToDetail: vi.fn(),
+      mapToSummary: vi.fn(),
+      parseTaskStatus: vi.fn(),
+      resolveTaskStatus: vi.fn(),
+    } as vi.Mocked<TaskMapper>;
 
     descriptionParserMock = {
-      parse: jest.fn(),
-      stringify: jest.fn(),
-      createEmpty: jest.fn(),
-      parseScope: jest.fn(),
-      parseGroupIds: jest.fn(),
-      parseSkippedGroupIds: jest.fn(),
-      parsePostLimit: jest.fn(),
-      parseStats: jest.fn(),
-      parseNumericField: jest.fn(),
-    } as unknown as jest.Mocked<TaskDescriptionParser>;
+      parse: vi.fn(),
+      stringify: vi.fn(),
+      createEmpty: vi.fn(),
+      parseScope: vi.fn(),
+      parseGroupIds: vi.fn(),
+      parseSkippedGroupIds: vi.fn(),
+      parsePostLimit: vi.fn(),
+      parseStats: vi.fn(),
+      parseNumericField: vi.fn(),
+    } as unknown as vi.Mocked<TaskDescriptionParser>;
 
     contextBuilderMock = {
-      buildResumeContext: jest.fn(),
+      buildResumeContext: vi.fn(),
       runner: {} as unknown as ParsingTaskRunner,
       parser: {} as unknown as TaskDescriptionParser,
-      normalizePostLimit: jest.fn(),
-    } as unknown as jest.Mocked<TaskContextBuilder>;
+      normalizePostLimit: vi.fn(),
+    } as unknown as vi.Mocked<TaskContextBuilder>;
 
     cancellationServiceMock = {
-      requestCancel: jest.fn(),
-      clear: jest.fn(),
-      isCancelled: jest.fn(),
-      throwIfCancelled: jest.fn(),
+      requestCancel: vi.fn(),
+      clear: vi.fn(),
+      isCancelled: vi.fn(),
+      throwIfCancelled: vi.fn(),
       cancelledTasks: new Set<number>(),
-    } as unknown as jest.Mocked<TaskCancellationService>;
+    } as unknown as vi.Mocked<TaskCancellationService>;
 
     service = new TasksService(
       repositoryMock,
@@ -290,7 +291,7 @@ describe('TasksService', () => {
   describe('getTask', () => {
     it('returns detailed task data', async () => {
       const task = createTaskRecord({ id: 7 });
-      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
+      (repositoryMock.findUnique as vi.Mock).mockResolvedValue(task);
 
       const parsed = {
         scope: ParsingScope.ALL,
@@ -334,7 +335,7 @@ describe('TasksService', () => {
         code = 'P2025';
         meta = { modelName: 'Task' };
       }
-      (repositoryMock.findUnique as jest.Mock).mockRejectedValue(
+      (repositoryMock.findUnique as vi.Mock).mockRejectedValue(
         new MockNotFoundError('Record to find does not exist.'),
       );
 
@@ -366,9 +367,9 @@ describe('TasksService', () => {
         }),
       });
 
-      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
+      (repositoryMock.findUnique as vi.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('failed');
-      (contextBuilderMock.buildResumeContext as jest.Mock).mockResolvedValue({
+      (contextBuilderMock.buildResumeContext as vi.Mock).mockResolvedValue({
         scope: ParsingScope.SELECTED,
         groupIds: [11, 12, 13],
         postLimit: 20,
@@ -466,9 +467,9 @@ describe('TasksService', () => {
           postLimit: 10,
         }),
       });
-      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
+      (repositoryMock.findUnique as vi.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('running');
-      (contextBuilderMock.buildResumeContext as jest.Mock).mockResolvedValue({
+      (contextBuilderMock.buildResumeContext as vi.Mock).mockResolvedValue({
         scope: ParsingScope.ALL,
         groupIds: [],
         postLimit: 10,
@@ -548,9 +549,9 @@ describe('TasksService', () => {
           postLimit: 15,
         }),
       });
-      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
+      (repositoryMock.findUnique as vi.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('pending');
-      (contextBuilderMock.buildResumeContext as jest.Mock).mockResolvedValue({
+      (contextBuilderMock.buildResumeContext as vi.Mock).mockResolvedValue({
         scope: ParsingScope.SELECTED,
         groupIds: [10, 11],
         postLimit: 15,
@@ -616,7 +617,7 @@ describe('TasksService', () => {
 
     it('throws when task already completed', async () => {
       const task = createTaskRecord({ id: 2, status: 'done', completed: true });
-      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
+      (repositoryMock.findUnique as vi.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('done');
 
       await expect(service.resumeTask(2)).rejects.toBeInstanceOf(
@@ -635,7 +636,7 @@ describe('TasksService', () => {
         }),
       });
 
-      (repositoryMock.findUnique as jest.Mock).mockResolvedValue(task);
+      (repositoryMock.findUnique as vi.Mock).mockResolvedValue(task);
       taskMapperMock.parseTaskStatus.mockReturnValue('failed');
       contextBuilderMock.buildResumeContext.mockRejectedValue(
         new NotFoundException('Нет доступных групп для парсинга'),
@@ -663,13 +664,13 @@ describe('TasksService', () => {
         }),
       });
 
-      const findUniqueMock = repositoryMock.findUnique as jest.Mock<
+      const findUniqueMock = repositoryMock.findUnique as vi.Mock<
         Promise<TaskRecord | null>,
         [{ id: number }]
       >;
       void findUniqueMock.mockResolvedValue(task);
       const buildResumeContextMock =
-        contextBuilderMock.buildResumeContext as jest.Mock;
+        contextBuilderMock.buildResumeContext as vi.Mock;
       void buildResumeContextMock.mockResolvedValue({
         scope: ParsingScope.SELECTED,
         groupIds: [1, 2, 3],
@@ -749,13 +750,13 @@ describe('TasksService', () => {
         }),
       });
 
-      const findUniqueMock = repositoryMock.findUnique as jest.Mock<
+      const findUniqueMock = repositoryMock.findUnique as vi.Mock<
         Promise<TaskRecord | null>,
         [{ id: number }]
       >;
       void findUniqueMock.mockResolvedValue(task);
       const buildResumeContextMock =
-        contextBuilderMock.buildResumeContext as jest.Mock;
+        contextBuilderMock.buildResumeContext as vi.Mock;
       void buildResumeContextMock.mockResolvedValue({
         scope: ParsingScope.ALL,
         groupIds: [],

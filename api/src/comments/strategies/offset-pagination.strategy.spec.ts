@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { OffsetPaginationStrategy } from './offset-pagination.strategy.js';
 import {
@@ -49,49 +50,49 @@ const realMapper = new CommentMapper();
 
 describe('OffsetPaginationStrategy', () => {
   let strategy: OffsetPaginationStrategy;
-  let repositoryMock: jest.Mocked<ICommentsRepository>;
-  let filterBuilderMock: jest.Mocked<CommentsFilterBuilder>;
-  let mapperMock: jest.Mocked<CommentMapper>;
-  let statsServiceMock: jest.Mocked<CommentsStatsService>;
+  let repositoryMock: vi.Mocked<ICommentsRepository>;
+  let filterBuilderMock: vi.Mocked<CommentsFilterBuilder>;
+  let mapperMock: vi.Mocked<CommentMapper>;
+  let statsServiceMock: vi.Mocked<CommentsStatsService>;
   let repositoryObj: {
-    findMany: jest.Mock;
-    count: jest.Mock;
-    update: jest.Mock;
-    transaction: jest.Mock;
+    findMany: vi.Mock;
+    count: vi.Mock;
+    update: vi.Mock;
+    transaction: vi.Mock;
   };
   let filterBuilderObj: {
-    buildWhere: jest.Mock;
+    buildWhere: vi.Mock;
   };
   let mapperObj: {
-    map: jest.Mock;
-    mapMany: jest.Mock;
+    map: vi.Mock;
+    mapMany: vi.Mock;
   };
   let statsServiceObj: {
-    calculateStats: jest.Mock;
+    calculateStats: vi.Mock;
   };
 
   beforeEach(async () => {
     repositoryObj = {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      update: jest.fn(),
-      transaction: jest.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+      update: vi.fn(),
+      transaction: vi.fn(),
     };
     repositoryMock = repositoryObj as never;
 
     filterBuilderObj = {
-      buildWhere: jest.fn(),
+      buildWhere: vi.fn(),
     };
     filterBuilderMock = filterBuilderObj as never;
 
     mapperObj = {
-      map: jest.fn(),
-      mapMany: jest.fn(),
+      map: vi.fn(),
+      mapMany: vi.fn(),
     };
     mapperMock = mapperObj as never;
 
     statsServiceObj = {
-      calculateStats: jest.fn(),
+      calculateStats: vi.fn(),
     };
     statsServiceMock = statsServiceObj as never;
 

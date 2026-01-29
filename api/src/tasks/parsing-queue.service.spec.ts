@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/unbound-method */
+import { vi } from 'vitest';
 import { ParsingQueueService } from './parsing-queue.service.js';
 import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface.js';
 import { ParsingQueueProducer } from './queues/parsing.queue.js';
@@ -6,15 +6,15 @@ import { ParsingScope } from './dto/create-parsing-task.dto.js';
 
 describe('ParsingQueueService', () => {
   let service: ParsingQueueService;
-  let producerMock: jest.Mocked<ParsingQueueProducer>;
+  let producerMock: vi.Mocked<ParsingQueueProducer>;
 
   beforeEach(() => {
     producerMock = {
-      enqueue: jest
+      enqueue: vi
         .fn<Promise<void>, [ParsingTaskJobData]>()
         .mockResolvedValue(undefined),
-      remove: jest.fn<Promise<void>, [number]>().mockResolvedValue(undefined),
-      getStats: jest
+      remove: vi.fn<Promise<void>, [number]>().mockResolvedValue(undefined),
+      getStats: vi
         .fn<
           Promise<{
             waiting: number;
@@ -34,16 +34,16 @@ describe('ParsingQueueService', () => {
           delayed: 0,
           total: 0,
         }),
-      pause: jest.fn<Promise<void>, []>().mockResolvedValue(undefined),
-      resume: jest.fn<Promise<void>, []>().mockResolvedValue(undefined),
-      clear: jest.fn<Promise<void>, []>().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<ParsingQueueProducer>;
+      pause: vi.fn<Promise<void>, []>().mockResolvedValue(undefined),
+      resume: vi.fn<Promise<void>, []>().mockResolvedValue(undefined),
+      clear: vi.fn<Promise<void>, []>().mockResolvedValue(undefined),
+    } as unknown as vi.Mocked<ParsingQueueProducer>;
 
     service = new ParsingQueueService(producerMock);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('enqueue', () => {
@@ -68,7 +68,7 @@ describe('ParsingQueueService', () => {
 
       await service.remove(taskId);
 
-      const removeMock = producerMock.remove as jest.Mock<
+      const removeMock = producerMock.remove as vi.Mock<
         Promise<void>,
         [number]
       >;
@@ -92,7 +92,7 @@ describe('ParsingQueueService', () => {
         total: 111,
       };
 
-      (producerMock.getStats as jest.Mock).mockResolvedValue(mockStats);
+      (producerMock.getStats as vi.Mock).mockResolvedValue(mockStats);
 
       const stats = await service.getStats();
 

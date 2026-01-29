@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { vi } from 'vitest';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { HealthService } from './common/services/health.service.js';
@@ -14,8 +15,8 @@ describe('AppController', () => {
         {
           provide: HealthService,
           useValue: {
-            checkHealth: jest.fn<Promise<unknown>, []>(),
-            checkReadiness: jest.fn<Promise<unknown>, []>(),
+            checkHealth: vi.fn<Promise<unknown>, []>(),
+            checkReadiness: vi.fn<Promise<unknown>, []>(),
           },
         },
       ],

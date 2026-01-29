@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { KeywordsService } from './keywords.service.js';
 import type { IKeywordsRepository } from './interfaces/keywords-repository.interface.js';
 import { KeywordsMatchesService } from './services/keywords-matches.service.js';
@@ -5,32 +6,32 @@ import type { IBulkAddResponse } from './interfaces/keyword.interface.js';
 
 describe('KeywordsService', () => {
   let service: KeywordsService;
-  let repositoryMock: jest.Mocked<IKeywordsRepository>;
-  let matchesServiceMock: jest.Mocked<KeywordsMatchesService>;
+  let repositoryMock: vi.Mocked<IKeywordsRepository>;
+  let matchesServiceMock: vi.Mocked<KeywordsMatchesService>;
 
   beforeEach(() => {
     repositoryMock = {
-      findUnique: jest.fn<Promise<unknown>, [{ word: string }]>(),
-      findMany: jest.fn<
+      findUnique: vi.fn<Promise<unknown>, [{ word: string }]>(),
+      findMany: vi.fn<
         Promise<unknown[]>,
         [unknown?, unknown?, number?, number?]
       >(),
-      create: jest.fn<Promise<unknown>, [unknown]>(),
-      update: jest.fn<Promise<unknown>, [{ id: number }, unknown]>(),
-      delete: jest.fn<Promise<void>, [{ id: number }]>(),
-      deleteMany: jest.fn<Promise<{ count: number }>, []>(),
-      findManyWithSelect: jest.fn<
+      create: vi.fn<Promise<unknown>, [unknown]>(),
+      update: vi.fn<Promise<unknown>, [{ id: number }, unknown]>(),
+      delete: vi.fn<Promise<void>, [{ id: number }]>(),
+      deleteMany: vi.fn<Promise<{ count: number }>, []>(),
+      findManyWithSelect: vi.fn<
         Promise<Array<{ id: number; word: string; isPhrase: boolean }>>,
         [unknown]
       >(),
-      count: jest.fn<Promise<number>, [unknown?]>(),
-      countComments: jest.fn<Promise<number>, []>(),
-      countPosts: jest.fn<Promise<number>, []>(),
-      findCommentsBatch: jest.fn<
+      count: vi.fn<Promise<number>, [unknown?]>(),
+      countComments: vi.fn<Promise<number>, []>(),
+      countPosts: vi.fn<Promise<number>, []>(),
+      findCommentsBatch: vi.fn<
         Promise<Array<{ id: number; text: string | null }>>,
         [unknown]
       >(),
-      findPostsBatch: jest.fn<
+      findPostsBatch: vi.fn<
         Promise<
           Array<{
             id: number;
@@ -41,27 +42,27 @@ describe('KeywordsService', () => {
         >,
         [unknown]
       >(),
-      findCommentsByPost: jest.fn<Promise<Array<{ id: number }>>, [unknown]>(),
-      findCommentKeywordMatches: jest.fn<
+      findCommentsByPost: vi.fn<Promise<Array<{ id: number }>>, [unknown]>(),
+      findCommentKeywordMatches: vi.fn<
         Promise<Array<{ keywordId: number }>>,
         [unknown]
       >(),
-      findPostKeywordMatches: jest.fn<
+      findPostKeywordMatches: vi.fn<
         Promise<Array<{ commentId: number; keywordId: number }>>,
         [unknown]
       >(),
-      deleteCommentKeywordMatches: jest.fn<Promise<void>, [unknown]>(),
-      deletePostKeywordMatches: jest.fn<Promise<void>, [unknown]>(),
-      createCommentKeywordMatches: jest.fn<Promise<void>, [unknown]>(),
-    } as jest.Mocked<IKeywordsRepository>;
+      deleteCommentKeywordMatches: vi.fn<Promise<void>, [unknown]>(),
+      deletePostKeywordMatches: vi.fn<Promise<void>, [unknown]>(),
+      createCommentKeywordMatches: vi.fn<Promise<void>, [unknown]>(),
+    } as vi.Mocked<IKeywordsRepository>;
 
     matchesServiceMock = {
       repository: repositoryMock,
-      recalculateKeywordMatches: jest.fn(),
-    } as unknown as jest.Mocked<KeywordsMatchesService>;
+      recalculateKeywordMatches: vi.fn(),
+    } as unknown as vi.Mocked<KeywordsMatchesService>;
 
     service = new KeywordsService(repositoryMock, matchesServiceMock);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     repositoryMock.findMany.mockResolvedValue([]);
   });
 
@@ -129,7 +130,7 @@ describe('KeywordsService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const addKeywordSpy = jest
+    const addKeywordSpy = vi
       .spyOn(service, 'addKeyword')
       .mockResolvedValue(keyword);
 
@@ -151,7 +152,7 @@ describe('KeywordsService', () => {
 
   it('должен собирать ошибки при исключениях в bulkAddKeywords', async () => {
     const error = new Error('duplicate');
-    jest.spyOn(service, 'addKeyword').mockRejectedValueOnce(error);
+    vi.spyOn(service, 'addKeyword').mockRejectedValueOnce(error);
 
     const result = await service.bulkAddKeywords(['one']);
 
@@ -176,7 +177,7 @@ describe('KeywordsService', () => {
     const updatedKeyword = { ...existingKeyword, category: 'Маркетинг' };
 
     repositoryMock.findMany.mockResolvedValue([existingKeyword]);
-    jest.spyOn(service, 'addKeyword').mockResolvedValue(updatedKeyword);
+    vi.spyOn(service, 'addKeyword').mockResolvedValue(updatedKeyword);
 
     const result = await (
       service as unknown as {
@@ -201,7 +202,7 @@ describe('KeywordsService', () => {
 
   it('должен разбирать текстовый файл и сохранять категории из него', async () => {
     const fileContent = 'first\ncategory; second\nthird; marketing\n';
-    const bulkSpy = jest
+    const bulkSpy = vi
       .spyOn(
         service as unknown as {
           bulkAddKeywordEntries: (

@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { CommentsService } from './comments.service.js';
 import type { ICommentsRepository } from './interfaces/comments-repository.interface.js';
 import type { CommentWithRelations } from './interfaces/comments-repository.interface.js';
@@ -10,49 +11,49 @@ import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto.js';
 
 describe('CommentsService', () => {
   let service: CommentsService;
-  let repository: jest.Mocked<ICommentsRepository>;
-  let offsetStrategy: jest.Mocked<OffsetPaginationStrategy>;
-  let cursorStrategy: jest.Mocked<CursorPaginationStrategy>;
-  let mapper: jest.Mocked<CommentMapper>;
+  let repository: vi.Mocked<ICommentsRepository>;
+  let offsetStrategy: vi.Mocked<OffsetPaginationStrategy>;
+  let cursorStrategy: vi.Mocked<CursorPaginationStrategy>;
+  let mapper: vi.Mocked<CommentMapper>;
   let repositoryObj: {
-    findMany: jest.Mock<Promise<CommentWithRelations[]>, [unknown]>;
-    count: jest.Mock<Promise<number>, [unknown]>;
-    update: jest.Mock<Promise<CommentWithRelations>, [unknown]>;
-    transaction: jest.Mock<Promise<unknown[]>, [unknown[]]>;
+    findMany: vi.Mock<Promise<CommentWithRelations[]>, [unknown]>;
+    count: vi.Mock<Promise<number>, [unknown]>;
+    update: vi.Mock<Promise<CommentWithRelations>, [unknown]>;
+    transaction: vi.Mock<Promise<unknown[]>, [unknown[]]>;
   };
   let offsetStrategyObj: {
-    execute: jest.Mock<Promise<CommentsListDto>, [unknown, unknown]>;
+    execute: vi.Mock<Promise<CommentsListDto>, [unknown, unknown]>;
   };
   let cursorStrategyObj: {
-    execute: jest.Mock<Promise<CommentsCursorListDto>, [unknown, unknown]>;
+    execute: vi.Mock<Promise<CommentsCursorListDto>, [unknown, unknown]>;
   };
   let mapperObj: {
-    map: jest.Mock<CommentWithAuthorDto, [CommentWithRelations]>;
-    mapMany: jest.Mock<CommentWithAuthorDto[], [CommentWithRelations[]]>;
+    map: vi.Mock<CommentWithAuthorDto, [CommentWithRelations]>;
+    mapMany: vi.Mock<CommentWithAuthorDto[], [CommentWithRelations[]]>;
   };
 
   beforeEach(() => {
     repositoryObj = {
-      findMany: jest.fn<Promise<CommentWithRelations[]>, [unknown]>(),
-      count: jest.fn<Promise<number>, [unknown]>(),
-      update: jest.fn<Promise<CommentWithRelations>, [unknown]>(),
-      transaction: jest.fn<Promise<unknown[]>, [unknown[]]>(),
+      findMany: vi.fn<Promise<CommentWithRelations[]>, [unknown]>(),
+      count: vi.fn<Promise<number>, [unknown]>(),
+      update: vi.fn<Promise<CommentWithRelations>, [unknown]>(),
+      transaction: vi.fn<Promise<unknown[]>, [unknown[]]>(),
     };
     repository = repositoryObj as never;
 
     offsetStrategyObj = {
-      execute: jest.fn<Promise<CommentsListDto>, [unknown, unknown]>(),
+      execute: vi.fn<Promise<CommentsListDto>, [unknown, unknown]>(),
     };
     offsetStrategy = offsetStrategyObj as never;
 
     cursorStrategyObj = {
-      execute: jest.fn<Promise<CommentsCursorListDto>, [unknown, unknown]>(),
+      execute: vi.fn<Promise<CommentsCursorListDto>, [unknown, unknown]>(),
     };
     cursorStrategy = cursorStrategyObj as never;
 
     mapperObj = {
-      map: jest.fn<CommentWithAuthorDto, [CommentWithRelations]>(),
-      mapMany: jest.fn<CommentWithAuthorDto[], [CommentWithRelations[]]>(),
+      map: vi.fn<CommentWithAuthorDto, [CommentWithRelations]>(),
+      mapMany: vi.fn<CommentWithAuthorDto[], [CommentWithRelations[]]>(),
     };
     mapper = mapperObj as never;
 

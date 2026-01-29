@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '../../generated/prisma/client.js';
 import { CommentsRepository } from './comments.repository.js';
@@ -43,21 +44,21 @@ describe('CommentsRepository', () => {
   let repository: CommentsRepository;
   let prismaService: {
     comment: {
-      findMany: jest.Mock;
-      count: jest.Mock;
-      update: jest.Mock;
+      findMany: vi.Mock;
+      count: vi.Mock;
+      update: vi.Mock;
     };
-    $transaction: jest.Mock;
+    $transaction: vi.Mock;
   };
 
   beforeEach(async () => {
     prismaService = {
       comment: {
-        findMany: jest.fn(),
-        count: jest.fn(),
-        update: jest.fn(),
+        findMany: vi.fn(),
+        count: vi.fn(),
+        update: vi.fn(),
       },
-      $transaction: jest.fn(),
+      $transaction: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

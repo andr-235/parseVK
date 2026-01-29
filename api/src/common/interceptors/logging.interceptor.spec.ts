@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { CallHandler, ExecutionContext, Logger } from '@nestjs/common';
 import { lastValueFrom, of, throwError } from 'rxjs';
 import { LoggingInterceptor } from './logging.interceptor.js';
@@ -10,15 +11,15 @@ describe('LoggingInterceptor', () => {
     method: string;
     originalUrl: string;
     ip: string;
-    get: jest.Mock;
+    get: vi.Mock;
     headers: Record<string, string>;
   };
   let response: {
     statusCode: number;
-    get: jest.Mock;
+    get: vi.Mock;
   };
-  let logSpy: jest.SpyInstance;
-  let errorSpy: jest.SpyInstance;
+  let logSpy: vi.SpyInstance;
+  let errorSpy: vi.SpyInstance;
 
   beforeEach(() => {
     interceptor = new LoggingInterceptor();
@@ -27,7 +28,7 @@ describe('LoggingInterceptor', () => {
       method: 'GET',
       originalUrl: '/test',
       ip: '127.0.0.1',
-      get: jest.fn().mockReturnValue('jest-agent'),
+      get: vi.fn().mockReturnValue('jest-agent'),
       headers: {
         [CORRELATION_ID_HEADER]: 'test-correlation-id',
       },
@@ -35,7 +36,7 @@ describe('LoggingInterceptor', () => {
 
     response = {
       statusCode: 200,
-      get: jest.fn().mockReturnValue('456'),
+      get: vi.fn().mockReturnValue('456'),
     };
 
     const httpContext = {
@@ -44,25 +45,23 @@ describe('LoggingInterceptor', () => {
     };
 
     context = {
-      switchToHttp: jest.fn().mockReturnValue(httpContext),
+      switchToHttp: vi.fn().mockReturnValue(httpContext),
     } as unknown as ExecutionContext;
 
-    logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation(jest.fn());
-    errorSpy = jest
-      .spyOn(Logger.prototype, 'error')
-      .mockImplementation(jest.fn());
+    logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(vi.fn());
+    errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(vi.fn());
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('логирует успешный ответ и пробрасывает данные дальше', async () => {
     const callHandler: CallHandler = {
-      handle: jest.fn(() => of('ok')),
+      handle: vi.fn(() => of('ok')),
     };
 
-    jest.spyOn(Date, 'now').mockReturnValueOnce(100).mockReturnValue(200);
+    vi.spyOn(Date, 'now').mockReturnValueOnce(100).mockReturnValue(200);
 
     const result = await lastValueFrom(
       interceptor.intercept(context, callHandler),
@@ -85,10 +84,10 @@ describe('LoggingInterceptor', () => {
     response.statusCode = 500;
 
     const callHandler: CallHandler = {
-      handle: jest.fn(() => throwError(() => testError)),
+      handle: vi.fn(() => throwError(() => testError)),
     };
 
-    jest.spyOn(Date, 'now').mockReturnValueOnce(100).mockReturnValue(250);
+    vi.spyOn(Date, 'now').mockReturnValueOnce(100).mockReturnValue(250);
 
     await expect(
       lastValueFrom(interceptor.intercept(context, callHandler)),

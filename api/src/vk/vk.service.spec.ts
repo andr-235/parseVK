@@ -1,21 +1,26 @@
+import { vi } from 'vitest';
 import { APIError, VK } from 'vk-io';
 import { VkService } from './vk.service.js';
 import type { Cache } from 'cache-manager';
 
 type ApiMock = {
-  users: { get: jest.Mock };
-  wall: { get: jest.Mock; getComments: jest.Mock; getById: jest.Mock };
-  groups: { getById: jest.Mock };
+  users: { get: ReturnType<typeof vi.fn> };
+  wall: {
+    get: ReturnType<typeof vi.fn>;
+    getComments: ReturnType<typeof vi.fn>;
+    getById: ReturnType<typeof vi.fn>;
+  };
+  groups: { getById: ReturnType<typeof vi.fn> };
 };
 
-jest.mock('vk-io', () => {
+vi.mock('vk-io', () => {
   const createApiMock = () => ({
-    users: { get: jest.fn() },
-    wall: { get: jest.fn(), getComments: jest.fn(), getById: jest.fn() },
-    groups: { getById: jest.fn() },
+    users: { get: vi.fn() },
+    wall: { get: vi.fn(), getComments: vi.fn(), getById: vi.fn() },
+    groups: { getById: vi.fn() },
   });
 
-  const VKMock = jest.fn().mockImplementation(() => ({
+  const VKMock = vi.fn().mockImplementation(() => ({
     api: createApiMock(),
   }));
 
@@ -32,7 +37,7 @@ jest.mock('vk-io', () => {
 });
 
 const getLastVkInstance = () => {
-  const mock = VK as unknown as jest.Mock;
+  const mock = VK as unknown as ReturnType<typeof vi.fn>;
   const lastCall = mock.mock.results[mock.mock.results.length - 1];
   if (!lastCall || lastCall.type !== 'return') {
     throw new Error('VK mock was not instantiated');
@@ -42,20 +47,20 @@ const getLastVkInstance = () => {
 
 describe('VkService', () => {
   let mockCacheManager: {
-    get: jest.Mock;
-    set: jest.Mock;
-    del: jest.Mock;
+    get: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    del: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env.VK_TOKEN = 'test-token';
 
     // Mock cache manager
     mockCacheManager = {
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue(undefined),
-      del: jest.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue(undefined),
+      del: vi.fn().mockResolvedValue(undefined),
     };
   });
 
@@ -65,20 +70,20 @@ describe('VkService', () => {
 
   const createService = () => {
     const configServiceMock = {
-      get: jest.fn((key: string) => {
+      get: vi.fn((key: string) => {
         if (key === 'vkToken') {
           return process.env.VK_TOKEN;
         }
         return undefined;
       }),
-    } as unknown as { get: jest.Mock };
+    } as unknown as { get: ReturnType<typeof vi.fn> };
 
     const requestManagerMock = {
-      execute: jest.fn(),
+      execute: vi.fn(),
     };
 
     const batchingServiceMock = {
-      batch: jest.fn(),
+      batch: vi.fn(),
     };
 
     const service = new VkService(

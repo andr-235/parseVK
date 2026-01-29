@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { DataImportController } from './data-import.controller.js';
 import type { DataImportService } from './data-import.service.js';
 import { ListingImportDto } from './dto/listing-import.dto.js';
@@ -6,16 +7,16 @@ import type { ListingImportReportDto } from './dto/listing-import-report.dto.js'
 
 describe('DataImportController', () => {
   let controller: DataImportController;
-  let service: jest.Mocked<DataImportService>;
+  let service: vi.Mocked<DataImportService>;
   let serviceObj: {
-    importListings: jest.Mock;
+    importListings: vi.Mock;
   };
 
   beforeEach(() => {
     serviceObj = {
-      importListings: jest.fn().mockResolvedValue({} as ListingImportReportDto),
+      importListings: vi.fn().mockResolvedValue({} as ListingImportReportDto),
     };
-    service = serviceObj as unknown as jest.Mocked<DataImportService>;
+    service = serviceObj as unknown as vi.Mocked<DataImportService>;
 
     controller = new DataImportController(service);
   });

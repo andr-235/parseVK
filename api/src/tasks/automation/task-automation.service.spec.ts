@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TaskAutomationService } from './task-automation.service.js';
 import { TasksService } from '../tasks.service.js';
@@ -13,12 +14,12 @@ describe('TaskAutomationService', () => {
         {
           provide: 'ITaskAutomationRepository',
           useValue: {
-            ensureSettingsExists: jest.fn(),
-            getOrCreateSettings: jest.fn(),
-            updateSettings: jest.fn(),
-            updateLastRunAt: jest.fn(),
-            hasActiveTasks: jest.fn(),
-            findLastCompletedTask: jest.fn(),
+            ensureSettingsExists: vi.fn(),
+            getOrCreateSettings: vi.fn(),
+            updateSettings: vi.fn(),
+            updateLastRunAt: vi.fn(),
+            hasActiveTasks: vi.fn(),
+            findLastCompletedTask: vi.fn(),
           },
         },
         {

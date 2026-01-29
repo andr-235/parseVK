@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
 import { TelegramAuthService } from './telegram-auth.service.js';
 import { Api } from 'telegram';
@@ -6,13 +7,13 @@ import type { ITelegramAuthRepository } from './interfaces/telegram-auth-reposit
 const createCacheMock = () => {
   const store = new Map<string, unknown>();
   return {
-    get: jest.fn((key: string) => Promise.resolve(store.get(key))),
+    get: vi.fn((key: string) => Promise.resolve(store.get(key))),
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    set: jest.fn((key: string, value: unknown, ttl?: number) => {
+    set: vi.fn((key: string, value: unknown, ttl?: number) => {
       store.set(key, value);
       return Promise.resolve();
     }),
-    del: jest.fn((key: string) => {
+    del: vi.fn((key: string) => {
       store.delete(key);
       return Promise.resolve();
     }),
@@ -21,7 +22,7 @@ const createCacheMock = () => {
 
 describe('TelegramAuthService', () => {
   const configMock = {
-    get: jest.fn((key: string) => {
+    get: vi.fn((key: string) => {
       if (key === 'telegramApiId') {
         return 123456;
       }
@@ -33,17 +34,17 @@ describe('TelegramAuthService', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('starts session and stores transaction', async () => {
     const cache = createCacheMock();
     const repositoryMock = {
-      findLatestSettings: jest.fn(),
-      upsertSettings: jest.fn(),
-      findLatestSession: jest.fn(),
-      replaceSession: jest.fn(),
-      deleteAllSessions: jest.fn().mockResolvedValue(0),
+      findLatestSettings: vi.fn(),
+      upsertSettings: vi.fn(),
+      findLatestSession: vi.fn(),
+      replaceSession: vi.fn(),
+      deleteAllSessions: vi.fn().mockResolvedValue(0),
     } as unknown as ITelegramAuthRepository;
     const service = new TelegramAuthService(
       configMock as never,
@@ -57,12 +58,12 @@ describe('TelegramAuthService', () => {
     };
 
     const clientMock = {
-      sendCode: jest.fn().mockResolvedValue(sendCodeResponse),
-      session: { save: jest.fn().mockReturnValue('temp-session') },
-      disconnect: jest.fn().mockResolvedValue(undefined),
+      sendCode: vi.fn().mockResolvedValue(sendCodeResponse),
+      session: { save: vi.fn().mockReturnValue('temp-session') },
+      disconnect: vi.fn().mockResolvedValue(undefined),
     } as unknown as Record<string, unknown>;
 
-    (service as unknown as { createClient: jest.Mock }).createClient = jest
+    (service as unknown as { createClient: vi.Mock }).createClient = vi
       .fn()
       .mockResolvedValue(clientMock);
 
@@ -76,7 +77,7 @@ describe('TelegramAuthService', () => {
     expect(result.codeLength).toBe(5);
     expect(result.nextType).toBe('sms');
     expect(cache.set).toHaveBeenCalledTimes(1);
-    const calls = (cache.set as jest.Mock).mock.calls;
+    const calls = (cache.set as vi.Mock).mock.calls;
     const [cacheKey, cacheValue] = calls[0] as [string, unknown];
     expect(cacheKey).toMatch(/^telegram:auth:tx:/);
     expect(cacheValue).toMatchObject({
@@ -91,11 +92,11 @@ describe('TelegramAuthService', () => {
   it('confirms session and returns final data', async () => {
     const cache = createCacheMock();
     const repositoryMock = {
-      findLatestSettings: jest.fn(),
-      upsertSettings: jest.fn(),
-      findLatestSession: jest.fn(),
-      replaceSession: jest.fn(),
-      deleteAllSessions: jest.fn().mockResolvedValue(0),
+      findLatestSettings: vi.fn(),
+      upsertSettings: vi.fn(),
+      findLatestSession: vi.fn(),
+      replaceSession: vi.fn(),
+      deleteAllSessions: vi.fn().mockResolvedValue(0),
     } as unknown as ITelegramAuthRepository;
     const service = new TelegramAuthService(
       configMock as never,
@@ -126,13 +127,13 @@ describe('TelegramAuthService', () => {
     } as unknown as ConstructorParameters<typeof Api.User>[0]);
 
     const clientMock = {
-      signInUser: jest.fn().mockResolvedValue(userMock),
-      getMe: jest.fn().mockResolvedValue(userMock),
-      session: { save: jest.fn().mockReturnValue('final-session') },
-      disconnect: jest.fn().mockResolvedValue(undefined),
+      signInUser: vi.fn().mockResolvedValue(userMock),
+      getMe: vi.fn().mockResolvedValue(userMock),
+      session: { save: vi.fn().mockReturnValue('final-session') },
+      disconnect: vi.fn().mockResolvedValue(undefined),
     } as unknown as Record<string, unknown>;
 
-    (service as unknown as { createClient: jest.Mock }).createClient = jest
+    (service as unknown as { createClient: vi.Mock }).createClient = vi
       .fn()
       .mockResolvedValue(clientMock);
 
@@ -148,7 +149,7 @@ describe('TelegramAuthService', () => {
       }),
     );
     expect(
-      (service as unknown as { createClient: jest.Mock }).createClient,
+      (service as unknown as { createClient: vi.Mock }).createClient,
     ).toHaveBeenCalledWith('temp-session', 123456, 'hash');
     expect(result.session).toBe('final-session');
     expect(result.userId).toBe(123);
@@ -159,11 +160,11 @@ describe('TelegramAuthService', () => {
   it('uses provided apiId and apiHash instead of env', async () => {
     const cache = createCacheMock();
     const repositoryMock = {
-      findLatestSettings: jest.fn(),
-      upsertSettings: jest.fn(),
-      findLatestSession: jest.fn(),
-      replaceSession: jest.fn(),
-      deleteAllSessions: jest.fn().mockResolvedValue(0),
+      findLatestSettings: vi.fn(),
+      upsertSettings: vi.fn(),
+      findLatestSession: vi.fn(),
+      replaceSession: vi.fn(),
+      deleteAllSessions: vi.fn().mockResolvedValue(0),
     } as unknown as ITelegramAuthRepository;
     const service = new TelegramAuthService(
       configMock as never,
@@ -177,12 +178,12 @@ describe('TelegramAuthService', () => {
     };
 
     const clientMock = {
-      sendCode: jest.fn().mockResolvedValue(sendCodeResponse),
-      session: { save: jest.fn().mockReturnValue('temp-session') },
-      disconnect: jest.fn().mockResolvedValue(undefined),
+      sendCode: vi.fn().mockResolvedValue(sendCodeResponse),
+      session: { save: vi.fn().mockReturnValue('temp-session') },
+      disconnect: vi.fn().mockResolvedValue(undefined),
     } as unknown as Record<string, unknown>;
 
-    (service as unknown as { createClient: jest.Mock }).createClient = jest
+    (service as unknown as { createClient: vi.Mock }).createClient = vi
       .fn()
       .mockResolvedValue(clientMock);
 
@@ -197,7 +198,7 @@ describe('TelegramAuthService', () => {
       '+79998887766',
       false,
     );
-    const calls = (cache.set as jest.Mock).mock.calls;
+    const calls = (cache.set as vi.Mock).mock.calls;
     const [, cacheValue] = calls[0] as [string, unknown];
     expect(cacheValue).toMatchObject({
       apiId: 999999,
@@ -208,14 +209,14 @@ describe('TelegramAuthService', () => {
   it('throws error when apiId and apiHash are missing', async () => {
     const cache = createCacheMock();
     const repositoryMock = {
-      findLatestSettings: jest.fn(),
-      upsertSettings: jest.fn(),
-      findLatestSession: jest.fn(),
-      replaceSession: jest.fn(),
-      deleteAllSessions: jest.fn().mockResolvedValue(0),
+      findLatestSettings: vi.fn(),
+      upsertSettings: vi.fn(),
+      findLatestSession: vi.fn(),
+      replaceSession: vi.fn(),
+      deleteAllSessions: vi.fn().mockResolvedValue(0),
     } as unknown as ITelegramAuthRepository;
     const configWithoutApi = {
-      get: jest.fn(() => undefined),
+      get: vi.fn(() => undefined),
     };
     const service = new TelegramAuthService(
       configWithoutApi as never,
@@ -231,11 +232,11 @@ describe('TelegramAuthService', () => {
   it('requires password when session password needed', async () => {
     const cache = createCacheMock();
     const repositoryMock = {
-      findLatestSettings: jest.fn(),
-      upsertSettings: jest.fn(),
-      findLatestSession: jest.fn(),
-      replaceSession: jest.fn(),
-      deleteAllSessions: jest.fn().mockResolvedValue(0),
+      findLatestSettings: vi.fn(),
+      upsertSettings: vi.fn(),
+      findLatestSession: vi.fn(),
+      replaceSession: vi.fn(),
+      deleteAllSessions: vi.fn().mockResolvedValue(0),
     } as unknown as ITelegramAuthRepository;
     const service = new TelegramAuthService(
       configMock as never,
@@ -259,13 +260,13 @@ describe('TelegramAuthService', () => {
     const error = new Error('PASSWORD_REQUIRED');
 
     const clientMock = {
-      signInUser: jest.fn().mockRejectedValue(error),
-      signInWithPassword: jest.fn(),
-      disconnect: jest.fn().mockResolvedValue(undefined),
-      session: { save: jest.fn() },
+      signInUser: vi.fn().mockRejectedValue(error),
+      signInWithPassword: vi.fn(),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      session: { save: vi.fn() },
     } as unknown as Record<string, unknown>;
 
-    (service as unknown as { createClient: jest.Mock }).createClient = jest
+    (service as unknown as { createClient: vi.Mock }).createClient = vi
       .fn()
       .mockResolvedValue(clientMock);
 
