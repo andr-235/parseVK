@@ -322,7 +322,7 @@ if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
 fi
 
 # Генерация только если клиент не собран (в build stage уже выполнен prisma generate)
-if [ ! -f ./dist/src/generated/prisma/client/index.js ]; then
+if [ ! -f ./dist/src/generated/prisma/client/index.js ] && [ ! -f ./dist/generated/prisma/client/index.js ]; then
   echo "Генерация Prisma Client..."
   if ! $PRISMA_CMD generate; then
     echo "Ошибка при генерации Prisma Client, останавливаемся."
@@ -333,5 +333,14 @@ else
 fi
 
 echo "Запуск приложения..."
-exec node dist/src/main.js
+if [ -f ./dist/main.js ]; then
+  exec node dist/main.js
+elif [ -f ./dist/src/main.js ]; then
+  exec node dist/src/main.js
+else
+  echo "Ошибка: не найден точка входа (dist/main.js или dist/src/main.js)"
+  ls -la ./dist 2>/dev/null || true
+  ls -la ./dist/src 2>/dev/null || true
+  exit 1
+fi
 
