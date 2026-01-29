@@ -33,7 +33,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.spec.ts', 'vitest.config.ts', 'vitest.e2e.config.ts', 'vitest.setup.ts'],
+    files: [
+      '**/*.spec.ts',
+      'vitest.config.ts',
+      'vitest.e2e.config.ts',
+      'vitest.setup.ts',
+    ],
     rules: {
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
