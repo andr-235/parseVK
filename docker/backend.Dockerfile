@@ -65,13 +65,15 @@ RUN rm -f .env
 RUN pnpm add -D prisma@7
 
 # Generate Prisma Client and build (retry on transient network errors in CI)
+# Use tsc (not nest build): output stays in dist/src/ and matches entrypoint; nest build
+# puts entry at dist/main.js and modules in dist/src/, causing ERR_MODULE_NOT_FOUND for ./app.module.
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 RUN for i in 1 2 3; do \
       pnpm run prisma:generate && break; \
       echo "prisma generate attempt $$i failed, retrying in 15s..."; \
       sleep 15; \
     done \
-    && pnpm run build \
+    && npx tsc -p tsconfig.build.json \
     && (test -f /app/dist/src/main.js || test -f /app/dist/main.js) || (echo "Build failed: main.js not found" && ls -laR /app/dist && exit 1)
 
 # Production stage
