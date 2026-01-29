@@ -14,21 +14,26 @@ ARG BUILDKIT_INLINE_CACHE=1
 ENV DATABASE_URL=${DATABASE_URL}
 ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
-# Prisma engines mirror - используем официальный CDN
-ENV PRISMA_ENGINES_MIRROR=https://binaries.prisma.sh
-# Настройки для node-gyp (сборка нативных модулей)
+
+# ============ КРИТИЧНО: Правильное зеркало Prisma для России/Китая ============
+ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
+# Или альтернативно (может работать лучше):
+# ENV PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
+
+# Настройки для node-gyp
 ENV NODEJS_ORG_MIRROR=https://nodejs.org/dist/
 ENV npm_config_node_gyp_timeout=300000
-# Увеличение таймаутов для Prisma
+
+# НЕ пропускаем postinstall - engines должны скачаться
 ENV PRISMA_GENERATE_DATAPROXY=false
-ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
 
 RUN npm config set registry ${NPM_REGISTRY} \
-    && npm config set fetch-retries 3 \
-    && npm config set fetch-retry-factor 2 \
-    && npm config set fetch-retry-mintimeout 10000 \
-    && npm config set fetch-timeout 60000 \
-    && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY} || npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK})
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-factor 3 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-timeout 180000 \
+    && (npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY} || \
+        npm install -g pnpm@${PNPM_VERSION} --registry=${NPM_REGISTRY_FALLBACK})
 
 # Copy package files first for better layer caching
 COPY api/package*.json ./
@@ -38,13 +43,24 @@ COPY api/pnpm-lock.yaml* ./
 # Нативные зависимости (argon2) требуют сборки в Alpine/musl
 RUN apk add --no-cache --virtual .build-deps python3 build-base
 
-# Install dependencies with BuildKit cache mount
+# Install dependencies with increased timeouts and retries
 RUN --mount=type=cache,target=/root/.pnpm-store \
     --mount=type=cache,target=/app/node_modules/.cache \
     pnpm config set registry ${NPM_REGISTRY} \
-    && pnpm config set fetch-retries 3 \
-    && pnpm config set fetch-timeout 60000 \
-    && (pnpm install --frozen-lockfile --dangerously-allow-all-builds || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile --dangerously-allow-all-builds))
+    && pnpm config set fetch-retries 5 \
+    && pnpm config set fetch-retry-factor 3 \
+    && pnpm config set fetch-retry-maxtimeout 180000 \
+    && pnpm config set fetch-timeout 180000 \
+    && pnpm config set network-timeout 180000 \
+    && (pnpm install --frozen-lockfile --dangerously-allow-all-builds || ( \
+        echo "First install failed, retrying with delay..." \
+        && sleep 10 \
+        && pnpm install --frozen-lockfile --dangerously-allow-all-builds \
+    ) || ( \
+        echo "Second attempt failed, trying fallback registry..." \
+        && pnpm config set registry ${NPM_REGISTRY_FALLBACK} \
+        && pnpm install --frozen-lockfile --dangerously-allow-all-builds \
+    ))
 
 RUN apk del .build-deps
 
@@ -53,12 +69,9 @@ COPY api/ ./
 
 RUN rm -f .env
 
-# Generate Prisma Client and build with cache
-# Добавляем retry логику для Prisma generate из-за возможных сетевых проблем
+# Generate Prisma Client and build
 RUN --mount=type=cache,target=/app/node_modules/.prisma \
-    (pnpm run prisma:generate || \
-     (echo "Prisma generate failed, retrying..." && sleep 5 && pnpm run prisma:generate) || \
-     (echo "Prisma generate failed again, retrying one more time..." && sleep 10 && pnpm run prisma:generate)) \
+    pnpm run prisma:generate \
     && pnpm run build
 
 # Production stage
@@ -69,12 +82,22 @@ WORKDIR /app
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
+# Prisma mirror для production stage тоже
+ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
 
-# Устанавливаем prisma CLI и netcat для healthcheck/миграций
+# Устанавливаем prisma CLI с увеличенными таймаутами
 RUN npm config set registry https://registry.npmmirror.com \
-    && npm config set fetch-retries 3 \
-    && npm config set fetch-timeout 60000 \
-    && (npm install -g prisma@^6.16.3 || (npm config set registry https://registry.npmjs.org/ && npm install -g prisma@^6.16.3)) \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-timeout 180000 \
+    && npm config set network-timeout 180000 \
+    && (npm install -g prisma@^6.16.3 || ( \
+        echo "Retrying with delay..." \
+        && sleep 10 \
+        && npm install -g prisma@^6.16.3 \
+    ) || ( \
+        npm config set registry https://registry.npmjs.org/ \
+        && npm install -g prisma@^6.16.3 \
+    )) \
     && apk add --no-cache netcat-openbsd
 
 # Копируем собранное приложение и node_modules из build stage
