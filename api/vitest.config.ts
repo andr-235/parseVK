@@ -1,11 +1,13 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const shimsDir = path.join(__dirname, 'jest-shims', 'node_modules');
 
 export default defineConfig({
+  plugins: [swc.vite()],
   test: {
     include: ['src/**/*.spec.ts'],
     exclude: ['**/node_modules/**', 'test/**/*.e2e-spec.ts'],

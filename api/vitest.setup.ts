@@ -1,4 +1,7 @@
-/**
- * Vitest setup: резолв тяжёлых модулей задан через resolve.alias в vitest.config.ts
- * (jest-shims). Дополнительная инициализация при необходимости.
- */
+import 'reflect-metadata';
+import { vi } from 'vitest';
+
+const jestFn = () => vi.fn();
+(globalThis as typeof globalThis & { jest: { fn: typeof jestFn } }).jest = {
+  fn: jestFn,
+};
