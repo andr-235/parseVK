@@ -1,11 +1,11 @@
-// Мокаем apiConfig перед импортами
-jest.mock('@/lib/apiConfig', () => ({
+import { vi } from 'vitest'
+
+vi.mock('@/lib/apiConfig', () => ({
   API_URL: '/api',
 }))
 
-// Мокаем store
-jest.mock('@/store/themeStore', () => ({
-  useThemeStore: jest.fn(),
+vi.mock('@/store/themeStore', () => ({
+  useThemeStore: vi.fn(),
 }))
 
 import { renderHook, act } from '@testing-library/react'
@@ -14,12 +14,12 @@ import { useThemeStore } from '@/store/themeStore'
 
 describe('useTheme', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('should return isDarkMode and toggleTheme', () => {
-    const mockToggleTheme = jest.fn()
-    ;(useThemeStore as jest.Mock).mockImplementation((selector) => {
+    const mockToggleTheme = vi.fn()
+    vi.mocked(useThemeStore).mockImplementation((selector) => {
       const state = {
         isDarkMode: false,
         toggleTheme: mockToggleTheme,
@@ -34,10 +34,10 @@ describe('useTheme', () => {
   })
 
   it('should return dark mode when enabled', () => {
-    ;(useThemeStore as jest.Mock).mockImplementation((selector) => {
+    vi.mocked(useThemeStore).mockImplementation((selector) => {
       const state = {
         isDarkMode: true,
-        toggleTheme: jest.fn(),
+        toggleTheme: vi.fn(),
       }
       return selector(state)
     })
@@ -48,8 +48,8 @@ describe('useTheme', () => {
   })
 
   it('should call toggleTheme when called', () => {
-    const mockToggleTheme = jest.fn()
-    ;(useThemeStore as jest.Mock).mockImplementation((selector) => {
+    const mockToggleTheme = vi.fn()
+    vi.mocked(useThemeStore).mockImplementation((selector) => {
       const state = {
         isDarkMode: false,
         toggleTheme: mockToggleTheme,

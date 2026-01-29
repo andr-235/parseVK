@@ -1,13 +1,14 @@
+import { vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation'
 
 describe('useKeyboardNavigation', () => {
-  let mockOnSelect: jest.Mock
-  let mockOnFocusChange: jest.Mock
+  let mockOnSelect: ReturnType<typeof vi.fn>
+  let mockOnFocusChange: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    mockOnSelect = jest.fn()
-    mockOnFocusChange = jest.fn()
+    mockOnSelect = vi.fn()
+    mockOnFocusChange = vi.fn()
   })
 
   it('should handle ArrowDown key correctly', () => {
@@ -21,12 +22,12 @@ describe('useKeyboardNavigation', () => {
 
     const mockEvent = {
       key: 'ArrowDown',
-      preventDefault: jest.fn(),
+      preventDefault: vi.fn(),
     } as any
 
     // Mock tableRef.current.querySelector
-    const mockRow = { focus: jest.fn() }
-    const mockQuerySelector = jest.fn().mockReturnValue(mockRow)
+    const mockRow = { focus: vi.fn() }
+    const mockQuerySelector = vi.fn().mockReturnValue(mockRow)
     ;(result.current.tableRef.current as any) = {
       querySelector: mockQuerySelector,
     }
@@ -50,11 +51,11 @@ describe('useKeyboardNavigation', () => {
 
     const mockEvent = {
       key: 'ArrowUp',
-      preventDefault: jest.fn(),
+      preventDefault: vi.fn(),
     } as any
 
-    const mockRow = { focus: jest.fn() }
-    const mockQuerySelector = jest.fn().mockReturnValue(mockRow)
+    const mockRow = { focus: vi.fn() }
+    const mockQuerySelector = vi.fn().mockReturnValue(mockRow)
     ;(result.current.tableRef.current as any) = {
       querySelector: mockQuerySelector,
     }
@@ -78,7 +79,7 @@ describe('useKeyboardNavigation', () => {
 
     const mockEvent = {
       key: 'Enter',
-      preventDefault: jest.fn(),
+      preventDefault: vi.fn(),
     } as any
 
     result.current.handleKeyDown(mockEvent, 2)
@@ -98,7 +99,7 @@ describe('useKeyboardNavigation', () => {
 
     const mockEvent = {
       key: ' ',
-      preventDefault: jest.fn(),
+      preventDefault: vi.fn(),
     } as any
 
     result.current.handleKeyDown(mockEvent, 1)
@@ -118,11 +119,11 @@ describe('useKeyboardNavigation', () => {
 
     const mockEvent = {
       key: 'ArrowDown',
-      preventDefault: jest.fn(),
+      preventDefault: vi.fn(),
     } as any
 
-    const mockRow = { focus: jest.fn() }
-    const mockQuerySelector = jest.fn().mockReturnValue(mockRow)
+    const mockRow = { focus: vi.fn() }
+    const mockQuerySelector = vi.fn().mockReturnValue(mockRow)
     ;(result.current.tableRef.current as any) = {
       querySelector: mockQuerySelector,
     }
@@ -144,11 +145,11 @@ describe('useKeyboardNavigation', () => {
 
     const mockEvent = {
       key: 'ArrowUp',
-      preventDefault: jest.fn(),
+      preventDefault: vi.fn(),
     } as any
 
-    const mockRow = { focus: jest.fn() }
-    const mockQuerySelector = jest.fn().mockReturnValue(mockRow)
+    const mockRow = { focus: vi.fn() }
+    const mockQuerySelector = vi.fn().mockReturnValue(mockRow)
     ;(result.current.tableRef.current as any) = {
       querySelector: mockQuerySelector,
     }
@@ -170,10 +171,10 @@ describe('useKeyboardNavigation', () => {
 
     const mockEvent = {
       key: 'ArrowDown',
-      preventDefault: jest.fn(),
+      preventDefault: vi.fn(),
     } as any
 
-    const mockQuerySelector = jest.fn().mockReturnValue(null)
+    const mockQuerySelector = vi.fn().mockReturnValue(null)
     ;(result.current.tableRef.current as any) = {
       querySelector: mockQuerySelector,
     }
@@ -198,11 +199,11 @@ describe('useKeyboardNavigation', () => {
 
     const mockEvent = {
       key: 'ArrowDown',
-      preventDefault: jest.fn(),
+      preventDefault: vi.fn(),
     } as any
 
-    const mockRow = { focus: jest.fn() }
-    const mockQuerySelector = jest.fn().mockReturnValue(mockRow)
+    const mockRow = { focus: vi.fn() }
+    const mockQuerySelector = vi.fn().mockReturnValue(mockRow)
     ;(result.current.tableRef.current as any) = {
       querySelector: mockQuerySelector,
     }
@@ -224,7 +225,7 @@ describe('useKeyboardNavigation', () => {
 
     const mockEvent = {
       key: 'Tab',
-      preventDefault: jest.fn(),
+      preventDefault: vi.fn(),
     } as any
 
     result.current.handleKeyDown(mockEvent, 0)

@@ -16,6 +16,17 @@ const dirname =
 const storybookConfigDir = path.join(dirname, '.storybook')
 const hasStorybookConfig = fs.existsSync(storybookConfigDir)
 
+const unitProject: TestProjectConfiguration = {
+  extends: true,
+  test: {
+    name: 'unit',
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['src/setupTests.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'src/**/__tests__/**/*.{test,spec}.{ts,tsx}'],
+  },
+}
+
 const storybookProjects: TestProjectConfiguration[] = hasStorybookConfig
   ? [
       {
@@ -92,6 +103,6 @@ export default defineConfig({
     },
   },
   test: {
-    projects: storybookProjects,
+    projects: [unitProject, ...storybookProjects],
   },
 })

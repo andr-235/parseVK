@@ -1,9 +1,10 @@
+import { vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import SearchInput from '../SearchInput'
 
 describe('SearchInput', () => {
   it('should render with placeholder', () => {
-    const handleChange = jest.fn()
+    const handleChange = vi.fn()
     render(<SearchInput value="" onChange={handleChange} placeholder="Поиск..." />)
 
     const input = screen.getByPlaceholderText('Поиск...')
@@ -11,7 +12,7 @@ describe('SearchInput', () => {
   })
 
   it('should call onChange when input value changes', () => {
-    const handleChange = jest.fn()
+    const handleChange = vi.fn()
     render(<SearchInput value="" onChange={handleChange} />)
 
     const input = screen.getByRole('textbox')
@@ -21,7 +22,7 @@ describe('SearchInput', () => {
   })
 
   it('should show clear button when value is not empty', () => {
-    const handleChange = jest.fn()
+    const handleChange = vi.fn()
     render(<SearchInput value="test" onChange={handleChange} />)
 
     const clearButton = screen.getByLabelText('Очистить поиск')
@@ -29,7 +30,7 @@ describe('SearchInput', () => {
   })
 
   it('should not show clear button when value is empty', () => {
-    const handleChange = jest.fn()
+    const handleChange = vi.fn()
     render(<SearchInput value="" onChange={handleChange} />)
 
     const clearButton = screen.queryByLabelText('Очистить поиск')
@@ -37,7 +38,7 @@ describe('SearchInput', () => {
   })
 
   it('should clear value when clear button is clicked', () => {
-    const handleChange = jest.fn()
+    const handleChange = vi.fn()
     render(<SearchInput value="test" onChange={handleChange} />)
 
     const clearButton = screen.getByLabelText('Очистить поиск')
@@ -47,7 +48,7 @@ describe('SearchInput', () => {
   })
 
   it('should render with glass variant', () => {
-    const handleChange = jest.fn()
+    const handleChange = vi.fn()
     const { container } = render(<SearchInput value="" onChange={handleChange} variant="glass" />)
 
     const wrapper = container.firstChild
@@ -55,7 +56,7 @@ describe('SearchInput', () => {
   })
 
   it('should render with leading icon', () => {
-    const handleChange = jest.fn()
+    const handleChange = vi.fn()
     render(
       <SearchInput
         value=""

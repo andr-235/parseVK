@@ -22,19 +22,16 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Enable corepack
-        run: corepack enable
-
-      - name: Setup pnpm
-        run: corepack prepare pnpm@latest --activate
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Scan API dependencies
         id: scan-api
         continue-on-error: true
         working-directory: api
         run: |
-          pnpm install --frozen-lockfile
-          pnpm audit --audit-level=moderate --json > audit-api.json || true
+          bun install --frozen-lockfile
+          bun audit --json > audit-api.json || true
           if [ -f audit-api.json ]; then
             VULN_COUNT=$(cat audit-api.json | jq -r '.metadata.vulnerabilities.total // 0')
             echo "vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT
@@ -49,8 +46,8 @@ jobs:
         continue-on-error: true
         working-directory: front
         run: |
-          pnpm install --frozen-lockfile
-          pnpm audit --audit-level=moderate --json > audit-frontend.json || true
+          bun install --frozen-lockfile
+          bun audit --json > audit-frontend.json || true
           if [ -f audit-frontend.json ]; then
             VULN_COUNT=$(cat audit-frontend.json | jq -r '.metadata.vulnerabilities.total // 0')
             echo "vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT

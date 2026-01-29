@@ -3,10 +3,9 @@
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "NodeNext",
-    "types": ["jest", "node", "vite/client"],
+    "types": ["node", "vite/client", "vitest/globals"],
     "esModuleInterop": true,
     "isolatedModules": false
   },
-  "include": ["src", "jest.config.js", "src/setupTests.ts"],
-  "exclude": ["src/**/*.test.*", "src/**/*.spec.*", "src/**/__tests__/**"]
+  "include": ["src"]
 }

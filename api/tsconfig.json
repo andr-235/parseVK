@@ -1,4 +1,6 @@
 {
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.e2e-spec.ts"],
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "bundler",

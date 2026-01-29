@@ -1,8 +1,6 @@
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
-// Глобальный мок для import.meta.env, чтобы Jest мог обрабатывать Vite-специфичные переменные
-// Для ESM в Jest нужно определить import.meta через Object.defineProperty
-// Это работает, потому что ts-jest трансформирует import.meta в runtime-доступный объект
 Object.defineProperty(globalThis, 'import', {
   value: {
     meta: {
@@ -17,15 +15,12 @@ Object.defineProperty(globalThis, 'import', {
   configurable: true,
 })
 
-// Глобальный мок для apiConfig, чтобы избежать проблем с import.meta.env в тестах
-jest.mock('@/lib/apiConfig', () => ({
+vi.mock('@/lib/apiConfig', () => ({
   API_URL: '/api',
 }))
 
-// Глобальный мок для queryClient, чтобы избежать проблем с import.meta.env в тестах
-jest.mock('@/lib/queryClient', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { QueryClient } = require('@tanstack/react-query')
+vi.mock('@/lib/queryClient', async () => {
+  const { QueryClient } = await import('@tanstack/react-query')
   return {
     queryClient: new QueryClient({
       defaultOptions: {
