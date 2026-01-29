@@ -107,11 +107,12 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/node_modules ./node_modules
 
-# Копируем entrypoint скрипт
+# Копируем entrypoint и healthcheck
 COPY docker/backend-entrypoint.sh /app/entrypoint.sh
+COPY docker/backend-healthcheck.cjs /app/healthcheck.cjs
 RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=90s \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=120s \
+  CMD ["node", "/app/healthcheck.cjs"]

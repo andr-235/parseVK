@@ -164,7 +164,8 @@ async function bootstrap() {
     app.setGlobalPrefix(apiPrefix);
 
     const port = configService.get('port', { infer: true }) ?? 3000;
-    await app.listen(port);
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : undefined;
+    await app.listen(port, host);
     logger.log(`API запущено на порту ${port}`);
   } catch (error) {
     const logger = new Logger('Bootstrap');
