@@ -1,6 +1,11 @@
 {
-  "include": ["src/**/*.ts", "vitest.config.ts", "vitest.setup.ts"],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.e2e-spec.ts"],
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "vitest.config.ts",
+    "vitest.setup.ts"
+  ],
+  "exclude": ["node_modules", "dist"],
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "bundler",
