@@ -16,6 +16,7 @@ The application allows users to create parsing tasks to collect posts and commen
 ## Development Commands
 
 ### Docker (Primary deployment method)
+
 ```bash
 # Build and start all services
 docker-compose up --build
@@ -28,35 +29,39 @@ docker-compose down
 ```
 
 ### API (NestJS Backend)
+
+Зависимости устанавливаются через [Bun](https://bun.sh): `cd api && bun install`.
+
 ```bash
 cd api
 
 # Development
-npm run start:dev          # Start with hot-reload
-npm run start:debug        # Start with debugger
+bun run start:dev          # Start with hot-reload
+bun run start:debug       # Start with debugger
 
 # Build and Production
-npm run build
-npm run start:prod
+bun run build
+bun run start:prod
 
-# Testing
-npm test                   # Run unit tests
-npm run test:watch         # Run tests in watch mode
-npm run test:cov           # Run tests with coverage
-npm run test:e2e           # Run e2e tests
+# Testing (Vitest)
+bun run test              # Run unit tests (vitest run)
+bun run test:watch        # Run tests in watch mode
+bun run test:cov          # Run tests with coverage
+bun run test:e2e          # Run e2e tests (vitest e2e config)
 
 # Code Quality
-npm run lint               # Run ESLint with auto-fix
-npm run format             # Format with Prettier
+bun run lint              # Run ESLint with auto-fix
+bun run format            # Format with Prettier
 
 # Database (Prisma)
-npx prisma migrate dev     # Run migrations in development
-npx prisma migrate deploy  # Run migrations in production
-npx prisma generate        # Generate Prisma client
-npx prisma studio          # Open Prisma Studio GUI
+bunx prisma migrate dev   # Run migrations in development
+bunx prisma migrate deploy # Run migrations in production
+bunx prisma generate      # Generate Prisma client (и add-js-extensions при необходимости)
+bunx prisma studio        # Open Prisma Studio GUI
 ```
 
 ### Frontend (React/Vite)
+
 ```bash
 cd front
 
@@ -78,6 +83,7 @@ npm run format:check       # Check formatting without changes
 ### Backend Architecture (NestJS)
 
 **Module Structure:**
+
 - `VkModule` - VK API integration via vk-io library
 - `GroupsModule` - VK groups management (CRUD, bulk operations)
 - `TasksModule` - Parsing task orchestration and progress tracking
@@ -86,6 +92,7 @@ npm run format:check       # Check formatting without changes
 - `WatchlistModule` - Author monitoring system ("На карандаше" feature)
 
 **Key Services:**
+
 - `VkService` ([src/vk/vk.service.ts](api/src/vk/vk.service.ts)) - Wraps vk-io library for VK API calls (groups, posts, comments, users)
 - `TasksService` ([src/tasks/tasks.service.ts](api/src/tasks/tasks.service.ts)) - Manages parsing tasks: creates tasks, fetches posts/comments from groups, tracks progress, handles errors (e.g., disabled walls)
 - `WatchlistService` ([src/watchlist/watchlist.service.ts](api/src/watchlist/watchlist.service.ts)) - Manages watchlist authors: CRUD operations, periodic monitoring, comment collection
@@ -94,6 +101,7 @@ npm run format:check       # Check formatting without changes
 - `PrismaService` ([src/prisma.service.ts](api/src/prisma.service.ts)) - Database client initialization
 
 **Task Processing Flow:**
+
 1. User creates parsing task with selected groups or all groups
 2. `TasksService.createParsingTask()` validates groups, creates task record with `pending` status
 3. For each group: fetch recent posts (configurable limit), fetch all comments recursively, extract and save author information
@@ -102,6 +110,7 @@ npm run format:check       # Check formatting without changes
 6. Errors change status to `failed` with error message stored in description
 
 **Watchlist Monitoring Flow:**
+
 1. User adds author to watchlist via comment card or by VK user ID
 2. `WatchlistService.createAuthor()` fetches author info, creates `WatchlistAuthor` record with `ACTIVE` status
 3. `WatchlistMonitorService` runs every 60 seconds, triggers `WatchlistService.refreshActiveAuthors()`
@@ -111,6 +120,7 @@ npm run format:check       # Check formatting without changes
 7. If `trackAllComments` is disabled, only update check timestamps without fetching comments
 
 **Database Schema (Prisma):**
+
 - `Task` - Parsing tasks with progress tracking
 - `Group` - VK groups with metadata (membersCount, wall status, etc.)
 - `Post` - VK posts linked to groups
@@ -121,6 +131,7 @@ npm run format:check       # Check formatting without changes
 - `WatchlistSettings` - Global watchlist configuration (poll interval, max authors, track all comments flag)
 
 **API Routing:**
+
 - All endpoints prefixed with `/api` (configured in main.ts)
 - CORS enabled for frontend integration
 - Logging interceptor on all requests
@@ -156,6 +167,7 @@ src/
 ```
 
 **Dependency Rules:**
+
 - `pages/` → can use: modules, components, hooks, services, store, utils
 - `modules/` → can use: components, hooks, services, store, utils
 - `components/` → can use: hooks, utils, types
@@ -167,6 +179,7 @@ src/
 - `lib/` → can use: types only
 
 **State Management (Zustand):**
+
 - `tasksStore` ([store/tasksStore.ts](front/src/store/tasksStore.ts)) - Task list with normalized state (taskIds, tasksById), task details caching
 - `groupsStore` ([store/groupsStore.ts](front/src/store/groupsStore.ts)) - VK groups management
 - `commentsStore` ([store/commentsStore.ts](front/src/store/commentsStore.ts)) - Comments data with keyword filtering
@@ -178,6 +191,7 @@ src/
 All stores use Zustand with immer, persist, devtools, and subscribeWithSelector middleware.
 
 **Routing:**
+
 - `/tasks` - Task list and creation
 - `/groups` - Group management (add, bulk upload, view)
 - `/comments` - Comments view with keyword highlighting
@@ -185,12 +199,14 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 - `/watchlist` - Watchlist authors management and activity monitoring
 
 **Key Components:**
+
 - `CreateParseTaskModal` - Modal for creating parsing tasks with group selection
 - `ActiveTasksBanner` - Shows active tasks with progress bars
 - `Table` - Generic reusable table component
 - `Sidebar` - Navigation with icons, badges, search, quick actions
 
 **Styling:**
+
 - Tailwind CSS 4.x with custom design tokens
 - Dark mode support via CSS variables
 - Theme managed by `themeStore`
@@ -198,31 +214,37 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 ### VK API Integration
 
 **Authentication:**
+
 - VK_TOKEN environment variable required (set in docker-compose.yml or .env)
 - Token used by vk-io library in VkService
 
 **Key VK API Operations:**
+
 - `groups.getById` - Fetch group metadata
 - `wall.get` - Fetch group posts with filters
 - `wall.getComments` - Fetch comments with thread support (recursive). Extended version `getAuthorCommentsForPost` used by watchlist to filter by specific author VK ID
 - `users.get` - Fetch user/author information (batch fetching supported)
 
 **Error Handling:**
+
 - API Error 15 (Access denied) handled for disabled group walls
 - Groups with disabled walls marked and skipped in parsing
 
 ## Environment Variables
 
 **API:**
+
 - `DATABASE_URL` - PostgreSQL connection string
 - `VK_TOKEN` - VK API access token (required)
 - `PORT` - API server port (default: 3000)
 
 **Redis:**
+
 - Redis runs on default port 6379 (configured in docker-compose.yml)
 - No authentication required in development environment
 
 **Frontend:**
+
 - `VITE_APP_TITLE` - Application title
 - `VITE_API_URL` - API base URL (default: /api)
 - `VITE_DEV_MODE` - Development mode flag
@@ -230,35 +252,42 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 ## Important Implementation Details
 
 ### Comment Source Tracking
+
 - Comments have `source` field with enum values: `TASK` (collected via parsing tasks) or `WATCHLIST` (collected via author monitoring)
 - Comments from watchlist have `watchlistAuthorId` reference linking to the monitored author record
 - This allows distinguishing between bulk-collected comments and targeted author monitoring
 
 ### Task Progress Tracking
+
 - Tasks use normalized state pattern with `taskIds` array and `tasksById` map
 - Progress tracked with: `totalItems`, `processedItems`, `progress` (0-1), `status` (pending/running/done/failed)
 - Task descriptions stored as JSON with scope, groupIds, postLimit, stats, errors
 
 ### Comment Threading
+
 - Comments support nested threads via `threadItems` array
 - Recursive processing in both VkService mapping and TasksService saving
 - Thread items stored as JSON in database
 
 ### Author Management
+
 - Authors deduplicated by VK user ID during task execution
 - Batch fetching via VK API users.get
 - Upsert pattern to update existing author records
 
 ### Keyword Highlighting
+
 - Utility function `highlightKeywords` ([utils/highlightKeywords.tsx](front/src/utils/highlightKeywords.tsx)) wraps matched keywords in spans
 - Case-insensitive matching
 - Used in Comments table for text display
 
 ### Bulk Operations
+
 - Groups support bulk upload via CSV/JSON
 - Keywords support bulk add via textarea (one per line)
 
 ### Watchlist Feature (Author Monitoring)
+
 - Users can add authors to watchlist from comment cards or by VK user ID
 - Background monitoring via `WatchlistMonitorService` runs every 60 seconds
 - Poll interval (default 5 min) configured in `WatchlistSettings` to throttle VK API calls
@@ -273,6 +302,7 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 ## Database Migrations
 
 When modifying the Prisma schema:
+
 1. Edit `api/prisma/schema.prisma`
 2. Run `npx prisma migrate dev --name <migration_name>` in api directory
 3. Prisma client auto-generated after migration
@@ -281,6 +311,7 @@ When modifying the Prisma schema:
 ## Common Workflows
 
 ### Adding a New VK Data Field
+
 1. Update Prisma schema with new field
 2. Run migration: `npx prisma migrate dev`
 3. Update interface in `api/src/vk/interfaces/`
@@ -290,6 +321,7 @@ When modifying the Prisma schema:
 7. Update table columns config if displaying in UI
 
 ### Adding a New Page
+
 1. Create page component in `front/src/pages/`
 2. Add route in `App.tsx`
 3. Add navigation item in `Sidebar.tsx`
@@ -298,6 +330,7 @@ When modifying the Prisma schema:
 6. Create module in `front/src/modules/` if page has complex logic
 
 ### Adding an Author to Watchlist
+
 1. User clicks "Add to Watchlist" button on comment card (provides `commentId`)
 2. OR user provides VK user ID directly (provides `authorVkId`)
 3. Backend validates comment/author exists
@@ -309,6 +342,7 @@ When modifying the Prisma schema:
 9. Background monitoring automatically picks up new active author on next cycle
 
 ### Modifying Watchlist Monitoring Behavior
+
 - Settings stored in `WatchlistSettings` table (singleton record with id=1)
 - `pollIntervalMinutes` - how often to actually fetch from VK API (default: 5)
 - `maxAuthors` - limit of authors to process per refresh cycle (default: 50)
@@ -317,6 +351,7 @@ When modifying the Prisma schema:
 - Monitor interval is fixed at 60 seconds in `WatchlistMonitorService`
 
 ### Debugging Parsing Tasks
+
 - Check task status in Tasks page
 - View task details for error messages
 - Check API logs for VK API errors

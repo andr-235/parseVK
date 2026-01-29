@@ -214,6 +214,7 @@ export class CreateGroupDto {
 ```
 
 **Примеры:**
+
 - `dto/create-group.dto.ts`
 - `dto/list-authors-query.dto.ts`
 - `dto/update-comment-read.dto.ts`
@@ -226,7 +227,7 @@ export class CreateGroupDto {
 // repositories/comments.repository.ts
 export class CommentsRepository implements ICommentsRepository {
   constructor(private prisma: PrismaService) {}
-  
+
   async findMany(filters: CommentsFilters): Promise<Comment[]> {
     // Prisma запросы
   }
@@ -234,6 +235,7 @@ export class CommentsRepository implements ICommentsRepository {
 ```
 
 **Примеры:**
+
 - `repositories/comments.repository.ts`
 - `repositories/watchlist.repository.ts`
 
@@ -251,6 +253,7 @@ export class CommentMapper {
 ```
 
 **Примеры:**
+
 - `mappers/comment.mapper.ts`
 - `mappers/task.mapper.ts`
 - `mappers/watchlist-author.mapper.ts`
@@ -269,6 +272,7 @@ export class CommentsFilterBuilder {
 ```
 
 **Примеры:**
+
 - `builders/comments-filter.builder.ts`
 - `builders/task-context.builder.ts`
 - `builders/author-sort.builder.ts`
@@ -288,6 +292,7 @@ export class CommentsQueryValidator {
 ```
 
 **Примеры:**
+
 - `validators/comments-query.validator.ts`
 - `validators/watchlist-query.validator.ts`
 - `validators/group-identifier.validator.ts`
@@ -306,6 +311,7 @@ export class TaskDescriptionParser {
 ```
 
 **Примеры:**
+
 - `parsers/task-description.parser.ts`
 - `parsers/author-counters.parser.ts`
 
@@ -323,6 +329,7 @@ export class CursorPaginationStrategy implements IPaginationStrategy {
 ```
 
 **Примеры:**
+
 - `strategies/cursor-pagination.strategy.ts`
 - `strategies/offset-pagination.strategy.ts`
 - `strategies/webhook-moderation.strategy.ts`
@@ -341,6 +348,7 @@ export class WatchlistAuthorRefresherService {
 ```
 
 **Примеры:**
+
 - `services/watchlist-author-refresher.service.ts`
 - `services/watchlist-stats-collector.service.ts`
 - `services/photo-analysis-facade.service.ts`
@@ -368,6 +376,7 @@ export class ParsingProcessor {
 ```
 
 **Примеры:**
+
 - `queues/parsing.queue.ts`
 - `queues/parsing.processor.ts`
 
@@ -389,6 +398,7 @@ export interface ICommentsRepository {
 ```
 
 **Примеры:**
+
 - `interfaces/comments-repository.interface.ts`
 - `interfaces/pagination-strategy.interface.ts`
 - `interfaces/watchlist-repository.interface.ts`
@@ -407,6 +417,7 @@ export type CommentsFilters = {
 ```
 
 **Примеры:**
+
 - `types/comments-filters.type.ts`
 - `types/authors.types.ts`
 
@@ -451,6 +462,7 @@ import { VkService } from '../vk/vk.service';
 ### Контроллер
 
 Контроллер отвечает только за:
+
 - Маршрутизацию HTTP запросов
 - Валидацию входных данных через DTO
 - Вызов методов сервиса
@@ -471,6 +483,7 @@ export class CommentsController {
 ### Сервис
 
 Сервис отвечает за:
+
 - Оркестрацию бизнес-логики
 - Использование репозиториев, мапперов, билдеров
 - Валидацию бизнес-правил
@@ -497,6 +510,7 @@ export class CommentsService {
 ### Репозиторий
 
 Репозиторий отвечает за:
+
 - Инкапсуляцию Prisma запросов
 - Работу с БД
 - Возврат Prisma моделей
@@ -676,14 +690,18 @@ app.useGlobalInterceptors(new LoggingInterceptor());
 
 ## Тестирование
 
+В проекте используется [Vitest](https://vitest.dev/). Конфигурация: `vitest.config.ts`, e2e: `vitest.e2e.config.ts`, setup: `vitest.setup.ts`.
+
 ### Unit тесты
 
-Тесты для сервисов и репозиториев:
+Тесты для сервисов и репозиториев (моки через `vi.fn()`):
 
 ```typescript
+import { vi } from 'vitest';
+
 describe('CommentsService', () => {
   let service: CommentsService;
-  let repository: jest.Mocked<ICommentsRepository>;
+  let repository: vi.Mocked<ICommentsRepository>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -724,9 +742,7 @@ describe('CommentsController (e2e)', () => {
   });
 
   it('/comments (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/api/comments')
-      .expect(200);
+    return request(app.getHttpServer()).get('/api/comments').expect(200);
   });
 });
 ```
@@ -832,16 +848,19 @@ tasks/
 После изменений рекомендуется проверить соблюдение правил зависимостей:
 
 1. **Контроллеры не используют Prisma напрямую**
+
    ```bash
    find api/src -name "*.controller.ts" | xargs grep -l "PrismaService"
    ```
 
 2. **Сервисы не используют Prisma напрямую (только через репозитории)**
+
    ```bash
    find api/src -name "*.service.ts" | xargs grep -l "this.prisma\."
    ```
 
 3. **Репозитории не содержат бизнес-логику**
+
    ```bash
    # Проверка: репозитории только работают с БД
    ```
@@ -858,4 +877,3 @@ tasks/
 ✅ Использование DTO для валидации  
 ✅ Использование интерфейсов для абстракций  
 ✅ Правила зависимостей соблюдаются
-

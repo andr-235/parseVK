@@ -35,7 +35,7 @@ $ cd api && bun install
 
 Скрипты: `bun run start:dev`, `bun run test`, `bunx prisma generate` и т.д.
 
-## Database setuлшлгнлнлн
+## Database setup
 
 ```bash
 # 1. Copy env template and adjust credentials if needed
@@ -45,10 +45,10 @@ $ cp .env.example .env
 $ docker compose up -d postgres
 
 # 3. Apply Prisma migrations to provision the schema
-$ npx prisma migrate deploy
+$ bunx prisma migrate deploy
 
 # (Optional) Generate the Prisma client if the schema changed
-$ npx prisma generate
+$ bunx prisma generate
 ```
 
 ## Auth bootstrap
@@ -70,7 +70,7 @@ Optional auth tuning:
 Seed the first admin user:
 
 ```bash
-$ npm run seed:admin
+$ bun run seed:admin
 ```
 
 Default admin credentials (change on first login):
@@ -84,26 +84,29 @@ You can override them with `ADMIN_SEED_USERNAME` and `ADMIN_SEED_PASSWORD`.
 
 ```bash
 # development
-$ npm run start
+$ bun run start
 
 # watch mode
-$ npm run start:dev
+$ bun run start:dev
 
 # production mode
-$ npm run start:prod
+$ bun run start:prod
 ```
 
-## Run tests
+## Run tests (Vitest)
 
 ```bash
 # unit tests
-$ npm run test
+$ bun run test
 
 # e2e tests
-$ npm run test:e2e
+$ bun run test:e2e
 
 # test coverage
-$ npm run test:cov
+$ bun run test:cov
+
+# watch mode
+$ bun run test:watch
 ```
 
 ## Deployment

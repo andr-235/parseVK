@@ -30,7 +30,8 @@
 **Особенности:**
 
 - Умное детектирование изменений - запускаются только нужные проверки
-- Кэширование зависимостей (pnpm store, node_modules, Prisma Client)
+- Установка зависимостей через **Bun** (`bun install --frozen-lockfile`), кэш по `bun.lock` и `node_modules`
+- Backend и frontend тесты запускаются через **Vitest** (`bun run test`)
 - Параллельное выполнение задач для ускорения
 - Docker buildx cache для ускорения сборки образов
 
