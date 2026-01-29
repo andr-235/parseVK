@@ -89,6 +89,8 @@ jobs:
     if: needs.changes.outputs.backend_changed == 'true' || needs.changes.outputs.frontend_changed == 'true'
     permissions:
       contents: read
+    env:
+      DATABASE_URL: postgresql://localhost:5432/dummy
     strategy:
       matrix:
         include:
@@ -155,6 +157,8 @@ jobs:
       - name: Generate Prisma Client
         if: matrix.project == 'backend'
         working-directory: api
+        env:
+          DATABASE_URL: postgresql://localhost:5432/dummy
         run: pnpm exec prisma generate
       - name: Run ${{ matrix.task }}
         working-directory: ${{ matrix.working-directory }}
