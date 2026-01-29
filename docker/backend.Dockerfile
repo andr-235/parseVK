@@ -15,17 +15,9 @@ ENV DATABASE_URL=${DATABASE_URL}
 ENV npm_config_registry=${NPM_REGISTRY}
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-# ============ КРИТИЧНО: Правильное зеркало Prisma для России/Китая ============
-ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
-# Или альтернативно (может работать лучше):
-# ENV PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
-
 # Настройки для node-gyp
 ENV NODEJS_ORG_MIRROR=https://nodejs.org/dist/
 ENV npm_config_node_gyp_timeout=300000
-
-# НЕ пропускаем postinstall - engines должны скачаться
-ENV PRISMA_GENERATE_DATAPROXY=false
 
 RUN npm config set registry ${NPM_REGISTRY} \
     && npm config set fetch-retries 5 \
@@ -70,8 +62,7 @@ COPY api/ ./
 RUN rm -f .env
 
 # Generate Prisma Client and build
-RUN --mount=type=cache,target=/app/node_modules/.prisma \
-    pnpm run prisma:generate \
+RUN pnpm run prisma:generate \
     && pnpm run build
 
 # Production stage
@@ -82,28 +73,24 @@ WORKDIR /app
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
-# Prisma mirror для production stage тоже
-ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
 
-# Устанавливаем prisma CLI с увеличенными таймаутами
-# ВАЖНО: network-timeout НЕ валидная опция для npm, только для pnpm
 RUN npm config set registry https://registry.npmmirror.com \
     && npm config set fetch-retries 5 \
     && npm config set fetch-timeout 180000 \
-    && (npm install -g prisma@^6.16.3 || ( \
+    && (npm install -g prisma@7 || ( \
         echo "Retrying with delay..." \
         && sleep 10 \
-        && npm install -g prisma@^6.16.3 \
+        && npm install -g prisma@7 \
     ) || ( \
         npm config set registry https://registry.npmjs.org/ \
-        && npm install -g prisma@^6.16.3 \
+        && npm install -g prisma@7 \
     )) \
     && apk add --no-cache netcat-openbsd
 
-# Копируем собранное приложение и node_modules из build stage
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/node_modules ./node_modules
 
@@ -112,6 +99,7 @@ COPY docker/backend-entrypoint.sh /app/entrypoint.sh
 COPY docker/backend-healthcheck.cjs /app/healthcheck.cjs
 RUN chmod +x /app/entrypoint.sh
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=120s \

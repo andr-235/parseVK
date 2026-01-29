@@ -322,7 +322,7 @@ if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
 fi
 
 # Генерация только если клиент не собран (в build stage уже выполнен prisma generate)
-if [ ! -f ./node_modules/.prisma/client/index.js ] && [ ! -f ./node_modules/@prisma/client/index.js ]; then
+if [ ! -f ./dist/src/generated/prisma/client/index.js ]; then
   echo "Генерация Prisma Client..."
   if ! $PRISMA_CMD generate; then
     echo "Ошибка при генерации Prisma Client, останавливаемся."
