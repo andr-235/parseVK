@@ -61,6 +61,9 @@ COPY api/ ./
 
 RUN rm -f .env
 
+# Ensure Prisma 7 in node_modules (CI cache may have served 6.x)
+RUN pnpm add -D prisma@7
+
 # Generate Prisma Client and build (retry on transient network errors in CI)
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 RUN for i in 1 2 3; do \
