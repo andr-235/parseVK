@@ -107,11 +107,11 @@ COPY --from=build /app/node_modules ./node_modules
 
 # Копируем entrypoint и healthcheck
 COPY docker/backend-entrypoint.sh /app/entrypoint.sh
-COPY docker/backend-healthcheck.cjs /app/healthcheck.cjs
+COPY docker/backend-healthcheck.mjs /app/healthcheck.mjs
 RUN chmod +x /app/entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=120s \
-  CMD ["node", "/app/healthcheck.cjs"]
+  CMD ["node", "/app/healthcheck.mjs"]
