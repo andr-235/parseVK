@@ -108,7 +108,7 @@ jobs:
             project: backend
             working-directory: api
             cache-path: api/bun.lock
-            command: bunx tsc --noEmit
+            command: bun run typecheck
           - task: type-check
             project: frontend
             working-directory: front
