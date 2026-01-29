@@ -333,12 +333,12 @@ else
 fi
 
 echo "Запуск приложения..."
-if [ -f ./dist/main.js ]; then
-  exec node dist/main.js
-elif [ -f ./dist/src/main.js ]; then
+if [ -f ./dist/src/main.js ]; then
   exec node dist/src/main.js
+elif [ -f ./dist/main.js ]; then
+  exec node dist/main.js
 else
-  echo "Ошибка: не найден точка входа (dist/main.js или dist/src/main.js)"
+  echo "Ошибка: не найден точка входа (dist/src/main.js или dist/main.js)"
   ls -la ./dist 2>/dev/null || true
   ls -la ./dist/src 2>/dev/null || true
   exit 1
