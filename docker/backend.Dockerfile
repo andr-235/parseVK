@@ -61,8 +61,13 @@ COPY api/ ./
 
 RUN rm -f .env
 
-# Generate Prisma Client and build
-RUN pnpm run prisma:generate \
+# Generate Prisma Client and build (retry on transient network errors in CI)
+ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+RUN for i in 1 2 3; do \
+      pnpm run prisma:generate && break; \
+      echo "prisma generate attempt $$i failed, retrying in 15s..."; \
+      sleep 15; \
+    done \
     && pnpm run build
 
 # Production stage
