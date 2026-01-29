@@ -3,13 +3,13 @@ import type {
   IListingsRepository,
   ListingCreateData,
   ListingUpdateData,
-} from '../listings/interfaces/listings-repository.interface';
-import type { ListingImportDto } from './dto/listing-import.dto';
+} from '../listings/interfaces/listings-repository.interface.js';
+import type { ListingImportDto } from './dto/listing-import.dto.js';
 import type {
   ListingImportErrorDto,
   ListingImportReportDto,
-} from './dto/listing-import-report.dto';
-import type { ListingImportRequestDto } from './dto/listing-import-request.dto';
+} from './dto/listing-import-report.dto.js';
+import type { ListingImportRequestDto } from './dto/listing-import-request.dto.js';
 
 @Injectable()
 export class DataImportService {

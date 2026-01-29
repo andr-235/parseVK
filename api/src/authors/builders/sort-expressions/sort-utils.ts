@@ -1,6 +1,6 @@
-import { Prisma } from '@/generated/prisma/client';
-import { AUTHORS_CONSTANTS } from '../../authors.constants';
-import type { AuthorSortDirection } from '../../types/authors.types';
+import { Prisma } from '../../../generated/prisma/client.js';
+import { AUTHORS_CONSTANTS } from '../../authors.constants.js';
+import type { AuthorSortDirection } from '../../types/authors.types.js';
 
 export class SortUtils {
   static applyDirection(

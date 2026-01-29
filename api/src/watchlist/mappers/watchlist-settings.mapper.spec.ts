@@ -1,5 +1,5 @@
-import { WatchlistSettingsMapper } from './watchlist-settings.mapper';
-import type { WatchlistSettingsRecord } from '../interfaces/watchlist-repository.interface';
+import { WatchlistSettingsMapper } from './watchlist-settings.mapper.js';
+import type { WatchlistSettingsRecord } from '../interfaces/watchlist-repository.interface.js';
 
 describe('WatchlistSettingsMapper', () => {
   let mapper: WatchlistSettingsMapper;

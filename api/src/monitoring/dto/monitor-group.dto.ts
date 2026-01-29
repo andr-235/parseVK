@@ -1,4 +1,4 @@
-import type { MonitoringMessenger } from '../types/monitoring-messenger.enum';
+import type { MonitoringMessenger } from '../types/monitoring-messenger.enum.js';
 
 export interface MonitorGroupDto {
   id: number;

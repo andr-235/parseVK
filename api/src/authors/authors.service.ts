@@ -1,23 +1,23 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { PhotoAnalysisService } from '../photo-analysis/photo-analysis.service';
-import type { PhotoAnalysisSummaryDto } from '../photo-analysis/dto/photo-analysis-response.dto';
-import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto';
-import { AuthorActivityService } from '../common/services/author-activity.service';
+import { PhotoAnalysisService } from '../photo-analysis/photo-analysis.service.js';
+import type { PhotoAnalysisSummaryDto } from '../photo-analysis/dto/photo-analysis-response.dto.js';
+import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto.js';
+import { AuthorActivityService } from '../common/services/author-activity.service.js';
 import {
   AUTHORS_CONSTANTS,
   AUTHORS_REPOSITORY,
   SORTABLE_FIELDS,
-} from './authors.constants';
-import { AuthorFiltersBuilder } from './builders/author-filters.builder';
-import { AuthorMapper } from './mappers/author.mapper';
-import type { IAuthorsRepository } from './interfaces/authors-repository.interface';
+} from './authors.constants.js';
+import { AuthorFiltersBuilder } from './builders/author-filters.builder.js';
+import { AuthorMapper } from './mappers/author.mapper.js';
+import type { IAuthorsRepository } from './interfaces/authors-repository.interface.js';
 import type {
   AuthorSortDirection,
   AuthorSortField,
   ListAuthorsOptions,
   ResolvedAuthorSort,
-} from './types/authors.types';
-import type { AuthorRecord } from './types/author-record.type';
+} from './types/authors.types.js';
+import type { AuthorRecord } from './types/author-record.type.js';
 
 @Injectable()
 export class AuthorsService {

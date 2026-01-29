@@ -8,12 +8,12 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
-import { PhotoAnalysisService } from './photo-analysis.service';
-import { AnalyzePhotosDto } from './dto/analyze-photos.dto';
+import { PhotoAnalysisService } from './photo-analysis.service.js';
+import { AnalyzePhotosDto } from './dto/analyze-photos.dto.js';
 import type {
   PhotoAnalysisListDto,
   PhotoAnalysisSummaryDto,
-} from './dto/photo-analysis-response.dto';
+} from './dto/photo-analysis-response.dto.js';
 
 @Controller('photo-analysis')
 export class PhotoAnalysisController {

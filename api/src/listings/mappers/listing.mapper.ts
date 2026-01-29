@@ -1,5 +1,5 @@
-import type { ListingDto } from '../dto/listing.dto';
-import type { ListingRecord } from '../types/listing-record.type';
+import type { ListingDto } from '../dto/listing.dto.js';
+import type { ListingRecord } from '../types/listing-record.type.js';
 
 type ListingWithOverrides = ListingRecord & {
   manualOverrides?: unknown;

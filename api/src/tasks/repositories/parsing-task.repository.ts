@@ -1,18 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@/generated/prisma/client';
-import { PrismaService } from '../../prisma.service';
+import { Prisma } from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   IParsingTaskRepository,
   ParsingGroupRecord,
   ParsingTaskRecord,
   PostUpsertData,
   TaskUpdateData,
-} from '../interfaces/parsing-task-repository.interface';
-import { ParsingScope } from '../dto/create-parsing-task.dto';
+} from '../interfaces/parsing-task-repository.interface.js';
+import { ParsingScope } from '../dto/create-parsing-task.dto.js';
 import {
   toCreateJsonValue,
   toUpdateJsonValue,
-} from '../../common/utils/prisma-json.utils';
+} from '../../common/utils/prisma-json.utils.js';
 
 @Injectable()
 export class ParsingTaskRepository implements IParsingTaskRepository {

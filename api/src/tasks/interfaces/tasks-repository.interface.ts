@@ -1,4 +1,4 @@
-import type { TaskRecord } from '../types/task-record.type';
+import type { TaskRecord } from '../types/task-record.type.js';
 
 export type TaskCreateData = {
   title: string;

@@ -1,8 +1,8 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APIError } from 'vk-io';
-import type { AppConfig } from '../../config/app.config';
-import { MetricsService } from '../../metrics/metrics.service';
+import type { AppConfig } from '../../config/app.config.js';
+import { MetricsService } from '../../metrics/metrics.service.js';
 
 export interface RetryOptions {
   maxAttempts?: number;

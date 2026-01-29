@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TaskCancelledError } from './errors/task-cancelled.error';
+import { TaskCancelledError } from './errors/task-cancelled.error.js';
 
 @Injectable()
 export class TaskCancellationService {

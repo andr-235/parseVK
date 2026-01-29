@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DEFAULT_LIMIT, MAX_LIMIT } from '../monitoring.constants';
+import { DEFAULT_LIMIT, MAX_LIMIT } from '../monitoring.constants.js';
 
 @Injectable()
 export class MonitoringQueryValidator {

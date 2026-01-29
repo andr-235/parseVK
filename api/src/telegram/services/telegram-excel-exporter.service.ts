@@ -1,8 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import ExcelJS from 'exceljs';
-import { TelegramChatRepository } from '../repositories/telegram-chat.repository';
-import { TelegramMemberMapper } from '../mappers/telegram-member.mapper';
-import { TelegramMemberStatus } from '../types/telegram.enums';
+import { TelegramChatRepository } from '../repositories/telegram-chat.repository.js';
+import { TelegramMemberMapper } from '../mappers/telegram-member.mapper.js';
+import { TelegramMemberStatus } from '../types/telegram.enums.js';
 
 @Injectable()
 export class TelegramExcelExporterService {

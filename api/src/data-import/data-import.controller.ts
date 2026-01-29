@@ -1,9 +1,9 @@
 import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
 import { validateSync, type ValidationError } from 'class-validator';
-import { DataImportService } from './data-import.service';
-import { ListingImportDto } from './dto/listing-import.dto';
-import { ListingImportRequestDto } from './dto/listing-import-request.dto';
-import type { ListingImportReportDto } from './dto/listing-import-report.dto';
+import { DataImportService } from './data-import.service.js';
+import { ListingImportDto } from './dto/listing-import.dto.js';
+import { ListingImportRequestDto } from './dto/listing-import-request.dto.js';
+import type { ListingImportReportDto } from './dto/listing-import-report.dto.js';
 
 const LISTING_FIELD_KEYS = new Set([
   'url',

@@ -4,7 +4,7 @@ import type {
   IModerationStrategy,
   IModerationAdapter,
   ModerationResult,
-} from '../interfaces/moderation-service.interface';
+} from '../interfaces/moderation-service.interface.js';
 
 @Injectable()
 export class ModerationService implements IModerationService {

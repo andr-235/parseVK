@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import type { CommentSource } from '../../common/types/comment-source.enum';
-import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
+import type { CommentSource } from '../../common/types/comment-source.enum.js';
+import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface.js';
 import type {
   WatchlistAuthorCardDto,
   WatchlistAuthorProfileDto,
   WatchlistCommentDto,
-} from '../dto/watchlist-author.dto';
-import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
+} from '../dto/watchlist-author.dto.js';
+import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto.js';
 
 @Injectable()
 export class WatchlistAuthorMapper {

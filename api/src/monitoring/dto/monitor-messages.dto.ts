@@ -1,4 +1,4 @@
-import type { MonitorMessageDto } from './monitor-message.dto';
+import type { MonitorMessageDto } from './monitor-message.dto.js';
 
 export interface MonitorMessagesDto {
   items: MonitorMessageDto[];

@@ -1,15 +1,15 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { Public } from './decorators/public.decorator';
-import { AllowTemporaryPassword } from './decorators/allow-temporary-password.decorator';
-import { CurrentUser } from './decorators/current-user.decorator';
-import { RequireUserPipe } from './pipes/require-user.pipe';
-import { ChangePasswordDto } from './dto/change-password.dto';
-import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
-import { AuthService } from './auth.service';
-import type { AuthResponse, AuthenticatedUser } from './auth.types';
+import { Public } from './decorators/public.decorator.js';
+import { AllowTemporaryPassword } from './decorators/allow-temporary-password.decorator.js';
+import { CurrentUser } from './decorators/current-user.decorator.js';
+import { RequireUserPipe } from './pipes/require-user.pipe.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { LoginDto } from './dto/login.dto.js';
+import { RefreshTokenDto } from './dto/refresh-token.dto.js';
+import { JwtRefreshGuard } from './guards/jwt-refresh.guard.js';
+import { AuthService } from './auth.service.js';
+import type { AuthResponse, AuthenticatedUser } from './auth.types.js';
 
 @Controller('auth')
 export class AuthController {

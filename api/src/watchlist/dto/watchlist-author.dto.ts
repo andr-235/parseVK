@@ -1,6 +1,6 @@
-import type { CommentSource } from '../../common/types/comment-source.enum';
-import type { WatchlistStatus } from '../types/watchlist-status.enum';
-import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
+import type { CommentSource } from '../../common/types/comment-source.enum.js';
+import type { WatchlistStatus } from '../types/watchlist-status.enum.js';
+import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto.js';
 
 export interface WatchlistAuthorProfileDto {
   vkUserId: number;

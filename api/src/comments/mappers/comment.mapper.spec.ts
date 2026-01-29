@@ -1,5 +1,5 @@
-import { CommentMapper } from './comment.mapper';
-import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
+import { CommentMapper } from './comment.mapper.js';
+import type { CommentWithRelations } from '../interfaces/comments-repository.interface.js';
 
 const createMockPost = () => ({
   text: 'Post text',

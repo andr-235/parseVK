@@ -1,7 +1,7 @@
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
-import type { ParsingScope } from './dto/create-parsing-task.dto';
-import type { ParsingStats } from './interfaces/parsing-stats.interface';
+import type { ParsingScope } from './dto/create-parsing-task.dto.js';
+import type { ParsingStats } from './interfaces/parsing-stats.interface.js';
 
 export type GatewayTaskStatus = 'pending' | 'running' | 'done' | 'failed';
 

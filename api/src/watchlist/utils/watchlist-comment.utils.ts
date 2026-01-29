@@ -1,4 +1,4 @@
-import type { CommentEntity } from '../../common/types/comment-entity.type';
+import type { CommentEntity } from '../../common/types/comment-entity.type.js';
 
 const COMMENT_KEY_SEPARATOR = ':';
 

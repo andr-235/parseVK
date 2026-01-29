@@ -1,4 +1,4 @@
-import type { WatchlistStatus } from '../types/watchlist-status.enum';
+import type { WatchlistStatus } from '../types/watchlist-status.enum.js';
 
 export type WatchlistSettingsRecord = {
   id: number;

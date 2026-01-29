@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { OffsetPaginationStrategy } from './offset-pagination.strategy';
+import { OffsetPaginationStrategy } from './offset-pagination.strategy.js';
 import {
   COMMENTS_REPOSITORY,
   type ICommentsRepository,
-} from '../interfaces/comments-repository.interface';
-import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
-import { CommentMapper } from '../mappers/comment.mapper';
-import { CommentsStatsService } from '../services/comments-stats.service';
-import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
-import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
+} from '../interfaces/comments-repository.interface.js';
+import { CommentsFilterBuilder } from '../builders/comments-filter.builder.js';
+import { CommentMapper } from '../mappers/comment.mapper.js';
+import { CommentsStatsService } from '../services/comments-stats.service.js';
+import type { CommentWithRelations } from '../interfaces/comments-repository.interface.js';
+import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto.js';
 
 const createMockPost = () => ({
   text: 'Post text',

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { SuspicionLevel as PrismaSuspicionLevel } from '@/generated/prisma/client';
-import type { ModerationResult } from '../interfaces/moderation-service.interface';
+import { SuspicionLevel as PrismaSuspicionLevel } from '../../generated/prisma/client.js';
+import type { ModerationResult } from '../interfaces/moderation-service.interface.js';
 
 export interface PhotoAnalysisData {
   authorId: number;

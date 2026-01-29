@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
-import { TelegramAuthService } from './telegram-auth.service';
+import { TelegramAuthService } from './telegram-auth.service.js';
 import { Api } from 'telegram';
-import type { ITelegramAuthRepository } from './interfaces/telegram-auth-repository.interface';
+import type { ITelegramAuthRepository } from './interfaces/telegram-auth-repository.interface.js';
 
 const createCacheMock = () => {
   const store = new Map<string, unknown>();

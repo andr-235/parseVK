@@ -8,9 +8,9 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { AuthorsService } from './authors.service';
-import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto';
-import { ListAuthorsQueryDto } from './dto/list-authors-query.dto';
+import { AuthorsService } from './authors.service.js';
+import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto.js';
+import { ListAuthorsQueryDto } from './dto/list-authors-query.dto.js';
 
 @Controller('authors')
 export class AuthorsController {

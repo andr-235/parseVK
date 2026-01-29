@@ -1,4 +1,4 @@
-import type { ListingDto } from './listing.dto';
+import type { ListingDto } from './listing.dto.js';
 
 export interface ListingsResponseDto {
   items: ListingDto[];

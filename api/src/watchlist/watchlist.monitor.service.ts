@@ -4,7 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { WatchlistService } from './watchlist.service';
+import { WatchlistService } from './watchlist.service.js';
 
 const MONITOR_INTERVAL_MS = 60_000;
 

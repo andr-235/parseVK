@@ -1,22 +1,22 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { VkService } from '../../vk/vk.service';
-import type { VkPhoto } from '../../vk/vk.service';
+import { VkService } from '../../vk/vk.service.js';
+import type { VkPhoto } from '../../vk/vk.service.js';
 import type {
   AnalyzePhotosCommand,
   IAnalyzePhotosCommandHandler,
-} from '../commands/analyze-photos.command';
-import type { PhotoAnalysisListDto } from '../dto/photo-analysis-response.dto';
-import type { IPhotoAnalysisRepository } from '../interfaces/photo-analysis-repository.interface';
+} from '../commands/analyze-photos.command.js';
+import type { PhotoAnalysisListDto } from '../dto/photo-analysis-response.dto.js';
+import type { IPhotoAnalysisRepository } from '../interfaces/photo-analysis-repository.interface.js';
 import type {
   IAuthorService,
   IPhotoLoader,
-} from '../interfaces/photo-loader.interface';
+} from '../interfaces/photo-loader.interface.js';
 import type {
   IModerationService,
   ModerationResult,
-} from '../interfaces/moderation-service.interface';
-import { PhotoAnalysisFactory } from '../factories/photo-analysis.factory';
-import { PhotoAnalysisSummaryBuilder } from '../builders/photo-analysis-summary.builder';
+} from '../interfaces/moderation-service.interface.js';
+import { PhotoAnalysisFactory } from '../factories/photo-analysis.factory.js';
+import { PhotoAnalysisSummaryBuilder } from '../builders/photo-analysis-summary.builder.js';
 
 interface PhotoForModeration {
   photoVkId: string;

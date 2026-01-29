@@ -17,12 +17,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { defer, from, of, type Observable } from 'rxjs';
 import { mergeMap } from 'rxjs/operators';
-import { OkFriendsService } from './ok-friends.service';
-import { OkFriendsExportRequestDto } from './dto/ok-friends.dto';
-import { OkFriendsJobStreamService } from './services/ok-friends-job-stream.service';
-import { OkFriendsExportJobService } from './services/ok-friends-export-job.service';
-import { OkFriendsFileService } from './services/ok-friends-file.service';
-import { buildParams } from './ok-friends-params.util';
+import { OkFriendsService } from './ok-friends.service.js';
+import { OkFriendsExportRequestDto } from './dto/ok-friends.dto.js';
+import { OkFriendsJobStreamService } from './services/ok-friends-job-stream.service.js';
+import { OkFriendsExportJobService } from './services/ok-friends-export-job.service.js';
+import { OkFriendsFileService } from './services/ok-friends-file.service.js';
+import { buildParams } from './ok-friends-params.util.js';
 
 @Controller('ok/friends')
 export class OkFriendsController {

@@ -8,11 +8,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { TasksService } from './tasks.service';
-import { CreateParsingTaskDto } from './dto/create-parsing-task.dto';
-import { GetTasksQueryDto } from './dto/get-tasks-query.dto';
-import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface';
-import type { TaskDetail, TaskSummary } from './interfaces/task.interface';
+import { TasksService } from './tasks.service.js';
+import { CreateParsingTaskDto } from './dto/create-parsing-task.dto.js';
+import { GetTasksQueryDto } from './dto/get-tasks-query.dto.js';
+import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface.js';
+import type { TaskDetail, TaskSummary } from './interfaces/task.interface.js';
 
 @Controller('tasks')
 export class TasksController {

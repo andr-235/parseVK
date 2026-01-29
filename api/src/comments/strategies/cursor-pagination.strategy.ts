@@ -1,21 +1,21 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import type { Prisma } from '@/generated/prisma/client';
+import type { Prisma } from '../../generated/prisma/client.js';
 
-import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
-import { CursorUtils } from '../dto/comments-cursor.dto';
-import type { CommentsCursorListDto } from '../dto/comments-cursor-list.dto';
-import { CommentMapper } from '../mappers/comment.mapper';
-import { CommentsStatsService } from '../services/comments-stats.service';
+import { CommentsFilterBuilder } from '../builders/comments-filter.builder.js';
+import { CursorUtils } from '../dto/comments-cursor.dto.js';
+import type { CommentsCursorListDto } from '../dto/comments-cursor-list.dto.js';
+import { CommentMapper } from '../mappers/comment.mapper.js';
+import { CommentsStatsService } from '../services/comments-stats.service.js';
 
 import type {
   CursorPaginationOptions,
   ICursorPaginationStrategy,
-} from '../interfaces/pagination-strategy.interface';
-import type { CommentsFilters } from '../types/comments-filters.type';
+} from '../interfaces/pagination-strategy.interface.js';
+import type { CommentsFilters } from '../types/comments-filters.type.js';
 import {
   COMMENTS_REPOSITORY,
   type ICommentsRepository,
-} from '../interfaces/comments-repository.interface';
+} from '../interfaces/comments-repository.interface.js';
 
 @Injectable()
 export class CursorPaginationStrategy implements ICursorPaginationStrategy {

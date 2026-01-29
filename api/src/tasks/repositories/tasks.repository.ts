@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@/generated/prisma/client';
-import { PrismaService } from '../../prisma.service';
+import { Prisma } from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   ITasksRepository,
   TaskCreateData,
   TaskOrderByInput,
   TaskUpdateData,
-} from '../interfaces/tasks-repository.interface';
-import type { TaskRecord } from '../types/task-record.type';
+} from '../interfaces/tasks-repository.interface.js';
+import type { TaskRecord } from '../types/task-record.type.js';
 
 @Injectable()
 export class TasksRepository implements ITasksRepository {

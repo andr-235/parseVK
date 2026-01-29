@@ -5,11 +5,12 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { TelegramClient } from 'telegram';
-import { StringSession } from 'telegram/sessions';
-import { PrismaService } from '../../prisma.service';
-import type { ITelegramClient } from '../interfaces/telegram-client.interface';
-import type { AppConfig } from '../../config/app.config';
+import { TelegramClient, sessions } from 'telegram';
+
+const { StringSession } = sessions;
+import { PrismaService } from '../../prisma.service.js';
+import type { ITelegramClient } from '../interfaces/telegram-client.interface.js';
+import type { AppConfig } from '../../config/app.config.js';
 
 @Injectable()
 export class TelegramClientManagerService

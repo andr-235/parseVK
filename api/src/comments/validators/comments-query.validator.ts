@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
-import { DEFAULT_LIMIT, MAX_LIMIT } from '../constants/comments.constants';
+import { DEFAULT_LIMIT, MAX_LIMIT } from '../constants/comments.constants.js';
 import type {
   KeywordSourceFilter,
   ReadStatusFilter,
-} from '../types/comments-filters.type';
+} from '../types/comments-filters.type.js';
 
 @Injectable()
 export class CommentsQueryValidator {

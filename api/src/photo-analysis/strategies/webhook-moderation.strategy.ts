@@ -5,8 +5,8 @@ import {
   request as httpsRequest,
   type RequestOptions as HttpsRequestOptions,
 } from 'node:https';
-import type { IModerationStrategy } from '../interfaces/moderation-service.interface';
-import type { AppConfig } from '../../config/app.config';
+import type { IModerationStrategy } from '../interfaces/moderation-service.interface.js';
+import type { AppConfig } from '../../config/app.config.js';
 
 const DEFAULT_IMAGE_MODERATION_WEBHOOK_URL =
   'https://192.168.88.12/webhook/image-moderation';

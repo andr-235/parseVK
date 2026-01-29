@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@/generated/prisma/client';
-import { PrismaService } from '../../prisma.service';
-import { toCreateJsonValue } from '../../common/utils/prisma-json.utils';
+import { Prisma } from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma.service.js';
+import { toCreateJsonValue } from '../../common/utils/prisma-json.utils.js';
 
 export type ExportJobStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED';
 export type JobLogLevel = 'info' | 'warn' | 'error';

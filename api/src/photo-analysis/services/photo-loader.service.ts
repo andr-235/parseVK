@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { VkService } from '../../vk/vk.service';
-import type { VkPhoto } from '../../vk/vk.service';
-import type { IPhotoLoader } from '../interfaces/photo-loader.interface';
+import { VkService } from '../../vk/vk.service.js';
+import type { VkPhoto } from '../../vk/vk.service.js';
+import type { IPhotoLoader } from '../interfaces/photo-loader.interface.js';
 
 const MAX_PHOTO_LIMIT = 200;
 

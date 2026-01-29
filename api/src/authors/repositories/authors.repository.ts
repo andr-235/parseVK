@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@/generated/prisma/client';
-import { PrismaService } from '../../prisma.service';
-import type { IAuthorsRepository } from '../interfaces/authors-repository.interface';
-import type { AuthorRecord } from '../types/author-record.type';
-import type { ResolvedAuthorSort, SqlFragment } from '../types/authors.types';
-import { AuthorSortBuilder } from '../builders/author-sort.builder';
+import { Prisma } from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma.service.js';
+import type { IAuthorsRepository } from '../interfaces/authors-repository.interface.js';
+import type { AuthorRecord } from '../types/author-record.type.js';
+import type {
+  ResolvedAuthorSort,
+  SqlFragment,
+} from '../types/authors.types.js';
+import { AuthorSortBuilder } from '../builders/author-sort.builder.js';
 
 @Injectable()
 export class AuthorsRepository implements IAuthorsRepository {

@@ -4,12 +4,12 @@ import type {
   ListingOrderByInput,
   ListingWhereInput,
   ListingUpdateData,
-} from './interfaces/listings-repository.interface';
-import { ListingMapper } from './mappers/listing.mapper';
-import type { ListingsResponseDto } from './dto/listings-response.dto';
-import type { ListingDto } from './dto/listing.dto';
-import type { UpdateListingDto } from './dto/update-listing.dto';
-import type { ListingRecord } from './types/listing-record.type';
+} from './interfaces/listings-repository.interface.js';
+import { ListingMapper } from './mappers/listing.mapper.js';
+import type { ListingsResponseDto } from './dto/listings-response.dto.js';
+import type { ListingDto } from './dto/listing.dto.js';
+import type { UpdateListingDto } from './dto/update-listing.dto.js';
+import type { ListingRecord } from './types/listing-record.type.js';
 
 type ListingWithOverrides = ListingRecord & {
   manualOverrides?: unknown;

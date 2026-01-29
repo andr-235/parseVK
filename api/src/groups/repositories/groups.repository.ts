@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@/generated/prisma/client';
-import { PrismaService } from '../../prisma.service';
+import type { Prisma } from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   GetGroupsWithCountResult,
   GroupOrderByInput,
   GroupUpsertData,
   IGroupsRepository,
-} from '../interfaces/groups-repository.interface';
-import type { IGroupResponse } from '../interfaces/group.interface';
+} from '../interfaces/groups-repository.interface.js';
+import type { IGroupResponse } from '../interfaces/group.interface.js';
 
 @Injectable()
 export class GroupsRepository implements IGroupsRepository {

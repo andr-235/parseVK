@@ -4,7 +4,7 @@ import {
   type OkFriendsGetParams,
   type OkUsersGetInfoParams,
   type OkUserInfo,
-} from './ok-api.service';
+} from './ok-api.service.js';
 import {
   OkFriendsRepository,
   type ExportJobCreateInput,
@@ -14,8 +14,8 @@ import {
   type JobLogInput,
   type JobProgressUpdateInput,
   type FriendRecordPayload,
-} from './repositories/ok-friends.repository';
-import { MAX_FRIENDS_LIMIT } from './ok-friends.constants';
+} from './repositories/ok-friends.repository.js';
+import { MAX_FRIENDS_LIMIT } from './ok-friends.constants.js';
 
 export interface OkFriendsStatusResponse {
   status: 'ok';

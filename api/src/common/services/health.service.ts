@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-import { PrismaService } from '../../prisma.service';
-import { VkService } from '../../vk/vk.service';
+import { PrismaService } from '../../prisma.service.js';
+import { VkService } from '../../vk/vk.service.js';
 
 export interface HealthCheckResult {
   status: 'ok' | 'degraded' | 'down';

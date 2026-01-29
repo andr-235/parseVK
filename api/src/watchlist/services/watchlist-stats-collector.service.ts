@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
-import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
-import { PhotoAnalysisService } from '../../photo-analysis/photo-analysis.service';
-import { PrismaService } from '../../prisma.service';
+import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface.js';
+import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto.js';
+import { PhotoAnalysisService } from '../../photo-analysis/photo-analysis.service.js';
+import { PrismaService } from '../../prisma.service.js';
 
 @Injectable()
 export class WatchlistStatsCollectorService {

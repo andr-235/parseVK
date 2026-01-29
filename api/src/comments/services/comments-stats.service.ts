@@ -1,13 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
+import { CommentsFilterBuilder } from '../builders/comments-filter.builder.js';
 
-import type { CommentWhereInput } from '../types/comment-structures.type';
-import type { CommentsFilters } from '../types/comments-filters.type';
+import type { CommentWhereInput } from '../types/comment-structures.type.js';
+import type { CommentsFilters } from '../types/comments-filters.type.js';
 import {
   COMMENTS_REPOSITORY,
   type ICommentsRepository,
-} from '../interfaces/comments-repository.interface';
+} from '../interfaces/comments-repository.interface.js';
 
 export interface CommentsStats {
   total: number;

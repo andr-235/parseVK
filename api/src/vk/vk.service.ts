@@ -4,19 +4,19 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { APIError, VK } from 'vk-io';
 import type { Objects, Params, Responses } from 'vk-io';
-import type { IAuthor } from './interfaces/author.interfaces';
-import type { IComment } from './interfaces/comment.interfaces';
-import type { IPost } from './interfaces/post.interfaces';
-import type { IGroup } from './interfaces/group.interfaces';
+import type { IAuthor } from './interfaces/author.interfaces.js';
+import type { IComment } from './interfaces/comment.interfaces.js';
+import type { IPost } from './interfaces/post.interfaces.js';
+import type { IGroup } from './interfaces/group.interfaces.js';
 import {
   buildGroupCacheKey,
   buildUsersCacheKey,
   buildPostsCacheKey,
   buildCommentsCacheKey,
   CACHE_TTL,
-} from '../common/constants/cache-keys';
-import { VkApiRequestManager } from './services/vk-api-request-manager.service';
-import { VkApiBatchingService } from './services/vk-api-batching.service';
+} from '../common/constants/cache-keys.js';
+import { VkApiRequestManager } from './services/vk-api-request-manager.service.js';
+import { VkApiBatchingService } from './services/vk-api-batching.service.js';
 
 export interface GetCommentsOptions {
   ownerId: number;

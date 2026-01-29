@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { OkFriendsController } from './ok-friends.controller';
-import { OkFriendsService } from './ok-friends.service';
-import { OkApiService } from './ok-api.service';
-import { OkFriendsRepository } from './repositories/ok-friends.repository';
-import { OkFriendsExporterService } from './services/ok-friends-exporter.service';
-import { OkFriendsJobStreamService } from './services/ok-friends-job-stream.service';
-import { OkFriendsExportJobService } from './services/ok-friends-export-job.service';
-import { OkFriendsFileService } from './services/ok-friends-file.service';
+import { OkFriendsController } from './ok-friends.controller.js';
+import { OkFriendsService } from './ok-friends.service.js';
+import { OkApiService } from './ok-api.service.js';
+import { OkFriendsRepository } from './repositories/ok-friends.repository.js';
+import { OkFriendsExporterService } from './services/ok-friends-exporter.service.js';
+import { OkFriendsJobStreamService } from './services/ok-friends-job-stream.service.js';
+import { OkFriendsExportJobService } from './services/ok-friends-export-job.service.js';
+import { OkFriendsFileService } from './services/ok-friends-file.service.js';
 
 @Module({
   controllers: [OkFriendsController],

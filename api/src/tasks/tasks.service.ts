@@ -9,18 +9,18 @@ import {
 import {
   CreateParsingTaskDto,
   ParsingScope,
-} from './dto/create-parsing-task.dto';
-import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface';
-import type { TaskDetail, TaskSummary } from './interfaces/task.interface';
-import type { ITasksRepository } from './interfaces/tasks-repository.interface';
-import { ParsingTaskRunner } from './parsing-task.runner';
-import { ParsingQueueService } from './parsing-queue.service';
-import { TaskCancellationService } from './task-cancellation.service';
-import { TaskMapper } from './mappers/task.mapper';
-import { TaskDescriptionParser } from './parsers/task-description.parser';
-import { TaskContextBuilder } from './builders/task-context.builder';
-import { MetricsService } from '../metrics/metrics.service';
-import type { TaskRecord } from './types/task-record.type';
+} from './dto/create-parsing-task.dto.js';
+import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface.js';
+import type { TaskDetail, TaskSummary } from './interfaces/task.interface.js';
+import type { ITasksRepository } from './interfaces/tasks-repository.interface.js';
+import { ParsingTaskRunner } from './parsing-task.runner.js';
+import { ParsingQueueService } from './parsing-queue.service.js';
+import { TaskCancellationService } from './task-cancellation.service.js';
+import { TaskMapper } from './mappers/task.mapper.js';
+import { TaskDescriptionParser } from './parsers/task-description.parser.js';
+import { TaskContextBuilder } from './builders/task-context.builder.js';
+import { MetricsService } from '../metrics/metrics.service.js';
+import type { TaskRecord } from './types/task-record.type.js';
 
 /**
  * Сервис для управления задачами парсинга VK групп

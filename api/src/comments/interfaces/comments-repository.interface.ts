@@ -1,8 +1,8 @@
-import type { Prisma } from '@/generated/prisma/client';
+import type { Prisma } from '../../generated/prisma/client.js';
 import type {
   CommentOrderByInput,
   CommentWhereInput,
-} from '../types/comment-structures.type';
+} from '../types/comment-structures.type.js';
 
 export const COMMENTS_REPOSITORY = Symbol('COMMENTS_REPOSITORY');
 

@@ -1,4 +1,4 @@
-import type { IGroup } from '../../vk/interfaces/group.interfaces';
+import type { IGroup } from '../../vk/interfaces/group.interfaces.js';
 
 export interface IRegionGroupSearchItem extends IGroup {
   existsInDb: boolean;

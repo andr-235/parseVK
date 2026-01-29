@@ -12,17 +12,17 @@ import {
   Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { GroupsService } from './groups.service';
-import { SaveGroupDto } from './dto/save-group.dto';
-import { GroupIdParamDto } from './dto/group-id-param.dto';
+import { GroupsService } from './groups.service.js';
+import { SaveGroupDto } from './dto/save-group.dto.js';
+import { GroupIdParamDto } from './dto/group-id-param.dto.js';
 import {
   IGroupResponse,
   IDeleteResponse,
   IGroupsListResponse,
-} from './interfaces/group.interface';
-import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface';
-import type { IRegionGroupSearchResponse } from './interfaces/group-search.interface';
-import { GetGroupsQueryDto } from './dto/get-groups-query.dto';
+} from './interfaces/group.interface.js';
+import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface.js';
+import type { IRegionGroupSearchResponse } from './interfaces/group-search.interface.js';
+import { GetGroupsQueryDto } from './dto/get-groups-query.dto.js';
 
 @Controller('groups')
 export class GroupsController {

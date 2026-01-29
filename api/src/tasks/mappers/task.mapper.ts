@@ -3,9 +3,9 @@ import type {
   TaskDetail,
   TaskSummary,
   TaskStatus,
-} from '../interfaces/task.interface';
-import type { ParsedTaskDescription } from '../parsers/task-description.parser';
-import type { TaskRecord } from '../types/task-record.type';
+} from '../interfaces/task.interface.js';
+import type { ParsedTaskDescription } from '../parsers/task-description.parser.js';
+import type { TaskRecord } from '../types/task-record.type.js';
 
 @Injectable()
 export class TaskMapper {

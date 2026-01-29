@@ -7,8 +7,8 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import type { RedisStore } from 'cache-manager-redis-yet';
-import { PrismaService } from '../prisma.service';
-import { MetricsService } from './metrics.service';
+import { PrismaService } from '../prisma.service.js';
+import { MetricsService } from './metrics.service.js';
 
 @Injectable()
 export class MetricsUpdaterService implements OnModuleInit, OnModuleDestroy {

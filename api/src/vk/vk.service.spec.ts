@@ -1,5 +1,5 @@
 import { APIError, VK } from 'vk-io';
-import { VkService } from './vk.service';
+import { VkService } from './vk.service.js';
 import type { Cache } from 'cache-manager';
 
 type ApiMock = {

@@ -1,4 +1,4 @@
-import type { OkFriendsParamsDto } from './dto/ok-friends.dto';
+import type { OkFriendsParamsDto } from './dto/ok-friends.dto.js';
 
 export interface OkFriendsGetParams {
   fid?: string;

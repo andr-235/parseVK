@@ -1,8 +1,8 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { KeywordsService } from '../keywords/keywords.service';
-import { MonitorDatabaseService } from './monitor-database.service';
-import type { MonitorMessagesDto } from './dto/monitor-messages.dto';
-import type { MonitorMessageDto } from './dto/monitor-message.dto';
+import { KeywordsService } from '../keywords/keywords.service.js';
+import { MonitorDatabaseService } from './monitor-database.service.js';
+import type { MonitorMessagesDto } from './dto/monitor-messages.dto.js';
+import type { MonitorMessageDto } from './dto/monitor-message.dto.js';
 
 const normalizeKeywords = (values: string[]): string[] => {
   const normalized = values

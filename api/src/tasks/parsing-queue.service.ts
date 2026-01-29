@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface';
-import { ParsingQueueProducer } from './queues/parsing.queue';
+import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface.js';
+import { ParsingQueueProducer } from './queues/parsing.queue.js';
 
 /**
  * Сервис-обертка над BullMQ очередью парсинга

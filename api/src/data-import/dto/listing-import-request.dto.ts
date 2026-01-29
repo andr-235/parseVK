@@ -5,7 +5,7 @@ import {
   IsOptional,
   ValidateNested,
 } from 'class-validator';
-import { ListingImportDto } from './listing-import.dto';
+import { ListingImportDto } from './listing-import.dto.js';
 
 export class ListingImportRequestDto {
   @IsArray({ message: 'listings должен быть массивом' })

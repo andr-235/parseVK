@@ -1,8 +1,8 @@
-import { DataImportController } from './data-import.controller';
-import type { DataImportService } from './data-import.service';
-import { ListingImportDto } from './dto/listing-import.dto';
-import { ListingImportRequestDto } from './dto/listing-import-request.dto';
-import type { ListingImportReportDto } from './dto/listing-import-report.dto';
+import { DataImportController } from './data-import.controller.js';
+import type { DataImportService } from './data-import.service.js';
+import { ListingImportDto } from './dto/listing-import.dto.js';
+import { ListingImportRequestDto } from './dto/listing-import-request.dto.js';
+import type { ListingImportReportDto } from './dto/listing-import-report.dto.js';
 
 describe('DataImportController', () => {
   let controller: DataImportController;

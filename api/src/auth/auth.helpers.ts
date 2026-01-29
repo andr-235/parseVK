@@ -1,6 +1,6 @@
 import { UnauthorizedException } from '@nestjs/common';
-import type { UsersService } from '../users/users.service';
-import type { AuthenticatedUser } from './auth.types';
+import type { UsersService } from '../users/users.service.js';
+import type { AuthenticatedUser } from './auth.types.js';
 
 export async function getUserOrThrow(
   usersService: UsersService,

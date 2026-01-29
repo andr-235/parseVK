@@ -2,7 +2,7 @@ import { redisStore } from 'cache-manager-redis-yet';
 import { CacheModuleOptions, CacheOptionsFactory } from '@nestjs/cache-manager';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { AppConfig } from '../../config/app.config';
+import type { AppConfig } from '../../config/app.config.js';
 
 const DEFAULT_TTL_MS = 3600 * 1000;
 

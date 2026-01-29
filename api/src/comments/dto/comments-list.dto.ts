@@ -1,4 +1,4 @@
-import type { CommentWithAuthorDto } from './comment-with-author.dto';
+import type { CommentWithAuthorDto } from './comment-with-author.dto.js';
 
 export interface CommentsListDto {
   items: CommentWithAuthorDto[];

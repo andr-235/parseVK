@@ -5,24 +5,24 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { VkService } from '../vk/vk.service';
-import { IGroup } from '../vk/interfaces/group.interfaces';
+import { VkService } from '../vk/vk.service.js';
+import { IGroup } from '../vk/interfaces/group.interfaces.js';
 import {
   IGroupResponse,
   IDeleteResponse,
   IGroupsListResponse,
-} from './interfaces/group.interface';
+} from './interfaces/group.interface.js';
 import {
   IBulkSaveGroupError,
   IBulkSaveGroupsResult,
-} from './interfaces/group-bulk.interface';
+} from './interfaces/group-bulk.interface.js';
 import {
   IRegionGroupSearchItem,
   IRegionGroupSearchResponse,
-} from './interfaces/group-search.interface';
-import type { IGroupsRepository } from './interfaces/groups-repository.interface';
-import { GroupMapper } from './mappers/group.mapper';
-import { GroupIdentifierValidator } from './validators/group-identifier.validator';
+} from './interfaces/group-search.interface.js';
+import type { IGroupsRepository } from './interfaces/groups-repository.interface.js';
+import { GroupMapper } from './mappers/group.mapper.js';
+import { GroupIdentifierValidator } from './validators/group-identifier.validator.js';
 
 /**
  * Сервис для управления VK группами

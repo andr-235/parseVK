@@ -1,7 +1,7 @@
-import { KeywordsService } from './keywords.service';
-import type { IKeywordsRepository } from './interfaces/keywords-repository.interface';
-import { KeywordsMatchesService } from './services/keywords-matches.service';
-import type { IBulkAddResponse } from './interfaces/keyword.interface';
+import { KeywordsService } from './keywords.service.js';
+import type { IKeywordsRepository } from './interfaces/keywords-repository.interface.js';
+import { KeywordsMatchesService } from './services/keywords-matches.service.js';
+import type { IBulkAddResponse } from './interfaces/keyword.interface.js';
 
 describe('KeywordsService', () => {
   let service: KeywordsService;

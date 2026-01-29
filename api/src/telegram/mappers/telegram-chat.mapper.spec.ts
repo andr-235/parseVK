@@ -1,6 +1,6 @@
-import { TelegramChatMapper } from './telegram-chat.mapper';
+import { TelegramChatMapper } from './telegram-chat.mapper.js';
 import { Api } from 'telegram';
-import { TelegramChatType } from '../types/telegram.enums';
+import { TelegramChatType } from '../types/telegram.enums.js';
 
 describe('TelegramChatMapper', () => {
   let mapper: TelegramChatMapper;

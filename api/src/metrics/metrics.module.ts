@@ -1,8 +1,8 @@
 import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { MetricsService } from './metrics.service';
-import { MetricsController } from './metrics.controller';
-import { MetricsUpdaterService } from './metrics-updater.service';
-import { MetricsSecurityMiddleware } from '../common/middleware/metrics-security.middleware';
+import { MetricsService } from './metrics.service.js';
+import { MetricsController } from './metrics.controller.js';
+import { MetricsUpdaterService } from './metrics-updater.service.js';
+import { MetricsSecurityMiddleware } from '../common/middleware/metrics-security.middleware.js';
 
 @Global()
 @Module({

@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import type { AuthenticatedUser } from '../auth.types';
-import { ALLOW_TEMP_PASSWORD_KEY, IS_PUBLIC_KEY } from '../auth.constants';
-import { getBoolMetadata } from '../auth.utils';
+import type { AuthenticatedUser } from '../auth.types.js';
+import { ALLOW_TEMP_PASSWORD_KEY, IS_PUBLIC_KEY } from '../auth.constants.js';
+import { getBoolMetadata } from '../auth.utils.js';
 
 @Injectable()
 export class PasswordChangeGuard implements CanActivate {

@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-import { MonitorDatabaseService } from './monitor-database.service';
-import type { MonitorGroupDto } from './dto/monitor-group.dto';
-import type { MonitorGroupsDto } from './dto/monitor-groups.dto';
-import type { CreateMonitorGroupDto } from './dto/create-monitor-group.dto';
-import type { UpdateMonitorGroupDto } from './dto/update-monitor-group.dto';
-import { MonitoringMessenger } from './types/monitoring-messenger.enum';
+import { PrismaService } from '../prisma.service.js';
+import { MonitorDatabaseService } from './monitor-database.service.js';
+import type { MonitorGroupDto } from './dto/monitor-group.dto.js';
+import type { MonitorGroupsDto } from './dto/monitor-groups.dto.js';
+import type { CreateMonitorGroupDto } from './dto/create-monitor-group.dto.js';
+import type { UpdateMonitorGroupDto } from './dto/update-monitor-group.dto.js';
+import { MonitoringMessenger } from './types/monitoring-messenger.enum.js';
 
 type MonitoringGroupWhereInput = {
   messenger?: MonitoringMessenger;

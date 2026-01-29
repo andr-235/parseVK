@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { ParsingScope } from '../dto/create-parsing-task.dto';
-import type { ParsingStats } from '../interfaces/parsing-stats.interface';
-import type { TaskRecord } from '../types/task-record.type';
+import { ParsingScope } from '../dto/create-parsing-task.dto.js';
+import type { ParsingStats } from '../interfaces/parsing-stats.interface.js';
+import type { TaskRecord } from '../types/task-record.type.js';
 
 export interface ParsedTaskDescription {
   scope: ParsingScope | null;

@@ -5,10 +5,10 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { UserRole } from '../../users/types/user-role.enum';
-import { IS_PUBLIC_KEY, ROLES_KEY } from '../auth.constants';
-import type { AuthenticatedRequest } from '../auth.types';
-import { getBoolMetadata } from '../auth.utils';
+import type { UserRole } from '../../users/types/user-role.enum.js';
+import { IS_PUBLIC_KEY, ROLES_KEY } from '../auth.constants.js';
+import type { AuthenticatedRequest } from '../auth.types.js';
+import { getBoolMetadata } from '../auth.utils.js';
 
 @Injectable()
 export class RolesGuard implements CanActivate {

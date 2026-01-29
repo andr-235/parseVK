@@ -11,16 +11,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { KeywordsService } from './keywords.service';
-import { AddKeywordDto } from './dto/add-keyword.dto';
-import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto';
-import { KeywordIdParamDto } from './dto/keyword-id-param.dto';
-import { GetKeywordsQueryDto } from './dto/get-keywords-query.dto';
+import { KeywordsService } from './keywords.service.js';
+import { AddKeywordDto } from './dto/add-keyword.dto.js';
+import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto.js';
+import { KeywordIdParamDto } from './dto/keyword-id-param.dto.js';
+import { GetKeywordsQueryDto } from './dto/get-keywords-query.dto.js';
 import {
   IKeywordResponse,
   IDeleteResponse,
   IBulkAddResponse,
-} from './interfaces/keyword.interface';
+} from './interfaces/keyword.interface.js';
 
 @Controller('keywords')
 export class KeywordsController {

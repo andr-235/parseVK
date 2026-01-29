@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type {
   IModerationAdapter,
   ModerationResult,
-} from '../interfaces/moderation-service.interface';
+} from '../interfaces/moderation-service.interface.js';
 
 interface PhotoForModeration {
   photoVkId: string;

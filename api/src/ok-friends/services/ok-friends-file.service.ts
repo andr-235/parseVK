@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { OkFriendsExporterService } from './ok-friends-exporter.service';
-import { OkFriendsService } from '../ok-friends.service';
-import { EXPORT_DIR } from '../ok-friends.constants';
+import { OkFriendsExporterService } from './ok-friends-exporter.service.js';
+import { OkFriendsService } from '../ok-friends.service.js';
+import { EXPORT_DIR } from '../ok-friends.constants.js';
 
 type JobForRebuild = {
   id: string;

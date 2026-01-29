@@ -3,21 +3,21 @@ import { TelegramClient, Api } from 'telegram';
 import type {
   ResolvedChat,
   MemberRecord,
-} from '../interfaces/telegram-client.interface';
-import type { TelegramMemberDto } from '../dto/telegram-member.dto';
-import { TelegramChatRepository } from '../repositories/telegram-chat.repository';
-import { TelegramMemberRepository } from '../repositories/telegram-member.repository';
+} from '../interfaces/telegram-client.interface.js';
+import type { TelegramMemberDto } from '../dto/telegram-member.dto.js';
+import { TelegramChatRepository } from '../repositories/telegram-chat.repository.js';
+import { TelegramMemberRepository } from '../repositories/telegram-member.repository.js';
 import {
   TelegramMemberMapper,
   type TelegramChatMemberRecord,
   type TelegramUserRecord,
-} from '../mappers/telegram-member.mapper';
-import { PrismaService } from '../../prisma.service';
+} from '../mappers/telegram-member.mapper.js';
+import { PrismaService } from '../../prisma.service.js';
 import {
   TelegramMemberStatus,
   type TelegramChatTypeValue,
   type TelegramMemberStatusValue,
-} from '../types/telegram.enums';
+} from '../types/telegram.enums.js';
 
 interface TelegramUserPersonal {
   flags?: number;

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@/generated/prisma/client';
-import { PrismaService } from '../../prisma.service';
+import type { Prisma } from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   GetListingsTransactionResult,
   IListingsRepository,
@@ -10,8 +10,8 @@ import type {
   ListingWhereInput,
   ListingWhereUniqueInput,
   ListingsTransactionClient,
-} from '../interfaces/listings-repository.interface';
-import type { ListingRecord } from '../types/listing-record.type';
+} from '../interfaces/listings-repository.interface.js';
+import type { ListingRecord } from '../types/listing-record.type.js';
 
 @Injectable()
 export class ListingsRepository implements IListingsRepository {

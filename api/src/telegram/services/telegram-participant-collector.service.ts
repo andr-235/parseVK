@@ -4,13 +4,13 @@ import bigInt from 'big-integer';
 import {
   TelegramChatType,
   TelegramMemberStatus,
-} from '../types/telegram.enums';
+} from '../types/telegram.enums.js';
 import type {
   ResolvedChat,
   MemberRecord,
   ParticipantCollection,
-} from '../interfaces/telegram-client.interface';
-import { TelegramMemberMapper } from '../mappers/telegram-member.mapper';
+} from '../interfaces/telegram-client.interface.js';
+import { TelegramMemberMapper } from '../mappers/telegram-member.mapper.js';
 
 @Injectable()
 export class TelegramParticipantCollectorService {

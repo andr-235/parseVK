@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
-import { validate } from './config.validator';
+import { validate } from './config.validator.js';
 
 @Module({
   imports: [

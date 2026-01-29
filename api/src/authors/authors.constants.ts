@@ -1,4 +1,4 @@
-import type { AuthorSortField } from './types/authors.types';
+import type { AuthorSortField } from './types/authors.types.js';
 
 export const AUTHORS_CONSTANTS = {
   DEFAULT_LIMIT: 20,

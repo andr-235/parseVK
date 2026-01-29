@@ -1,4 +1,4 @@
-import type { VkPhoto } from '../../vk/vk.service';
+import type { VkPhoto } from '../../vk/vk.service.js';
 
 export interface IPhotoLoader {
   loadUserPhotos(params: {

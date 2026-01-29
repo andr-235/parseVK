@@ -1,19 +1,19 @@
 import { Module } from '@nestjs/common';
 
-import { CommentsController } from './comments.controller';
-import { CommentsService } from './comments.service';
-import { CommentsStatsService } from './services/comments-stats.service';
+import { CommentsController } from './comments.controller.js';
+import { CommentsService } from './comments.service.js';
+import { CommentsStatsService } from './services/comments-stats.service.js';
 
-import { CommentsRepository } from './repositories/comments.repository';
+import { CommentsRepository } from './repositories/comments.repository.js';
 
-import { CommentMapper } from './mappers/comment.mapper';
-import { CommentsFilterBuilder } from './builders/comments-filter.builder';
+import { CommentMapper } from './mappers/comment.mapper.js';
+import { CommentsFilterBuilder } from './builders/comments-filter.builder.js';
 
-import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
-import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
+import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy.js';
+import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy.js';
 
-import { CommentsQueryValidator } from './validators/comments-query.validator';
-import { COMMENTS_REPOSITORY } from './interfaces/comments-repository.interface';
+import { CommentsQueryValidator } from './validators/comments-query.validator.js';
+import { COMMENTS_REPOSITORY } from './interfaces/comments-repository.interface.js';
 
 const PAGINATION_STRATEGIES = [
   OffsetPaginationStrategy,

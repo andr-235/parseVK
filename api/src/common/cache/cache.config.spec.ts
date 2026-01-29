@@ -1,8 +1,8 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as redisStoreModule from 'cache-manager-redis-yet';
-import { CacheConfigService } from './cache.config';
-import type { AppConfig } from '../../config/app.config';
+import { CacheConfigService } from './cache.config.js';
+import type { AppConfig } from '../../config/app.config.js';
 
 describe('CacheConfigService', () => {
   let redisStoreMock: jest.SpyInstance;

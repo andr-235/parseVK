@@ -8,13 +8,13 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { MonitoringGroupsService } from './monitoring-groups.service';
-import type { MonitorGroupDto } from './dto/monitor-group.dto';
-import type { MonitorGroupsDto } from './dto/monitor-groups.dto';
-import { CreateMonitorGroupDto } from './dto/create-monitor-group.dto';
-import { UpdateMonitorGroupDto } from './dto/update-monitor-group.dto';
-import { MonitorGroupsQueryDto } from './dto/monitor-groups-query.dto';
-import { MonitorGroupIdParamDto } from './dto/monitor-group-id-param.dto';
+import { MonitoringGroupsService } from './monitoring-groups.service.js';
+import type { MonitorGroupDto } from './dto/monitor-group.dto.js';
+import type { MonitorGroupsDto } from './dto/monitor-groups.dto.js';
+import { CreateMonitorGroupDto } from './dto/create-monitor-group.dto.js';
+import { UpdateMonitorGroupDto } from './dto/update-monitor-group.dto.js';
+import { MonitorGroupsQueryDto } from './dto/monitor-groups-query.dto.js';
+import { MonitorGroupIdParamDto } from './dto/monitor-group-id-param.dto.js';
 
 @Controller('monitoring/groups')
 export class MonitoringGroupsController {

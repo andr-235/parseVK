@@ -1,5 +1,5 @@
-import type { Prisma } from '@/generated/prisma/client';
-import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
+import type { Prisma } from '../../generated/prisma/client.js';
+import type { CommentWithRelations } from '../interfaces/comments-repository.interface.js';
 
 /**
  * Тип для автора комментария с выбранными полями

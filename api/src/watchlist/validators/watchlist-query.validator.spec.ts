@@ -1,4 +1,4 @@
-import { WatchlistQueryValidator } from './watchlist-query.validator';
+import { WatchlistQueryValidator } from './watchlist-query.validator.js';
 
 describe('WatchlistQueryValidator', () => {
   let validator: WatchlistQueryValidator;

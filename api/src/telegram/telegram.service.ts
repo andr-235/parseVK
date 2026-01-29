@@ -4,16 +4,16 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import type { TelegramSyncResultDto } from './dto/telegram-sync-result.dto';
-import type { SyncChatParams } from './types/telegram-sync.types';
-import { TelegramClientManagerService } from './services/telegram-client-manager.service';
-import { TelegramChatMapper } from './mappers/telegram-chat.mapper';
-import { TelegramParticipantCollectorService } from './services/telegram-participant-collector.service';
-import { TelegramChatSyncService } from './services/telegram-chat-sync.service';
-import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service';
-import { TelegramChatRepository } from './repositories/telegram-chat.repository';
-import type { ParticipantCollection } from './interfaces/telegram-client.interface';
-import type { TelegramMemberDto } from './dto/telegram-member.dto';
+import type { TelegramSyncResultDto } from './dto/telegram-sync-result.dto.js';
+import type { SyncChatParams } from './types/telegram-sync.types.js';
+import { TelegramClientManagerService } from './services/telegram-client-manager.service.js';
+import { TelegramChatMapper } from './mappers/telegram-chat.mapper.js';
+import { TelegramParticipantCollectorService } from './services/telegram-participant-collector.service.js';
+import { TelegramChatSyncService } from './services/telegram-chat-sync.service.js';
+import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service.js';
+import { TelegramChatRepository } from './repositories/telegram-chat.repository.js';
+import type { ParticipantCollection } from './interfaces/telegram-client.interface.js';
+import type { TelegramMemberDto } from './dto/telegram-member.dto.js';
 
 @Injectable()
 export class TelegramService {

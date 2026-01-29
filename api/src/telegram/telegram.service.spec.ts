@@ -1,19 +1,22 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { BadRequestException } from '@nestjs/common';
-import { TelegramChatType, TelegramMemberStatus } from './types/telegram.enums';
+import {
+  TelegramChatType,
+  TelegramMemberStatus,
+} from './types/telegram.enums.js';
 import type { Api } from 'telegram';
-import type { TelegramMemberDto } from './dto/telegram-member.dto';
-import { TelegramService } from './telegram.service';
-import { TelegramClientManagerService } from './services/telegram-client-manager.service';
-import { TelegramChatMapper } from './mappers/telegram-chat.mapper';
-import { TelegramParticipantCollectorService } from './services/telegram-participant-collector.service';
-import { TelegramChatSyncService } from './services/telegram-chat-sync.service';
-import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service';
-import { TelegramChatRepository } from './repositories/telegram-chat.repository';
+import type { TelegramMemberDto } from './dto/telegram-member.dto.js';
+import { TelegramService } from './telegram.service.js';
+import { TelegramClientManagerService } from './services/telegram-client-manager.service.js';
+import { TelegramChatMapper } from './mappers/telegram-chat.mapper.js';
+import { TelegramParticipantCollectorService } from './services/telegram-participant-collector.service.js';
+import { TelegramChatSyncService } from './services/telegram-chat-sync.service.js';
+import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service.js';
+import { TelegramChatRepository } from './repositories/telegram-chat.repository.js';
 import type {
   ResolvedChat,
   ParticipantCollection,
-} from './interfaces/telegram-client.interface';
+} from './interfaces/telegram-client.interface.js';
 import type { TelegramClient } from 'telegram';
 
 describe('TelegramService', () => {

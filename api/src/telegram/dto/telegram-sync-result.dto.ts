@@ -1,5 +1,5 @@
-import { TelegramChatType } from '../types/telegram.enums';
-import { TelegramMemberDto } from './telegram-member.dto';
+import { TelegramChatType } from '../types/telegram.enums.js';
+import { TelegramMemberDto } from './telegram-member.dto.js';
 
 export class TelegramSyncResultDto {
   chatId!: number;

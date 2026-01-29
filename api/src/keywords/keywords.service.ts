@@ -3,9 +3,9 @@ import {
   IKeywordResponse,
   IDeleteResponse,
   IBulkAddResponse,
-} from './interfaces/keyword.interface';
-import type { IKeywordsRepository } from './interfaces/keywords-repository.interface';
-import { KeywordsMatchesService } from './services/keywords-matches.service';
+} from './interfaces/keyword.interface.js';
+import type { IKeywordsRepository } from './interfaces/keywords-repository.interface.js';
+import { KeywordsMatchesService } from './services/keywords-matches.service.js';
 
 /**
  * Сервис для управления ключевыми словами

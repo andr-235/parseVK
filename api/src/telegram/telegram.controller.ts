@@ -7,9 +7,9 @@ import {
   Post,
   Res,
 } from '@nestjs/common';
-import { TelegramService } from './telegram.service';
-import { SyncTelegramChatDto } from './dto/sync-telegram-chat.dto';
-import { TelegramSyncResultDto } from './dto/telegram-sync-result.dto';
+import { TelegramService } from './telegram.service.js';
+import { SyncTelegramChatDto } from './dto/sync-telegram-chat.dto.js';
+import { TelegramSyncResultDto } from './dto/telegram-sync-result.dto.js';
 import type { Response } from 'express';
 
 @Controller('telegram')

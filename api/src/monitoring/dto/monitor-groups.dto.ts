@@ -1,4 +1,4 @@
-import type { MonitorGroupDto } from './monitor-group.dto';
+import type { MonitorGroupDto } from './monitor-group.dto.js';
 
 export interface MonitorGroupsDto {
   items: MonitorGroupDto[];

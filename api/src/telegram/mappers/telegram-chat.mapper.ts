@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Api } from 'telegram';
-import type { ResolvedChat } from '../interfaces/telegram-client.interface';
-import { TelegramChatType } from '../types/telegram.enums';
+import type { ResolvedChat } from '../interfaces/telegram-client.interface.js';
+import { TelegramChatType } from '../types/telegram.enums.js';
 
 @Injectable()
 export class TelegramChatMapper {

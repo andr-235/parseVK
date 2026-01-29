@@ -1,4 +1,4 @@
-import { Prisma } from '@/generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client.js';
 
 /**
  * Преобразует значение в формат Prisma InputJsonValue для операций обновления

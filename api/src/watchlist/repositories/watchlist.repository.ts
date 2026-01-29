@@ -1,20 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma.service';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   IWatchlistRepository,
   WatchlistAuthorWithRelations,
   WatchlistAuthorUpdateData,
   WatchlistSettingsRecord,
   WatchlistSettingsUpdateData,
-} from '../interfaces/watchlist-repository.interface';
-import type { Comment, Prisma } from '@/generated/prisma/client';
+} from '../interfaces/watchlist-repository.interface.js';
+import type { Comment, Prisma } from '../../generated/prisma/client.js';
 import {
   CommentSource as PrismaCommentSource,
   WatchlistStatus as WS,
-} from '@/generated/prisma/client';
-import { composeCommentKey } from '../utils/watchlist-comment.utils';
-import type { CommentSource } from '../../common/types/comment-source.enum';
-import type { WatchlistStatus } from '../types/watchlist-status.enum';
+} from '../../generated/prisma/client.js';
+import { composeCommentKey } from '../utils/watchlist-comment.utils.js';
+import type { CommentSource } from '../../common/types/comment-source.enum.js';
+import type { WatchlistStatus } from '../types/watchlist-status.enum.js';
 
 const DEFAULT_SETTINGS_ID = 1;
 type WatchlistAuthorRecord = Omit<WatchlistAuthorWithRelations, 'status'> & {

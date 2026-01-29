@@ -6,10 +6,10 @@ import {
 } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { FriendMapper, type VkUserInput } from '../mappers/friend.mapper';
-import { VkFriendsExporterService } from './vk-friends-exporter.service';
-import { VkFriendsService } from '../vk-friends.service';
-import { EXPORT_DIR } from '../vk-friends.constants';
+import { FriendMapper, type VkUserInput } from '../mappers/friend.mapper.js';
+import { VkFriendsExporterService } from './vk-friends-exporter.service.js';
+import { VkFriendsService } from '../vk-friends.service.js';
+import { EXPORT_DIR } from '../vk-friends.constants.js';
 
 type JobForRebuild = {
   id: string;

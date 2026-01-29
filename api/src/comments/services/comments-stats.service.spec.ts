@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommentsStatsService } from './comments-stats.service';
+import { CommentsStatsService } from './comments-stats.service.js';
 import {
   COMMENTS_REPOSITORY,
   type ICommentsRepository,
-} from '../interfaces/comments-repository.interface';
-import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
+} from '../interfaces/comments-repository.interface.js';
+import { CommentsFilterBuilder } from '../builders/comments-filter.builder.js';
 
 describe('CommentsStatsService', () => {
   let service: CommentsStatsService;

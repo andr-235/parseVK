@@ -9,13 +9,13 @@ import {
   Query,
 } from '@nestjs/common';
 
-import { DEFAULT_LIMIT } from './constants/comments.constants';
-import { CommentsService } from './comments.service';
-import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
-import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
-import type { CommentsListDto } from './dto/comments-list.dto';
-import { UpdateCommentReadDto } from './dto/update-comment-read.dto';
-import { CommentsQueryValidator } from './validators/comments-query.validator';
+import { DEFAULT_LIMIT } from './constants/comments.constants.js';
+import { CommentsService } from './comments.service.js';
+import type { CommentWithAuthorDto } from './dto/comment-with-author.dto.js';
+import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto.js';
+import type { CommentsListDto } from './dto/comments-list.dto.js';
+import { UpdateCommentReadDto } from './dto/update-comment-read.dto.js';
+import { CommentsQueryValidator } from './validators/comments-query.validator.js';
 
 @Controller('comments')
 export class CommentsController {

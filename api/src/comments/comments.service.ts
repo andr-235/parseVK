@@ -1,21 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { CommentMapper } from './mappers/comment.mapper';
-import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
-import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
+import { CommentMapper } from './mappers/comment.mapper.js';
+import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy.js';
+import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy.js';
 
-import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
-import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
-import type { CommentsListDto } from './dto/comments-list.dto';
+import type { CommentWithAuthorDto } from './dto/comment-with-author.dto.js';
+import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto.js';
+import type { CommentsListDto } from './dto/comments-list.dto.js';
 
 import type {
   CommentsCursorOptions,
   CommentsQueryOptions,
-} from './types/comments-filters.type';
+} from './types/comments-filters.type.js';
 import {
   COMMENTS_REPOSITORY,
   type ICommentsRepository,
-} from './interfaces/comments-repository.interface';
+} from './interfaces/comments-repository.interface.js';
 
 @Injectable()
 export class CommentsService {

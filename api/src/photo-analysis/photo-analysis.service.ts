@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { AnalyzePhotosDto } from './dto/analyze-photos.dto';
+import type { AnalyzePhotosDto } from './dto/analyze-photos.dto.js';
 import type {
   PhotoAnalysisListDto,
   PhotoAnalysisSummaryDto,
-} from './dto/photo-analysis-response.dto';
-import { PhotoAnalysisFacadeService } from './services/photo-analysis-facade.service';
+} from './dto/photo-analysis-response.dto.js';
+import { PhotoAnalysisFacadeService } from './services/photo-analysis-facade.service.js';
 
 @Injectable()
 export class PhotoAnalysisService {

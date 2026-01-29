@@ -1,15 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import type { Params } from 'vk-io';
-import { FriendMapper } from '../mappers/friend.mapper';
+import { FriendMapper } from '../mappers/friend.mapper.js';
 import type {
   FriendRecordInput,
   JobLogLevel,
-} from '../repositories/vk-friends.repository';
-import { VkFriendsExporterService } from './vk-friends-exporter.service';
-import { VkFriendsJobStreamService } from './vk-friends-job-stream.service';
-import { VkFriendsService } from '../vk-friends.service';
-import { EXPORT_BATCH_SIZE } from '../vk-friends.constants';
+} from '../repositories/vk-friends.repository.js';
+import { VkFriendsExporterService } from './vk-friends-exporter.service.js';
+import { VkFriendsJobStreamService } from './vk-friends-job-stream.service.js';
+import { VkFriendsService } from '../vk-friends.service.js';
+import { EXPORT_BATCH_SIZE } from '../vk-friends.constants.js';
 
 export interface ExportJobProgress {
   fetchedCount: number;

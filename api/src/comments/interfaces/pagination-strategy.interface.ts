@@ -1,6 +1,6 @@
-import type { CommentsCursorListDto } from '../dto/comments-cursor-list.dto';
-import type { CommentsListDto } from '../dto/comments-list.dto';
-import type { CommentsFilters } from '../types/comments-filters.type';
+import type { CommentsCursorListDto } from '../dto/comments-cursor-list.dto.js';
+import type { CommentsListDto } from '../dto/comments-list.dto.js';
+import type { CommentsFilters } from '../types/comments-filters.type.js';
 
 /**
  * Опции для offset-based пагинации

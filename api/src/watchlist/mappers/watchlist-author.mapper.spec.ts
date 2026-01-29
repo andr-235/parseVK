@@ -1,7 +1,7 @@
-import { WatchlistAuthorMapper } from './watchlist-author.mapper';
-import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
-import { WatchlistStatus } from '../types/watchlist-status.enum';
-import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
+import { WatchlistAuthorMapper } from './watchlist-author.mapper.js';
+import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface.js';
+import { WatchlistStatus } from '../types/watchlist-status.enum.js';
+import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto.js';
 
 describe('WatchlistAuthorMapper', () => {
   let mapper: WatchlistAuthorMapper;

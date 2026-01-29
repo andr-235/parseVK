@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
-import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
+import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto.js';
+import type { CommentWithRelations } from '../interfaces/comments-repository.interface.js';
 import type {
   CommentAuthor,
   CommentKeywordMatches,
   PostWithGroup,
-} from '../types/comment-structures.type';
+} from '../types/comment-structures.type.js';
 
 @Injectable()
 export class CommentMapper {

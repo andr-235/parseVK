@@ -1,16 +1,18 @@
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { AppModule } from './app.module';
+import { AppModule } from './app.module.js';
 import { json, urlencoded, type Request } from 'express';
 import helmet from 'helmet';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import type { AppConfig } from './config/app.config';
-import type {
-  CorsOptions,
-  CorsOptionsDelegate,
-} from '@nestjs/common/interfaces/external/cors-options.interface';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
+import type { AppConfig } from './config/app.config.js';
+import type { CorsOptions } from 'cors';
+
+type CorsOptionsDelegate<T> = (
+  req: T,
+  cb: (err: Error | null, options?: CorsOptions) => void,
+) => void;
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {

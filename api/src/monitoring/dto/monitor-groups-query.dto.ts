@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
-import { MonitoringMessenger } from '../types/monitoring-messenger.enum';
+import { MonitoringMessenger } from '../types/monitoring-messenger.enum.js';
 
 const trimValue = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;

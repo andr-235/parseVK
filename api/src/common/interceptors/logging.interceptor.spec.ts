@@ -1,7 +1,7 @@
 import { CallHandler, ExecutionContext, Logger } from '@nestjs/common';
 import { lastValueFrom, of, throwError } from 'rxjs';
-import { LoggingInterceptor } from './logging.interceptor';
-import { CORRELATION_ID_HEADER } from '../middleware/correlation-id.middleware';
+import { LoggingInterceptor } from './logging.interceptor.js';
+import { CORRELATION_ID_HEADER } from '../middleware/correlation-id.middleware.js';
 
 describe('LoggingInterceptor', () => {
   let interceptor: LoggingInterceptor;

@@ -1,4 +1,4 @@
-import type { IGroupResponse } from './group.interface';
+import type { IGroupResponse } from './group.interface.js';
 
 export type GroupOrderByInput = Record<string, 'asc' | 'desc'>;
 

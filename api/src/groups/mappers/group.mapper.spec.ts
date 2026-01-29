@@ -1,5 +1,5 @@
-import { GroupMapper } from './group.mapper';
-import type { IGroup } from '../../vk/interfaces/group.interfaces';
+import { GroupMapper } from './group.mapper.js';
+import type { IGroup } from '../../vk/interfaces/group.interfaces.js';
 
 describe('GroupMapper', () => {
   let mapper: GroupMapper;

@@ -1,24 +1,24 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
-import { TasksController } from './tasks.controller';
-import { TasksService } from './tasks.service';
-import { VkModule } from '../vk/vk.module';
-import { ParsingTaskRunner } from './parsing-task.runner';
-import { ParsingQueueService } from './parsing-queue.service';
-import { TasksGateway } from './tasks.gateway';
-import { ParsingQueueProducer } from './queues/parsing.queue';
-import { ParsingProcessor } from './queues/parsing.processor';
-import { PARSING_QUEUE } from './queues/parsing.constants';
-import { TaskCancellationService } from './task-cancellation.service';
-import { CommonModule } from '../common/common.module';
-import { TaskAutomationService } from './automation/task-automation.service';
-import { TaskAutomationController } from './automation/task-automation.controller';
-import { TaskMapper } from './mappers/task.mapper';
-import { TaskDescriptionParser } from './parsers/task-description.parser';
-import { TaskContextBuilder } from './builders/task-context.builder';
-import { TasksRepository } from './repositories/tasks.repository';
-import { ParsingTaskRepository } from './repositories/parsing-task.repository';
-import { TaskAutomationRepository } from './repositories/task-automation.repository';
+import { TasksController } from './tasks.controller.js';
+import { TasksService } from './tasks.service.js';
+import { VkModule } from '../vk/vk.module.js';
+import { ParsingTaskRunner } from './parsing-task.runner.js';
+import { ParsingQueueService } from './parsing-queue.service.js';
+import { TasksGateway } from './tasks.gateway.js';
+import { ParsingQueueProducer } from './queues/parsing.queue.js';
+import { ParsingProcessor } from './queues/parsing.processor.js';
+import { PARSING_QUEUE } from './queues/parsing.constants.js';
+import { TaskCancellationService } from './task-cancellation.service.js';
+import { CommonModule } from '../common/common.module.js';
+import { TaskAutomationService } from './automation/task-automation.service.js';
+import { TaskAutomationController } from './automation/task-automation.controller.js';
+import { TaskMapper } from './mappers/task.mapper.js';
+import { TaskDescriptionParser } from './parsers/task-description.parser.js';
+import { TaskContextBuilder } from './builders/task-context.builder.js';
+import { TasksRepository } from './repositories/tasks.repository.js';
+import { ParsingTaskRepository } from './repositories/parsing-task.repository.js';
+import { TaskAutomationRepository } from './repositories/task-automation.repository.js';
 
 @Module({
   imports: [

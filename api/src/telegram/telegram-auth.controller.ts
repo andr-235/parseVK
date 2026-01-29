@@ -1,17 +1,17 @@
 import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
-import { TelegramAuthService } from './telegram-auth.service';
+import { TelegramAuthService } from './telegram-auth.service.js';
 import {
   StartTelegramSessionDto,
   StartTelegramSessionResponseDto,
-} from './dto/start-session.dto';
+} from './dto/start-session.dto.js';
 import {
   ConfirmTelegramSessionDto,
   ConfirmTelegramSessionResponseDto,
-} from './dto/confirm-session.dto';
+} from './dto/confirm-session.dto.js';
 import {
   TelegramSettingsDto,
   TelegramSettingsResponseDto,
-} from './dto/telegram-settings.dto';
+} from './dto/telegram-settings.dto.js';
 
 @Controller('telegram')
 export class TelegramAuthController {

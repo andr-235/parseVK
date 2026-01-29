@@ -1,6 +1,6 @@
-import type { AuthorSortDirection } from '../../types/authors.types';
-import type { ISortExpression } from './sort-expression.interface';
-import { SortUtils } from './sort-utils';
+import type { AuthorSortDirection } from '../../types/authors.types.js';
+import type { ISortExpression } from './sort-expression.interface.js';
+import { SortUtils } from './sort-utils.js';
 
 export class CounterSortExpression implements ISortExpression {
   constructor(private readonly keys: string[]) {}

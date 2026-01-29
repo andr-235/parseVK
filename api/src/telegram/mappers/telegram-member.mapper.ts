@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Api } from 'telegram';
-import { Prisma } from '@/generated/prisma/client';
-import type { MemberRecord } from '../interfaces/telegram-client.interface';
-import type { TelegramMemberDto } from '../dto/telegram-member.dto';
+import { Prisma } from '../../generated/prisma/client.js';
+import type { MemberRecord } from '../interfaces/telegram-client.interface.js';
+import type { TelegramMemberDto } from '../dto/telegram-member.dto.js';
 import bigInt, { type BigInteger } from 'big-integer';
-import { TelegramMemberStatus } from '../types/telegram.enums';
+import { TelegramMemberStatus } from '../types/telegram.enums.js';
 
 export type TelegramUserRecord = {
   id: number;

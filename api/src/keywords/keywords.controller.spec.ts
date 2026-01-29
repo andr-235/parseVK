@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { KeywordsController } from './keywords.controller';
-import { KeywordsService } from './keywords.service';
-import { AddKeywordDto } from './dto/add-keyword.dto';
-import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto';
+import { KeywordsController } from './keywords.controller.js';
+import { KeywordsService } from './keywords.service.js';
+import { AddKeywordDto } from './dto/add-keyword.dto.js';
+import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto.js';
 
 const mockKeywordsService = () => ({
   addKeyword: jest.fn(),

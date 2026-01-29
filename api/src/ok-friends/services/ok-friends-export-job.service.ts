@@ -3,14 +3,14 @@ import { promises as fs } from 'fs';
 import type {
   FriendRecordInput,
   JobLogLevel,
-} from '../repositories/ok-friends.repository';
-import { OkFriendsExporterService } from './ok-friends-exporter.service';
-import { OkFriendsJobStreamService } from './ok-friends-job-stream.service';
-import { OkFriendsService } from '../ok-friends.service';
-import { EXPORT_BATCH_SIZE } from '../ok-friends.constants';
-import type { OkFriendsGetParams } from '../ok-api.service';
-import { flattenUserInfo } from '../utils/flatten-user-info.util';
-import type { FriendFlatDto } from '../dto/ok-friends.dto';
+} from '../repositories/ok-friends.repository.js';
+import { OkFriendsExporterService } from './ok-friends-exporter.service.js';
+import { OkFriendsJobStreamService } from './ok-friends-job-stream.service.js';
+import { OkFriendsService } from '../ok-friends.service.js';
+import { EXPORT_BATCH_SIZE } from '../ok-friends.constants.js';
+import type { OkFriendsGetParams } from '../ok-api.service.js';
+import { flattenUserInfo } from '../utils/flatten-user-info.util.js';
+import type { FriendFlatDto } from '../dto/ok-friends.dto.js';
 
 export interface ExportJobProgress {
   fetchedCount: number;

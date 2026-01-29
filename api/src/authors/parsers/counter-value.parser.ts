@@ -1,5 +1,10 @@
-import { AUTHORS_CONSTANTS } from '../authors.constants';
-import { isNullish, isFiniteNumber, isString, isObject } from './parser-utils';
+import { AUTHORS_CONSTANTS } from '../authors.constants.js';
+import {
+  isNullish,
+  isFiniteNumber,
+  isString,
+  isObject,
+} from './parser-utils.js';
 
 export class CounterValueParser {
   parse(value: unknown, depth = 0): number | null {

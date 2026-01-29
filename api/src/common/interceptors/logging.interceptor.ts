@@ -10,8 +10,8 @@ import {
 import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { CORRELATION_ID_HEADER } from '../middleware/correlation-id.middleware';
-import type { MetricsService } from '../../metrics/metrics.service';
+import { CORRELATION_ID_HEADER } from '../middleware/correlation-id.middleware.js';
+import type { MetricsService } from '../../metrics/metrics.service.js';
 
 interface LogEntry {
   correlationId: string;

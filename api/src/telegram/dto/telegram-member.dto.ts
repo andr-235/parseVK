@@ -1,4 +1,4 @@
-import { TelegramMemberStatus } from '../types/telegram.enums';
+import { TelegramMemberStatus } from '../types/telegram.enums.js';
 
 export class TelegramMemberDto {
   userId!: number;

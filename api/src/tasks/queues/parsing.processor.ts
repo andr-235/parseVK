@@ -1,18 +1,18 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Inject, Logger, Optional } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { ParsingTaskRunner } from '../parsing-task.runner';
-import { TasksGateway } from '../tasks.gateway';
-import type { ParsingTaskJobData } from '../interfaces/parsing-task-job.interface';
+import { ParsingTaskRunner } from '../parsing-task.runner.js';
+import { TasksGateway } from '../tasks.gateway.js';
+import type { ParsingTaskJobData } from '../interfaces/parsing-task-job.interface.js';
 import {
   PARSING_QUEUE,
   PARSING_CONCURRENCY,
   PARSING_JOB_TIMEOUT,
-} from './parsing.constants';
-import { TaskCancellationService } from '../task-cancellation.service';
-import { TaskCancelledError } from '../errors/task-cancelled.error';
-import { MetricsService } from '../../metrics/metrics.service';
-import type { IParsingTaskRepository } from '../interfaces/parsing-task-repository.interface';
+} from './parsing.constants.js';
+import { TaskCancellationService } from '../task-cancellation.service.js';
+import { TaskCancelledError } from '../errors/task-cancelled.error.js';
+import { MetricsService } from '../../metrics/metrics.service.js';
+import type { IParsingTaskRepository } from '../interfaces/parsing-task-repository.interface.js';
 
 /**
  * Worker для обработки задач парсинга

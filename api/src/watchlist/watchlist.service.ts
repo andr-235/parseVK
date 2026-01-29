@@ -5,29 +5,29 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { CommentSource } from '../common/types/comment-source.enum';
-import { WatchlistStatus } from './types/watchlist-status.enum';
+import { CommentSource } from '../common/types/comment-source.enum.js';
+import { WatchlistStatus } from './types/watchlist-status.enum.js';
 import type {
   WatchlistAuthorCardDto,
   WatchlistAuthorDetailsDto,
   WatchlistAuthorListDto,
   WatchlistSettingsDto,
-} from './dto/watchlist-author.dto';
-import { CreateWatchlistAuthorDto } from './dto/create-watchlist-author.dto';
-import { UpdateWatchlistAuthorDto } from './dto/update-watchlist-author.dto';
-import { UpdateWatchlistSettingsDto } from './dto/update-watchlist-settings.dto';
+} from './dto/watchlist-author.dto.js';
+import { CreateWatchlistAuthorDto } from './dto/create-watchlist-author.dto.js';
+import { UpdateWatchlistAuthorDto } from './dto/update-watchlist-author.dto.js';
+import { UpdateWatchlistSettingsDto } from './dto/update-watchlist-settings.dto.js';
 import type {
   IWatchlistRepository,
   WatchlistAuthorUpdateData,
   WatchlistSettingsUpdateData,
-} from './interfaces/watchlist-repository.interface';
+} from './interfaces/watchlist-repository.interface.js';
 import { Inject } from '@nestjs/common';
-import { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper';
-import { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper';
-import { WatchlistStatsCollectorService } from './services/watchlist-stats-collector.service';
-import { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service';
-import { WatchlistQueryValidator } from './validators/watchlist-query.validator';
-import { AuthorActivityService } from '../common/services/author-activity.service';
+import { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper.js';
+import { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper.js';
+import { WatchlistStatsCollectorService } from './services/watchlist-stats-collector.service.js';
+import { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service.js';
+import { WatchlistQueryValidator } from './validators/watchlist-query.validator.js';
+import { AuthorActivityService } from '../common/services/author-activity.service.js';
 
 /**
  * Сервис для управления списком отслеживаемых авторов ("На карандаше")

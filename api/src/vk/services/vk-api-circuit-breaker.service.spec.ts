@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   VkApiCircuitBreaker,
   CircuitBreakerState,
-} from './vk-api-circuit-breaker.service';
+} from './vk-api-circuit-breaker.service.js';
 
 describe('VkApiCircuitBreaker', () => {
   let service: VkApiCircuitBreaker;

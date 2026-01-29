@@ -5,11 +5,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { hashSecret, verifyAndMaybeRehash } from './password-hash';
-import type { AppConfig } from '../config/app.config';
-import { UsersService } from '../users/users.service';
-import type { UserAuthRecord } from '../users/types/user.types';
-import type { AuthResponse, AuthTokens, JwtPayload } from './auth.types';
+import { hashSecret, verifyAndMaybeRehash } from './password-hash.js';
+import type { AppConfig } from '../config/app.config.js';
+import { UsersService } from '../users/users.service.js';
+import type { UserAuthRecord } from '../users/types/user.types.js';
+import type { AuthResponse, AuthTokens, JwtPayload } from './auth.types.js';
 
 @Injectable()
 export class AuthService {

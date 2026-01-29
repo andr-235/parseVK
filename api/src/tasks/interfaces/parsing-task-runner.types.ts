@@ -1,5 +1,5 @@
-import type { CommentEntity } from '../../common/types/comment-entity.type';
-import type { ParsingStats } from './parsing-stats.interface';
+import type { CommentEntity } from '../../common/types/comment-entity.type.js';
+import type { ParsingStats } from './parsing-stats.interface.js';
 
 export type { CommentEntity };
 

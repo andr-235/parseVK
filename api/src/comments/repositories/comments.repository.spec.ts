@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Prisma } from '@/generated/prisma/client';
-import { CommentsRepository } from './comments.repository';
-import { PrismaService } from '../../prisma.service';
-import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
+import { Prisma } from '../../generated/prisma/client.js';
+import { CommentsRepository } from './comments.repository.js';
+import { PrismaService } from '../../prisma.service.js';
+import type { CommentWithRelations } from '../interfaces/comments-repository.interface.js';
 
 const createMockPost = () => ({
   text: 'Post text',

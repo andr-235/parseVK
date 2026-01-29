@@ -1,5 +1,5 @@
-import { CounterValueParser } from './counter-value.parser';
-import { isValidObject } from './parser-utils';
+import { CounterValueParser } from './counter-value.parser.js';
+import { isValidObject } from './parser-utils.js';
 
 export interface ParsedCounters {
   photos: number | null;

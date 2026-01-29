@@ -1,9 +1,9 @@
-import { CommentSource } from '../types/comment-source.enum';
-import { MatchSource } from '../types/match-source.enum';
-import { AuthorActivityService } from './author-activity.service';
-import type { PrismaService } from '../../prisma.service';
-import type { CommentEntity } from '../types/comment-entity.type';
-import type { VkService } from '../../vk/vk.service';
+import { CommentSource } from '../types/comment-source.enum.js';
+import { MatchSource } from '../types/match-source.enum.js';
+import { AuthorActivityService } from './author-activity.service.js';
+import type { PrismaService } from '../../prisma.service.js';
+import type { CommentEntity } from '../types/comment-entity.type.js';
+import type { VkService } from '../../vk/vk.service.js';
 
 describe('AuthorActivityService - keyword matches', () => {
   let service: AuthorActivityService;

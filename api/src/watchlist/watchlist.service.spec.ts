@@ -1,16 +1,16 @@
-import { WatchlistService } from './watchlist.service';
-import { WatchlistStatus } from './types/watchlist-status.enum';
-import type { AuthorActivityService } from '../common/services/author-activity.service';
+import { WatchlistService } from './watchlist.service.js';
+import { WatchlistStatus } from './types/watchlist-status.enum.js';
+import type { AuthorActivityService } from '../common/services/author-activity.service.js';
 import type {
   IWatchlistRepository,
   WatchlistSettingsRecord,
   WatchlistAuthorWithRelations,
-} from './interfaces/watchlist-repository.interface';
-import type { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper';
-import type { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper';
-import type { WatchlistStatsCollectorService } from './services/watchlist-stats-collector.service';
-import type { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service';
-import type { WatchlistQueryValidator } from './validators/watchlist-query.validator';
+} from './interfaces/watchlist-repository.interface.js';
+import type { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper.js';
+import type { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper.js';
+import type { WatchlistStatsCollectorService } from './services/watchlist-stats-collector.service.js';
+import type { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service.js';
+import type { WatchlistQueryValidator } from './validators/watchlist-query.validator.js';
 
 jest.mock('vk-io', () => {
   class APIErrorMock extends Error {}

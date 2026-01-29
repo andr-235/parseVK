@@ -1,5 +1,5 @@
 import { Engine, Gender, Case } from 'russian-nouns-js';
-import { normalizeForKeywordMatch } from './keyword-normalization.utils';
+import { normalizeForKeywordMatch } from './keyword-normalization.utils.js';
 
 const rne = new Engine();
 

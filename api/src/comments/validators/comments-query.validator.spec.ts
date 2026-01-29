@@ -1,4 +1,4 @@
-import { CommentsQueryValidator } from './comments-query.validator';
+import { CommentsQueryValidator } from './comments-query.validator.js';
 
 describe('CommentsQueryValidator', () => {
   let validator: CommentsQueryValidator;

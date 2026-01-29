@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { WatchlistSettingsRecord } from '../interfaces/watchlist-repository.interface';
-import type { WatchlistSettingsDto } from '../dto/watchlist-author.dto';
+import type { WatchlistSettingsRecord } from '../interfaces/watchlist-repository.interface.js';
+import type { WatchlistSettingsDto } from '../dto/watchlist-author.dto.js';
 
 @Injectable()
 export class WatchlistSettingsMapper {

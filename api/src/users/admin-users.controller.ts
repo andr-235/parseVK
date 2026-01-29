@@ -9,12 +9,12 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import { UserRole } from './types/user-role.enum';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UserResponseDto } from './dto/user-response.dto';
-import { UsersService } from './users.service';
-import type { AuthenticatedRequest } from '../auth/auth.types';
+import { UserRole } from './types/user-role.enum.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { CreateUserDto } from './dto/create-user.dto.js';
+import { UserResponseDto } from './dto/user-response.dto.js';
+import { UsersService } from './users.service.js';
+import type { AuthenticatedRequest } from '../auth/auth.types.js';
 
 @Controller('admin/users')
 @Roles(UserRole.admin)

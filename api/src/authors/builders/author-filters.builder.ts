@@ -1,5 +1,5 @@
-import { Prisma } from '@/generated/prisma/client';
-import type { SqlFragment } from '../types/authors.types';
+import { Prisma } from '../../generated/prisma/client.js';
+import type { SqlFragment } from '../types/authors.types.js';
 
 export interface AuthorFiltersResult {
   sqlConditions: SqlFragment[];

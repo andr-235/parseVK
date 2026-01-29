@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma.service';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   PhotoAnalysisItemDto,
   PhotoSuspicionLevel,
-} from '../dto/photo-analysis-response.dto';
-import type { IPhotoAnalysisRepository } from '../interfaces/photo-analysis-repository.interface';
+} from '../dto/photo-analysis-response.dto.js';
+import type { IPhotoAnalysisRepository } from '../interfaces/photo-analysis-repository.interface.js';
 
 @Injectable()
 export class PhotoAnalysisRepository implements IPhotoAnalysisRepository {

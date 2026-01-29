@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
-import { AppConfig } from './app.config';
+import { AppConfig } from './app.config.js';
 
 export function validate(config: Record<string, unknown>): AppConfig {
   const validatedConfig = plainToInstance(AppConfig, {

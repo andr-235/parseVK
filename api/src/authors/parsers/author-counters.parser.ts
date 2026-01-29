@@ -1,6 +1,6 @@
-import type { ParsedCounters } from './counters-extractor';
-import { CountersExtractor } from './counters-extractor';
-import { LastSeenParser } from './lastseen.parser';
+import type { ParsedCounters } from './counters-extractor.js';
+import { CountersExtractor } from './counters-extractor.js';
+import { LastSeenParser } from './lastseen.parser.js';
 
 export class AuthorCountersParser {
   private static readonly countersExtractor = new CountersExtractor();

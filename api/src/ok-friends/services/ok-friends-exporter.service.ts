@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { FriendFlatDto } from '../dto/ok-friends.dto';
-import { EXPORT_DIR } from '../ok-friends.constants';
-import { formatCellValue } from '../utils/flatten-user-info.util';
+import type { FriendFlatDto } from '../dto/ok-friends.dto.js';
+import { EXPORT_DIR } from '../ok-friends.constants.js';
+import { formatCellValue } from '../utils/flatten-user-info.util.js';
 
 @Injectable()
 export class OkFriendsExporterService {

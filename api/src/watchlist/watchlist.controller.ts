@@ -9,16 +9,16 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { WatchlistService } from './watchlist.service';
+import { WatchlistService } from './watchlist.service.js';
 import type {
   WatchlistAuthorCardDto,
   WatchlistAuthorDetailsDto,
   WatchlistAuthorListDto,
   WatchlistSettingsDto,
-} from './dto/watchlist-author.dto';
-import { CreateWatchlistAuthorDto } from './dto/create-watchlist-author.dto';
-import { UpdateWatchlistAuthorDto } from './dto/update-watchlist-author.dto';
-import { UpdateWatchlistSettingsDto } from './dto/update-watchlist-settings.dto';
+} from './dto/watchlist-author.dto.js';
+import { CreateWatchlistAuthorDto } from './dto/create-watchlist-author.dto.js';
+import { UpdateWatchlistAuthorDto } from './dto/update-watchlist-author.dto.js';
+import { UpdateWatchlistSettingsDto } from './dto/update-watchlist-settings.dto.js';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 200;

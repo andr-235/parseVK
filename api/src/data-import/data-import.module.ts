@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { DataImportController } from './data-import.controller';
-import { DataImportService } from './data-import.service';
-import { ListingsModule } from '../listings/listings.module';
+import { DataImportController } from './data-import.controller.js';
+import { DataImportService } from './data-import.service.js';
+import { ListingsModule } from '../listings/listings.module.js';
 
 @Module({
   imports: [ListingsModule],

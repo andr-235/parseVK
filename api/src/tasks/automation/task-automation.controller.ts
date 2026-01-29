@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { TaskAutomationService } from './task-automation.service';
-import { UpdateTaskAutomationSettingsDto } from './dto/update-task-automation-settings.dto';
+import { TaskAutomationService } from './task-automation.service.js';
+import { UpdateTaskAutomationSettingsDto } from './dto/update-task-automation-settings.dto.js';
 import type {
   TaskAutomationRunResponse,
   TaskAutomationSettingsResponse,
-} from './task-automation.interface';
+} from './task-automation.interface.js';
 
 @Controller('tasks/automation')
 export class TaskAutomationController {

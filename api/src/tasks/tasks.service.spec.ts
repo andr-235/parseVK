@@ -6,23 +6,23 @@ jest.mock('vk-io', () => ({
 }));
 
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { TaskRecord } from './types/task-record.type';
-import { TasksService } from './tasks.service';
-import { ParsingScope } from './dto/create-parsing-task.dto';
-import type { ParsingStats } from './interfaces/parsing-stats.interface';
-import { ParsingQueueService } from './parsing-queue.service';
-import { TaskMapper } from './mappers/task.mapper';
-import { TaskDescriptionParser } from './parsers/task-description.parser';
-import { TaskContextBuilder } from './builders/task-context.builder';
-import { TaskCancellationService } from './task-cancellation.service';
-import type { ITasksRepository } from './interfaces/tasks-repository.interface';
-import { ParsingTaskRunner } from './parsing-task.runner';
-import type { ParsedTaskDescription } from './parsers/task-description.parser';
+import type { TaskRecord } from './types/task-record.type.js';
+import { TasksService } from './tasks.service.js';
+import { ParsingScope } from './dto/create-parsing-task.dto.js';
+import type { ParsingStats } from './interfaces/parsing-stats.interface.js';
+import { ParsingQueueService } from './parsing-queue.service.js';
+import { TaskMapper } from './mappers/task.mapper.js';
+import { TaskDescriptionParser } from './parsers/task-description.parser.js';
+import { TaskContextBuilder } from './builders/task-context.builder.js';
+import { TaskCancellationService } from './task-cancellation.service.js';
+import type { ITasksRepository } from './interfaces/tasks-repository.interface.js';
+import { ParsingTaskRunner } from './parsing-task.runner.js';
+import type { ParsedTaskDescription } from './parsers/task-description.parser.js';
 import type {
   TaskDetail,
   TaskSummary,
   TaskStatus,
-} from './interfaces/task.interface';
+} from './interfaces/task.interface.js';
 
 describe('TasksService', () => {
   let service: TasksService;

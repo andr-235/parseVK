@@ -6,15 +6,15 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { TasksService } from '../tasks.service';
-import { ParsingScope } from '../dto/create-parsing-task.dto';
+import { TasksService } from '../tasks.service.js';
+import { ParsingScope } from '../dto/create-parsing-task.dto.js';
 import type {
   TaskAutomationRunResponse,
   TaskAutomationSettings,
   TaskAutomationSettingsResponse,
-} from './task-automation.interface';
-import { UpdateTaskAutomationSettingsDto } from './dto/update-task-automation-settings.dto';
-import type { ITaskAutomationRepository } from '../interfaces/task-automation-repository.interface';
+} from './task-automation.interface.js';
+import { UpdateTaskAutomationSettingsDto } from './dto/update-task-automation-settings.dto.js';
+import type { ITaskAutomationRepository } from '../interfaces/task-automation-repository.interface.js';
 
 const RETRY_DELAY_MS = 60 * 60 * 1000; // 1 час
 const DEFAULT_POST_LIMIT = 10;

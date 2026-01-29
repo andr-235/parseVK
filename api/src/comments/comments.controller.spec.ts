@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommentsController } from './comments.controller';
-import { CommentsService } from './comments.service';
-import { CommentsQueryValidator } from './validators/comments-query.validator';
+import { CommentsController } from './comments.controller.js';
+import { CommentsService } from './comments.service.js';
+import { CommentsQueryValidator } from './validators/comments-query.validator.js';
 
 describe('CommentsController', () => {
   let controller: CommentsController;

@@ -1,12 +1,12 @@
-import { CommentsService } from './comments.service';
-import type { ICommentsRepository } from './interfaces/comments-repository.interface';
-import type { CommentWithRelations } from './interfaces/comments-repository.interface';
-import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy';
-import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy';
-import { CommentMapper } from './mappers/comment.mapper';
-import type { CommentWithAuthorDto } from './dto/comment-with-author.dto';
-import type { CommentsListDto } from './dto/comments-list.dto';
-import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto';
+import { CommentsService } from './comments.service.js';
+import type { ICommentsRepository } from './interfaces/comments-repository.interface.js';
+import type { CommentWithRelations } from './interfaces/comments-repository.interface.js';
+import { OffsetPaginationStrategy } from './strategies/offset-pagination.strategy.js';
+import { CursorPaginationStrategy } from './strategies/cursor-pagination.strategy.js';
+import { CommentMapper } from './mappers/comment.mapper.js';
+import type { CommentWithAuthorDto } from './dto/comment-with-author.dto.js';
+import type { CommentsListDto } from './dto/comments-list.dto.js';
+import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto.js';
 
 describe('CommentsService', () => {
   let service: CommentsService;

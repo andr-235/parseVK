@@ -1,10 +1,10 @@
 import { Transform, Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import { AUTHORS_CONSTANTS, SORTABLE_FIELDS } from '../authors.constants';
+import { AUTHORS_CONSTANTS, SORTABLE_FIELDS } from '../authors.constants.js';
 import type {
   AuthorSortDirection,
   AuthorSortField,
-} from '../types/authors.types';
+} from '../types/authors.types.js';
 
 function toOptionalBoolean(value: unknown): boolean | undefined {
   if (

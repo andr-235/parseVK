@@ -1,5 +1,8 @@
-import type { AuthorRecord } from '../types/author-record.type';
-import type { QueryAuthorsOptions, SqlFragment } from '../types/authors.types';
+import type { AuthorRecord } from '../types/author-record.type.js';
+import type {
+  QueryAuthorsOptions,
+  SqlFragment,
+} from '../types/authors.types.js';
 
 export interface IAuthorsRepository {
   countByFilters(sqlConditions: SqlFragment[]): Promise<number>;

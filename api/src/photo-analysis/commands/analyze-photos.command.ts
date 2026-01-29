@@ -1,5 +1,5 @@
-import type { AnalyzePhotosDto } from '../dto/analyze-photos.dto';
-import type { PhotoAnalysisListDto } from '../dto/photo-analysis-response.dto';
+import type { AnalyzePhotosDto } from '../dto/analyze-photos.dto.js';
+import type { PhotoAnalysisListDto } from '../dto/photo-analysis-response.dto.js';
 
 export interface AnalyzePhotosCommand {
   vkUserId: number;

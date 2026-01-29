@@ -6,8 +6,8 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import * as http from 'http';
 import request from 'supertest';
-import { GroupsController } from './groups.controller';
-import { GroupsService } from './groups.service';
+import { GroupsController } from './groups.controller.js';
+import { GroupsService } from './groups.service.js';
 
 jest.mock('../vk/vk.service', () => ({
   VkService: jest.fn(),

@@ -2,17 +2,17 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { GroupsService } from './groups.service';
-import type { VkService } from '../vk/vk.service';
+import { GroupsService } from './groups.service.js';
+import type { VkService } from '../vk/vk.service.js';
 import type {
   IGroupResponse,
   IGroupsListResponse,
-} from './interfaces/group.interface';
-import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface';
-import type { IGroup } from '../vk/interfaces/group.interfaces';
-import type { IGroupsRepository } from './interfaces/groups-repository.interface';
-import { GroupMapper } from './mappers/group.mapper';
-import { GroupIdentifierValidator } from './validators/group-identifier.validator';
+} from './interfaces/group.interface.js';
+import type { IBulkSaveGroupsResult } from './interfaces/group-bulk.interface.js';
+import type { IGroup } from '../vk/interfaces/group.interfaces.js';
+import type { IGroupsRepository } from './interfaces/groups-repository.interface.js';
+import { GroupMapper } from './mappers/group.mapper.js';
+import { GroupIdentifierValidator } from './validators/group-identifier.validator.js';
 
 jest.mock('../vk/vk.service', () => ({
   VkService: jest.fn(),

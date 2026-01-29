@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@/generated/prisma/client';
-import type { AppConfig } from '../config/app.config';
+import { PrismaClient } from '../generated/prisma/client.js';
+import type { AppConfig } from '../config/app.config.js';
 
 const IDENTIFIER_PATTERN =
   /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/;

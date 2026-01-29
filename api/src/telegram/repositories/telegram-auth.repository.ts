@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma.service';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   ITelegramAuthRepository,
   TelegramSessionCreate,
   TelegramSessionRecord,
   TelegramSettingsRecord,
   TelegramSettingsUpdate,
-} from '../interfaces/telegram-auth-repository.interface';
+} from '../interfaces/telegram-auth-repository.interface.js';
 
 @Injectable()
 export class TelegramAuthRepository implements ITelegramAuthRepository {

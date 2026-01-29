@@ -1,7 +1,7 @@
-import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto';
-import { AuthorCardDto, AuthorDetailsDto } from '../dto/author.dto';
-import { AuthorCountersParser } from '../parsers/author-counters.parser';
-import type { AuthorRecord } from '../types/author-record.type';
+import type { PhotoAnalysisSummaryDto } from '../../photo-analysis/dto/photo-analysis-response.dto.js';
+import { AuthorCardDto, AuthorDetailsDto } from '../dto/author.dto.js';
+import { AuthorCountersParser } from '../parsers/author-counters.parser.js';
+import type { AuthorRecord } from '../types/author-record.type.js';
 
 export class AuthorMapper {
   static toCardDto(

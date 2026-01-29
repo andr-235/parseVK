@@ -3,7 +3,7 @@ import type { Api } from 'telegram';
 import type {
   TelegramChatType,
   TelegramMemberStatus,
-} from '../types/telegram.enums';
+} from '../types/telegram.enums.js';
 
 export interface ITelegramClient {
   getClient(): Promise<TelegramClient>;

@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import type { IAuthorService } from '../interfaces/photo-loader.interface';
-import type { IPhotoAnalysisAuthorRepository } from '../interfaces/photo-analysis-author-repository.interface';
+import type { IAuthorService } from '../interfaces/photo-loader.interface.js';
+import type { IPhotoAnalysisAuthorRepository } from '../interfaces/photo-analysis-author-repository.interface.js';
 
 @Injectable()
 export class AuthorService implements IAuthorService {

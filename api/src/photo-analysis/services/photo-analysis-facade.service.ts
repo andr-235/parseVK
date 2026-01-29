@@ -2,12 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import type {
   PhotoAnalysisListDto,
   PhotoAnalysisSummaryDto,
-} from '../dto/photo-analysis-response.dto';
-import type { IPhotoAnalysisRepository } from '../interfaces/photo-analysis-repository.interface';
-import type { IAuthorService } from '../interfaces/photo-loader.interface';
-import { PhotoAnalysisSummaryBuilder } from '../builders/photo-analysis-summary.builder';
-import type { AnalyzePhotosCommand } from '../commands/analyze-photos.command';
-import type { IAnalyzePhotosCommandHandler } from '../commands/analyze-photos.command';
+} from '../dto/photo-analysis-response.dto.js';
+import type { IPhotoAnalysisRepository } from '../interfaces/photo-analysis-repository.interface.js';
+import type { IAuthorService } from '../interfaces/photo-loader.interface.js';
+import { PhotoAnalysisSummaryBuilder } from '../builders/photo-analysis-summary.builder.js';
+import type { AnalyzePhotosCommand } from '../commands/analyze-photos.command.js';
+import type { IAnalyzePhotosCommandHandler } from '../commands/analyze-photos.command.js';
 
 @Injectable()
 export class PhotoAnalysisFacadeService {

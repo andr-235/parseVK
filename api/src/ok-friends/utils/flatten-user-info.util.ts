@@ -1,4 +1,4 @@
-import type { OkUserInfo } from '../ok-api.service';
+import type { OkUserInfo } from '../ok-api.service.js';
 
 /**
  * Расплющивает вложенные объекты в плоскую структуру для экспорта в XLSX

@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { CursorPaginationStrategy } from './cursor-pagination.strategy';
+import { CursorPaginationStrategy } from './cursor-pagination.strategy.js';
 import {
   COMMENTS_REPOSITORY,
   type ICommentsRepository,
-} from '../interfaces/comments-repository.interface';
-import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
-import { CommentMapper } from '../mappers/comment.mapper';
-import { CommentsStatsService } from '../services/comments-stats.service';
-import { CursorUtils } from '../dto/comments-cursor.dto';
-import type { CommentWithRelations } from '../interfaces/comments-repository.interface';
-import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto';
+} from '../interfaces/comments-repository.interface.js';
+import { CommentsFilterBuilder } from '../builders/comments-filter.builder.js';
+import { CommentMapper } from '../mappers/comment.mapper.js';
+import { CommentsStatsService } from '../services/comments-stats.service.js';
+import { CursorUtils } from '../dto/comments-cursor.dto.js';
+import type { CommentWithRelations } from '../interfaces/comments-repository.interface.js';
+import type { CommentWithAuthorDto } from '../dto/comment-with-author.dto.js';
 
 const realMapper = new CommentMapper();
 

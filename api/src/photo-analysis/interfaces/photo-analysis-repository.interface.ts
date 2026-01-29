@@ -1,4 +1,4 @@
-import type { PhotoAnalysisItemDto } from '../dto/photo-analysis-response.dto';
+import type { PhotoAnalysisItemDto } from '../dto/photo-analysis-response.dto.js';
 
 export interface IPhotoAnalysisRepository {
   findByAuthorId(authorId: number): Promise<PhotoAnalysisItemDto[]>;

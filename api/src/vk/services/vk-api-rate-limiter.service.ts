@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-import type { AppConfig } from '../../config/app.config';
+import type { AppConfig } from '../../config/app.config.js';
 
 export interface RateLimitOptions {
   requests?: number;

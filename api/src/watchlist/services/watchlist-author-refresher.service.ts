@@ -1,15 +1,15 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { CommentSource } from '../../common/types/comment-source.enum';
-import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface';
-import type { CommentEntity } from '../../common/types/comment-entity.type';
-import { AuthorActivityService } from '../../common/services/author-activity.service';
-import { VkService } from '../../vk/vk.service';
-import { normalizeComment } from '../../common/utils/comment-normalizer.utils';
+import { CommentSource } from '../../common/types/comment-source.enum.js';
+import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface.js';
+import type { CommentEntity } from '../../common/types/comment-entity.type.js';
+import { AuthorActivityService } from '../../common/services/author-activity.service.js';
+import { VkService } from '../../vk/vk.service.js';
+import { normalizeComment } from '../../common/utils/comment-normalizer.utils.js';
 import {
   composeCommentKey,
   walkCommentTree,
-} from '../utils/watchlist-comment.utils';
-import type { IWatchlistRepository } from '../interfaces/watchlist-repository.interface';
+} from '../utils/watchlist-comment.utils.js';
+import type { IWatchlistRepository } from '../interfaces/watchlist-repository.interface.js';
 
 @Injectable()
 export class WatchlistAuthorRefresherService {

@@ -1,4 +1,4 @@
-import type { ParsingScope } from '../dto/create-parsing-task.dto';
+import type { ParsingScope } from '../dto/create-parsing-task.dto.js';
 
 export type ParsingTaskRecord = {
   id: number;

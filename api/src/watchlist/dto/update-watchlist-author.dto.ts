@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional } from 'class-validator';
-import { WatchlistStatus } from '../types/watchlist-status.enum';
+import { WatchlistStatus } from '../types/watchlist-status.enum.js';
 
 export class UpdateWatchlistAuthorDto {
   @IsOptional()

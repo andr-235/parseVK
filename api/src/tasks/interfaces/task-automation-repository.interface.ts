@@ -1,7 +1,7 @@
 import type {
   TaskAutomationSettings,
   TaskAutomationSettingsResponse,
-} from '../automation/task-automation.interface';
+} from '../automation/task-automation.interface.js';
 
 export type TaskAutomationSettingsUpdate = {
   enabled: boolean;

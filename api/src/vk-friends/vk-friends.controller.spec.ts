@@ -2,11 +2,11 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as http from 'http';
 import request from 'supertest';
-import { VkFriendsController } from './vk-friends.controller';
-import { VkFriendsService } from './vk-friends.service';
-import { VkFriendsExportJobService } from './services/vk-friends-export-job.service';
-import { VkFriendsFileService } from './services/vk-friends-file.service';
-import { VkFriendsJobStreamService } from './services/vk-friends-job-stream.service';
+import { VkFriendsController } from './vk-friends.controller.js';
+import { VkFriendsService } from './vk-friends.service.js';
+import { VkFriendsExportJobService } from './services/vk-friends-export-job.service.js';
+import { VkFriendsFileService } from './services/vk-friends-file.service.js';
+import { VkFriendsJobStreamService } from './services/vk-friends-job-stream.service.js';
 import { firstValueFrom, of } from 'rxjs';
 
 describe('VkFriendsController (HTTP)', () => {

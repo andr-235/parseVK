@@ -1,6 +1,6 @@
-import { TaskDescriptionParser } from './task-description.parser';
-import type { TaskRecord } from '../types/task-record.type';
-import { ParsingScope } from '../dto/create-parsing-task.dto';
+import { TaskDescriptionParser } from './task-description.parser.js';
+import type { TaskRecord } from '../types/task-record.type.js';
+import { ParsingScope } from '../dto/create-parsing-task.dto.js';
 
 describe('TaskDescriptionParser', () => {
   let parser: TaskDescriptionParser;

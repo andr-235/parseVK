@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { IGroup } from '../../vk/interfaces/group.interfaces';
-import type { IGroupResponse } from '../interfaces/group.interface';
+import { IGroup } from '../../vk/interfaces/group.interfaces.js';
+import type { IGroupResponse } from '../interfaces/group.interface.js';
 
 @Injectable()
 export class GroupMapper {

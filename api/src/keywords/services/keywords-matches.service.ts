@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { MatchSource } from '../../common/types/match-source.enum';
-import type { IKeywordsRepository } from '../interfaces/keywords-repository.interface';
+import { MatchSource } from '../../common/types/match-source.enum.js';
+import type { IKeywordsRepository } from '../interfaces/keywords-repository.interface.js';
 
 const WORD_CHARS_PATTERN = '[a-zA-Z0-9_\\u0400-\\u04FF]';
 const WORD_CHAR_TEST = new RegExp(WORD_CHARS_PATTERN);

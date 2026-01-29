@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@/generated/prisma/client';
-import { PrismaService } from '../../prisma.service';
+import type { Prisma } from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   CommentWithRelations,
   CountCommentsParams,
   FindCommentsParams,
   ICommentsRepository,
   UpdateCommentParams,
-} from '../interfaces/comments-repository.interface';
+} from '../interfaces/comments-repository.interface.js';
 
 const authorSelect = {
   vkUserId: true,

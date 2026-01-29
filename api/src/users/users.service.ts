@@ -4,12 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomInt } from 'crypto';
-import { hashSecret } from '../auth/password-hash';
-import { PrismaService } from '../prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UserResponseDto } from './dto/user-response.dto';
-import { UserRole } from './types/user-role.enum';
-import type { UserRecord } from './types/user.types';
+import { hashSecret } from '../auth/password-hash.js';
+import { PrismaService } from '../prisma.service.js';
+import { CreateUserDto } from './dto/create-user.dto.js';
+import { UserResponseDto } from './dto/user-response.dto.js';
+import { UserRole } from './types/user-role.enum.js';
+import type { UserRecord } from './types/user.types.js';
 
 const TEMP_PASSWORD_LENGTH = 12;
 const LOWERCASE_CHARS = 'abcdefghijklmnopqrstuvwxyz';

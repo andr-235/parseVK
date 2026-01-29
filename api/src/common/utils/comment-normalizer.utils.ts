@@ -1,5 +1,5 @@
-import type { IComment } from '../../vk/interfaces/comment.interfaces';
-import type { CommentEntity } from '../types/comment-entity.type';
+import type { IComment } from '../../vk/interfaces/comment.interfaces.js';
+import type { CommentEntity } from '../types/comment-entity.type.js';
 
 /**
  * Нормализует комментарий из формата VK API в формат приложения

@@ -7,13 +7,13 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
-import { ListingsService } from './listings.service';
-import type { ListingsResponseDto } from './dto/listings-response.dto';
-import type { ListingDto } from './dto/listing.dto';
+import { ListingsService } from './listings.service.js';
+import type { ListingsResponseDto } from './dto/listings-response.dto.js';
+import type { ListingDto } from './dto/listing.dto.js';
 import type { Response } from 'express';
-import type { UpdateListingDto } from './dto/update-listing.dto';
-import { ListingsQueryDto } from './dto/listings-query.dto';
-import { ListingIdParamDto } from './dto/listing-id-param.dto';
+import type { UpdateListingDto } from './dto/update-listing.dto.js';
+import { ListingsQueryDto } from './dto/listings-query.dto.js';
+import { ListingIdParamDto } from './dto/listing-id-param.dto.js';
 
 @Controller('listings')
 export class ListingsController {

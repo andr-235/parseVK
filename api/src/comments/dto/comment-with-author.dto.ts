@@ -1,4 +1,4 @@
-import type { Comment } from '@/generated/prisma/client';
+import type { Comment } from '../../generated/prisma/client.js';
 
 export interface CommentAuthorDto {
   vkUserId: number;

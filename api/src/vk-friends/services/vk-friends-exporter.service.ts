@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { FriendFlatDto } from '../dto/vk-friends.dto';
-import { EXPORT_DIR } from '../vk-friends.constants';
+import type { FriendFlatDto } from '../dto/vk-friends.dto.js';
+import { EXPORT_DIR } from '../vk-friends.constants.js';
 
 const FRIEND_FIELDS: Array<keyof FriendFlatDto> = [
   'id',

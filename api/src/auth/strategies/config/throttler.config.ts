@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import type { AppConfig } from '../../../config/app.config';
+import type { AppConfig } from '../../../config/app.config.js';
 
 export function authThrottlerConfigFactory(
   configService: ConfigService<AppConfig>,

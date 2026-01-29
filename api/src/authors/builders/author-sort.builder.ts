@@ -1,16 +1,16 @@
-import { Prisma } from '@/generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client.js';
 import type {
   AuthorSortField,
   ResolvedAuthorSort,
   SqlFragment,
-} from '../types/authors.types';
-import { CounterSortExpression } from './sort-expressions/counter-sort.expression';
-import { CitySortExpression } from './sort-expressions/city-sort.expression';
-import { FollowersSortExpression } from './sort-expressions/followers-sort.expression';
-import { FullNameSortExpression } from './sort-expressions/fullname-sort.expression';
-import { LastSeenSortExpression } from './sort-expressions/lastseen-sort.expression';
-import { SimpleSortExpression } from './sort-expressions/simple-sort.expression';
-import type { ISortExpression } from './sort-expressions/sort-expression.interface';
+} from '../types/authors.types.js';
+import { CounterSortExpression } from './sort-expressions/counter-sort.expression.js';
+import { CitySortExpression } from './sort-expressions/city-sort.expression.js';
+import { FollowersSortExpression } from './sort-expressions/followers-sort.expression.js';
+import { FullNameSortExpression } from './sort-expressions/fullname-sort.expression.js';
+import { LastSeenSortExpression } from './sort-expressions/lastseen-sort.expression.js';
+import { SimpleSortExpression } from './sort-expressions/simple-sort.expression.js';
+import type { ISortExpression } from './sort-expressions/sort-expression.interface.js';
 
 export class AuthorSortBuilder {
   private static readonly TIE_BREAKERS: Prisma.Sql[] = [

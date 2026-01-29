@@ -1,4 +1,4 @@
-import { GroupIdentifierValidator } from './group-identifier.validator';
+import { GroupIdentifierValidator } from './group-identifier.validator.js';
 
 describe('GroupIdentifierValidator', () => {
   let validator: GroupIdentifierValidator;

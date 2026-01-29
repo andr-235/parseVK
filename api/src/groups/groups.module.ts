@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { GroupsController } from './groups.controller';
-import { GroupsService } from './groups.service';
-import { VkModule } from '../vk/vk.module';
-import { GroupsRepository } from './repositories/groups.repository';
-import { GroupMapper } from './mappers/group.mapper';
-import { GroupIdentifierValidator } from './validators/group-identifier.validator';
+import { GroupsController } from './groups.controller.js';
+import { GroupsService } from './groups.service.js';
+import { VkModule } from '../vk/vk.module.js';
+import { GroupsRepository } from './repositories/groups.repository.js';
+import { GroupMapper } from './mappers/group.mapper.js';
+import { GroupIdentifierValidator } from './validators/group-identifier.validator.js';
 
 @Module({
   imports: [VkModule],

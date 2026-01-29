@@ -17,12 +17,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { defer, from, of, type Observable } from 'rxjs';
 import { mergeMap } from 'rxjs/operators';
-import { VkFriendsService } from './vk-friends.service';
-import { VkFriendsExportRequestDto } from './dto/vk-friends.dto';
-import { VkFriendsJobStreamService } from './services/vk-friends-job-stream.service';
-import { VkFriendsExportJobService } from './services/vk-friends-export-job.service';
-import { VkFriendsFileService } from './services/vk-friends-file.service';
-import { buildParams } from './vk-friends-params.util';
+import { VkFriendsService } from './vk-friends.service.js';
+import { VkFriendsExportRequestDto } from './dto/vk-friends.dto.js';
+import { VkFriendsJobStreamService } from './services/vk-friends-job-stream.service.js';
+import { VkFriendsExportJobService } from './services/vk-friends-export-job.service.js';
+import { VkFriendsFileService } from './services/vk-friends-file.service.js';
+import { buildParams } from './vk-friends-params.util.js';
 
 @Controller('vk/friends')
 export class VkFriendsController {

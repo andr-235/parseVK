@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { APIError } from 'vk-io';
-import { VkApiRetryService } from './vk-api-retry.service';
+import { VkApiRetryService } from './vk-api-retry.service.js';
 
 describe('VkApiRetryService', () => {
   let service: VkApiRetryService;

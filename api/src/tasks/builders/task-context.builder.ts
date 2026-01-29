@@ -3,11 +3,11 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { ParsingScope } from '../dto/create-parsing-task.dto';
-import type { ParsedTaskDescription } from '../parsers/task-description.parser';
-import { ParsingTaskRunner } from '../parsing-task.runner';
-import { TaskDescriptionParser } from '../parsers/task-description.parser';
-import type { TaskRecord } from '../types/task-record.type';
+import { ParsingScope } from '../dto/create-parsing-task.dto.js';
+import type { ParsedTaskDescription } from '../parsers/task-description.parser.js';
+import { ParsingTaskRunner } from '../parsing-task.runner.js';
+import { TaskDescriptionParser } from '../parsers/task-description.parser.js';
+import type { TaskRecord } from '../types/task-record.type.js';
 
 export interface TaskResumeContext {
   scope: ParsingScope;

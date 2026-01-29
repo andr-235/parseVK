@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TaskAutomationService } from './task-automation.service';
-import { TasksService } from '../tasks.service';
+import { TaskAutomationService } from './task-automation.service.js';
+import { TasksService } from '../tasks.service.js';
 import { SchedulerRegistry } from '@nestjs/schedule';
 
 describe('TaskAutomationService', () => {

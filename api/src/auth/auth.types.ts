@@ -1,4 +1,4 @@
-import type { UserRole } from '../users/types/user-role.enum';
+import type { UserRole } from '../users/types/user-role.enum.js';
 import type { Request } from 'express';
 
 export interface JwtPayload {

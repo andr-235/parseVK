@@ -1,4 +1,4 @@
-import type { CommentWithAuthorDto } from './comment-with-author.dto';
+import type { CommentWithAuthorDto } from './comment-with-author.dto.js';
 
 /**
  * DTO для ответа cursor-based pagination

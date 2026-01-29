@@ -1,6 +1,6 @@
 import type { JwtModuleOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import type { AppConfig } from '../../../config/app.config';
+import type { AppConfig } from '../../../config/app.config.js';
 
 export function jwtAccessConfigFactory(
   configService: ConfigService<AppConfig>,

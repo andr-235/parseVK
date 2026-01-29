@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from './prisma.service.js';
 
 describe('PrismaService', () => {
   it('должен выбрасывать исключение при отсутствии DATABASE_URL', () => {

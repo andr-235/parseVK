@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Params, Responses } from 'vk-io';
-import { VkApiService } from './vk-api.service';
+import { VkApiService } from './vk-api.service.js';
 import {
   VkFriendsRepository,
   type ExportJobCreateInput,
@@ -10,7 +10,7 @@ import {
   type JobLogInput,
   type JobProgressUpdateInput,
   type FriendRecordPayload,
-} from './repositories/vk-friends.repository';
+} from './repositories/vk-friends.repository.js';
 
 export interface VkFriendsStatusResponse {
   status: 'ok';

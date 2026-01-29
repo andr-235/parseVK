@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma.service';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   IPhotoAnalysisAuthorRepository,
   PhotoAnalysisAuthorRecord,
-} from '../interfaces/photo-analysis-author-repository.interface';
+} from '../interfaces/photo-analysis-author-repository.interface.js';
 
 @Injectable()
 export class PhotoAnalysisAuthorRepository implements IPhotoAnalysisAuthorRepository {

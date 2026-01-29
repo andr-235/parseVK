@@ -2,7 +2,7 @@ import type {
   PhotoAnalysisItemDto,
   PhotoAnalysisSummaryDto,
   PhotoSuspicionLevel,
-} from '../dto/photo-analysis-response.dto';
+} from '../dto/photo-analysis-response.dto.js';
 
 const KNOWN_CATEGORIES = [
   'violence',

@@ -7,7 +7,7 @@ import {
   IsString,
   IsUrl,
 } from 'class-validator';
-import { IsStringOrNumber } from './validators/is-string-or-number.decorator';
+import { IsStringOrNumber } from './validators/is-string-or-number.decorator.js';
 
 export class ListingImportDto {
   @IsUrl({}, { message: 'url должен быть валидным URL' })

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Objects } from 'vk-io';
-import type { FriendFlatDto } from '../dto/vk-friends.dto';
+import type { FriendFlatDto } from '../dto/vk-friends.dto.js';
 
 export type VkUserInput =
   | Objects.UsersUserFull

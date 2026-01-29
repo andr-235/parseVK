@@ -1,5 +1,5 @@
 import type { Params } from 'vk-io';
-import type { VkFriendsParamsDto } from './dto/vk-friends.dto';
+import type { VkFriendsParamsDto } from './dto/vk-friends.dto.js';
 
 const DEFAULT_FRIEND_FIELDS: VkFriendsParamsDto['fields'] = [
   'nickname',

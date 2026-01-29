@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { ParsingQueueService } from './parsing-queue.service';
-import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface';
-import { ParsingQueueProducer } from './queues/parsing.queue';
-import { ParsingScope } from './dto/create-parsing-task.dto';
+import { ParsingQueueService } from './parsing-queue.service.js';
+import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface.js';
+import { ParsingQueueProducer } from './queues/parsing.queue.js';
+import { ParsingScope } from './dto/create-parsing-task.dto.js';
 
 describe('ParsingQueueService', () => {
   let service: ParsingQueueService;

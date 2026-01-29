@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { VK } from 'vk-io';
 import type { Params, Responses } from 'vk-io';
-import { VkApiRequestManager } from '../vk/services/vk-api-request-manager.service';
+import { VkApiRequestManager } from '../vk/services/vk-api-request-manager.service.js';
 
 @Injectable()
 export class VkApiService {

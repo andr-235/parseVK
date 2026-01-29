@@ -5,11 +5,11 @@ jest.mock('vk-io', () => ({
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { TasksController } from './tasks.controller';
-import { TasksService } from './tasks.service';
-import { ParsingScope } from './dto/create-parsing-task.dto';
-import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface';
-import type { TaskDetail, TaskSummary } from './interfaces/task.interface';
+import { TasksController } from './tasks.controller.js';
+import { TasksService } from './tasks.service.js';
+import { ParsingScope } from './dto/create-parsing-task.dto.js';
+import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface.js';
+import type { TaskDetail, TaskSummary } from './interfaces/task.interface.js';
 
 describe('TasksController', () => {
   let controller: TasksController;

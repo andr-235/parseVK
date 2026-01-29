@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma.service';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   ITaskAutomationRepository,
   TaskAutomationRepositorySettings,
   TaskAutomationSettingsUpdate,
-} from '../interfaces/task-automation-repository.interface';
+} from '../interfaces/task-automation-repository.interface.js';
 
 const DEFAULT_SETTINGS: TaskAutomationSettingsUpdate = {
   enabled: false,

@@ -7,27 +7,27 @@ import {
   Optional,
 } from '@nestjs/common';
 import { APIError } from 'vk-io';
-import { CommentSource } from '../common/types/comment-source.enum';
-import { VkService } from '../vk/vk.service';
-import type { IPost } from '../vk/interfaces/post.interfaces';
-import type { IComment } from '../vk/interfaces/comment.interfaces';
-import { ParsingScope } from './dto/create-parsing-task.dto';
-import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface';
+import { CommentSource } from '../common/types/comment-source.enum.js';
+import { VkService } from '../vk/vk.service.js';
+import type { IPost } from '../vk/interfaces/post.interfaces.js';
+import type { IComment } from '../vk/interfaces/comment.interfaces.js';
+import { ParsingScope } from './dto/create-parsing-task.dto.js';
+import type { ParsingTaskJobData } from './interfaces/parsing-task-job.interface.js';
 import type {
   CommentEntity,
   TaskProcessingContext,
-} from './interfaces/parsing-task-runner.types';
-import type { ParsingStats } from './interfaces/parsing-stats.interface';
-import { AuthorActivityService } from '../common/services/author-activity.service';
-import { normalizeComment } from '../common/utils/comment-normalizer.utils';
-import { TasksGateway } from './tasks.gateway';
-import { TaskCancellationService } from './task-cancellation.service';
-import { TaskCancelledError } from './errors/task-cancelled.error';
-import { MetricsService } from '../metrics/metrics.service';
+} from './interfaces/parsing-task-runner.types.js';
+import type { ParsingStats } from './interfaces/parsing-stats.interface.js';
+import { AuthorActivityService } from '../common/services/author-activity.service.js';
+import { normalizeComment } from '../common/utils/comment-normalizer.utils.js';
+import { TasksGateway } from './tasks.gateway.js';
+import { TaskCancellationService } from './task-cancellation.service.js';
+import { TaskCancelledError } from './errors/task-cancelled.error.js';
+import { MetricsService } from '../metrics/metrics.service.js';
 import type {
   IParsingTaskRepository,
   ParsingGroupRecord,
-} from './interfaces/parsing-task-repository.interface';
+} from './interfaces/parsing-task-repository.interface.js';
 
 @Injectable()
 export class ParsingTaskRunner {

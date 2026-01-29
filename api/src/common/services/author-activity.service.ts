@@ -1,19 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { CommentSource } from '../types/comment-source.enum';
-import { MatchSource } from '../types/match-source.enum';
-import { PrismaService } from '../../prisma.service';
-import { VkService } from '../../vk/vk.service';
-import type { IAuthor } from '../../vk/interfaces/author.interfaces';
-import type { CommentEntity } from '../types/comment-entity.type';
+import { CommentSource } from '../types/comment-source.enum.js';
+import { MatchSource } from '../types/match-source.enum.js';
+import { PrismaService } from '../../prisma.service.js';
+import { VkService } from '../../vk/vk.service.js';
+import type { IAuthor } from '../../vk/interfaces/author.interfaces.js';
+import type { CommentEntity } from '../types/comment-entity.type.js';
 import {
   normalizeForKeywordMatch,
   matchesKeyword,
   type KeywordMatchCandidate,
-} from '../utils/keyword-normalization.utils';
+} from '../utils/keyword-normalization.utils.js';
 import {
   toUpdateJsonValue,
   toCreateJsonValue,
-} from '../utils/prisma-json.utils';
+} from '../utils/prisma-json.utils.js';
 
 type JsonUpdateValue = ReturnType<typeof toUpdateJsonValue>;
 

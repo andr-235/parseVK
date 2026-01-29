@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { AppConfig } from '../config/app.config';
-import { OK_API_BASE_URL } from './ok-friends.constants';
+import type { AppConfig } from '../config/app.config.js';
+import { OK_API_BASE_URL } from './ok-friends.constants.js';
 import {
   signOkRequest,
   signOkRequestForUsersGetInfo,
   type OkApiParams,
-} from './ok-friends-signature.util';
+} from './ok-friends-signature.util.js';
 
 export interface OkFriendsGetParams {
   fid?: string;

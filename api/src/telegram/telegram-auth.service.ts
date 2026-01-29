@@ -9,22 +9,23 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { Inject } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { TelegramClient, Api } from 'telegram';
-import { StringSession } from 'telegram/sessions';
-import type { ITelegramAuthRepository } from './interfaces/telegram-auth-repository.interface';
-import type { AppConfig } from '../config/app.config';
+import { TelegramClient, Api, sessions } from 'telegram';
+
+const { StringSession } = sessions;
+import type { ITelegramAuthRepository } from './interfaces/telegram-auth-repository.interface.js';
+import type { AppConfig } from '../config/app.config.js';
 import type {
   ConfirmTelegramSessionDto,
   ConfirmTelegramSessionResponseDto,
-} from './dto/confirm-session.dto';
+} from './dto/confirm-session.dto.js';
 import type {
   StartTelegramSessionDto,
   StartTelegramSessionResponseDto,
-} from './dto/start-session.dto';
+} from './dto/start-session.dto.js';
 import type {
   TelegramSettingsDto,
   TelegramSettingsResponseDto,
-} from './dto/telegram-settings.dto';
+} from './dto/telegram-settings.dto.js';
 
 interface AuthTransactionState {
   phoneNumber: string;

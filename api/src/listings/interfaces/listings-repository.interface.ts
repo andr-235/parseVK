@@ -1,4 +1,4 @@
-import type { ListingRecord } from '../types/listing-record.type';
+import type { ListingRecord } from '../types/listing-record.type.js';
 
 export type ListingWhereInput = Record<string, unknown>;
 export type ListingOrderByInput =

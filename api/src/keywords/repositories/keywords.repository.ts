@@ -3,10 +3,10 @@ import {
   MatchSource as PrismaMatchSource,
   type Keyword,
   type Prisma,
-} from '@/generated/prisma/client';
-import { PrismaService } from '../../prisma.service';
-import type { IKeywordsRepository } from '../interfaces/keywords-repository.interface';
-import type { MatchSource } from '../../common/types/match-source.enum';
+} from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma.service.js';
+import type { IKeywordsRepository } from '../interfaces/keywords-repository.interface.js';
+import type { MatchSource } from '../../common/types/match-source.enum.js';
 
 @Injectable()
 export class KeywordsRepository implements IKeywordsRepository {

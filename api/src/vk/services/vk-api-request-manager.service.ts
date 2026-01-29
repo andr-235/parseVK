@@ -1,15 +1,15 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
-import { VkApiRateLimiter } from './vk-api-rate-limiter.service';
-import { VkApiRetryService } from './vk-api-retry.service';
+import { VkApiRateLimiter } from './vk-api-rate-limiter.service.js';
+import { VkApiRetryService } from './vk-api-retry.service.js';
 import {
   VkApiCircuitBreaker,
   CircuitBreakerState,
-} from './vk-api-circuit-breaker.service';
-import { VkApiMetricsService } from './vk-api-metrics.service';
-import { MetricsService } from '../../metrics/metrics.service';
-import type { RateLimitOptions } from './vk-api-rate-limiter.service';
-import type { RetryOptions } from './vk-api-retry.service';
-import type { CircuitBreakerOptions } from './vk-api-circuit-breaker.service';
+} from './vk-api-circuit-breaker.service.js';
+import { VkApiMetricsService } from './vk-api-metrics.service.js';
+import { MetricsService } from '../../metrics/metrics.service.js';
+import type { RateLimitOptions } from './vk-api-rate-limiter.service.js';
+import type { RetryOptions } from './vk-api-retry.service.js';
+import type { CircuitBreakerOptions } from './vk-api-circuit-breaker.service.js';
 
 export interface RequestManagerOptions {
   rateLimit?: RateLimitOptions;

@@ -5,10 +5,10 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
-import { MonitoringService } from './monitoring.service';
-import { MonitoringQueryValidator } from './validators/monitoring-query.validator';
-import { DEFAULT_LIMIT, DEFAULT_PAGE } from './monitoring.constants';
-import type { MonitorMessagesDto } from './dto/monitor-messages.dto';
+import { MonitoringService } from './monitoring.service.js';
+import { MonitoringQueryValidator } from './validators/monitoring-query.validator.js';
+import { DEFAULT_LIMIT, DEFAULT_PAGE } from './monitoring.constants.js';
+import type { MonitorMessagesDto } from './dto/monitor-messages.dto.js';
 
 @Controller('monitoring')
 export class MonitoringController {

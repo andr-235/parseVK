@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
-import { WatchlistController } from './watchlist.controller';
-import { WatchlistService } from './watchlist.service';
-import { WatchlistMonitorService } from './watchlist.monitor.service';
-import { PhotoAnalysisModule } from '../photo-analysis/photo-analysis.module';
-import { VkModule } from '../vk/vk.module';
-import { CommonModule } from '../common/common.module';
-import { WatchlistRepository } from './repositories/watchlist.repository';
-import { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper';
-import { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper';
-import { WatchlistStatsCollectorService } from './services/watchlist-stats-collector.service';
-import { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service';
-import { WatchlistQueryValidator } from './validators/watchlist-query.validator';
+import { WatchlistController } from './watchlist.controller.js';
+import { WatchlistService } from './watchlist.service.js';
+import { WatchlistMonitorService } from './watchlist.monitor.service.js';
+import { PhotoAnalysisModule } from '../photo-analysis/photo-analysis.module.js';
+import { VkModule } from '../vk/vk.module.js';
+import { CommonModule } from '../common/common.module.js';
+import { WatchlistRepository } from './repositories/watchlist.repository.js';
+import { WatchlistAuthorMapper } from './mappers/watchlist-author.mapper.js';
+import { WatchlistSettingsMapper } from './mappers/watchlist-settings.mapper.js';
+import { WatchlistStatsCollectorService } from './services/watchlist-stats-collector.service.js';
+import { WatchlistAuthorRefresherService } from './services/watchlist-author-refresher.service.js';
+import { WatchlistQueryValidator } from './validators/watchlist-query.validator.js';
 
 @Module({
   imports: [VkModule, PhotoAnalysisModule, CommonModule],

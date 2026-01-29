@@ -1,6 +1,6 @@
-import { TaskMapper } from './task.mapper';
-import type { TaskRecord } from '../types/task-record.type';
-import type { ParsedTaskDescription } from '../parsers/task-description.parser';
+import { TaskMapper } from './task.mapper.js';
+import type { TaskRecord } from '../types/task-record.type.js';
+import type { ParsedTaskDescription } from '../parsers/task-description.parser.js';
 
 describe('TaskMapper', () => {
   let mapper: TaskMapper;
