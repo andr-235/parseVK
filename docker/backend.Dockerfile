@@ -35,13 +35,18 @@ COPY api/package*.json ./
 COPY api/.npmrc ./
 COPY api/pnpm-lock.yaml* ./
 
+# Нативные зависимости (argon2) требуют сборки в Alpine/musl
+RUN apk add --no-cache --virtual .build-deps python3 build-base
+
 # Install dependencies with BuildKit cache mount
 RUN --mount=type=cache,target=/root/.pnpm-store \
     --mount=type=cache,target=/app/node_modules/.cache \
     pnpm config set registry ${NPM_REGISTRY} \
     && pnpm config set fetch-retries 3 \
     && pnpm config set fetch-timeout 60000 \
-    && (pnpm install --frozen-lockfile || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile))
+    && (pnpm install --frozen-lockfile --dangerously-allow-all-builds || (echo "Fallback to npmjs" && pnpm config set registry ${NPM_REGISTRY_FALLBACK} && pnpm install --frozen-lockfile --dangerously-allow-all-builds))
+
+RUN apk del .build-deps
 
 # Copy source code after dependencies are installed
 COPY api/ ./

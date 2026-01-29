@@ -1,8 +1,7 @@
 import { PrismaClient, UserRole } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
+import { hashSecret } from '../src/auth/password-hash';
 
 const prisma = new PrismaClient();
-const PASSWORD_SALT_ROUNDS = 12;
 
 async function main() {
   const username = process.env.ADMIN_SEED_USERNAME || 'admin';
@@ -18,7 +17,7 @@ async function main() {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
+  const passwordHash = await hashSecret(password);
   await prisma.user.create({
     data: {
       username,

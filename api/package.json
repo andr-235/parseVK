@@ -38,6 +38,7 @@
     "@nestjs/throttler": "^6.4.0",
     "@nestjs/websockets": "^11.1.6",
     "@prisma/client": "^6.16.3",
+    "argon2": "^0.44.0",
     "bcryptjs": "^2.4.3",
     "big-integer": "^1.6.52",
     "bullmq": "^5.61.0",

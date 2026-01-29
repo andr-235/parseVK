@@ -3,15 +3,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
 import { randomInt } from 'crypto';
+import { hashSecret } from '../auth/password-hash';
 import { PrismaService } from '../prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UserRole } from './types/user-role.enum';
 import type { UserRecord } from './types/user.types';
 
-const PASSWORD_SALT_ROUNDS = 12;
 const TEMP_PASSWORD_LENGTH = 12;
 const LOWERCASE_CHARS = 'abcdefghijklmnopqrstuvwxyz';
 const UPPERCASE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -56,7 +55,7 @@ export class UsersService {
       throw new ConflictException('Username already exists');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, PASSWORD_SALT_ROUNDS);
+    const passwordHash = await hashSecret(dto.password);
     const user = await this.prisma.user.create({
       data: {
         username: dto.username,
@@ -93,9 +92,19 @@ export class UsersService {
     refreshToken: string | null,
   ): Promise<void> {
     const refreshTokenHash = refreshToken
-      ? await bcrypt.hash(refreshToken, PASSWORD_SALT_ROUNDS)
+      ? await hashSecret(refreshToken)
       : null;
 
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshTokenHash },
+    });
+  }
+
+  async setRefreshTokenHash(
+    userId: number,
+    refreshTokenHash: string | null,
+  ): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { refreshTokenHash },
@@ -129,10 +138,7 @@ export class UsersService {
   ): Promise<{ temporaryPassword: string }> {
     void adminId;
     const temporaryPassword = this.generateTemporaryPassword();
-    const passwordHash = await bcrypt.hash(
-      temporaryPassword,
-      PASSWORD_SALT_ROUNDS,
-    );
+    const passwordHash = await hashSecret(temporaryPassword);
     await this.setPassword(userId, passwordHash, true);
     return { temporaryPassword };
   }

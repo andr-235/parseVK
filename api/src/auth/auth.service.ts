@@ -5,13 +5,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
+import { hashSecret, verifyAndMaybeRehash } from './password-hash';
 import type { AppConfig } from '../config/app.config';
 import { UsersService } from '../users/users.service';
 import type { UserAuthRecord } from '../users/types/user.types';
 import type { AuthResponse, AuthTokens, JwtPayload } from './auth.types';
-
-const PASSWORD_SALT_ROUNDS = 12;
 
 @Injectable()
 export class AuthService {
@@ -52,12 +50,12 @@ export class AuthService {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    const matches = await bcrypt.compare(oldPassword, user.passwordHash);
-    if (!matches) {
+    const { ok } = await verifyAndMaybeRehash(oldPassword, user.passwordHash);
+    if (!ok) {
       throw new BadRequestException('Invalid current password');
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS);
+    const passwordHash = await hashSecret(newPassword);
     const updatedUser = await this.usersService.setPassword(
       user.id,
       passwordHash,
@@ -77,9 +75,21 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const matches = await bcrypt.compare(password, user.passwordHash);
-    if (!matches) {
+    const { ok, newHash } = await verifyAndMaybeRehash(
+      password,
+      user.passwordHash,
+    );
+    if (!ok) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (newHash) {
+      const updatedUser = await this.usersService.setPassword(
+        user.id,
+        newHash,
+        user.isTemporaryPassword,
+      );
+      return updatedUser;
     }
 
     return user;
@@ -94,9 +104,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
-    if (!matches) {
+    const { ok, newHash } = await verifyAndMaybeRehash(
+      refreshToken,
+      user.refreshTokenHash,
+    );
+    if (!ok) {
       throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (newHash) {
+      await this.usersService.setRefreshTokenHash(user.id, newHash);
+      return { ...user, refreshTokenHash: newHash };
     }
 
     return user;
