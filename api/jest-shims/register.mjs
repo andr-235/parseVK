@@ -1,5 +1,9 @@
-const path = require('path');
-const Module = require('module');
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Module from 'node:module';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const shimNodeModules = path.join(__dirname, 'node_modules');
 const existing = process.env.NODE_PATH
@@ -11,5 +15,3 @@ if (!existing.includes(shimNodeModules)) {
   process.env.NODE_PATH = existing.join(path.delimiter);
   Module._initPaths();
 }
-
-module.exports = {};

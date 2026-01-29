@@ -4,8 +4,12 @@
     "rootDir": ".",
     "noEmit": false,
     "emitDeclarationOnly": false,
-    "moduleResolution": "node",
-    "resolvePackageJsonExports": false
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "esModuleInterop": true,
+    "resolvePackageJsonExports": false,
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src/**/*.ts"],
   "exclude": [
