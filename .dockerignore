@@ -1,0 +1,27 @@
+# Build artifacts (we build inside the container)
+api/dist
+front/dist
+
+# Dependencies (installed in container)
+api/node_modules
+front/node_modules
+node_modules
+
+# Git and env
+.git
+.gitignore
+.env
+.env.*
+
+# Docs, tooling, CI (not needed in image context)
+.github
+docs
+*.md
+
+# Cache and temp
+.cache
+.pnpm
+.temp
+.tmp
+*.tsbuildinfo
+api/tsconfig.build.tsbuildinfo

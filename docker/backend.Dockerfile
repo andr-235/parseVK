@@ -71,8 +71,8 @@ RUN for i in 1 2 3; do \
       echo "prisma generate attempt $$i failed, retrying in 15s..."; \
       sleep 15; \
     done \
-    && npx tsc -p tsconfig.build.json \
-    && test -f /app/dist/main.js || (echo "Build failed: main.js not found" && ls -laR /app/dist && exit 1)
+    && pnpm run build \
+    && (test -f /app/dist/src/main.js || test -f /app/dist/main.js) || (echo "Build failed: main.js not found" && ls -laR /app/dist && exit 1)
 
 # Production stage
 FROM node:22-alpine
