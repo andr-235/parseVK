@@ -4,7 +4,7 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-ARG DATABASE_URL
+ARG DATABASE_URL=postgresql://localhost:5432/dummy
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 ARG NPM_REGISTRY_FALLBACK=https://registry.npmjs.org/
 ARG PNPM_VERSION=10.25.0
