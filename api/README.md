@@ -27,9 +27,13 @@
 
 ## Project setup
 
+В каталоге `api` зависимости ставятся через [Bun](https://bun.sh):
+
 ```bash
-$ npm install
+$ cd api && bun install
 ```
+
+Скрипты: `bun run start:dev`, `bun run test`, `bunx prisma generate` и т.д.
 
 ## Database setuлшлгнлнлн
 

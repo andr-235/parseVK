@@ -73,7 +73,7 @@ jobs:
           }
 
           if [ "$BACKEND_CHANGED" = true ]; then
-            add_include '{"project":"backend","working-directory":"api","cache-path":"api/pnpm-lock.yaml"}'
+            add_include '{"project":"backend","working-directory":"api","cache-path":"api/bun.lock"}'
           fi
           if [ "$FRONTEND_CHANGED" = true ]; then
             add_include '{"project":"frontend","working-directory":"front","cache-path":"front/pnpm-lock.yaml"}'
@@ -97,8 +97,8 @@ jobs:
           - task: lint
             project: backend
             working-directory: api
-            cache-path: api/pnpm-lock.yaml
-            command: pnpm run lint
+            cache-path: api/bun.lock
+            command: bun run lint
           - task: lint
             project: frontend
             working-directory: front
@@ -107,8 +107,8 @@ jobs:
           - task: type-check
             project: backend
             working-directory: api
-            cache-path: api/pnpm-lock.yaml
-            command: pnpm exec tsc --noEmit
+            cache-path: api/bun.lock
+            command: bunx tsc --noEmit
           - task: type-check
             project: frontend
             working-directory: front
@@ -117,8 +117,8 @@ jobs:
           - task: format-check
             project: backend
             working-directory: api
-            cache-path: api/pnpm-lock.yaml
-            command: pnpm run format:check
+            cache-path: api/bun.lock
+            command: bun run format:check
           - task: format-check
             project: frontend
             working-directory: front
@@ -129,15 +129,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Setup Bun
+        if: matrix.project == 'backend'
+        uses: oven-sh/setup-bun@v2
       - name: Enable corepack
+        if: matrix.project == 'frontend'
         run: corepack enable
       - name: Setup pnpm
+        if: matrix.project == 'frontend'
         run: corepack prepare pnpm@latest --activate
       - name: Get pnpm store directory
+        if: matrix.project == 'frontend'
         id: pnpm-cache
         shell: bash
         run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v4
+        if: matrix.project == 'frontend'
         name: Setup pnpm cache
         with:
           path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
@@ -151,7 +158,12 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ matrix.project }}-${{ hashFiles(matrix.cache-path) }}
           restore-keys: |
             ${{ runner.os }}-node-modules-${{ matrix.project }}-
-      - name: Install dependencies
+      - name: Install dependencies (Bun)
+        if: matrix.project == 'backend'
+        working-directory: api
+        run: bun install --frozen-lockfile
+      - name: Install dependencies (pnpm)
+        if: matrix.project == 'frontend'
         working-directory: ${{ matrix.working-directory }}
         run: pnpm install --frozen-lockfile
       - name: Generate Prisma Client
@@ -159,7 +171,7 @@ jobs:
         working-directory: api
         env:
           DATABASE_URL: postgresql://localhost:5432/dummy
-        run: pnpm exec prisma generate
+        run: bunx prisma generate
       - name: Run ${{ matrix.task }}
         working-directory: ${{ matrix.working-directory }}
         run: ${{ matrix.command }}
@@ -202,40 +214,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Enable corepack
-        run: corepack enable
-      - name: Setup pnpm
-        run: corepack prepare pnpm@latest --activate
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v4
-        name: Setup pnpm cache
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('api/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
           path: api/node_modules
-          key: ${{ runner.os }}-node-modules-backend-${{ hashFiles('api/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-node-modules-backend-${{ hashFiles('api/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-backend-
       - name: Install dependencies
         working-directory: api
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
       - name: Generate Prisma Client
         working-directory: api
-        run: pnpm exec prisma generate
+        run: bunx prisma generate
       - name: Run migrations
         working-directory: api
-        run: pnpm exec prisma migrate deploy
+        run: bunx prisma migrate deploy
       - name: Run tests
         working-directory: api
-        run: pnpm test
+        run: bun run test
 
   test-frontend:
     name: Test Frontend
