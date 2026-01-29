@@ -86,10 +86,10 @@ ENV NODE_ENV=production
 ENV PRISMA_ENGINES_MIRROR=https://cdn.npmmirror.com/binaries/prisma
 
 # Устанавливаем prisma CLI с увеличенными таймаутами
+# ВАЖНО: network-timeout НЕ валидная опция для npm, только для pnpm
 RUN npm config set registry https://registry.npmmirror.com \
     && npm config set fetch-retries 5 \
     && npm config set fetch-timeout 180000 \
-    && npm config set network-timeout 180000 \
     && (npm install -g prisma@^6.16.3 || ( \
         echo "Retrying with delay..." \
         && sleep 10 \
@@ -114,6 +114,4 @@ RUN chmod +x /app/entrypoint.sh
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=60s \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode
