@@ -149,14 +149,6 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ matrix.project }}-${{ hashFiles(matrix.cache-path) }}
           restore-keys: |
             ${{ runner.os }}-node-modules-${{ matrix.project }}-
-      - name: Cache Prisma Client
-        if: matrix.project == 'backend'
-        uses: actions/cache@v4
-        with:
-          path: api/node_modules/.prisma
-          key: prisma-${{ runner.os }}-${{ hashFiles('api/prisma/schema.prisma') }}
-          restore-keys: |
-            prisma-${{ runner.os }}-
       - name: Install dependencies
         working-directory: ${{ matrix.working-directory }}
         run: pnpm install --frozen-lockfile
@@ -228,13 +220,6 @@ jobs:
           key: ${{ runner.os }}-node-modules-backend-${{ hashFiles('api/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-backend-
-      - name: Cache Prisma Client
-        uses: actions/cache@v4
-        with:
-          path: api/node_modules/.prisma
-          key: prisma-${{ runner.os }}-${{ hashFiles('api/prisma/schema.prisma') }}
-          restore-keys: |
-            prisma-${{ runner.os }}-
       - name: Install dependencies
         working-directory: api
         run: pnpm install --frozen-lockfile
