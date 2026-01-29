@@ -7,11 +7,11 @@ import type {
   WatchlistSettingsRecord,
   WatchlistSettingsUpdateData,
 } from '../interfaces/watchlist-repository.interface';
-import type { Comment, Prisma } from '@prisma/client';
+import type { Comment, Prisma } from '@/generated/prisma/client';
 import {
   CommentSource as PrismaCommentSource,
   WatchlistStatus as WS,
-} from '@prisma/client';
+} from '@/generated/prisma/client';
 import { composeCommentKey } from '../utils/watchlist-comment.utils';
 import type { CommentSource } from '../../common/types/comment-source.enum';
 import type { WatchlistStatus } from '../types/watchlist-status.enum';

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
-import { TelegramChatType } from '@prisma/client';
+import { TelegramChatType } from '@/generated/prisma/client';
 
 export interface TelegramChatCreateData {
   telegramId: bigint;

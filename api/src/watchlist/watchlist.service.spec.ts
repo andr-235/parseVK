@@ -21,7 +21,7 @@ jest.mock('vk-io', () => {
   };
 });
 
-jest.mock('@prisma/client', () => {
+jest.mock('@/generated/prisma/client', () => {
   class PrismaClientMock {
     constructor() {}
   }

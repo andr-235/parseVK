@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { MatchSource as PrismaMatchSource } from '@prisma/client';
-import type { Keyword, Prisma } from '@prisma/client';
+import {
+  MatchSource as PrismaMatchSource,
+  type Keyword,
+  type Prisma,
+} from '@/generated/prisma/client';
 import { PrismaService } from '../../prisma.service';
 import type { IKeywordsRepository } from '../interfaces/keywords-repository.interface';
 import type { MatchSource } from '../../common/types/match-source.enum';

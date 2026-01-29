@@ -1,4 +1,6 @@
-import { MatchSource, PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { MatchSource, PrismaClient } from '../src/generated/prisma/client';
 
 const NBSP_REGEX = /\u00a0/g;
 const SOFT_HYPHEN_REGEX = /\u00ad/g;
@@ -21,10 +23,15 @@ const normalizeForKeywordMatch = (value: string | null | undefined): string => {
 };
 
 async function main() {
-  const prisma = new PrismaClient();
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is not set.');
+  }
+  const adapter = new PrismaPg({ connectionString: databaseUrl });
+  const prisma = new PrismaClient({ adapter });
 
   try {
-    console.log('Загрузка всех совпадений ключевых слов...');
+    console.warn('Загрузка всех совпадений ключевых слов...');
     const allMatches = await prisma.commentKeywordMatch.findMany({
       include: {
         comment: {
@@ -36,12 +43,15 @@ async function main() {
       },
     });
 
-    console.log(`Найдено ${allMatches.length} совпадений`);
+    console.warn(`Найдено ${allMatches.length} совпадений`);
 
-    console.log('Проверка совпадений...');
+    console.warn('Проверка совпадений...');
     let checked = 0;
-    let deleted = 0;
-    const toDelete: Array<{ commentId: number; keywordId: number; source: MatchSource }> = [];
+    const toDelete: Array<{
+      commentId: number;
+      keywordId: number;
+      source: MatchSource;
+    }> = [];
 
     for (const match of allMatches) {
       checked++;
@@ -60,18 +70,18 @@ async function main() {
       }
 
       if (checked % 1000 === 0) {
-        console.log(`Проверено: ${checked}/${allMatches.length}`);
+        console.warn(`Проверено: ${checked}/${allMatches.length}`);
       }
     }
 
-    console.log(`\nНайдено неправильных совпадений: ${toDelete.length}`);
+    console.warn(`\nНайдено неправильных совпадений: ${toDelete.length}`);
 
     if (toDelete.length === 0) {
-      console.log('Все совпадения корректны, удалять нечего.');
+      console.warn('Все совпадения корректны, удалять нечего.');
       return;
     }
 
-    console.log('Удаление неправильных совпадений...');
+    console.warn('Удаление неправильных совпадений...');
     let deletedCount = 0;
 
     for (const match of toDelete) {
@@ -85,14 +95,14 @@ async function main() {
       deletedCount++;
 
       if (deletedCount % 100 === 0) {
-        console.log(`Удалено: ${deletedCount}/${toDelete.length}`);
+        console.warn(`Удалено: ${deletedCount}/${toDelete.length}`);
       }
     }
 
-    console.log('\n=== Результаты ===');
-    console.log(`Проверено совпадений: ${checked}`);
-    console.log(`Удалено неправильных: ${deletedCount}`);
-    console.log(`Осталось правильных: ${checked - deletedCount}`);
+    console.warn('\n=== Результаты ===');
+    console.warn(`Проверено совпадений: ${checked}`);
+    console.warn(`Удалено неправильных: ${deletedCount}`);
+    console.warn(`Осталось правильных: ${checked - deletedCount}`);
   } catch (error) {
     console.error('Ошибка:', error);
     process.exit(1);
@@ -101,10 +111,4 @@ async function main() {
   }
 }
 
-main();
-
-
-
-
-
-
+void main();

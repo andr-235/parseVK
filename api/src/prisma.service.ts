@@ -5,7 +5,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@/generated/prisma/client';
 
 @Injectable()
 export class PrismaService
@@ -23,15 +24,9 @@ export class PrismaService
       );
     }
 
-    super({
-      datasources: {
-        db: {
-          url: databaseUrl,
-        },
-      },
-    });
+    const adapter = new PrismaPg({ connectionString: databaseUrl });
+    super({ adapter });
 
-    // Логируем только факт наличия DATABASE_URL, без самого значения
     this.logger.log('DATABASE_URL настроен');
   }
 

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import { CommentsRepository } from './comments.repository';
 import { PrismaService } from '../../prisma.service';
 import type { CommentWithRelations } from '../interfaces/comments-repository.interface';

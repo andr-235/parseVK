@@ -7,17 +7,21 @@ import helmet from 'helmet';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import type { AppConfig } from './config/app.config';
-import type { CorsOptionsDelegate } from '@nestjs/common/interfaces/external/cors-options.interface';
+import type {
+  CorsOptions,
+  CorsOptionsDelegate,
+} from '@nestjs/common/interfaces/external/cors-options.interface';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   try {
+    const logLevels =
+      process.env.NODE_ENV === 'production'
+        ? (['log', 'warn', 'error'] as const)
+        : (['log', 'warn', 'error', 'debug', 'verbose'] as const);
     const app = await NestFactory.create(AppModule, {
       bufferLogs: true,
-      logger:
-        process.env.NODE_ENV === 'production'
-          ? ['log', 'warn', 'error']
-          : ['log', 'warn', 'error', 'debug', 'verbose'],
+      logger: [...logLevels],
     });
     const logger = new Logger('Bootstrap');
     const configService = app.get(ConfigService<AppConfig>);
@@ -30,7 +34,7 @@ async function bootstrap() {
     app.use(urlencoded({ limit: '2mb', extended: true }));
     app.useLogger(logger);
     app.useGlobalInterceptors(app.get(LoggingInterceptor));
-    app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalFilters(app.get(HttpExceptionFilter));
     const validationLogger = new Logger('ValidationPipe');
     app.useGlobalPipes(
       new ValidationPipe({
@@ -41,11 +45,11 @@ async function bootstrap() {
           enableImplicitConversion: true,
         },
         exceptionFactory: (errors) => {
-          const messages = errors.map((error) => {
-            const constraints = error.constraints
-              ? Object.values(error.constraints).join(', ')
+          const messages = errors.map((err) => {
+            const constraints = err.constraints
+              ? Object.values(err.constraints).join(', ')
               : 'Validation failed';
-            return `${error.property}: ${constraints}`;
+            return `${err.property}: ${constraints}`;
           });
           validationLogger.error(
             `Validation failed: ${messages.join('; ')}`,
@@ -143,17 +147,18 @@ async function bootstrap() {
       credentialedRoutes.some((route) => path.startsWith(route));
 
     const corsOptionsDelegate: CorsOptionsDelegate<Request> = (
-      req,
-      callback,
+      req: Request,
+      callback: (err: Error | null, options: CorsOptions) => void,
     ) => {
       const origin = req.get('origin');
+      const path = typeof req.path === 'string' ? req.path : '';
       const useCredentials =
         credentialedOrigins.size > 0 &&
         credentialedRoutes.length > 0 &&
         origin &&
-        isCredentialedRoute(req.path) &&
+        isCredentialedRoute(path) &&
         credentialedOrigins.has(origin);
-      const options = useCredentials
+      const options: CorsOptions = useCredentials
         ? corsOptionsCredentials
         : corsOptionsNoCredentials;
       callback(null, options);
@@ -163,15 +168,19 @@ async function bootstrap() {
 
     app.setGlobalPrefix(apiPrefix);
 
-    const port = configService.get('port', { infer: true }) ?? 3000;
-    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : undefined;
-    await app.listen(port, host);
+    const portRaw: unknown = configService.get('port', { infer: true });
+    const port = typeof portRaw === 'number' ? portRaw : 3000;
+    if (process.env.NODE_ENV === 'production') {
+      await app.listen(port, '0.0.0.0');
+    } else {
+      await app.listen(port);
+    }
     logger.log(`API запущено на порту ${port}`);
-  } catch (error) {
+  } catch (err) {
     const logger = new Logger('Bootstrap');
     logger.error(
       'Не удалось запустить приложение',
-      error instanceof Error ? error.stack : undefined,
+      err instanceof Error ? err.stack : undefined,
     );
     process.exit(1);
   }

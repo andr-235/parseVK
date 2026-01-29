@@ -9,6 +9,7 @@ import { CacheModule } from './common/cache/cache.module';
 import { CommonModule } from './common/common.module';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaModule } from './prisma.module';
 import { VkModule } from './vk/vk.module';
 import { VkFriendsModule } from './vk-friends/vk-friends.module';
@@ -64,7 +65,7 @@ import type { AppConfig } from './config/app.config';
     TelegramModule,
   ],
   controllers: [AppController],
-  providers: [AppService, LoggingInterceptor],
+  providers: [AppService, LoggingInterceptor, HttpExceptionFilter],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SuspicionLevel as PrismaSuspicionLevel } from '@prisma/client';
+import { SuspicionLevel as PrismaSuspicionLevel } from '@/generated/prisma/client';
 import type { ModerationResult } from '../interfaces/moderation-service.interface';
 
 export interface PhotoAnalysisData {

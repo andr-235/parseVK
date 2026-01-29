@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/generated/prisma/client';
 
 import { CommentsFilterBuilder } from '../builders/comments-filter.builder';
 import { CursorUtils } from '../dto/comments-cursor.dto';

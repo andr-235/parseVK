@@ -1,8 +1,7 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, type Listing } from '@/generated/prisma/client';
 import { DataImportService } from '../data-import.service';
 import type { IListingsRepository } from '../../listings/interfaces/listings-repository.interface';
 import type { ListingImportRequestDto } from '../dto/listing-import-request.dto';
-import type { Listing } from '@prisma/client';
 
 const createListing = (overrides: Partial<Listing> = {}): Listing => ({
   id: 1,

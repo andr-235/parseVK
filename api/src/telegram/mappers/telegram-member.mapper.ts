@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Api } from 'telegram';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import type { MemberRecord } from '../interfaces/telegram-client.interface';
 import type { TelegramMemberDto } from '../dto/telegram-member.dto';
 import bigInt, { type BigInteger } from 'big-integer';

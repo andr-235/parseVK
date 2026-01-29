@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/generated/prisma/client';
 
 /**
  * Prisma.Sql совместим с Prisma.sql`...` и Prisma.join(...)

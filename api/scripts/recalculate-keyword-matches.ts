@@ -1,4 +1,6 @@
-import { MatchSource, PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { MatchSource, PrismaClient } from '../src/generated/prisma/client';
 
 const NBSP_REGEX = /\u00a0/g;
 const SOFT_HYPHEN_REGEX = /\u00ad/g;
@@ -48,17 +50,22 @@ const matchesKeyword = (
 };
 
 async function main() {
-  const prisma = new PrismaClient();
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is not set.');
+  }
+  const adapter = new PrismaPg({ connectionString: databaseUrl });
+  const prisma = new PrismaClient({ adapter });
 
   try {
-    console.log('Загрузка ключевых слов...');
+    console.warn('Загрузка ключевых слов...');
     const keywords = await prisma.keyword.findMany({
       select: { id: true, word: true, isPhrase: true },
     });
 
-    console.log(`Найдено ${keywords.length} ключевых слов`);
+    console.warn(`Найдено ${keywords.length} ключевых слов`);
 
-    console.log('Подготовка ключевых слов...');
+    console.warn('Подготовка ключевых слов...');
     const keywordCandidates: KeywordMatchCandidate[] = keywords
       .map((keyword) => {
         const normalized = normalizeForKeywordMatch(keyword.word);
@@ -70,11 +77,13 @@ async function main() {
       })
       .filter((keyword) => keyword.normalizedWord.length > 0);
 
-    console.log(`Сгенерировано форм для ${keywordCandidates.length} ключевых слов`);
+    console.warn(
+      `Сгенерировано форм для ${keywordCandidates.length} ключевых слов`,
+    );
 
-    console.log('Загрузка комментариев...');
+    console.warn('Загрузка комментариев...');
     const totalComments = await prisma.comment.count();
-    console.log(`Всего комментариев: ${totalComments}`);
+    console.warn(`Всего комментариев: ${totalComments}`);
 
     const batchSize = 1000;
     let processed = 0;
@@ -111,15 +120,15 @@ async function main() {
           select: { keywordId: true },
         });
 
-        const existingKeywordIds = new Set(
+        const existingKeywordIds = new Set<number>(
           existingMatches.map((match) => match.keywordId),
         );
 
         const toCreate = Array.from(matchedKeywordIds).filter(
-          (keywordId) => !existingKeywordIds.has(keywordId),
+          (keywordId: number) => !existingKeywordIds.has(keywordId),
         );
         const toDelete = Array.from(existingKeywordIds).filter(
-          (keywordId) => !matchedKeywordIds.has(keywordId),
+          (keywordId: number) => !matchedKeywordIds.has(keywordId),
         );
 
         if (toCreate.length > 0 || toDelete.length > 0) {
@@ -152,14 +161,16 @@ async function main() {
         processed++;
 
         if (processed % 100 === 0) {
-          console.log(`Обработано комментариев: ${processed}/${totalComments}`);
+          console.warn(
+            `Обработано комментариев: ${processed}/${totalComments}`,
+          );
         }
       }
     }
 
-    console.log('\nЗагрузка постов...');
+    console.warn('\nЗагрузка постов...');
     const totalPosts = await prisma.post.count();
-    console.log(`Всего постов: ${totalPosts}`);
+    console.warn(`Всего постов: ${totalPosts}`);
 
     let processedPosts = 0;
 
@@ -236,7 +247,10 @@ async function main() {
 
         for (const match of existingMatches) {
           if (!matchedKeywordIds.has(match.keywordId)) {
-            toDelete.push({ commentId: match.commentId, keywordId: match.keywordId });
+            toDelete.push({
+              commentId: match.commentId,
+              keywordId: match.keywordId,
+            });
           }
         }
 
@@ -272,17 +286,17 @@ async function main() {
         processedPosts++;
 
         if (processedPosts % 100 === 0) {
-          console.log(`Обработано постов: ${processedPosts}/${totalPosts}`);
+          console.warn(`Обработано постов: ${processedPosts}/${totalPosts}`);
         }
       }
     }
 
-    console.log('\n=== Результаты ===');
-    console.log(`Обработано комментариев: ${processed}`);
-    console.log(`Обработано постов: ${processedPosts}`);
-    console.log(`Обновлено записей: ${updated}`);
-    console.log(`Создано совпадений: ${created}`);
-    console.log(`Удалено совпадений: ${deleted}`);
+    console.warn('\n=== Результаты ===');
+    console.warn(`Обработано комментариев: ${processed}`);
+    console.warn(`Обработано постов: ${processedPosts}`);
+    console.warn(`Обновлено записей: ${updated}`);
+    console.warn(`Создано совпадений: ${created}`);
+    console.warn(`Удалено совпадений: ${deleted}`);
   } catch (error) {
     console.error('Ошибка:', error);
     process.exit(1);
@@ -291,5 +305,4 @@ async function main() {
   }
 }
 
-main();
-
+void main();

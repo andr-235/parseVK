@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import { AUTHORS_CONSTANTS } from '../../authors.constants';
 import type { AuthorSortDirection } from '../../types/authors.types';
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MatchSource, type Prisma } from '@prisma/client';
+import { MatchSource, type Prisma } from '@/generated/prisma/client';
 import type {
   CommentsFilters,
   ReadStatusFilter,

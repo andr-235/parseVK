@@ -1,5 +1,5 @@
 import { CommentsFilterBuilder } from './comments-filter.builder';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/generated/prisma/client';
 
 describe('CommentsFilterBuilder', () => {
   let builder: CommentsFilterBuilder;

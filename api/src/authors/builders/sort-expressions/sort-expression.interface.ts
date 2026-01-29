@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import type { AuthorSortDirection } from '../../types/authors.types';
 
 export interface ISortExpression {

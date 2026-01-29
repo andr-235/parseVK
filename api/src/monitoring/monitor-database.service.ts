@@ -5,7 +5,8 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@/generated/prisma/client';
 import type { AppConfig } from '../config/app.config';
 
 const IDENTIFIER_PATTERN =
@@ -156,13 +157,10 @@ export class MonitorDatabaseService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.client = new PrismaClient({
-      datasources: {
-        db: {
-          url: this.databaseUrl,
-        },
-      },
+    const adapter = new PrismaPg({
+      connectionString: this.databaseUrl,
     });
+    this.client = new PrismaClient({ adapter });
 
     try {
       await this.client.$connect();
