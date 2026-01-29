@@ -1,12 +1,13 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "rootDir": "./src",
+    "rootDir": ".",
     "noEmit": false,
     "emitDeclarationOnly": false,
     "moduleResolution": "node",
     "resolvePackageJsonExports": false
   },
+  "include": ["src/**/*.ts"],
   "exclude": [
     "node_modules",
     "test",
