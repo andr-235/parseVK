@@ -126,7 +126,7 @@ jobs:
             command: bun run format:check
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
       - name: Setup Bun
@@ -186,7 +186,7 @@ jobs:
       VK_TOKEN: test-token
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
       - name: Setup Bun
@@ -218,7 +218,7 @@ jobs:
     if: needs.changes.outputs.frontend_changed == 'true'
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
       - name: Setup Bun
