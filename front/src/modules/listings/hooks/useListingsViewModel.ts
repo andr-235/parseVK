@@ -3,7 +3,7 @@ import type { IListing } from '@/types/api'
 import type { UseInfiniteFetcher } from '@/modules/listings/hooks/useInfiniteListings'
 // Использование services для создания fetcher функции для useInfiniteListings
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
-import { listingsService } from '@/services/listingsService'
+import { listingsService } from '@/modules/listings/api/listings.api'
 import type { ListingsMeta, ListingsFetcherParams } from '@/modules/listings/types/listingsTypes'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]

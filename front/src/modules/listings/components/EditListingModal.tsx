@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button'
 import { Spinner } from '@/shared/ui/spinner'
 // Использование services для одноразовой операции (обновление объявления)
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
-import { listingsService } from '@/services/listingsService'
+import { listingsService } from '@/modules/listings/api/listings.api'
 import type { IListing, ListingUpdatePayload } from '@/types/api'
 
 type Props = {

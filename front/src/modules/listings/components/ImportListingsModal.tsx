@@ -3,7 +3,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 // Использование services для одноразовой операции (импорт данных)
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
-import { listingsService } from '@/services/listingsService'
+import { listingsService } from '@/modules/listings/api/listings.api'
 import { Spinner } from '@/shared/ui/spinner'
 import { Upload, AlertCircle, FileJson } from 'lucide-react'
 

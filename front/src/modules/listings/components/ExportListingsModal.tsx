@@ -44,7 +44,7 @@ const ALL_FIELDS: { key: FieldKey; label: string }[] = [
 
 // Использование services для одноразовой операции (экспорт данных)
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
-import { listingsService } from '@/services/listingsService'
+import { listingsService } from '@/modules/listings/api/listings.api'
 
 function ExportListingsModal({
   isOpen,
