@@ -1,0 +1,6 @@
+export * from './api/comments.api'
+export * from './hooks/useCommentsQuery'
+export { default as CommentsHero } from './components/CommentsHero'
+export { default as CommentsFiltersPanel } from './components/CommentsFiltersPanel'
+export { default as CommentsTableCard } from './components/CommentsTableCard'
+export { default as CommentsPage } from './components/CommentsPage'

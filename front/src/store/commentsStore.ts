@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { commentsService } from '@/services/commentsService'
+import { commentsService } from '@/modules/comments/api/comments.api'
 import type { CommentsFilters, CommentsState } from '@/types/stores'
 import { normalizeCommentResponse, COMMENTS_PAGE_SIZE } from './commentsStore.utils'
 import { queryClient } from '@/lib/queryClient'

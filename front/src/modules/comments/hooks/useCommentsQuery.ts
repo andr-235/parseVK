@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
-import { commentsService } from '@/services/commentsService'
+import { commentsService } from '@/modules/comments/api/comments.api'
 import { useCommentsStore } from '@/store'
 import { queryKeys } from '@/hooks/queryKeys'
 import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/store/commentsStore.utils'
