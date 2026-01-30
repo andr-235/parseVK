@@ -8,8 +8,8 @@ import {
   type ChangeEvent,
 } from 'react'
 import { Upload } from 'lucide-react'
-import { Input } from './ui/input'
-import { Button } from './ui/button'
+import { Input } from '../shared/ui/input'
+import { Button } from '../shared/ui/button'
 import { cn } from '@/lib/utils'
 import type { FileUploadProps, FileUploadRef } from '@/types/fileUpload'
 import { validateFiles } from '@/utils/fileValidation'
