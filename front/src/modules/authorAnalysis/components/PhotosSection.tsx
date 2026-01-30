@@ -1,5 +1,5 @@
 import { Button } from '@/shared/ui/button'
-import SectionCard from '@/shared/components/SectionCard'
+import { SectionCard } from '@/shared/components'
 import { Spinner } from '@/shared/ui/spinner'
 import { PhotoAnalysisCard } from './PhotoAnalysisCard'
 import type { PhotoAnalysis } from '@/types'

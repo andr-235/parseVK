@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Badge } from '@/shared/ui/badge'
 import { Spinner } from '@/shared/ui/spinner'
-import SectionCard from '@/shared/components/SectionCard'
+import { SectionCard } from '@/shared/components'
 import { SuspicionLevelBadge } from './SuspicionLevelBadge'
 import type { AuthorDetails, PhotoAnalysisSummary } from '@/types'
 import { categoryLabels } from '@/modules/authorAnalysis/utils/authorAnalysisUtils'

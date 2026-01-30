@@ -1,7 +1,7 @@
 import { memo, useMemo, useCallback, useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { Button } from '@/shared/ui/button'
-import SectionCard from '@/shared/components/SectionCard'
+import { SectionCard } from '@/shared/components'
 import { Table, TableCaption } from '@/shared/ui/table'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation'

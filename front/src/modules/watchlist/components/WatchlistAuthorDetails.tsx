@@ -1,4 +1,4 @@
-import SectionCard from '@/shared/components/SectionCard'
+import { SectionCard } from '@/shared/components'
 import {
   Table,
   TableBody,
