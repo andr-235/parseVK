@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { photoAnalysisService } from '@/services/photoAnalysisService'
+import { photoAnalysisService } from '@/modules/authorAnalysis/api/photoAnalysis.api'
 import type {
   AnalyzePhotosOptions,
   PhotoAnalysis,
