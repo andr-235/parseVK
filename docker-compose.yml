@@ -72,7 +72,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       MONITOR_DATABASE_URL: ${MONITOR_DATABASE_URL:-}
     healthcheck:
-      test: ["CMD", "node", "/app/healthcheck.cjs"]
+      test: ["CMD", "node", "/app/healthcheck.mjs"]
       interval: 10s
       timeout: 5s
       retries: 5

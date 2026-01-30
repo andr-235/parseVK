@@ -82,7 +82,7 @@ services:
       - default
       - monitor_net
     healthcheck:
-      test: ["CMD", "node", "/app/healthcheck.cjs"]
+      test: ["CMD", "node", "/app/healthcheck.mjs"]
       interval: 10s
       timeout: 5s
       retries: 5
