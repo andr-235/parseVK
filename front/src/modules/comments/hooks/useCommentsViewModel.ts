@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useCommentsStore } from '@/modules/comments/store'
 import { useKeywordsStore } from '@/modules/keywords/store'
 import { useWatchlistStore } from '@/modules/watchlist/store'
@@ -245,6 +246,7 @@ const useCommentsViewModel = () => {
   useEffect(() => {
     fetchCommentsCursor({ reset: true, filters: fetchFilters }).catch((error) => {
       console.error('Failed to fetch comments with filters', error)
+      toast.error('Не удалось загрузить комментарии')
     })
   }, [fetchCommentsCursor, fetchFilters])
 
@@ -265,8 +267,21 @@ const useCommentsViewModel = () => {
   const handleLoadMore = useCallback(() => {
     fetchCommentsCursor({ reset: false }).catch((error) => {
       console.error('Failed to load more comments', error)
+      toast.error('Не удалось загрузить комментарии')
     })
   }, [fetchCommentsCursor])
+
+  const handleToggleReadStatus = useCallback(
+    async (id: number) => {
+      try {
+        await toggleReadStatus(id)
+      } catch (error) {
+        console.error('Failed to update comment read status', error)
+        toast.error('Не удалось обновить статус комментария')
+      }
+    },
+    [toggleReadStatus]
+  )
 
   const handleAddToWatchlist = useCallback(
     async (commentId: number) => {
@@ -313,7 +328,7 @@ const useCommentsViewModel = () => {
     commentIndexMap,
     isLoading,
     emptyMessage,
-    toggleReadStatus,
+    toggleReadStatus: handleToggleReadStatus,
     handleLoadMore,
     hasMore,
     isLoadingMore,

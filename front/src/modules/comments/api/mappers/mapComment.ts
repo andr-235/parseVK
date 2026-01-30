@@ -1,6 +1,11 @@
-import type { ICommentResponse } from '@/shared/types'
+import type { Comment, ICommentResponse } from '@/shared/types'
 
-export const COMMENTS_PAGE_SIZE = 100
+type NormalizedAuthor = {
+  name: string
+  id: string | null
+  url: string | null
+  avatar: string | null
+}
 
 const normalizeString = (value?: string | null): string => value?.trim() ?? ''
 
@@ -15,13 +20,6 @@ const normalizeCreatedAt = (value: string | null): string => {
   }
 
   return date.toISOString()
-}
-
-interface NormalizedAuthor {
-  name: string
-  id: string | null
-  url: string | null
-  avatar: string | null
 }
 
 const buildCommentUrl = (comment: ICommentResponse): string | null => {
@@ -156,10 +154,10 @@ const resolveAuthorInfo = (comment: ICommentResponse): NormalizedAuthor => {
   }
 
   console.warn('Автор комментария не определён, исходные данные:', comment)
-  return { name: 'Неизвестный автор', id: null, url: null, avatar }
+  return { name: 'Неизвестный автор', id: null, url: null, avatar: null }
 }
 
-export const normalizeCommentResponse = (comment: ICommentResponse) => {
+export const mapComment = (comment: ICommentResponse): Comment => {
   const authorInfo = resolveAuthorInfo(comment)
   const watchlistAuthorId =
     typeof comment.watchlistAuthorId === 'number' ? comment.watchlistAuthorId : null
@@ -195,3 +193,5 @@ export const normalizeCommentResponse = (comment: ICommentResponse) => {
     matchedKeywords,
   }
 }
+
+export const mapComments = (comments: ICommentResponse[]): Comment[] => comments.map(mapComment)

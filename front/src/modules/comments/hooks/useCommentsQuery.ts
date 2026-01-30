@@ -1,16 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import toast from 'react-hot-toast'
 
-// Использование services напрямую в queryFn - стандартный паттерн React Query
+// Использование API функций напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
-import { commentsService } from '@/modules/comments/api/comments.api'
+import { getCommentsCursor } from '@/modules/comments/api/comments.api'
 import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
 import { useCommentsStore } from '@/modules/comments/store'
-import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/modules/comments/store'
+import { COMMENTS_PAGE_SIZE } from '@/modules/comments/store'
 import type { CommentsFilters } from '@/shared/types'
 
 const fetchInitialComments = async (filters: CommentsFilters) => {
-  const response = await commentsService.getCommentsCursor({
+  const response = await getCommentsCursor({
     limit: COMMENTS_PAGE_SIZE,
     keywords: filters.keywords,
     keywordSource: filters.keywordSource,
@@ -19,9 +20,7 @@ const fetchInitialComments = async (filters: CommentsFilters) => {
   })
 
   return {
-    comments: Array.isArray(response.items)
-      ? response.items.map((item) => normalizeCommentResponse(item))
-      : [],
+    comments: Array.isArray(response.items) ? response.items : [],
     nextCursor: response.nextCursor ?? null,
     hasMore: response.hasMore,
     totalCount: response.total,
@@ -47,6 +46,10 @@ export const useCommentsQuery = (options?: UseCommentsQueryOptions) => {
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: false,
     enabled,
+    onError: (error) => {
+      console.error('Failed to sync comments', error)
+      toast.error('Не удалось загрузить комментарии')
+    },
   })
 
   useEffect(() => {

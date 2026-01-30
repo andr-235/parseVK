@@ -1,8 +1,12 @@
 import { create } from 'zustand'
-import { commentsService } from '@/modules/comments/api/comments.api'
+import {
+  getComments,
+  getCommentsCursor,
+  updateReadStatus,
+} from '@/modules/comments/api/comments.api'
 import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
 import type { CommentsFilters, CommentsState } from '@/shared/types'
-import { normalizeCommentResponse, COMMENTS_PAGE_SIZE } from './commentsStore.utils'
+export const COMMENTS_PAGE_SIZE = 100
 import { queryClient } from '@/shared/api'
 
 // Синхронный флаг для предотвращения race condition
@@ -101,7 +105,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }
 
     try {
-      const response = await commentsService.getComments({
+      const response = await getComments({
         offset,
         limit: pageSize,
         keywords: activeFilters.keywords,
@@ -114,10 +118,10 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
           `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
         )
       }
-      const normalized = response.items.map((comment) => normalizeCommentResponse(comment))
+      const items = response.items
 
       set((prevState) => ({
-        comments: reset ? normalized : [...prevState.comments, ...normalized],
+        comments: reset ? items : [...prevState.comments, ...items],
         isLoading: false,
         isLoadingMore: false,
         hasMore: response.hasMore,
@@ -128,7 +132,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       }))
 
       queryClient.setQueryData<CommentsQueryData>(queryKey, (prev) => ({
-        comments: reset ? normalized : [...(prev?.comments ?? []), ...normalized],
+        comments: reset ? items : [...(prev?.comments ?? []), ...items],
         nextCursor: null,
         hasMore: response.hasMore,
         totalCount: response.total,
@@ -191,7 +195,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }
 
     try {
-      const response = await commentsService.getCommentsCursor({
+      const response = await getCommentsCursor({
         cursor,
         limit: pageSize,
         keywords: activeFilters.keywords,
@@ -211,10 +215,10 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
           `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
         )
       }
-      const normalized = response.items.map((comment) => normalizeCommentResponse(comment))
+      const items = response.items
 
       set((prevState) => {
-        const nextComments = reset ? normalized : [...prevState.comments, ...normalized]
+        const nextComments = reset ? items : [...prevState.comments, ...items]
         // Если все комментарии загружены, обновляем totalCount до фактического количества
         const finalTotalCount = response.hasMore
           ? response.total
@@ -234,7 +238,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       })
 
       queryClient.setQueryData<CommentsQueryData>(queryKey, (prev) => {
-        const nextComments = reset ? normalized : [...(prev?.comments ?? []), ...normalized]
+        const nextComments = reset ? items : [...(prev?.comments ?? []), ...items]
         const finalTotalCount = response.hasMore
           ? response.total
           : Math.max(response.total, nextComments.length)
@@ -286,7 +290,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     }))
 
     try {
-      const updated = await commentsService.updateReadStatus(id, nextIsRead)
+      const updated = await updateReadStatus(id, nextIsRead)
       const finalIsRead = updated.isRead ?? nextIsRead
 
       if (finalIsRead !== nextIsRead) {
