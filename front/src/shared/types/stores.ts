@@ -1,4 +1,5 @@
 import type { AuthorCard, AuthorSortField, AuthorSortOrder } from '@/modules/authors/types'
+import type { CommentsFilters } from '@/modules/comments/api/query/commentsQuery.types'
 import type { Comment, Group, Keyword, Task, TaskDetails } from './common'
 import type { IBulkAddResponse, IRegionGroupSearchItem } from './api'
 // Navigation Store Types
@@ -14,14 +15,6 @@ export type Page =
 export interface NavigationState {
   currentPage: Page
   setCurrentPage: (page: Page) => void
-}
-
-// Comments Store Types
-export interface CommentsFilters {
-  keywords?: string[]
-  keywordSource?: 'COMMENT' | 'POST'
-  readStatus?: 'all' | 'unread' | 'read'
-  search?: string
 }
 
 export interface CommentsState {

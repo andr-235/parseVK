@@ -5,10 +5,10 @@ import toast from 'react-hot-toast'
 // Использование API функций напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
 import { getCommentsCursor } from '@/modules/comments/api/comments.api'
+import type { CommentsFilters } from '@/modules/comments/api/query/commentsQuery.types'
 import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
 import { useCommentsStore } from '@/modules/comments/store'
 import { COMMENTS_PAGE_SIZE } from '@/modules/comments/store'
-import type { CommentsFilters } from '@/shared/types'
 
 const fetchInitialComments = async (filters: CommentsFilters) => {
   const response = await getCommentsCursor({

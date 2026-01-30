@@ -1,8 +1,8 @@
 import { API_URL, createRequest, handleResponse } from '@/shared/api'
-import type { CommentsFilters } from '@/shared/types'
+import type { CommentsFilters } from './query/commentsQuery.types'
 import type { CommentResponseDto, GetCommentsCursorDto, GetCommentsDto } from './dto/comments.dto'
 import type { Comment } from './models/comment.model'
-import { buildCommentsQuery } from './buildCommentsQuery'
+import { buildCommentsQuery } from './query/buildCommentsQuery'
 import { mapComment, mapComments } from './mappers/mapComment'
 
 type GetCommentsResult = {

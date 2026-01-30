@@ -1,12 +1,4 @@
-import type { CommentsFilters } from '@/shared/types'
-
-type CommentsQueryBase = {
-  offset?: number
-  limit?: number
-  cursor?: string
-}
-
-export type CommentsQueryParams = CommentsQueryBase & CommentsFilters
+import type { CommentsQueryParams } from './commentsQuery.types'
 
 export const buildCommentsQuery = (params?: CommentsQueryParams): string => {
   if (!params) {
@@ -15,11 +7,11 @@ export const buildCommentsQuery = (params?: CommentsQueryParams): string => {
 
   const searchParams = new URLSearchParams()
 
-  if (typeof params.offset === 'number') {
+  if (params.offset !== undefined) {
     searchParams.set('offset', String(params.offset))
   }
 
-  if (typeof params.limit === 'number') {
+  if (params.limit !== undefined) {
     searchParams.set('limit', String(params.limit))
   }
 
@@ -29,10 +21,8 @@ export const buildCommentsQuery = (params?: CommentsQueryParams): string => {
 
   params.keywords
     ?.map((keyword) => keyword.trim())
-    .filter((keyword) => keyword.length > 0)
-    .forEach((keyword) => {
-      searchParams.append('keywords', keyword)
-    })
+    .filter(Boolean)
+    .forEach((keyword) => searchParams.append('keywords', keyword))
 
   if (params.keywordSource) {
     searchParams.set('keywordSource', params.keywordSource)
@@ -42,9 +32,9 @@ export const buildCommentsQuery = (params?: CommentsQueryParams): string => {
     searchParams.set('readStatus', params.readStatus)
   }
 
-  const normalizedSearch = params.search?.trim()
-  if (normalizedSearch) {
-    searchParams.set('search', normalizedSearch)
+  const search = params.search?.trim()
+  if (search) {
+    searchParams.set('search', search)
   }
 
   return searchParams.toString()

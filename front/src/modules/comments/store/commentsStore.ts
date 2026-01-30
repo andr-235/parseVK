@@ -5,7 +5,8 @@ import {
   updateReadStatus,
 } from '@/modules/comments/api/comments.api'
 import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
-import type { CommentsFilters, CommentsState } from '@/shared/types'
+import type { CommentsFilters } from '@/modules/comments/api/query/commentsQuery.types'
+import type { CommentsState } from '@/shared/types'
 export const COMMENTS_PAGE_SIZE = 100
 import { queryClient } from '@/shared/api'
 

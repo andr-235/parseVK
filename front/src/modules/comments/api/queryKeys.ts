@@ -1,4 +1,4 @@
-import type { CommentsFilters } from '@/shared/types'
+import type { CommentsFilters } from './query/commentsQuery.types'
 
 export const commentsQueryKeys = {
   all: ['comments'] as const,
