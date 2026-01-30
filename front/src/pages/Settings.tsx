@@ -1,5 +1,5 @@
 import { SettingsPage } from '@/modules/settings'
 
-export default function SettingsRoute() {
+export default function Settings() {
   return <SettingsPage />
 }

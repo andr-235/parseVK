@@ -1,5 +1,5 @@
 import { AuthorsPage } from '@/modules/authors'
 
-export default function AuthorsRoute() {
+export default function Authors() {
   return <AuthorsPage />
 }

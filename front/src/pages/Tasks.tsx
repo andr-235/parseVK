@@ -1,5 +1,5 @@
 import { TasksPage } from '@/modules/tasks'
 
-export default function TasksRoute() {
+export default function Tasks() {
   return <TasksPage />
 }

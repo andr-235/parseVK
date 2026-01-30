@@ -1,5 +1,5 @@
 import { MonitoringPage } from '@/modules/monitoring'
 
-export default function MonitoringRoute() {
+export default function Monitoring() {
   return <MonitoringPage />
 }

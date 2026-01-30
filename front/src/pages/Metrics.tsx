@@ -1,5 +1,5 @@
 import { MetricsPage } from '@/modules/metrics'
 
-export default function MetricsRoute() {
+export default function Metrics() {
   return <MetricsPage />
 }

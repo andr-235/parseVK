@@ -1,5 +1,5 @@
 import { CommentsPage } from '@/modules/comments'
 
-export default function CommentsRoute() {
+export default function Comments() {
   return <CommentsPage />
 }

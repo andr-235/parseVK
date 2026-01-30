@@ -1,5 +1,5 @@
 import { GroupsPage } from '@/modules/groups'
 
-export default function GroupsRoute() {
+export default function Groups() {
   return <GroupsPage />
 }

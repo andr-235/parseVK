@@ -1,5 +1,5 @@
 import { AdminUsersPage } from '@/modules/adminUsers'
 
-export default function AdminUsersRoute() {
+export default function AdminUsers() {
   return <AdminUsersPage />
 }

@@ -1,5 +1,5 @@
 import { AuthorAnalysisPage } from '@/modules/authorAnalysis'
 
-export default function AuthorAnalysisRoute() {
+export default function AuthorAnalysis() {
   return <AuthorAnalysisPage />
 }
