@@ -1,4 +1,4 @@
-import { useThemeStore } from '@/store/shared/themeStore'
+import { useThemeStore } from '@/shared/store'
 
 export function useTheme() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode)

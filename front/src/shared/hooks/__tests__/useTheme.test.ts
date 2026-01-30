@@ -4,13 +4,13 @@ vi.mock('@/shared/api', () => ({
   API_URL: '/api',
 }))
 
-vi.mock('@/store/shared/themeStore', () => ({
+vi.mock('@/shared/store', () => ({
   useThemeStore: vi.fn(),
 }))
 
 import { renderHook, act } from '@testing-library/react'
 import { useTheme } from '../useTheme'
-import { useThemeStore } from '@/store/shared/themeStore'
+import { useThemeStore } from '@/shared/store'
 
 describe('useTheme', () => {
   beforeEach(() => {
