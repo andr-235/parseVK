@@ -10,14 +10,26 @@ import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
 import { useCommentsStore } from '@/modules/comments/store'
 import { COMMENTS_PAGE_SIZE } from '@/modules/comments/store'
 
-const fetchInitialComments = async (filters: CommentsFilters) => {
-  const response = await getCommentsCursor({
-    limit: COMMENTS_PAGE_SIZE,
-    keywords: filters.keywords,
-    keywordSource: filters.keywordSource,
-    readStatus: filters.readStatus,
-    search: filters.search,
-  })
+type CommentsQueryData = {
+  comments: ReturnType<typeof useCommentsStore.getState>['comments']
+  nextCursor: string | null
+  hasMore: boolean
+  totalCount: number
+  readCount: number
+  unreadCount: number
+  filters: CommentsFilters
+}
+
+const buildFetchParams = (filters: CommentsFilters) => ({
+  limit: COMMENTS_PAGE_SIZE,
+  keywords: filters.keywords,
+  keywordSource: filters.keywordSource,
+  readStatus: filters.readStatus,
+  search: filters.search,
+})
+
+const fetchInitialComments = async (filters: CommentsFilters): Promise<CommentsQueryData> => {
+  const response = await getCommentsCursor(buildFetchParams(filters))
 
   return {
     comments: Array.isArray(response.items) ? response.items : [],
@@ -28,6 +40,20 @@ const fetchInitialComments = async (filters: CommentsFilters) => {
     unreadCount: response.unreadCount,
     filters,
   }
+}
+
+const applyQueryDataToStore = (data: CommentsQueryData) => {
+  useCommentsStore.setState({
+    comments: data.comments,
+    totalCount: data.totalCount,
+    hasMore: data.hasMore,
+    nextCursor: data.nextCursor,
+    readCount: data.readCount,
+    unreadCount: data.unreadCount,
+    filters: data.filters,
+    isLoading: false,
+    isLoadingMore: false,
+  })
 }
 
 interface UseCommentsQueryOptions {
@@ -57,17 +83,7 @@ export const useCommentsQuery = (options?: UseCommentsQueryOptions) => {
       return
     }
 
-    useCommentsStore.setState({
-      comments: query.data.comments,
-      totalCount: query.data.totalCount,
-      hasMore: query.data.hasMore,
-      nextCursor: query.data.nextCursor,
-      readCount: query.data.readCount,
-      unreadCount: query.data.unreadCount,
-      filters: query.data.filters,
-      isLoading: false,
-      isLoadingMore: false,
-    })
+    applyQueryDataToStore(query.data)
   }, [enabled, query.data])
 
   useEffect(() => {

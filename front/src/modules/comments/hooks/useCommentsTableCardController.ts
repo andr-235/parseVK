@@ -1,6 +1,49 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CategorizedComment, CategorizedGroup } from '@/modules/comments/types/commentsTable'
 
+const syncExpandedCategories = (previous: Record<string, boolean>, groups: CategorizedGroup[]) => {
+  const next = groups.reduce<Record<string, boolean>>((acc, group) => {
+    acc[group.category] = previous[group.category] ?? true
+    return acc
+  }, {})
+
+  if (groups.length !== Object.keys(previous).length) return next
+  for (const key of Object.keys(previous)) {
+    if (!(key in next)) return next
+  }
+  return previous
+}
+
+const buildSubtitle = ({
+  isLoading,
+  hasComments,
+  hasKeywordGroups,
+  hasCommentsWithoutKeywords,
+  hasDefinedKeywords,
+  hasAnyKeywordFilter,
+}: {
+  isLoading: boolean
+  hasComments: boolean
+  hasKeywordGroups: boolean
+  hasCommentsWithoutKeywords: boolean
+  hasDefinedKeywords: boolean
+  hasAnyKeywordFilter: boolean
+}) => {
+  if (isLoading && !hasComments) {
+    return 'Мы подготавливаем данные и проверяем их перед отображением.'
+  }
+  if (hasKeywordGroups) {
+    return 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте фильтры, чтобы сосредоточиться на нужных темах.'
+  }
+  if (hasCommentsWithoutKeywords && !hasDefinedKeywords) {
+    return 'Ключевые слова пока не заданы — все найденные комментарии находятся в разделе «Без ключевых слов».'
+  }
+  if (hasComments && !hasAnyKeywordFilter && hasCommentsWithoutKeywords) {
+    return 'Комментарии без совпадений с ключевыми словами отображаются в отдельном блоке.'
+  }
+  return 'После добавления групп и запуска парсинга комментарии появятся в списке.'
+}
+
 interface UseCommentsTableCardControllerParams {
   groupedComments: CategorizedGroup[]
   commentsWithoutKeywords: CategorizedComment[]
@@ -28,16 +71,9 @@ export default function useCommentsTableCardController({
   const hasKeywordGroups = keywordGroups.length > 0
   const hasCommentsWithoutKeywords = commentsWithoutKeywords.length > 0
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
+
   useEffect(() => {
-    setExpandedCategories((previous) => {
-      const next = keywordGroups.reduce<Record<string, boolean>>((acc, group) => {
-        acc[group.category] = previous[group.category] ?? true
-        return acc
-      }, {})
-      if (keywordGroups.length !== Object.keys(previous).length) return next
-      for (const key of Object.keys(previous)) if (!(key in next)) return next
-      return previous
-    })
+    setExpandedCategories((previous) => syncExpandedCategories(previous, keywordGroups))
   }, [keywordGroups])
 
   const toggleCategory = useCallback(
@@ -80,29 +116,4 @@ export default function useCommentsTableCardController({
     subtitle,
     totalCategories,
   }
-}
-function buildSubtitle({
-  isLoading,
-  hasComments,
-  hasKeywordGroups,
-  hasCommentsWithoutKeywords,
-  hasDefinedKeywords,
-  hasAnyKeywordFilter,
-}: {
-  isLoading: boolean
-  hasComments: boolean
-  hasKeywordGroups: boolean
-  hasCommentsWithoutKeywords: boolean
-  hasDefinedKeywords: boolean
-  hasAnyKeywordFilter: boolean
-}) {
-  if (isLoading && !hasComments)
-    return 'Мы подготавливаем данные и проверяем их перед отображением.'
-  if (hasKeywordGroups)
-    return 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте фильтры, чтобы сосредоточиться на нужных темах.'
-  if (hasCommentsWithoutKeywords && !hasDefinedKeywords)
-    return 'Ключевые слова пока не заданы — все найденные комментарии находятся в разделе «Без ключевых слов».'
-  if (hasComments && !hasAnyKeywordFilter && hasCommentsWithoutKeywords)
-    return 'Комментарии без совпадений с ключевыми словами отображаются в отдельном блоке.'
-  return 'После добавления групп и запуска парсинга комментарии появятся в списке.'
 }

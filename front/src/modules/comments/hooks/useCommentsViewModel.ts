@@ -7,6 +7,7 @@ import type { Comment, Keyword } from '@/types'
 
 type ReadFilter = 'all' | 'unread' | 'read'
 type CommentWithKeywords = { comment: Comment; matchedKeywords: Keyword[] }
+type KeywordSource = 'COMMENT' | 'POST'
 
 const DEFAULT_CATEGORY = 'Без категории'
 
@@ -98,6 +99,114 @@ const matchesSearch = (comment: Comment, searchLower: string) => {
   )
 }
 
+const shouldIncludeByKeywords = (
+  matched: Keyword[],
+  filterByCommentKeywords: boolean,
+  filterByPostKeywords: boolean
+) => {
+  if (!filterByCommentKeywords && !filterByPostKeywords) return true
+  if (matched.length === 0) return false
+
+  if (filterByCommentKeywords && !filterByPostKeywords) {
+    return matched.some((kw) => kw.source !== 'POST')
+  }
+
+  if (filterByPostKeywords && !filterByCommentKeywords) {
+    return matched.some((kw) => kw.source === 'POST')
+  }
+
+  return true
+}
+
+const shouldIncludeComment = (
+  comment: Comment,
+  readFilter: ReadFilter,
+  searchLower: string,
+  filterByCommentKeywords: boolean,
+  filterByPostKeywords: boolean
+) => {
+  if (!shouldIncludeByRead(comment, readFilter)) return false
+  if (!matchesSearch(comment, searchLower)) return false
+
+  const matched = getMatchedKeywords(comment)
+  return shouldIncludeByKeywords(matched, filterByCommentKeywords, filterByPostKeywords)
+}
+
+const buildKeywordFilters = ({
+  keywords,
+  searchTerm,
+  shouldFilterByKeywordComments,
+  shouldFilterByKeywordPosts,
+}: {
+  keywords: Keyword[]
+  searchTerm: string
+  shouldFilterByKeywordComments: boolean
+  shouldFilterByKeywordPosts: boolean
+}): {
+  keywordFilterValues?: string[]
+  keywordSource?: KeywordSource
+  trimmedSearch: string
+  searchLower: string
+} => {
+  const trimmed = searchTerm.trim()
+  if (!shouldFilterByKeywordComments && !shouldFilterByKeywordPosts) {
+    return {
+      keywordFilterValues: undefined,
+      keywordSource: undefined,
+      trimmedSearch: trimmed,
+      searchLower: trimmed.toLowerCase(),
+    }
+  }
+
+  const normalized = keywords.map((item) => item.word.trim()).filter(Boolean)
+  const values = normalized.length > 0 ? Array.from(new Set(normalized)) : undefined
+
+  let source: KeywordSource | undefined
+  if (shouldFilterByKeywordComments && shouldFilterByKeywordPosts) {
+    source = undefined
+  } else if (shouldFilterByKeywordComments) {
+    source = 'COMMENT'
+  } else if (shouldFilterByKeywordPosts) {
+    source = 'POST'
+  }
+
+  return {
+    keywordFilterValues: values,
+    keywordSource: source,
+    trimmedSearch: trimmed,
+    searchLower: trimmed.toLowerCase(),
+  }
+}
+
+const buildEmptyMessage = ({
+  isLoading,
+  readFilter,
+  showKeywordComments,
+  showKeywordPosts,
+  trimmedSearch,
+}: {
+  isLoading: boolean
+  readFilter: ReadFilter
+  showKeywordComments: boolean
+  showKeywordPosts: boolean
+  trimmedSearch: string
+}) => {
+  if (isLoading) return 'Загрузка...'
+  const hasAnyKeywordFilter = showKeywordComments || showKeywordPosts
+  if (readFilter === 'read') {
+    return hasAnyKeywordFilter
+      ? 'Нет прочитанных комментариев с ключевыми словами'
+      : 'Нет прочитанных комментариев'
+  }
+  if (readFilter === 'unread') {
+    return hasAnyKeywordFilter
+      ? 'Все комментарии с ключевыми словами прочитаны'
+      : 'Все комментарии прочитаны'
+  }
+  if (hasAnyKeywordFilter) return 'Нет комментариев с ключевыми словами'
+  return trimmedSearch ? 'Ничего не найдено по вашему запросу' : 'Нет комментариев'
+}
+
 const useCommentsViewModel = () => {
   const comments = useCommentsStore((state) => state.comments)
   const isLoading = useCommentsStore((state) => state.isLoading)
@@ -121,35 +230,16 @@ const useCommentsViewModel = () => {
   const shouldFilterByKeywordComments = showKeywordComments && hasKeywords
   const shouldFilterByKeywordPosts = showKeywordPosts && hasKeywords
 
-  const { keywordFilterValues, keywordSource, trimmedSearch, searchLower } = useMemo(() => {
-    const trimmed = searchTerm.trim()
-    if (!shouldFilterByKeywordComments && !shouldFilterByKeywordPosts) {
-      return {
-        keywordFilterValues: undefined,
-        keywordSource: undefined,
-        trimmedSearch: trimmed,
-        searchLower: trimmed.toLowerCase(),
-      }
-    }
-    const normalized = keywords.map((item) => item.word.trim()).filter(Boolean)
-    const values = normalized.length > 0 ? Array.from(new Set(normalized)) : undefined
-
-    let source: 'COMMENT' | 'POST' | undefined = undefined
-    if (shouldFilterByKeywordComments && shouldFilterByKeywordPosts) {
-      source = undefined
-    } else if (shouldFilterByKeywordComments) {
-      source = 'COMMENT'
-    } else if (shouldFilterByKeywordPosts) {
-      source = 'POST'
-    }
-
-    return {
-      keywordFilterValues: values,
-      keywordSource: source,
-      trimmedSearch: trimmed,
-      searchLower: trimmed.toLowerCase(),
-    }
-  }, [keywords, searchTerm, shouldFilterByKeywordComments, shouldFilterByKeywordPosts])
+  const { keywordFilterValues, keywordSource, trimmedSearch, searchLower } = useMemo(
+    () =>
+      buildKeywordFilters({
+        keywords,
+        searchTerm,
+        shouldFilterByKeywordComments,
+        shouldFilterByKeywordPosts,
+      }),
+    [keywords, searchTerm, shouldFilterByKeywordComments, shouldFilterByKeywordPosts]
+  )
 
   const fetchFilters = useMemo(
     () => ({
@@ -161,49 +251,19 @@ const useCommentsViewModel = () => {
     [keywordFilterValues, keywordSource, readFilter, trimmedSearch]
   )
 
-  const filteredComments = useMemo(() => {
-    return comments.filter((comment) => {
-      // Filter by read status
-      if (!shouldIncludeByRead(comment, readFilter)) {
-        return false
-      }
-
-      // Filter by search term
-      if (!matchesSearch(comment, searchLower)) {
-        return false
-      }
-
-      // Filter by keywords if filters are active
-      const matched = getMatchedKeywords(comment)
-      const hasKeywords = matched.length > 0
-
-      if (shouldFilterByKeywordComments || shouldFilterByKeywordPosts) {
-        if (!hasKeywords) {
-          return false
-        }
-
-        // If filtering by comments only, check if comment has keyword matches
-        if (shouldFilterByKeywordComments && !shouldFilterByKeywordPosts) {
-          const hasCommentMatch = matched.some((kw) => kw.source !== 'POST')
-          if (!hasCommentMatch) {
-            return false
-          }
-        }
-
-        // If filtering by posts only, check if post has keyword matches
-        if (shouldFilterByKeywordPosts && !shouldFilterByKeywordComments) {
-          const hasPostMatch = matched.some((kw) => kw.source === 'POST')
-          if (!hasPostMatch) {
-            return false
-          }
-        }
-
-        // If both filters are active, any keyword match is fine
-      }
-
-      return true
-    })
-  }, [comments, readFilter, searchLower, shouldFilterByKeywordComments, shouldFilterByKeywordPosts])
+  const filteredComments = useMemo(
+    () =>
+      comments.filter((comment) =>
+        shouldIncludeComment(
+          comment,
+          readFilter,
+          searchLower,
+          shouldFilterByKeywordComments,
+          shouldFilterByKeywordPosts
+        )
+      ),
+    [comments, readFilter, searchLower, shouldFilterByKeywordComments, shouldFilterByKeywordPosts]
+  )
 
   const commentIndexMap = useMemo(
     () =>
@@ -226,22 +286,17 @@ const useCommentsViewModel = () => {
 
   const visibleCount = useMemo(() => filteredComments.length, [filteredComments])
 
-  const emptyMessage = useMemo(() => {
-    if (isLoading) return 'Загрузка...'
-    const hasAnyKeywordFilter = showKeywordComments || showKeywordPosts
-    if (readFilter === 'read') {
-      return hasAnyKeywordFilter
-        ? 'Нет прочитанных комментариев с ключевыми словами'
-        : 'Нет прочитанных комментариев'
-    }
-    if (readFilter === 'unread') {
-      return hasAnyKeywordFilter
-        ? 'Все комментарии с ключевыми словами прочитаны'
-        : 'Все комментарии прочитаны'
-    }
-    if (hasAnyKeywordFilter) return 'Нет комментариев с ключевыми словами'
-    return trimmedSearch ? 'Ничего не найдено по вашему запросу' : 'Нет комментариев'
-  }, [isLoading, readFilter, showKeywordComments, showKeywordPosts, trimmedSearch])
+  const emptyMessage = useMemo(
+    () =>
+      buildEmptyMessage({
+        isLoading,
+        readFilter,
+        showKeywordComments,
+        showKeywordPosts,
+        trimmedSearch,
+      }),
+    [isLoading, readFilter, showKeywordComments, showKeywordPosts, trimmedSearch]
+  )
 
   useEffect(() => {
     fetchCommentsCursor({ reset: true, filters: fetchFilters }).catch((error) => {
