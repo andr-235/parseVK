@@ -7,7 +7,7 @@ import { CommentAttachments } from './CommentAttachments'
 import CommentCard from './CommentCard'
 import { useState, useMemo } from 'react'
 import { normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 interface PostGroupCardProps {
   postText?: string | null

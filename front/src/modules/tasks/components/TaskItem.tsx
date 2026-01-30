@@ -27,7 +27,7 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { Separator } from '@/shared/ui/separator'
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 import type { Task } from '@/types'
 import { calculateTaskProgress, isTaskActive } from '@/modules/tasks/utils/taskProgress'
 import { getTaskStatusText } from '@/modules/tasks/utils/statusHelpers'

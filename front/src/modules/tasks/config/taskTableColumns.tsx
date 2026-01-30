@@ -1,6 +1,6 @@
 import ProgressBar from '@/shared/components/ProgressBar'
 import TaskActionsCell from '@/modules/tasks/components/TaskActionsCell'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 import { getTaskStatusText } from '@/modules/tasks/utils/statusHelpers'
 import { calculateTaskProgress } from '@/modules/tasks/utils/taskProgress'
 import { formatDate, formatPair, resolveNumber, toNumber } from '@/modules/tasks/config/utils'

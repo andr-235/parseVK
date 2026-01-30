@@ -1,6 +1,6 @@
 import { Card } from '@/shared/ui/card'
 import { Spinner } from '@/shared/ui/spinner'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 interface LoadingStateProps {
   message?: string

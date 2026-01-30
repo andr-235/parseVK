@@ -2,7 +2,7 @@ import { Plus, Play, Settings, Calendar, Clock } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Card } from '@/shared/ui/card'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 interface TasksHeroAutomationInfo {
   enabled: boolean

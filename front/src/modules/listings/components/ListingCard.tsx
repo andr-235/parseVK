@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Button } from '@/shared/ui/button'
 import { Card, CardHeader, CardContent, CardDescription } from '@/shared/ui/card'
 import type { IListing } from '@/types/api'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 import { ExternalLink, MapPin, Phone, Calendar, Tag } from 'lucide-react'
 
 const SOURCE_TITLE_MAP: Record<string, string> = {

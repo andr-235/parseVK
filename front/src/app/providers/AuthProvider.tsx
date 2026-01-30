@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Spinner } from '@/shared/ui/spinner'
-import { isTokenExpired, refreshAccessToken } from '@/lib/authSession'
+import { isTokenExpired, refreshAccessToken } from '@/modules/auth'
 import { useAuthStore } from '@/store'
 
 interface AuthProviderProps {

@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/lib/apiConfig'
-import { buildQueryString, createRequest, handleResponse } from '@/lib/apiUtils'
+import { API_URL } from '@/shared/api'
+import { buildQueryString, createRequest, handleResponse } from '@/shared/api'
 import type {
   IWatchlistAuthorDetailsResponse,
   IWatchlistAuthorListResponse,

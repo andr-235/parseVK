@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/shared/ui/empty'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 interface EmptyStateProps {
   icon?: string | ReactNode

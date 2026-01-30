@@ -15,11 +15,11 @@ Object.defineProperty(globalThis, 'import', {
   configurable: true,
 })
 
-vi.mock('@/lib/apiConfig', () => ({
+vi.mock('@/shared/api', () => ({
   API_URL: '/api',
 }))
 
-vi.mock('@/lib/queryClient', async () => {
+vi.mock('@/shared/api', async () => {
   const { QueryClient } = await import('@tanstack/react-query')
   return {
     queryClient: new QueryClient({

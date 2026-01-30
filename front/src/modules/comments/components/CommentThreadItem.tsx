@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 import type { ThreadItem } from '@/types'
 import { formatDateTime } from '@/modules/comments/utils/formatDateTime'
 import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'

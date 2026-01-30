@@ -1,6 +1,6 @@
 import type { ImgHTMLAttributes } from 'react'
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 const baseUrl = import.meta.env?.BASE_URL ?? '/'
 const logoSrc = `${baseUrl}logo.png`

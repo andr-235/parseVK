@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import toast from 'react-hot-toast'
 import { keywordsService } from '@/modules/keywords/api/keywords.api'
-import { queryClient } from '@/lib/queryClient'
+import { queryClient } from '@/shared/api'
 import { queryKeys } from '@/hooks/queryKeys'
 import type { KeywordsState } from '@/types/stores'
 

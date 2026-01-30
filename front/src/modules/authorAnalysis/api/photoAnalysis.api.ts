@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/lib/apiConfig'
-import { createRequest, handleResponse } from '@/lib/apiUtils'
+import { API_URL } from '@/shared/api'
+import { createRequest, handleResponse } from '@/shared/api'
 import type { AnalyzePhotosOptions, PhotoAnalysisResponse, PhotoAnalysisSummary } from '@/types'
 
 export const photoAnalysisService = {

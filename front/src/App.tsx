@@ -4,7 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { useTheme } from '@/shared/hooks'
 import { Sidebar } from '@/shared/components/Sidebar'
 import MainContent from '@/shared/components/MainContent'
-import AppSyncProvider from '@/lib/providers/AppSyncProvider'
+import AppSyncProvider from '@/app/providers/AppSyncProvider'
 import { useAuthStore } from '@/store'
 
 // Lazy load pages

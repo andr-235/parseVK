@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { commentsService } from '@/modules/comments/api/comments.api'
 import type { CommentsFilters, CommentsState } from '@/types/stores'
 import { normalizeCommentResponse, COMMENTS_PAGE_SIZE } from './commentsStore.utils'
-import { queryClient } from '@/lib/queryClient'
+import { queryClient } from '@/shared/api'
 import { queryKeys } from '@/hooks/queryKeys'
 
 // Синхронный флаг для предотвращения race condition

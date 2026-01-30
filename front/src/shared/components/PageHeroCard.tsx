@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { Card, CardHeader, CardDescription, CardFooter } from '../shared/ui/card'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 import PageTitle from './PageTitle'
 
 interface PageHeroCardProps {

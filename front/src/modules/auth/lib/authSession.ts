@@ -1,4 +1,4 @@
-import { API_URL } from '@/lib/apiConfig'
+import { API_URL } from '@/shared/api'
 import { useAuthStore } from '@/store'
 import type { AuthResponse } from '@/types/auth'
 

@@ -5,7 +5,7 @@ import type { PersistOptions } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 
 import { tasksService } from '@/modules/tasks/api/tasks.api'
-import { queryClient } from '@/lib/queryClient'
+import { queryClient } from '@/shared/api'
 import { queryKeys } from '@/hooks/queryKeys'
 import { mapResultToTaskDetails } from './tasksStore.mappers'
 import {

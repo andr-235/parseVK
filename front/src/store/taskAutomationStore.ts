@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { queryClient } from '@/lib/queryClient'
+import { queryClient } from '@/shared/api'
 import { queryKeys } from '@/hooks/queryKeys'
 import type { TaskAutomationSettings } from '@/types'
 import { taskAutomationService } from '@/modules/settings/api/taskAutomation.api'

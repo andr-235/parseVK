@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import SearchInput from '@/shared/components/SearchInput'
 import { EmptyState } from '@/shared/components/EmptyState'
 import { LoadingState } from '@/shared/components/LoadingState'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 import { useMonitoringGroupsViewModel } from '@/modules/monitoring/hooks/useMonitoringGroupsViewModel'
 import type { MonitoringMessenger } from '@/types/api'
 

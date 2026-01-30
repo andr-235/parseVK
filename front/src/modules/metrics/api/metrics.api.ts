@@ -1,5 +1,5 @@
-import { API_URL } from '@/lib/apiConfig'
-import { createRequest } from '@/lib/apiUtils'
+import { API_URL } from '@/shared/api'
+import { createRequest } from '@/shared/api'
 
 export interface PrometheusMetric {
   name: string

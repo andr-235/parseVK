@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 import { BrandLogo } from '@/shared/components/BrandLogo'
 import { SidebarCollapseButton } from './SidebarCollapseButton'
 

@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react'
 
 import type { TableSortDirection } from '@/types'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 interface TableSortButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   direction?: TableSortDirection | null

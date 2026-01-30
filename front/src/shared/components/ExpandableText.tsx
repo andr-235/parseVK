@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { Button } from '../shared/ui/button'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 interface ExpandableTextProps {
   text: string

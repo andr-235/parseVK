@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 interface AttachmentsGalleryProps {
   attachments: unknown[]

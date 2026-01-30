@@ -12,7 +12,7 @@ import {
   mapWatchlistDetails,
   mapWatchlistSettings,
 } from './watchlistStore.utils'
-import { queryClient } from '@/lib/queryClient'
+import { queryClient } from '@/shared/api'
 import { queryKeys } from '@/hooks/queryKeys'
 
 type WatchlistAuthorsQueryData = {

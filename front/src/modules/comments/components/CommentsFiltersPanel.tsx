@@ -2,7 +2,7 @@ import { Search, SlidersHorizontal } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 interface CommentsFiltersPanelProps {
   searchTerm: string

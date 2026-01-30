@@ -1,4 +1,4 @@
-import { refreshAccessToken } from '@/lib/authSession'
+import { refreshAccessToken } from '@/modules/auth'
 import { useAuthStore } from '@/store'
 
 type QueryParams = Record<string, string | number | boolean | undefined | null>

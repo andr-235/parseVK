@@ -6,7 +6,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 import {
   MONITORING_TIME_RANGES,
   useMonitoringViewModel,
