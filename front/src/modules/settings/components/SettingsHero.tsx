@@ -1,5 +1,5 @@
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
 import { Play } from 'lucide-react'
 import { useAutomationSettings } from '@/modules/settings/hooks/useAutomationSettings'
 

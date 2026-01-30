@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Spinner } from '@/components/ui/spinner'
+import { Button } from '@/shared/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
+import { Spinner } from '@/shared/ui/spinner'
 import { Info } from 'lucide-react'
 
 interface ExportListingsModalProps {

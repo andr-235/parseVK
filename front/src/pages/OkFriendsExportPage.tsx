@@ -1,10 +1,10 @@
-import PageHeroCard from '@/components/PageHeroCard'
-import CircularProgress from '@/components/CircularProgress'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Spinner } from '@/components/ui/spinner'
+import PageHeroCard from '@/shared/components/PageHeroCard'
+import CircularProgress from '@/shared/components/CircularProgress'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+import { Spinner } from '@/shared/ui/spinner'
 import { useOkFriendsExport } from '@/modules/okFriendsExport/hooks/useOkFriendsExport'
 import {
   formatCellValue,

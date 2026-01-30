@@ -1,4 +1,4 @@
-import { Input } from '@/components/ui/input'
+import { Input } from '@/shared/ui/input'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { formatSourceLabel } from '@/modules/listings/utils/listingsUtils'
 

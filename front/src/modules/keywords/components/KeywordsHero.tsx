@@ -1,4 +1,4 @@
-import PageTitle from '@/components/PageTitle'
+import PageTitle from '@/shared/components/PageTitle'
 
 export const KeywordsHero = () => {
   return (

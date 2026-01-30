@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/shared/ui/badge'
 import { getNavItemClasses } from './utils'
 import type { SidebarNavItem as SidebarNavItemType } from './types'
 

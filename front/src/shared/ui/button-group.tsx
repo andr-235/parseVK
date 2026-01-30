@@ -3,7 +3,7 @@ import { type VariantProps } from 'class-variance-authority'
 
 import { buttonGroupVariants } from './button-group-variants'
 import { cn } from '@/lib/utils'
-import { Separator } from '@/components/ui/separator'
+import { Separator } from '@/shared/ui/separator'
 
 function ButtonGroup({
   className,

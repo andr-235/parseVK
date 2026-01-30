@@ -4,10 +4,10 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/components/ui/*": ["src/components/ui/*", "src/shared/ui/*"],
-      "@/components/ui": ["src/components/ui", "src/shared/ui"],
-      "@/components/*": ["src/components/*", "src/shared/components/*"],
-      "@/components": ["src/components", "src/shared/components"],
+      "@/shared/components/*": ["src/shared/components/*"],
+      "@/shared/components": ["src/shared/components"],
+      "@/shared/ui/*": ["src/shared/ui/*"],
+      "@/shared/ui": ["src/shared/ui"],
       "@/hooks/*": ["src/hooks/*", "src/shared/hooks/*"],
       "@/hooks": ["src/hooks", "src/shared/hooks"],
       "@/lib/*": ["src/lib/*", "src/shared/lib/*"],

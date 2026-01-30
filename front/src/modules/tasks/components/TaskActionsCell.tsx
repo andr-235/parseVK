@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from 'react'
 
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/ui/button'
 import { useTaskActions } from '@/modules/tasks/hooks/useTaskActions'
 import type { Task } from '@/types'
 

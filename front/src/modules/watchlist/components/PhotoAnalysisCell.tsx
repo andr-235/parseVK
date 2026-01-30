@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/shared/ui/badge'
 import type { WatchlistAuthorCard, PhotoAnalysisSummaryCategory } from '@/types'
 import { formatDateTime } from '@/modules/watchlist/utils/watchlistUtils'
 import { PHOTO_ANALYSIS_LABELS } from '@/modules/authorAnalysis/constants/photoAnalysisConstants'

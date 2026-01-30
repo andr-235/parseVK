@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { BrandLogo } from '@/components/BrandLogo'
+import { BrandLogo } from '@/shared/components/BrandLogo'
 import { SidebarCollapseButton } from './SidebarCollapseButton'
 
 interface SidebarHeaderProps {

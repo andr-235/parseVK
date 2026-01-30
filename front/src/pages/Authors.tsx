@@ -1,4 +1,4 @@
-import PageHeroCard from '@/components/PageHeroCard'
+import PageHeroCard from '@/shared/components/PageHeroCard'
 import { AuthorsFiltersPanel } from '@/modules/authors/components/AuthorsFiltersPanel'
 import { AuthorsTableCard } from '@/modules/authors/components/AuthorsTableCard'
 import { useAuthorsViewModel } from '@/modules/authors/hooks/useAuthorsViewModel'

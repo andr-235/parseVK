@@ -7,12 +7,12 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
-import { BrandLogo } from '@/components/BrandLogo'
+} from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+import { Button } from '@/shared/ui/button'
+import { Spinner } from '@/shared/ui/spinner'
+import { BrandLogo } from '@/shared/components/BrandLogo'
 import { authService } from '@/services/authService'
 import { useAuthStore } from '@/store'
 

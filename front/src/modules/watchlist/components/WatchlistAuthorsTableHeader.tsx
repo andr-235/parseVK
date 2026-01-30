@@ -1,6 +1,6 @@
 import { memo } from 'react'
-import { TableHeader, TableHead, TableRow } from '@/components/ui/table'
-import { TableSortButton } from '@/components/ui/table-sort-button'
+import { TableHeader, TableHead, TableRow } from '@/shared/ui/table'
+import { TableSortButton } from '@/shared/ui/table-sort-button'
 import type { TableColumn, WatchlistAuthorCard } from '@/types'
 
 interface WatchlistAuthorsTableHeaderProps {

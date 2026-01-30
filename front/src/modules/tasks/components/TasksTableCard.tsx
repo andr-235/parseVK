@@ -1,14 +1,7 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { TableSortButton } from '@/components/ui/table-sort-button'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/shared/ui/card'
+import { Badge } from '@/shared/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import { TableSortButton } from '@/shared/ui/table-sort-button'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type { Task } from '@/types'
 import { getTaskTableColumns } from '@/modules/tasks/config/taskTableColumns'

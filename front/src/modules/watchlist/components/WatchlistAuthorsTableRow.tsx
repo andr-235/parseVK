@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react'
 import type { KeyboardEvent } from 'react'
-import { TableRow, TableCell } from '@/components/ui/table'
+import { TableRow, TableCell } from '@/shared/ui/table'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
 import { getPrimitiveColumnValue } from '@/modules/watchlist/utils/watchlistUtils'
 import { logger } from '@/modules/watchlist/utils/logger'

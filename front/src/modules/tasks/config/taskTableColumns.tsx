@@ -1,4 +1,4 @@
-import ProgressBar from '@/components/ProgressBar'
+import ProgressBar from '@/shared/components/ProgressBar'
 import TaskActionsCell from '@/modules/tasks/components/TaskActionsCell'
 import { cn } from '@/lib/utils'
 import { getTaskStatusText } from '@/modules/tasks/utils/statusHelpers'

@@ -1,6 +1,6 @@
-import PageTitle from '@/components/PageTitle'
+import PageTitle from '@/shared/components/PageTitle'
 import GroupInput from '@/modules/groups/components/GroupInput'
-import FileUpload from '@/components/FileUpload'
+import FileUpload from '@/shared/components/FileUpload'
 
 interface GroupsHeroProps {
   url: string

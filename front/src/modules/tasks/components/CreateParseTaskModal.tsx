@@ -1,5 +1,5 @@
 import { Search, X, Check } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/ui/button'
 import type { Group } from '@/types'
 import { useCreateParseTaskModal } from '@/modules/tasks/hooks/useCreateParseTaskModal'
 

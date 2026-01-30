@@ -1,15 +1,8 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { TableSortButton } from '@/components/ui/table-sort-button'
-import { Spinner } from '@/components/ui/spinner'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import { TableSortButton } from '@/shared/ui/table-sort-button'
+import { Spinner } from '@/shared/ui/spinner'
+import { Button } from '@/shared/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import type { AuthorCard, AuthorSortField } from '@/types'
 import { resolveCityLabel } from '@/modules/authors/utils/authorUtils'
 import { ArrowRight, Camera, Search, Trash2 } from 'lucide-react'

@@ -1,4 +1,4 @@
-import type { BadgeProps } from '@/components/ui/badge'
+import type { BadgeProps } from '@/shared/ui/badge'
 import type { ExportJobStatus, JobLogLevel } from '@/services/okFriendsExportService'
 
 export const STATUS_LABELS: Record<ExportJobStatus, string> = {

@@ -1,4 +1,4 @@
-import { Separator } from '@/components/ui/separator'
+import { Separator } from '@/shared/ui/separator'
 import CommentsHero from '@/modules/comments/components/CommentsHero'
 import CommentsFiltersPanel from '@/modules/comments/components/CommentsFiltersPanel'
 import CommentsTableCard from '@/modules/comments/components/CommentsTableCard'

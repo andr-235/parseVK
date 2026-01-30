@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/shared/ui/badge'
 import type { SuspicionLevel } from '@/types'
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'highlight'

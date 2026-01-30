@@ -1,22 +1,15 @@
 import { NavLink, useParams } from 'react-router-dom'
 import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
-import PageTitle from '@/components/PageTitle'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import SearchInput from '@/components/SearchInput'
-import { EmptyState } from '@/components/EmptyState'
-import { LoadingState } from '@/components/LoadingState'
+import PageTitle from '@/shared/components/PageTitle'
+import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import SearchInput from '@/shared/components/SearchInput'
+import { EmptyState } from '@/shared/components/EmptyState'
+import { LoadingState } from '@/shared/components/LoadingState'
 import { cn } from '@/lib/utils'
 import { useMonitoringGroupsViewModel } from '@/modules/monitoring/hooks/useMonitoringGroupsViewModel'
 import type { MonitoringMessenger } from '@/types/api'

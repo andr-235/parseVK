@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/ui/button'
 import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
 import { formatDateTime } from '@/modules/comments/utils/formatDateTime'
 import { getAuthorInitials } from '@/modules/comments/utils/getAuthorInitials'

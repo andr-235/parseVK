@@ -1,22 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { KeyRound, RefreshCw, Trash2, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
-import PageHeroCard from '@/components/PageHeroCard'
-import SectionCard from '@/components/SectionCard'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
-import { LoadingState } from '@/components/LoadingState'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import PageHeroCard from '@/shared/components/PageHeroCard'
+import SectionCard from '@/shared/components/SectionCard'
+import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+import { Badge } from '@/shared/ui/badge'
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/shared/ui/empty'
+import { LoadingState } from '@/shared/components/LoadingState'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { cn } from '@/lib/utils'
 import { adminUsersService } from '@/services/adminUsersService'
 import { useAuthStore } from '@/store'

@@ -59,12 +59,12 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: '@/components/ui',
-        replacement: path.resolve(__dirname, './src/components/ui'),
+        find: '@/shared/ui',
+        replacement: path.resolve(__dirname, './src/shared/ui'),
       },
       {
-        find: '@/components',
-        replacement: path.resolve(__dirname, './src/components'),
+        find: '@/shared/components',
+        replacement: path.resolve(__dirname, './src/shared/components'),
       },
       {
         find: '@/hooks',

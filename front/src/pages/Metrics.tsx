@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { metricsService, type ParsedMetrics } from '@/services/metricsService'
-import { Card } from '@/components/ui/card'
+import { Card } from '@/shared/ui/card'
 
 export default function Metrics() {
   const [metrics, setMetrics] = useState<ParsedMetrics | null>(null)

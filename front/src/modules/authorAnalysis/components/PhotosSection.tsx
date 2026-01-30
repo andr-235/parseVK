@@ -1,6 +1,6 @@
-import { Button } from '@/components/ui/button'
-import SectionCard from '@/components/SectionCard'
-import { Spinner } from '@/components/ui/spinner'
+import { Button } from '@/shared/ui/button'
+import SectionCard from '@/shared/components/SectionCard'
+import { Spinner } from '@/shared/ui/spinner'
 import { PhotoAnalysisCard } from './PhotoAnalysisCard'
 import type { PhotoAnalysis } from '@/types'
 

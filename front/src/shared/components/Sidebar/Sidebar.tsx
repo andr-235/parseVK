@@ -4,7 +4,7 @@ import { Users, Building, Send, Settings, UserCog, LogOut, Activity } from 'luci
 import { useSidebarState } from '@/hooks/useSidebarState'
 import { useSidebarData } from '@/hooks/useSidebarData'
 import { useAuthStore } from '@/store'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/ui/button'
 import {
   createMonitoringSubItems,
   createVkSubItems,

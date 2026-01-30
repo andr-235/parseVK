@@ -121,7 +121,7 @@ types/
 
 ```typescript
 // ✅ Правильно
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/ui/button'
 import { useTheme } from '@/hooks/useTheme'
 import { formatDateTime } from '@/modules/comments/utils/formatDateTime'
 
@@ -158,6 +158,7 @@ modules/{moduleName}/
 ### Примеры
 
 **Модуль с полной структурой:**
+
 ```
 modules/comments/
 ├── components/
@@ -176,6 +177,7 @@ modules/comments/
 ```
 
 **Модуль с типами:**
+
 ```
 modules/listings/
 ├── components/
@@ -189,6 +191,7 @@ modules/listings/
 ```
 
 **Модуль с константами:**
+
 ```
 modules/watchlist/
 ├── components/
@@ -200,6 +203,7 @@ modules/watchlist/
 ```
 
 **Модуль с минимальной структурой:**
+
 ```
 modules/telegram/
 ├── components/
@@ -228,7 +232,7 @@ function CreateParseTaskModal({ isOpen, groups, ... }: Props) {
     handleSelectAll,
     handleDeselectAll,
   } = useCreateParseTaskModal(groups, isOpen)
-  
+
   // только UI-логика
 }
 
@@ -243,6 +247,7 @@ function CreateParseTaskModal({ isOpen, groups, ... }: Props) {
 ### Хуки
 
 Хуки модуля могут использовать:
+
 - Store для получения и обновления состояния
 - Services для работы с API (в React Query queryFn или для одноразовых операций)
 - Utils для вспомогательных функций
@@ -261,13 +266,13 @@ export const useTasksQuery = () => {
     queryFn: tasksService.fetchTasks, // services используется здесь
     // ...
   })
-  
+
   useEffect(() => {
     if (query.data) {
       useTasksStore.setState({ tasks: query.data }) // store обновляется здесь
     }
   }, [query.data])
-  
+
   return query
 }
 ```
@@ -287,6 +292,7 @@ const handleImport = async () => {
 ## Глобальное состояние
 
 Store используется для:
+
 - Глобального состояния приложения
 - Кэширования данных
 - Синхронизации между компонентами
@@ -357,6 +363,7 @@ function Tasks() {
 ```
 
 **Особенности:**
+
 - Страница содержит только композицию компонентов
 - Вся логика вынесена в хук `useTasksViewModel`
 - Компоненты получают данные через props
@@ -412,6 +419,7 @@ export const useTasksViewModel = () => {
 ```
 
 **Особенности:**
+
 - Хук использует store через `useShallow` для оптимизации
 - Вызывает query-хуки для загрузки данных
 - Содержит всю бизнес-логику страницы
@@ -422,7 +430,7 @@ export const useTasksViewModel = () => {
 **Файл:** `src/modules/tasks/components/CreateParseTaskModal.tsx`
 
 ```typescript
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/ui/button'
 import type { Group } from '@/types'
 import { useCreateParseTaskModal } from '@/modules/tasks/hooks/useCreateParseTaskModal'
 
@@ -446,6 +454,7 @@ function CreateParseTaskModal({ isOpen, groups, onClose, onSubmit }: Props) {
 ```
 
 **Особенности:**
+
 - Компонент получает данные через props
 - Вся логика фильтрации и выбора вынесена в хук `useCreateParseTaskModal`
 - Компонент содержит только UI-логику
@@ -479,6 +488,7 @@ export const useTasksQuery = () => {
 ```
 
 **Особенности:**
+
 - Services используется напрямую в `queryFn` (стандартный паттерн React Query)
 - Store обновляется через `useEffect` после получения данных
 - Хук возвращает объект query для использования в компонентах
@@ -505,6 +515,7 @@ function CommentCard({ comment, toggleReadStatus }: Props) {
 ```
 
 **Особенности:**
+
 - Компонент использует утилиты модуля для форматирования
 - Получает данные через props
 - Не зависит от store напрямую
@@ -536,6 +547,7 @@ export const tasksService = {
 ```
 
 **Особенности:**
+
 - Только HTTP-запросы и обработка ответов
 - Использует утилиты из `lib/` для работы с API
 - Не содержит UI-логику
@@ -581,6 +593,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 ```
 
 **Особенности:**
+
 - Store использует services для загрузки данных
 - Предоставляет API для компонентов через хуки
 - Может использовать utils для преобразования данных
@@ -610,6 +623,7 @@ npm run audit:architecture
 ```
 
 Скрипт проверяет:
+
 - Использование alias `@/` вместо относительных импортов в модулях
 - Отсутствие прямых импортов store в компонентах модулей
 - Отсутствие импортов services/store в utils
@@ -621,14 +635,17 @@ npm run audit:architecture
 В проекте настроены ESLint правила для автоматической проверки архитектуры:
 
 **Правила для компонентов модулей:**
+
 - Запрет импорта `@/store` напрямую
 - Компоненты должны использовать хуки модуля
 
 **Правила для utils:**
+
 - Запрет импорта `@/services` и `@/store`
 - Utils должны оставаться чистыми функциями
 
 **Запуск проверки:**
+
 ```bash
 npm run lint
 ```
@@ -656,7 +673,7 @@ function WatchlistAuthorsTable({ authors, ... }: Props) {
 // ✅ После: разбит на части
 function WatchlistAuthorsTable({ authors, ... }: Props) {
   const { sortedAuthors, ... } = useWatchlistTableLogic(authors)
-  
+
   return (
     <Table>
       <WatchlistAuthorsTableHeader />
@@ -677,6 +694,7 @@ function WatchlistAuthorsTable({ authors, ... }: Props) {
 ### Добавление новых модулей
 
 При добавлении нового модуля следуйте чек-листу выше и убедитесь, что:
+
 - Модуль изолирован от других модулей
 - Использует общие компоненты из `components/`
 - Логика вынесена в хуки модуля
@@ -692,4 +710,3 @@ function WatchlistAuthorsTable({ authors, ... }: Props) {
 ✅ Правила зависимостей соблюдаются  
 ✅ ESLint правила настроены для автоматической проверки  
 ✅ Скрипт аудита архитектуры покрывает все основные правила
-

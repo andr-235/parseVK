@@ -1,7 +1,7 @@
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Input } from '@/shared/ui/input'
+import { Button } from '@/shared/ui/button'
 import { Plus, RefreshCw } from 'lucide-react'
-import FileUpload from '@/components/FileUpload'
+import FileUpload from '@/shared/components/FileUpload'
 import type { ChangeEvent } from 'react'
 
 interface KeywordsFormProps {

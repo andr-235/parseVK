@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { TelegramSyncResponse } from '@/types/api'
-import PageTitle from '@/components/PageTitle'
+import PageTitle from '@/shared/components/PageTitle'
 import TelegramSessionCard from '@/modules/telegram/components/TelegramSessionCard'
 import TelegramSyncCard from '@/modules/telegram/components/TelegramSyncCard'
 import TelegramMembersCard from '@/modules/telegram/components/TelegramMembersCard'

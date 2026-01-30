@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import SearchInput from '@/components/SearchInput'
-import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/shared/ui/button'
+import { Badge } from '@/shared/ui/badge'
+import SearchInput from '@/shared/components/SearchInput'
+import { Card, CardContent } from '@/shared/ui/card'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type { Keyword } from '@/types'
-import { LoadingState } from '@/components/LoadingState'
-import { EmptyState } from '@/components/EmptyState'
+import { LoadingState } from '@/shared/components/LoadingState'
+import { EmptyState } from '@/shared/components/EmptyState'
 import { KeywordCard } from './KeywordCard'
 import { ArrowUpDown } from 'lucide-react'
 import {
@@ -14,7 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@/shared/ui/dropdown-menu'
 import { getKeywordTableColumns } from '@/modules/keywords/config/keywordTableColumns'
 
 interface KeywordsTableCardProps {

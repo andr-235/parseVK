@@ -1,5 +1,5 @@
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
 import type { Comment, Keyword } from '@/types'
 import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
 import { ChevronDown, ChevronUp } from 'lucide-react'

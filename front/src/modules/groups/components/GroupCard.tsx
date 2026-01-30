@@ -1,8 +1,8 @@
 import { Users, ExternalLink, Trash2 } from 'lucide-react'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { ExpandableText } from '@/components/ExpandableText'
+import { Card, CardContent, CardFooter } from '@/shared/ui/card'
+import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
+import { ExpandableText } from '@/shared/components/ExpandableText'
 import type { Group } from '@/types'
 
 interface GroupCardProps {

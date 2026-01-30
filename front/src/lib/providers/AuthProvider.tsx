@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Spinner } from '@/components/ui/spinner'
+import { Spinner } from '@/shared/ui/spinner'
 import { isTokenExpired, refreshAccessToken } from '@/lib/authSession'
 import { useAuthStore } from '@/store'
 

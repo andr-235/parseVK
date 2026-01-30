@@ -1,4 +1,4 @@
-import PageHeroCard from '@/components/PageHeroCard'
+import PageHeroCard from '@/shared/components/PageHeroCard'
 import { AutomationCard } from '@/modules/settings/components/AutomationCard'
 import { TelegramCard } from '@/modules/settings/components/TelegramCard'
 import { SettingsHero } from '@/modules/settings/components/SettingsHero'

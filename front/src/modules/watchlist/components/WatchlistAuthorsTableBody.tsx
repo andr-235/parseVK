@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import type { KeyboardEvent } from 'react'
-import { TableBody } from '@/components/ui/table'
+import { TableBody } from '@/shared/ui/table'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
 import { WatchlistAuthorsTableRow } from './WatchlistAuthorsTableRow'
 

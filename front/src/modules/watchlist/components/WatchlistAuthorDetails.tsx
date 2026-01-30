@@ -1,4 +1,4 @@
-import SectionCard from '@/components/SectionCard'
+import SectionCard from '@/shared/components/SectionCard'
 import {
   Table,
   TableBody,
@@ -7,9 +7,9 @@ import {
   TableHeader,
   TableRow,
   TableCaption,
-} from '@/components/ui/table'
-import { TableSortButton } from '@/components/ui/table-sort-button'
-import { Spinner } from '@/components/ui/spinner'
+} from '@/shared/ui/table'
+import { TableSortButton } from '@/shared/ui/table-sort-button'
+import { Spinner } from '@/shared/ui/spinner'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type {
   WatchlistAuthorDetails as WatchlistAuthorDetailsType,

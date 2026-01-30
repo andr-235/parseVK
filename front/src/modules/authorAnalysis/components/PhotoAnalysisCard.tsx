@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/shared/ui/card'
+import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
 import { SuspicionLevelBadge } from './SuspicionLevelBadge'
 import type { PhotoAnalysis } from '@/types'
 

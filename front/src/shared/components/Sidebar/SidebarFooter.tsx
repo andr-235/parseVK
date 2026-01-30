@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import ThemeToggle from '@/components/ThemeToggle'
+import ThemeToggle from '@/shared/components/ThemeToggle'
 import { SidebarCollapseButton } from './SidebarCollapseButton'
 import { getPrimaryNavItemClasses } from './utils'
 import type { SidebarItem } from './types'

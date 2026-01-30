@@ -15,17 +15,17 @@ import {
   ArrowRight,
 } from 'lucide-react'
 
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import ProgressBar from '@/components/ProgressBar'
+import { Card } from '@/shared/ui/card'
+import { Button } from '@/shared/ui/button'
+import { Badge } from '@/shared/ui/badge'
+import ProgressBar from '@/shared/components/ProgressBar'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Separator } from '@/components/ui/separator'
+} from '@/shared/ui/dropdown-menu'
+import { Separator } from '@/shared/ui/separator'
 
 import { cn } from '@/lib/utils'
 import type { Task } from '@/types'

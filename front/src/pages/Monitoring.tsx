@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import { Pause, Play, RefreshCw, Search } from 'lucide-react'
-import PageTitle from '@/components/PageTitle'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import PageTitle from '@/shared/components/PageTitle'
+import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent } from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
 import { cn } from '@/lib/utils'
 import {
   MONITORING_TIME_RANGES,

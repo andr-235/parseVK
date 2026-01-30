@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/shared/ui/empty'
 import { cn } from '@/lib/utils'
 
 interface EmptyStateProps {

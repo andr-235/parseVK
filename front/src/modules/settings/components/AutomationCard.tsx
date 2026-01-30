@@ -6,10 +6,10 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
+} from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+import { Button } from '@/shared/ui/button'
 import { Clock, Activity, Calendar, Zap, Save } from 'lucide-react'
 import { formatAutomationDate } from '@/modules/settings/utils/automationFormatting'
 import { useAutomationSettings } from '@/modules/settings/hooks/useAutomationSettings'

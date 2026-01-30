@@ -1,6 +1,6 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/ui/button'
 import { RefreshCw, Download, Upload } from 'lucide-react'
-import PageTitle from '@/components/PageTitle'
+import PageTitle from '@/shared/components/PageTitle'
 
 interface ListingsHeroProps {
   isListLoading: boolean

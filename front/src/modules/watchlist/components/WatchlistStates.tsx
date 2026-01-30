@@ -1,4 +1,4 @@
-import { Spinner } from '@/components/ui/spinner'
+import { Spinner } from '@/shared/ui/spinner'
 import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 
 export const LoadingState = () => (

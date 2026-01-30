@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/shared/ui/badge'
 import type { TableColumn, WatchlistAuthorCard } from '@/types'
 import { formatDateTime, formatStatus } from '@/modules/watchlist/utils/watchlistUtils'
 import { AuthorCell } from '@/modules/watchlist/components/AuthorCell'

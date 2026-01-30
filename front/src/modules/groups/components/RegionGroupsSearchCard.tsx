@@ -1,17 +1,17 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { IRegionGroupSearchItem } from '@/types/api'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/ui/button'
 import { useTableSorting } from '@/hooks/useTableSorting'
 import type { TableColumn } from '@/types'
-import { Spinner } from '@/components/ui/spinner'
-import { Card, CardContent } from '@/components/ui/card'
+import { Spinner } from '@/shared/ui/spinner'
+import { Card, CardContent } from '@/shared/ui/card'
 import { Search, X, RotateCcw, ArrowUpDown, Plus } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@/shared/ui/dropdown-menu'
 
 interface RegionGroupCardProps {
   group: IRegionGroupSearchItem

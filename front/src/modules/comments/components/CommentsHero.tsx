@@ -1,5 +1,5 @@
-import PageHeroCard from '@/components/PageHeroCard'
-import { Badge } from '@/components/ui/badge'
+import PageHeroCard from '@/shared/components/PageHeroCard'
+import { Badge } from '@/shared/ui/badge'
 
 interface CommentsHeroProps {
   totalCount: number

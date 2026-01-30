@@ -1,7 +1,7 @@
 import { Plus, Play, Settings, Calendar, Clock } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
+import { Button } from '@/shared/ui/button'
+import { Badge } from '@/shared/ui/badge'
+import { Card } from '@/shared/ui/card'
 import { cn } from '@/lib/utils'
 
 interface TasksHeroAutomationInfo {
