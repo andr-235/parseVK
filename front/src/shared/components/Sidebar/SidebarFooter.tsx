@@ -5,7 +5,7 @@ import ThemeToggle from '@/shared/components/ThemeToggle'
 import { SidebarCollapseButton } from './SidebarCollapseButton'
 import { getPrimaryNavItemClasses } from './utils'
 import type { SidebarItem } from './types'
-import packageJson from '../../../package.json'
+import packageJson from '../../../../../package.json'
 
 interface SidebarFooterProps {
   items: SidebarItem[]

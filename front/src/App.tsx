@@ -26,7 +26,7 @@ const AdminUsers = lazy(() => import('@/pages/AdminUsers'))
 const ChangePassword = lazy(() => import('@/pages/ChangePassword'))
 const VkFriendsExportPage = lazy(() => import('@/pages/VkFriendsExportPage'))
 const OkFriendsExportPage = lazy(() => import('@/pages/OkFriendsExportPage'))
-import { ErrorBoundary } from './components/ErrorBoundary'
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary'
 
 const RequireAuth = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
