@@ -1,5 +1,6 @@
 export * from './hooks/useAutomationSettings'
 export * from './hooks/useTelegramSettings'
+export * from './api/taskAutomation.api'
 export { AutomationCard } from './components/AutomationCard'
 export { TelegramCard } from './components/TelegramCard'
 export { SettingsHero } from './components/SettingsHero'

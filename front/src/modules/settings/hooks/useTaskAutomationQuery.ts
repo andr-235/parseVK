@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
-import { taskAutomationService } from '@/services/taskAutomationService'
+import { taskAutomationService } from '@/modules/settings/api/taskAutomation.api'
 import { useTaskAutomationStore } from '@/store'
 import { queryKeys } from '@/hooks/queryKeys'
 

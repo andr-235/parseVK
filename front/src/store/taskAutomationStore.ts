@@ -3,8 +3,8 @@ import { devtools } from 'zustand/middleware'
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/hooks/queryKeys'
 import type { TaskAutomationSettings } from '@/types'
-import { taskAutomationService } from '@/services/taskAutomationService'
-import type { UpdateTaskAutomationSettingsRequest } from '@/services/taskAutomationService'
+import { taskAutomationService } from '@/modules/settings/api/taskAutomation.api'
+import type { UpdateTaskAutomationSettingsRequest } from '@/modules/settings/api/taskAutomation.api'
 
 interface TaskAutomationStore {
   settings: TaskAutomationSettings | null
