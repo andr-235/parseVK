@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
 import type { Keyword } from '@/types'
-import type { IMonitorMessageResponse } from '@/types/api'
+import type { IMonitorMessageResponse } from '@/shared/types'
 
 interface MonitoringMessagesCardProps {
   messages: IMonitorMessageResponse[]

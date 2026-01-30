@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { API_URL } from '@/shared/api'
 import { createRequest, handleResponse } from '@/shared/api'
-import type { ITaskAutomationRunResponse, ITaskAutomationSettings } from '@/types/api'
+import type { ITaskAutomationRunResponse, ITaskAutomationSettings } from '@/shared/types'
 
 export interface UpdateTaskAutomationSettingsRequest {
   enabled: boolean

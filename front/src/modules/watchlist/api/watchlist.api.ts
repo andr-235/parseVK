@@ -7,7 +7,7 @@ import type {
   IWatchlistAuthorResponse,
   IWatchlistSettingsResponse,
   WatchlistStatus,
-} from '@/types/api'
+} from '@/shared/types'
 
 interface ListParams {
   offset?: number

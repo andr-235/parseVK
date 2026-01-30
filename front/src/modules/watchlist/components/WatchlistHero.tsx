@@ -4,7 +4,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import PageHeroCard from '@/shared/components/PageHeroCard'
 import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
-import type { WatchlistHeroProps } from '@/types/watchlist'
+import type { WatchlistHeroProps } from '@/modules/watchlist/types'
 import { isValidWatchlistSettings } from '@/modules/watchlist/utils/watchlistUtils'
 import WatchlistHeroErrorBoundary from './WatchlistHeroErrorBoundary'
 

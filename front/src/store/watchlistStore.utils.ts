@@ -3,7 +3,7 @@ import type {
   IWatchlistAuthorResponse,
   IWatchlistCommentResponse,
   IWatchlistSettingsResponse,
-} from '@/types/api'
+} from '@/shared/types'
 import type {
   PhotoAnalysisSummary,
   WatchlistAuthorCard,

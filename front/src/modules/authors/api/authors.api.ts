@@ -15,7 +15,7 @@ import type {
   AuthorDetailsResponse,
   AuthorsListResponse,
   RefreshAuthorsResponse,
-} from '@/types/api'
+} from '@/shared/types'
 
 const normalizeSummary = (summary?: PhotoAnalysisSummary | null): PhotoAnalysisSummary => {
   const fallback = createEmptyPhotoAnalysisSummary()

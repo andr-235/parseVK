@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { monitoringService } from '@/modules/monitoring/api/monitoring.api'
-import type { IMonitorMessageResponse } from '@/types/api'
+import type { IMonitorMessageResponse } from '@/shared/types'
 
 const POLL_INTERVAL_MS = 15000
 const DEFAULT_LIMIT = 100

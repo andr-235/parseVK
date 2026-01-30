@@ -2,7 +2,7 @@
  * Типы для компонента AuthorAnalysis
  */
 
-import type { AuthorDetails } from './authors'
+import type { AuthorDetails } from '@/modules/authors/types'
 import type { PhotoAnalysis, PhotoAnalysisSummary } from './photoAnalysis'
 
 /**

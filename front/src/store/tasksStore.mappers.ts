@@ -1,4 +1,4 @@
-import type { IParsingTaskResult, IParsingTaskSummary } from '@/types/api'
+import type { IParsingTaskResult, IParsingTaskSummary } from '@/shared/types'
 import type { GroupStatus, Task, TaskDetails } from './tasksStore.types'
 import {
   cleanStats,

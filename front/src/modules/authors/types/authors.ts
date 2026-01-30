@@ -1,4 +1,4 @@
-import type { PhotoAnalysisSummary } from './photoAnalysis'
+import type { PhotoAnalysisSummary } from '@/modules/authorAnalysis/types'
 
 export interface AuthorCard {
   id: number

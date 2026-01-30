@@ -10,7 +10,7 @@ import type {
   TelegramSettingsRequest,
   TelegramSyncRequest,
   TelegramSyncResponse,
-} from '@/types/api'
+} from '@/shared/types'
 
 export const telegramService = {
   async syncChat(payload: TelegramSyncRequest): Promise<TelegramSyncResponse> {

@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { API_URL } from '@/shared/api'
 import { createRequest, handleResponse } from '@/shared/api'
-import type { AuthResponse } from '@/types/auth'
+import type { AuthResponse } from '@/modules/auth/types'
 
 export const authService = {
   async login(username: string, password: string): Promise<AuthResponse> {

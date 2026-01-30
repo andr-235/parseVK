@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import toast from 'react-hot-toast'
-import type { GroupsState } from '@/types/stores'
-import type { IRegionGroupSearchItem } from '@/types/api'
+import type { GroupsState } from '@/shared/types'
+import type { IRegionGroupSearchItem } from '@/shared/types'
 import type { Group } from '@/types'
 import { groupsService } from '@/modules/groups/api/groups.api'
 

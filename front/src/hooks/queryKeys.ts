@@ -1,4 +1,4 @@
-import type { AuthorSortField, AuthorSortOrder } from '@/types/authors'
+import type { AuthorSortField, AuthorSortOrder } from '@/modules/authors/types'
 
 type ListingsQueryParams = {
   page: number

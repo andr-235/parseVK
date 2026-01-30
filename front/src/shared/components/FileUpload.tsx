@@ -11,7 +11,7 @@ import { Upload } from 'lucide-react'
 import { Input } from '../shared/ui/input'
 import { Button } from '../shared/ui/button'
 import { cn } from '@/shared/utils'
-import type { FileUploadProps, FileUploadRef } from '@/types/fileUpload'
+import type { FileUploadProps, FileUploadRef } from '@/shared/types'
 import { validateFiles } from '@/utils/fileValidation'
 
 const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(function FileUpload(

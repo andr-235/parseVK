@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { Badge } from '@/shared/ui/badge'
-import type { TelegramMember, TelegramSyncResponse } from '@/types/api'
+import type { TelegramMember, TelegramSyncResponse } from '@/shared/types'
 import { Users, Shield, UserX, Ban, CheckCircle2, Star } from 'lucide-react'
 import { getChatTypeInfo } from '@/modules/telegram/utils/telegramChatType.utils'
 

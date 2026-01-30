@@ -1,13 +1,5 @@
-import type {
-  AuthorCard,
-  AuthorSortField,
-  AuthorSortOrder,
-  Comment,
-  Keyword,
-  Group,
-  Task,
-  TaskDetails,
-} from './index'
+import type { AuthorCard, AuthorSortField, AuthorSortOrder } from '@/modules/authors/types'
+import type { Comment, Group, Keyword, Task, TaskDetails } from './common'
 import type { IBulkAddResponse, IRegionGroupSearchItem } from './api'
 // Navigation Store Types
 export type Page =

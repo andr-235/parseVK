@@ -1,4 +1,4 @@
-import type { ICommentResponse } from '@/types/api'
+import type { ICommentResponse } from '@/shared/types'
 
 export const COMMENTS_PAGE_SIZE = 100
 

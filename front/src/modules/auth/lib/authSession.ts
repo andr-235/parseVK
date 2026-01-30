@@ -1,6 +1,6 @@
 import { API_URL } from '@/shared/api'
 import { useAuthStore } from '@/store'
-import type { AuthResponse } from '@/types/auth'
+import type { AuthResponse } from '@/modules/auth/types'
 
 const parseJwtPayload = (token: string): Record<string, unknown> | null => {
   const segments = token.split('.')

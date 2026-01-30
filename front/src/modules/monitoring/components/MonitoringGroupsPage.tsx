@@ -12,7 +12,7 @@ import { EmptyState } from '@/shared/components/EmptyState'
 import { LoadingState } from '@/shared/components/LoadingState'
 import { cn } from '@/shared/utils'
 import { useMonitoringGroupsViewModel } from '@/modules/monitoring/hooks/useMonitoringGroupsViewModel'
-import type { MonitoringMessenger } from '@/types/api'
+import type { MonitoringMessenger } from '@/shared/types'
 
 const MONITORING_SOURCES = {
   whatsapp: {

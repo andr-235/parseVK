@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { IRegionGroupSearchItem } from '@/types/api'
+import type { IRegionGroupSearchItem } from '@/shared/types'
 import { Button } from '@/shared/ui/button'
 import { useTableSorting } from '@/shared/hooks'
 import type { TableColumn } from '@/types'

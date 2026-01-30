@@ -6,8 +6,8 @@ import type {
   IDeleteResponse,
   IGroupsListResponse,
   IRegionGroupSearchResponse,
-} from '@/types/api'
-import type { SaveGroupDto } from '@/types/dto'
+} from '@/shared/types'
+import type { SaveGroupDto } from '@/shared/types'
 
 export const groupsService = {
   async fetchGroups(params?: { page?: number; limit?: number }): Promise<IGroupsListResponse> {

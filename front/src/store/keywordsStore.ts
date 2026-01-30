@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import { keywordsService } from '@/modules/keywords/api/keywords.api'
 import { queryClient } from '@/shared/api'
 import { queryKeys } from '@/hooks/queryKeys'
-import type { KeywordsState } from '@/types/stores'
+import type { KeywordsState } from '@/shared/types'
 
 export const useKeywordsStore = create<KeywordsState>((set) => ({
   keywords: [],

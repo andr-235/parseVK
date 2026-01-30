@@ -8,7 +8,7 @@ import { useTasksStore } from '@/store'
 import { mapSummaryToTask } from '@/store/tasksStore.mappers'
 import { replaceTasksCollection } from '@/store/tasksStore.utils'
 import { queryKeys } from '@/hooks/queryKeys'
-import type { IParsingTaskSummary } from '@/types/api'
+import type { IParsingTaskSummary } from '@/shared/types'
 
 const mapSummariesToTasks = (summaries: IParsingTaskSummary[]) => {
   if (!Array.isArray(summaries)) {

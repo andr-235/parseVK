@@ -1,5 +1,5 @@
 import { Hash, Users, User, MessageSquare } from 'lucide-react'
-import type { TelegramChatType } from '@/types/api'
+import type { TelegramChatType } from '@/shared/types'
 
 export interface TelegramChatTypeInfo {
   label: string

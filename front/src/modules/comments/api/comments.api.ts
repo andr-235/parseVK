@@ -5,7 +5,7 @@ import type {
   ICommentResponse,
   IGetCommentsResponse,
   IGetCommentsCursorResponse,
-} from '@/types/api'
+} from '@/shared/types'
 
 type CommentsFilters = {
   keywords?: string[]

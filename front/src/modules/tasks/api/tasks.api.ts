@@ -1,8 +1,8 @@
 import toast from 'react-hot-toast'
 import { API_URL } from '@/shared/api'
 import { createRequest, handleResponse } from '@/shared/api'
-import type { CreateParsingTaskDto } from '@/types/dto'
-import type { IParsingTaskResult, IParsingTaskSummary } from '@/types/api'
+import type { CreateParsingTaskDto } from '@/shared/types'
+import type { IParsingTaskResult, IParsingTaskSummary } from '@/shared/types'
 
 export const tasksService = {
   async fetchTasks(): Promise<IParsingTaskSummary[]> {

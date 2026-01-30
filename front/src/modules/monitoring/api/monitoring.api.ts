@@ -7,7 +7,7 @@ import type {
   IMonitorGroupsResponse,
   IMonitorMessagesResponse,
   MonitoringMessenger,
-} from '@/types/api'
+} from '@/shared/types'
 
 type MonitorMessagesParams = {
   keywords?: string[]

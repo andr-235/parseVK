@@ -7,7 +7,7 @@ import type {
   ListingImportRequest,
   ListingImportReport,
   ListingUpdatePayload,
-} from '@/types/api'
+} from '@/shared/types'
 
 interface FetchListingsOptions {
   page: number
