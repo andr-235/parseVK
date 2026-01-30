@@ -6,7 +6,7 @@ import {
   type OkFriendsJobLog,
   type OkFriendsParams,
   type OkFriendsStreamEvent,
-} from '@/services/okFriendsExportService'
+} from '@/modules/okFriendsExport/api/okFriendsExport.api'
 import {
   STATUS_LABELS,
   STATUS_VARIANTS,
