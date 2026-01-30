@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import type { GroupsState } from '@/types/stores'
 import type { IRegionGroupSearchItem } from '@/types/api'
 import type { Group } from '@/types'
-import { groupsService } from '@/services/groupsService'
+import { groupsService } from '@/modules/groups/api/groups.api'
 
 export const GROUPS_PAGE_LIMIT = 50
 

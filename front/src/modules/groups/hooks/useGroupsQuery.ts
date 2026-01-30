@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
-import { groupsService } from '@/services/groupsService'
+import { groupsService } from '@/modules/groups/api/groups.api'
 import { GROUPS_PAGE_LIMIT, useGroupsStore } from '@/store'
 import { queryKeys } from '@/hooks/queryKeys'
 
