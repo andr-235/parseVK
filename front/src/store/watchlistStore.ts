@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { watchlistService } from '@/services/watchlistService'
+import { watchlistService } from '@/modules/watchlist/api/watchlist.api'
 import type {
   WatchlistAuthorCard,
   WatchlistAuthorDetails,
