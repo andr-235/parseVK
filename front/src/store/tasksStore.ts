@@ -4,7 +4,7 @@ import { devtools, persist, subscribeWithSelector } from 'zustand/middleware'
 import type { PersistOptions } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 
-import { tasksService } from '@/services/tasksService'
+import { tasksService } from '@/modules/tasks/api/tasks.api'
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/hooks/queryKeys'
 import { mapResultToTaskDetails } from './tasksStore.mappers'

@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
-import { tasksService } from '@/services/tasksService'
+import { tasksService } from '@/modules/tasks/api/tasks.api'
 import { useTasksStore } from '@/store'
 import { mapSummaryToTask } from '@/store/tasksStore.mappers'
 import { replaceTasksCollection } from '@/store/tasksStore.utils'
