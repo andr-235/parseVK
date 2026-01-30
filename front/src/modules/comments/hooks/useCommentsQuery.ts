@@ -7,9 +7,9 @@ import { commentsService } from '@/modules/comments/api/comments.api'
 import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
 import { useCommentsStore } from '@/store'
 import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/store/comments/commentsStore.utils'
+import type { CommentsFilters } from '@/shared/types'
 
-const fetchInitialComments = async () => {
-  const { filters } = useCommentsStore.getState()
+const fetchInitialComments = async (filters: CommentsFilters) => {
   const response = await commentsService.getCommentsCursor({
     limit: COMMENTS_PAGE_SIZE,
     keywords: filters.keywords,
@@ -41,7 +41,7 @@ export const useCommentsQuery = (options?: UseCommentsQueryOptions) => {
 
   const query = useQuery({
     queryKey: commentsQueryKeys.list(filters),
-    queryFn: fetchInitialComments,
+    queryFn: () => fetchInitialComments(filters),
     staleTime: 30_000,
     refetchInterval: 30_000,
     refetchIntervalInBackground: true,

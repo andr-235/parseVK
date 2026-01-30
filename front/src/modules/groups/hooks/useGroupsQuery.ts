@@ -11,12 +11,14 @@ interface UseGroupsQueryOptions {
   enabled?: boolean
 }
 
+const fetchGroups = () => groupsService.fetchGroups({ page: 1, limit: GROUPS_PAGE_LIMIT })
+
 export const useGroupsQuery = (options?: UseGroupsQueryOptions) => {
   const enabled = options?.enabled ?? true
 
   const query = useQuery({
     queryKey: groupsQueryKeys.list(),
-    queryFn: () => groupsService.fetchGroups({ page: 1, limit: GROUPS_PAGE_LIMIT }),
+    queryFn: fetchGroups,
     staleTime: 60_000,
     gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
