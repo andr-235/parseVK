@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
-import { useTheme } from '@/hooks/useTheme'
+import { useTheme } from '@/shared/hooks'
 import { Moon, Sun } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 
 interface ThemeToggleProps {
   className?: string

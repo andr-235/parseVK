@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/sha
 import { Badge } from '@/shared/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { TableSortButton } from '@/shared/ui/table-sort-button'
-import { useTableSorting } from '@/hooks/useTableSorting'
+import { useTableSorting } from '@/shared/hooks'
 import type { Task } from '@/types'
 import { getTaskTableColumns } from '@/modules/tasks/config/taskTableColumns'
 

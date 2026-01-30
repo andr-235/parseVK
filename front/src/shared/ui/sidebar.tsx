@@ -14,8 +14,8 @@ import {
   SIDEBAR_WIDTH_MOBILE,
 } from './sidebar-constants'
 import { SidebarContext, useSidebar, type SidebarContextProps } from './sidebar-context'
-import { useIsMobile } from '@/hooks/useIsMobile'
-import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/shared/hooks'
+import { cn } from '@/shared/utils'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Separator } from '@/shared/ui/separator'

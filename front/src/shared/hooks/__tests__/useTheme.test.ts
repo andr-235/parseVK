@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-vi.mock('@/lib/apiConfig', () => ({
+vi.mock('@/shared/api', () => ({
   API_URL: '/api',
 }))
 

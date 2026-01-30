@@ -1,8 +1,8 @@
 import { useMemo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Users, Building, Send, Settings, UserCog, LogOut, Activity } from 'lucide-react'
-import { useSidebarState } from '@/hooks/useSidebarState'
-import { useSidebarData } from '@/hooks/useSidebarData'
+import { useSidebarState } from '@/shared/hooks'
+import { useSidebarData } from '@/shared/hooks'
 import { useAuthStore } from '@/store'
 import { Button } from '@/shared/ui/button'
 import {
@@ -13,7 +13,7 @@ import {
   SECONDARY_ITEMS_CONFIG,
 } from './constants'
 import { getSidebarClasses, getPrimaryNavItemClasses } from './utils'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils'
 import { SidebarHeader } from './SidebarHeader'
 import { SidebarSection } from './SidebarSection'
 import { SidebarFooter } from './SidebarFooter'

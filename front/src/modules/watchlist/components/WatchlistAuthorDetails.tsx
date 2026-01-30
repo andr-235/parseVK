@@ -10,7 +10,7 @@ import {
 } from '@/shared/ui/table'
 import { TableSortButton } from '@/shared/ui/table-sort-button'
 import { Spinner } from '@/shared/ui/spinner'
-import { useTableSorting } from '@/hooks/useTableSorting'
+import { useTableSorting } from '@/shared/hooks'
 import type {
   WatchlistAuthorDetails as WatchlistAuthorDetailsType,
   WatchlistComment,

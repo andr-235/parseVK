@@ -1,7 +1,7 @@
 import { useEffect, Suspense, lazy, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { useTheme } from '@/hooks/useTheme'
+import { useTheme } from '@/shared/hooks'
 import { Sidebar } from '@/shared/components/Sidebar'
 import MainContent from '@/shared/components/MainContent'
 import AppSyncProvider from '@/lib/providers/AppSyncProvider'

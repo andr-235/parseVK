@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation'
+import { useKeyboardNavigation } from '@/shared/hooks'
 
 describe('useKeyboardNavigation', () => {
   let mockOnSelect: ReturnType<typeof vi.fn>

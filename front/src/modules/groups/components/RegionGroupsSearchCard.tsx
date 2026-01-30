@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { IRegionGroupSearchItem } from '@/types/api'
 import { Button } from '@/shared/ui/button'
-import { useTableSorting } from '@/hooks/useTableSorting'
+import { useTableSorting } from '@/shared/hooks'
 import type { TableColumn } from '@/types'
 import { Spinner } from '@/shared/ui/spinner'
 import { Card, CardContent } from '@/shared/ui/card'

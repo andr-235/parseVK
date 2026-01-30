@@ -3,7 +3,7 @@ import type { KeyboardEvent } from 'react'
 import { List, type ListImperativeAPI, type RowComponentProps } from 'react-window'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
 import { WatchlistAuthorsTableRow } from './WatchlistAuthorsTableRow'
-import { useVirtualizedKeyboardNavigation } from '@/hooks/useVirtualizedKeyboardNavigation'
+import { useVirtualizedKeyboardNavigation } from '@/shared/hooks'
 import { logger } from '@/modules/watchlist/utils/logger'
 
 const DEFAULT_HEIGHT = 400
