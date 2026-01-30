@@ -1,4 +1,6 @@
-import type { PhotoAnalysisSummary, TaskStatus } from './index'
+import type { PhotoAnalysisSummary } from '@/modules/authorAnalysis/types'
+import type { WatchlistStatus } from '@/modules/watchlist/types'
+import type { TaskStatus } from './common'
 
 export interface IGroupResponse {
   id: number
@@ -460,8 +462,6 @@ export interface IWatchlistAuthorProfileResponse {
   domain: string | null
   profileUrl: string | null
 }
-
-export type WatchlistStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED'
 
 export interface IWatchlistAuthorResponse {
   id: number
