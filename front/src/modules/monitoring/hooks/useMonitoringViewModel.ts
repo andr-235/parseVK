@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { monitoringService } from '@/services/monitoringService'
+import { monitoringService } from '@/modules/monitoring/api/monitoring.api'
 import type { IMonitorMessageResponse } from '@/types/api'
 
 const POLL_INTERVAL_MS = 15000
