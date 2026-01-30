@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { telegramService } from '@/services/telegramService'
+import { telegramService } from '@/modules/telegram/api/telegram.api'
 import type { TelegramSessionConfirmResponse } from '@/types/api'
 import toast from 'react-hot-toast'
 
