@@ -5,8 +5,8 @@ import type { PersistOptions } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 
 import { tasksService } from '@/modules/tasks/api/tasks.api'
+import { tasksQueryKeys } from '@/modules/tasks/api/queryKeys'
 import { queryClient } from '@/shared/api'
-import { queryKeys } from '@/hooks/queryKeys'
 import { mapResultToTaskDetails } from './tasksStore.mappers'
 import {
   ensureGroupsLoaded,
@@ -76,7 +76,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
   fetchTasks: async () => {
     try {
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.tasks,
+        queryKey: tasksQueryKeys.list(),
         refetchType: 'active',
       })
     } catch (error) {
@@ -120,7 +120,10 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
         upsertTaskEntity(state, task, { position: 'start' })
         ensureTaskDetailsStore(state)[toTaskKey(task.id)] = details
       })
-      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks, refetchType: 'active' })
+      void queryClient.invalidateQueries({
+        queryKey: tasksQueryKeys.list(),
+        refetchType: 'active',
+      })
 
       return task.id
     } catch (error) {
@@ -151,7 +154,10 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
         upsertTaskEntity(state, task, exists ? {} : { position: 'start' })
         ensureTaskDetailsStore(state)[taskKey] = details
       })
-      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks, refetchType: 'active' })
+      void queryClient.invalidateQueries({
+        queryKey: tasksQueryKeys.list(),
+        refetchType: 'active',
+      })
 
       return true
     } catch (error) {
@@ -178,7 +184,10 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
         upsertTaskEntity(state, task, exists ? {} : { position: 'start' })
         ensureTaskDetailsStore(state)[taskKey] = details
       })
-      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks, refetchType: 'active' })
+      void queryClient.invalidateQueries({
+        queryKey: tasksQueryKeys.list(),
+        refetchType: 'active',
+      })
 
       return true
     } catch (error) {
@@ -208,7 +217,10 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
           delete state.taskDetails[key]
         }
       })
-      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks, refetchType: 'active' })
+      void queryClient.invalidateQueries({
+        queryKey: tasksQueryKeys.list(),
+        refetchType: 'active',
+      })
 
       return true
     } catch (error) {

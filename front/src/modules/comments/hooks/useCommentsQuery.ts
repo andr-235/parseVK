@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
 import { commentsService } from '@/modules/comments/api/comments.api'
+import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
 import { useCommentsStore } from '@/store'
-import { queryKeys } from '@/hooks/queryKeys'
 import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/store/comments/commentsStore.utils'
 
 const fetchInitialComments = async () => {
@@ -37,9 +37,10 @@ interface UseCommentsQueryOptions {
 
 export const useCommentsQuery = (options?: UseCommentsQueryOptions) => {
   const enabled = options?.enabled ?? true
+  const filters = useCommentsStore((state) => state.filters)
 
   const query = useQuery({
-    queryKey: queryKeys.comments,
+    queryKey: commentsQueryKeys.list(filters),
     queryFn: fetchInitialComments,
     staleTime: 30_000,
     refetchInterval: 30_000,

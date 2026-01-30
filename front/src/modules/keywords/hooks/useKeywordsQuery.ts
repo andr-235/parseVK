@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
 import { keywordsService } from '@/modules/keywords/api/keywords.api'
+import { keywordsQueryKeys } from '@/modules/keywords/api/queryKeys'
 import { useKeywordsStore } from '@/store'
-import { queryKeys } from '@/hooks/queryKeys'
 
 const fetchKeywords = () => keywordsService.getAllKeywords()
 
@@ -17,7 +17,7 @@ export const useKeywordsQuery = (options?: UseKeywordsQueryOptions) => {
   const enabled = options?.enabled ?? true
 
   const query = useQuery({
-    queryKey: queryKeys.keywords,
+    queryKey: keywordsQueryKeys.list(),
     queryFn: fetchKeywords,
     staleTime: 60_000,
     gcTime: 1000 * 60 * 10,

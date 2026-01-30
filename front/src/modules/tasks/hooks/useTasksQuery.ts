@@ -4,10 +4,10 @@ import { useEffect, useRef } from 'react'
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
 import { tasksService } from '@/modules/tasks/api/tasks.api'
+import { tasksQueryKeys } from '@/modules/tasks/api/queryKeys'
 import { useTasksStore } from '@/store'
 import { mapSummaryToTask } from '@/store/tasks/tasksStore.mappers'
 import { replaceTasksCollection } from '@/store/tasks/tasksStore.utils'
-import { queryKeys } from '@/hooks/queryKeys'
 import type { IParsingTaskSummary } from '@/shared/types'
 
 const mapSummariesToTasks = (summaries: IParsingTaskSummary[]) => {
@@ -29,7 +29,7 @@ export const useTasksQuery = (options?: UseTasksQueryOptions) => {
   const isSocketConnected = useTasksStore((s) => s.isSocketConnected)
 
   const query = useQuery({
-    queryKey: queryKeys.tasks,
+    queryKey: tasksQueryKeys.list(),
     queryFn: tasksService.fetchTasks,
     // Когда сокет подключён — не поллим. Когда нет — поллим раз в 15 сек.
     refetchInterval: isSocketConnected ? false : 15_000,

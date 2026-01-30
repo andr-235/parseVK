@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { authorsService } from '@/modules/authors/api/authors.api'
+import { authorsQueryKeys, type AuthorsQueryParams } from '@/modules/authors/api/queryKeys'
 import type { AuthorListResponse, AuthorSortField } from '@/types'
 import type { AuthorsState } from '@/shared/types'
 import { queryClient } from '@/shared/api'
-import { queryKeys, type AuthorsQueryParams } from '@/hooks/queryKeys'
 
 const DEFAULT_PAGE_SIZE = 24
 
@@ -44,7 +44,7 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
 
     const trimmedCity = state.cityFilter.trim()
     const queryParams = buildAuthorsQueryParams(state, trimmedSearch, trimmedCity)
-    const queryKey = queryKeys.authors.list(queryParams)
+    const queryKey = authorsQueryKeys.list(queryParams)
 
     if (shouldReset) {
       set({
@@ -222,7 +222,7 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
       updatedState.search.trim(),
       updatedState.cityFilter.trim()
     )
-    const queryKey = queryKeys.authors.list(params)
+    const queryKey = authorsQueryKeys.list(params)
 
     await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
 
@@ -245,7 +245,7 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
         stateAfterRefresh.search.trim(),
         stateAfterRefresh.cityFilter.trim()
       )
-      const queryKey = queryKeys.authors.list(params)
+      const queryKey = authorsQueryKeys.list(params)
       await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
     } finally {
       set({ isRefreshing: false })
@@ -264,7 +264,7 @@ export const useAuthorsStore = create<AuthorsState>((set, get) => ({
       updatedState.search.trim(),
       updatedState.cityFilter.trim()
     )
-    const queryKey = queryKeys.authors.list(params)
+    const queryKey = authorsQueryKeys.list(params)
 
     await queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
   },

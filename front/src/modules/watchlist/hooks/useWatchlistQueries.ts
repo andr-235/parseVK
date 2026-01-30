@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
 import { watchlistService } from '@/modules/watchlist/api/watchlist.api'
+import { watchlistQueryKeys } from '@/modules/watchlist/api/queryKeys'
 import { useWatchlistStore } from '@/store'
-import { queryKeys } from '@/hooks/queryKeys'
 import {
   WATCHLIST_PAGE_SIZE,
   mapWatchlistAuthor,
@@ -32,7 +32,7 @@ const fetchWatchlistAuthors = async () => {
 
 export const useWatchlistAuthorsQuery = (enabled: boolean) => {
   const query = useQuery({
-    queryKey: queryKeys.watchlist.authors,
+    queryKey: watchlistQueryKeys.authors(),
     queryFn: fetchWatchlistAuthors,
     staleTime: 30_000,
     refetchInterval: 60_000,
@@ -95,7 +95,7 @@ const fetchWatchlistSettings = async () => {
 
 export const useWatchlistSettingsQuery = (enabled: boolean) => {
   const query = useQuery({
-    queryKey: queryKeys.watchlist.settings,
+    queryKey: watchlistQueryKeys.settings(),
     queryFn: fetchWatchlistSettings,
     staleTime: 60_000,
     refetchOnWindowFocus: false,

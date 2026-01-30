@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { commentsService } from '@/modules/comments/api/comments.api'
+import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
 import type { CommentsFilters, CommentsState } from '@/shared/types'
 import { normalizeCommentResponse, COMMENTS_PAGE_SIZE } from './commentsStore.utils'
 import { queryClient } from '@/shared/api'
-import { queryKeys } from '@/hooks/queryKeys'
 
 // Синхронный флаг для предотвращения race condition
 let isFetchingComments = false
@@ -92,6 +92,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     const offset = reset ? 0 : state.comments.length
     const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
     const activeFilters = reset ? normalizeFilters(filters ?? state.filters) : state.filters
+    const queryKey = commentsQueryKeys.list(activeFilters)
 
     if (reset) {
       set({ isLoading: true, filters: activeFilters })
@@ -126,7 +127,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         filters: activeFilters,
       }))
 
-      queryClient.setQueryData<CommentsQueryData>(queryKeys.comments, (prev) => ({
+      queryClient.setQueryData<CommentsQueryData>(queryKey, (prev) => ({
         comments: reset ? normalized : [...(prev?.comments ?? []), ...normalized],
         nextCursor: null,
         hasMore: response.hasMore,
@@ -181,6 +182,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     const cursor = reset ? undefined : (state.nextCursor ?? undefined)
     const pageSize = typeof limit === 'number' && limit > 0 ? limit : COMMENTS_PAGE_SIZE
     const activeFilters = normalizeFilters(reset ? (filters ?? state.filters) : state.filters)
+    const queryKey = commentsQueryKeys.list(activeFilters)
 
     if (reset) {
       set({ isLoading: true, filters: activeFilters })
@@ -231,7 +233,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         }
       })
 
-      queryClient.setQueryData<CommentsQueryData>(queryKeys.comments, (prev) => {
+      queryClient.setQueryData<CommentsQueryData>(queryKey, (prev) => {
         const nextComments = reset ? normalized : [...(prev?.comments ?? []), ...normalized]
         const finalTotalCount = response.hasMore
           ? response.total

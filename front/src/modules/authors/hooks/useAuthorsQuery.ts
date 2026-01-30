@@ -5,7 +5,7 @@ import { useEffect, useMemo } from 'react'
 // Store обновляется через useEffect после получения данных
 import { authorsService } from '@/modules/authors/api/authors.api'
 import { useAuthorsStore } from '@/store'
-import { queryKeys, type AuthorsQueryParams } from '@/hooks/queryKeys'
+import { authorsQueryKeys, type AuthorsQueryParams } from '@/modules/authors/api/queryKeys'
 
 const createFetchAuthors = (params: AuthorsQueryParams) => () => {
   return authorsService.fetchAuthors({
@@ -39,7 +39,7 @@ export const useAuthorsQuery = (enabled: boolean) => {
     [statusFilter, rawSearch, cityFilter, sortBy, sortOrder, pageSize]
   )
 
-  const queryKey = useMemo(() => queryKeys.authors.list(params), [params])
+  const queryKey = useMemo(() => authorsQueryKeys.list(params), [params])
 
   const query = useQuery({
     queryKey,

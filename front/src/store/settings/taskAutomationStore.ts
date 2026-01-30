@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+import { settingsQueryKeys } from '@/modules/settings/api/queryKeys'
 import { queryClient } from '@/shared/api'
-import { queryKeys } from '@/hooks/queryKeys'
 import type { TaskAutomationSettings } from '@/types'
 import { taskAutomationService } from '@/modules/settings/api/taskAutomation.api'
 import type { UpdateTaskAutomationSettingsRequest } from '@/modules/settings/api/taskAutomation.api'
@@ -33,7 +33,7 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
 
         try {
           const settings = await queryClient.ensureQueryData({
-            queryKey: queryKeys.taskAutomation,
+            queryKey: settingsQueryKeys.taskAutomation(),
             queryFn: taskAutomationService.fetchSettings,
           })
           set({ settings })
@@ -53,7 +53,7 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
           const settings = await taskAutomationService.updateSettings(payload)
           set({ settings, isUpdating: false })
           void queryClient.invalidateQueries({
-            queryKey: queryKeys.taskAutomation,
+            queryKey: settingsQueryKeys.taskAutomation(),
             refetchType: 'active',
           })
           return true
@@ -75,7 +75,7 @@ export const useTaskAutomationStore = create<TaskAutomationStore>()(
           const response = await taskAutomationService.runAutomation()
           set({ settings: response.settings, isTriggering: false })
           void queryClient.invalidateQueries({
-            queryKey: queryKeys.taskAutomation,
+            queryKey: settingsQueryKeys.taskAutomation(),
             refetchType: 'active',
           })
           return response.started

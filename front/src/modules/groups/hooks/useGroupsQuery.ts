@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
 import { groupsService } from '@/modules/groups/api/groups.api'
+import { groupsQueryKeys } from '@/modules/groups/api/queryKeys'
 import { GROUPS_PAGE_LIMIT, useGroupsStore } from '@/store'
-import { queryKeys } from '@/hooks/queryKeys'
 
 interface UseGroupsQueryOptions {
   enabled?: boolean
@@ -15,7 +15,7 @@ export const useGroupsQuery = (options?: UseGroupsQueryOptions) => {
   const enabled = options?.enabled ?? true
 
   const query = useQuery({
-    queryKey: queryKeys.groups,
+    queryKey: groupsQueryKeys.list(),
     queryFn: () => groupsService.fetchGroups({ page: 1, limit: GROUPS_PAGE_LIMIT }),
     staleTime: 60_000,
     gcTime: 1000 * 60 * 10,

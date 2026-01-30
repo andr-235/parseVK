@@ -12,8 +12,8 @@ import {
   mapWatchlistDetails,
   mapWatchlistSettings,
 } from './watchlistStore.utils'
+import { watchlistQueryKeys } from '@/modules/watchlist/api/queryKeys'
 import { queryClient } from '@/shared/api'
-import { queryKeys } from '@/hooks/queryKeys'
 
 type WatchlistAuthorsQueryData = {
   items: WatchlistAuthorCard[]
@@ -112,7 +112,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
       }))
 
       queryClient.setQueryData<WatchlistAuthorsQueryData>(
-        queryKeys.watchlist.authors,
+        watchlistQueryKeys.authors(),
         (prevData) => ({
           items: reset
             ? mapped
@@ -173,7 +173,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
       }))
 
       queryClient.setQueryData<WatchlistAuthorsQueryData>(
-        queryKeys.watchlist.authors,
+        watchlistQueryKeys.authors(),
         (prevData) => {
           const existing = prevData?.items ?? []
           const filtered = existing.filter((item) => item.id !== mapped.id)
@@ -227,7 +227,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
       })
 
       queryClient.setQueryData<WatchlistAuthorsQueryData>(
-        queryKeys.watchlist.authors,
+        watchlistQueryKeys.authors(),
         (prevData) => {
           const wasStopped = (prevData?.items ?? []).find((a) => a.id === id)?.status === 'STOPPED'
           const willBeStopped = mapped.status === 'STOPPED'
@@ -261,7 +261,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
       const response = await watchlistService.getSettings()
       const mapped = mapWatchlistSettings(response)
       set({ settings: mapped, isLoadingSettings: false, error: null })
-      queryClient.setQueryData(queryKeys.watchlist.settings, mapped)
+      queryClient.setQueryData(watchlistQueryKeys.settings(), mapped)
     } catch (error) {
       console.error('Не удалось загрузить настройки мониторинга', error)
       set({ isLoadingSettings: false, error: 'Не удалось загрузить настройки мониторинга' })
@@ -276,7 +276,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
       const response = await watchlistService.updateSettings(payload)
       const mapped = mapWatchlistSettings(response)
       set({ settings: mapped, isUpdatingSettings: false, error: null })
-      queryClient.setQueryData(queryKeys.watchlist.settings, mapped)
+      queryClient.setQueryData(watchlistQueryKeys.settings(), mapped)
       return mapped
     } catch (error) {
       console.error('Не удалось обновить настройки мониторинга', error)
