@@ -4,18 +4,18 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/components/ui/*": ["./src/components/ui/*", "./src/shared/ui/*"],
-      "@/components/ui": ["./src/components/ui", "./src/shared/ui"],
-      "@/components/*": ["./src/components/*", "./src/shared/components/*"],
-      "@/components": ["./src/components", "./src/shared/components"],
-      "@/hooks/*": ["./src/hooks/*", "./src/shared/hooks/*"],
-      "@/hooks": ["./src/hooks", "./src/shared/hooks"],
-      "@/lib/*": ["./src/lib/*", "./src/shared/lib/*"],
-      "@/lib": ["./src/lib", "./src/shared/lib"],
-      "@/utils/*": ["./src/utils/*", "./src/shared/utils/*"],
-      "@/utils": ["./src/utils", "./src/shared/utils"],
-      "@/types/*": ["./src/types/*", "./src/shared/types/*"],
-      "@/types": ["./src/types", "./src/shared/types"],
+      "@/components/ui/*": ["src/components/ui/*", "src/shared/ui/*"],
+      "@/components/ui": ["src/components/ui", "src/shared/ui"],
+      "@/components/*": ["src/components/*", "src/shared/components/*"],
+      "@/components": ["src/components", "src/shared/components"],
+      "@/hooks/*": ["src/hooks/*", "src/shared/hooks/*"],
+      "@/hooks": ["src/hooks", "src/shared/hooks"],
+      "@/lib/*": ["src/lib/*", "src/shared/lib/*"],
+      "@/lib": ["src/lib", "src/shared/lib"],
+      "@/utils/*": ["src/utils/*", "src/shared/utils/*"],
+      "@/utils": ["src/utils", "src/shared/utils"],
+      "@/types/*": ["src/types/*", "src/shared/types/*"],
+      "@/types": ["src/types", "src/shared/types"],
       "@/*": ["src/*"]
     }
   }
