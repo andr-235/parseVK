@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 import { commentsService } from '@/modules/comments/api/comments.api'
 import { useCommentsStore } from '@/store'
 import { queryKeys } from '@/hooks/queryKeys'
-import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/store/commentsStore.utils'
+import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/store/comments/commentsStore.utils'
 
 const fetchInitialComments = async () => {
   const { filters } = useCommentsStore.getState()

@@ -10,7 +10,7 @@ import {
   WATCHLIST_PAGE_SIZE,
   mapWatchlistAuthor,
   mapWatchlistSettings,
-} from '@/store/watchlistStore.utils'
+} from '@/store/watchlist/watchlistStore.utils'
 
 const fetchWatchlistAuthors = async () => {
   const response = await watchlistService.getAuthors({
