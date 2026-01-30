@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { usePhotoAnalysisStore } from '@/store'
+import { usePhotoAnalysisStore } from '@/modules/authorAnalysis/store'
 import { calculateAnalysisParams } from '@/modules/authorAnalysis/utils/authorAnalysisUtils'
 import type { AnalyzePhotosOptions, AuthorDetails } from '@/types'
 export const usePhotoAnalysis = (

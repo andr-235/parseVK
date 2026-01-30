@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { io, type Socket } from 'socket.io-client'
-import { useTasksStore } from '@/store'
-import type { TaskStatsInfo, TaskStatus } from '@/store/tasks/tasksStore.types'
-import { normalizeId, rebuildTaskList, toTaskKey } from '@/store/tasks/tasksStore.utils'
+import { useTasksStore } from '@/modules/tasks/store'
+import type { TaskStatsInfo, TaskStatus } from '@/modules/tasks/store'
+import { normalizeId, rebuildTaskList, toTaskKey } from '@/modules/tasks/store'
 
 export type GatewayTaskStatus = 'pending' | 'running' | 'done' | 'failed'
 

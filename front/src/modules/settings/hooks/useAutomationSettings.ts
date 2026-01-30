@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTaskAutomationStore } from '@/store'
+import { useTaskAutomationStore } from '@/modules/settings/store'
 import { clamp, formatAutomationTime } from '@/modules/settings/utils/automationFormatting'
 
 interface AutomationFormState {

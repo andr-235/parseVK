@@ -1,4 +1,7 @@
-import { useAuthorsStore, useCommentsStore, useTasksStore, useWatchlistStore } from '@/store'
+import { useAuthorsStore } from '@/modules/authors/store'
+import { useCommentsStore } from '@/modules/comments/store'
+import { useTasksStore } from '@/modules/tasks/store'
+import { useWatchlistStore } from '@/modules/watchlist/store'
 
 export function useSidebarData() {
   const tasksCount = useTasksStore((state) => state.tasks.length)

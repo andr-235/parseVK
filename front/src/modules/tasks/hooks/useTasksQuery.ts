@@ -5,9 +5,8 @@ import { useEffect, useRef } from 'react'
 // Store обновляется через useEffect после получения данных
 import { tasksService } from '@/modules/tasks/api/tasks.api'
 import { tasksQueryKeys } from '@/modules/tasks/api/queryKeys'
-import { useTasksStore } from '@/store'
-import { mapSummaryToTask } from '@/store/tasks/tasksStore.mappers'
-import { replaceTasksCollection } from '@/store/tasks/tasksStore.utils'
+import { useTasksStore } from '@/modules/tasks/store'
+import { mapSummaryToTask, replaceTasksCollection } from '@/modules/tasks/store'
 import type { IParsingTaskSummary } from '@/shared/types'
 
 const mapSummariesToTasks = (summaries: IParsingTaskSummary[]) => {

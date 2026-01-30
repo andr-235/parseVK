@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { useAuthorsStore, usePhotoAnalysisStore } from '@/store'
+import { useAuthorsStore } from '@/modules/authors/store'
+import { usePhotoAnalysisStore } from '@/modules/authorAnalysis/store'
 import type { AuthorCard, AuthorSortField, PhotoAnalysisSummary } from '@/types'
 import { resolveCityLabel, resolveProfileUrl } from '@/modules/authors/utils/authorUtils'
 

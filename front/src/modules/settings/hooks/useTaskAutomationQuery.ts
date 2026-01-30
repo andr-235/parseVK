@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 // Store обновляется через useEffect после получения данных
 import { taskAutomationService } from '@/modules/settings/api/taskAutomation.api'
 import { settingsQueryKeys } from '@/modules/settings/api/queryKeys'
-import { useTaskAutomationStore } from '@/store'
+import { useTaskAutomationStore } from '@/modules/settings/store'
 
 interface UseTaskAutomationQueryOptions {
   enabled?: boolean

@@ -1,4 +1,4 @@
-import { useTasksStore } from '@/store'
+import { useTasksStore } from '@/modules/tasks/store'
 
 export function useTaskActions() {
   const resumeTask = useTasksStore((state) => state.resumeTask)

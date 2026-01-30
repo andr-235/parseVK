@@ -12,7 +12,7 @@ import {
   useWatchlistSettingsQuery,
 } from '@/modules/watchlist/hooks/useWatchlistQueries'
 import { useTasksSocket } from '@/modules/tasks/hooks/useTasksSocket'
-import { useAuthStore } from '@/store'
+import { useAuthStore } from '@/modules/auth/store'
 
 const shouldSyncKeywords = (pathname: string): boolean => {
   return pathname.startsWith('/keywords') || pathname.startsWith('/comments')

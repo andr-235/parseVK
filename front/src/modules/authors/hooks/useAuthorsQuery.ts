@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react'
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
 import { authorsService } from '@/modules/authors/api/authors.api'
-import { useAuthorsStore } from '@/store'
+import { useAuthorsStore } from '@/modules/authors/store'
 import { authorsQueryKeys, type AuthorsQueryParams } from '@/modules/authors/api/queryKeys'
 
 const createFetchAuthors = (params: AuthorsQueryParams) => () => {

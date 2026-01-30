@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useCommentsStore, useKeywordsStore, useWatchlistStore } from '@/store'
+import { useCommentsStore } from '@/modules/comments/store'
+import { useKeywordsStore } from '@/modules/keywords/store'
+import { useWatchlistStore } from '@/modules/watchlist/store'
 import type { Comment, Keyword } from '@/types'
 
 type ReadFilter = 'all' | 'unread' | 'read'

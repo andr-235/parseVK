@@ -1,5 +1,5 @@
 import { useShallow } from 'zustand/react/shallow'
-import { useTasksStore } from '@/store'
+import { useTasksStore } from '@/modules/tasks/store'
 
 export const useTasksList = () => {
   const { tasks, isLoading } = useTasksStore(

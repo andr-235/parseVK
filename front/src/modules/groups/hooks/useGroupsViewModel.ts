@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
-import { useGroupsStore } from '@/store'
+import { useGroupsStore } from '@/modules/groups/store'
 import type { IRegionGroupSearchItem } from '@/shared/types'
 
 export const useGroupsViewModel = () => {

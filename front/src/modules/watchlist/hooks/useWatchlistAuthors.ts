@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useWatchlistStore } from '@/store'
+import { useWatchlistStore } from '@/modules/watchlist/store'
 import type { WatchlistAuthorDetails } from '@/types'
 
 export const useWatchlistAuthors = () => {

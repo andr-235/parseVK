@@ -5,7 +5,7 @@ import { useTheme } from '@/shared/hooks'
 import { Sidebar } from '@/shared/components/Sidebar'
 import MainContent from '@/shared/components/MainContent'
 import AppSyncProvider from '@/app/providers/AppSyncProvider'
-import { useAuthStore } from '@/store'
+import { useAuthStore } from '@/modules/auth/store'
 
 // Lazy load pages
 const Tasks = lazy(() => import('@/pages/Tasks'))

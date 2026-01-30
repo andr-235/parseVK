@@ -5,12 +5,12 @@ import { useEffect } from 'react'
 // Store обновляется через useEffect после получения данных
 import { watchlistService } from '@/modules/watchlist/api/watchlist.api'
 import { watchlistQueryKeys } from '@/modules/watchlist/api/queryKeys'
-import { useWatchlistStore } from '@/store'
+import { useWatchlistStore } from '@/modules/watchlist/store'
 import {
   WATCHLIST_PAGE_SIZE,
   mapWatchlistAuthor,
   mapWatchlistSettings,
-} from '@/store/watchlist/watchlistStore.utils'
+} from '@/modules/watchlist/store'
 
 const fetchWatchlistAuthors = async () => {
   const response = await watchlistService.getAuthors({

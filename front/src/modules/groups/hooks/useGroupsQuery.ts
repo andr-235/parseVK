@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 // Store обновляется через useEffect после получения данных
 import { groupsService } from '@/modules/groups/api/groups.api'
 import { groupsQueryKeys } from '@/modules/groups/api/queryKeys'
-import { GROUPS_PAGE_LIMIT, useGroupsStore } from '@/store'
+import { GROUPS_PAGE_LIMIT, useGroupsStore } from '@/modules/groups/store'
 
 interface UseGroupsQueryOptions {
   enabled?: boolean

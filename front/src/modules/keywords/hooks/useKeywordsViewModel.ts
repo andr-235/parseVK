@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import toast from 'react-hot-toast'
-import { useKeywordsStore } from '@/store'
+import { useKeywordsStore } from '@/modules/keywords/store'
 // Использование services для одноразовой операции (пересчет совпадений)
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { keywordsService } from '@/modules/keywords/api/keywords.api'

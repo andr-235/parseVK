@@ -5,8 +5,8 @@ import { useEffect } from 'react'
 // Store обновляется через useEffect после получения данных
 import { commentsService } from '@/modules/comments/api/comments.api'
 import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
-import { useCommentsStore } from '@/store'
-import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/store/comments/commentsStore.utils'
+import { useCommentsStore } from '@/modules/comments/store'
+import { COMMENTS_PAGE_SIZE, normalizeCommentResponse } from '@/modules/comments/store'
 import type { CommentsFilters } from '@/shared/types'
 
 const fetchInitialComments = async (filters: CommentsFilters) => {

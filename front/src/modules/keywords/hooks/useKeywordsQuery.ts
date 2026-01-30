@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 // Store обновляется через useEffect после получения данных
 import { keywordsService } from '@/modules/keywords/api/keywords.api'
 import { keywordsQueryKeys } from '@/modules/keywords/api/queryKeys'
-import { useKeywordsStore } from '@/store'
+import { useKeywordsStore } from '@/modules/keywords/store'
 
 const fetchKeywords = () => keywordsService.getAllKeywords()
 
