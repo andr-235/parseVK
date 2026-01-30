@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { API_URL } from '@/shared/api'
 import { createRequest, handleResponse } from '@/shared/api'
-import { saveReportBlob } from '@/utils/reportExport'
+import { saveReportBlob } from '@/shared/utils'
 
 export type ExportJobStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED'
 export type JobLogLevel = 'info' | 'warn' | 'error'

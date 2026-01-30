@@ -12,7 +12,7 @@ import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils'
 import type { FileUploadProps, FileUploadRef } from '@/shared/types'
-import { validateFiles } from '@/utils/fileValidation'
+import { validateFiles } from '@/shared/utils'
 
 const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(function FileUpload(
   {
