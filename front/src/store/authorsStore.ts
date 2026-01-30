@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { authorsService } from '@/services/authorsService'
+import { authorsService } from '@/modules/authors/api/authors.api'
 import type { AuthorListResponse, AuthorSortField } from '@/types'
 import type { AuthorsState } from '@/types/stores'
 import { queryClient } from '@/lib/queryClient'

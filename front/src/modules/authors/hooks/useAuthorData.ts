@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 // Использование services для одноразовой операции (загрузка данных автора)
 // Это допустимо согласно правилам архитектуры для операций, не требующих глобального состояния
-import { authorsService } from '@/services/authorsService'
+import { authorsService } from '@/modules/authors/api/authors.api'
 import { useAuthorsStore } from '@/store'
 import { createEmptyPhotoAnalysisSummary, type AuthorDetails } from '@/types'
 import type { AuthorAnalysisLocationState } from '@/types/authorAnalysis'
