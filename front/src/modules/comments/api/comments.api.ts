@@ -1,11 +1,7 @@
 import { API_URL, createRequest, handleResponse } from '@/shared/api'
-import type {
-  Comment,
-  CommentsFilters,
-  ICommentResponse,
-  IGetCommentsCursorResponse,
-  IGetCommentsResponse,
-} from '@/shared/types'
+import type { CommentsFilters } from '@/shared/types'
+import type { CommentResponseDto, GetCommentsCursorDto, GetCommentsDto } from './dto/comments.dto'
+import type { Comment } from './models/comment.model'
 import { buildCommentsQuery } from './buildCommentsQuery'
 import { mapComment, mapComments } from './mappers/mapComment'
 
@@ -32,7 +28,7 @@ export const getComments = async (
   const query = buildCommentsQuery(params)
   const url = query ? `${API_URL}/comments?${query}` : `${API_URL}/comments`
   const response = await createRequest(url)
-  const data = await handleResponse<IGetCommentsResponse>(response, 'Failed to fetch comments')
+  const data = await handleResponse<GetCommentsDto>(response, 'Failed to fetch comments')
 
   return {
     items: mapComments(data.items),
@@ -49,7 +45,7 @@ export const getCommentsCursor = async (
   const query = buildCommentsQuery(params)
   const url = query ? `${API_URL}/comments/cursor?${query}` : `${API_URL}/comments/cursor`
   const response = await createRequest(url)
-  const data = await handleResponse<IGetCommentsCursorResponse>(
+  const data = await handleResponse<GetCommentsCursorDto>(
     response,
     'Failed to fetch comments with cursor'
   )
@@ -70,7 +66,7 @@ export const updateReadStatus = async (id: number, isRead: boolean): Promise<Com
     body: JSON.stringify({ isRead }),
   })
 
-  const data = await handleResponse<ICommentResponse>(
+  const data = await handleResponse<CommentResponseDto>(
     response,
     'Failed to update comment read status'
   )
