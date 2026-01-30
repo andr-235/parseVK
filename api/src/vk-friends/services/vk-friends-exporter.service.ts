@@ -39,6 +39,40 @@ const FRIEND_FIELDS: Array<keyof FriendFlatDto> = [
   'universities',
 ];
 
+const FRIEND_HEADERS_RU: Record<keyof FriendFlatDto, string> = {
+  id: 'ID',
+  first_name: 'Имя',
+  last_name: 'Фамилия',
+  nickname: 'Никнейм',
+  domain: 'Домен',
+  bdate: 'Дата рождения',
+  sex: 'Пол',
+  status: 'Статус',
+  online: 'Онлайн',
+  last_seen_time: 'Был(а) в сети (время)',
+  last_seen_platform: 'Был(а) в сети (платформа)',
+  city_id: 'ID города',
+  city_title: 'Город',
+  country_id: 'ID страны',
+  country_title: 'Страна',
+  has_mobile: 'Есть мобильный',
+  can_post: 'Можно писать на стене',
+  can_see_all_posts: 'Видит все записи',
+  can_write_private_message: 'Можно писать в ЛС',
+  timezone: 'Часовой пояс',
+  photo_50: 'Фото 50',
+  photo_100: 'Фото 100',
+  photo_200_orig: 'Фото 200 (оригинал)',
+  photo_id: 'ID фото',
+  relation: 'Семейное положение',
+  contacts_mobile_phone: 'Телефон (мобильный)',
+  contacts_home_phone: 'Телефон (домашний)',
+  education_university: 'Университет (ID)',
+  education_faculty: 'Факультет (ID)',
+  education_graduation: 'Год выпуска',
+  universities: 'Университеты',
+};
+
 @Injectable()
 export class VkFriendsExporterService {
   async writeXlsxFile(jobId: string, rows: FriendFlatDto[]): Promise<string> {
@@ -52,11 +86,14 @@ export class VkFriendsExporterService {
       headerFooter: { firstHeader: '', firstFooter: '' },
     });
 
-    const columns = FRIEND_FIELDS.map((key) => ({
-      header: String(key),
-      key: String(key),
-      width: 14,
-    }));
+    const columns = FRIEND_FIELDS.map((key) => {
+      const header = FRIEND_HEADERS_RU[key] ?? String(key);
+      return {
+        header,
+        key: String(key),
+        width: Math.max(14, header.length + 2),
+      };
+    });
     worksheet.columns = columns;
 
     worksheet.getRow(1).font = { bold: true };
