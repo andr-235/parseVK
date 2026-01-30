@@ -1,46 +1,20 @@
 import { useState } from 'react'
-import { X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils'
+import {
+  extractPhotoAttachments,
+  type GalleryPhoto,
+} from '@/modules/comments/utils/extractPhotoAttachments'
 
 interface AttachmentsGalleryProps {
   attachments: unknown[]
   className?: string
 }
 
-function extractPhotoUrl(attachment: unknown): string | null {
-  if (!attachment || typeof attachment !== 'object') return null
-
-  const att = attachment as Record<string, unknown>
-  if (att.type !== 'photo') return null
-
-  const photo = att.photo as Record<string, unknown> | undefined
-  if (!photo) return null
-
-  const sizes = (photo.sizes as Array<Record<string, unknown>>) || []
-  const largestSize = sizes.reduce((max, size) => {
-    const maxWidth = (max?.width as number) || 0
-    const currentWidth = (size?.width as number) || 0
-    return currentWidth > maxWidth ? size : max
-  }, sizes[0] || {})
-
-  return (
-    (largestSize?.url as string) ||
-    (photo.photo_807 as string) ||
-    (photo.photo_604 as string) ||
-    null
-  )
-}
-
 export function AttachmentsGallery({ attachments, className }: AttachmentsGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
-
-  const photos = attachments
-    .map((att) => {
-      const url = extractPhotoUrl(att)
-      return url ? { url, attachment: att } : null
-    })
-    .filter((item): item is { url: string; attachment: unknown } => item !== null)
+  const photos: GalleryPhoto[] = extractPhotoAttachments(attachments)
 
   if (photos.length === 0) {
     return null
@@ -53,7 +27,7 @@ export function AttachmentsGallery({ attachments, className }: AttachmentsGaller
       <div className={cn('grid grid-cols-2 sm:grid-cols-3 gap-2', className)}>
         {photos.map((photo, index) => (
           <button
-            key={index}
+            key={photo.url}
             onClick={() => setSelectedIndex(index)}
             className="relative aspect-square rounded-lg overflow-hidden border border-border/40 hover:border-primary/50 transition-all group"
           >
