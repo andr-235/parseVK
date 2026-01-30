@@ -6,7 +6,7 @@ import {
   type VkFriendsJobLog,
   type VkFriendsParams,
   type VkFriendsStreamEvent,
-} from '@/services/vkFriendsExportService'
+} from '@/modules/vkFriendsExport/api/vkFriendsExport.api'
 import { STATUS_LABELS, STATUS_VARIANTS, toOptionalNumber } from '../utils/vkFriendsExportUtils'
 
 const MAX_LOGS = 50

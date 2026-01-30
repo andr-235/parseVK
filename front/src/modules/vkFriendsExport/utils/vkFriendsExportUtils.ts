@@ -1,5 +1,8 @@
 import type { BadgeProps } from '@/shared/ui/badge'
-import type { ExportJobStatus, JobLogLevel } from '@/services/vkFriendsExportService'
+import type {
+  ExportJobStatus,
+  JobLogLevel,
+} from '@/modules/vkFriendsExport/api/vkFriendsExport.api'
 
 export const STATUS_LABELS: Record<ExportJobStatus, string> = {
   PENDING: 'В ожидании',
