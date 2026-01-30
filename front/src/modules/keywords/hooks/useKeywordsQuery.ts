@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 
 // Использование services напрямую в queryFn - стандартный паттерн React Query
 // Store обновляется через useEffect после получения данных
-import { keywordsService } from '@/services/keywordsService'
+import { keywordsService } from '@/modules/keywords/api/keywords.api'
 import { useKeywordsStore } from '@/store'
 import { queryKeys } from '@/hooks/queryKeys'
 
