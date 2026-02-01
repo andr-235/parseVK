@@ -1,16 +1,17 @@
+import { useState } from 'react'
+import { BookmarkPlus, CheckCircle2, ExternalLink, Eye, Maximize2 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import type { Comment, Keyword } from '@/types'
-import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
-import { CheckCircle2, ExternalLink, BookmarkPlus, Eye, Maximize2 } from 'lucide-react'
 import { Spinner } from '@/shared/ui/spinner'
-import { getAuthorInitials } from '@/modules/comments/utils/getAuthorInitials'
-import { formatDateTime } from '@/modules/comments/utils/formatDateTime'
-import { useMemo, useState } from 'react'
-import { cn } from '@/shared/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
-import { normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
+import { cn } from '@/shared/utils'
+import type { Comment, Keyword } from '@/types'
+import { formatDateTime } from '@/modules/comments/utils/formatDateTime'
+import { getAuthorInitials } from '@/modules/comments/utils/getAuthorInitials'
+import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
+import { resolveCommentKeywords } from '@/modules/comments/utils/resolveCommentKeywords'
+import { resolveCommentVisibility } from '@/modules/comments/utils/resolveCommentVisibility'
 import { CommentAttachments } from './CommentAttachments'
 import { CommentThread } from './CommentThread'
 import { PostPreviewModal } from './PostPreviewModal'
@@ -41,47 +42,19 @@ function CommentCard({
   const [isCommentExpanded, setIsCommentExpanded] = useState(false)
   const [isPostModalOpen, setIsPostModalOpen] = useState(false)
 
-  // Helper to check if a keyword is actually present in the text
-  const isKeywordInText = (text: string | undefined, keyword: Keyword) => {
-    if (!text) return false
-    const normalizedText = normalizeForKeywordMatch(text)
-    const normalizedKeyword = normalizeForKeywordMatch(keyword.word)
-    return normalizedText.includes(normalizedKeyword)
-  }
+  const { fromPost, fromComment, all } = resolveCommentKeywords({
+    matchedKeywords,
+    commentText: comment.text,
+    postText: comment.postText,
+  })
 
-  const keywordsFromPost = (matchedKeywords ?? [])
-    .filter((kw) => kw.source === 'POST')
-    .filter((keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index)
-    .filter((kw) => isKeywordInText(comment.postText || undefined, kw))
+  const { shouldShowPost, shouldShowComment } = resolveCommentVisibility({
+    hidePostContext,
+    showKeywordComments,
+    showKeywordPosts,
+  })
 
-  const keywordsFromComment = (matchedKeywords ?? [])
-    .filter((kw) => kw.source !== 'POST')
-    .filter((keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index)
-
-  const allUniqueKeywords = [...keywordsFromPost, ...keywordsFromComment].filter(
-    (keyword, index, array) => array.findIndex((item) => item.id === keyword.id) === index
-  )
-
-  const isFilterActive = showKeywordComments !== undefined || showKeywordPosts !== undefined
-
-  // Show post context logic:
-  // - If hidePostContext is true, never show post (used when comment is inside PostGroupCard)
-  // - If only showKeywordComments filter is active, hide post (show only comments)
-  // - If showKeywordPosts is active (alone or with comments), show post
-  // - If no filters are active, show post by default
-  const shouldShowPost = !hidePostContext && (!isFilterActive || showKeywordPosts === true)
-
-  // Show comment logic:
-  // - If only showKeywordPosts is active (without showKeywordComments), hide comment (show only post)
-  // - Otherwise, show comment
-  const shouldShowComment = !isFilterActive || showKeywordComments === true
-
-  const postAttachments = useMemo(() => {
-    if (!comment.postAttachments || !Array.isArray(comment.postAttachments)) {
-      return []
-    }
-    return comment.postAttachments
-  }, [comment.postAttachments])
+  const postAttachments = Array.isArray(comment.postAttachments) ? comment.postAttachments : []
 
   return (
     <div
@@ -182,9 +155,9 @@ function CommentCard({
               <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 select-none">
                 <div className="flex items-center gap-2">
                   Контекст поста
-                  {keywordsFromPost.length > 0 && (
+                  {fromPost.length > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {keywordsFromPost.map((kw) => (
+                      {fromPost.map((kw) => (
                         <Badge
                           key={kw.id}
                           variant="secondary"
@@ -228,10 +201,7 @@ function CommentCard({
                   )}
                   onClick={() => setIsPostExpanded(!isPostExpanded)}
                 >
-                  {highlightKeywords(
-                    comment.postText,
-                    keywordsFromPost.length > 0 ? keywordsFromPost : allUniqueKeywords
-                  )}
+                  {highlightKeywords(comment.postText, fromPost.length > 0 ? fromPost : all)}
                 </div>
               )}
 
@@ -243,9 +213,9 @@ function CommentCard({
         {/* Текст комментария */}
         {shouldShowComment && (
           <div className="space-y-2">
-            {keywordsFromComment.length > 0 && (
+            {fromComment.length > 0 && (
               <div className="flex flex-wrap items-center gap-1 mb-1">
-                {keywordsFromComment.map((kw) => (
+                {fromComment.map((kw) => (
                   <Badge
                     key={kw.id}
                     variant="secondary"
@@ -263,10 +233,7 @@ function CommentCard({
               )}
               onClick={() => setIsCommentExpanded(!isCommentExpanded)}
             >
-              {highlightKeywords(
-                comment.text,
-                keywordsFromComment.length > 0 ? keywordsFromComment : allUniqueKeywords
-              )}
+              {highlightKeywords(comment.text, fromComment.length > 0 ? fromComment : all)}
             </div>
           </div>
         )}
@@ -323,12 +290,7 @@ function CommentCard({
         </div>
 
         {/* Тред комментариев */}
-        <CommentThread
-          comment={comment}
-          keywords={allUniqueKeywords}
-          maxDepth={3}
-          defaultExpanded={false}
-        />
+        <CommentThread comment={comment} keywords={all} maxDepth={3} defaultExpanded={false} />
       </div>
 
       {/* Модальное окно превью поста */}
@@ -342,7 +304,7 @@ function CommentCard({
             ? comment.commentUrl.replace(/\/wall-\d+_\d+\?reply=\d+/, '').replace(/#reply\d+/, '')
             : null
         }
-        keywords={keywordsFromPost.length > 0 ? keywordsFromPost : allUniqueKeywords}
+        keywords={fromPost.length > 0 ? fromPost : all}
         onClose={() => setIsPostModalOpen(false)}
       />
     </div>
