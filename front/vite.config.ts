@@ -83,10 +83,6 @@ export default defineConfig({
         replacement: path.resolve(__dirname, './src/types'),
       },
       {
-        find: '@root',
-        replacement: path.resolve(__dirname, '..'),
-      },
-      {
         find: '@',
         replacement: path.resolve(__dirname, './src'),
       },
