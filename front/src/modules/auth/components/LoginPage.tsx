@@ -1,13 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Button } from '@/shared/ui/button'
@@ -138,66 +130,130 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-background-primary px-4 py-8">
-      {/* Background gradients */}
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background px-4 py-8 font-monitoring-body">
+      {/* Animated Mesh Gradient Background */}
+      <div className="absolute inset-0 opacity-60">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-950 via-slate-950 to-cyan-950" />
+        <div
+          className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-blue-500/30 blur-[120px] animate-pulse"
+          style={{ animationDuration: '8s' }}
+        />
+        <div
+          className="absolute right-0 bottom-0 h-[600px] w-[600px] rounded-full bg-cyan-500/20 blur-[120px] animate-pulse"
+          style={{ animationDuration: '12s', animationDelay: '2s' }}
+        />
+        <div
+          className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/20 blur-[100px] animate-pulse"
+          style={{ animationDuration: '10s', animationDelay: '4s' }}
+        />
+      </div>
+
+      {/* Grid Overlay */}
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(37,99,235,0.14),transparent_60%),radial-gradient(120%_80%_at_100%_100%,rgba(14,165,233,0.08),transparent_55%)]"
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                           linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px',
+        }}
       />
 
-      {/* Gradient border wrapper */}
-      <div className="relative w-full max-w-md">
-        <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-br from-accent-primary/40 via-accent-primary/20 to-transparent opacity-75 blur-sm" />
-
-        <Card className="relative overflow-hidden border-border/40 bg-background-primary/95 backdrop-blur-xl shadow-2xl">
-          {/* Inner glow */}
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(20)].map((_, i) => (
           <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent-primary/5 via-transparent to-transparent"
+            key={i}
+            className="absolute h-1 w-1 rounded-full bg-cyan-400/40 animate-float"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 10}s`,
+              animationDuration: `${15 + Math.random() * 10}s`,
+            }}
           />
+        ))}
+      </div>
 
-          <CardHeader className="relative z-10 items-center space-y-3 pb-4 pt-8 text-center">
-            <div className="animate-in fade-in-0 zoom-in-95 duration-500">
-              <BrandLogo
-                size="lg"
-                className="drop-shadow-[0_20px_50px_rgba(37,99,235,0.3)] transition-transform duration-300 hover:scale-105"
-              />
+      {/* Main Card Container */}
+      <div className="relative z-10 w-full max-w-md">
+        {/* Glow Effect */}
+        <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-2xl" />
+
+        {/* Card */}
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur-2xl">
+          {/* Top Border Glow */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+
+          {/* Header */}
+          <div className="relative px-8 pt-10 pb-6 text-center">
+            {/* Logo with Glow */}
+            <div className="mb-6 inline-block animate-in fade-in-0 zoom-in-95 duration-700">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-cyan-400/30 blur-xl" />
+                <BrandLogo
+                  size="lg"
+                  className="relative drop-shadow-[0_0_30px_rgba(34,211,238,0.4)] transition-transform duration-300 hover:scale-105"
+                />
+              </div>
             </div>
-            <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
-              <CardTitle className="text-2xl font-semibold tracking-tight text-text-primary">
-                {mustChangePassword ? 'Смена пароля' : 'Вход в систему'}
-              </CardTitle>
-            </div>
-            <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
-              <CardDescription className="max-w-sm text-sm text-text-secondary/90">
-                {mustChangePassword
-                  ? `Пользователь ${authUser?.username ?? ''} должен сменить временный пароль.`
-                  : 'Используйте учетную запись администратора или пользователя, выданную администратором.'}
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10 px-6 pb-6 pt-2 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-300">
+
+            {/* Title */}
+            <h1 className="mb-2 font-monitoring-display text-3xl font-bold tracking-tight text-white animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+              {mustChangePassword ? (
+                <>
+                  Смена <span className="text-cyan-400">пароля</span>
+                </>
+              ) : (
+                <>
+                  Intelligence <span className="text-cyan-400">Hub</span>
+                </>
+              )}
+            </h1>
+
+            {/* Subtitle */}
+            <p className="text-sm text-slate-400 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+              {mustChangePassword
+                ? `Пользователь ${authUser?.username ?? ''} должен установить новый пароль`
+                : 'Система аналитики и мониторинга VK'}
+            </p>
+
+            {/* Decorative Line */}
+            <div className="mx-auto mt-4 h-px w-16 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          </div>
+
+          {/* Form Container */}
+          <div className="px-8 pb-8 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-300">
             {mustChangePassword || isManualChangePassword ? (
-              <form className="space-y-4" onSubmit={handleChangePassword}>
+              <form className="space-y-5" onSubmit={handleChangePassword}>
                 {isManualChangePassword && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="username" className="text-sm font-medium">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="username"
+                      className="text-xs font-medium uppercase tracking-wider text-slate-300"
+                    >
                       Логин
                     </Label>
-                    <Input
-                      id="username"
-                      autoComplete="username"
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
-                      placeholder="Введите логин"
-                      disabled={isChanging}
-                      className="transition-all duration-200 focus:scale-[1.01]"
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="username"
+                        autoComplete="username"
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                        placeholder="Введите логин"
+                        disabled={isChanging}
+                        className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                        required
+                      />
+                      <div className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-cyan-500/0 via-cyan-500/5 to-cyan-500/0 opacity-0 transition-opacity duration-200 peer-focus:opacity-100" />
+                    </div>
                   </div>
                 )}
-                <div className="space-y-1.5">
-                  <Label htmlFor="old-password" className="text-sm font-medium">
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="old-password"
+                    className="text-xs font-medium uppercase tracking-wider text-slate-300"
+                  >
                     Текущий пароль
                   </Label>
                   <Input
@@ -206,14 +262,18 @@ function LoginPage() {
                     autoComplete="current-password"
                     value={oldPassword}
                     onChange={(event) => setOldPassword(event.target.value)}
-                    placeholder="Введите текущий пароль"
+                    placeholder="••••••••"
                     disabled={isChanging}
-                    className="transition-all duration-200 focus:scale-[1.01]"
+                    className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
                     required
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="new-password" className="text-sm font-medium">
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="new-password"
+                    className="text-xs font-medium uppercase tracking-wider text-slate-300"
+                  >
                     Новый пароль
                   </Label>
                   <Input
@@ -224,15 +284,19 @@ function LoginPage() {
                     onChange={(event) => setNewPassword(event.target.value)}
                     placeholder="Минимум 8 символов"
                     disabled={isChanging}
-                    className="transition-all duration-200 focus:scale-[1.01]"
+                    className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
                     required
                   />
-                  <p className="text-xs text-muted-foreground/80">
-                    Минимум 8 символов, заглавные и строчные буквы, цифры.
+                  <p className="text-xs text-slate-500 font-mono-accent">
+                    Min 8 chars · A-Z · a-z · 0-9
                   </p>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirm-password" className="text-sm font-medium">
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="confirm-password"
+                    className="text-xs font-medium uppercase tracking-wider text-slate-300"
+                  >
                     Повторите пароль
                   </Label>
                   <Input
@@ -241,72 +305,102 @@ function LoginPage() {
                     autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    placeholder="Повторите новый пароль"
+                    placeholder="••••••••"
                     disabled={isChanging}
-                    className="transition-all duration-200 focus:scale-[1.01]"
+                    className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
                     required
                   />
                 </div>
+
                 {error && (
-                  <div className="animate-in slide-in-from-top-2 fade-in-0 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {error}
+                  <div className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    <span className="font-mono-accent">⚠</span> {error}
                   </div>
                 )}
-                <CardFooter className="flex flex-col gap-2.5 px-0 pt-2">
+
+                <div className="flex flex-col gap-3 pt-2">
                   <Button
-                    className="w-full shadow-lg shadow-accent-primary/20 transition-all duration-200 hover:shadow-xl hover:shadow-accent-primary/30 hover:scale-[1.02] active:scale-[0.98]"
+                    className="group relative h-11 overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     type="submit"
                     disabled={isChanging}
                   >
-                    {isChanging ? (
-                      <>
-                        <Spinner className="size-4" />
-                        Сохраняем...
-                      </>
-                    ) : (
-                      'Сменить пароль'
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <span className="relative flex items-center justify-center gap-2">
+                      {isChanging ? (
+                        <>
+                          <Spinner className="size-4" />
+                          Сохранение...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="size-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                          Сменить пароль
+                        </>
+                      )}
+                    </span>
                   </Button>
+
                   {mustChangePassword ? (
                     <Button
                       type="button"
                       variant="ghost"
                       onClick={handleLogout}
-                      className="w-full transition-colors"
+                      className="h-11 text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
                     >
-                      Выйти
+                      Выйти из системы
                     </Button>
                   ) : (
                     <Button
                       type="button"
                       variant="ghost"
                       onClick={handleSwitchToLogin}
-                      className="w-full transition-colors"
+                      className="h-11 text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
                     >
-                      Вернуться ко входу
+                      ← Вернуться ко входу
                     </Button>
                   )}
-                </CardFooter>
+                </div>
               </form>
             ) : (
-              <form className="space-y-4" onSubmit={handleSubmit}>
-                <div className="space-y-1.5">
-                  <Label htmlFor="username" className="text-sm font-medium">
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="username"
+                    className="text-xs font-medium uppercase tracking-wider text-slate-300"
+                  >
                     Логин
                   </Label>
-                  <Input
-                    id="username"
-                    autoComplete="username"
-                    value={username}
-                    onChange={(event) => setUsername(event.target.value)}
-                    placeholder="Введите логин"
-                    disabled={isSubmitting}
-                    className="transition-all duration-200 focus:scale-[1.01]"
-                    required
-                  />
+                  <div className="relative group">
+                    <Input
+                      id="username"
+                      autoComplete="username"
+                      value={username}
+                      onChange={(event) => setUsername(event.target.value)}
+                      placeholder="Введите логин"
+                      disabled={isSubmitting}
+                      className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="password" className="text-sm font-medium">
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="password"
+                    className="text-xs font-medium uppercase tracking-wider text-slate-300"
+                  >
                     Пароль
                   </Label>
                   <Input
@@ -315,47 +409,103 @@ function LoginPage() {
                     autoComplete="current-password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Введите пароль"
+                    placeholder="••••••••"
                     disabled={isSubmitting}
-                    className="transition-all duration-200 focus:scale-[1.01]"
+                    className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
                     required
                   />
-                  <p className="text-xs text-muted-foreground/80">Минимум 8 символов.</p>
+                  <p className="text-xs text-slate-500 font-mono-accent">Минимум 8 символов</p>
                 </div>
+
                 {error && (
-                  <div className="animate-in slide-in-from-top-2 fade-in-0 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                    {error}
+                  <div className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    <span className="font-mono-accent">⚠</span> {error}
                   </div>
                 )}
-                <CardFooter className="flex flex-col gap-2.5 px-0 pt-2">
+
+                <div className="flex flex-col gap-3 pt-2">
                   <Button
-                    className="w-full shadow-lg shadow-accent-primary/20 transition-all duration-200 hover:shadow-xl hover:shadow-accent-primary/30 hover:scale-[1.02] active:scale-[0.98]"
+                    className="group relative h-11 overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     type="submit"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Spinner className="size-4" />
-                        Входим...
-                      </>
-                    ) : (
-                      'Войти'
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <span className="relative flex items-center justify-center gap-2">
+                      {isSubmitting ? (
+                        <>
+                          <Spinner className="size-4" />
+                          Вход в систему...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="size-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 7l5 5m0 0l-5 5m5-5H6"
+                            />
+                          </svg>
+                          Войти
+                        </>
+                      )}
+                    </span>
                   </Button>
+
                   <Button
                     type="button"
                     variant="ghost"
                     onClick={handleSwitchToChangePassword}
-                    className="w-full transition-colors"
+                    className="h-11 text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
                   >
                     Сменить пароль
                   </Button>
-                </CardFooter>
+                </div>
               </form>
             )}
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Bottom Accent Line */}
+          <div className="h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500" />
+        </div>
+
+        {/* Version Badge */}
+        <div className="mt-6 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/50 px-4 py-1.5 text-xs text-slate-400 backdrop-blur-sm font-mono-accent">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-500" />
+            </span>
+            System Online
+          </span>
+        </div>
       </div>
+
+      <style>{`
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0) translateX(0);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(-100vh) translateX(50px);
+          }
+        }
+        .animate-float {
+          animation: float linear infinite;
+        }
+      `}</style>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import 'tailwindcss';
 
 @plugin "tailwindcss-animate";
@@ -183,11 +183,15 @@
 
 @layer base {
   .font-monitoring-display {
-    font-family: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+    font-family: 'Outfit', 'Space Grotesk', sans-serif;
   }
 
   .font-monitoring-body {
-    font-family: 'IBM Plex Sans', 'Space Grotesk', sans-serif;
+    font-family: 'Outfit', 'IBM Plex Sans', sans-serif;
+  }
+
+  .font-mono-accent {
+    font-family: 'JetBrains Mono', monospace;
   }
 
   * {
