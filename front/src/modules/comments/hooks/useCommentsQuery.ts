@@ -72,10 +72,6 @@ export const useCommentsQuery = (options?: UseCommentsQueryOptions) => {
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: false,
     enabled,
-    onError: (error) => {
-      console.error('Failed to sync comments', error)
-      toast.error('Не удалось загрузить комментарии')
-    },
   })
 
   useEffect(() => {
@@ -98,6 +94,15 @@ export const useCommentsQuery = (options?: UseCommentsQueryOptions) => {
       isLoading: shouldShowLoading,
     })
   }, [enabled, query.isFetching])
+
+  useEffect(() => {
+    if (!enabled || !query.error) {
+      return
+    }
+
+    console.error('Failed to sync comments', query.error)
+    toast.error('Не удалось загрузить комментарии')
+  }, [enabled, query.error])
 
   return query
 }

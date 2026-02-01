@@ -1,6 +1,7 @@
 import type { AuthorCard, AuthorSortField, AuthorSortOrder } from '@/modules/authors/types'
 import type { CommentsFilters } from '@/modules/comments/api/query/commentsQuery.types'
-import type { Comment, Group, Keyword, Task, TaskDetails } from './common'
+import type { Comment } from '@/modules/comments/api/models/comment.model'
+import type { Group, Keyword, Task, TaskDetails } from './common'
 import type { IBulkAddResponse, IRegionGroupSearchItem } from './api'
 // Navigation Store Types
 export type Page =

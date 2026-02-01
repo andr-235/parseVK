@@ -16,6 +16,7 @@
       "@/utils": ["src/utils", "src/shared/utils"],
       "@/types/*": ["src/types/*", "src/shared/types/*"],
       "@/types": ["src/types", "src/shared/types"],
+      "@root/*": ["../*"],
       "@/*": ["src/*"]
     }
   }

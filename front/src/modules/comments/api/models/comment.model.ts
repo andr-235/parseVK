@@ -1,3 +1,5 @@
+import type { PostGroup } from '@/shared/types/common'
+
 export interface Comment {
   id: number
   author: string
@@ -8,7 +10,7 @@ export interface Comment {
   text: string
   postText: string | null
   postAttachments: unknown | null
-  postGroup: unknown | null
+  postGroup: PostGroup | null
   createdAt: string
   publishedAt: string | null
   isRead: boolean
