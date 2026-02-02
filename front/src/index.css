@@ -3,32 +3,8 @@
 
 @plugin "tailwindcss-animate";
 
-@custom-variant dark (&:is(.dark *));
-
 @layer base {
   :root {
-    --bg-primary: #f9fafb;
-    --bg-secondary: #ffffff;
-    --bg-sidebar: #ffffff;
-    --bg-sidebar-hover: #f3f4f6;
-    --text-primary: #1f2937;
-    --text-secondary: #6b7280;
-    --text-light: #ffffff;
-    --border-color: #e5e7eb;
-    --shadow: rgba(15, 23, 42, 0.08);
-    --accent-primary: #2563eb;
-    --accent-info: #0ea5e9;
-    --accent-success: #22c55e;
-    --accent-warning: #f59e0b;
-    --accent-danger: #dc2626;
-    --card-border-radius: 20px;
-    --glass-bg: rgba(255, 255, 255, 0.72);
-    --glass-border: rgba(255, 255, 255, 0.5);
-    --glass-shadow: 0 8px 32px rgba(15, 23, 42, 0.12);
-    --glass-blur: 10px;
-  }
-
-  .dark {
     --bg-primary: #0b1220;
     --bg-secondary: #111827;
     --bg-sidebar: #0f172a;
@@ -43,6 +19,7 @@
     --accent-success: #22c55e;
     --accent-warning: #f59e0b;
     --accent-danger: #ef4444;
+    --card-border-radius: 20px;
     --glass-bg: rgba(15, 23, 42, 0.65);
     --glass-border: rgba(148, 163, 184, 0.2);
     --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -112,41 +89,6 @@
 
 :root {
   --radius: 0.75rem;
-  --background: #f9fafb;
-  --foreground: #1f2937;
-  --card: #ffffff;
-  --card-foreground: #1f2937;
-  --popover: #ffffff;
-  --popover-foreground: #1f2937;
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
-  --secondary: #f3f4f6;
-  --secondary-foreground: #1f2937;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --accent: #eff6ff;
-  --accent-foreground: #1d4ed8;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: rgba(37, 99, 235, 0.35);
-  --chart-1: #2563eb;
-  --chart-2: #22c55e;
-  --chart-3: #f59e0b;
-  --chart-4: #f97316;
-  --chart-5: #dc2626;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1f2937;
-  --sidebar-primary: #2563eb;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eff6ff;
-  --sidebar-accent-foreground: #1d4ed8;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: rgba(37, 99, 235, 0.3);
-}
-
-.dark {
   --background: #0b1220;
   --foreground: #e5e7eb;
   --card: #111827;
@@ -235,11 +177,11 @@
     scrollbar-color: var(--border-color) transparent;
   }
 
-  /* Input autofill styles for dark theme */
-  .dark input:-webkit-autofill,
-  .dark input:-webkit-autofill:hover,
-  .dark input:-webkit-autofill:focus,
-  .dark input:-webkit-autofill:active {
+  /* Input autofill styles */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
     -webkit-box-shadow: 0 0 0 30px #141414 inset !important;
     -webkit-text-fill-color: #f5f5f5 !important;
     box-shadow: 0 0 0 30px #141414 inset !important;

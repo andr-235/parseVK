@@ -357,3 +357,5 @@ When modifying the Prisma schema:
 - Check API logs for VK API errors
 - Use Prisma Studio to inspect database records
 - Enable dev mode logging in stores (import.meta.env.DEV checks)
+  Не запускай "npm run dev"
+  используй для проветки "npm run build"

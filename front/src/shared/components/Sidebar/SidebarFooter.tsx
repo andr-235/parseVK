@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/shared/utils'
-import ThemeToggle from '@/shared/components/ThemeToggle'
 import { SidebarCollapseButton } from './SidebarCollapseButton'
 import { getPrimaryNavItemClasses } from './utils'
 import type { SidebarItem } from './types'
@@ -49,10 +48,9 @@ export function SidebarFooter({ items, isCollapsed, onExpand, footerAction }: Si
       <div
         className={cn(
           'mt-4 flex items-center animate-in fade-in-0 duration-700 delay-200',
-          isCollapsed ? 'justify-center' : 'justify-between'
+          isCollapsed ? 'justify-center' : 'justify-end'
         )}
       >
-        {!isCollapsed && <ThemeToggle />}
         {isCollapsed && <SidebarCollapseButton isCollapsed={isCollapsed} onToggle={onExpand} />}
         {!isCollapsed && (
           <div className="text-[10px] text-slate-500 font-mono-accent tracking-wider">
@@ -60,11 +58,6 @@ export function SidebarFooter({ items, isCollapsed, onExpand, footerAction }: Si
           </div>
         )}
       </div>
-      {isCollapsed && (
-        <div className="mt-2 flex justify-center animate-in fade-in-0 duration-700 delay-300">
-          <ThemeToggle />
-        </div>
-      )}
     </div>
   )
 }

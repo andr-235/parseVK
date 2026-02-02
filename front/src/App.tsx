@@ -1,7 +1,6 @@
 import { useEffect, Suspense, lazy, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { useTheme } from '@/shared/hooks'
 import { Sidebar } from '@/shared/components/Sidebar'
 import MainContent from '@/shared/components/MainContent'
 import AppSyncProvider from '@/app/providers/AppSyncProvider'
@@ -81,22 +80,12 @@ const AppLayout = () => {
 }
 
 function App() {
-  const { isDarkMode } = useTheme()
   const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
 
+  // Зафиксируем темную тему
   useEffect(() => {
-    const root = document.documentElement
-
-    if (isDarkMode) {
-      root.classList.add('dark')
-    } else {
-      root.classList.remove('dark')
-    }
-
-    return () => {
-      root.classList.remove('dark')
-    }
-  }, [isDarkMode])
+    document.documentElement.classList.add('dark')
+  }, [])
 
   return (
     <ErrorBoundary>
