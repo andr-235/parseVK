@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Badge } from '@/shared/ui/badge'
@@ -16,7 +17,7 @@ interface CommentsFiltersPanelProps {
   keywordsCount: number
 }
 
-function CommentsFiltersPanel({
+const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
   searchTerm,
   onSearchChange,
   showKeywordComments,
@@ -27,39 +28,67 @@ function CommentsFiltersPanel({
   onReadFilterChange,
   keywordsCount,
 }: CommentsFiltersPanelProps) {
+  // Memoized handlers (rerender optimization)
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onSearchChange(e.target.value)
+    },
+    [onSearchChange]
+  )
+
+  const handleReadFilterAll = useCallback(() => {
+    onReadFilterChange('all')
+  }, [onReadFilterChange])
+
+  const handleReadFilterUnread = useCallback(() => {
+    onReadFilterChange('unread')
+  }, [onReadFilterChange])
+
+  const handleReadFilterRead = useCallback(() => {
+    onReadFilterChange('read')
+  }, [onReadFilterChange])
+
+  const handleToggleKeywordCommentsClick = useCallback(() => {
+    onToggleKeywordComments(!showKeywordComments)
+  }, [onToggleKeywordComments, showKeywordComments])
+
+  const handleToggleKeywordPostsClick = useCallback(() => {
+    onToggleKeywordPosts(!showKeywordPosts)
+  }, [onToggleKeywordPosts, showKeywordPosts])
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Поиск и статистика */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="relative w-full sm:max-w-md group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+      {/* Search input */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="group relative w-full sm:max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400 transition-colors duration-200 group-focus-within:text-cyan-400" />
           <Input
             value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Поиск по тексту, автору или ID..."
-            className="pl-10 h-11 rounded-xl border-muted bg-muted/20 focus-visible:ring-1 focus-visible:ring-primary/30 transition-all hover:bg-muted/30"
+            className="h-11 rounded-lg border-white/10 bg-slate-800/50 pl-10 font-monitoring-body text-white placeholder:text-slate-500 transition-all duration-200 hover:bg-slate-800/70 focus:border-cyan-400/50 focus:bg-slate-800/70 focus:ring-cyan-400/20"
           />
         </div>
       </div>
 
-      {/* Фильтры (Pill-style) */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 mr-2 text-sm font-medium text-muted-foreground">
-          <SlidersHorizontal className="h-4 w-4" />
+        <div className="mr-2 flex items-center gap-2 font-mono-accent text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <SlidersHorizontal className="size-4" />
           Фильтры:
         </div>
 
-        {/* Статус прочтения */}
-        <div className="flex items-center rounded-lg bg-muted/20 p-1 border border-border/40">
+        {/* Read status filter */}
+        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-slate-800/30 p-1 backdrop-blur-sm">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onReadFilterChange('all')}
+            onClick={handleReadFilterAll}
             className={cn(
-              'h-7 rounded-md px-3 text-xs font-medium transition-all',
+              'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
               readFilter === 'all'
-                ? 'bg-background shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             )}
           >
             Все
@@ -67,12 +96,12 @@ function CommentsFiltersPanel({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onReadFilterChange('unread')}
+            onClick={handleReadFilterUnread}
             className={cn(
-              'h-7 rounded-md px-3 text-xs font-medium transition-all',
+              'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
               readFilter === 'unread'
-                ? 'bg-background shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             )}
           >
             Непрочитанные
@@ -80,32 +109,32 @@ function CommentsFiltersPanel({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onReadFilterChange('read')}
+            onClick={handleReadFilterRead}
             className={cn(
-              'h-7 rounded-md px-3 text-xs font-medium transition-all',
+              'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
               readFilter === 'read'
-                ? 'bg-background shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             )}
           >
             Прочитанные
           </Button>
         </div>
 
-        {/* Ключевые слова */}
+        {/* Keyword filters */}
         {keywordsCount > 0 && (
           <>
-            <div className="w-px h-6 bg-border/50 mx-1" />
+            <div className="mx-1 h-6 w-px bg-white/10" />
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onToggleKeywordComments(!showKeywordComments)}
+                onClick={handleToggleKeywordCommentsClick}
                 className={cn(
-                  'h-9 rounded-full px-4 text-xs font-medium border transition-all',
+                  'h-9 rounded-full border px-4 font-mono-accent text-xs font-medium transition-all duration-200',
                   showKeywordComments
-                    ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
-                    : 'border-border/60 bg-transparent text-muted-foreground hover:text-foreground'
+                    ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-lg shadow-cyan-500/10 hover:bg-cyan-500/20'
+                    : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20 hover:text-white'
                 )}
               >
                 В комментариях
@@ -113,21 +142,18 @@ function CommentsFiltersPanel({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onToggleKeywordPosts(!showKeywordPosts)}
+                onClick={handleToggleKeywordPostsClick}
                 className={cn(
-                  'h-9 rounded-full px-4 text-xs font-medium border transition-all',
+                  'h-9 rounded-full border px-4 font-mono-accent text-xs font-medium transition-all duration-200',
                   showKeywordPosts
-                    ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
-                    : 'border-border/60 bg-transparent text-muted-foreground hover:text-foreground'
+                    ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-lg shadow-cyan-500/10 hover:bg-cyan-500/20'
+                    : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20 hover:text-white'
                 )}
               >
                 В постах
               </Button>
             </div>
-            <Badge
-              variant="secondary"
-              className="h-6 px-2 text-[10px] bg-muted text-muted-foreground border-0 ml-auto sm:ml-0"
-            >
+            <Badge className="ml-auto h-6 border-0 bg-slate-800/50 px-2 font-mono-accent text-[10px] text-slate-400 sm:ml-0">
               Доступно {keywordsCount} ключей
             </Badge>
           </>
@@ -135,6 +161,6 @@ function CommentsFiltersPanel({
       </div>
     </div>
   )
-}
+})
 
 export default CommentsFiltersPanel
