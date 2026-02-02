@@ -80,15 +80,18 @@ function GroupsTableCard({
   const currentSortLabel = sortOptions.find((o) => o.key === sortState?.key)?.label || 'Сортировка'
 
   return (
-    <Card className="overflow-hidden rounded-xl border border-border shadow-sm">
-      <div className="flex flex-col gap-4 border-b bg-muted/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
+    <Card className="relative overflow-hidden rounded-xl border border-white/10 bg-slate-900/50 shadow-lg backdrop-blur-sm">
+      {/* Top border glow */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
+
+      {/* Header */}
+      <div className="flex flex-col gap-4 border-b border-white/5 bg-slate-800/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold tracking-tight">Список групп</h2>
+          <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-white">
+            Список групп
+          </h2>
           {!isLoading && (
-            <Badge
-              variant="secondary"
-              className="bg-background/50 px-2 py-0.5 text-xs font-normal text-muted-foreground"
-            >
+            <Badge className="border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-mono-accent text-xs text-cyan-400">
               {badgeText} {getCounterLabel(totalCount)}
             </Badge>
           )}
@@ -99,24 +102,35 @@ function GroupsTableCard({
             value={searchTerm}
             onChange={onSearchChange}
             placeholder="Поиск..."
-            className="h-9 w-full sm:w-[250px]"
+            className="h-10 w-full border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 sm:w-[250px]"
           />
 
           {hasGroups && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 gap-2 border-white/10 bg-slate-800/50 text-slate-300 hover:border-cyan-400/50 hover:bg-slate-800 hover:text-white"
+                >
                   <ArrowUpDown className="size-4" />
-                  <span className="truncate max-w-[100px]">{currentSortLabel}</span>
+                  <span className="max-w-[100px] truncate">{currentSortLabel}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent
+                align="end"
+                className="border-white/10 bg-slate-900/95 backdrop-blur-xl"
+              >
                 {sortOptions.map((option) => (
-                  <DropdownMenuItem key={option.key} onClick={() => requestSort(option.key)}>
+                  <DropdownMenuItem
+                    key={option.key}
+                    onClick={() => requestSort(option.key)}
+                    className="text-slate-300 hover:bg-white/5 hover:text-white"
+                  >
                     {option.label}
                     {sortState?.key === option.key && (
-                      <span className="ml-auto text-xs text-muted-foreground">
-                        {sortState.direction === 'asc' ? ' (А-Я)' : ' (Я-А)'}
+                      <span className="ml-auto font-mono-accent text-xs text-cyan-400">
+                        {sortState.direction === 'asc' ? ' ↑' : ' ↓'}
                       </span>
                     )}
                   </DropdownMenuItem>
@@ -131,7 +145,7 @@ function GroupsTableCard({
               size="sm"
               onClick={onClear}
               disabled={clearDisabled}
-              className="h-9 text-muted-foreground hover:text-destructive"
+              className="h-10 text-slate-400 transition-colors duration-200 hover:bg-red-500/10 hover:text-red-400"
               title="Очистить список"
             >
               <Trash2 className="mr-2 size-4" />
@@ -141,6 +155,7 @@ function GroupsTableCard({
         </div>
       </div>
 
+      {/* Content */}
       <CardContent className="p-4 md:p-6">
         {isLoading && !hasGroups && (
           <div className="py-8">
@@ -159,23 +174,30 @@ function GroupsTableCard({
 
         {hasGroups && !isLoading && !hasFilteredGroups && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="text-sm text-muted-foreground">
-              По запросу «{searchTerm}» ничего не найдено
+            <div className="text-sm text-slate-400">
+              По запросу «<span className="font-mono-accent text-cyan-400">{searchTerm}</span>»
+              ничего не найдено
             </div>
           </div>
         )}
 
         {hasFilteredGroups && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {sortedGroups.map((group) => (
-              <GroupCard key={group.id} group={group} onDelete={onDelete} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {sortedGroups.map((group, index) => (
+              <div
+                key={group.id}
+                className="animate-in fade-in-0 slide-in-from-bottom-2 duration-500"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <GroupCard group={group} onDelete={onDelete} />
+              </div>
             ))}
           </div>
         )}
 
         {isLoadingMore && (
           <div className="flex justify-center py-4">
-            <span className="text-sm text-muted-foreground">Загрузка...</span>
+            <span className="font-mono-accent text-sm text-slate-400">Загрузка...</span>
           </div>
         )}
       </CardContent>

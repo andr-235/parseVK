@@ -5,7 +5,7 @@ import { useTableSorting } from '@/shared/hooks'
 import type { TableColumn } from '@/types'
 import { Spinner } from '@/shared/ui/spinner'
 import { Card, CardContent } from '@/shared/ui/card'
-import { Search, X, RotateCcw, ArrowUpDown, Plus } from 'lucide-react'
+import { Search, X, RotateCcw, ArrowUpDown, Plus, MapPin, Users as UsersIcon } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,64 +35,102 @@ const RegionGroupCard = memo(function RegionGroupCard({
   renderMembersCount,
 }: RegionGroupCardProps) {
   return (
-    <div
-      className={`relative flex flex-col gap-3 rounded-lg border p-4 transition-colors ${isSelected ? 'bg-primary/5 border-primary/20' : 'bg-card hover:bg-muted/30'}`}
-    >
-      <div className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggleSelection(group.id)}
-          className="mt-1 size-4 shrink-0 cursor-pointer rounded border-primary text-primary focus:ring-primary"
-        />
+    <div className="group relative">
+      {/* Subtle glow on selection */}
+      {isSelected && (
+        <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 blur-lg" />
+      )}
 
-        <div className="min-w-0 flex-1 space-y-1">
-          <a
-            href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block font-medium leading-tight text-foreground hover:text-primary hover:underline truncate"
-            title={group.name}
+      <div
+        className={`relative flex flex-col gap-3 rounded-lg border p-4 transition-all duration-300 ${
+          isSelected
+            ? 'border-cyan-500/40 bg-cyan-500/5 shadow-lg shadow-cyan-500/10'
+            : 'border-white/10 bg-slate-900/50 hover:border-white/20 hover:bg-slate-800/50'
+        }`}
+      >
+        {/* Top border glow */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+        <div className="flex items-start gap-3">
+          {/* Custom checkbox */}
+          <div className="relative mt-0.5">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleSelection(group.id)}
+              className="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-white/20 bg-slate-800/50 transition-all duration-200 checked:border-cyan-500 checked:bg-cyan-500 focus:ring-2 focus:ring-cyan-400/20"
+            />
+            <svg
+              className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-white opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={3}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+
+          <div className="min-w-0 flex-1 space-y-1">
+            <a
+              href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block truncate font-monitoring-display text-sm font-medium leading-tight text-white transition-colors duration-200 hover:text-cyan-400 hover:underline"
+              title={group.name}
+            >
+              {group.name}
+            </a>
+            <div className="truncate font-mono-accent text-xs text-slate-500">
+              vk.com/{group.screen_name ?? `club${group.id}`}
+            </div>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="-mr-2 -mt-2 size-6 text-slate-400 transition-colors duration-200 hover:bg-red-500/10 hover:text-red-400"
+            onClick={() => onRemoveGroup(group.id)}
+            disabled={isBulkAdding}
           >
-            {group.name}
-          </a>
-          <div className="text-xs text-muted-foreground truncate">
-            vk.com/{group.screen_name ?? `club${group.id}`}
+            <X className="size-4" />
+          </Button>
+        </div>
+
+        {/* Metrics */}
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <div className="flex items-center gap-2" title="Участники">
+            <div className="flex size-6 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-400">
+              <UsersIcon className="size-3.5" />
+            </div>
+            <span className="font-mono-accent text-xs font-medium text-slate-300">
+              {renderMembersCount(group)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 truncate" title="Город">
+            <MapPin className="size-3.5 shrink-0 text-slate-500" />
+            <span className="truncate font-mono-accent text-xs text-slate-400">
+              {formatCityTitle(group)}
+            </span>
           </div>
         </div>
 
+        {/* Add button */}
         <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 -mr-2 -mt-2 text-muted-foreground hover:text-destructive"
-          onClick={() => onRemoveGroup(group.id)}
+          size="sm"
+          className="group/btn relative h-8 overflow-hidden bg-gradient-to-r from-cyan-500/80 to-blue-500/80 text-xs font-semibold text-white shadow-md shadow-cyan-500/20 transition-all duration-300 hover:from-cyan-500 hover:to-blue-500 hover:shadow-lg hover:shadow-cyan-500/30"
+          onClick={() => {
+            void onAddGroup(group)
+          }}
           disabled={isBulkAdding}
         >
-          <X className="size-4" />
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover/btn:opacity-100" />
+          <span className="relative flex items-center justify-center gap-1.5">
+            <Plus className="size-3" />
+            Добавить
+          </span>
         </Button>
       </div>
-
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <div className="flex items-center gap-1.5" title="Участники">
-          <span className="text-xs font-medium">👥 {renderMembersCount(group)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 truncate max-w-[50%]" title="Город">
-          <span className="text-xs truncate">📍 {formatCityTitle(group)}</span>
-        </div>
-      </div>
-
-      <Button
-        size="sm"
-        variant="secondary"
-        className="w-full h-8 text-xs"
-        onClick={() => {
-          void onAddGroup(group)
-        }}
-        disabled={isBulkAdding}
-      >
-        <Plus className="mr-1.5 size-3" />
-        Добавить
-      </Button>
     </div>
   )
 })
@@ -311,12 +349,19 @@ function RegionGroupsSearchCard({
   const currentSortLabel = columns.find((c) => c.key === sortState?.key)?.header || 'Сортировка'
 
   return (
-    <Card className="overflow-hidden rounded-xl border border-border shadow-sm">
-      <div className="flex flex-col gap-4 border-b bg-muted/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">Поиск по региону</h2>
-          <p className="text-sm text-muted-foreground">
-            Поиск групп в регионе «Еврейская автономная область»
+    <Card className="relative overflow-hidden rounded-xl border border-white/10 bg-slate-900/50 shadow-lg backdrop-blur-sm">
+      {/* Top border glow */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
+
+      {/* Header */}
+      <div className="flex flex-col gap-4 border-b border-white/5 bg-slate-800/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="space-y-1.5">
+          <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-white">
+            Поиск по региону
+          </h2>
+          <p className="text-sm text-slate-400">
+            Поиск групп в регионе{' '}
+            <span className="font-mono-accent text-cyan-400">«Еврейская автономная область»</span>
           </p>
         </div>
 
@@ -325,10 +370,13 @@ function RegionGroupsSearchCard({
             onClick={handleSearchClick}
             disabled={!canSearch}
             size="sm"
-            className="min-w-[140px]"
+            className="group relative h-10 min-w-[140px] overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-[1.02]"
           >
-            {isLoading ? <Spinner className="mr-2 size-4" /> : <Search className="mr-2 size-4" />}
-            Найти группы
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <span className="relative flex items-center justify-center gap-2">
+              {isLoading ? <Spinner className="size-4" /> : <Search className="size-4" />}
+              Найти группы
+            </span>
           </Button>
 
           {(total > 0 || hasResults) && (
@@ -339,51 +387,73 @@ function RegionGroupsSearchCard({
               disabled={isLoading}
               onClick={handleResetClick}
               title="Очистить результаты"
+              className="h-10 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-white"
             >
-              <RotateCcw className="size-4 text-muted-foreground" />
+              <RotateCcw className="size-4" />
             </Button>
           )}
         </div>
       </div>
 
+      {/* Content */}
       <CardContent className="p-0">
-        {error && <div className="p-6 text-sm text-destructive">{error}</div>}
+        {error && (
+          <div className="animate-in slide-in-from-top-2 fade-in-0 m-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <span className="font-mono-accent">⚠</span> {error}
+          </div>
+        )}
 
         {isLoading && !hasResults && (
-          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center py-12">
             <Spinner className="mr-2" />
-            Выполняется поиск групп...
+            <span className="font-mono-accent text-sm text-slate-400">
+              Выполняется поиск групп...
+            </span>
           </div>
         )}
 
         {!isLoading && !hasResults && total > 0 && !error && (
-          <div className="p-6 text-center text-sm text-muted-foreground">
+          <div className="p-6 text-center text-sm text-slate-400">
             Все найденные группы уже добавлены в базу данных.
           </div>
         )}
 
         {!isLoading && !hasResults && total === 0 && !error && (
-          <div className="p-6 text-center text-sm text-muted-foreground">
+          <div className="p-6 text-center text-sm text-slate-400">
             В регионе пока не найдено сообществ, отсутствующих в базе.
           </div>
         )}
 
         {hasResults && (
           <div className="flex flex-col">
-            <div className="flex flex-col gap-3 border-b bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+            {/* Selection controls */}
+            <div className="flex flex-col gap-3 border-b border-white/5 bg-slate-800/20 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
-                    checked={isAllSelected}
-                    disabled={!hasResults || isLoading}
-                    onChange={(event) => toggleSelectAll(event.target.checked)}
-                    className="size-4 rounded border-primary text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm font-medium">Выбрать все</span>
+                <label className="flex cursor-pointer select-none items-center gap-2.5">
+                  <div className="relative">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={isAllSelected}
+                      disabled={!hasResults || isLoading}
+                      onChange={(event) => toggleSelectAll(event.target.checked)}
+                      className="peer size-4 cursor-pointer appearance-none rounded border border-white/20 bg-slate-800/50 transition-all duration-200 checked:border-cyan-500 checked:bg-cyan-500 focus:ring-2 focus:ring-cyan-400/20"
+                    />
+                    <svg
+                      className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-white opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="font-monitoring-display text-sm font-medium text-white">
+                    Выбрать все
+                  </span>
                 </label>
-                <span className="hidden sm:inline text-xs text-muted-foreground">
+                <span className="hidden font-mono-accent text-xs text-slate-500 sm:inline">
                   ({results.length})
                 </span>
               </div>
@@ -391,20 +461,31 @@ function RegionGroupsSearchCard({
               <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-2 border-white/10 bg-slate-800/50 text-slate-300 hover:border-cyan-400/50 hover:bg-slate-800 hover:text-white"
+                    >
                       <ArrowUpDown className="size-3.5" />
-                      <span className="truncate max-w-[100px] text-xs">{currentSortLabel}</span>
+                      <span className="max-w-[100px] truncate text-xs">{currentSortLabel}</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent
+                    align="end"
+                    className="border-white/10 bg-slate-900/95 backdrop-blur-xl"
+                  >
                     {columns
                       .filter((c) => c.sortable)
                       .map((col) => (
-                        <DropdownMenuItem key={col.key} onClick={() => requestSort(col.key)}>
+                        <DropdownMenuItem
+                          key={col.key}
+                          onClick={() => requestSort(col.key)}
+                          className="text-slate-300 hover:bg-white/5 hover:text-white"
+                        >
                           {col.header}
                           {sortState?.key === col.key && (
-                            <span className="ml-auto text-xs text-muted-foreground">
-                              {sortState.direction === 'asc' ? ' (А-Я)' : ' (Я-А)'}
+                            <span className="ml-auto font-mono-accent text-xs text-cyan-400">
+                              {sortState.direction === 'asc' ? ' ↑' : ' ↓'}
                             </span>
                           )}
                         </DropdownMenuItem>
@@ -414,31 +495,39 @@ function RegionGroupsSearchCard({
 
                 <Button
                   type="button"
-                  variant="secondary"
                   size="sm"
-                  className="h-8 text-xs"
+                  className="group relative h-8 overflow-hidden bg-gradient-to-r from-cyan-500/80 to-blue-500/80 text-xs font-semibold text-white shadow-md shadow-cyan-500/20 transition-all duration-300 hover:from-cyan-500 hover:to-blue-500 hover:shadow-lg hover:shadow-cyan-500/30"
                   disabled={isLoading || isBulkAdding || !hasResults}
                   onClick={handleAddGroups}
                 >
-                  {isBulkAdding && <Spinner className="mr-2 size-3" />}
-                  {hasSelection ? `Добавить (${selectionSize})` : 'Добавить все'}
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <span className="relative flex items-center gap-1.5">
+                    {isBulkAdding && <Spinner className="size-3" />}
+                    {hasSelection ? `Добавить (${selectionSize})` : 'Добавить все'}
+                  </span>
                 </Button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-              {sortedResults.map((group) => (
-                <RegionGroupCard
+            {/* Results grid */}
+            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+              {sortedResults.map((group, index) => (
+                <div
                   key={group.id}
-                  group={group}
-                  isSelected={selectedIds.has(group.id)}
-                  isBulkAdding={isBulkAdding}
-                  onToggleSelection={toggleSelection}
-                  onAddGroup={handleAddSingleGroup}
-                  onRemoveGroup={handleRemoveSingleGroup}
-                  formatCityTitle={formatCityTitle}
-                  renderMembersCount={renderMembersCount}
-                />
+                  className="animate-in fade-in-0 slide-in-from-bottom-2 duration-500"
+                  style={{ animationDelay: `${index * 40}ms` }}
+                >
+                  <RegionGroupCard
+                    group={group}
+                    isSelected={selectedIds.has(group.id)}
+                    isBulkAdding={isBulkAdding}
+                    onToggleSelection={toggleSelection}
+                    onAddGroup={handleAddSingleGroup}
+                    onRemoveGroup={handleRemoveSingleGroup}
+                    formatCityTitle={formatCityTitle}
+                    renderMembersCount={renderMembersCount}
+                  />
+                </div>
               ))}
             </div>
           </div>
