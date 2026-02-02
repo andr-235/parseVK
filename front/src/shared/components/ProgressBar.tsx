@@ -59,39 +59,52 @@ function ProgressBar({
 
   const formattedLabel = useMemo(() => label ?? `${Math.round(percentage)}%`, [label, percentage])
 
-  const toneStyle = TONE_STYLES[tone]
+  const toneStyle = useMemo(() => TONE_STYLES[tone], [tone])
 
   return (
-    <div className={cn('flex flex-col gap-2', size === 'small' ? 'text-xs' : 'text-sm', className)}>
+    <div
+      className={cn(
+        'flex flex-col',
+        showLabel && 'gap-2',
+        size === 'small' ? 'text-xs' : 'text-sm',
+        className
+      )}
+    >
       <div
         className={cn(
           'relative w-full overflow-hidden rounded-full border border-border/60 bg-background-secondary/70',
           size === 'small' ? 'h-2.5' : 'h-3.5'
         )}
+        role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={Math.round(percentage)}
-        role="progressbar"
+        aria-valuenow={indeterminate ? undefined : Math.round(percentage)}
+        aria-label={label ?? `Progress: ${Math.round(percentage)}%`}
+        aria-busy={indeterminate}
       >
         {indeterminate ? (
           <motion.div
-            className={cn('absolute left-0 top-0 h-full rounded-full', toneStyle.className)}
-            style={{ backgroundColor: toneStyle.color }}
-            initial={{ width: '0%' }}
-            animate={{ width: '100%' }}
+            className={cn('absolute top-0 h-full rounded-full', toneStyle.className)}
+            style={{
+              backgroundColor: toneStyle.color,
+              width: '30%',
+            }}
+            animate={{
+              left: ['-30%', '100%'],
+            }}
             transition={{
               duration: 1.5,
               repeat: Infinity,
-              ease: 'easeInOut',
-              repeatType: 'reverse',
+              ease: 'linear',
             }}
           />
         ) : (
           <motion.div
             className={cn('absolute left-0 top-0 h-full rounded-full', toneStyle.className)}
-            style={{ backgroundColor: toneStyle.color }}
-            initial={{ width: '0%' }}
-            animate={{ width: `${percentage}%` }}
+            style={{
+              width: `${percentage}%`,
+              backgroundColor: toneStyle.color,
+            }}
             transition={{
               duration: 0.8,
               ease: [0.4, 0, 0.2, 1],
