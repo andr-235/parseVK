@@ -17,12 +17,13 @@ export function SidebarCollapseButton({
       <button
         onClick={onToggle}
         className={cn(
-          'flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+          'group relative flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-slate-400 transition-all duration-300 hover:border-cyan-400/30 hover:text-cyan-400 hover:bg-white/5 hover:shadow-lg hover:shadow-cyan-500/20',
           className
         )}
         aria-label="Развернуть"
       >
-        <ChevronRight className="h-4 w-4" />
+        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-cyan-500/0 to-blue-500/0 opacity-0 transition-opacity duration-300 group-hover:from-cyan-500/10 group-hover:to-blue-500/10 group-hover:opacity-100" />
+        <ChevronRight className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
       </button>
     )
   }
@@ -31,12 +32,13 @@ export function SidebarCollapseButton({
     <button
       onClick={onToggle}
       className={cn(
-        'flex h-6 w-6 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+        'group relative flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-slate-400 transition-all duration-300 hover:border-cyan-400/30 hover:text-cyan-400 hover:bg-white/5 hover:shadow-lg hover:shadow-cyan-500/20',
         className
       )}
       aria-label="Свернуть"
     >
-      <ChevronLeft className="h-4 w-4" />
+      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-cyan-500/0 to-blue-500/0 opacity-0 transition-opacity duration-300 group-hover:from-cyan-500/10 group-hover:to-blue-500/10 group-hover:opacity-100" />
+      <ChevronLeft className="relative h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
     </button>
   )
 }

@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom'
-import { Badge } from '@/shared/ui/badge'
 import { getNavItemClasses } from './utils'
 import type { SidebarNavItem as SidebarNavItemType } from './types'
 
@@ -10,15 +9,18 @@ interface SidebarNavItemProps {
 export function SidebarNavItem({ item }: SidebarNavItemProps) {
   return (
     <NavLink to={item.path} className={({ isActive }) => getNavItemClasses(isActive)}>
-      <div className="flex flex-1 items-center justify-between">
-        <span>{item.label}</span>
+      <div className="relative flex flex-1 items-center justify-between animate-in fade-in-0 slide-in-from-left-2 duration-500">
+        <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+          {item.label}
+        </span>
         {item.badge && (
-          <Badge
-            variant="secondary"
-            className="ml-auto h-5 px-1.5 min-w-5 flex items-center justify-center text-[10px]"
-          >
+          <span className="relative inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/50 px-2 py-0.5 text-[10px] text-cyan-400 backdrop-blur-sm font-mono-accent ml-auto">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-cyan-500" />
+            </span>
             {item.badge}
-          </Badge>
+          </span>
         )}
       </div>
     </NavLink>

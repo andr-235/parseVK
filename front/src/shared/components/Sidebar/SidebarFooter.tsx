@@ -17,8 +17,11 @@ interface SidebarFooterProps {
 
 export function SidebarFooter({ items, isCollapsed, onExpand, footerAction }: SidebarFooterProps) {
   return (
-    <div className="border-t border-sidebar-border p-4">
-      <div className="space-y-1">
+    <div className="relative border-t border-white/10 p-4">
+      {/* Top Accent Line */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
+
+      <div className="space-y-1 animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         {items.map((item) => (
           <NavLink
             key={item.path}
@@ -33,20 +36,32 @@ export function SidebarFooter({ items, isCollapsed, onExpand, footerAction }: Si
       </div>
 
       {footerAction && (
-        <div className={cn('mt-4 flex', isCollapsed ? 'justify-center' : 'justify-start')}>
+        <div
+          className={cn(
+            'mt-4 flex animate-in fade-in-0 duration-700 delay-100',
+            isCollapsed ? 'justify-center' : 'justify-start'
+          )}
+        >
           {footerAction}
         </div>
       )}
 
       <div
-        className={cn('mt-4 flex items-center', isCollapsed ? 'justify-center' : 'justify-between')}
+        className={cn(
+          'mt-4 flex items-center animate-in fade-in-0 duration-700 delay-200',
+          isCollapsed ? 'justify-center' : 'justify-between'
+        )}
       >
         {!isCollapsed && <ThemeToggle />}
         {isCollapsed && <SidebarCollapseButton isCollapsed={isCollapsed} onToggle={onExpand} />}
-        {!isCollapsed && <div className="text-xs text-sidebar-foreground/40">v{APP_VERSION}</div>}
+        {!isCollapsed && (
+          <div className="text-[10px] text-slate-500 font-mono-accent tracking-wider">
+            v{APP_VERSION}
+          </div>
+        )}
       </div>
       {isCollapsed && (
-        <div className="mt-2 flex justify-center">
+        <div className="mt-2 flex justify-center animate-in fade-in-0 duration-700 delay-300">
           <ThemeToggle />
         </div>
       )}
