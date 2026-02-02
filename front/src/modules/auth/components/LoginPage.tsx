@@ -205,7 +205,7 @@ function LoginPage() {
                 </>
               ) : (
                 <>
-                  Intelligence <span className="text-cyan-400">Hub</span>
+                  Центр <span className="text-cyan-400">аналитики</span>
                 </>
               )}
             </h1>

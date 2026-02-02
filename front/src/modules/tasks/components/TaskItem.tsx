@@ -99,138 +99,158 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
   }
 
   return (
-    <Card
-      onClick={() => onSelect(task.id)}
-      className="group relative overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-soft-md hover:border-border/80"
-    >
-      <div className="flex flex-col gap-4 p-5">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1.5 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-lg leading-none truncate text-foreground">
-                {task.title || `Задача #${task.id}`}
-              </h3>
-              <Badge
-                variant="outline"
-                className={cn(
-                  'gap-1.5 h-6 rounded-full text-[11px] font-semibold tracking-wide',
-                  getStatusColor(task.status)
-                )}
-              >
-                {getStatusIcon(task.status)}
-                {getTaskStatusText(task.status)}
-              </Badge>
-            </div>
+    <div className="relative">
+      {/* Glow Effect */}
+      <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-50" />
 
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" />
-                <span>
-                  {task.createdAt
-                    ? format(new Date(task.createdAt), 'd MMM HH:mm', { locale: ru })
-                    : '—'}
-                </span>
+      <Card
+        onClick={() => onSelect(task.id)}
+        className="group relative overflow-hidden transition-all duration-300 cursor-pointer border border-white/10 bg-slate-900/80 backdrop-blur-2xl hover:shadow-xl hover:shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98]"
+      >
+        {/* Top Border Glow */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+
+        <div className="flex flex-col gap-4 p-5">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-monitoring-display font-semibold text-lg leading-none truncate text-white">
+                  {task.title || `Задача #${task.id}`}
+                </h3>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'gap-1.5 h-6 rounded-full text-[11px] font-semibold tracking-wide font-mono-accent',
+                    getStatusColor(task.status)
+                  )}
+                >
+                  {getStatusIcon(task.status)}
+                  {getTaskStatusText(task.status)}
+                </Badge>
               </div>
-              {task.completedAt && (
-                <>
-                  <ArrowRight className="w-3.5 h-3.5 opacity-50" />
-                  <span>{format(new Date(task.completedAt), 'HH:mm', { locale: ru })}</span>
-                </>
-              )}
+
+              <div className="flex items-center gap-3 text-sm text-slate-400 font-mono-accent">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>
+                    {task.createdAt
+                      ? format(new Date(task.createdAt), 'd MMM HH:mm', { locale: ru })
+                      : '—'}
+                  </span>
+                </div>
+                {task.completedAt && (
+                  <>
+                    <ArrowRight className="w-3.5 h-3.5 opacity-50" />
+                    <span>{format(new Date(task.completedAt), 'HH:mm', { locale: ru })}</span>
+                  </>
+                )}
+              </div>
             </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 -mr-2 text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-48 border-white/10 bg-slate-900/95 backdrop-blur-2xl"
+              >
+                {(task.status === 'failed' || task.status === 'completed') && (
+                  <DropdownMenuItem
+                    onClick={handleResume}
+                    className="text-slate-300 hover:text-white"
+                  >
+                    <RotateCw className="w-4 h-4 mr-2" />
+                    Перезапустить
+                  </DropdownMenuItem>
+                )}
+                {isActive && (
+                  <DropdownMenuItem
+                    onClick={handleCheck}
+                    className="text-slate-300 hover:text-white"
+                  >
+                    <RotateCw className="w-4 h-4 mr-2" />
+                    Проверить статус
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  className="text-rose-400 focus:text-rose-400 hover:bg-rose-500/10"
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Удалить
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {(task.status === 'failed' || task.status === 'completed') && (
-                <DropdownMenuItem onClick={handleResume}>
-                  <RotateCw className="w-4 h-4 mr-2" />
-                  Перезапустить
-                </DropdownMenuItem>
-              )}
-              {isActive && (
-                <DropdownMenuItem onClick={handleCheck}>
-                  <RotateCw className="w-4 h-4 mr-2" />
-                  Проверить статус
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                className="text-rose-500 focus:text-rose-500"
-                onClick={handleDelete}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Удалить
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Progress */}
-        {isActive ? (
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs font-medium text-muted-foreground">
-              <span>Прогресс</span>
-              <span>{percent}%</span>
+          {/* Progress */}
+          {isActive ? (
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-medium text-slate-400 font-mono-accent">
+                <span>Прогресс</span>
+                <span className="text-cyan-400">{percent}%</span>
+              </div>
+              <ProgressBar
+                current={progress.processed}
+                total={progress.total}
+                tone={progressTone}
+                size="small"
+                showLabel={false}
+                className="gap-1.5"
+              />
+              <div className="flex justify-between text-xs text-slate-500 font-mono-accent">
+                <span>
+                  Обработано: {progress.processed} из {progress.total}
+                </span>
+                {progress.failed > 0 && (
+                  <span className="text-rose-400">Ошибок: {progress.failed}</span>
+                )}
+              </div>
             </div>
-            <ProgressBar
-              current={progress.processed}
-              total={progress.total}
-              tone={progressTone}
-              size="small"
-              showLabel={false}
-              className="gap-1.5"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>
-                Обработано: {progress.processed} из {progress.total}
+          ) : (
+            <Separator className="bg-white/10" />
+          )}
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-4 pt-1">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500 flex items-center gap-1.5 font-mono-accent uppercase tracking-wider">
+                <Users className="w-3.5 h-3.5" />
+                Группы
               </span>
-              {progress.failed > 0 && (
-                <span className="text-rose-500">Ошибок: {progress.failed}</span>
-              )}
+              <span className="text-sm font-medium text-slate-200">{groupsCount}</span>
+            </div>
+
+            <div className="flex flex-col gap-1 border-l border-white/10 pl-4">
+              <span className="text-xs text-slate-500 flex items-center gap-1.5 font-mono-accent uppercase tracking-wider">
+                <FileText className="w-3.5 h-3.5" />
+                Посты
+              </span>
+              <span className="text-sm font-medium text-slate-200">{postsCount}</span>
+            </div>
+
+            <div className="flex flex-col gap-1 border-l border-white/10 pl-4">
+              <span className="text-xs text-slate-500 flex items-center gap-1.5 font-mono-accent uppercase tracking-wider">
+                <MessageSquare className="w-3.5 h-3.5" />
+                Комменты
+              </span>
+              <span className="text-sm font-medium text-slate-200">{commentsCount}</span>
             </div>
           </div>
-        ) : (
-          <Separator className="bg-border/50" />
-        )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-4 pt-1">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5" />
-              Группы
-            </span>
-            <span className="text-sm font-medium">{groupsCount}</span>
-          </div>
-
-          <div className="flex flex-col gap-1 border-l border-border/30 pl-4">
-            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5" />
-              Посты
-            </span>
-            <span className="text-sm font-medium">{postsCount}</span>
-          </div>
-
-          <div className="flex flex-col gap-1 border-l border-border/30 pl-4">
-            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5" />
-              Комменты
-            </span>
-            <span className="text-sm font-medium">{commentsCount}</span>
-          </div>
+          {/* Bottom Accent Line */}
+          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-500/50 via-blue-500/50 to-purple-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   )
 })
 
