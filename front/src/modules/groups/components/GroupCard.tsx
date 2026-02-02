@@ -69,7 +69,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
         </div>
 
         {/* Content - GROWS TO FILL SPACE */}
-        <CardContent className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+        <CardContent className="flex flex-1 flex-col gap-4 overflow-hidden p-4 pt-5">
           {/* Status - optional, max 2 lines */}
           {group.status && (
             <div className="shrink-0 rounded-md border border-cyan-500/20 bg-cyan-500/5 p-2.5">
@@ -92,7 +92,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
 
           {/* Description - max 3 lines with ellipsis */}
           {group.description && (
-            <div className="min-h-0 flex-1">
+            <div className="min-h-0 flex-1 pt-1">
               <p
                 className="line-clamp-3 text-xs leading-relaxed text-slate-400"
                 title={group.description}
