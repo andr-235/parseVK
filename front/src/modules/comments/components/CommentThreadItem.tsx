@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils'
@@ -16,7 +16,7 @@ interface CommentThreadItemProps {
   onReplyClick?: (commentId: number) => void
 }
 
-export function CommentThreadItem({
+export const CommentThreadItem = memo(function CommentThreadItem({
   item,
   depth,
   maxDepth,
@@ -27,6 +27,15 @@ export function CommentThreadItem({
   const hasNestedThreads = item.threadItems && item.threadItems.length > 0
   const canExpand = depth < maxDepth && hasNestedThreads
 
+  // Memoized handlers (rerender optimization)
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((prev) => !prev)
+  }, [])
+
+  const handleExpandNested = useCallback(() => {
+    setIsExpanded(true)
+  }, [])
+
   const authorName = item.author
     ? `${item.author.firstName} ${item.author.lastName}`.trim()
     : `ID${item.fromId}`
@@ -35,89 +44,92 @@ export function CommentThreadItem({
 
   return (
     <div className={cn('relative', depth > 0 && 'ml-6')}>
-      {/* Линия связи для вложенных элементов */}
+      {/* Connection line for nested items */}
       {depth > 0 && (
-        <div className={cn('absolute left-0 top-0 bottom-0 w-px bg-border/40', '-translate-x-6')} />
+        <div className={cn('absolute bottom-0 left-0 top-0 w-px bg-white/10', '-translate-x-6')} />
       )}
 
       <div
         className={cn(
-          'group relative rounded-lg border border-border/30 bg-card/50 p-3 transition-all hover:border-border/60 hover:bg-card',
+          'group relative rounded-lg border border-white/10 bg-slate-900/30 p-3 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-slate-900/40',
           depth > 0 && 'ml-2'
         )}
       >
-        {/* Заголовок комментария */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* Comment header */}
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             {canExpand && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 shrink-0"
-                onClick={() => setIsExpanded(!isExpanded)}
+                className="size-6 shrink-0 text-slate-400 hover:bg-white/5 hover:text-white"
+                onClick={handleToggleExpand}
               >
                 {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="size-4" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="size-4" />
                 )}
               </Button>
             )}
 
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               {item.author?.logo && (
                 <img
                   src={item.author.logo}
                   alt={authorName}
-                  className="h-6 w-6 rounded-full border border-border/40"
+                  className="size-6 rounded-full border border-white/10"
+                  loading="lazy"
                 />
               )}
-              <span className="text-sm font-semibold text-foreground truncate">{authorName}</span>
+              <span className="truncate font-monitoring-display text-sm font-semibold text-white">
+                {authorName}
+              </span>
               {item.replyToUser && item.replyToUser !== item.fromId && (
-                <span className="text-xs text-muted-foreground">
+                <span className="font-mono-accent text-xs text-slate-500">
                   → ответ на ID{item.replyToUser}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             {item.likesCount != null && item.likesCount > 0 && (
-              <span className="text-xs text-muted-foreground">❤️ {item.likesCount}</span>
+              <span className="font-mono-accent text-xs text-slate-500">❤️ {item.likesCount}</span>
             )}
-            <time dateTime={item.publishedAt} className="text-xs text-muted-foreground">
+            <time dateTime={item.publishedAt} className="font-mono-accent text-xs text-slate-400">
               {formatDateTime(item.publishedAt)}
             </time>
           </div>
         </div>
 
-        {/* Текст комментария */}
-        <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap break-words mb-2">
+        {/* Comment text */}
+        <div className="mb-2 whitespace-pre-wrap break-words font-monitoring-body text-sm leading-relaxed text-slate-200">
           {highlightKeywords(item.text, keywords)}
         </div>
 
-        {/* Вложения */}
+        {/* Attachments */}
         {attachments.length > 0 && (
           <div className="mb-2">
             <CommentAttachments attachments={attachments} />
           </div>
         )}
 
-        {/* Индикатор вложенных тредов */}
+        {/* Nested threads indicator */}
         {hasNestedThreads && !isExpanded && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => setIsExpanded(true)}
+            className="h-7 font-mono-accent text-xs text-slate-400 hover:bg-white/5 hover:text-white"
+            onClick={handleExpandNested}
           >
-            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+            <MessageSquare className="mr-1.5 size-3.5" />
             {item.threadItems?.length} ответов
           </Button>
         )}
       </div>
 
-      {/* Вложенные треды */}
+      {/* Nested threads */}
       {isExpanded && hasNestedThreads && item.threadItems && (
         <div className="mt-2 space-y-2">
           {item.threadItems.map((nestedItem, index) => (
@@ -134,4 +146,4 @@ export function CommentThreadItem({
       )}
     </div>
   )
-}
+})

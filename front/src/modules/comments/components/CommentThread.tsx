@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
@@ -14,7 +14,7 @@ interface CommentThreadProps {
   onReplyClick?: (commentId: number) => void
 }
 
-export function CommentThread({
+export const CommentThread = memo(function CommentThread({
   comment,
   keywords = [],
   maxDepth = 3,
@@ -22,6 +22,11 @@ export function CommentThread({
   onReplyClick,
 }: CommentThreadProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+
+  // Memoized handler (rerender optimization)
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((prev) => !prev)
+  }, [])
 
   const threadItems = normalizeThreadItems(comment.threadItems)
   const hasThreads = threadItems && threadItems.length > 0
@@ -32,29 +37,32 @@ export function CommentThread({
   }
 
   return (
-    <div className="mt-3 border-t border-border/30 pt-3">
-      <div className="flex items-center justify-between mb-2">
+    <div className="mt-3 border-t border-white/10 pt-3">
+      <div className="mb-2 flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 text-xs font-medium text-muted-foreground hover:text-foreground"
-          onClick={() => setIsExpanded(!isExpanded)}
+          className="h-8 font-mono-accent text-xs font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+          onClick={handleToggleExpand}
         >
           {isExpanded ? (
-            <ChevronUp className="h-3.5 w-3.5 mr-1.5" />
+            <ChevronUp className="mr-1.5 size-3.5" />
           ) : (
-            <ChevronDown className="h-3.5 w-3.5 mr-1.5" />
+            <ChevronDown className="mr-1.5 size-3.5" />
           )}
-          <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+          <MessageSquare className="mr-1.5 size-3.5" />
           Ответы в треде
-          <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] font-normal">
+          <Badge
+            variant="secondary"
+            className="ml-2 h-5 border-0 bg-cyan-500/10 px-1.5 font-mono-accent text-[10px] font-normal text-cyan-400"
+          >
             {threadCount}
           </Badge>
         </Button>
       </div>
 
       {isExpanded && threadItems && (
-        <div className="space-y-2 mt-2">
+        <div className="mt-2 space-y-2">
           {threadItems.map((item, index) => (
             <CommentThreadItem
               key={`${item.vkCommentId}-${index}`}
@@ -69,4 +77,4 @@ export function CommentThread({
       )}
     </div>
   )
-}
+})
