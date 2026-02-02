@@ -8,7 +8,7 @@ interface ProgressBarProps {
   label?: string
   showLabel?: boolean
   size?: 'default' | 'small'
-  tone?: 'primary' | 'success' | 'warning' | 'danger'
+  tone?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
   className?: string
   indeterminate?: boolean
 }
@@ -24,20 +24,24 @@ const clampPercentage = (value: number): number => {
 
 const TONE_STYLES = {
   primary: {
-    className: 'bg-accent-primary',
-    color: '#3b82f6',
+    gradient: 'from-cyan-500 to-blue-500',
+    glow: 'shadow-cyan-500/25',
   },
   success: {
-    className: 'bg-accent-success',
-    color: '#22c55e',
+    gradient: 'from-green-500 to-emerald-500',
+    glow: 'shadow-green-500/25',
   },
   warning: {
-    className: 'bg-accent-warning',
-    color: '#f59e0b',
+    gradient: 'from-amber-500 to-orange-500',
+    glow: 'shadow-amber-500/25',
   },
   danger: {
-    className: 'bg-accent-danger',
-    color: '#ef4444',
+    gradient: 'from-red-500 to-rose-500',
+    glow: 'shadow-red-500/25',
+  },
+  info: {
+    gradient: 'from-sky-500 to-blue-500',
+    glow: 'shadow-sky-500/25',
   },
 } as const
 
@@ -62,18 +66,11 @@ function ProgressBar({
   const toneStyle = useMemo(() => TONE_STYLES[tone], [tone])
 
   return (
-    <div
-      className={cn(
-        'flex flex-col',
-        showLabel && 'gap-2',
-        size === 'small' ? 'text-xs' : 'text-sm',
-        className
-      )}
-    >
+    <div className={cn('flex flex-col', showLabel && 'gap-2', className)}>
       <div
         className={cn(
-          'relative w-full overflow-hidden rounded-full border border-border/60 bg-background-secondary/70',
-          size === 'small' ? 'h-2.5' : 'h-3.5'
+          'relative w-full overflow-hidden rounded-full border border-white/10 bg-slate-900/50 backdrop-blur-sm',
+          size === 'small' ? 'h-2' : 'h-3'
         )}
         role="progressbar"
         aria-valuemin={0}
@@ -84,11 +81,12 @@ function ProgressBar({
       >
         {indeterminate ? (
           <motion.div
-            className={cn('absolute top-0 h-full rounded-full', toneStyle.className)}
-            style={{
-              backgroundColor: toneStyle.color,
-              width: '30%',
-            }}
+            className={cn(
+              'absolute top-0 h-full rounded-full bg-gradient-to-r shadow-lg',
+              toneStyle.gradient,
+              toneStyle.glow
+            )}
+            style={{ width: '30%' }}
             animate={{
               left: ['-30%', '100%'],
             }}
@@ -100,11 +98,12 @@ function ProgressBar({
           />
         ) : (
           <motion.div
-            className={cn('absolute left-0 top-0 h-full rounded-full', toneStyle.className)}
-            style={{
-              width: `${percentage}%`,
-              backgroundColor: toneStyle.color,
-            }}
+            className={cn(
+              'absolute left-0 top-0 h-full rounded-full bg-gradient-to-r shadow-lg',
+              toneStyle.gradient,
+              toneStyle.glow
+            )}
+            style={{ width: `${percentage}%` }}
             transition={{
               duration: 0.8,
               ease: [0.4, 0, 0.2, 1],
@@ -114,7 +113,7 @@ function ProgressBar({
       </div>
       {showLabel && (
         <motion.div
-          className="font-medium text-text-secondary"
+          className="font-mono-accent text-xs text-slate-400"
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
