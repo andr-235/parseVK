@@ -1,7 +1,6 @@
 import { Users, ExternalLink, Trash2, Lock } from 'lucide-react'
 import { Card, CardContent, CardFooter } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
-import { ExpandableText } from '@/shared/components/ExpandableText'
 import type { Group } from '@/types'
 
 interface GroupCardProps {
@@ -19,7 +18,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
   const link = `https://vk.com/${group.screenName || `club${group.vkId}`}`
 
   return (
-    <div className="group relative">
+    <div className="group relative h-full">
       {/* Subtle glow on hover only */}
       <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-cyan-500/0 via-blue-500/0 to-purple-500/0 opacity-0 blur-xl transition-all duration-500 group-hover:from-cyan-500/20 group-hover:via-blue-500/20 group-hover:to-purple-500/20 group-hover:opacity-100" />
 
@@ -27,8 +26,8 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
         {/* Top border glow */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-        {/* Header with avatar */}
-        <div className="flex items-start gap-4 border-b border-white/5 bg-slate-800/30 p-4">
+        {/* Header with avatar - FIXED HEIGHT */}
+        <div className="flex shrink-0 items-start gap-3 border-b border-white/5 bg-slate-800/30 p-4">
           <div className="relative shrink-0">
             {group.photo50 ? (
               <img
@@ -51,75 +50,84 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
           </div>
 
           <div className="min-w-0 flex-1">
+            {/* Title - max 2 lines with ellipsis */}
             <h3
-              className="font-monitoring-display truncate text-base font-semibold text-white transition-colors duration-200 group-hover:text-cyan-400"
+              className="font-monitoring-display line-clamp-2 text-base font-semibold leading-tight text-white transition-colors duration-200 group-hover:text-cyan-400"
               title={group.name}
             >
               {group.name}
             </h3>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-              <span className="font-mono-accent text-slate-400">
+            {/* Metadata - single line */}
+            <div className="mt-1.5 flex items-center gap-2 text-xs">
+              <span className="font-mono-accent text-slate-400 truncate">
                 {GROUP_TYPE_LABELS[group.type || ''] || group.type || 'Группа'}
               </span>
               <span className="text-slate-600">•</span>
-              <span className="font-mono-accent text-slate-500">ID: {group.vkId}</span>
+              <span className="font-mono-accent text-slate-500 truncate">ID: {group.vkId}</span>
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <CardContent className="flex flex-1 flex-col gap-3 p-4 text-sm">
+        {/* Content - GROWS TO FILL SPACE */}
+        <CardContent className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+          {/* Status - optional, max 2 lines */}
           {group.status && (
-            <div className="rounded-md border border-cyan-500/20 bg-cyan-500/5 p-2.5 text-xs italic text-slate-300">
-              "{group.status}"
+            <div className="shrink-0 rounded-md border border-cyan-500/20 bg-cyan-500/5 p-2.5">
+              <p className="line-clamp-2 text-xs italic leading-snug text-slate-300">
+                "{group.status}"
+              </p>
             </div>
           )}
 
-          <div className="space-y-2.5">
-            {/* Members count with icon */}
-            <div className="flex items-center gap-2">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
-                <Users className="size-4" />
-              </div>
-              <span className="font-monitoring-display text-base font-semibold text-white">
-                {group.membersCount?.toLocaleString('ru-RU') ?? 0}
-              </span>
-              <span className="text-xs text-slate-400">участников</span>
+          {/* Members count - fixed height */}
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
+              <Users className="size-4" />
             </div>
-
-            {group.description && (
-              <div className="text-xs text-slate-400">
-                <ExpandableText text={group.description} maxLength={80} />
-              </div>
-            )}
+            <span className="font-monitoring-display text-base font-semibold text-white">
+              {group.membersCount?.toLocaleString('ru-RU') ?? 0}
+            </span>
+            <span className="text-xs text-slate-400">участников</span>
           </div>
+
+          {/* Description - max 3 lines with ellipsis */}
+          {group.description && (
+            <div className="min-h-0 flex-1">
+              <p
+                className="line-clamp-3 text-xs leading-relaxed text-slate-400"
+                title={group.description}
+              >
+                {group.description}
+              </p>
+            </div>
+          )}
         </CardContent>
 
-        {/* Footer actions */}
-        <CardFooter className="flex items-center justify-between gap-2 border-t border-white/5 bg-slate-900/30 p-3">
+        {/* Footer actions - FIXED HEIGHT, PINNED TO BOTTOM */}
+        <CardFooter className="flex shrink-0 items-center justify-between gap-2 border-t border-white/5 bg-slate-900/30 p-3">
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-cyan-400"
+            className="h-8 flex-1 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-cyan-400"
             onClick={() => window.open(link, '_blank')}
           >
             <ExternalLink className="mr-1.5 size-3.5" />
-            Открыть
+            <span className="truncate">Открыть</span>
           </Button>
 
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 text-slate-400 transition-colors duration-200 hover:bg-red-500/10 hover:text-red-400"
+            className="h-8 flex-1 text-slate-400 transition-colors duration-200 hover:bg-red-500/10 hover:text-red-400"
             onClick={() => onDelete(group.id)}
           >
             <Trash2 className="mr-1.5 size-3.5" />
-            Удалить
+            <span className="truncate">Удалить</span>
           </Button>
         </CardFooter>
 
         {/* Bottom accent line on hover */}
-        <div className="h-0.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="h-0.5 shrink-0 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       </Card>
     </div>
   )

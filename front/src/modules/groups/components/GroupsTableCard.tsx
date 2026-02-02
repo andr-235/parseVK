@@ -186,7 +186,7 @@ function GroupsTableCard({
             {sortedGroups.map((group, index) => (
               <div
                 key={group.id}
-                className="animate-in fade-in-0 slide-in-from-bottom-2 duration-500"
+                className="h-full animate-in fade-in-0 slide-in-from-bottom-2 duration-500"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <GroupCard group={group} onDelete={onDelete} />
