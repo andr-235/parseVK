@@ -1,11 +1,11 @@
+import { memo, useCallback, useMemo, useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import type { Comment, Keyword } from '@/types'
 import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
-import { ChevronDown, ChevronUp } from 'lucide-react'
 import { CommentAttachments } from './CommentAttachments'
 import CommentCard from './CommentCard'
-import { useState, useMemo } from 'react'
 import { normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
 import { cn } from '@/shared/utils'
 
@@ -28,7 +28,7 @@ interface PostGroupCardProps {
   showKeywordPosts?: boolean
 }
 
-export function PostGroupCard({
+export const PostGroupCard = memo(function PostGroupCard({
   postText,
   postAttachments,
   postGroup,
@@ -41,6 +41,15 @@ export function PostGroupCard({
 }: PostGroupCardProps) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [isPostTextExpanded, setIsPostTextExpanded] = useState(false)
+
+  // Memoized handlers (rerender optimization)
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((prev) => !prev)
+  }, [])
+
+  const handleTogglePostText = useCallback(() => {
+    setIsPostTextExpanded((prev) => !prev)
+  }, [])
 
   const postKeywords = useMemo(() => {
     if (!postText) return []
@@ -63,25 +72,35 @@ export function PostGroupCard({
   }, [postAttachments])
 
   return (
-    <div className="border border-border/40 rounded-xl overflow-hidden bg-card mb-4">
+    <div className="mb-4 overflow-hidden rounded-xl border border-white/10 bg-slate-900/30 backdrop-blur-sm">
       {/* Post Header/Content */}
-      <div className="p-4 bg-muted/10 border-b border-border/40">
-        <div className="flex items-start justify-between gap-4 mb-3">
+      <div className="border-b border-white/5 bg-slate-800/30 p-4">
+        <div className="mb-3 flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
             {postGroup?.photo && (
-              <img src={postGroup.photo} alt="" className="w-6 h-6 rounded-full" />
+              <img
+                src={postGroup.photo}
+                alt=""
+                className="size-6 rounded-full border border-white/10"
+                loading="lazy"
+              />
             )}
-            <span className="font-semibold text-sm">{postGroup?.name || 'Группа'}</span>
-            <Badge variant="outline" className="text-[10px] h-5">
+            <span className="font-monitoring-display text-sm font-semibold text-white">
+              {postGroup?.name || 'Группа'}
+            </span>
+            <Badge
+              variant="outline"
+              className="h-5 border-white/10 bg-slate-800/50 font-mono-accent text-[10px] text-slate-400"
+            >
               Контекст поста
             </Badge>
             {postKeywords.length > 0 && (
-              <div className="flex flex-wrap gap-1 ml-2">
+              <div className="ml-2 flex flex-wrap gap-1">
                 {postKeywords.map((kw) => (
                   <Badge
                     key={kw.id}
                     variant="secondary"
-                    className="h-5 px-1.5 text-[9px] bg-yellow-500/10 text-yellow-600 border-0"
+                    className="h-5 border-0 bg-amber-500/10 px-1.5 font-mono-accent text-[9px] text-amber-400"
                   >
                     {kw.word}
                   </Badge>
@@ -93,20 +112,20 @@ export function PostGroupCard({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="h-8 w-8 p-0"
+            onClick={handleToggleExpand}
+            className="size-8 p-0 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
           >
-            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
           </Button>
         </div>
 
         {postText && (
           <div
             className={cn(
-              'text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap break-words cursor-pointer hover:text-foreground transition-colors',
+              'cursor-pointer whitespace-pre-wrap break-words font-monitoring-body text-sm leading-relaxed text-slate-200 transition-colors hover:text-white',
               !isPostTextExpanded && 'line-clamp-3'
             )}
-            onClick={() => setIsPostTextExpanded(!isPostTextExpanded)}
+            onClick={handleTogglePostText}
           >
             {highlightKeywords(postText, postKeywords)}
           </div>
@@ -126,8 +145,8 @@ export function PostGroupCard({
       {isExpanded &&
         (showKeywordComments === true ||
           (showKeywordComments === false && showKeywordPosts === false)) && (
-          <div className="divide-y divide-border/40">
-            <div className="px-4 py-2 bg-muted/5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <div className="divide-y divide-white/5">
+            <div className="bg-slate-900/50 px-4 py-2 font-mono-accent text-xs font-medium uppercase tracking-wider text-slate-400">
               Найденные комментарии ({comments.length})
             </div>
             {comments.map(({ comment, matchedKeywords, index }) => (
@@ -148,4 +167,4 @@ export function PostGroupCard({
         )}
     </div>
   )
-}
+})
