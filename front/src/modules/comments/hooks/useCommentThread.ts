@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { Comment } from '@/types'
 import {
   normalizeThreadItems,
@@ -17,20 +17,31 @@ export function useCommentThread(comment: Comment, options: UseCommentThreadOpti
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const [expandedThreads, setExpandedThreads] = useState<Set<number>>(new Set())
 
+  // Memoized thread items processing (rerender optimization)
   const threadItems = useMemo(
     () => normalizeThreadItems(comment.threadItems),
     [comment.threadItems]
   )
 
-  const hasThreads = threadItems !== null && threadItems.length > 0
-  const threadCount = comment.threadCount ?? (hasThreads ? countThreadItems(threadItems) : 0)
-  const maxDepthInThread = hasThreads ? getMaxThreadDepth(threadItems) : 0
+  // Memoized computed values (rerender optimization)
+  const hasThreads = useMemo(() => threadItems !== null && threadItems.length > 0, [threadItems])
 
-  const toggleExpanded = () => {
+  const threadCount = useMemo(
+    () => comment.threadCount ?? (hasThreads ? countThreadItems(threadItems) : 0),
+    [comment.threadCount, hasThreads, threadItems]
+  )
+
+  const maxDepthInThread = useMemo(
+    () => (hasThreads ? getMaxThreadDepth(threadItems) : 0),
+    [hasThreads, threadItems]
+  )
+
+  // Memoized handlers (rerender optimization)
+  const toggleExpanded = useCallback(() => {
     setIsExpanded((prev) => !prev)
-  }
+  }, [])
 
-  const toggleThreadExpanded = (threadId: number) => {
+  const toggleThreadExpanded = useCallback((threadId: number) => {
     setExpandedThreads((prev) => {
       const next = new Set(prev)
       if (next.has(threadId)) {
@@ -40,11 +51,14 @@ export function useCommentThread(comment: Comment, options: UseCommentThreadOpti
       }
       return next
     })
-  }
+  }, [])
 
-  const isThreadExpanded = (threadId: number) => {
-    return expandedThreads.has(threadId)
-  }
+  const isThreadExpanded = useCallback(
+    (threadId: number) => {
+      return expandedThreads.has(threadId)
+    },
+    [expandedThreads]
+  )
 
   return {
     threadItems,

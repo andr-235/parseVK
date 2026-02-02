@@ -63,19 +63,32 @@ export default function useCommentsTableCardController({
   hasDefinedKeywords,
   visibleCount,
 }: UseCommentsTableCardControllerParams) {
+  // Memoized filtered groups (rerender optimization)
   const keywordGroups = useMemo(
     () => groupedComments.filter((group) => group.comments.length > 0),
     [groupedComments]
   )
-  const hasComments = visibleCount > 0
-  const hasKeywordGroups = keywordGroups.length > 0
-  const hasCommentsWithoutKeywords = commentsWithoutKeywords.length > 0
+
+  // Memoized computed values (rerender optimization)
+  const hasComments = useMemo(() => visibleCount > 0, [visibleCount])
+  const hasKeywordGroups = useMemo(() => keywordGroups.length > 0, [keywordGroups.length])
+  const hasCommentsWithoutKeywords = useMemo(
+    () => commentsWithoutKeywords.length > 0,
+    [commentsWithoutKeywords.length]
+  )
+  const totalCategories = useMemo(() => keywordGroups.length, [keywordGroups.length])
+  const hasAnyKeywordFilter = useMemo(
+    () => showKeywordComments || showKeywordPosts,
+    [showKeywordComments, showKeywordPosts]
+  )
+
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     setExpandedCategories((previous) => syncExpandedCategories(previous, keywordGroups))
   }, [keywordGroups])
 
+  // Memoized handler (rerender optimization)
   const toggleCategory = useCallback(
     (category: string) =>
       setExpandedCategories((previous) => ({
@@ -84,9 +97,6 @@ export default function useCommentsTableCardController({
       })),
     []
   )
-
-  const totalCategories = keywordGroups.length
-  const hasAnyKeywordFilter = showKeywordComments || showKeywordPosts
   const subtitle = useMemo(
     () =>
       buildSubtitle({
