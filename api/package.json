@@ -35,7 +35,7 @@
     "@nestjs/cqrs": "^11.0.3",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.3",
-    "@nestjs/platform-express": "^11.1.6",
+    "@nestjs/platform-express": "^11.1.12",
     "@nestjs/platform-socket.io": "^11.1.12",
     "@nestjs/schedule": "^6.0.1",
     "@nestjs/throttler": "^6.4.0",
