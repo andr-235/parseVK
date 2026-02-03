@@ -76,20 +76,33 @@ enum JobLogLevel {
 }
 
 model Task {
-  id             Int      @id @default(autoincrement())
+  id             Int            @id @default(autoincrement())
   title          String
   description    String?
-  completed      Boolean  @default(false)
-  totalItems     Int      @default(0)
-  processedItems Int      @default(0)
-  progress       Float    @default(0)
-  status         String   @default("pending")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  completed      Boolean        @default(false)
+  totalItems     Int            @default(0)
+  processedItems Int            @default(0)
+  progress       Float          @default(0)
+  status         String         @default("pending")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  auditLogs      TaskAuditLog[]
 
   @@index([status, createdAt(sort: Desc)]) // для выборки активных задач с сортировкой
   @@index([createdAt(sort: Desc)]) // для списка задач
   @@index([completed]) // для фильтрации завершенных
+}
+
+model TaskAuditLog {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  eventType String
+  eventData Json?
+  createdAt DateTime @default(now())
+
+  @@index([taskId, createdAt])
+  @@map("task_audit_logs")
 }
 
 model ExportJob {

@@ -16,10 +16,10 @@
  */
 
 import * as runtime from "@prisma/client/runtime/client"
-import type * as Prisma from "../models.js"
-import { type PrismaClient } from "./class.js"
+import type * as Prisma from "../models"
+import { type PrismaClient } from "./class"
 
-export type * from '../models.js'
+export type * from '../models'
 
 export type DMMF = typeof runtime.DMMF
 
@@ -385,6 +385,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   Task: 'Task',
+  TaskAuditLog: 'TaskAuditLog',
   ExportJob: 'ExportJob',
   FriendRecord: 'FriendRecord',
   JobLog: 'JobLog',
@@ -421,7 +422,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "task" | "exportJob" | "friendRecord" | "jobLog" | "user" | "taskAutomationSettings" | "group" | "post" | "comment" | "listing" | "author" | "photoAnalysis" | "keyword" | "monitoringGroup" | "commentKeywordMatch" | "watchlistSettings" | "watchlistAuthor" | "telegramChat" | "telegramUser" | "telegramChatMember" | "telegramSession" | "telegramSettings"
+    modelProps: "task" | "taskAuditLog" | "exportJob" | "friendRecord" | "jobLog" | "user" | "taskAutomationSettings" | "group" | "post" | "comment" | "listing" | "author" | "photoAnalysis" | "keyword" | "monitoringGroup" | "commentKeywordMatch" | "watchlistSettings" | "watchlistAuthor" | "telegramChat" | "telegramUser" | "telegramChatMember" | "telegramSession" | "telegramSettings"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -496,6 +497,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TaskCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TaskCountAggregateOutputType> | number
+        }
+      }
+    }
+    TaskAuditLog: {
+      payload: Prisma.$TaskAuditLogPayload<ExtArgs>
+      fields: Prisma.TaskAuditLogFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TaskAuditLogFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TaskAuditLogFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload>
+        }
+        findFirst: {
+          args: Prisma.TaskAuditLogFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TaskAuditLogFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload>
+        }
+        findMany: {
+          args: Prisma.TaskAuditLogFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload>[]
+        }
+        create: {
+          args: Prisma.TaskAuditLogCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload>
+        }
+        createMany: {
+          args: Prisma.TaskAuditLogCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TaskAuditLogCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload>[]
+        }
+        delete: {
+          args: Prisma.TaskAuditLogDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload>
+        }
+        update: {
+          args: Prisma.TaskAuditLogUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload>
+        }
+        deleteMany: {
+          args: Prisma.TaskAuditLogDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TaskAuditLogUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TaskAuditLogUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload>[]
+        }
+        upsert: {
+          args: Prisma.TaskAuditLogUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskAuditLogPayload>
+        }
+        aggregate: {
+          args: Prisma.TaskAuditLogAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTaskAuditLog>
+        }
+        groupBy: {
+          args: Prisma.TaskAuditLogGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TaskAuditLogGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TaskAuditLogCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TaskAuditLogCountAggregateOutputType> | number
         }
       }
     }
@@ -2108,6 +2183,17 @@ export const TaskScalarFieldEnum = {
 export type TaskScalarFieldEnum = (typeof TaskScalarFieldEnum)[keyof typeof TaskScalarFieldEnum]
 
 
+export const TaskAuditLogScalarFieldEnum = {
+  id: 'id',
+  taskId: 'taskId',
+  eventType: 'eventType',
+  eventData: 'eventData',
+  createdAt: 'createdAt'
+} as const
+
+export type TaskAuditLogScalarFieldEnum = (typeof TaskAuditLogScalarFieldEnum)[keyof typeof TaskAuditLogScalarFieldEnum]
+
+
 export const ExportJobScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
@@ -2537,19 +2623,19 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
-
-
 export const NullableJsonNullValueInput = {
   DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -2647,20 +2733,6 @@ export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
 
 
 /**
- * Reference to a field of type 'ExportJobStatus'
- */
-export type EnumExportJobStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ExportJobStatus'>
-    
-
-
-/**
- * Reference to a field of type 'ExportJobStatus[]'
- */
-export type ListEnumExportJobStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ExportJobStatus[]'>
-    
-
-
-/**
  * Reference to a field of type 'Json'
  */
 export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
@@ -2671,6 +2743,20 @@ export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'J
  * Reference to a field of type 'QueryMode'
  */
 export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+/**
+ * Reference to a field of type 'ExportJobStatus'
+ */
+export type EnumExportJobStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ExportJobStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ExportJobStatus[]'
+ */
+export type ListEnumExportJobStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ExportJobStatus[]'>
     
 
 
@@ -2909,6 +2995,7 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   task?: Prisma.TaskOmit
+  taskAuditLog?: Prisma.TaskAuditLogOmit
   exportJob?: Prisma.ExportJobOmit
   friendRecord?: Prisma.FriendRecordOmit
   jobLog?: Prisma.JobLogOmit

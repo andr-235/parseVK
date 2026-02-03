@@ -43,6 +43,11 @@ export class ParsingTaskRunner {
     @Optional() private readonly metricsService?: MetricsService,
   ) {}
 
+  /**
+   * @deprecated This method is replaced by ExecuteParsingTaskHandler (CQRS)
+   * Will be removed in future versions.
+   * Use CommandBus.execute(new ExecuteParsingTaskCommand()) instead.
+   */
   async execute(job: ParsingTaskJobData): Promise<void> {
     const { taskId, scope, groupIds, postLimit } = job;
 

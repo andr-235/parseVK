@@ -6,7 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { TasksService } from '../tasks.service.js';
+import { CommandBus } from '@nestjs/cqrs';
 import { ParsingScope } from '../dto/create-parsing-task.dto.js';
 import type {
   TaskAutomationRunResponse,
@@ -15,6 +15,7 @@ import type {
 } from './task-automation.interface.js';
 import { UpdateTaskAutomationSettingsDto } from './dto/update-task-automation-settings.dto.js';
 import type { ITaskAutomationRepository } from '../interfaces/task-automation-repository.interface.js';
+import { CreateParsingTaskCommand } from '../commands/index.js';
 
 const RETRY_DELAY_MS = 60 * 60 * 1000; // 1 час
 const DEFAULT_POST_LIMIT = 10;
@@ -30,7 +31,7 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject('ITaskAutomationRepository')
     private readonly repository: ITaskAutomationRepository,
-    private readonly tasksService: TasksService,
+    private readonly commandBus: CommandBus,
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
 
@@ -140,12 +141,13 @@ export class TaskAutomationService implements OnModuleInit, OnModuleDestroy {
         };
       }
 
-      await this.tasksService.createParsingTask({
-        scope: taskConfig.scope,
-        groupIds: taskConfig.groupIds,
-        postLimit:
+      await this.commandBus.execute(
+        new CreateParsingTaskCommand(
+          taskConfig.scope,
+          taskConfig.groupIds,
           settings.postLimit ?? taskConfig.postLimit ?? DEFAULT_POST_LIMIT,
-      });
+        ),
+      );
 
       await this.repository.updateLastRunAt(settings.id, new Date());
 

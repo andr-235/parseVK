@@ -1,7 +1,7 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Inject, Logger, Optional } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
 import { Job } from 'bullmq';
-import { ParsingTaskRunner } from '../parsing-task.runner.js';
 import { TasksGateway } from '../tasks.gateway.js';
 import type { ParsingTaskJobData } from '../interfaces/parsing-task-job.interface.js';
 import {
@@ -13,6 +13,7 @@ import { TaskCancellationService } from '../task-cancellation.service.js';
 import { TaskCancelledError } from '../errors/task-cancelled.error.js';
 import { MetricsService } from '../../metrics/metrics.service.js';
 import type { IParsingTaskRepository } from '../interfaces/parsing-task-repository.interface.js';
+import { ExecuteParsingTaskCommand } from '../commands/index.js';
 
 /**
  * Worker для обработки задач парсинга
@@ -29,7 +30,7 @@ export class ParsingProcessor extends WorkerHost {
   private readonly logger = new Logger(ParsingProcessor.name);
 
   constructor(
-    private readonly runner: ParsingTaskRunner,
+    private readonly commandBus: CommandBus,
     @Inject('IParsingTaskRepository')
     private readonly repository: IParsingTaskRepository,
     private readonly tasksGateway: TasksGateway,
@@ -52,12 +53,15 @@ export class ParsingProcessor extends WorkerHost {
       // Обновляем статус на "running"
       await this.markStatus(taskId, 'running');
 
-      const runnerPromise = this.runner.execute(job.data);
+      // Выполняем парсинг через CommandBus
+      const commandPromise = this.commandBus.execute(
+        new ExecuteParsingTaskCommand(taskId, scope, groupIds, postLimit),
+      );
 
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutHandle = setTimeout(() => {
           this.cancellationService.requestCancel(taskId);
-          void runnerPromise.catch(() => undefined);
+          void commandPromise.catch(() => undefined);
           reject(
             new Error(
               `Задача ${taskId} превысила лимит времени выполнения (${PARSING_JOB_TIMEOUT}мс)`,
@@ -71,7 +75,7 @@ export class ParsingProcessor extends WorkerHost {
       });
 
       // Выполняем парсинг
-      await Promise.race([runnerPromise, timeoutPromise]);
+      await Promise.race([commandPromise, timeoutPromise]);
 
       this.logger.log(`Задача ${taskId} успешно завершена`);
     } catch (error) {

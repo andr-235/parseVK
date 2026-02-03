@@ -1,5 +1,13 @@
 import type { TaskRecord } from '../types/task-record.type.js';
 
+export type TaskWhereInput = {
+  status?: string;
+  createdAt?: {
+    gte?: Date;
+    lte?: Date;
+  };
+};
+
 export type TaskCreateData = {
   title: string;
   description: string | null;
@@ -27,6 +35,7 @@ export interface ITasksRepository {
   findMany(params?: {
     skip?: number;
     take?: number;
+    where?: TaskWhereInput;
     orderBy?: TaskOrderByInput;
   }): Promise<TaskRecord[]>;
   count(): Promise<number>;

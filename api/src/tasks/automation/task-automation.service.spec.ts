@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CommandBus } from '@nestjs/cqrs';
 import { TaskAutomationService } from './task-automation.service.js';
-import { TasksService } from '../tasks.service.js';
 import { SchedulerRegistry } from '@nestjs/schedule';
 
 describe('TaskAutomationService', () => {
@@ -23,12 +23,18 @@ describe('TaskAutomationService', () => {
           },
         },
         {
-          provide: TasksService,
-          useValue: {},
+          provide: CommandBus,
+          useValue: {
+            execute: vi.fn(),
+          },
         },
         {
           provide: SchedulerRegistry,
-          useValue: {},
+          useValue: {
+            addTimeout: vi.fn(),
+            deleteTimeout: vi.fn(),
+            getTimeouts: vi.fn(() => []),
+          },
         },
       ],
     }).compile();

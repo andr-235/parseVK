@@ -6,6 +6,7 @@ import type {
   TaskCreateData,
   TaskOrderByInput,
   TaskUpdateData,
+  TaskWhereInput,
 } from '../interfaces/tasks-repository.interface.js';
 import type { TaskRecord } from '../types/task-record.type.js';
 
@@ -20,11 +21,13 @@ export class TasksRepository implements ITasksRepository {
   findMany(params?: {
     skip?: number;
     take?: number;
+    where?: TaskWhereInput;
     orderBy?: TaskOrderByInput;
   }): Promise<TaskRecord[]> {
     return this.prisma.task.findMany({
       skip: params?.skip,
       take: params?.take,
+      where: params?.where as Prisma.TaskWhereInput,
       orderBy: params?.orderBy as Prisma.TaskOrderByWithRelationInput,
     });
   }
