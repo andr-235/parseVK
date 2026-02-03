@@ -4,14 +4,106 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**parseVK** is a VK (VKontakte) analytics application for parsing and analyzing VK group comments. The system consists of four main services:
+**parseVK** is a VK (VKontakte) analytics application for parsing and analyzing VK group comments. The system consists of multiple services:
+
+**Core Services:**
 
 - **API** (Backend): NestJS application that interfaces with VK API and manages parsing tasks
 - **Frontend**: React/Vite application with Zustand state management
-- **Database**: PostgreSQL with Prisma ORM
+- **Database**: PostgreSQL 15 with Prisma ORM
 - **Redis**: In-memory data store for caching and background job management
 
+**Infrastructure Services:**
+
+- **DB Backup**: Automated PostgreSQL backup service (daily at 3 AM, 7-day retention)
+- **Prometheus**: Metrics collection and monitoring
+- **Grafana**: Metrics visualization and dashboards
+- **Node Exporter**: System-level metrics collection
+
 The application allows users to create parsing tasks to collect posts and comments from VK groups, track authors, search for keywords in comments, and monitor specific authors' activity through the "Watchlist" (На карандаше) feature.
+
+## Code Quality Standards
+
+### TypeScript Best Practices
+
+- Always use TypeScript with strict mode enabled
+- Avoid `any`, use `unknown` when type is truly unknown
+- Type all functions, parameters, and return values explicitly
+- Use `interface` for object shapes, `type` for unions/intersections/aliases
+
+```typescript
+// ✅ GOOD
+interface User {
+  id: string;
+  name: string;
+}
+
+function getUser(id: string): Promise<User | null> {
+  // ...
+}
+
+// ❌ BAD
+function getUser(id: any): any {
+  // ...
+}
+```
+
+### SOLID Principles
+
+- **Single Responsibility**: One class/function should have one responsibility
+- **Open/Closed**: Open for extension, closed for modification
+- **Liskov Substitution**: Subtypes must be substitutable for base types
+- **Interface Segregation**: Many specific interfaces are better than one general
+- **Dependency Inversion**: Depend on abstractions, not concrete implementations
+
+### Code Readability
+
+- Write self-documenting, readable code
+- Use meaningful variable names (avoid abbreviations unless widely known)
+- Avoid magic numbers - use named constants
+- Keep functions short (< 20 lines ideally)
+- Use early returns to simplify logic
+
+```typescript
+// ✅ GOOD
+const MAX_RETRY_ATTEMPTS = 3;
+
+function processPayment(amount: number): void {
+  if (amount <= 0) {
+    throw new Error("Amount must be positive");
+  }
+  // process payment
+}
+
+// ❌ BAD
+function processPayment(a: number): void {
+  if (a > 0) {
+    // deeply nested logic
+  }
+}
+```
+
+### Comments
+
+- Add comments only for complex logic that isn't self-evident
+- Explain "why", not "what"
+- Keep comments up to date with code changes
+- Use JSDoc for public APIs and exported functions
+
+```typescript
+// ✅ GOOD
+// Using O(1) lookup instead of O(n) search for large datasets
+const cache = new Map();
+
+/**
+ * Creates a parsing task with group validation
+ * @param dto - Task creation data
+ * @returns Created task instance
+ */
+async function createTask(dto: CreateTaskDto): Promise<Task> {
+  // ...
+}
+```
 
 ## Development Commands
 
@@ -24,9 +116,29 @@ docker-compose up --build
 # Start services without rebuilding
 docker-compose up
 
-# Stop all services
+# Stop all services (preserves data in volumes)
 docker-compose down
+
+# Stop and remove volumes (WARNING: deletes all data)
+docker-compose down -v
 ```
+
+**Docker Volumes:**
+
+The application uses named Docker volumes for data persistence:
+
+- `parsevk_postgres_data` (external) - PostgreSQL database data
+- `parsevk_postgres_backups` - Database backup files
+- `parsevk_prometheus_data` - Prometheus metrics data
+- `parsevk_grafana_data` - Grafana dashboards and settings
+
+**IMPORTANT**: The `parsevk_postgres_data` volume is marked as external and must be created before first run:
+
+```bash
+docker volume create parsevk_postgres_data
+```
+
+All volumes persist data between container restarts. Use `docker-compose down -v` only when you want to completely reset the application state.
 
 ### API (NestJS Backend)
 
@@ -77,6 +189,13 @@ npm run lint               # Run ESLint
 npm run format             # Format with Prettier
 npm run format:check       # Check formatting without changes
 ```
+
+**IMPORTANT**: For verifying changes, use `npm run build` instead of `npm run dev`. This ensures:
+
+- All TypeScript errors are caught at compile time
+- Build-time optimizations are tested
+- Production bundle issues are identified early
+- Vite build plugins and transformations are validated
 
 ## Architecture Overview
 
@@ -136,6 +255,121 @@ npm run format:check       # Check formatting without changes
 - CORS enabled for frontend integration
 - Logging interceptor on all requests
 
+**Backend Best Practices:**
+
+NestJS architecture follows these principles:
+
+```typescript
+// ✅ GOOD - Proper separation of concerns
+@Module({
+  controllers: [TasksController],
+  providers: [TasksService, TasksRepository],
+})
+export class TasksModule {}
+
+@Controller("tasks")
+export class TasksController {
+  constructor(private readonly service: TasksService) {}
+
+  @Post()
+  async create(@Body() dto: CreateTaskDto) {
+    return this.service.create(dto); // Controller only routes
+  }
+}
+
+// Service contains business logic
+@Injectable()
+export class TasksService {
+  async create(dto: CreateTaskDto): Promise<Task> {
+    // Business logic here
+  }
+}
+```
+
+**Validation:**
+
+- Always validate input data using class-validator
+- Use DTOs for request/response typing
+- Validation happens at controller level
+
+```typescript
+export class CreateTaskDto {
+  @IsString()
+  @MinLength(3)
+  title: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+```
+
+**Error Handling:**
+
+- Use NestJS exception filters for error handling
+- Create custom exceptions for business logic errors
+- Always log errors with context
+- Never expose sensitive data in error messages
+
+**Logging:**
+
+- Log important events (creation, updates, errors)
+- Use appropriate log levels (debug, info, warn, error)
+- Never log sensitive data (passwords, tokens, personal info)
+
+```typescript
+// ✅ GOOD
+this.logger.log(`Task ${taskId} created`, { taskId, userId });
+this.logger.error("Failed to process task", { error: error.message, taskId });
+
+// ❌ BAD
+this.logger.log(`User password: ${password}`);
+```
+
+**Testing Strategy:**
+
+The API uses Vitest for both unit and e2e tests:
+
+```typescript
+// Unit test example - testing business logic
+describe("TasksService", () => {
+  let service: TasksService;
+
+  beforeEach(() => {
+    // Mock dependencies
+    const mockPrisma = createMockPrisma();
+    service = new TasksService(mockPrisma);
+  });
+
+  it("should create task with valid groups", async () => {
+    const dto = { scope: "selected", groupIds: [1, 2] };
+    const task = await service.createParsingTask(dto);
+    expect(task.status).toBe("pending");
+  });
+});
+
+// E2E test example - testing API endpoints
+describe("Tasks API (e2e)", () => {
+  it("/tasks (POST) should create new task", () => {
+    return request(app.getHttpServer())
+      .post("/tasks")
+      .send({ scope: "all" })
+      .expect(201)
+      .expect((res) => {
+        expect(res.body).toHaveProperty("id");
+      });
+  });
+});
+```
+
+**Test Guidelines:**
+
+- Write unit tests for business logic in services
+- Mock external dependencies (Prisma, VK API, Redis)
+- Use e2e tests for critical API workflows
+- Test error cases and edge conditions
+- Maintain test coverage for new features
+
 ### Frontend Architecture (React/Vite)
 
 **Project Structure:**
@@ -178,6 +412,36 @@ src/
 - `types/` → no dependencies (except built-in types)
 - `lib/` → can use: types only
 
+**Import Rules:**
+
+All imports must use the `@/` alias for consistency and maintainability:
+
+```typescript
+// ✅ CORRECT - Using @/ alias
+import { Button } from "@/components/ui/button";
+import { useTableSorting } from "@/hooks/useTableSorting";
+import { tasksService } from "@/services/tasksService";
+import type { Task } from "@/types";
+import { useTaskDetails } from "@/modules/tasks/hooks/useTaskDetails";
+
+// ❌ INCORRECT - Relative imports
+import { Button } from "../../../components/ui/button";
+import { useTaskDetails } from "../hooks/useTaskDetails";
+```
+
+**Benefits of using `@/` alias:**
+
+- Consistency across the entire codebase
+- Easier refactoring (moving files doesn't break imports)
+- Better readability (explicit path to module)
+- Simpler to search for dependencies project-wide
+
+**This applies to all imports**, including:
+
+- Inter-module imports within the same module
+- Cross-module imports
+- Shared component/hook/utility imports
+
 **State Management (Zustand):**
 
 - `tasksStore` ([store/tasksStore.ts](front/src/store/tasksStore.ts)) - Task list with normalized state (taskIds, tasksById), task details caching
@@ -211,6 +475,78 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 - Dark mode support via CSS variables
 - Theme managed by `themeStore`
 
+**Performance Best Practices:**
+
+React components should follow performance optimization patterns:
+
+```typescript
+// ✅ GOOD - Memoized callbacks and computed values
+function TaskCard({ task, onComplete }: Props) {
+  const handleComplete = useCallback(() => {
+    onComplete(task.id)
+  }, [task.id, onComplete])
+
+  const isOverdue = useMemo(() => {
+    return task.dueDate < new Date()
+  }, [task.dueDate])
+
+  return <div onClick={handleComplete}>...</div>
+}
+
+// ❌ BAD - Inline functions and re-computation on every render
+function TaskCard({ task, onComplete }: Props) {
+  return (
+    <div onClick={() => onComplete(task.id)}>
+      {task.dueDate < new Date() ? 'Overdue' : 'On time'}
+    </div>
+  )
+}
+```
+
+**Key performance rules:**
+
+- Avoid inline functions in props (use `useCallback`)
+- Memoize expensive computations (use `useMemo`)
+- Memoize functions passed as props to prevent child re-renders
+- Use `React.memo` for components that render often with same props
+- Keep component render logic lightweight
+
+**Accessibility Requirements:**
+
+All UI components must follow WCAG 2.1 accessibility guidelines:
+
+```typescript
+// ✅ GOOD - Accessible button with keyboard support
+<button
+  onClick={handleClick}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      handleClick()
+    }
+  }}
+  aria-label="Close dialog"
+  tabIndex={0}
+>
+  Close
+</button>
+
+// ✅ GOOD - Semantic HTML
+<nav aria-label="Main navigation">
+  <ul>
+    <li><a href="/tasks">Tasks</a></li>
+  </ul>
+</nav>
+```
+
+**Accessibility checklist:**
+
+- Use semantic HTML elements (`<nav>`, `<main>`, `<button>`, etc.)
+- Add ARIA attributes where necessary
+- Ensure keyboard navigation works (Tab, Enter, Space, Escape)
+- Provide meaningful labels for interactive elements
+- Maintain sufficient color contrast ratios
+- Test with screen readers when implementing complex interactions
+
 ### VK API Integration
 
 **Authentication:**
@@ -230,24 +566,71 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 - API Error 15 (Access denied) handled for disabled group walls
 - Groups with disabled walls marked and skipped in parsing
 
+### Monitoring and Observability
+
+The application includes comprehensive monitoring infrastructure:
+
+**Prometheus**:
+
+- Metrics collection and storage
+- Scrapes API endpoints for application metrics
+- Configurable retention period
+- Configuration: `monitoring/prometheus.yml`
+
+**Grafana**:
+
+- Visualization dashboards for metrics
+- Credentials configured via environment variables (see docker-compose.yml)
+- Pre-configured data sources and dashboards
+- Dashboards location: `monitoring/grafana/dashboards/`
+
+**Node Exporter**:
+
+- System-level metrics (CPU, memory, disk, network)
+- Collects host machine statistics
+
+**Access ports configured in docker-compose.yml**
+
+**Key Metrics to Monitor:**
+
+- Task processing rate and duration
+- VK API request rates and errors
+- Database connection pool status
+- Redis cache hit/miss ratios
+- Background job queue lengths (watchlist monitoring)
+- API response times and error rates
+
 ## Environment Variables
 
 **API:**
 
-- `DATABASE_URL` - PostgreSQL connection string
+- `DATABASE_URL` - PostgreSQL connection string (required)
 - `VK_TOKEN` - VK API access token (required)
-- `PORT` - API server port (default: 3000)
+- `PORT` - API server port
+- `CORS_ORIGINS` - Allowed CORS origins (comma-separated, optional)
+- `MONITOR_DATABASE_URL` - Separate database for monitoring data (optional)
 
 **Redis:**
 
-- Redis runs on default port 6379 (configured in docker-compose.yml)
-- No authentication required in development environment
+- Redis connection configured in docker-compose.yml
+- Port and authentication settings per environment
 
 **Frontend:**
 
 - `VITE_APP_TITLE` - Application title
-- `VITE_API_URL` - API base URL (default: /api)
+- `VITE_API_URL` - API base URL
+- `VITE_API_WS_URL` - WebSocket URL
 - `VITE_DEV_MODE` - Development mode flag
+- `VITE_APP_VERSION` - Application version
+
+**Build Configuration:**
+
+- `NPM_REGISTRY` - Primary npm registry URL
+- `NPM_REGISTRY_FALLBACK` - Fallback npm registry URL
+
+These are used in Docker builds to optimize dependency installation in restricted networks.
+
+**IMPORTANT**: All sensitive values (tokens, passwords, connection strings) must be set via environment variables or docker-compose.yml and should NEVER be committed to git.
 
 ## Important Implementation Details
 
@@ -299,7 +682,9 @@ All stores use Zustand with immer, persist, devtools, and subscribeWithSelector 
 - Updates `lastCheckedAt`, `lastActivityAt`, and `foundCommentsCount` for each author
 - Shared `AuthorActivityService` used by both task parsing and watchlist monitoring to avoid code duplication
 
-## Database Migrations
+## Database Management
+
+### Migrations
 
 When modifying the Prisma schema:
 
@@ -307,6 +692,43 @@ When modifying the Prisma schema:
 2. Run `npx prisma migrate dev --name <migration_name>` in api directory
 3. Prisma client auto-generated after migration
 4. Docker builds include migration execution
+
+### Automated Backups
+
+The `db_backup` service automatically backs up the PostgreSQL database:
+
+**Configuration:**
+
+- Schedule: Configurable via cron expression
+- Retention: Configurable retention period
+- Location: Docker volume `parsevk_postgres_backups`
+- Format: SQL dump files with timestamps
+
+**Manual Backup:**
+
+```bash
+# Create manual backup
+docker exec <backup_container_name> /backup.sh
+
+# List backups
+docker exec <backup_container_name> ls -lh /backups
+
+# Restore from backup (adjust connection parameters as needed)
+docker exec -i <db_container_name> psql -U <user> -d <database> < backup_file.sql
+```
+
+**Backup Environment Variables:**
+
+- `POSTGRES_HOST`: Database host
+- `POSTGRES_PORT`: Database port
+- `POSTGRES_DB`: Database name
+- `POSTGRES_USER`: Database user
+- `PGPASSWORD`: Database password
+- `BACKUP_DIR`: Backup directory path
+- `BACKUP_KEEP_DAYS`: Retention period in days
+- `BACKUP_SCHEDULE`: Cron schedule expression
+
+**See docker-compose.yml for actual configuration values.**
 
 ## Common Workflows
 
@@ -357,5 +779,5 @@ When modifying the Prisma schema:
 - Check API logs for VK API errors
 - Use Prisma Studio to inspect database records
 - Enable dev mode logging in stores (import.meta.env.DEV checks)
-  Не запускай "npm run dev"
-  используй для проветки "npm run build"
+- Monitor Prometheus metrics for performance issues
+- Check Grafana dashboards for system-level problems
