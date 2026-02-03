@@ -219,7 +219,7 @@ const useCommentsViewModel = () => {
   const unreadCount = useCommentsStore((state) => state.unreadCount)
   const toggleReadStatus = useCommentsStore((state) => state.toggleReadStatus)
   const markWatchlisted = useCommentsStore((state) => state.markWatchlisted)
-  const { keywords, fetchKeywords } = useKeywordsStore()
+  const { keywords, fetchKeywords, isLoaded: keywordsLoaded } = useKeywordsStore()
   const { addAuthorFromComment } = useWatchlistStore()
   const [showKeywordComments, setShowKeywordComments] = useState(true)
   const [showKeywordPosts, setShowKeywordPosts] = useState(false)
@@ -300,18 +300,23 @@ const useCommentsViewModel = () => {
   )
 
   useEffect(() => {
-    fetchCommentsCursor({ reset: true, filters: fetchFilters }).catch((error) => {
-      console.error('Failed to fetch comments with filters', error)
-      toast.error('Не удалось загрузить комментарии')
-    })
-  }, [fetchCommentsCursor, fetchFilters])
+    const loadData = async () => {
+      // Если keywords ещё не загружались - загружаем их сначала
+      if (!keywordsLoaded) {
+        await fetchKeywords().catch((error) => {
+          console.error('Failed to fetch keywords', error)
+        })
+      }
 
-  useEffect(() => {
-    if (keywords.length > 0) return
-    fetchKeywords().catch((error) => {
-      console.error('Failed to fetch keywords', error)
-    })
-  }, [fetchKeywords, keywords.length])
+      // Загружаем комментарии только после того, как keywords точно загружены
+      await fetchCommentsCursor({ reset: true, filters: fetchFilters }).catch((error) => {
+        console.error('Failed to fetch comments with filters', error)
+        toast.error('Не удалось загрузить комментарии')
+      })
+    }
+
+    void loadData()
+  }, [fetchCommentsCursor, fetchFilters, fetchKeywords, keywordsLoaded])
 
   useEffect(() => {
     if (readFilter === 'all') {

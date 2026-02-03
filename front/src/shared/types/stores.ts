@@ -46,6 +46,7 @@ export interface CommentsState {
 export interface KeywordsState {
   keywords: Keyword[]
   isLoading: boolean
+  isLoaded: boolean // Флаг успешной загрузки keywords
   fetchKeywords: () => Promise<void>
   addKeyword: (word: string, category?: string, isPhrase?: boolean) => Promise<boolean>
   deleteKeyword: (id: number) => Promise<void>

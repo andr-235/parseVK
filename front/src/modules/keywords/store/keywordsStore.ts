@@ -8,6 +8,7 @@ import type { KeywordsState } from '@/shared/types'
 export const useKeywordsStore = create<KeywordsState>((set) => ({
   keywords: [],
   isLoading: false,
+  isLoaded: false,
 
   async fetchKeywords() {
     set({ isLoading: true })
@@ -16,6 +17,7 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
         queryKey: keywordsQueryKeys.list(),
         refetchType: 'active',
       })
+      // isLoaded устанавливается в useKeywordsQuery после получения данных
     } catch (error) {
       console.error('Failed to fetch keywords', error)
       throw error

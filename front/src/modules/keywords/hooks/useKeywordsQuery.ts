@@ -26,11 +26,14 @@ export const useKeywordsQuery = (options?: UseKeywordsQueryOptions) => {
   })
 
   useEffect(() => {
-    if (!enabled || !query.data) {
+    if (!enabled) {
       return
     }
 
-    useKeywordsStore.setState({ keywords: query.data })
+    // Обновляем keywords и isLoaded вместе, когда данные доступны
+    if (query.data) {
+      useKeywordsStore.setState({ keywords: query.data, isLoaded: true })
+    }
   }, [enabled, query.data])
 
   useEffect(() => {
