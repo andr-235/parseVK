@@ -9,16 +9,7 @@ import type { CommentsFilters } from '@/modules/comments/api/query/commentsQuery
 import { commentsQueryKeys } from '@/modules/comments/api/queryKeys'
 import { useCommentsStore } from '@/modules/comments/store'
 import { COMMENTS_PAGE_SIZE } from '@/modules/comments/store'
-
-type CommentsQueryData = {
-  comments: ReturnType<typeof useCommentsStore.getState>['comments']
-  nextCursor: string | null
-  hasMore: boolean
-  totalCount: number
-  readCount: number
-  unreadCount: number
-  filters: CommentsFilters
-}
+import type { CommentsQueryData } from '@/modules/comments/types/commentsCache.types'
 
 const buildFetchParams = (filters: CommentsFilters) => ({
   limit: COMMENTS_PAGE_SIZE,

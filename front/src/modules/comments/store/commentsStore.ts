@@ -9,6 +9,7 @@ import type { CommentsFilters } from '@/modules/comments/api/query/commentsQuery
 import type { CommentsState } from '@/shared/types'
 export const COMMENTS_PAGE_SIZE = 100
 import { queryClient } from '@/shared/api'
+import type { CommentsQueryData } from '@/modules/comments/types/commentsCache.types'
 
 // Синхронный флаг для предотвращения race condition
 let isFetchingComments = false
@@ -17,18 +18,10 @@ let isFetchingComments = false
 let cursorRequestCounter = 0
 let latestCursorRequestId = 0
 
-type CommentsQueryData = {
-  comments: CommentsState['comments']
-  nextCursor: string | null
-  hasMore: boolean
-  totalCount: number
-  readCount: number
-  unreadCount: number
-}
-
 const normalizeFilters = (filters?: CommentsFilters): CommentsFilters => {
   const normalized: CommentsFilters = {
     readStatus: 'unread',
+    keywords: [], // ВСЕГДА устанавливаем keywords (предотвращает undefined)
   }
 
   const rawStatus = filters?.readStatus?.toLowerCase()
@@ -139,6 +132,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
         totalCount: response.total,
         readCount: response.readCount,
         unreadCount: response.unreadCount,
+        filters: activeFilters, // Сохраняем filters для синхронизации с useCommentsQuery
       }))
     } catch (error) {
       console.error('Failed to fetch comments', error)
@@ -251,6 +245,7 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
           totalCount: finalTotalCount,
           readCount: response.readCount,
           unreadCount: response.unreadCount,
+          filters: activeFilters, // Сохраняем filters для синхронизации с useCommentsQuery
         }
       })
     } catch (error) {

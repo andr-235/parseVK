@@ -138,7 +138,7 @@ const buildKeywordFilters = ({
   shouldFilterByKeywordComments,
   shouldFilterByKeywordPosts,
 }: {
-  keywords: Keyword[]
+  keywords: Keyword[] | undefined // Разрешаем undefined для защиты от race condition
   searchTerm: string
   shouldFilterByKeywordComments: boolean
   shouldFilterByKeywordPosts: boolean
@@ -158,7 +158,8 @@ const buildKeywordFilters = ({
     }
   }
 
-  const normalized = keywords.map((item) => item.word.trim()).filter(Boolean)
+  // Защита от undefined keywords
+  const normalized = (keywords ?? []).map((item) => item.word.trim()).filter(Boolean)
   const values = normalized.length > 0 ? Array.from(new Set(normalized)) : undefined
 
   let source: KeywordSource | undefined
