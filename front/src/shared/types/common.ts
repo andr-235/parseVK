@@ -122,6 +122,7 @@ export interface TaskStatsInfo {
   posts?: number
   comments?: number
   authors?: number
+  [key: string]: unknown
 }
 
 export interface Task {
