@@ -52,7 +52,7 @@
     "class-validator": "^0.14.2",
     "cookie-parser": "^1.4.7",
     "cron": "^2.4.4",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "exceljs": "^4.4.0",
     "got": "^14.6.1",
     "helmet": "^8.1.0",
