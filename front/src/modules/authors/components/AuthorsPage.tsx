@@ -1,4 +1,4 @@
-import PageHeroCard from '@/shared/components/PageHeroCard'
+import { AuthorsHero } from '@/modules/authors/components/AuthorsHero'
 import { AuthorsFiltersPanel } from '@/modules/authors/components/AuthorsFiltersPanel'
 import { AuthorsTableCard } from '@/modules/authors/components/AuthorsTableCard'
 import { useAuthorsViewModel } from '@/modules/authors/hooks/useAuthorsViewModel'
@@ -34,14 +34,23 @@ function AuthorsPage() {
   } = useAuthorsViewModel()
 
   return (
-    <div className="flex w-full flex-col gap-8">
-      <PageHeroCard
-        title="Авторы ВКонтакте"
-        description="База авторов, собранная через парсинг и мониторинг. Управляйте статусами проверки и анализируйте профили."
-        className="mb-2"
-      />
+    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+      {/* Hero Section - fade in first */}
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+        <AuthorsHero
+          totalAuthors={authors.length}
+          isRefreshing={isRefreshing}
+          onRefresh={handleRefresh}
+        />
+      </div>
 
-      <div className="flex flex-col gap-6">
+      {/* Filters Panel - staggered animation */}
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+        <div className="flex items-center gap-4">
+          <h2 className="font-monitoring-display text-2xl font-semibold text-white">Фильтры</h2>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+        </div>
+
         <AuthorsFiltersPanel
           searchTerm={searchValue}
           onSearchChange={handleSearchChange}
@@ -53,6 +62,16 @@ function AuthorsPage() {
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing || isLoading}
         />
+      </div>
+
+      {/* Authors Table - staggered animation */}
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+        <div className="flex items-center gap-4">
+          <h2 className="font-monitoring-display text-2xl font-semibold text-white">
+            База авторов
+          </h2>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+        </div>
 
         <AuthorsTableCard
           authors={authors}

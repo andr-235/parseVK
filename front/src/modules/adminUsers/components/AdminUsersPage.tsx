@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { KeyRound, RefreshCw, Trash2, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
-import PageHeroCard from '@/shared/components/PageHeroCard'
-import { SectionCard } from '@/shared/components'
 import { Button } from '@/shared/ui/button'
+import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Badge } from '@/shared/ui/badge'
@@ -13,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/shared/utils'
 import { adminUsersService } from '@/modules/adminUsers/api/adminUsers.api'
 import { useCurrentUser } from '@/modules/adminUsers/hooks/useCurrentUser'
+import { AdminUsersHero } from '@/modules/adminUsers/components/AdminUsersHero'
 import type { AdminUser, UserRole } from '@/modules/auth/types'
 
 const roleLabelMap: Record<UserRole, string> = {
@@ -157,155 +157,195 @@ function AdminUsersPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-8">
-      <PageHeroCard
-        title="Управление пользователями"
-        description="Создавайте учетные записи и контролируйте доступ к системе."
-        actions={
-          <Button variant="secondary" onClick={loadUsers} disabled={isLoading}>
-            Обновить список
-          </Button>
-        }
-      />
+    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+      {/* Hero Section - fade in first */}
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+        <AdminUsersHero totalUsers={users.length} onRefresh={loadUsers} isLoading={isLoading} />
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr]">
-        <SectionCard
-          title="Новый пользователь"
-          description="Добавьте логин, пароль и назначьте роль."
-        >
-          <form className="space-y-5" onSubmit={handleCreateUser}>
-            <div className="space-y-2">
-              <Label htmlFor="new-username">Логин</Label>
-              <Input
-                id="new-username"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder="username"
+      {/* Main Content - staggered animation */}
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr] animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+        {/* Create User Section */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <h2 className="font-monitoring-display text-2xl font-semibold text-white">
+              Новый пользователь
+            </h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          </div>
+
+          <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+            <p className="text-sm text-slate-400 mb-6">Добавьте логин, пароль и назначьте роль.</p>
+            <form className="space-y-5" onSubmit={handleCreateUser}>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="new-username"
+                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                >
+                  Логин
+                </Label>
+                <Input
+                  id="new-username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="username"
+                  disabled={isSubmitting}
+                  required
+                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="new-password"
+                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                >
+                  Пароль
+                </Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Минимум 8 символов"
+                  disabled={isSubmitting}
+                  required
+                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                />
+                <p className="text-xs text-slate-500">
+                  Минимум 8 символов, заглавные и строчные буквы, цифры.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="new-role"
+                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                >
+                  Роль
+                </Label>
+                <select
+                  id="new-role"
+                  value={role}
+                  onChange={(event) => setRole(event.target.value as UserRole)}
+                  className={cn(
+                    'h-11 w-full rounded-lg border border-white/10 bg-slate-800/50 px-3 py-2 text-sm text-white transition-all duration-200',
+                    'focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20'
+                  )}
+                  disabled={isSubmitting}
+                >
+                  <option value="user">Пользователь</option>
+                  <option value="admin">Администратор</option>
+                </select>
+              </div>
+              {formError && <div className="text-sm text-red-400">{formError}</div>}
+              <Button
+                type="submit"
                 disabled={isSubmitting}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">Пароль</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Минимум 8 символов"
-                disabled={isSubmitting}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Минимум 8 символов, заглавные и строчные буквы, цифры.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-role">Роль</Label>
-              <select
-                id="new-role"
-                value={role}
-                onChange={(event) => setRole(event.target.value as UserRole)}
-                className={cn(
-                  'border-border/60 h-10 w-full rounded-xl border bg-background-secondary px-3 py-2 text-sm shadow-soft-sm',
-                  'focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-2'
-                )}
-                disabled={isSubmitting}
+                className="w-full h-11 bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40 transition-all duration-300"
               >
-                <option value="user">Пользователь</option>
-                <option value="admin">Администратор</option>
-              </select>
-            </div>
-            {formError && <div className="text-sm text-destructive">{formError}</div>}
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? 'Создаём...' : 'Создать пользователя'}
-              <UserPlus className="ml-2 h-4 w-4" />
-            </Button>
-          </form>
-        </SectionCard>
+                {isSubmitting ? 'Создаём...' : 'Создать пользователя'}
+                <UserPlus className="ml-2 h-4 w-4" />
+              </Button>
+            </form>
+          </Card>
+        </div>
 
-        <SectionCard title="Список пользователей" description="Все зарегистрированные аккаунты.">
-          {isLoading ? (
-            <LoadingState message="Загрузка пользователей..." />
-          ) : sortedUsers.length === 0 ? (
-            <Empty className="border border-dashed border-border/50 bg-background-secondary/60">
-              <EmptyHeader>
-                <EmptyTitle>Пользователей нет</EmptyTitle>
-                <EmptyDescription>Создайте первого пользователя администратора.</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Логин</TableHead>
-                  <TableHead>Роль</TableHead>
-                  <TableHead>Статус</TableHead>
-                  <TableHead>Создан</TableHead>
-                  <TableHead className="text-right">Действия</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedUsers.map((user) => {
-                  const isCurrent = currentUser?.id === user.id
-                  const isTemporarilyBlocked = Boolean(user.isTemporaryPassword)
-                  return (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium text-text-primary">
-                        {user.username}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.role === 'admin' ? 'highlight' : 'secondary'}>
-                          {roleLabelMap[user.role]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {isTemporarilyBlocked ? (
-                          <Badge variant="outline">Нужна смена пароля</Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Активен</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={passwordActionId === user.id}
-                            onClick={() => handleTemporaryPassword(user, 'set')}
-                            title="Выдать временный пароль"
-                          >
-                            <KeyRound className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={passwordActionId === user.id}
-                            onClick={() => handleTemporaryPassword(user, 'reset')}
-                            title="Сбросить пароль"
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={deletingId === user.id || isCurrent}
-                            onClick={() => handleDeleteUser(user.id)}
-                            title={isCurrent ? 'Нельзя удалить себя' : 'Удалить пользователя'}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          )}
-          {submitError && <div className="mt-4 text-sm text-destructive">{submitError}</div>}
-        </SectionCard>
+        {/* Users List Section */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <h2 className="font-monitoring-display text-2xl font-semibold text-white">
+              Список пользователей
+            </h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          </div>
+
+          <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+            <p className="text-sm text-slate-400 mb-6">Все зарегистрированные аккаунты.</p>
+            {isLoading ? (
+              <LoadingState message="Загрузка пользователей..." />
+            ) : sortedUsers.length === 0 ? (
+              <Empty className="border border-dashed border-border/50 bg-background-secondary/60">
+                <EmptyHeader>
+                  <EmptyTitle>Пользователей нет</EmptyTitle>
+                  <EmptyDescription>Создайте первого пользователя администратора.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Логин</TableHead>
+                    <TableHead>Роль</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Создан</TableHead>
+                    <TableHead className="text-right">Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedUsers.map((user) => {
+                    const isCurrent = currentUser?.id === user.id
+                    const isTemporarilyBlocked = Boolean(user.isTemporaryPassword)
+                    return (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium text-text-primary">
+                          {user.username}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.role === 'admin' ? 'highlight' : 'secondary'}>
+                            {roleLabelMap[user.role]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {isTemporarilyBlocked ? (
+                            <Badge variant="outline">Нужна смена пароля</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Активен</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(user.createdAt).toLocaleDateString('ru-RU')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={passwordActionId === user.id}
+                              onClick={() => handleTemporaryPassword(user, 'set')}
+                              title="Выдать временный пароль"
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={passwordActionId === user.id}
+                              onClick={() => handleTemporaryPassword(user, 'reset')}
+                              title="Сбросить пароль"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={deletingId === user.id || isCurrent}
+                              onClick={() => handleDeleteUser(user.id)}
+                              title={isCurrent ? 'Нельзя удалить себя' : 'Удалить пользователя'}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+            {submitError && <div className="mt-4 text-sm text-red-400">{submitError}</div>}
+          </Card>
+        </div>
       </div>
     </div>
   )

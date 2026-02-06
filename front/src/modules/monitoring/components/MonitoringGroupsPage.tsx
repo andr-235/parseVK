@@ -1,9 +1,8 @@
-import { NavLink, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
-import PageTitle from '@/shared/components/PageTitle'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
@@ -12,6 +11,7 @@ import { EmptyState } from '@/shared/components/EmptyState'
 import { LoadingState } from '@/shared/components/LoadingState'
 import { cn } from '@/shared/utils'
 import { useMonitoringGroupsViewModel } from '@/modules/monitoring/hooks/useMonitoringGroupsViewModel'
+import { MonitoringGroupsHero } from '@/modules/monitoring/components/MonitoringGroupsHero'
 import type { MonitoringMessenger } from '@/shared/types'
 
 const MONITORING_SOURCES = {
@@ -24,14 +24,6 @@ const MONITORING_SOURCES = {
     messenger: 'max' as MonitoringMessenger,
   },
 } as const
-
-const getNavButtonClasses = (isActive: boolean) =>
-  cn(
-    'inline-flex h-9 items-center justify-center rounded-full border px-4 text-[11px] font-semibold uppercase tracking-[0.2em] transition',
-    isActive
-      ? 'border-transparent bg-foreground text-background shadow-soft-sm'
-      : 'border-border/60 bg-background/70 text-text-primary shadow-soft-sm backdrop-blur hover:bg-background/90'
-  )
 
 function MonitoringGroupsPage() {
   const { sourceKey } = useParams()
@@ -65,106 +57,125 @@ function MonitoringGroupsPage() {
     isSaving,
   } = useMonitoringGroupsViewModel({ messenger: activeSource.messenger })
 
-  const messagesPath = `/monitoring/${activeSourceKey}`
-  const groupsPath = `/monitoring/${activeSourceKey}/groups`
-
   const hasGroups = totalGroups > 0
   const hasFilteredGroups = groups.length > 0
   const hasFilters = searchTerm.trim() || categoryFilter.trim()
   const countLabel = hasFilters ? `${groups.length} из ${totalGroups}` : `${totalGroups}`
 
   return (
-    <div className="flex flex-col gap-8 pb-10 pt-6 font-monitoring-body text-text-primary">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.4em] text-muted-foreground">
-            Мониторинг {activeSource.label}
-          </div>
-          <PageTitle className="font-monitoring-display text-3xl sm:text-4xl">
-            Группы мониторинга
-          </PageTitle>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Привяжите chat_id к названию группы и зафиксируйте категорию — это поможет быстрее
-            ориентироваться в потоке сообщений.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <NavLink to={messagesPath} className={({ isActive }) => getNavButtonClasses(isActive)}>
-            Сообщения
-          </NavLink>
-          <NavLink to={groupsPath} className={({ isActive }) => getNavButtonClasses(isActive)}>
-            Группы
-          </NavLink>
-        </div>
+    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+      {/* Hero Section - fade in first */}
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+        <MonitoringGroupsHero
+          sourceName={activeSource.label}
+          sourceKey={activeSourceKey}
+          totalGroups={totalGroups}
+        />
       </div>
 
-      <Card className="overflow-hidden">
-        <CardHeader className="border-b border-border/60 bg-muted/20">
-          <CardTitle className="font-monitoring-display text-lg">
+      {/* Add/Edit Group Section - staggered animation */}
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+        <div className="flex items-center gap-4">
+          <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             {editingId ? 'Редактировать группу' : 'Добавить группу'}
-          </CardTitle>
-          <CardDescription>
+          </h2>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+        </div>
+
+        <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <p className="text-sm text-slate-400 mb-4">
             Укажите chat_id, название и категорию. Запись будет обновлена, если chat_id уже есть.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
-            <div className="space-y-2">
-              <Label htmlFor="monitoring-chat-id">Chat ID</Label>
-              <Input
-                id="monitoring-chat-id"
-                value={chatId}
-                onChange={(event) => setChatId(event.target.value)}
-                placeholder="Например: 1200348"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="monitoring-group-name">Название</Label>
-              <Input
-                id="monitoring-group-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Название группы"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="monitoring-group-category">Категория</Label>
-              <Input
-                id="monitoring-group-category"
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-                placeholder="Новостные, оппозиционные и т.д."
-                list="monitoring-group-categories"
-              />
-              <datalist id="monitoring-group-categories">
-                {categorySuggestions.map((value) => (
-                  <option key={value} value={value} />
-                ))}
-              </datalist>
-            </div>
-            <div className="flex flex-wrap items-end gap-2">
-              <Button onClick={saveGroup} className="h-10" disabled={isSaving}>
-                {editingId ? 'Сохранить' : 'Добавить'}
-              </Button>
-              {editingId && (
-                <Button variant="outline" onClick={resetForm} className="h-10" disabled={isSaving}>
-                  Отмена
+          </p>
+          <div className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="monitoring-chat-id"
+                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                >
+                  Chat ID
+                </Label>
+                <Input
+                  id="monitoring-chat-id"
+                  value={chatId}
+                  onChange={(event) => setChatId(event.target.value)}
+                  placeholder="Например: 1200348"
+                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="monitoring-group-name"
+                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                >
+                  Название
+                </Label>
+                <Input
+                  id="monitoring-group-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Название группы"
+                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="monitoring-group-category"
+                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                >
+                  Категория
+                </Label>
+                <Input
+                  id="monitoring-group-category"
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                  placeholder="Новостные, оппозиционные и т.д."
+                  list="monitoring-group-categories"
+                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                />
+                <datalist id="monitoring-group-categories">
+                  {categorySuggestions.map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="flex flex-wrap items-end gap-2">
+                <Button
+                  onClick={saveGroup}
+                  disabled={isSaving}
+                  className="h-11 bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40 transition-all duration-300"
+                >
+                  {editingId ? 'Сохранить' : 'Добавить'}
                 </Button>
-              )}
+                {editingId && (
+                  <Button
+                    variant="outline"
+                    onClick={resetForm}
+                    disabled={isSaving}
+                    className="h-11 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 transition-all duration-200"
+                  >
+                    Отмена
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
 
-      <Card className="overflow-hidden">
-        <div className="flex flex-col gap-4 border-b border-border/60 bg-muted/20 p-4 md:flex-row md:items-center md:justify-between md:px-6">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold tracking-tight">Группы</h2>
+      {/* Groups List Section - staggered animation */}
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <h2 className="font-monitoring-display text-2xl font-semibold text-white">
+              Список групп
+            </h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
             {!isLoading && (
               <Badge
                 variant="outline"
-                className="rounded-full border-border/60 bg-background/70 px-3 py-1 text-[11px] font-semibold shadow-soft-sm backdrop-blur"
+                className="border-white/10 bg-slate-900/50 px-3 py-1 text-xs text-slate-400 font-mono-accent"
               >
                 {countLabel}
               </Badge>
@@ -175,29 +186,30 @@ function MonitoringGroupsPage() {
               value={searchTerm}
               onChange={setSearchTerm}
               placeholder="Поиск по названию или chat_id"
-              className="h-9 w-full sm:w-[240px]"
+              className="h-10 w-full sm:w-[240px] border-white/10 bg-slate-800/50 text-white"
             />
             <Input
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.target.value)}
               placeholder="Категория"
-              className="h-9 w-full sm:w-[180px]"
               list="monitoring-group-categories"
+              className="h-10 w-full sm:w-[180px] border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
             />
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => reloadGroups()}
               disabled={isLoading}
-              className="h-9 text-muted-foreground hover:text-primary"
+              className="h-10 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 transition-all duration-200"
             >
-              <RefreshCw className={`mr-2 size-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={cn('mr-2 w-4 h-4', isLoading && 'animate-spin')} />
               Обновить
             </Button>
           </div>
         </div>
 
-        <CardContent className="p-4 md:p-6">
+        <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
           {isLoading && !hasGroups && (
             <div className="py-8">
               <LoadingState message="Загружаем группы мониторинга…" />
@@ -279,8 +291,8 @@ function MonitoringGroupsPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }

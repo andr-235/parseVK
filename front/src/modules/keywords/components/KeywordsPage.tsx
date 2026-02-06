@@ -24,30 +24,53 @@ function KeywordsPage() {
   } = useKeywordsViewModel()
 
   return (
-    <div className="flex flex-col gap-8 pb-10 pt-6">
-      <KeywordsHero />
+    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+      {/* Hero Section - fade in first */}
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+        <KeywordsHero totalKeywords={keywords.length} />
+      </div>
 
-      <KeywordsForm
-        keywordValue={keywordValue}
-        categoryValue={categoryValue}
-        phraseValue={phraseValue}
-        isRecalculating={isRecalculating}
-        onKeywordChange={setKeywordValue}
-        onCategoryChange={setCategoryValue}
-        onPhraseChange={setPhraseValue}
-        onAdd={handleAddKeyword}
-        onAddPhrase={handleAddPhrase}
-        onRecalculate={handleRecalculate}
-        onFileUpload={handleFileUpload}
-      />
+      {/* Keywords Form - staggered animation */}
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+        <div className="flex items-center gap-4">
+          <h2 className="font-monitoring-display text-2xl font-semibold text-white">
+            Добавить ключевые слова
+          </h2>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+        </div>
 
-      <KeywordsTableCard
-        keywords={keywords}
-        isLoading={isLoading}
-        onDelete={deleteKeyword}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-      />
+        <KeywordsForm
+          keywordValue={keywordValue}
+          categoryValue={categoryValue}
+          phraseValue={phraseValue}
+          isRecalculating={isRecalculating}
+          onKeywordChange={setKeywordValue}
+          onCategoryChange={setCategoryValue}
+          onPhraseChange={setPhraseValue}
+          onAdd={handleAddKeyword}
+          onAddPhrase={handleAddPhrase}
+          onRecalculate={handleRecalculate}
+          onFileUpload={handleFileUpload}
+        />
+      </div>
+
+      {/* Keywords Table - staggered animation */}
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+        <div className="flex items-center gap-4">
+          <h2 className="font-monitoring-display text-2xl font-semibold text-white">
+            Словарь ключевых слов
+          </h2>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+        </div>
+
+        <KeywordsTableCard
+          keywords={keywords}
+          isLoading={isLoading}
+          onDelete={deleteKeyword}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+        />
+      </div>
     </div>
   )
 }

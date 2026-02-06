@@ -1,8 +1,9 @@
-import { memo, useMemo, useCallback } from 'react'
-import type { ReactNode } from 'react'
+import { memo, useCallback } from 'react'
+import { Eye, EyeOff, RefreshCw, Clock, Users } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import PageHeroCard from '@/shared/components/PageHeroCard'
+import { Card } from '@/shared/ui/card'
+import { cn } from '@/shared/utils'
 import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 import type { WatchlistHeroProps } from '@/modules/watchlist/types'
 import { isValidWatchlistSettings } from '@/modules/watchlist/utils/watchlistUtils'
@@ -35,95 +36,158 @@ function WatchlistHeroComponent({
     onToggleTrackAll()
   }, [onToggleTrackAll])
 
-  const heroDescription = useMemo(() => {
-    if (!settings || !isValidWatchlistSettings(settings)) {
-      return ''
-    }
-    return `Список авторов «На карандаше». Проверка активности каждые ${settings.pollIntervalMinutes} мин., лимит одновременно обновляемых авторов — ${settings.maxAuthors}.`
-  }, [settings])
-
-  const footer = useMemo((): ReactNode => {
-    if (!settings || !isValidWatchlistSettings(settings)) {
-      return null
-    }
-    const badges = [
-      <Badge key="authors" variant="secondary" className="bg-white/20 text-text-primary">
-        {`${WATCHLIST_CONSTANTS.AUTHORS_BADGE_PREFIX}${totalAuthors || 0}`}
-      </Badge>,
-    ]
-
-    badges.push(
-      <Badge key="interval" variant="outline">
-        {`${WATCHLIST_CONSTANTS.INTERVAL_BADGE_PREFIX}${settings.pollIntervalMinutes}${WATCHLIST_CONSTANTS.INTERVAL_BADGE_SUFFIX}`}
-      </Badge>
-    )
-
-    return badges
-  }, [settings, totalAuthors])
-
-  const toggleButtonText = useMemo(() => {
-    if (!settings || !isValidWatchlistSettings(settings)) {
-      return ''
-    }
-    return isUpdatingSettings
-      ? WATCHLIST_CONSTANTS.SAVING_TEXT
-      : settings.trackAllComments
-        ? WATCHLIST_CONSTANTS.DISABLE_TRACK_ALL_TEXT
-        : WATCHLIST_CONSTANTS.ENABLE_TRACK_ALL_TEXT
-  }, [isUpdatingSettings, settings])
-
-  const refreshButton = useMemo(
-    () => (
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleRefresh}
-        disabled={isLoadingAuthors}
-        aria-label="Обновить список"
-      >
-        {WATCHLIST_CONSTANTS.REFRESH_BUTTON_TEXT}
-      </Button>
-    ),
-    [handleRefresh, isLoadingAuthors]
-  )
-
-  const toggleTrackAllButton = useMemo(() => {
-    if (!settings || !isValidWatchlistSettings(settings)) {
-      return null
-    }
-    return (
-      <Button
-        type="button"
-        variant={settings.trackAllComments ? 'default' : 'outline'}
-        onClick={handleToggleTrackAll}
-        disabled={isUpdatingSettings}
-        aria-label={toggleButtonText}
-      >
-        {toggleButtonText}
-      </Button>
-    )
-  }, [handleToggleTrackAll, settings, isUpdatingSettings, toggleButtonText])
-
   if (!settings) {
-    return <div>{WATCHLIST_CONSTANTS.LOADING_SETTINGS_TEXT}</div>
+    return <div className="text-slate-400">{WATCHLIST_CONSTANTS.LOADING_SETTINGS_TEXT}</div>
   }
 
   if (!isValidWatchlistSettings(settings)) {
-    return <div>{WATCHLIST_CONSTANTS.INVALID_SETTINGS_ERROR}</div>
+    return <div className="text-red-400">{WATCHLIST_CONSTANTS.INVALID_SETTINGS_ERROR}</div>
   }
 
+  const trackingEnabled = settings.trackAllComments
+
   return (
-    <PageHeroCard
-      title="Авторы на карандаше"
-      description={heroDescription}
-      actions={
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {refreshButton}
-          {toggleTrackAllButton}
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+        <div className="space-y-3">
+          <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
+            Авторы <span className="text-cyan-400">на карандаше</span>
+          </h1>
+          <p className="text-slate-300 max-w-2xl text-lg">
+            Отслеживайте активность выбранных авторов в комментариях. Система автоматически
+            проверяет новые комментарии от этих пользователей во всех отслеживаемых группах.
+          </p>
         </div>
-      }
-      footer={footer}
-    />
+
+        <Button
+          onClick={handleRefresh}
+          size="lg"
+          variant="outline"
+          className="h-11 shrink-0 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+          disabled={isLoadingAuthors}
+        >
+          <RefreshCw className={cn('mr-2 w-5 h-5', isLoadingAuthors && 'animate-spin')} />
+          Обновить
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {/* Monitoring Status Card */}
+        <div className="relative md:col-span-2">
+          {/* Glow Effect */}
+          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl" />
+
+          <Card className="relative overflow-hidden border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur-2xl">
+            {/* Top Border Glow */}
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+
+            <div className="flex flex-col justify-between gap-5 p-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-monitoring-display font-semibold text-white">
+                      Статус мониторинга
+                    </h3>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'uppercase text-[10px] tracking-wider font-semibold rounded-full font-mono-accent',
+                        trackingEnabled
+                          ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
+                          : 'border border-amber-500/25 bg-amber-500/10 text-amber-400'
+                      )}
+                    >
+                      {trackingEnabled ? 'Активен' : 'Пауза'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-slate-400">
+                    {trackingEnabled
+                      ? 'Система отслеживает новые комментарии от выбранных авторов'
+                      : 'Отслеживание приостановлено, обновление временных меток продолжается'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-6 pt-2">
+                <div className="flex items-center gap-2.5 text-sm">
+                  <div className="p-2 rounded-full bg-cyan-500/10 text-cyan-400">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-slate-500 font-medium uppercase tracking-wide font-mono-accent">
+                      Интервал проверки
+                    </span>
+                    <span className="font-semibold text-slate-200">
+                      {settings.pollIntervalMinutes} мин
+                    </span>
+                  </div>
+                </div>
+
+                <div className="w-px h-8 bg-white/10" />
+
+                <div className="flex items-center gap-2.5 text-sm">
+                  <div className="p-2 rounded-full bg-purple-500/10 text-purple-400">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-slate-500 font-medium uppercase tracking-wide font-mono-accent">
+                      Макс. авторов/цикл
+                    </span>
+                    <span className="font-semibold text-slate-200">{settings.maxAuthors}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Quick Action Card */}
+        <div className="relative">
+          {/* Glow Effect */}
+          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 opacity-50 blur-xl" />
+
+          <Card className="relative flex flex-col gap-4 p-6 border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur-2xl overflow-hidden">
+            {/* Top Border Glow */}
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+
+            <div className="space-y-1">
+              <h3 className="font-monitoring-display text-sm font-semibold text-white">
+                Режим отслеживания
+              </h3>
+              <p className="text-xs text-slate-500">
+                Всего авторов:{' '}
+                <span className="font-mono-accent text-slate-300">{totalAuthors || 0}</span>
+              </p>
+            </div>
+
+            <Button
+              className={cn(
+                'h-12 w-full text-base font-medium transition-all duration-200',
+                trackingEnabled
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40'
+                  : 'border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50'
+              )}
+              onClick={handleToggleTrackAll}
+              disabled={isUpdatingSettings}
+              variant={trackingEnabled ? 'default' : 'outline'}
+            >
+              {isUpdatingSettings ? (
+                <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+              ) : trackingEnabled ? (
+                <EyeOff className="w-5 h-5 mr-2" />
+              ) : (
+                <Eye className="w-5 h-5 mr-2" />
+              )}
+              {isUpdatingSettings
+                ? 'Сохранение...'
+                : trackingEnabled
+                  ? 'Приостановить'
+                  : 'Активировать'}
+            </Button>
+          </Card>
+        </div>
+      </div>
+    </div>
   )
 }
 
