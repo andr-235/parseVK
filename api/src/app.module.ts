@@ -27,6 +27,9 @@ import { TelegramModule } from './telegram/telegram.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { MonitoringModule } from './monitoring/monitoring.module.js';
+import { ClickHouseModule } from './clickhouse/clickhouse.module.js';
+import { ElasticsearchModule } from './elasticsearch/elasticsearch.module.js';
+import { SyncModule } from './sync/sync.module.js';
 import type { AppConfig } from './config/app.config.js';
 
 @Module({
@@ -63,6 +66,9 @@ import type { AppConfig } from './config/app.config.js';
     DataImportModule,
     ListingsModule,
     TelegramModule,
+    ClickHouseModule,
+    ElasticsearchModule,
+    SyncModule,
   ],
   controllers: [AppController],
   providers: [AppService, LoggingInterceptor, HttpExceptionFilter],
