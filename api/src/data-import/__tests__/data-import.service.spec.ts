@@ -221,6 +221,44 @@ describe('DataImportService', () => {
     });
   });
 
+  it('корректно парсит строковые цены с символами валюты (Юла, Циан)', async () => {
+    findUniqueByUrlMock.mockResolvedValue(null);
+    upsertMock.mockResolvedValue(createListing({ id: 1 }));
+
+    await service.importListings({
+      listings: [
+        {
+          url: 'https://youla.ru/listing-1',
+          price: '45 000 ₽',
+        },
+        {
+          url: 'https://cian.ru/listing-2',
+          price: '60 000 ₽/мес.',
+        },
+        {
+          url: 'https://example.com/listing-3',
+          price: '1500000руб.',
+        },
+      ],
+    } as ListingImportRequestDto);
+
+    expect(upsertMock).toHaveBeenNthCalledWith(
+      1,
+      { url: 'https://youla.ru/listing-1' },
+      expect.objectContaining({ price: 45000 }),
+    );
+    expect(upsertMock).toHaveBeenNthCalledWith(
+      2,
+      { url: 'https://cian.ru/listing-2' },
+      expect.objectContaining({ price: 60000 }),
+    );
+    expect(upsertMock).toHaveBeenNthCalledWith(
+      3,
+      { url: 'https://example.com/listing-3' },
+      expect.objectContaining({ price: 1500000 }),
+    );
+  });
+
   it('пропускает объявления без URL и возвращает ошибку', async () => {
     const result = await service.importListings({
       listings: [

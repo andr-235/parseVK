@@ -318,10 +318,18 @@ export class DataImportService {
       return undefined;
     }
 
-    const numeric =
-      typeof value === 'number'
-        ? value
-        : Number(String(value).replace(/\s+/g, ''));
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? Math.round(value) : undefined;
+    }
+
+    // Извлекаем только цифры из строки
+    const digitsOnly = String(value).replace(/\D/g, '');
+
+    if (!digitsOnly) {
+      return undefined;
+    }
+
+    const numeric = Number(digitsOnly);
 
     if (!Number.isFinite(numeric)) {
       return undefined;
