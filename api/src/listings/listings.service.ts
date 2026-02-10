@@ -232,6 +232,11 @@ export class ListingsService {
     }
   }
 
+  async deleteListing(id: number): Promise<void> {
+    await this.repository.findUniqueOrThrow({ id });
+    await this.repository.delete({ id });
+  }
+
   async updateListing(
     id: number,
     payload: UpdateListingDto,

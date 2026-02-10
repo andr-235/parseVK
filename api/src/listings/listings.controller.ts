@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Query,
@@ -219,6 +222,12 @@ export class ListingsController {
     @Body() payload: UpdateListingDto,
   ): Promise<ListingDto> {
     return this.listingsService.updateListing(params.id, payload);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteListing(@Param() params: ListingIdParamDto): Promise<void> {
+    return this.listingsService.deleteListing(params.id);
   }
 
   private normalizeString(value?: string): string | null {

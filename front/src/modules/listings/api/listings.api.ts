@@ -242,4 +242,26 @@ export const listingsService = {
       throw error
     }
   },
+
+  async deleteListing(id: number): Promise<void> {
+    try {
+      const response = await createRequest(`${API_URL}/listings/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '')
+        throw new Error(text || 'Failed to delete listing')
+      }
+
+      toast.success('Объявление удалено')
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[listingsService] deleteListing error', error)
+      }
+      const message = error instanceof Error ? error.message : 'Не удалось удалить объявление'
+      toast.error(message)
+      throw error
+    }
+  },
 }

@@ -13,7 +13,6 @@ function ListingsPage() {
     appliedSearch,
     sourceFilter,
     archivedFilter,
-    expandedDescriptions,
     isListLoading,
     isExportOpen,
     isImportOpen,
@@ -34,11 +33,11 @@ function ListingsPage() {
     handleArchivedChange,
     handlePageSizeChange,
     handleManualRefresh,
-    toggleDescription,
     handleAddNote,
     handleCloseEdit,
     handleListingUpdated,
     handleArchive,
+    handleDelete,
     handleMetaChange,
     handleItemsChange,
     handleLoadingChange,
@@ -83,10 +82,9 @@ function ListingsPage() {
           limit={pageSize}
           filtersKey={filtersKey}
           fetchParams={fetchParams}
-          expandedDescriptions={expandedDescriptions}
-          onToggleDescription={toggleDescription}
           onAddNote={handleAddNote}
           onArchive={handleArchive}
+          onDelete={handleDelete}
           onMetaChange={handleMetaChange}
           onItemsChange={handleItemsChange}
           onLoadingChange={handleLoadingChange}

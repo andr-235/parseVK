@@ -201,6 +201,16 @@ export const useListingsViewModel = () => {
     }
   }, [])
 
+  const handleDelete = useCallback(async (listing: IListing) => {
+    try {
+      await listingsService.deleteListing(listing.id)
+      setIsListLoading(true)
+      setRefreshToken((token) => token + 1)
+    } catch {
+      // Ошибки отображаются в сервисе
+    }
+  }, [])
+
   return {
     pageSize,
     searchTerm,
@@ -237,6 +247,7 @@ export const useListingsViewModel = () => {
     handleCloseEdit,
     handleListingUpdated,
     handleArchive,
+    handleDelete,
     handleMetaChange,
     handleItemsChange,
     handleLoadingChange,

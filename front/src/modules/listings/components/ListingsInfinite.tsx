@@ -5,7 +5,7 @@ import {
   type UseInfiniteFetcher,
 } from '@/modules/listings/hooks/useInfiniteListings'
 import type { IListing } from '@/shared/types'
-import { ListingCard, ListingSkeleton } from './ListingCard'
+import { ListingsTable } from './ListingsTable'
 import type { ListingsMeta, ListingsFetcherParams } from '@/modules/listings/types/listingsTypes'
 
 interface ListingsInfiniteProps {
@@ -13,10 +13,9 @@ interface ListingsInfiniteProps {
   limit: number
   filtersKey: string
   fetchParams: ListingsFetcherParams
-  expandedDescriptions: Set<number>
-  onToggleDescription: (id: number) => void
   onAddNote: (listing: IListing) => void
   onArchive: (listing: IListing) => void | Promise<void>
+  onDelete: (listing: IListing) => void | Promise<void>
   onMetaChange?: (meta: ListingsMeta | null) => void
   onItemsChange?: (count: number) => void
   onLoadingChange?: (loading: boolean) => void
@@ -27,17 +26,15 @@ export function ListingsInfinite({
   limit,
   filtersKey,
   fetchParams,
-  expandedDescriptions,
-  onToggleDescription,
   onAddNote,
   onArchive,
+  onDelete,
   onMetaChange,
   onItemsChange,
   onLoadingChange,
 }: ListingsInfiniteProps) {
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
-  const animatedIdsRef = useRef<Set<number>>(new Set())
   const [observerAvailable, setObserverAvailable] = useState(true)
 
   const { items, loading, initialLoading, error, hasMore, meta, loadMore, reset } =
@@ -51,10 +48,6 @@ export function ListingsInfinite({
   const handleLoadMore = useCallback(async () => {
     await loadMore()
   }, [loadMore])
-
-  useEffect(() => {
-    animatedIdsRef.current.clear()
-  }, [filtersKey])
 
   useEffect(() => {
     onMetaChange?.(meta ?? null)
@@ -87,14 +80,14 @@ export function ListingsInfinite({
         (entries) => {
           const [entry] = entries
           if (entry?.isIntersecting && !loading) {
-            handleLoadMore().catch((error) => {
+            handleLoadMore().catch((err) => {
               if (import.meta.env.DEV) {
-                console.error('Failed to load more listings:', error)
+                console.error('Failed to load more listings:', err)
               }
             })
           }
         },
-        { root: null, rootMargin: '0px 0px 300px 0px', threshold: 0 }
+        { root: null, rootMargin: '0px 0px 400px 0px', threshold: 0 }
       )
 
       observer.observe(sentinel)
@@ -121,40 +114,13 @@ export function ListingsInfinite({
     return `Загружено ${items.length} объявлений`
   }, [error, hasMore, items.length, loading])
 
-  const skeletonCount = initialLoading ? 6 : 3
-
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div className="sr-only" aria-live="polite">
         {statusMessage}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {items.map((listing, index) => {
-          const hasAnimated = animatedIdsRef.current.has(listing.id)
-          if (!hasAnimated) animatedIdsRef.current.add(listing.id)
-
-          return (
-            <ListingCard
-              key={listing.id}
-              listing={listing}
-              expandedDescriptions={expandedDescriptions}
-              onToggleDescription={onToggleDescription}
-              onAddNote={onAddNote}
-              onArchive={onArchive}
-              shouldAnimate={!hasAnimated}
-              staggerDelay={Math.min(index % 8, 6) * 0.04}
-            />
-          )
-        })}
-
-        {(initialLoading || (loading && items.length > 0)) &&
-          Array.from({ length: skeletonCount }).map((_, index) => (
-            <ListingSkeleton key={`skeleton-${index}`} />
-          ))}
-      </div>
-
-      {!initialLoading && items.length === 0 && !loading && !error && (
+      {!initialLoading && items.length === 0 && !loading && !error ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-border/50 bg-background-secondary p-12 text-center">
           <div className="mb-4 rounded-full bg-muted p-4">
             <span className="text-4xl">🔍</span>
@@ -162,6 +128,15 @@ export function ListingsInfinite({
           <h3 className="text-lg font-semibold text-text-primary">Ничего не найдено</h3>
           <p className="text-text-secondary">Попробуйте изменить параметры поиска или фильтры.</p>
         </div>
+      ) : (
+        <ListingsTable
+          items={items}
+          loading={loading}
+          initialLoading={initialLoading}
+          onAddNote={onAddNote}
+          onArchive={onArchive}
+          onDelete={onDelete}
+        />
       )}
 
       {error && (

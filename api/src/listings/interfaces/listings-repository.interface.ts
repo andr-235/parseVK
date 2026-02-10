@@ -39,6 +39,7 @@ export interface IListingsRepository {
     where: { id: number },
     data: ListingUpdateData,
   ): Promise<ListingRecord>;
+  delete(where: { id: number }): Promise<ListingRecord>;
   getListingsWithCountAndSources(params: {
     where: ListingWhereInput;
     skip: number;

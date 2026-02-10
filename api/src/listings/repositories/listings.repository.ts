@@ -69,6 +69,10 @@ export class ListingsRepository implements IListingsRepository {
     });
   }
 
+  delete(where: { id: number }): Promise<ListingRecord> {
+    return this.prisma.listing.delete({ where });
+  }
+
   async getListingsWithCountAndSources(params: {
     where: ListingWhereInput;
     skip: number;
