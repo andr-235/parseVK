@@ -7,6 +7,7 @@ export type ListingsSortField =
   | 'createdAt'
   | 'price'
   | 'publishedAt'
+  | 'sourceParsedAt'
   | 'source'
   | 'address'
   | 'title'

@@ -65,7 +65,12 @@ const COLUMN_DEFS = [
     hideable: true,
     sortField: 'publishedAt' as ListingsSortField,
   },
-  { id: 'note' as const, label: 'Заметка', hideable: true, sortField: null },
+  {
+    id: 'parsedAt' as const,
+    label: 'Дата парсинга',
+    hideable: true,
+    sortField: 'sourceParsedAt' as ListingsSortField,
+  },
   { id: 'actions' as const, label: '', hideable: false, sortField: null },
 ] as const
 
@@ -140,8 +145,12 @@ function ListingRow({
     [listing.price, listing.currency]
   )
   const date = useMemo(
-    () => formatDateShort(listing.publishedAt ?? listing.sourcePostedAt ?? listing.sourceParsedAt),
-    [listing.publishedAt, listing.sourcePostedAt, listing.sourceParsedAt]
+    () => formatDateShort(listing.publishedAt ?? listing.sourcePostedAt),
+    [listing.publishedAt, listing.sourcePostedAt]
+  )
+  const parsedAt = useMemo(
+    () => formatDateShort(listing.sourceParsedAt ?? listing.createdAt),
+    [listing.sourceParsedAt, listing.createdAt]
   )
   const source = useMemo(() => formatSourceLabel(listing.source), [listing.source])
   const location = useMemo(() => {
@@ -235,13 +244,9 @@ function ListingRow({
         </td>
       )}
 
-      {visibleColumns.has('note') && (
-        <td className="px-4 py-3">
-          {listing.manualNote ? (
-            <StickyNote className="size-3.5 text-amber-400/80" />
-          ) : (
-            <span className="font-mono-accent text-xs text-slate-600">—</span>
-          )}
+      {visibleColumns.has('parsedAt') && (
+        <td className="px-4 py-3 whitespace-nowrap">
+          <span className="font-mono-accent text-xs text-slate-500">{parsedAt}</span>
         </td>
       )}
 

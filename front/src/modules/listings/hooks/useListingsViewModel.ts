@@ -27,6 +27,7 @@ export const useListingsViewModel = () => {
 
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [noteListing, setNoteListing] = useState<IListing | null>(null)
 
   const [sortBy, setSortBy] = useState<ListingsSortField | undefined>(undefined)
@@ -234,6 +235,7 @@ export const useListingsViewModel = () => {
     isListLoading,
     isExportOpen,
     isImportOpen,
+    isCreateOpen,
     noteListing,
     querySource,
     fetchParams,
@@ -245,6 +247,7 @@ export const useListingsViewModel = () => {
     setSearchTerm,
     setIsExportOpen,
     setIsImportOpen,
+    setIsCreateOpen,
     handleApplySearch,
     handleResetSearch,
     handleSourceChange,

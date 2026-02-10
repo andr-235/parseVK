@@ -4,6 +4,7 @@ import { ListingsInfinite } from '@/modules/listings/components/ListingsInfinite
 import ExportListingsModal from '@/modules/listings/components/ExportListingsModal'
 import ImportListingsModal from '@/modules/listings/components/ImportListingsModal'
 import EditListingModal from '@/modules/listings/components/EditListingModal'
+import CreateListingModal from '@/modules/listings/components/CreateListingModal'
 import { useListingsViewModel } from '@/modules/listings/hooks/useListingsViewModel'
 
 function ListingsPage() {
@@ -16,6 +17,7 @@ function ListingsPage() {
     isListLoading,
     isExportOpen,
     isImportOpen,
+    isCreateOpen,
     noteListing,
     querySource,
     fetchParams,
@@ -27,6 +29,7 @@ function ListingsPage() {
     setSearchTerm,
     setIsExportOpen,
     setIsImportOpen,
+    setIsCreateOpen,
     handleApplySearch,
     handleResetSearch,
     handleSourceChange,
@@ -52,6 +55,7 @@ function ListingsPage() {
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <ListingsHero
           isListLoading={isListLoading}
+          onAdd={() => setIsCreateOpen(true)}
           onImport={() => setIsImportOpen(true)}
           onExport={() => setIsExportOpen(true)}
           onRefresh={handleManualRefresh}
@@ -115,6 +119,12 @@ function ListingsPage() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImportComplete={handleManualRefresh}
+      />
+
+      <CreateListingModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onCreated={handleManualRefresh}
       />
     </div>
   )

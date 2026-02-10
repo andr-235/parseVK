@@ -9,6 +9,24 @@ import type {
   ListingUpdatePayload,
 } from '@/shared/types'
 
+export interface CreateListingPayload {
+  url: string
+  title?: string
+  description?: string
+  price?: number | null
+  currency?: string
+  source?: string
+  address?: string
+  city?: string
+  rooms?: number | null
+  areaTotal?: number | null
+  floor?: number | null
+  floorsTotal?: number | null
+  contactName?: string
+  contactPhone?: string
+  publishedAt?: string | null
+}
+
 interface FetchListingsOptions {
   page: number
   pageSize: number
@@ -240,6 +258,44 @@ export const listingsService = {
         console.error('[listingsService] archiveListing error', error)
       }
       const message = error instanceof Error ? error.message : 'Не удалось отправить в архив'
+      toast.error(message)
+      throw error
+    }
+  },
+
+  async createListing(payload: CreateListingPayload): Promise<void> {
+    try {
+      const item: ListingImportRequest['listings'][0] = {
+        url: payload.url,
+        title: payload.title ?? null,
+        description: payload.description ?? null,
+        price: payload.price ?? null,
+        currency: payload.currency ?? null,
+        source: payload.source ?? null,
+        address: payload.address ?? null,
+        city: payload.city ?? null,
+        rooms: payload.rooms ?? null,
+        areaTotal: payload.areaTotal ?? null,
+        floor: payload.floor ?? null,
+        floorsTotal: payload.floorsTotal ?? null,
+        contactName: payload.contactName ?? null,
+        contactPhone: payload.contactPhone ?? null,
+        publishedAt: payload.publishedAt ?? null,
+        sourceParsedAt: new Date().toISOString(),
+      }
+
+      const response = await createRequest(`${API_URL}/data/import`, {
+        method: 'POST',
+        body: JSON.stringify({ listings: [item], updateExisting: false }),
+      })
+
+      await handleResponse<ListingImportReport>(response, 'Failed to create listing')
+      toast.success('Объявление добавлено')
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[listingsService] createListing error', error)
+      }
+      const message = error instanceof Error ? error.message : 'Не удалось добавить объявление'
       toast.error(message)
       throw error
     }

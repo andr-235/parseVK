@@ -1,6 +1,6 @@
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
-import { RefreshCw, Download, Upload, Database, Filter, Archive } from 'lucide-react'
+import { RefreshCw, Download, Upload, Database, Filter, Archive, Plus } from 'lucide-react'
 import { cn } from '@/shared/utils'
 
 interface ListingsHeroProps {
@@ -8,6 +8,7 @@ interface ListingsHeroProps {
   onImport: () => void
   onExport: () => void
   onRefresh: () => void
+  onAdd: () => void
 }
 
 export const ListingsHero = ({
@@ -15,6 +16,7 @@ export const ListingsHero = ({
   onImport,
   onExport,
   onRefresh,
+  onAdd,
 }: ListingsHeroProps) => {
   return (
     <div className="flex flex-col gap-8">
@@ -30,6 +32,14 @@ export const ListingsHero = ({
         </div>
 
         <div className="flex flex-wrap gap-3">
+          <Button
+            onClick={onAdd}
+            size="lg"
+            className="h-11 bg-cyan-500/90 hover:bg-cyan-500 text-slate-900 font-semibold transition-all duration-200"
+          >
+            <Plus className="mr-2 w-5 h-5" />
+            Добавить
+          </Button>
           <Button
             onClick={onImport}
             size="lg"
