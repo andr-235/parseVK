@@ -111,8 +111,11 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
     })
 
     try {
-      await ensureGroupsLoaded()
-      const result = await tasksService.createParsingTask({ groupIds: payloadGroupIds })
+      // Параллельная загрузка групп и создание задачи (async-parallel optimization)
+      const [, result] = await Promise.all([
+        ensureGroupsLoaded(),
+        tasksService.createParsingTask({ groupIds: payloadGroupIds }),
+      ])
 
       const { task, details } = mapResultToTaskDetails(result)
 
@@ -235,8 +238,6 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
    * Загружает детали задачи и кэширует результат.
    */
   fetchTaskDetails: async (taskId) => {
-    await ensureGroupsLoaded()
-
     const normalizedId = normalizeId(taskId)
     const cacheKey = toTaskKey(normalizedId)
     const cached = get().taskDetails[cacheKey]
@@ -246,7 +247,11 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
     }
 
     try {
-      const result = await tasksService.fetchTaskDetails(normalizedId)
+      // Параллельная загрузка групп и деталей задачи (async-parallel optimization)
+      const [, result] = await Promise.all([
+        ensureGroupsLoaded(),
+        tasksService.fetchTaskDetails(normalizedId),
+      ])
 
       const { task, details } = mapResultToTaskDetails(result)
       const exists = Boolean(get().tasksById[toTaskKey(task.id)])
