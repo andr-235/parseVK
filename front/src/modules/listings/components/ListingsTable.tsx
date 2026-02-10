@@ -181,14 +181,14 @@ function ListingRow({
         </td>
       )}
 
-      <td className="px-4 py-3 max-w-[300px]">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-start gap-1.5">
+      <td className="px-4 py-3 w-[300px] max-w-[300px] overflow-hidden">
+        <div className="flex flex-col gap-1 min-w-0">
+          <div className="flex items-start gap-1.5 min-w-0">
             <a
               href={listing.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="line-clamp-2 text-sm font-medium text-slate-200 leading-snug transition-colors duration-200 hover:text-cyan-400"
+              className="line-clamp-2 text-sm font-medium text-slate-200 leading-snug transition-colors duration-200 hover:text-cyan-400 min-w-0 break-words"
               title={listing.title ?? listing.url}
             >
               {listing.title ?? listing.url}
@@ -196,7 +196,9 @@ function ListingRow({
             <ExternalLink className="mt-0.5 size-3 shrink-0 text-slate-600" />
           </div>
           {listing.manualNote && (
-            <p className="text-xs text-amber-400/70 italic leading-snug">{listing.manualNote}</p>
+            <p className="text-xs text-amber-400/70 italic leading-snug break-words">
+              {listing.manualNote}
+            </p>
           )}
         </div>
       </td>
