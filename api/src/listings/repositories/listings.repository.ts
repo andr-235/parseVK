@@ -77,13 +77,15 @@ export class ListingsRepository implements IListingsRepository {
     where: ListingWhereInput;
     skip: number;
     take: number;
+    orderBy?: ListingOrderByInput;
   }): Promise<GetListingsTransactionResult> {
+    const orderBy = params.orderBy ?? { createdAt: 'desc' };
     return this.prisma.$transaction(async (tx) => {
       const listings = await tx.listing.findMany({
         where: params.where as Prisma.ListingWhereInput,
         skip: params.skip,
         take: params.take,
-        orderBy: { createdAt: 'desc' },
+        orderBy: orderBy as Prisma.ListingOrderByWithRelationInput,
       });
       const total = await tx.listing.count({
         where: params.where as Prisma.ListingWhereInput,

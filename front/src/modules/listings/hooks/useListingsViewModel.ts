@@ -4,7 +4,11 @@ import type { UseInfiniteFetcher } from '@/modules/listings/hooks/useInfiniteLis
 // Использование services для создания fetcher функции для useInfiniteListings
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { listingsService } from '@/modules/listings/api/listings.api'
-import type { ListingsMeta, ListingsFetcherParams } from '@/modules/listings/types/listingsTypes'
+import type {
+  ListingsMeta,
+  ListingsFetcherParams,
+  ListingsSortField,
+} from '@/modules/listings/types/listingsTypes'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 
@@ -15,7 +19,6 @@ export const useListingsViewModel = () => {
   const [sourceFilter, setSourceFilter] = useState('all')
   const [archivedFilter, setArchivedFilter] = useState(false)
 
-  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<number>>(new Set())
   const [availableSources, setAvailableSources] = useState<string[]>([])
   const [totalItems, setTotalItems] = useState<number | null>(null)
   const [fetchedCount, setFetchedCount] = useState(0)
@@ -26,6 +29,9 @@ export const useListingsViewModel = () => {
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [noteListing, setNoteListing] = useState<IListing | null>(null)
 
+  const [sortBy, setSortBy] = useState<ListingsSortField | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
   const querySource = sourceFilter === 'all' ? undefined : sourceFilter
 
   const fetchParams = useMemo<ListingsFetcherParams>(
@@ -33,8 +39,10 @@ export const useListingsViewModel = () => {
       search: appliedSearch.trim() || undefined,
       source: querySource,
       archived: archivedFilter || undefined,
+      sortBy,
+      sortOrder: sortBy ? sortOrder : undefined,
     }),
-    [appliedSearch, querySource, archivedFilter]
+    [appliedSearch, querySource, archivedFilter, sortBy, sortOrder]
   )
 
   const filtersIdentity = useMemo(
@@ -43,10 +51,23 @@ export const useListingsViewModel = () => {
         search: fetchParams.search ?? '',
         source: fetchParams.source ?? 'all',
         archived: fetchParams.archived ?? false,
+        sortBy: fetchParams.sortBy ?? '',
+        sortOrder: fetchParams.sortOrder ?? '',
         pageSize,
       }),
     [fetchParams, pageSize]
   )
+
+  const handleSortChange = useCallback((field: ListingsSortField) => {
+    setSortBy((prev) => {
+      if (prev === field) {
+        setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))
+        return field
+      }
+      setSortOrder('asc')
+      return field
+    })
+  }, [])
 
   const filtersKey = useMemo(
     () =>
@@ -71,6 +92,8 @@ export const useListingsViewModel = () => {
       search: params?.search,
       source: params?.source,
       archived: params?.archived,
+      sortBy: params?.sortBy,
+      sortOrder: params?.sortOrder,
       signal,
     })
 
@@ -95,10 +118,6 @@ export const useListingsViewModel = () => {
 
     return ['all', ...unique]
   }, [availableSources, sourceFilter])
-
-  useEffect(() => {
-    setExpandedDescriptions(new Set())
-  }, [filtersIdentity])
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
 
@@ -168,15 +187,6 @@ export const useListingsViewModel = () => {
     setRefreshToken((token) => token + 1)
   }, [])
 
-  const toggleDescription = useCallback((listingId: number) => {
-    setExpandedDescriptions((prev) => {
-      const next = new Set(prev)
-      if (next.has(listingId)) next.delete(listingId)
-      else next.add(listingId)
-      return next
-    })
-  }, [])
-
   const handleAddNote = useCallback((listing: IListing) => {
     setNoteListing(listing)
   }, [])
@@ -217,7 +227,6 @@ export const useListingsViewModel = () => {
     appliedSearch,
     sourceFilter,
     archivedFilter,
-    expandedDescriptions,
     availableSources,
     totalItems,
     fetchedCount,
@@ -242,12 +251,14 @@ export const useListingsViewModel = () => {
     handleArchivedChange,
     handlePageSizeChange,
     handleManualRefresh,
-    toggleDescription,
     handleAddNote,
     handleCloseEdit,
     handleListingUpdated,
     handleArchive,
     handleDelete,
+    sortBy,
+    sortOrder,
+    handleSortChange,
     handleMetaChange,
     handleItemsChange,
     handleLoadingChange,

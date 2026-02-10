@@ -32,6 +32,8 @@ export class ListingsController {
       search: query.search,
       source: query.source,
       archived: query.archived,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
     });
   }
 

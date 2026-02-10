@@ -44,6 +44,7 @@ export interface IListingsRepository {
     where: ListingWhereInput;
     skip: number;
     take: number;
+    orderBy?: ListingOrderByInput;
   }): Promise<GetListingsTransactionResult>;
   transaction<T>(
     callback: (tx: ListingsTransactionClient) => Promise<T>,

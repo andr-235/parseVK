@@ -6,16 +6,23 @@ import {
 } from '@/modules/listings/hooks/useInfiniteListings'
 import type { IListing } from '@/shared/types'
 import { ListingsTable } from './ListingsTable'
-import type { ListingsMeta, ListingsFetcherParams } from '@/modules/listings/types/listingsTypes'
+import type {
+  ListingsMeta,
+  ListingsFetcherParams,
+  ListingsSortField,
+} from '@/modules/listings/types/listingsTypes'
 
 interface ListingsInfiniteProps {
   fetcher: UseInfiniteFetcher<IListing, ListingsMeta, ListingsFetcherParams>
   limit: number
   filtersKey: string
   fetchParams: ListingsFetcherParams
+  sortBy?: ListingsSortField
+  sortOrder?: 'asc' | 'desc'
   onAddNote: (listing: IListing) => void
   onArchive: (listing: IListing) => void | Promise<void>
   onDelete: (listing: IListing) => void | Promise<void>
+  onSortChange: (field: ListingsSortField) => void
   onMetaChange?: (meta: ListingsMeta | null) => void
   onItemsChange?: (count: number) => void
   onLoadingChange?: (loading: boolean) => void
@@ -26,9 +33,12 @@ export function ListingsInfinite({
   limit,
   filtersKey,
   fetchParams,
+  sortBy,
+  sortOrder,
   onAddNote,
   onArchive,
   onDelete,
+  onSortChange,
   onMetaChange,
   onItemsChange,
   onLoadingChange,
@@ -133,9 +143,12 @@ export function ListingsInfinite({
           items={items}
           loading={loading}
           initialLoading={initialLoading}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
           onAddNote={onAddNote}
           onArchive={onArchive}
           onDelete={onDelete}
+          onSortChange={onSortChange}
         />
       )}
 

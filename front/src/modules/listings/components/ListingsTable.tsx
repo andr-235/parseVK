@@ -10,27 +10,63 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { Skeleton } from '@/shared/ui/skeleton'
 import type { IListing } from '@/shared/types'
+import type { ListingsSortField } from '@/modules/listings/types/listingsTypes'
 import {
   formatSourceLabel,
   formatPriceValue,
   formatDateShort,
   buildParamsString,
 } from '@/modules/listings/utils/listingsUtils'
-import { ExternalLink, StickyNote, Archive, Trash2, Columns3, ArchiveRestore } from 'lucide-react'
+import {
+  ExternalLink,
+  StickyNote,
+  Archive,
+  Trash2,
+  Columns3,
+  ArchiveRestore,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+} from 'lucide-react'
 import { cn } from '@/shared/utils'
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 const COLUMN_DEFS = [
-  { id: 'source' as const, label: 'Источник', hideable: true },
-  { id: 'title' as const, label: 'Заголовок', hideable: false },
-  { id: 'price' as const, label: 'Цена', hideable: true },
-  { id: 'params' as const, label: 'Параметры', hideable: true },
-  { id: 'address' as const, label: 'Адрес', hideable: true },
-  { id: 'contact' as const, label: 'Контакт', hideable: true },
-  { id: 'date' as const, label: 'Дата', hideable: true },
-  { id: 'note' as const, label: 'Заметка', hideable: true },
-  { id: 'actions' as const, label: '', hideable: false },
+  {
+    id: 'source' as const,
+    label: 'Источник',
+    hideable: true,
+    sortField: 'source' as ListingsSortField,
+  },
+  {
+    id: 'title' as const,
+    label: 'Заголовок',
+    hideable: false,
+    sortField: 'title' as ListingsSortField,
+  },
+  { id: 'price' as const, label: 'Цена', hideable: true, sortField: 'price' as ListingsSortField },
+  { id: 'params' as const, label: 'Параметры', hideable: true, sortField: null },
+  {
+    id: 'address' as const,
+    label: 'Адрес',
+    hideable: true,
+    sortField: 'address' as ListingsSortField,
+  },
+  {
+    id: 'contact' as const,
+    label: 'Контакт',
+    hideable: true,
+    sortField: 'sourceAuthorName' as ListingsSortField,
+  },
+  {
+    id: 'date' as const,
+    label: 'Дата',
+    hideable: true,
+    sortField: 'publishedAt' as ListingsSortField,
+  },
+  { id: 'note' as const, label: 'Заметка', hideable: true, sortField: null },
+  { id: 'actions' as const, label: '', hideable: false, sortField: null },
 ] as const
 
 type ColumnId = (typeof COLUMN_DEFS)[number]['id']
@@ -43,9 +79,20 @@ interface ListingsTableProps {
   items: IListing[]
   loading: boolean
   initialLoading: boolean
+  sortBy?: ListingsSortField
+  sortOrder?: 'asc' | 'desc'
   onAddNote: (listing: IListing) => void
   onArchive: (listing: IListing) => void | Promise<void>
   onDelete: (listing: IListing) => void | Promise<void>
+  onSortChange: (field: ListingsSortField) => void
+}
+
+// ─── Sort icon ────────────────────────────────────────────────────────────────
+
+function SortIcon({ active, order }: { active: boolean; order: 'asc' | 'desc' | undefined }) {
+  if (!active) return <ChevronsUpDown className="size-3 opacity-30" />
+  if (order === 'asc') return <ChevronUp className="size-3 text-cyan-400" />
+  return <ChevronDown className="size-3 text-cyan-400" />
 }
 
 // ─── Skeleton row ─────────────────────────────────────────────────────────────
@@ -135,7 +182,7 @@ function ListingRow({
       )}
 
       <td className="px-4 py-3 max-w-[300px]">
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-1">
           <div className="flex items-start gap-1.5">
             <a
               href={listing.url}
@@ -149,7 +196,7 @@ function ListingRow({
             <ExternalLink className="mt-0.5 size-3 shrink-0 text-slate-600" />
           </div>
           {listing.manualNote && (
-            <p className="line-clamp-1 text-xs text-amber-400/70 italic">{listing.manualNote}</p>
+            <p className="text-xs text-amber-400/70 italic leading-snug">{listing.manualNote}</p>
           )}
         </div>
       </td>
@@ -249,7 +296,7 @@ function ListingRow({
   )
 }
 
-// ─── Column toggle toolbar ────────────────────────────────────────────────────
+// ─── Column toggle ────────────────────────────────────────────────────────────
 
 interface ColumnToggleProps {
   hiddenColumns: Set<ColumnId>
@@ -298,9 +345,12 @@ export function ListingsTable({
   items,
   loading,
   initialLoading,
+  sortBy,
+  sortOrder,
   onAddNote,
   onArchive,
   onDelete,
+  onSortChange,
 }: ListingsTableProps) {
   const [hiddenColumns, setHiddenColumns] = useState<Set<ColumnId>>(DEFAULT_HIDDEN_COLUMNS)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
@@ -346,14 +396,36 @@ export function ListingsTable({
           <table className="w-full font-monitoring-body">
             <thead className="bg-slate-800/50">
               <tr>
-                {COLUMN_DEFS.filter((col) => visibleColumns.has(col.id)).map((col) => (
-                  <th
-                    key={col.id}
-                    className="px-4 py-3 text-left font-monitoring-display text-xs font-medium uppercase tracking-wider text-slate-400"
-                  >
-                    {col.label}
-                  </th>
-                ))}
+                {COLUMN_DEFS.filter((col) => visibleColumns.has(col.id)).map((col) => {
+                  const isSortable = col.sortField !== null
+                  const isActive = isSortable && sortBy === col.sortField
+
+                  return (
+                    <th
+                      key={col.id}
+                      className={cn(
+                        'px-4 py-3 text-left font-monitoring-display text-xs font-medium uppercase tracking-wider text-slate-400',
+                        isSortable &&
+                          'cursor-pointer select-none transition-colors duration-200 hover:text-slate-200',
+                        isActive && 'text-cyan-400'
+                      )}
+                      onClick={
+                        isSortable && col.sortField
+                          ? () => onSortChange(col.sortField as ListingsSortField)
+                          : undefined
+                      }
+                    >
+                      {col.label ? (
+                        <div className="flex items-center gap-1">
+                          {col.label}
+                          {isSortable && (
+                            <SortIcon active={isActive} order={isActive ? sortOrder : undefined} />
+                          )}
+                        </div>
+                      ) : null}
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>

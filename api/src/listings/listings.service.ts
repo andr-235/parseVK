@@ -5,6 +5,7 @@ import type {
   ListingWhereInput,
   ListingUpdateData,
 } from './interfaces/listings-repository.interface.js';
+import type { SortableField } from './dto/listings-query.dto.js';
 import { ListingMapper } from './mappers/listing.mapper.js';
 import type { ListingsResponseDto } from './dto/listings-response.dto.js';
 import type { ListingDto } from './dto/listing.dto.js';
@@ -21,6 +22,8 @@ interface GetListingsOptions {
   search?: string;
   source?: string;
   archived?: boolean;
+  sortBy?: SortableField;
+  sortOrder?: 'asc' | 'desc';
 }
 
 interface ExportListingsOptions {
@@ -47,8 +50,13 @@ export class ListingsService {
   ) {}
 
   async getListings(options: GetListingsOptions): Promise<ListingsResponseDto> {
-    const { page, pageSize, search, source, archived } = options;
+    const { page, pageSize, search, source, archived, sortBy, sortOrder } =
+      options;
     const skip = (page - 1) * pageSize;
+
+    const orderBy: ListingOrderByInput = sortBy
+      ? [{ [sortBy]: sortOrder ?? 'asc' }]
+      : [{ createdAt: 'desc' }];
 
     const where: ListingWhereInput = {};
 
@@ -84,6 +92,7 @@ export class ListingsService {
       where,
       skip,
       take: pageSize,
+      orderBy,
     });
 
     const listings = (result as { listings: ListingRecord[] }).listings;

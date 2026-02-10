@@ -15,6 +15,8 @@ interface FetchListingsOptions {
   search?: string
   source?: string
   archived?: boolean
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
   signal?: AbortSignal
 }
 

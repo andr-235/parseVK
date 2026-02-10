@@ -38,6 +38,9 @@ function ListingsPage() {
     handleListingUpdated,
     handleArchive,
     handleDelete,
+    sortBy,
+    sortOrder,
+    handleSortChange,
     handleMetaChange,
     handleItemsChange,
     handleLoadingChange,
@@ -82,9 +85,12 @@ function ListingsPage() {
           limit={pageSize}
           filtersKey={filtersKey}
           fetchParams={fetchParams}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
           onAddNote={handleAddNote}
           onArchive={handleArchive}
           onDelete={handleDelete}
+          onSortChange={handleSortChange}
           onMetaChange={handleMetaChange}
           onItemsChange={handleItemsChange}
           onLoadingChange={handleLoadingChange}

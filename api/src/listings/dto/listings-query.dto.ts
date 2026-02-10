@@ -2,11 +2,24 @@ import {
   IsOptional,
   IsString,
   IsInt,
+  IsIn,
   Min,
   Max,
   IsBoolean,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+
+const SORTABLE_FIELDS = [
+  'createdAt',
+  'price',
+  'publishedAt',
+  'source',
+  'address',
+  'title',
+  'sourceAuthorName',
+] as const;
+
+export type SortableField = (typeof SORTABLE_FIELDS)[number];
 
 export class ListingsQueryDto {
   @Transform(({ value }: { value: unknown }) => {
@@ -59,4 +72,14 @@ export class ListingsQueryDto {
   @IsOptional()
   @IsBoolean()
   archived?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @IsIn([...SORTABLE_FIELDS])
+  sortBy?: SortableField;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc';
 }
