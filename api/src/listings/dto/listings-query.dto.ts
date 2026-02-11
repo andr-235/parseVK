@@ -17,6 +17,7 @@ const SORTABLE_FIELDS = [
   'address',
   'title',
   'sourceAuthorName',
+  'sourceParsedAt',
 ] as const;
 
 export type SortableField = (typeof SORTABLE_FIELDS)[number];
