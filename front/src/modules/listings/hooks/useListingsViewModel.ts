@@ -17,7 +17,7 @@ export const useListingsViewModel = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
   const [sourceFilter, setSourceFilter] = useState('all')
-  const [archivedFilter, setArchivedFilter] = useState(false)
+  const [archivedFilter, setArchivedFilter] = useState<'all' | 'active' | 'archived'>('all')
 
   const [availableSources, setAvailableSources] = useState<string[]>([])
   const [totalItems, setTotalItems] = useState<number | null>(null)
@@ -39,7 +39,8 @@ export const useListingsViewModel = () => {
     () => ({
       search: appliedSearch.trim() || undefined,
       source: querySource,
-      archived: archivedFilter || undefined,
+      archived:
+        archivedFilter === 'archived' ? true : archivedFilter === 'active' ? false : undefined,
       sortBy,
       sortOrder: sortBy ? sortOrder : undefined,
     }),
@@ -51,12 +52,12 @@ export const useListingsViewModel = () => {
       JSON.stringify({
         search: fetchParams.search ?? '',
         source: fetchParams.source ?? 'all',
-        archived: fetchParams.archived ?? false,
+        archived: archivedFilter,
         sortBy: fetchParams.sortBy ?? '',
         sortOrder: fetchParams.sortOrder ?? '',
         pageSize,
       }),
-    [fetchParams, pageSize]
+    [fetchParams, archivedFilter, pageSize]
   )
 
   const handleSortChange = useCallback((field: ListingsSortField) => {
@@ -174,7 +175,7 @@ export const useListingsViewModel = () => {
     setSourceFilter(event.target.value)
   }, [])
 
-  const handleArchivedChange = useCallback((archived: boolean) => {
+  const handleArchivedChange = useCallback((archived: 'all' | 'active' | 'archived') => {
     setArchivedFilter(archived)
   }, [])
 
@@ -204,7 +205,11 @@ export const useListingsViewModel = () => {
 
   const handleArchive = useCallback(async (listing: IListing) => {
     try {
-      await listingsService.archiveListing(listing.id)
+      if (listing.archived) {
+        await listingsService.restoreListing(listing.id)
+      } else {
+        await listingsService.archiveListing(listing.id)
+      }
       setIsListLoading(true)
       setRefreshToken((token) => token + 1)
     } catch {

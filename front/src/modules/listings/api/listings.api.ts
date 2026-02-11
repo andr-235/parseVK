@@ -250,7 +250,11 @@ export const listingsService = {
 
   async archiveListing(id: number): Promise<IListing> {
     try {
-      const result = await this.updateListing(id, { archived: true })
+      const response = await createRequest(`${API_URL}/listings/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ archived: true }),
+      })
+      const result = await handleResponse<IListing>(response, 'Failed to archive listing')
       toast.success('Объявление отправлено в архив')
       return result
     } catch (error) {
@@ -258,6 +262,25 @@ export const listingsService = {
         console.error('[listingsService] archiveListing error', error)
       }
       const message = error instanceof Error ? error.message : 'Не удалось отправить в архив'
+      toast.error(message)
+      throw error
+    }
+  },
+
+  async restoreListing(id: number): Promise<IListing> {
+    try {
+      const response = await createRequest(`${API_URL}/listings/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ archived: false }),
+      })
+      const result = await handleResponse<IListing>(response, 'Failed to restore listing')
+      toast.success('Объявление восстановлено из архива')
+      return result
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[listingsService] restoreListing error', error)
+      }
+      const message = error instanceof Error ? error.message : 'Не удалось восстановить из архива'
       toast.error(message)
       throw error
     }

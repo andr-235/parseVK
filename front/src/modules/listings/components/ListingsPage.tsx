@@ -89,6 +89,7 @@ function ListingsPage() {
           limit={pageSize}
           filtersKey={filtersKey}
           fetchParams={fetchParams}
+          isArchivedView={archivedFilter === 'archived'}
           sortBy={sortBy}
           sortOrder={sortOrder}
           onAddNote={handleAddNote}

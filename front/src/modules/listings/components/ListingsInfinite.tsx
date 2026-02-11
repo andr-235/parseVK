@@ -17,6 +17,7 @@ interface ListingsInfiniteProps {
   limit: number
   filtersKey: string
   fetchParams: ListingsFetcherParams
+  isArchivedView?: boolean
   sortBy?: ListingsSortField
   sortOrder?: 'asc' | 'desc'
   onAddNote: (listing: IListing) => void
@@ -33,6 +34,7 @@ export function ListingsInfinite({
   limit,
   filtersKey,
   fetchParams,
+  isArchivedView = false,
   sortBy,
   sortOrder,
   onAddNote,
@@ -143,6 +145,7 @@ export function ListingsInfinite({
           items={items}
           loading={loading}
           initialLoading={initialLoading}
+          isArchivedView={isArchivedView}
           sortBy={sortBy}
           sortOrder={sortOrder}
           onAddNote={onAddNote}

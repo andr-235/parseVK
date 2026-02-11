@@ -6,7 +6,7 @@ interface ListingsFiltersProps {
   searchTerm: string
   appliedSearch: string
   sourceFilter: string
-  archivedFilter: boolean
+  archivedFilter: 'all' | 'active' | 'archived'
   pageSize: number
   filterOptions: string[]
   PAGE_SIZE_OPTIONS: number[]
@@ -15,7 +15,7 @@ interface ListingsFiltersProps {
   onApplySearch: () => void
   onResetSearch: () => void
   onSourceChange: (event: React.ChangeEvent<HTMLSelectElement>) => void
-  onArchivedChange: (archived: boolean) => void
+  onArchivedChange: (archived: 'all' | 'active' | 'archived') => void
   onPageSizeChange: (event: React.ChangeEvent<HTMLSelectElement>) => void
 }
 
@@ -78,10 +78,11 @@ export const ListingsFilters = ({
         </select>
 
         <select
-          value={archivedFilter ? 'archived' : 'active'}
-          onChange={(e) => onArchivedChange(e.target.value === 'archived')}
+          value={archivedFilter}
+          onChange={(e) => onArchivedChange(e.target.value as 'all' | 'active' | 'archived')}
           className={`${selectClass} min-w-[140px]`}
         >
+          <option value="all">Все</option>
           <option value="active">Активные</option>
           <option value="archived">В архиве</option>
         </select>

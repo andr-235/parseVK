@@ -84,8 +84,6 @@ export class ListingsService {
 
     if (archived !== undefined) {
       (where as { archived?: boolean }).archived = archived;
-    } else {
-      (where as { archived: boolean }).archived = false;
     }
 
     const result = await this.repository.getListingsWithCountAndSources({
@@ -155,8 +153,6 @@ export class ListingsService {
 
     if (archived !== undefined) {
       where.archived = archived;
-    } else {
-      where.archived = false;
     }
 
     const listings = await this.repository.findMany({
@@ -216,8 +212,6 @@ export class ListingsService {
 
     if (archived !== undefined) {
       where.archived = archived;
-    } else {
-      where.archived = false;
     }
 
     let cursorId: number | null = null;

@@ -84,6 +84,7 @@ interface ListingsTableProps {
   items: IListing[]
   loading: boolean
   initialLoading: boolean
+  isArchivedView?: boolean
   sortBy?: ListingsSortField
   sortOrder?: 'asc' | 'desc'
   onAddNote: (listing: IListing) => void
@@ -119,6 +120,7 @@ function SkeletonRow({ colCount }: { colCount: number }) {
 interface RowProps {
   listing: IListing
   visibleColumns: Set<ColumnId>
+  isArchivedView: boolean
   confirmDeleteId: number | null
   onConfirmDeleteRequest: (id: number) => void
   onConfirmDeleteCancel: () => void
@@ -130,6 +132,7 @@ interface RowProps {
 function ListingRow({
   listing,
   visibleColumns,
+  isArchivedView,
   confirmDeleteId,
   onConfirmDeleteRequest,
   onConfirmDeleteCancel,
@@ -175,7 +178,7 @@ function ListingRow({
       className={cn(
         'border-b border-white/5 transition-colors hover:bg-white/[0.03]',
         isPendingDelete && 'bg-red-500/[0.06] border-red-500/20',
-        listing.archived && 'opacity-50'
+        listing.archived && !isArchivedView && 'opacity-50'
       )}
     >
       {visibleColumns.has('source') && (
@@ -352,6 +355,7 @@ export function ListingsTable({
   items,
   loading,
   initialLoading,
+  isArchivedView = false,
   sortBy,
   sortOrder,
   onAddNote,
@@ -445,6 +449,7 @@ export function ListingsTable({
                       key={listing.id}
                       listing={listing}
                       visibleColumns={visibleColumns}
+                      isArchivedView={isArchivedView}
                       confirmDeleteId={confirmDeleteId}
                       onConfirmDeleteRequest={setConfirmDeleteId}
                       onConfirmDeleteCancel={() => setConfirmDeleteId(null)}
