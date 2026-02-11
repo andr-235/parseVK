@@ -66,8 +66,10 @@ export class ListingsQueryDto {
   source?: string;
 
   @Transform(({ value }) => {
-    if (value === 'true' || value === '1' || value === 'yes') return true;
-    if (value === 'false' || value === '0' || value === 'no') return false;
+    if (value === true || value === 'true' || value === '1' || value === 'yes')
+      return true;
+    if (value === false || value === 'false' || value === '0' || value === 'no')
+      return false;
     return undefined;
   })
   @IsOptional()
