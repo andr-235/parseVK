@@ -60,6 +60,12 @@ const COLUMN_DEFS = [
     sortField: 'sourceAuthorName' as ListingsSortField,
   },
   {
+    id: 'authorUrl' as const,
+    label: 'URL автора',
+    hideable: true,
+    sortField: null,
+  },
+  {
     id: 'date' as const,
     label: 'Дата',
     hideable: true,
@@ -76,7 +82,7 @@ const COLUMN_DEFS = [
 
 type ColumnId = (typeof COLUMN_DEFS)[number]['id']
 
-const DEFAULT_HIDDEN_COLUMNS = new Set<ColumnId>(['params'])
+const DEFAULT_HIDDEN_COLUMNS = new Set<ColumnId>(['params', 'authorUrl'])
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -238,6 +244,17 @@ function ListingRow({
       {visibleColumns.has('contact') && (
         <td className="px-4 py-3 max-w-[180px]">
           <span className="line-clamp-2 text-xs text-slate-400">{contact}</span>
+        </td>
+      )}
+
+      {visibleColumns.has('authorUrl') && (
+        <td className="px-4 py-3 max-w-[180px] overflow-hidden">
+          <span
+            className="line-clamp-2 text-xs text-slate-400"
+            title={listing.sourceAuthorUrl ?? undefined}
+          >
+            {listing.sourceAuthorUrl ?? '—'}
+          </span>
         </td>
       )}
 
