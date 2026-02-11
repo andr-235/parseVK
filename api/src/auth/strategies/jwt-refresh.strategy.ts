@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import type { AppConfig } from '../../config/app.config.js';
 import { UsersService } from '../../users/users.service.js';
 import type { AuthenticatedUser, JwtPayload } from '../auth.types.js';
 import { toAuthenticatedUser } from '../auth.mappers.js';
 import { getUserOrThrow } from '../auth.helpers.js';
+import { refreshTokenExtractor } from './refresh-token.extractor.js';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
@@ -21,9 +22,13 @@ export class JwtRefreshStrategy extends PassportStrategy(
     if (!secret) throw new Error('JWT access secret is not configured');
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // [FIX] использует кастомный экстрактор: cookie → x-refresh-token header → body
+      // ранее использовался fromAuthHeaderAsBearerToken(), который не находил токен
+      // т.к. фронтенд отправляет его в теле запроса
+      jwtFromRequest: refreshTokenExtractor,
       ignoreExpiration: false,
       secretOrKey: secret,
+      passReqToCallback: false,
     });
   }
 
