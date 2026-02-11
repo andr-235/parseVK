@@ -24,6 +24,7 @@ export interface CreateListingPayload {
   floorsTotal?: number | null
   contactName?: string
   contactPhone?: string
+  sourceAuthorUrl?: string
   publishedAt?: string | null
 }
 
@@ -303,6 +304,7 @@ export const listingsService = {
         floorsTotal: payload.floorsTotal ?? null,
         contactName: payload.contactName ?? null,
         contactPhone: payload.contactPhone ?? null,
+        sourceAuthorUrl: payload.sourceAuthorUrl ?? null,
         publishedAt: payload.publishedAt ?? null,
         sourceParsedAt: new Date().toISOString(),
       }

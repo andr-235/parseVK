@@ -28,6 +28,7 @@ const EMPTY_FORM: CreateListingPayload = {
   floorsTotal: null,
   contactName: '',
   contactPhone: '',
+  sourceAuthorUrl: '',
   publishedAt: null,
 }
 
@@ -270,6 +271,15 @@ function CreateListingModal({ isOpen, onClose, onCreated }: CreateListingModalPr
               />
             </LabeledField>
           </div>
+
+          <LabeledField label="URL автора">
+            <Input
+              value={form.sourceAuthorUrl ?? ''}
+              onChange={handleStringChange('sourceAuthorUrl')}
+              placeholder="https://vk.com/id123"
+              className={INPUT_CLASS}
+            />
+          </LabeledField>
 
           <LabeledField label="Дата публикации">
             <Input
