@@ -64,7 +64,7 @@ const COLUMN_DEFS = [
     id: 'authorUrl' as const,
     label: 'URL автора',
     hideable: true,
-    sortField: null,
+    sortField: 'sourceAuthorUrl' as ListingsSortField,
   },
   {
     id: 'date' as const,
