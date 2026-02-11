@@ -27,6 +27,7 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
+  Pencil,
 } from 'lucide-react'
 import { cn } from '@/shared/utils'
 
@@ -94,6 +95,7 @@ interface ListingsTableProps {
   sortBy?: ListingsSortField
   sortOrder?: 'asc' | 'desc'
   onAddNote: (listing: IListing) => void
+  onEdit: (listing: IListing) => void
   onArchive: (listing: IListing) => void | Promise<void>
   onDelete: (listing: IListing) => void | Promise<void>
   onSortChange: (field: ListingsSortField) => void
@@ -132,6 +134,7 @@ interface RowProps {
   onConfirmDeleteCancel: () => void
   onConfirmDeleteExecute: (listing: IListing) => void
   onAddNote: (listing: IListing) => void
+  onEdit: (listing: IListing) => void
   onArchive: (listing: IListing) => void | Promise<void>
 }
 
@@ -144,6 +147,7 @@ function ListingRow({
   onConfirmDeleteCancel,
   onConfirmDeleteExecute,
   onAddNote,
+  onEdit,
   onArchive,
 }: RowProps) {
   const isPendingDelete = confirmDeleteId === listing.id
@@ -293,6 +297,13 @@ function ListingRow({
           <div className="flex items-center gap-0.5">
             <button
               className="flex size-7 items-center justify-center rounded-md text-slate-500 transition-colors duration-200 hover:bg-white/5 hover:text-slate-300"
+              title="Редактировать"
+              onClick={() => onEdit(listing)}
+            >
+              <Pencil className="size-3.5" />
+            </button>
+            <button
+              className="flex size-7 items-center justify-center rounded-md text-slate-500 transition-colors duration-200 hover:bg-white/5 hover:text-slate-300"
               title="Добавить заметку"
               onClick={() => onAddNote(listing)}
             >
@@ -376,6 +387,7 @@ export function ListingsTable({
   sortBy,
   sortOrder,
   onAddNote,
+  onEdit,
   onArchive,
   onDelete,
   onSortChange,
@@ -472,6 +484,7 @@ export function ListingsTable({
                       onConfirmDeleteCancel={() => setConfirmDeleteId(null)}
                       onConfirmDeleteExecute={handleConfirmDeleteExecute}
                       onAddNote={onAddNote}
+                      onEdit={onEdit}
                       onArchive={onArchive}
                     />
                   ))}

@@ -21,6 +21,7 @@ interface ListingsInfiniteProps {
   sortBy?: ListingsSortField
   sortOrder?: 'asc' | 'desc'
   onAddNote: (listing: IListing) => void
+  onEdit: (listing: IListing) => void
   onArchive: (listing: IListing) => void | Promise<void>
   onDelete: (listing: IListing) => void | Promise<void>
   onSortChange: (field: ListingsSortField) => void
@@ -38,6 +39,7 @@ export function ListingsInfinite({
   sortBy,
   sortOrder,
   onAddNote,
+  onEdit,
   onArchive,
   onDelete,
   onSortChange,
@@ -149,6 +151,7 @@ export function ListingsInfinite({
           sortBy={sortBy}
           sortOrder={sortOrder}
           onAddNote={onAddNote}
+          onEdit={onEdit}
           onArchive={onArchive}
           onDelete={onDelete}
           onSortChange={onSortChange}

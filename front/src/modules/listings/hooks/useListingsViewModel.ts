@@ -29,6 +29,7 @@ export const useListingsViewModel = () => {
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [noteListing, setNoteListing] = useState<IListing | null>(null)
+  const [editListing, setEditListing] = useState<IListing | null>(null)
 
   const [sortBy, setSortBy] = useState<ListingsSortField | undefined>(undefined)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -193,6 +194,20 @@ export const useListingsViewModel = () => {
     setNoteListing(listing)
   }, [])
 
+  const handleEditListing = useCallback((listing: IListing) => {
+    setEditListing(listing)
+  }, [])
+
+  const handleCloseFullEdit = useCallback(() => {
+    setEditListing(null)
+  }, [])
+
+  const handleFullEditUpdated = useCallback(() => {
+    setEditListing(null)
+    setIsListLoading(true)
+    setRefreshToken((token) => token + 1)
+  }, [])
+
   const handleCloseEdit = useCallback(() => {
     setNoteListing(null)
   }, [])
@@ -242,6 +257,7 @@ export const useListingsViewModel = () => {
     isImportOpen,
     isCreateOpen,
     noteListing,
+    editListing,
     querySource,
     fetchParams,
     filtersKey,
@@ -262,6 +278,9 @@ export const useListingsViewModel = () => {
     handleAddNote,
     handleCloseEdit,
     handleListingUpdated,
+    handleEditListing,
+    handleCloseFullEdit,
+    handleFullEditUpdated,
     handleArchive,
     handleDelete,
     sortBy,

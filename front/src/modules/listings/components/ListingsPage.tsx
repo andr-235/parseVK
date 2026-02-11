@@ -5,6 +5,7 @@ import ExportListingsModal from '@/modules/listings/components/ExportListingsMod
 import ImportListingsModal from '@/modules/listings/components/ImportListingsModal'
 import EditListingModal from '@/modules/listings/components/EditListingModal'
 import CreateListingModal from '@/modules/listings/components/CreateListingModal'
+import { FullEditListingModal } from '@/modules/listings/components/FullEditListingModal'
 import { useListingsViewModel } from '@/modules/listings/hooks/useListingsViewModel'
 
 function ListingsPage() {
@@ -19,6 +20,7 @@ function ListingsPage() {
     isImportOpen,
     isCreateOpen,
     noteListing,
+    editListing,
     querySource,
     fetchParams,
     filtersKey,
@@ -39,6 +41,9 @@ function ListingsPage() {
     handleAddNote,
     handleCloseEdit,
     handleListingUpdated,
+    handleEditListing,
+    handleCloseFullEdit,
+    handleFullEditUpdated,
     handleArchive,
     handleDelete,
     sortBy,
@@ -93,6 +98,7 @@ function ListingsPage() {
           sortBy={sortBy}
           sortOrder={sortOrder}
           onAddNote={handleAddNote}
+          onEdit={handleEditListing}
           onArchive={handleArchive}
           onDelete={handleDelete}
           onSortChange={handleSortChange}
@@ -107,6 +113,12 @@ function ListingsPage() {
         isOpen={Boolean(noteListing)}
         onClose={handleCloseEdit}
         onUpdated={handleListingUpdated}
+      />
+
+      <FullEditListingModal
+        listing={editListing}
+        onClose={handleCloseFullEdit}
+        onUpdated={handleFullEditUpdated}
       />
 
       <ExportListingsModal
