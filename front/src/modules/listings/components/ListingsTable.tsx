@@ -28,8 +28,6 @@ import {
   ChevronDown,
   ChevronsUpDown,
   Pencil,
-  Copy,
-  Check,
 } from 'lucide-react'
 import { cn } from '@/shared/utils'
 
@@ -114,49 +112,10 @@ function SortIcon({ active, order }: { active: boolean; order: 'asc' | 'desc' | 
 // ─── Author URL cell ──────────────────────────────────────────────────────────
 
 function AuthorUrlCell({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      navigator.clipboard.writeText(url).then(() => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
-      })
-    },
-    [url]
-  )
-
   return (
-    <div className="group flex items-center gap-1 max-w-[260px]">
-      <span className="flex-1 truncate font-mono text-[11px] text-slate-400 min-w-0" title={url}>
-        {url}
-      </span>
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-        <button
-          type="button"
-          onClick={handleCopy}
-          title="Копировать ссылку"
-          className={cn(
-            'flex size-5 items-center justify-center rounded transition-colors duration-150',
-            copied ? 'text-emerald-400' : 'text-slate-600 hover:bg-white/10 hover:text-slate-300'
-          )}
-        >
-          {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-        </button>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Открыть"
-          onClick={(e) => e.stopPropagation()}
-          className="flex size-5 items-center justify-center rounded text-slate-600 transition-colors duration-150 hover:bg-white/10 hover:text-cyan-400"
-        >
-          <ExternalLink className="size-3" />
-        </a>
-      </div>
-    </div>
+    <span className="break-all font-mono text-[11px] text-slate-400 leading-relaxed w-[220px] block">
+      {url}
+    </span>
   )
 }
 
