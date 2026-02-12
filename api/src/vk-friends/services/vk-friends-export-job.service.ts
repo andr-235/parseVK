@@ -7,7 +7,7 @@ import type {
   JobLogLevel,
 } from '../repositories/vk-friends.repository.js';
 import { VkFriendsExporterService } from './vk-friends-exporter.service.js';
-import { VkFriendsJobStreamService } from './vk-friends-job-stream.service.js';
+import { FriendsJobStreamService } from '../../common/friends-export/services/friends-job-stream.service.js';
 import { VkFriendsService } from '../vk-friends.service.js';
 import { EXPORT_BATCH_SIZE } from '../vk-friends.constants.js';
 
@@ -25,7 +25,7 @@ export class VkFriendsExportJobService {
     private readonly vkFriendsService: VkFriendsService,
     private readonly friendMapper: FriendMapper,
     private readonly exporter: VkFriendsExporterService,
-    private readonly jobStream: VkFriendsJobStreamService,
+    private readonly jobStream: FriendsJobStreamService,
   ) {}
 
   async run(jobId: string, params: Params.FriendsGetParams): Promise<void> {

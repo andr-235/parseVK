@@ -19,7 +19,7 @@ import { defer, from, of, type Observable } from 'rxjs';
 import { mergeMap } from 'rxjs/operators';
 import { OkFriendsService } from './ok-friends.service.js';
 import { OkFriendsExportRequestDto } from './dto/ok-friends.dto.js';
-import { OkFriendsJobStreamService } from './services/ok-friends-job-stream.service.js';
+import { FriendsJobStreamService } from '../common/friends-export/services/friends-job-stream.service.js';
 import { OkFriendsExportJobService } from './services/ok-friends-export-job.service.js';
 import { OkFriendsFileService } from './services/ok-friends-file.service.js';
 import { buildParams } from './ok-friends-params.util.js';
@@ -32,7 +32,7 @@ export class OkFriendsController {
     private readonly okFriendsService: OkFriendsService,
     private readonly exportJobService: OkFriendsExportJobService,
     private readonly fileService: OkFriendsFileService,
-    private readonly jobStream: OkFriendsJobStreamService,
+    private readonly jobStream: FriendsJobStreamService,
   ) {}
 
   @Post('export')

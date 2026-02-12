@@ -21,24 +21,15 @@ export interface OkFriendsStatusResponse {
   status: 'ok';
 }
 
-export interface FetchAllFriendsProgress {
-  fetchedCount: number;
-  totalCount: number;
-  limitApplied: boolean;
-}
+import type {
+  FetchAllFriendsProgress,
+  FetchAllFriendsOptions,
+  FetchAllFriendsResult as BaseFetchAllFriendsResult,
+} from '../common/friends-export/interfaces/friends-export.interfaces.js';
 
-export interface FetchAllFriendsOptions {
-  pageSize?: number;
-  onProgress?: (progress: FetchAllFriendsProgress) => void;
-  onLog?: (log: string) => void;
-}
+export type { FetchAllFriendsProgress, FetchAllFriendsOptions };
 
-export interface FetchAllFriendsResult {
-  totalCount: number;
-  fetchedCount: number;
-  warning?: string;
-  rawItems: string[];
-}
+export type FetchAllFriendsResult = BaseFetchAllFriendsResult<string>;
 
 const DEFAULT_PAGE_SIZE = 5000;
 

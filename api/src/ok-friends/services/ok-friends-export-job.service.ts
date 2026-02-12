@@ -5,7 +5,7 @@ import type {
   JobLogLevel,
 } from '../repositories/ok-friends.repository.js';
 import { OkFriendsExporterService } from './ok-friends-exporter.service.js';
-import { OkFriendsJobStreamService } from './ok-friends-job-stream.service.js';
+import { FriendsJobStreamService } from '../../common/friends-export/services/friends-job-stream.service.js';
 import { OkFriendsService } from '../ok-friends.service.js';
 import { EXPORT_BATCH_SIZE } from '../ok-friends.constants.js';
 import type { OkFriendsGetParams } from '../ok-api.service.js';
@@ -25,7 +25,7 @@ export class OkFriendsExportJobService {
   constructor(
     private readonly okFriendsService: OkFriendsService,
     private readonly exporter: OkFriendsExporterService,
-    private readonly jobStream: OkFriendsJobStreamService,
+    private readonly jobStream: FriendsJobStreamService,
   ) {}
 
   async run(jobId: string, params: OkFriendsGetParams): Promise<void> {

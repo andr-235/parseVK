@@ -7,7 +7,7 @@ import { VkFriendsController } from './vk-friends.controller.js';
 import { VkFriendsService } from './vk-friends.service.js';
 import { VkFriendsExportJobService } from './services/vk-friends-export-job.service.js';
 import { VkFriendsFileService } from './services/vk-friends-file.service.js';
-import { VkFriendsJobStreamService } from './services/vk-friends-job-stream.service.js';
+import { FriendsJobStreamService } from '../common/friends-export/services/friends-job-stream.service.js';
 import { firstValueFrom, of } from 'rxjs';
 
 describe('VkFriendsController (HTTP)', () => {
@@ -38,7 +38,7 @@ describe('VkFriendsController (HTTP)', () => {
         { provide: VkFriendsService, useValue: vkFriendsService },
         { provide: VkFriendsExportJobService, useValue: exportJobService },
         { provide: VkFriendsFileService, useValue: fileService },
-        { provide: VkFriendsJobStreamService, useValue: jobStream },
+        { provide: FriendsJobStreamService, useValue: jobStream },
       ],
     }).compile();
 
