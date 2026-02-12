@@ -1,7 +1,7 @@
 import { ExternalLink, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import type { PostGroup } from '@/types'
-import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
+import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
 import type { Keyword } from '@/types'
 

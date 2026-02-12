@@ -1,5 +1,9 @@
 import type { AuthorCard } from '@/types'
 
+export const isValidAuthorId = (vkUserId: number): boolean => {
+  return Number.isInteger(vkUserId) && vkUserId > 0
+}
+
 export const resolveProfileUrl = (author: AuthorCard): string => {
   if (author.profileUrl) {
     return author.profileUrl

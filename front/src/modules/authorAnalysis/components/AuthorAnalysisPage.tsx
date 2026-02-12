@@ -1,4 +1,4 @@
-import { useAuthorData } from '@/modules/authors/hooks/useAuthorData'
+import { useAuthorData } from '@/modules/authors'
 import { usePhotoAnalysis } from '@/modules/authorAnalysis/hooks/usePhotoAnalysis'
 import { AuthorHeroSection } from '@/modules/authorAnalysis/components/AuthorHeroSection'
 import { AnalysisSummarySection } from '@/modules/authorAnalysis/components/AnalysisSummarySection'

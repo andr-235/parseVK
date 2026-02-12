@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils'
 import type { ThreadItem } from '@/types'
 import { formatDateTime } from '@/modules/comments/utils/formatDateTime'
-import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
+import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
 import type { Keyword } from '@/types'
 

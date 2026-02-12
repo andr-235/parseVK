@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { Users, Building, Send, Settings, UserCog, LogOut, Activity } from 'lucide-react'
 import { useSidebarState } from '@/shared/hooks'
 import { useSidebarData } from '@/shared/hooks'
-import { useAuthStore } from '@/modules/auth/store'
+import { useAuthStore } from '@/modules/auth'
 import { Button } from '@/shared/ui/button'
 import {
   createMonitoringSubItems,

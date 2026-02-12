@@ -1,6 +1,5 @@
-import type { AuthorCard, AuthorSortField, AuthorSortOrder } from '@/modules/authors/types'
-import type { CommentsFilters } from '@/modules/comments/api/query/commentsQuery.types'
-import type { Comment } from '@/modules/comments/api/models/comment.model'
+import type { AuthorCard, AuthorSortField, AuthorSortOrder } from '@/modules/authors'
+import type { CommentsFilters, CommentsComment } from '@/modules/comments'
 import type { Group, Keyword, Task, TaskDetails } from './common'
 import type { IBulkAddResponse, IRegionGroupSearchItem } from './api'
 // Navigation Store Types
@@ -19,7 +18,7 @@ export interface NavigationState {
 }
 
 export interface CommentsState {
-  comments: Comment[]
+  comments: CommentsComment[]
   isLoading: boolean
   isLoadingMore: boolean
   hasMore: boolean

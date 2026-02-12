@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useCommentsStore } from '@/modules/comments/store'
-import { useKeywordsStore } from '@/modules/keywords/store'
-import { useWatchlistStore } from '@/modules/watchlist/store'
+import { useKeywordsStore } from '@/modules/keywords'
+import { useWatchlistStore } from '@/modules/watchlist'
 import type { Comment, Keyword } from '@/types'
 
 type ReadFilter = 'all' | 'unread' | 'read'

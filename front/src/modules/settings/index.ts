@@ -1,3 +1,4 @@
+export { useTaskAutomationStore } from './store/taskAutomationStore'
 export * from './hooks/useAutomationSettings'
 export * from './hooks/useTelegramSettings'
 export * from './api/taskAutomation.api'

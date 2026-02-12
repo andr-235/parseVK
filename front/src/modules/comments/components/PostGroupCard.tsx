@@ -3,10 +3,10 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import type { Comment, Keyword } from '@/types'
-import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
+import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
 import CommentCard from './CommentCard'
-import { normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
+import { normalizeForKeywordMatch } from '@/shared/utils/keywordMatching'
 import { cn } from '@/shared/utils'
 
 interface PostGroupCardProps {

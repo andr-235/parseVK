@@ -1,4 +1,11 @@
-export type SuspicionLevel = 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH'
+export type {
+  SuspicionLevel,
+  PhotoAnalysisSummary,
+  PhotoAnalysisSummaryCategory,
+  PhotoAnalysisSummaryLevel,
+} from '@/shared/types/photoAnalysis'
+
+import type { SuspicionLevel, PhotoAnalysisSummary } from '@/shared/types/photoAnalysis'
 
 export interface PhotoAnalysis {
   id: number
@@ -11,24 +18,6 @@ export interface PhotoAnalysis {
   confidence: number | null
   explanation: string | null
   analyzedAt: string
-}
-
-export interface PhotoAnalysisSummaryCategory {
-  name: string
-  count: number
-}
-
-export interface PhotoAnalysisSummaryLevel {
-  level: SuspicionLevel
-  count: number
-}
-
-export interface PhotoAnalysisSummary {
-  total: number
-  suspicious: number
-  lastAnalyzedAt: string | null
-  categories: PhotoAnalysisSummaryCategory[]
-  levels: PhotoAnalysisSummaryLevel[]
 }
 
 const KNOWN_CATEGORIES = [

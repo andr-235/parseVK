@@ -13,7 +13,7 @@ import { cn } from '@/shared/utils'
 import { adminUsersService } from '@/modules/adminUsers/api/adminUsers.api'
 import { useCurrentUser } from '@/modules/adminUsers/hooks/useCurrentUser'
 import { AdminUsersHero } from '@/modules/adminUsers/components/AdminUsersHero'
-import type { AdminUser, UserRole } from '@/modules/auth/types'
+import type { AdminUser, UserRole } from '@/modules/auth'
 
 const roleLabelMap: Record<UserRole, string> = {
   admin: 'Администратор',

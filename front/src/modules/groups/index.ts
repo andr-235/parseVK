@@ -1,4 +1,5 @@
 export * from './api/groups.api'
+export { useGroupsStore } from './store/groupsStore'
 export * from './hooks/useGroupsQuery'
 export * from './hooks/useGroupsViewModel'
 export { GroupsHero } from './components/GroupsHero'

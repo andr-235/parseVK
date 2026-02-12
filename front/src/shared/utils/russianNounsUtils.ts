@@ -1,5 +1,5 @@
 import { Engine, Gender, Case } from 'russian-nouns-js'
-import { normalizeForKeywordMatch } from '@/modules/comments/utils/keywordMatching'
+import { normalizeForKeywordMatch } from '@/shared/utils/keywordMatching'
 
 const rne = new Engine()
 

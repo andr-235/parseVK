@@ -1,7 +1,7 @@
 import { Badge } from '@/shared/ui/badge'
 import type { WatchlistAuthorCard, PhotoAnalysisSummaryCategory } from '@/types'
 import { formatDateTime } from '@/modules/watchlist/utils/watchlistUtils'
-import { PHOTO_ANALYSIS_LABELS } from '@/modules/authorAnalysis/constants/photoAnalysisConstants'
+import { PHOTO_ANALYSIS_LABELS } from '@/modules/authorAnalysis'
 import { WATCHLIST_CONSTANTS } from '@/modules/watchlist/constants/watchlist'
 
 const getBadgeVariant = (count: number) => {

@@ -6,8 +6,8 @@ import toast from 'react-hot-toast'
 import { authorsService } from '@/modules/authors/api/authors.api'
 import { useAuthorsStore } from '@/modules/authors/store'
 import { createEmptyPhotoAnalysisSummary, type AuthorDetails } from '@/types'
-import type { AuthorAnalysisLocationState } from '@/modules/authorAnalysis/types'
-import { isValidAuthorId } from '@/modules/authorAnalysis/utils/authorAnalysisUtils'
+import type { AuthorAnalysisLocationState } from '@/modules/authorAnalysis'
+import { isValidAuthorId } from '@/modules/authors/utils/authorUtils'
 export const useAuthorData = () => {
   const params = useParams<{ vkUserId: string }>()
   const navigate = useNavigate()

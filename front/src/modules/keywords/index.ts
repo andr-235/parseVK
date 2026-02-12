@@ -1,4 +1,5 @@
 export * from './api/keywords.api'
+export { useKeywordsStore } from './store/keywordsStore'
 export * from './hooks/useKeywordsQuery'
 export * from './hooks/useKeywordsViewModel'
 export { KeywordsHero } from './components/KeywordsHero'

@@ -1,4 +1,4 @@
-import type { PhotoAnalysisSummary } from '@/modules/authorAnalysis/types'
+import type { PhotoAnalysisSummary } from '@/shared/types'
 import type { TableColumn } from '@/shared/types'
 
 export type WatchlistStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED'

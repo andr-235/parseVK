@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 // Использование services для одноразовых операций (загрузка/сохранение настроек Telegram)
 // Это допустимо согласно правилам архитектуры для операций, не требующих глобального состояния
-import { telegramService } from '@/modules/telegram/api/telegram.api'
+import { telegramService } from '@/modules/telegram'
 import type { TelegramSettingsRequest } from '@/shared/types'
 
 interface TelegramFormState {

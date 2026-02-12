@@ -1,5 +1,5 @@
 import { Button } from '@/shared/ui/button'
-import { highlightKeywords } from '@/modules/comments/utils/highlightKeywords'
+import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { formatDateTime } from '@/modules/comments/utils/formatDateTime'
 import { getAuthorInitials } from '@/modules/comments/utils/getAuthorInitials'
 import type { TableColumn, Comment, Keyword } from '@/types'

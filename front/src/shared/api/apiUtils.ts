@@ -1,5 +1,5 @@
 import { refreshAccessToken } from '@/modules/auth'
-import { useAuthStore } from '@/modules/auth/store'
+import { useAuthStore } from '@/modules/auth'
 
 type QueryParams = Record<string, string | number | boolean | undefined | null>
 interface ApiRequestOptions extends RequestInit {
