@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-
 import { vi } from 'vitest';
 
 vi.mock('vk-io', () => ({

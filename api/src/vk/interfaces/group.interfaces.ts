@@ -22,5 +22,5 @@ export interface IGroup {
 
 export interface IGroupsResponse {
   groups: IGroup[];
-  profiles: any[];
+  profiles: unknown[];
 }

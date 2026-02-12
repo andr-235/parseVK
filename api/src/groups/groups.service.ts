@@ -6,7 +6,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { VkService } from '../vk/vk.service.js';
-import { IGroup } from '../vk/interfaces/group.interfaces.js';
 import {
   IGroupResponse,
   IDeleteResponse,
@@ -58,7 +57,7 @@ export class GroupsService {
       throw new NotFoundException(`Group ${parsedIdentifier} not found`);
     }
 
-    const groupData = response.groups[0] as IGroup;
+    const groupData = response.groups[0];
 
     const mappedData = this.groupMapper.mapGroupData(groupData);
     const group = await this.repository.upsert(

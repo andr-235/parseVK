@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { IAuthor } from './interfaces/author.interfaces.js';
 import type { IComment } from './interfaces/comment.interfaces.js';
 import type { IPost } from './interfaces/post.interfaces.js';
-import type { IGroup } from './interfaces/group.interfaces.js';
+import type { IGroup, IGroupsResponse } from './interfaces/group.interfaces.js';
 import type {
   GetCommentsOptions,
   GetCommentsResponse,
@@ -39,7 +39,7 @@ export class VkService {
     private readonly usersService: VkUsersService,
   ) {}
 
-  getGroups(id: string | number): Promise<{ groups: any[]; profiles: any[] }> {
+  getGroups(id: string | number): Promise<IGroupsResponse> {
     return this.groupsService.getGroups(id);
   }
 

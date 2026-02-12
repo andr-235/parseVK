@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { vi } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
 import {

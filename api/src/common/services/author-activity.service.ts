@@ -17,6 +17,23 @@ import {
 
 type JsonUpdateValue = ReturnType<typeof toUpdateJsonValue>;
 
+interface SerializedComment {
+  vkCommentId: number;
+  ownerId: number;
+  postId: number;
+  fromId: number;
+  text: string;
+  publishedAt: string;
+  likesCount: number | null;
+  parentsStack: unknown;
+  threadCount: number | null;
+  threadItems: unknown[] | null;
+  attachments: unknown;
+  replyToUser: number | null;
+  replyToComment: number | null;
+  isDeleted: boolean;
+}
+
 interface SaveCommentsOptions {
   source: CommentSource;
   watchlistAuthorId?: number | null;
@@ -323,7 +340,7 @@ export class AuthorActivityService {
     };
   }
 
-  private serializeComment(comment: CommentEntity) {
+  private serializeComment(comment: CommentEntity): SerializedComment {
     return {
       vkCommentId: comment.vkCommentId,
       ownerId: comment.ownerId,

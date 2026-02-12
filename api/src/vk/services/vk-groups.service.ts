@@ -3,7 +3,10 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { APIError, VK } from 'vk-io';
 import type { Objects, Params } from 'vk-io';
-import type { IGroup } from '../interfaces/group.interfaces.js';
+import type {
+  IGroup,
+  IGroupsResponse,
+} from '../interfaces/group.interfaces.js';
 import {
   buildGroupCacheKey,
   CACHE_TTL,
@@ -22,15 +25,10 @@ export class VkGroupsService {
     private readonly requestManager: VkApiRequestManager,
   ) {}
 
-  async getGroups(
-    id: string | number,
-  ): Promise<{ groups: any[]; profiles: any[] }> {
+  async getGroups(id: string | number): Promise<IGroupsResponse> {
     const cacheKey = buildGroupCacheKey(id);
 
-    const cached = await this.cacheManager.get<{
-      groups: any[];
-      profiles: any[];
-    }>(cacheKey);
+    const cached = await this.cacheManager.get<IGroupsResponse>(cacheKey);
     if (cached) {
       this.logger.debug(`Cache HIT: ${cacheKey}`);
       return cached;
