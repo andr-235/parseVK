@@ -23,7 +23,7 @@ import type { ParsingStats } from '@/tasks/interfaces/parsing-stats.interface.js
 import type { TaskProcessingContext } from '@/tasks/interfaces/parsing-task-runner.types.js';
 import { TaskCancellationService } from '@/tasks/task-cancellation.service.js';
 import { TaskCancelledError } from '@/tasks/errors/task-cancelled.error.js';
-import { ParsingTaskRunner } from '@/tasks/parsing-task.runner.js';
+import { TaskGroupResolverService } from '@/tasks/services/task-group-resolver.service.js';
 import { MetricsService } from '@/metrics/metrics.service.js';
 import {
   TaskStartedEvent,
@@ -46,7 +46,7 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
     private readonly commandBus: CommandBus,
     private readonly eventBus: EventBus,
     private readonly cancellationService: TaskCancellationService,
-    private readonly runner: ParsingTaskRunner, // Temporary, for helper methods
+    private readonly groupResolver: TaskGroupResolverService,
     @Optional() private readonly metricsService?: MetricsService,
   ) {}
 
@@ -300,13 +300,12 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
     );
   }
 
-  // Helper methods (copied from ParsingTaskRunner)
   private async safeResolveGroups(
     scope: ParsingScope,
     groupIds: number[],
   ): Promise<ParsingGroupRecord[]> {
     try {
-      return await this.runner.resolveGroups(scope, groupIds);
+      return await this.groupResolver.resolveGroups(scope, groupIds);
     } catch (error) {
       if (
         error instanceof NotFoundException ||

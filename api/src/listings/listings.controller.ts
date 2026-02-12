@@ -17,6 +17,7 @@ import type { Response } from 'express';
 import type { UpdateListingDto } from './dto/update-listing.dto.js';
 import { ListingsQueryDto } from './dto/listings-query.dto.js';
 import { ListingIdParamDto } from './dto/listing-id-param.dto.js';
+import { buildCsvFilename, parseCsvFields } from './utils/csv-exporter.js';
 
 @Controller('listings')
 export class ListingsController {
@@ -49,170 +50,31 @@ export class ListingsController {
     const exportAll =
       (allParam ?? '').toLowerCase() === '1' ||
       (allParam ?? '').toLowerCase() === 'true';
+
     const search = exportAll
       ? undefined
-      : (this.normalizeString(searchParam) ?? undefined);
+      : (normalizeString(searchParam) ?? undefined);
     const source = exportAll
       ? undefined
-      : (this.normalizeSource(sourceParam) ?? undefined);
+      : (normalizeSource(sourceParam) ?? undefined);
     const archived = exportAll
       ? undefined
-      : (this.parseBoolean(archivedParam) ?? undefined);
+      : (parseBoolean(archivedParam) ?? undefined);
+    const fields = parseCsvFields(fieldsParam);
 
-    const defaultFields = [
-      'id',
-      'source',
-      'title',
-      'url',
-      'price',
-      'currency',
-      'address',
-      'sourceAuthorName',
-      'sourceAuthorPhone',
-      'sourceAuthorUrl',
-      'publishedAt',
-      'postedAt',
-      'parsedAt',
-      'images',
-      'description',
-      'manualNote',
-    ] as const;
-    type FieldKey = (typeof defaultFields)[number];
-
-    const fieldLabels: Record<FieldKey, string> = {
-      id: 'ID',
-      source: 'Источник',
-      title: 'Заголовок',
-      url: 'Ссылка',
-      price: 'Цена',
-      currency: 'Валюта',
-      address: 'Адрес',
-      sourceAuthorName: 'Имя продавца',
-      sourceAuthorPhone: 'Телефон продавца',
-      sourceAuthorUrl: 'Ссылка на продавца',
-      publishedAt: 'Дата публикации',
-      postedAt: 'Оригинальная дата публикации',
-      parsedAt: 'Дата парсинга',
-      images: 'Изображения',
-      description: 'Описание',
-      manualNote: 'Примечание',
-    };
-
-    const parseFields = (value?: string): FieldKey[] => {
-      const raw = (value ?? '').trim();
-      if (!raw) return [...defaultFields];
-      const allowed = new Set(defaultFields);
-      const list = raw
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const result: FieldKey[] = [];
-      for (const key of list) {
-        if (allowed.has(key as FieldKey)) {
-          result.push(key as FieldKey);
-        }
-      }
-      return result.length > 0 ? result : [...defaultFields];
-    };
-
-    const fields = parseFields(fieldsParam);
-
-    const escapeCsv = (value: unknown): string => {
-      if (value === null || value === undefined) return '';
-      if (Array.isArray(value)) {
-        return escapeCsv(value.join('; '));
-      }
-      const str =
-        typeof value === 'string'
-          ? value
-          : typeof value === 'number' || typeof value === 'boolean'
-            ? String(value)
-            : JSON.stringify(value);
-      const needsQuotes = /[",\n\r;]/.test(str);
-      const escaped = str.replace(/"/g, '""');
-      return needsQuotes ? `"${escaped}"` : escaped;
-    };
-
-    const bom = '\uFEFF';
-    const filenameParts = ['listings'];
-    if (source) filenameParts.push(source);
-    if (exportAll) filenameParts.push('all');
-    const now = new Date();
-    const iso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-      .toISOString()
-      .replace(/[:T]/g, '-')
-      .slice(0, 16);
-    filenameParts.push(iso);
-    const filename = `${filenameParts.join('_')}.csv`;
+    const filename = buildCsvFilename({ source, exportAll });
 
     res?.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res?.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res?.write(bom);
-    const headerRow = fields
-      .map((field) => escapeCsv(fieldLabels[field] ?? field))
-      .join(',');
-    res?.write(headerRow + '\n');
+    res?.write('\uFEFF');
 
-    const pickPublished = (item: ListingDto): string | null => {
-      if (item.publishedAt) return item.publishedAt;
-      if (item.sourcePostedAt) return item.sourcePostedAt;
-      return item.sourceParsedAt ?? null;
-    };
-
-    for await (const batch of this.listingsService.iterateAllListings({
+    for await (const line of this.listingsService.exportAsCsvLines({
       search,
       source,
       archived,
-      batchSize: 1000,
+      fields,
     })) {
-      for (const item of batch) {
-        const row = fields
-          .map((key) => {
-            const value = ((): unknown => {
-              switch (key) {
-                case 'id':
-                  return item.id;
-                case 'source':
-                  return item.source;
-                case 'title':
-                  return item.title;
-                case 'url':
-                  return item.url;
-                case 'price':
-                  return item.price;
-                case 'currency':
-                  return item.currency;
-                case 'address':
-                  return item.address;
-                case 'publishedAt':
-                  return pickPublished(item);
-                case 'postedAt': {
-                  return item.sourcePostedAt ?? '';
-                }
-                case 'parsedAt': {
-                  return item.sourceParsedAt ?? '';
-                }
-                case 'images':
-                  return item.images;
-                case 'description':
-                  return item.description;
-                case 'sourceAuthorName':
-                  return item.sourceAuthorName;
-                case 'sourceAuthorPhone':
-                  return item.sourceAuthorPhone;
-                case 'sourceAuthorUrl':
-                  return item.sourceAuthorUrl;
-                case 'manualNote':
-                  return item.manualNote;
-                default:
-                  return '';
-              }
-            })();
-            return escapeCsv(value);
-          })
-          .join(',');
-        res?.write(row + '\n');
-      }
+      res?.write(line);
     }
 
     res?.end();
@@ -231,42 +93,27 @@ export class ListingsController {
   async deleteListing(@Param() params: ListingIdParamDto): Promise<void> {
     return this.listingsService.deleteListing(params.id);
   }
+}
 
-  private normalizeString(value?: string): string | null {
-    if (!value) {
-      return null;
-    }
+function normalizeString(value?: string): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  }
+function normalizeSource(value?: string): string | null {
+  const normalized = normalizeString(value);
+  if (!normalized) return null;
+  if (normalized.toLowerCase() === 'all') return null;
+  return normalized;
+}
 
-  private normalizeSource(value?: string): string | null {
-    const normalized = this.normalizeString(value);
-    if (!normalized) {
-      return null;
-    }
-
-    if (normalized.toLowerCase() === 'all') {
-      return null;
-    }
-
-    return normalized;
-  }
-
-  private parseBoolean(value?: string): boolean | null {
-    if (!value) {
-      return null;
-    }
-
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
-      return true;
-    }
-    if (normalized === 'false' || normalized === '0' || normalized === 'no') {
-      return false;
-    }
-
-    return null;
-  }
+function parseBoolean(value?: string): boolean | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1' || normalized === 'yes')
+    return true;
+  if (normalized === 'false' || normalized === '0' || normalized === 'no')
+    return false;
+  return null;
 }

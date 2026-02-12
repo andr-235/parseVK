@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ParsingScope } from '../dto/create-parsing-task.dto.js';
 import type { ParsedTaskDescription } from '../parsers/task-description.parser.js';
-import { ParsingTaskRunner } from '../parsing-task.runner.js';
+import { TaskGroupResolverService } from '../services/task-group-resolver.service.js';
 import { TaskDescriptionParser } from '../parsers/task-description.parser.js';
 import type { TaskRecord } from '../types/task-record.type.js';
 
@@ -22,7 +22,7 @@ export interface TaskResumeContext {
 @Injectable()
 export class TaskContextBuilder {
   constructor(
-    private readonly runner: ParsingTaskRunner,
+    private readonly groupResolver: TaskGroupResolverService,
     private readonly parser: TaskDescriptionParser,
   ) {}
 
@@ -41,7 +41,7 @@ export class TaskContextBuilder {
     }
 
     const postLimit = this.normalizePostLimit(parsed.postLimit);
-    const groups = await this.runner.resolveGroups(scope, groupIds);
+    const groups = await this.groupResolver.resolveGroups(scope, groupIds);
 
     if (!groups.length) {
       throw new NotFoundException('Нет доступных групп для парсинга');

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   IListingsRepository,
   ListingOrderByInput,
@@ -11,6 +11,13 @@ import type { ListingsResponseDto } from './dto/listings-response.dto.js';
 import type { ListingDto } from './dto/listing.dto.js';
 import type { UpdateListingDto } from './dto/update-listing.dto.js';
 import type { ListingRecord } from './types/listing-record.type.js';
+import {
+  formatCsvHeader,
+  formatCsvRow,
+  CSV_DEFAULT_FIELDS,
+  CSV_FIELD_LABELS,
+} from './utils/csv-exporter.js';
+import type { CsvFieldKey } from './utils/csv-exporter.js';
 
 type ListingWithOverrides = ListingRecord & {
   manualOverrides?: unknown;
@@ -42,8 +49,18 @@ interface ExportListingsOptions {
  * Обеспечивает получение, фильтрацию, экспорт и обновление объявлений
  * с поддержкой пагинации и поиска.
  */
+interface ExportAsCsvOptions {
+  search?: string;
+  source?: string;
+  archived?: boolean;
+  fields?: CsvFieldKey[];
+  batchSize?: number;
+}
+
 @Injectable()
 export class ListingsService {
+  private readonly logger = new Logger(ListingsService.name);
+
   constructor(
     @Inject('IListingsRepository')
     private readonly repository: IListingsRepository,
@@ -233,6 +250,31 @@ export class ListingsService {
 
       yield items;
     }
+  }
+
+  async *exportAsCsvLines(options: ExportAsCsvOptions): AsyncGenerator<string> {
+    const fields = options.fields ?? [...CSV_DEFAULT_FIELDS];
+    this.logger.log('[exportAsCsvLines] START', { fields: fields.length });
+
+    yield formatCsvHeader(fields, CSV_FIELD_LABELS) + '\n';
+
+    let written = 0;
+    for await (const batch of this.iterateAllListings({
+      search: options.search,
+      source: options.source,
+      archived: options.archived,
+      batchSize: options.batchSize,
+    })) {
+      for (const item of batch) {
+        yield formatCsvRow(item, fields) + '\n';
+        written += 1;
+        if (written % 1000 === 0) {
+          this.logger.log('[exportAsCsvLines] PROGRESS', { written });
+        }
+      }
+    }
+
+    this.logger.log('[exportAsCsvLines] COMPLETE', { totalWritten: written });
   }
 
   async deleteListing(id: number): Promise<void> {

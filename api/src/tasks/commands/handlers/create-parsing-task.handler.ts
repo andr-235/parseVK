@@ -8,7 +8,7 @@ import {
 import { CreateParsingTaskCommand } from '../impl/create-parsing-task.command.js';
 import type { ITasksRepository } from '@/tasks/interfaces/tasks-repository.interface.js';
 import type { TaskDetail } from '@/tasks/interfaces/task.interface.js';
-import { ParsingTaskRunner } from '@/tasks/parsing-task.runner.js';
+import { TaskGroupResolverService } from '@/tasks/services/task-group-resolver.service.js';
 import { ParsingQueueService } from '@/tasks/parsing-queue.service.js';
 import { TaskMapper } from '@/tasks/mappers/task.mapper.js';
 import { TaskDescriptionParser } from '@/tasks/parsers/task-description.parser.js';
@@ -26,7 +26,7 @@ export class CreateParsingTaskHandler implements ICommandHandler<
   constructor(
     @Inject('ITasksRepository')
     private readonly repository: ITasksRepository,
-    private readonly runner: ParsingTaskRunner,
+    private readonly groupResolver: TaskGroupResolverService,
     private readonly parsingQueue: ParsingQueueService,
     private readonly eventBus: EventBus,
     private readonly taskMapper: TaskMapper,
@@ -42,7 +42,7 @@ export class CreateParsingTaskHandler implements ICommandHandler<
     const groupIds = command.groupIds ?? [];
 
     // Validate groups exist
-    const groups = await this.runner.resolveGroups(scope, groupIds);
+    const groups = await this.groupResolver.resolveGroups(scope, groupIds);
     if (!groups.length) {
       throw new NotFoundException('Нет доступных групп для парсинга');
     }
@@ -51,7 +51,7 @@ export class CreateParsingTaskHandler implements ICommandHandler<
 
     // Create task in DB
     const task = await this.repository.create({
-      title: this.runner.buildTaskTitle(scope, groups),
+      title: this.groupResolver.buildTaskTitle(scope, groups),
       description: JSON.stringify({ scope, groupIds, postLimit }),
       totalItems,
       processedItems: 0,

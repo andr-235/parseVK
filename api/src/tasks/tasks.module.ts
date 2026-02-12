@@ -3,7 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TasksController } from './tasks.controller.js';
 import { VkModule } from '../vk/vk.module.js';
-import { ParsingTaskRunner } from './parsing-task.runner.js';
+import { TaskGroupResolverService } from './services/task-group-resolver.service.js';
 import { ParsingQueueService } from './parsing-queue.service.js';
 import { TasksGateway } from './tasks.gateway.js';
 import { ParsingQueueProducer } from './queues/parsing.queue.js';
@@ -118,9 +118,7 @@ const EventHandlers = [TaskAuditLogHandler, TaskWebSocketNotificationHandler];
     ParsingQueueProducer,
     ParsingProcessor,
 
-    // Temporary: keep ParsingTaskRunner for helper methods
-    // Will be removed after migrating all logic to handlers
-    ParsingTaskRunner,
+    TaskGroupResolverService,
   ],
   exports: [ParsingQueueService],
 })
