@@ -18,6 +18,10 @@ import type {
 } from '@/tasks/interfaces/parsing-task-runner.types.js';
 import type { ParsingGroupRecord } from '@/tasks/interfaces/parsing-task-repository.interface.js';
 import { GetCommentsResponse } from '@/vk/vk.service.js';
+import {
+  TASK_COMMENTS_BATCH_SIZE,
+  TASK_COMMENTS_THREAD_ITEMS_COUNT,
+} from '@/common/constants/processing.constants.js';
 
 @Injectable()
 @CommandHandler(ProcessGroupCommand)
@@ -145,7 +149,7 @@ export class ProcessGroupHandler implements ICommandHandler<
     postId: number,
     taskId: number,
   ): Promise<{ comments: CommentEntity[]; authorIds: number[] }> {
-    const batchSize = 100;
+    const batchSize = TASK_COMMENTS_BATCH_SIZE;
     let offset = 0;
     const collected: CommentEntity[] = [];
     const authorIds = new Set<number>();
@@ -160,7 +164,7 @@ export class ProcessGroupHandler implements ICommandHandler<
         offset,
         needLikes: true,
         extended: true,
-        threadItemsCount: 10,
+        threadItemsCount: TASK_COMMENTS_THREAD_ITEMS_COUNT,
       });
 
       const items: IComment[] = response.items ?? [];

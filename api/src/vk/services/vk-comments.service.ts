@@ -8,6 +8,12 @@ import {
   buildCommentsCacheKey,
   CACHE_TTL,
 } from '../../common/constants/cache-keys.js';
+import {
+  VK_COMMENTS_MAX_COUNT,
+  VK_COMMENTS_MAX_PAGES,
+  VK_COMMENTS_THREAD_ITEMS_COUNT,
+  VK_ERROR_WALL_DISABLED,
+} from '../constants/vk-api.constants.js';
 import { VkApiRequestManager } from './vk-api-request-manager.service.js';
 import { VK_INSTANCE } from './vk-groups.service.js';
 import type {
@@ -29,7 +35,7 @@ export class VkCommentsService {
     const {
       ownerId,
       postId,
-      count = 100,
+      count = VK_COMMENTS_MAX_COUNT,
       needLikes = true,
       extended = true,
       offset = 0,
@@ -63,7 +69,7 @@ export class VkCommentsService {
             post_id: postId,
             need_likes: needLikes ? 1 : 0,
             extended: extended ? 1 : 0,
-            count: Math.max(0, Math.min(count, 100)),
+            count: Math.max(0, Math.min(count, VK_COMMENTS_MAX_COUNT)),
             offset,
             sort,
             preview_length: previewLength,
@@ -95,7 +101,7 @@ export class VkCommentsService {
 
       return result;
     } catch (error) {
-      if (error instanceof APIError && error.code === 15) {
+      if (error instanceof APIError && error.code === VK_ERROR_WALL_DISABLED) {
         return {
           count: 0,
           current_level_count: 0,
@@ -126,9 +132,9 @@ export class VkCommentsService {
       postId,
       authorVkId,
       baseline = null,
-      batchSize = 100,
-      maxPages = 5,
-      threadItemsCount = 10,
+      batchSize = VK_COMMENTS_MAX_COUNT,
+      maxPages = VK_COMMENTS_MAX_PAGES,
+      threadItemsCount = VK_COMMENTS_THREAD_ITEMS_COUNT,
     } = options;
 
     const baselineTimestamp = baseline ? baseline.getTime() : null;

@@ -13,6 +13,7 @@ import {
   WatchlistStatus as WS,
 } from '../../generated/prisma/client.js';
 import { composeCommentKey } from '../utils/watchlist-comment.utils.js';
+import { WATCHLIST_MAX_TRACKED_POSTS } from '../constants/watchlist.constants.js';
 import type { CommentSource } from '../../common/types/comment-source.enum.js';
 import type { WatchlistStatus } from '../types/watchlist-status.enum.js';
 
@@ -181,7 +182,7 @@ export class WatchlistRepository implements IWatchlistRepository {
       },
       _max: { publishedAt: true },
       orderBy: [{ _max: { publishedAt: 'desc' } }],
-      take: 20,
+      take: WATCHLIST_MAX_TRACKED_POSTS,
     });
 
     return grouped.map((item) => ({

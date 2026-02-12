@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CommentSource } from '../../common/types/comment-source.enum.js';
 import type { WatchlistAuthorWithRelations } from '../interfaces/watchlist-repository.interface.js';
 import type { CommentEntity } from '../../common/types/comment-entity.type.js';
-import { AuthorActivityService } from '../../common/services/author-activity.service.js';
+import { CommentsSaverService } from '../../common/services/comments-saver.service.js';
 import { VkService } from '../../vk/vk.service.js';
 import { normalizeComment } from '../../common/utils/comment-normalizer.utils.js';
 import {
@@ -10,6 +10,11 @@ import {
   walkCommentTree,
 } from '../utils/watchlist-comment.utils.js';
 import type { IWatchlistRepository } from '../interfaces/watchlist-repository.interface.js';
+import {
+  WATCHLIST_COMMENTS_BATCH_SIZE,
+  WATCHLIST_COMMENTS_MAX_PAGES,
+} from '../constants/watchlist.constants.js';
+import { VK_COMMENTS_THREAD_ITEMS_COUNT } from '../../vk/constants/vk-api.constants.js';
 
 @Injectable()
 export class WatchlistAuthorRefresherService {
@@ -18,7 +23,7 @@ export class WatchlistAuthorRefresherService {
   constructor(
     @Inject('IWatchlistRepository')
     private readonly repository: IWatchlistRepository,
-    private readonly authorActivityService: AuthorActivityService,
+    private readonly commentsSaver: CommentsSaverService,
     private readonly vkService: VkService,
   ) {}
 
@@ -106,7 +111,7 @@ export class WatchlistAuthorRefresherService {
       return { addedCount: 0, maxActivity: null };
     }
 
-    await this.authorActivityService.saveComments(comments, {
+    await this.commentsSaver.saveComments(comments, {
       source: CommentSource.WATCHLIST,
       watchlistAuthorId: record.id,
     });
@@ -143,9 +148,9 @@ export class WatchlistAuthorRefresherService {
       postId,
       authorVkId,
       baseline,
-      batchSize: 100,
-      maxPages: 5,
-      threadItemsCount: 10,
+      batchSize: WATCHLIST_COMMENTS_BATCH_SIZE,
+      maxPages: WATCHLIST_COMMENTS_MAX_PAGES,
+      threadItemsCount: VK_COMMENTS_THREAD_ITEMS_COUNT,
     });
 
     if (!comments.length) {

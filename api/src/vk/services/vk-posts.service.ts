@@ -7,6 +7,10 @@ import {
   buildPostsCacheKey,
   CACHE_TTL,
 } from '../../common/constants/cache-keys.js';
+import {
+  VK_POSTS_DEFAULT_COUNT,
+  VK_POSTS_MAX_COUNT,
+} from '../constants/vk-api.constants.js';
 import { VkApiRequestManager } from './vk-api-request-manager.service.js';
 import { VK_INSTANCE } from './vk-groups.service.js';
 
@@ -45,8 +49,8 @@ export class VkPostsService {
     count?: number;
     offset?: number;
   }): Promise<IPost[]> {
-    const { ownerId, count = 10, offset = 0 } = options;
-    const normalizedCount = Math.max(0, Math.min(count, 100));
+    const { ownerId, count = VK_POSTS_DEFAULT_COUNT, offset = 0 } = options;
+    const normalizedCount = Math.max(0, Math.min(count, VK_POSTS_MAX_COUNT));
     const cacheKey = buildPostsCacheKey(ownerId, offset, normalizedCount);
 
     const cached = await this.cacheManager.get<IPost[]>(cacheKey);
