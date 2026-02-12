@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PhotoAnalysisService } from '../photo-analysis/photo-analysis.service.js';
 import type { PhotoAnalysisSummaryDto } from '../photo-analysis/dto/photo-analysis-response.dto.js';
 import type { AuthorDetailsDto, AuthorListDto } from './dto/author.dto.js';
-import { AuthorActivityService } from '../common/services/author-activity.service.js';
+import { AuthorsSaverService } from '../common/services/authors-saver.service.js';
 import {
   AUTHORS_CONSTANTS,
   AUTHORS_REPOSITORY,
@@ -28,7 +28,7 @@ export class AuthorsService {
     @Inject(AUTHORS_REPOSITORY)
     private readonly repository: IAuthorsRepository,
     private readonly photoAnalysisService: PhotoAnalysisService,
-    private readonly authorActivityService: AuthorActivityService,
+    private readonly authorsSaver: AuthorsSaverService,
   ) {}
 
   async listAuthors(options: ListAuthorsOptions = {}): Promise<AuthorListDto> {
@@ -81,7 +81,7 @@ export class AuthorsService {
   }
 
   async refreshAuthors(): Promise<number> {
-    return this.authorActivityService.refreshAllAuthors();
+    return this.authorsSaver.refreshAllAuthors();
   }
 
   async deleteAuthor(vkUserId: number): Promise<void> {

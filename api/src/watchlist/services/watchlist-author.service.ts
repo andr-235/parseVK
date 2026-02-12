@@ -23,7 +23,7 @@ import { WatchlistAuthorMapper } from '../mappers/watchlist-author.mapper.js';
 import { WatchlistStatsCollectorService } from './watchlist-stats-collector.service.js';
 import { WatchlistAuthorRefresherService } from './watchlist-author-refresher.service.js';
 import { WatchlistQueryValidator } from '../validators/watchlist-query.validator.js';
-import { AuthorActivityService } from '../../common/services/author-activity.service.js';
+import { AuthorsSaverService } from '../../common/services/authors-saver.service.js';
 
 @Injectable()
 export class WatchlistAuthorService {
@@ -37,7 +37,7 @@ export class WatchlistAuthorService {
     private readonly statsCollector: WatchlistStatsCollectorService,
     private readonly authorRefresher: WatchlistAuthorRefresherService,
     private readonly queryValidator: WatchlistQueryValidator,
-    private readonly authorActivityService: AuthorActivityService,
+    private readonly authorsSaver: AuthorsSaverService,
   ) {}
 
   async getAuthors(
@@ -182,7 +182,7 @@ export class WatchlistAuthorService {
       );
     }
 
-    await this.authorActivityService.saveAuthors([authorVkId]);
+    await this.authorsSaver.saveAuthors([authorVkId]);
 
     const record = await this.repository.create({
       authorVkId,
@@ -278,7 +278,7 @@ export class WatchlistAuthorService {
       return;
     }
 
-    await this.authorActivityService.saveAuthors(
+    await this.authorsSaver.saveAuthors(
       activeAuthors.map((author) => author.authorVkId),
     );
 

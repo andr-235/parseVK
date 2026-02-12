@@ -1,7 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Injectable } from '@nestjs/common';
 import { SaveAuthorsCommand } from '../impl/save-authors.command.js';
-import { AuthorActivityService } from '@/common/services/author-activity.service.js';
+import { AuthorsSaverService } from '@/common/services/authors-saver.service.js';
 
 @Injectable()
 @CommandHandler(SaveAuthorsCommand)
@@ -9,9 +9,9 @@ export class SaveAuthorsHandler implements ICommandHandler<
   SaveAuthorsCommand,
   number
 > {
-  constructor(private readonly authorActivityService: AuthorActivityService) {}
+  constructor(private readonly authorsSaver: AuthorsSaverService) {}
 
   async execute(command: SaveAuthorsCommand): Promise<number> {
-    return this.authorActivityService.saveAuthors(command.authorIds);
+    return this.authorsSaver.saveAuthors(command.authorIds);
   }
 }
