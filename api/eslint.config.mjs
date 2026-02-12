@@ -32,6 +32,50 @@ export default tseslint.config(
       'no-console': ['error', { allow: ['warn', 'error'] }],
     },
   },
+  // Межмодульные границы: запрещаем прямые импорты внутренних сервисов между модулями
+  // Внешние модули должны использовать фасадные сервисы, а не внутренние реализации.
+  {
+    files: ['src/**/*.ts'],
+    ignores: [
+      'src/watchlist/**',
+      '**/*.spec.ts',
+      '**/*.module.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/watchlist/services/watchlist-author.service*', '**/watchlist/services/watchlist-settings.service*'],
+              message: 'Используйте WatchlistService (фасад) вместо прямого импорта внутренних watchlist-сервисов.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/**/*.ts'],
+    ignores: [
+      'src/data-import/**',
+      '**/*.spec.ts',
+      '**/*.module.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/data-import/services/listing-validator*', '**/data-import/services/listing-normalizer*'],
+              message: 'ListingValidatorService и ListingNormalizerService являются внутренними для модуля data-import.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   {
     files: [
       '**/*.spec.ts',
