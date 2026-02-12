@@ -78,6 +78,7 @@ export interface IWatchlistRepository {
   ): Promise<WatchlistAuthorWithRelations>;
   updateMany(ids: number[], data: WatchlistAuthorUpdateData): Promise<void>;
   countComments(watchlistAuthorId: number): Promise<number>;
+  countCommentsByAuthorIds(authorIds: number[]): Promise<Map<number, number>>;
   getTrackedPosts(
     watchlistAuthorId: number,
     authorVkId: number,

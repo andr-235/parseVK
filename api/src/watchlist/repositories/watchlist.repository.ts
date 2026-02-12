@@ -145,6 +145,31 @@ export class WatchlistRepository implements IWatchlistRepository {
     });
   }
 
+  async countCommentsByAuthorIds(
+    authorIds: number[],
+  ): Promise<Map<number, number>> {
+    const map = new Map<number, number>();
+
+    if (!authorIds.length) {
+      return map;
+    }
+
+    const grouped = await this.prisma.comment.groupBy({
+      by: ['watchlistAuthorId'],
+      where: { watchlistAuthorId: { in: authorIds } },
+      _count: { watchlistAuthorId: true },
+      orderBy: { watchlistAuthorId: 'asc' },
+    });
+
+    for (const group of grouped) {
+      if (typeof group.watchlistAuthorId === 'number') {
+        map.set(group.watchlistAuthorId, group._count.watchlistAuthorId ?? 0);
+      }
+    }
+
+    return map;
+  }
+
   async getTrackedPosts(
     watchlistAuthorId: number,
     authorVkId: number,

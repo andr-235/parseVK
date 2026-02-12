@@ -1,0 +1,320 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { CommentSource } from '../../common/types/comment-source.enum.js';
+import { WatchlistStatus } from '../types/watchlist-status.enum.js';
+import type {
+  WatchlistAuthorCardDto,
+  WatchlistAuthorDetailsDto,
+  WatchlistAuthorListDto,
+} from '../dto/watchlist-author.dto.js';
+import { CreateWatchlistAuthorDto } from '../dto/create-watchlist-author.dto.js';
+import { UpdateWatchlistAuthorDto } from '../dto/update-watchlist-author.dto.js';
+import type {
+  IWatchlistRepository,
+  WatchlistAuthorUpdateData,
+} from '../interfaces/watchlist-repository.interface.js';
+import { WatchlistAuthorMapper } from '../mappers/watchlist-author.mapper.js';
+import { WatchlistStatsCollectorService } from './watchlist-stats-collector.service.js';
+import { WatchlistAuthorRefresherService } from './watchlist-author-refresher.service.js';
+import { WatchlistQueryValidator } from '../validators/watchlist-query.validator.js';
+import { AuthorActivityService } from '../../common/services/author-activity.service.js';
+
+@Injectable()
+export class WatchlistAuthorService {
+  private readonly logger = new Logger(WatchlistAuthorService.name);
+  private lastRefreshTimestamp = 0;
+
+  constructor(
+    @Inject('IWatchlistRepository')
+    private readonly repository: IWatchlistRepository,
+    private readonly authorMapper: WatchlistAuthorMapper,
+    private readonly statsCollector: WatchlistStatsCollectorService,
+    private readonly authorRefresher: WatchlistAuthorRefresherService,
+    private readonly queryValidator: WatchlistQueryValidator,
+    private readonly authorActivityService: AuthorActivityService,
+  ) {}
+
+  async getAuthors(
+    params: {
+      offset?: number;
+      limit?: number;
+      excludeStopped?: boolean;
+    } = {},
+  ): Promise<WatchlistAuthorListDto> {
+    const settings = await this.repository.ensureSettings();
+    const offset = this.queryValidator.normalizeOffset(params.offset);
+    const limit = this.queryValidator.normalizeLimit(params.limit);
+    const excludeStopped = this.queryValidator.normalizeExcludeStopped(
+      params.excludeStopped,
+    );
+
+    const { items: records, total } = await this.repository.findMany({
+      settingsId: settings.id,
+      excludeStopped,
+      offset,
+      limit,
+    });
+
+    const recordIds: number[] = records.map((record) => record.id);
+    const commentCounts =
+      await this.statsCollector.collectCommentCounts(recordIds);
+    const summaryMap =
+      await this.statsCollector.collectAnalysisSummaries(records);
+
+    const items = records.map((record) =>
+      this.authorMapper.mapAuthor(
+        record,
+        commentCounts.get(record.id) ?? 0,
+        this.statsCollector.resolveSummary(record, summaryMap),
+      ),
+    );
+
+    return {
+      items,
+      total,
+      hasMore: offset + items.length < total,
+    };
+  }
+
+  async getAuthorDetails(
+    id: number,
+    params: { offset?: number; limit?: number } = {},
+  ): Promise<WatchlistAuthorDetailsDto> {
+    const record = await this.repository.findById(id);
+
+    if (!record) {
+      throw new NotFoundException('Автор списка "На карандаше" не найден');
+    }
+
+    const offset = this.queryValidator.normalizeOffset(params.offset);
+    const limit = this.queryValidator.normalizeLimit(params.limit);
+
+    const { items: comments, total } = await this.repository.getAuthorComments({
+      watchlistAuthorId: id,
+      offset,
+      limit,
+    });
+
+    const commentDtos = comments.map((comment) =>
+      this.authorMapper.mapComment({
+        id: (comment as { id: number }).id,
+        ownerId: (comment as { ownerId: number }).ownerId,
+        postId: (comment as { postId: number }).postId,
+        vkCommentId: (comment as { vkCommentId: number }).vkCommentId,
+        text: (comment as { text: string | null }).text,
+        publishedAt: (comment as { publishedAt: Date | null }).publishedAt,
+        createdAt: (comment as { createdAt: Date }).createdAt,
+        source: (comment as { source: string }).source,
+      }),
+    );
+
+    const summaryMap = await this.statsCollector.collectAnalysisSummaries([
+      record,
+    ]);
+
+    return {
+      ...this.authorMapper.mapAuthor(
+        record,
+        total,
+        this.statsCollector.resolveSummary(record, summaryMap),
+      ),
+      comments: {
+        items: commentDtos,
+        total,
+        hasMore: offset + commentDtos.length < total,
+      },
+    };
+  }
+
+  async createAuthor(
+    dto: CreateWatchlistAuthorDto,
+  ): Promise<WatchlistAuthorCardDto> {
+    if (
+      typeof dto.commentId !== 'number' &&
+      typeof dto.authorVkId !== 'number'
+    ) {
+      throw new BadRequestException('Нужно указать commentId или authorVkId');
+    }
+
+    const settings = await this.repository.ensureSettings();
+
+    let authorVkId = dto.authorVkId ?? null;
+    let sourceCommentId: number | null = null;
+
+    if (typeof dto.commentId === 'number') {
+      const comment = await this.repository.findCommentById(dto.commentId);
+
+      if (!comment) {
+        throw new NotFoundException('Комментарий не найден');
+      }
+
+      sourceCommentId = comment.id;
+      const fromId = comment.fromId;
+      authorVkId = comment.authorVkId ?? (fromId > 0 ? fromId : null);
+
+      if (!authorVkId) {
+        throw new BadRequestException(
+          'Не удалось определить автора по указанному комментарию',
+        );
+      }
+    }
+
+    if (!authorVkId || authorVkId <= 0) {
+      throw new BadRequestException(
+        'Идентификатор автора должен быть положительным числом',
+      );
+    }
+
+    const existing = await this.repository.findByAuthorVkIdAndSettingsId(
+      authorVkId,
+      settings.id,
+    );
+
+    if (existing) {
+      throw new ConflictException(
+        'Автор уже находится в списке "На карандаше"',
+      );
+    }
+
+    await this.authorActivityService.saveAuthors([authorVkId]);
+
+    const record = await this.repository.create({
+      authorVkId,
+      sourceCommentId,
+      settingsId: settings.id,
+      status: WatchlistStatus.ACTIVE,
+    });
+
+    if (sourceCommentId) {
+      await this.repository.updateComment(sourceCommentId, {
+        watchlistAuthorId: record.id,
+        source: CommentSource.WATCHLIST,
+      });
+    }
+
+    const commentsCount = await this.repository.countComments(record.id);
+
+    this.logger.log(`Добавлен автор ${authorVkId} в список "На карандаше"`);
+
+    const summaryMap = await this.statsCollector.collectAnalysisSummaries([
+      record,
+    ]);
+
+    return this.authorMapper.mapAuthor(
+      record,
+      commentsCount,
+      this.statsCollector.resolveSummary(record, summaryMap),
+    );
+  }
+
+  async updateAuthor(
+    id: number,
+    dto: UpdateWatchlistAuthorDto,
+  ): Promise<WatchlistAuthorCardDto> {
+    const record = await this.repository.findById(id);
+
+    if (!record) {
+      throw new NotFoundException('Автор списка "На карандаше" не найден');
+    }
+
+    const data: WatchlistAuthorUpdateData = {};
+
+    if (dto.status && dto.status !== record.status) {
+      data.status = dto.status;
+
+      if (dto.status === WatchlistStatus.ACTIVE) {
+        data.monitoringStoppedAt = null;
+      } else if (dto.status === WatchlistStatus.STOPPED) {
+        data.monitoringStoppedAt = new Date();
+      }
+    }
+
+    if (Object.keys(data).length === 0) {
+      const commentsCount = await this.repository.countComments(id);
+      const summaryMap = await this.statsCollector.collectAnalysisSummaries([
+        record,
+      ]);
+      return this.authorMapper.mapAuthor(
+        record,
+        commentsCount,
+        this.statsCollector.resolveSummary(record, summaryMap),
+      );
+    }
+
+    const updated = await this.repository.update(id, data);
+    const commentsCount = await this.repository.countComments(id);
+    const summaryMap = await this.statsCollector.collectAnalysisSummaries([
+      updated,
+    ]);
+
+    return this.authorMapper.mapAuthor(
+      updated,
+      commentsCount,
+      this.statsCollector.resolveSummary(updated, summaryMap),
+    );
+  }
+
+  async refreshActiveAuthors(): Promise<void> {
+    const settings = await this.repository.ensureSettings();
+
+    if (this.shouldSkipRefresh(settings.pollIntervalMinutes)) {
+      return;
+    }
+
+    this.lastRefreshTimestamp = Date.now();
+
+    const activeAuthors = await this.repository.findActiveAuthors({
+      settingsId: settings.id,
+      limit: Math.max(settings.maxAuthors, 1),
+    });
+
+    if (!activeAuthors.length) {
+      return;
+    }
+
+    await this.authorActivityService.saveAuthors(
+      activeAuthors.map((author) => author.authorVkId),
+    );
+
+    if (!settings.trackAllComments) {
+      const timestamp = new Date();
+      await this.repository.updateMany(
+        activeAuthors.map((author) => author.id),
+        { lastCheckedAt: timestamp },
+      );
+      this.logger.debug(
+        'Мониторинг всех комментариев отключен, обновлены только метки проверки авторов',
+      );
+      return;
+    }
+
+    let totalNewComments = 0;
+
+    for (const author of activeAuthors) {
+      const newComments =
+        await this.authorRefresher.refreshAuthorRecord(author);
+      totalNewComments += newComments;
+    }
+
+    this.logger.debug(
+      `Обработано ${activeAuthors.length} авторов "На карандаше", найдено новых комментариев: ${totalNewComments}`,
+    );
+  }
+
+  private shouldSkipRefresh(pollIntervalMinutes: number): boolean {
+    if (!this.lastRefreshTimestamp) {
+      return false;
+    }
+
+    const interval = Math.max(pollIntervalMinutes, 1) * 60_000;
+    const elapsed = Date.now() - this.lastRefreshTimestamp;
+
+    return elapsed < interval;
+  }
+}
