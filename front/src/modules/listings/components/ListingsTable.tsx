@@ -61,6 +61,12 @@ const COLUMN_DEFS = [
     sortField: 'sourceAuthorName' as ListingsSortField,
   },
   {
+    id: 'phone' as const,
+    label: 'Номер телефона',
+    hideable: true,
+    sortField: 'sourceAuthorPhone' as ListingsSortField,
+  },
+  {
     id: 'authorUrl' as const,
     label: 'URL автора',
     hideable: false,
@@ -180,18 +186,14 @@ function ListingRow({
     const parts = [listing.city, listing.address].filter(Boolean)
     return parts.join(', ') || '—'
   }, [listing.city, listing.address])
-  const contact = useMemo(() => {
-    const parts = [
-      listing.sourceAuthorName ?? listing.contactName,
-      listing.sourceAuthorPhone ?? listing.contactPhone,
-    ].filter(Boolean)
-    return parts.join(' · ') || '—'
-  }, [
-    listing.sourceAuthorName,
-    listing.contactName,
-    listing.sourceAuthorPhone,
-    listing.contactPhone,
-  ])
+  const contact = useMemo(
+    () => listing.sourceAuthorName ?? listing.contactName ?? '—',
+    [listing.sourceAuthorName, listing.contactName]
+  )
+  const phone = useMemo(
+    () => listing.sourceAuthorPhone ?? listing.contactPhone ?? '—',
+    [listing.sourceAuthorPhone, listing.contactPhone]
+  )
 
   return (
     <tr
@@ -258,6 +260,12 @@ function ListingRow({
       {visibleColumns.has('contact') && (
         <td className="px-4 py-3 max-w-[180px]">
           <span className="line-clamp-2 text-xs text-slate-400">{contact}</span>
+        </td>
+      )}
+
+      {visibleColumns.has('phone') && (
+        <td className="px-4 py-3 whitespace-nowrap">
+          <span className="font-mono-accent text-xs text-slate-400">{phone}</span>
         </td>
       )}
 

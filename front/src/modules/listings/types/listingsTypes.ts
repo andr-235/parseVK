@@ -12,6 +12,7 @@ export type ListingsSortField =
   | 'address'
   | 'title'
   | 'sourceAuthorName'
+  | 'sourceAuthorPhone'
   | 'sourceAuthorUrl'
 
 export type ListingsFetcherParams = {
