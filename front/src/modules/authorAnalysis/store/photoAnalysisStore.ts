@@ -6,8 +6,8 @@ import type {
   PhotoAnalysis,
   PhotoAnalysisResponse,
   PhotoAnalysisSummary,
-} from '@/types'
-import { createEmptyPhotoAnalysisSummary } from '@/types'
+} from '@/modules/authorAnalysis/types/photoAnalysis'
+import { createEmptyPhotoAnalysisSummary } from '@/modules/authorAnalysis/types/photoAnalysis'
 
 type PhotoFilter = 'all' | 'suspicious'
 
