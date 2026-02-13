@@ -136,6 +136,7 @@ jobs:
           context: .
           file: docker/backend.Dockerfile
           push: false
+          load: true
           tags: parsevk-api:scan
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -150,6 +151,7 @@ jobs:
           context: .
           file: docker/frontend.Dockerfile
           push: false
+          load: true
           tags: parsevk-frontend:scan
           cache-from: type=gha
           cache-to: type=gha,mode=max
