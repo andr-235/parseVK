@@ -71,9 +71,19 @@ export class ListingsService {
       options;
     const skip = (page - 1) * pageSize;
 
+    const order = sortOrder ?? 'asc';
+    // Контакт отображается как sourceAuthorName ?? contactName,
+    // поэтому при сортировке по sourceAuthorName добавляем contactName как вторичный ключ —
+    // null-записи будут отсортированы по contactName внутри null-группы
+    const isContactSort = sortBy === 'sourceAuthorName';
     const orderBy: ListingOrderByInput = sortBy
-      ? [{ [sortBy]: sortOrder ?? 'asc' }]
+      ? isContactSort
+        ? [{ sourceAuthorName: order }, { contactName: order }]
+        : [{ [sortBy]: order }]
       : [{ createdAt: 'desc' }];
+    this.logger.debug(
+      `[getListings] sort: ${sortBy ?? 'default'}, order: ${order}, compound: ${isContactSort}`,
+    );
 
     const where: ListingWhereInput = {};
 
