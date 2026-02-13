@@ -1,3 +1,10 @@
+## [0.17.1](https://github.com/andr-235/parseVK/compare/v0.17.0...v0.17.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* **listings:** вынести queryWithContactSort из транзакции для совместимости с Prisma ([5d8c8f4](https://github.com/andr-235/parseVK/commit/5d8c8f48e716844be3e839ba790742e58ea16188))
+
 # [0.17.0](https://github.com/andr-235/parseVK/compare/v0.16.0...v0.17.0) (2026-02-13)
 
 
