@@ -26,3 +26,4 @@ export type {
   WatchlistComment,
   WatchlistSettings,
 } from '@/modules/watchlist'
+export type { WatchlistAuthorDetails } from '@/modules/watchlist/types'

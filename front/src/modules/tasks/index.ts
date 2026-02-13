@@ -1,4 +1,5 @@
 export * from './api/tasks.api'
+export { useTasksStore } from './store/tasksStore'
 export * from './hooks/useTasksQuery'
 export * from './hooks/useTasksViewModel'
 export { default as TasksHero } from './components/TasksHero'
