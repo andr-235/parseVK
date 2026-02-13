@@ -28,7 +28,7 @@ describe('ListingsService', () => {
   });
 
   describe('getListings — сортировка', () => {
-    it('при sortBy=sourceAuthorName использует составной orderBy с contactName как вторичным ключом', async () => {
+    it('при sortBy=sourceAuthorName передаёт contactSort=asc и не передаёт orderBy', async () => {
       await service.getListings({
         page: 1,
         pageSize: 20,
@@ -38,15 +38,13 @@ describe('ListingsService', () => {
 
       const call = (
         repository.getListingsWithCountAndSources as ReturnType<typeof vi.fn>
-      ).mock.calls[0][0] as { orderBy: unknown };
+      ).mock.calls[0][0] as { orderBy?: unknown; contactSort?: string };
 
-      expect(call.orderBy).toEqual([
-        { sourceAuthorName: 'asc' },
-        { contactName: 'asc' },
-      ]);
+      expect(call.contactSort).toBe('asc');
+      expect(call.orderBy).toBeUndefined();
     });
 
-    it('при sortBy=sourceAuthorName desc оба ключа используют desc', async () => {
+    it('при sortBy=sourceAuthorName desc передаёт contactSort=desc', async () => {
       await service.getListings({
         page: 1,
         pageSize: 20,
@@ -56,12 +54,10 @@ describe('ListingsService', () => {
 
       const call = (
         repository.getListingsWithCountAndSources as ReturnType<typeof vi.fn>
-      ).mock.calls[0][0] as { orderBy: unknown };
+      ).mock.calls[0][0] as { orderBy?: unknown; contactSort?: string };
 
-      expect(call.orderBy).toEqual([
-        { sourceAuthorName: 'desc' },
-        { contactName: 'desc' },
-      ]);
+      expect(call.contactSort).toBe('desc');
+      expect(call.orderBy).toBeUndefined();
     });
 
     it('при sortBy=price использует одиночный ключ (не составной)', async () => {

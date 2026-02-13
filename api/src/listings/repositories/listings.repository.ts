@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma.service.js';
 import type {
   GetListingsTransactionResult,
@@ -78,15 +78,23 @@ export class ListingsRepository implements IListingsRepository {
     skip: number;
     take: number;
     orderBy?: ListingOrderByInput;
+    contactSort?: 'asc' | 'desc';
   }): Promise<GetListingsTransactionResult> {
     const orderBy = params.orderBy ?? { createdAt: 'desc' };
     return this.prisma.$transaction(async (tx) => {
-      const listings = await tx.listing.findMany({
-        where: params.where as Prisma.ListingWhereInput,
-        skip: params.skip,
-        take: params.take,
-        orderBy: orderBy as Prisma.ListingOrderByWithRelationInput,
-      });
+      const listings = params.contactSort
+        ? await this.queryWithContactSort(tx, {
+            where: params.where,
+            skip: params.skip,
+            take: params.take,
+            order: params.contactSort,
+          })
+        : await tx.listing.findMany({
+            where: params.where as Prisma.ListingWhereInput,
+            skip: params.skip,
+            take: params.take,
+            orderBy: orderBy as Prisma.ListingOrderByWithRelationInput,
+          });
       const total = await tx.listing.count({
         where: params.where as Prisma.ListingWhereInput,
       });
@@ -98,6 +106,66 @@ export class ListingsRepository implements IListingsRepository {
       });
       return { listings, total, distinctSources };
     });
+  }
+
+  // Сортировка по эффективному контакту: COALESCE(sourceAuthorName, contactName).
+  // Телефоны (начинаются на + или цифру) идут первыми, затем имена — алфавитно.
+  private async queryWithContactSort(
+    tx: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0],
+    params: {
+      where: ListingWhereInput;
+      skip: number;
+      take: number;
+      order: 'asc' | 'desc';
+    },
+  ): Promise<ListingRecord[]> {
+    const { where, skip, take, order } = params;
+    const w = where as {
+      OR?: Array<{ title?: { contains?: string } }>;
+      source?: { equals?: string };
+      archived?: boolean;
+    };
+
+    const conditions: Prisma.Sql[] = [];
+
+    if (w.OR && w.OR.length > 0) {
+      const term = w.OR[0]?.title?.contains;
+      if (term) {
+        conditions.push(Prisma.sql`(
+          title ILIKE ${`%${term}%`} OR
+          description ILIKE ${`%${term}%`} OR
+          address ILIKE ${`%${term}%`} OR
+          city ILIKE ${`%${term}%`} OR
+          "externalId" ILIKE ${`%${term}%`} OR
+          "contactName" ILIKE ${`%${term}%`} OR
+          "contactPhone" ILIKE ${`%${term}%`}
+        )`);
+      }
+    }
+
+    if (w.source?.equals !== undefined) {
+      conditions.push(Prisma.sql`source ILIKE ${w.source.equals}`);
+    }
+
+    if (w.archived !== undefined) {
+      conditions.push(Prisma.sql`archived = ${w.archived}`);
+    }
+
+    const whereClause =
+      conditions.length > 0
+        ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
+        : Prisma.empty;
+
+    const orderDir = Prisma.raw(order === 'asc' ? 'ASC' : 'DESC');
+
+    return tx.$queryRaw<ListingRecord[]>(Prisma.sql`
+      SELECT * FROM "Listing"
+      ${whereClause}
+      ORDER BY
+        CASE WHEN COALESCE("sourceAuthorName", "contactName") ~ '^[+0-9]' THEN 0 ELSE 1 END ASC,
+        COALESCE("sourceAuthorName", "contactName") ${orderDir} NULLS LAST
+      LIMIT ${take} OFFSET ${skip}
+    `);
   }
 
   transaction<T>(

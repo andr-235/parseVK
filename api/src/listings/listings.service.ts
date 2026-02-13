@@ -72,17 +72,16 @@ export class ListingsService {
     const skip = (page - 1) * pageSize;
 
     const order = sortOrder ?? 'asc';
-    // Контакт отображается как sourceAuthorName ?? contactName,
-    // поэтому при сортировке по sourceAuthorName добавляем contactName как вторичный ключ —
-    // null-записи будут отсортированы по contactName внутри null-группы
+    // Контакт в UI = COALESCE(sourceAuthorName, contactName).
+    // При сортировке по контакту используем raw SQL: телефоны вперёд имён,
+    // одинаковые номера в разных колонках стоят рядом.
     const isContactSort = sortBy === 'sourceAuthorName';
-    const orderBy: ListingOrderByInput = sortBy
-      ? isContactSort
-        ? [{ sourceAuthorName: order }, { contactName: order }]
-        : [{ [sortBy]: order }]
-      : [{ createdAt: 'desc' }];
+    const orderBy: ListingOrderByInput =
+      sortBy && !isContactSort
+        ? [{ [sortBy]: order }]
+        : [{ createdAt: 'desc' }];
     this.logger.debug(
-      `[getListings] sort: ${sortBy ?? 'default'}, order: ${order}, compound: ${isContactSort}`,
+      `[getListings] sort: ${sortBy ?? 'default'}, order: ${order}, contactSort: ${isContactSort}`,
     );
 
     const where: ListingWhereInput = {};
@@ -117,7 +116,7 @@ export class ListingsService {
       where,
       skip,
       take: pageSize,
-      orderBy,
+      ...(isContactSort ? { contactSort: order } : { orderBy }),
     });
 
     const listings = (result as { listings: ListingRecord[] }).listings;
