@@ -1,3 +1,10 @@
+# [0.18.0](https://github.com/andr-235/parseVK/compare/v0.17.1...v0.18.0) (2026-02-13)
+
+
+### Features
+
+* **listings:** добавить поддержку сортировки по номеру телефона ([06623cc](https://github.com/andr-235/parseVK/commit/06623ccbd63e938e3929f083339720905a701a2f))
+
 ## [0.17.1](https://github.com/andr-235/parseVK/compare/v0.17.0...v0.17.1) (2026-02-13)
 
 
