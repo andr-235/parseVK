@@ -1,3 +1,10 @@
+# [0.17.0](https://github.com/andr-235/parseVK/compare/v0.16.0...v0.17.0) (2026-02-13)
+
+
+### Features
+
+* **listings:** добавить сортировку по контакту в репозитории и сервисе ([4b4facb](https://github.com/andr-235/parseVK/commit/4b4facb9739bdc3f59ed6d850bfffe362d1ed93c))
+
 # [0.16.0](https://github.com/andr-235/parseVK/compare/v0.15.0...v0.16.0) (2026-02-13)
 
 
