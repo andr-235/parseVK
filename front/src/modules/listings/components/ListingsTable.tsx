@@ -64,7 +64,7 @@ const COLUMN_DEFS = [
     id: 'phone' as const,
     label: 'Номер телефона',
     hideable: true,
-    sortField: 'sourceAuthorPhone' as ListingsSortField,
+    sortField: 'contactPhone' as ListingsSortField,
   },
   {
     id: 'authorUrl' as const,

@@ -72,16 +72,11 @@ export class ListingsService {
     const skip = (page - 1) * pageSize;
 
     const order = sortOrder ?? 'asc';
-    // Контакт в UI = COALESCE(sourceAuthorName, contactName).
-    // При сортировке по контакту используем raw SQL: телефоны вперёд имён,
-    // одинаковые номера в разных колонках стоят рядом.
-    const isContactSort = sortBy === 'sourceAuthorName';
-    const orderBy: ListingOrderByInput =
-      sortBy && !isContactSort
-        ? [{ [sortBy]: order }]
-        : [{ createdAt: 'desc' }];
+    const orderBy: ListingOrderByInput = sortBy
+      ? [{ [sortBy]: order }]
+      : [{ createdAt: 'desc' }];
     this.logger.debug(
-      `[getListings] sort: ${sortBy ?? 'default'}, order: ${order}, contactSort: ${isContactSort}`,
+      `[getListings] sort: ${sortBy ?? 'default'}, order: ${order}`,
     );
 
     const where: ListingWhereInput = {};
@@ -116,7 +111,7 @@ export class ListingsService {
       where,
       skip,
       take: pageSize,
-      ...(isContactSort ? { contactSort: order } : { orderBy }),
+      orderBy,
     });
 
     const listings = (result as { listings: ListingRecord[] }).listings;

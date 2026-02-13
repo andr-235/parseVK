@@ -17,7 +17,7 @@ const SORTABLE_FIELDS = [
   'address',
   'title',
   'sourceAuthorName',
-  'sourceAuthorPhone',
+  'contactPhone',
   'sourceAuthorUrl',
   'sourceParsedAt',
 ] as const;

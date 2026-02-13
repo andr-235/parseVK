@@ -45,7 +45,6 @@ export interface IListingsRepository {
     skip: number;
     take: number;
     orderBy?: ListingOrderByInput;
-    contactSort?: 'asc' | 'desc';
   }): Promise<GetListingsTransactionResult>;
   transaction<T>(
     callback: (tx: ListingsTransactionClient) => Promise<T>,
