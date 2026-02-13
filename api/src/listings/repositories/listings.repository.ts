@@ -81,20 +81,35 @@ export class ListingsRepository implements IListingsRepository {
     contactSort?: 'asc' | 'desc';
   }): Promise<GetListingsTransactionResult> {
     const orderBy = params.orderBy ?? { createdAt: 'desc' };
+
+    if (params.contactSort) {
+      const [listings, total, distinctSourcesRaw] = await Promise.all([
+        this.queryWithContactSort({
+          where: params.where,
+          skip: params.skip,
+          take: params.take,
+          order: params.contactSort,
+        }),
+        this.prisma.listing.count({
+          where: params.where as Prisma.ListingWhereInput,
+        }),
+        this.prisma.listing.findMany({
+          where: { source: { not: null, notIn: [''] } },
+          distinct: ['source'],
+          select: { source: true },
+          orderBy: { source: 'asc' },
+        }),
+      ]);
+      return { listings, total, distinctSources: distinctSourcesRaw };
+    }
+
     return this.prisma.$transaction(async (tx) => {
-      const listings = params.contactSort
-        ? await this.queryWithContactSort(tx, {
-            where: params.where,
-            skip: params.skip,
-            take: params.take,
-            order: params.contactSort,
-          })
-        : await tx.listing.findMany({
-            where: params.where as Prisma.ListingWhereInput,
-            skip: params.skip,
-            take: params.take,
-            orderBy: orderBy as Prisma.ListingOrderByWithRelationInput,
-          });
+      const listings = await tx.listing.findMany({
+        where: params.where as Prisma.ListingWhereInput,
+        skip: params.skip,
+        take: params.take,
+        orderBy: orderBy as Prisma.ListingOrderByWithRelationInput,
+      });
       const total = await tx.listing.count({
         where: params.where as Prisma.ListingWhereInput,
       });
@@ -110,15 +125,12 @@ export class ListingsRepository implements IListingsRepository {
 
   // Сортировка по эффективному контакту: COALESCE(sourceAuthorName, contactName).
   // Телефоны (начинаются на + или цифру) идут первыми, затем имена — алфавитно.
-  private async queryWithContactSort(
-    tx: Parameters<Parameters<typeof this.prisma.$transaction>[0]>[0],
-    params: {
-      where: ListingWhereInput;
-      skip: number;
-      take: number;
-      order: 'asc' | 'desc';
-    },
-  ): Promise<ListingRecord[]> {
+  private async queryWithContactSort(params: {
+    where: ListingWhereInput;
+    skip: number;
+    take: number;
+    order: 'asc' | 'desc';
+  }): Promise<ListingRecord[]> {
     const { where, skip, take, order } = params;
     const w = where as {
       OR?: Array<{ title?: { contains?: string } }>;
@@ -158,7 +170,7 @@ export class ListingsRepository implements IListingsRepository {
 
     const orderDir = Prisma.raw(order === 'asc' ? 'ASC' : 'DESC');
 
-    return tx.$queryRaw<ListingRecord[]>(Prisma.sql`
+    return this.prisma.$queryRaw<ListingRecord[]>(Prisma.sql`
       SELECT * FROM "Listing"
       ${whereClause}
       ORDER BY
