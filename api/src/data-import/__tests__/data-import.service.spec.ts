@@ -1,6 +1,8 @@
 import { vi } from 'vitest';
 import { Prisma, type Listing } from '../../generated/prisma/client.js';
 import { DataImportService } from '../data-import.service.js';
+import { ListingValidatorService } from '../services/listing-validator.service.js';
+import { ListingNormalizerService } from '../services/listing-normalizer.service.js';
 import type { IListingsRepository } from '../../listings/interfaces/listings-repository.interface.js';
 import type { ListingImportRequestDto } from '../dto/listing-import-request.dto.js';
 
@@ -74,7 +76,11 @@ describe('DataImportService', () => {
       ),
     } as unknown as vi.Mocked<IListingsRepository>;
 
-    service = new DataImportService(listingsRepository);
+    service = new DataImportService(
+      listingsRepository,
+      new ListingValidatorService(),
+      new ListingNormalizerService(),
+    );
   });
 
   it('создает объявления последовательно и возвращает отчет', async () => {

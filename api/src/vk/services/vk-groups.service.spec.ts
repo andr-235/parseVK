@@ -4,7 +4,10 @@ import { VkGroupsService } from './vk-groups.service.js';
 import type { Cache } from 'cache-manager';
 import type { VkApiRequestManager } from './vk-api-request-manager.service.js';
 
-vi.mock('vk-io', () => ({ VK: vi.fn() }));
+vi.mock('vk-io', () => {
+  class APIErrorMock extends Error {}
+  return { VK: vi.fn(), APIError: APIErrorMock };
+});
 
 function createMockVkApi() {
   return {
