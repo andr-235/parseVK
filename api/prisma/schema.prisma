@@ -306,6 +306,7 @@ model Listing {
   @@index([city])
   @@index([price])
   @@index([archived])
+  @@index([contactPhone])
 }
 
 model Author {

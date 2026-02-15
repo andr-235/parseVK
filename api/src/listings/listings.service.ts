@@ -73,7 +73,14 @@ export class ListingsService {
 
     const order = sortOrder ?? 'asc';
     const orderBy: ListingOrderByInput = sortBy
-      ? [{ [sortBy]: order }]
+      ? [
+          {
+            [sortBy]:
+              sortBy === 'contactPhone'
+                ? { sort: order, nulls: 'last' }
+                : order,
+          },
+        ]
       : [{ createdAt: 'desc' }];
     this.logger.debug(
       `[getListings] sort: ${sortBy ?? 'default'}, order: ${order}`,
