@@ -56,7 +56,9 @@ describe('ListingsService', () => {
         repository.getListingsWithCountAndSources as ReturnType<typeof vi.fn>
       ).mock.calls[0][0] as { orderBy?: unknown; contactSort?: string };
 
-      expect(call.orderBy).toEqual([{ contactPhone: 'asc' }]);
+      expect(call.orderBy).toEqual([
+        { contactPhone: { sort: 'asc', nulls: 'last' } },
+      ]);
       expect(call.contactSort).toBeUndefined();
     });
 
