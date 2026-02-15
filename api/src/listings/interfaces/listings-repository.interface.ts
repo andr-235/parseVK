@@ -1,9 +1,13 @@
 import type { ListingRecord } from '../types/listing-record.type.js';
 
 export type ListingWhereInput = Record<string, unknown>;
+type OrderByValue =
+  | 'asc'
+  | 'desc'
+  | { sort: 'asc' | 'desc'; nulls?: 'first' | 'last' };
 export type ListingOrderByInput =
-  | Record<string, 'asc' | 'desc'>
-  | Array<Record<string, 'asc' | 'desc'>>;
+  | Record<string, OrderByValue>
+  | Array<Record<string, OrderByValue>>;
 export type ListingWhereUniqueInput = { id?: number; url?: string };
 export type ListingCreateData = Record<string, unknown>;
 export type ListingUpdateData = Record<string, unknown>;
