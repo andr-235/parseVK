@@ -27,6 +27,8 @@
     "seed:admin": "tsx scripts/seed-admin.ts"
   },
   "dependencies": {
+    "@clickhouse/client": "^1.8.0",
+    "@elastic/elasticsearch": "^8.11.0",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/cache-manager": "^3.0.1",
     "@nestjs/common": "^11.1.12",
@@ -76,7 +78,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
     "@types/multer": "^2.0.0",
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.19.8",
     "@types/passport": "^1.0.16",
     "@types/passport-jwt": "^4.0.1",
     "@types/russian-nouns-js": "^2.3.2",
