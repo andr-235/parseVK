@@ -56,6 +56,17 @@ export class TelegramIdentifierResolverService {
       );
     }
 
+    const directEntity = await this.tryResolveDirectlyByNumericId(
+      client,
+      identifier.normalized,
+    );
+    if (directEntity) {
+      return {
+        identifier,
+        entity: directEntity,
+      };
+    }
+
     const metadata =
       await this.chatRepository.findResolutionMetadataByTelegramId(telegramId);
 
@@ -99,5 +110,17 @@ export class TelegramIdentifierResolverService {
     throw new BadRequestException(
       'Не удалось открыть чат Telegram по числовому ID без сохранённого access hash',
     );
+  }
+
+  private async tryResolveDirectlyByNumericId(
+    client: TelegramClient,
+    normalizedIdentifier: string,
+  ): Promise<unknown | null> {
+    try {
+      const inputPeer = await client.getInputEntity(normalizedIdentifier);
+      return await client.getEntity(inputPeer);
+    } catch {
+      return null;
+    }
   }
 }

@@ -15,6 +15,7 @@ describe('TelegramIdentifierResolverService', () => {
   const createClientMock = () =>
     ({
       getEntity: vi.fn(),
+      getInputEntity: vi.fn(),
       invoke: vi.fn(),
     }) as unknown as TelegramClient;
 
@@ -119,6 +120,34 @@ describe('TelegramIdentifierResolverService', () => {
     );
   });
 
+  it('resolves unknown numeric channel id via direct Telegram client lookup', async () => {
+    const repository = createRepositoryMock() as unknown as {
+      findResolutionMetadataByTelegramId: ReturnType<typeof vi.fn>;
+    };
+    const service = new TelegramIdentifierResolverService(
+      repository as unknown as TelegramChatRepository,
+    );
+    const client = createClientMock() as unknown as {
+      getInputEntity: ReturnType<typeof vi.fn>;
+      getEntity: ReturnType<typeof vi.fn>;
+    };
+    const inputPeer = { className: 'InputPeerChannel' };
+    const channel = { className: 'Channel', id: BigInt('1157519810') };
+
+    repository.findResolutionMetadataByTelegramId.mockResolvedValue(null);
+    client.getInputEntity.mockResolvedValue(inputPeer);
+    client.getEntity.mockResolvedValue(channel);
+
+    const result = await service.resolve(
+      client as unknown as TelegramClient,
+      '-1001157519810',
+    );
+
+    expect(client.getInputEntity).toHaveBeenCalledWith('-1001157519810');
+    expect(client.getEntity).toHaveBeenCalledWith(inputPeer);
+    expect(result.entity).toBe(channel);
+  });
+
   it('throws the same bootstrap error for unknown internal t.me/c link', async () => {
     const repository = createRepositoryMock() as unknown as {
       findResolutionMetadataByTelegramId: ReturnType<typeof vi.fn>;
@@ -129,6 +158,8 @@ describe('TelegramIdentifierResolverService', () => {
     const client = createClientMock();
 
     repository.findResolutionMetadataByTelegramId.mockResolvedValue(null);
+    (client as unknown as { getInputEntity: ReturnType<typeof vi.fn> })
+      .getInputEntity.mockRejectedValue(new Error('Could not find input entity'));
 
     await expect(
       service.resolve(client, 'https://t.me/c/1949542659/115914'),
