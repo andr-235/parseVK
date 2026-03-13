@@ -1,3 +1,15 @@
+# [0.21.0](https://github.com/andr-235/parseVK/compare/v0.20.4...v0.21.0) (2026-03-13)
+
+
+### Bug Fixes
+
+* исправить lint в тестах telegram ([eb6b6f8](https://github.com/andr-235/parseVK/commit/eb6b6f86694b7dcdb0128da84644635393894c70))
+
+
+### Features
+
+* добавить sync авторов комментариев telegram ([0270e0c](https://github.com/andr-235/parseVK/commit/0270e0c931ae7229a93129f3d2ea110992513099))
+
 ## [0.20.4](https://github.com/andr-235/parseVK/compare/v0.20.3...v0.20.4) (2026-03-13)
 
 
