@@ -207,6 +207,31 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare API image for migrations
+        id: prepare_api_image
+        working-directory: /opt/parseVK
+        timeout-minutes: 20
+        if: steps.deployment_context.outputs.skip_deploy != 'true' && steps.check_migrations.outputs.needs_migrations == 'true'
+        run: |
+          set -euo pipefail
+          source .github/scripts/log-helper.sh
+
+          API_IMAGE_TAG="parsevk-api:local"
+          IMAGE_EXISTS=false
+
+          if docker image inspect "$API_IMAGE_TAG" > /dev/null 2>&1; then
+            IMAGE_EXISTS=true
+          fi
+
+          if [ "${{ steps.changed_services.outputs.build_api }}" = "true" ] || [ "$IMAGE_EXISTS" != "true" ]; then
+            log_info "Подготавливаю образ API для миграций"
+            retry_with_backoff 2 10 "timeout 1200s docker compose -f \"$COMPOSE_FILE\" build --progress plain api"
+            echo "api_prebuilt_for_migrations=true" >> "$GITHUB_OUTPUT"
+          else
+            log_info "Использую существующий локальный образ API для миграций"
+            echo "api_prebuilt_for_migrations=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run database migrations
         working-directory: /opt/parseVK
         timeout-minutes: 5
@@ -214,7 +239,7 @@ jobs:
         run: |
           echo "=== Running database migrations ==="
 
-          if docker compose -f "$COMPOSE_FILE" run --rm --no-deps --entrypoint sh api -c "command -v ./node_modules/.bin/prisma > /dev/null 2>&1 && ./node_modules/.bin/prisma migrate deploy || prisma migrate deploy"; then
+          if docker compose -f "$COMPOSE_FILE" run --rm --no-build --no-deps --entrypoint sh api -c "command -v ./node_modules/.bin/prisma > /dev/null 2>&1 && ./node_modules/.bin/prisma migrate deploy || prisma migrate deploy"; then
             echo "Migrations completed"
           else
             echo "Error: Migrations failed"
@@ -237,7 +262,7 @@ jobs:
 
           SERVICES_TO_BUILD=""
 
-          if [ "${{ steps.changed_services.outputs.build_api }}" = "true" ]; then
+          if [ "${{ steps.changed_services.outputs.build_api }}" = "true" ] && [ "${{ steps.prepare_api_image.outputs.api_prebuilt_for_migrations }}" != "true" ]; then
             SERVICES_TO_BUILD="$SERVICES_TO_BUILD api"
           fi
 
