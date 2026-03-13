@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/tgmbase"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model channel {
+  id                 BigInt    @id(map: "idx_16653_primary") @default(autoincrement())
+  channel_id         BigInt    @unique(map: "idx_16653_channel_id")
+  title              String
+  date               DateTime  @db.Timestamp(6)
+  scam               Boolean   @default(false)
+  username           String?   @unique(map: "idx_16653_username") @db.VarChar(32)
+  participants_count BigInt?
+  region             Int       @default(0) @db.SmallInt
+  description        String?   @db.VarChar(512)
+  upd_date           DateTime? @db.Timestamptz(6)
+}
+
+model group {
+  id                 BigInt   @id(map: "idx_16663_primary") @default(autoincrement())
+  group_id           BigInt   @unique(map: "idx_16663_group_id")
+  title              String
+  participants_count BigInt?
+  date               DateTime @db.Timestamp(6)
+  region             Int      @default(0) @db.SmallInt
+  description        String?  @db.VarChar(512)
+  upd_date           DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model keyword {
+  id         BigInt @id(map: "idx_16673_primary") @default(autoincrement())
+  word       String
+  declension Int    @default(1) @db.SmallInt
+  region     BigInt
+}
+
+model message {
+  id         BigInt   @id(map: "idx_16681_primary") @default(autoincrement())
+  message_id BigInt
+  peer_id    BigInt
+  date       DateTime @default(now()) @db.Timestamptz(6)
+  message    String?
+  from_id    BigInt?
+  forwarded  Boolean? @default(false)
+  reply_to   BigInt?
+  media      Boolean? @default(false)
+  keywords   String?
+}
+
+model snitch_admin {
+  id         BigInt    @id(map: "idx_16689_primary") @default(autoincrement())
+  login      String
+  password   String
+  last_login DateTime? @db.Timestamptz(6)
+}
+
+model supergroup {
+  id                 BigInt   @id(map: "idx_16696_primary") @default(autoincrement())
+  supergroup_id      BigInt   @unique(map: "idx_16696_supergroup_id")
+  title              String
+  username           String?  @unique(map: "idx_16696_username") @db.VarChar(32)
+  participants_count BigInt?
+  scam               Int      @db.SmallInt
+  date               DateTime @db.Timestamp(6)
+  region             Int      @default(0) @db.SmallInt
+  description        String?  @db.VarChar(512)
+  upd_date           DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model telegramnotify {
+  id          BigInt   @id(map: "idx_16707_primary") @default(autoincrement())
+  telegram_id BigInt   @unique(map: "idx_16707_telegram_id")
+  username    String   @db.VarChar(64)
+  timestamp   DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model user {
+  id         BigInt    @id(map: "idx_16713_primary") @default(autoincrement())
+  user_id    BigInt    @unique(map: "idx_16713_user_id")
+  bot        Boolean   @default(false)
+  scam       Boolean   @default(false)
+  premium    Boolean   @default(false)
+  first_name String?
+  last_name  String?
+  username   String?   @db.VarChar(32)
+  phone      String?
+  upd_date   DateTime? @db.Timestamptz(6)
+}

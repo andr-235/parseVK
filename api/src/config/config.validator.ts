@@ -6,6 +6,7 @@ export function validate(config: Record<string, unknown>): AppConfig {
   const validatedConfig = plainToInstance(AppConfig, {
     port: config.PORT ? parseInt(config.PORT as string, 10) : 3000,
     databaseUrl: config.DATABASE_URL,
+    tgmbaseDatabaseUrl: config.TGMBASE_DATABASE_URL,
     redisHost: config.REDIS_HOST || 'redis',
     redisPort: config.REDIS_PORT
       ? parseInt(config.REDIS_PORT as string, 10)

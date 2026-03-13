@@ -13,6 +13,10 @@ export class AppConfig {
 
   @IsString()
   @IsOptional()
+  tgmbaseDatabaseUrl?: string;
+
+  @IsString()
+  @IsOptional()
   redisHost?: string = 'redis';
 
   @IsNumber()

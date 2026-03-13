@@ -23,6 +23,7 @@
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate && node scripts/add-js-extensions.mjs src",
+    "prisma:generate:tgmbase": "prisma generate --schema prisma/tgmbase.prisma && node scripts/generate-tgmbase-client.mjs",
     "recalculate-keywords": "tsx scripts/recalculate-keyword-matches.ts",
     "seed:admin": "tsx scripts/seed-admin.ts"
   },
