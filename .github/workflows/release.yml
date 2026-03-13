@@ -33,12 +33,26 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
+      - name: Detect release commit
+        id: release_commit
+        run: |
+          set -euo pipefail
+
+          COMMIT_MESSAGE=$(git log -1 --format=%B)
+          if printf '%s' "$COMMIT_MESSAGE" | grep -qF '[skip ci]'; then
+            echo "skip_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_release=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup Node.js
+        if: steps.release_commit.outputs.skip_release != 'true'
         uses: actions/setup-node@v6
         with:
           node-version: "20"
 
       - name: Install semantic-release
+        if: steps.release_commit.outputs.skip_release != 'true'
         run: |
           npm install --no-save \
             semantic-release \
@@ -51,6 +65,7 @@ jobs:
             @semantic-release/github
 
       - name: Release
+        if: steps.release_commit.outputs.skip_release != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GIT_AUTHOR_NAME: github-actions[bot]
@@ -58,3 +73,7 @@ jobs:
           GIT_COMMITTER_NAME: github-actions[bot]
           GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
         run: npx semantic-release
+
+      - name: Release status
+        if: steps.release_commit.outputs.skip_release == 'true'
+        run: echo "Skipping release for release commit with [skip ci]"
