@@ -1,3 +1,11 @@
+## [0.20.4](https://github.com/andr-235/parseVK/compare/v0.20.3...v0.20.4) (2026-03-13)
+
+
+### Bug Fixes
+
+* исправлено форматирование карточки синхронизации telegram ([166c061](https://github.com/andr-235/parseVK/commit/166c0619cbd756d972658124623294949b67514a))
+* поддержать internal telegram identifiers ([544aa93](https://github.com/andr-235/parseVK/commit/544aa9364721354770212ad37d7f856e881a0f97))
+
 ## [0.20.3](https://github.com/andr-235/parseVK/compare/v0.20.2...v0.20.3) (2026-03-13)
 
 
