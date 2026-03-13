@@ -14,6 +14,7 @@ import { TelegramExcelExporterService } from './services/telegram-excel-exporter
 import { TelegramChatRepository } from './repositories/telegram-chat.repository.js';
 import type { ParticipantCollection } from './interfaces/telegram-client.interface.js';
 import type { TelegramMemberDto } from './dto/telegram-member.dto.js';
+import { TelegramIdentifierResolverService } from './services/telegram-identifier-resolver.service.js';
 
 @Injectable()
 export class TelegramService {
@@ -22,6 +23,7 @@ export class TelegramService {
 
   constructor(
     private readonly clientManager: TelegramClientManagerService,
+    private readonly identifierResolver: TelegramIdentifierResolverService,
     private readonly chatMapper: TelegramChatMapper,
     private readonly participantCollector: TelegramParticipantCollectorService,
     private readonly chatSync: TelegramChatSyncService,
@@ -39,12 +41,16 @@ export class TelegramService {
 
     let entity: unknown;
     try {
-      entity = await client.getEntity(identifier);
+      const resolution = await this.identifierResolver.resolve(client, identifier);
+      entity = resolution.entity;
     } catch (error) {
       this.logger.error(
         `Failed to resolve Telegram entity for "${identifier}"`,
         error as Error,
       );
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException(
         'Unable to resolve Telegram chat by provided identifier',
       );

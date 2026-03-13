@@ -12,6 +12,7 @@ import { TelegramExcelExporterService } from './services/telegram-excel-exporter
 import { TelegramChatRepository } from './repositories/telegram-chat.repository.js';
 import { TelegramMemberRepository } from './repositories/telegram-member.repository.js';
 import { TelegramAuthRepository } from './repositories/telegram-auth.repository.js';
+import { TelegramIdentifierResolverService } from './services/telegram-identifier-resolver.service.js';
 
 @Module({
   controllers: [TelegramController, TelegramAuthController],
@@ -28,6 +29,7 @@ import { TelegramAuthRepository } from './repositories/telegram-auth.repository.
     TelegramParticipantCollectorService,
     TelegramChatSyncService,
     TelegramExcelExporterService,
+    TelegramIdentifierResolverService,
     TelegramChatRepository,
     TelegramMemberRepository,
   ],

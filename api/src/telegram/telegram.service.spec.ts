@@ -13,9 +13,11 @@ import { TelegramParticipantCollectorService } from './services/telegram-partici
 import { TelegramChatSyncService } from './services/telegram-chat-sync.service.js';
 import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service.js';
 import { TelegramChatRepository } from './repositories/telegram-chat.repository.js';
+import { TelegramIdentifierResolverService } from './services/telegram-identifier-resolver.service.js';
 import type {
   ResolvedChat,
   ParticipantCollection,
+  NormalizedTelegramIdentifier,
 } from './interfaces/telegram-client.interface.js';
 import type { TelegramClient } from 'telegram';
 
@@ -27,6 +29,7 @@ describe('TelegramService', () => {
   let chatSyncMock: vi.Mocked<TelegramChatSyncService>;
   let excelExporterMock: vi.Mocked<TelegramExcelExporterService>;
   let chatRepositoryMock: vi.Mocked<TelegramChatRepository>;
+  let identifierResolverMock: vi.Mocked<TelegramIdentifierResolverService>;
 
   beforeEach(() => {
     clientManagerMock = {
@@ -59,8 +62,13 @@ describe('TelegramService', () => {
       upsert: vi.fn(),
     } as unknown as vi.Mocked<TelegramChatRepository>;
 
+    identifierResolverMock = {
+      resolve: vi.fn(),
+    } as unknown as vi.Mocked<TelegramIdentifierResolverService>;
+
     service = new TelegramService(
       clientManagerMock,
+      identifierResolverMock,
       chatMapperMock,
       participantCollectorMock,
       chatSyncMock,
@@ -82,10 +90,18 @@ describe('TelegramService', () => {
   it('returns sync result with persisted data', async () => {
     const fakeEntity = {};
     const mockClient = {
-      getEntity: vi.fn().mockResolvedValue(fakeEntity),
     } as unknown as TelegramClient;
 
     clientManagerMock.getClient.mockResolvedValue(mockClient);
+    identifierResolverMock.resolve.mockResolvedValue({
+      identifier: {
+        raw: '@test',
+        normalized: 'test',
+        kind: 'username',
+        username: 'test',
+      } satisfies NormalizedTelegramIdentifier,
+      entity: fakeEntity,
+    });
 
     const resolvedChat: ResolvedChat = {
       telegramId: BigInt(123),
@@ -93,6 +109,7 @@ describe('TelegramService', () => {
       title: 'Test channel',
       username: 'test_channel',
       description: null,
+      accessHash: '987654321',
       entity: {} as Api.Channel,
       totalMembers: 42,
     };
@@ -124,7 +141,10 @@ describe('TelegramService', () => {
 
     const result = await service.syncChat({ identifier: 'test', limit: 10 });
 
-    expect(mockClient.getEntity).toHaveBeenCalledWith('test');
+    expect(identifierResolverMock.resolve).toHaveBeenCalledWith(
+      mockClient,
+      'test',
+    );
     expect(chatMapperMock.resolveChat).toHaveBeenCalledWith(fakeEntity);
     expect(participantCollectorMock.collectParticipants).toHaveBeenCalled();
     expect(chatSyncMock.persistChat).toHaveBeenCalled();
@@ -139,5 +159,17 @@ describe('TelegramService', () => {
       fetchedMembers: participants.members.length,
       members: persisted.members,
     });
+  });
+
+  it('rethrows resolver bad request errors', async () => {
+    const mockClient = {} as TelegramClient;
+    clientManagerMock.getClient.mockResolvedValue(mockClient);
+    identifierResolverMock.resolve.mockRejectedValue(
+      new BadRequestException('Cannot resolve Telegram chat by numeric ID'),
+    );
+
+    await expect(
+      service.syncChat({ identifier: '-1001157519810' }),
+    ).rejects.toThrow('Cannot resolve Telegram chat by numeric ID');
   });
 });

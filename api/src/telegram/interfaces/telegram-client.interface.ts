@@ -10,12 +10,30 @@ export interface ITelegramClient {
   disconnect(): Promise<void>;
 }
 
+export type TelegramIdentifierKind =
+  | 'username'
+  | 'publicLink'
+  | 'inviteLink'
+  | 'numericId'
+  | 'channelNumericId'
+  | 'invalid';
+
+export interface NormalizedTelegramIdentifier {
+  raw: string;
+  normalized: string;
+  kind: TelegramIdentifierKind;
+  numericTelegramId?: bigint;
+  inviteHash?: string;
+  username?: string;
+}
+
 export interface ResolvedChat {
   telegramId: bigint;
   type: TelegramChatType;
   title: string | null;
   username: string | null;
   description: string | null;
+  accessHash: string | null;
   entity: Api.Channel | Api.Chat | Api.User;
   totalMembers: number | null;
 }

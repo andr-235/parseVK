@@ -470,6 +470,7 @@ model TelegramChat {
   type        TelegramChatType
   title       String?
   username    String?
+  accessHash  String?
   photoUrl    String?
   description String?              @db.Text
   createdAt   DateTime             @default(now())
