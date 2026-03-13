@@ -11,6 +11,8 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { PrismaModule } from './prisma.module.js';
+import { TgmbasePrismaModule } from './tgmbase-prisma/tgmbase-prisma.module.js';
+import { TgmbaseSearchModule } from './tgmbase-search/tgmbase-search.module.js';
 import { VkModule } from './vk/vk.module.js';
 import { VkFriendsModule } from './vk-friends/vk-friends.module.js';
 import { OkFriendsModule } from './ok-friends/ok-friends.module.js';
@@ -33,6 +35,8 @@ import type { AppConfig } from './config/app.config.js';
   imports: [
     ConfigModule,
     PrismaModule,
+    TgmbasePrismaModule,
+    TgmbaseSearchModule,
     ScheduleModule.forRoot(),
     // BullMQ глобальная конфигурация
     BullModule.forRootAsync({
