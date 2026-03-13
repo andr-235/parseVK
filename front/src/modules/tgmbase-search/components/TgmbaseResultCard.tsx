@@ -98,7 +98,10 @@ export function TgmbaseResultCard({
             <div className="text-sm font-medium text-white">Чаты и каналы</div>
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {item.groups.map((group) => (
-                <div key={group.peerId} className="rounded-card border border-white/10 bg-slate-950/60 p-3 text-sm">
+                <div
+                  key={group.peerId}
+                  className="rounded-card border border-white/10 bg-slate-950/60 p-3 text-sm"
+                >
                   <div className="font-medium text-slate-100">{group.title}</div>
                   <div className="mt-1 text-slate-400">
                     {group.type} · {group.peerId}
@@ -111,10 +114,15 @@ export function TgmbaseResultCard({
 
         {item.contacts.length > 0 ? (
           <div className="space-y-2">
-            <div className="text-sm font-medium text-white">Активные контакты в общих peer&apos;ах</div>
+            <div className="text-sm font-medium text-white">
+              Активные контакты в общих peer&apos;ах
+            </div>
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {item.contacts.map((contact) => (
-                <div key={contact.telegramId} className="rounded-card border border-white/10 bg-slate-950/60 p-3 text-sm">
+                <div
+                  key={contact.telegramId}
+                  className="rounded-card border border-white/10 bg-slate-950/60 p-3 text-sm"
+                >
                   <div className="font-medium text-slate-100">{contact.fullName}</div>
                   <div className="mt-1 text-slate-400">
                     {contact.username ? `@${contact.username}` : contact.telegramId}

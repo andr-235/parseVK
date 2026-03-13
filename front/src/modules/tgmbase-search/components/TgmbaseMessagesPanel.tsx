@@ -25,7 +25,10 @@ export function TgmbaseMessagesPanel({
           <div className="text-sm text-slate-400">Сообщения не найдены.</div>
         ) : (
           messagesPage.items.map((message) => (
-            <div key={message.id} className="rounded-card border border-white/10 bg-slate-900/80 p-3">
+            <div
+              key={message.id}
+              className="rounded-card border border-white/10 bg-slate-900/80 p-3"
+            >
               <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                 <span>{new Date(message.date).toLocaleString('ru-RU')}</span>
                 <span>peer: {message.peerTitle ?? message.peerId}</span>

@@ -77,9 +77,7 @@ export function useTgmbaseSearchState() {
                   ...currentItem.messagesPage.items,
                   ...nextItem.messagesPage.items.filter(
                     (message) =>
-                      !currentItem.messagesPage.items.some(
-                        (existing) => existing.id === message.id
-                      )
+                      !currentItem.messagesPage.items.some((existing) => existing.id === message.id)
                   ),
                 ],
               },

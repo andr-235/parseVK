@@ -1,12 +1,5 @@
 import { Badge } from '@/shared/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import type { TgmbaseSearchItem } from '@/shared/types'
 
 interface TgmbaseSummaryTableProps {
@@ -33,7 +26,9 @@ export function TgmbaseSummaryTable({ items, selectedQuery, onSelect }: TgmbaseS
   return (
     <div className="rounded-card border border-white/10 bg-slate-900/60 p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="font-monitoring-display text-xl font-semibold text-white">Сводка по батчу</h2>
+        <h2 className="font-monitoring-display text-xl font-semibold text-white">
+          Сводка по батчу
+        </h2>
         <div className="text-sm text-slate-400">Результатов: {items.length}</div>
       </div>
       <Table>
@@ -64,7 +59,10 @@ export function TgmbaseSummaryTable({ items, selectedQuery, onSelect }: TgmbaseS
               <TableCell className="font-medium text-slate-100">{item.query}</TableCell>
               <TableCell className="text-slate-300">{item.queryType}</TableCell>
               <TableCell>
-                <Badge variant="outline" className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+                <Badge
+                  variant="outline"
+                  className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200"
+                >
                   {statusLabels[item.status]}
                 </Badge>
               </TableCell>
