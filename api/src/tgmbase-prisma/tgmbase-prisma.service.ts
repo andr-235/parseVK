@@ -17,7 +17,9 @@ export class TgmbasePrismaService
   private readonly logger = new Logger(TgmbasePrismaService.name);
 
   constructor(private readonly configService: ConfigService<AppConfig>) {
-    const databaseUrl = configService.get('tgmbaseDatabaseUrl', { infer: true });
+    const databaseUrl = configService.get('tgmbaseDatabaseUrl', {
+      infer: true,
+    });
 
     if (!databaseUrl) {
       throw new Error(
