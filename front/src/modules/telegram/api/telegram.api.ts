@@ -14,22 +14,17 @@ import type {
 
 export const telegramService = {
   async syncChat(payload: TelegramSyncRequest): Promise<TelegramSyncResponse> {
-    try {
-      const response = await createRequest(`${API_URL}/telegram/sync`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
+    const response = await createRequest(`${API_URL}/telegram/sync`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
 
-      const result = await handleResponse<TelegramSyncResponse>(
-        response,
-        'Не удалось синхронизировать чат Telegram'
-      )
-      toast.success('Синхронизация Telegram завершена')
-      return result
-    } catch (error) {
-      toast.error('Не удалось синхронизировать чат Telegram')
-      throw error
-    }
+    const result = await handleResponse<TelegramSyncResponse>(
+      response,
+      'Не удалось синхронизировать чат Telegram'
+    )
+    toast.success('Синхронизация Telegram завершена')
+    return result
   },
 
   async startSession(payload: TelegramSessionStartRequest): Promise<TelegramSessionStartResponse> {

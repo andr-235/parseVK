@@ -22,11 +22,13 @@ export class TelegramIdentifierResolverService {
     const identifier = normalizeTelegramIdentifier(rawIdentifier);
 
     if (identifier.kind === 'invalid') {
-      throw new BadRequestException('Unsupported Telegram identifier format');
+      throw new BadRequestException('Неподдерживаемый формат идентификатора Telegram');
     }
 
     if (identifier.kind === 'inviteLink') {
-      throw new BadRequestException('Invite links require explicit join flow');
+      throw new BadRequestException(
+        'Invite-ссылки требуют явного сценария вступления в чат',
+      );
     }
 
     if (identifier.kind === 'username' || identifier.kind === 'publicLink') {
@@ -48,7 +50,7 @@ export class TelegramIdentifierResolverService {
     const telegramId = identifier.numericTelegramId;
     if (!telegramId) {
       throw new BadRequestException(
-        'Telegram identifier does not contain a numeric chat id',
+        'Идентификатор Telegram не содержит числовой идентификатор чата',
       );
     }
 
@@ -57,7 +59,7 @@ export class TelegramIdentifierResolverService {
 
     if (!metadata) {
       throw new BadRequestException(
-        'Cannot resolve Telegram chat by numeric ID without saved metadata',
+        'Нельзя выполнить первый sync только по внутреннему Telegram ID. Сначала используйте @username, публичную или invite-ссылку. После первого успешного sync внутренние идентификаторы вроде -100... и t.me/c/... будут работать.',
       );
     }
 
@@ -93,7 +95,7 @@ export class TelegramIdentifierResolverService {
     }
 
     throw new BadRequestException(
-      'Cannot resolve Telegram chat by numeric ID without saved access hash',
+      'Не удалось открыть чат Telegram по числовому ID без сохранённого access hash',
     );
   }
 }

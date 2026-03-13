@@ -22,10 +22,36 @@ export function buildQueryString(params: QueryParams): string {
 export async function handleResponse<T>(response: Response, defaultError?: string): Promise<T> {
   if (!response.ok) {
     const errorText = await response.text().catch(() => null)
-    throw new Error(errorText || defaultError || 'Request failed')
+    const parsedError = tryExtractErrorMessage(errorText)
+    throw new Error(parsedError || defaultError || 'Не удалось выполнить запрос')
   }
 
   return response.json() as Promise<T>
+}
+
+function tryExtractErrorMessage(payload: string | null): string | null {
+  if (!payload) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(payload) as { message?: unknown }
+    if (typeof parsed.message === 'string' && parsed.message.trim()) {
+      return parsed.message.trim()
+    }
+    if (Array.isArray(parsed.message)) {
+      const firstMessage = parsed.message.find(
+        (entry): entry is string => typeof entry === 'string' && entry.trim().length > 0
+      )
+      if (firstMessage) {
+        return firstMessage.trim()
+      }
+    }
+  } catch {
+    return payload.trim() || null
+  }
+
+  return payload.trim() || null
 }
 
 export async function createRequest(

@@ -116,7 +116,27 @@ describe('TelegramIdentifierResolverService', () => {
 
     await expect(
       service.resolve(client, '-1001157519810'),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toThrow(
+      'Нельзя выполнить первый sync только по внутреннему Telegram ID.',
+    );
+  });
+
+  it('throws the same bootstrap error for unknown internal t.me/c link', async () => {
+    const repository = createRepositoryMock() as unknown as {
+      findResolutionMetadataByTelegramId: ReturnType<typeof vi.fn>;
+    };
+    const service = new TelegramIdentifierResolverService(
+      repository as unknown as TelegramChatRepository,
+    );
+    const client = createClientMock();
+
+    repository.findResolutionMetadataByTelegramId.mockResolvedValue(null);
+
+    await expect(
+      service.resolve(client, 'https://t.me/c/1949542659/115914'),
+    ).rejects.toThrow(
+      'Нельзя выполнить первый sync только по внутреннему Telegram ID.',
+    );
   });
 
   it('throws BadRequestException for invalid format', async () => {
