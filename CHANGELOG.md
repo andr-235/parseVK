@@ -1,3 +1,11 @@
+## [0.21.1](https://github.com/andr-235/parseVK/compare/v0.21.0...v0.21.1) (2026-03-13)
+
+
+### Bug Fixes
+
+* добавить прямой резолв telegram id через сессию клиента ([b8866ba](https://github.com/andr-235/parseVK/commit/b8866baedf3751f9b5d0a78ea4603dc6b57cb313))
+* уточнить типизацию резолвера telegram id ([3d523ee](https://github.com/andr-235/parseVK/commit/3d523ee85ba7f0dcdbe9a63a9d48aa4c8d7ebc49))
+
 # [0.21.0](https://github.com/andr-235/parseVK/compare/v0.20.4...v0.21.0) (2026-03-13)
 
 
