@@ -1,3 +1,10 @@
+## [0.20.1](https://github.com/andr-235/parseVK/compare/v0.20.0...v0.20.1) (2026-03-13)
+
+
+### Bug Fixes
+
+* убрать неиспользуемые типы в tgmbase search ([93239d3](https://github.com/andr-235/parseVK/commit/93239d3362289bc2a5814ab51cd1b8403e07c8ba))
+
 # [0.20.0](https://github.com/andr-235/parseVK/compare/v0.19.0...v0.20.0) (2026-03-13)
 
 
