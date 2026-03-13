@@ -703,6 +703,33 @@ export interface TelegramSyncRequest {
   limit?: number
 }
 
+export interface TelegramDiscussionSyncRequest {
+  identifier: string
+  mode: 'thread' | 'chatRange'
+  messageId?: number
+  dateFrom?: string
+  dateTo?: string
+  messageLimit?: number
+  authorLimit?: number
+}
+
+export interface TelegramDiscussionSyncResponse {
+  chatId: number
+  telegramId: string
+  type: TelegramChatType
+  title: string | null
+  username: string | null
+  syncedMembers: number
+  totalMembers: number | null
+  fetchedMembers: number
+  fetchedMessages: number
+  source: 'discussion_comments'
+  mode: 'thread' | 'chatRange'
+  members: TelegramMember[]
+}
+
+export type TelegramSyncResult = TelegramSyncResponse | TelegramDiscussionSyncResponse
+
 export interface TelegramSessionStartRequest {
   phoneNumber?: string
   apiId?: number

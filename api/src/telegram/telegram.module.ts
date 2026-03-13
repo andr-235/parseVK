@@ -13,6 +13,8 @@ import { TelegramChatRepository } from './repositories/telegram-chat.repository.
 import { TelegramMemberRepository } from './repositories/telegram-member.repository.js';
 import { TelegramAuthRepository } from './repositories/telegram-auth.repository.js';
 import { TelegramIdentifierResolverService } from './services/telegram-identifier-resolver.service.js';
+import { TelegramDiscussionResolverService } from './services/telegram-discussion-resolver.service.js';
+import { TelegramCommentAuthorCollectorService } from './services/telegram-comment-author-collector.service.js';
 
 @Module({
   controllers: [TelegramController, TelegramAuthController],
@@ -30,6 +32,8 @@ import { TelegramIdentifierResolverService } from './services/telegram-identifie
     TelegramChatSyncService,
     TelegramExcelExporterService,
     TelegramIdentifierResolverService,
+    TelegramDiscussionResolverService,
+    TelegramCommentAuthorCollectorService,
     TelegramChatRepository,
     TelegramMemberRepository,
   ],

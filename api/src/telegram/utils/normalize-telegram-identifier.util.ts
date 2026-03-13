@@ -37,11 +37,13 @@ export function normalizeTelegramIdentifier(
   const internalMessageMatch = withoutPrefix.match(/^c\/(\d+)\/(\d+)$/);
   if (internalMessageMatch) {
     const chatId = internalMessageMatch[1];
+    const messageId = Number.parseInt(internalMessageMatch[2], 10);
     return {
       raw,
       normalized: `-100${chatId}`,
       kind: 'channelNumericId',
       numericTelegramId: BigInt(chatId),
+      messageId: Number.isNaN(messageId) ? undefined : messageId,
     };
   }
 

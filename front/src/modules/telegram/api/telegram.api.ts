@@ -6,6 +6,8 @@ import type {
   TelegramSessionConfirmResponse,
   TelegramSessionStartRequest,
   TelegramSessionStartResponse,
+  TelegramDiscussionSyncRequest,
+  TelegramDiscussionSyncResponse,
   TelegramSettings,
   TelegramSettingsRequest,
   TelegramSyncRequest,
@@ -24,6 +26,22 @@ export const telegramService = {
       'Не удалось синхронизировать чат Telegram'
     )
     toast.success('Синхронизация Telegram завершена')
+    return result
+  },
+
+  async syncDiscussionAuthors(
+    payload: TelegramDiscussionSyncRequest
+  ): Promise<TelegramDiscussionSyncResponse> {
+    const response = await createRequest(`${API_URL}/telegram/discussion-authors/sync`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+
+    const result = await handleResponse<TelegramDiscussionSyncResponse>(
+      response,
+      'Не удалось синхронизировать авторов комментариев Telegram'
+    )
+    toast.success('Авторы комментариев Telegram загружены')
     return result
   },
 

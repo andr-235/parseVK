@@ -4,7 +4,7 @@ import {
   TelegramChatType,
   TelegramMemberStatus,
 } from './types/telegram.enums.js';
-import type { Api } from 'telegram';
+import { Api } from 'telegram';
 import type { TelegramMemberDto } from './dto/telegram-member.dto.js';
 import { TelegramService } from './telegram.service.js';
 import { TelegramClientManagerService } from './services/telegram-client-manager.service.js';
@@ -14,10 +14,14 @@ import { TelegramChatSyncService } from './services/telegram-chat-sync.service.j
 import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service.js';
 import { TelegramChatRepository } from './repositories/telegram-chat.repository.js';
 import { TelegramIdentifierResolverService } from './services/telegram-identifier-resolver.service.js';
+import { TelegramDiscussionResolverService } from './services/telegram-discussion-resolver.service.js';
+import { TelegramCommentAuthorCollectorService } from './services/telegram-comment-author-collector.service.js';
 import type {
   ResolvedChat,
   ParticipantCollection,
   NormalizedTelegramIdentifier,
+  DiscussionAuthorCollection,
+  ResolvedDiscussionTarget,
 } from './interfaces/telegram-client.interface.js';
 import type { TelegramClient } from 'telegram';
 
@@ -30,6 +34,8 @@ describe('TelegramService', () => {
   let excelExporterMock: vi.Mocked<TelegramExcelExporterService>;
   let chatRepositoryMock: vi.Mocked<TelegramChatRepository>;
   let identifierResolverMock: vi.Mocked<TelegramIdentifierResolverService>;
+  let discussionResolverMock: vi.Mocked<TelegramDiscussionResolverService>;
+  let commentCollectorMock: vi.Mocked<TelegramCommentAuthorCollectorService>;
 
   beforeEach(() => {
     clientManagerMock = {
@@ -66,11 +72,21 @@ describe('TelegramService', () => {
       resolve: vi.fn(),
     } as unknown as vi.Mocked<TelegramIdentifierResolverService>;
 
+    discussionResolverMock = {
+      resolve: vi.fn(),
+    } as unknown as vi.Mocked<TelegramDiscussionResolverService>;
+
+    commentCollectorMock = {
+      collectAuthors: vi.fn(),
+    } as unknown as vi.Mocked<TelegramCommentAuthorCollectorService>;
+
     service = new TelegramService(
       clientManagerMock,
       identifierResolverMock,
+      discussionResolverMock,
       chatMapperMock,
       participantCollectorMock,
+      commentCollectorMock,
       chatSyncMock,
       excelExporterMock,
       chatRepositoryMock,
@@ -170,5 +186,114 @@ describe('TelegramService', () => {
     await expect(
       service.syncChat({ identifier: '-1001157519810' }),
     ).rejects.toThrow('Cannot resolve Telegram chat by numeric ID');
+  });
+
+  it('throws BadRequestException when thread mode has no messageId', async () => {
+    const mockClient = {} as TelegramClient;
+    clientManagerMock.getClient.mockResolvedValue(mockClient);
+    discussionResolverMock.resolve.mockRejectedValue(
+      new BadRequestException(
+        'Для режима одного треда требуется messageId, если его нельзя извлечь из ссылки',
+      ),
+    );
+
+    await expect(
+      service.syncDiscussionAuthors({
+        identifier: '@chatname',
+        mode: 'thread',
+      }),
+    ).rejects.toThrow(
+      'Для режима одного треда требуется messageId, если его нельзя извлечь из ссылки',
+    );
+  });
+
+  it('returns unique comment authors for thread mode', async () => {
+    const mockClient = {} as TelegramClient;
+    const fakeEntity = {} as Api.Channel;
+    const resolvedChat: ResolvedChat = {
+      telegramId: BigInt(123),
+      type: TelegramChatType.SUPERGROUP,
+      title: 'Discussion chat',
+      username: 'discussion_chat',
+      description: null,
+      accessHash: '987654321',
+      entity: fakeEntity,
+      totalMembers: null,
+    };
+    const discussionTarget: ResolvedDiscussionTarget = {
+      resolvedChat,
+      messageId: 115914,
+      mode: 'thread',
+      identifier: {
+        raw: 'https://t.me/c/1949542659/115914',
+        normalized: '-1001949542659',
+        kind: 'channelNumericId',
+        numericTelegramId: BigInt('1949542659'),
+        messageId: 115914,
+      } satisfies NormalizedTelegramIdentifier,
+    };
+    const authors: DiscussionAuthorCollection = {
+      members: [
+        {
+          user: new Api.User({
+            id: BigInt(777),
+            firstName: 'Ivan',
+            username: 'ivan',
+          }),
+          status: TelegramMemberStatus.MEMBER,
+          isAdmin: false,
+          isOwner: false,
+          joinedAt: null,
+          leftAt: null,
+        },
+      ],
+      total: 1,
+      fetchedMessages: 8,
+      source: 'discussion_comments',
+    };
+    const persisted = {
+      chatId: 17,
+      telegramId: BigInt(123),
+      members: [] as TelegramMemberDto[],
+    };
+
+    clientManagerMock.getClient.mockResolvedValue(mockClient);
+    discussionResolverMock.resolve.mockResolvedValue(discussionTarget);
+    commentCollectorMock.collectAuthors.mockResolvedValue(authors);
+    chatSyncMock.persistChat.mockResolvedValue(persisted);
+
+    const result = await service.syncDiscussionAuthors({
+      identifier: 'https://t.me/c/1949542659/115914',
+      mode: 'thread',
+    });
+
+    expect(discussionResolverMock.resolve).toHaveBeenCalledWith(mockClient, {
+      identifier: 'https://t.me/c/1949542659/115914',
+      mode: 'thread',
+    });
+    expect(commentCollectorMock.collectAuthors).toHaveBeenCalledWith(
+      mockClient,
+      discussionTarget,
+      {
+        authorLimit: undefined,
+        dateFrom: undefined,
+        dateTo: undefined,
+        messageLimit: undefined,
+      },
+    );
+    expect(result).toEqual({
+      chatId: 17,
+      telegramId: '123',
+      type: resolvedChat.type,
+      title: resolvedChat.title,
+      username: resolvedChat.username,
+      syncedMembers: 1,
+      totalMembers: 1,
+      fetchedMembers: 1,
+      fetchedMessages: 8,
+      source: 'discussion_comments',
+      mode: 'thread',
+      members: [],
+    });
   });
 });

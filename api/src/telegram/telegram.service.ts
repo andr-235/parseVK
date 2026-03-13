@@ -4,8 +4,12 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
+import type { TelegramDiscussionResultDto } from './dto/telegram-discussion-result.dto.js';
 import type { TelegramSyncResultDto } from './dto/telegram-sync-result.dto.js';
-import type { SyncChatParams } from './types/telegram-sync.types.js';
+import type {
+  SyncChatParams,
+  SyncDiscussionAuthorsParams,
+} from './types/telegram-sync.types.js';
 import { TelegramClientManagerService } from './services/telegram-client-manager.service.js';
 import { TelegramChatMapper } from './mappers/telegram-chat.mapper.js';
 import { TelegramParticipantCollectorService } from './services/telegram-participant-collector.service.js';
@@ -15,6 +19,11 @@ import { TelegramChatRepository } from './repositories/telegram-chat.repository.
 import type { ParticipantCollection } from './interfaces/telegram-client.interface.js';
 import type { TelegramMemberDto } from './dto/telegram-member.dto.js';
 import { TelegramIdentifierResolverService } from './services/telegram-identifier-resolver.service.js';
+import { TelegramDiscussionResolverService } from './services/telegram-discussion-resolver.service.js';
+import {
+  TelegramCommentAuthorCollectorService,
+  type DiscussionAuthorCollectOptions,
+} from './services/telegram-comment-author-collector.service.js';
 
 @Injectable()
 export class TelegramService {
@@ -24,8 +33,10 @@ export class TelegramService {
   constructor(
     private readonly clientManager: TelegramClientManagerService,
     private readonly identifierResolver: TelegramIdentifierResolverService,
+    private readonly discussionResolver: TelegramDiscussionResolverService,
     private readonly chatMapper: TelegramChatMapper,
     private readonly participantCollector: TelegramParticipantCollectorService,
+    private readonly commentAuthorCollector: TelegramCommentAuthorCollectorService,
     private readonly chatSync: TelegramChatSyncService,
     private readonly excelExporter: TelegramExcelExporterService,
     private readonly chatRepository: TelegramChatRepository,
@@ -107,6 +118,86 @@ export class TelegramService {
 
   async exportChatToExcel(chatId: number): Promise<Buffer> {
     return this.excelExporter.exportChatToExcel(chatId);
+  }
+
+  async syncDiscussionAuthors(
+    params: SyncDiscussionAuthorsParams,
+  ): Promise<TelegramDiscussionResultDto> {
+    const identifier = params.identifier?.trim();
+    if (!identifier) {
+      throw new BadRequestException('Identifier is required');
+    }
+
+    const client = await this.clientManager.getClient();
+
+    let target;
+    try {
+      target = await this.discussionResolver.resolve(client, {
+        identifier,
+        mode: params.mode,
+        messageId: params.messageId,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to resolve Telegram discussion for "${identifier}"`,
+        error as Error,
+      );
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'Не удалось разрешить обсуждение Telegram по указанному идентификатору',
+      );
+    }
+
+    const collectOptions: DiscussionAuthorCollectOptions = {
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      messageLimit: params.messageLimit,
+      authorLimit: params.authorLimit,
+    };
+
+    let collection;
+    try {
+      collection = await this.commentAuthorCollector.collectAuthors(
+        client,
+        target,
+        collectOptions,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to collect discussion authors for "${identifier}"`,
+        error as Error,
+      );
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Не удалось получить авторов комментариев Telegram',
+      );
+    }
+
+    const persisted = await this.chatSync.persistChat(
+      target.resolvedChat,
+      collection.members,
+      client,
+      false,
+    );
+
+    return {
+      chatId: persisted.chatId,
+      telegramId: persisted.telegramId.toString(),
+      type: target.resolvedChat.type,
+      title: target.resolvedChat.title,
+      username: target.resolvedChat.username,
+      syncedMembers: collection.members.length,
+      totalMembers: collection.total ?? null,
+      fetchedMembers: collection.members.length,
+      fetchedMessages: collection.fetchedMessages,
+      source: collection.source,
+      mode: target.mode,
+      members: persisted.members as TelegramMemberDto[],
+    };
   }
 
   async getChatInfo(chatId: number): Promise<unknown> {
