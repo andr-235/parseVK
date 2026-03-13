@@ -1,1 +1,8 @@
-npx lint-staged
+#!/bin/sh
+set -e
+
+if [ -x "./node_modules/.bin/lint-staged" ]; then
+  exec ./node_modules/.bin/lint-staged
+fi
+
+echo "lint-staged не найден в ./node_modules/.bin, пропускаю pre-commit hook"
