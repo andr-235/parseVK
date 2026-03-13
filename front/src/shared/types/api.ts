@@ -214,6 +214,111 @@ export interface IMonitorGroupDeleteResponse {
   id: number
 }
 
+export type TgmbaseQueryType = 'telegramId' | 'username' | 'phoneNumber' | 'invalid'
+
+export type TgmbaseSearchStatus = 'found' | 'not_found' | 'ambiguous' | 'invalid' | 'error'
+
+export type TgmbasePeerType = 'group' | 'supergroup' | 'channel' | 'unknown'
+
+export interface TgmbaseProfile {
+  id: string
+  telegramId: string
+  username: string | null
+  phoneNumber: string | null
+  firstName: string | null
+  lastName: string | null
+  fullName: string
+  bot: boolean
+  scam: boolean
+  premium: boolean
+  updatedAt: string | null
+}
+
+export interface TgmbaseCandidate {
+  telegramId: string
+  username: string | null
+  phoneNumber: string | null
+  fullName: string
+}
+
+export interface TgmbasePeer {
+  peerId: string
+  title: string
+  username: string | null
+  type: TgmbasePeerType
+  participantsCount: number | null
+  region: number | null
+}
+
+export interface TgmbaseContact {
+  telegramId: string
+  username: string | null
+  phoneNumber: string | null
+  fullName: string
+  commonPeersCount: number
+  messageCount: number
+}
+
+export interface TgmbaseMessage {
+  id: string
+  messageId: string
+  peerId: string
+  peerTitle: string | null
+  peerType: TgmbasePeerType
+  date: string
+  text: string | null
+  fromId: string | null
+  replyTo: string | null
+  hasMedia: boolean
+  hasKeywords: boolean
+}
+
+export interface TgmbaseMessagesPage {
+  items: TgmbaseMessage[]
+  page: number
+  pageSize: number
+  total: number
+  hasMore: boolean
+}
+
+export interface TgmbaseSearchItem {
+  query: string
+  normalizedQuery: string
+  queryType: TgmbaseQueryType
+  status: TgmbaseSearchStatus
+  profile: TgmbaseProfile | null
+  candidates: TgmbaseCandidate[]
+  groups: TgmbasePeer[]
+  contacts: TgmbaseContact[]
+  messagesPage: TgmbaseMessagesPage
+  stats: {
+    groups: number
+    contacts: number
+    messages: number
+  }
+  error: string | null
+}
+
+export interface TgmbaseSearchSummary {
+  total: number
+  found: number
+  notFound: number
+  ambiguous: number
+  invalid: number
+  error: number
+}
+
+export interface TgmbaseSearchRequest {
+  queries: string[]
+  page?: number
+  pageSize?: number
+}
+
+export interface TgmbaseSearchResponse {
+  summary: TgmbaseSearchSummary
+  items: TgmbaseSearchItem[]
+}
+
 export interface IParsingTaskGroup {
   groupId: number | string
   groupName: string
