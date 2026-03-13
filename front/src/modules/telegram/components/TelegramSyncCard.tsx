@@ -50,8 +50,8 @@ export default function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Для первого импорта используйте @username, публичную или invite-ссылку.
-              Internal ID и t.me/c/... работают для уже известных чатов.
+              Для первого импорта используйте @username, публичную или invite-ссылку. Internal ID и
+              t.me/c/... работают для уже известных чатов.
             </p>
           </div>
 
