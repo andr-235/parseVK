@@ -1,3 +1,10 @@
+## [0.20.2](https://github.com/andr-235/parseVK/compare/v0.20.1...v0.20.2) (2026-03-13)
+
+
+### Bug Fixes
+
+* показать tgmbase search в сайдбаре ([ddd4058](https://github.com/andr-235/parseVK/commit/ddd40586529034c356314cd5a246416d9920f234))
+
 ## [0.20.1](https://github.com/andr-235/parseVK/compare/v0.20.0...v0.20.1) (2026-03-13)
 
 
