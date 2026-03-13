@@ -115,10 +115,10 @@ export class TelegramIdentifierResolverService {
   private async tryResolveDirectlyByNumericId(
     client: TelegramClient,
     normalizedIdentifier: string,
-  ): Promise<unknown | null> {
+  ): Promise<object | null> {
     try {
       const inputPeer = await client.getInputEntity(normalizedIdentifier);
-      return await client.getEntity(inputPeer);
+      return (await client.getEntity(inputPeer)) as object;
     } catch {
       return null;
     }
