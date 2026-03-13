@@ -1,6 +1,15 @@
 import { useMemo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Users, Building, Send, Settings, UserCog, LogOut, Activity } from 'lucide-react'
+import {
+  Users,
+  Building,
+  Send,
+  Search,
+  Settings,
+  UserCog,
+  LogOut,
+  Activity,
+} from 'lucide-react'
 import { useSidebarState } from '@/shared/hooks'
 import { useSidebarData } from '@/shared/hooks'
 import { useAuthStore } from '@/modules/auth'
@@ -50,15 +59,22 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
 
   const parsingSubItems = createParsingSubItems()
 
+  const getPrimaryItemIcon = useCallback((path: string) => {
+    if (path === '/tgmbase-search') {
+      return <Search className="h-4 w-4" />
+    }
+
+    return <Send className="h-4 w-4" />
+  }, [])
+
   const primaryItems = useMemo<SidebarItem[]>(
-    () => [
-      {
-        label: PRIMARY_ITEMS_CONFIG[0].label,
-        path: PRIMARY_ITEMS_CONFIG[0].path,
-        icon: <Send className="h-4 w-4" />,
-      },
-    ],
-    []
+    () =>
+      PRIMARY_ITEMS_CONFIG.map((item) => ({
+        label: item.label,
+        path: item.path,
+        icon: getPrimaryItemIcon(item.path),
+      })),
+    [getPrimaryItemIcon]
   )
 
   const secondaryItems = useMemo<SidebarItem[]>(
