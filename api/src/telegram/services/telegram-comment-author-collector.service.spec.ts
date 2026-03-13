@@ -38,9 +38,9 @@ describe('TelegramCommentAuthorCollectorService', () => {
 
   it('collects unique user authors from thread messages', async () => {
     const service = new TelegramCommentAuthorCollectorService();
-    const invoke = async (request: unknown) => {
+    const invoke = (request: unknown) => {
       if (request instanceof Api.messages.GetDiscussionMessage) {
-        return {
+        return Promise.resolve({
           messages: [
             new Api.Message({
               id: 991,
@@ -57,11 +57,11 @@ describe('TelegramCommentAuthorCollectorService', () => {
               megagroup: true,
             }),
           ],
-        };
+        });
       }
 
       if (request instanceof Api.messages.GetReplies) {
-        return {
+        return Promise.resolve({
           messages: [
             new Api.Message({
               id: 1,
@@ -85,10 +85,12 @@ describe('TelegramCommentAuthorCollectorService', () => {
               username: 'ivan',
             }),
           ],
-        };
+        });
       }
 
-      throw new Error(`Unexpected request: ${String(request)}`);
+      return Promise.reject(
+        new Error(`Unexpected request: ${String(request)}`),
+      );
     };
 
     const result = await service.collectAuthors(
@@ -111,9 +113,9 @@ describe('TelegramCommentAuthorCollectorService', () => {
 
   it('ignores service messages and non-user senders', async () => {
     const service = new TelegramCommentAuthorCollectorService();
-    const invoke = async (request: unknown) => {
+    const invoke = (request: unknown) => {
       if (request instanceof Api.messages.GetDiscussionMessage) {
-        return {
+        return Promise.resolve({
           messages: [
             new Api.Message({
               id: 991,
@@ -130,11 +132,11 @@ describe('TelegramCommentAuthorCollectorService', () => {
               megagroup: true,
             }),
           ],
-        };
+        });
       }
 
       if (request instanceof Api.messages.GetReplies) {
-        return {
+        return Promise.resolve({
           messages: [
             new Api.MessageService({
               id: 3,
@@ -151,10 +153,12 @@ describe('TelegramCommentAuthorCollectorService', () => {
             }),
           ],
           users: [],
-        };
+        });
       }
 
-      throw new Error(`Unexpected request: ${String(request)}`);
+      return Promise.reject(
+        new Error(`Unexpected request: ${String(request)}`),
+      );
     };
 
     const result = await service.collectAuthors(
@@ -176,14 +180,16 @@ describe('TelegramCommentAuthorCollectorService', () => {
       messageId: undefined,
     };
     let callCount = 0;
-    const invoke = async (request: unknown) => {
+    const invoke = (request: unknown) => {
       if (!(request instanceof Api.messages.GetHistory)) {
-        throw new Error(`Unexpected request: ${String(request)}`);
+        return Promise.reject(
+          new Error(`Unexpected request: ${String(request)}`),
+        );
       }
 
       callCount += 1;
       if (callCount === 1) {
-        return {
+        return Promise.resolve({
           messages: [
             new Api.Message({
               id: 10,
@@ -204,10 +210,10 @@ describe('TelegramCommentAuthorCollectorService', () => {
             new Api.User({ id: BigInt(1), firstName: 'One' }),
             new Api.User({ id: BigInt(2), firstName: 'Two' }),
           ],
-        };
+        });
       }
 
-      return { messages: [], users: [] };
+      return Promise.resolve({ messages: [], users: [] });
     };
 
     const result = await service.collectAuthors(

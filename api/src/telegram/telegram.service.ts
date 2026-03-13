@@ -196,7 +196,7 @@ export class TelegramService {
       fetchedMessages: collection.fetchedMessages,
       source: collection.source,
       mode: target.mode,
-      members: persisted.members as TelegramMemberDto[],
+      members: persisted.members,
     };
   }
 
