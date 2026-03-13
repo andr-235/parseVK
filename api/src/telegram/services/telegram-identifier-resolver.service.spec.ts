@@ -158,8 +158,11 @@ describe('TelegramIdentifierResolverService', () => {
     const client = createClientMock();
 
     repository.findResolutionMetadataByTelegramId.mockResolvedValue(null);
-    (client as unknown as { getInputEntity: ReturnType<typeof vi.fn> })
-      .getInputEntity.mockRejectedValue(new Error('Could not find input entity'));
+    (
+      client as unknown as { getInputEntity: ReturnType<typeof vi.fn> }
+    ).getInputEntity.mockRejectedValue(
+      new Error('Could not find input entity'),
+    );
 
     await expect(
       service.resolve(client, 'https://t.me/c/1949542659/115914'),
