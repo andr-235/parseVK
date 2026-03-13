@@ -18,7 +18,13 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: read
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
 
     env:
       DOCKER_BUILDKIT: 1
@@ -30,48 +36,97 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
-      - name: Update code
+      - name: Load deployment metadata
+        id: deployment_metadata
         working-directory: /opt/parseVK
-        timeout-minutes: 5
         run: |
-          echo "=== Updating code ==="
+          set -euo pipefail
+
+          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
+          LAST_SUCCESSFUL_COMMIT=""
+
+          if [ -f "$METADATA_FILE" ]; then
+            LAST_SUCCESSFUL_COMMIT=$(jq -r '.last_successful_commit // empty' "$METADATA_FILE" 2>/dev/null || echo "")
+          fi
+
+          echo "last_successful_commit=$LAST_SUCCESSFUL_COMMIT" >> $GITHUB_OUTPUT
+
+      - name: Determine deployment context
+        id: deployment_context
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
 
           if ! git remote get-url origin > /dev/null 2>&1; then
             echo "Error: Git remote 'origin' is not configured"
             exit 1
           fi
 
-          if ! git fetch origin; then
-            echo "Error: Failed to fetch from origin"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            TARGET_SHA="${{ github.event.workflow_run.head_sha }}"
+            if ! git fetch --no-tags origin "$TARGET_SHA"; then
+              echo "Error: Failed to fetch target commit $TARGET_SHA"
+              exit 1
+            fi
+
+            COMMIT_MESSAGE=$(git log -1 --format=%B FETCH_HEAD)
+            if printf '%s' "$COMMIT_MESSAGE" | grep -qF '[skip ci]'; then
+              echo "skip_deploy=true" >> $GITHUB_OUTPUT
+            else
+              echo "skip_deploy=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            if ! git fetch origin main; then
+              echo "Error: Failed to fetch origin/main"
+              exit 1
+            fi
+
+            TARGET_SHA=$(git rev-parse origin/main)
+            echo "skip_deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "target_sha=$TARGET_SHA" >> $GITHUB_OUTPUT
+          echo "Selected target commit: $TARGET_SHA"
+
+      - name: Update code
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+
+          echo "=== Updating code ==="
+          TARGET_SHA="${{ steps.deployment_context.outputs.target_sha }}"
+
+          if ! git fetch --no-tags origin "$TARGET_SHA"; then
+            echo "Error: Failed to fetch target commit $TARGET_SHA"
             exit 1
           fi
 
-          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-          echo "Current branch: $CURRENT_BRANCH"
-
-          if [ "$CURRENT_BRANCH" != "main" ]; then
-            echo "Switching to main branch..."
-            git checkout -f main 2>/dev/null || git checkout -b main origin/main
-          fi
-
-          if ! git reset --hard origin/main; then
-            echo "Error: Failed to reset to origin/main"
+          if ! git checkout -f "$TARGET_SHA"; then
+            echo "Error: Failed to checkout commit $TARGET_SHA"
             exit 1
           fi
+
+          git branch -f deployed "$TARGET_SHA"
 
           echo "Updated to commit: $(git rev-parse HEAD)"
 
       - name: Check for migrations
         id: check_migrations
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
         working-directory: /opt/parseVK
         run: |
-          PREV_COMMIT=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+          set -euo pipefail
+
+          PREV_COMMIT="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
           CURRENT_COMMIT=$(git rev-parse HEAD)
 
           if [ -z "$PREV_COMMIT" ] || ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
             echo "needs_migrations=true" >> $GITHUB_OUTPUT
-            echo "No previous commit found, will run migrations"
+            echo "No previous deployed commit found, will run migrations"
           else
             CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$CURRENT_COMMIT" || true)
             if echo "$CHANGED_FILES" | grep -qE '^api/|^prisma/'; then
@@ -86,7 +141,7 @@ jobs:
       - name: Start database and dependencies
         working-directory: /opt/parseVK
         timeout-minutes: 5
-        if: steps.check_migrations.outputs.needs_migrations == 'true'
+        if: steps.deployment_context.outputs.skip_deploy != 'true' && steps.check_migrations.outputs.needs_migrations == 'true'
         run: |
           echo "=== Starting database and dependencies ==="
 
@@ -114,7 +169,7 @@ jobs:
       - name: Run database migrations
         working-directory: /opt/parseVK
         timeout-minutes: 5
-        if: steps.check_migrations.outputs.needs_migrations == 'true'
+        if: steps.deployment_context.outputs.skip_deploy != 'true' && steps.check_migrations.outputs.needs_migrations == 'true'
         run: |
           echo "=== Running database migrations ==="
 
@@ -128,6 +183,7 @@ jobs:
           fi
 
       - name: Build and start containers
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
         working-directory: /opt/parseVK
         timeout-minutes: 30
         run: |
@@ -164,10 +220,40 @@ jobs:
           echo "=== Container status ==="
           docker compose -f "$COMPOSE_FILE" ps
 
+      - name: Update deployment metadata
+        if: success() && steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+
+          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          if [ -f "$METADATA_FILE" ]; then
+            jq --arg commit "$CURRENT_COMMIT" \
+               --arg time "$CURRENT_TIME" \
+               '.last_successful_commit = $commit | .last_successful_deploy_time = $time' \
+               "$METADATA_FILE" > "${METADATA_FILE}.tmp" && \
+            mv "${METADATA_FILE}.tmp" "$METADATA_FILE"
+          else
+            cat > "$METADATA_FILE" <<EOF
+          {
+            "last_successful_commit": "$CURRENT_COMMIT",
+            "last_successful_deploy_time": "$CURRENT_TIME"
+          }
+          EOF
+          fi
+
+          echo "Updated deployment metadata"
+
       - name: Deployment status
         if: always()
         run: |
-          if [ "${{ job.status }}" == "success" ]; then
+          if [ "${{ steps.deployment_context.outputs.skip_deploy }}" == "true" ]; then
+            echo "⏭️ Deployment skipped for release commit"
+            echo "Commit: ${{ steps.deployment_context.outputs.target_sha }}"
+          elif [ "${{ job.status }}" == "success" ]; then
             echo "✅ Deployment successful!"
             echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
           else

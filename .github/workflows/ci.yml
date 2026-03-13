@@ -12,6 +12,7 @@ jobs:
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[skip ci]') }}
     outputs:
       backend_changed: ${{ steps.filter.outputs.backend_changed }}
       frontend_changed: ${{ steps.filter.outputs.frontend_changed }}

@@ -2,13 +2,17 @@
 
 ## Обзор
 
-Проект использует GitHub Actions для автоматизации CI/CD процессов. Pipeline состоит из трех основных workflow:
+Проект использует GitHub Actions для автоматизации проверки кода, production deploy и автоматических релизов.
 
-1. **CI** - проверка кода, тесты, сборка образов
-2. **Deploy** - деплой на production сервер
-3. **Release** - создание релизов
-4. **Security** - сканирование безопасности
-5. **Rollback** - откат деплоя
+Актуальная цепочка для основной ветки:
+
+1. `pull_request` в `main` запускает только `CI`
+2. `push` в `main` запускает `CI`
+3. После успешного `CI` для push в `main` параллельно запускаются:
+   - `Deploy to Production Server`
+   - `Release`
+4. `semantic-release` создаёт release-коммит с `[skip ci]`, git tag `vX.Y.Z` и GitHub Release
+5. Release-коммит не запускает повторный полный цикл
 
 ## Workflow: CI
 
@@ -19,21 +23,24 @@
 - Pull Request в `main`
 - Push в `main`
 
+**Назначение:**
+
+- проверить качество изменений до merge
+- быть единым quality gate для downstream workflow
+
 **Jobs:**
 
-1. **changes** - детектирование изменений (backend/frontend)
-2. **code-quality** - параллельное выполнение lint, type-check, format-check
-3. **test-backend** - тесты backend с PostgreSQL и Redis
-4. **test-frontend** - тесты frontend
-5. **build-images** - сборка и push Docker образов в GHCR (только при push в main)
+1. `changes` - определяет, изменились ли backend и frontend
+2. `code-quality` - запускает `lint`, `typecheck`, `format-check`
+3. `test-backend` - запускает backend тесты с PostgreSQL и Redis
+4. `test-frontend` - запускает frontend тесты
 
 **Особенности:**
 
-- Умное детектирование изменений - запускаются только нужные проверки
-- Установка зависимостей через **Bun** (`bun install --frozen-lockfile`), кэш по `bun.lock` и `node_modules`
-- Backend и frontend тесты запускаются через **Vitest** (`bun run test`)
-- Параллельное выполнение задач для ускорения
-- Docker buildx cache для ускорения сборки образов
+- backend и frontend проверки запускаются только при релевантных изменениях
+- зависимости ставятся через Bun
+- для backend генерируется Prisma Client
+- release-коммит `chore(release): ... [skip ci]` не запускает тяжёлые jobs
 
 ## Workflow: Deploy
 
@@ -41,38 +48,31 @@
 
 **Триггеры:**
 
-- Успешное завершение CI workflow
-- Ручной запуск (workflow_dispatch)
+- `workflow_run` после завершения `CI`
+- ручной запуск `workflow_dispatch`
 
-**Особенности:**
+**Когда deploy реально выполняется автоматически:**
 
-- Детектирование изменений сервисов
-- Частичный деплой - обновляются только измененные сервисы
-- Автоматические миграции БД при изменении схемы
-- Health checks после деплоя
-- Smoke tests для проверки работоспособности
-- Автоматический rollback при ошибках
-- Сохранение метаданных деплоя
-- Экспорт метрик в Prometheus
-- Уведомления в Telegram/Slack
+- исходный `CI` завершился со статусом `success`
+- этот `CI` был вызван событием `push`
+- push пришёл в ветку `main`
+- целевой commit не является release-коммитом с `[skip ci]`
 
-**Шаги:**
+**Что делает deploy:**
 
-1. Валидация окружения и переменных
-2. Сохранение текущей версии для rollback
-3. Обновление кода из репозитория
-4. Детектирование измененных сервисов
-5. Остановка контейнеров (при полном деплое)
-6. Проверка портов и БД
-7. Очистка старых образов
-8. Запуск БД и зависимостей (при необходимости миграций)
-9. Выполнение миграций БД
-10. Запуск измененных контейнеров
-11. Health checks
-12. Smoke tests
-13. Сохранение метаданных
-14. Экспорт метрик
-15. Отправка уведомлений
+1. Загружает metadata предыдущего успешного деплоя из `/opt/parseVK/.deployment-metadata.json`
+2. Определяет целевой commit SHA из `github.event.workflow_run.head_sha`
+3. Checkout'ит на сервере именно этот commit, а не просто текущий `origin/main`
+4. Сравнивает текущий commit с `last_successful_commit` и решает, нужны ли миграции
+5. При необходимости поднимает зависимости и запускает миграции
+6. Собирает и поднимает контейнеры через `docker compose`
+7. Обновляет deployment metadata после успешного деплоя
+
+**Почему это важно:**
+
+- production получает именно тот commit, который прошёл `CI`
+- release-коммит не провоцирует лишний deploy
+- rollback опирается на актуальный `last_successful_commit`
 
 ## Workflow: Release
 
@@ -80,18 +80,39 @@
 
 **Триггеры:**
 
-- Push в `main` с footer "Release: vX.Y.Z"
-- Ручной запуск с указанием версии
+- `workflow_run` после успешного `CI`
+- ручной запуск `workflow_dispatch`
 
-**Процесс:**
+**Когда release реально выполняется автоматически:**
 
-1. Извлечение версии из коммита или input
-2. Обновление версий в package.json файлах
-3. Создание коммита с обновлением версий
-4. Создание git tag
-5. Генерация changelog
-6. Push изменений и тега
-7. Создание GitHub Release
+- исходный `CI` завершился успешно
+- этот `CI` был вызван `push` в `main`
+
+**Что делает release:**
+
+1. Checkout'ит commit, прошедший `CI`
+2. Запускает `semantic-release`
+3. Вычисляет следующую версию по conventional commits
+4. Обновляет:
+   - `CHANGELOG.md`
+   - `package.json`
+   - `api/package.json`
+   - `front/package.json`
+5. Создаёт release-коммит `chore(release): X.Y.Z [skip ci]`
+6. Создаёт git tag формата `vX.Y.Z`
+7. Создаёт GitHub Release
+
+## Semantic Release Configuration
+
+**Файл:** `.releaserc.json`
+
+Текущая конфигурация:
+
+- релизы идут только из ветки `main`
+- тег создаётся в формате `v${version}`
+- changelog обновляется автоматически
+- корневой, backend и frontend `package.json` синхронизируются по версии
+- публикация в npm отключена
 
 ## Workflow: Security
 
@@ -101,19 +122,13 @@
 
 - Pull Request в `main`
 - Push в `main`
-- Еженедельный schedule (понедельник)
+- schedule
 
-**Jobs:**
+**Назначение:**
 
-1. **dependency-scan** - сканирование зависимостей через `npm audit`
-2. **docker-scan** - сканирование Docker образов через Trivy
-3. **secret-scan** - проверка на утечку секретов через Gitleaks
-
-**Особенности:**
-
-- Блокировка деплоя при критических уязвимостях
-- Загрузка результатов в GitHub Security
-- Еженедельное автоматическое сканирование
+- dependency scan
+- Docker image scan
+- secret scan
 
 ## Workflow: Rollback
 
@@ -121,110 +136,70 @@
 
 **Триггеры:**
 
-- Ручной запуск (workflow_dispatch)
+- ручной запуск `workflow_dispatch`
 
-**Параметры:**
+**Источник данных для rollback:**
 
-- `target_commit` - коммит для отката (опционально, по умолчанию последний успешный)
-- `skip_health_check` - пропустить health checks после rollback
+- `/opt/parseVK/.deployment-metadata.json`
 
-**Процесс:**
+**Используется для:**
 
-1. Загрузка метаданных деплоя
-2. Определение целевого коммита
-3. Сохранение текущего состояния
-4. Checkout целевого коммита
-5. Валидация docker-compose
-6. Остановка текущих контейнеров
-7. Pull и запуск контейнеров из целевого коммита
-8. Health checks (опционально)
-9. Обновление метаданных
+- определения последнего успешного production commit
+- отката на указанный commit или на последний успешный deploy
 
-## Кэширование
+## Метаданные деплоя
 
-### CI Pipeline
+Файл metadata:
 
-- **pnpm store** - кэш пакетов pnpm
-- **node_modules** - кэш установленных зависимостей
-- **Prisma Client** - кэш сгенерированного Prisma Client
-- **Docker buildx** - кэш слоев Docker образов (type=gha)
+- `/opt/parseVK/.deployment-metadata.json`
 
-### Docker Builds
+После успешного production deploy в нём поддерживаются:
 
-- **BuildKit cache mounts** - кэш для node_modules и build artifacts
-- **Multi-stage builds** - оптимизация размера образов
-- **Layer caching** - кэширование слоев между сборками
+- `last_successful_commit`
+- `last_successful_deploy_time`
 
-## Метрики
+Это используется:
 
-Метрики деплоя экспортируются в Prometheus:
-
-- `deployment_duration_seconds` - длительность деплоя
-- `deployment_total` - общее количество деплоев
-- `deployment_last_timestamp` - timestamp последнего деплоя
-
-Файл метрик: `/opt/parseVK/.deployment-metrics.prom`
-
-## Уведомления
-
-Поддерживаются два канала уведомлений:
-
-1. **Telegram** - через `TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID`
-2. **Slack** - через `SLACK_WEBHOOK_URL`
-
-Уведомления отправляются при:
-
-- Успешном деплое
-- Неудачном деплое
-- Rollback
-
-## Скрипты
-
-Все вспомогательные скрипты находятся в `.github/scripts/`:
-
-- `check-ports.sh` - проверка доступности портов
-- `health-check.sh` - проверка здоровья контейнеров
-- `http-health-check.sh` - HTTP health checks
-- `smoke-tests.sh` - smoke tests после деплоя
-- `send-notification.sh` - отправка уведомлений
-- `export-metrics.sh` - экспорт метрик
-- `log-helper.sh` - вспомогательные функции логирования
+- в production deploy для сравнения изменений перед миграциями
+- в rollback workflow для выбора commit по умолчанию
 
 ## Dependabot
 
-Автоматическое обновление зависимостей настроено через `.github/dependabot.yml`:
+**Файл:** `.github/dependabot.yml`
 
-- Еженедельные обновления (понедельник)
-- Отдельные PR для backend и frontend
-- Автоматические обновления Docker образов
-- Автоматические обновления GitHub Actions
+Настроены автоматические обновления:
 
-## Best Practices
-
-1. **Всегда проверяйте CI перед merge** - убедитесь, что все проверки прошли
-2. **Используйте semantic commits** - для автоматического определения версий релизов
-3. **Не коммитьте секреты** - используйте GitHub Secrets
-4. **Проверяйте security scan** - исправляйте уязвимости перед деплоем
-5. **Мониторьте метрики** - следите за временем деплоя и успешностью
+- npm зависимостей
+- Docker образов
+- GitHub Actions
 
 ## Troubleshooting
 
-### CI не запускается
+### Почему CI не запускает тяжёлые jobs
 
-- Проверьте, что изменения в правильной ветке
-- Убедитесь, что workflow файлы корректны
+Проверь commit message. Если это release-коммит с `[skip ci]`, workflow intentionally не идёт дальше `changes`.
 
-### Деплой не запускается
+### Почему deploy не пошёл после PR
 
-- Проверьте, что CI workflow завершился успешно
-- Убедитесь, что self-hosted runner доступен
+Это ожидаемое поведение. Автоматический deploy выполняется только после успешного `CI`, вызванного `push` в `main`.
 
-### Rollback не работает
+### Почему release не создался
 
-- Проверьте наличие метаданных в `/opt/parseVK/.deployment-metadata.json`
-- Убедитесь, что целевой коммит существует
+Проверь:
 
-### Уведомления не приходят
+- завершился ли `CI` успешно
+- был ли upstream event именно `push` в `main`
+- есть ли новые conventional commits, требующие релиза
+- хватает ли прав у `GITHUB_TOKEN` на создание commit/tag/release
 
-- Проверьте настройку секретов (TELEGRAM_BOT_TOKEN, SLACK_WEBHOOK_URL)
-- Проверьте логи workflow
+### Как понять, какой commit ушёл в production
+
+Смотри:
+
+- лог job `Deploy to Debian Server`
+- значение `github.event.workflow_run.head_sha`
+- файл `/opt/parseVK/.deployment-metadata.json`
+
+### Почему миграции не запустились
+
+Deploy сравнивает текущий commit с `last_successful_commit`. Если в diff нет изменений в `api/` или Prisma-файлах, миграции пропускаются.
