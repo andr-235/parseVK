@@ -10,6 +10,8 @@ import {
 import { TelegramService } from './telegram.service.js';
 import { SyncTelegramChatDto } from './dto/sync-telegram-chat.dto.js';
 import { TelegramSyncResultDto } from './dto/telegram-sync-result.dto.js';
+import { TelegramDiscussionSyncDto } from './dto/telegram-discussion-sync.dto.js';
+import { TelegramDiscussionResultDto } from './dto/telegram-discussion-result.dto.js';
 import type { Response } from 'express';
 
 @Controller('telegram')
@@ -23,6 +25,21 @@ export class TelegramController {
     return this.telegramService.syncChat({
       identifier: payload.identifier,
       limit: payload.limit,
+    });
+  }
+
+  @Post('discussion-authors/sync')
+  async syncDiscussionAuthors(
+    @Body() payload: TelegramDiscussionSyncDto,
+  ): Promise<TelegramDiscussionResultDto> {
+    return this.telegramService.syncDiscussionAuthors({
+      identifier: payload.identifier,
+      mode: payload.mode,
+      messageId: payload.messageId,
+      dateFrom: payload.dateFrom,
+      dateTo: payload.dateTo,
+      messageLimit: payload.messageLimit,
+      authorLimit: payload.authorLimit,
     });
   }
 

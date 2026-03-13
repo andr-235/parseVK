@@ -1,13 +1,20 @@
 import { useState } from 'react'
 import { telegramService } from '@/modules/telegram/api/telegram.api'
-import type { TelegramSyncResponse } from '@/shared/types'
+import type { TelegramSyncResult } from '@/shared/types'
 import toast from 'react-hot-toast'
 
-export const useTelegramSync = (onDataLoaded: (data: TelegramSyncResponse) => void) => {
+export const useTelegramSync = (onDataLoaded: (data: TelegramSyncResult) => void) => {
   const [identifier, setIdentifier] = useState('')
+  const [syncMode, setSyncMode] = useState<'members' | 'commentAuthors'>('members')
+  const [discussionMode, setDiscussionMode] = useState<'thread' | 'chatRange'>('thread')
   const [limit, setLimit] = useState<string>('1000')
+  const [messageId, setMessageId] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [messageLimit, setMessageLimit] = useState('200')
+  const [authorLimit, setAuthorLimit] = useState('1000')
   const [loading, setLoading] = useState(false)
-  const [lastSyncData, setLastSyncData] = useState<TelegramSyncResponse | null>(null)
+  const [lastSyncData, setLastSyncData] = useState<TelegramSyncResult | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -20,16 +27,36 @@ export const useTelegramSync = (onDataLoaded: (data: TelegramSyncResponse) => vo
     setErrorMessage(null)
     setLoading(true)
     try {
-      const numericLimit = Number.parseInt(limit, 10)
-      const response = await telegramService.syncChat({
-        identifier: identifier.trim(),
-        limit: Number.isNaN(numericLimit) ? undefined : numericLimit,
-      })
+      const response =
+        syncMode === 'members'
+          ? await telegramService.syncChat({
+              identifier: identifier.trim(),
+              limit: parseOptionalNumber(limit),
+            })
+          : await telegramService.syncDiscussionAuthors({
+              identifier: identifier.trim(),
+              mode: discussionMode,
+              messageId: parseOptionalNumber(messageId),
+              dateFrom: dateFrom || undefined,
+              dateTo: dateTo || undefined,
+              messageLimit: parseOptionalNumber(messageLimit),
+              authorLimit: parseOptionalNumber(authorLimit),
+            })
+
       setLastSyncData(response)
       onDataLoaded(response)
-      toast.success('Участники успешно загружены')
+      toast.success(
+        syncMode === 'members'
+          ? 'Участники успешно загружены'
+          : 'Авторы комментариев успешно загружены'
+      )
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Ошибка загрузки участников'
+      const message =
+        err instanceof Error
+          ? err.message
+          : syncMode === 'members'
+            ? 'Ошибка загрузки участников'
+            : 'Ошибка загрузки авторов комментариев'
       setErrorMessage(message)
       toast.error(message)
     } finally {
@@ -46,12 +73,31 @@ export const useTelegramSync = (onDataLoaded: (data: TelegramSyncResponse) => vo
   return {
     identifier,
     setIdentifier,
+    syncMode,
+    setSyncMode,
+    discussionMode,
+    setDiscussionMode,
     limit,
     setLimit,
+    messageId,
+    setMessageId,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+    messageLimit,
+    setMessageLimit,
+    authorLimit,
+    setAuthorLimit,
     loading,
     lastSyncData,
     errorMessage,
     handleSubmit,
     handleExport,
   }
+}
+
+function parseOptionalNumber(value: string): number | undefined {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isNaN(parsed) ? undefined : parsed
 }

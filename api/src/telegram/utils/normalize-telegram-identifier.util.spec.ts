@@ -25,6 +25,7 @@ describe('normalizeTelegramIdentifier', () => {
       kind: 'channelNumericId',
       numericTelegramId: BigInt('1949542659'),
       normalized: '-1001949542659',
+      messageId: 115914,
     });
   });
 

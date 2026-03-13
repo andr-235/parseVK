@@ -2,12 +2,12 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { Badge } from '@/shared/ui/badge'
-import type { TelegramMember, TelegramSyncResponse } from '@/shared/types'
+import type { TelegramMember, TelegramSyncResult } from '@/shared/types'
 import { Users, Shield, UserX, Ban, CheckCircle2, Star } from 'lucide-react'
 import { getChatTypeInfo } from '@/modules/telegram/utils/telegramChatType.utils'
 
 interface TelegramMembersCardProps {
-  data: TelegramSyncResponse | null
+  data: TelegramSyncResult | null
 }
 
 export default function TelegramMembersCard({ data }: TelegramMembersCardProps) {
@@ -62,6 +62,7 @@ export default function TelegramMembersCard({ data }: TelegramMembersCardProps) 
     if (!data?.type) return null
     return getChatTypeInfo(data.type)
   }, [data?.type])
+  const isDiscussionAuthors = data && 'source' in data && data.source === 'discussion_comments'
 
   if (!data) {
     return (
@@ -70,7 +71,7 @@ export default function TelegramMembersCard({ data }: TelegramMembersCardProps) 
           <Users className="h-12 w-12 text-muted-foreground/20 mb-4" />
           <h3 className="font-medium text-lg text-muted-foreground">Нет данных</h3>
           <p className="text-sm text-muted-foreground/60 max-w-xs">
-            Выполните синхронизацию, чтобы увидеть список участников
+            Выполните синхронизацию, чтобы увидеть участников или авторов комментариев
           </p>
         </CardContent>
       </Card>
@@ -83,7 +84,7 @@ export default function TelegramMembersCard({ data }: TelegramMembersCardProps) 
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <CardTitle>Участники</CardTitle>
+              <CardTitle>{isDiscussionAuthors ? 'Авторы комментариев' : 'Участники'}</CardTitle>
               {typeInfo && (
                 <Badge variant="outline" className="flex items-center gap-1.5">
                   {(() => {
@@ -95,7 +96,7 @@ export default function TelegramMembersCard({ data }: TelegramMembersCardProps) 
               )}
             </div>
             <CardDescription>
-              Найдено {members.length} участников
+              Найдено {members.length} {isDiscussionAuthors ? 'авторов' : 'участников'}
               {data?.title && ` • ${data.title}`}
             </CardDescription>
           </div>
@@ -117,7 +118,9 @@ export default function TelegramMembersCard({ data }: TelegramMembersCardProps) 
               {members.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center">
-                    Участники не найдены
+                    {isDiscussionAuthors
+                      ? 'Авторы комментариев не найдены'
+                      : 'Участники не найдены'}
                   </TableCell>
                 </TableRow>
               ) : (

@@ -25,6 +25,7 @@ export interface NormalizedTelegramIdentifier {
   numericTelegramId?: bigint;
   inviteHash?: string;
   username?: string;
+  messageId?: number;
 }
 
 export interface ResolvedChat {
@@ -50,4 +51,18 @@ export interface MemberRecord {
 export interface ParticipantCollection {
   members: MemberRecord[];
   total: number | null;
+}
+
+export interface DiscussionAuthorCollection {
+  members: MemberRecord[];
+  total: number | null;
+  fetchedMessages: number;
+  source: 'discussion_comments';
+}
+
+export interface ResolvedDiscussionTarget {
+  identifier: NormalizedTelegramIdentifier;
+  resolvedChat: ResolvedChat;
+  mode: 'thread' | 'chatRange';
+  messageId?: number;
 }
