@@ -1,15 +1,6 @@
 import { useMemo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
-import {
-  Users,
-  Building,
-  Send,
-  Search,
-  Settings,
-  UserCog,
-  LogOut,
-  Activity,
-} from 'lucide-react'
+import { Users, Building, Send, Search, Settings, UserCog, LogOut, Activity } from 'lucide-react'
 import { useSidebarState } from '@/shared/hooks'
 import { useSidebarData } from '@/shared/hooks'
 import { useAuthStore } from '@/modules/auth'
