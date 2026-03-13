@@ -1,3 +1,11 @@
+# [0.20.0](https://github.com/andr-235/parseVK/compare/v0.19.0...v0.20.0) (2026-03-13)
+
+
+### Features
+
+* добавить api поиска по tgmbase ([1ac64a3](https://github.com/andr-235/parseVK/commit/1ac64a304f44faa3b7bc36ec527f77838846fb72))
+* добавить страницу поиска по tgmbase ([b64e1cb](https://github.com/andr-235/parseVK/commit/b64e1cb55e02691b490cc1d662ab02662ebb6847))
+
 # [0.19.0](https://github.com/andr-235/parseVK/compare/v0.18.0...v0.19.0) (2026-02-15)
 
 
