@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import bigInt from 'big-integer';
 import { Api, type TelegramClient } from 'telegram';
+import { TelegramChatType as PrismaTelegramChatType } from '../../generated/prisma/enums.js';
 import type { NormalizedTelegramIdentifier } from '../interfaces/telegram-client.interface.js';
-import { TelegramChatType } from '../types/telegram.enums.js';
 import { TelegramChatRepository } from '../repositories/telegram-chat.repository.js';
 import { normalizeTelegramIdentifier } from '../utils/normalize-telegram-identifier.util.js';
 
@@ -21,22 +22,19 @@ export class TelegramIdentifierResolverService {
     const identifier = normalizeTelegramIdentifier(rawIdentifier);
 
     if (identifier.kind === 'invalid') {
-      throw new BadRequestException(
-        'Unsupported Telegram identifier format',
-      );
+      throw new BadRequestException('Unsupported Telegram identifier format');
     }
 
     if (identifier.kind === 'inviteLink') {
       throw new BadRequestException('Invite links require explicit join flow');
     }
 
-    if (
-      identifier.kind === 'username' ||
-      identifier.kind === 'publicLink'
-    ) {
+    if (identifier.kind === 'username' || identifier.kind === 'publicLink') {
       return {
         identifier,
-        entity: await client.getEntity(identifier.username ?? identifier.normalized),
+        entity: await client.getEntity(
+          identifier.username ?? identifier.normalized,
+        ),
       };
     }
 
@@ -71,16 +69,16 @@ export class TelegramIdentifierResolverService {
     }
 
     if (
-      (metadata.type === TelegramChatType.CHANNEL ||
-        metadata.type === TelegramChatType.SUPERGROUP) &&
+      (metadata.type === PrismaTelegramChatType.CHANNEL ||
+        metadata.type === PrismaTelegramChatType.SUPERGROUP) &&
       metadata.accessHash
     ) {
       const response = await client.invoke(
         new Api.channels.GetChannels({
           id: [
             new Api.InputChannel({
-              channelId: telegramId,
-              accessHash: BigInt(metadata.accessHash),
+              channelId: bigInt(telegramId.toString()),
+              accessHash: bigInt(metadata.accessHash),
             }),
           ],
         }),

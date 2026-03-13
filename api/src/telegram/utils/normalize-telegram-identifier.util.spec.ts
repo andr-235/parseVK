@@ -11,9 +11,7 @@ describe('normalizeTelegramIdentifier', () => {
   });
 
   it('detects public t.me link', () => {
-    expect(
-      normalizeTelegramIdentifier('https://t.me/durov'),
-    ).toMatchObject({
+    expect(normalizeTelegramIdentifier('https://t.me/durov')).toMatchObject({
       kind: 'publicLink',
       username: 'durov',
       normalized: 'durov',

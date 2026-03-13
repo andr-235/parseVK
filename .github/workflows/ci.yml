@@ -113,7 +113,7 @@ jobs:
             project: frontend
             working-directory: front
             cache-path: front/bun.lock
-            command: bunx tsc --noEmit
+            command: bun run typecheck
           - task: format-check
             project: backend
             working-directory: api

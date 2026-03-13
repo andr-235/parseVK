@@ -20,7 +20,9 @@ export class TelegramChatMapper {
           typeof (entity as { accessHash?: unknown }).accessHash === 'bigint' ||
           typeof (entity as { accessHash?: unknown }).accessHash === 'number' ||
           typeof (entity as { accessHash?: unknown }).accessHash === 'string'
-            ? (entity as { accessHash: { toString: () => string } }).accessHash.toString()
+            ? (
+                entity as { accessHash: { toString: () => string } }
+              ).accessHash.toString()
             : null,
         entity,
         totalMembers:

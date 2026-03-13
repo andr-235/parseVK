@@ -34,7 +34,9 @@ export function normalizeTelegramIdentifier(
   }
 
   const withoutPrefix = trimmed.replace(TELEGRAM_LINK_PREFIX, '');
-  const inviteMatch = withoutPrefix.match(/^(?:\+|joinchat\/)([A-Za-z0-9_-]+)$/);
+  const inviteMatch = withoutPrefix.match(
+    /^(?:\+|joinchat\/)([A-Za-z0-9_-]+)$/,
+  );
   if (inviteMatch) {
     return {
       raw,
