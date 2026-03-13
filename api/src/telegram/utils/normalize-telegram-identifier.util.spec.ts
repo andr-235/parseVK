@@ -18,6 +18,16 @@ describe('normalizeTelegramIdentifier', () => {
     });
   });
 
+  it('detects internal t.me/c link as channel numeric id', () => {
+    expect(
+      normalizeTelegramIdentifier('https://t.me/c/1949542659/115914'),
+    ).toMatchObject({
+      kind: 'channelNumericId',
+      numericTelegramId: BigInt('1949542659'),
+      normalized: '-1001949542659',
+    });
+  });
+
   it('detects invite link', () => {
     expect(normalizeTelegramIdentifier('https://t.me/+abc123')).toMatchObject({
       kind: 'inviteLink',

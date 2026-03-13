@@ -8,6 +8,7 @@ export const useTelegramSync = (onDataLoaded: (data: TelegramSyncResponse) => vo
   const [limit, setLimit] = useState<string>('1000')
   const [loading, setLoading] = useState(false)
   const [lastSyncData, setLastSyncData] = useState<TelegramSyncResponse | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -15,6 +16,8 @@ export const useTelegramSync = (onDataLoaded: (data: TelegramSyncResponse) => vo
       toast.error('Укажите идентификатор чата')
       return
     }
+
+    setErrorMessage(null)
     setLoading(true)
     try {
       const numericLimit = Number.parseInt(limit, 10)
@@ -26,7 +29,9 @@ export const useTelegramSync = (onDataLoaded: (data: TelegramSyncResponse) => vo
       onDataLoaded(response)
       toast.success('Участники успешно загружены')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Ошибка загрузки участников')
+      const message = err instanceof Error ? err.message : 'Ошибка загрузки участников'
+      setErrorMessage(message)
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -45,6 +50,7 @@ export const useTelegramSync = (onDataLoaded: (data: TelegramSyncResponse) => vo
     setLimit,
     loading,
     lastSyncData,
+    errorMessage,
     handleSubmit,
     handleExport,
   }

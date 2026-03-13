@@ -19,6 +19,7 @@ export default function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps
     setLimit,
     loading,
     lastSyncData,
+    errorMessage,
     handleSubmit,
     handleExport,
   } = useTelegramSync(onDataLoaded)
@@ -48,6 +49,10 @@ export default function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps
                 disabled={loading}
               />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Для первого импорта используйте @username, публичную или invite-ссылку.
+              Internal ID и t.me/c/... работают для уже известных чатов.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -65,6 +70,12 @@ export default function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps
             {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </form>
+
+        {errorMessage && (
+          <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {errorMessage}
+          </div>
+        )}
 
         {lastSyncData && (
           <div className="mt-6 pt-6 border-t space-y-4">
