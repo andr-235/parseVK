@@ -1,84 +1,64 @@
+const quoteForShell = (value) => `'${value.replace(/'/g, "'\\''")}'`;
+
+const toProjectRelativePaths = (prefix, filenames) =>
+  filenames.map((file) => {
+    const match = file.match(new RegExp(`(?:^|/)${prefix}/(.+)$`));
+    if (match) {
+      return match[1];
+    }
+
+    return file.replace(new RegExp(`^${prefix}/`), '');
+  });
+
 module.exports = {
-  // Backend: строгая проверка TypeScript файлов
-  'api/**/*.ts': [
-    // 1. Автоматическое форматирование
-    'bash -c "cd api && npm run format"',
-    // 2. Линтинг с автоФиксом и блокировкой при предупреждениях (только для измененных файлов)
-    (filenames) => {
-      const relativePaths = filenames
-        .map((f) => {
-          const match = f.match(/(?:^|\/)api\/(.+)$/);
-          if (match) {
-            const path = match[1];
-            return path;
-          }
-          return f.replace(/^api\//, 'src/');
-        })
-        .join(' ');
-      return `bash -c "cd api && npx eslint --fix --max-warnings=0 ${relativePaths}"`;
-    },
-  ],
-  // Тестовые файлы: только форматирование
-  'api/**/*.spec.ts': [
-    'bash -c "cd api && npm run format"',
-    (filenames) => {
-      const relativePaths = filenames
-        .map((f) => {
-          const match = f.match(/(?:^|\/)api\/(.+)$/);
-          if (match) {
-            const path = match[1];
-            return path;
-          }
-          return f.replace(/^api\//, 'src/');
-        })
-        .join(' ');
-      return `bash -c "cd api && npx eslint --fix --max-warnings=0 ${relativePaths}"`;
-    },
-  ],
-  // Frontend: строгая проверка TypeScript/TSX файлов (исключая тесты)
+  'api/**/*.ts': (filenames) => {
+    const relativePaths = toProjectRelativePaths('api', filenames)
+      .map(quoteForShell)
+      .join(' ');
+
+    return [
+      `bash -c "cd api && npx prettier --write ${relativePaths}"`,
+      `bash -c "cd api && npx eslint --fix --max-warnings=0 ${relativePaths}"`,
+    ];
+  },
   'front/**/*.{ts,tsx}': (filenames) => {
-    // Фильтруем тестовые файлы
     const nonTestFiles = filenames.filter(
-      (f) => !f.includes('__tests__') && !f.includes('.test.')
+      (file) => !file.includes('__tests__') && !file.includes('.test.'),
     );
-    
+
     if (nonTestFiles.length === 0) {
       return [];
     }
-    
-    // Получаем относительные пути
-    const relativePaths = nonTestFiles
-      .map((f) => {
-        const match = f.match(/(?:^|\/)front\/(.+)$/);
-        if (match) {
-          return match[1];
-        }
-        return f.replace(/^front\//, '');
-      });
-    const quotedPaths = relativePaths
-      .map((file) => `'${file.replace(/'/g, "'\\''")}'`)
+
+    const relativePaths = toProjectRelativePaths('front', nonTestFiles)
+      .map(quoteForShell)
       .join(' ');
-    
+
     return [
-      // 1. Автоматическое форматирование
-      `bash -c "cd front && npx prettier --write ${quotedPaths}"`,
-      // 2. Линтинг с автоФиксом и блокировкой при предупреждений
-      `bash -c "cd front && npx eslint --fix --max-warnings=0 --no-warn-ignored ${quotedPaths}"`,
+      `bash -c "cd front && npx prettier --write ${relativePaths}"`,
+      `bash -c "cd front && npx eslint --fix --max-warnings=0 --no-warn-ignored ${relativePaths}"`,
     ];
   },
-  // Тестовые файлы frontend: только форматирование
-  'front/**/__tests__/**/*.{ts,tsx}': [
-    'bash -c "cd front && npm run format"',
-  ],
-  'front/**/*.test.{ts,tsx}': [
-    'bash -c "cd front && npm run format"',
-  ],
-  // CSS файлы: только форматирование
-  'front/**/*.css': [
-    'bash -c "cd front && npm run format"',
-  ],
-  // Конфигурационные файлы: форматирование
-  '*.{json,md,yml,yaml}': [
-    'npx prettier --write',
-  ],
+  'front/**/__tests__/**/*.{ts,tsx}': (filenames) => {
+    const relativePaths = toProjectRelativePaths('front', filenames)
+      .map(quoteForShell)
+      .join(' ');
+
+    return [`bash -c "cd front && npx prettier --write ${relativePaths}"`];
+  },
+  'front/**/*.test.{ts,tsx}': (filenames) => {
+    const relativePaths = toProjectRelativePaths('front', filenames)
+      .map(quoteForShell)
+      .join(' ');
+
+    return [`bash -c "cd front && npx prettier --write ${relativePaths}"`];
+  },
+  'front/**/*.css': (filenames) => {
+    const relativePaths = toProjectRelativePaths('front', filenames)
+      .map(quoteForShell)
+      .join(' ');
+
+    return [`bash -c "cd front && npx prettier --write ${relativePaths}"`];
+  },
+  '*.{json,md,yml,yaml}': ['npx prettier --write'],
 };

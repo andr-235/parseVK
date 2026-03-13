@@ -89,8 +89,7 @@ describe('TelegramService', () => {
 
   it('returns sync result with persisted data', async () => {
     const fakeEntity = {};
-    const mockClient = {
-    } as unknown as TelegramClient;
+    const mockClient = {} as unknown as TelegramClient;
 
     clientManagerMock.getClient.mockResolvedValue(mockClient);
     identifierResolverMock.resolve.mockResolvedValue({

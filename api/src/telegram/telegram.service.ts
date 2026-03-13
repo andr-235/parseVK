@@ -41,7 +41,10 @@ export class TelegramService {
 
     let entity: unknown;
     try {
-      const resolution = await this.identifierResolver.resolve(client, identifier);
+      const resolution = await this.identifierResolver.resolve(
+        client,
+        identifier,
+      );
       entity = resolution.entity;
     } catch (error) {
       this.logger.error(

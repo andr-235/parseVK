@@ -17,6 +17,7 @@
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "vitest run",
+    "check:push": "bun run format:check && bun run lint && bun run typecheck && bun run test",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "NODE_OPTIONS='--inspect-brk' vitest run --no-file-parallelism",
