@@ -1,3 +1,10 @@
+## [0.20.3](https://github.com/andr-235/parseVK/compare/v0.20.2...v0.20.3) (2026-03-13)
+
+
+### Bug Fixes
+
+* исправить резолв telegram идентификаторов ([952ed5c](https://github.com/andr-235/parseVK/commit/952ed5c1e9ffb800412c7887451388b0bf9318e1))
+
 ## [0.20.2](https://github.com/andr-235/parseVK/compare/v0.20.1...v0.20.2) (2026-03-13)
 
 
