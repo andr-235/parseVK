@@ -114,9 +114,7 @@ describe('TelegramIdentifierResolverService', () => {
 
     repository.findResolutionMetadataByTelegramId.mockResolvedValue(null);
 
-    await expect(
-      service.resolve(client, '-1001157519810'),
-    ).rejects.toThrow(
+    await expect(service.resolve(client, '-1001157519810')).rejects.toThrow(
       'Нельзя выполнить первый sync только по внутреннему Telegram ID.',
     );
   });

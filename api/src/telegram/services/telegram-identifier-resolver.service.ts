@@ -22,7 +22,9 @@ export class TelegramIdentifierResolverService {
     const identifier = normalizeTelegramIdentifier(rawIdentifier);
 
     if (identifier.kind === 'invalid') {
-      throw new BadRequestException('Неподдерживаемый формат идентификатора Telegram');
+      throw new BadRequestException(
+        'Неподдерживаемый формат идентификатора Telegram',
+      );
     }
 
     if (identifier.kind === 'inviteLink') {
