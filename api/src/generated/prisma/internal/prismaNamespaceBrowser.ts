@@ -451,6 +451,7 @@ export const TelegramChatScalarFieldEnum = {
   type: 'type',
   title: 'title',
   username: 'username',
+  accessHash: 'accessHash',
   photoUrl: 'photoUrl',
   description: 'description',
   createdAt: 'createdAt',

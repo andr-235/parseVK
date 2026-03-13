@@ -16,6 +16,12 @@ export class TelegramChatMapper {
         title: (entity as { title?: string }).title ?? null,
         username: (entity as { username?: string }).username ?? null,
         description: null,
+        accessHash:
+          typeof (entity as { accessHash?: unknown }).accessHash === 'bigint' ||
+          typeof (entity as { accessHash?: unknown }).accessHash === 'number' ||
+          typeof (entity as { accessHash?: unknown }).accessHash === 'string'
+            ? (entity as { accessHash: { toString: () => string } }).accessHash.toString()
+            : null,
         entity,
         totalMembers:
           typeof (entity as { participantsCount?: unknown })
@@ -32,6 +38,7 @@ export class TelegramChatMapper {
         title: (entity as { title?: string }).title ?? null,
         username: null,
         description: null,
+        accessHash: null,
         entity,
         totalMembers:
           typeof (entity as { participantsCount?: unknown })
@@ -48,6 +55,7 @@ export class TelegramChatMapper {
         title: this.composeUserTitle(entity),
         username: (entity as { username?: string }).username ?? null,
         description: null,
+        accessHash: null,
         entity,
         totalMembers: 1,
       };

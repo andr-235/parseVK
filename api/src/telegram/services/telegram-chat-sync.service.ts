@@ -62,12 +62,14 @@ export class TelegramChatSyncService {
           title: resolved.title,
           username: resolved.username,
           description: resolved.description,
+          accessHash: resolved.accessHash,
         },
         update: {
           type: resolved.type as unknown as TelegramChatTypeValue,
           title: resolved.title,
           username: resolved.username,
           description: resolved.description,
+          accessHash: resolved.accessHash,
         },
       })) as { id: number; telegramId: bigint };
 

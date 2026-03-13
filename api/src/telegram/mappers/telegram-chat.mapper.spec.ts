@@ -14,6 +14,7 @@ describe('TelegramChatMapper', () => {
       id: BigInt(123),
       title: 'Test Channel',
       username: 'testchannel',
+      accessHash: BigInt(987654321),
       megagroup: false,
       participantsCount: 1000,
     } as unknown as ConstructorParameters<typeof Api.Channel>[0]);
@@ -25,6 +26,7 @@ describe('TelegramChatMapper', () => {
       type: TelegramChatType.CHANNEL,
       title: 'Test Channel',
       username: 'testchannel',
+      accessHash: '987654321',
       totalMembers: 1000,
     });
   });

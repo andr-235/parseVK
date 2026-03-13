@@ -8,6 +8,7 @@ export interface TelegramChatCreateData {
   title: string | null;
   username: string | null;
   description: string | null;
+  accessHash?: string | null;
 }
 
 export interface TelegramChatUpdateData {
@@ -15,6 +16,7 @@ export interface TelegramChatUpdateData {
   title?: string | null;
   username?: string | null;
   description?: string | null;
+  accessHash?: string | null;
 }
 
 @Injectable()
@@ -37,6 +39,18 @@ export class TelegramChatRepository {
   findByTelegramId(telegramId: bigint) {
     return this.prisma.telegramChat.findUnique({
       where: { telegramId },
+    });
+  }
+
+  findResolutionMetadataByTelegramId(telegramId: bigint) {
+    return this.prisma.telegramChat.findUnique({
+      where: { telegramId },
+      select: {
+        telegramId: true,
+        type: true,
+        username: true,
+        accessHash: true,
+      },
     });
   }
 

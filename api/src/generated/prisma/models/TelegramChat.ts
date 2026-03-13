@@ -42,6 +42,7 @@ export type TelegramChatMinAggregateOutputType = {
   type: $Enums.TelegramChatType | null
   title: string | null
   username: string | null
+  accessHash: string | null
   photoUrl: string | null
   description: string | null
   createdAt: Date | null
@@ -54,6 +55,7 @@ export type TelegramChatMaxAggregateOutputType = {
   type: $Enums.TelegramChatType | null
   title: string | null
   username: string | null
+  accessHash: string | null
   photoUrl: string | null
   description: string | null
   createdAt: Date | null
@@ -66,6 +68,7 @@ export type TelegramChatCountAggregateOutputType = {
   type: number
   title: number
   username: number
+  accessHash: number
   photoUrl: number
   description: number
   createdAt: number
@@ -90,6 +93,7 @@ export type TelegramChatMinAggregateInputType = {
   type?: true
   title?: true
   username?: true
+  accessHash?: true
   photoUrl?: true
   description?: true
   createdAt?: true
@@ -102,6 +106,7 @@ export type TelegramChatMaxAggregateInputType = {
   type?: true
   title?: true
   username?: true
+  accessHash?: true
   photoUrl?: true
   description?: true
   createdAt?: true
@@ -114,6 +119,7 @@ export type TelegramChatCountAggregateInputType = {
   type?: true
   title?: true
   username?: true
+  accessHash?: true
   photoUrl?: true
   description?: true
   createdAt?: true
@@ -213,6 +219,7 @@ export type TelegramChatGroupByOutputType = {
   type: $Enums.TelegramChatType
   title: string | null
   username: string | null
+  accessHash: string | null
   photoUrl: string | null
   description: string | null
   createdAt: Date
@@ -248,6 +255,7 @@ export type TelegramChatWhereInput = {
   type?: Prisma.EnumTelegramChatTypeFilter<"TelegramChat"> | $Enums.TelegramChatType
   title?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
   username?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
+  accessHash?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
   description?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
   createdAt?: Prisma.DateTimeFilter<"TelegramChat"> | Date | string
@@ -261,6 +269,7 @@ export type TelegramChatOrderByWithRelationInput = {
   type?: Prisma.SortOrder
   title?: Prisma.SortOrderInput | Prisma.SortOrder
   username?: Prisma.SortOrderInput | Prisma.SortOrder
+  accessHash?: Prisma.SortOrderInput | Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -277,6 +286,7 @@ export type TelegramChatWhereUniqueInput = Prisma.AtLeast<{
   type?: Prisma.EnumTelegramChatTypeFilter<"TelegramChat"> | $Enums.TelegramChatType
   title?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
   username?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
+  accessHash?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
   photoUrl?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
   description?: Prisma.StringNullableFilter<"TelegramChat"> | string | null
   createdAt?: Prisma.DateTimeFilter<"TelegramChat"> | Date | string
@@ -290,6 +300,7 @@ export type TelegramChatOrderByWithAggregationInput = {
   type?: Prisma.SortOrder
   title?: Prisma.SortOrderInput | Prisma.SortOrder
   username?: Prisma.SortOrderInput | Prisma.SortOrder
+  accessHash?: Prisma.SortOrderInput | Prisma.SortOrder
   photoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -310,6 +321,7 @@ export type TelegramChatScalarWhereWithAggregatesInput = {
   type?: Prisma.EnumTelegramChatTypeWithAggregatesFilter<"TelegramChat"> | $Enums.TelegramChatType
   title?: Prisma.StringNullableWithAggregatesFilter<"TelegramChat"> | string | null
   username?: Prisma.StringNullableWithAggregatesFilter<"TelegramChat"> | string | null
+  accessHash?: Prisma.StringNullableWithAggregatesFilter<"TelegramChat"> | string | null
   photoUrl?: Prisma.StringNullableWithAggregatesFilter<"TelegramChat"> | string | null
   description?: Prisma.StringNullableWithAggregatesFilter<"TelegramChat"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"TelegramChat"> | Date | string
@@ -321,6 +333,7 @@ export type TelegramChatCreateInput = {
   type: $Enums.TelegramChatType
   title?: string | null
   username?: string | null
+  accessHash?: string | null
   photoUrl?: string | null
   description?: string | null
   createdAt?: Date | string
@@ -334,6 +347,7 @@ export type TelegramChatUncheckedCreateInput = {
   type: $Enums.TelegramChatType
   title?: string | null
   username?: string | null
+  accessHash?: string | null
   photoUrl?: string | null
   description?: string | null
   createdAt?: Date | string
@@ -346,6 +360,7 @@ export type TelegramChatUpdateInput = {
   type?: Prisma.EnumTelegramChatTypeFieldUpdateOperationsInput | $Enums.TelegramChatType
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -359,6 +374,7 @@ export type TelegramChatUncheckedUpdateInput = {
   type?: Prisma.EnumTelegramChatTypeFieldUpdateOperationsInput | $Enums.TelegramChatType
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -372,6 +388,7 @@ export type TelegramChatCreateManyInput = {
   type: $Enums.TelegramChatType
   title?: string | null
   username?: string | null
+  accessHash?: string | null
   photoUrl?: string | null
   description?: string | null
   createdAt?: Date | string
@@ -383,6 +400,7 @@ export type TelegramChatUpdateManyMutationInput = {
   type?: Prisma.EnumTelegramChatTypeFieldUpdateOperationsInput | $Enums.TelegramChatType
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -395,6 +413,7 @@ export type TelegramChatUncheckedUpdateManyInput = {
   type?: Prisma.EnumTelegramChatTypeFieldUpdateOperationsInput | $Enums.TelegramChatType
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -407,6 +426,7 @@ export type TelegramChatCountOrderByAggregateInput = {
   type?: Prisma.SortOrder
   title?: Prisma.SortOrder
   username?: Prisma.SortOrder
+  accessHash?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
   description?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -424,6 +444,7 @@ export type TelegramChatMaxOrderByAggregateInput = {
   type?: Prisma.SortOrder
   title?: Prisma.SortOrder
   username?: Prisma.SortOrder
+  accessHash?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
   description?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -436,6 +457,7 @@ export type TelegramChatMinOrderByAggregateInput = {
   type?: Prisma.SortOrder
   title?: Prisma.SortOrder
   username?: Prisma.SortOrder
+  accessHash?: Prisma.SortOrder
   photoUrl?: Prisma.SortOrder
   description?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -483,6 +505,7 @@ export type TelegramChatCreateWithoutMembersInput = {
   type: $Enums.TelegramChatType
   title?: string | null
   username?: string | null
+  accessHash?: string | null
   photoUrl?: string | null
   description?: string | null
   createdAt?: Date | string
@@ -495,6 +518,7 @@ export type TelegramChatUncheckedCreateWithoutMembersInput = {
   type: $Enums.TelegramChatType
   title?: string | null
   username?: string | null
+  accessHash?: string | null
   photoUrl?: string | null
   description?: string | null
   createdAt?: Date | string
@@ -522,6 +546,7 @@ export type TelegramChatUpdateWithoutMembersInput = {
   type?: Prisma.EnumTelegramChatTypeFieldUpdateOperationsInput | $Enums.TelegramChatType
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -534,6 +559,7 @@ export type TelegramChatUncheckedUpdateWithoutMembersInput = {
   type?: Prisma.EnumTelegramChatTypeFieldUpdateOperationsInput | $Enums.TelegramChatType
   title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  accessHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -577,6 +603,7 @@ export type TelegramChatSelect<ExtArgs extends runtime.Types.Extensions.Internal
   type?: boolean
   title?: boolean
   username?: boolean
+  accessHash?: boolean
   photoUrl?: boolean
   description?: boolean
   createdAt?: boolean
@@ -591,6 +618,7 @@ export type TelegramChatSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   type?: boolean
   title?: boolean
   username?: boolean
+  accessHash?: boolean
   photoUrl?: boolean
   description?: boolean
   createdAt?: boolean
@@ -603,6 +631,7 @@ export type TelegramChatSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   type?: boolean
   title?: boolean
   username?: boolean
+  accessHash?: boolean
   photoUrl?: boolean
   description?: boolean
   createdAt?: boolean
@@ -615,13 +644,14 @@ export type TelegramChatSelectScalar = {
   type?: boolean
   title?: boolean
   username?: boolean
+  accessHash?: boolean
   photoUrl?: boolean
   description?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type TelegramChatOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "telegramId" | "type" | "title" | "username" | "photoUrl" | "description" | "createdAt" | "updatedAt", ExtArgs["result"]["telegramChat"]>
+export type TelegramChatOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "telegramId" | "type" | "title" | "username" | "accessHash" | "photoUrl" | "description" | "createdAt" | "updatedAt", ExtArgs["result"]["telegramChat"]>
 export type TelegramChatInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | Prisma.TelegramChat$membersArgs<ExtArgs>
   _count?: boolean | Prisma.TelegramChatCountOutputTypeDefaultArgs<ExtArgs>
@@ -640,6 +670,7 @@ export type $TelegramChatPayload<ExtArgs extends runtime.Types.Extensions.Intern
     type: $Enums.TelegramChatType
     title: string | null
     username: string | null
+    accessHash: string | null
     photoUrl: string | null
     description: string | null
     createdAt: Date
@@ -1073,6 +1104,7 @@ export interface TelegramChatFieldRefs {
   readonly type: Prisma.FieldRef<"TelegramChat", 'TelegramChatType'>
   readonly title: Prisma.FieldRef<"TelegramChat", 'String'>
   readonly username: Prisma.FieldRef<"TelegramChat", 'String'>
+  readonly accessHash: Prisma.FieldRef<"TelegramChat", 'String'>
   readonly photoUrl: Prisma.FieldRef<"TelegramChat", 'String'>
   readonly description: Prisma.FieldRef<"TelegramChat", 'String'>
   readonly createdAt: Prisma.FieldRef<"TelegramChat", 'DateTime'>
