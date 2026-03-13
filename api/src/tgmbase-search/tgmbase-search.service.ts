@@ -5,10 +5,8 @@ import { TgmbaseSearchMapper } from './mappers/tgmbase-search.mapper.js';
 import type { TgmbaseSearchRequestDto } from './dto/tgmbase-search-request.dto.js';
 import type {
   TgmbaseContactDto,
-  TgmbaseMessageDto,
   TgmbaseMessagesPageDto,
   TgmbasePeerDto,
-  TgmbasePeerType,
   TgmbaseSearchItemDto,
   TgmbaseSearchResponseDto,
   TgmbaseSearchStatus,
@@ -22,9 +20,6 @@ import {
 
 type SearchUser = Awaited<
   ReturnType<TgmbasePrismaService['user']['findMany']>
->[number];
-type SearchMessage = Awaited<
-  ReturnType<TgmbasePrismaService['message']['findMany']>
 >[number];
 
 @Injectable()
