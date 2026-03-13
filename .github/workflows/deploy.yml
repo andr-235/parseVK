@@ -131,9 +131,27 @@ jobs:
         working-directory: /opt/parseVK
         timeout-minutes: 30
         run: |
-          echo "=== Building and starting containers ==="
+          set -euo pipefail
+          source .github/scripts/log-helper.sh
 
-          docker compose -f "$COMPOSE_FILE" build
+          log_info "=== Сборка и запуск контейнеров ==="
+          log_info "Docker version: $(docker --version)"
+          log_info "Docker Compose version: $(docker compose version)"
+
+          for host in registry-1.docker.io auth.docker.io production.cloudflare.docker.com; do
+            if getent hosts "$host" > /dev/null 2>&1; then
+              log_info "DNS ok для $host"
+            else
+              log_warn "DNS не разрешает $host"
+            fi
+          done
+
+          for image in postgres:15-alpine redis:7-alpine oven/bun:1-alpine nginx:alpine; do
+            log_info "Подготавливаю базовый образ $image"
+            retry_with_backoff 3 5 "timeout 180s docker pull $image"
+          done
+
+          retry_with_backoff 2 10 "timeout 1200s docker compose -f \"$COMPOSE_FILE\" build --progress plain"
 
           if docker compose -f "$COMPOSE_FILE" up -d; then
             echo "Containers started successfully"
