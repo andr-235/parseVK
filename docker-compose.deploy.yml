@@ -33,9 +33,11 @@ services:
       - default
 
   db_backup:
+    image: parsevk-db-backup:local
+    pull_policy: never
     build:
-      context: .
-      dockerfile: docker/db-backup/Dockerfile
+      context: docker/db-backup
+      dockerfile: Dockerfile
     depends_on:
       db:
         condition: service_healthy
@@ -60,9 +62,11 @@ services:
       - default
 
   api:
+    image: parsevk-api:local
+    pull_policy: never
     build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
+      context: ./api
+      dockerfile: Dockerfile.deploy
       args:
         DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/vk_api?schema=public}
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
@@ -89,9 +93,11 @@ services:
       start_period: 120s
 
   frontend:
+    image: parsevk-frontend:local
+    pull_policy: never
     build:
-      context: .
-      dockerfile: docker/frontend.Dockerfile
+      context: ./front
+      dockerfile: Dockerfile.deploy
       args:
         VITE_APP_TITLE: ${VITE_APP_TITLE:-Центр аналитики}
         VITE_API_URL: ${VITE_API_URL:-/api}

@@ -1,6 +1,9 @@
 .env
 dist
 coverage
+coverage-watchlist
 node_modules
 *.tsbuildinfo
 .claude
+.ai-factory
+.storybook-cache

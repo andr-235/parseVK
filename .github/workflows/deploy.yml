@@ -138,6 +138,47 @@ jobs:
             fi
           fi
 
+      - name: Detect changed services
+        id: changed_services
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+
+          PREV_COMMIT="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+
+          BUILD_API=false
+          BUILD_FRONTEND=false
+          BUILD_DB_BACKUP=false
+
+          if [ -z "$PREV_COMMIT" ] || ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
+            BUILD_API=true
+            BUILD_FRONTEND=true
+            BUILD_DB_BACKUP=true
+            echo "No previous deployed commit found, building all local images"
+          else
+            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$CURRENT_COMMIT" || true)
+            echo "Changed files since last successful deploy:"
+            printf '%s\n' "$CHANGED_FILES"
+
+            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(api/|docker/backend\.Dockerfile|docker/backend-entrypoint\.sh|docker/backend-healthcheck\.mjs|docker-compose\.deploy\.yml|\.dockerignore)'; then
+              BUILD_API=true
+            fi
+
+            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(front/|docker/frontend\.Dockerfile|docker/frontend\.nginx\.conf|docker/frontend-entrypoint\.sh|docker-compose\.deploy\.yml|\.dockerignore)'; then
+              BUILD_FRONTEND=true
+            fi
+
+            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(docker/db-backup/|docker-compose\.deploy\.yml|\.dockerignore)'; then
+              BUILD_DB_BACKUP=true
+            fi
+          fi
+
+          echo "build_api=$BUILD_API" >> "$GITHUB_OUTPUT"
+          echo "build_frontend=$BUILD_FRONTEND" >> "$GITHUB_OUTPUT"
+          echo "build_db_backup=$BUILD_DB_BACKUP" >> "$GITHUB_OUTPUT"
+
       - name: Start database and dependencies
         working-directory: /opt/parseVK
         timeout-minutes: 5
@@ -194,22 +235,30 @@ jobs:
           log_info "Docker version: $(docker --version)"
           log_info "Docker Compose version: $(docker compose version)"
 
-          for host in registry-1.docker.io auth.docker.io production.cloudflare.docker.com; do
-            if getent hosts "$host" > /dev/null 2>&1; then
-              log_info "DNS ok для $host"
-            else
-              log_warn "DNS не разрешает $host"
-            fi
-          done
+          SERVICES_TO_BUILD=""
 
-          for image in postgres:15-alpine redis:7-alpine oven/bun:1-alpine nginx:alpine; do
-            log_info "Подготавливаю базовый образ $image"
-            retry_with_backoff 3 5 "timeout 180s docker pull $image"
-          done
+          if [ "${{ steps.changed_services.outputs.build_api }}" = "true" ]; then
+            SERVICES_TO_BUILD="$SERVICES_TO_BUILD api"
+          fi
 
-          retry_with_backoff 2 10 "timeout 1200s docker compose -f \"$COMPOSE_FILE\" build --progress plain"
+          if [ "${{ steps.changed_services.outputs.build_frontend }}" = "true" ]; then
+            SERVICES_TO_BUILD="$SERVICES_TO_BUILD frontend"
+          fi
 
-          if docker compose -f "$COMPOSE_FILE" up -d; then
+          if [ "${{ steps.changed_services.outputs.build_db_backup }}" = "true" ]; then
+            SERVICES_TO_BUILD="$SERVICES_TO_BUILD db_backup"
+          fi
+
+          if [ -n "$SERVICES_TO_BUILD" ]; then
+            log_info "Собираю изменённые сервисы:$SERVICES_TO_BUILD"
+            retry_with_backoff 2 10 "timeout 1200s docker compose -f \"$COMPOSE_FILE\" build --progress plain $SERVICES_TO_BUILD"
+            UP_ARGS="-d"
+          else
+            log_info "Изменений в образах нет, пропускаю build"
+            UP_ARGS="-d --no-build"
+          fi
+
+          if docker compose -f "$COMPOSE_FILE" up $UP_ARGS; then
             echo "Containers started successfully"
           else
             echo "Error: Failed to start containers"
