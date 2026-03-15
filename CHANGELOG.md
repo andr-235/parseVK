@@ -1,3 +1,15 @@
+## [0.21.2](https://github.com/andr-235/parseVK/compare/v0.21.1...v0.21.2) (2026-03-13)
+
+
+### Bug Fixes
+
+* отключен сетевой вызов в pre-commit hook ([91eb05e](https://github.com/andr-235/parseVK/commit/91eb05e7ecd5f5ffb7781494cb8dc01591f4cc37))
+
+
+### Performance Improvements
+
+* ускорен локальный docker-деплой ([7adb663](https://github.com/andr-235/parseVK/commit/7adb66388e8e4a8a7b07c6e2ee4bd3279152a296))
+
 ## [0.21.1](https://github.com/andr-235/parseVK/compare/v0.21.0...v0.21.1) (2026-03-13)
 
 
