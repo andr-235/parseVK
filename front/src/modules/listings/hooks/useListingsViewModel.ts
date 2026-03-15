@@ -98,7 +98,7 @@ export const useListingsViewModel = () => {
       sortBy: params?.sortBy,
       sortOrder: params?.sortOrder,
       signal,
-    })
+    }, { silent: true })
 
     return {
       items: response.items,

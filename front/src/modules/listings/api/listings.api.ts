@@ -39,6 +39,10 @@ interface FetchListingsOptions {
   signal?: AbortSignal
 }
 
+interface ListingsRequestOptions {
+  silent?: boolean
+}
+
 interface ImportListingsOptions {
   file: File
   source: string
@@ -79,7 +83,10 @@ const ensureSource = (source: string): string => {
 }
 
 export const listingsService = {
-  async fetchListings(options: FetchListingsOptions): Promise<IListingsResponse> {
+  async fetchListings(
+    options: FetchListingsOptions,
+    requestOptions?: ListingsRequestOptions
+  ): Promise<IListingsResponse> {
     try {
       const { signal, ...rest } = options
       const query = buildQueryString(rest)
@@ -90,7 +97,9 @@ export const listingsService = {
       if (import.meta.env.DEV) {
         console.error('[listingsService] fetchListings error', error)
       }
-      toast.error('Не удалось загрузить объявления')
+      if (!requestOptions?.silent) {
+        toast.error('Не удалось загрузить объявления')
+      }
       throw error
     }
   },
