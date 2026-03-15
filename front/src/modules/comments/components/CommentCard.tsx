@@ -12,6 +12,7 @@ import { getAuthorInitials } from '@/modules/comments/utils/getAuthorInitials'
 import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { resolveCommentKeywords } from '@/modules/comments/utils/resolveCommentKeywords'
 import { resolveCommentVisibility } from '@/modules/comments/utils/resolveCommentVisibility'
+import { getCommentCategories } from '@/modules/comments/utils/getCommentCategories'
 import { CommentAttachments } from './CommentAttachments'
 import { CommentThread } from './CommentThread'
 
@@ -25,6 +26,7 @@ interface CommentCardProps {
   onAddToWatchlist?: (commentId: number) => void
   isWatchlistLoading?: boolean
   matchedKeywords?: Keyword[]
+  onCategoryClick?: (category: string) => void
   showKeywordComments?: boolean
   showKeywordPosts?: boolean
   hidePostContext?: boolean
@@ -36,6 +38,7 @@ const CommentCard = memo(function CommentCard({
   onAddToWatchlist,
   isWatchlistLoading,
   matchedKeywords,
+  onCategoryClick,
   showKeywordComments,
   showKeywordPosts,
   hidePostContext = false,
@@ -85,6 +88,7 @@ const CommentCard = memo(function CommentCard({
 
   const postAttachments = Array.isArray(comment.postAttachments) ? comment.postAttachments : []
   const hasPostContent = comment.postText || comment.postGroup || postAttachments.length > 0
+  const commentCategories = getCommentCategories(matchedKeywords)
 
   return (
     <div
@@ -161,6 +165,23 @@ const CommentCard = memo(function CommentCard({
                 </>
               )}
             </div>
+
+            {commentCategories.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {commentCategories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => onCategoryClick?.(category)}
+                    className="rounded-full"
+                  >
+                    <Badge className="h-6 border border-cyan-500/20 bg-cyan-500/10 px-2.5 font-mono-accent text-[10px] font-medium text-cyan-300 hover:bg-cyan-500/20">
+                      {category}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

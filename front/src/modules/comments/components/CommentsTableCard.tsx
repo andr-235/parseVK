@@ -8,6 +8,7 @@ import { LoadingState } from '@/shared/components/LoadingState'
 import { EmptyState } from '@/shared/components/EmptyState'
 import CommentCard from './CommentCard'
 import { PostGroupCard } from './PostGroupCard'
+import { CommentCategoryFilters } from './CommentCategoryFilters'
 import useCommentsTableCardController from '@/modules/comments/hooks/useCommentsTableCardController'
 import type { CategorizedComment, CategorizedGroup } from '@/modules/comments/types/commentsTable'
 
@@ -74,6 +75,11 @@ const CommentsTableCard = memo(function CommentsTableCard({
     hasCommentsWithoutKeywords,
     expandedCategories,
     toggleCategory,
+    selectedCategories,
+    availableCategories,
+    toggleFilterCategory,
+    clearCategoryFilters,
+    filteredCommentsWithoutKeywords,
     subtitle,
   } = useCommentsTableCardController({
     groupedComments,
@@ -82,7 +88,6 @@ const CommentsTableCard = memo(function CommentsTableCard({
     showKeywordComments,
     showKeywordPosts,
     hasDefinedKeywords,
-    visibleCount,
   })
 
   const observerTargetRef = useRef<HTMLDivElement>(null)
@@ -187,6 +192,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
                 watchlistPending={watchlistPending}
                 showKeywordComments={showKeywordComments}
                 showKeywordPosts={showKeywordPosts}
+                onCategoryClick={toggleFilterCategory}
               />
             )
           })}
@@ -203,6 +209,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
                 isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
                 showKeywordComments={showKeywordComments}
                 showKeywordPosts={showKeywordPosts}
+                onCategoryClick={toggleFilterCategory}
               />
             )
           })}
@@ -214,6 +221,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
       onAddToWatchlist,
       showKeywordComments,
       showKeywordPosts,
+      toggleFilterCategory,
       toggleReadStatus,
       watchlistPending,
     ]
@@ -254,6 +262,13 @@ const CommentsTableCard = memo(function CommentsTableCard({
       </CardHeader>
 
       <CardContent className="p-0 space-y-8">
+        <CommentCategoryFilters
+          categories={availableCategories}
+          selectedCategories={selectedCategories}
+          onToggleCategory={toggleFilterCategory}
+          onClear={clearCategoryFilters}
+        />
+
         {isLoading && !hasComments && <LoadingState message="Загружаем комментарии…" useCard />}
 
         {!isLoading && !hasComments && (
@@ -319,7 +334,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
                   )}
 
                   <div className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/30 shadow-sm backdrop-blur-sm">
-                    {renderCommentsList(commentsWithoutKeywords)}
+                    {renderCommentsList(filteredCommentsWithoutKeywords)}
                   </div>
                 </div>
               )}

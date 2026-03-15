@@ -26,6 +26,7 @@ interface PostGroupCardProps {
   watchlistPending?: Record<number, boolean>
   showKeywordComments?: boolean
   showKeywordPosts?: boolean
+  onCategoryClick?: (category: string) => void
 }
 
 export const PostGroupCard = memo(function PostGroupCard({
@@ -38,6 +39,7 @@ export const PostGroupCard = memo(function PostGroupCard({
   watchlistPending,
   showKeywordComments,
   showKeywordPosts,
+  onCategoryClick,
 }: PostGroupCardProps) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [isPostTextExpanded, setIsPostTextExpanded] = useState(false)
@@ -161,6 +163,7 @@ export const PostGroupCard = memo(function PostGroupCard({
                 showKeywordComments={showKeywordComments}
                 showKeywordPosts={showKeywordPosts}
                 hidePostContext={true}
+                onCategoryClick={onCategoryClick}
               />
             ))}
           </div>

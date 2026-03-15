@@ -10,6 +10,11 @@ export interface Keyword {
   updatedAt?: string
 }
 
+export interface KeywordCategoryGroup {
+  category: string
+  keywords: Keyword[]
+}
+
 export interface PostGroup {
   id: number
   vkId: number

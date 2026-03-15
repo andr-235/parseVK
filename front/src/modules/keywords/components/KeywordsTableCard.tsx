@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import SearchInput from '@/shared/components/SearchInput'
@@ -7,7 +7,6 @@ import { useTableSorting } from '@/shared/hooks'
 import type { Keyword } from '@/types'
 import { LoadingState } from '@/shared/components/LoadingState'
 import { EmptyState } from '@/shared/components/EmptyState'
-import { KeywordCard } from './KeywordCard'
 import { ArrowUpDown } from 'lucide-react'
 import {
   DropdownMenu,
@@ -16,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { getKeywordTableColumns } from '@/modules/keywords/config/keywordTableColumns'
+import { groupKeywordsByCategory } from '@/modules/keywords/utils/groupKeywordsByCategory'
+import { KeywordCategorySection } from './KeywordCategorySection'
 
 interface KeywordsTableCardProps {
   keywords: Keyword[]
@@ -53,6 +54,18 @@ function KeywordsTableCard({
 
   const hasKeywords = keywords.length > 0
   const hasFilteredKeywords = sortedKeywords.length > 0
+  const groupedKeywords = useMemo(
+    () => groupKeywordsByCategory(sortedKeywords),
+    [sortedKeywords]
+  )
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((current) => ({
+      ...current,
+      [category]: !(current[category] ?? true),
+    }))
+  }
 
   return (
     <Card className="overflow-hidden rounded-xl border border-border shadow-sm">
@@ -127,9 +140,16 @@ function KeywordsTableCard({
         )}
 
         {hasFilteredKeywords && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-            {sortedKeywords.map((keyword) => (
-              <KeywordCard key={keyword.id} keyword={keyword} onDelete={onDelete} />
+          <div className="space-y-4">
+            {groupedKeywords.map((group) => (
+              <KeywordCategorySection
+                key={group.category}
+                category={group.category}
+                keywords={group.keywords}
+                isExpanded={expandedCategories[group.category] ?? true}
+                onToggle={() => toggleCategory(group.category)}
+                onDelete={onDelete}
+              />
             ))}
           </div>
         )}

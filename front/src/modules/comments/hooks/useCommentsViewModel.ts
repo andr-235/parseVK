@@ -4,6 +4,7 @@ import { useCommentsStore } from '@/modules/comments/store'
 import { useKeywordsStore } from '@/modules/keywords'
 import { useWatchlistStore } from '@/modules/watchlist'
 import type { Comment, Keyword } from '@/types'
+import { getCommentCategories } from '@/modules/comments/utils/getCommentCategories'
 
 type ReadFilter = 'all' | 'unread' | 'read'
 type CommentWithKeywords = { comment: Comment; matchedKeywords: Keyword[] }
@@ -69,7 +70,19 @@ const groupComments = (comments: Comment[], indexMap: Map<number, number>) => {
       return a.category.localeCompare(b.category, 'ru', { sensitivity: 'base' })
     })
 
-  return { groupedComments, commentsWithoutKeywords }
+  return {
+    groupedComments: groupedComments.map((group) => ({
+      ...group,
+      comments: group.comments.map((item) => ({
+        ...item,
+        categories: getCommentCategories(item.matchedKeywords),
+      })),
+    })),
+    commentsWithoutKeywords: commentsWithoutKeywords.map((item) => ({
+      ...item,
+      categories: getCommentCategories(item.matchedKeywords),
+    })),
+  }
 }
 
 const shouldIncludeByRead = (comment: Comment, filter: ReadFilter) => {
