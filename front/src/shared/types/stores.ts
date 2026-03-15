@@ -21,12 +21,15 @@ export interface CommentsState {
   comments: CommentsComment[]
   isLoading: boolean
   isLoadingMore: boolean
+  isQueryEnabled: boolean
   hasMore: boolean
   totalCount: number
   nextCursor: string | null
   readCount: number
   unreadCount: number
   filters: CommentsFilters
+  setFilters: (filters?: CommentsFilters, options?: { enableQuery?: boolean }) => void
+  setQueryEnabled: (enabled: boolean) => void
   fetchComments: (options?: {
     reset?: boolean
     limit?: number

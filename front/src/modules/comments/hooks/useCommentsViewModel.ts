@@ -225,6 +225,8 @@ const useCommentsViewModel = () => {
   const comments = useCommentsStore((state) => state.comments)
   const isLoading = useCommentsStore((state) => state.isLoading)
   const fetchCommentsCursor = useCommentsStore((state) => state.fetchCommentsCursor)
+  const setCommentsFilters = useCommentsStore((state) => state.setFilters)
+  const setCommentsQueryEnabled = useCommentsStore((state) => state.setQueryEnabled)
   const isLoadingMore = useCommentsStore((state) => state.isLoadingMore)
   const hasMore = useCommentsStore((state) => state.hasMore)
   const totalCount = useCommentsStore((state) => state.totalCount)
@@ -314,22 +316,20 @@ const useCommentsViewModel = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      // Если keywords ещё не загружались - загружаем их сначала
       if (!keywordsLoaded) {
         await fetchKeywords().catch((error) => {
           console.error('Failed to fetch keywords', error)
         })
       }
 
-      // Загружаем комментарии только после того, как keywords точно загружены
-      await fetchCommentsCursor({ reset: true, filters: fetchFilters }).catch((error) => {
-        console.error('Failed to fetch comments with filters', error)
-        toast.error('Не удалось загрузить комментарии')
-      })
+      setCommentsFilters(fetchFilters, { enableQuery: true })
     }
 
     void loadData()
-  }, [fetchCommentsCursor, fetchFilters, fetchKeywords, keywordsLoaded])
+    return () => {
+      setCommentsQueryEnabled(false)
+    }
+  }, [fetchFilters, fetchKeywords, keywordsLoaded, setCommentsFilters, setCommentsQueryEnabled])
 
   useEffect(() => {
     if (readFilter === 'all') {

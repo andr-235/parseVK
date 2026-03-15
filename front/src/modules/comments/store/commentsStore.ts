@@ -65,12 +65,24 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
   comments: [],
   isLoading: false,
   isLoadingMore: false,
+  isQueryEnabled: false,
   hasMore: true,
   totalCount: 0,
   nextCursor: null,
   readCount: 0,
   unreadCount: 0,
   filters: normalizeFilters(),
+
+  setFilters(filters, options) {
+    set({
+      filters: normalizeFilters(filters),
+      isQueryEnabled: options?.enableQuery ?? get().isQueryEnabled,
+    })
+  },
+
+  setQueryEnabled(enabled) {
+    set({ isQueryEnabled: enabled })
+  },
 
   async fetchComments({
     reset = false,
