@@ -2,9 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CommandBus } from '@nestjs/cqrs';
 import { ProcessGroupHandler } from './process-group.handler.js';
 import { ProcessGroupCommand } from '../impl/process-group.command.js';
-import {
-  ParsingTaskMode,
-} from '@/tasks/dto/create-parsing-task.dto.js';
+import { ParsingTaskMode } from '@/tasks/dto/create-parsing-task.dto.js';
 import type { ParsingGroupRecord } from '@/tasks/interfaces/parsing-task-repository.interface.js';
 import type { TaskProcessingContext } from '@/tasks/interfaces/parsing-task-runner.types.js';
 import type { IParsingTaskRepository } from '@/tasks/interfaces/parsing-task-repository.interface.js';
@@ -25,14 +23,20 @@ const createContext = (): TaskProcessingContext => ({
   failedGroups: [],
 });
 
-async function* makeBatches<T>(batches: T[][]): AsyncGenerator<T[], void, void> {
+async function* makeBatches<T>(
+  batches: T[][],
+): AsyncGenerator<T[], void, void> {
   for (const batch of batches) {
+    await Promise.resolve();
     yield batch;
   }
 }
 
 describe('ProcessGroupHandler', () => {
-  let vkService: Pick<VkService, 'getGroupRecentPosts' | 'iterateGroupPosts' | 'getComments'>;
+  let vkService: Pick<
+    VkService,
+    'getGroupRecentPosts' | 'iterateGroupPosts' | 'getComments'
+  >;
   let commandBus: Pick<CommandBus, 'execute'>;
   let repository: Pick<IParsingTaskRepository, 'updateGroupWall'>;
   let cancellationService: Pick<TaskCancellationService, 'throwIfCancelled'>;
@@ -78,7 +82,9 @@ describe('ProcessGroupHandler', () => {
   beforeEach(() => {
     vkService = {
       getGroupRecentPosts: vi.fn().mockResolvedValue([postOne]),
-      iterateGroupPosts: vi.fn().mockReturnValue(makeBatches([[postOne], [postTwo]])),
+      iterateGroupPosts: vi
+        .fn()
+        .mockReturnValue(makeBatches([[postOne], [postTwo]])),
       getComments: vi.fn().mockResolvedValue({
         items: [],
         profiles: [],

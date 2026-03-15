@@ -145,16 +145,10 @@ export class TaskDescriptionParser {
     }
 
     const normalized = value.toLowerCase();
-    if (
-      normalized === ParsingTaskMode.RECENT_POSTS ||
-      normalized === ParsingTaskMode.RECENT_POSTS.toLowerCase()
-    ) {
+    if (normalized === 'recent_posts') {
       return ParsingTaskMode.RECENT_POSTS;
     }
-    if (
-      normalized === ParsingTaskMode.RECHECK_GROUP ||
-      normalized === ParsingTaskMode.RECHECK_GROUP.toLowerCase()
-    ) {
+    if (normalized === 'recheck_group') {
       return ParsingTaskMode.RECHECK_GROUP;
     }
 

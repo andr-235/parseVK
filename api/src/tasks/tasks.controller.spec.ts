@@ -17,7 +17,6 @@ import type { ParsingTaskResult } from './interfaces/parsing-task-result.interfa
 import type { TaskDetail, TaskSummary } from './interfaces/task.interface.js';
 import type { TaskAuditLog } from './interfaces/task-audit-log.interface.js';
 import {
-  CreateParsingTaskCommand,
   ResumeTaskCommand,
   DeleteTaskCommand,
   RefreshTaskCommand,

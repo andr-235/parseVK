@@ -64,7 +64,13 @@ export class ProcessGroupHandler implements ICommandHandler<
             ownerId,
           })) {
             totalPosts += posts.length;
-            await this.processPostsBatch(posts, group, context, taskId, ownerId);
+            await this.processPostsBatch(
+              posts,
+              group,
+              context,
+              taskId,
+              ownerId,
+            );
           }
 
           this.logger.log(

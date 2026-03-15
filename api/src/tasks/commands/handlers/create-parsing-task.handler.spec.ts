@@ -23,7 +23,10 @@ describe('CreateParsingTaskHandler', () => {
   >;
   let parsingQueue: Pick<ParsingQueueService, 'enqueue'>;
   let eventBus: Pick<EventBus, 'publish'>;
-  let taskMapper: Pick<TaskMapper, 'parseTaskStatus' | 'resolveTaskStatus' | 'mapToDetail'>;
+  let taskMapper: Pick<
+    TaskMapper,
+    'parseTaskStatus' | 'resolveTaskStatus' | 'mapToDetail'
+  >;
   let descriptionParser: TaskDescriptionParser;
   let handler: CreateParsingTaskHandler;
 
@@ -50,7 +53,9 @@ describe('CreateParsingTaskHandler', () => {
     };
     groupResolver = {
       resolveGroups: vi.fn().mockResolvedValue(groups),
-      buildTaskTitle: vi.fn().mockReturnValue('Перепроверка группы: Test group'),
+      buildTaskTitle: vi
+        .fn()
+        .mockReturnValue('Перепроверка группы: Test group'),
     };
     parsingQueue = {
       enqueue: vi.fn().mockResolvedValue(undefined),

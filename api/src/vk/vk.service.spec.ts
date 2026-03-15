@@ -99,6 +99,7 @@ describe('VkService (фасад)', () => {
 
   it('iterateGroupPosts делегирует в VkPostsService', () => {
     const expected = (async function* () {
+      await Promise.resolve();
       yield [];
     })();
     vi.mocked(postsMock.iterateGroupPosts).mockReturnValue(expected);

@@ -119,7 +119,14 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
       });
 
       // Complete task
-      await this.completeTask(taskId, context, scope, groupIds, postLimit, mode);
+      await this.completeTask(
+        taskId,
+        context,
+        scope,
+        groupIds,
+        postLimit,
+        mode,
+      );
     } catch (error) {
       if (error instanceof TaskCancelledError) {
         this.logger.warn(`Задача ${taskId} отменена пользователем`);
