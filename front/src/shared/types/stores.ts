@@ -106,7 +106,10 @@ export interface TasksState {
   /** Признак активного WebSocket-соединения для задач. */
   isSocketConnected: boolean
   fetchTasks: () => Promise<void>
-  createParseTask: (groupIds: Array<number | string>) => Promise<number | string | null>
+  createParseTask: (payload: {
+    groupIds: Array<number | string>
+    mode: 'recent_posts' | 'recheck_group'
+  }) => Promise<number | string | null>
   fetchTaskDetails: (taskId: number | string) => Promise<TaskDetails | null>
   getTaskDetails: (taskId: number | string) => TaskDetails | undefined
   resumeTask: (taskId: number | string) => Promise<boolean>

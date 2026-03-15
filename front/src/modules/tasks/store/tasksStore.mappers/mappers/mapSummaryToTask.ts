@@ -36,7 +36,7 @@ export const mapSummaryToTask = (summary: IParsingTaskSummary): Task => {
   logDebug('mapSummaryToTask parsed description:', description)
 
   // Извлекаем базовые данные
-  const { title, scope, skippedGroupsMessage, postLimit, createdAt, completedAt } = extractTaskData(
+  const { title, scope, mode, skippedGroupsMessage, postLimit, createdAt, completedAt } = extractTaskData(
     summary,
     description,
     summary.status
@@ -190,6 +190,7 @@ export const mapSummaryToTask = (summary: IParsingTaskSummary): Task => {
     failedCount: normalizedFailedCount ?? null,
     title,
     scope,
+    mode,
     skippedGroupsMessage,
     postLimit,
     groupIds: normalizedGroupIds,

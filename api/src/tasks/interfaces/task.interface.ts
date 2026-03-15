@@ -1,4 +1,7 @@
-import type { ParsingScope } from '../dto/create-parsing-task.dto.js';
+import type {
+  ParsingScope,
+  ParsingTaskMode,
+} from '../dto/create-parsing-task.dto.js';
 import type { ParsingStats } from './parsing-stats.interface.js';
 
 export type TaskStatus = 'pending' | 'running' | 'done' | 'failed';
@@ -14,6 +17,7 @@ export interface TaskSummary {
   createdAt: Date;
   updatedAt: Date;
   scope: ParsingScope | null;
+  mode: ParsingTaskMode | null;
   groupIds: number[];
   postLimit: number | null;
   stats: ParsingStats | null;

@@ -341,6 +341,7 @@ export interface IParsingTaskStats {
 
 export interface IParsingTaskDescription {
   groupIds?: Array<number | string>
+  mode?: 'recent_posts' | 'recheck_group' | null
   stats?: IParsingTaskStats | null
   [key: string]: unknown
 }
@@ -363,6 +364,7 @@ export interface IParsingTaskSummary {
   completed?: boolean | null
   state?: string | null
   scope?: string | null
+  mode?: 'recent_posts' | 'recheck_group' | null
   groupIds?: Array<number | string>
   postLimit?: number | null
   skippedGroupsMessage?: string | null

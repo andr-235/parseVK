@@ -75,6 +75,13 @@ export class VkService {
     return this.postsService.getGroupRecentPosts(options);
   }
 
+  iterateGroupPosts(options: {
+    ownerId: number;
+    batchSize?: number;
+  }): AsyncGenerator<IPost[], void, void> {
+    return this.postsService.iterateGroupPosts(options);
+  }
+
   searchGroupsByRegion({ query }: { query?: string }): Promise<IGroup[]> {
     return this.groupsService.searchGroupsByRegion({ query });
   }

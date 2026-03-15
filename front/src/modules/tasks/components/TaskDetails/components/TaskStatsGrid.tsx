@@ -5,6 +5,7 @@ import { formatDate, STATUS_BADGE_BASE, taskStatusClasses } from '../utils/forma
 interface TaskStatsGridProps {
   task: TaskDetailsType
   scopeLabel: string | null
+  modeLabel: string | null
   totalGroups: number
   postsCount: number | null
   commentsCountTotal: number | null
@@ -13,6 +14,7 @@ interface TaskStatsGridProps {
 export const TaskStatsGrid = ({
   task,
   scopeLabel,
+  modeLabel,
   totalGroups,
   postsCount,
   commentsCountTotal,
@@ -49,10 +51,18 @@ export const TaskStatsGrid = ({
       </div>
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
-          Лимит постов
+          Режим
         </p>
-        <p className="text-sm font-medium text-foreground">{task.postLimit ?? '—'}</p>
+        <p className="text-sm font-medium text-foreground">{modeLabel ?? 'Последние посты'}</p>
       </div>
+      {task.mode !== 'recheck_group' && (
+        <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+            Лимит постов
+          </p>
+          <p className="text-sm font-medium text-foreground">{task.postLimit ?? '—'}</p>
+        </div>
+      )}
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
           Всего групп

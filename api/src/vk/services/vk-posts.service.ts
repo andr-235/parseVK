@@ -14,6 +14,24 @@ import {
 import { VkApiRequestManager } from './vk-api-request-manager.service.js';
 import { VK_INSTANCE } from './vk-groups.service.js';
 
+type VkWallComments = {
+  count?: number | null;
+  can_post?: number | null;
+  groups_can_post?: boolean | number | null;
+  can_close?: boolean | number | null;
+  can_open?: boolean | number | null;
+};
+
+type VkWallPost = {
+  id: number;
+  owner_id: number;
+  from_id: number;
+  date: number;
+  text?: string | null;
+  attachments?: unknown;
+  comments?: VkWallComments | null;
+};
+
 @Injectable()
 export class VkPostsService {
   private readonly logger = new Logger(VkPostsService.name);
@@ -75,14 +93,56 @@ export class VkPostsService {
       },
     );
 
-    const normalizeBoolean = (value?: boolean | number | null): boolean => {
-      if (typeof value === 'number') {
-        return value === 1;
-      }
-      return Boolean(value);
-    };
+    const result = this.normalizePosts(response.items ?? []);
 
-    const result = (response.items ?? []).map((item) => ({
+    await this.cacheManager.set(cacheKey, result, CACHE_TTL.VK_POST * 1000);
+
+    return result;
+  }
+
+  async *iterateGroupPosts(options: {
+    ownerId: number;
+    batchSize?: number;
+  }): AsyncGenerator<IPost[], void, void> {
+    const { ownerId, batchSize = VK_POSTS_MAX_COUNT } = options;
+    const normalizedCount = Math.max(
+      1,
+      Math.min(batchSize, VK_POSTS_MAX_COUNT),
+    );
+    let offset = 0;
+
+    while (true) {
+      const response = await this.requestManager.execute(
+        () =>
+          this.vk.api.wall.get({
+            owner_id: ownerId,
+            count: normalizedCount,
+            offset,
+            filter: 'all',
+          }),
+        {
+          method: 'wall.get',
+          key: `wall:${ownerId}`,
+        },
+      );
+
+      const posts = this.normalizePosts(response.items ?? []);
+      if (!posts.length) {
+        break;
+      }
+
+      yield posts;
+
+      if (posts.length < normalizedCount) {
+        break;
+      }
+
+      offset += posts.length;
+    }
+  }
+
+  private normalizePosts(items: VkWallPost[]): IPost[] {
+    return items.map((item) => ({
       id: item.id,
       owner_id: item.owner_id,
       from_id: item.from_id,
@@ -91,21 +151,18 @@ export class VkPostsService {
       attachments: item.attachments,
       comments: {
         count: item.comments?.count ?? 0,
-        can_post: (item.comments?.can_post ?? 0) as number,
-        groups_can_post: normalizeBoolean(
-          item.comments?.groups_can_post as boolean | number | null | undefined,
-        ),
-        can_close: normalizeBoolean(
-          item.comments?.can_close as boolean | number | null | undefined,
-        ),
-        can_open: normalizeBoolean(
-          item.comments?.can_open as boolean | number | null | undefined,
-        ),
+        can_post: item.comments?.can_post ?? 0,
+        groups_can_post: this.normalizeBoolean(item.comments?.groups_can_post),
+        can_close: this.normalizeBoolean(item.comments?.can_close),
+        can_open: this.normalizeBoolean(item.comments?.can_open),
       },
     }));
+  }
 
-    await this.cacheManager.set(cacheKey, result, CACHE_TTL.VK_POST * 1000);
-
-    return result;
+  private normalizeBoolean(value?: boolean | number | null): boolean {
+    if (typeof value === 'number') {
+      return value === 1;
+    }
+    return Boolean(value);
   }
 }

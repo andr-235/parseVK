@@ -125,6 +125,14 @@ const getScopeLabel = (item: Task, totalNormalized: number | null): string | nul
   return item.scope
 }
 
+const getModeLabel = (item: Task): string | null => {
+  if (!item.mode) {
+    return null
+  }
+
+  return item.mode === 'recheck_group' ? 'Режим: перепроверка группы' : 'Режим: последние посты'
+}
+
 const getSkippedLabel = (item: Task): { label: string | null; raw: string } => {
   const skippedPreviewRaw =
     typeof item.skippedGroupsMessage === 'string' ? item.skippedGroupsMessage.trim() : ''
@@ -177,8 +185,11 @@ const columns: TableColumn<Task>[] = [
       const totalNormalized = total > 0 ? total : null
 
       const scopeLabel = getScopeLabel(item, totalNormalized)
+      const modeLabel = getModeLabel(item)
       const postLimitValue =
-        typeof item.postLimit === 'number' && Number.isFinite(item.postLimit)
+        item.mode !== 'recheck_group' &&
+        typeof item.postLimit === 'number' &&
+        Number.isFinite(item.postLimit)
           ? item.postLimit
           : null
       const { label: skippedLabel, raw: skippedPreviewRaw } = getSkippedLabel(item)
@@ -191,6 +202,7 @@ const columns: TableColumn<Task>[] = [
         processingCount > 0 ||
         pendingCount > 0 ||
         scopeLabel !== null ||
+        modeLabel !== null ||
         postLimitValue !== null ||
         hasSkipped
 
@@ -220,6 +232,7 @@ const columns: TableColumn<Task>[] = [
           {hasMeta && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-relaxed text-text-secondary">
               {scopeLabel && <span className="whitespace-nowrap">{scopeLabel}</span>}
+              {modeLabel && <span className="whitespace-nowrap text-cyan-300">{modeLabel}</span>}
               {postLimitValue !== null && (
                 <span className="whitespace-nowrap">{`Лимит постов: ${postLimitValue}`}</span>
               )}

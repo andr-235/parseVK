@@ -18,6 +18,7 @@ import type {
 } from '@/tasks/interfaces/parsing-task-runner.types.js';
 import type { ParsingGroupRecord } from '@/tasks/interfaces/parsing-task-repository.interface.js';
 import { GetCommentsResponse } from '@/vk/vk.service.js';
+import { ParsingTaskMode } from '@/tasks/dto/create-parsing-task.dto.js';
 import {
   TASK_COMMENTS_BATCH_SIZE,
   TASK_COMMENTS_THREAD_ITEMS_COUNT,
@@ -40,7 +41,7 @@ export class ProcessGroupHandler implements ICommandHandler<
   ) {}
 
   async execute(command: ProcessGroupCommand): Promise<boolean> {
-    const { taskId, group, postLimit, context } = command;
+    const { taskId, group, mode, postLimit, context } = command;
     const ownerId = this.toGroupOwnerId(group.vkId);
 
     try {
@@ -55,13 +56,41 @@ export class ProcessGroupHandler implements ICommandHandler<
         return false;
       }
 
-      // Fetch posts
-      let posts: IPost[];
       try {
-        posts = await this.vkService.getGroupRecentPosts({
+        if (mode === ParsingTaskMode.RECHECK_GROUP) {
+          let totalPosts = 0;
+
+          for await (const posts of this.vkService.iterateGroupPosts({
+            ownerId,
+          })) {
+            totalPosts += posts.length;
+            await this.processPostsBatch(
+              posts,
+              group,
+              context,
+              taskId,
+              ownerId,
+            );
+          }
+
+          this.logger.log(
+            `Задача ${taskId}: получено ${totalPosts} постов для группы ${group.vkId}`,
+          );
+
+          return true;
+        }
+
+        const posts = await this.vkService.getGroupRecentPosts({
           ownerId,
-          count: postLimit,
+          count: postLimit ?? undefined,
         });
+
+        this.logger.log(
+          `Задача ${taskId}: получено ${posts.length} постов для группы ${group.vkId}`,
+        );
+
+        await this.processPostsBatch(posts, group, context, taskId, ownerId);
+        return true;
       } catch (error) {
         if (this.isWallDisabledApiError(error)) {
           this.handleSkippedGroup(context, group);
@@ -73,56 +102,6 @@ export class ProcessGroupHandler implements ICommandHandler<
         }
         throw error;
       }
-
-      this.logger.log(
-        `Задача ${taskId}: получено ${posts.length} постов для группы ${group.vkId}`,
-      );
-
-      // Process each post
-      for (const post of posts) {
-        this.cancellationService.throwIfCancelled(taskId);
-
-        // Save post via command
-        await this.commandBus.execute(new SavePostCommand(post, group));
-        context.stats.posts += 1;
-
-        // Fetch and save comments
-        const { comments, authorIds } = await this.fetchAllComments(
-          ownerId,
-          post.id,
-          taskId,
-        );
-
-        const newAuthorIds = this.extractNewAuthorIds(
-          authorIds,
-          context.processedAuthorIds,
-        );
-
-        if (newAuthorIds.length) {
-          this.cancellationService.throwIfCancelled(taskId);
-          const createdOrUpdated: number = await this.commandBus.execute(
-            new SaveAuthorsCommand(newAuthorIds),
-          );
-          context.stats.authors += createdOrUpdated;
-          newAuthorIds.forEach((id) => context.processedAuthorIds.add(id));
-          this.logger.debug(
-            `Задача ${taskId}: обновлено ${createdOrUpdated} авторов после поста ${post.id} группы ${group.vkId}`,
-          );
-        }
-
-        if (comments.length) {
-          this.cancellationService.throwIfCancelled(taskId);
-          const savedCount: number = await this.commandBus.execute(
-            new SaveCommentsCommand(comments, CommentSource.TASK),
-          );
-          context.stats.comments += savedCount;
-          this.logger.debug(
-            `Задача ${taskId}: сохранено ${savedCount} комментариев для поста ${post.id} группы ${group.vkId}`,
-          );
-        }
-      }
-
-      return true;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -140,6 +119,55 @@ export class ProcessGroupHandler implements ICommandHandler<
         `Задача ${taskId}: ошибка при обработке группы ${group.vkId}: ${errorText}`,
       );
       return false;
+    }
+  }
+
+  private async processPostsBatch(
+    posts: IPost[],
+    group: ParsingGroupRecord,
+    context: TaskProcessingContext,
+    taskId: number,
+    ownerId: number,
+  ): Promise<void> {
+    for (const post of posts) {
+      this.cancellationService.throwIfCancelled(taskId);
+
+      await this.commandBus.execute(new SavePostCommand(post, group));
+      context.stats.posts += 1;
+
+      const { comments, authorIds } = await this.fetchAllComments(
+        ownerId,
+        post.id,
+        taskId,
+      );
+
+      const newAuthorIds = this.extractNewAuthorIds(
+        authorIds,
+        context.processedAuthorIds,
+      );
+
+      if (newAuthorIds.length) {
+        this.cancellationService.throwIfCancelled(taskId);
+        const createdOrUpdated: number = await this.commandBus.execute(
+          new SaveAuthorsCommand(newAuthorIds),
+        );
+        context.stats.authors += createdOrUpdated;
+        newAuthorIds.forEach((id) => context.processedAuthorIds.add(id));
+        this.logger.debug(
+          `Задача ${taskId}: обновлено ${createdOrUpdated} авторов после поста ${post.id} группы ${group.vkId}`,
+        );
+      }
+
+      if (comments.length) {
+        this.cancellationService.throwIfCancelled(taskId);
+        const savedCount: number = await this.commandBus.execute(
+          new SaveCommentsCommand(comments, CommentSource.TASK),
+        );
+        context.stats.comments += savedCount;
+        this.logger.debug(
+          `Задача ${taskId}: сохранено ${savedCount} комментариев для поста ${post.id} группы ${group.vkId}`,
+        );
+      }
     }
   }
 

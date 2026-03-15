@@ -13,6 +13,11 @@ export enum ParsingScope {
   SELECTED = 'selected',
 }
 
+export enum ParsingTaskMode {
+  RECENT_POSTS = 'recent_posts',
+  RECHECK_GROUP = 'recheck_group',
+}
+
 export class CreateParsingTaskDto {
   @IsOptional()
   @IsEnum(ParsingScope)
@@ -29,4 +34,8 @@ export class CreateParsingTaskDto {
   @Min(1)
   @Max(100)
   postLimit?: number;
+
+  @IsOptional()
+  @IsEnum(ParsingTaskMode)
+  mode?: ParsingTaskMode;
 }

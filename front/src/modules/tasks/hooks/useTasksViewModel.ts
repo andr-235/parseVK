@@ -118,14 +118,18 @@ export const useTasksViewModel = () => {
   }, [areGroupsLoading, hasGroups, fetchAllGroups])
 
   const handleCreateTask = useCallback(
-    async (groupIds: Array<number | string>) => {
+    async (payload: {
+      groupIds: Array<number | string>
+      mode: 'recent_posts' | 'recheck_group'
+    }) => {
+      const { groupIds } = payload
       if (groupIds.length === 0) {
         toast.error('Выберите хотя бы одну группу для парсинга')
         return
       }
 
       try {
-        const taskId = await createParseTask(groupIds)
+        const taskId = await createParseTask(payload)
 
         if (taskId != null) {
           setSelectedTaskId(taskId)

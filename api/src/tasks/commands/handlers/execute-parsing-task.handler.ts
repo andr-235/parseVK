@@ -30,7 +30,10 @@ import {
   TaskCompletedEvent,
   TaskFailedEvent,
 } from '@/tasks/events/index.js';
-import type { ParsingScope } from '@/tasks/dto/create-parsing-task.dto.js';
+import type {
+  ParsingScope,
+  ParsingTaskMode,
+} from '@/tasks/dto/create-parsing-task.dto.js';
 
 @Injectable()
 @CommandHandler(ExecuteParsingTaskCommand)
@@ -51,10 +54,10 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
   ) {}
 
   async execute(command: ExecuteParsingTaskCommand): Promise<void> {
-    const { taskId, scope, groupIds, postLimit } = command;
+    const { taskId, scope, groupIds, postLimit, mode } = command;
 
     this.logger.log(
-      `Запуск парсинга задачи ${taskId}: scope=${scope}, количество групп=${groupIds.length}, лимит постов=${postLimit}`,
+      `Запуск парсинга задачи ${taskId}: scope=${scope}, количество групп=${groupIds.length}, лимит постов=${postLimit}, mode=${mode}`,
     );
 
     this.cancellationService.throwIfCancelled(taskId);
@@ -82,6 +85,7 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
         scope,
         groupIds,
         postLimit,
+        mode,
       );
       return;
     }
@@ -108,20 +112,36 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
       // Process all groups
       await this.processGroups({
         groups,
+        mode,
         postLimit,
         context,
         taskId,
       });
 
       // Complete task
-      await this.completeTask(taskId, context, scope, groupIds, postLimit);
+      await this.completeTask(
+        taskId,
+        context,
+        scope,
+        groupIds,
+        postLimit,
+        mode,
+      );
     } catch (error) {
       if (error instanceof TaskCancelledError) {
         this.logger.warn(`Задача ${taskId} отменена пользователем`);
         throw error;
       }
 
-      await this.failTask(taskId, error, context, scope, groupIds, postLimit);
+      await this.failTask(
+        taskId,
+        error,
+        context,
+        scope,
+        groupIds,
+        postLimit,
+        mode,
+      );
       throw error;
     } finally {
       this.cancellationService.clear(taskId);
@@ -131,11 +151,12 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
   // Process all groups
   private async processGroups(params: {
     groups: ParsingGroupRecord[];
-    postLimit: number;
+    mode: ParsingTaskMode;
+    postLimit: number | null;
     context: TaskProcessingContext;
     taskId: number;
   }): Promise<void> {
-    const { groups, postLimit, context, taskId } = params;
+    const { groups, mode, postLimit, context, taskId } = params;
 
     this.cancellationService.throwIfCancelled(taskId);
 
@@ -164,7 +185,7 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
 
       // Delegate to ProcessGroupCommand
       const shouldUpdateProgress = await this.commandBus.execute<boolean>(
-        new ProcessGroupCommand(group, postLimit, context, taskId),
+        new ProcessGroupCommand(group, mode, postLimit, context, taskId),
       );
 
       if (shouldUpdateProgress) {
@@ -194,7 +215,8 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
     context: TaskProcessingContext,
     scope: ParsingScope,
     groupIds: number[],
-    postLimit: number,
+    postLimit: number | null,
+    mode: ParsingTaskMode,
   ): Promise<void> {
     const skippedGroupsMessage = this.buildSkippedGroupsMessage(
       context.skippedGroupVkIds,
@@ -208,6 +230,7 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
       description: JSON.stringify({
         scope,
         groupIds,
+        mode,
         postLimit,
         stats: context.stats,
         skippedGroupsMessage: skippedGroupsMessage ?? undefined,
@@ -259,7 +282,8 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
     context?: TaskProcessingContext,
     scope?: ParsingScope,
     groupIds?: number[],
-    postLimit?: number,
+    postLimit?: number | null,
+    mode?: ParsingTaskMode,
   ): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const skippedGroupsMessage = context
@@ -271,6 +295,7 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
       description: JSON.stringify({
         scope,
         groupIds,
+        mode,
         postLimit,
         error: errorMessage,
         skippedGroupsMessage: skippedGroupsMessage ?? undefined,

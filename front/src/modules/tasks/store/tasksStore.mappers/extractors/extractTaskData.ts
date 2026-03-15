@@ -4,6 +4,7 @@ import type { UnknownRecord } from '../../tasksStore.utils'
 export interface ExtractedTaskData {
   title: string | null
   scope: string | null
+  mode: string | null
   skippedGroupsMessage: string | null
   postLimit: number | null
   createdAt: string
@@ -24,6 +25,11 @@ export const extractTaskData = (
   const scopeValue = firstDefined<string | null>(
     source.scope as string,
     description?.scope as string
+  )
+
+  const modeValue = firstDefined<string | null>(
+    source.mode as string,
+    description?.mode as string
   )
 
   const skippedGroupsMessage = firstDefined<string | null>(
@@ -47,6 +53,7 @@ export const extractTaskData = (
   return {
     title: typeof rawTitle === 'string' ? rawTitle : null,
     scope: scopeValue ?? null,
+    mode: modeValue ?? null,
     skippedGroupsMessage: skippedGroupsMessage ?? null,
     postLimit: postLimitValue ?? null,
     createdAt,

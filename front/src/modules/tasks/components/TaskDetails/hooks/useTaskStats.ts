@@ -10,6 +10,13 @@ export const useTaskStats = (task: TaskDetailsType | undefined) => {
 
     const overallProgress = calculateTaskProgress(task)
 
+    const modeLabel =
+      task.mode === 'recheck_group'
+        ? 'Перепроверка группы'
+        : task.mode === 'recent_posts'
+          ? 'Последние посты'
+          : null
+
     // Scope label
     const scopeLabel = (() => {
       if (!task.scope) {
@@ -95,6 +102,7 @@ export const useTaskStats = (task: TaskDetailsType | undefined) => {
     return {
       overallProgress,
       scopeLabel,
+      modeLabel,
       successCount,
       failedCount,
       processingCountStat,

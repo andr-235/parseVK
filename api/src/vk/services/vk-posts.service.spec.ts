@@ -126,4 +126,63 @@ describe('VkPostsService', () => {
       );
     });
   });
+
+  describe('iterateGroupPosts', () => {
+    it('обходит все посты группы постранично до пустой страницы', async () => {
+      const { service, api } = createService();
+      api.wall.get
+        .mockResolvedValueOnce({
+          items: [
+            {
+              id: 1,
+              owner_id: -1,
+              from_id: 10,
+              date: 1700000000,
+              text: 'one',
+              comments: { count: 0, can_post: 1 },
+            },
+            {
+              id: 2,
+              owner_id: -1,
+              from_id: 11,
+              date: 1700000100,
+              text: 'two',
+              comments: { count: 1, can_post: 1 },
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          items: [
+            {
+              id: 3,
+              owner_id: -1,
+              from_id: 12,
+              date: 1700000200,
+              text: 'three',
+              comments: { count: 2, can_post: 0 },
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ items: [] });
+
+      const batches: number[][] = [];
+
+      for await (const batch of service.iterateGroupPosts({
+        ownerId: -1,
+        batchSize: 2,
+      })) {
+        batches.push(batch.map((post) => post.id));
+      }
+
+      expect(batches).toEqual([[1, 2], [3]]);
+      expect(api.wall.get).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ owner_id: -1, count: 2, offset: 0 }),
+      );
+      expect(api.wall.get).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ owner_id: -1, count: 2, offset: 2 }),
+      );
+    });
+  });
 });

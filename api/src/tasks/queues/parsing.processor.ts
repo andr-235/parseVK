@@ -41,10 +41,10 @@ export class ParsingProcessor extends WorkerHost {
   }
 
   async process(job: Job<ParsingTaskJobData>): Promise<void> {
-    const { taskId, scope, groupIds, postLimit } = job.data;
+    const { taskId, scope, groupIds, postLimit, mode } = job.data;
 
     this.logger.log(
-      `Начало обработки задачи ${taskId} (scope: ${scope}, groups: ${groupIds.length}, postLimit: ${postLimit})`,
+      `Начало обработки задачи ${taskId} (scope: ${scope}, groups: ${groupIds.length}, postLimit: ${postLimit}, mode: ${mode})`,
     );
 
     let timeoutHandle: NodeJS.Timeout | null = null;
@@ -55,7 +55,7 @@ export class ParsingProcessor extends WorkerHost {
 
       // Выполняем парсинг через CommandBus
       const commandPromise = this.commandBus.execute(
-        new ExecuteParsingTaskCommand(taskId, scope, groupIds, postLimit),
+        new ExecuteParsingTaskCommand(taskId, scope, groupIds, postLimit, mode),
       );
 
       const timeoutPromise = new Promise<never>((_, reject) => {
