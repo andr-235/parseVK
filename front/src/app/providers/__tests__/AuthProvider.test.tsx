@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { useAuthStore } from '@/modules/auth/store'
 
-const {
-  refreshAccessTokenMock,
-  isTokenExpiredMock,
-  getRefreshDelayMsMock,
-} = vi.hoisted(() => ({
+const { refreshAccessTokenMock, isTokenExpiredMock, getRefreshDelayMsMock } = vi.hoisted(() => ({
   refreshAccessTokenMock: vi.fn().mockResolvedValue('next-access-token'),
   isTokenExpiredMock: vi.fn(() => false),
   getRefreshDelayMsMock: vi.fn(() => 1_000),
@@ -49,7 +45,7 @@ describe('AuthProvider', () => {
     render(
       <AuthProvider>
         <div>app</div>
-      </AuthProvider>,
+      </AuthProvider>
     )
 
     expect(await screen.findByText('app')).toBeInTheDocument()
@@ -67,7 +63,7 @@ describe('AuthProvider', () => {
     render(
       <AuthProvider>
         <div>app</div>
-      </AuthProvider>,
+      </AuthProvider>
     )
 
     await waitFor(() => {

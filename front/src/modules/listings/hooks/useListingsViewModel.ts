@@ -89,16 +89,19 @@ export const useListingsViewModel = () => {
         ? Number.parseInt(cursor, 10)
         : undefined
 
-    const response = await listingsService.fetchListings({
-      page: cursorAsPage ?? page ?? 1,
-      pageSize: limit,
-      search: params?.search,
-      source: params?.source,
-      archived: params?.archived,
-      sortBy: params?.sortBy,
-      sortOrder: params?.sortOrder,
-      signal,
-    }, { silent: true })
+    const response = await listingsService.fetchListings(
+      {
+        page: cursorAsPage ?? page ?? 1,
+        pageSize: limit,
+        search: params?.search,
+        source: params?.source,
+        archived: params?.archived,
+        sortBy: params?.sortBy,
+        sortOrder: params?.sortOrder,
+        signal,
+      },
+      { silent: true }
+    )
 
     return {
       items: response.items,

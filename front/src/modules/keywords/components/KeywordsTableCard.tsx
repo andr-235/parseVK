@@ -54,10 +54,7 @@ function KeywordsTableCard({
 
   const hasKeywords = keywords.length > 0
   const hasFilteredKeywords = sortedKeywords.length > 0
-  const groupedKeywords = useMemo(
-    () => groupKeywordsByCategory(sortedKeywords),
-    [sortedKeywords]
-  )
+  const groupedKeywords = useMemo(() => groupKeywordsByCategory(sortedKeywords), [sortedKeywords])
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
 
   const toggleCategory = (category: string) => {

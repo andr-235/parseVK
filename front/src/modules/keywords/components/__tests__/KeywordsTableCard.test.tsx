@@ -7,13 +7,9 @@ vi.mock('@/shared/ui/dropdown-menu', () => ({
   DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuItem: ({
-    children,
-    onClick,
-  }: {
-    children: ReactNode
-    onClick?: () => void
-  }) => <button onClick={onClick}>{children}</button>,
+  DropdownMenuItem: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick}>{children}</button>
+  ),
 }))
 
 describe('KeywordsTableCard', () => {

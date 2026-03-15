@@ -43,7 +43,9 @@ function AppSyncProvider(): null {
   useTaskAutomationQuery({ enabled: isAuthenticated })
   useGroupsQuery({ enabled: isAuthenticated && syncGroups })
   useKeywordsQuery({ enabled: isAuthenticated && syncKeywords })
-  useCommentsQuery({ enabled: isAuthenticated && syncComments && keywordsReady && commentsQueryEnabled })
+  useCommentsQuery({
+    enabled: isAuthenticated && syncComments && keywordsReady && commentsQueryEnabled,
+  })
   useAuthorsQuery(isAuthenticated && syncAuthors)
   useWatchlistAuthorsQuery(isAuthenticated && syncWatchlist)
   useWatchlistSettingsQuery(isAuthenticated && syncWatchlist)

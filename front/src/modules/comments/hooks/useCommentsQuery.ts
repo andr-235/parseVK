@@ -74,7 +74,11 @@ const applyQueryDataToStore = (data: CommentsQueryData) => {
   })
 }
 
-export const shouldNotifyCommentsSyncError = (enabled: boolean, hasError: boolean, hasComments: boolean) => {
+export const shouldNotifyCommentsSyncError = (
+  enabled: boolean,
+  hasError: boolean,
+  hasComments: boolean
+) => {
   return enabled && hasError && !hasComments
 }
 

@@ -19,7 +19,9 @@ describe('watchlistService', () => {
 
   it('suppresses error toast for silent getAuthors requests', async () => {
     const { watchlistService } = await import('../watchlist.api')
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 503 })) as typeof fetch
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 503 })) as typeof fetch
 
     await expect(
       watchlistService.getAuthors({ offset: 0, limit: 20, excludeStopped: true }, { silent: true })
@@ -30,12 +32,16 @@ describe('watchlistService', () => {
 
   it('keeps error toast for interactive getAuthors requests', async () => {
     const { watchlistService } = await import('../watchlist.api')
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 503 })) as typeof fetch
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 503 })) as typeof fetch
 
     await expect(
       watchlistService.getAuthors({ offset: 0, limit: 20, excludeStopped: true })
     ).rejects.toThrow()
 
-    expect(toastErrorMock).toHaveBeenCalledWith('Не удалось загрузить список авторов "На карандаше"')
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      'Не удалось загрузить список авторов "На карандаше"'
+    )
   })
 })

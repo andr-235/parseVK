@@ -36,11 +36,8 @@ export const mapSummaryToTask = (summary: IParsingTaskSummary): Task => {
   logDebug('mapSummaryToTask parsed description:', description)
 
   // Извлекаем базовые данные
-  const { title, scope, mode, skippedGroupsMessage, postLimit, createdAt, completedAt } = extractTaskData(
-    summary,
-    description,
-    summary.status
-  )
+  const { title, scope, mode, skippedGroupsMessage, postLimit, createdAt, completedAt } =
+    extractTaskData(summary, description, summary.status)
 
   // Извлекаем groupIds
   const { groupIds: normalizedGroupIds, groupIdsCount } = extractGroupIds(summary, description)

@@ -216,9 +216,7 @@ function CreateParseTaskModal({
             className="group relative h-11 overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <span className="relative">
-              {isLoading ? 'Создание...' : 'Перепроверить группу'}
-            </span>
+            <span className="relative">{isLoading ? 'Создание...' : 'Перепроверить группу'}</span>
           </Button>
         </footer>
 

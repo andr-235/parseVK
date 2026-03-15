@@ -27,10 +27,7 @@ export const extractTaskData = (
     description?.scope as string
   )
 
-  const modeValue = firstDefined<string | null>(
-    source.mode as string,
-    description?.mode as string
-  )
+  const modeValue = firstDefined<string | null>(source.mode as string, description?.mode as string)
 
   const skippedGroupsMessage = firstDefined<string | null>(
     source.skippedGroupsMessage as string,

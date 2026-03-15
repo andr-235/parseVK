@@ -19,7 +19,9 @@ describe('listingsService.fetchListings', () => {
 
   it('suppresses error toast for silent listings fetches', async () => {
     const { listingsService } = await import('../listings.api')
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 503 })) as typeof fetch
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 503 })) as typeof fetch
 
     await expect(
       listingsService.fetchListings(
@@ -36,7 +38,9 @@ describe('listingsService.fetchListings', () => {
 
   it('keeps error toast for non-silent listings fetches', async () => {
     const { listingsService } = await import('../listings.api')
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 503 })) as typeof fetch
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 503 })) as typeof fetch
 
     await expect(
       listingsService.fetchListings({
