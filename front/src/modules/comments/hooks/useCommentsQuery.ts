@@ -47,6 +47,10 @@ const applyQueryDataToStore = (data: CommentsQueryData) => {
   })
 }
 
+export const shouldNotifyCommentsSyncError = (enabled: boolean, hasError: boolean, hasComments: boolean) => {
+  return enabled && hasError && !hasComments
+}
+
 interface UseCommentsQueryOptions {
   enabled?: boolean
 }
@@ -87,7 +91,8 @@ export const useCommentsQuery = (options?: UseCommentsQueryOptions) => {
   }, [enabled, query.isFetching])
 
   useEffect(() => {
-    if (!enabled || !query.error) {
+    const hasComments = useCommentsStore.getState().comments.length > 0
+    if (!shouldNotifyCommentsSyncError(enabled, Boolean(query.error), hasComments)) {
       return
     }
 
