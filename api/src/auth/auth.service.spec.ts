@@ -5,9 +5,9 @@ import type { UserAuthRecord } from '../users/types/user.types.js';
 
 vi.mock('./password-hash.js', () => ({
   hashSecret: vi.fn(async (value: string) => `hashed:${value}`),
-  verifyAndMaybeRehash: vi.fn(
-    async (secret: string, storedHash: string) => ({ ok: secret === storedHash }),
-  ),
+  verifyAndMaybeRehash: vi.fn(async (secret: string, storedHash: string) => ({
+    ok: secret === storedHash,
+  })),
 }));
 
 describe('AuthService', () => {
@@ -41,32 +41,40 @@ describe('AuthService', () => {
       findByUsername: vi.fn(async (username: string) =>
         username === user.username ? { ...user } : null,
       ),
-      findById: vi.fn(async (id: number) => (id === user.id ? { ...user } : null)),
-      updateRefreshTokenHash: vi.fn(async (userId: number, refreshToken: string | null) => {
-        if (userId === user.id) {
-          user.refreshTokenHash = refreshToken;
-        }
-      }),
-      setRefreshTokenHash: vi.fn(async (userId: number, refreshTokenHash: string | null) => {
-        if (userId === user.id) {
-          user.refreshTokenHash = refreshTokenHash;
-        }
-      }),
+      findById: vi.fn(async (id: number) =>
+        id === user.id ? { ...user } : null,
+      ),
+      updateRefreshTokenHash: vi.fn(
+        async (userId: number, refreshToken: string | null) => {
+          if (userId === user.id) {
+            user.refreshTokenHash = refreshToken;
+          }
+        },
+      ),
+      setRefreshTokenHash: vi.fn(
+        async (userId: number, refreshTokenHash: string | null) => {
+          if (userId === user.id) {
+            user.refreshTokenHash = refreshTokenHash;
+          }
+        },
+      ),
       setPassword: vi.fn(),
     };
 
     let accessCounter = 0;
     let refreshCounter = 0;
     jwtService = {
-      signAsync: vi.fn(async (_payload: unknown, options?: { expiresIn?: string }) => {
-        if (options?.expiresIn?.endsWith('m')) {
-          accessCounter += 1;
-          return `access-token-${accessCounter}`;
-        }
+      signAsync: vi.fn(
+        async (_payload: unknown, options?: { expiresIn?: string }) => {
+          if (options?.expiresIn?.endsWith('m')) {
+            accessCounter += 1;
+            return `access-token-${accessCounter}`;
+          }
 
-        refreshCounter += 1;
-        return `refresh-token-${refreshCounter}`;
-      }),
+          refreshCounter += 1;
+          return `refresh-token-${refreshCounter}`;
+        },
+      ),
     };
 
     configService = {
@@ -88,7 +96,10 @@ describe('AuthService', () => {
 
   it('rejects an outdated refresh token after successful rotation', async () => {
     const firstLogin = await authService.login('admin', 'password');
-    const secondLogin = await authService.refreshTokens(user.id, firstLogin.refreshToken);
+    const secondLogin = await authService.refreshTokens(
+      user.id,
+      firstLogin.refreshToken,
+    );
 
     await expect(
       authService.refreshTokens(user.id, firstLogin.refreshToken),
@@ -101,8 +112,14 @@ describe('AuthService', () => {
 
   it('accepts the most recently issued refresh token', async () => {
     const firstLogin = await authService.login('admin', 'password');
-    const secondLogin = await authService.refreshTokens(user.id, firstLogin.refreshToken);
-    const thirdLogin = await authService.refreshTokens(user.id, secondLogin.refreshToken);
+    const secondLogin = await authService.refreshTokens(
+      user.id,
+      firstLogin.refreshToken,
+    );
+    const thirdLogin = await authService.refreshTokens(
+      user.id,
+      secondLogin.refreshToken,
+    );
 
     expect(thirdLogin.accessToken).toBe('access-token-3');
     expect(thirdLogin.refreshToken).toBe('refresh-token-3');
