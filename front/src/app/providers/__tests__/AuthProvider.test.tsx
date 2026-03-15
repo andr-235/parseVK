@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { useAuthStore } from '@/modules/auth/store'
 
 const {
@@ -36,26 +36,27 @@ describe('AuthProvider', () => {
   })
 
   afterEach(() => {
-    useAuthStore.getState().clearAuth()
+    cleanup()
+
+    act(() => {
+      useAuthStore.getState().clearAuth()
+    })
   })
 
   it('schedules refresh before access token expires', async () => {
     const setTimeoutSpy = vi.spyOn(window, 'setTimeout')
 
-    await act(async () => {
-      render(
-        <AuthProvider>
-          <div>app</div>
-        </AuthProvider>,
-      )
+    render(
+      <AuthProvider>
+        <div>app</div>
+      </AuthProvider>,
+    )
 
-      await Promise.resolve()
-      await Promise.resolve()
+    expect(await screen.findByText('app')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(getRefreshDelayMsMock).toHaveBeenCalledWith('valid-access-token')
+      expect(setTimeoutSpy).toHaveBeenCalled()
     })
-
-    expect(screen.getByText('app')).toBeInTheDocument()
-    expect(getRefreshDelayMsMock).toHaveBeenCalledWith('valid-access-token')
-    expect(setTimeoutSpy).toHaveBeenCalled()
     expect(setTimeoutSpy.mock.calls[0]?.[1]).toBe(1_000)
   })
 
@@ -63,21 +64,18 @@ describe('AuthProvider', () => {
     isTokenExpiredMock.mockReturnValue(true)
     refreshAccessTokenMock.mockResolvedValue(null)
 
-    await act(async () => {
-      render(
-        <AuthProvider>
-          <div>app</div>
-        </AuthProvider>,
-      )
+    render(
+      <AuthProvider>
+        <div>app</div>
+      </AuthProvider>,
+    )
 
-      await Promise.resolve()
-      await Promise.resolve()
+    await waitFor(() => {
+      expect(refreshAccessTokenMock).toHaveBeenCalledTimes(1)
+      expect(useAuthStore.getState().accessToken).toBeNull()
+      expect(useAuthStore.getState().refreshToken).toBeNull()
+      expect(useAuthStore.getState().user).toBeNull()
     })
-
-    expect(refreshAccessTokenMock).toHaveBeenCalledTimes(1)
-    expect(useAuthStore.getState().accessToken).toBeNull()
-    expect(useAuthStore.getState().refreshToken).toBeNull()
-    expect(useAuthStore.getState().user).toBeNull()
     await waitFor(() => {
       expect(screen.getByText('app')).toBeInTheDocument()
     })
