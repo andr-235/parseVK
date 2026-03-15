@@ -32,6 +32,20 @@ export const isTokenExpired = (token: string, leewaySeconds = 30): boolean => {
 
 let refreshPromise: Promise<string | null> | null = null
 
+const isFatalRefreshStatus = (status: number): boolean => status === 401 || status === 403
+
+export const getRefreshDelayMs = (token: string, leewaySeconds = 60): number => {
+  const payload = parseJwtPayload(token)
+  const exp = typeof payload?.exp === 'number' ? payload.exp : null
+
+  if (!exp) {
+    return 0
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  return Math.max(0, (exp - now - leewaySeconds) * 1000)
+}
+
 export const refreshAccessToken = async (): Promise<string | null> => {
   if (refreshPromise) {
     return refreshPromise
@@ -54,7 +68,9 @@ export const refreshAccessToken = async (): Promise<string | null> => {
       })
 
       if (!response.ok) {
-        clearAuth()
+        if (isFatalRefreshStatus(response.status)) {
+          clearAuth()
+        }
         return null
       }
 
@@ -66,7 +82,6 @@ export const refreshAccessToken = async (): Promise<string | null> => {
       })
       return data.accessToken
     } catch {
-      useAuthStore.getState().clearAuth()
       return null
     } finally {
       refreshPromise = null

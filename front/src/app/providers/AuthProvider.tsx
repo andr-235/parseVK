@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Spinner } from '@/shared/ui/spinner'
-import { isTokenExpired, refreshAccessToken } from '@/modules/auth'
+import { getRefreshDelayMs, isTokenExpired, refreshAccessToken } from '@/modules/auth'
 import { useAuthStore } from '@/modules/auth/store'
 
 interface AuthProviderProps {
@@ -29,6 +29,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return () => {
       isMounted = false
+    }
+  }, [accessToken, refreshToken])
+
+  useEffect(() => {
+    if (!accessToken || !refreshToken) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void refreshAccessToken()
+    }, getRefreshDelayMs(accessToken))
+
+    return () => {
+      window.clearTimeout(timeoutId)
     }
   }, [accessToken, refreshToken])
 
