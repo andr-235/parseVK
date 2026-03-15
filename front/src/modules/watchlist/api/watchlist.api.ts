@@ -15,8 +15,15 @@ interface ListParams {
   excludeStopped?: boolean
 }
 
+interface WatchlistRequestOptions {
+  silent?: boolean
+}
+
 export const watchlistService = {
-  async getAuthors(params?: ListParams): Promise<IWatchlistAuthorListResponse> {
+  async getAuthors(
+    params?: ListParams,
+    options?: WatchlistRequestOptions
+  ): Promise<IWatchlistAuthorListResponse> {
     try {
       const query = buildQueryString({
         offset: params?.offset,
@@ -31,7 +38,9 @@ export const watchlistService = {
         'Не удалось загрузить список авторов "На карандаше"'
       )
     } catch (error) {
-      toast.error('Не удалось загрузить список авторов "На карандаше"')
+      if (!options?.silent) {
+        toast.error('Не удалось загрузить список авторов "На карандаше"')
+      }
       throw error
     }
   },
@@ -60,7 +69,8 @@ export const watchlistService = {
 
   async getAuthorDetails(
     id: number,
-    params?: ListParams
+    params?: ListParams,
+    options?: WatchlistRequestOptions
   ): Promise<IWatchlistAuthorDetailsResponse> {
     try {
       const query = buildQueryString({
@@ -78,7 +88,9 @@ export const watchlistService = {
         'Не удалось загрузить данные автора "На карандаше"'
       )
     } catch (error) {
-      toast.error('Не удалось загрузить данные автора "На карандаше"')
+      if (!options?.silent) {
+        toast.error('Не удалось загрузить данные автора "На карандаше"')
+      }
       throw error
     }
   },
@@ -103,7 +115,7 @@ export const watchlistService = {
     }
   },
 
-  async getSettings(): Promise<IWatchlistSettingsResponse> {
+  async getSettings(options?: WatchlistRequestOptions): Promise<IWatchlistSettingsResponse> {
     try {
       const response = await createRequest(`${API_URL}/watchlist/settings`)
 
@@ -112,7 +124,9 @@ export const watchlistService = {
         'Не удалось загрузить настройки мониторинга авторов'
       )
     } catch (error) {
-      toast.error('Не удалось загрузить настройки мониторинга авторов')
+      if (!options?.silent) {
+        toast.error('Не удалось загрузить настройки мониторинга авторов')
+      }
       throw error
     }
   },

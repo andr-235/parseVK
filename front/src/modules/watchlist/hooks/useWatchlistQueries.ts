@@ -17,7 +17,7 @@ const fetchWatchlistAuthors = async () => {
     offset: 0,
     limit: WATCHLIST_PAGE_SIZE,
     excludeStopped: true,
-  })
+  }, { silent: true })
   if (!Array.isArray(response.items)) {
     throw new Error(
       `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
@@ -89,7 +89,7 @@ export const useWatchlistAuthorsQuery = (enabled: boolean) => {
 }
 
 const fetchWatchlistSettings = async () => {
-  const response = await watchlistService.getSettings()
+  const response = await watchlistService.getSettings({ silent: true })
   return mapWatchlistSettings(response)
 }
 
