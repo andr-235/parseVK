@@ -33,17 +33,44 @@ const fetchInitialComments = async (filters: CommentsFilters): Promise<CommentsQ
   }
 }
 
+export const mergeCommentsSyncData = (
+  incoming: CommentsQueryData,
+  existing: Pick<
+    ReturnType<typeof useCommentsStore.getState>,
+    'comments' | 'nextCursor' | 'hasMore' | 'totalCount' | 'readCount' | 'unreadCount'
+  >
+) => {
+  const incomingIds = new Set(incoming.comments.map((comment) => comment.id))
+  const extras = existing.comments.filter((comment) => !incomingIds.has(comment.id))
+  const mergedComments = [...incoming.comments, ...extras]
+  const hasLoadedExtraPages = extras.length > 0
+  const allLoaded = mergedComments.length >= incoming.totalCount
+
+  return {
+    comments: mergedComments,
+    totalCount: incoming.totalCount,
+    readCount: incoming.readCount,
+    unreadCount: incoming.unreadCount,
+    hasMore: allLoaded ? false : hasLoadedExtraPages ? existing.hasMore : incoming.hasMore,
+    nextCursor: allLoaded ? null : hasLoadedExtraPages ? existing.nextCursor : incoming.nextCursor,
+  }
+}
+
 const applyQueryDataToStore = (data: CommentsQueryData) => {
-  useCommentsStore.setState({
-    comments: data.comments,
-    totalCount: data.totalCount,
-    hasMore: data.hasMore,
-    nextCursor: data.nextCursor,
-    readCount: data.readCount,
-    unreadCount: data.unreadCount,
-    filters: data.filters,
-    isLoading: false,
-    isLoadingMore: false,
+  useCommentsStore.setState((state) => {
+    const merged = mergeCommentsSyncData(data, state)
+
+    return {
+      comments: merged.comments,
+      totalCount: merged.totalCount,
+      hasMore: merged.hasMore,
+      nextCursor: merged.nextCursor,
+      readCount: merged.readCount,
+      unreadCount: merged.unreadCount,
+      filters: data.filters,
+      isLoading: false,
+      isLoadingMore: false,
+    }
   })
 }
 
