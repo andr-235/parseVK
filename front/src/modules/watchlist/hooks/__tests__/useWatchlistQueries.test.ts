@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { mergeWatchlistAuthors } from '../useWatchlistQueries'
+import { mergeWatchlistAuthors, reconcileSelectedWatchlistAuthor } from '../useWatchlistQueries'
 import type { WatchlistAuthorCard } from '@/modules/watchlist/types'
 import { createEmptyPhotoAnalysisSummary } from '@/types'
 
-const buildAuthor = (id: number, status: WatchlistAuthorCard['status'] = 'ACTIVE'): WatchlistAuthorCard => ({
+const buildAuthor = (
+  id: number,
+  status: WatchlistAuthorCard['status'] = 'ACTIVE'
+): WatchlistAuthorCard => ({
   id,
   authorVkId: id * 10,
   status,
@@ -46,5 +49,21 @@ describe('mergeWatchlistAuthors', () => {
 
     expect(result.authors.map((item) => item.id)).toEqual([1, 2, 4])
     expect(result.hasMoreAuthors).toBe(true)
+  })
+})
+
+describe('reconcileSelectedWatchlistAuthor', () => {
+  it('keeps selected author when it is still present in the merged list', () => {
+    const selected = { id: 2, label: 'selected' }
+
+    expect(
+      reconcileSelectedWatchlistAuthor(selected, [buildAuthor(1), buildAuthor(2), buildAuthor(3)])
+    ).toEqual(selected)
+  })
+
+  it('clears selected author when it disappears from the merged list', () => {
+    const selected = { id: 5, label: 'selected' }
+
+    expect(reconcileSelectedWatchlistAuthor(selected, [buildAuthor(1), buildAuthor(2)])).toBeNull()
   })
 })

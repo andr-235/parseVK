@@ -13,11 +13,14 @@ import {
 } from '@/modules/watchlist/store'
 
 const fetchWatchlistAuthors = async () => {
-  const response = await watchlistService.getAuthors({
-    offset: 0,
-    limit: WATCHLIST_PAGE_SIZE,
-    excludeStopped: true,
-  }, { silent: true })
+  const response = await watchlistService.getAuthors(
+    {
+      offset: 0,
+      limit: WATCHLIST_PAGE_SIZE,
+      excludeStopped: true,
+    },
+    { silent: true }
+  )
   if (!Array.isArray(response.items)) {
     throw new Error(
       `Invalid API response: expected 'items' to be an array, got ${typeof response.items}. Response: ${JSON.stringify(response)}`
@@ -43,6 +46,19 @@ export const mergeWatchlistAuthors = (
     authors: mergedAuthors,
     hasMoreAuthors: mergedAuthors.length < total,
   }
+}
+
+export const reconcileSelectedWatchlistAuthor = <
+  T extends { id: number } | null,
+>(
+  selectedAuthor: T,
+  authors: Array<{ id: number }>
+): T | null => {
+  if (!selectedAuthor) {
+    return null
+  }
+
+  return authors.some((author) => author.id === selectedAuthor.id) ? selectedAuthor : null
 }
 
 export const useWatchlistAuthorsQuery = (enabled: boolean) => {
@@ -78,6 +94,7 @@ export const useWatchlistAuthorsQuery = (enabled: boolean) => {
         authors,
         totalAuthors: query.data.total,
         hasMoreAuthors,
+        selectedAuthor: reconcileSelectedWatchlistAuthor(state.selectedAuthor, authors),
         isLoadingAuthors: false,
         isLoadingMoreAuthors: false,
       }
