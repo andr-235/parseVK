@@ -28,7 +28,7 @@
 4. **Проверка секретов**
    ```bash
    # Убедитесь, что все необходимые секреты настроены в GitHub
-   # VK_TOKEN, DATABASE_URL и т.д.
+   # VK_TOKEN, DATABASE_URL, POSTGRES_PASSWORD, GRAFANA_ADMIN_PASSWORD и т.д.
    ```
 
 ## Процесс деплоя
@@ -82,6 +82,10 @@ curl http://localhost:3000/api/health
 
 # Frontend
 curl http://localhost:80
+
+# Prometheus и Grafana доступны только локально на сервере
+curl http://127.0.0.1:9090/-/healthy
+curl http://127.0.0.1:3001/api/health
 ```
 
 ## Rollback
@@ -163,6 +167,16 @@ docker compose -f docker-compose.deploy.yml up -d --no-build
 4. Не используйте `prisma migrate resolve --applied` как автоматическое восстановление в production.
    Сначала выясните, была ли миграция реально выполнена и в каком состоянии находится схема.
 
+### Обязательные переменные окружения для production compose
+
+Перед `docker compose -f docker-compose.deploy.yml up -d` проверьте, что в `.env` заданы:
+
+```bash
+grep -E '^(DATABASE_URL|POSTGRES_USER|POSTGRES_PASSWORD|POSTGRES_DB|GRAFANA_ADMIN_PASSWORD)=' .env
+```
+
+`docker-compose.deploy.yml` намеренно завершает запуск с ошибкой, если этих значений нет.
+
 ### Health checks не проходят
 
 **Симптомы:**
@@ -224,7 +238,7 @@ docker compose -f docker-compose.deploy.yml up -d --no-build
    ```
 3. Проверьте порты:
    ```bash
-   netstat -tuln | grep -E "3000|80|5433"
+   ss -ltnp | grep -E "127.0.0.1:5433|127.0.0.1:6379|127.0.0.1:9090|127.0.0.1:9100|127.0.0.1:3001|:8080"
    ```
 
 ## Экстренные процедуры

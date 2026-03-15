@@ -287,6 +287,10 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=MySecurePassword123!
 POSTGRES_DB=vk_api
 
+# GRAFANA
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=AnotherStrongPassword123!
+
 # API
 PORT=3000
 
@@ -297,6 +301,7 @@ REDIS_URL=redis://redis:6379
 **ВАЖНО:**
 
 - Замените `MySecurePassword123!` на **сильный** пароль
+- Замените `AnotherStrongPassword123!` на отдельный сильный пароль для Grafana
 - Замените `ВАSШ_РЕАЛЬНЫЙ_ТОКЕН_ОТ_ВК` на реальный токен VK
 - Сохраните изменения: `Ctrl+O`, затем `Enter`, затем `Ctrl+X`
 
