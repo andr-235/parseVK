@@ -125,10 +125,11 @@ export const useListingsViewModel = () => {
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
 
   useEffect(() => {
+    setAvailableSources([])
     setFetchedCount(0)
     setTotalItems(null)
     setIsListLoading(true)
-  }, [filtersIdentity])
+  }, [filtersIdentity, refreshToken])
 
   const handleMetaChange = useCallback((meta: ListingsMeta | null) => {
     if (!meta) return
