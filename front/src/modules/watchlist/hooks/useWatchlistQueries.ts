@@ -48,9 +48,7 @@ export const mergeWatchlistAuthors = (
   }
 }
 
-export const reconcileSelectedWatchlistAuthor = <
-  T extends { id: number } | null,
->(
+export const reconcileSelectedWatchlistAuthor = <T extends { id: number } | null>(
   selectedAuthor: T,
   authors: Array<{ id: number }>
 ): T | null => {
