@@ -355,10 +355,27 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
   },
 
   markWatchlisted(commentId: number, watchlistAuthorId: number) {
+    const filters = get().filters
+
     set((state) => ({
       comments: state.comments.map((comment) =>
         comment.id === commentId ? { ...comment, watchlistAuthorId, isWatchlisted: true } : comment
       ),
     }))
+
+    queryClient.setQueryData<CommentsQueryData>(commentsQueryKeys.list(filters), (prev) => {
+      if (!prev) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        comments: prev.comments.map((comment) =>
+          comment.id === commentId
+            ? { ...comment, watchlistAuthorId, isWatchlisted: true }
+            : comment
+        ),
+      }
+    })
   },
 }))
