@@ -44,6 +44,13 @@ export const mapResultToTaskDetails = (
     baseTask.scope ?? null
   )
 
+  const modeValue = firstDefined<string | null>(
+    result.mode as string,
+    (result as UnknownRecord).mode as string,
+    description?.mode as string,
+    baseTask.mode ?? null
+  )
+
   const skippedGroupsMessage = firstDefined<string | null>(
     result.skippedGroupsMessage as string,
     (result as UnknownRecord).skippedGroupsMessage as string,
@@ -313,6 +320,7 @@ export const mapResultToTaskDetails = (
         ? ((result as UnknownRecord).title as string)
         : (baseTask.title ?? null)),
     scope: scopeValue ?? baseTask.scope ?? null,
+    mode: modeValue ?? baseTask.mode ?? null,
     skippedGroupsMessage: skippedGroupsMessage ?? baseTask.skippedGroupsMessage ?? null,
     postLimit: postLimitValue ?? baseTask.postLimit ?? null,
     groupIds: normalizedGroupIds ?? baseTask.groupIds ?? null,

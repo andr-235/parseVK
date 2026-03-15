@@ -15,6 +15,7 @@ export interface TaskSocketPayload {
   progress?: number | string | null
   stats?: Partial<Record<keyof TaskStatsInfo, number>> | null
   scope?: string | null
+  mode?: string | null
   groupIds?: Array<number | string> | null
   postLimit?: number | string | null
   skippedGroupsMessage?: string | null
@@ -138,6 +139,10 @@ const applyTaskUpdate = (payload: TaskSocketPayload, source: string): void => {
         updatedTask.scope = payload.scope ?? null
       }
 
+      if (hasOwnProperty(payload, 'mode')) {
+        updatedTask.mode = payload.mode ?? null
+      }
+
       if (hasOwnProperty(payload, 'postLimit')) {
         if (payload.postLimit === null) {
           updatedTask.postLimit = null
@@ -187,6 +192,10 @@ const applyTaskUpdate = (payload: TaskSocketPayload, source: string): void => {
 
         if (hasOwnProperty(payload, 'scope')) {
           nextDetails.scope = updatedTask.scope ?? null
+        }
+
+        if (hasOwnProperty(payload, 'mode')) {
+          nextDetails.mode = updatedTask.mode ?? null
         }
 
         if (hasOwnProperty(payload, 'postLimit')) {

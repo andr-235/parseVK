@@ -42,6 +42,7 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
           <TaskStatsGrid
             task={task}
             scopeLabel={stats.scopeLabel}
+            modeLabel={stats.modeLabel}
             totalGroups={stats.totalGroups}
             postsCount={stats.postsCount}
             commentsCountTotal={stats.commentsCountTotal}

@@ -89,7 +89,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
   /**
    * Создаёт новую задачу на парсинг и добавляет её в начало списка.
    */
-  createParseTask: async (groupIds) => {
+  createParseTask: async ({ groupIds, mode }) => {
     const validIds = groupIds.filter((value): value is number | string => {
       return (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'string'
     })
@@ -114,7 +114,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
       // Параллельная загрузка групп и создание задачи (async-parallel optimization)
       const [, result] = await Promise.all([
         ensureGroupsLoaded(),
-        tasksService.createParsingTask({ groupIds: payloadGroupIds }),
+        tasksService.createParsingTask({ groupIds: payloadGroupIds, mode }),
       ])
 
       const { task, details } = mapResultToTaskDetails(result)

@@ -8,7 +8,10 @@ interface CreateParseTaskModalProps {
   groups: Group[]
   isLoading: boolean
   onClose: () => void
-  onSubmit: (groupIds: Array<number | string>) => void
+  onSubmit: (payload: {
+    groupIds: Array<number | string>
+    mode: 'recent_posts' | 'recheck_group'
+  }) => void
 }
 
 function CreateParseTaskModal({
@@ -29,12 +32,12 @@ function CreateParseTaskModal({
     getDisplayName,
   } = useCreateParseTaskModal(groups, isOpen)
 
-  const handleSubmit = () => {
+  const handleSubmit = (mode: 'recent_posts' | 'recheck_group') => {
     if (isLoading) {
       return
     }
     const ids = Array.from(selectedIds)
-    onSubmit(ids)
+    onSubmit({ groupIds: ids, mode })
     onClose()
   }
 
@@ -69,6 +72,9 @@ function CreateParseTaskModal({
             <p className="text-sm text-slate-400">
               Сформируйте список групп с помощью поиска и быстрых действий. Мы сразу подсчитаем
               выбранные сообщества и подскажем, сколько осталось.
+            </p>
+            <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/80">
+              Выберите действие: обычный парсинг или полная перепроверка группы
             </p>
           </div>
           <button
@@ -195,13 +201,23 @@ function CreateParseTaskModal({
           </Button>
           <Button
             type="button"
-            onClick={handleSubmit}
+            onClick={() => handleSubmit('recent_posts')}
+            disabled={isLoading || selectedIds.size === 0}
+            className="group relative h-11 overflow-hidden border border-white/10 bg-slate-700/70 font-semibold text-white transition-all duration-300 hover:bg-slate-600/80 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="relative">
+              {isLoading ? 'Создание...' : `Парсить последние посты (${selectedIds.size})`}
+            </span>
+          </Button>
+          <Button
+            type="button"
+            onClick={() => handleSubmit('recheck_group')}
             disabled={isLoading || selectedIds.size === 0}
             className="group relative h-11 overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             <span className="relative">
-              {isLoading ? 'Создание...' : `Создать (${selectedIds.size})`}
+              {isLoading ? 'Создание...' : 'Перепроверить группу'}
             </span>
           </Button>
         </footer>

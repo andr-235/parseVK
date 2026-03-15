@@ -140,6 +140,7 @@ export interface Task {
   failedCount?: number | null
   title?: string | null
   scope?: 'ALL' | 'SELECTED' | string | null
+  mode?: 'recent_posts' | 'recheck_group' | string | null
   skippedGroupsMessage?: string | null
   postLimit?: number | null
   groupIds?: Array<number | string> | null
