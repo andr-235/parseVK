@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { useAuthStore } from '@/modules/auth/store'
 
 const {
@@ -57,5 +57,29 @@ describe('AuthProvider', () => {
     expect(getRefreshDelayMsMock).toHaveBeenCalledWith('valid-access-token')
     expect(setTimeoutSpy).toHaveBeenCalled()
     expect(setTimeoutSpy.mock.calls[0]?.[1]).toBe(1_000)
+  })
+
+  it('clears auth state when bootstrap refresh fails for an expired token', async () => {
+    isTokenExpiredMock.mockReturnValue(true)
+    refreshAccessTokenMock.mockResolvedValue(null)
+
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <div>app</div>
+        </AuthProvider>,
+      )
+
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(refreshAccessTokenMock).toHaveBeenCalledTimes(1)
+    expect(useAuthStore.getState().accessToken).toBeNull()
+    expect(useAuthStore.getState().refreshToken).toBeNull()
+    expect(useAuthStore.getState().user).toBeNull()
+    await waitFor(() => {
+      expect(screen.getByText('app')).toBeInTheDocument()
+    })
   })
 })

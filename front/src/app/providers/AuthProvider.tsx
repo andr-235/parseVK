@@ -16,8 +16,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let isMounted = true
 
     const bootstrap = async () => {
-      if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
-        await refreshAccessToken()
+      const { clearAuth } = useAuthStore.getState()
+      const needsRefresh = !accessToken || isTokenExpired(accessToken)
+
+      if (needsRefresh) {
+        if (!refreshToken) {
+          clearAuth()
+        } else {
+          const refreshedToken = await refreshAccessToken()
+          if (!refreshedToken) {
+            clearAuth()
+          }
+        }
       }
 
       if (isMounted) {
