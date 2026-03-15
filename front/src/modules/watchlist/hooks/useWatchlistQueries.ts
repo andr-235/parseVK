@@ -30,6 +30,21 @@ const fetchWatchlistAuthors = async () => {
   }
 }
 
+export const mergeWatchlistAuthors = (
+  incoming: ReturnType<typeof mapWatchlistAuthor>[],
+  existing: ReturnType<typeof mapWatchlistAuthor>[],
+  total: number
+) => {
+  const incomingIds = new Set(incoming.map((item) => item.id))
+  const extras = existing.filter((item) => !incomingIds.has(item.id) && item.status !== 'STOPPED')
+  const mergedAuthors = [...incoming, ...extras]
+
+  return {
+    authors: mergedAuthors,
+    hasMoreAuthors: mergedAuthors.length < total,
+  }
+}
+
 export const useWatchlistAuthorsQuery = (enabled: boolean) => {
   const query = useQuery({
     queryKey: watchlistQueryKeys.authors(),
@@ -52,19 +67,17 @@ export const useWatchlistAuthorsQuery = (enabled: boolean) => {
     }
 
     useWatchlistStore.setState((state) => {
-      const incoming = query.data.items
-      const existing = state.authors
-      const incomingIds = new Set(incoming.map((item) => item.id))
-      // сохраняем элементы из уже загруженных страниц, но исключаем STOPPED
-      const extras = existing.filter(
-        (item) => !incomingIds.has(item.id) && item.status !== 'STOPPED'
+      const { authors, hasMoreAuthors } = mergeWatchlistAuthors(
+        query.data.items,
+        state.authors,
+        query.data.total
       )
 
       return {
         ...state,
-        authors: [...incoming, ...extras],
+        authors,
         totalAuthors: query.data.total,
-        hasMoreAuthors: query.data.hasMore,
+        hasMoreAuthors,
         isLoadingAuthors: false,
         isLoadingMoreAuthors: false,
       }
