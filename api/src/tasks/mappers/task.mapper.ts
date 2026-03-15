@@ -41,6 +41,7 @@ export class TaskMapper {
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       scope: parsed.scope,
+      mode: parsed.mode,
       groupIds: parsed.groupIds,
       postLimit: parsed.postLimit,
       stats: parsed.stats,

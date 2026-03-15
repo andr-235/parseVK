@@ -4,7 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ParsingScope } from '../dto/create-parsing-task.dto.js';
+import {
+  ParsingScope,
+  ParsingTaskMode,
+} from '../dto/create-parsing-task.dto.js';
 import type {
   IParsingTaskRepository,
   ParsingGroupRecord,
@@ -42,15 +45,22 @@ export class TaskGroupResolverService {
     return groups;
   }
 
-  buildTaskTitle(scope: ParsingScope, groups: ParsingGroupRecord[]): string {
+  buildTaskTitle(
+    scope: ParsingScope,
+    groups: ParsingGroupRecord[],
+    mode: ParsingTaskMode = ParsingTaskMode.RECENT_POSTS,
+  ): string {
+    const prefix =
+      mode === ParsingTaskMode.RECHECK_GROUP ? 'Перепроверка' : 'Парсинг';
+
     if (scope === ParsingScope.ALL) {
-      return `Парсинг всех групп (${groups.length})`;
+      return `${prefix} всех групп (${groups.length})`;
     }
 
     if (groups.length === 1) {
-      return `Парсинг группы: ${groups[0].name}`;
+      return `${prefix} группы: ${groups[0].name}`;
     }
 
-    return `Парсинг выбранных групп (${groups.length})`;
+    return `${prefix} выбранных групп (${groups.length})`;
   }
 }

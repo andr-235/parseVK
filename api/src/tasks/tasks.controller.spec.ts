@@ -9,7 +9,10 @@ vi.mock('vk-io', () => ({
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { TasksController } from './tasks.controller.js';
-import { ParsingScope } from './dto/create-parsing-task.dto.js';
+import {
+  ParsingScope,
+  ParsingTaskMode,
+} from './dto/create-parsing-task.dto.js';
 import type { ParsingTaskResult } from './interfaces/parsing-task-result.interface.js';
 import type { TaskDetail, TaskSummary } from './interfaces/task.interface.js';
 import type { TaskAuditLog } from './interfaces/task-audit-log.interface.js';
@@ -71,6 +74,7 @@ describe('TasksController', () => {
         scope: ParsingScope.ALL,
         groupIds: [],
         postLimit: 10,
+        mode: ParsingTaskMode.RECHECK_GROUP,
       };
 
       const mockResult: ParsingTaskResult = {
@@ -85,6 +89,7 @@ describe('TasksController', () => {
         updatedAt: new Date(),
         scope: ParsingScope.ALL,
         groupIds: [],
+        mode: ParsingTaskMode.RECHECK_GROUP,
         postLimit: 10,
         stats: null,
         error: null,
@@ -97,7 +102,9 @@ describe('TasksController', () => {
       const result = await controller.createParsingTask(dto);
 
       expect(commandBus.execute).toHaveBeenCalledWith(
-        expect.any(CreateParsingTaskCommand),
+        expect.objectContaining({
+          mode: ParsingTaskMode.RECHECK_GROUP,
+        }),
       );
       expect(result).toEqual(mockResult);
     });

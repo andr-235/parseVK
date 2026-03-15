@@ -1,6 +1,9 @@
 import { TaskDescriptionParser } from './task-description.parser.js';
 import type { TaskRecord } from '../types/task-record.type.js';
-import { ParsingScope } from '../dto/create-parsing-task.dto.js';
+import {
+  ParsingScope,
+  ParsingTaskMode,
+} from '../dto/create-parsing-task.dto.js';
 
 describe('TaskDescriptionParser', () => {
   let parser: TaskDescriptionParser;
@@ -91,6 +94,7 @@ describe('TaskDescriptionParser', () => {
     const result = parser.stringify({
       scope: ParsingScope.ALL,
       groupIds: [1, 2],
+      mode: ParsingTaskMode.RECENT_POSTS,
       postLimit: 10,
       stats: null,
       skippedGroupsMessage: null,
@@ -105,5 +109,32 @@ describe('TaskDescriptionParser', () => {
     expect(parsed.scope).toBe('all');
     expect(parsed.groupIds).toEqual([1, 2]);
     expect(parsed.postLimit).toBe(10);
+  });
+
+  it('должен парсить режим перепроверки группы', () => {
+    const task: TaskRecord = {
+      id: 2,
+      title: 'Recheck',
+      description: JSON.stringify({
+        scope: 'selected',
+        groupIds: [1, 2],
+        mode: 'recheck_group',
+        postLimit: null,
+      }),
+      completed: false,
+      totalItems: 2,
+      processedItems: 0,
+      progress: 0,
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = parser.parse(task);
+
+    expect(result.scope).toBe(ParsingScope.SELECTED);
+    expect(result.groupIds).toEqual([1, 2]);
+    expect(result.mode).toBe(ParsingTaskMode.RECHECK_GROUP);
+    expect(result.postLimit).toBeNull();
   });
 });

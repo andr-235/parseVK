@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { ParsingScope } from '../dto/create-parsing-task.dto.js';
+import {
+  ParsingScope,
+  ParsingTaskMode,
+} from '../dto/create-parsing-task.dto.js';
 import type { ParsingStats } from '../interfaces/parsing-stats.interface.js';
 import type { TaskRecord } from '../types/task-record.type.js';
 
 export interface ParsedTaskDescription {
   scope: ParsingScope | null;
+  mode: ParsingTaskMode | null;
   groupIds: number[];
   postLimit: number | null;
   stats: ParsingStats | null;
@@ -28,6 +32,7 @@ export class TaskDescriptionParser {
       return {
         ...empty,
         scope: this.parseScope(data.scope),
+        mode: this.parseMode(data.mode),
         groupIds: this.parseGroupIds(data.groupIds),
         postLimit: this.parsePostLimit(data.postLimit),
         stats: this.parseStats(data.stats),
@@ -50,8 +55,9 @@ export class TaskDescriptionParser {
 
   stringify(data: {
     scope: ParsingScope;
+    mode?: ParsingTaskMode | null;
     groupIds: number[];
-    postLimit: number;
+    postLimit: number | null;
     stats: ParsingStats | null;
     skippedGroupsMessage: string | null;
     skippedGroupIds: number[];
@@ -71,6 +77,7 @@ export class TaskDescriptionParser {
     }
 
     payload.scope = data.scope;
+    payload.mode = data.mode ?? ParsingTaskMode.RECENT_POSTS;
     payload.groupIds = data.groupIds;
     payload.postLimit = data.postLimit;
 
@@ -103,6 +110,7 @@ export class TaskDescriptionParser {
   private createEmpty(): ParsedTaskDescription {
     return {
       scope: null,
+      mode: ParsingTaskMode.RECENT_POSTS,
       groupIds: [],
       postLimit: null,
       stats: null,
@@ -126,6 +134,28 @@ export class TaskDescriptionParser {
       normalized === ParsingScope.SELECTED.toLowerCase()
     ) {
       return ParsingScope.SELECTED;
+    }
+
+    return null;
+  }
+
+  private parseMode(value: unknown): ParsingTaskMode | null {
+    if (typeof value !== 'string') {
+      return ParsingTaskMode.RECENT_POSTS;
+    }
+
+    const normalized = value.toLowerCase();
+    if (
+      normalized === ParsingTaskMode.RECENT_POSTS ||
+      normalized === ParsingTaskMode.RECENT_POSTS.toLowerCase()
+    ) {
+      return ParsingTaskMode.RECENT_POSTS;
+    }
+    if (
+      normalized === ParsingTaskMode.RECHECK_GROUP ||
+      normalized === ParsingTaskMode.RECHECK_GROUP.toLowerCase()
+    ) {
+      return ParsingTaskMode.RECHECK_GROUP;
     }
 
     return null;

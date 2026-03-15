@@ -12,7 +12,10 @@ import { TaskGroupResolverService } from '@/tasks/services/task-group-resolver.s
 import { ParsingQueueService } from '@/tasks/parsing-queue.service.js';
 import { TaskMapper } from '@/tasks/mappers/task.mapper.js';
 import { TaskDescriptionParser } from '@/tasks/parsers/task-description.parser.js';
-import { ParsingScope } from '@/tasks/dto/create-parsing-task.dto.js';
+import {
+  ParsingScope,
+  ParsingTaskMode,
+} from '@/tasks/dto/create-parsing-task.dto.js';
 import { TaskCreatedEvent } from '@/tasks/events/index.js';
 import { MetricsService } from '@/metrics/metrics.service.js';
 import type { TaskRecord } from '@/tasks/types/task-record.type.js';
@@ -38,7 +41,9 @@ export class CreateParsingTaskHandler implements ICommandHandler<
     const scope =
       command.scope ??
       (command.groupIds?.length ? ParsingScope.SELECTED : ParsingScope.ALL);
-    const postLimit = command.postLimit ?? 10;
+    const mode = command.mode ?? ParsingTaskMode.RECENT_POSTS;
+    const postLimit =
+      mode === ParsingTaskMode.RECHECK_GROUP ? null : (command.postLimit ?? 10);
     const groupIds = command.groupIds ?? [];
 
     // Validate groups exist
@@ -51,8 +56,8 @@ export class CreateParsingTaskHandler implements ICommandHandler<
 
     // Create task in DB
     const task = await this.repository.create({
-      title: this.groupResolver.buildTaskTitle(scope, groups),
-      description: JSON.stringify({ scope, groupIds, postLimit }),
+      title: this.groupResolver.buildTaskTitle(scope, groups, mode),
+      description: JSON.stringify({ scope, groupIds, mode, postLimit }),
       totalItems,
       processedItems: 0,
       progress: 0,
@@ -67,11 +72,19 @@ export class CreateParsingTaskHandler implements ICommandHandler<
       scope,
       groupIds,
       postLimit,
+      mode,
     });
 
     // Publish event
     this.eventBus.publish(
-      new TaskCreatedEvent(task.id, scope, groupIds, postLimit, task.createdAt),
+      new TaskCreatedEvent(
+        task.id,
+        scope,
+        groupIds,
+        postLimit,
+        mode,
+        task.createdAt,
+      ),
     );
 
     return this.mapTaskToDetail(task);

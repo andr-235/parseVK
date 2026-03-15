@@ -40,7 +40,12 @@ export class TasksController {
     @Body() dto: CreateParsingTaskDto,
   ): Promise<ParsingTaskResult> {
     return this.commandBus.execute(
-      new CreateParsingTaskCommand(dto.scope, dto.groupIds, dto.postLimit),
+      new CreateParsingTaskCommand(
+        dto.scope,
+        dto.groupIds,
+        dto.postLimit,
+        dto.mode,
+      ),
     );
   }
 
