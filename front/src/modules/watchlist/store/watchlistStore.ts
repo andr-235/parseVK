@@ -216,11 +216,13 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
           totalAuthors: Math.max(nextTotal, 0),
           selectedAuthor:
             prev.selectedAuthor && prev.selectedAuthor.id === id
-              ? {
-                  ...prev.selectedAuthor,
-                  ...mapped,
-                  comments: prev.selectedAuthor.comments,
-                }
+              ? willBeStopped
+                ? null
+                : {
+                    ...prev.selectedAuthor,
+                    ...mapped,
+                    comments: prev.selectedAuthor.comments,
+                  }
               : prev.selectedAuthor,
           error: null,
         }
