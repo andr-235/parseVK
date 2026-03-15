@@ -9,6 +9,7 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
   keywords: [],
   isLoading: false,
   isLoaded: false,
+  isReady: false,
 
   async fetchKeywords() {
     set({ isLoading: true })

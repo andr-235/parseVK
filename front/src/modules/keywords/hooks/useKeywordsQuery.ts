@@ -30,9 +30,8 @@ export const useKeywordsQuery = (options?: UseKeywordsQueryOptions) => {
       return
     }
 
-    // Обновляем keywords и isLoaded вместе, когда данные доступны
     if (query.data) {
-      useKeywordsStore.setState({ keywords: query.data, isLoaded: true })
+      useKeywordsStore.setState({ keywords: query.data, isLoaded: true, isReady: true })
     }
   }, [enabled, query.data])
 
@@ -43,6 +42,16 @@ export const useKeywordsQuery = (options?: UseKeywordsQueryOptions) => {
 
     useKeywordsStore.setState({ isLoading: query.isFetching })
   }, [enabled, query.isFetching])
+
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    if (!query.isFetching && query.error) {
+      useKeywordsStore.setState({ isReady: true })
+    }
+  }, [enabled, query.error, query.isFetching])
 
   return query
 }

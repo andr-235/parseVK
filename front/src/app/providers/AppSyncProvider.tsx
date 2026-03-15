@@ -30,7 +30,7 @@ function AppSyncProvider(): null {
   const isAuthenticated = useAuthStore((state) =>
     Boolean(state.accessToken && state.user && !state.user.isTemporaryPassword)
   )
-  const keywordsLoaded = useKeywordsStore((state) => state.isLoaded)
+  const keywordsReady = useKeywordsStore((state) => state.isReady)
   const commentsQueryEnabled = useCommentsStore((state) => state.isQueryEnabled)
 
   const syncGroups = useMemo(() => shouldSyncGroups(pathname), [pathname])
@@ -43,7 +43,7 @@ function AppSyncProvider(): null {
   useTaskAutomationQuery({ enabled: isAuthenticated })
   useGroupsQuery({ enabled: isAuthenticated && syncGroups })
   useKeywordsQuery({ enabled: isAuthenticated && syncKeywords })
-  useCommentsQuery({ enabled: isAuthenticated && syncComments && keywordsLoaded && commentsQueryEnabled })
+  useCommentsQuery({ enabled: isAuthenticated && syncComments && keywordsReady && commentsQueryEnabled })
   useAuthorsQuery(isAuthenticated && syncAuthors)
   useWatchlistAuthorsQuery(isAuthenticated && syncWatchlist)
   useWatchlistSettingsQuery(isAuthenticated && syncWatchlist)

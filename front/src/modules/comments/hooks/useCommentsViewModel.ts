@@ -234,7 +234,7 @@ const useCommentsViewModel = () => {
   const unreadCount = useCommentsStore((state) => state.unreadCount)
   const toggleReadStatus = useCommentsStore((state) => state.toggleReadStatus)
   const markWatchlisted = useCommentsStore((state) => state.markWatchlisted)
-  const { keywords, fetchKeywords, isLoaded: keywordsLoaded } = useKeywordsStore()
+  const { keywords } = useKeywordsStore()
   const { addAuthorFromComment } = useWatchlistStore()
   const [showKeywordComments, setShowKeywordComments] = useState(true)
   const [showKeywordPosts, setShowKeywordPosts] = useState(false)
@@ -315,21 +315,12 @@ const useCommentsViewModel = () => {
   )
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!keywordsLoaded) {
-        await fetchKeywords().catch((error) => {
-          console.error('Failed to fetch keywords', error)
-        })
-      }
+    setCommentsFilters(fetchFilters, { enableQuery: true })
 
-      setCommentsFilters(fetchFilters, { enableQuery: true })
-    }
-
-    void loadData()
     return () => {
       setCommentsQueryEnabled(false)
     }
-  }, [fetchFilters, fetchKeywords, keywordsLoaded, setCommentsFilters, setCommentsQueryEnabled])
+  }, [fetchFilters, setCommentsFilters, setCommentsQueryEnabled])
 
   useEffect(() => {
     if (readFilter === 'all') {
