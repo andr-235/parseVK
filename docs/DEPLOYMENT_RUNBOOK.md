@@ -88,7 +88,7 @@ curl http://localhost:80
 
 ### Автоматический rollback
 
-При ошибке деплоя автоматически выполняется rollback к предыдущей версии.
+Автоматического rollback больше нет. Откат выполняется вручную через workflow `Rollback Deployment`, чтобы оператор мог проверить совместимость схемы БД и целевой ревизии.
 
 ### Ручной rollback
 
@@ -96,7 +96,8 @@ curl http://localhost:80
 2. Выберите workflow "Rollback Deployment"
 3. Нажмите "Run workflow"
 4. Укажите целевой коммит (опционально, по умолчанию последний успешный)
-5. Выберите опции (например, skip_health_check)
+5. При необходимости включите `allow_schema_mismatch` только если совместимость схемы БД уже вручную проверена
+6. Выберите дополнительные опции (например, `skip_health_check`)
 6. Нажмите "Run workflow"
 
 ### Rollback через CLI
@@ -111,9 +112,15 @@ cat .deployment-metadata.json
 # Checkout предыдущего коммита
 git checkout <previous-commit-hash>
 
-# Перезапустите контейнеры
+# Проверьте совместимость схемы БД с целевым коммитом до запуска rollback
+# Если есть сомнения, не продолжайте без отдельного плана восстановления
+
+# Пересоберите локальные образы из целевого коммита
+docker compose -f docker-compose.deploy.yml build api frontend db_backup
+
+# Перезапустите контейнеры на образах целевого коммита
 docker compose -f docker-compose.deploy.yml down
-docker compose -f docker-compose.deploy.yml up -d --pull always
+docker compose -f docker-compose.deploy.yml up -d --no-build
 ```
 
 ## Troubleshooting
@@ -153,6 +160,8 @@ docker compose -f docker-compose.deploy.yml up -d --pull always
    ```bash
    docker compose -f docker-compose.deploy.yml exec api prisma migrate deploy
    ```
+4. Не используйте `prisma migrate resolve --applied` как автоматическое восстановление в production.
+   Сначала выясните, была ли миграция реально выполнена и в каком состоянии находится схема.
 
 ### Health checks не проходят
 

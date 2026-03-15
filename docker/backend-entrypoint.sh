@@ -228,97 +228,11 @@ fi
 echo "Используем Prisma CLI: $PRISMA_CMD"
 if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
   MIGRATE_ERROR=$(cat /tmp/migrate.log)
-  
-  # Проверяем, если ошибка связана с неудачной миграцией (P3009)
-  if echo "$MIGRATE_ERROR" | grep -q "P3009\|failed migrations\|migration.*failed"; then
-    echo "Обнаружена неудачная миграция, пытаемся исправить..."
-    
-    # Извлекаем имя миграции из ошибки (формат: `20251020120000_add_task_automation_settings`)
-    MIGRATION_NAME=$(echo "$MIGRATE_ERROR" | grep -oP '`\K[^`]+' | head -1 || echo "")
-    
-    if [ -z "$MIGRATION_NAME" ]; then
-      # Пробуем другой формат - ищем имя миграции после "The `"
-      MIGRATION_NAME=$(echo "$MIGRATE_ERROR" | grep -oP 'The `\K[^`]+' | head -1 || echo "")
-    fi
-    
-    if [ -z "$MIGRATION_NAME" ]; then
-      # Пробуем найти по паттерну даты и имени (формат: 20251020120000_add_task_automation_settings)
-      MIGRATION_NAME=$(echo "$MIGRATE_ERROR" | grep -oP '\d{14}_[a-zA-Z0-9_]+' | head -1 || echo "")
-    fi
-    
-    if [ -n "$MIGRATION_NAME" ]; then
-      echo "Помечаем неудачную миграцию $MIGRATION_NAME как применённую..."
-      if $PRISMA_CMD migrate resolve --applied "$MIGRATION_NAME" 2>&1; then
-        echo "Миграция $MIGRATION_NAME помечена как применённая, повторяем deploy..."
-        if ! $PRISMA_CMD migrate deploy; then
-          echo "Ошибка при повторном выполнении миграций, останавливаемся."
-          exit 1
-        fi
-      else
-        echo "Не удалось пометить миграцию как применённую, останавливаемся."
-        exit 1
-      fi
-    else
-      echo "Предупреждение: Не удалось определить имя неудачной миграции из ошибки."
-      echo "Ошибка: $MIGRATE_ERROR"
-      exit 1
-    fi
-  # Проверяем, если ошибка связана с отсутствующей колонкой (миграция не была применена)
-  elif echo "$MIGRATE_ERROR" | grep -q "column.*does not exist\|does not exist.*column"; then
-    echo "Обнаружена ошибка 'column does not exist', возможно миграция не была применена..."
-    echo "Повторяем попытку применения миграций..."
-    if ! $PRISMA_CMD migrate deploy; then
-      echo "Ошибка при повторном выполнении миграций, останавливаемся."
-      exit 1
-    fi
-  # Проверяем, если ошибка связана с уже существующей таблицей
-  elif echo "$MIGRATE_ERROR" | grep -q "already exists"; then
-    echo "Обнаружена ошибка 'already exists', пытаемся исправить..."
-    
-    # Извлекаем имя миграции из ошибки (пробуем разные форматы)
-    MIGRATION_NAME=$(echo "$MIGRATE_ERROR" | grep -oP 'Migration name: \K[^\s]+' || echo "")
-    
-    # Если не удалось извлечь через "Migration name:", пробуем найти по имени таблицы
-    if [ -z "$MIGRATION_NAME" ]; then
-      # Извлекаем имя таблицы из ошибки (например, "TaskAutomationSettings")
-      TABLE_NAME=$(echo "$MIGRATE_ERROR" | grep -oP 'relation "\K[^"]+' || echo "")
-      
-      if [ -n "$TABLE_NAME" ]; then
-        echo "Найдена таблица '$TABLE_NAME' в ошибке, ищем соответствующую миграцию..."
-        # Ищем миграцию, которая создает эту таблицу
-        for MIGRATION_DIR in api/prisma/migrations/*/; do
-          if [ -f "${MIGRATION_DIR}migration.sql" ] && grep -q "CREATE TABLE.*\"${TABLE_NAME}\"" "${MIGRATION_DIR}migration.sql" 2>/dev/null; then
-            MIGRATION_NAME=$(basename "$MIGRATION_DIR")
-            echo "Найдена миграция: $MIGRATION_NAME"
-            break
-          fi
-        done
-      fi
-    fi
-    
-    if [ -n "$MIGRATION_NAME" ]; then
-      echo "Помечаем миграцию $MIGRATION_NAME как применённую..."
-      if $PRISMA_CMD migrate resolve --applied "$MIGRATION_NAME" 2>&1; then
-        echo "Миграция $MIGRATION_NAME помечена как применённая, повторяем deploy..."
-        if ! $PRISMA_CMD migrate deploy; then
-          echo "Ошибка при повторном выполнении миграций, останавливаемся."
-          exit 1
-        fi
-      else
-        echo "Не удалось пометить миграцию как применённую, останавливаемся."
-        exit 1
-      fi
-    else
-      echo "Предупреждение: Не удалось определить имя миграции из ошибки."
-      echo "Пробуем продолжить, так как таблица уже существует..."
-      echo "Ошибка: $MIGRATE_ERROR"
-      # Продолжаем выполнение, так как таблица уже существует
-    fi
-  else
-    echo "Ошибка при выполнении миграций, останавливаемся."
-    echo "Ошибка: $MIGRATE_ERROR"
-    exit 1
-  fi
+  echo "ОШИБКА: prisma migrate deploy завершился неуспешно."
+  echo "Автоматическое исправление состояния миграций отключено."
+  echo "Проверьте журнал /tmp/migrate.log и состояние таблицы _prisma_migrations, затем выполните ручное восстановление."
+  echo "Ошибка: $MIGRATE_ERROR"
+  exit 1
 fi
 
 # Генерация только если клиент не собран (в build stage уже выполнен prisma generate)
