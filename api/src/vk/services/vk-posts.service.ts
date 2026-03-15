@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { VK } from 'vk-io';
+import type { Objects } from 'vk-io';
 import type { IPost } from '../interfaces/post.interfaces.js';
 import {
   buildPostsCacheKey,
@@ -28,7 +29,7 @@ type VkWallPost = {
   from_id: number;
   date: number;
   text?: string | null;
-  attachments?: unknown;
+  attachments?: Objects.WallWallpostAttachment[] | undefined;
   comments?: VkWallComments | null;
 };
 

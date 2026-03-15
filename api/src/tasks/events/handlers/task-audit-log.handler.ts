@@ -25,12 +25,13 @@ type TaskEvent =
 type EventData = {
   scope?: string;
   groupIds?: unknown[];
-  postLimit?: number;
+  postLimit?: number | null;
   processedItems?: number;
   progress?: number;
   stats?: unknown;
   skippedGroupIds?: unknown[];
   error?: string;
+  mode?: string;
 } | null;
 
 @Injectable()
@@ -86,6 +87,7 @@ export class TaskAuditLogHandler implements IEventHandler<TaskEvent> {
       return {
         scope: event.scope,
         groupIds: event.groupIds,
+        mode: event.mode,
         postLimit: event.postLimit,
       };
     }

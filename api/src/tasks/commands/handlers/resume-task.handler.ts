@@ -58,6 +58,7 @@ export class ResumeTaskHandler implements ICommandHandler<
         progress: context.progress,
         description: this.descriptionParser.stringify({
           scope: context.scope,
+          mode: context.mode,
           groupIds: context.groupIds,
           postLimit: context.postLimit,
           stats: context.parsed.stats,
@@ -77,6 +78,7 @@ export class ResumeTaskHandler implements ICommandHandler<
       scope: context.scope,
       groupIds: context.groupIds,
       postLimit: context.postLimit,
+      mode: context.mode,
     });
 
     // Publish event

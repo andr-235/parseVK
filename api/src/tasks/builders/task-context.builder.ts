@@ -3,7 +3,10 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { ParsingScope } from '../dto/create-parsing-task.dto.js';
+import {
+  ParsingScope,
+  ParsingTaskMode,
+} from '../dto/create-parsing-task.dto.js';
 import type { ParsedTaskDescription } from '../parsers/task-description.parser.js';
 import { TaskGroupResolverService } from '../services/task-group-resolver.service.js';
 import { TaskDescriptionParser } from '../parsers/task-description.parser.js';
@@ -12,7 +15,8 @@ import type { TaskRecord } from '../types/task-record.type.js';
 export interface TaskResumeContext {
   scope: ParsingScope;
   groupIds: number[];
-  postLimit: number;
+  mode: ParsingTaskMode;
+  postLimit: number | null;
   parsed: ParsedTaskDescription;
   totalItems: number;
   processedItems: number;
@@ -40,7 +44,11 @@ export class TaskContextBuilder {
       );
     }
 
-    const postLimit = this.normalizePostLimit(parsed.postLimit);
+    const mode = parsed.mode ?? ParsingTaskMode.RECENT_POSTS;
+    const postLimit =
+      mode === ParsingTaskMode.RECHECK_GROUP
+        ? null
+        : this.normalizePostLimit(parsed.postLimit);
     const groups = await this.groupResolver.resolveGroups(scope, groupIds);
 
     if (!groups.length) {
@@ -55,6 +63,7 @@ export class TaskContextBuilder {
     return {
       scope,
       groupIds,
+      mode,
       postLimit,
       parsed,
       totalItems,

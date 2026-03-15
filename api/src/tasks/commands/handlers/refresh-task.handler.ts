@@ -48,6 +48,7 @@ export class RefreshTaskHandler implements ICommandHandler<
         progress: shouldComplete ? 1 : context.progress,
         description: this.descriptionParser.stringify({
           scope: context.scope,
+          mode: context.mode,
           groupIds: context.groupIds,
           postLimit: context.postLimit,
           stats: context.parsed.stats,
@@ -68,6 +69,7 @@ export class RefreshTaskHandler implements ICommandHandler<
         scope: context.scope,
         groupIds: context.groupIds,
         postLimit: context.postLimit,
+        mode: context.mode,
       });
     }
 

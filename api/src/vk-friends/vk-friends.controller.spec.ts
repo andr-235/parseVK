@@ -1,8 +1,6 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as http from 'http';
-import request from 'supertest';
 import { VkFriendsController } from './vk-friends.controller.js';
 import { VkFriendsService } from './vk-friends.service.js';
 import { VkFriendsExportJobService } from './services/vk-friends-export-job.service.js';
@@ -10,8 +8,7 @@ import { VkFriendsFileService } from './services/vk-friends-file.service.js';
 import { FriendsJobStreamService } from '../common/friends-export/services/friends-job-stream.service.js';
 import { firstValueFrom, of } from 'rxjs';
 
-describe('VkFriendsController (HTTP)', () => {
-  let app: INestApplication;
+describe('VkFriendsController', () => {
   let controller: VkFriendsController;
   let vkFriendsService: {
     createJob: vi.Mock;
@@ -42,36 +39,21 @@ describe('VkFriendsController (HTTP)', () => {
       ],
     }).compile();
 
-    app = module.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        transform: true,
-        transformOptions: { enableImplicitConversion: true },
-      }),
-    );
-    await app.init();
-
     controller = module.get(VkFriendsController);
   });
 
-  afterEach(async () => {
-    await app.close();
-  });
-
-  it('POST /vk/friends/export returns job id and enqueues export', async () => {
+  it('export returns job id and enqueues export', async () => {
     const job = {
       id: '11111111-1111-4111-8111-111111111111',
       status: 'RUNNING',
     };
     vkFriendsService.createJob.mockResolvedValue(job);
 
-    await request(app.getHttpServer() as http.Server)
-      .post('/vk/friends/export')
-      .send({
+    await expect(
+      controller.export({
         params: { user_id: 42, count: 10 },
-      })
-      .expect(201)
-      .expect({ jobId: job.id, status: job.status });
+      }),
+    ).resolves.toEqual({ jobId: job.id, status: job.status });
 
     expect(vkFriendsService.createJob).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -86,26 +68,21 @@ describe('VkFriendsController (HTTP)', () => {
     );
   });
 
-  it('GET /vk/friends/jobs/:jobId returns job and logs', async () => {
+  it('getJob returns job and logs', async () => {
     const jobId = '11111111-1111-4111-8111-111111111111';
     const job = { id: jobId, status: 'RUNNING' };
     const logs = [{ id: 'log-1' }];
     vkFriendsService.getJobById.mockResolvedValue(job);
     vkFriendsService.getJobLogs.mockResolvedValue(logs);
 
-    await request(app.getHttpServer() as http.Server)
-      .get(`/vk/friends/jobs/${jobId}`)
-      .expect(200)
-      .expect({ job, logs });
+    await expect(controller.getJob(jobId)).resolves.toEqual({ job, logs });
   });
 
-  it('GET /vk/friends/jobs/:jobId returns 404 when job missing', async () => {
+  it('getJob returns 404 when job missing', async () => {
     const jobId = '11111111-1111-4111-8111-111111111111';
     vkFriendsService.getJobById.mockResolvedValue(null);
 
-    await request(app.getHttpServer() as http.Server)
-      .get(`/vk/friends/jobs/${jobId}`)
-      .expect(404);
+    await expect(controller.getJob(jobId)).rejects.toThrow(NotFoundException);
   });
 
   it('streamJob returns immediate done event for completed job', async () => {
