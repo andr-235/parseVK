@@ -4,10 +4,12 @@ import { AuthService } from './auth.service.js';
 import type { UserAuthRecord } from '../users/types/user.types.js';
 
 vi.mock('./password-hash.js', () => ({
-  hashSecret: vi.fn(async (value: string) => `hashed:${value}`),
-  verifyAndMaybeRehash: vi.fn(async (secret: string, storedHash: string) => ({
-    ok: secret === storedHash,
-  })),
+  hashSecret: vi.fn((value: string) => Promise.resolve(`hashed:${value}`)),
+  verifyAndMaybeRehash: vi.fn((secret: string, storedHash: string) =>
+    Promise.resolve({
+      ok: secret === storedHash,
+    }),
+  ),
 }));
 
 describe('AuthService', () => {
@@ -38,24 +40,26 @@ describe('AuthService', () => {
     };
 
     usersService = {
-      findByUsername: vi.fn(async (username: string) =>
-        username === user.username ? { ...user } : null,
+      findByUsername: vi.fn((username: string) =>
+        Promise.resolve(username === user.username ? { ...user } : null),
       ),
-      findById: vi.fn(async (id: number) =>
-        id === user.id ? { ...user } : null,
+      findById: vi.fn((id: number) =>
+        Promise.resolve(id === user.id ? { ...user } : null),
       ),
       updateRefreshTokenHash: vi.fn(
-        async (userId: number, refreshToken: string | null) => {
+        (userId: number, refreshToken: string | null) => {
           if (userId === user.id) {
             user.refreshTokenHash = refreshToken;
           }
+          return Promise.resolve();
         },
       ),
       setRefreshTokenHash: vi.fn(
-        async (userId: number, refreshTokenHash: string | null) => {
+        (userId: number, refreshTokenHash: string | null) => {
           if (userId === user.id) {
             user.refreshTokenHash = refreshTokenHash;
           }
+          return Promise.resolve();
         },
       ),
       setPassword: vi.fn(),
@@ -65,14 +69,14 @@ describe('AuthService', () => {
     let refreshCounter = 0;
     jwtService = {
       signAsync: vi.fn(
-        async (_payload: unknown, options?: { expiresIn?: string }) => {
+        (_payload: unknown, options?: { expiresIn?: string }) => {
           if (options?.expiresIn?.endsWith('m')) {
             accessCounter += 1;
-            return `access-token-${accessCounter}`;
+            return Promise.resolve(`access-token-${accessCounter}`);
           }
 
           refreshCounter += 1;
-          return `refresh-token-${refreshCounter}`;
+          return Promise.resolve(`refresh-token-${refreshCounter}`);
         },
       ),
     };
