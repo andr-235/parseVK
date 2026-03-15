@@ -16,6 +16,7 @@ const makePostsMock = (): VkPostsService =>
   ({
     getPosts: vi.fn(),
     getGroupRecentPosts: vi.fn(),
+    iterateGroupPosts: vi.fn(),
   }) as unknown as VkPostsService;
 
 const makeCommentsMock = (): VkCommentsService =>
@@ -94,6 +95,21 @@ describe('VkService (фасад)', () => {
       ownerId: -1,
       count: 5,
     });
+  });
+
+  it('iterateGroupPosts делегирует в VkPostsService', () => {
+    const expected = (async function* () {
+      yield [];
+    })();
+    vi.mocked(postsMock.iterateGroupPosts).mockReturnValue(expected);
+
+    const result = service.iterateGroupPosts({ ownerId: -1, batchSize: 5 });
+
+    expect(postsMock.iterateGroupPosts).toHaveBeenCalledWith({
+      ownerId: -1,
+      batchSize: 5,
+    });
+    expect(result).toBe(expected);
   });
 
   it('searchGroupsByRegion делегирует в VkGroupsService', async () => {
