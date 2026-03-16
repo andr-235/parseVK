@@ -30,6 +30,8 @@ jobs:
       DOCKER_BUILDKIT: 1
       COMPOSE_DOCKER_CLI_BUILD: 1
       COMPOSE_FILE: docker-compose.deploy.yml
+      PROJECT_ROOT: /opt/parseVK
+      PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
 
     steps:
       - name: Checkout code
@@ -43,15 +45,8 @@ jobs:
         working-directory: /opt/parseVK
         run: |
           set -euo pipefail
-
-          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
-          LAST_SUCCESSFUL_COMMIT=""
-
-          if [ -f "$METADATA_FILE" ]; then
-            LAST_SUCCESSFUL_COMMIT=$(jq -r '.last_successful_commit // empty' "$METADATA_FILE" 2>/dev/null || echo "")
-          fi
-
-          echo "last_successful_commit=$LAST_SUCCESSFUL_COMMIT" >> $GITHUB_OUTPUT
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+            bash "$PRODUCTION_SCRIPTS_DIR/metadata.sh" load
 
       - name: Determine deployment context
         id: deployment_context
@@ -113,6 +108,14 @@ jobs:
           git branch -f deployed "$TARGET_SHA"
 
           echo "Updated to commit: $(git rev-parse HEAD)"
+
+      - name: Production preflight
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/preflight.sh"
 
       - name: Check for migrations
         id: check_migrations
@@ -184,9 +187,10 @@ jobs:
         timeout-minutes: 5
         if: steps.deployment_context.outputs.skip_deploy != 'true' && steps.check_migrations.outputs.needs_migrations == 'true'
         run: |
-          echo "=== Starting database and dependencies ==="
+          set -euo pipefail
 
-          docker compose -f "$COMPOSE_FILE" up -d db redis
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" UP_ARGS="-d --no-build" \
+            bash "$PRODUCTION_SCRIPTS_DIR/release.sh" db redis
 
           echo "=== Waiting for database to be ready ==="
           MAX_WAIT=60
@@ -214,7 +218,6 @@ jobs:
         if: steps.deployment_context.outputs.skip_deploy != 'true' && steps.check_migrations.outputs.needs_migrations == 'true'
         run: |
           set -euo pipefail
-          source .github/scripts/log-helper.sh
 
           API_IMAGE_TAG="parsevk-api:local"
           IMAGE_EXISTS=false
@@ -224,11 +227,12 @@ jobs:
           fi
 
           if [ "${{ steps.changed_services.outputs.build_api }}" = "true" ] || [ "$IMAGE_EXISTS" != "true" ]; then
-            log_info "Подготавливаю образ API для миграций"
-            retry_with_backoff 2 10 "timeout 1200s docker compose -f \"$COMPOSE_FILE\" build --progress plain api"
+            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare
+            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build api
             echo "api_prebuilt_for_migrations=true" >> "$GITHUB_OUTPUT"
           else
-            log_info "Использую существующий локальный образ API для миграций"
             echo "api_prebuilt_for_migrations=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -237,16 +241,9 @@ jobs:
         timeout-minutes: 5
         if: steps.deployment_context.outputs.skip_deploy != 'true' && steps.check_migrations.outputs.needs_migrations == 'true'
         run: |
-          echo "=== Running database migrations ==="
-
-          if docker compose -f "$COMPOSE_FILE" run --rm --no-deps --entrypoint sh api -c "command -v ./node_modules/.bin/prisma > /dev/null 2>&1 && ./node_modules/.bin/prisma migrate deploy || prisma migrate deploy"; then
-            echo "Migrations completed"
-          else
-            echo "Error: Migrations failed"
-            docker compose -f "$COMPOSE_FILE" logs --tail=100 api
-            docker compose -f "$COMPOSE_FILE" logs --tail=100 db
-            exit 1
-          fi
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/migrations.sh"
 
       - name: Build and start containers
         if: steps.deployment_context.outputs.skip_deploy != 'true'
@@ -254,12 +251,6 @@ jobs:
         timeout-minutes: 30
         run: |
           set -euo pipefail
-          source .github/scripts/log-helper.sh
-
-          log_info "=== Сборка и запуск контейнеров ==="
-          log_info "Docker version: $(docker --version)"
-          log_info "Docker Compose version: $(docker compose version)"
-
           SERVICES_TO_BUILD=""
 
           if [ "${{ steps.changed_services.outputs.build_api }}" = "true" ] && [ "${{ steps.prepare_api_image.outputs.api_prebuilt_for_migrations }}" != "true" ]; then
@@ -274,25 +265,19 @@ jobs:
             SERVICES_TO_BUILD="$SERVICES_TO_BUILD db_backup"
           fi
 
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare
+
           if [ -n "$SERVICES_TO_BUILD" ]; then
-            log_info "Собираю изменённые сервисы:$SERVICES_TO_BUILD"
-            retry_with_backoff 2 10 "timeout 1200s docker compose -f \"$COMPOSE_FILE\" build --progress plain $SERVICES_TO_BUILD"
+            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build $SERVICES_TO_BUILD
             UP_ARGS="-d"
           else
-            log_info "Изменений в образах нет, пропускаю build"
             UP_ARGS="-d --no-build"
           fi
 
-          if docker compose -f "$COMPOSE_FILE" up $UP_ARGS; then
-            echo "Containers started successfully"
-          else
-            echo "Error: Failed to start containers"
-            docker compose -f "$COMPOSE_FILE" logs --tail=50
-            exit 1
-          fi
-
-          echo "=== Container status ==="
-          docker compose -f "$COMPOSE_FILE" ps
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" UP_ARGS="$UP_ARGS" \
+            bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
 
       - name: Update deployment metadata
         if: success() && steps.deployment_context.outputs.skip_deploy != 'true'
@@ -300,26 +285,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
           CURRENT_COMMIT=$(git rev-parse HEAD)
           CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          if [ -f "$METADATA_FILE" ]; then
-            jq --arg commit "$CURRENT_COMMIT" \
-               --arg time "$CURRENT_TIME" \
-               '.last_successful_commit = $commit | .last_successful_deploy_time = $time' \
-               "$METADATA_FILE" > "${METADATA_FILE}.tmp" && \
-            mv "${METADATA_FILE}.tmp" "$METADATA_FILE"
-          else
-            cat > "$METADATA_FILE" <<EOF
-          {
-            "last_successful_commit": "$CURRENT_COMMIT",
-            "last_successful_deploy_time": "$CURRENT_TIME"
-          }
-          EOF
-          fi
-
-          echo "Updated deployment metadata"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/metadata.sh" write "$CURRENT_COMMIT" "$CURRENT_TIME"
 
       - name: Deployment status
         if: always()

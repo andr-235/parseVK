@@ -33,6 +33,8 @@ jobs:
       DOCKER_BUILDKIT: 1
       COMPOSE_DOCKER_CLI_BUILD: 1
       COMPOSE_FILE: docker-compose.deploy.yml
+      PROJECT_ROOT: /opt/parseVK
+      PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
 
     steps:
       - name: Checkout code
@@ -45,16 +47,8 @@ jobs:
         working-directory: /opt/parseVK
         run: |
           set -euo pipefail
-
-          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
-          if [ -f "$METADATA_FILE" ]; then
-            LAST_SUCCESSFUL_COMMIT=$(jq -r '.last_successful_commit // empty' "$METADATA_FILE" 2>/dev/null || echo "")
-            LAST_SUCCESSFUL_DEPLOY_TIME=$(jq -r '.last_successful_deploy_time // empty' "$METADATA_FILE" 2>/dev/null || echo "")
-            echo "last_successful_commit=$LAST_SUCCESSFUL_COMMIT" >> $GITHUB_OUTPUT
-            echo "last_successful_deploy_time=$LAST_SUCCESSFUL_DEPLOY_TIME" >> $GITHUB_OUTPUT
-          else
-            echo "No deployment metadata found"
-          fi
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+            bash "$PRODUCTION_SCRIPTS_DIR/metadata.sh" load
 
       - name: Determine target commit
         id: determine_commit
@@ -170,17 +164,8 @@ jobs:
         timeout-minutes: 1
         run: |
           set -euo pipefail
-
-          if [ ! -f "$COMPOSE_FILE" ]; then
-            echo "Error: $COMPOSE_FILE not found in target commit"
-            exit 1
-          fi
-
-          if ! docker compose -f "$COMPOSE_FILE" config > /dev/null 2>&1; then
-            echo "Error: Invalid $COMPOSE_FILE in target commit"
-            docker compose -f "$COMPOSE_FILE" config
-            exit 1
-          fi
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/preflight.sh"
 
       - name: Build local application images for target commit
         working-directory: /opt/parseVK
@@ -188,8 +173,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "=== Building local images for target commit ==="
-          docker compose -f "$COMPOSE_FILE" build --progress plain api frontend db_backup
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build api frontend db_backup
 
       - name: Stop current containers
         working-directory: /opt/parseVK
@@ -239,30 +226,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "=== Pulling external images and starting containers ==="
-
-          MAX_RETRIES=2
-          RETRY=0
-          START_SUCCESS=false
-
-          while [ $RETRY -lt $MAX_RETRIES ]; do
-            if docker compose -f "$COMPOSE_FILE" pull --ignore-pull-failures && \
-               docker compose -f "$COMPOSE_FILE" up -d --no-build; then
-              START_SUCCESS=true
-              break
-            fi
-            RETRY=$((RETRY + 1))
-            if [ $RETRY -lt $MAX_RETRIES ]; then
-              echo "Start failed, retry $RETRY/$MAX_RETRIES in 3s..."
-              sleep 3
-            fi
-          done
-
-          if [ "$START_SUCCESS" != "true" ]; then
-            echo "Error: Failed to start containers after $MAX_RETRIES attempts"
-            docker compose -f "$COMPOSE_FILE" ps
-            exit 1
-          fi
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" UP_ARGS="-d --no-build" \
+            bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
 
       - name: Wait for services to be healthy
         if: github.event.inputs.skip_health_check != 'true'
@@ -295,26 +260,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          METADATA_FILE="/opt/parseVK/.deployment-metadata.json"
           TARGET_COMMIT="${{ steps.determine_commit.outputs.target_commit }}"
           CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          if [ -f "$METADATA_FILE" ]; then
-            jq --arg commit "$TARGET_COMMIT" \
-               --arg time "$CURRENT_TIME" \
-               '.last_successful_commit = $commit | .last_successful_deploy_time = $time' \
-               "$METADATA_FILE" > "${METADATA_FILE}.tmp" && \
-            mv "${METADATA_FILE}.tmp" "$METADATA_FILE"
-          else
-            cat > "$METADATA_FILE" <<EOF
-          {
-            "last_successful_commit": "$TARGET_COMMIT",
-            "last_successful_deploy_time": "$CURRENT_TIME"
-          }
-          EOF
-          fi
-
-          echo "Updated deployment metadata"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/metadata.sh" write "$TARGET_COMMIT" "$CURRENT_TIME"
 
       - name: Rollback summary
         if: always()
