@@ -22,6 +22,7 @@ interface KeywordsTableCardProps {
   keywords: Keyword[]
   isLoading: boolean
   onDelete: (id: number) => void | Promise<void>
+  onManageForms: (keyword: Keyword) => void
   searchTerm: string
   onSearchChange: (value: string) => void
 }
@@ -30,6 +31,7 @@ function KeywordsTableCard({
   keywords,
   isLoading,
   onDelete,
+  onManageForms,
   searchTerm,
   onSearchChange,
 }: KeywordsTableCardProps) {
@@ -146,6 +148,7 @@ function KeywordsTableCard({
                 isExpanded={expandedCategories[group.category] ?? true}
                 onToggle={() => toggleCategory(group.category)}
                 onDelete={onDelete}
+                onManageForms={onManageForms}
               />
             ))}
           </div>

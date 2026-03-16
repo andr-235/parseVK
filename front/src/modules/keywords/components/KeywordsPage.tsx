@@ -1,4 +1,5 @@
 import KeywordsTableCard from '@/modules/keywords/components/KeywordsTableCard'
+import { KeywordFormsSheet } from '@/modules/keywords/components/KeywordFormsSheet'
 import { KeywordsHero } from '@/modules/keywords/components/KeywordsHero'
 import { KeywordsForm } from '@/modules/keywords/components/KeywordsForm'
 import { useKeywordsViewModel } from '@/modules/keywords/hooks/useKeywordsViewModel'
@@ -12,14 +13,27 @@ function KeywordsPage() {
     categoryValue,
     phraseValue,
     isRecalculating,
+    selectedKeyword,
+    keywordForms,
+    isKeywordFormsLoading,
+    manualFormValue,
+    exclusionValue,
     setKeywordValue,
     setCategoryValue,
     setPhraseValue,
     setSearchTerm,
+    setManualFormValue,
+    setExclusionValue,
     handleAddKeyword,
     handleAddPhrase,
     handleFileUpload,
     handleRecalculate,
+    handleManageForms,
+    handleKeywordFormsOpenChange,
+    handleAddManualForm,
+    handleRemoveManualForm,
+    handleAddExclusion,
+    handleRemoveExclusion,
     deleteKeyword,
   } = useKeywordsViewModel()
 
@@ -67,10 +81,27 @@ function KeywordsPage() {
           keywords={keywords}
           isLoading={isLoading}
           onDelete={deleteKeyword}
+          onManageForms={handleManageForms}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
         />
       </div>
+
+      <KeywordFormsSheet
+        open={selectedKeyword !== null}
+        onOpenChange={handleKeywordFormsOpenChange}
+        keyword={selectedKeyword}
+        forms={keywordForms}
+        isLoading={isKeywordFormsLoading}
+        manualFormValue={manualFormValue}
+        exclusionValue={exclusionValue}
+        onManualFormChange={setManualFormValue}
+        onExclusionChange={setExclusionValue}
+        onAddManualForm={handleAddManualForm}
+        onRemoveManualForm={handleRemoveManualForm}
+        onAddExclusion={handleAddExclusion}
+        onRemoveExclusion={handleRemoveExclusion}
+      />
     </div>
   )
 }

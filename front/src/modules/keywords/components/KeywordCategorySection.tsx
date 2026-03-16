@@ -10,6 +10,7 @@ interface KeywordCategorySectionProps {
   isExpanded: boolean
   onToggle: () => void
   onDelete: (id: number) => void | Promise<void>
+  onManageForms: (keyword: Keyword) => void
 }
 
 export function KeywordCategorySection({
@@ -18,6 +19,7 @@ export function KeywordCategorySection({
   isExpanded,
   onToggle,
   onDelete,
+  onManageForms,
 }: KeywordCategorySectionProps) {
   return (
     <section className="space-y-4 rounded-2xl border border-border/60 bg-background/20 p-4">
@@ -41,7 +43,12 @@ export function KeywordCategorySection({
       {isExpanded && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {keywords.map((keyword) => (
-            <KeywordCard key={keyword.id} keyword={keyword} onDelete={onDelete} />
+            <KeywordCard
+              key={keyword.id}
+              keyword={keyword}
+              onDelete={onDelete}
+              onManageForms={onManageForms}
+            />
           ))}
         </div>
       )}

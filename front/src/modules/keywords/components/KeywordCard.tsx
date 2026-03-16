@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react'
+import { Shapes, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/shared/ui/card'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -7,9 +7,10 @@ import type { Keyword } from '@/types'
 interface KeywordCardProps {
   keyword: Keyword
   onDelete: (id: number) => void
+  onManageForms: (keyword: Keyword) => void
 }
 
-export function KeywordCard({ keyword, onDelete }: KeywordCardProps) {
+export function KeywordCard({ keyword, onDelete, onManageForms }: KeywordCardProps) {
   return (
     <Card className="relative flex flex-col h-full overflow-hidden hover:shadow-md transition-shadow">
       <Button
@@ -44,6 +45,18 @@ export function KeywordCard({ keyword, onDelete }: KeywordCardProps) {
             Без категории
           </Badge>
         )}
+
+        <div className="mt-auto pt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-center gap-2"
+            onClick={() => onManageForms(keyword)}
+          >
+            <Shapes className="size-4" />
+            Формы
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )

@@ -3,6 +3,15 @@ import { API_URL } from '@/shared/api'
 import { createRequest, handleResponse } from '@/shared/api'
 import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '@/shared/types'
 
+export interface IKeywordFormsResponse {
+  keywordId: number
+  word: string
+  isPhrase: boolean
+  generatedForms: string[]
+  manualForms: string[]
+  exclusions: string[]
+}
+
 export const keywordsService = {
   async addKeyword(
     word: string,
@@ -128,5 +137,66 @@ export const keywordsService = {
       toast.error('Не удалось пересчитать совпадения ключевых слов')
       throw error
     }
+  },
+
+  async getKeywordForms(id: number): Promise<IKeywordFormsResponse> {
+    const response = await createRequest(`${API_URL}/keywords/${id}/forms`)
+    return handleResponse<IKeywordFormsResponse>(response, 'Failed to fetch keyword forms')
+  },
+
+  async addManualKeywordForm(id: number, form: string): Promise<IKeywordFormsResponse> {
+    const response = await createRequest(`${API_URL}/keywords/${id}/forms/manual`, {
+      method: 'POST',
+      body: JSON.stringify({ form }),
+    })
+
+    const result = await handleResponse<IKeywordFormsResponse>(
+      response,
+      'Failed to add manual keyword form'
+    )
+    toast.success('Ручная форма добавлена')
+    return result
+  },
+
+  async removeManualKeywordForm(id: number, form: string): Promise<IKeywordFormsResponse> {
+    const response = await createRequest(`${API_URL}/keywords/${id}/forms/manual`, {
+      method: 'DELETE',
+      body: JSON.stringify({ form }),
+    })
+
+    const result = await handleResponse<IKeywordFormsResponse>(
+      response,
+      'Failed to remove manual keyword form'
+    )
+    toast.success('Ручная форма удалена')
+    return result
+  },
+
+  async addKeywordFormExclusion(id: number, form: string): Promise<IKeywordFormsResponse> {
+    const response = await createRequest(`${API_URL}/keywords/${id}/forms/exclusions`, {
+      method: 'POST',
+      body: JSON.stringify({ form }),
+    })
+
+    const result = await handleResponse<IKeywordFormsResponse>(
+      response,
+      'Failed to add keyword form exclusion'
+    )
+    toast.success('Исключение добавлено')
+    return result
+  },
+
+  async removeKeywordFormExclusion(id: number, form: string): Promise<IKeywordFormsResponse> {
+    const response = await createRequest(`${API_URL}/keywords/${id}/forms/exclusions`, {
+      method: 'DELETE',
+      body: JSON.stringify({ form }),
+    })
+
+    const result = await handleResponse<IKeywordFormsResponse>(
+      response,
+      'Failed to remove keyword form exclusion'
+    )
+    toast.success('Исключение удалено')
+    return result
   },
 }

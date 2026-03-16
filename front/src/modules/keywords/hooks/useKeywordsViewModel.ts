@@ -3,7 +3,11 @@ import toast from 'react-hot-toast'
 import { useKeywordsStore } from '@/modules/keywords/store'
 // Использование services для одноразовой операции (пересчет совпадений)
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
-import { keywordsService } from '@/modules/keywords/api/keywords.api'
+import {
+  keywordsService,
+  type IKeywordFormsResponse,
+} from '@/modules/keywords/api/keywords.api'
+import type { Keyword } from '@/types'
 
 export const useKeywordsViewModel = () => {
   const keywords = useKeywordsStore((state) => state.keywords)
@@ -18,6 +22,11 @@ export const useKeywordsViewModel = () => {
   const [phraseValue, setPhraseValue] = useState('')
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null)
+  const [keywordForms, setKeywordForms] = useState<IKeywordFormsResponse | null>(null)
+  const [isKeywordFormsLoading, setIsKeywordFormsLoading] = useState(false)
+  const [manualFormValue, setManualFormValue] = useState('')
+  const [exclusionValue, setExclusionValue] = useState('')
 
   useEffect(() => {
     const loadKeywords = async () => {
@@ -99,6 +108,87 @@ export const useKeywordsViewModel = () => {
     )
   }, [keywords, searchTerm])
 
+  const handleManageForms = useCallback(async (keyword: Keyword) => {
+    setSelectedKeyword(keyword)
+    setManualFormValue('')
+    setExclusionValue('')
+    setIsKeywordFormsLoading(true)
+
+    try {
+      const response = await keywordsService.getKeywordForms(keyword.id)
+      setKeywordForms(response)
+    } catch (error) {
+      console.error('Failed to load keyword forms', error)
+      setKeywordForms(null)
+    } finally {
+      setIsKeywordFormsLoading(false)
+    }
+  }, [])
+
+  const handleKeywordFormsOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setSelectedKeyword(null)
+      setKeywordForms(null)
+      setManualFormValue('')
+      setExclusionValue('')
+    }
+  }, [])
+
+  const applyFormsMutation = useCallback(
+    async (
+      action: (keywordId: number) => Promise<IKeywordFormsResponse>,
+      onSuccess?: () => void
+    ) => {
+      if (!selectedKeyword) return
+
+      setIsKeywordFormsLoading(true)
+      try {
+        const response = await action(selectedKeyword.id)
+        setKeywordForms(response)
+        onSuccess?.()
+      } catch (error) {
+        console.error('Failed to mutate keyword forms', error)
+      } finally {
+        setIsKeywordFormsLoading(false)
+      }
+    },
+    [selectedKeyword]
+  )
+
+  const handleAddManualForm = useCallback(async () => {
+    const nextValue = manualFormValue.trim()
+    if (!nextValue) return
+
+    await applyFormsMutation(
+      (keywordId) => keywordsService.addManualKeywordForm(keywordId, nextValue),
+      () => setManualFormValue('')
+    )
+  }, [applyFormsMutation, manualFormValue])
+
+  const handleRemoveManualForm = useCallback(
+    async (form: string) => {
+      await applyFormsMutation((keywordId) => keywordsService.removeManualKeywordForm(keywordId, form))
+    },
+    [applyFormsMutation]
+  )
+
+  const handleAddExclusion = useCallback(async () => {
+    const nextValue = exclusionValue.trim()
+    if (!nextValue) return
+
+    await applyFormsMutation(
+      (keywordId) => keywordsService.addKeywordFormExclusion(keywordId, nextValue),
+      () => setExclusionValue('')
+    )
+  }, [applyFormsMutation, exclusionValue])
+
+  const handleRemoveExclusion = useCallback(
+    async (form: string) => {
+      await applyFormsMutation((keywordId) => keywordsService.removeKeywordFormExclusion(keywordId, form))
+    },
+    [applyFormsMutation]
+  )
+
   return {
     keywords: filteredKeywords,
     isLoading,
@@ -107,14 +197,27 @@ export const useKeywordsViewModel = () => {
     categoryValue,
     phraseValue,
     isRecalculating,
+    selectedKeyword,
+    keywordForms,
+    isKeywordFormsLoading,
+    manualFormValue,
+    exclusionValue,
     setKeywordValue,
     setCategoryValue,
     setPhraseValue,
     setSearchTerm,
+    setManualFormValue,
+    setExclusionValue,
     handleAddKeyword,
     handleAddPhrase,
     handleFileUpload,
     handleRecalculate,
+    handleManageForms,
+    handleKeywordFormsOpenChange,
+    handleAddManualForm,
+    handleRemoveManualForm,
+    handleAddExclusion,
+    handleRemoveExclusion,
     deleteKeyword,
   }
 }

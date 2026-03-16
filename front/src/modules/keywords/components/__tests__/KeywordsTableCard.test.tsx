@@ -22,6 +22,7 @@ describe('KeywordsTableCard', () => {
         ]}
         isLoading={false}
         onDelete={() => {}}
+        onManageForms={() => {}}
         searchTerm=""
         onSearchChange={() => {}}
       />
@@ -37,6 +38,7 @@ describe('KeywordsTableCard', () => {
         keywords={[{ id: 1, word: 'ремонт', category: 'Услуги' }]}
         isLoading={false}
         onDelete={() => {}}
+        onManageForms={() => {}}
         searchTerm=""
         onSearchChange={() => {}}
       />
@@ -46,5 +48,24 @@ describe('KeywordsTableCard', () => {
 
     expect(screen.queryByText('ремонт')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /развернуть/i })).toBeInTheDocument()
+  })
+
+  it('calls onManageForms for selected keyword', async () => {
+    const onManageForms = vi.fn()
+
+    render(
+      <KeywordsTableCard
+        keywords={[{ id: 1, word: 'ремонт', category: 'Услуги' }]}
+        isLoading={false}
+        onDelete={() => {}}
+        onManageForms={onManageForms}
+        searchTerm=""
+        onSearchChange={() => {}}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /формы/i }))
+
+    expect(onManageForms).toHaveBeenCalledWith({ id: 1, word: 'ремонт', category: 'Услуги' })
   })
 })
