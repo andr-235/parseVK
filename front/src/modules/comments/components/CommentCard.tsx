@@ -13,6 +13,7 @@ import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { resolveCommentKeywords } from '@/modules/comments/utils/resolveCommentKeywords'
 import { resolveCommentVisibility } from '@/modules/comments/utils/resolveCommentVisibility'
 import { getCommentCategories } from '@/modules/comments/utils/getCommentCategories'
+import { getMatchedKeywordLabel } from '@/modules/comments/utils/getMatchedKeywordLabel'
 import { CommentAttachments } from './CommentAttachments'
 import { CommentThread } from './CommentThread'
 
@@ -226,7 +227,7 @@ const CommentCard = memo(function CommentCard({
                         key={kw.id}
                         className="h-5 border-0 bg-amber-500/10 px-1.5 font-mono-accent text-[9px] text-amber-400"
                       >
-                        {kw.word}
+                        {getMatchedKeywordLabel(kw, comment.postText)}
                       </Badge>
                     ))}
                   </div>
@@ -288,7 +289,7 @@ const CommentCard = memo(function CommentCard({
                     key={kw.id}
                     className="h-5 border-0 bg-amber-500/10 px-1.5 font-mono-accent text-[9px] text-amber-400"
                   >
-                    {kw.word}
+                    {getMatchedKeywordLabel(kw, comment.text)}
                   </Badge>
                 ))}
               </div>

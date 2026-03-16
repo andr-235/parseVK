@@ -52,4 +52,20 @@ describe('CommentCard', () => {
     expect(screen.getByRole('button', { name: 'Акции' })).toBeInTheDocument()
     expect(onCategoryClick).toHaveBeenCalledWith('Услуги')
   })
+
+  it('shows matched keyword form label when form differs from base word', () => {
+    render(
+      <CommentCard
+        comment={{
+          ...createComment(),
+          text: 'Вижу клоунов в комментарии',
+        }}
+        index={1}
+        toggleReadStatus={async () => {}}
+        matchedKeywords={[{ id: 1, word: 'клоун', forms: ['клоун', 'клоунов'] }]}
+      />
+    )
+
+    expect(screen.getByText('клоун / клоунов')).toBeInTheDocument()
+  })
 })
