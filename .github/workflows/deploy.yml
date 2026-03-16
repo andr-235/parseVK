@@ -239,7 +239,7 @@ jobs:
         run: |
           echo "=== Running database migrations ==="
 
-          if docker compose -f "$COMPOSE_FILE" run --rm --no-build --no-deps --entrypoint sh api -c "command -v ./node_modules/.bin/prisma > /dev/null 2>&1 && ./node_modules/.bin/prisma migrate deploy || prisma migrate deploy"; then
+          if docker compose -f "$COMPOSE_FILE" run --rm --no-deps --entrypoint sh api -c "command -v ./node_modules/.bin/prisma > /dev/null 2>&1 && ./node_modules/.bin/prisma migrate deploy || prisma migrate deploy"; then
             echo "Migrations completed"
           else
             echo "Error: Migrations failed"
