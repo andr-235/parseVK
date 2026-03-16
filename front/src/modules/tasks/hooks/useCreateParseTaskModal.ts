@@ -27,8 +27,6 @@ export function useCreateParseTaskModal(groups: Group[], isOpen: boolean) {
       setSearch('')
       return
     }
-
-    setSelectedIds(new Set(groups.map((group) => group.id)))
   }, [isOpen, groups])
 
   const filteredGroups = useMemo(() => {
