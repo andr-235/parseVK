@@ -1,3 +1,10 @@
+## [0.22.2](https://github.com/andr-235/parseVK/compare/v0.22.1...v0.22.2) (2026-03-16)
+
+
+### Bug Fixes
+
+* исправлен выбор всех групп в модалке задач ([8639eb8](https://github.com/andr-235/parseVK/commit/8639eb8177c40fc11420e9c39aa87cd2cee42a33))
+
 ## [0.22.1](https://github.com/andr-235/parseVK/compare/v0.22.0...v0.22.1) (2026-03-16)
 
 
