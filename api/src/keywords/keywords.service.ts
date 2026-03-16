@@ -102,6 +102,20 @@ export class KeywordsService {
     return created;
   }
 
+  async updateKeywordCategory(
+    id: number,
+    category?: string | null,
+  ): Promise<IKeywordResponse> {
+    await this.repository.findUniqueById({ id });
+
+    const normalizedCategory = category?.trim() ?? null;
+
+    return (await this.repository.update(
+      { id },
+      { category: normalizedCategory },
+    )) as IKeywordResponse;
+  }
+
   async bulkAddKeywords(words: string[]): Promise<IBulkAddResponse> {
     const entries = words.map((word) => ({
       word: word.trim(),

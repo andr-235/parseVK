@@ -4,7 +4,7 @@
 
 **Goal:** Починить добавление ключевых слов и сделать комбинированное поле категории с выбором существующих значений и вводом новых.
 
-**Architecture:** Использовать существующий поток данных формы и стор без изменений API. Подсказки категорий вычислять во view model и передавать в UI, а доступность кнопок определять напрямую по значениям инпутов.
+**Architecture:** Использовать существующий поток данных формы и стор, но дополнить его явной синхронизацией списка после добавления и отдельным обновлением категории keyword. Подсказки категорий вычислять во view model и переиспользовать как в форме добавления, так и в инлайн-редактировании карточки.
 
 **Tech Stack:** React, TypeScript, Vitest, Testing Library
 
@@ -34,3 +34,43 @@
 - [ ] **Step 2: Render `datalist` in form**
 - [ ] **Step 3: Disable add buttons for empty trimmed values**
 - [ ] **Step 4: Re-run targeted tests**
+
+### Task 3: Исправить автосинхронизацию списка после добавления
+
+**Files:**
+- Modify: `front/src/modules/keywords/api/keywords.api.ts`
+- Modify: `front/src/modules/keywords/store/keywordsStore.ts`
+- Test: `front/src/modules/keywords/api/__tests__/keywords.api.test.ts`
+
+- [ ] **Step 1: Write failing test for full list refresh behavior**
+- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Fix keyword loading/update flow**
+- [ ] **Step 4: Run targeted tests**
+
+### Task 4: Добавить инлайн-редактирование категории keyword
+
+**Files:**
+- Modify: `api/src/keywords/keywords.controller.ts`
+- Modify: `api/src/keywords/keywords.service.ts`
+- Modify: `api/src/keywords/interfaces/keywords-repository.interface.ts`
+- Modify: `api/src/keywords/repositories/keywords.repository.ts`
+- Modify: `front/src/modules/keywords/api/keywords.api.ts`
+- Modify: `front/src/modules/keywords/components/KeywordCard.tsx`
+- Modify: `front/src/modules/keywords/components/KeywordCategorySection.tsx`
+- Modify: `front/src/modules/keywords/hooks/useKeywordsViewModel.ts`
+
+- [ ] **Step 1: Write failing backend/frontend tests**
+- [ ] **Step 2: Add minimal update category API**
+- [ ] **Step 3: Add inline edit mode on keyword card**
+- [ ] **Step 4: Re-run targeted tests**
+
+### Task 5: Проверить регрессию комментариев по категориям
+
+**Files:**
+- Modify: `front/src/modules/comments/hooks/useCommentsViewModel.ts`
+- Modify: `front/src/modules/comments/utils/getCommentCategories.ts`
+- Test: `front/src/modules/comments/**/__tests__/*`
+
+- [ ] **Step 1: Reproduce category grouping regression with failing test**
+- [ ] **Step 2: Fix grouping logic without side effects**
+- [ ] **Step 3: Re-run targeted tests**

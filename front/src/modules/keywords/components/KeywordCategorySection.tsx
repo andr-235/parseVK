@@ -11,6 +11,8 @@ interface KeywordCategorySectionProps {
   onToggle: () => void
   onDelete: (id: number) => void | Promise<void>
   onManageForms: (keyword: Keyword) => void
+  onUpdateCategory: (id: number, category?: string | null) => void | Promise<void>
+  categorySuggestions: string[]
 }
 
 export function KeywordCategorySection({
@@ -20,6 +22,8 @@ export function KeywordCategorySection({
   onToggle,
   onDelete,
   onManageForms,
+  onUpdateCategory,
+  categorySuggestions,
 }: KeywordCategorySectionProps) {
   return (
     <section className="space-y-4 rounded-2xl border border-border/60 bg-background/20 p-4">
@@ -48,6 +52,8 @@ export function KeywordCategorySection({
               keyword={keyword}
               onDelete={onDelete}
               onManageForms={onManageForms}
+              onUpdateCategory={onUpdateCategory}
+              categorySuggestions={categorySuggestions}
             />
           ))}
         </div>

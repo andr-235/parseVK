@@ -33,10 +33,29 @@ export const keywordsService = {
       })
 
       const result = await handleResponse<IKeywordResponse>(response, 'Failed to add keyword')
-      toast.success(isPhrase ? 'Фраза добавлена' : 'Ключевое слово добавлено')
+      toast.success(isPhrase ? `Фраза «${word}» добавлена` : `Слово «${word}» добавлено`)
       return result
     } catch (error) {
       toast.error('Не удалось добавить ключевое слово')
+      throw error
+    }
+  },
+
+  async updateKeywordCategory(id: number, category?: string | null): Promise<IKeywordResponse> {
+    try {
+      const response = await createRequest(`${API_URL}/keywords/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ category: category ?? null }),
+      })
+
+      const result = await handleResponse<IKeywordResponse>(
+        response,
+        'Failed to update keyword category'
+      )
+      toast.success('Категория обновлена')
+      return result
+    } catch (error) {
+      toast.error('Не удалось обновить категорию')
       throw error
     }
   },

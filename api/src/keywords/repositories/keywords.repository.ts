@@ -51,6 +51,10 @@ export class KeywordsRepository implements IKeywordsRepository {
     return this.prisma.keyword.create({ data });
   }
 
+  findUniqueById(where: { id: number }): Promise<Keyword> {
+    return this.prisma.keyword.findUniqueOrThrow({ where });
+  }
+
   update(
     where: { id: number },
     data: {

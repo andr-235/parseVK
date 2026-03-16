@@ -9,6 +9,7 @@ import type { Keyword } from '@/types'
 export const useKeywordsViewModel = () => {
   const keywords = useKeywordsStore((state) => state.keywords)
   const addKeyword = useKeywordsStore((state) => state.addKeyword)
+  const updateKeywordCategory = useKeywordsStore((state) => state.updateKeywordCategory)
   const deleteKeyword = useKeywordsStore((state) => state.deleteKeyword)
   const loadFromFile = useKeywordsStore((state) => state.loadFromFile)
   const fetchKeywords = useKeywordsStore((state) => state.fetchKeywords)
@@ -57,6 +58,13 @@ export const useKeywordsViewModel = () => {
       // categoryValue is intentionally left as is for easier bulk entry
     }
   }, [phraseValue, categoryValue, addKeyword])
+
+  const handleUpdateKeywordCategory = useCallback(
+    async (id: number, category?: string | null) => {
+      await updateKeywordCategory(id, category ?? null)
+    },
+    [updateKeywordCategory]
+  )
 
   const handleFileUpload = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -247,6 +255,7 @@ export const useKeywordsViewModel = () => {
     setExclusionValue,
     handleAddKeyword,
     handleAddPhrase,
+    handleUpdateKeywordCategory,
     handleFileUpload,
     handleRecalculate,
     handleRebuildForms,

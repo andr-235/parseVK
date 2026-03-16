@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { KeywordsService } from './keywords.service.js';
 import type { IKeywordsRepository } from './interfaces/keywords-repository.interface.js';
 import { KeywordFormSource } from '../generated/prisma/client.js';
@@ -27,6 +27,7 @@ describe('KeywordsService', () => {
         [unknown?, unknown?, number?, number?]
       >(),
       create: vi.fn<Promise<unknown>, [unknown]>(),
+      findUniqueById: vi.fn<Promise<unknown>, [{ id: number }]>(),
       update: vi.fn<Promise<unknown>, [{ id: number }, unknown]>(),
       delete: vi.fn<Promise<void>, [{ id: number }]>(),
       deleteMany: vi.fn<Promise<{ count: number }>, []>(),
@@ -173,6 +174,26 @@ describe('KeywordsService', () => {
     expect(
       matchesServiceMock.recalculateKeywordMatchesForKeyword,
     ).toHaveBeenCalledWith(1);
+    expect(result).toEqual(updated);
+  });
+
+  it('должен обновлять категорию существующего ключевого слова по id', async () => {
+    const updated = {
+      id: 1,
+      word: 'путлер',
+      category: 'Оскорбление',
+      isPhrase: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    repositoryMock.update.mockResolvedValue(updated);
+
+    const result = await service.updateKeywordCategory(1, '  Оскорбление  ');
+
+    expect(repositoryMock.update).toHaveBeenCalledWith(
+      { id: 1 },
+      { category: 'Оскорбление' },
+    );
     expect(result).toEqual(updated);
   });
 

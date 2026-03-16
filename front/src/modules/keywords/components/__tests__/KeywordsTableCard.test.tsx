@@ -23,6 +23,8 @@ describe('KeywordsTableCard', () => {
         isLoading={false}
         onDelete={() => {}}
         onManageForms={() => {}}
+        onUpdateCategory={() => {}}
+        categorySuggestions={[]}
         searchTerm=""
         onSearchChange={() => {}}
       />
@@ -39,6 +41,8 @@ describe('KeywordsTableCard', () => {
         isLoading={false}
         onDelete={() => {}}
         onManageForms={() => {}}
+        onUpdateCategory={() => {}}
+        categorySuggestions={[]}
         searchTerm=""
         onSearchChange={() => {}}
       />
@@ -59,6 +63,8 @@ describe('KeywordsTableCard', () => {
         isLoading={false}
         onDelete={() => {}}
         onManageForms={onManageForms}
+        onUpdateCategory={() => {}}
+        categorySuggestions={[]}
         searchTerm=""
         onSearchChange={() => {}}
       />

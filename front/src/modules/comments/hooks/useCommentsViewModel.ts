@@ -242,7 +242,7 @@ const useCommentsViewModel = () => {
   const markWatchlisted = useCommentsStore((state) => state.markWatchlisted)
   const { keywords } = useKeywordsStore()
   const { addAuthorFromComment } = useWatchlistStore()
-  const [showKeywordComments, setShowKeywordComments] = useState(true)
+  const [showKeywordComments, setShowKeywordComments] = useState(false)
   const [showKeywordPosts, setShowKeywordPosts] = useState(false)
   const [readFilter, setReadFilter] = useState<ReadFilter>('unread')
   const [searchTerm, setSearchTerm] = useState('')

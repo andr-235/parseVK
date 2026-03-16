@@ -26,6 +26,7 @@ export interface IKeywordsRepository {
     category: string | null;
     isPhrase: boolean;
   }): Promise<Keyword>;
+  findUniqueById(where: { id: number }): Promise<Keyword>;
   update(
     where: { id: number },
     data: {

@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Delete,
+  Patch,
   Body,
   Param,
   Query,
@@ -14,6 +15,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { KeywordsService } from './keywords.service.js';
 import { AddKeywordDto } from './dto/add-keyword.dto.js';
 import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto.js';
+import { UpdateKeywordCategoryDto } from './dto/update-keyword-category.dto.js';
 import { KeywordFormDto } from './dto/keyword-form.dto.js';
 import { KeywordIdParamDto } from './dto/keyword-id-param.dto.js';
 import { GetKeywordsQueryDto } from './dto/get-keywords-query.dto.js';
@@ -42,6 +44,14 @@ export class KeywordsController {
     @Body() dto: BulkAddKeywordsDto,
   ): Promise<IBulkAddResponse> {
     return this.keywordsService.bulkAddKeywords(dto.words);
+  }
+
+  @Patch(':id')
+  async updateKeywordCategory(
+    @Param() params: KeywordIdParamDto,
+    @Body() dto: UpdateKeywordCategoryDto,
+  ): Promise<IKeywordResponse> {
+    return this.keywordsService.updateKeywordCategory(params.id, dto.category);
   }
 
   @Post('upload')

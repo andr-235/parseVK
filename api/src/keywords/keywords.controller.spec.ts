@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { KeywordsController } from './keywords.controller.js';
@@ -8,6 +8,7 @@ import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto.js';
 
 const mockKeywordsService = () => ({
   addKeyword: vi.fn(),
+  updateKeywordCategory: vi.fn(),
   bulkAddKeywords: vi.fn(),
   addKeywordsFromFile: vi.fn(),
   getKeywords: vi.fn(),
@@ -86,6 +87,29 @@ describe('KeywordsController', () => {
       'one',
       'two',
     ]);
+  });
+
+  it('должен обновить категорию keyword через PATCH /:id', async () => {
+    const response = {
+      id: 1,
+      word: 'путлер',
+      category: 'Оскорбление',
+      isPhrase: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    keywordsService.updateKeywordCategory.mockResolvedValue(response);
+
+    const result = await controller.updateKeywordCategory(
+      { id: 1 },
+      { category: 'Оскорбление' },
+    );
+
+    expect(result).toEqual(response);
+    expect(keywordsService.updateKeywordCategory).toHaveBeenCalledWith(
+      1,
+      'Оскорбление',
+    );
   });
 
   it('должен загрузить ключевые слова из файла через POST /upload', async () => {

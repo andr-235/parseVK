@@ -28,6 +28,7 @@ function KeywordsPage() {
     setExclusionValue,
     handleAddKeyword,
     handleAddPhrase,
+    handleUpdateKeywordCategory,
     handleFileUpload,
     handleRecalculate,
     handleRebuildForms,
@@ -88,6 +89,8 @@ function KeywordsPage() {
           isLoading={isLoading}
           onDelete={deleteKeyword}
           onManageForms={handleManageForms}
+          onUpdateCategory={handleUpdateKeywordCategory}
+          categorySuggestions={categorySuggestions}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
         />

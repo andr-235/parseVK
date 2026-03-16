@@ -55,7 +55,7 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
 
         return { keywords: [...state.keywords, keyword] }
       })
-      void queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: keywordsQueryKeys.list(),
         refetchType: 'active',
       })
@@ -63,6 +63,28 @@ export const useKeywordsStore = create<KeywordsState>((set) => ({
     } catch (error) {
       console.error('Failed to add keyword', error)
       toast.error('Не удалось добавить слово')
+      return false
+    }
+  },
+
+  async updateKeywordCategory(id, category) {
+    const trimmedCategory = category?.trim() ?? ''
+
+    try {
+      const keyword = await keywordsService.updateKeywordCategory(
+        id,
+        trimmedCategory ? trimmedCategory : null
+      )
+      set((state) => ({
+        keywords: state.keywords.map((item) => (item.id === id ? keyword : item)),
+      }))
+      await queryClient.invalidateQueries({
+        queryKey: keywordsQueryKeys.list(),
+        refetchType: 'active',
+      })
+      return true
+    } catch (error) {
+      console.error('Failed to update keyword category', error)
       return false
     }
   },
