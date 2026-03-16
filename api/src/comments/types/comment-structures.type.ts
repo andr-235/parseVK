@@ -24,6 +24,9 @@ export type KeywordInMatch = {
   word: string;
   category: string | null;
   isPhrase: boolean;
+  keywordForms: Array<{
+    form: string;
+  }>;
 };
 
 /**

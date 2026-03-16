@@ -7,19 +7,25 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
   }
 
   const keywordEntries = keywords
-    .map((keyword) => {
-      const trimmed = keyword.word.trim()
-      const normalized = normalizeForKeywordMatch(trimmed)
+    .flatMap((keyword) => {
+      const sourceForms = Array.isArray(keyword.forms) && keyword.forms.length > 0
+        ? keyword.forms
+        : [keyword.word]
 
-      if (!normalized) {
-        return null
-      }
+      return sourceForms.map((form) => {
+        const trimmed = form.trim()
+        const normalized = normalizeForKeywordMatch(trimmed)
 
-      return {
-        original: trimmed,
-        normalized,
-        isPhrase: keyword.isPhrase ?? false,
-      }
+        if (!normalized) {
+          return null
+        }
+
+        return {
+          original: trimmed,
+          normalized,
+          isPhrase: keyword.isPhrase ?? false,
+        }
+      })
     })
     .filter(
       (
@@ -47,7 +53,11 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
     return text
   }
 
-  const patterns = keywordEntries.map((entry) =>
+  const sortedKeywordEntries = [...keywordEntries].sort(
+    (left, right) => right.original.length - left.original.length
+  )
+
+  const patterns = sortedKeywordEntries.map((entry) =>
     buildKeywordPattern(entry.original, entry.isPhrase)
   )
 
@@ -56,7 +66,7 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
   }
 
   const regex = new RegExp(`(${patterns.join('|')})`, 'gi')
-  const normalizedKeywords = new Set(keywordEntries.map((entry) => entry.normalized))
+  const normalizedKeywords = new Set(sortedKeywordEntries.map((entry) => entry.normalized))
 
   const parts = text.split(regex)
 

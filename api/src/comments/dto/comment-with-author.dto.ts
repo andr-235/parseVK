@@ -11,6 +11,7 @@ export interface CommentMatchedKeywordDto {
   id: number;
   word: string;
   category: string | null;
+  forms: string[];
   source?: 'COMMENT' | 'POST';
 }
 

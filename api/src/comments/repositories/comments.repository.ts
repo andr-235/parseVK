@@ -23,6 +23,11 @@ const keywordSelect = {
   word: true,
   category: true,
   isPhrase: true,
+  keywordForms: {
+    select: {
+      form: true,
+    },
+  },
 } satisfies Prisma.KeywordSelect;
 
 const commentInclude = {

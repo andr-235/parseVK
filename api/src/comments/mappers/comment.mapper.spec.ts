@@ -78,6 +78,7 @@ describe('CommentMapper', () => {
             word: 'test',
             category: 'category1',
             isPhrase: false,
+            keywordForms: [{ form: 'tests' }, { form: 'testing' }],
           },
         },
       ],
@@ -104,6 +105,7 @@ describe('CommentMapper', () => {
           id: 1,
           word: 'test',
           category: 'category1',
+          forms: ['test', 'tests', 'testing'],
         },
       ],
     });

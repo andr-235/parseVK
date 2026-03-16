@@ -10,8 +10,13 @@ type ResolveKeywordsParams = {
 const isKeywordInText = (text: string | undefined, keyword: Keyword): boolean => {
   if (!text) return false
   const normalizedText = normalizeForKeywordMatch(text)
-  const normalizedKeyword = normalizeForKeywordMatch(keyword.word)
-  return normalizedText.includes(normalizedKeyword)
+  const candidateForms =
+    Array.isArray(keyword.forms) && keyword.forms.length > 0 ? keyword.forms : [keyword.word]
+
+  return candidateForms.some((form) => {
+    const normalizedKeyword = normalizeForKeywordMatch(form)
+    return normalizedKeyword.length > 0 && normalizedText.includes(normalizedKeyword)
+  })
 }
 
 const uniqueById = <T extends { id: number }>(items: T[]): T[] =>

@@ -74,6 +74,7 @@ export interface IKeywordResponse {
   word: string
   category?: string | null
   isPhrase: boolean
+  forms?: string[]
   source?: 'COMMENT' | 'POST'
   createdAt?: string
   updatedAt?: string
