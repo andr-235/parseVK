@@ -31,9 +31,7 @@ describe('CreateParseTaskModal', () => {
     )
 
     expect(screen.getByText('0')).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /парсить последние посты \(0\)/i })
-    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: /парсить последние посты \(0\)/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /перепроверить группу/i })).toBeDisabled()
   })
 
