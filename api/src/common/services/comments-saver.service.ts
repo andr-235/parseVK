@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { CommentSource } from '../types/comment-source.enum.js';
 import { MatchSource } from '../types/match-source.enum.js';
 import { PrismaService } from '../../prisma.service.js';
 import type { CommentEntity } from '../types/comment-entity.type.js';
+import { CommentsSearchIndexerService } from '../../comments-search/services/comments-search-indexer.service.js';
 import {
   normalizeForKeywordMatch,
   matchesKeyword,
@@ -45,7 +46,11 @@ export interface SaveCommentsOptions {
 export class CommentsSaverService {
   private readonly logger = new Logger(CommentsSaverService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    private readonly searchIndexer?: CommentsSearchIndexerService,
+  ) {}
 
   /**
    * Сохраняет массив комментариев в БД.
@@ -120,6 +125,9 @@ export class CommentsSaverService {
       comment.postId,
       options.keywordMatches ?? [],
     );
+
+    await this.searchIndexer?.indexCommentById(savedComment.id);
+    await this.searchIndexer?.indexCommentsByPost(comment.ownerId, comment.postId);
 
     let saved = 1;
     if (comment.threadItems?.length) {

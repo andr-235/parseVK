@@ -5,9 +5,10 @@ import { CommentsSaverService } from './services/comments-saver.service.js';
 import { HealthService } from './services/health.service.js';
 import { VkModule } from '../vk/vk.module.js';
 import { MetricsModule } from '../metrics/metrics.module.js';
+import { CommentsSearchModule } from '../comments-search/comments-search.module.js';
 
 @Module({
-  imports: [VkModule, forwardRef(() => MetricsModule)],
+  imports: [VkModule, forwardRef(() => MetricsModule), CommentsSearchModule],
   providers: [
     AuthorsSaverService,
     CommentsSaverService,

@@ -4,6 +4,7 @@ import { CommentSource } from '../types/comment-source.enum.js';
 import { MatchSource } from '../types/match-source.enum.js';
 import type { PrismaService } from '../../prisma.service.js';
 import type { CommentEntity } from '../types/comment-entity.type.js';
+import type { CommentsSearchIndexerService } from '../../comments-search/services/comments-search-indexer.service.js';
 
 const baseComment: CommentEntity = {
   postId: 10,
@@ -24,9 +25,14 @@ const baseComment: CommentEntity = {
 
 describe('CommentsSaverService', () => {
   let service: CommentsSaverService;
+  let searchIndexerMock: {
+    indexCommentById: ReturnType<typeof vi.fn>;
+    indexCommentsByPost: ReturnType<typeof vi.fn>;
+  };
   let prismaMock: {
     comment: {
       upsert: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
     };
     post: {
       findUnique: ReturnType<typeof vi.fn>;
@@ -43,9 +49,15 @@ describe('CommentsSaverService', () => {
   };
 
   beforeEach(() => {
+    searchIndexerMock = {
+      indexCommentById: vi.fn().mockResolvedValue(undefined),
+      indexCommentsByPost: vi.fn().mockResolvedValue(undefined),
+    };
+
     prismaMock = {
       comment: {
         upsert: vi.fn().mockResolvedValue({ id: 99 }),
+        findMany: vi.fn().mockResolvedValue([{ id: 99 }, { id: 100 }]),
       },
       post: {
         findUnique: vi
@@ -73,7 +85,10 @@ describe('CommentsSaverService', () => {
       }),
     };
 
-    service = new CommentsSaverService(prismaMock as unknown as PrismaService);
+    service = new CommentsSaverService(
+      prismaMock as unknown as PrismaService,
+      searchIndexerMock as unknown as CommentsSearchIndexerService,
+    );
   });
 
   describe('saveComments', () => {
@@ -202,6 +217,29 @@ describe('CommentsSaverService', () => {
       });
 
       expect(prismaMock.commentKeywordMatch.deleteMany).toHaveBeenCalled();
+    });
+
+    it('индексирует сохранённый комментарий после успешного upsert', async () => {
+      await service.saveComments([baseComment], {
+        source: CommentSource.TASK,
+      });
+
+      expect(searchIndexerMock.indexCommentById).toHaveBeenCalledWith(99);
+    });
+
+    it('переиндексирует все комментарии поста после синхронизации post keyword matches', async () => {
+      prismaMock.post.findUnique.mockResolvedValue({
+        text: 'Ищем подрядчика для ремонта',
+      });
+
+      await service.saveComments([baseComment], {
+        source: CommentSource.TASK,
+      });
+
+      expect(searchIndexerMock.indexCommentsByPost).toHaveBeenCalledWith(
+        -100,
+        10,
+      );
     });
   });
 });
