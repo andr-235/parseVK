@@ -18,8 +18,20 @@ const WORD_CHAR_TEST = new RegExp(WORD_CHARS_PATTERN);
 
 export interface KeywordMatchCandidate {
   id: number;
-  normalizedWord: string;
   isPhrase: boolean;
+  normalizedWord?: string;
+  normalizedForms?: string[];
+}
+
+export interface KeywordFormRecord {
+  form: string;
+}
+
+export interface KeywordCandidateSource {
+  id: number;
+  word: string;
+  isPhrase: boolean;
+  keywordForms?: KeywordFormRecord[];
 }
 
 /**
@@ -78,10 +90,43 @@ export function matchesKeyword(
   text: string,
   keyword: KeywordMatchCandidate,
 ): boolean {
-  const escaped = escapeRegExp(keyword.normalizedWord);
-  const pattern = buildMatchPattern(escaped, keyword);
-  const regex = new RegExp(pattern, 'i');
-  return regex.test(text);
+  return getCandidateForms(keyword).some((form) => {
+    const escaped = escapeRegExp(form);
+    const pattern = buildMatchPattern(escaped, form, keyword.isPhrase);
+    const regex = new RegExp(pattern, 'i');
+    return regex.test(text);
+  });
+}
+
+export function buildKeywordMatchCandidate(
+  keyword: KeywordCandidateSource,
+): KeywordMatchCandidate | null {
+  const normalizedForms = Array.from(
+    new Set(
+      [keyword.word, ...(keyword.keywordForms?.map((form) => form.form) ?? [])]
+        .map((value) => normalizeForKeywordMatch(value))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  if (normalizedForms.length === 0) {
+    return null;
+  }
+
+  return {
+    id: keyword.id,
+    isPhrase: keyword.isPhrase,
+    normalizedWord: normalizedForms[0],
+    normalizedForms,
+  };
+}
+
+export function buildKeywordMatchCandidates(
+  keywords: KeywordCandidateSource[],
+): KeywordMatchCandidate[] {
+  return keywords
+    .map((keyword) => buildKeywordMatchCandidate(keyword))
+    .filter((keyword): keyword is KeywordMatchCandidate => keyword !== null);
 }
 
 /**
@@ -93,9 +138,9 @@ export function matchesKeyword(
  */
 function buildMatchPattern(
   escapedKeyword: string,
-  keyword: KeywordMatchCandidate,
+  normalizedWord: string,
+  isPhrase: boolean,
 ): string {
-  const normalizedWord = keyword.normalizedWord;
   const startsWithWordChar = WORD_CHAR_TEST.test(normalizedWord[0]);
   const endsWithWordChar = WORD_CHAR_TEST.test(
     normalizedWord[normalizedWord.length - 1],
@@ -104,8 +149,16 @@ function buildMatchPattern(
   const boundaryStart = startsWithWordChar ? `(?<!${WORD_CHARS_PATTERN})` : '';
   const boundaryEnd = endsWithWordChar ? `(?!${WORD_CHARS_PATTERN})` : '';
 
-  if (keyword.isPhrase) {
+  if (isPhrase) {
     return `${boundaryStart}${escapedKeyword}${boundaryEnd}`;
   }
   return `${boundaryStart}${escapedKeyword}`;
+}
+
+function getCandidateForms(keyword: KeywordMatchCandidate): string[] {
+  if (keyword.normalizedForms?.length) {
+    return keyword.normalizedForms;
+  }
+
+  return keyword.normalizedWord ? [keyword.normalizedWord] : [];
 }

@@ -33,6 +33,17 @@ describe('KeywordsService', () => {
         Promise<Array<{ id: number; word: string; isPhrase: boolean }>>,
         [unknown]
       >(),
+      findManyForMatching: vi.fn<
+        Promise<
+          Array<{
+            id: number;
+            word: string;
+            isPhrase: boolean;
+            keywordForms: Array<{ form: string }>;
+          }>
+        >,
+        []
+      >(),
       count: vi.fn<Promise<number>, [unknown?]>(),
       countComments: vi.fn<Promise<number>, []>(),
       countPosts: vi.fn<Promise<number>, []>(),

@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma.service.js';
 import type { CommentEntity } from '../types/comment-entity.type.js';
 import { CommentsSearchIndexerService } from '../../comments-search/services/comments-search-indexer.service.js';
 import {
+  buildKeywordMatchCandidates,
   normalizeForKeywordMatch,
   matchesKeyword,
   type KeywordMatchCandidate,
@@ -255,19 +256,19 @@ export class CommentsSaverService {
 
   private async loadKeywordMatchCandidates(): Promise<KeywordMatchCandidate[]> {
     const keywords = await this.prisma.keyword.findMany({
-      select: { id: true, word: true, isPhrase: true },
+      select: {
+        id: true,
+        word: true,
+        isPhrase: true,
+        keywordForms: {
+          select: {
+            form: true,
+          },
+        },
+      },
     });
 
-    return keywords
-      .map((keyword) => {
-        const normalized = normalizeForKeywordMatch(keyword.word);
-        return {
-          id: keyword.id,
-          normalizedWord: normalized,
-          isPhrase: keyword.isPhrase,
-        };
-      })
-      .filter((keyword) => keyword.normalizedWord.length > 0);
+    return buildKeywordMatchCandidates(keywords);
   }
 
   private async syncCommentKeywordMatches(

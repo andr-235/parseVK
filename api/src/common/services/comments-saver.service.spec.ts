@@ -165,7 +165,9 @@ describe('CommentsSaverService', () => {
     });
 
     it('загружает keywords из БД если keywordMatches не переданы', async () => {
-      prismaMock.keyword.findMany.mockResolvedValue([{ id: 11, word: 'ёжик' }]);
+      prismaMock.keyword.findMany.mockResolvedValue([
+        { id: 11, word: 'ёжик', isPhrase: false, keywordForms: [] },
+      ]);
 
       await service.saveComments([baseComment], {
         source: CommentSource.TASK,
@@ -176,7 +178,7 @@ describe('CommentsSaverService', () => {
 
     it('создаёт CommentKeywordMatch для совпавшего ключевого слова', async () => {
       prismaMock.keyword.findMany.mockResolvedValue([
-        { id: 11, word: 'ёжик', isPhrase: false },
+        { id: 11, word: 'ёжик', isPhrase: false, keywordForms: [] },
       ]);
       prismaMock.commentKeywordMatch.findMany.mockResolvedValue([]);
 
@@ -192,7 +194,7 @@ describe('CommentsSaverService', () => {
 
     it('не создаёт match если текст не содержит ключевых слов', async () => {
       prismaMock.keyword.findMany.mockResolvedValue([
-        { id: 11, word: 'несуществующее', isPhrase: false },
+        { id: 11, word: 'несуществующее', isPhrase: false, keywordForms: [] },
       ]);
 
       await service.saveComments([{ ...baseComment, text: 'обычный текст' }], {
@@ -205,7 +207,7 @@ describe('CommentsSaverService', () => {
 
     it('удаляет устаревшие CommentKeywordMatch если текст изменился', async () => {
       prismaMock.keyword.findMany.mockResolvedValue([
-        { id: 11, word: 'ёжик', isPhrase: false },
+        { id: 11, word: 'ёжик', isPhrase: false, keywordForms: [] },
       ]);
       prismaMock.commentKeywordMatch.findMany.mockResolvedValue([
         { keywordId: 11 },
@@ -240,6 +242,27 @@ describe('CommentsSaverService', () => {
         -100,
         10,
       );
+    });
+
+    it('создаёт match по словоформе из KeywordForm даже если base word не совпал', async () => {
+      prismaMock.keyword.findMany.mockResolvedValue([
+        {
+          id: 11,
+          word: 'ёж',
+          isPhrase: false,
+          keywordForms: [{ form: 'ёжиком' }],
+        },
+      ]);
+      prismaMock.commentKeywordMatch.findMany.mockResolvedValue([]);
+
+      await service.saveComments([baseComment], {
+        source: CommentSource.TASK,
+      });
+
+      expect(prismaMock.commentKeywordMatch.createMany).toHaveBeenCalledWith({
+        data: [{ commentId: 99, keywordId: 11, source: MatchSource.COMMENT }],
+        skipDuplicates: true,
+      });
     });
   });
 });

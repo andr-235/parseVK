@@ -1,15 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MatchSource } from '../../common/types/match-source.enum.js';
+import {
+  buildKeywordMatchCandidates,
+  matchesKeyword,
+  normalizeForKeywordMatch,
+} from '../../common/utils/keyword-normalization.utils.js';
 import type { IKeywordsRepository } from '../interfaces/keywords-repository.interface.js';
-
-const WORD_CHARS_PATTERN = '[a-zA-Z0-9_\\u0400-\\u04FF]';
-const WORD_CHAR_TEST = new RegExp(WORD_CHARS_PATTERN);
-
-interface KeywordCandidate {
-  id: number;
-  normalizedWord: string;
-  isPhrase: boolean;
-}
 
 @Injectable()
 export class KeywordsMatchesService {
@@ -24,76 +20,8 @@ export class KeywordsMatchesService {
     created: number;
     deleted: number;
   }> {
-    const NBSP_REGEX = /\u00a0/g;
-    const SOFT_HYPHEN_REGEX = /\u00ad/g;
-    const INVISIBLE_SPACE_REGEX =
-      /[\u2000-\u200f\u2028\u2029\u202f\u205f\u3000]/g;
-    const WHITESPACE_REGEX = /\s+/g;
-
-    const normalizeForKeywordMatch = (
-      value: string | null | undefined,
-    ): string => {
-      if (!value) {
-        return '';
-      }
-
-      return value
-        .toLowerCase()
-        .replace(NBSP_REGEX, ' ')
-        .replace(INVISIBLE_SPACE_REGEX, ' ')
-        .replace(SOFT_HYPHEN_REGEX, '')
-        .replace(/ё/g, 'е')
-        .replace(WHITESPACE_REGEX, ' ')
-        .trim();
-    };
-
-    const escapeRegExp = (value: string): string => {
-      return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    };
-
-    const matchesKeyword = (
-      text: string,
-      keyword: KeywordCandidate,
-    ): boolean => {
-      const escaped = escapeRegExp(keyword.normalizedWord);
-
-      const startsWithWordChar = WORD_CHAR_TEST.test(keyword.normalizedWord[0]);
-      const endsWithWordChar = WORD_CHAR_TEST.test(
-        keyword.normalizedWord[keyword.normalizedWord.length - 1],
-      );
-
-      const boundaryStart = startsWithWordChar
-        ? `(?<!${WORD_CHARS_PATTERN})`
-        : '';
-      const boundaryEnd = endsWithWordChar ? `(?!${WORD_CHARS_PATTERN})` : '';
-
-      if (keyword.isPhrase) {
-        const pattern = `${boundaryStart}${escaped}${boundaryEnd}`;
-        const regex = new RegExp(pattern, 'i');
-        return regex.test(text);
-      } else {
-        const pattern = `${boundaryStart}${escaped}`;
-        const regex = new RegExp(pattern, 'i');
-        return regex.test(text);
-      }
-    };
-
-    const keywords = await this.repository.findManyWithSelect({
-      id: true,
-      word: true,
-      isPhrase: true,
-    });
-
-    const keywordCandidates: KeywordCandidate[] = keywords
-      .map((keyword) => {
-        const normalized = normalizeForKeywordMatch(keyword.word);
-        return {
-          id: keyword.id,
-          normalizedWord: normalized,
-          isPhrase: keyword.isPhrase,
-        };
-      })
-      .filter((keyword) => keyword.normalizedWord.length > 0);
+    const keywords = await this.repository.findManyForMatching();
+    const keywordCandidates = buildKeywordMatchCandidates(keywords);
 
     const totalComments = await this.repository.countComments();
     const totalPosts = await this.repository.countPosts();

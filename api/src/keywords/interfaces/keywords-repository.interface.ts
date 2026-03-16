@@ -46,6 +46,16 @@ export interface IKeywordsRepository {
       isPhrase: boolean;
     }>
   >;
+  findManyForMatching(): Promise<
+    Array<{
+      id: number;
+      word: string;
+      isPhrase: boolean;
+      keywordForms: Array<{
+        form: string;
+      }>;
+    }>
+  >;
   // Methods for keyword matching recalculation
   countComments(): Promise<number>;
   countPosts(): Promise<number>;

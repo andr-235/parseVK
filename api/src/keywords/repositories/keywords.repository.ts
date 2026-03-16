@@ -128,6 +128,30 @@ export class KeywordsRepository implements IKeywordsRepository {
     return this.prisma.keyword.findMany({ select });
   }
 
+  findManyForMatching(): Promise<
+    Array<{
+      id: number;
+      word: string;
+      isPhrase: boolean;
+      keywordForms: Array<{
+        form: string;
+      }>;
+    }>
+  > {
+    return this.prisma.keyword.findMany({
+      select: {
+        id: true,
+        word: true,
+        isPhrase: true,
+        keywordForms: {
+          select: {
+            form: true,
+          },
+        },
+      },
+    });
+  }
+
   countComments(): Promise<number> {
     return this.prisma.comment.count();
   }
