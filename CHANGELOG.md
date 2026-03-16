@@ -1,3 +1,11 @@
+# [0.24.0](https://github.com/andr-235/parseVK/compare/v0.23.2...v0.24.0) (2026-03-16)
+
+
+### Features
+
+* добавлена кнопка обновления словоформ keywords ([9c61026](https://github.com/andr-235/parseVK/commit/9c610267913cd94f66ea565f3e432394cba9f38d))
+* добавлена массовая регенерация словоформ keywords ([a18ceef](https://github.com/andr-235/parseVK/commit/a18ceef30276ef5df80b70495f973350ac794916))
+
 ## [0.23.2](https://github.com/andr-235/parseVK/compare/v0.23.1...v0.23.2) (2026-03-16)
 
 
