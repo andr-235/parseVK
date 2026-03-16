@@ -7,6 +7,7 @@ import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
 import CommentCard from './CommentCard'
 import { normalizeForKeywordMatch } from '@/shared/utils/keywordMatching'
+import { getMatchedKeywordLabel } from '@/modules/comments/utils/getMatchedKeywordLabel'
 import { cn } from '@/shared/utils'
 
 interface PostGroupCardProps {
@@ -63,8 +64,13 @@ export const PostGroupCard = memo(function PostGroupCard({
     return uniqueKeywords.filter((kw) => {
       if (kw.source !== 'POST') return false
       const normalizedText = normalizeForKeywordMatch(postText)
-      const normalizedKeyword = normalizeForKeywordMatch(kw.word)
-      return normalizedText.includes(normalizedKeyword)
+      const candidateForms =
+        Array.isArray(kw.forms) && kw.forms.length > 0 ? kw.forms : [kw.word]
+
+      return candidateForms.some((form) => {
+        const normalizedKeyword = normalizeForKeywordMatch(form)
+        return normalizedKeyword.length > 0 && normalizedText.includes(normalizedKeyword)
+      })
     })
   }, [comments, postText])
 
@@ -104,7 +110,7 @@ export const PostGroupCard = memo(function PostGroupCard({
                     variant="secondary"
                     className="h-5 border-0 bg-amber-500/10 px-1.5 font-mono-accent text-[9px] text-amber-400"
                   >
-                    {kw.word}
+                    {getMatchedKeywordLabel(kw, postText)}
                   </Badge>
                 ))}
               </div>
