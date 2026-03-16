@@ -1,3 +1,37 @@
+# [0.22.0](https://github.com/andr-235/parseVK/compare/v0.21.2...v0.22.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* завершена верификация перепроверки групп ([cdb623e](https://github.com/andr-235/parseVK/commit/cdb623e8ff7fb6dfc6f9a551e5d844b971511f06))
+* исключена скрытая сборка api при миграциях ([c34584d](https://github.com/andr-235/parseVK/commit/c34584d38761560868252c2bba3f957754dd3169))
+* исправлен формат watchlist hooks перед push ([31df52c](https://github.com/andr-235/parseVK/commit/31df52c42ecab63f306886ff32e5fa60317b876e))
+* отключено автоисправление миграций в entrypoint ([550b671](https://github.com/andr-235/parseVK/commit/550b6713172e2dd3a3dcd712824670c8e1095c7f))
+* приведен фронтенд к формату перед push ([423b195](https://github.com/andr-235/parseVK/commit/423b19521a215e60be450f6a8a97f79a1142f87e))
+* сбрасывается summary listings при refresh ([183376b](https://github.com/andr-235/parseVK/commit/183376bc40f6eb216dfe1e6773fc50e511e74eae))
+* синхронизирован watchlist флаг комментариев ([ed3b4d8](https://github.com/andr-235/parseVK/commit/ed3b4d852c1ae3a3515dd938b696cdb79554a242))
+* синхронизирована пагинация watchlist после refetch ([9311d4a](https://github.com/andr-235/parseVK/commit/9311d4a20c72f5b2f10049593d655fa1add97672))
+* скрываются детали удаленного автора watchlist ([8946f21](https://github.com/andr-235/parseVK/commit/8946f216911f047bad80fc4b76f478e8e6205a40))
+* скрываются устаревшие детали автора watchlist ([73b3f94](https://github.com/andr-235/parseVK/commit/73b3f941252ac95e17c15b1737c88726e8aa729e))
+* сохранена пагинация комментариев после sync ([63bec8a](https://github.com/andr-235/parseVK/commit/63bec8a1da50b415bee93ff89f864eb2047c2d8a))
+* стабилизировано автоматическое продление авторизации ([65a15fe](https://github.com/andr-235/parseVK/commit/65a15fe3a5b2d50df757bf3db05810f9a28d4c40))
+* стабилизированы проверки перед push ([4c0d349](https://github.com/andr-235/parseVK/commit/4c0d349d56dca7868b057a08c8d2389826f3828f))
+* убран toast spam у listings infinite load ([b081ff9](https://github.com/andr-235/parseVK/commit/b081ff992009088b486e388125281fcf8753ffd5))
+* убран toast spam у фонового comments sync ([b630e40](https://github.com/andr-235/parseVK/commit/b630e403e4290cf310ebade1a31aa6cd80acb953))
+* убран toast spam у фонового watchlist refetch ([66eb8ea](https://github.com/andr-235/parseVK/commit/66eb8ea02da6749848de9a82d508250f49a28147))
+* убран лишний fetch keywords на странице комментариев ([9a5ce91](https://github.com/andr-235/parseVK/commit/9a5ce913ec3a0c63eb437dd11d2591e918f0f4f9))
+* усилен rollback workflow для корректного отката ([d9f218d](https://github.com/andr-235/parseVK/commit/d9f218dc9168107c2f4196835df6bb405e72f7bd))
+* устранен двойной initial fetch комментариев ([6b3a1d3](https://github.com/andr-235/parseVK/commit/6b3a1d3401ee7628941be6431623bf326548a40d))
+* устранен сломанный bootstrap auth session ([5f11439](https://github.com/andr-235/parseVK/commit/5f11439b528539c968cfae821f0b3d0e6b7334c0))
+
+
+### Features
+
+* добавлен полный обход постов для перепроверки ([adae0a4](https://github.com/andr-235/parseVK/commit/adae0a485ed73d5b48216d8a38fe0868ada9b80b))
+* добавлен режим перепроверки в задачи парсинга ([4bb0846](https://github.com/andr-235/parseVK/commit/4bb0846ea67b840fb306f88ebbae8de53309fd3c))
+* добавлен режим перепроверки в интерфейс задач ([e499e03](https://github.com/andr-235/parseVK/commit/e499e03b0845744ab50a05855d075ec77bcbc455))
+* добавлены категории слов и теги комментариев ([147af27](https://github.com/andr-235/parseVK/commit/147af27a25e4f243e744cfbb64cf5872f24ea823))
+
 ## [0.21.2](https://github.com/andr-235/parseVK/compare/v0.21.1...v0.21.2) (2026-03-13)
 
 
