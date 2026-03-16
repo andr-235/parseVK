@@ -136,6 +136,9 @@ describe('KeywordsService', () => {
       'test',
       false,
     );
+    expect(
+      matchesServiceMock.recalculateKeywordMatchesForKeyword,
+    ).toHaveBeenCalledWith(1);
     expect(result).toEqual(keyword);
   });
 
@@ -167,6 +170,9 @@ describe('KeywordsService', () => {
       'test',
       false,
     );
+    expect(
+      matchesServiceMock.recalculateKeywordMatchesForKeyword,
+    ).toHaveBeenCalledWith(1);
     expect(result).toEqual(updated);
   });
 

@@ -82,6 +82,7 @@ export class KeywordsService {
         updated.word,
         updated.isPhrase,
       );
+      await this.matchesService.recalculateKeywordMatchesForKeyword(updated.id);
       return updated;
     }
 
@@ -96,6 +97,7 @@ export class KeywordsService {
       created.word,
       created.isPhrase,
     );
+    await this.matchesService.recalculateKeywordMatchesForKeyword(created.id);
 
     return created;
   }
