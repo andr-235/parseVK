@@ -15,6 +15,8 @@ interface CommentsFiltersPanelProps {
   readFilter: 'all' | 'unread' | 'read'
   onReadFilterChange: (value: 'all' | 'unread' | 'read') => void
   keywordsCount: number
+  viewMode: 'comments' | 'posts'
+  onViewModeChange: (value: 'comments' | 'posts') => void
 }
 
 const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
@@ -27,6 +29,8 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
   readFilter,
   onReadFilterChange,
   keywordsCount,
+  viewMode,
+  onViewModeChange,
 }: CommentsFiltersPanelProps) {
   // Memoized handlers (rerender optimization)
   const handleSearchChange = useCallback(
@@ -56,6 +60,14 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
     onToggleKeywordPosts(!showKeywordPosts)
   }, [onToggleKeywordPosts, showKeywordPosts])
 
+  const handleViewModeComments = useCallback(() => {
+    onViewModeChange('comments')
+  }, [onViewModeChange])
+
+  const handleViewModePosts = useCallback(() => {
+    onViewModeChange('posts')
+  }, [onViewModeChange])
+
   return (
     <div className="flex flex-col gap-6">
       {/* Search input */}
@@ -76,6 +88,35 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
         <div className="mr-2 flex items-center gap-2 font-mono-accent text-xs font-semibold uppercase tracking-wider text-slate-500">
           <SlidersHorizontal className="size-4" />
           Фильтры:
+        </div>
+
+        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-slate-800/30 p-1 backdrop-blur-sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleViewModeComments}
+            className={cn(
+              'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
+              viewMode === 'comments'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            )}
+          >
+            Комментарии
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleViewModePosts}
+            className={cn(
+              'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
+              viewMode === 'posts'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            )}
+          >
+            Посты
+          </Button>
         </div>
 
         {/* Read status filter */}

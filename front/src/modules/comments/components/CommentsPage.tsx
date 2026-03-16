@@ -1,5 +1,6 @@
 import CommentsHero from '@/modules/comments/components/CommentsHero'
 import CommentsFiltersPanel from '@/modules/comments/components/CommentsFiltersPanel'
+import CommentsSearchResults from '@/modules/comments/components/CommentsSearchResults'
 import CommentsTableCard from '@/modules/comments/components/CommentsTableCard'
 import useCommentsViewModel from '@/modules/comments/hooks/useCommentsViewModel'
 
@@ -10,6 +11,8 @@ function CommentsPage() {
     unreadCount,
     searchTerm,
     handleSearchChange,
+    viewMode,
+    handleViewModeChange,
     showKeywordComments,
     handleToggleKeywordComments,
     showKeywordPosts,
@@ -32,6 +35,8 @@ function CommentsPage() {
     handleAddToWatchlist,
     watchlistPending,
     keywordCommentsTotal,
+    useSearchResults,
+    searchResults,
   } = useCommentsViewModel()
 
   return (
@@ -46,6 +51,8 @@ function CommentsPage() {
         <CommentsFiltersPanel
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
           showKeywordComments={showKeywordComments}
           onToggleKeywordComments={handleToggleKeywordComments}
           showKeywordPosts={showKeywordPosts}
@@ -58,26 +65,30 @@ function CommentsPage() {
 
       {/* Comments Table - staggered animation */}
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
-        <CommentsTableCard
-          groupedComments={groupedComments}
-          commentsWithoutKeywords={commentsWithoutKeywords}
-          commentIndexMap={commentIndexMap}
-          isLoading={isLoading}
-          emptyMessage={emptyMessage}
-          toggleReadStatus={toggleReadStatus}
-          onLoadMore={handleLoadMore}
-          hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
-          totalCount={totalCount}
-          loadedCount={loadedCount}
-          visibleCount={visibleCount}
-          showKeywordComments={showKeywordComments}
-          showKeywordPosts={showKeywordPosts}
-          hasDefinedKeywords={hasDefinedKeywords}
-          onAddToWatchlist={handleAddToWatchlist}
-          watchlistPending={watchlistPending}
-          keywordCommentsTotal={keywordCommentsTotal}
-        />
+        {useSearchResults ? (
+          <CommentsSearchResults result={searchResults} isLoading={isLoading} />
+        ) : (
+          <CommentsTableCard
+            groupedComments={groupedComments}
+            commentsWithoutKeywords={commentsWithoutKeywords}
+            commentIndexMap={commentIndexMap}
+            isLoading={isLoading}
+            emptyMessage={emptyMessage}
+            toggleReadStatus={toggleReadStatus}
+            onLoadMore={handleLoadMore}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            totalCount={totalCount}
+            loadedCount={loadedCount}
+            visibleCount={visibleCount}
+            showKeywordComments={showKeywordComments}
+            showKeywordPosts={showKeywordPosts}
+            hasDefinedKeywords={hasDefinedKeywords}
+            onAddToWatchlist={handleAddToWatchlist}
+            watchlistPending={watchlistPending}
+            keywordCommentsTotal={keywordCommentsTotal}
+          />
+        )}
       </div>
     </div>
   )

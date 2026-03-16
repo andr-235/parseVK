@@ -3,12 +3,18 @@ import toast from 'react-hot-toast'
 import { useCommentsStore } from '@/modules/comments/store'
 import { useKeywordsStore } from '@/modules/keywords'
 import { useWatchlistStore } from '@/modules/watchlist'
+import { useCommentsSearchQuery } from '@/modules/comments/hooks/useCommentsSearchQuery'
+import {
+  buildCommentsSearchPayload,
+  shouldUseCommentsSearch,
+} from '@/modules/comments/api/query/buildCommentsSearchQuery'
 import type { Comment, Keyword } from '@/types'
 import { getCommentCategories } from '@/modules/comments/utils/getCommentCategories'
 
 type ReadFilter = 'all' | 'unread' | 'read'
 type CommentWithKeywords = { comment: Comment; matchedKeywords: Keyword[] }
 type KeywordSource = 'COMMENT' | 'POST'
+type ViewMode = 'comments' | 'posts'
 
 const DEFAULT_CATEGORY = 'Без категории'
 
@@ -240,6 +246,7 @@ const useCommentsViewModel = () => {
   const [showKeywordPosts, setShowKeywordPosts] = useState(false)
   const [readFilter, setReadFilter] = useState<ReadFilter>('unread')
   const [searchTerm, setSearchTerm] = useState('')
+  const [viewMode, setViewMode] = useState<ViewMode>('comments')
   const [watchlistPending, setWatchlistPending] = useState<Record<number, boolean>>({})
 
   const hasKeywords = keywords.length > 0
@@ -266,6 +273,29 @@ const useCommentsViewModel = () => {
     }),
     [keywordFilterValues, keywordSource, readFilter, trimmedSearch]
   )
+
+  const searchPayload = useMemo(
+    () =>
+      buildCommentsSearchPayload({
+        query: trimmedSearch,
+        viewMode,
+        page: 1,
+        pageSize: 20,
+        keywords: keywordFilterValues,
+        keywordSource,
+        readStatus: readFilter,
+      }),
+    [keywordFilterValues, keywordSource, readFilter, trimmedSearch, viewMode]
+  )
+
+  const useSearchResults = useMemo(
+    () => shouldUseCommentsSearch({ query: trimmedSearch, viewMode }),
+    [trimmedSearch, viewMode]
+  )
+
+  const searchQuery = useCommentsSearchQuery(searchPayload, {
+    enabled: useSearchResults,
+  })
 
   const filteredComments = useMemo(
     () =>
@@ -315,12 +345,17 @@ const useCommentsViewModel = () => {
   )
 
   useEffect(() => {
+    if (useSearchResults) {
+      setCommentsQueryEnabled(false)
+      return
+    }
+
     setCommentsFilters(fetchFilters, { enableQuery: true })
 
     return () => {
       setCommentsQueryEnabled(false)
     }
-  }, [fetchFilters, setCommentsFilters, setCommentsQueryEnabled])
+  }, [fetchFilters, setCommentsFilters, setCommentsQueryEnabled, useSearchResults])
 
   useEffect(() => {
     if (readFilter === 'all') {
@@ -330,11 +365,15 @@ const useCommentsViewModel = () => {
   }, [readFilter])
 
   const handleLoadMore = useCallback(() => {
+    if (useSearchResults) {
+      return
+    }
+
     fetchCommentsCursor({ reset: false }).catch((error) => {
       console.error('Failed to load more comments', error)
       toast.error('Не удалось загрузить комментарии')
     })
-  }, [fetchCommentsCursor])
+  }, [fetchCommentsCursor, useSearchResults])
 
   const handleToggleReadStatus = useCallback(
     async (id: number) => {
@@ -374,13 +413,16 @@ const useCommentsViewModel = () => {
   )
   const handleToggleKeywordPosts = useCallback((value: boolean) => setShowKeywordPosts(value), [])
   const handleReadFilterChange = useCallback((value: ReadFilter) => setReadFilter(value), [])
+  const handleViewModeChange = useCallback((value: ViewMode) => setViewMode(value), [])
 
   return {
-    totalCount,
+    totalCount: useSearchResults ? (searchQuery.data?.total ?? 0) : totalCount,
     readCount,
     unreadCount,
     searchTerm,
     handleSearchChange,
+    viewMode,
+    handleViewModeChange,
     showKeywordComments,
     handleToggleKeywordComments,
     showKeywordPosts,
@@ -391,18 +433,20 @@ const useCommentsViewModel = () => {
     groupedComments,
     commentsWithoutKeywords,
     commentIndexMap,
-    isLoading,
+    isLoading: useSearchResults ? searchQuery.isLoading : isLoading,
     emptyMessage,
     toggleReadStatus: handleToggleReadStatus,
     handleLoadMore,
-    hasMore,
-    isLoadingMore,
-    loadedCount: comments.length,
-    visibleCount,
+    hasMore: useSearchResults ? false : hasMore,
+    isLoadingMore: useSearchResults ? false : isLoadingMore,
+    loadedCount: useSearchResults ? (searchQuery.data?.items.length ?? 0) : comments.length,
+    visibleCount: useSearchResults ? (searchQuery.data?.items.length ?? 0) : visibleCount,
     hasDefinedKeywords: hasKeywords,
     handleAddToWatchlist,
     watchlistPending,
     keywordCommentsTotal,
+    useSearchResults,
+    searchResults: searchQuery.data,
   }
 }
 
