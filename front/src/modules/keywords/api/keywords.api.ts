@@ -12,6 +12,14 @@ export interface IKeywordFormsResponse {
   exclusions: string[]
 }
 
+export interface IKeywordFormsRebuildResponse {
+  keywordsRebuilt: number
+  processed: number
+  updated: number
+  created: number
+  deleted: number
+}
+
 export const keywordsService = {
   async addKeyword(
     word: string,
@@ -135,6 +143,24 @@ export const keywordsService = {
       return result
     } catch (error) {
       toast.error('Не удалось пересчитать совпадения ключевых слов')
+      throw error
+    }
+  },
+
+  async rebuildKeywordForms(): Promise<IKeywordFormsRebuildResponse> {
+    try {
+      const response = await createRequest(`${API_URL}/keywords/rebuild-forms`, {
+        method: 'POST',
+      })
+
+      const result = await handleResponse<IKeywordFormsRebuildResponse>(
+        response,
+        'Failed to rebuild keyword forms'
+      )
+      toast.success('Словоформы ключевых слов пересобраны')
+      return result
+    } catch (error) {
+      toast.error('Не удалось пересобрать словоформы ключевых слов')
       throw error
     }
   },

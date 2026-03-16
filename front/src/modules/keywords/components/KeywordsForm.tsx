@@ -9,12 +9,14 @@ interface KeywordsFormProps {
   categoryValue: string
   phraseValue: string
   isRecalculating: boolean
+  isRebuildingForms: boolean
   onKeywordChange: (value: string) => void
   onCategoryChange: (value: string) => void
   onPhraseChange: (value: string) => void
   onAdd: () => void
   onAddPhrase: () => void
   onRecalculate: () => void
+  onRebuildForms: () => void
   onFileUpload: (event: ChangeEvent<HTMLInputElement>) => void
 }
 
@@ -23,12 +25,14 @@ export const KeywordsForm = ({
   categoryValue,
   phraseValue,
   isRecalculating,
+  isRebuildingForms,
   onKeywordChange,
   onCategoryChange,
   onPhraseChange,
   onAdd,
   onAddPhrase,
   onRecalculate,
+  onRebuildForms,
   onFileUpload,
 }: KeywordsFormProps) => {
   return (
@@ -58,6 +62,15 @@ export const KeywordsForm = ({
         </div>
 
         <div className="flex w-full items-center gap-3 lg:w-auto">
+          <Button
+            variant="secondary"
+            onClick={onRebuildForms}
+            disabled={isRebuildingForms}
+            className="flex-1 lg:flex-none"
+          >
+            <RefreshCw className={`mr-2 size-4 ${isRebuildingForms ? 'animate-spin' : ''}`} />
+            Обновить словоформы
+          </Button>
           <Button
             variant="outline"
             onClick={onRecalculate}

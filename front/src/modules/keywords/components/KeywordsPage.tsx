@@ -13,6 +13,7 @@ function KeywordsPage() {
     categoryValue,
     phraseValue,
     isRecalculating,
+    isRebuildingForms,
     selectedKeyword,
     keywordForms,
     isKeywordFormsLoading,
@@ -28,6 +29,7 @@ function KeywordsPage() {
     handleAddPhrase,
     handleFileUpload,
     handleRecalculate,
+    handleRebuildForms,
     handleManageForms,
     handleKeywordFormsOpenChange,
     handleAddManualForm,
@@ -58,12 +60,14 @@ function KeywordsPage() {
           categoryValue={categoryValue}
           phraseValue={phraseValue}
           isRecalculating={isRecalculating}
+          isRebuildingForms={isRebuildingForms}
           onKeywordChange={setKeywordValue}
           onCategoryChange={setCategoryValue}
           onPhraseChange={setPhraseValue}
           onAdd={handleAddKeyword}
           onAddPhrase={handleAddPhrase}
           onRecalculate={handleRecalculate}
+          onRebuildForms={handleRebuildForms}
           onFileUpload={handleFileUpload}
         />
       </div>

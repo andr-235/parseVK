@@ -18,6 +18,7 @@ export const useKeywordsViewModel = () => {
   const [categoryValue, setCategoryValue] = useState('')
   const [phraseValue, setPhraseValue] = useState('')
   const [isRecalculating, setIsRecalculating] = useState(false)
+  const [isRebuildingForms, setIsRebuildingForms] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedKeyword, setSelectedKeyword] = useState<Keyword | null>(null)
   const [keywordForms, setKeywordForms] = useState<IKeywordFormsResponse | null>(null)
@@ -93,6 +94,27 @@ export const useKeywordsViewModel = () => {
       setIsRecalculating(false)
     }
   }, [isRecalculating])
+
+  const handleRebuildForms = useCallback(async () => {
+    if (isRebuildingForms) return
+
+    setIsRebuildingForms(true)
+    const toastId = toast.loading('Пересборка словоформ и совпадений...')
+
+    try {
+      const result = await keywordsService.rebuildKeywordForms()
+      toast.success(
+        `Слов обновлено: ${result.keywordsRebuilt}, обработано: ${result.processed}, обновлено: ${result.updated}, создано: ${result.created}, удалено: ${result.deleted}`,
+        { id: toastId, duration: 6000 }
+      )
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Ошибка при пересборке словоформ', {
+        id: toastId,
+      })
+    } finally {
+      setIsRebuildingForms(false)
+    }
+  }, [isRebuildingForms])
 
   const filteredKeywords = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -198,6 +220,7 @@ export const useKeywordsViewModel = () => {
     categoryValue,
     phraseValue,
     isRecalculating,
+    isRebuildingForms,
     selectedKeyword,
     keywordForms,
     isKeywordFormsLoading,
@@ -213,6 +236,7 @@ export const useKeywordsViewModel = () => {
     handleAddPhrase,
     handleFileUpload,
     handleRecalculate,
+    handleRebuildForms,
     handleManageForms,
     handleKeywordFormsOpenChange,
     handleAddManualForm,
