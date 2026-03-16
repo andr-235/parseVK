@@ -1,3 +1,10 @@
+## [0.23.1](https://github.com/andr-235/parseVK/compare/v0.23.0...v0.23.1) (2026-03-16)
+
+
+### Bug Fixes
+
+* синхронизированы типы комментариев со словоформами ([e885a20](https://github.com/andr-235/parseVK/commit/e885a20ff0a3dc7c3605438a84ef74cc1485a484))
+
 # [0.23.0](https://github.com/andr-235/parseVK/compare/v0.22.2...v0.23.0) (2026-03-16)
 
 
