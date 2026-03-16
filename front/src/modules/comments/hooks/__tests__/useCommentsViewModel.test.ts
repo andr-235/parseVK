@@ -2,7 +2,11 @@ import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import useCommentsViewModel from '../useCommentsViewModel'
 
-const buildComment = (id: number, text: string, matchedKeywords: Array<{ id: number; word: string }> = []) => ({
+const buildComment = (
+  id: number,
+  text: string,
+  matchedKeywords: Array<{ id: number; word: string }> = []
+) => ({
   id,
   author: `Автор ${id}`,
   authorId: null,

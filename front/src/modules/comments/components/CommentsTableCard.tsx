@@ -265,7 +265,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
             {isLoading ? (
               <Spinner className="size-4 text-slate-400" />
             ) : (
-            <Badge
+              <Badge
                 variant="secondary"
                 className="border-white/10 bg-slate-800/50 font-mono-accent font-normal text-slate-300"
               >
