@@ -1,3 +1,10 @@
+## [0.23.2](https://github.com/andr-235/parseVK/compare/v0.23.1...v0.23.2) (2026-03-16)
+
+
+### Bug Fixes
+
+* пересчитываются матчи после обновления keyword ([352638b](https://github.com/andr-235/parseVK/commit/352638b417a0b2eaf7445b5f7faa2d02dd991e26))
+
 ## [0.23.1](https://github.com/andr-235/parseVK/compare/v0.23.0...v0.23.1) (2026-03-16)
 
 
