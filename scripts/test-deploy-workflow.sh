@@ -68,4 +68,16 @@ if rg -n 'docker compose -f "\$COMPOSE_FILE" up ' "$DEPLOY_WORKFLOW" "$ROLLBACK_
   exit 1
 fi
 
+if rg -n 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: deploy workflow eagerly prepares monitoring images"
+  rg -n 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$DEPLOY_WORKFLOW"
+  exit 1
+fi
+
+if rg -n 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$ROLLBACK_WORKFLOW" >/dev/null; then
+  echo "Regression: rollback workflow eagerly prepares monitoring images"
+  rg -n 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$ROLLBACK_WORKFLOW"
+  exit 1
+fi
+
 echo "Production workflows use the shared production shell layer"

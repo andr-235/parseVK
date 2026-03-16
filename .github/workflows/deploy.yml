@@ -265,10 +265,9 @@ jobs:
             SERVICES_TO_BUILD="$SERVICES_TO_BUILD db_backup"
           fi
 
-          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare api frontend db_backup prometheus node-exporter grafana
-
           if [ -n "$SERVICES_TO_BUILD" ]; then
+            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare $SERVICES_TO_BUILD
             PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
               bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build $SERVICES_TO_BUILD
             UP_ARGS="-d"
