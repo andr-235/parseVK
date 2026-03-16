@@ -1,3 +1,10 @@
+## [0.22.1](https://github.com/andr-235/parseVK/compare/v0.22.0...v0.22.1) (2026-03-16)
+
+
+### Bug Fixes
+
+* исправлен запуск миграций в deploy workflow ([1e5c91f](https://github.com/andr-235/parseVK/commit/1e5c91f0eaec1f161ab13be1444fb3a744af73b8))
+
 # [0.22.0](https://github.com/andr-235/parseVK/compare/v0.21.2...v0.22.0) (2026-03-16)
 
 
