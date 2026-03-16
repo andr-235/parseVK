@@ -20,6 +20,7 @@ export interface CommentResponseDto {
     id: number
     word: string
     category?: string | null
+    forms?: string[]
     source?: 'POST' | 'COMMENT' | string
   }> | null
 }

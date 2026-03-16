@@ -1,4 +1,5 @@
 import type { PostGroup } from '@/shared/types/common'
+import type { Keyword } from '@/shared/types/common'
 
 export interface Comment {
   id: number
@@ -17,10 +18,5 @@ export interface Comment {
   isDeleted: boolean
   watchlistAuthorId: number | null
   isWatchlisted: boolean
-  matchedKeywords: Array<{
-    id: number
-    word: string
-    category: string | null
-    source?: 'POST' | 'COMMENT'
-  }>
+  matchedKeywords: Keyword[]
 }
