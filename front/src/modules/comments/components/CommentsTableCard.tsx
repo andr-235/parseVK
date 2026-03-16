@@ -24,7 +24,7 @@ interface CommentsTableCardProps {
   isLoadingMore: boolean
   totalCount: number
   loadedCount: number
-  visibleCount: number
+  renderedCount: number
   showKeywordComments: boolean
   showKeywordPosts: boolean
   hasDefinedKeywords: boolean
@@ -60,7 +60,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
   isLoadingMore,
   totalCount,
   loadedCount,
-  visibleCount,
+  renderedCount,
   showKeywordComments,
   showKeywordPosts,
   hasDefinedKeywords,
@@ -94,12 +94,21 @@ const CommentsTableCard = memo(function CommentsTableCard({
   const onLoadMoreRef = useRef(onLoadMore)
   const hasMoreRef = useRef(hasMore)
   const isLoadingMoreRef = useRef(isLoadingMore)
+  const autoLoadConsumedRef = useRef(false)
 
   useEffect(() => {
     onLoadMoreRef.current = onLoadMore
     hasMoreRef.current = hasMore
     isLoadingMoreRef.current = isLoadingMore
   }, [onLoadMore, hasMore, isLoadingMore])
+
+  useEffect(() => {
+    if (!isLoadingMore) {
+      return
+    }
+
+    autoLoadConsumedRef.current = true
+  }, [isLoadingMore])
 
   // После загрузки проверяем, находится ли target в viewport — если да, загружаем ещё
   useEffect(() => {
@@ -113,7 +122,13 @@ const CommentsTableCard = memo(function CommentsTableCard({
       const rect = target.getBoundingClientRect()
       const isInViewport = rect.top < window.innerHeight + 200
 
-      if (isInViewport && hasMoreRef.current && !isLoadingMoreRef.current) {
+      if (
+        isInViewport &&
+        hasMoreRef.current &&
+        !isLoadingMoreRef.current &&
+        !autoLoadConsumedRef.current
+      ) {
+        autoLoadConsumedRef.current = true
         onLoadMoreRef.current()
       }
     }, 100)
@@ -250,11 +265,11 @@ const CommentsTableCard = memo(function CommentsTableCard({
             {isLoading ? (
               <Spinner className="size-4 text-slate-400" />
             ) : (
-              <Badge
+            <Badge
                 variant="secondary"
                 className="border-white/10 bg-slate-800/50 font-mono-accent font-normal text-slate-300"
               >
-                {visibleCount} / {totalCount}
+                Всего по фильтру: {totalCount}
               </Badge>
             )}
           </div>
@@ -347,7 +362,13 @@ const CommentsTableCard = memo(function CommentsTableCard({
               }}
             >
               <p className="font-monitoring-body text-sm text-slate-400">
-                Загружено {loadedCount} из {totalCount} {getCommentLabel(totalCount)}
+                Загружено: {loadedCount}
+              </p>
+              <p className="font-monitoring-body text-sm text-slate-400">
+                Показано: {renderedCount}
+              </p>
+              <p className="font-monitoring-body text-sm text-slate-400">
+                Всего по фильтру: {totalCount} {getCommentLabel(totalCount)}
               </p>
 
               <div ref={observerTargetRef} className="flex w-full justify-center py-4">

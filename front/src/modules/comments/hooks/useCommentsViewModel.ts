@@ -440,7 +440,7 @@ const useCommentsViewModel = () => {
     hasMore: useSearchResults ? false : hasMore,
     isLoadingMore: useSearchResults ? false : isLoadingMore,
     loadedCount: useSearchResults ? (searchQuery.data?.items.length ?? 0) : comments.length,
-    visibleCount: useSearchResults ? (searchQuery.data?.items.length ?? 0) : visibleCount,
+    renderedCount: useSearchResults ? (searchQuery.data?.items.length ?? 0) : visibleCount,
     hasDefinedKeywords: hasKeywords,
     handleAddToWatchlist,
     watchlistPending,

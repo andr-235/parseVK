@@ -226,17 +226,13 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
 
       set((prevState) => {
         const nextComments = reset ? items : [...prevState.comments, ...items]
-        // Если все комментарии загружены, обновляем totalCount до фактического количества
-        const finalTotalCount = response.hasMore
-          ? response.total
-          : Math.max(response.total, nextComments.length)
 
         return {
           comments: nextComments,
           isLoading: false,
           isLoadingMore: false,
           hasMore: response.hasMore,
-          totalCount: finalTotalCount,
+          totalCount: response.total,
           nextCursor: response.nextCursor,
           readCount: response.readCount,
           unreadCount: response.unreadCount,
@@ -246,15 +242,12 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
 
       queryClient.setQueryData<CommentsQueryData>(queryKey, (prev) => {
         const nextComments = reset ? items : [...(prev?.comments ?? []), ...items]
-        const finalTotalCount = response.hasMore
-          ? response.total
-          : Math.max(response.total, nextComments.length)
 
         return {
           comments: nextComments,
           nextCursor: response.nextCursor ?? null,
           hasMore: response.hasMore,
-          totalCount: finalTotalCount,
+          totalCount: response.total,
           readCount: response.readCount,
           unreadCount: response.unreadCount,
           filters: activeFilters, // Сохраняем filters для синхронизации с useCommentsQuery

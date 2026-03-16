@@ -4,6 +4,11 @@ const { setQueryDataMock } = vi.hoisted(() => ({
   setQueryDataMock: vi.fn(),
 }))
 
+const { getCommentsCursorMock, updateReadStatusMock } = vi.hoisted(() => ({
+  getCommentsCursorMock: vi.fn(),
+  updateReadStatusMock: vi.fn(),
+}))
+
 vi.mock('@/shared/api', async () => {
   const actual = await vi.importActual<typeof import('@/shared/api')>('@/shared/api')
   return {
@@ -14,6 +19,12 @@ vi.mock('@/shared/api', async () => {
     },
   }
 })
+
+vi.mock('@/modules/comments/api/comments.api', () => ({
+  getComments: vi.fn(),
+  getCommentsCursor: getCommentsCursorMock,
+  updateReadStatus: updateReadStatusMock,
+}))
 
 import { useCommentsStore } from '../commentsStore'
 
@@ -110,5 +121,106 @@ describe('commentsStore query gating', () => {
       isWatchlisted: true,
     })
     expect(setQueryDataMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps server totalCount on the last cursor page even when loaded items are more', async () => {
+    useCommentsStore.setState({
+      comments: [
+        {
+          id: 1,
+          author: 'Author 1',
+          authorId: null,
+          authorUrl: null,
+          authorAvatar: null,
+          commentUrl: null,
+          text: 'Comment 1',
+          postText: null,
+          postAttachments: null,
+          postGroup: null,
+          createdAt: '2026-03-16T00:00:00.000Z',
+          publishedAt: null,
+          isRead: false,
+          isDeleted: false,
+          watchlistAuthorId: null,
+          isWatchlisted: false,
+          matchedKeywords: [],
+        },
+        {
+          id: 2,
+          author: 'Author 2',
+          authorId: null,
+          authorUrl: null,
+          authorAvatar: null,
+          commentUrl: null,
+          text: 'Comment 2',
+          postText: null,
+          postAttachments: null,
+          postGroup: null,
+          createdAt: '2026-03-15T00:00:00.000Z',
+          publishedAt: null,
+          isRead: false,
+          isDeleted: false,
+          watchlistAuthorId: null,
+          isWatchlisted: false,
+          matchedKeywords: [],
+        },
+      ],
+      nextCursor: 'cursor-page-2',
+      hasMore: true,
+      totalCount: 3,
+    })
+
+    getCommentsCursorMock.mockResolvedValue({
+      items: [
+        {
+          id: 3,
+          author: 'Author 3',
+          authorId: null,
+          authorUrl: null,
+          authorAvatar: null,
+          commentUrl: null,
+          text: 'Comment 3',
+          postText: null,
+          postAttachments: null,
+          postGroup: null,
+          createdAt: '2026-03-14T00:00:00.000Z',
+          publishedAt: null,
+          isRead: false,
+          isDeleted: false,
+          watchlistAuthorId: null,
+          isWatchlisted: false,
+          matchedKeywords: [],
+        },
+        {
+          id: 4,
+          author: 'Author 4',
+          authorId: null,
+          authorUrl: null,
+          authorAvatar: null,
+          commentUrl: null,
+          text: 'Comment 4',
+          postText: null,
+          postAttachments: null,
+          postGroup: null,
+          createdAt: '2026-03-13T00:00:00.000Z',
+          publishedAt: null,
+          isRead: false,
+          isDeleted: false,
+          watchlistAuthorId: null,
+          isWatchlisted: false,
+          matchedKeywords: [],
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
+      total: 3,
+      readCount: 0,
+      unreadCount: 3,
+    })
+
+    await useCommentsStore.getState().fetchCommentsCursor()
+
+    expect(useCommentsStore.getState().comments).toHaveLength(4)
+    expect(useCommentsStore.getState().totalCount).toBe(3)
   })
 })

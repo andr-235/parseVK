@@ -30,7 +30,7 @@ function CommentsPage() {
     hasMore,
     isLoadingMore,
     loadedCount,
-    visibleCount,
+    renderedCount,
     hasDefinedKeywords,
     handleAddToWatchlist,
     watchlistPending,
@@ -80,7 +80,7 @@ function CommentsPage() {
             isLoadingMore={isLoadingMore}
             totalCount={totalCount}
             loadedCount={loadedCount}
-            visibleCount={visibleCount}
+            renderedCount={renderedCount}
             showKeywordComments={showKeywordComments}
             showKeywordPosts={showKeywordPosts}
             hasDefinedKeywords={hasDefinedKeywords}
