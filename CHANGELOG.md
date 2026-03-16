@@ -1,3 +1,10 @@
+## [0.24.1](https://github.com/andr-235/parseVK/compare/v0.24.0...v0.24.1) (2026-03-16)
+
+
+### Bug Fixes
+
+* исправлена форма добавления ключевых слов ([d3d254e](https://github.com/andr-235/parseVK/commit/d3d254e9b818fa0536c05d56869efafb542ddabb))
+
 # [0.24.0](https://github.com/andr-235/parseVK/compare/v0.23.2...v0.24.0) (2026-03-16)
 
 
