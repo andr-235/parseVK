@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsController } from './comments.controller.js';
 import { CommentsService } from './comments.service.js';
+import { CommentsSearchService } from '../comments-search/comments-search.service.js';
 import { CommentsQueryValidator } from './validators/comments-query.validator.js';
 
 describe('CommentsController', () => {
@@ -10,6 +11,9 @@ describe('CommentsController', () => {
     getComments: vi.Mock;
     getCommentsCursor: vi.Mock;
     setReadStatus: vi.Mock;
+  };
+  let commentsSearchService: {
+    search: vi.Mock;
   };
   let queryValidator: {
     normalizeOffset: vi.Mock;
@@ -26,6 +30,9 @@ describe('CommentsController', () => {
       getComments: vi.fn(),
       getCommentsCursor: vi.fn(),
       setReadStatus: vi.fn(),
+    };
+    commentsSearchService = {
+      search: vi.fn(),
     };
 
     queryValidator = {
@@ -64,6 +71,10 @@ describe('CommentsController', () => {
         {
           provide: CommentsService,
           useValue: commentsService,
+        },
+        {
+          provide: CommentsSearchService,
+          useValue: commentsSearchService,
         },
         {
           provide: CommentsQueryValidator,
@@ -205,5 +216,29 @@ describe('CommentsController', () => {
       controller.updateReadStatus(1, { isRead: true }),
     ).resolves.toBe(updatedComment);
     expect(commentsService.setReadStatus).toHaveBeenCalledWith(1, true);
+  });
+
+  it('должен прокидывать payload поиска комментариев в search service', async () => {
+    const payload = {
+      query: 'ремонт квартиры',
+      viewMode: 'comments',
+      page: 1,
+      pageSize: 20,
+      keywords: ['ремонт'],
+      keywordSource: 'COMMENT',
+      readStatus: 'unread',
+    } as const;
+    const serviceResult = {
+      source: 'fallback',
+      viewMode: 'comments',
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      items: [],
+    } as never;
+    commentsSearchService.search.mockResolvedValue(serviceResult);
+
+    await expect(controller.searchComments(payload)).resolves.toBe(serviceResult);
+    expect(commentsSearchService.search).toHaveBeenCalledWith(payload);
   });
 });

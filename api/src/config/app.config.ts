@@ -17,6 +17,25 @@ export class AppConfig {
 
   @IsString()
   @IsOptional()
+  elasticsearchNode?: string;
+
+  @IsString()
+  @IsOptional()
+  elasticsearchIndex?: string;
+
+  @IsString()
+  @IsOptional()
+  elasticsearchUsername?: string;
+
+  @IsString()
+  @IsOptional()
+  elasticsearchPassword?: string;
+
+  @IsOptional()
+  commentsSearchEnabled?: boolean | string;
+
+  @IsString()
+  @IsOptional()
   redisHost?: string = 'redis';
 
   @IsNumber()

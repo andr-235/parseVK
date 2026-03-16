@@ -6,21 +6,26 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Post,
   Query,
 } from '@nestjs/common';
 
 import { DEFAULT_LIMIT } from './constants/comments.constants.js';
 import { CommentsService } from './comments.service.js';
+import { CommentsSearchService } from '../comments-search/comments-search.service.js';
 import type { CommentWithAuthorDto } from './dto/comment-with-author.dto.js';
 import type { CommentsCursorListDto } from './dto/comments-cursor-list.dto.js';
 import type { CommentsListDto } from './dto/comments-list.dto.js';
 import { UpdateCommentReadDto } from './dto/update-comment-read.dto.js';
 import { CommentsQueryValidator } from './validators/comments-query.validator.js';
+import type { CommentsSearchRequestDto } from '../comments-search/dto/comments-search-request.dto.js';
+import type { CommentsSearchResponseDto } from '../comments-search/dto/comments-search-response.dto.js';
 
 @Controller('comments')
 export class CommentsController {
   constructor(
     private readonly commentsService: CommentsService,
+    private readonly commentsSearchService: CommentsSearchService,
     private readonly queryValidator: CommentsQueryValidator,
   ) {}
 
@@ -101,5 +106,12 @@ export class CommentsController {
     @Body() { isRead }: UpdateCommentReadDto,
   ): Promise<CommentWithAuthorDto> {
     return this.commentsService.setReadStatus(id, isRead);
+  }
+
+  @Post('search')
+  searchComments(
+    @Body() payload: CommentsSearchRequestDto,
+  ): Promise<CommentsSearchResponseDto> {
+    return this.commentsSearchService.search(payload);
   }
 }
