@@ -5,6 +5,7 @@ import {
   IBulkAddResponse,
 } from './interfaces/keyword.interface.js';
 import type { IKeywordsRepository } from './interfaces/keywords-repository.interface.js';
+import { KeywordFormsService } from './services/keyword-forms.service.js';
 import { KeywordsMatchesService } from './services/keywords-matches.service.js';
 
 /**
@@ -19,6 +20,7 @@ export class KeywordsService {
     @Inject('IKeywordsRepository')
     private readonly repository: IKeywordsRepository,
     private readonly matchesService: KeywordsMatchesService,
+    private readonly formsService: KeywordFormsService,
   ) {}
 
   /**
@@ -69,6 +71,11 @@ export class KeywordsService {
             isPhrase ?? (existing as { isPhrase: boolean }).isPhrase ?? false,
         },
       )) as IKeywordResponse;
+      await this.formsService.syncGeneratedForms(
+        updated.id,
+        updated.word,
+        updated.isPhrase,
+      );
       return updated;
     }
 
@@ -77,6 +84,12 @@ export class KeywordsService {
       category: normalizedCategory,
       isPhrase: isPhrase ?? false,
     })) as IKeywordResponse;
+
+    await this.formsService.syncGeneratedForms(
+      created.id,
+      created.word,
+      created.isPhrase,
+    );
 
     return created;
   }

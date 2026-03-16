@@ -3,11 +3,15 @@ import { KeywordsService } from './keywords.service.js';
 import type { IKeywordsRepository } from './interfaces/keywords-repository.interface.js';
 import { KeywordsMatchesService } from './services/keywords-matches.service.js';
 import type { IBulkAddResponse } from './interfaces/keyword.interface.js';
+import type { KeywordFormsService } from './services/keyword-forms.service.js';
 
 describe('KeywordsService', () => {
   let service: KeywordsService;
   let repositoryMock: vi.Mocked<IKeywordsRepository>;
   let matchesServiceMock: vi.Mocked<KeywordsMatchesService>;
+  let formsServiceMock: {
+    syncGeneratedForms: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     repositoryMock = {
@@ -66,7 +70,15 @@ describe('KeywordsService', () => {
       recalculateKeywordMatches: vi.fn(),
     } as unknown as vi.Mocked<KeywordsMatchesService>;
 
-    service = new KeywordsService(repositoryMock, matchesServiceMock);
+    formsServiceMock = {
+      syncGeneratedForms: vi.fn<Promise<void>, [number, string, boolean]>(),
+    };
+
+    service = new KeywordsService(
+      repositoryMock,
+      matchesServiceMock,
+      formsServiceMock as unknown as KeywordFormsService,
+    );
     vi.clearAllMocks();
     repositoryMock.findMany.mockResolvedValue([]);
   });
@@ -97,6 +109,11 @@ describe('KeywordsService', () => {
       category: null,
       isPhrase: false,
     });
+    expect(formsServiceMock.syncGeneratedForms).toHaveBeenCalledWith(
+      1,
+      'test',
+      false,
+    );
     expect(result).toEqual(keyword);
   });
 
@@ -122,6 +139,11 @@ describe('KeywordsService', () => {
     expect(repositoryMock['update']).toHaveBeenCalledWith(
       { id: 1 },
       { category: 'Маркетинг', isPhrase: false },
+    );
+    expect(formsServiceMock.syncGeneratedForms).toHaveBeenCalledWith(
+      1,
+      'test',
+      false,
     );
     expect(result).toEqual(updated);
   });
