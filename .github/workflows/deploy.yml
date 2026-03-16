@@ -228,7 +228,7 @@ jobs:
 
           if [ "${{ steps.changed_services.outputs.build_api }}" = "true" ] || [ "$IMAGE_EXISTS" != "true" ]; then
             PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare
+              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare api
             PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
               bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build api
             echo "api_prebuilt_for_migrations=true" >> "$GITHUB_OUTPUT"
@@ -266,7 +266,7 @@ jobs:
           fi
 
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare
+            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare api frontend db_backup prometheus node-exporter grafana
 
           if [ -n "$SERVICES_TO_BUILD" ]; then
             PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \

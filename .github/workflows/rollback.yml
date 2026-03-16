@@ -174,7 +174,7 @@ jobs:
           set -euo pipefail
 
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare
+            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare api frontend db_backup prometheus node-exporter grafana
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
             bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build api frontend db_backup
 
