@@ -6,19 +6,19 @@ import {
   Optional,
 } from '@nestjs/common';
 import { CreateParsingTaskCommand } from '../impl/create-parsing-task.command.js';
-import type { ITasksRepository } from '@/tasks/interfaces/tasks-repository.interface.js';
-import type { TaskDetail } from '@/tasks/interfaces/task.interface.js';
-import { TaskGroupResolverService } from '@/tasks/services/task-group-resolver.service.js';
-import { ParsingQueueService } from '@/tasks/parsing-queue.service.js';
-import { TaskMapper } from '@/tasks/mappers/task.mapper.js';
-import { TaskDescriptionParser } from '@/tasks/parsers/task-description.parser.js';
+import type { ITasksRepository } from '../../../tasks/interfaces/tasks-repository.interface.js';
+import type { TaskDetail } from '../../../tasks/interfaces/task.interface.js';
+import { TaskGroupResolverService } from '../../../tasks/services/task-group-resolver.service.js';
+import { ParsingQueueService } from '../../../tasks/parsing-queue.service.js';
+import { TaskMapper } from '../../../tasks/mappers/task.mapper.js';
+import { TaskDescriptionParser } from '../../../tasks/parsers/task-description.parser.js';
 import {
   ParsingScope,
   ParsingTaskMode,
-} from '@/tasks/dto/create-parsing-task.dto.js';
-import { TaskCreatedEvent } from '@/tasks/events/index.js';
-import { MetricsService } from '@/metrics/metrics.service.js';
-import type { TaskRecord } from '@/tasks/types/task-record.type.js';
+} from '../../../tasks/dto/create-parsing-task.dto.js';
+import { TaskCreatedEvent } from '../../../tasks/events/index.js';
+import { MetricsService } from '../../../metrics/metrics.service.js';
+import type { TaskRecord } from '../../../tasks/types/task-record.type.js';
 
 @Injectable()
 @CommandHandler(CreateParsingTaskCommand)

@@ -1,9 +1,9 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateTaskProgressCommand } from '../impl/update-task-progress.command.js';
-import type { IParsingTaskRepository } from '@/tasks/interfaces/parsing-task-repository.interface.js';
-import { TaskCancellationService } from '@/tasks/task-cancellation.service.js';
-import { TaskProgressUpdatedEvent } from '@/tasks/events/index.js';
+import type { IParsingTaskRepository } from '../../../tasks/interfaces/parsing-task-repository.interface.js';
+import { TaskCancellationService } from '../../../tasks/task-cancellation.service.js';
+import { TaskProgressUpdatedEvent } from '../../../tasks/events/index.js';
 
 @Injectable()
 @CommandHandler(UpdateTaskProgressCommand)

@@ -6,14 +6,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ResumeTaskCommand } from '../impl/resume-task.command.js';
-import type { ITasksRepository } from '@/tasks/interfaces/tasks-repository.interface.js';
-import type { TaskDetail } from '@/tasks/interfaces/task.interface.js';
-import { ParsingQueueService } from '@/tasks/parsing-queue.service.js';
-import { TaskMapper } from '@/tasks/mappers/task.mapper.js';
-import { TaskDescriptionParser } from '@/tasks/parsers/task-description.parser.js';
-import { TaskContextBuilder } from '@/tasks/builders/task-context.builder.js';
-import { TaskResumedEvent } from '@/tasks/events/index.js';
-import type { TaskRecord } from '@/tasks/types/task-record.type.js';
+import type { ITasksRepository } from '../../../tasks/interfaces/tasks-repository.interface.js';
+import type { TaskDetail } from '../../../tasks/interfaces/task.interface.js';
+import { ParsingQueueService } from '../../../tasks/parsing-queue.service.js';
+import { TaskMapper } from '../../../tasks/mappers/task.mapper.js';
+import { TaskDescriptionParser } from '../../../tasks/parsers/task-description.parser.js';
+import { TaskContextBuilder } from '../../../tasks/builders/task-context.builder.js';
+import { TaskResumedEvent } from '../../../tasks/events/index.js';
+import type { TaskRecord } from '../../../tasks/types/task-record.type.js';
 
 @Injectable()
 @CommandHandler(ResumeTaskCommand)

@@ -45,6 +45,7 @@
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
     "argon2": "^0.44.0",
+    "az": "^0.2.3",
     "bcryptjs": "^2.4.3",
     "big-integer": "^1.6.52",
     "bullmq": "^5.61.0",
@@ -74,6 +75,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@swc/core": "^1.8.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
@@ -83,12 +85,11 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/russian-nouns-js": "^2.3.2",
     "@types/supertest": "^6.0.2",
+    "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
-    "vitest": "^3.2.4",
-    "@vitest/coverage-v8": "^3.2.4",
     "prettier": "^3.4.2",
     "prisma": "^7.0.0",
     "source-map-support": "^0.5.21",
@@ -100,6 +101,6 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "unplugin-swc": "^1.5.0",
-    "@swc/core": "^1.8.0"
+    "vitest": "^3.2.4"
   }
 }

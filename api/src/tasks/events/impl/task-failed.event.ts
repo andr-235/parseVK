@@ -1,4 +1,4 @@
-import type { ParsingStats } from '@/tasks/interfaces/parsing-stats.interface.js';
+import type { ParsingStats } from '../../../tasks/interfaces/parsing-stats.interface.js';
 
 export class TaskFailedEvent {
   constructor(

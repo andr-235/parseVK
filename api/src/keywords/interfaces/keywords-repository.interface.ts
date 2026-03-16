@@ -1,8 +1,19 @@
-import type { Keyword, Prisma } from '../../generated/prisma/client.js';
+import type {
+  Keyword,
+  KeywordForm,
+  KeywordFormExclusion,
+  Prisma,
+} from '../../generated/prisma/client.js';
 import type { MatchSource } from '../../common/types/match-source.enum.js';
+
+export interface KeywordWithForms extends Keyword {
+  keywordForms: KeywordForm[];
+  keywordFormExclusions: KeywordFormExclusion[];
+}
 
 export interface IKeywordsRepository {
   findUnique(where: { word: string }): Promise<Keyword>;
+  findUniqueWithForms(where: { id: number }): Promise<KeywordWithForms>;
   findMany(
     where?: Prisma.KeywordWhereInput,
     orderBy?: Prisma.KeywordOrderByWithRelationInput,
@@ -24,6 +35,10 @@ export interface IKeywordsRepository {
   ): Promise<Keyword>;
   delete(where: { id: number }): Promise<void>;
   deleteMany(): Promise<{ count: number }>;
+  replaceGeneratedForms(keywordId: number, forms: string[]): Promise<void>;
+  addManualForm(keywordId: number, form: string): Promise<void>;
+  removeManualForm(keywordId: number, form: string): Promise<void>;
+  excludeGeneratedForm(keywordId: number, form: string): Promise<void>;
   findManyWithSelect(select: { id: true; word: true; isPhrase: true }): Promise<
     Array<{
       id: number;

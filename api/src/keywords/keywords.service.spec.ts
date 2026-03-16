@@ -12,6 +12,7 @@ describe('KeywordsService', () => {
   beforeEach(() => {
     repositoryMock = {
       findUnique: vi.fn<Promise<unknown>, [{ word: string }]>(),
+      findUniqueWithForms: vi.fn<Promise<unknown>, [{ id: number }]>(),
       findMany: vi.fn<
         Promise<unknown[]>,
         [unknown?, unknown?, number?, number?]
@@ -20,6 +21,10 @@ describe('KeywordsService', () => {
       update: vi.fn<Promise<unknown>, [{ id: number }, unknown]>(),
       delete: vi.fn<Promise<void>, [{ id: number }]>(),
       deleteMany: vi.fn<Promise<{ count: number }>, []>(),
+      replaceGeneratedForms: vi.fn<Promise<void>, [number, string[]]>(),
+      addManualForm: vi.fn<Promise<void>, [number, string]>(),
+      removeManualForm: vi.fn<Promise<void>, [number, string]>(),
+      excludeGeneratedForm: vi.fn<Promise<void>, [number, string]>(),
       findManyWithSelect: vi.fn<
         Promise<Array<{ id: number; word: string; isPhrase: boolean }>>,
         [unknown]

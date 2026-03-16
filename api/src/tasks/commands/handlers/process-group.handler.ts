@@ -5,24 +5,24 @@ import { ProcessGroupCommand } from '../impl/process-group.command.js';
 import { SavePostCommand } from '../impl/save-post.command.js';
 import { SaveCommentsCommand } from '../impl/save-comments.command.js';
 import { SaveAuthorsCommand } from '../impl/save-authors.command.js';
-import { VkService } from '@/vk/vk.service.js';
-import { TaskCancellationService } from '@/tasks/task-cancellation.service.js';
-import type { IParsingTaskRepository } from '@/tasks/interfaces/parsing-task-repository.interface.js';
-import type { IPost } from '@/vk/interfaces/post.interfaces.js';
-import type { IComment } from '@/vk/interfaces/comment.interfaces.js';
-import { CommentSource } from '@/common/types/comment-source.enum.js';
-import { normalizeComment } from '@/common/utils/comment-normalizer.utils.js';
+import { VkService } from '../../../vk/vk.service.js';
+import { TaskCancellationService } from '../../../tasks/task-cancellation.service.js';
+import type { IParsingTaskRepository } from '../../../tasks/interfaces/parsing-task-repository.interface.js';
+import type { IPost } from '../../../vk/interfaces/post.interfaces.js';
+import type { IComment } from '../../../vk/interfaces/comment.interfaces.js';
+import { CommentSource } from '../../../common/types/comment-source.enum.js';
+import { normalizeComment } from '../../../common/utils/comment-normalizer.utils.js';
 import type {
   CommentEntity,
   TaskProcessingContext,
-} from '@/tasks/interfaces/parsing-task-runner.types.js';
-import type { ParsingGroupRecord } from '@/tasks/interfaces/parsing-task-repository.interface.js';
-import { GetCommentsResponse } from '@/vk/vk.service.js';
-import { ParsingTaskMode } from '@/tasks/dto/create-parsing-task.dto.js';
+} from '../../../tasks/interfaces/parsing-task-runner.types.js';
+import type { ParsingGroupRecord } from '../../../tasks/interfaces/parsing-task-repository.interface.js';
+import { GetCommentsResponse } from '../../../vk/vk.service.js';
+import { ParsingTaskMode } from '../../../tasks/dto/create-parsing-task.dto.js';
 import {
   TASK_COMMENTS_BATCH_SIZE,
   TASK_COMMENTS_THREAD_ITEMS_COUNT,
-} from '@/common/constants/processing.constants.js';
+} from '../../../common/constants/processing.constants.js';
 
 @Injectable()
 @CommandHandler(ProcessGroupCommand)

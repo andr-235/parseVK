@@ -10,8 +10,8 @@
  */
 
 import type * as runtime from "@prisma/client/runtime/client"
-import * as $Enums from "./enums"
-import type * as Prisma from "./internal/prismaNamespace"
+import * as $Enums from "./enums.js"
+import type * as Prisma from "./internal/prismaNamespace.js"
 
 
 export type IntFilter<$PrismaModel = never> = {
@@ -508,6 +508,23 @@ export type EnumSuspicionLevelWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumSuspicionLevelFilter<$PrismaModel>
   _max?: Prisma.NestedEnumSuspicionLevelFilter<$PrismaModel>
+}
+
+export type EnumKeywordFormSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.KeywordFormSource | Prisma.EnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.KeywordFormSource[] | Prisma.ListEnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.KeywordFormSource[] | Prisma.ListEnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumKeywordFormSourceFilter<$PrismaModel> | $Enums.KeywordFormSource
+}
+
+export type EnumKeywordFormSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.KeywordFormSource | Prisma.EnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.KeywordFormSource[] | Prisma.ListEnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.KeywordFormSource[] | Prisma.ListEnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumKeywordFormSourceWithAggregatesFilter<$PrismaModel> | $Enums.KeywordFormSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumKeywordFormSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumKeywordFormSourceFilter<$PrismaModel>
 }
 
 export type EnumMonitoringMessengerFilter<$PrismaModel = never> = {
@@ -1051,6 +1068,23 @@ export type NestedEnumSuspicionLevelWithAggregatesFilter<$PrismaModel = never> =
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumSuspicionLevelFilter<$PrismaModel>
   _max?: Prisma.NestedEnumSuspicionLevelFilter<$PrismaModel>
+}
+
+export type NestedEnumKeywordFormSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.KeywordFormSource | Prisma.EnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.KeywordFormSource[] | Prisma.ListEnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.KeywordFormSource[] | Prisma.ListEnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumKeywordFormSourceFilter<$PrismaModel> | $Enums.KeywordFormSource
+}
+
+export type NestedEnumKeywordFormSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.KeywordFormSource | Prisma.EnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.KeywordFormSource[] | Prisma.ListEnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.KeywordFormSource[] | Prisma.ListEnumKeywordFormSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumKeywordFormSourceWithAggregatesFilter<$PrismaModel> | $Enums.KeywordFormSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumKeywordFormSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumKeywordFormSourceFilter<$PrismaModel>
 }
 
 export type NestedEnumMonitoringMessengerFilter<$PrismaModel = never> = {

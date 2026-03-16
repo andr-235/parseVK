@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import {
+  KeywordFormSource,
   MatchSource as PrismaMatchSource,
   type Keyword,
   type Prisma,
 } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma.service.js';
-import type { IKeywordsRepository } from '../interfaces/keywords-repository.interface.js';
+import type {
+  IKeywordsRepository,
+  KeywordWithForms,
+} from '../interfaces/keywords-repository.interface.js';
 import type { MatchSource } from '../../common/types/match-source.enum.js';
 
 @Injectable()
@@ -14,6 +18,16 @@ export class KeywordsRepository implements IKeywordsRepository {
 
   findUnique(where: { word: string }): Promise<Keyword> {
     return this.prisma.keyword.findUniqueOrThrow({ where });
+  }
+
+  findUniqueWithForms(where: { id: number }): Promise<KeywordWithForms> {
+    return this.prisma.keyword.findUniqueOrThrow({
+      where,
+      include: {
+        keywordForms: true,
+        keywordFormExclusions: true,
+      },
+    });
   }
 
   findMany(
@@ -53,6 +67,57 @@ export class KeywordsRepository implements IKeywordsRepository {
 
   deleteMany(): Promise<{ count: number }> {
     return this.prisma.keyword.deleteMany({});
+  }
+
+  async replaceGeneratedForms(keywordId: number, forms: string[]): Promise<void> {
+    await this.prisma.keywordForm.deleteMany({
+      where: {
+        keywordId,
+        source: KeywordFormSource.generated,
+      },
+    });
+
+    if (forms.length === 0) {
+      return;
+    }
+
+    await this.prisma.keywordForm.createMany({
+      data: forms.map((form) => ({
+        keywordId,
+        form,
+        source: KeywordFormSource.generated,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  async addManualForm(keywordId: number, form: string): Promise<void> {
+    await this.prisma.keywordForm.create({
+      data: {
+        keywordId,
+        form,
+        source: KeywordFormSource.manual,
+      },
+    });
+  }
+
+  async removeManualForm(keywordId: number, form: string): Promise<void> {
+    await this.prisma.keywordForm.deleteMany({
+      where: {
+        keywordId,
+        form,
+        source: KeywordFormSource.manual,
+      },
+    });
+  }
+
+  async excludeGeneratedForm(keywordId: number, form: string): Promise<void> {
+    await this.prisma.keywordFormExclusion.create({
+      data: {
+        keywordId,
+        form,
+      },
+    });
   }
 
   findManyWithSelect(select: {

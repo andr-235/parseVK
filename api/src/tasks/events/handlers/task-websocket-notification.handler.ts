@@ -1,6 +1,6 @@
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { Injectable, Logger } from '@nestjs/common';
-import { TasksGateway } from '@/tasks/tasks.gateway.js';
+import { TasksGateway } from '../../../tasks/tasks.gateway.js';
 import {
   TaskCreatedEvent,
   TaskStartedEvent,

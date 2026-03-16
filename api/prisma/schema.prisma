@@ -52,6 +52,11 @@ enum MatchSource {
   POST
 }
 
+enum KeywordFormSource {
+  generated
+  manual
+}
+
 enum UserRole {
   admin
   user
@@ -400,6 +405,35 @@ model Keyword {
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
   commentKeywordMatches CommentKeywordMatch[]
+  keywordForms          KeywordForm[]
+  keywordFormExclusions KeywordFormExclusion[]
+}
+
+model KeywordForm {
+  id        Int               @id @default(autoincrement())
+  keywordId Int
+  form      String
+  source    KeywordFormSource
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  keyword   Keyword           @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@unique([keywordId, form])
+  @@index([keywordId])
+  @@index([form])
+  @@index([source])
+}
+
+model KeywordFormExclusion {
+  id        Int      @id @default(autoincrement())
+  keywordId Int
+  form      String
+  createdAt DateTime @default(now())
+  keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@unique([keywordId, form])
+  @@index([keywordId])
+  @@index([form])
 }
 
 model MonitoringGroup {

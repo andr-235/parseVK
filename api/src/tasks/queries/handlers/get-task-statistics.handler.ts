@@ -4,8 +4,8 @@ import { GetTaskStatisticsQuery } from '../impl/get-task-statistics.query.js';
 import type {
   ITasksRepository,
   TaskWhereInput,
-} from '@/tasks/interfaces/tasks-repository.interface.js';
-import type { TaskRecord } from '@/tasks/types/task-record.type.js';
+} from '../../../tasks/interfaces/tasks-repository.interface.js';
+import type { TaskRecord } from '../../../tasks/types/task-record.type.js';
 
 export interface TaskStatistics {
   total: number;

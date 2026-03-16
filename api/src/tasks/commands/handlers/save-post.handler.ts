@@ -1,7 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject, Injectable } from '@nestjs/common';
 import { SavePostCommand } from '../impl/save-post.command.js';
-import type { IParsingTaskRepository } from '@/tasks/interfaces/parsing-task-repository.interface.js';
+import type { IParsingTaskRepository } from '../../../tasks/interfaces/parsing-task-repository.interface.js';
 
 @Injectable()
 @CommandHandler(SavePostCommand)

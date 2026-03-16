@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums"
-import type * as Prisma from "../internal/prismaNamespace"
+import type * as $Enums from "../enums.js"
+import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model Keyword
@@ -225,6 +225,8 @@ export type KeywordWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Keyword"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Keyword"> | Date | string
   commentKeywordMatches?: Prisma.CommentKeywordMatchListRelationFilter
+  keywordForms?: Prisma.KeywordFormListRelationFilter
+  keywordFormExclusions?: Prisma.KeywordFormExclusionListRelationFilter
 }
 
 export type KeywordOrderByWithRelationInput = {
@@ -235,6 +237,8 @@ export type KeywordOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   commentKeywordMatches?: Prisma.CommentKeywordMatchOrderByRelationAggregateInput
+  keywordForms?: Prisma.KeywordFormOrderByRelationAggregateInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionOrderByRelationAggregateInput
 }
 
 export type KeywordWhereUniqueInput = Prisma.AtLeast<{
@@ -248,6 +252,8 @@ export type KeywordWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Keyword"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Keyword"> | Date | string
   commentKeywordMatches?: Prisma.CommentKeywordMatchListRelationFilter
+  keywordForms?: Prisma.KeywordFormListRelationFilter
+  keywordFormExclusions?: Prisma.KeywordFormExclusionListRelationFilter
 }, "id" | "word">
 
 export type KeywordOrderByWithAggregationInput = {
@@ -283,6 +289,8 @@ export type KeywordCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   commentKeywordMatches?: Prisma.CommentKeywordMatchCreateNestedManyWithoutKeywordInput
+  keywordForms?: Prisma.KeywordFormCreateNestedManyWithoutKeywordInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionCreateNestedManyWithoutKeywordInput
 }
 
 export type KeywordUncheckedCreateInput = {
@@ -293,6 +301,8 @@ export type KeywordUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   commentKeywordMatches?: Prisma.CommentKeywordMatchUncheckedCreateNestedManyWithoutKeywordInput
+  keywordForms?: Prisma.KeywordFormUncheckedCreateNestedManyWithoutKeywordInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionUncheckedCreateNestedManyWithoutKeywordInput
 }
 
 export type KeywordUpdateInput = {
@@ -302,6 +312,8 @@ export type KeywordUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   commentKeywordMatches?: Prisma.CommentKeywordMatchUpdateManyWithoutKeywordNestedInput
+  keywordForms?: Prisma.KeywordFormUpdateManyWithoutKeywordNestedInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionUpdateManyWithoutKeywordNestedInput
 }
 
 export type KeywordUncheckedUpdateInput = {
@@ -312,6 +324,8 @@ export type KeywordUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   commentKeywordMatches?: Prisma.CommentKeywordMatchUncheckedUpdateManyWithoutKeywordNestedInput
+  keywordForms?: Prisma.KeywordFormUncheckedUpdateManyWithoutKeywordNestedInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionUncheckedUpdateManyWithoutKeywordNestedInput
 }
 
 export type KeywordCreateManyInput = {
@@ -380,6 +394,34 @@ export type KeywordScalarRelationFilter = {
   isNot?: Prisma.KeywordWhereInput
 }
 
+export type KeywordCreateNestedOneWithoutKeywordFormsInput = {
+  create?: Prisma.XOR<Prisma.KeywordCreateWithoutKeywordFormsInput, Prisma.KeywordUncheckedCreateWithoutKeywordFormsInput>
+  connectOrCreate?: Prisma.KeywordCreateOrConnectWithoutKeywordFormsInput
+  connect?: Prisma.KeywordWhereUniqueInput
+}
+
+export type KeywordUpdateOneRequiredWithoutKeywordFormsNestedInput = {
+  create?: Prisma.XOR<Prisma.KeywordCreateWithoutKeywordFormsInput, Prisma.KeywordUncheckedCreateWithoutKeywordFormsInput>
+  connectOrCreate?: Prisma.KeywordCreateOrConnectWithoutKeywordFormsInput
+  upsert?: Prisma.KeywordUpsertWithoutKeywordFormsInput
+  connect?: Prisma.KeywordWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.KeywordUpdateToOneWithWhereWithoutKeywordFormsInput, Prisma.KeywordUpdateWithoutKeywordFormsInput>, Prisma.KeywordUncheckedUpdateWithoutKeywordFormsInput>
+}
+
+export type KeywordCreateNestedOneWithoutKeywordFormExclusionsInput = {
+  create?: Prisma.XOR<Prisma.KeywordCreateWithoutKeywordFormExclusionsInput, Prisma.KeywordUncheckedCreateWithoutKeywordFormExclusionsInput>
+  connectOrCreate?: Prisma.KeywordCreateOrConnectWithoutKeywordFormExclusionsInput
+  connect?: Prisma.KeywordWhereUniqueInput
+}
+
+export type KeywordUpdateOneRequiredWithoutKeywordFormExclusionsNestedInput = {
+  create?: Prisma.XOR<Prisma.KeywordCreateWithoutKeywordFormExclusionsInput, Prisma.KeywordUncheckedCreateWithoutKeywordFormExclusionsInput>
+  connectOrCreate?: Prisma.KeywordCreateOrConnectWithoutKeywordFormExclusionsInput
+  upsert?: Prisma.KeywordUpsertWithoutKeywordFormExclusionsInput
+  connect?: Prisma.KeywordWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.KeywordUpdateToOneWithWhereWithoutKeywordFormExclusionsInput, Prisma.KeywordUpdateWithoutKeywordFormExclusionsInput>, Prisma.KeywordUncheckedUpdateWithoutKeywordFormExclusionsInput>
+}
+
 export type KeywordCreateNestedOneWithoutCommentKeywordMatchesInput = {
   create?: Prisma.XOR<Prisma.KeywordCreateWithoutCommentKeywordMatchesInput, Prisma.KeywordUncheckedCreateWithoutCommentKeywordMatchesInput>
   connectOrCreate?: Prisma.KeywordCreateOrConnectWithoutCommentKeywordMatchesInput
@@ -394,12 +436,130 @@ export type KeywordUpdateOneRequiredWithoutCommentKeywordMatchesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.KeywordUpdateToOneWithWhereWithoutCommentKeywordMatchesInput, Prisma.KeywordUpdateWithoutCommentKeywordMatchesInput>, Prisma.KeywordUncheckedUpdateWithoutCommentKeywordMatchesInput>
 }
 
+export type KeywordCreateWithoutKeywordFormsInput = {
+  word: string
+  category?: string | null
+  isPhrase?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  commentKeywordMatches?: Prisma.CommentKeywordMatchCreateNestedManyWithoutKeywordInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionCreateNestedManyWithoutKeywordInput
+}
+
+export type KeywordUncheckedCreateWithoutKeywordFormsInput = {
+  id?: number
+  word: string
+  category?: string | null
+  isPhrase?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  commentKeywordMatches?: Prisma.CommentKeywordMatchUncheckedCreateNestedManyWithoutKeywordInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionUncheckedCreateNestedManyWithoutKeywordInput
+}
+
+export type KeywordCreateOrConnectWithoutKeywordFormsInput = {
+  where: Prisma.KeywordWhereUniqueInput
+  create: Prisma.XOR<Prisma.KeywordCreateWithoutKeywordFormsInput, Prisma.KeywordUncheckedCreateWithoutKeywordFormsInput>
+}
+
+export type KeywordUpsertWithoutKeywordFormsInput = {
+  update: Prisma.XOR<Prisma.KeywordUpdateWithoutKeywordFormsInput, Prisma.KeywordUncheckedUpdateWithoutKeywordFormsInput>
+  create: Prisma.XOR<Prisma.KeywordCreateWithoutKeywordFormsInput, Prisma.KeywordUncheckedCreateWithoutKeywordFormsInput>
+  where?: Prisma.KeywordWhereInput
+}
+
+export type KeywordUpdateToOneWithWhereWithoutKeywordFormsInput = {
+  where?: Prisma.KeywordWhereInput
+  data: Prisma.XOR<Prisma.KeywordUpdateWithoutKeywordFormsInput, Prisma.KeywordUncheckedUpdateWithoutKeywordFormsInput>
+}
+
+export type KeywordUpdateWithoutKeywordFormsInput = {
+  word?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPhrase?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  commentKeywordMatches?: Prisma.CommentKeywordMatchUpdateManyWithoutKeywordNestedInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionUpdateManyWithoutKeywordNestedInput
+}
+
+export type KeywordUncheckedUpdateWithoutKeywordFormsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  word?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPhrase?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  commentKeywordMatches?: Prisma.CommentKeywordMatchUncheckedUpdateManyWithoutKeywordNestedInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionUncheckedUpdateManyWithoutKeywordNestedInput
+}
+
+export type KeywordCreateWithoutKeywordFormExclusionsInput = {
+  word: string
+  category?: string | null
+  isPhrase?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  commentKeywordMatches?: Prisma.CommentKeywordMatchCreateNestedManyWithoutKeywordInput
+  keywordForms?: Prisma.KeywordFormCreateNestedManyWithoutKeywordInput
+}
+
+export type KeywordUncheckedCreateWithoutKeywordFormExclusionsInput = {
+  id?: number
+  word: string
+  category?: string | null
+  isPhrase?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  commentKeywordMatches?: Prisma.CommentKeywordMatchUncheckedCreateNestedManyWithoutKeywordInput
+  keywordForms?: Prisma.KeywordFormUncheckedCreateNestedManyWithoutKeywordInput
+}
+
+export type KeywordCreateOrConnectWithoutKeywordFormExclusionsInput = {
+  where: Prisma.KeywordWhereUniqueInput
+  create: Prisma.XOR<Prisma.KeywordCreateWithoutKeywordFormExclusionsInput, Prisma.KeywordUncheckedCreateWithoutKeywordFormExclusionsInput>
+}
+
+export type KeywordUpsertWithoutKeywordFormExclusionsInput = {
+  update: Prisma.XOR<Prisma.KeywordUpdateWithoutKeywordFormExclusionsInput, Prisma.KeywordUncheckedUpdateWithoutKeywordFormExclusionsInput>
+  create: Prisma.XOR<Prisma.KeywordCreateWithoutKeywordFormExclusionsInput, Prisma.KeywordUncheckedCreateWithoutKeywordFormExclusionsInput>
+  where?: Prisma.KeywordWhereInput
+}
+
+export type KeywordUpdateToOneWithWhereWithoutKeywordFormExclusionsInput = {
+  where?: Prisma.KeywordWhereInput
+  data: Prisma.XOR<Prisma.KeywordUpdateWithoutKeywordFormExclusionsInput, Prisma.KeywordUncheckedUpdateWithoutKeywordFormExclusionsInput>
+}
+
+export type KeywordUpdateWithoutKeywordFormExclusionsInput = {
+  word?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPhrase?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  commentKeywordMatches?: Prisma.CommentKeywordMatchUpdateManyWithoutKeywordNestedInput
+  keywordForms?: Prisma.KeywordFormUpdateManyWithoutKeywordNestedInput
+}
+
+export type KeywordUncheckedUpdateWithoutKeywordFormExclusionsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  word?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isPhrase?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  commentKeywordMatches?: Prisma.CommentKeywordMatchUncheckedUpdateManyWithoutKeywordNestedInput
+  keywordForms?: Prisma.KeywordFormUncheckedUpdateManyWithoutKeywordNestedInput
+}
+
 export type KeywordCreateWithoutCommentKeywordMatchesInput = {
   word: string
   category?: string | null
   isPhrase?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  keywordForms?: Prisma.KeywordFormCreateNestedManyWithoutKeywordInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionCreateNestedManyWithoutKeywordInput
 }
 
 export type KeywordUncheckedCreateWithoutCommentKeywordMatchesInput = {
@@ -409,6 +569,8 @@ export type KeywordUncheckedCreateWithoutCommentKeywordMatchesInput = {
   isPhrase?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  keywordForms?: Prisma.KeywordFormUncheckedCreateNestedManyWithoutKeywordInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionUncheckedCreateNestedManyWithoutKeywordInput
 }
 
 export type KeywordCreateOrConnectWithoutCommentKeywordMatchesInput = {
@@ -433,6 +595,8 @@ export type KeywordUpdateWithoutCommentKeywordMatchesInput = {
   isPhrase?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  keywordForms?: Prisma.KeywordFormUpdateManyWithoutKeywordNestedInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionUpdateManyWithoutKeywordNestedInput
 }
 
 export type KeywordUncheckedUpdateWithoutCommentKeywordMatchesInput = {
@@ -442,6 +606,8 @@ export type KeywordUncheckedUpdateWithoutCommentKeywordMatchesInput = {
   isPhrase?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  keywordForms?: Prisma.KeywordFormUncheckedUpdateManyWithoutKeywordNestedInput
+  keywordFormExclusions?: Prisma.KeywordFormExclusionUncheckedUpdateManyWithoutKeywordNestedInput
 }
 
 
@@ -451,10 +617,14 @@ export type KeywordUncheckedUpdateWithoutCommentKeywordMatchesInput = {
 
 export type KeywordCountOutputType = {
   commentKeywordMatches: number
+  keywordForms: number
+  keywordFormExclusions: number
 }
 
 export type KeywordCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   commentKeywordMatches?: boolean | KeywordCountOutputTypeCountCommentKeywordMatchesArgs
+  keywordForms?: boolean | KeywordCountOutputTypeCountKeywordFormsArgs
+  keywordFormExclusions?: boolean | KeywordCountOutputTypeCountKeywordFormExclusionsArgs
 }
 
 /**
@@ -474,6 +644,20 @@ export type KeywordCountOutputTypeCountCommentKeywordMatchesArgs<ExtArgs extends
   where?: Prisma.CommentKeywordMatchWhereInput
 }
 
+/**
+ * KeywordCountOutputType without action
+ */
+export type KeywordCountOutputTypeCountKeywordFormsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.KeywordFormWhereInput
+}
+
+/**
+ * KeywordCountOutputType without action
+ */
+export type KeywordCountOutputTypeCountKeywordFormExclusionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.KeywordFormExclusionWhereInput
+}
+
 
 export type KeywordSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -483,6 +667,8 @@ export type KeywordSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   createdAt?: boolean
   updatedAt?: boolean
   commentKeywordMatches?: boolean | Prisma.Keyword$commentKeywordMatchesArgs<ExtArgs>
+  keywordForms?: boolean | Prisma.Keyword$keywordFormsArgs<ExtArgs>
+  keywordFormExclusions?: boolean | Prisma.Keyword$keywordFormExclusionsArgs<ExtArgs>
   _count?: boolean | Prisma.KeywordCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["keyword"]>
 
@@ -516,6 +702,8 @@ export type KeywordSelectScalar = {
 export type KeywordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "word" | "category" | "isPhrase" | "createdAt" | "updatedAt", ExtArgs["result"]["keyword"]>
 export type KeywordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   commentKeywordMatches?: boolean | Prisma.Keyword$commentKeywordMatchesArgs<ExtArgs>
+  keywordForms?: boolean | Prisma.Keyword$keywordFormsArgs<ExtArgs>
+  keywordFormExclusions?: boolean | Prisma.Keyword$keywordFormExclusionsArgs<ExtArgs>
   _count?: boolean | Prisma.KeywordCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type KeywordIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -525,6 +713,8 @@ export type $KeywordPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
   name: "Keyword"
   objects: {
     commentKeywordMatches: Prisma.$CommentKeywordMatchPayload<ExtArgs>[]
+    keywordForms: Prisma.$KeywordFormPayload<ExtArgs>[]
+    keywordFormExclusions: Prisma.$KeywordFormExclusionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -928,6 +1118,8 @@ readonly fields: KeywordFieldRefs;
 export interface Prisma__KeywordClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   commentKeywordMatches<T extends Prisma.Keyword$commentKeywordMatchesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Keyword$commentKeywordMatchesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentKeywordMatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  keywordForms<T extends Prisma.Keyword$keywordFormsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Keyword$keywordFormsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$KeywordFormPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  keywordFormExclusions<T extends Prisma.Keyword$keywordFormExclusionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Keyword$keywordFormExclusionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$KeywordFormExclusionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1372,6 +1564,54 @@ export type Keyword$commentKeywordMatchesArgs<ExtArgs extends runtime.Types.Exte
   take?: number
   skip?: number
   distinct?: Prisma.CommentKeywordMatchScalarFieldEnum | Prisma.CommentKeywordMatchScalarFieldEnum[]
+}
+
+/**
+ * Keyword.keywordForms
+ */
+export type Keyword$keywordFormsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the KeywordForm
+   */
+  select?: Prisma.KeywordFormSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the KeywordForm
+   */
+  omit?: Prisma.KeywordFormOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.KeywordFormInclude<ExtArgs> | null
+  where?: Prisma.KeywordFormWhereInput
+  orderBy?: Prisma.KeywordFormOrderByWithRelationInput | Prisma.KeywordFormOrderByWithRelationInput[]
+  cursor?: Prisma.KeywordFormWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.KeywordFormScalarFieldEnum | Prisma.KeywordFormScalarFieldEnum[]
+}
+
+/**
+ * Keyword.keywordFormExclusions
+ */
+export type Keyword$keywordFormExclusionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the KeywordFormExclusion
+   */
+  select?: Prisma.KeywordFormExclusionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the KeywordFormExclusion
+   */
+  omit?: Prisma.KeywordFormExclusionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.KeywordFormExclusionInclude<ExtArgs> | null
+  where?: Prisma.KeywordFormExclusionWhereInput
+  orderBy?: Prisma.KeywordFormExclusionOrderByWithRelationInput | Prisma.KeywordFormExclusionOrderByWithRelationInput[]
+  cursor?: Prisma.KeywordFormExclusionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.KeywordFormExclusionScalarFieldEnum | Prisma.KeywordFormExclusionScalarFieldEnum[]
 }
 
 /**

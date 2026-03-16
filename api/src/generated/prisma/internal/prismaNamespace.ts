@@ -16,10 +16,10 @@
  */
 
 import * as runtime from "@prisma/client/runtime/client"
-import type * as Prisma from "../models"
-import { type PrismaClient } from "./class"
+import type * as Prisma from "../models.js"
+import { type PrismaClient } from "./class.js"
 
-export type * from '../models'
+export type * from '../models.js'
 
 export type DMMF = typeof runtime.DMMF
 
@@ -398,6 +398,8 @@ export const ModelName = {
   Author: 'Author',
   PhotoAnalysis: 'PhotoAnalysis',
   Keyword: 'Keyword',
+  KeywordForm: 'KeywordForm',
+  KeywordFormExclusion: 'KeywordFormExclusion',
   MonitoringGroup: 'MonitoringGroup',
   CommentKeywordMatch: 'CommentKeywordMatch',
   WatchlistSettings: 'WatchlistSettings',
@@ -422,7 +424,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "task" | "taskAuditLog" | "exportJob" | "friendRecord" | "jobLog" | "user" | "taskAutomationSettings" | "group" | "post" | "comment" | "listing" | "author" | "photoAnalysis" | "keyword" | "monitoringGroup" | "commentKeywordMatch" | "watchlistSettings" | "watchlistAuthor" | "telegramChat" | "telegramUser" | "telegramChatMember" | "telegramSession" | "telegramSettings"
+    modelProps: "task" | "taskAuditLog" | "exportJob" | "friendRecord" | "jobLog" | "user" | "taskAutomationSettings" | "group" | "post" | "comment" | "listing" | "author" | "photoAnalysis" | "keyword" | "keywordForm" | "keywordFormExclusion" | "monitoringGroup" | "commentKeywordMatch" | "watchlistSettings" | "watchlistAuthor" | "telegramChat" | "telegramUser" | "telegramChatMember" | "telegramSession" | "telegramSettings"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1462,6 +1464,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    KeywordForm: {
+      payload: Prisma.$KeywordFormPayload<ExtArgs>
+      fields: Prisma.KeywordFormFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.KeywordFormFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.KeywordFormFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload>
+        }
+        findFirst: {
+          args: Prisma.KeywordFormFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.KeywordFormFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload>
+        }
+        findMany: {
+          args: Prisma.KeywordFormFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload>[]
+        }
+        create: {
+          args: Prisma.KeywordFormCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload>
+        }
+        createMany: {
+          args: Prisma.KeywordFormCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.KeywordFormCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload>[]
+        }
+        delete: {
+          args: Prisma.KeywordFormDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload>
+        }
+        update: {
+          args: Prisma.KeywordFormUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload>
+        }
+        deleteMany: {
+          args: Prisma.KeywordFormDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.KeywordFormUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.KeywordFormUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload>[]
+        }
+        upsert: {
+          args: Prisma.KeywordFormUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormPayload>
+        }
+        aggregate: {
+          args: Prisma.KeywordFormAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateKeywordForm>
+        }
+        groupBy: {
+          args: Prisma.KeywordFormGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.KeywordFormGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.KeywordFormCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.KeywordFormCountAggregateOutputType> | number
+        }
+      }
+    }
+    KeywordFormExclusion: {
+      payload: Prisma.$KeywordFormExclusionPayload<ExtArgs>
+      fields: Prisma.KeywordFormExclusionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.KeywordFormExclusionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.KeywordFormExclusionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload>
+        }
+        findFirst: {
+          args: Prisma.KeywordFormExclusionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.KeywordFormExclusionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload>
+        }
+        findMany: {
+          args: Prisma.KeywordFormExclusionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload>[]
+        }
+        create: {
+          args: Prisma.KeywordFormExclusionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload>
+        }
+        createMany: {
+          args: Prisma.KeywordFormExclusionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.KeywordFormExclusionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload>[]
+        }
+        delete: {
+          args: Prisma.KeywordFormExclusionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload>
+        }
+        update: {
+          args: Prisma.KeywordFormExclusionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload>
+        }
+        deleteMany: {
+          args: Prisma.KeywordFormExclusionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.KeywordFormExclusionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.KeywordFormExclusionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload>[]
+        }
+        upsert: {
+          args: Prisma.KeywordFormExclusionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$KeywordFormExclusionPayload>
+        }
+        aggregate: {
+          args: Prisma.KeywordFormExclusionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateKeywordFormExclusion>
+        }
+        groupBy: {
+          args: Prisma.KeywordFormExclusionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.KeywordFormExclusionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.KeywordFormExclusionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.KeywordFormExclusionCountAggregateOutputType> | number
+        }
+      }
+    }
     MonitoringGroup: {
       payload: Prisma.$MonitoringGroupPayload<ExtArgs>
       fields: Prisma.MonitoringGroupFieldRefs
@@ -2467,6 +2617,28 @@ export const KeywordScalarFieldEnum = {
 export type KeywordScalarFieldEnum = (typeof KeywordScalarFieldEnum)[keyof typeof KeywordScalarFieldEnum]
 
 
+export const KeywordFormScalarFieldEnum = {
+  id: 'id',
+  keywordId: 'keywordId',
+  form: 'form',
+  source: 'source',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type KeywordFormScalarFieldEnum = (typeof KeywordFormScalarFieldEnum)[keyof typeof KeywordFormScalarFieldEnum]
+
+
+export const KeywordFormExclusionScalarFieldEnum = {
+  id: 'id',
+  keywordId: 'keywordId',
+  form: 'form',
+  createdAt: 'createdAt'
+} as const
+
+export type KeywordFormExclusionScalarFieldEnum = (typeof KeywordFormExclusionScalarFieldEnum)[keyof typeof KeywordFormExclusionScalarFieldEnum]
+
+
 export const MonitoringGroupScalarFieldEnum = {
   id: 'id',
   messenger: 'messenger',
@@ -2832,6 +3004,20 @@ export type ListEnumSuspicionLevelFieldRefInput<$PrismaModel> = FieldRefInputTyp
 
 
 /**
+ * Reference to a field of type 'KeywordFormSource'
+ */
+export type EnumKeywordFormSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'KeywordFormSource'>
+    
+
+
+/**
+ * Reference to a field of type 'KeywordFormSource[]'
+ */
+export type ListEnumKeywordFormSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'KeywordFormSource[]'>
+    
+
+
+/**
  * Reference to a field of type 'MonitoringMessenger'
  */
 export type EnumMonitoringMessengerFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MonitoringMessenger'>
@@ -3009,6 +3195,8 @@ export type GlobalOmitConfig = {
   author?: Prisma.AuthorOmit
   photoAnalysis?: Prisma.PhotoAnalysisOmit
   keyword?: Prisma.KeywordOmit
+  keywordForm?: Prisma.KeywordFormOmit
+  keywordFormExclusion?: Prisma.KeywordFormExclusionOmit
   monitoringGroup?: Prisma.MonitoringGroupOmit
   commentKeywordMatch?: Prisma.CommentKeywordMatchOmit
   watchlistSettings?: Prisma.WatchlistSettingsOmit

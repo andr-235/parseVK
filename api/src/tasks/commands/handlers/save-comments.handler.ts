@@ -1,7 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Injectable } from '@nestjs/common';
 import { SaveCommentsCommand } from '../impl/save-comments.command.js';
-import { CommentsSaverService } from '@/common/services/comments-saver.service.js';
+import { CommentsSaverService } from '../../../common/services/comments-saver.service.js';
 
 @Injectable()
 @CommandHandler(SaveCommentsCommand)

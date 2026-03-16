@@ -2,12 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CommandBus } from '@nestjs/cqrs';
 import { ProcessGroupHandler } from './process-group.handler.js';
 import { ProcessGroupCommand } from '../impl/process-group.command.js';
-import { ParsingTaskMode } from '@/tasks/dto/create-parsing-task.dto.js';
-import type { ParsingGroupRecord } from '@/tasks/interfaces/parsing-task-repository.interface.js';
-import type { TaskProcessingContext } from '@/tasks/interfaces/parsing-task-runner.types.js';
-import type { IParsingTaskRepository } from '@/tasks/interfaces/parsing-task-repository.interface.js';
-import type { VkService } from '@/vk/vk.service.js';
-import { TaskCancellationService } from '@/tasks/task-cancellation.service.js';
+import { ParsingTaskMode } from '../../../tasks/dto/create-parsing-task.dto.js';
+import type { ParsingGroupRecord } from '../../../tasks/interfaces/parsing-task-repository.interface.js';
+import type { TaskProcessingContext } from '../../../tasks/interfaces/parsing-task-runner.types.js';
+import type { IParsingTaskRepository } from '../../../tasks/interfaces/parsing-task-repository.interface.js';
+import type { VkService } from '../../../vk/vk.service.js';
+import { TaskCancellationService } from '../../../tasks/task-cancellation.service.js';
 
 const createContext = (): TaskProcessingContext => ({
   totalGroups: 1,

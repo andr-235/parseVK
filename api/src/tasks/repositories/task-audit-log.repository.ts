@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@/generated/prisma/client.js';
-import { PrismaService } from '@/prisma.service.js';
+import { Prisma } from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma.service.js';
 import type {
   TaskAuditLog,
   CreateTaskAuditLogData,
-} from '@/tasks/interfaces/task-audit-log.interface.js';
+} from '../../tasks/interfaces/task-audit-log.interface.js';
 
 @Injectable()
 export class TaskAuditLogRepository {

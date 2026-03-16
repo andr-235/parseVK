@@ -18,22 +18,22 @@ import { UpdateTaskProgressCommand } from '../impl/update-task-progress.command.
 import type {
   IParsingTaskRepository,
   ParsingGroupRecord,
-} from '@/tasks/interfaces/parsing-task-repository.interface.js';
-import type { ParsingStats } from '@/tasks/interfaces/parsing-stats.interface.js';
-import type { TaskProcessingContext } from '@/tasks/interfaces/parsing-task-runner.types.js';
-import { TaskCancellationService } from '@/tasks/task-cancellation.service.js';
-import { TaskCancelledError } from '@/tasks/errors/task-cancelled.error.js';
-import { TaskGroupResolverService } from '@/tasks/services/task-group-resolver.service.js';
-import { MetricsService } from '@/metrics/metrics.service.js';
+} from '../../../tasks/interfaces/parsing-task-repository.interface.js';
+import type { ParsingStats } from '../../../tasks/interfaces/parsing-stats.interface.js';
+import type { TaskProcessingContext } from '../../../tasks/interfaces/parsing-task-runner.types.js';
+import { TaskCancellationService } from '../../../tasks/task-cancellation.service.js';
+import { TaskCancelledError } from '../../../tasks/errors/task-cancelled.error.js';
+import { TaskGroupResolverService } from '../../../tasks/services/task-group-resolver.service.js';
+import { MetricsService } from '../../../metrics/metrics.service.js';
 import {
   TaskStartedEvent,
   TaskCompletedEvent,
   TaskFailedEvent,
-} from '@/tasks/events/index.js';
+} from '../../../tasks/events/index.js';
 import type {
   ParsingScope,
   ParsingTaskMode,
-} from '@/tasks/dto/create-parsing-task.dto.js';
+} from '../../../tasks/dto/create-parsing-task.dto.js';
 
 @Injectable()
 @CommandHandler(ExecuteParsingTaskCommand)

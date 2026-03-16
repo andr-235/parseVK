@@ -1,11 +1,11 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { GetTaskByIdQuery } from '../impl/get-task-by-id.query.js';
-import type { ITasksRepository } from '@/tasks/interfaces/tasks-repository.interface.js';
-import type { TaskDetail } from '@/tasks/interfaces/task.interface.js';
-import { TaskMapper } from '@/tasks/mappers/task.mapper.js';
-import { TaskDescriptionParser } from '@/tasks/parsers/task-description.parser.js';
-import type { TaskRecord } from '@/tasks/types/task-record.type.js';
+import type { ITasksRepository } from '../../../tasks/interfaces/tasks-repository.interface.js';
+import type { TaskDetail } from '../../../tasks/interfaces/task.interface.js';
+import { TaskMapper } from '../../../tasks/mappers/task.mapper.js';
+import { TaskDescriptionParser } from '../../../tasks/parsers/task-description.parser.js';
+import type { TaskRecord } from '../../../tasks/types/task-record.type.js';
 
 @Injectable()
 @QueryHandler(GetTaskByIdQuery)

@@ -1,6 +1,6 @@
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { Injectable, Logger } from '@nestjs/common';
-import { TaskAuditLogRepository } from '@/tasks/repositories/task-audit-log.repository.js';
+import { TaskAuditLogRepository } from '../../../tasks/repositories/task-audit-log.repository.js';
 import {
   TaskCreatedEvent,
   TaskStartedEvent,

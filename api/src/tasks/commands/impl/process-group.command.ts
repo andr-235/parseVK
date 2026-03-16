@@ -1,7 +1,7 @@
-import type { ParsingGroupRecord } from '@/tasks/interfaces/parsing-task-repository.interface.js';
-import type { TaskProcessingContext } from '@/tasks/interfaces/parsing-task-runner.types.js';
+import type { ParsingGroupRecord } from '../../../tasks/interfaces/parsing-task-repository.interface.js';
+import type { TaskProcessingContext } from '../../../tasks/interfaces/parsing-task-runner.types.js';
 import { Command } from '@nestjs/cqrs';
-import type { ParsingTaskMode } from '@/tasks/dto/create-parsing-task.dto.js';
+import type { ParsingTaskMode } from '../../../tasks/dto/create-parsing-task.dto.js';
 
 export class ProcessGroupCommand extends Command<boolean> {
   constructor(

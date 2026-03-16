@@ -66,6 +66,14 @@ export const MatchSource = {
 export type MatchSource = (typeof MatchSource)[keyof typeof MatchSource]
 
 
+export const KeywordFormSource = {
+  generated: 'generated',
+  manual: 'manual'
+} as const
+
+export type KeywordFormSource = (typeof KeywordFormSource)[keyof typeof KeywordFormSource]
+
+
 export const UserRole = {
   admin: 'admin',
   user: 'user'

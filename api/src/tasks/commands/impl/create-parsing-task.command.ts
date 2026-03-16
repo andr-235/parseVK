@@ -1,7 +1,7 @@
 import type {
   ParsingScope,
   ParsingTaskMode,
-} from '@/tasks/dto/create-parsing-task.dto.js';
+} from '../../../tasks/dto/create-parsing-task.dto.js';
 
 export class CreateParsingTaskCommand {
   constructor(

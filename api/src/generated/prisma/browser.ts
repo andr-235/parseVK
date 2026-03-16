@@ -13,10 +13,10 @@
  * 🟢 You can import this file directly.
  */
 
-import * as Prisma from './internal/prismaNamespaceBrowser'
+import * as Prisma from './internal/prismaNamespaceBrowser.js'
 export { Prisma }
-export * as $Enums from './enums'
-export * from './enums';
+export * as $Enums from './enums.js'
+export * from './enums.js';
 /**
  * Model Task
  * 
@@ -87,6 +87,16 @@ export type PhotoAnalysis = Prisma.PhotoAnalysisModel
  * 
  */
 export type Keyword = Prisma.KeywordModel
+/**
+ * Model KeywordForm
+ * 
+ */
+export type KeywordForm = Prisma.KeywordFormModel
+/**
+ * Model KeywordFormExclusion
+ * 
+ */
+export type KeywordFormExclusion = Prisma.KeywordFormExclusionModel
 /**
  * Model MonitoringGroup
  * 

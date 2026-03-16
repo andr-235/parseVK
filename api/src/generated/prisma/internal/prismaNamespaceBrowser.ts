@@ -17,8 +17,8 @@
 
 import * as runtime from "@prisma/client/runtime/index-browser"
 
-export type * from '../models'
-export type * from './prismaNamespace'
+export type * from '../models.js'
+export type * from './prismaNamespace.js'
 
 export const Decimal = runtime.Decimal
 
@@ -65,6 +65,8 @@ export const ModelName = {
   Author: 'Author',
   PhotoAnalysis: 'PhotoAnalysis',
   Keyword: 'Keyword',
+  KeywordForm: 'KeywordForm',
+  KeywordFormExclusion: 'KeywordFormExclusion',
   MonitoringGroup: 'MonitoringGroup',
   CommentKeywordMatch: 'CommentKeywordMatch',
   WatchlistSettings: 'WatchlistSettings',
@@ -390,6 +392,28 @@ export const KeywordScalarFieldEnum = {
 } as const
 
 export type KeywordScalarFieldEnum = (typeof KeywordScalarFieldEnum)[keyof typeof KeywordScalarFieldEnum]
+
+
+export const KeywordFormScalarFieldEnum = {
+  id: 'id',
+  keywordId: 'keywordId',
+  form: 'form',
+  source: 'source',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type KeywordFormScalarFieldEnum = (typeof KeywordFormScalarFieldEnum)[keyof typeof KeywordFormScalarFieldEnum]
+
+
+export const KeywordFormExclusionScalarFieldEnum = {
+  id: 'id',
+  keywordId: 'keywordId',
+  form: 'form',
+  createdAt: 'createdAt'
+} as const
+
+export type KeywordFormExclusionScalarFieldEnum = (typeof KeywordFormExclusionScalarFieldEnum)[keyof typeof KeywordFormExclusionScalarFieldEnum]
 
 
 export const MonitoringGroupScalarFieldEnum = {
