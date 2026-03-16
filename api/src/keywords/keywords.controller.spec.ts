@@ -16,6 +16,8 @@ const mockKeywordsService = () => ({
   removeManualKeywordForm: vi.fn(),
   addKeywordFormExclusion: vi.fn(),
   removeKeywordFormExclusion: vi.fn(),
+  rebuildKeywordForms: vi.fn(),
+  recalculateKeywordMatches: vi.fn(),
   deleteAllKeywords: vi.fn(),
   deleteKeyword: vi.fn(),
 });
@@ -280,5 +282,21 @@ describe('KeywordsController', () => {
 
     expect(result).toEqual(response);
     expect(keywordsService.deleteKeyword).toHaveBeenCalledWith(1);
+  });
+
+  it('должен пересобрать forms и matches через POST /rebuild-forms', async () => {
+    const response = {
+      keywordsRebuilt: 2,
+      processed: 10,
+      updated: 3,
+      created: 7,
+      deleted: 1,
+    };
+    keywordsService.rebuildKeywordForms.mockResolvedValue(response);
+
+    const result = await controller.rebuildKeywordForms();
+
+    expect(result).toEqual(response);
+    expect(keywordsService.rebuildKeywordForms).toHaveBeenCalled();
   });
 });

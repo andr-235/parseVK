@@ -404,4 +404,47 @@ describe('KeywordsService', () => {
       matchesServiceMock.recalculateKeywordMatchesForKeyword,
     ).toHaveBeenCalledWith(1);
   });
+
+  it('массово пересобирает forms для existing keywords и затем пересчитывает matches', async () => {
+    repositoryMock.findManyWithSelect.mockResolvedValue([
+      { id: 1, word: 'клоун', isPhrase: false },
+      { id: 2, word: 'ауешник', isPhrase: false },
+    ]);
+    matchesServiceMock.recalculateKeywordMatches.mockResolvedValue({
+      processed: 10,
+      updated: 3,
+      created: 7,
+      deleted: 1,
+    });
+
+    const result = await service.rebuildKeywordForms();
+
+    expect(repositoryMock.findManyWithSelect).toHaveBeenCalledWith({
+      id: true,
+      word: true,
+      isPhrase: true,
+    });
+    expect(formsServiceMock.syncGeneratedForms).toHaveBeenNthCalledWith(
+      1,
+      1,
+      'клоун',
+      false,
+    );
+    expect(formsServiceMock.syncGeneratedForms).toHaveBeenNthCalledWith(
+      2,
+      2,
+      'ауешник',
+      false,
+    );
+    expect(matchesServiceMock.recalculateKeywordMatches).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(result).toEqual({
+      keywordsRebuilt: 2,
+      processed: 10,
+      updated: 3,
+      created: 7,
+      deleted: 1,
+    });
+  });
 });

@@ -365,6 +365,35 @@ export class KeywordsService {
     return this.matchesService.recalculateKeywordMatches();
   }
 
+  async rebuildKeywordForms(): Promise<{
+    keywordsRebuilt: number;
+    processed: number;
+    updated: number;
+    created: number;
+    deleted: number;
+  }> {
+    const keywords = await this.repository.findManyWithSelect({
+      id: true,
+      word: true,
+      isPhrase: true,
+    });
+
+    for (const keyword of keywords) {
+      await this.formsService.syncGeneratedForms(
+        keyword.id,
+        keyword.word,
+        keyword.isPhrase,
+      );
+    }
+
+    const matches = await this.matchesService.recalculateKeywordMatches();
+
+    return {
+      keywordsRebuilt: keywords.length,
+      ...matches,
+    };
+  }
+
   private ensureSingleWordKeyword(isPhrase: boolean): void {
     if (isPhrase) {
       throw new BadRequestException(

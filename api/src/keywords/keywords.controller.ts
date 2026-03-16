@@ -130,4 +130,15 @@ export class KeywordsController {
   }> {
     return this.keywordsService.recalculateKeywordMatches();
   }
+
+  @Post('rebuild-forms')
+  async rebuildKeywordForms(): Promise<{
+    keywordsRebuilt: number;
+    processed: number;
+    updated: number;
+    created: number;
+    deleted: number;
+  }> {
+    return this.keywordsService.rebuildKeywordForms();
+  }
 }
