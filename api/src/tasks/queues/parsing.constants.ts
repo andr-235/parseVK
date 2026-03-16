@@ -42,3 +42,19 @@ export const PARSING_RETRY_OPTIONS = {
  * Timeout для обработки одной задачи
  */
 export const PARSING_JOB_TIMEOUT = 30 * 60 * 1000; // 30 минут
+
+const RECENT_POSTS_TIMEOUT_PER_GROUP_MS = 3 * 60 * 1000; // 3 минуты на группу
+const RECHECK_GROUP_TIMEOUT_PER_GROUP_MS = 30 * 60 * 1000; // 30 минут на группу
+
+export function resolveParsingJobTimeout(params: {
+  mode: 'recent_posts' | 'recheck_group';
+  groupsCount: number;
+}): number {
+  const groupsCount = Math.max(1, params.groupsCount);
+  const perGroupTimeoutMs =
+    params.mode === 'recheck_group'
+      ? RECHECK_GROUP_TIMEOUT_PER_GROUP_MS
+      : RECENT_POSTS_TIMEOUT_PER_GROUP_MS;
+
+  return Math.max(PARSING_JOB_TIMEOUT, groupsCount * perGroupTimeoutMs);
+}

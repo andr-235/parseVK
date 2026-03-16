@@ -8,6 +8,7 @@ import {
   PARSING_QUEUE,
   PARSING_CONCURRENCY,
   PARSING_JOB_TIMEOUT,
+  resolveParsingJobTimeout,
 } from './parsing.constants.js';
 import { TaskCancellationService } from '../task-cancellation.service.js';
 import { TaskCancelledError } from '../errors/task-cancelled.error.js';
@@ -48,6 +49,10 @@ export class ParsingProcessor extends WorkerHost {
     );
 
     let timeoutHandle: NodeJS.Timeout | null = null;
+    const jobTimeoutMs = resolveParsingJobTimeout({
+      mode,
+      groupsCount: groupIds.length,
+    });
 
     try {
       // Обновляем статус на "running"
@@ -64,10 +69,10 @@ export class ParsingProcessor extends WorkerHost {
           void commandPromise.catch(() => undefined);
           reject(
             new Error(
-              `Задача ${taskId} превысила лимит времени выполнения (${PARSING_JOB_TIMEOUT}мс)`,
+              `Задача ${taskId} превысила лимит времени выполнения (${jobTimeoutMs}мс)`,
             ),
           );
-        }, PARSING_JOB_TIMEOUT);
+        }, jobTimeoutMs);
 
         if (timeoutHandle && typeof timeoutHandle.unref === 'function') {
           timeoutHandle.unref();

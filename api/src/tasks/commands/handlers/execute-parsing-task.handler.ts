@@ -182,6 +182,11 @@ export class ExecuteParsingTaskHandler implements ICommandHandler<
 
     for (const group of remainingGroups) {
       this.cancellationService.throwIfCancelled(taskId);
+      const currentGroupNumber = context.processedGroups + 1;
+
+      this.logger.log(
+        `Задача ${taskId}: начинаем обработку группы ${group.vkId} (${currentGroupNumber}/${context.totalGroups})`,
+      );
 
       // Delegate to ProcessGroupCommand
       const shouldUpdateProgress = await this.commandBus.execute<boolean>(
