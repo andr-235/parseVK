@@ -1,3 +1,10 @@
+## [0.24.3](https://github.com/andr-235/parseVK/compare/v0.24.2...v0.24.3) (2026-03-16)
+
+
+### Bug Fixes
+
+* улучшено управление ключевыми словами ([315f9ce](https://github.com/andr-235/parseVK/commit/315f9ce74003c90b81747c42fd85d841bdcd0f91))
+
 ## [0.24.2](https://github.com/andr-235/parseVK/compare/v0.24.1...v0.24.2) (2026-03-16)
 
 
