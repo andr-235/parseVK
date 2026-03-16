@@ -1,3 +1,10 @@
+## [0.24.6](https://github.com/andr-235/parseVK/compare/v0.24.5...v0.24.6) (2026-03-16)
+
+
+### Bug Fixes
+
+* не подготавливать лишние production образы ([1d544ce](https://github.com/andr-235/parseVK/commit/1d544ce44d937738e55fc0146d060bfcfa59f960))
+
 ## [0.24.5](https://github.com/andr-235/parseVK/compare/v0.24.4...v0.24.5) (2026-03-16)
 
 
