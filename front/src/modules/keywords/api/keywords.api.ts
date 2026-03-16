@@ -78,14 +78,30 @@ export const keywordsService = {
 
   async getAllKeywords(): Promise<IKeywordResponse[]> {
     try {
-      const response = await createRequest(`${API_URL}/keywords`)
-      const result = await handleResponse<{
-        keywords: IKeywordResponse[]
-        total: number
-        page: number
-        limit: number
-      }>(response, 'Failed to fetch keywords')
-      return result.keywords
+      const pageSize = 100
+      let page = 1
+      let total = 0
+      const allKeywords: IKeywordResponse[] = []
+
+      do {
+        const searchParams = new URLSearchParams({
+          page: String(page),
+          limit: String(pageSize),
+        })
+        const response = await createRequest(`${API_URL}/keywords?${searchParams.toString()}`)
+        const result = await handleResponse<{
+          keywords: IKeywordResponse[]
+          total: number
+          page: number
+          limit: number
+        }>(response, 'Failed to fetch keywords')
+
+        total = result.total
+        allKeywords.push(...result.keywords)
+        page += 1
+      } while (allKeywords.length < total)
+
+      return allKeywords
     } catch (error) {
       toast.error('Не удалось загрузить ключевые слова')
       throw error
