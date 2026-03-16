@@ -11,6 +11,7 @@ function KeywordsPage() {
     searchTerm,
     keywordValue,
     categoryValue,
+    categorySuggestions,
     phraseValue,
     isRecalculating,
     isRebuildingForms,
@@ -58,6 +59,7 @@ function KeywordsPage() {
         <KeywordsForm
           keywordValue={keywordValue}
           categoryValue={categoryValue}
+          categorySuggestions={categorySuggestions}
           phraseValue={phraseValue}
           isRecalculating={isRecalculating}
           isRebuildingForms={isRebuildingForms}

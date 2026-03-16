@@ -7,6 +7,7 @@ import type { ChangeEvent } from 'react'
 interface KeywordsFormProps {
   keywordValue: string
   categoryValue: string
+  categorySuggestions: string[]
   phraseValue: string
   isRecalculating: boolean
   isRebuildingForms: boolean
@@ -23,6 +24,7 @@ interface KeywordsFormProps {
 export const KeywordsForm = ({
   keywordValue,
   categoryValue,
+  categorySuggestions,
   phraseValue,
   isRecalculating,
   isRebuildingForms,
@@ -35,6 +37,9 @@ export const KeywordsForm = ({
   onRebuildForms,
   onFileUpload,
 }: KeywordsFormProps) => {
+  const isKeywordDisabled = keywordValue.trim().length === 0
+  const isPhraseDisabled = phraseValue.trim().length === 0
+
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -43,18 +48,24 @@ export const KeywordsForm = ({
             <Input
               placeholder="Категория (опц.)"
               value={categoryValue}
+              list="keyword-categories"
               onChange={(e) => onCategoryChange(e.target.value)}
             />
+            <datalist id="keyword-categories">
+              {categorySuggestions.map((value) => (
+                <option key={value} value={value} />
+              ))}
+            </datalist>
           </div>
           <div className="flex flex-1 gap-2 sm:w-auto">
             <Input
               placeholder="Ключевое слово"
               value={keywordValue}
               onChange={(e) => onKeywordChange(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && onAdd()}
+              onKeyDown={(e) => e.key === 'Enter' && !isKeywordDisabled && onAdd()}
               className="flex-1 sm:w-[240px]"
             />
-            <Button onClick={onAdd}>
+            <Button onClick={onAdd} disabled={isKeywordDisabled}>
               <Plus className="mr-2 size-4" />
               Добавить
             </Button>
@@ -90,10 +101,10 @@ export const KeywordsForm = ({
             placeholder="Фраза для поиска"
             value={phraseValue}
             onChange={(e) => onPhraseChange(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onAddPhrase()}
+            onKeyDown={(e) => e.key === 'Enter' && !isPhraseDisabled && onAddPhrase()}
             className="flex-1 sm:flex-none sm:w-[320px]"
           />
-          <Button onClick={onAddPhrase}>
+          <Button onClick={onAddPhrase} disabled={isPhraseDisabled}>
             <Plus className="mr-2 size-4" />
             Добавить фразу
           </Button>

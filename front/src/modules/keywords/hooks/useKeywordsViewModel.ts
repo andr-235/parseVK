@@ -127,6 +127,18 @@ export const useKeywordsViewModel = () => {
     )
   }, [keywords, searchTerm])
 
+  const categorySuggestions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          keywords
+            .map((keyword) => keyword.category?.trim() ?? '')
+            .filter((category) => category.length > 0)
+        )
+      ).sort((left, right) => left.localeCompare(right, 'ru')),
+    [keywords]
+  )
+
   const handleManageForms = useCallback(async (keyword: Keyword) => {
     setSelectedKeyword(keyword)
     setManualFormValue('')
@@ -218,6 +230,7 @@ export const useKeywordsViewModel = () => {
     searchTerm,
     keywordValue,
     categoryValue,
+    categorySuggestions,
     phraseValue,
     isRecalculating,
     isRebuildingForms,
