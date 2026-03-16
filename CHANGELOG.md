@@ -1,3 +1,10 @@
+## [0.24.2](https://github.com/andr-235/parseVK/compare/v0.24.1...v0.24.2) (2026-03-16)
+
+
+### Bug Fixes
+
+* загружается полный список ключевых слов ([1759047](https://github.com/andr-235/parseVK/commit/1759047e5bb86254f2e991f3bcdccd1891671ff6))
+
 ## [0.24.1](https://github.com/andr-235/parseVK/compare/v0.24.0...v0.24.1) (2026-03-16)
 
 
