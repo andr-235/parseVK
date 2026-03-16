@@ -3,10 +3,7 @@ import toast from 'react-hot-toast'
 import { useKeywordsStore } from '@/modules/keywords/store'
 // Использование services для одноразовой операции (пересчет совпадений)
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
-import {
-  keywordsService,
-  type IKeywordFormsResponse,
-} from '@/modules/keywords/api/keywords.api'
+import { keywordsService, type IKeywordFormsResponse } from '@/modules/keywords/api/keywords.api'
 import type { Keyword } from '@/types'
 
 export const useKeywordsViewModel = () => {
@@ -167,7 +164,9 @@ export const useKeywordsViewModel = () => {
 
   const handleRemoveManualForm = useCallback(
     async (form: string) => {
-      await applyFormsMutation((keywordId) => keywordsService.removeManualKeywordForm(keywordId, form))
+      await applyFormsMutation((keywordId) =>
+        keywordsService.removeManualKeywordForm(keywordId, form)
+      )
     },
     [applyFormsMutation]
   )
@@ -184,7 +183,9 @@ export const useKeywordsViewModel = () => {
 
   const handleRemoveExclusion = useCallback(
     async (form: string) => {
-      await applyFormsMutation((keywordId) => keywordsService.removeKeywordFormExclusion(keywordId, form))
+      await applyFormsMutation((keywordId) =>
+        keywordsService.removeKeywordFormExclusion(keywordId, form)
+      )
     },
     [applyFormsMutation]
   )

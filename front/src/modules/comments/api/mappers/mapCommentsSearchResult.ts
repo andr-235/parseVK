@@ -9,9 +9,7 @@ import type {
   CommentsSearchResult,
 } from '../models/commentsSearch.model'
 
-const mapCommentItem = (
-  item: CommentsSearchCommentItemDto
-): CommentsSearchCommentItem => ({
+const mapCommentItem = (item: CommentsSearchCommentItemDto): CommentsSearchCommentItem => ({
   type: 'comment',
   commentId: item.commentId,
   postId: item.postId,
@@ -35,5 +33,7 @@ export const mapCommentsSearchResult = (
   total: payload.total,
   page: payload.page,
   pageSize: payload.pageSize,
-  items: payload.items.map((item) => (item.type === 'post' ? mapPostItem(item) : mapCommentItem(item))),
+  items: payload.items.map((item) =>
+    item.type === 'post' ? mapPostItem(item) : mapCommentItem(item)
+  ),
 })

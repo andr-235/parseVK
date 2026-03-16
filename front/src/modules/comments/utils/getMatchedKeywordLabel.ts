@@ -12,7 +12,8 @@ export function getMatchedKeywordLabel(keyword: Keyword, text?: string | null): 
     return baseWord
   }
 
-  const forms = Array.isArray(keyword.forms) && keyword.forms.length > 0 ? keyword.forms : [baseWord]
+  const forms =
+    Array.isArray(keyword.forms) && keyword.forms.length > 0 ? keyword.forms : [baseWord]
   const sortedForms = [...forms].sort((left, right) => right.length - left.length)
 
   const matchedForm = sortedForms.find((form) => {

@@ -8,10 +8,7 @@ interface CommentsSearchResultsProps {
   isLoading: boolean
 }
 
-export default function CommentsSearchResults({
-  result,
-  isLoading,
-}: CommentsSearchResultsProps) {
+export default function CommentsSearchResults({ result, isLoading }: CommentsSearchResultsProps) {
   if (isLoading) {
     return (
       <Card className="border-white/10 bg-slate-900/30">
@@ -43,9 +40,7 @@ export default function CommentsSearchResults({
         <Badge className="border-white/10 bg-slate-800/50 text-slate-300">
           {result.viewMode === 'posts' ? 'Посты' : 'Комментарии'}
         </Badge>
-        <Badge className="border-white/10 bg-slate-800/50 text-slate-300">
-          {result.source}
-        </Badge>
+        <Badge className="border-white/10 bg-slate-800/50 text-slate-300">{result.source}</Badge>
       </div>
 
       {result.items.map((item) =>
@@ -65,7 +60,9 @@ export default function CommentsSearchResults({
                   key={`search-post-comment-${comment.commentId}`}
                   className="rounded-lg border border-white/10 bg-slate-950/40 p-3"
                 >
-                  <div className="mb-2 text-xs text-slate-500">Комментарий #{comment.commentId}</div>
+                  <div className="mb-2 text-xs text-slate-500">
+                    Комментарий #{comment.commentId}
+                  </div>
                   <div className="whitespace-pre-wrap text-sm text-slate-200">
                     {comment.commentText}
                   </div>

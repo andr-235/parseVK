@@ -2,13 +2,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/shared/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet'
 import type { Keyword } from '@/types'
 import type { IKeywordFormsResponse } from '@/modules/keywords/api/keywords.api'
 
@@ -103,7 +97,11 @@ export function KeywordFormsSheet({
                   Эти формы собираются backend-ом и участвуют в матчинге автоматически.
                 </CardDescription>
               </CardHeader>
-              <CardContent>{isLoading ? 'Загрузка…' : renderFormBadges(forms?.generatedForms ?? [], 'Нет автосгенерированных форм')}</CardContent>
+              <CardContent>
+                {isLoading
+                  ? 'Загрузка…'
+                  : renderFormBadges(forms?.generatedForms ?? [], 'Нет автосгенерированных форм')}
+              </CardContent>
             </Card>
 
             <Card className="border-border/60 bg-background/70">
@@ -126,7 +124,10 @@ export function KeywordFormsSheet({
                         onChange={(event) => onManualFormChange(event.target.value)}
                         placeholder="Например: ауешница"
                       />
-                      <Button onClick={() => void onAddManualForm()} disabled={!manualFormValue.trim()}>
+                      <Button
+                        onClick={() => void onAddManualForm()}
+                        disabled={!manualFormValue.trim()}
+                      >
                         Добавить
                       </Button>
                     </div>
@@ -162,7 +163,10 @@ export function KeywordFormsSheet({
                         onChange={(event) => onExclusionChange(event.target.value)}
                         placeholder="Например: клоуном"
                       />
-                      <Button onClick={() => void onAddExclusion()} disabled={!exclusionValue.trim()}>
+                      <Button
+                        onClick={() => void onAddExclusion()}
+                        disabled={!exclusionValue.trim()}
+                      >
                         Исключить
                       </Button>
                     </div>

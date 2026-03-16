@@ -64,8 +64,7 @@ export const PostGroupCard = memo(function PostGroupCard({
     return uniqueKeywords.filter((kw) => {
       if (kw.source !== 'POST') return false
       const normalizedText = normalizeForKeywordMatch(postText)
-      const candidateForms =
-        Array.isArray(kw.forms) && kw.forms.length > 0 ? kw.forms : [kw.word]
+      const candidateForms = Array.isArray(kw.forms) && kw.forms.length > 0 ? kw.forms : [kw.word]
 
       return candidateForms.some((form) => {
         const normalizedKeyword = normalizeForKeywordMatch(form)

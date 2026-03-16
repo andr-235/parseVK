@@ -30,7 +30,9 @@ export const mapComment = (comment: CommentResponseDto): Comment => {
             word: keyword.word,
             category: keyword.category ?? null,
             forms: Array.isArray(keyword.forms)
-              ? keyword.forms.filter((form): form is string => typeof form === 'string' && form.trim().length > 0)
+              ? keyword.forms.filter(
+                  (form): form is string => typeof form === 'string' && form.trim().length > 0
+                )
               : undefined,
             source,
           }

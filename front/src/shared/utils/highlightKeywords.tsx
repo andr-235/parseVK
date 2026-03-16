@@ -8,9 +8,8 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
 
   const keywordEntries = keywords
     .flatMap((keyword) => {
-      const sourceForms = Array.isArray(keyword.forms) && keyword.forms.length > 0
-        ? keyword.forms
-        : [keyword.word]
+      const sourceForms =
+        Array.isArray(keyword.forms) && keyword.forms.length > 0 ? keyword.forms : [keyword.word]
 
       return sourceForms.map((form) => {
         const trimmed = form.trim()
