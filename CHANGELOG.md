@@ -1,3 +1,26 @@
+# [0.23.0](https://github.com/andr-235/parseVK/compare/v0.22.2...v0.23.0) (2026-03-16)
+
+
+### Bug Fixes
+
+* увеличен таймаут крупных задач парсинга ([2ea43e3](https://github.com/andr-235/parseVK/commit/2ea43e3cdd715285610d0a46b86c6c6b8dec7eee))
+
+
+### Features
+
+* выровнена подсветка комментариев со словоформами ([6cca244](https://github.com/andr-235/parseVK/commit/6cca244a3d5e32dc6888ad8f27a920aef14230b9))
+* выровнены словоформы в группировке комментариев по постам ([33b77a3](https://github.com/andr-235/parseVK/commit/33b77a31e688c856bcbcaa60886536fa8b66492a))
+* добавлен базовый маппинг выдачи поиска комментариев ([40f8126](https://github.com/andr-235/parseVK/commit/40f8126f908aadbdef19d771a7a4510c0f8276e5))
+* добавлен каркас поиска комментариев через elasticsearch ([c55336d](https://github.com/andr-235/parseVK/commit/c55336da819ac17d2a6aad4ca6dfa1796bc9c8c2))
+* добавлен матчинг keywords по словоформам ([d4de3f1](https://github.com/andr-235/parseVK/commit/d4de3f1ce7b851bfee671bfc593e3ae5ee572109))
+* добавлена индексация комментариев в поиск ([4cd8bce](https://github.com/andr-235/parseVK/commit/4cd8bce0703e57d230c863c090d05cef0f4eafc4))
+* добавлена модель словоформ keywords и сервис azjs ([800b857](https://github.com/andr-235/parseVK/commit/800b857f3407a819f4053b0df3f3bc196a38d315))
+* добавлена синхронизация словоформ ключевых слов ([18256c3](https://github.com/andr-235/parseVK/commit/18256c3a4828550c31e3af455815661ca989e57d))
+* добавлено управление словоформами keywords на фронтенде ([fe2294b](https://github.com/andr-235/parseVK/commit/fe2294b71ef424076ef4af7eb04f184706f2a410))
+* добавлено управление формами ключевых слов ([0d889c9](https://github.com/andr-235/parseVK/commit/0d889c967f62debe1cda9de60da21968279e1906))
+* подключен режим поиска комментариев на фронтенде ([b5a017c](https://github.com/andr-235/parseVK/commit/b5a017cf3558c2314c8fb87ec0505e7504122e9b))
+* показана сработавшая словоформа в карточке комментария ([e498008](https://github.com/andr-235/parseVK/commit/e498008b456843281ca5e360525bdf12ca6b1d10))
+
 ## [0.22.2](https://github.com/andr-235/parseVK/compare/v0.22.1...v0.22.2) (2026-03-16)
 
 
