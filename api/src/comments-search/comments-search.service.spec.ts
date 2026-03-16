@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CommentsSearchService } from './comments-search.service.js';
 import { CommentsSearchQueryBuilder } from './builders/comments-search-query.builder.js';
+import { CommentsSearchResponseMapper } from './mappers/comments-search-response.mapper.js';
 
 describe('CommentsSearchService', () => {
   it('returns controlled fallback response when elasticsearch search is disabled', async () => {
@@ -8,6 +9,7 @@ describe('CommentsSearchService', () => {
       { enabled: false, node: '', indexName: 'vk-comments' },
       { search: async () => ({ hits: { total: { value: 0 }, hits: [] } }) },
       new CommentsSearchQueryBuilder(),
+      new CommentsSearchResponseMapper(),
     );
 
     const result = await service.search({
@@ -40,10 +42,28 @@ describe('CommentsSearchService', () => {
       {
         search: async (payload: unknown) => {
           calls.push(payload);
-          return { hits: { total: { value: 0 }, hits: [] } };
+          return {
+            hits: {
+              total: { value: 1 },
+              hits: [
+                {
+                  _source: {
+                    commentId: 101,
+                    postId: 55,
+                    commentText: 'Нужен ремонт квартиры',
+                    postText: 'Ищем подрядчика',
+                  },
+                  highlight: {
+                    commentText: ['Нужен <em>ремонт</em> квартиры'],
+                  },
+                },
+              ],
+            },
+          };
         },
       },
       new CommentsSearchQueryBuilder(),
+      new CommentsSearchResponseMapper(),
     );
 
     const result = await service.search({
@@ -72,10 +92,19 @@ describe('CommentsSearchService', () => {
     expect(result).toEqual({
       source: 'elasticsearch',
       viewMode: 'comments',
-      total: 0,
+      total: 1,
       page: 1,
       pageSize: 20,
-      items: [],
+      items: [
+        {
+          type: 'comment',
+          commentId: 101,
+          postId: 55,
+          commentText: 'Нужен ремонт квартиры',
+          postText: 'Ищем подрядчика',
+          highlight: ['Нужен <em>ремонт</em> квартиры'],
+        },
+      ],
     });
   });
 });

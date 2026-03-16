@@ -12,6 +12,7 @@ import {
 import { buildCommentsSearchConfig } from '../comments-search/comments-search.config.js';
 import { CommentsSearchClient } from '../comments-search/comments-search.client.js';
 import { CommentsSearchQueryBuilder } from '../comments-search/builders/comments-search-query.builder.js';
+import { CommentsSearchResponseMapper } from '../comments-search/mappers/comments-search-response.mapper.js';
 
 import { CommentsRepository } from './repositories/comments.repository.js';
 
@@ -38,6 +39,7 @@ const COMMENTS_PROVIDERS = [
   CommentsQueryValidator,
   CommentsSearchService,
   CommentsSearchQueryBuilder,
+  CommentsSearchResponseMapper,
 ];
 
 @Module({
