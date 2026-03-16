@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MatchSource } from '../../common/types/match-source.enum.js';
 import {
+  buildKeywordMatchCandidate,
   buildKeywordMatchCandidates,
   matchesKeyword,
   normalizeForKeywordMatch,
@@ -22,7 +23,36 @@ export class KeywordsMatchesService {
   }> {
     const keywords = await this.repository.findManyForMatching();
     const keywordCandidates = buildKeywordMatchCandidates(keywords);
+    return this.recalculateForCandidates(keywordCandidates);
+  }
 
+  async recalculateKeywordMatchesForKeyword(keywordId: number): Promise<{
+    processed: number;
+    updated: number;
+    created: number;
+    deleted: number;
+  }> {
+    const keyword = await this.repository.findUniqueWithForms({ id: keywordId });
+    const keywordCandidate = buildKeywordMatchCandidate(keyword);
+
+    if (!keywordCandidate) {
+      return { processed: 0, updated: 0, created: 0, deleted: 0 };
+    }
+
+    return this.recalculateForCandidates([keywordCandidate]);
+  }
+
+  private async recalculateForCandidates(keywordCandidates: Array<{
+    id: number;
+    isPhrase: boolean;
+    normalizedWord?: string;
+    normalizedForms?: string[];
+  }>): Promise<{
+    processed: number;
+    updated: number;
+    created: number;
+    deleted: number;
+  }> {
     const totalComments = await this.repository.countComments();
     const totalPosts = await this.repository.countPosts();
     const batchSize = 1000;

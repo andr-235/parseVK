@@ -14,12 +14,14 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { KeywordsService } from './keywords.service.js';
 import { AddKeywordDto } from './dto/add-keyword.dto.js';
 import { BulkAddKeywordsDto } from './dto/bulk-add-keywords.dto.js';
+import { KeywordFormDto } from './dto/keyword-form.dto.js';
 import { KeywordIdParamDto } from './dto/keyword-id-param.dto.js';
 import { GetKeywordsQueryDto } from './dto/get-keywords-query.dto.js';
 import {
   IKeywordResponse,
   IDeleteResponse,
   IBulkAddResponse,
+  IKeywordFormsResponse,
 } from './interfaces/keyword.interface.js';
 
 @Controller('keywords')
@@ -71,6 +73,45 @@ export class KeywordsController {
   @Delete('all')
   async deleteAllKeywords(): Promise<IDeleteResponse> {
     return this.keywordsService.deleteAllKeywords();
+  }
+
+  @Get(':id/forms')
+  async getKeywordForms(
+    @Param() params: KeywordIdParamDto,
+  ): Promise<IKeywordFormsResponse> {
+    return this.keywordsService.getKeywordForms(params.id);
+  }
+
+  @Post(':id/forms/manual')
+  async addManualKeywordForm(
+    @Param() params: KeywordIdParamDto,
+    @Body() dto: KeywordFormDto,
+  ): Promise<IKeywordFormsResponse> {
+    return this.keywordsService.addManualKeywordForm(params.id, dto.form);
+  }
+
+  @Delete(':id/forms/manual')
+  async removeManualKeywordForm(
+    @Param() params: KeywordIdParamDto,
+    @Body() dto: KeywordFormDto,
+  ): Promise<IKeywordFormsResponse> {
+    return this.keywordsService.removeManualKeywordForm(params.id, dto.form);
+  }
+
+  @Post(':id/forms/exclusions')
+  async addKeywordFormExclusion(
+    @Param() params: KeywordIdParamDto,
+    @Body() dto: KeywordFormDto,
+  ): Promise<IKeywordFormsResponse> {
+    return this.keywordsService.addKeywordFormExclusion(params.id, dto.form);
+  }
+
+  @Delete(':id/forms/exclusions')
+  async removeKeywordFormExclusion(
+    @Param() params: KeywordIdParamDto,
+    @Body() dto: KeywordFormDto,
+  ): Promise<IKeywordFormsResponse> {
+    return this.keywordsService.removeKeywordFormExclusion(params.id, dto.form);
   }
 
   @Delete(':id')

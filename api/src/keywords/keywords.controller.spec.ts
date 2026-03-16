@@ -11,6 +11,11 @@ const mockKeywordsService = () => ({
   bulkAddKeywords: vi.fn(),
   addKeywordsFromFile: vi.fn(),
   getKeywords: vi.fn(),
+  getKeywordForms: vi.fn(),
+  addManualKeywordForm: vi.fn(),
+  removeManualKeywordForm: vi.fn(),
+  addKeywordFormExclusion: vi.fn(),
+  removeKeywordFormExclusion: vi.fn(),
   deleteAllKeywords: vi.fn(),
   deleteKeyword: vi.fn(),
 });
@@ -153,6 +158,115 @@ describe('KeywordsController', () => {
 
     expect(result).toEqual(response);
     expect(keywordsService.deleteAllKeywords).toHaveBeenCalled();
+  });
+
+  it('должен вернуть формы keyword через GET /:id/forms', async () => {
+    const response = {
+      keywordId: 1,
+      word: 'клоун',
+      isPhrase: false,
+      generatedForms: ['клоуна', 'клоунов'],
+      manualForms: ['клоунами'],
+      exclusions: ['клоуном'],
+    };
+    keywordsService.getKeywordForms.mockResolvedValue(response);
+
+    const result = await controller.getKeywordForms({ id: 1 });
+
+    expect(result).toEqual(response);
+    expect(keywordsService.getKeywordForms).toHaveBeenCalledWith(1);
+  });
+
+  it('должен добавить manual form через POST /:id/forms/manual', async () => {
+    const response = {
+      keywordId: 1,
+      word: 'клоун',
+      isPhrase: false,
+      generatedForms: [],
+      manualForms: ['клоунами'],
+      exclusions: [],
+    };
+    keywordsService.addManualKeywordForm.mockResolvedValue(response);
+
+    const result = await controller.addManualKeywordForm(
+      { id: 1 },
+      { form: 'клоунами' },
+    );
+
+    expect(result).toEqual(response);
+    expect(keywordsService.addManualKeywordForm).toHaveBeenCalledWith(
+      1,
+      'клоунами',
+    );
+  });
+
+  it('должен удалить manual form через DELETE /:id/forms/manual', async () => {
+    const response = {
+      keywordId: 1,
+      word: 'клоун',
+      isPhrase: false,
+      generatedForms: [],
+      manualForms: [],
+      exclusions: [],
+    };
+    keywordsService.removeManualKeywordForm.mockResolvedValue(response);
+
+    const result = await controller.removeManualKeywordForm(
+      { id: 1 },
+      { form: 'клоунами' },
+    );
+
+    expect(result).toEqual(response);
+    expect(keywordsService.removeManualKeywordForm).toHaveBeenCalledWith(
+      1,
+      'клоунами',
+    );
+  });
+
+  it('должен добавить exclusion через POST /:id/forms/exclusions', async () => {
+    const response = {
+      keywordId: 1,
+      word: 'клоун',
+      isPhrase: false,
+      generatedForms: ['клоунов'],
+      manualForms: [],
+      exclusions: ['клоуном'],
+    };
+    keywordsService.addKeywordFormExclusion.mockResolvedValue(response);
+
+    const result = await controller.addKeywordFormExclusion(
+      { id: 1 },
+      { form: 'клоуном' },
+    );
+
+    expect(result).toEqual(response);
+    expect(keywordsService.addKeywordFormExclusion).toHaveBeenCalledWith(
+      1,
+      'клоуном',
+    );
+  });
+
+  it('должен удалить exclusion через DELETE /:id/forms/exclusions', async () => {
+    const response = {
+      keywordId: 1,
+      word: 'клоун',
+      isPhrase: false,
+      generatedForms: ['клоуном'],
+      manualForms: [],
+      exclusions: [],
+    };
+    keywordsService.removeKeywordFormExclusion.mockResolvedValue(response);
+
+    const result = await controller.removeKeywordFormExclusion(
+      { id: 1 },
+      { form: 'клоуном' },
+    );
+
+    expect(result).toEqual(response);
+    expect(keywordsService.removeKeywordFormExclusion).toHaveBeenCalledWith(
+      1,
+      'клоуном',
+    );
   });
 
   it('должен удалить ключевое слово по id через DELETE /:id', async () => {

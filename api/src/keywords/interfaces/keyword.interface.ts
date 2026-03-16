@@ -24,3 +24,12 @@ export interface IBulkAddResponse {
     updated: number;
   };
 }
+
+export interface IKeywordFormsResponse {
+  keywordId: number;
+  word: string;
+  isPhrase: boolean;
+  generatedForms: string[];
+  manualForms: string[];
+  exclusions: string[];
+}

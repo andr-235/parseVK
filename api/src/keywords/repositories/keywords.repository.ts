@@ -120,6 +120,18 @@ export class KeywordsRepository implements IKeywordsRepository {
     });
   }
 
+  async removeGeneratedFormExclusion(
+    keywordId: number,
+    form: string,
+  ): Promise<void> {
+    await this.prisma.keywordFormExclusion.deleteMany({
+      where: {
+        keywordId,
+        form,
+      },
+    });
+  }
+
   findManyWithSelect(select: {
     id: true;
     word: true;

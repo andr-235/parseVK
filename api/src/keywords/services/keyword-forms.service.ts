@@ -66,4 +66,16 @@ export class KeywordFormsService {
 
     await this.repository.excludeGeneratedForm(keywordId, normalizedForm);
   }
+
+  async removeGeneratedFormExclusion(
+    keywordId: number,
+    form: string,
+  ): Promise<void> {
+    const normalizedForm = normalizeForKeywordMatch(form);
+    if (!normalizedForm) {
+      return;
+    }
+
+    await this.repository.removeGeneratedFormExclusion(keywordId, normalizedForm);
+  }
 }

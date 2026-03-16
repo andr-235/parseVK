@@ -39,6 +39,7 @@ export interface IKeywordsRepository {
   addManualForm(keywordId: number, form: string): Promise<void>;
   removeManualForm(keywordId: number, form: string): Promise<void>;
   excludeGeneratedForm(keywordId: number, form: string): Promise<void>;
+  removeGeneratedFormExclusion(keywordId: number, form: string): Promise<void>;
   findManyWithSelect(select: { id: true; word: true; isPhrase: true }): Promise<
     Array<{
       id: number;

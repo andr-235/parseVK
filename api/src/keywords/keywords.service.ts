@@ -1,10 +1,16 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import {
   IKeywordResponse,
   IDeleteResponse,
   IBulkAddResponse,
+  IKeywordFormsResponse,
 } from './interfaces/keyword.interface.js';
 import type { IKeywordsRepository } from './interfaces/keywords-repository.interface.js';
+import {
+  KeywordFormSource,
+  type KeywordForm,
+} from '../generated/prisma/client.js';
+import { normalizeForKeywordMatch } from '../common/utils/keyword-normalization.utils.js';
 import { KeywordFormsService } from './services/keyword-forms.service.js';
 import { KeywordsMatchesService } from './services/keywords-matches.service.js';
 
@@ -261,6 +267,85 @@ export class KeywordsService {
     return Array.from(new Set(normalized));
   }
 
+  async getKeywordForms(id: number): Promise<IKeywordFormsResponse> {
+    const keyword = await this.repository.findUniqueWithForms({ id });
+
+    return {
+      keywordId: keyword.id,
+      word: keyword.word,
+      isPhrase: keyword.isPhrase,
+      generatedForms: this.collectFormsBySource(
+        keyword.keywordForms,
+        KeywordFormSource.generated,
+      ),
+      manualForms: this.collectFormsBySource(
+        keyword.keywordForms,
+        KeywordFormSource.manual,
+      ),
+      exclusions: Array.from(
+        new Set(keyword.keywordFormExclusions.map((item) => item.form)),
+      ).sort((left, right) => left.localeCompare(right, 'ru')),
+    };
+  }
+
+  async addManualKeywordForm(
+    id: number,
+    form: string,
+  ): Promise<IKeywordFormsResponse> {
+    const keyword = await this.repository.findUniqueWithForms({ id });
+    this.ensureSingleWordKeyword(keyword.isPhrase);
+    this.ensureNormalizedForm(form);
+
+    await this.formsService.addManualForm(id, form);
+    await this.matchesService.recalculateKeywordMatchesForKeyword(id);
+
+    return this.getKeywordForms(id);
+  }
+
+  async removeManualKeywordForm(
+    id: number,
+    form: string,
+  ): Promise<IKeywordFormsResponse> {
+    const keyword = await this.repository.findUniqueWithForms({ id });
+    this.ensureSingleWordKeyword(keyword.isPhrase);
+    this.ensureNormalizedForm(form);
+
+    await this.formsService.removeManualForm(id, form);
+    await this.matchesService.recalculateKeywordMatchesForKeyword(id);
+
+    return this.getKeywordForms(id);
+  }
+
+  async addKeywordFormExclusion(
+    id: number,
+    form: string,
+  ): Promise<IKeywordFormsResponse> {
+    const keyword = await this.repository.findUniqueWithForms({ id });
+    this.ensureSingleWordKeyword(keyword.isPhrase);
+    this.ensureNormalizedForm(form);
+
+    await this.formsService.excludeGeneratedForm(id, form);
+    await this.formsService.syncGeneratedForms(id, keyword.word, keyword.isPhrase);
+    await this.matchesService.recalculateKeywordMatchesForKeyword(id);
+
+    return this.getKeywordForms(id);
+  }
+
+  async removeKeywordFormExclusion(
+    id: number,
+    form: string,
+  ): Promise<IKeywordFormsResponse> {
+    const keyword = await this.repository.findUniqueWithForms({ id });
+    this.ensureSingleWordKeyword(keyword.isPhrase);
+    this.ensureNormalizedForm(form);
+
+    await this.formsService.removeGeneratedFormExclusion(id, form);
+    await this.formsService.syncGeneratedForms(id, keyword.word, keyword.isPhrase);
+    await this.matchesService.recalculateKeywordMatchesForKeyword(id);
+
+    return this.getKeywordForms(id);
+  }
+
   async recalculateKeywordMatches(): Promise<{
     processed: number;
     updated: number;
@@ -268,5 +353,35 @@ export class KeywordsService {
     deleted: number;
   }> {
     return this.matchesService.recalculateKeywordMatches();
+  }
+
+  private ensureSingleWordKeyword(isPhrase: boolean): void {
+    if (isPhrase) {
+      throw new BadRequestException(
+        'Manual forms and exclusions are available only for single-word keywords',
+      );
+    }
+  }
+
+  private ensureNormalizedForm(form: string): string {
+    const normalizedForm = normalizeForKeywordMatch(form);
+    if (!normalizedForm) {
+      throw new BadRequestException('Keyword form cannot be empty');
+    }
+
+    return normalizedForm;
+  }
+
+  private collectFormsBySource(
+    forms: KeywordForm[],
+    source: KeywordFormSource,
+  ): string[] {
+    return Array.from(
+      new Set(
+        forms
+          .filter((form) => form.source === source)
+          .map((form) => form.form),
+      ),
+    ).sort((left, right) => left.localeCompare(right, 'ru'));
   }
 }

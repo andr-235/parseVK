@@ -24,6 +24,7 @@ describe('KeywordFormsService', () => {
       addManualForm: vi.fn(),
       removeManualForm: vi.fn(),
       excludeGeneratedForm: vi.fn(),
+      removeGeneratedFormExclusion: vi.fn(),
       findManyWithSelect: vi.fn(),
       countComments: vi.fn(),
       countPosts: vi.fn(),
@@ -79,5 +80,14 @@ describe('KeywordFormsService', () => {
     await service.addManualForm(1, '  КЛОУНАМИ ');
 
     expect(repositoryMock.addManualForm).toHaveBeenCalledWith(1, 'клоунами');
+  });
+
+  it('removes generated exclusion in normalized form', async () => {
+    await service.removeGeneratedFormExclusion(1, '  КЛОУНОМ ');
+
+    expect(repositoryMock.removeGeneratedFormExclusion).toHaveBeenCalledWith(
+      1,
+      'клоуном',
+    );
   });
 });

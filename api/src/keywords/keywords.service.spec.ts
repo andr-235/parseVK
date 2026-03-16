@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { KeywordsService } from './keywords.service.js';
 import type { IKeywordsRepository } from './interfaces/keywords-repository.interface.js';
+import { KeywordFormSource } from '../generated/prisma/client.js';
 import { KeywordsMatchesService } from './services/keywords-matches.service.js';
 import type { IBulkAddResponse } from './interfaces/keyword.interface.js';
 import type { KeywordFormsService } from './services/keyword-forms.service.js';
@@ -11,6 +12,10 @@ describe('KeywordsService', () => {
   let matchesServiceMock: vi.Mocked<KeywordsMatchesService>;
   let formsServiceMock: {
     syncGeneratedForms: ReturnType<typeof vi.fn>;
+    addManualForm: ReturnType<typeof vi.fn>;
+    removeManualForm: ReturnType<typeof vi.fn>;
+    excludeGeneratedForm: ReturnType<typeof vi.fn>;
+    removeGeneratedFormExclusion: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -29,6 +34,7 @@ describe('KeywordsService', () => {
       addManualForm: vi.fn<Promise<void>, [number, string]>(),
       removeManualForm: vi.fn<Promise<void>, [number, string]>(),
       excludeGeneratedForm: vi.fn<Promise<void>, [number, string]>(),
+      removeGeneratedFormExclusion: vi.fn<Promise<void>, [number, string]>(),
       findManyWithSelect: vi.fn<
         Promise<Array<{ id: number; word: string; isPhrase: boolean }>>,
         [unknown]
@@ -79,10 +85,15 @@ describe('KeywordsService', () => {
     matchesServiceMock = {
       repository: repositoryMock,
       recalculateKeywordMatches: vi.fn(),
+      recalculateKeywordMatchesForKeyword: vi.fn(),
     } as unknown as vi.Mocked<KeywordsMatchesService>;
 
     formsServiceMock = {
       syncGeneratedForms: vi.fn<Promise<void>, [number, string, boolean]>(),
+      addManualForm: vi.fn<Promise<void>, [number, string]>(),
+      removeManualForm: vi.fn<Promise<void>, [number, string]>(),
+      excludeGeneratedForm: vi.fn<Promise<void>, [number, string]>(),
+      removeGeneratedFormExclusion: vi.fn<Promise<void>, [number, string]>(),
     };
 
     service = new KeywordsService(
@@ -287,5 +298,101 @@ describe('KeywordsService', () => {
 
     expect(repositoryMock['deleteMany']).toHaveBeenCalled();
     expect(result).toEqual({ success: true, count: 2 });
+  });
+
+  it('возвращает manual/generated forms и exclusions по keyword', async () => {
+    repositoryMock.findUniqueWithForms.mockResolvedValue({
+      id: 1,
+      word: 'клоун',
+      category: null,
+      isPhrase: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      keywordForms: [
+        {
+          id: 10,
+          keywordId: 1,
+          form: 'клоунов',
+          source: KeywordFormSource.generated,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 11,
+          keywordId: 1,
+          form: 'клоунами',
+          source: KeywordFormSource.manual,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      keywordFormExclusions: [
+        {
+          id: 20,
+          keywordId: 1,
+          form: 'клоуном',
+          createdAt: new Date(),
+        },
+      ],
+    } as never);
+
+    const result = await service.getKeywordForms(1);
+
+    expect(result).toEqual({
+      keywordId: 1,
+      word: 'клоун',
+      isPhrase: false,
+      generatedForms: ['клоунов'],
+      manualForms: ['клоунами'],
+      exclusions: ['клоуном'],
+    });
+  });
+
+  it('добавляет manual form и пересчитывает матчи только для этого keyword', async () => {
+    repositoryMock.findUniqueWithForms.mockResolvedValue({
+      id: 1,
+      word: 'клоун',
+      category: null,
+      isPhrase: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      keywordForms: [],
+      keywordFormExclusions: [],
+    } as never);
+
+    await service.addManualKeywordForm(1, '  КЛОУНАМИ ');
+
+    expect(formsServiceMock.addManualForm).toHaveBeenCalledWith(1, '  КЛОУНАМИ ');
+    expect(
+      matchesServiceMock.recalculateKeywordMatchesForKeyword,
+    ).toHaveBeenCalledWith(1);
+  });
+
+  it('добавляет exclusion, пересобирает generated forms и пересчитывает матчи', async () => {
+    repositoryMock.findUniqueWithForms.mockResolvedValue({
+      id: 1,
+      word: 'клоун',
+      category: null,
+      isPhrase: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      keywordForms: [],
+      keywordFormExclusions: [],
+    } as never);
+
+    await service.addKeywordFormExclusion(1, 'клоуном');
+
+    expect(formsServiceMock.excludeGeneratedForm).toHaveBeenCalledWith(
+      1,
+      'клоуном',
+    );
+    expect(formsServiceMock.syncGeneratedForms).toHaveBeenCalledWith(
+      1,
+      'клоун',
+      false,
+    );
+    expect(
+      matchesServiceMock.recalculateKeywordMatchesForKeyword,
+    ).toHaveBeenCalledWith(1);
   });
 });

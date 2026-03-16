@@ -33,9 +33,10 @@ describe('KeywordsRepository', () => {
         deleteMany: vi.fn(),
         createMany: vi.fn(),
       },
-      keywordFormExclusion: {
-        create: vi.fn(),
-      },
+    keywordFormExclusion: {
+      create: vi.fn(),
+      deleteMany: vi.fn(),
+    },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -107,6 +108,17 @@ describe('KeywordsRepository', () => {
 
     expect(prismaService.keywordFormExclusion.create).toHaveBeenCalledWith({
       data: {
+        keywordId: 1,
+        form: 'клоуном',
+      },
+    });
+  });
+
+  it('removes exclusion for generated form', async () => {
+    await repository.removeGeneratedFormExclusion(1, 'клоуном');
+
+    expect(prismaService.keywordFormExclusion.deleteMany).toHaveBeenCalledWith({
+      where: {
         keywordId: 1,
         form: 'клоуном',
       },
