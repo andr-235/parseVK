@@ -69,7 +69,10 @@ export class KeywordsRepository implements IKeywordsRepository {
     return this.prisma.keyword.deleteMany({});
   }
 
-  async replaceGeneratedForms(keywordId: number, forms: string[]): Promise<void> {
+  async replaceGeneratedForms(
+    keywordId: number,
+    forms: string[],
+  ): Promise<void> {
     await this.prisma.keywordForm.deleteMany({
       where: {
         keywordId,

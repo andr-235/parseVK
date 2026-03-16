@@ -104,9 +104,10 @@ export class CommentMapper {
       category: match.keyword.category,
       forms: Array.from(
         new Set(
-          [match.keyword.word, ...match.keyword.keywordForms.map((form) => form.form)].filter(
-            (value): value is string => value.trim().length > 0,
-          ),
+          [
+            match.keyword.word,
+            ...match.keyword.keywordForms.map((form) => form.form),
+          ].filter((value): value is string => value.trim().length > 0),
         ),
       ),
       isPhrase: match.keyword.isPhrase,

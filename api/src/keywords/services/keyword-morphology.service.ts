@@ -6,7 +6,9 @@ import { normalizeForKeywordMatch } from '../../common/utils/keyword-normalizati
 type AzParse = {
   word: string;
   formCnt?: number;
-  inflect: (tag: number | string[] | Record<string, unknown>) => AzParse | false;
+  inflect: (
+    tag: number | string[] | Record<string, unknown>,
+  ) => AzParse | false;
   normalize: () => AzParse | false;
 };
 

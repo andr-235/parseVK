@@ -42,10 +42,7 @@ export class CommentsSearchResponseMapper {
       total: this.extractTotal(response),
       page: payload.page ?? 1,
       pageSize: payload.pageSize ?? 20,
-      items:
-        payload.viewMode === 'posts'
-          ? this.groupByPost(items)
-          : items,
+      items: payload.viewMode === 'posts' ? this.groupByPost(items) : items,
     };
   }
 

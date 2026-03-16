@@ -16,7 +16,9 @@ export class KeywordFormsService {
     word: string,
     isPhrase: boolean,
   ): Promise<void> {
-    const keyword = await this.repository.findUniqueWithForms({ id: keywordId });
+    const keyword = await this.repository.findUniqueWithForms({
+      id: keywordId,
+    });
     const generatedForms = await this.morphologyService.generateForms(
       word,
       isPhrase,
@@ -76,6 +78,9 @@ export class KeywordFormsService {
       return;
     }
 
-    await this.repository.removeGeneratedFormExclusion(keywordId, normalizedForm);
+    await this.repository.removeGeneratedFormExclusion(
+      keywordId,
+      normalizedForm,
+    );
   }
 }

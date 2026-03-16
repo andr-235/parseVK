@@ -44,7 +44,11 @@ describe('CommentsSearchIndexerService', () => {
       indexDocument: vi.fn().mockResolvedValue(undefined),
     };
     const service = new CommentsSearchIndexerService(
-      { enabled: true, node: 'http://localhost:9200', indexName: 'vk-comments' },
+      {
+        enabled: true,
+        node: 'http://localhost:9200',
+        indexName: 'vk-comments',
+      },
       prismaMock as unknown as PrismaService,
       clientMock as unknown as CommentsSearchClient,
       new CommentsSearchDocumentMapper(),

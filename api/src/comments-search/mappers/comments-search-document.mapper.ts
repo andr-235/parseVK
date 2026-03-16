@@ -65,7 +65,9 @@ export class CommentsSearchDocumentMapper {
       commentText: comment.text,
       postText: comment.post.text,
       keywordIds: comment.commentKeywordMatches.map((item) => item.keyword.id),
-      keywordWords: comment.commentKeywordMatches.map((item) => item.keyword.word),
+      keywordWords: comment.commentKeywordMatches.map(
+        (item) => item.keyword.word,
+      ),
       authorName: authorName || null,
       groupName: comment.post.group?.name ?? null,
     };

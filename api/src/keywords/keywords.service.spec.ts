@@ -362,7 +362,10 @@ describe('KeywordsService', () => {
 
     await service.addManualKeywordForm(1, '  КЛОУНАМИ ');
 
-    expect(formsServiceMock.addManualForm).toHaveBeenCalledWith(1, '  КЛОУНАМИ ');
+    expect(formsServiceMock.addManualForm).toHaveBeenCalledWith(
+      1,
+      '  КЛОУНАМИ ',
+    );
     expect(
       matchesServiceMock.recalculateKeywordMatchesForKeyword,
     ).toHaveBeenCalledWith(1);

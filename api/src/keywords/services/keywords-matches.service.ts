@@ -32,7 +32,9 @@ export class KeywordsMatchesService {
     created: number;
     deleted: number;
   }> {
-    const keyword = await this.repository.findUniqueWithForms({ id: keywordId });
+    const keyword = await this.repository.findUniqueWithForms({
+      id: keywordId,
+    });
     const keywordCandidate = buildKeywordMatchCandidate(keyword);
 
     if (!keywordCandidate) {
@@ -42,12 +44,14 @@ export class KeywordsMatchesService {
     return this.recalculateForCandidates([keywordCandidate]);
   }
 
-  private async recalculateForCandidates(keywordCandidates: Array<{
-    id: number;
-    isPhrase: boolean;
-    normalizedWord?: string;
-    normalizedForms?: string[];
-  }>): Promise<{
+  private async recalculateForCandidates(
+    keywordCandidates: Array<{
+      id: number;
+      isPhrase: boolean;
+      normalizedWord?: string;
+      normalizedForms?: string[];
+    }>,
+  ): Promise<{
     processed: number;
     updated: number;
     created: number;

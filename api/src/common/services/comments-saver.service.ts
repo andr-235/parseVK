@@ -128,7 +128,10 @@ export class CommentsSaverService {
     );
 
     await this.searchIndexer?.indexCommentById(savedComment.id);
-    await this.searchIndexer?.indexCommentsByPost(comment.ownerId, comment.postId);
+    await this.searchIndexer?.indexCommentsByPost(
+      comment.ownerId,
+      comment.postId,
+    );
 
     let saved = 1;
     if (comment.threadItems?.length) {

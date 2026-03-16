@@ -56,8 +56,19 @@ describe('KeywordFormsService', () => {
       isPhrase: false,
       createdAt: new Date(),
       updatedAt: new Date(),
-      keywordForms: [{ id: 10, keywordId: 1, form: 'клоунами', source: 'manual', createdAt: new Date(), updatedAt: new Date() }],
-      keywordFormExclusions: [{ id: 20, keywordId: 1, form: 'клоуном', createdAt: new Date() }],
+      keywordForms: [
+        {
+          id: 10,
+          keywordId: 1,
+          form: 'клоунами',
+          source: 'manual',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      keywordFormExclusions: [
+        { id: 20, keywordId: 1, form: 'клоуном', createdAt: new Date() },
+      ],
       commentKeywordMatches: [],
     });
     morphologyMock.generateForms.mockResolvedValue([

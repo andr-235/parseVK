@@ -8,7 +8,10 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import type { KeywordSourceFilter, ReadStatusFilter } from '../../comments/types/comments-filters.type.js';
+import type {
+  KeywordSourceFilter,
+  ReadStatusFilter,
+} from '../../comments/types/comments-filters.type.js';
 import type { CommentsSearchViewMode } from '../comments-search.types.js';
 
 export class CommentsSearchRequestDto {

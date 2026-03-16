@@ -66,7 +66,10 @@ export class CommentsSearchIndexerService {
       return;
     }
 
-    await this.client.indexDocument(String(comment.id), this.mapper.map(comment));
+    await this.client.indexDocument(
+      String(comment.id),
+      this.mapper.map(comment),
+    );
   }
 
   async indexCommentsByPost(ownerId: number, postId: number): Promise<void> {

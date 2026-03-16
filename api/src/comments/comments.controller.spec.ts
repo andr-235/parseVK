@@ -238,7 +238,9 @@ describe('CommentsController', () => {
     } as never;
     commentsSearchService.search.mockResolvedValue(serviceResult);
 
-    await expect(controller.searchComments(payload)).resolves.toBe(serviceResult);
+    await expect(controller.searchComments(payload)).resolves.toBe(
+      serviceResult,
+    );
     expect(commentsSearchService.search).toHaveBeenCalledWith(payload);
   });
 });

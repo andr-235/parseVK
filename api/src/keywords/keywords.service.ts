@@ -325,7 +325,11 @@ export class KeywordsService {
     this.ensureNormalizedForm(form);
 
     await this.formsService.excludeGeneratedForm(id, form);
-    await this.formsService.syncGeneratedForms(id, keyword.word, keyword.isPhrase);
+    await this.formsService.syncGeneratedForms(
+      id,
+      keyword.word,
+      keyword.isPhrase,
+    );
     await this.matchesService.recalculateKeywordMatchesForKeyword(id);
 
     return this.getKeywordForms(id);
@@ -340,7 +344,11 @@ export class KeywordsService {
     this.ensureNormalizedForm(form);
 
     await this.formsService.removeGeneratedFormExclusion(id, form);
-    await this.formsService.syncGeneratedForms(id, keyword.word, keyword.isPhrase);
+    await this.formsService.syncGeneratedForms(
+      id,
+      keyword.word,
+      keyword.isPhrase,
+    );
     await this.matchesService.recalculateKeywordMatchesForKeyword(id);
 
     return this.getKeywordForms(id);
@@ -378,9 +386,7 @@ export class KeywordsService {
   ): string[] {
     return Array.from(
       new Set(
-        forms
-          .filter((form) => form.source === source)
-          .map((form) => form.form),
+        forms.filter((form) => form.source === source).map((form) => form.form),
       ),
     ).sort((left, right) => left.localeCompare(right, 'ru'));
   }

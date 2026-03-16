@@ -33,10 +33,10 @@ describe('KeywordsRepository', () => {
         deleteMany: vi.fn(),
         createMany: vi.fn(),
       },
-    keywordFormExclusion: {
-      create: vi.fn(),
-      deleteMany: vi.fn(),
-    },
+      keywordFormExclusion: {
+        create: vi.fn(),
+        deleteMany: vi.fn(),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
