@@ -1,3 +1,10 @@
+## [0.24.5](https://github.com/andr-235/parseVK/compare/v0.24.4...v0.24.5) (2026-03-16)
+
+
+### Bug Fixes
+
+* сузить pre-pull production образов ([a2cc869](https://github.com/andr-235/parseVK/commit/a2cc8694e44f12a9a2093c193aa9e811bb242936))
+
 ## [0.24.4](https://github.com/andr-235/parseVK/compare/v0.24.3...v0.24.4) (2026-03-16)
 
 
