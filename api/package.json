@@ -45,7 +45,7 @@
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
     "argon2": "^0.44.0",
-    "az": "^0.2.3",
+    "az": "0.2.3",
     "bcryptjs": "^2.4.3",
     "big-integer": "^1.6.52",
     "bullmq": "^5.61.0",

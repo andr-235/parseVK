@@ -21,6 +21,7 @@
         "@prisma/adapter-pg": "^7.0.0",
         "@prisma/client": "^7.0.0",
         "argon2": "^0.44.0",
+        "az": "0.2.3",
         "bcryptjs": "^2.4.3",
         "big-integer": "^1.6.52",
         "bullmq": "^5.61.0",
@@ -658,6 +659,8 @@
     "asynckit": ["asynckit@0.4.0", "", {}, ""],
 
     "aws-ssl-profiles": ["aws-ssl-profiles@1.1.2", "", {}, "sha512-NZKeq9AfyQvEeNlN0zSYAaWrmBffJh3IELMZfRpJVWgrpEbtEpnjvzqBPf+mxoI287JohRDoa+/nsfqqiZmF6g=="],
+
+    "az": ["az@0.2.3", "", {}, "sha512-U8d6Tw8ohZ8dcEp8aKjFYo+DU3BT8JPmYqmW0A0BsWW8ocP+F6gLZvrtglHq7pYa84dCEp3NHAoZoC4W3Lth2w=="],
 
     "balanced-match": ["balanced-match@1.0.2", "", {}, ""],
 
