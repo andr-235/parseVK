@@ -1,3 +1,10 @@
+## [0.24.4](https://github.com/andr-235/parseVK/compare/v0.24.3...v0.24.4) (2026-03-16)
+
+
+### Bug Fixes
+
+* stabilize comments infinite scroll ([c2bc253](https://github.com/andr-235/parseVK/commit/c2bc253ac7b201760dfa972a050ad6494620fca6))
+
 ## [0.24.3](https://github.com/andr-235/parseVK/compare/v0.24.2...v0.24.3) (2026-03-16)
 
 
