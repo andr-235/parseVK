@@ -4,7 +4,6 @@ import {
   COMMENTS_SEARCH_CONFIG,
 } from './comments-search.constants.js';
 import { CommentsSearchQueryBuilder } from './builders/comments-search-query.builder.js';
-import type { CommentsSearchClient } from './comments-search.client.js';
 import type { CommentsSearchRequestDto } from './dto/comments-search-request.dto.js';
 import type { CommentsSearchResponseDto } from './dto/comments-search-response.dto.js';
 import {

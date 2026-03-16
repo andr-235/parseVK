@@ -7,7 +7,10 @@ describe('CommentsSearchService', () => {
   it('returns controlled fallback response when elasticsearch search is disabled', async () => {
     const service = new CommentsSearchService(
       { enabled: false, node: '', indexName: 'vk-comments' },
-      { search: async () => ({ hits: { total: { value: 0 }, hits: [] } }) },
+      {
+        search: () =>
+          Promise.resolve({ hits: { total: { value: 0 }, hits: [] } }),
+      },
       new CommentsSearchQueryBuilder(),
       new CommentsSearchResponseMapper(),
     );
@@ -40,9 +43,9 @@ describe('CommentsSearchService', () => {
         indexName: 'vk-comments',
       },
       {
-        search: async (payload: unknown) => {
+        search: (payload: unknown) => {
           calls.push(payload);
-          return {
+          return Promise.resolve({
             hits: {
               total: { value: 1 },
               hits: [
@@ -59,7 +62,7 @@ describe('CommentsSearchService', () => {
                 },
               ],
             },
-          };
+          });
         },
       },
       new CommentsSearchQueryBuilder(),

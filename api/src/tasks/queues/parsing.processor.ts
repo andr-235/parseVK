@@ -7,7 +7,6 @@ import type { ParsingTaskJobData } from '../interfaces/parsing-task-job.interfac
 import {
   PARSING_QUEUE,
   PARSING_CONCURRENCY,
-  PARSING_JOB_TIMEOUT,
   resolveParsingJobTimeout,
 } from './parsing.constants.js';
 import { TaskCancellationService } from '../task-cancellation.service.js';
