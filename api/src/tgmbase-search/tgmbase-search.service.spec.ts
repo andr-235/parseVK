@@ -24,6 +24,44 @@ const createPrismaMock = () => ({
 });
 
 describe('TgmbaseSearchService', () => {
+  it('processes queries in internal batches of 200', async () => {
+    const prisma = createPrismaMock();
+    let resolveFirstBatch!: (value: []) => void;
+    const firstBatchPromise = new Promise<[]>((resolve) => {
+      resolveFirstBatch = resolve;
+    });
+
+    prisma.user.findMany.mockImplementation(() => {
+      if (prisma.user.findMany.mock.calls.length <= 200) {
+        return firstBatchPromise;
+      }
+
+      return Promise.resolve([]);
+    });
+
+    const service = new TgmbaseSearchService(
+      prisma as never,
+      new TgmbaseSearchMapper(),
+    );
+
+    const searchPromise = service.search({
+      queries: Array.from({ length: 201 }, (_, index) => `@sample${index}`),
+    });
+
+    await Promise.resolve();
+
+    expect(prisma.user.findMany).toHaveBeenCalledTimes(200);
+
+    resolveFirstBatch([]);
+
+    const result = await searchPromise;
+
+    expect(prisma.user.findMany).toHaveBeenCalledTimes(201);
+    expect(result.summary.total).toBe(201);
+    expect(result.summary.notFound).toBe(201);
+    expect(result.items).toHaveLength(201);
+  });
+
   it('returns invalid for empty input', async () => {
     const prisma = createPrismaMock();
     const service = new TgmbaseSearchService(

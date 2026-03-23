@@ -22,6 +22,8 @@ type SearchUser = Awaited<
   ReturnType<TgmbasePrismaService['user']['findMany']>
 >[number];
 
+const SEARCH_BATCH_SIZE = 200;
+
 @Injectable()
 export class TgmbaseSearchService {
   private readonly logger = new Logger(TgmbaseSearchService.name);
@@ -36,10 +38,14 @@ export class TgmbaseSearchService {
   ): Promise<TgmbaseSearchResponseDto> {
     const page = payload.page ?? 1;
     const pageSize = payload.pageSize ?? 20;
+    const items: TgmbaseSearchItemDto[] = [];
 
-    const items = await Promise.all(
-      payload.queries.map((query) => this.searchSingle(query, page, pageSize)),
-    );
+    for (const queriesChunk of this.chunkQueries(payload.queries)) {
+      const chunkItems = await Promise.all(
+        queriesChunk.map((query) => this.searchSingle(query, page, pageSize)),
+      );
+      items.push(...chunkItems);
+    }
 
     return {
       summary: this.buildSummary(items),
@@ -171,6 +177,16 @@ export class TgmbaseSearchService {
     }
 
     return [...variants];
+  }
+
+  private chunkQueries(queries: string[]): string[][] {
+    const chunks: string[][] = [];
+
+    for (let index = 0; index < queries.length; index += SEARCH_BATCH_SIZE) {
+      chunks.push(queries.slice(index, index + SEARCH_BATCH_SIZE));
+    }
+
+    return chunks;
   }
 
   private async findPeersForUser(userId: bigint): Promise<TgmbasePeerDto[]> {

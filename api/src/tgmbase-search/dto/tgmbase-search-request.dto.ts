@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsInt,
@@ -13,7 +12,6 @@ import {
 export class TgmbaseSearchRequestDto {
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(200)
   @IsString({ each: true })
   queries!: string[];
 
