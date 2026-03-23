@@ -1,3 +1,10 @@
+## [0.25.1](https://github.com/andr-235/parseVK/compare/v0.25.0...v0.25.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* добавить логирование поиска tgmbase ([feea44f](https://github.com/andr-235/parseVK/commit/feea44fab1051d94371ff95c63e66da7f5347b5e))
+
 # [0.25.0](https://github.com/andr-235/parseVK/compare/v0.24.7...v0.25.0) (2026-03-23)
 
 
