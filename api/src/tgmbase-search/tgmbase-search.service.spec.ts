@@ -24,6 +24,57 @@ const createPrismaMock = () => ({
 });
 
 describe('TgmbaseSearchService', () => {
+  it('publishes websocket progress for searchId', async () => {
+    const prisma = createPrismaMock();
+    prisma.user.findMany.mockResolvedValue([]);
+    const gateway = {
+      broadcastProgress: vi.fn(),
+    };
+
+    const service = new TgmbaseSearchService(
+      prisma as never,
+      new TgmbaseSearchMapper(),
+      gateway as never,
+    );
+
+    await service.search({
+      queries: Array.from({ length: 201 }, (_, index) => `${index + 1}`),
+      searchId: 'search-1',
+    });
+
+    expect(gateway.broadcastProgress).toHaveBeenCalled();
+
+    const payloads = gateway.broadcastProgress.mock.calls.map(
+      ([payload]) => payload,
+    );
+
+    expect(payloads[0]).toMatchObject({
+      searchId: 'search-1',
+      status: 'started',
+      totalQueries: 201,
+      totalBatches: 2,
+      batchSize: 200,
+    });
+    expect(payloads).toContainEqual(
+      expect.objectContaining({
+        searchId: 'search-1',
+        status: 'progress',
+        processedQueries: 200,
+        totalQueries: 201,
+        currentBatch: 1,
+        totalBatches: 2,
+      }),
+    );
+    expect(payloads.at(-1)).toMatchObject({
+      searchId: 'search-1',
+      status: 'completed',
+      processedQueries: 201,
+      totalQueries: 201,
+      currentBatch: 2,
+      totalBatches: 2,
+    });
+  });
+
   it('processes queries in internal batches of 200', async () => {
     const prisma = createPrismaMock();
     let resolveFirstBatch!: (value: []) => void;

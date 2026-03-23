@@ -1,9 +1,21 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TgmbaseSearchPage from '../components/TgmbaseSearchPage'
 import { tgmbaseSearchService } from '../api/tgmbaseSearch.api'
+
+type MockSocketHandler = (payload?: unknown) => void
+
+const socketHandlers = new Map<string, MockSocketHandler>()
+const mockSocket = {
+  on: vi.fn((event: string, handler: MockSocketHandler) => {
+    socketHandlers.set(event, handler)
+    return mockSocket
+  }),
+  emit: vi.fn(),
+  disconnect: vi.fn(),
+}
 
 vi.mock('../api/tgmbaseSearch.api', () => ({
   tgmbaseSearchService: {
@@ -11,7 +23,11 @@ vi.mock('../api/tgmbaseSearch.api', () => ({
   },
 }))
 
-const mockedSearch = vi.mocked(tgmbaseSearchService.search)
+vi.mock('socket.io-client', () => ({
+  io: vi.fn(() => mockSocket),
+}))
+
+const mockedSearch = tgmbaseSearchService.search as unknown as ReturnType<typeof vi.fn>
 
 const createResponse = (overrides = {}) => ({
   summary: {
@@ -133,6 +149,10 @@ const renderPage = () => {
 describe('TgmbaseSearchPage', () => {
   beforeEach(() => {
     mockedSearch.mockReset()
+    socketHandlers.clear()
+    mockSocket.on.mockClear()
+    mockSocket.emit.mockClear()
+    mockSocket.disconnect.mockClear()
   })
 
   it('submits multiple queries and renders summary rows', async () => {
@@ -147,7 +167,7 @@ describe('TgmbaseSearchPage', () => {
     expect(await screen.findByText('Сводка по батчу')).toBeInTheDocument()
     expect((await screen.findAllByText('123')).length).toBeGreaterThan(0)
     expect((await screen.findAllByText('@demo')).length).toBeGreaterThan(0)
-    expect(mockedSearch.mock.calls[0]?.[0]).toEqual({
+    expect(mockedSearch.mock.calls[0]?.[0]).toMatchObject({
       queries: ['123', '@demo'],
       page: 1,
       pageSize: 20,
@@ -326,5 +346,53 @@ describe('TgmbaseSearchPage', () => {
       page: 2,
       pageSize: 1,
     })
+  })
+
+  it('sends searchId and renders live progress while search is running', async () => {
+    let resolveSearch!: (value: ReturnType<typeof createResponse>) => void
+    mockedSearch.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSearch = resolve
+        })
+    )
+
+    renderPage()
+
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText(/список запросов/i), '123{enter}456')
+    await user.click(screen.getByRole('button', { name: /найти/i }))
+
+    await waitFor(() => {
+      expect(mockedSearch).toHaveBeenCalled()
+    })
+
+    expect(mockedSearch.mock.calls[0]?.[0]).toMatchObject({
+      queries: ['123', '456'],
+      page: 1,
+      pageSize: 20,
+      searchId: expect.any(String),
+    })
+
+    act(() => {
+      socketHandlers.get('connect')?.()
+      socketHandlers.get('tgmbase-search-progress')?.({
+        searchId: mockedSearch.mock.calls[0]?.[0].searchId,
+        status: 'progress',
+        processedQueries: 1,
+        totalQueries: 2,
+        currentBatch: 1,
+        totalBatches: 1,
+      })
+    })
+
+    expect(await screen.findByText('Обработано: 1 из 2')).toBeInTheDocument()
+    expect(screen.getByText('Батч: 1 из 1')).toBeInTheDocument()
+
+    act(() => {
+      resolveSearch(createResponse())
+    })
+
+    expect(await screen.findByText('Сводка по батчу')).toBeInTheDocument()
   })
 })

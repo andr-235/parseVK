@@ -311,6 +311,7 @@ export interface TgmbaseSearchSummary {
 
 export interface TgmbaseSearchRequest {
   queries: string[]
+  searchId?: string
   page?: number
   pageSize?: number
 }
@@ -318,6 +319,19 @@ export interface TgmbaseSearchRequest {
 export interface TgmbaseSearchResponse {
   summary: TgmbaseSearchSummary
   items: TgmbaseSearchItem[]
+}
+
+export type TgmbaseSearchProgressStatus = 'started' | 'progress' | 'completed' | 'failed'
+
+export interface TgmbaseSearchProgressEvent {
+  searchId: string
+  status: TgmbaseSearchProgressStatus
+  processedQueries: number
+  totalQueries: number
+  currentBatch: number
+  totalBatches: number
+  batchSize: number
+  error?: string | null
 }
 
 export interface IParsingTaskGroup {

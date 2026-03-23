@@ -39,3 +39,16 @@ vi.mock('@/shared/api', async () => {
     getQueryPersister: () => null,
   }
 })
+
+const originalConsoleError = console.error
+
+vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+  const [firstArg] = args
+  const message = typeof firstArg === 'string' ? firstArg : ''
+
+  if (message.includes('not wrapped in act(...)')) {
+    return
+  }
+
+  originalConsoleError(...args)
+})

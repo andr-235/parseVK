@@ -12,6 +12,7 @@ import type {
   TgmbaseSearchStatus,
   TgmbaseSearchSummaryDto,
 } from './dto/tgmbase-search-response.dto.js';
+import { TgmbaseSearchGateway } from './tgmbase-search.gateway.js';
 import {
   normalizePhoneNumber,
   normalizeTgmbaseQuery,
@@ -31,6 +32,7 @@ export class TgmbaseSearchService {
   constructor(
     private readonly prisma: TgmbasePrismaService,
     private readonly mapper: TgmbaseSearchMapper,
+    private readonly gateway?: TgmbaseSearchGateway,
   ) {}
 
   async search(
@@ -39,13 +41,49 @@ export class TgmbaseSearchService {
     const page = payload.page ?? 1;
     const pageSize = payload.pageSize ?? 20;
     const items: TgmbaseSearchItemDto[] = [];
+    const searchId = payload.searchId?.trim();
+    const totalQueries = payload.queries.length;
+    const totalBatches = Math.ceil(totalQueries / SEARCH_BATCH_SIZE);
+    let processedQueries = 0;
 
-    for (const queriesChunk of this.chunkQueries(payload.queries)) {
+    this.broadcastProgress(searchId, {
+      status: 'started',
+      processedQueries,
+      totalQueries,
+      currentBatch: totalQueries > 0 ? 1 : 0,
+      totalBatches,
+      batchSize: SEARCH_BATCH_SIZE,
+    });
+
+    for (const [batchIndex, queriesChunk] of this.chunkQueries(
+      payload.queries,
+    ).entries()) {
       const chunkItems = await Promise.all(
-        queriesChunk.map((query) => this.searchSingle(query, page, pageSize)),
+        queriesChunk.map(async (query) => {
+          const item = await this.searchSingle(query, page, pageSize);
+          processedQueries += 1;
+          this.broadcastProgress(searchId, {
+            status: 'progress',
+            processedQueries,
+            totalQueries,
+            currentBatch: batchIndex + 1,
+            totalBatches,
+            batchSize: SEARCH_BATCH_SIZE,
+          });
+          return item;
+        }),
       );
       items.push(...chunkItems);
     }
+
+    this.broadcastProgress(searchId, {
+      status: 'completed',
+      processedQueries,
+      totalQueries,
+      currentBatch: totalBatches,
+      totalBatches,
+      batchSize: SEARCH_BATCH_SIZE,
+    });
 
     return {
       summary: this.buildSummary(items),
@@ -187,6 +225,23 @@ export class TgmbaseSearchService {
     }
 
     return chunks;
+  }
+
+  private broadcastProgress(
+    searchId: string | undefined,
+    payload: Omit<
+      Parameters<TgmbaseSearchGateway['broadcastProgress']>[0],
+      'searchId'
+    >,
+  ): void {
+    if (!searchId) {
+      return;
+    }
+
+    this.gateway?.broadcastProgress({
+      searchId,
+      ...payload,
+    });
   }
 
   private async findPeersForUser(userId: bigint): Promise<TgmbasePeerDto[]> {

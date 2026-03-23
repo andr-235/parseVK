@@ -16,6 +16,10 @@ export class TgmbaseSearchRequestDto {
   queries!: string[];
 
   @IsOptional()
+  @IsString()
+  searchId?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
