@@ -46,49 +46,91 @@ export class TgmbaseSearchService {
     const totalBatches = Math.ceil(totalQueries / SEARCH_BATCH_SIZE);
     let processedQueries = 0;
 
-    this.broadcastProgress(searchId, {
-      status: 'started',
-      processedQueries,
-      totalQueries,
-      currentBatch: totalQueries > 0 ? 1 : 0,
-      totalBatches,
-      batchSize: SEARCH_BATCH_SIZE,
-    });
+    this.logger.log(
+      `tgmbase search started: searchId=${searchId ?? 'none'} totalQueries=${totalQueries} totalBatches=${totalBatches} page=${page} pageSize=${pageSize}`,
+    );
 
-    for (const [batchIndex, queriesChunk] of this.chunkQueries(
-      payload.queries,
-    ).entries()) {
-      const chunkItems = await Promise.all(
-        queriesChunk.map(async (query) => {
-          const item = await this.searchSingle(query, page, pageSize);
-          processedQueries += 1;
-          this.broadcastProgress(searchId, {
-            status: 'progress',
-            processedQueries,
-            totalQueries,
-            currentBatch: batchIndex + 1,
-            totalBatches,
-            batchSize: SEARCH_BATCH_SIZE,
-          });
-          return item;
-        }),
+    try {
+      this.broadcastProgress(searchId, {
+        status: 'started',
+        processedQueries,
+        totalQueries,
+        currentBatch: totalQueries > 0 ? 1 : 0,
+        totalBatches,
+        batchSize: SEARCH_BATCH_SIZE,
+      });
+
+      for (const [batchIndex, queriesChunk] of this.chunkQueries(
+        payload.queries,
+      ).entries()) {
+        const currentBatch = batchIndex + 1;
+        this.logger.log(
+          `tgmbase search batch started: searchId=${searchId ?? 'none'} batch=${currentBatch}/${totalBatches} batchQueries=${queriesChunk.length} processed=${processedQueries}/${totalQueries}`,
+        );
+
+        const chunkItems = await Promise.all(
+          queriesChunk.map(async (query) => {
+            const item = await this.searchSingle(query, page, pageSize);
+            processedQueries += 1;
+            this.broadcastProgress(searchId, {
+              status: 'progress',
+              processedQueries,
+              totalQueries,
+              currentBatch,
+              totalBatches,
+              batchSize: SEARCH_BATCH_SIZE,
+            });
+            return item;
+          }),
+        );
+        items.push(...chunkItems);
+
+        this.logger.log(
+          `tgmbase search batch completed: searchId=${searchId ?? 'none'} batch=${currentBatch}/${totalBatches} processed=${processedQueries}/${totalQueries}`,
+        );
+      }
+
+      this.broadcastProgress(searchId, {
+        status: 'completed',
+        processedQueries,
+        totalQueries,
+        currentBatch: totalBatches,
+        totalBatches,
+        batchSize: SEARCH_BATCH_SIZE,
+      });
+
+      const summary = this.buildSummary(items);
+
+      if (summary.error > 0) {
+        this.logger.warn(
+          `tgmbase search completed with errors: searchId=${searchId ?? 'none'} total=${summary.total} found=${summary.found} ambiguous=${summary.ambiguous} notFound=${summary.notFound} invalid=${summary.invalid} error=${summary.error}`,
+        );
+      }
+
+      this.logger.log(
+        `tgmbase search completed: searchId=${searchId ?? 'none'} total=${summary.total} found=${summary.found} ambiguous=${summary.ambiguous} notFound=${summary.notFound} invalid=${summary.invalid} error=${summary.error}`,
       );
-      items.push(...chunkItems);
+
+      return {
+        summary,
+        items,
+      };
+    } catch (error) {
+      this.broadcastProgress(searchId, {
+        status: 'failed',
+        processedQueries,
+        totalQueries,
+        currentBatch: totalBatches > 0 ? Math.min(totalBatches, Math.floor(processedQueries / SEARCH_BATCH_SIZE) + 1) : 0,
+        totalBatches,
+        batchSize: SEARCH_BATCH_SIZE,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      this.logger.error(
+        `tgmbase search failed: searchId=${searchId ?? 'none'} processed=${processedQueries}/${totalQueries}`,
+        error,
+      );
+      throw error;
     }
-
-    this.broadcastProgress(searchId, {
-      status: 'completed',
-      processedQueries,
-      totalQueries,
-      currentBatch: totalBatches,
-      totalBatches,
-      batchSize: SEARCH_BATCH_SIZE,
-    });
-
-    return {
-      summary: this.buildSummary(items),
-      items,
-    };
   }
 
   private async searchSingle(

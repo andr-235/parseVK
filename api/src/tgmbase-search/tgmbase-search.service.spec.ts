@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { Logger } from '@nestjs/common';
 import { TgmbaseSearchMapper } from './mappers/tgmbase-search.mapper.js';
 import { TgmbaseSearchService } from './tgmbase-search.service.js';
 
@@ -24,6 +25,39 @@ const createPrismaMock = () => ({
 });
 
 describe('TgmbaseSearchService', () => {
+  it('writes aggregate logs for search lifecycle', async () => {
+    const prisma = createPrismaMock();
+    prisma.user.findMany.mockResolvedValue([]);
+    const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+
+    try {
+      const service = new TgmbaseSearchService(
+        prisma as never,
+        new TgmbaseSearchMapper(),
+      );
+
+      await service.search({
+        queries: Array.from({ length: 201 }, (_, index) => `${index + 1}`),
+        searchId: 'search-logs',
+      });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('tgmbase search started'),
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('tgmbase search batch completed'),
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('tgmbase search completed'),
+      );
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+  });
+
   it('publishes websocket progress for searchId', async () => {
     const prisma = createPrismaMock();
     prisma.user.findMany.mockResolvedValue([]);

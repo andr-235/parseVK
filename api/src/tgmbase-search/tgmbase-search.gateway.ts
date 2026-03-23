@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -26,6 +27,8 @@ export interface TgmbaseSearchProgressPayload {
 
 @WebSocketGateway({ namespace: 'tgmbase-search', cors: { origin: '*' } })
 export class TgmbaseSearchGateway {
+  private readonly logger = new Logger(TgmbaseSearchGateway.name);
+
   @WebSocketServer()
   private readonly server!: Server;
 
@@ -40,6 +43,7 @@ export class TgmbaseSearchGateway {
     }
 
     client.join(searchId);
+    this.logger.log(`tgmbase search subscription established: searchId=${searchId}`);
   }
 
   broadcastProgress(payload: TgmbaseSearchProgressPayload): void {
@@ -48,5 +52,8 @@ export class TgmbaseSearchGateway {
     }
 
     this.server.to(payload.searchId).emit('tgmbase-search-progress', payload);
+    this.logger.debug(
+      `tgmbase search progress emitted: searchId=${payload.searchId} status=${payload.status} processed=${payload.processedQueries}/${payload.totalQueries} batch=${payload.currentBatch}/${payload.totalBatches}`,
+    );
   }
 }
