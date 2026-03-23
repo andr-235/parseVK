@@ -1,3 +1,10 @@
+## [0.25.2](https://github.com/andr-235/parseVK/compare/v0.25.1...v0.25.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* прописать tgmbase env в deploy compose ([129c1ef](https://github.com/andr-235/parseVK/commit/129c1ef214561f7f6c4147cd13dfd29c198761d0))
+
 ## [0.25.1](https://github.com/andr-235/parseVK/compare/v0.25.0...v0.25.1) (2026-03-23)
 
 
