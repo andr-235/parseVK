@@ -1,3 +1,10 @@
+## [0.24.7](https://github.com/andr-235/parseVK/compare/v0.24.6...v0.24.7) (2026-03-23)
+
+
+### Bug Fixes
+
+* добавить батчинг поиска tgmbase по 200 запросов ([64e7de9](https://github.com/andr-235/parseVK/commit/64e7de9e84199dc777c7dd24188fb3470fd3e6f3))
+
 ## [0.24.6](https://github.com/andr-235/parseVK/compare/v0.24.5...v0.24.6) (2026-03-16)
 
 
