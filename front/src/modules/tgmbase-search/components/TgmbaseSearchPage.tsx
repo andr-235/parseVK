@@ -39,7 +39,9 @@ export default function TgmbaseSearchPage() {
         >
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-cyan-300/70">Прогресс поиска</p>
+              <p className="text-xs uppercase tracking-[0.24em] text-cyan-300/70">
+                Прогресс поиска
+              </p>
               <h2 className="mt-1 text-lg font-semibold text-white">
                 {progress.status === 'failed'
                   ? 'Поиск завершился с ошибкой'
@@ -67,8 +69,12 @@ export default function TgmbaseSearchPage() {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-300">
-            <span>Обработано: {progress.processedQueries} из {progress.totalQueries}</span>
-            <span>Батч: {progress.currentBatch} из {progress.totalBatches}</span>
+            <span>
+              Обработано: {progress.processedQueries} из {progress.totalQueries}
+            </span>
+            <span>
+              Батч: {progress.currentBatch} из {progress.totalBatches}
+            </span>
             <span>Прогресс: {progressPercent}%</span>
           </div>
 

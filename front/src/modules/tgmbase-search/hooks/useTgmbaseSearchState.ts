@@ -179,7 +179,7 @@ export function useTgmbaseSearchState() {
           ? {
               ...current,
               status: 'failed',
-              error: error instanceof Error ? error.message : 'Не удалось выполнить поиск'
+              error: error instanceof Error ? error.message : 'Не удалось выполнить поиск',
             }
           : current
       )
