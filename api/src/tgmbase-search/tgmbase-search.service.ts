@@ -120,7 +120,13 @@ export class TgmbaseSearchService {
         status: 'failed',
         processedQueries,
         totalQueries,
-        currentBatch: totalBatches > 0 ? Math.min(totalBatches, Math.floor(processedQueries / SEARCH_BATCH_SIZE) + 1) : 0,
+        currentBatch:
+          totalBatches > 0
+            ? Math.min(
+                totalBatches,
+                Math.floor(processedQueries / SEARCH_BATCH_SIZE) + 1,
+              )
+            : 0,
         totalBatches,
         batchSize: SEARCH_BATCH_SIZE,
         error: error instanceof Error ? error.message : 'Unknown error',

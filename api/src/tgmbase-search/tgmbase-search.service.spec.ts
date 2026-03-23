@@ -28,8 +28,12 @@ describe('TgmbaseSearchService', () => {
   it('writes aggregate logs for search lifecycle', async () => {
     const prisma = createPrismaMock();
     prisma.user.findMany.mockResolvedValue([]);
-    const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
-    const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    const logSpy = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => {});
+    const warnSpy = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
 
     try {
       const service = new TgmbaseSearchService(

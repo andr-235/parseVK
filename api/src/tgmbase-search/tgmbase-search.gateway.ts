@@ -43,7 +43,9 @@ export class TgmbaseSearchGateway {
     }
 
     client.join(searchId);
-    this.logger.log(`tgmbase search subscription established: searchId=${searchId}`);
+    this.logger.log(
+      `tgmbase search subscription established: searchId=${searchId}`,
+    );
   }
 
   broadcastProgress(payload: TgmbaseSearchProgressPayload): void {

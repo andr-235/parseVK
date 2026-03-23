@@ -8,8 +8,12 @@ describe('TgmbaseSearchGateway', () => {
     const join = vi.fn();
     const emit = vi.fn();
     const to = vi.fn(() => ({ emit }));
-    const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
-    const debugSpy = vi.spyOn(Logger.prototype, 'debug').mockImplementation(() => {});
+    const logSpy = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => {});
+    const debugSpy = vi
+      .spyOn(Logger.prototype, 'debug')
+      .mockImplementation(() => {});
 
     try {
       Object.defineProperty(gateway, 'server', {
