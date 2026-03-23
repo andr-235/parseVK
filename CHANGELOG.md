@@ -1,3 +1,15 @@
+# [0.25.0](https://github.com/andr-235/parseVK/compare/v0.24.7...v0.25.0) (2026-03-23)
+
+
+### Bug Fixes
+
+* исправить общий мок api в frontend тестах ([00192bf](https://github.com/andr-235/parseVK/commit/00192bf9a3789bb387bec87a5442e22076ae49ef))
+
+
+### Features
+
+* добавить прогресс поиска tgmbase через websocket ([42ce4e3](https://github.com/andr-235/parseVK/commit/42ce4e31eea362deae96229d05dd67f7f7eb0e6b))
+
 ## [0.24.7](https://github.com/andr-235/parseVK/compare/v0.24.6...v0.24.7) (2026-03-23)
 
 
