@@ -21,9 +21,7 @@ export default function TelegramDlUploadHistory({
       {isLoading ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-slate-800/30 px-4 py-10 text-center">
           <div className="text-base font-medium text-white">Загружаю историю</div>
-          <div className="mt-2 text-sm text-slate-400">
-            Получаю историю файлов из tgmbase.
-          </div>
+          <div className="mt-2 text-sm text-slate-400">Получаю историю файлов из tgmbase.</div>
         </div>
       ) : files.length === 0 ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-slate-800/30 px-4 py-10 text-center">
@@ -47,9 +45,9 @@ export default function TelegramDlUploadHistory({
                       ? 'text-rose-300'
                       : file.status === 'SKIPPED'
                         ? 'text-amber-300'
-                      : file.isActive
-                        ? 'text-emerald-300'
-                        : 'text-slate-400'
+                        : file.isActive
+                          ? 'text-emerald-300'
+                          : 'text-slate-400'
                   }
                 >
                   {file.status === 'FAILED'
