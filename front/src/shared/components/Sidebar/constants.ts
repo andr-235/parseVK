@@ -49,7 +49,7 @@ export const createParsingSubItems = (): SidebarNavEntry[] => {
 
 export const createTelegramSubItems = (): SidebarNavEntry[] => {
   return [
-    { label: 'Парсинг пользователей', path: '/telegram' },
+    { label: 'Выгрузка пользователей', path: '/telegram' },
     { label: 'Поиск по местным каналам', path: '/tgmbase-search' },
     { label: 'Выгрузка с ДЛ', path: '/telegram/dl-upload' },
   ]
