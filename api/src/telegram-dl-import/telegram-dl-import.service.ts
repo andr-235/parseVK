@@ -20,6 +20,18 @@ interface ImportFileProcessingResult extends TelegramDlImportFileDto {
   succeeded: boolean;
 }
 
+type DlContactCreateManyInput = Parameters<
+  TgmbasePrismaService['dlContact']['createMany']
+>[0] extends infer T
+  ? NonNullable<T> extends { data: infer D }
+    ? D extends Array<infer U>
+      ? U
+      : D extends infer U | Array<infer U>
+        ? U
+        : never
+    : never
+  : never;
+
 @Injectable()
 export class TelegramDlImportService {
   private readonly logger = new Logger(TelegramDlImportService.name);
@@ -148,8 +160,8 @@ export class TelegramDlImportService {
         orderBy: [{ createdAt: 'desc' }],
       });
 
-      await this.prisma.dlContact.createMany({
-        data: parsed.contacts.map((contact) => ({
+      const contactRows: DlContactCreateManyInput[] = parsed.contacts.map(
+        (contact) => ({
           importFileId,
           telegramId: contact.telegramId,
           username: contact.username,
@@ -172,8 +184,17 @@ export class TelegramDlImportService {
           usernameExtra: contact.usernameExtra,
           geo: contact.geo,
           sourceRowIndex: contact.sourceRowIndex,
-        })),
-      });
+        }),
+      );
+
+      try {
+        await this.prisma.dlContact.createMany({
+          data: contactRows,
+        });
+      } catch (error) {
+        this.logContactFieldLengths(batchId, file.originalname, contactRows);
+        throw error;
+      }
 
       const currentImportFile = importFile;
       const currentParsed = parsed;
@@ -259,6 +280,41 @@ export class TelegramDlImportService {
     }
 
     return new Date(parsed);
+  }
+
+  private logContactFieldLengths(
+    batchId: bigint,
+    fileName: string,
+    contacts: DlContactCreateManyInput[],
+  ): void {
+    if (contacts.length === 0) {
+      return;
+    }
+
+    const summary = Object.entries(
+      contacts.reduce<Record<string, number>>((accumulator, contact) => {
+        for (const [field, value] of Object.entries(contact)) {
+          if (typeof value !== 'string') {
+            continue;
+          }
+
+          accumulator[field] = Math.max(
+            accumulator[field] ?? 0,
+            value.length,
+          );
+        }
+
+        return accumulator;
+      }, {}),
+    )
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 5)
+      .map(([field, length]) => `${field}:${length}`)
+      .join(', ');
+
+    this.logger.warn(
+      `Batch ${batchId.toString()}: длины полей dl_contact для ${fileName}: ${summary || 'нет строковых значений'}`,
+    );
   }
 
   private mapBatch(batch: DlImportBatch) {

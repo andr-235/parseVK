@@ -17,4 +17,13 @@ describe('tgmbase prisma schema', () => {
       /filesFailed\s+Int\s+@default\(0\)\s+@map\("files_failed"\)/,
     );
   });
+
+  it('stores dl contact string fields as text to support long xlsx values', () => {
+    const schemaPath = join(process.cwd(), 'prisma', 'tgmbase.prisma');
+    const schema = readFileSync(schemaPath, 'utf8');
+    const dlContactModel = schema.match(/model DlContact \{[\s\S]*?\n\}/)?.[0];
+
+    expect(dlContactModel).toBeTruthy();
+    expect(dlContactModel).not.toContain('@db.VarChar');
+  });
 });

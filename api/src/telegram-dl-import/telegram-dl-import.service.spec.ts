@@ -1,4 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { Logger } from '@nestjs/common';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { Express } from 'express';
 import { TelegramDlImportService } from './telegram-dl-import.service.js';
 
@@ -36,10 +37,23 @@ const createXlsxFile = (name: string): Express.Multer.File =>
 describe('TelegramDlImportService', () => {
   let prisma: ReturnType<typeof createPrismaMock>;
   let parser: ReturnType<typeof createParserMock>;
+  let loggerErrorSpy: ReturnType<typeof vi.spyOn>;
+  let loggerWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     prisma = createPrismaMock();
     parser = createParserMock();
+    loggerErrorSpy = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    loggerWarnSpy = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    loggerErrorSpy.mockRestore();
+    loggerWarnSpy.mockRestore();
   });
 
   it('imports several files into one batch', async () => {
@@ -292,6 +306,75 @@ describe('TelegramDlImportService', () => {
         where: { id: 77 },
         data: expect.objectContaining({ isActive: false }),
       }),
+    );
+  });
+
+  it('logs longest parsed field lengths when contact insert fails', async () => {
+    parser.parse.mockReturnValue({
+      originalFileName: 'groupexport_long.xlsx',
+      replacementKey: 'groupexport_long.xlsx',
+      sheetName: 'Sheet1',
+      rowsTotal: 1,
+      contacts: [
+        {
+          telegramId: '1',
+          phone: '79990000001',
+          username: 'short',
+          channels:
+            'https://t.me/example/'.padEnd(400, 'a'),
+          description: 'desc'.padEnd(300, 'b'),
+          date: '2024-01-01T00:00:00.000Z',
+          sourceRowIndex: 2,
+        },
+      ],
+    });
+
+    prisma.dlImportBatch.create.mockResolvedValue({
+      id: 10,
+      status: 'RUNNING',
+      filesTotal: 1,
+      filesSuccess: 0,
+      filesFailed: 0,
+    });
+    prisma.dlImportBatch.update.mockResolvedValue({
+      id: 10,
+      status: 'PARTIAL',
+      filesTotal: 1,
+      filesSuccess: 0,
+      filesFailed: 1,
+    });
+    prisma.dlImportFile.create.mockResolvedValue({
+      id: 101,
+      originalFileName: 'groupexport_long.xlsx',
+    });
+    prisma.dlImportFile.findFirst.mockResolvedValue(null);
+    prisma.dlContact.createMany.mockRejectedValue(new Error('db failed'));
+    prisma.dlImportFile.update.mockResolvedValue({
+      id: 101,
+      originalFileName: 'groupexport_long.xlsx',
+      status: 'FAILED',
+      rowsTotal: 1,
+      rowsSuccess: 0,
+      rowsFailed: 1,
+      isActive: false,
+      replacedFileId: null,
+      error: 'db failed',
+    });
+
+    const service = new TelegramDlImportService(
+      prisma as never,
+      parser as never,
+    );
+
+    await service.uploadFiles([createXlsxFile('groupexport_long.xlsx')]);
+
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'длины полей dl_contact для groupexport_long.xlsx',
+      ),
+    );
+    expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('channelsRaw:400'),
     );
   });
 });

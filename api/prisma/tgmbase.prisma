@@ -135,25 +135,25 @@ model DlImportFile {
 model DlContact {
   id              BigInt       @id @default(autoincrement())
   importFileId    BigInt       @map("import_file_id")
-  telegramId      String?      @map("telegram_id") @db.VarChar(64)
-  username        String?      @db.VarChar(128)
-  phone           String?      @db.VarChar(64)
-  firstName       String?      @map("first_name") @db.VarChar(255)
-  lastName        String?      @map("last_name") @db.VarChar(255)
+  telegramId      String?      @map("telegram_id") @db.Text
+  username        String?      @db.Text
+  phone           String?      @db.Text
+  firstName       String?      @map("first_name") @db.Text
+  lastName        String?      @map("last_name") @db.Text
   description     String?      @db.Text
-  region          String?      @db.VarChar(255)
+  region          String?      @db.Text
   joinedAt        DateTime?    @map("joined_at") @db.Timestamptz(6)
   channelsRaw     String?      @map("channels_raw") @db.Text
-  fullName        String?      @map("full_name") @db.VarChar(255)
+  fullName        String?      @map("full_name") @db.Text
   address         String?      @db.Text
   vkUrl           String?      @map("vk_url") @db.Text
-  email           String?      @db.VarChar(255)
-  telegramContact String?      @map("telegram_contact") @db.VarChar(255)
-  instagram       String?      @db.VarChar(255)
-  viber           String?      @db.VarChar(255)
-  odnoklassniki   String?      @db.VarChar(255)
-  birthDateText   String?      @map("birth_date_text") @db.VarChar(255)
-  usernameExtra   String?      @map("username_extra") @db.VarChar(128)
+  email           String?      @db.Text
+  telegramContact String?      @map("telegram_contact") @db.Text
+  instagram       String?      @db.Text
+  viber           String?      @db.Text
+  odnoklassniki   String?      @db.Text
+  birthDateText   String?      @map("birth_date_text") @db.Text
+  usernameExtra   String?      @map("username_extra") @db.Text
   geo             String?      @db.Text
   sourceRowIndex  Int          @map("source_row_index")
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)

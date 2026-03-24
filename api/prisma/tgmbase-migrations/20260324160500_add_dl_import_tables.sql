@@ -78,3 +78,19 @@ CREATE INDEX IF NOT EXISTS idx_dl_contact_phone
 
 CREATE INDEX IF NOT EXISTS idx_dl_contact_username
   ON dl_contact (username);
+
+ALTER TABLE dl_contact
+  ALTER COLUMN telegram_id TYPE TEXT,
+  ALTER COLUMN username TYPE TEXT,
+  ALTER COLUMN phone TYPE TEXT,
+  ALTER COLUMN first_name TYPE TEXT,
+  ALTER COLUMN last_name TYPE TEXT,
+  ALTER COLUMN region TYPE TEXT,
+  ALTER COLUMN full_name TYPE TEXT,
+  ALTER COLUMN email TYPE TEXT,
+  ALTER COLUMN telegram_contact TYPE TEXT,
+  ALTER COLUMN instagram TYPE TEXT,
+  ALTER COLUMN viber TYPE TEXT,
+  ALTER COLUMN odnoklassniki TYPE TEXT,
+  ALTER COLUMN birth_date_text TYPE TEXT,
+  ALTER COLUMN username_extra TYPE TEXT;
