@@ -1,3 +1,10 @@
+## [0.28.1](https://github.com/andr-235/parseVK/compare/v0.28.0...v0.28.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* исправить применение tgmbase миграции в деплое ([13331eb](https://github.com/andr-235/parseVK/commit/13331eb657699247681f6f9fd211ba7459136f21))
+
 # [0.28.0](https://github.com/andr-235/parseVK/compare/v0.27.0...v0.28.0) (2026-03-24)
 
 
