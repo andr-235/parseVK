@@ -6,11 +6,11 @@ import { useSidebarData } from '@/shared/hooks'
 import { useAuthStore } from '@/modules/auth'
 import { Button } from '@/shared/ui/button'
 import {
+  createPrimaryItems,
   createMonitoringSubItems,
   createVkSubItems,
   createParsingSubItems,
   createTelegramSubItems,
-  PRIMARY_ITEMS_CONFIG,
   SECONDARY_ITEMS_CONFIG,
 } from './constants'
 import { getSidebarClasses, getPrimaryNavItemClasses } from './utils'
@@ -54,7 +54,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
 
   const primaryItems = useMemo<SidebarItem[]>(
     () =>
-      PRIMARY_ITEMS_CONFIG.map((item) => ({
+      createPrimaryItems().map((item) => ({
         label: item.label,
         path: item.path,
         icon: <Send className="h-4 w-4" />,

@@ -1,4 +1,6 @@
-import type { SidebarNavEntry } from './types'
+import type { SidebarItem, SidebarNavEntry } from './types'
+
+type SidebarItemConfig = Pick<SidebarItem, 'label' | 'path'>
 
 export const formatCount = (count: number): string | undefined => {
   return count > 0 ? String(count) : undefined
@@ -49,9 +51,19 @@ export const createTelegramSubItems = (): SidebarNavEntry[] => {
   return [
     { label: 'Парсинг пользователей', path: '/telegram' },
     { label: 'Поиск по местным каналам', path: '/tgmbase-search' },
+    { label: 'Выгрузка с ДЛ', path: '/telegram/dl-upload' },
   ]
 }
 
-export const PRIMARY_ITEMS_CONFIG = [] as const
+export const PRIMARY_ITEMS_CONFIG: readonly SidebarItemConfig[] = []
 
-export const SECONDARY_ITEMS_CONFIG = [{ label: 'Настройки', path: '/settings' }] as const
+export const SECONDARY_ITEMS_CONFIG: readonly SidebarItemConfig[] = [
+  { label: 'Настройки', path: '/settings' },
+]
+
+export const createPrimaryItems = (): SidebarItemConfig[] => {
+  return PRIMARY_ITEMS_CONFIG.map((item) => ({
+    label: item.label,
+    path: item.path,
+  }))
+}

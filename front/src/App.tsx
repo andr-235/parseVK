@@ -18,6 +18,7 @@ const Settings = lazy(() => import('@/pages/Settings'))
 const Listings = lazy(() => import('@/pages/Listings'))
 const Telegram = lazy(() => import('@/pages/Telegram'))
 const TgmbaseSearch = lazy(() => import('@/pages/TgmbaseSearch'))
+const TelegramDlUpload = lazy(() => import('@/pages/TelegramDlUpload'))
 const Metrics = lazy(() => import('@/pages/Metrics'))
 const Monitoring = lazy(() => import('@/pages/Monitoring'))
 const MonitoringGroups = lazy(() => import('@/pages/MonitoringGroups'))
@@ -113,6 +114,7 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/telegram" element={<Telegram />} />
             <Route path="/tgmbase-search" element={<TgmbaseSearch />} />
+            <Route path="/telegram/dl-upload" element={<TelegramDlUpload />} />
             <Route path="/metrics" element={<Metrics />} />
             <Route path="/monitoring" element={<Navigate to="/monitoring/whatsapp" replace />} />
             <Route path="/monitoring/:sourceKey" element={<Monitoring />} />
