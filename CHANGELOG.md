@@ -1,3 +1,10 @@
+## [0.26.1](https://github.com/andr-235/parseVK/compare/v0.26.0...v0.26.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* обновить nginx proxy для динамического api upstream ([a097409](https://github.com/andr-235/parseVK/commit/a097409feceabc1cb00ba4069af5b5712fb67fe0))
+
 # [0.26.0](https://github.com/andr-235/parseVK/compare/v0.25.2...v0.26.0) (2026-03-24)
 
 
