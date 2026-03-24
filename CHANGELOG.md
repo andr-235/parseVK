@@ -1,3 +1,10 @@
+## [0.29.1](https://github.com/andr-235/parseVK/compare/v0.29.0...v0.29.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* переработан ui dl матчинга и миграция деплоя ([af75ded](https://github.com/andr-235/parseVK/commit/af75dedb8d039d5d6245cb6ccc55d801a0105cc1))
+
 # [0.29.0](https://github.com/andr-235/parseVK/compare/v0.28.5...v0.29.0) (2026-03-24)
 
 
