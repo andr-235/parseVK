@@ -1,3 +1,10 @@
+# [0.29.0](https://github.com/andr-235/parseVK/compare/v0.28.5...v0.29.0) (2026-03-24)
+
+
+### Features
+
+* добавить матчинг dl с tgmbase ([f375498](https://github.com/andr-235/parseVK/commit/f375498ab12f33295fdb17049e34dfba89893ec1))
+
 ## [0.28.5](https://github.com/andr-235/parseVK/compare/v0.28.4...v0.28.5) (2026-03-24)
 
 
