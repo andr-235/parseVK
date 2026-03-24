@@ -102,4 +102,44 @@ describe('LoggingInterceptor', () => {
       expect.any(String),
     );
   });
+
+  it('не логирует health и metrics endpoints при успешных ответах', async () => {
+    request.originalUrl = '/api/health';
+
+    const callHandler: CallHandler = {
+      handle: vi.fn(() => of('ok')),
+    };
+
+    await lastValueFrom(interceptor.intercept(context, callHandler));
+
+    expect(logSpy).not.toHaveBeenCalled();
+
+    request.originalUrl = '/api/metrics';
+
+    await lastValueFrom(interceptor.intercept(context, callHandler));
+
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it('логирует ошибки health endpoints несмотря на suppress успешных логов', async () => {
+    request.originalUrl = '/api/health';
+    response.statusCode = 500;
+
+    const testError = new Error('health failed');
+    const callHandler: CallHandler = {
+      handle: vi.fn(() => throwError(() => testError)),
+    };
+
+    vi.spyOn(Date, 'now').mockReturnValueOnce(100).mockReturnValue(250);
+
+    await expect(
+      lastValueFrom(interceptor.intercept(context, callHandler)),
+    ).rejects.toThrow(testError);
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[test-correlation-id] Ошибка: GET /api/health — статус 500 — 150мс — health failed',
+      expect.any(String),
+    );
+  });
 });

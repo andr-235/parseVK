@@ -30,6 +30,12 @@ interface LogEntry {
 export class LoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HTTP');
   private readonly isProduction = process.env.NODE_ENV === 'production';
+  private static readonly silentPaths = new Set([
+    '/health',
+    '/api/health',
+    '/metrics',
+    '/api/metrics',
+  ]);
 
   constructor(
     @Optional()
@@ -76,6 +82,10 @@ export class LoggingInterceptor implements NestInterceptor {
    * Логирует входящий запрос
    */
   private logRequest(logEntry: LogEntry): void {
+    if (this.shouldSkipSuccessLogs(logEntry.url)) {
+      return;
+    }
+
     if (this.isProduction) {
       this.logger.log(JSON.stringify({ ...logEntry, event: 'request' }));
     } else {
@@ -110,6 +120,10 @@ export class LoggingInterceptor implements NestInterceptor {
         response.statusCode,
         duration,
       );
+    }
+
+    if (this.shouldSkipSuccessLogs(logEntry.url)) {
+      return;
     }
 
     if (this.isProduction) {
@@ -153,5 +167,9 @@ export class LoggingInterceptor implements NestInterceptor {
         error.stack,
       );
     }
+  }
+
+  private shouldSkipSuccessLogs(url: string): boolean {
+    return LoggingInterceptor.silentPaths.has(url);
   }
 }

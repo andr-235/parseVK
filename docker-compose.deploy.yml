@@ -81,7 +81,7 @@ services:
       - .env
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      TGMBASE_DATABASE_URL: ${TGMBASE_DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:5433/tgmbase?schema=public}
+      TGMBASE_DATABASE_URL: ${TGMBASE_DATABASE_URL:-postgresql://postgres:postgres@db:5432/tgmbase?schema=public}
       MONITOR_DATABASE_URL: ${MONITOR_DATABASE_URL:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
