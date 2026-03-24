@@ -94,9 +94,9 @@ model user {
 model DlImportBatch {
   id           BigInt         @id @default(autoincrement())
   status       String         @db.VarChar(32)
-  filesTotal   Int            @default(0)
-  filesSuccess Int            @default(0)
-  filesFailed  Int            @default(0)
+  filesTotal   Int            @default(0) @map("files_total")
+  filesSuccess Int            @default(0) @map("files_success")
+  filesFailed  Int            @default(0) @map("files_failed")
   createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   files        DlImportFile[]
