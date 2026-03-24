@@ -1,3 +1,10 @@
+## [0.28.3](https://github.com/andr-235/parseVK/compare/v0.28.2...v0.28.3) (2026-03-24)
+
+
+### Bug Fixes
+
+* разбить выгрузку дл на батчи и показать ошибки ([8cbaac0](https://github.com/andr-235/parseVK/commit/8cbaac09de8005b5f41e836d178c1d4372c65cb5))
+
 ## [0.28.2](https://github.com/andr-235/parseVK/compare/v0.28.1...v0.28.2) (2026-03-24)
 
 
