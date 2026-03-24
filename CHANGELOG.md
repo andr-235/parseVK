@@ -1,3 +1,10 @@
+## [0.29.2](https://github.com/andr-235/parseVK/compare/v0.29.1...v0.29.2) (2026-03-24)
+
+
+### Bug Fixes
+
+* применить все tgmbase миграции в deploy entrypoint ([9a36d83](https://github.com/andr-235/parseVK/commit/9a36d83c922c8ccd5056177a8f1694c6c7cd73e5))
+
 ## [0.29.1](https://github.com/andr-235/parseVK/compare/v0.29.0...v0.29.1) (2026-03-24)
 
 
