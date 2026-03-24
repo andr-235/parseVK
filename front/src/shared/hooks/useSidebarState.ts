@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 
-type SectionKey = 'vk' | 'monitoring' | 'parsing'
+type SectionKey = 'vk' | 'monitoring' | 'parsing' | 'telegram'
 
 export const useSidebarState = () => {
   const location = useLocation()
@@ -10,6 +10,7 @@ export const useSidebarState = () => {
     vk: true,
     monitoring: true,
     parsing: false,
+    telegram: false,
   })
 
   const toggleCollapse = useCallback(() => {

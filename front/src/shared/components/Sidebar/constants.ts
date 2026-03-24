@@ -45,9 +45,13 @@ export const createParsingSubItems = (): SidebarNavEntry[] => {
   return [{ label: 'Недвижимость', path: '/listings' }]
 }
 
-export const PRIMARY_ITEMS_CONFIG = [
-  { label: 'Telegram', path: '/telegram' },
-  { label: 'TGMB Search', path: '/tgmbase-search' },
-] as const
+export const createTelegramSubItems = (): SidebarNavEntry[] => {
+  return [
+    { label: 'Парсинг пользователей', path: '/telegram' },
+    { label: 'Поиск по местным каналам', path: '/tgmbase-search' },
+  ]
+}
+
+export const PRIMARY_ITEMS_CONFIG = [] as const
 
 export const SECONDARY_ITEMS_CONFIG = [{ label: 'Настройки', path: '/settings' }] as const

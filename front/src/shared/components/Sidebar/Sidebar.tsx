@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Users, Building, Send, Search, Settings, UserCog, LogOut, Activity } from 'lucide-react'
+import { Users, Building, Send, Settings, UserCog, LogOut, Activity } from 'lucide-react'
 import { useSidebarState } from '@/shared/hooks'
 import { useSidebarData } from '@/shared/hooks'
 import { useAuthStore } from '@/modules/auth'
@@ -9,6 +9,7 @@ import {
   createMonitoringSubItems,
   createVkSubItems,
   createParsingSubItems,
+  createTelegramSubItems,
   PRIMARY_ITEMS_CONFIG,
   SECONDARY_ITEMS_CONFIG,
 } from './constants'
@@ -49,23 +50,16 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
   const monitoringSubItems = createMonitoringSubItems()
 
   const parsingSubItems = createParsingSubItems()
-
-  const getPrimaryItemIcon = useCallback((path: string) => {
-    if (path === '/tgmbase-search') {
-      return <Search className="h-4 w-4" />
-    }
-
-    return <Send className="h-4 w-4" />
-  }, [])
+  const telegramSubItems = createTelegramSubItems()
 
   const primaryItems = useMemo<SidebarItem[]>(
     () =>
       PRIMARY_ITEMS_CONFIG.map((item) => ({
         label: item.label,
         path: item.path,
-        icon: getPrimaryItemIcon(item.path),
+        icon: <Send className="h-4 w-4" />,
       })),
-    [getPrimaryItemIcon]
+    []
   )
 
   const secondaryItems = useMemo<SidebarItem[]>(
@@ -91,13 +85,16 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
   const vkPaths = useMemo(() => collectNavPaths(vkSubItems), [vkSubItems])
   const monitoringPaths = useMemo(() => collectNavPaths(monitoringSubItems), [monitoringSubItems])
   const parsingPaths = useMemo(() => collectNavPaths(parsingSubItems), [parsingSubItems])
+  const telegramPaths = useMemo(() => collectNavPaths(telegramSubItems), [telegramSubItems])
 
   const isVkActive = isSectionActive(vkPaths)
   const isMonitoringActive = isSectionActive(monitoringPaths)
   const isParsingActive = isSectionActive(parsingPaths)
+  const isTelegramActive = isSectionActive(telegramPaths)
   const isVkExpanded = isSectionExpanded('vk')
   const isMonitoringExpanded = isSectionExpanded('monitoring')
   const isParsingExpanded = isSectionExpanded('parsing')
+  const isTelegramExpanded = isSectionExpanded('telegram')
 
   const handleVkToggle = useCallback(() => {
     toggleSection('vk')
@@ -109,6 +106,10 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
 
   const handleMonitoringToggle = useCallback(() => {
     toggleSection('monitoring')
+  }, [toggleSection])
+
+  const handleTelegramToggle = useCallback(() => {
+    toggleSection('telegram')
   }, [toggleSection])
 
   const handleExpand = useCallback(() => {
@@ -198,6 +199,17 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
               isCollapsed={isCollapsed}
               isActive={isParsingActive}
               collapsedLabel="Недвижимость"
+            />
+
+            <SidebarSection
+              title="Telegram"
+              icon={<Send className="h-4 w-4" />}
+              items={telegramSubItems}
+              isExpanded={isTelegramExpanded}
+              onToggle={handleTelegramToggle}
+              isCollapsed={isCollapsed}
+              isActive={isTelegramActive}
+              collapsedLabel="Telegram"
             />
 
             {primaryItems.length > 0 && (
