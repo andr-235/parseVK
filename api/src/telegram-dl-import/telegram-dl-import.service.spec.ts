@@ -320,8 +320,7 @@ describe('TelegramDlImportService', () => {
           telegramId: '1',
           phone: '79990000001',
           username: 'short',
-          channels:
-            'https://t.me/example/'.padEnd(400, 'a'),
+          channels: 'https://t.me/example/'.padEnd(400, 'a'),
           description: 'desc'.padEnd(300, 'b'),
           date: '2024-01-01T00:00:00.000Z',
           sourceRowIndex: 2,

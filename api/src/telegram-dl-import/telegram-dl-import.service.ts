@@ -298,10 +298,7 @@ export class TelegramDlImportService {
             continue;
           }
 
-          accumulator[field] = Math.max(
-            accumulator[field] ?? 0,
-            value.length,
-          );
+          accumulator[field] = Math.max(accumulator[field] ?? 0, value.length);
         }
 
         return accumulator;
