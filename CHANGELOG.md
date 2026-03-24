@@ -1,3 +1,10 @@
+# [0.27.0](https://github.com/andr-235/parseVK/compare/v0.26.2...v0.27.0) (2026-03-24)
+
+
+### Features
+
+* сгруппировать telegram-раздел в сайдбаре ([530a26f](https://github.com/andr-235/parseVK/commit/530a26f82a26fdcf4cfe805b5a474a4b1dc40386))
+
 ## [0.26.2](https://github.com/andr-235/parseVK/compare/v0.26.1...v0.26.2) (2026-03-24)
 
 
