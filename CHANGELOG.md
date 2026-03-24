@@ -1,3 +1,10 @@
+## [0.28.4](https://github.com/andr-235/parseVK/compare/v0.28.3...v0.28.4) (2026-03-24)
+
+
+### Bug Fixes
+
+* снять лимит размера запроса в nginx ([7e95864](https://github.com/andr-235/parseVK/commit/7e95864deda88c7afa3003feae5aebb2a7cd3887))
+
 ## [0.28.3](https://github.com/andr-235/parseVK/compare/v0.28.2...v0.28.3) (2026-03-24)
 
 
