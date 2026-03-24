@@ -155,22 +155,7 @@ describe('TelegramDlImportService', () => {
     expect(prisma.dlImportFile.create).toHaveBeenCalledTimes(2);
   });
 
-  it('replaces previous active version by full file name', async () => {
-    parser.parse.mockReturnValue({
-      originalFileName: 'groupexport_same.xlsx',
-      replacementKey: 'groupexport_same.xlsx',
-      sheetName: 'Sheet1',
-      rowsTotal: 1,
-      contacts: [
-        {
-          telegramId: '1',
-          phone: '79990000001',
-          date: '2024-01-01T00:00:00.000Z',
-          sourceRowIndex: 2,
-        },
-      ],
-    });
-
+  it('skips duplicate file when active version with the same name already exists', async () => {
     prisma.dlImportBatch.create.mockResolvedValue({
       id: 10,
       status: 'RUNNING',
@@ -188,58 +173,53 @@ describe('TelegramDlImportService', () => {
     prisma.dlImportFile.create.mockResolvedValue({
       id: 101,
       originalFileName: 'groupexport_same.xlsx',
+      status: 'SKIPPED',
+      rowsTotal: 0,
+      rowsSuccess: 0,
+      rowsFailed: 0,
+      isActive: false,
+      replacedFileId: null,
+      error: 'Файл уже загружен, повторная выгрузка пропущена',
     });
-    prisma.dlImportFile.findFirst.mockResolvedValue({
+    prisma.dlImportFile.findFirst.mockResolvedValueOnce({
       id: 77,
       originalFileName: 'groupexport_same.xlsx',
       isActive: true,
+      status: 'DONE',
     });
-    prisma.dlImportFile.update
-      .mockResolvedValueOnce({
-        id: 77,
-        originalFileName: 'groupexport_same.xlsx',
-        isActive: false,
-      })
-      .mockResolvedValueOnce({
-        id: 101,
-        originalFileName: 'groupexport_same.xlsx',
-        status: 'DONE',
-        rowsTotal: 1,
-        rowsSuccess: 1,
-        rowsFailed: 0,
-        isActive: true,
-        replacedFileId: 77,
-        error: null,
-      });
-    prisma.dlContact.createMany.mockResolvedValue({ count: 1 });
-    prisma.$transaction.mockImplementation(
-      (callback: (tx: typeof prisma) => unknown) => callback(prisma),
-    );
 
     const service = new TelegramDlImportService(
       prisma as never,
       parser as never,
     );
 
-    await service.uploadFiles([createXlsxFile('groupexport_same.xlsx')]);
+    const result = await service.uploadFiles([
+      createXlsxFile('groupexport_same.xlsx'),
+    ]);
 
+    expect(result.files[0].status).toBe('SKIPPED');
+    expect(parser.parse).not.toHaveBeenCalled();
     expect(prisma.dlImportFile.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           originalFileName: 'groupexport_same.xlsx',
           isActive: true,
+          status: 'DONE',
         },
       }),
     );
-    expect(prisma.dlImportFile.update).toHaveBeenCalledWith(
+    expect(prisma.dlContact.createMany).not.toHaveBeenCalled();
+    expect(prisma.dlImportFile.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 77 },
-        data: expect.objectContaining({ isActive: false }),
+        data: expect.objectContaining({
+          originalFileName: 'groupexport_same.xlsx',
+          status: 'SKIPPED',
+        }),
       }),
     );
   });
 
-  it('keeps previous active version when new import fails', async () => {
+  it('allows retry when there is no active successful duplicate', async () => {
     parser.parse.mockReturnValue({
       originalFileName: 'groupexport_same.xlsx',
       replacementKey: 'groupexport_same.xlsx',
@@ -273,11 +253,9 @@ describe('TelegramDlImportService', () => {
       id: 101,
       originalFileName: 'groupexport_same.xlsx',
     });
-    prisma.dlImportFile.findFirst.mockResolvedValue({
-      id: 77,
-      originalFileName: 'groupexport_same.xlsx',
-      isActive: true,
-    });
+    prisma.dlImportFile.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
     prisma.dlContact.createMany.mockRejectedValue(new Error('db failed'));
     prisma.dlImportFile.update.mockResolvedValue({
       id: 101,
@@ -300,6 +278,7 @@ describe('TelegramDlImportService', () => {
       createXlsxFile('groupexport_same.xlsx'),
     ]);
 
+    expect(parser.parse).toHaveBeenCalledTimes(1);
     expect(result.files[0].status).toBe('FAILED');
     expect(prisma.dlImportFile.update).not.toHaveBeenCalledWith(
       expect.objectContaining({

@@ -13,7 +13,7 @@ export default function TelegramDlUploadHistory({
   return (
     <SectionCard
       title="История загрузок"
-      description="Последние импортированные файлы и их активные версии появятся здесь."
+      description="Последние импортированные файлы, пропущенные дубликаты и активные версии появятся здесь."
       className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl"
       headerClassName="border-white/10"
       contentClassName="space-y-4"
@@ -22,14 +22,14 @@ export default function TelegramDlUploadHistory({
         <div className="rounded-lg border border-dashed border-white/10 bg-slate-800/30 px-4 py-10 text-center">
           <div className="text-base font-medium text-white">Загружаю историю</div>
           <div className="mt-2 text-sm text-slate-400">
-            Получаю активные версии файлов из tgmbase.
+            Получаю историю файлов из tgmbase.
           </div>
         </div>
       ) : files.length === 0 ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-slate-800/30 px-4 py-10 text-center">
           <div className="text-base font-medium text-white">Пока нет загруженных файлов</div>
           <div className="mt-2 text-sm text-slate-400">
-            После первой выгрузки здесь появится список файлов, дата загрузки и статус замены.
+            После первой выгрузки здесь появится список файлов, дата загрузки и статус обработки.
           </div>
         </div>
       ) : (
@@ -45,12 +45,20 @@ export default function TelegramDlUploadHistory({
                   className={
                     file.status === 'FAILED'
                       ? 'text-rose-300'
+                      : file.status === 'SKIPPED'
+                        ? 'text-amber-300'
                       : file.isActive
                         ? 'text-emerald-300'
                         : 'text-slate-400'
                   }
                 >
-                  {file.status === 'FAILED' ? 'Ошибка' : file.isActive ? 'Активная' : 'Архивная'}
+                  {file.status === 'FAILED'
+                    ? 'Ошибка'
+                    : file.status === 'SKIPPED'
+                      ? 'Пропущена'
+                      : file.isActive
+                        ? 'Активная'
+                        : 'Архивная'}
                 </span>
               </div>
               <div className="mt-1 text-xs text-slate-400">

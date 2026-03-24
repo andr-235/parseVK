@@ -133,12 +133,47 @@ export class TelegramDlImportService {
   ): Promise<ImportFileProcessingResult> {
     let parsed: TelegramDlImportParseResult | null = null;
     let importFile: DlImportFile | null = null;
+    const normalizedFileName = file.originalname.trim();
 
     this.logger.log(
       `Batch ${batchId.toString()}: обработка файла ${file.originalname} (${file.size} bytes)`,
     );
 
     try {
+      const existingActive = await this.prisma.dlImportFile.findFirst({
+        where: {
+          originalFileName: normalizedFileName,
+          isActive: true,
+          status: 'DONE',
+        },
+        orderBy: [{ createdAt: 'desc' }],
+      });
+
+      if (existingActive) {
+        this.logger.log(
+          `Batch ${batchId.toString()}: файл ${normalizedFileName} пропущен, активная версия уже существует`,
+        );
+
+        importFile = await this.prisma.dlImportFile.create({
+          data: {
+            batchId,
+            originalFileName: normalizedFileName,
+            status: 'SKIPPED',
+            rowsTotal: 0,
+            rowsSuccess: 0,
+            rowsFailed: 0,
+            error: 'Файл уже загружен, повторная выгрузка пропущена',
+            isActive: false,
+            finishedAt: new Date(),
+          },
+        });
+
+        return {
+          ...this.mapFile(importFile),
+          succeeded: true,
+        };
+      }
+
       parsed = await this.parser.parse(file.buffer, file.originalname);
 
       importFile = await this.prisma.dlImportFile.create({
@@ -151,14 +186,6 @@ export class TelegramDlImportService {
         },
       });
       const importFileId = importFile.id;
-
-      const previousActive = await this.prisma.dlImportFile.findFirst({
-        where: {
-          originalFileName: parsed.replacementKey,
-          isActive: true,
-        },
-        orderBy: [{ createdAt: 'desc' }],
-      });
 
       const contactRows: DlContactCreateManyInput[] = parsed.contacts.map(
         (contact) => ({
@@ -199,27 +226,16 @@ export class TelegramDlImportService {
       const currentImportFile = importFile;
       const currentParsed = parsed;
 
-      const finalized = await this.prisma.$transaction(async (tx) => {
-        if (previousActive) {
-          await tx.dlImportFile.update({
-            where: { id: previousActive.id },
-            data: {
-              isActive: false,
-            },
-          });
-        }
-
-        return tx.dlImportFile.update({
+      const finalized = await this.prisma.dlImportFile.update({
           where: { id: currentImportFile.id },
           data: {
             status: 'DONE',
             rowsSuccess: currentParsed.contacts.length,
             rowsFailed: 0,
             isActive: true,
-            replacedFileId: previousActive?.id ?? null,
+            replacedFileId: null,
             finishedAt: new Date(),
           },
-        });
       });
 
       return {

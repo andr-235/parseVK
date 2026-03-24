@@ -127,7 +127,7 @@ export default function TelegramDlUploadCard({
                 </div>
                 <div className="mt-1 text-xs text-slate-400">
                   Строк: {file.rowsSuccess}/{file.rowsTotal}
-                  {file.replacedFileId ? ' • заменила предыдущую версию' : ''}
+                  {file.status === 'SKIPPED' ? ' • дубликат пропущен' : ''}
                 </div>
                 {file.error ? <div className="mt-1 text-xs text-rose-300">{file.error}</div> : null}
               </div>
