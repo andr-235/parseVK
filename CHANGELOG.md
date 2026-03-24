@@ -1,3 +1,11 @@
+## [0.26.2](https://github.com/andr-235/parseVK/compare/v0.26.1...v0.26.2) (2026-03-24)
+
+
+### Bug Fixes
+
+* добавить fallback для socket io на фронтенде ([e357dfd](https://github.com/andr-235/parseVK/commit/e357dfd4b53d2ee11d6f6343d747d9d07bac2a5d))
+* убрать шум health логов и исправить tgmbase url ([b2b46c5](https://github.com/andr-235/parseVK/commit/b2b46c5b8fc5ea98a7d2ca7d709d958e1d59ee04))
+
 ## [0.26.1](https://github.com/andr-235/parseVK/compare/v0.26.0...v0.26.1) (2026-03-24)
 
 
