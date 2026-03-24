@@ -15,6 +15,7 @@ export default function TelegramDlUploadHero() {
           </span>
         </div>
       }
+      className="py-1"
     />
   )
 }

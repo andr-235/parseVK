@@ -1,30 +1,37 @@
+import { useState } from 'react'
 import { useTelegramDlUpload } from '@/modules/telegram-dl-upload/hooks/useTelegramDlUpload'
 import TelegramDlUploadHero from './TelegramDlUploadHero'
-import TelegramDlUploadCard from './TelegramDlUploadCard'
-import TelegramDlUploadHistory from './TelegramDlUploadHistory'
+import TelegramDlTabs from './TelegramDlTabs'
+import TelegramDlImportWorkspace from './TelegramDlImportWorkspace'
 import TelegramDlMatchWorkspace from './TelegramDlMatchWorkspace'
 
 export default function TelegramDlUploadPage() {
   const state = useTelegramDlUpload()
+  const [activeTab, setActiveTab] = useState<'import' | 'match'>('import')
   const { files, isFilesLoading, uploadFiles, isUploading, uploadResult } = state
 
   return (
-    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 font-monitoring-body md:px-8">
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <TelegramDlUploadHero />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
-        <TelegramDlUploadCard
-          isUploading={isUploading}
-          uploadStatuses={uploadResult?.files ?? []}
-          onSubmit={uploadFiles}
-        />
-        <TelegramDlUploadHistory files={files} isLoading={isFilesLoading} />
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-75">
+        <TelegramDlTabs activeTab={activeTab} onChange={setActiveTab} />
       </div>
 
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-150">
-        <TelegramDlMatchWorkspace state={state} />
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+        {activeTab === 'import' ? (
+          <TelegramDlImportWorkspace
+            files={files}
+            isFilesLoading={isFilesLoading}
+            isUploading={isUploading}
+            uploadStatuses={uploadResult?.files ?? []}
+            onSubmit={uploadFiles}
+          />
+        ) : (
+          <TelegramDlMatchWorkspace state={state} />
+        )}
       </div>
     </div>
   )

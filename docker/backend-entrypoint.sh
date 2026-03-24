@@ -243,6 +243,13 @@ if ! $PRISMA_CMD db execute \
   exit 1
 fi
 
+if ! $PRISMA_CMD db execute \
+  --config prisma.tgmbase.config.ts \
+  --file prisma/tgmbase-migrations/20260325120000_add_dl_match_tables.sql; then
+  echo "ОШИБКА: не удалось применить tgmbase SQL-миграции матчинга."
+  exit 1
+fi
+
 # Генерация только если клиент не собран (в build stage уже выполнен prisma generate)
 if [ ! -f ./dist/src/generated/prisma/client/index.js ] && [ ! -f ./dist/generated/prisma/client/index.js ]; then
   echo "Генерация Prisma Client..."

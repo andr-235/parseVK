@@ -58,7 +58,7 @@ export default function TelegramDlMatchWorkspace({ state }: TelegramDlMatchWorks
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <TelegramDlMatchToolbar
         viewMode={displayMode}
         contactsCount={contacts.length}

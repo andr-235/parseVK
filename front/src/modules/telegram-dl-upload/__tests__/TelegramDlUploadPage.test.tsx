@@ -158,18 +158,25 @@ const renderPage = () => {
 }
 
 describe('TelegramDlUploadPage', () => {
-  it('renders the upload shell and history placeholder', () => {
+  it('starts on the import tab and shows upload workspace', () => {
     renderPage()
 
     expect(screen.getByText('Выгрузка с ДЛ')).toBeInTheDocument()
-    expect(screen.getByText(/Можно выбрать несколько XLSX файлов/)).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Импорт DL/i })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Матчинг DL/i })).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByText('История загрузок')).toBeInTheDocument()
     expect(screen.getByText(/Загружаю историю|Пока нет загруженных файлов/)).toBeInTheDocument()
+    expect(screen.queryByText('Полная DL-база')).not.toBeInTheDocument()
   })
 
-  it('renders the full DL table and match controls', async () => {
+  it('switches to the match tab and renders the full DL table', async () => {
+    const user = userEvent.setup()
     renderPage()
 
+    await user.click(screen.getByRole('tab', { name: /Матчинг DL/i }))
+
+    expect(screen.getByRole('tab', { name: /Импорт DL/i })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: /Матчинг DL/i })).toHaveAttribute('aria-selected', 'true')
     expect(await screen.findByText('Полная DL-база')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Найти совпадения в tgmbase/i })).toBeInTheDocument()
     expect(await screen.findByText('groupexport_ab3army_2024-10-15.xlsx')).toBeInTheDocument()
@@ -183,6 +190,7 @@ describe('TelegramDlUploadPage', () => {
     }
     renderPage()
 
+    await user.click(screen.getByRole('tab', { name: /Матчинг DL/i }))
     await user.click(await screen.findByRole('button', { name: /Найти совпадения в tgmbase/i }))
 
     expect(await screen.findByText('Совпадения tgmbase')).toBeInTheDocument()
@@ -192,7 +200,7 @@ describe('TelegramDlUploadPage', () => {
     await user.click(screen.getByRole('button', { name: /Выгрузить XLSX/i }))
     expect(matchService.exportMatchRun).toHaveBeenCalledWith('run-2')
 
-    await user.click(screen.getByRole('button', { name: /Показать все DL/i }))
+    await user.click(screen.getByRole('button', { name: /Показать всю DL-базу/i }))
     expect(await screen.findByText('Полная DL-база')).toBeInTheDocument()
   })
 
