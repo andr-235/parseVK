@@ -32,6 +32,17 @@ vi.mock('socket.io-client', () => ({
 const mockedSearch = tgmbaseSearchService.search as unknown as ReturnType<typeof vi.fn>
 const mockedIo = vi.mocked(io)
 
+const resolveExpectedTgmbaseSocketUrl = () => {
+  const raw = import.meta.env.VITE_API_WS_URL
+  const trimmed = typeof raw === 'string' ? raw.trim() : ''
+  const base =
+    trimmed !== '' && trimmed.toLowerCase() !== 'auto'
+      ? trimmed
+      : `ws://${window.location.host}`
+
+  return base.replace(/\/api$/i, '').replace(/\/tgmbase-search$/i, '') + '/tgmbase-search'
+}
+
 const createResponse = (overrides = {}) => ({
   summary: {
     total: 3,
@@ -202,7 +213,7 @@ describe('TgmbaseSearchPage', () => {
       pageSize: 20,
     })
     expect(mockedIo).toHaveBeenCalledTimes(1)
-    expect(mockedIo.mock.calls[0]?.[0]).toBe('ws://192.168.88.12:8080/api/tasks/tgmbase-search')
+    expect(mockedIo.mock.calls[0]?.[0]).toBe(resolveExpectedTgmbaseSocketUrl())
     expect(mockedIo.mock.calls[0]).toHaveLength(1)
   })
 

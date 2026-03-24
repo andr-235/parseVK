@@ -13,6 +13,17 @@ vi.mock('socket.io-client', () => ({
   io: (...args: unknown[]) => mockIo(...args),
 }))
 
+const resolveExpectedTasksSocketUrl = () => {
+  const raw = import.meta.env.VITE_API_WS_URL
+  const trimmed = typeof raw === 'string' ? raw.trim() : ''
+
+  if (trimmed !== '' && trimmed.toLowerCase() !== 'auto') {
+    return trimmed
+  }
+
+  return `ws://${window.location.host}/tasks`
+}
+
 describe('useTasksSocket', () => {
   beforeEach(() => {
     mockIo.mockClear()
@@ -24,7 +35,7 @@ describe('useTasksSocket', () => {
     renderHook(() => useTasksSocket())
 
     expect(mockIo).toHaveBeenCalledTimes(1)
-    expect(mockIo.mock.calls[0]?.[0]).toBe('ws://192.168.88.12:8080/api/tasks')
+    expect(mockIo.mock.calls[0]?.[0]).toBe(resolveExpectedTasksSocketUrl())
     expect(mockIo.mock.calls[0]).toHaveLength(1)
   })
 })
