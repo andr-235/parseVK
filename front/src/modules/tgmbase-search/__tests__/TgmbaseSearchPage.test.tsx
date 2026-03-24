@@ -36,9 +36,7 @@ const resolveExpectedTgmbaseSocketUrl = () => {
   const raw = import.meta.env.VITE_API_WS_URL
   const trimmed = typeof raw === 'string' ? raw.trim() : ''
   const base =
-    trimmed !== '' && trimmed.toLowerCase() !== 'auto'
-      ? trimmed
-      : `ws://${window.location.host}`
+    trimmed !== '' && trimmed.toLowerCase() !== 'auto' ? trimmed : `ws://${window.location.host}`
 
   return base.replace(/\/api$/i, '').replace(/\/tgmbase-search$/i, '') + '/tgmbase-search'
 }
