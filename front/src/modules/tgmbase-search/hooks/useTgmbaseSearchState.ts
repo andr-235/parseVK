@@ -21,6 +21,7 @@ type TgmbaseProgressState = {
   connected: boolean
   error: string | null
 }
+export type { TgmbaseProgressState }
 
 const parseQueries = (value: string): string[] =>
   value
@@ -138,6 +139,8 @@ export function useTgmbaseSearchState() {
 
     const searchId = createSearchId()
     const totalBatches = Math.ceil(queries.length / SEARCH_BATCH_SIZE)
+    setResult(null)
+    setSelectedQuery(null)
     setProgress({
       searchId,
       status: 'connecting',
@@ -192,6 +195,16 @@ export function useTgmbaseSearchState() {
 
   const selectQuery = (query: string) => {
     setSelectedQuery(query)
+  }
+
+  const resetSearch = () => {
+    socketRef.current?.disconnect()
+    socketRef.current = null
+    setInput('')
+    setResult(null)
+    setSelectedQuery(null)
+    setLoadingMoreQuery(null)
+    setProgress(null)
   }
 
   const loadMoreMessages = async (item: TgmbaseSearchItem) => {
@@ -256,6 +269,7 @@ export function useTgmbaseSearchState() {
     isLoading: searchMutation.isPending,
     loadingMoreQuery,
     submit,
+    resetSearch,
     selectQuery,
     loadMoreMessages,
   }

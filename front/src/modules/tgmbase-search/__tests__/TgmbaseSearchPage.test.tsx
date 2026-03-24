@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TgmbaseSearchPage from '../components/TgmbaseSearchPage'
@@ -9,6 +9,7 @@ type MockSocketHandler = (payload?: unknown) => void
 
 const socketHandlers = new Map<string, MockSocketHandler>()
 const mockSocket = {
+  connected: true,
   on: vi.fn((event: string, handler: MockSocketHandler) => {
     socketHandlers.set(event, handler)
     return mockSocket
@@ -31,9 +32,9 @@ const mockedSearch = tgmbaseSearchService.search as unknown as ReturnType<typeof
 
 const createResponse = (overrides = {}) => ({
   summary: {
-    total: 2,
+    total: 3,
     found: 1,
-    notFound: 0,
+    notFound: 1,
     ambiguous: 1,
     invalid: 0,
     error: 0,
@@ -127,6 +128,29 @@ const createResponse = (overrides = {}) => ({
       },
       error: null,
     },
+    {
+      query: '000',
+      normalizedQuery: '000',
+      queryType: 'telegramId',
+      status: 'not_found',
+      profile: null,
+      candidates: [],
+      groups: [],
+      contacts: [],
+      messagesPage: {
+        items: [],
+        page: 1,
+        pageSize: 20,
+        total: 0,
+        hasMore: false,
+      },
+      stats: {
+        groups: 0,
+        contacts: 0,
+        messages: 0,
+      },
+      error: null,
+    },
   ],
   ...overrides,
 })
@@ -155,103 +179,66 @@ describe('TgmbaseSearchPage', () => {
     mockSocket.disconnect.mockClear()
   })
 
-  it('submits multiple queries and renders summary rows', async () => {
+  it('submits multiple queries and renders batch workspace', async () => {
     mockedSearch.mockResolvedValue(createResponse())
 
     renderPage()
 
     const user = userEvent.setup()
-    await user.type(screen.getByLabelText(/список запросов/i), '123{enter}@demo')
-    await user.click(screen.getByRole('button', { name: /найти/i }))
+    await user.type(screen.getByLabelText(/список запросов/i), '123{enter}@demo{enter}000')
+    await user.click(screen.getByRole('button', { name: /^найти$/i }))
 
-    expect(await screen.findByText('Сводка по батчу')).toBeInTheDocument()
-    expect((await screen.findAllByText('123')).length).toBeGreaterThan(0)
-    expect((await screen.findAllByText('@demo')).length).toBeGreaterThan(0)
+    expect(await screen.findByText('Результаты батча')).toBeInTheDocument()
+    expect(screen.getByText('Подготовлено запросов: 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Все 3' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Найдено 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Не найдено 1' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Детали результата' })).toBeInTheDocument()
     expect(mockedSearch.mock.calls[0]?.[0]).toMatchObject({
-      queries: ['123', '@demo'],
+      queries: ['123', '@demo', '000'],
       page: 1,
       pageSize: 20,
     })
   })
 
-  it('renders ambiguous state with candidate hint', async () => {
+  it('filters results from summary controls and updates detail panel', async () => {
     mockedSearch.mockResolvedValue(createResponse())
 
     renderPage()
 
     const user = userEvent.setup()
-    await user.type(screen.getByLabelText(/список запросов/i), '@demo')
-    await user.click(screen.getByRole('button', { name: /найти/i }))
+    await user.type(screen.getByLabelText(/список запросов/i), '123{enter}@demo{enter}000')
+    await user.click(screen.getByRole('button', { name: /^найти$/i }))
 
-    expect(await screen.findByText('Кандидаты')).toBeInTheDocument()
-    expect((await screen.findAllByText(/Demo One/)).length).toBeGreaterThan(0)
+    await user.click(await screen.findByRole('button', { name: 'Не найдено 1' }))
+
+    const list = screen.getByRole('list', { name: 'Результаты поиска tgmbase' })
+    expect(within(list).getByText('000')).toBeInTheDocument()
+    expect(within(list).queryByText('123')).not.toBeInTheDocument()
+    expect(screen.getByText('Совпадения не найдены')).toBeInTheDocument()
   })
 
-  it('renders not_found state', async () => {
-    mockedSearch.mockResolvedValue(
-      createResponse({
-        summary: {
-          total: 1,
-          found: 0,
-          notFound: 1,
-          ambiguous: 0,
-          invalid: 0,
-          error: 0,
-        },
-        items: [
-          {
-            query: '000',
-            normalizedQuery: '000',
-            queryType: 'telegramId',
-            status: 'not_found',
-            profile: null,
-            candidates: [],
-            groups: [],
-            contacts: [],
-            messagesPage: { items: [], page: 1, pageSize: 20, total: 0, hasMore: false },
-            stats: { groups: 0, contacts: 0, messages: 0 },
-            error: null,
-          },
-        ],
-      })
-    )
-
-    renderPage()
-
-    const user = userEvent.setup()
-    await user.type(screen.getByLabelText(/список запросов/i), '000')
-    await user.click(screen.getByRole('button', { name: /найти/i }))
-
-    expect(await screen.findByText('Совпадения не найдены')).toBeInTheDocument()
-  })
-
-  it('scrolls to the result card when a summary row is clicked', async () => {
+  it('switches the detail panel when another result row is selected', async () => {
     mockedSearch.mockResolvedValue(createResponse())
 
     renderPage()
 
     const user = userEvent.setup()
-    await user.type(screen.getByLabelText(/список запросов/i), '123{enter}@demo')
-    await user.click(screen.getByRole('button', { name: /найти/i }))
+    await user.type(screen.getByLabelText(/список запросов/i), '123{enter}@demo{enter}000')
+    await user.click(screen.getByRole('button', { name: /^найти$/i }))
 
-    const scrollSpy = vi.fn()
-    const targetCard = (await screen.findAllByText('Ivan Petrov'))
-      .map((element) => element.closest('[id]'))
-      .find(Boolean)
-    expect(targetCard).not.toBeNull()
-    Object.defineProperty(targetCard as Element, 'scrollIntoView', {
-      value: scrollSpy,
-      configurable: true,
-    })
+    await user.click(await screen.findByRole('button', { name: /@demo username/i }))
 
-    await user.click(screen.getAllByText('123')[0])
+    const details = screen.getByRole('region', { name: 'Панель деталей tgmbase' })
+    expect(within(details).getByText('Demo One')).toBeInTheDocument()
 
-    await waitFor(() => {
-      expect(scrollSpy).toHaveBeenCalled()
-    })
+    await user.click(screen.getByRole('button', { name: /123 telegramId/i }))
+
+    expect(within(details).getByText('Ivan Petrov')).toBeInTheDocument()
+    expect(within(details).getByText('Test Chat')).toBeInTheDocument()
   })
 
-  it('loads more messages without replacing the existing list', async () => {
+  it('loads more messages for the active result without replacing existing messages', async () => {
     mockedSearch
       .mockResolvedValueOnce(
         createResponse({
@@ -334,7 +321,7 @@ describe('TgmbaseSearchPage', () => {
 
     const user = userEvent.setup()
     await user.type(screen.getByLabelText(/список запросов/i), '123')
-    await user.click(screen.getByRole('button', { name: /найти/i }))
+    await user.click(screen.getByRole('button', { name: /^найти$/i }))
 
     expect(await screen.findByText('first page')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /показать ещё сообщения/i }))
@@ -361,7 +348,7 @@ describe('TgmbaseSearchPage', () => {
 
     const user = userEvent.setup()
     await user.type(screen.getByLabelText(/список запросов/i), '123{enter}456')
-    await user.click(screen.getByRole('button', { name: /найти/i }))
+    await user.click(screen.getByRole('button', { name: /^найти$/i }))
 
     await waitFor(() => {
       expect(mockedSearch).toHaveBeenCalled()
@@ -386,13 +373,13 @@ describe('TgmbaseSearchPage', () => {
       })
     })
 
-    expect(await screen.findByText('Обработано: 1 из 2')).toBeInTheDocument()
-    expect(screen.getByText('Батч: 1 из 1')).toBeInTheDocument()
+    expect(await screen.findByText('Обработано 1 из 2')).toBeInTheDocument()
+    expect(screen.getByText('Батч 1 из 1')).toBeInTheDocument()
 
     act(() => {
       resolveSearch(createResponse())
     })
 
-    expect(await screen.findByText('Сводка по батчу')).toBeInTheDocument()
+    expect(await screen.findByText('Результаты батча')).toBeInTheDocument()
   })
 })
