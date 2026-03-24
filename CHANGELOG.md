@@ -1,3 +1,10 @@
+## [0.29.3](https://github.com/andr-235/parseVK/compare/v0.29.2...v0.29.3) (2026-03-24)
+
+
+### Bug Fixes
+
+* вынесен отдельный сервис миграций для deploy ([c8d5a65](https://github.com/andr-235/parseVK/commit/c8d5a656228835d657d74fcf1c46b58b82cb4b61))
+
 ## [0.29.2](https://github.com/andr-235/parseVK/compare/v0.29.1...v0.29.2) (2026-03-24)
 
 
