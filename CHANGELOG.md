@@ -1,3 +1,17 @@
+# [0.28.0](https://github.com/andr-235/parseVK/compare/v0.27.0...v0.28.0) (2026-03-24)
+
+
+### Bug Fixes
+
+* исправить линт и типы импорта выгрузки с дл ([d01eb7c](https://github.com/andr-235/parseVK/commit/d01eb7cfbd3d10c2a9652547eeaa54e0e83481b7))
+* исправить сборку sidebar и добавить страницу выгрузки dl ([ade3ef0](https://github.com/andr-235/parseVK/commit/ade3ef07339e22c5834c3ba0d748e5c1b7e08669))
+* отформатировать ui выгрузки с дл ([4a2eefe](https://github.com/andr-235/parseVK/commit/4a2eefef673c865c391b71abed76c88fdfb09074))
+
+
+### Features
+
+* добавить выгрузку с дл в telegram ([640160d](https://github.com/andr-235/parseVK/commit/640160deda96eb5ea5c5bb45ae34bb6ace90c006))
+
 # [0.27.0](https://github.com/andr-235/parseVK/compare/v0.26.2...v0.27.0) (2026-03-24)
 
 
