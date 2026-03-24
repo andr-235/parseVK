@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type {
   DlContact,
   DlMatchResult,
@@ -66,9 +70,12 @@ export class TelegramDlMatchService {
       const strictMatchesTotal = results.filter(
         (item) => item.strictTelegramIdMatch,
       ).length;
-      const usernameMatchesTotal = results.filter((item) => item.usernameMatch)
-        .length;
-      const phoneMatchesTotal = results.filter((item) => item.phoneMatch).length;
+      const usernameMatchesTotal = results.filter(
+        (item) => item.usernameMatch,
+      ).length;
+      const phoneMatchesTotal = results.filter(
+        (item) => item.phoneMatch,
+      ).length;
       const contactsTotal = contacts.length;
       const matchesTotal = results.length;
 
@@ -135,9 +142,7 @@ export class TelegramDlMatchService {
     const items = await this.prisma.dlMatchResult.findMany({
       where: {
         runId: BigInt(runId),
-        ...(query.strictOnly === 'true'
-          ? { strictTelegramIdMatch: true }
-          : {}),
+        ...(query.strictOnly === 'true' ? { strictTelegramIdMatch: true } : {}),
         ...(query.usernameOnly === 'true' ? { usernameMatch: true } : {}),
         ...(query.phoneOnly === 'true' ? { phoneMatch: true } : {}),
       },
@@ -162,7 +167,10 @@ export class TelegramDlMatchService {
     };
   }
 
-  private async buildResults(runId: bigint, contacts: DlContactWithImportFile[]) {
+  private async buildResults(
+    runId: bigint,
+    contacts: DlContactWithImportFile[],
+  ) {
     const rows: DlMatchResultCreateManyInput[] = [];
 
     for (const contact of contacts) {
@@ -219,7 +227,11 @@ export class TelegramDlMatchService {
 
     const upsert = (
       matchedUser: user,
-      flags: { strictTelegramIdMatch?: boolean; usernameMatch?: boolean; phoneMatch?: boolean },
+      flags: {
+        strictTelegramIdMatch?: boolean;
+        usernameMatch?: boolean;
+        phoneMatch?: boolean;
+      },
     ) => {
       const key = matchedUser.user_id.toString();
       const current = merged.get(key) ?? {
@@ -239,7 +251,9 @@ export class TelegramDlMatchService {
       });
     };
 
-    strictMatches.forEach((item) => upsert(item, { strictTelegramIdMatch: true }));
+    strictMatches.forEach((item) =>
+      upsert(item, { strictTelegramIdMatch: true }),
+    );
     usernameMatches.forEach((item) => upsert(item, { usernameMatch: true }));
     phoneMatches.forEach((item) => upsert(item, { phoneMatch: true }));
 

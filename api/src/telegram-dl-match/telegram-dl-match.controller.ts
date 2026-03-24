@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  Res,
-} from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { TelegramDlMatchService } from './telegram-dl-match.service.js';
 import { TelegramDlMatchResultsQueryDto } from './dto/telegram-dl-match-results-query.dto.js';

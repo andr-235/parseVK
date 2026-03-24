@@ -53,8 +53,8 @@ describe('TelegramDlMatchService', () => {
     prisma.dlMatchRun.create.mockResolvedValue({ id: 10n, status: 'RUNNING' });
     prisma.dlMatchRun.update.mockResolvedValue({ id: 10n, status: 'DONE' });
     prisma.dlMatchResult.createMany.mockResolvedValue({ count: 1 });
-    prisma.$transaction.mockImplementation((callback: (tx: unknown) => unknown) =>
-      callback(prisma),
+    prisma.$transaction.mockImplementation(
+      (callback: (tx: unknown) => unknown) => callback(prisma),
     );
 
     const service = new TelegramDlMatchService(prisma as never);
