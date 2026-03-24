@@ -227,15 +227,15 @@ export class TelegramDlImportService {
       const currentParsed = parsed;
 
       const finalized = await this.prisma.dlImportFile.update({
-          where: { id: currentImportFile.id },
-          data: {
-            status: 'DONE',
-            rowsSuccess: currentParsed.contacts.length,
-            rowsFailed: 0,
-            isActive: true,
-            replacedFileId: null,
-            finishedAt: new Date(),
-          },
+        where: { id: currentImportFile.id },
+        data: {
+          status: 'DONE',
+          rowsSuccess: currentParsed.contacts.length,
+          rowsFailed: 0,
+          isActive: true,
+          replacedFileId: null,
+          finishedAt: new Date(),
+        },
       });
 
       return {
