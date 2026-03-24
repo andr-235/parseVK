@@ -22,7 +22,11 @@ export function TgmbaseResultDetails({
 }: TgmbaseResultDetailsProps) {
   if (!item) {
     return (
-      <Card className="border-white/10 bg-slate-900/60 text-slate-100" role="region" aria-label="Панель деталей tgmbase">
+      <Card
+        className="border-white/10 bg-slate-900/60 text-slate-100"
+        role="region"
+        aria-label="Панель деталей tgmbase"
+      >
         <CardHeader>
           <h2 className="text-xl font-semibold">Детали результата</h2>
         </CardHeader>
@@ -36,7 +40,11 @@ export function TgmbaseResultDetails({
                   : 'Запустите поиск, чтобы открыть детали результата.'}
               </div>
               {hasActiveFilters ? (
-                <button type="button" className="text-cyan-300 underline underline-offset-4" onClick={onResetFilters}>
+                <button
+                  type="button"
+                  className="text-cyan-300 underline underline-offset-4"
+                  onClick={onResetFilters}
+                >
                   Сбросить фильтры
                 </button>
               ) : null}
@@ -48,7 +56,11 @@ export function TgmbaseResultDetails({
   }
 
   return (
-    <Card className="border-white/10 bg-slate-900/60 text-slate-100" role="region" aria-label="Панель деталей tgmbase">
+    <Card
+      className="border-white/10 bg-slate-900/60 text-slate-100"
+      role="region"
+      aria-label="Панель деталей tgmbase"
+    >
       <CardHeader className="gap-3 border-b border-white/10">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-semibold">Детали результата</h2>
@@ -77,7 +89,9 @@ export function TgmbaseResultDetails({
 
         {item.profile ? (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Профиль</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+              Профиль
+            </h3>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-card border border-white/10 bg-slate-950/60 p-4">
                 <div className="text-lg font-semibold text-slate-100">{item.profile.fullName}</div>
@@ -94,10 +108,15 @@ export function TgmbaseResultDetails({
 
         {item.candidates.length > 0 ? (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Кандидаты</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+              Кандидаты
+            </h3>
             <div className="grid gap-3 md:grid-cols-2">
               {item.candidates.map((candidate) => (
-                <div key={candidate.telegramId} className="rounded-card border border-white/10 bg-slate-950/60 p-4">
+                <div
+                  key={candidate.telegramId}
+                  className="rounded-card border border-white/10 bg-slate-950/60 p-4"
+                >
                   <div className="font-semibold text-slate-100">{candidate.fullName}</div>
                   <div className="mt-2 text-sm text-slate-300">
                     {candidate.username ? `@${candidate.username}` : candidate.telegramId}
@@ -110,10 +129,15 @@ export function TgmbaseResultDetails({
 
         {item.groups.length > 0 ? (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Чаты и каналы</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+              Чаты и каналы
+            </h3>
             <div className="grid gap-3 md:grid-cols-2">
               {item.groups.map((group) => (
-                <div key={group.peerId} className="rounded-card border border-white/10 bg-slate-950/60 p-4">
+                <div
+                  key={group.peerId}
+                  className="rounded-card border border-white/10 bg-slate-950/60 p-4"
+                >
                   <div className="font-semibold text-slate-100">{group.title}</div>
                   <div className="mt-2 text-sm text-slate-400">
                     {group.type} · {group.peerId}
@@ -126,10 +150,15 @@ export function TgmbaseResultDetails({
 
         {item.contacts.length > 0 ? (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Активные контакты</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+              Активные контакты
+            </h3>
             <div className="grid gap-3 md:grid-cols-2">
               {item.contacts.map((contact) => (
-                <div key={contact.telegramId} className="rounded-card border border-white/10 bg-slate-950/60 p-4">
+                <div
+                  key={contact.telegramId}
+                  className="rounded-card border border-white/10 bg-slate-950/60 p-4"
+                >
                   <div className="font-semibold text-slate-100">{contact.fullName}</div>
                   <div className="mt-2 text-sm text-slate-300">
                     {contact.username ? `@${contact.username}` : contact.telegramId}

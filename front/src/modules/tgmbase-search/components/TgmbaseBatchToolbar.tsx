@@ -79,7 +79,10 @@ export function TgmbaseBatchToolbar({
         </div>
 
         {progress ? (
-          <div className="rounded-card border border-cyan-400/20 bg-slate-900/80 p-4" aria-live="polite">
+          <div
+            className="rounded-card border border-cyan-400/20 bg-slate-900/80 p-4"
+            aria-live="polite"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-xs uppercase tracking-[0.24em] text-cyan-300/70">
@@ -93,18 +96,30 @@ export function TgmbaseBatchToolbar({
                 {progress.connected ? 'WebSocket подключен' : 'WebSocket подключается'}
               </div>
             </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
+            <div
+              className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800"
+              role="progressbar"
+              aria-valuenow={progressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
               <div
                 className="h-full rounded-full bg-cyan-400 transition-[width] duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
             <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-300">
-              <span>Обработано {progress.processedQueries} из {progress.totalQueries}</span>
-              <span>Батч {progress.currentBatch} из {progress.totalBatches}</span>
+              <span>
+                Обработано {progress.processedQueries} из {progress.totalQueries}
+              </span>
+              <span>
+                Батч {progress.currentBatch} из {progress.totalBatches}
+              </span>
               <span>Прогресс {progressPercent}%</span>
             </div>
-            {progress.error ? <div className="mt-2 text-sm text-rose-300">{progress.error}</div> : null}
+            {progress.error ? (
+              <div className="mt-2 text-sm text-rose-300">{progress.error}</div>
+            ) : null}
           </div>
         ) : null}
 

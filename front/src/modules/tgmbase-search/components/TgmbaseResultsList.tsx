@@ -65,7 +65,10 @@ export function TgmbaseResultsList({
                         <Badge variant="outline" className="text-slate-200">
                           {tgmbaseQueryTypeLabels[item.queryType]}
                         </Badge>
-                        <Badge variant="outline" className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+                        <Badge
+                          variant="outline"
+                          className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200"
+                        >
                           {tgmbaseStatusLabels[item.status]}
                         </Badge>
                       </div>

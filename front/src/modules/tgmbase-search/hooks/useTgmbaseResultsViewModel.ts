@@ -146,7 +146,10 @@ export function useTgmbaseResultsViewModel({
         return false
       }
 
-      if (normalizedSearchTerm.length > 0 && !buildSearchIndex(item).includes(normalizedSearchTerm)) {
+      if (
+        normalizedSearchTerm.length > 0 &&
+        !buildSearchIndex(item).includes(normalizedSearchTerm)
+      ) {
         return false
       }
 

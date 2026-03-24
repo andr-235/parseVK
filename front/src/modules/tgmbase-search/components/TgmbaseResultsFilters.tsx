@@ -14,10 +14,7 @@ interface TgmbaseResultsFiltersProps {
   queryTypeFilters: TgmbaseQueryType[]
   onToggleQueryType: (value: TgmbaseQueryType) => void
   presenceFilters: TgmbasePresenceFilters
-  onSetPresenceFilter: (
-    key: keyof TgmbasePresenceFilters,
-    value: boolean
-  ) => void
+  onSetPresenceFilter: (key: keyof TgmbasePresenceFilters, value: boolean) => void
   sortBy: TgmbaseSortMode
   onSortChange: (value: TgmbaseSortMode) => void
   onResetFilters: () => void
