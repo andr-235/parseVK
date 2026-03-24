@@ -21,7 +21,11 @@ const tabs: Array<{ id: TelegramDlTabId; label: string; description: string }> =
 export default function TelegramDlTabs({ activeTab, onChange }: TelegramDlTabsProps) {
   return (
     <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-2 shadow-soft-md backdrop-blur-2xl">
-      <div role="tablist" aria-label="Режимы работы с выгрузкой DL" className="grid gap-2 md:grid-cols-2">
+      <div
+        role="tablist"
+        aria-label="Режимы работы с выгрузкой DL"
+        className="grid gap-2 md:grid-cols-2"
+      >
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab
 
