@@ -51,9 +51,6 @@ export const telegramDlUploadService = {
 
   async getFiles(): Promise<TelegramDlImportFile[]> {
     const response = await createRequest(`${API_URL}/telegram/dl-import/files?activeOnly=true`)
-    return handleResponse<TelegramDlImportFile[]>(
-      response,
-      'Не удалось загрузить историю выгрузок'
-    )
+    return handleResponse<TelegramDlImportFile[]>(response, 'Не удалось загрузить историю выгрузок')
   },
 }

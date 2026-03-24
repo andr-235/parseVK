@@ -6,7 +6,10 @@ interface TelegramDlUploadHistoryProps {
   isLoading: boolean
 }
 
-export default function TelegramDlUploadHistory({ files, isLoading }: TelegramDlUploadHistoryProps) {
+export default function TelegramDlUploadHistory({
+  files,
+  isLoading,
+}: TelegramDlUploadHistoryProps) {
   return (
     <SectionCard
       title="История загрузок"
@@ -18,7 +21,9 @@ export default function TelegramDlUploadHistory({ files, isLoading }: TelegramDl
       {isLoading ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-slate-800/30 px-4 py-10 text-center">
           <div className="text-base font-medium text-white">Загружаю историю</div>
-          <div className="mt-2 text-sm text-slate-400">Получаю активные версии файлов из tgmbase.</div>
+          <div className="mt-2 text-sm text-slate-400">
+            Получаю активные версии файлов из tgmbase.
+          </div>
         </div>
       ) : files.length === 0 ? (
         <div className="rounded-lg border border-dashed border-white/10 bg-slate-800/30 px-4 py-10 text-center">
