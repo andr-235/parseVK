@@ -237,7 +237,7 @@ fi
 
 echo "Применяем tgmbase SQL-миграции..."
 if ! $PRISMA_CMD db execute \
-  --schema prisma/tgmbase.prisma \
+  --config prisma.tgmbase.config.ts \
   --file prisma/tgmbase-migrations/20260324160500_add_dl_import_tables.sql; then
   echo "ОШИБКА: не удалось применить tgmbase SQL-миграции."
   exit 1
