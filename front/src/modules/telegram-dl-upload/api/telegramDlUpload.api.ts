@@ -1,7 +1,30 @@
 import toast from 'react-hot-toast'
 import { API_URL, createRequest, handleResponse } from '@/shared/api'
+import { saveReportBlob } from '@/shared/utils'
 
 const UPLOAD_CHUNK_SIZE = 20
+
+const DEFAULT_MATCH_EXPORT_NAME = 'telegram_dl_match.xlsx'
+
+const extractFilename = (disposition: string | null, fallback: string): string => {
+  if (!disposition) {
+    return fallback
+  }
+
+  const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(disposition)
+  const encodedName = match?.[1]
+  const simpleName = match?.[2]
+
+  if (encodedName) {
+    try {
+      return decodeURIComponent(encodedName)
+    } catch {
+      return encodedName
+    }
+  }
+
+  return simpleName || fallback
+}
 
 export interface TelegramDlImportBatch {
   id: string
@@ -26,6 +49,86 @@ export interface TelegramDlImportFile {
 export interface TelegramDlImportUploadResponse {
   batch: TelegramDlImportBatch
   files: TelegramDlImportFile[]
+}
+
+export interface TelegramDlImportContact {
+  id: string
+  importFileId: string
+  originalFileName: string
+  telegramId: string | null
+  username: string | null
+  phone: string | null
+  firstName: string | null
+  lastName: string | null
+  fullName: string | null
+  region: string | null
+  sourceRowIndex: number
+  description: string | null
+  joinedAt: string | null
+  address: string | null
+  vkUrl: string | null
+  email: string | null
+  telegramContact: string | null
+  instagram: string | null
+  viber: string | null
+  odnoklassniki: string | null
+  birthDateText: string | null
+  usernameExtra: string | null
+  geo: string | null
+  createdAt: string
+}
+
+export interface TelegramDlMatchRun {
+  id: string
+  status: 'RUNNING' | 'DONE' | 'FAILED'
+  contactsTotal: number
+  matchesTotal: number
+  strictMatchesTotal: number
+  usernameMatchesTotal: number
+  phoneMatchesTotal: number
+  createdAt: string
+  finishedAt: string | null
+  error: string | null
+}
+
+export interface TelegramDlMatchResultContact {
+  id: string
+  importFileId: string
+  originalFileName: string
+  telegramId: string | null
+  username: string | null
+  phone: string | null
+  firstName: string | null
+  lastName: string | null
+  fullName: string | null
+  region: string | null
+  sourceRowIndex: number
+}
+
+export interface TelegramDlMatchResultUser {
+  id: string
+  user_id: string
+  bot: boolean
+  scam: boolean
+  premium: boolean
+  first_name: string | null
+  last_name: string | null
+  username: string | null
+  phone: string | null
+  upd_date: string | null
+}
+
+export interface TelegramDlMatchResult {
+  id: string
+  runId: string
+  dlContactId: string
+  tgmbaseUserId: string | null
+  strictTelegramIdMatch: boolean
+  usernameMatch: boolean
+  phoneMatch: boolean
+  createdAt: string
+  dlContact: TelegramDlMatchResultContact
+  user: TelegramDlMatchResultUser | null
 }
 
 const chunkFiles = (files: File[], chunkSize: number): File[][] => {
@@ -111,5 +214,100 @@ export const telegramDlUploadService = {
       filesResponse,
       'Не удалось загрузить историю выгрузок'
     )
+  },
+
+  async getContacts(): Promise<TelegramDlImportContact[]> {
+    try {
+      const response = await createRequest(`${API_URL}/telegram/dl-import/contacts`)
+      return await handleResponse<TelegramDlImportContact[]>(
+        response,
+        'Не удалось загрузить контакты DL'
+      )
+    } catch (error) {
+      toast.error('Не удалось загрузить контакты DL')
+      throw error
+    }
+  },
+
+  async getMatchRuns(): Promise<TelegramDlMatchRun[]> {
+    try {
+      const response = await createRequest(`${API_URL}/telegram/dl-match/runs`)
+      return await handleResponse<TelegramDlMatchRun[]>(
+        response,
+        'Не удалось загрузить запуски матчинга'
+      )
+    } catch (error) {
+      toast.error('Не удалось загрузить запуски матчинга')
+      throw error
+    }
+  },
+
+  async getMatchRun(runId: string): Promise<TelegramDlMatchRun> {
+    try {
+      const response = await createRequest(`${API_URL}/telegram/dl-match/runs/${runId}`)
+      return await handleResponse<TelegramDlMatchRun>(
+        response,
+        'Не удалось загрузить запуск матчинга'
+      )
+    } catch (error) {
+      toast.error('Не удалось загрузить запуск матчинга')
+      throw error
+    }
+  },
+
+  async getMatchResults(runId: string): Promise<TelegramDlMatchResult[]> {
+    try {
+      const response = await createRequest(`${API_URL}/telegram/dl-match/runs/${runId}/results`)
+      return await handleResponse<TelegramDlMatchResult[]>(
+        response,
+        'Не удалось загрузить результаты матчинга'
+      )
+    } catch (error) {
+      toast.error('Не удалось загрузить результаты матчинга')
+      throw error
+    }
+  },
+
+  async createMatchRun(): Promise<TelegramDlMatchRun> {
+    try {
+      const response = await createRequest(`${API_URL}/telegram/dl-match/runs`, {
+        method: 'POST',
+      })
+      const run = await handleResponse<TelegramDlMatchRun>(
+        response,
+        'Не удалось запустить матчинг DL'
+      )
+      toast.success('Матчинг DL завершен')
+      return run
+    } catch (error) {
+      toast.error('Не удалось запустить матчинг DL')
+      throw error
+    }
+  },
+
+  async exportMatchRun(runId: string): Promise<void> {
+    try {
+      const response = await createRequest(`${API_URL}/telegram/dl-match/runs/${runId}/export`)
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '')
+        throw new Error(text || 'Не удалось выгрузить результат матчинга')
+      }
+
+      const blob = await response.blob()
+      if (blob.size === 0) {
+        throw new Error('Downloaded file is empty')
+      }
+
+      const fallbackName = DEFAULT_MATCH_EXPORT_NAME
+      const filename = extractFilename(response.headers.get('Content-Disposition'), fallbackName)
+      saveReportBlob(blob, filename)
+      toast.success('Результат матчинга сохранён')
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Не удалось выгрузить результат матчинга'
+      toast.error(message)
+      throw error
+    }
   },
 }

@@ -61,7 +61,9 @@ export const ModelName = {
   user: 'user',
   DlImportBatch: 'DlImportBatch',
   DlImportFile: 'DlImportFile',
-  DlContact: 'DlContact'
+  DlContact: 'DlContact',
+  DlMatchRun: 'DlMatchRun',
+  DlMatchResult: 'DlMatchResult'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -251,12 +253,59 @@ export const DlContactScalarFieldEnum = {
 export type DlContactScalarFieldEnum = (typeof DlContactScalarFieldEnum)[keyof typeof DlContactScalarFieldEnum]
 
 
+export const DlMatchRunScalarFieldEnum = {
+  id: 'id',
+  status: 'status',
+  contactsTotal: 'contactsTotal',
+  matchesTotal: 'matchesTotal',
+  strictMatchesTotal: 'strictMatchesTotal',
+  usernameMatchesTotal: 'usernameMatchesTotal',
+  phoneMatchesTotal: 'phoneMatchesTotal',
+  createdAt: 'createdAt',
+  finishedAt: 'finishedAt',
+  error: 'error'
+} as const
+
+export type DlMatchRunScalarFieldEnum = (typeof DlMatchRunScalarFieldEnum)[keyof typeof DlMatchRunScalarFieldEnum]
+
+
+export const DlMatchResultScalarFieldEnum = {
+  id: 'id',
+  runId: 'runId',
+  dlContactId: 'dlContactId',
+  tgmbaseUserId: 'tgmbaseUserId',
+  strictTelegramIdMatch: 'strictTelegramIdMatch',
+  usernameMatch: 'usernameMatch',
+  phoneMatch: 'phoneMatch',
+  dlContactSnapshot: 'dlContactSnapshot',
+  tgmbaseUserSnapshot: 'tgmbaseUserSnapshot',
+  createdAt: 'createdAt'
+} as const
+
+export type DlMatchResultScalarFieldEnum = (typeof DlMatchResultScalarFieldEnum)[keyof typeof DlMatchResultScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const QueryMode = {
@@ -273,4 +322,13 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 

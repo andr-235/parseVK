@@ -26,4 +26,14 @@ describe('tgmbase prisma schema', () => {
     expect(dlContactModel).toBeTruthy();
     expect(dlContactModel).not.toContain('@db.VarChar');
   });
+
+  it('defines dl match run and result models', () => {
+    const schemaPath = join(process.cwd(), 'prisma', 'tgmbase.prisma');
+    const schema = readFileSync(schemaPath, 'utf8');
+
+    expect(schema).toMatch(/model DlMatchRun \{/);
+    expect(schema).toMatch(/model DlMatchResult \{/);
+    expect(schema).toMatch(/@@map\("dl_match_run"\)/);
+    expect(schema).toMatch(/@@map\("dl_match_result"\)/);
+  });
 });

@@ -116,14 +116,31 @@ export class TelegramDlImportService {
 
     return items.map((item) => ({
       id: item.id.toString(),
+      importFileId: item.importFileId?.toString() ?? null,
       originalFileName: item.importFile.originalFileName,
+      isActive: item.importFile.isActive,
       telegramId: item.telegramId,
       username: item.username,
       phone: item.phone,
       firstName: item.firstName,
       lastName: item.lastName,
+      description: item.description,
       region: item.region,
+      joinedAt: item.joinedAt?.toISOString() ?? null,
+      channelsRaw: item.channelsRaw,
+      fullName: item.fullName,
+      address: item.address,
+      vkUrl: item.vkUrl,
+      email: item.email,
+      telegramContact: item.telegramContact,
+      instagram: item.instagram,
+      viber: item.viber,
+      odnoklassniki: item.odnoklassniki,
+      birthDateText: item.birthDateText,
+      usernameExtra: item.usernameExtra,
+      geo: item.geo,
       sourceRowIndex: item.sourceRowIndex,
+      createdAt: item.createdAt.toISOString(),
     }));
   }
 

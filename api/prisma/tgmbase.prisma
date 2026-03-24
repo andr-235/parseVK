@@ -89,6 +89,7 @@ model user {
   username   String?   @db.VarChar(32)
   phone      String?
   upd_date   DateTime? @db.Timestamptz(6)
+  dlMatches   DlMatchResult[]
 }
 
 model DlImportBatch {
@@ -158,10 +159,50 @@ model DlContact {
   sourceRowIndex  Int          @map("source_row_index")
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   importFile      DlImportFile @relation(fields: [importFileId], references: [id], onDelete: Cascade)
+  matchResults    DlMatchResult[]
 
   @@index([importFileId, sourceRowIndex])
   @@index([telegramId])
   @@index([phone])
   @@index([username])
   @@map("dl_contact")
+}
+
+model DlMatchRun {
+  id                  BigInt          @id @default(autoincrement())
+  status              String          @db.VarChar(32)
+  contactsTotal       Int             @default(0) @map("contacts_total")
+  matchesTotal        Int             @default(0) @map("matches_total")
+  strictMatchesTotal  Int             @default(0) @map("strict_matches_total")
+  usernameMatchesTotal Int            @default(0) @map("username_matches_total")
+  phoneMatchesTotal   Int             @default(0) @map("phone_matches_total")
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  finishedAt          DateTime?       @map("finished_at") @db.Timestamptz(6)
+  error               String?         @db.Text
+  results             DlMatchResult[]
+
+  @@index([createdAt(sort: Desc)])
+  @@map("dl_match_run")
+}
+
+model DlMatchResult {
+  id                   BigInt       @id @default(autoincrement())
+  runId                BigInt       @map("run_id")
+  dlContactId          BigInt       @map("dl_contact_id")
+  tgmbaseUserId        BigInt?      @map("tgmbase_user_id")
+  strictTelegramIdMatch Boolean      @default(false) @map("strict_telegram_id_match")
+  usernameMatch        Boolean      @default(false) @map("username_match")
+  phoneMatch           Boolean      @default(false) @map("phone_match")
+  dlContactSnapshot    Json         @map("dl_contact_snapshot")
+  tgmbaseUserSnapshot   Json?        @map("tgmbase_user_snapshot")
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  run                  DlMatchRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  dlContact            DlContact    @relation(fields: [dlContactId], references: [id], onDelete: Cascade)
+  tgmbaseUser          user?        @relation(fields: [tgmbaseUserId], references: [user_id], onDelete: SetNull)
+
+  @@index([runId])
+  @@index([dlContactId])
+  @@index([tgmbaseUserId])
+  @@index([runId, dlContactId])
+  @@map("dl_match_result")
 }

@@ -72,3 +72,13 @@ export type DlImportFile = Prisma.DlImportFileModel
  * 
  */
 export type DlContact = Prisma.DlContactModel
+/**
+ * Model DlMatchRun
+ * 
+ */
+export type DlMatchRun = Prisma.DlMatchRunModel
+/**
+ * Model DlMatchResult
+ * 
+ */
+export type DlMatchResult = Prisma.DlMatchResultModel

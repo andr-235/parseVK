@@ -355,4 +355,80 @@ describe('TelegramDlImportService', () => {
       expect.stringContaining('channelsRaw:400'),
     );
   });
+
+  it('returns full dl contact payload for frontend tables', async () => {
+    prisma.dlContact.findMany.mockResolvedValue([
+      {
+        id: 101n,
+        telegramId: '123',
+        username: 'alpha',
+        phone: '+79990000001',
+        firstName: 'Alpha',
+        lastName: 'One',
+        description: 'desc',
+        region: 'region',
+        joinedAt: new Date('2024-01-01T00:00:00.000Z'),
+        channelsRaw: 'channels',
+        fullName: 'Alpha One',
+        address: 'address',
+        vkUrl: 'vk',
+        email: 'alpha@example.com',
+        telegramContact: '@alpha',
+        instagram: 'inst',
+        viber: 'viber',
+        odnoklassniki: 'ok',
+        birthDateText: '1990-01-01',
+        usernameExtra: 'alpha_extra',
+        geo: 'geo',
+        sourceRowIndex: 7,
+        createdAt: new Date('2024-01-02T00:00:00.000Z'),
+        importFile: {
+          originalFileName: 'dl.xlsx',
+          isActive: true,
+        },
+      },
+    ]);
+
+    const service = new TelegramDlImportService(
+      prisma as never,
+      parser as never,
+    );
+
+    await expect(service.getContacts({})).resolves.toEqual([
+      expect.objectContaining({
+        id: '101',
+        originalFileName: 'dl.xlsx',
+        telegramId: '123',
+        username: 'alpha',
+        phone: '+79990000001',
+        firstName: 'Alpha',
+        lastName: 'One',
+        description: 'desc',
+        region: 'region',
+        joinedAt: '2024-01-01T00:00:00.000Z',
+        channelsRaw: 'channels',
+        fullName: 'Alpha One',
+        address: 'address',
+        vkUrl: 'vk',
+        email: 'alpha@example.com',
+        telegramContact: '@alpha',
+        instagram: 'inst',
+        viber: 'viber',
+        odnoklassniki: 'ok',
+        birthDateText: '1990-01-01',
+        usernameExtra: 'alpha_extra',
+        geo: 'geo',
+        sourceRowIndex: 7,
+        createdAt: '2024-01-02T00:00:00.000Z',
+        isActive: true,
+      }),
+    ]);
+    expect(prisma.dlContact.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: {
+          importFile: true,
+        },
+      }),
+    );
+  });
 });

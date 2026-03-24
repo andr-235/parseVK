@@ -2,9 +2,11 @@ import { useTelegramDlUpload } from '@/modules/telegram-dl-upload/hooks/useTeleg
 import TelegramDlUploadHero from './TelegramDlUploadHero'
 import TelegramDlUploadCard from './TelegramDlUploadCard'
 import TelegramDlUploadHistory from './TelegramDlUploadHistory'
+import TelegramDlMatchWorkspace from './TelegramDlMatchWorkspace'
 
 export default function TelegramDlUploadPage() {
-  const { files, isFilesLoading, uploadFiles, isUploading, uploadResult } = useTelegramDlUpload()
+  const state = useTelegramDlUpload()
+  const { files, isFilesLoading, uploadFiles, isUploading, uploadResult } = state
 
   return (
     <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
@@ -19,6 +21,10 @@ export default function TelegramDlUploadPage() {
           onSubmit={uploadFiles}
         />
         <TelegramDlUploadHistory files={files} isLoading={isFilesLoading} />
+      </div>
+
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-150">
+        <TelegramDlMatchWorkspace state={state} />
       </div>
     </div>
   )

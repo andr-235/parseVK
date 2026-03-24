@@ -377,6 +377,7 @@ export type DlContactWhereInput = {
   sourceRowIndex?: Prisma.IntFilter<"DlContact"> | number
   createdAt?: Prisma.DateTimeFilter<"DlContact"> | Date | string
   importFile?: Prisma.XOR<Prisma.DlImportFileScalarRelationFilter, Prisma.DlImportFileWhereInput>
+  matchResults?: Prisma.DlMatchResultListRelationFilter
 }
 
 export type DlContactOrderByWithRelationInput = {
@@ -405,6 +406,7 @@ export type DlContactOrderByWithRelationInput = {
   sourceRowIndex?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   importFile?: Prisma.DlImportFileOrderByWithRelationInput
+  matchResults?: Prisma.DlMatchResultOrderByRelationAggregateInput
 }
 
 export type DlContactWhereUniqueInput = Prisma.AtLeast<{
@@ -436,6 +438,7 @@ export type DlContactWhereUniqueInput = Prisma.AtLeast<{
   sourceRowIndex?: Prisma.IntFilter<"DlContact"> | number
   createdAt?: Prisma.DateTimeFilter<"DlContact"> | Date | string
   importFile?: Prisma.XOR<Prisma.DlImportFileScalarRelationFilter, Prisma.DlImportFileWhereInput>
+  matchResults?: Prisma.DlMatchResultListRelationFilter
 }, "id">
 
 export type DlContactOrderByWithAggregationInput = {
@@ -525,6 +528,7 @@ export type DlContactCreateInput = {
   sourceRowIndex: number
   createdAt?: Date | string
   importFile: Prisma.DlImportFileCreateNestedOneWithoutContactsInput
+  matchResults?: Prisma.DlMatchResultCreateNestedManyWithoutDlContactInput
 }
 
 export type DlContactUncheckedCreateInput = {
@@ -552,6 +556,7 @@ export type DlContactUncheckedCreateInput = {
   geo?: string | null
   sourceRowIndex: number
   createdAt?: Date | string
+  matchResults?: Prisma.DlMatchResultUncheckedCreateNestedManyWithoutDlContactInput
 }
 
 export type DlContactUpdateInput = {
@@ -579,6 +584,7 @@ export type DlContactUpdateInput = {
   sourceRowIndex?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   importFile?: Prisma.DlImportFileUpdateOneRequiredWithoutContactsNestedInput
+  matchResults?: Prisma.DlMatchResultUpdateManyWithoutDlContactNestedInput
 }
 
 export type DlContactUncheckedUpdateInput = {
@@ -606,6 +612,7 @@ export type DlContactUncheckedUpdateInput = {
   geo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sourceRowIndex?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  matchResults?: Prisma.DlMatchResultUncheckedUpdateManyWithoutDlContactNestedInput
 }
 
 export type DlContactCreateManyInput = {
@@ -791,6 +798,11 @@ export type DlContactSumOrderByAggregateInput = {
   sourceRowIndex?: Prisma.SortOrder
 }
 
+export type DlContactScalarRelationFilter = {
+  is?: Prisma.DlContactWhereInput
+  isNot?: Prisma.DlContactWhereInput
+}
+
 export type DlContactCreateNestedManyWithoutImportFileInput = {
   create?: Prisma.XOR<Prisma.DlContactCreateWithoutImportFileInput, Prisma.DlContactUncheckedCreateWithoutImportFileInput> | Prisma.DlContactCreateWithoutImportFileInput[] | Prisma.DlContactUncheckedCreateWithoutImportFileInput[]
   connectOrCreate?: Prisma.DlContactCreateOrConnectWithoutImportFileInput | Prisma.DlContactCreateOrConnectWithoutImportFileInput[]
@@ -833,6 +845,20 @@ export type DlContactUncheckedUpdateManyWithoutImportFileNestedInput = {
   deleteMany?: Prisma.DlContactScalarWhereInput | Prisma.DlContactScalarWhereInput[]
 }
 
+export type DlContactCreateNestedOneWithoutMatchResultsInput = {
+  create?: Prisma.XOR<Prisma.DlContactCreateWithoutMatchResultsInput, Prisma.DlContactUncheckedCreateWithoutMatchResultsInput>
+  connectOrCreate?: Prisma.DlContactCreateOrConnectWithoutMatchResultsInput
+  connect?: Prisma.DlContactWhereUniqueInput
+}
+
+export type DlContactUpdateOneRequiredWithoutMatchResultsNestedInput = {
+  create?: Prisma.XOR<Prisma.DlContactCreateWithoutMatchResultsInput, Prisma.DlContactUncheckedCreateWithoutMatchResultsInput>
+  connectOrCreate?: Prisma.DlContactCreateOrConnectWithoutMatchResultsInput
+  upsert?: Prisma.DlContactUpsertWithoutMatchResultsInput
+  connect?: Prisma.DlContactWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DlContactUpdateToOneWithWhereWithoutMatchResultsInput, Prisma.DlContactUpdateWithoutMatchResultsInput>, Prisma.DlContactUncheckedUpdateWithoutMatchResultsInput>
+}
+
 export type DlContactCreateWithoutImportFileInput = {
   id?: bigint | number
   telegramId?: string | null
@@ -857,6 +883,7 @@ export type DlContactCreateWithoutImportFileInput = {
   geo?: string | null
   sourceRowIndex: number
   createdAt?: Date | string
+  matchResults?: Prisma.DlMatchResultCreateNestedManyWithoutDlContactInput
 }
 
 export type DlContactUncheckedCreateWithoutImportFileInput = {
@@ -883,6 +910,7 @@ export type DlContactUncheckedCreateWithoutImportFileInput = {
   geo?: string | null
   sourceRowIndex: number
   createdAt?: Date | string
+  matchResults?: Prisma.DlMatchResultUncheckedCreateNestedManyWithoutDlContactInput
 }
 
 export type DlContactCreateOrConnectWithoutImportFileInput = {
@@ -941,6 +969,130 @@ export type DlContactScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"DlContact"> | Date | string
 }
 
+export type DlContactCreateWithoutMatchResultsInput = {
+  id?: bigint | number
+  telegramId?: string | null
+  username?: string | null
+  phone?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  description?: string | null
+  region?: string | null
+  joinedAt?: Date | string | null
+  channelsRaw?: string | null
+  fullName?: string | null
+  address?: string | null
+  vkUrl?: string | null
+  email?: string | null
+  telegramContact?: string | null
+  instagram?: string | null
+  viber?: string | null
+  odnoklassniki?: string | null
+  birthDateText?: string | null
+  usernameExtra?: string | null
+  geo?: string | null
+  sourceRowIndex: number
+  createdAt?: Date | string
+  importFile: Prisma.DlImportFileCreateNestedOneWithoutContactsInput
+}
+
+export type DlContactUncheckedCreateWithoutMatchResultsInput = {
+  id?: bigint | number
+  importFileId: bigint | number
+  telegramId?: string | null
+  username?: string | null
+  phone?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  description?: string | null
+  region?: string | null
+  joinedAt?: Date | string | null
+  channelsRaw?: string | null
+  fullName?: string | null
+  address?: string | null
+  vkUrl?: string | null
+  email?: string | null
+  telegramContact?: string | null
+  instagram?: string | null
+  viber?: string | null
+  odnoklassniki?: string | null
+  birthDateText?: string | null
+  usernameExtra?: string | null
+  geo?: string | null
+  sourceRowIndex: number
+  createdAt?: Date | string
+}
+
+export type DlContactCreateOrConnectWithoutMatchResultsInput = {
+  where: Prisma.DlContactWhereUniqueInput
+  create: Prisma.XOR<Prisma.DlContactCreateWithoutMatchResultsInput, Prisma.DlContactUncheckedCreateWithoutMatchResultsInput>
+}
+
+export type DlContactUpsertWithoutMatchResultsInput = {
+  update: Prisma.XOR<Prisma.DlContactUpdateWithoutMatchResultsInput, Prisma.DlContactUncheckedUpdateWithoutMatchResultsInput>
+  create: Prisma.XOR<Prisma.DlContactCreateWithoutMatchResultsInput, Prisma.DlContactUncheckedCreateWithoutMatchResultsInput>
+  where?: Prisma.DlContactWhereInput
+}
+
+export type DlContactUpdateToOneWithWhereWithoutMatchResultsInput = {
+  where?: Prisma.DlContactWhereInput
+  data: Prisma.XOR<Prisma.DlContactUpdateWithoutMatchResultsInput, Prisma.DlContactUncheckedUpdateWithoutMatchResultsInput>
+}
+
+export type DlContactUpdateWithoutMatchResultsInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  telegramId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  region?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  joinedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  channelsRaw?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fullName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  vkUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  telegramContact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  instagram?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  viber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  odnoklassniki?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  birthDateText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameExtra?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  geo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceRowIndex?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  importFile?: Prisma.DlImportFileUpdateOneRequiredWithoutContactsNestedInput
+}
+
+export type DlContactUncheckedUpdateWithoutMatchResultsInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  importFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  telegramId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  region?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  joinedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  channelsRaw?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fullName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  vkUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  telegramContact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  instagram?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  viber?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  odnoklassniki?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  birthDateText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  usernameExtra?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  geo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  sourceRowIndex?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type DlContactCreateManyImportFileInput = {
   id?: bigint | number
   telegramId?: string | null
@@ -991,6 +1143,7 @@ export type DlContactUpdateWithoutImportFileInput = {
   geo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sourceRowIndex?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  matchResults?: Prisma.DlMatchResultUpdateManyWithoutDlContactNestedInput
 }
 
 export type DlContactUncheckedUpdateWithoutImportFileInput = {
@@ -1017,6 +1170,7 @@ export type DlContactUncheckedUpdateWithoutImportFileInput = {
   geo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   sourceRowIndex?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  matchResults?: Prisma.DlMatchResultUncheckedUpdateManyWithoutDlContactNestedInput
 }
 
 export type DlContactUncheckedUpdateManyWithoutImportFileInput = {
@@ -1046,6 +1200,35 @@ export type DlContactUncheckedUpdateManyWithoutImportFileInput = {
 }
 
 
+/**
+ * Count Type DlContactCountOutputType
+ */
+
+export type DlContactCountOutputType = {
+  matchResults: number
+}
+
+export type DlContactCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  matchResults?: boolean | DlContactCountOutputTypeCountMatchResultsArgs
+}
+
+/**
+ * DlContactCountOutputType without action
+ */
+export type DlContactCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DlContactCountOutputType
+   */
+  select?: Prisma.DlContactCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * DlContactCountOutputType without action
+ */
+export type DlContactCountOutputTypeCountMatchResultsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DlMatchResultWhereInput
+}
+
 
 export type DlContactSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1073,6 +1256,8 @@ export type DlContactSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   sourceRowIndex?: boolean
   createdAt?: boolean
   importFile?: boolean | Prisma.DlImportFileDefaultArgs<ExtArgs>
+  matchResults?: boolean | Prisma.DlContact$matchResultsArgs<ExtArgs>
+  _count?: boolean | Prisma.DlContactCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["dlContact"]>
 
 export type DlContactSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1161,6 +1346,8 @@ export type DlContactSelectScalar = {
 export type DlContactOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "importFileId" | "telegramId" | "username" | "phone" | "firstName" | "lastName" | "description" | "region" | "joinedAt" | "channelsRaw" | "fullName" | "address" | "vkUrl" | "email" | "telegramContact" | "instagram" | "viber" | "odnoklassniki" | "birthDateText" | "usernameExtra" | "geo" | "sourceRowIndex" | "createdAt", ExtArgs["result"]["dlContact"]>
 export type DlContactInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   importFile?: boolean | Prisma.DlImportFileDefaultArgs<ExtArgs>
+  matchResults?: boolean | Prisma.DlContact$matchResultsArgs<ExtArgs>
+  _count?: boolean | Prisma.DlContactCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type DlContactIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   importFile?: boolean | Prisma.DlImportFileDefaultArgs<ExtArgs>
@@ -1173,6 +1360,7 @@ export type $DlContactPayload<ExtArgs extends runtime.Types.Extensions.InternalA
   name: "DlContact"
   objects: {
     importFile: Prisma.$DlImportFilePayload<ExtArgs>
+    matchResults: Prisma.$DlMatchResultPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: bigint
@@ -1594,6 +1782,7 @@ readonly fields: DlContactFieldRefs;
 export interface Prisma__DlContactClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   importFile<T extends Prisma.DlImportFileDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DlImportFileDefaultArgs<ExtArgs>>): Prisma.Prisma__DlImportFileClient<runtime.Types.Result.GetResult<Prisma.$DlImportFilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  matchResults<T extends Prisma.DlContact$matchResultsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DlContact$matchResultsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DlMatchResultPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2040,6 +2229,30 @@ export type DlContactDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Int
    * Limit how many DlContacts to delete.
    */
   limit?: number
+}
+
+/**
+ * DlContact.matchResults
+ */
+export type DlContact$matchResultsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DlMatchResult
+   */
+  select?: Prisma.DlMatchResultSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DlMatchResult
+   */
+  omit?: Prisma.DlMatchResultOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DlMatchResultInclude<ExtArgs> | null
+  where?: Prisma.DlMatchResultWhereInput
+  orderBy?: Prisma.DlMatchResultOrderByWithRelationInput | Prisma.DlMatchResultOrderByWithRelationInput[]
+  cursor?: Prisma.DlMatchResultWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DlMatchResultScalarFieldEnum | Prisma.DlMatchResultScalarFieldEnum[]
 }
 
 /**

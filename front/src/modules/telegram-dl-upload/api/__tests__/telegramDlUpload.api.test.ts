@@ -5,11 +5,17 @@ const { toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
   toastSuccessMock: vi.fn(),
 }))
 
+const saveReportBlobMock = vi.hoisted(() => vi.fn())
+
 vi.mock('react-hot-toast', () => ({
   default: {
     error: toastErrorMock,
     success: toastSuccessMock,
   },
+}))
+
+vi.mock('@/shared/utils', () => ({
+  saveReportBlob: saveReportBlobMock,
 }))
 
 const createUploadResponse = (startIndex: number, count: number) => ({
@@ -93,5 +99,180 @@ describe('telegramDlUploadService.upload', () => {
     expect(result.batch.filesSuccess).toBe(45)
     expect(result.files).toHaveLength(45)
     expect(toastSuccessMock).toHaveBeenCalled()
+  })
+})
+
+describe('telegramDlUploadService.match workflow', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
+  it('loads contacts and match runs for the workspace', async () => {
+    const { telegramDlUploadService } = await import('../telegramDlUpload.api')
+    const matchService = telegramDlUploadService as unknown as {
+      getContacts: () => Promise<unknown>
+      getMatchRuns: () => Promise<unknown>
+    }
+
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              id: '1',
+              importFileId: '10',
+              originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
+              telegramId: '123456',
+              username: 'user_one',
+              phone: '79990000001',
+              firstName: 'Иван',
+              lastName: 'Иванов',
+              fullName: 'Иван Иванов',
+              region: 'Москва',
+              sourceRowIndex: 2,
+              description: 'Контакт из DL',
+              joinedAt: '2024-01-01T00:00:00.000Z',
+              address: 'Москва',
+              vkUrl: null,
+              email: null,
+              telegramContact: null,
+              instagram: null,
+              viber: null,
+              odnoklassniki: null,
+              birthDateText: null,
+              usernameExtra: null,
+              geo: null,
+              createdAt: '2024-01-01T00:00:00.000Z',
+            },
+          ]),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              id: 'run-1',
+              status: 'DONE',
+              contactsTotal: 1,
+              matchesTotal: 1,
+              strictMatchesTotal: 1,
+              usernameMatchesTotal: 0,
+              phoneMatchesTotal: 0,
+              createdAt: '2024-03-25T10:00:00.000Z',
+              finishedAt: '2024-03-25T10:00:01.000Z',
+              error: null,
+            },
+          ]),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      ) as typeof fetch
+
+    await expect(matchService.getContacts()).resolves.toEqual([
+      {
+        id: '1',
+        importFileId: '10',
+        originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
+        telegramId: '123456',
+        username: 'user_one',
+        phone: '79990000001',
+        firstName: 'Иван',
+        lastName: 'Иванов',
+        fullName: 'Иван Иванов',
+        region: 'Москва',
+        sourceRowIndex: 2,
+        description: 'Контакт из DL',
+        joinedAt: '2024-01-01T00:00:00.000Z',
+        address: 'Москва',
+        vkUrl: null,
+        email: null,
+        telegramContact: null,
+        instagram: null,
+        viber: null,
+        odnoklassniki: null,
+        birthDateText: null,
+        usernameExtra: null,
+        geo: null,
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
+    ])
+
+    await expect(matchService.getMatchRuns()).resolves.toEqual([
+      {
+        id: 'run-1',
+        status: 'DONE',
+        contactsTotal: 1,
+        matchesTotal: 1,
+        strictMatchesTotal: 1,
+        usernameMatchesTotal: 0,
+        phoneMatchesTotal: 0,
+        createdAt: '2024-03-25T10:00:00.000Z',
+        finishedAt: '2024-03-25T10:00:01.000Z',
+        error: null,
+      },
+    ])
+  })
+
+  it('starts a match run and exports xlsx results', async () => {
+    const { telegramDlUploadService } = await import('../telegramDlUpload.api')
+    const matchService = telegramDlUploadService as unknown as {
+      createMatchRun: () => Promise<{ id: string; status: string }>
+      exportMatchRun: (runId: string) => Promise<void>
+    }
+
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: 'run-2',
+            status: 'DONE',
+            contactsTotal: 1,
+            matchesTotal: 1,
+            strictMatchesTotal: 1,
+            usernameMatchesTotal: 0,
+            phoneMatchesTotal: 0,
+            createdAt: '2024-03-25T10:00:00.000Z',
+            finishedAt: '2024-03-25T10:00:01.000Z',
+            error: null,
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response('xlsx-bytes', {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': 'attachment; filename="telegram_dl_match_run-2.xlsx"',
+          },
+        })
+      ) as typeof fetch
+
+    await expect(matchService.createMatchRun()).resolves.toEqual(
+      expect.objectContaining({
+        id: 'run-2',
+        status: 'DONE',
+      })
+    )
+
+    await matchService.exportMatchRun('run-2')
+
+    expect(saveReportBlobMock).toHaveBeenCalledTimes(1)
+    expect(saveReportBlobMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'telegram_dl_match_run-2.xlsx'
+    )
   })
 })
