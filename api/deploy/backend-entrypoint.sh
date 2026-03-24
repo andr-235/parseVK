@@ -236,12 +236,17 @@ if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
 fi
 
 echo "Применяем tgmbase SQL-миграции..."
-if ! $PRISMA_CMD db execute \
-  --config prisma.tgmbase.config.ts \
-  --file prisma/tgmbase-migrations/20260324160500_add_dl_import_tables.sql; then
-  echo "ОШИБКА: не удалось применить tgmbase SQL-миграции."
-  exit 1
-fi
+for migration_file in ./prisma/tgmbase-migrations/*.sql; do
+  [ -f "$migration_file" ] || continue
+
+  echo "Применяем tgmbase SQL-миграцию: $migration_file"
+  if ! $PRISMA_CMD db execute \
+    --config prisma.tgmbase.config.ts \
+    --file "$migration_file"; then
+    echo "ОШИБКА: не удалось применить tgmbase SQL-миграцию $migration_file."
+    exit 1
+  fi
+done
 
 # Генерация только если клиент не собран (в build stage уже выполнен prisma generate)
 if [ ! -f ./dist/src/generated/prisma/client/index.js ] && [ ! -f ./dist/generated/prisma/client/index.js ]; then
