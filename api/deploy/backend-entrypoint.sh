@@ -213,44 +213,21 @@ if [ "$SUCCESS" = "false" ]; then
   exit 1
 fi
 
-echo "Запуск миграций базы данных..."
-if [ ! -x "./node_modules/.bin/prisma" ]; then
-  echo "Prisma CLI не найден в ./node_modules/.bin/prisma, пробуем глобальный..."
-  if ! command -v prisma >/dev/null 2>&1; then
-    echo "Глобальный Prisma CLI тоже не найден, останавливаемся."
-    exit 1
-  fi
-  PRISMA_CMD="prisma"
-else
-  PRISMA_CMD="./node_modules/.bin/prisma"
-fi
-
-echo "Используем Prisma CLI: $PRISMA_CMD"
-if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
-  MIGRATE_ERROR=$(cat /tmp/migrate.log)
-  echo "ОШИБКА: prisma migrate deploy завершился неуспешно."
-  echo "Автоматическое исправление состояния миграций отключено."
-  echo "Проверьте журнал /tmp/migrate.log и состояние таблицы _prisma_migrations, затем выполните ручное восстановление."
-  echo "Ошибка: $MIGRATE_ERROR"
-  exit 1
-fi
-
-echo "Применяем tgmbase SQL-миграции..."
-for migration_file in ./prisma/tgmbase-migrations/*.sql; do
-  [ -f "$migration_file" ] || continue
-
-  echo "Применяем tgmbase SQL-миграцию: $migration_file"
-  if ! $PRISMA_CMD db execute \
-    --config prisma.tgmbase.config.ts \
-    --file "$migration_file"; then
-    echo "ОШИБКА: не удалось применить tgmbase SQL-миграцию $migration_file."
-    exit 1
-  fi
-done
-
 # Генерация только если клиент не собран (в build stage уже выполнен prisma generate)
 if [ ! -f ./dist/src/generated/prisma/client/index.js ] && [ ! -f ./dist/generated/prisma/client/index.js ]; then
   echo "Генерация Prisma Client..."
+  if [ ! -x "./node_modules/.bin/prisma" ]; then
+    echo "Prisma CLI не найден в ./node_modules/.bin/prisma, пробуем глобальный..."
+    if ! command -v prisma >/dev/null 2>&1; then
+      echo "Глобальный Prisma CLI тоже не найден, останавливаемся."
+      exit 1
+    fi
+    PRISMA_CMD="prisma"
+  else
+    PRISMA_CMD="./node_modules/.bin/prisma"
+  fi
+
+  echo "Используем Prisma CLI: $PRISMA_CMD"
   if ! $PRISMA_CMD generate; then
     echo "Ошибка при генерации Prisma Client, останавливаемся."
     exit 1

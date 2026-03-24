@@ -50,9 +50,10 @@ COPY --from=build /app/prisma.tgmbase.config.ts ./
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/node_modules ./node_modules
 COPY deploy/backend-entrypoint.sh /app/entrypoint.sh
+COPY deploy/run-migrations.sh /app/run-migrations.sh
 COPY deploy/backend-healthcheck.mjs /app/healthcheck.mjs
 
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh /app/run-migrations.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 EXPOSE 3000

@@ -1,3 +1,16 @@
+x-api-build: &api-build
+  context: ./api
+  dockerfile: Dockerfile.deploy
+  args:
+    DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+    NPM_REGISTRY_FALLBACK: ${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org/}
+
+x-api-environment: &api-environment
+  DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+  TGMBASE_DATABASE_URL: ${TGMBASE_DATABASE_URL:-postgresql://postgres:postgres@db:5432/tgmbase?schema=public}
+  MONITOR_DATABASE_URL: ${MONITOR_DATABASE_URL:-}
+
 services:
   db:
     image: postgres:15-alpine
@@ -64,25 +77,18 @@ services:
   api:
     image: parsevk-api:local
     pull_policy: never
-    build:
-      context: ./api
-      dockerfile: Dockerfile.deploy
-      args:
-        DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
-        NPM_REGISTRY_FALLBACK: ${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org/}
+    build: *api-build
     restart: always
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      api-migrate:
+        condition: service_completed_successfully
     env_file:
       - .env
-    environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      TGMBASE_DATABASE_URL: ${TGMBASE_DATABASE_URL:-postgresql://postgres:postgres@db:5432/tgmbase?schema=public}
-      MONITOR_DATABASE_URL: ${MONITOR_DATABASE_URL:-}
+    environment: *api-environment
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -94,6 +100,26 @@ services:
       timeout: 5s
       retries: 5
       start_period: 120s
+
+  api-migrate:
+    image: parsevk-api:local
+    pull_policy: never
+    build: *api-build
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment: *api-environment
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    entrypoint: ["/app/run-migrations.sh"]
+    networks:
+      - default
+      - monitor_net
 
   frontend:
     image: parsevk-frontend:local
