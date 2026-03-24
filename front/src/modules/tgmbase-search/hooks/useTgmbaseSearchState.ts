@@ -93,9 +93,7 @@ export function useTgmbaseSearchState() {
     }
 
     const namespaceUrl = `${normalizeSocketBase(baseUrl)}/tgmbase-search`
-    const socket: Socket = io(namespaceUrl, {
-      transports: ['websocket'],
-    })
+    const socket: Socket = io(namespaceUrl)
     socketRef.current = socket
 
     socket.on('connect', () => {

@@ -286,9 +286,7 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
       ? `${normalizedBase}tasks`
       : `${normalizedBase}/tasks`
 
-    const socket: Socket<TaskServerEvents, TaskClientEvents> = io(namespaceUrl, {
-      transports: ['websocket'],
-    })
+    const socket: Socket<TaskServerEvents, TaskClientEvents> = io(namespaceUrl)
 
     socket.on('connect', () => {
       useTasksStore.setState((state) => {

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TgmbaseSearchPage from '../components/TgmbaseSearchPage'
 import { tgmbaseSearchService } from '../api/tgmbaseSearch.api'
+import { io } from 'socket.io-client'
 
 type MockSocketHandler = (payload?: unknown) => void
 
@@ -29,6 +30,7 @@ vi.mock('socket.io-client', () => ({
 }))
 
 const mockedSearch = tgmbaseSearchService.search as unknown as ReturnType<typeof vi.fn>
+const mockedIo = vi.mocked(io)
 
 const createResponse = (overrides = {}) => ({
   summary: {
@@ -199,6 +201,9 @@ describe('TgmbaseSearchPage', () => {
       page: 1,
       pageSize: 20,
     })
+    expect(mockedIo).toHaveBeenCalledTimes(1)
+    expect(mockedIo.mock.calls[0]?.[0]).toBe('ws://192.168.88.12:8080/api/tasks/tgmbase-search')
+    expect(mockedIo.mock.calls[0]).toHaveLength(1)
   })
 
   it('filters results from summary controls and updates detail panel', async () => {
