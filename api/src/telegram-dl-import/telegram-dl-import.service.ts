@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Express } from 'express';
 import type {
-  DlContact,
   DlImportBatch,
   DlImportFile,
 } from '../generated/tgmbase/client.js';
@@ -44,7 +43,9 @@ export class TelegramDlImportService {
       processedFiles.push(await this.processFile(batch.id, file));
     }
 
-    const filesSuccess = processedFiles.filter((entry) => entry.succeeded).length;
+    const filesSuccess = processedFiles.filter(
+      (entry) => entry.succeeded,
+    ).length;
     const filesFailed = processedFiles.length - filesSuccess;
     const status = filesFailed > 0 ? 'PARTIAL' : 'DONE';
 
@@ -59,7 +60,7 @@ export class TelegramDlImportService {
 
     return {
       batch: this.mapBatch(updatedBatch),
-      files: processedFiles.map(({ succeeded: _succeeded, ...entry }) => entry),
+      files: processedFiles.map((entry) => this.mapProcessedFile(entry)),
     };
   }
 
@@ -67,7 +68,9 @@ export class TelegramDlImportService {
     const items = await this.prisma.dlImportFile.findMany({
       where: {
         ...(query.fileName ? { originalFileName: query.fileName } : {}),
-        ...(query.activeOnly !== undefined ? { isActive: query.activeOnly } : {}),
+        ...(query.activeOnly !== undefined
+          ? { isActive: query.activeOnly }
+          : {}),
       },
       orderBy: [{ createdAt: 'desc' }],
     });
@@ -80,7 +83,9 @@ export class TelegramDlImportService {
       where: {
         importFile: {
           ...(query.fileName ? { originalFileName: query.fileName } : {}),
-          ...(query.activeOnly !== undefined ? { isActive: query.activeOnly } : {}),
+          ...(query.activeOnly !== undefined
+            ? { isActive: query.activeOnly }
+            : {}),
         },
       },
       include: {
@@ -260,6 +265,22 @@ export class TelegramDlImportService {
       isActive: file.isActive,
       replacedFileId: file.replacedFileId?.toString() ?? null,
       error: file.error ?? null,
+    };
+  }
+
+  private mapProcessedFile(
+    file: ImportFileProcessingResult,
+  ): TelegramDlImportFileDto {
+    return {
+      id: file.id,
+      originalFileName: file.originalFileName,
+      status: file.status,
+      rowsTotal: file.rowsTotal,
+      rowsSuccess: file.rowsSuccess,
+      rowsFailed: file.rowsFailed,
+      isActive: file.isActive,
+      replacedFileId: file.replacedFileId,
+      error: file.error,
     };
   }
 }

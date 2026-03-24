@@ -39,7 +39,9 @@ describe('TelegramDlImportController', () => {
       ],
     }).compile();
 
-    controller = module.get<TelegramDlImportController>(TelegramDlImportController);
+    controller = module.get<TelegramDlImportController>(
+      TelegramDlImportController,
+    );
   });
 
   it('uploads several xlsx files', async () => {
@@ -65,7 +67,9 @@ describe('TelegramDlImportController', () => {
   });
 
   it('returns imported files history', async () => {
-    service.getFiles.mockResolvedValue([{ id: 1, originalFileName: 'test.xlsx' }]);
+    service.getFiles.mockResolvedValue([
+      { id: 1, originalFileName: 'test.xlsx' },
+    ]);
 
     await expect(controller.getFiles({ activeOnly: true })).resolves.toEqual([
       { id: 1, originalFileName: 'test.xlsx' },
@@ -74,11 +78,13 @@ describe('TelegramDlImportController', () => {
   });
 
   it('returns imported contacts list', async () => {
-    service.getContacts.mockResolvedValue([{ id: 1, originalFileName: 'test.xlsx' }]);
-
-    await expect(controller.getContacts({ fileName: 'test.xlsx' })).resolves.toEqual([
+    service.getContacts.mockResolvedValue([
       { id: 1, originalFileName: 'test.xlsx' },
     ]);
+
+    await expect(
+      controller.getContacts({ fileName: 'test.xlsx' }),
+    ).resolves.toEqual([{ id: 1, originalFileName: 'test.xlsx' }]);
     expect(service.getContacts).toHaveBeenCalledWith({ fileName: 'test.xlsx' });
   });
 });

@@ -88,8 +88,14 @@ describe('TelegramDlImportService', () => {
       filesFailed: 0,
     });
     prisma.dlImportFile.create
-      .mockResolvedValueOnce({ id: 101, originalFileName: 'groupexport_a.xlsx' })
-      .mockResolvedValueOnce({ id: 102, originalFileName: 'groupexport_b.xlsx' });
+      .mockResolvedValueOnce({
+        id: 101,
+        originalFileName: 'groupexport_a.xlsx',
+      })
+      .mockResolvedValueOnce({
+        id: 102,
+        originalFileName: 'groupexport_b.xlsx',
+      });
     prisma.dlImportFile.findFirst.mockResolvedValue(null);
     prisma.dlImportFile.update
       .mockResolvedValueOnce({
@@ -115,11 +121,14 @@ describe('TelegramDlImportService', () => {
         error: null,
       });
     prisma.dlContact.createMany.mockResolvedValue({ count: 1 });
-    prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => unknown) =>
-      callback(prisma),
+    prisma.$transaction.mockImplementation(
+      (callback: (tx: typeof prisma) => unknown) => callback(prisma),
     );
 
-    const service = new TelegramDlImportService(prisma as never, parser as never);
+    const service = new TelegramDlImportService(
+      prisma as never,
+      parser as never,
+    );
 
     const result = await service.uploadFiles([
       createXlsxFile('groupexport_a.xlsx'),
@@ -189,11 +198,14 @@ describe('TelegramDlImportService', () => {
         error: null,
       });
     prisma.dlContact.createMany.mockResolvedValue({ count: 1 });
-    prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => unknown) =>
-      callback(prisma),
+    prisma.$transaction.mockImplementation(
+      (callback: (tx: typeof prisma) => unknown) => callback(prisma),
     );
 
-    const service = new TelegramDlImportService(prisma as never, parser as never);
+    const service = new TelegramDlImportService(
+      prisma as never,
+      parser as never,
+    );
 
     await service.uploadFiles([createXlsxFile('groupexport_same.xlsx')]);
 
@@ -265,9 +277,14 @@ describe('TelegramDlImportService', () => {
       error: 'db failed',
     });
 
-    const service = new TelegramDlImportService(prisma as never, parser as never);
+    const service = new TelegramDlImportService(
+      prisma as never,
+      parser as never,
+    );
 
-    const result = await service.uploadFiles([createXlsxFile('groupexport_same.xlsx')]);
+    const result = await service.uploadFiles([
+      createXlsxFile('groupexport_same.xlsx'),
+    ]);
 
     expect(result.files[0].status).toBe('FAILED');
     expect(prisma.dlImportFile.update).not.toHaveBeenCalledWith(
