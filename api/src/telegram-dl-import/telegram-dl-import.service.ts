@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Express } from 'express';
 import type {
   DlImportBatch,
@@ -22,6 +22,8 @@ interface ImportFileProcessingResult extends TelegramDlImportFileDto {
 
 @Injectable()
 export class TelegramDlImportService {
+  private readonly logger = new Logger(TelegramDlImportService.name);
+
   constructor(
     private readonly prisma: TgmbasePrismaService,
     private readonly parser: TelegramDlImportParser,
@@ -30,6 +32,8 @@ export class TelegramDlImportService {
   async uploadFiles(
     files: Express.Multer.File[],
   ): Promise<TelegramDlImportUploadResponseDto> {
+    this.logger.log(`Запуск batch выгрузки ДЛ: файлов ${files.length}`);
+
     const batch = await this.prisma.dlImportBatch.create({
       data: {
         status: 'RUNNING',
@@ -48,6 +52,10 @@ export class TelegramDlImportService {
     ).length;
     const filesFailed = processedFiles.length - filesSuccess;
     const status = filesFailed > 0 ? 'PARTIAL' : 'DONE';
+
+    this.logger.log(
+      `Batch ${batch.id.toString()} завершен: успешно ${filesSuccess}, ошибок ${filesFailed}`,
+    );
 
     const updatedBatch = await this.prisma.dlImportBatch.update({
       where: { id: batch.id },
@@ -113,6 +121,10 @@ export class TelegramDlImportService {
   ): Promise<ImportFileProcessingResult> {
     let parsed: TelegramDlImportParseResult | null = null;
     let importFile: DlImportFile | null = null;
+
+    this.logger.log(
+      `Batch ${batchId.toString()}: обработка файла ${file.originalname} (${file.size} bytes)`,
+    );
 
     try {
       parsed = await this.parser.parse(file.buffer, file.originalname);
@@ -194,6 +206,11 @@ export class TelegramDlImportService {
         succeeded: true,
       };
     } catch (error) {
+      this.logger.error(
+        `Batch ${batchId.toString()}: ошибка файла ${file.originalname}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
       if (!importFile) {
         importFile = await this.prisma.dlImportFile.create({
           data: {

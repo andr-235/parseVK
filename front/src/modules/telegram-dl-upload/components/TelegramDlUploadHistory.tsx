@@ -41,13 +41,22 @@ export default function TelegramDlUploadHistory({
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="truncate text-white">{file.originalFileName}</span>
-                <span className={file.isActive ? 'text-emerald-300' : 'text-slate-400'}>
-                  {file.isActive ? 'Активная' : 'Архивная'}
+                <span
+                  className={
+                    file.status === 'FAILED'
+                      ? 'text-rose-300'
+                      : file.isActive
+                        ? 'text-emerald-300'
+                        : 'text-slate-400'
+                  }
+                >
+                  {file.status === 'FAILED' ? 'Ошибка' : file.isActive ? 'Активная' : 'Архивная'}
                 </span>
               </div>
               <div className="mt-1 text-xs text-slate-400">
                 Статус: {file.status} • Строк: {file.rowsSuccess}/{file.rowsTotal}
               </div>
+              {file.error ? <div className="mt-1 text-xs text-rose-300">{file.error}</div> : null}
             </div>
           ))}
         </div>

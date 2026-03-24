@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TelegramDlUploadPage from '../components/TelegramDlUploadPage'
 import { telegramDlUploadService } from '../api/telegramDlUpload.api'
 
@@ -31,6 +31,11 @@ vi.mock('../api/telegramDlUpload.api', () => ({
     }),
   },
 }))
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(telegramDlUploadService.getFiles).mockResolvedValue([])
+})
 
 const renderPage = () => {
   const queryClient = new QueryClient({
@@ -94,5 +99,26 @@ describe('TelegramDlUploadPage', () => {
 
     expect(await screen.findByText('DONE')).toBeInTheDocument()
     expect(telegramDlUploadService.upload).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders failed files in history', async () => {
+    vi.mocked(telegramDlUploadService.getFiles).mockResolvedValue([
+      {
+        id: 'failed-1',
+        originalFileName: 'broken-file.xlsx',
+        status: 'FAILED',
+        rowsTotal: 0,
+        rowsSuccess: 0,
+        rowsFailed: 0,
+        isActive: false,
+        replacedFileId: null,
+        error: 'Файл поврежден',
+      },
+    ])
+
+    renderPage()
+
+    expect(await screen.findByText('broken-file.xlsx')).toBeInTheDocument()
+    expect(screen.getByText(/Статус: FAILED/)).toBeInTheDocument()
   })
 })
