@@ -1,3 +1,12 @@
+## [0.28.5](https://github.com/andr-235/parseVK/compare/v0.28.4...v0.28.5) (2026-03-24)
+
+
+### Bug Fixes
+
+* добавлено выгрузка пользователей ([7c37660](https://github.com/andr-235/parseVK/commit/7c376600b96b3fba34d926d5bb3d659b07672f30))
+* пропускать дубли выгрузки дл по имени файла ([29721af](https://github.com/andr-235/parseVK/commit/29721afbb5a85fd0d7e85321d3f9645898fe05df))
+* расширить поля dl_contact для длинных выгрузок ([72114b7](https://github.com/andr-235/parseVK/commit/72114b7b3ff5c15e1de5bdd8dde035abd3563e44))
+
 ## [0.28.4](https://github.com/andr-235/parseVK/compare/v0.28.3...v0.28.4) (2026-03-24)
 
 
