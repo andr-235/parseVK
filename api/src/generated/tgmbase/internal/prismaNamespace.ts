@@ -391,7 +391,10 @@ export const ModelName = {
   snitch_admin: 'snitch_admin',
   supergroup: 'supergroup',
   telegramnotify: 'telegramnotify',
-  user: 'user'
+  user: 'user',
+  DlImportBatch: 'DlImportBatch',
+  DlImportFile: 'DlImportFile',
+  DlContact: 'DlContact'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -407,7 +410,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "channel" | "group" | "keyword" | "message" | "snitch_admin" | "supergroup" | "telegramnotify" | "user"
+    modelProps: "channel" | "group" | "keyword" | "message" | "snitch_admin" | "supergroup" | "telegramnotify" | "user" | "dlImportBatch" | "dlImportFile" | "dlContact"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1003,6 +1006,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    DlImportBatch: {
+      payload: Prisma.$DlImportBatchPayload<ExtArgs>
+      fields: Prisma.DlImportBatchFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DlImportBatchFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DlImportBatchFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload>
+        }
+        findFirst: {
+          args: Prisma.DlImportBatchFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DlImportBatchFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload>
+        }
+        findMany: {
+          args: Prisma.DlImportBatchFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload>[]
+        }
+        create: {
+          args: Prisma.DlImportBatchCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload>
+        }
+        createMany: {
+          args: Prisma.DlImportBatchCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DlImportBatchCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload>[]
+        }
+        delete: {
+          args: Prisma.DlImportBatchDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload>
+        }
+        update: {
+          args: Prisma.DlImportBatchUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload>
+        }
+        deleteMany: {
+          args: Prisma.DlImportBatchDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DlImportBatchUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DlImportBatchUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload>[]
+        }
+        upsert: {
+          args: Prisma.DlImportBatchUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportBatchPayload>
+        }
+        aggregate: {
+          args: Prisma.DlImportBatchAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDlImportBatch>
+        }
+        groupBy: {
+          args: Prisma.DlImportBatchGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlImportBatchGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DlImportBatchCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlImportBatchCountAggregateOutputType> | number
+        }
+      }
+    }
+    DlImportFile: {
+      payload: Prisma.$DlImportFilePayload<ExtArgs>
+      fields: Prisma.DlImportFileFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DlImportFileFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DlImportFileFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload>
+        }
+        findFirst: {
+          args: Prisma.DlImportFileFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DlImportFileFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload>
+        }
+        findMany: {
+          args: Prisma.DlImportFileFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload>[]
+        }
+        create: {
+          args: Prisma.DlImportFileCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload>
+        }
+        createMany: {
+          args: Prisma.DlImportFileCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DlImportFileCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload>[]
+        }
+        delete: {
+          args: Prisma.DlImportFileDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload>
+        }
+        update: {
+          args: Prisma.DlImportFileUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload>
+        }
+        deleteMany: {
+          args: Prisma.DlImportFileDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DlImportFileUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DlImportFileUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload>[]
+        }
+        upsert: {
+          args: Prisma.DlImportFileUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlImportFilePayload>
+        }
+        aggregate: {
+          args: Prisma.DlImportFileAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDlImportFile>
+        }
+        groupBy: {
+          args: Prisma.DlImportFileGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlImportFileGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DlImportFileCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlImportFileCountAggregateOutputType> | number
+        }
+      }
+    }
+    DlContact: {
+      payload: Prisma.$DlContactPayload<ExtArgs>
+      fields: Prisma.DlContactFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DlContactFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DlContactFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload>
+        }
+        findFirst: {
+          args: Prisma.DlContactFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DlContactFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload>
+        }
+        findMany: {
+          args: Prisma.DlContactFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload>[]
+        }
+        create: {
+          args: Prisma.DlContactCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload>
+        }
+        createMany: {
+          args: Prisma.DlContactCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DlContactCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload>[]
+        }
+        delete: {
+          args: Prisma.DlContactDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload>
+        }
+        update: {
+          args: Prisma.DlContactUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload>
+        }
+        deleteMany: {
+          args: Prisma.DlContactDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DlContactUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DlContactUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload>[]
+        }
+        upsert: {
+          args: Prisma.DlContactUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlContactPayload>
+        }
+        aggregate: {
+          args: Prisma.DlContactAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDlContact>
+        }
+        groupBy: {
+          args: Prisma.DlContactGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlContactGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DlContactCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlContactCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1148,6 +1373,69 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const DlImportBatchScalarFieldEnum = {
+  id: 'id',
+  status: 'status',
+  filesTotal: 'filesTotal',
+  filesSuccess: 'filesSuccess',
+  filesFailed: 'filesFailed',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DlImportBatchScalarFieldEnum = (typeof DlImportBatchScalarFieldEnum)[keyof typeof DlImportBatchScalarFieldEnum]
+
+
+export const DlImportFileScalarFieldEnum = {
+  id: 'id',
+  batchId: 'batchId',
+  originalFileName: 'originalFileName',
+  fileHash: 'fileHash',
+  status: 'status',
+  rowsTotal: 'rowsTotal',
+  rowsSuccess: 'rowsSuccess',
+  rowsFailed: 'rowsFailed',
+  error: 'error',
+  isActive: 'isActive',
+  replacedFileId: 'replacedFileId',
+  createdAt: 'createdAt',
+  finishedAt: 'finishedAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DlImportFileScalarFieldEnum = (typeof DlImportFileScalarFieldEnum)[keyof typeof DlImportFileScalarFieldEnum]
+
+
+export const DlContactScalarFieldEnum = {
+  id: 'id',
+  importFileId: 'importFileId',
+  telegramId: 'telegramId',
+  username: 'username',
+  phone: 'phone',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  description: 'description',
+  region: 'region',
+  joinedAt: 'joinedAt',
+  channelsRaw: 'channelsRaw',
+  fullName: 'fullName',
+  address: 'address',
+  vkUrl: 'vkUrl',
+  email: 'email',
+  telegramContact: 'telegramContact',
+  instagram: 'instagram',
+  viber: 'viber',
+  odnoklassniki: 'odnoklassniki',
+  birthDateText: 'birthDateText',
+  usernameExtra: 'usernameExtra',
+  geo: 'geo',
+  sourceRowIndex: 'sourceRowIndex',
+  createdAt: 'createdAt'
+} as const
+
+export type DlContactScalarFieldEnum = (typeof DlContactScalarFieldEnum)[keyof typeof DlContactScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1359,6 +1647,9 @@ export type GlobalOmitConfig = {
   supergroup?: Prisma.supergroupOmit
   telegramnotify?: Prisma.telegramnotifyOmit
   user?: Prisma.userOmit
+  dlImportBatch?: Prisma.DlImportBatchOmit
+  dlImportFile?: Prisma.DlImportFileOmit
+  dlContact?: Prisma.DlContactOmit
 }
 
 /* Types for Logging */

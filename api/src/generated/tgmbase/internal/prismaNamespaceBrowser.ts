@@ -58,7 +58,10 @@ export const ModelName = {
   snitch_admin: 'snitch_admin',
   supergroup: 'supergroup',
   telegramnotify: 'telegramnotify',
-  user: 'user'
+  user: 'user',
+  DlImportBatch: 'DlImportBatch',
+  DlImportFile: 'DlImportFile',
+  DlContact: 'DlContact'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -183,6 +186,69 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const DlImportBatchScalarFieldEnum = {
+  id: 'id',
+  status: 'status',
+  filesTotal: 'filesTotal',
+  filesSuccess: 'filesSuccess',
+  filesFailed: 'filesFailed',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DlImportBatchScalarFieldEnum = (typeof DlImportBatchScalarFieldEnum)[keyof typeof DlImportBatchScalarFieldEnum]
+
+
+export const DlImportFileScalarFieldEnum = {
+  id: 'id',
+  batchId: 'batchId',
+  originalFileName: 'originalFileName',
+  fileHash: 'fileHash',
+  status: 'status',
+  rowsTotal: 'rowsTotal',
+  rowsSuccess: 'rowsSuccess',
+  rowsFailed: 'rowsFailed',
+  error: 'error',
+  isActive: 'isActive',
+  replacedFileId: 'replacedFileId',
+  createdAt: 'createdAt',
+  finishedAt: 'finishedAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DlImportFileScalarFieldEnum = (typeof DlImportFileScalarFieldEnum)[keyof typeof DlImportFileScalarFieldEnum]
+
+
+export const DlContactScalarFieldEnum = {
+  id: 'id',
+  importFileId: 'importFileId',
+  telegramId: 'telegramId',
+  username: 'username',
+  phone: 'phone',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  description: 'description',
+  region: 'region',
+  joinedAt: 'joinedAt',
+  channelsRaw: 'channelsRaw',
+  fullName: 'fullName',
+  address: 'address',
+  vkUrl: 'vkUrl',
+  email: 'email',
+  telegramContact: 'telegramContact',
+  instagram: 'instagram',
+  viber: 'viber',
+  odnoklassniki: 'odnoklassniki',
+  birthDateText: 'birthDateText',
+  usernameExtra: 'usernameExtra',
+  geo: 'geo',
+  sourceRowIndex: 'sourceRowIndex',
+  createdAt: 'createdAt'
+} as const
+
+export type DlContactScalarFieldEnum = (typeof DlContactScalarFieldEnum)[keyof typeof DlContactScalarFieldEnum]
 
 
 export const SortOrder = {

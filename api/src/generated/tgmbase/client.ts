@@ -79,3 +79,18 @@ export type telegramnotify = Prisma.telegramnotifyModel
  * 
  */
 export type user = Prisma.userModel
+/**
+ * Model DlImportBatch
+ * 
+ */
+export type DlImportBatch = Prisma.DlImportBatchModel
+/**
+ * Model DlImportFile
+ * 
+ */
+export type DlImportFile = Prisma.DlImportFileModel
+/**
+ * Model DlContact
+ * 
+ */
+export type DlContact = Prisma.DlContactModel

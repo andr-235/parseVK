@@ -3,10 +3,21 @@ import { Upload } from 'lucide-react'
 import FileUpload from '@/shared/components/FileUpload'
 import SectionCard from '@/shared/components/SectionCard'
 import { Button } from '@/shared/ui/button'
+import type { TelegramDlImportFile } from '@/modules/telegram-dl-upload/api/telegramDlUpload.api'
 
 const XLSX_ACCEPT = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
-export default function TelegramDlUploadCard() {
+interface TelegramDlUploadCardProps {
+  isUploading: boolean
+  uploadStatuses: TelegramDlImportFile[]
+  onSubmit: (files: File[]) => Promise<unknown>
+}
+
+export default function TelegramDlUploadCard({
+  isUploading,
+  uploadStatuses,
+  onSubmit,
+}: TelegramDlUploadCardProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 
   const handleFilesSelect = async (files: File[]) => {
@@ -21,6 +32,15 @@ export default function TelegramDlUploadCard() {
   }
 
   const handleClear = () => {
+    setSelectedFiles([])
+  }
+
+  const handleSubmit = async () => {
+    if (selectedFiles.length === 0 || isUploading) {
+      return
+    }
+
+    await onSubmit(selectedFiles)
     setSelectedFiles([])
   }
 
@@ -88,13 +108,36 @@ export default function TelegramDlUploadCard() {
         <Button
           type="button"
           className="w-full h-11 bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25"
-          disabled
+          disabled={selectedFiles.length === 0 || isUploading}
+          onClick={() => void handleSubmit()}
         >
-          Загрузить в tgmbase
+          {isUploading ? 'Загрузка...' : 'Загрузить в tgmbase'}
         </Button>
-        <p className="text-xs text-slate-500">
-          API загрузки появится на следующем шаге, когда backend-модуль будет готов.
-        </p>
+
+        {uploadStatuses.length > 0 ? (
+          <div className="space-y-2">
+            {uploadStatuses.map((file) => (
+              <div
+                key={file.id}
+                className="rounded-lg border border-white/10 bg-slate-800/30 px-4 py-3 text-sm"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate text-white">{file.originalFileName}</span>
+                  <span className="shrink-0 text-cyan-300">{file.status}</span>
+                </div>
+                <div className="mt-1 text-xs text-slate-400">
+                  Строк: {file.rowsSuccess}/{file.rowsTotal}
+                  {file.replacedFileId ? ' • заменила предыдущую версию' : ''}
+                </div>
+                {file.error ? <div className="mt-1 text-xs text-rose-300">{file.error}</div> : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500">
+            После отправки здесь появятся статусы обработки по каждому файлу.
+          </p>
+        )}
       </div>
     </SectionCard>
   )

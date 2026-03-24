@@ -235,6 +235,14 @@ if ! $PRISMA_CMD migrate deploy 2>&1 | tee /tmp/migrate.log; then
   exit 1
 fi
 
+echo "Применяем tgmbase SQL-миграции..."
+if ! $PRISMA_CMD db execute \
+  --schema prisma/tgmbase.prisma \
+  --file prisma/tgmbase-migrations/20260324160500_add_dl_import_tables.sql; then
+  echo "ОШИБКА: не удалось применить tgmbase SQL-миграции."
+  exit 1
+fi
+
 # Генерация только если клиент не собран (в build stage уже выполнен prisma generate)
 if [ ! -f ./dist/src/generated/prisma/client/index.js ] && [ ! -f ./dist/generated/prisma/client/index.js ]; then
   echo "Генерация Prisma Client..."
