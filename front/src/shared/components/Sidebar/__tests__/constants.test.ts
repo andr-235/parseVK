@@ -8,7 +8,7 @@ import {
 describe('Sidebar constants', () => {
   it('builds telegram section items with renamed entries', () => {
     expect(createTelegramSubItems()).toEqual([
-      { label: 'Парсинг пользователей', path: '/telegram' },
+      { label: 'Выгрузка пользователей', path: '/telegram' },
       { label: 'Поиск по местным каналам', path: '/tgmbase-search' },
       { label: 'Выгрузка с ДЛ', path: '/telegram/dl-upload' },
     ])
