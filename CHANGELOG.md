@@ -1,3 +1,10 @@
+## [0.28.2](https://github.com/andr-235/parseVK/compare/v0.28.1...v0.28.2) (2026-03-24)
+
+
+### Bug Fixes
+
+* исправить маппинг счетчиков batch в tgmbase ([5bff18f](https://github.com/andr-235/parseVK/commit/5bff18f2a898560000e11761911eac161419b308))
+
 ## [0.28.1](https://github.com/andr-235/parseVK/compare/v0.28.0...v0.28.1) (2026-03-24)
 
 
