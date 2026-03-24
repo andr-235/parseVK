@@ -5,7 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import SectionCard from '@/shared/components/SectionCard'
 import { EmptyState } from '@/shared/components/EmptyState'
 import { LoadingState } from '@/shared/components/LoadingState'
-import type { TelegramDlMatchResult, TelegramDlMatchRun } from '@/modules/telegram-dl-upload/api/telegramDlUpload.api'
+import type {
+  TelegramDlMatchResult,
+  TelegramDlMatchRun,
+} from '@/modules/telegram-dl-upload/api/telegramDlUpload.api'
 
 interface TelegramDlMatchResultsTableProps {
   results: TelegramDlMatchResult[]
@@ -105,9 +108,7 @@ export default function TelegramDlMatchResultsTable({
                   <div className="text-xs text-slate-400">
                     telegramId: {result.dlContact.telegramId ?? '—'}
                   </div>
-                  <div className="text-xs text-slate-400">
-                    {result.dlContact.originalFileName}
-                  </div>
+                  <div className="text-xs text-slate-400">{result.dlContact.originalFileName}</div>
                 </TableCell>
                 <TableCell className="text-slate-200">
                   <div className="font-medium text-white">

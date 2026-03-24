@@ -28,7 +28,9 @@ export const useTelegramDlUpload = (): UseTelegramDlUploadResult => {
   const [activeMatchRunId, setActiveMatchRunId] = useState<string | null>(null)
 
   const activeMatchRunQuery = useQuery({
-    queryKey: activeMatchRunId ? telegramDlUploadQueryKeys.matchRun(activeMatchRunId) : ['telegram-dl-upload', 'match-run', 'idle'],
+    queryKey: activeMatchRunId
+      ? telegramDlUploadQueryKeys.matchRun(activeMatchRunId)
+      : ['telegram-dl-upload', 'match-run', 'idle'],
     queryFn: () => telegramDlUploadService.getMatchRun(activeMatchRunId ?? ''),
     enabled: activeMatchRunId !== null,
   })
@@ -77,8 +79,7 @@ export const useTelegramDlUpload = (): UseTelegramDlUploadResult => {
     mutationFn: (runId: string) => telegramDlUploadService.exportMatchRun(runId),
   })
 
-  const activeMatchRun =
-    activeMatchRunQuery.data ?? createMatchRunMutation.data ?? null
+  const activeMatchRun = activeMatchRunQuery.data ?? createMatchRunMutation.data ?? null
 
   const contacts = contactsQuery.data ?? []
   const matchResults = matchResultsQuery.data ?? []

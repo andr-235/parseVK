@@ -107,11 +107,10 @@ export default function TelegramDlContactsTable({
                 </TableCell>
                 <TableCell className="text-slate-200">
                   <div className="font-medium text-white">
-                    {contact.fullName ?? [contact.firstName, contact.lastName].filter(Boolean).join(' ')}
+                    {contact.fullName ??
+                      [contact.firstName, contact.lastName].filter(Boolean).join(' ')}
                   </div>
-                  <div className="text-xs text-slate-400">
-                    {contact.region ?? '—'}
-                  </div>
+                  <div className="text-xs text-slate-400">{contact.region ?? '—'}</div>
                 </TableCell>
                 <TableCell className="text-slate-200">
                   <div className="space-y-1">

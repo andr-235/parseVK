@@ -92,11 +92,15 @@ export default function TelegramDlMatchToolbar({
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Проверено</div>
-            <div className="mt-1 text-lg font-semibold text-white">{activeMatchRun.contactsTotal}</div>
+            <div className="mt-1 text-lg font-semibold text-white">
+              {activeMatchRun.contactsTotal}
+            </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Всего матчей</div>
-            <div className="mt-1 text-lg font-semibold text-white">{activeMatchRun.matchesTotal}</div>
+            <div className="mt-1 text-lg font-semibold text-white">
+              {activeMatchRun.matchesTotal}
+            </div>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
             <div className="text-xs uppercase tracking-[0.24em] text-slate-400">ID</div>
