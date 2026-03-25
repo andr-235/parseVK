@@ -1,3 +1,10 @@
+## [0.29.4](https://github.com/andr-235/parseVK/compare/v0.29.3...v0.29.4) (2026-03-25)
+
+
+### Bug Fixes
+
+* добавить пагинацию dl контактов ([af199bd](https://github.com/andr-235/parseVK/commit/af199bdc8b70b8661a7b5265f85be39bc2d5962a))
+
 ## [0.29.3](https://github.com/andr-235/parseVK/compare/v0.29.2...v0.29.3) (2026-03-24)
 
 
