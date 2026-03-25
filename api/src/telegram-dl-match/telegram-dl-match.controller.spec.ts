@@ -10,6 +10,9 @@ describe('TelegramDlMatchController', () => {
     getRuns: vi.fn(),
     getRunById: vi.fn(),
     getResults: vi.fn(),
+    getResultMessages: vi.fn(),
+    excludeChat: vi.fn(),
+    restoreChat: vi.fn(),
     exportRun: vi.fn(),
   };
 
@@ -41,6 +44,9 @@ describe('TelegramDlMatchController', () => {
     service.getRuns.mockResolvedValue([{ id: '1', status: 'DONE' }]);
     service.getRunById.mockResolvedValue({ id: '1', status: 'DONE' });
     service.getResults.mockResolvedValue([{ id: '11' }]);
+    service.getResultMessages.mockResolvedValue([
+      { peerId: '9001', isExcluded: false, messages: [{ messageId: '10' }] },
+    ]);
 
     await expect(controller.getRuns()).resolves.toEqual([
       { id: '1', status: 'DONE' },
@@ -50,6 +56,25 @@ describe('TelegramDlMatchController', () => {
       status: 'DONE',
     });
     await expect(controller.getResults('1')).resolves.toEqual([{ id: '11' }]);
+    await expect(controller.getResultMessages('1', '11')).resolves.toEqual([
+      { peerId: '9001', isExcluded: false, messages: [{ messageId: '10' }] },
+    ]);
+  });
+
+  it('excludes and restores peer ids for a run', async () => {
+    service.excludeChat.mockResolvedValue({ id: '1', matchesTotal: 7 });
+    service.restoreChat.mockResolvedValue({ id: '1', matchesTotal: 8 });
+
+    await expect(
+      controller.excludeChat('1', { peerId: '9001' }),
+    ).resolves.toEqual({
+      id: '1',
+      matchesTotal: 7,
+    });
+    await expect(controller.restoreChat('1', '9001')).resolves.toEqual({
+      id: '1',
+      matchesTotal: 8,
+    });
   });
 
   it('exports xlsx results with download headers', async () => {

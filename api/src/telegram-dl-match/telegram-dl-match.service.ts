@@ -726,7 +726,7 @@ export class TelegramDlMatchService {
       }
       current.messages.push({
         peer_id: chat.peer_id,
-        message_id: item.message_id.toString(),
+        message_id: item.message_id?.toString() ?? null,
         message_date: item.date?.toISOString() ?? null,
         text: item.message ?? null,
       });

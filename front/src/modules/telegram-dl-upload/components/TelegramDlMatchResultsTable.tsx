@@ -62,8 +62,7 @@ function TelegramDlMatchResultRow({
             ?.map((item) => {
               const remainingChats =
                 item.user?.relatedChats?.filter((chat) => chat.peer_id !== peerId) ?? []
-              const nextChatActivityMatch =
-                item.chatActivityMatch && remainingChats.length > 0
+              const nextChatActivityMatch = item.chatActivityMatch && remainingChats.length > 0
 
               if (
                 item.id === result.id &&
@@ -90,7 +89,7 @@ function TelegramDlMatchResultRow({
                   : null,
               }
             })
-            .filter((item): item is TelegramDlMatchResult => item !== null) ?? [],
+            .filter((item): item is TelegramDlMatchResult => item !== null) ?? []
       )
       await queryClient.invalidateQueries({
         queryKey: telegramDlUploadQueryKeys.matchRun(runId),
@@ -112,7 +111,9 @@ function TelegramDlMatchResultRow({
             {result.dlContact.fullName ??
               [result.dlContact.firstName, result.dlContact.lastName].filter(Boolean).join(' ')}
           </div>
-          <div className="text-xs text-slate-400">telegramId: {result.dlContact.telegramId ?? '—'}</div>
+          <div className="text-xs text-slate-400">
+            telegramId: {result.dlContact.telegramId ?? '—'}
+          </div>
           <div className="text-xs text-slate-400">{result.dlContact.originalFileName}</div>
         </TableCell>
         <TableCell className="text-slate-200">

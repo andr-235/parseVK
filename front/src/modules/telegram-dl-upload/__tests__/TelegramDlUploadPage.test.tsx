@@ -7,97 +7,97 @@ import { telegramDlUploadService } from '../api/telegramDlUpload.api'
 
 const { defaultMatchResults } = vi.hoisted(() => ({
   defaultMatchResults: [
-  {
-    id: 'result-1',
-    runId: 'run-2',
-    dlContactId: '1',
-    tgmbaseUserId: '1001',
-    strictTelegramIdMatch: true,
-    usernameMatch: false,
-    phoneMatch: false,
-    chatActivityMatch: true,
-    createdAt: '2024-03-25T10:00:01.000Z',
-    dlContact: {
-      id: '1',
-      importFileId: '10',
-      originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
-      telegramId: '123456',
-      username: 'user_one',
-      phone: '79990000001',
-      firstName: 'Иван',
-      lastName: 'Иванов',
-      fullName: 'Иван Иванов',
-      region: 'Москва',
-      sourceRowIndex: 2,
+    {
+      id: 'result-1',
+      runId: 'run-2',
+      dlContactId: '1',
+      tgmbaseUserId: '1001',
+      strictTelegramIdMatch: true,
+      usernameMatch: false,
+      phoneMatch: false,
+      chatActivityMatch: true,
+      createdAt: '2024-03-25T10:00:01.000Z',
+      dlContact: {
+        id: '1',
+        importFileId: '10',
+        originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
+        telegramId: '123456',
+        username: 'user_one',
+        phone: '79990000001',
+        firstName: 'Иван',
+        lastName: 'Иванов',
+        fullName: 'Иван Иванов',
+        region: 'Москва',
+        sourceRowIndex: 2,
+      },
+      user: {
+        id: '1001',
+        user_id: '123456',
+        bot: false,
+        scam: false,
+        premium: true,
+        first_name: 'Иван',
+        last_name: 'Иванов',
+        username: 'user_one',
+        phone: '79990000001',
+        upd_date: '2024-03-25T10:00:00.000Z',
+        relatedChats: [
+          {
+            type: 'supergroup' as const,
+            peer_id: '9001',
+            title: 'Supergroup Alpha',
+          },
+          {
+            type: 'channel' as const,
+            peer_id: '9002',
+            title: 'Channel Alpha',
+          },
+        ],
+      },
     },
-    user: {
-      id: '1001',
-      user_id: '123456',
-      bot: false,
-      scam: false,
-      premium: true,
-      first_name: 'Иван',
-      last_name: 'Иванов',
-      username: 'user_one',
-      phone: '79990000001',
-      upd_date: '2024-03-25T10:00:00.000Z',
-      relatedChats: [
-        {
-          type: 'supergroup' as const,
-          peer_id: '9001',
-          title: 'Supergroup Alpha',
-        },
-        {
-          type: 'channel' as const,
-          peer_id: '9002',
-          title: 'Channel Alpha',
-        },
-      ],
+    {
+      id: 'result-2',
+      runId: 'run-2',
+      dlContactId: '2',
+      tgmbaseUserId: '1002',
+      strictTelegramIdMatch: false,
+      usernameMatch: false,
+      phoneMatch: false,
+      chatActivityMatch: true,
+      createdAt: '2024-03-25T10:00:02.000Z',
+      dlContact: {
+        id: '2',
+        importFileId: '11',
+        originalFileName: 'chat-only.xlsx',
+        telegramId: null,
+        username: null,
+        phone: null,
+        firstName: 'Петр',
+        lastName: 'Петров',
+        fullName: 'Петр Петров',
+        region: 'СПб',
+        sourceRowIndex: 3,
+      },
+      user: {
+        id: '1002',
+        user_id: '654321',
+        bot: false,
+        scam: false,
+        premium: false,
+        first_name: 'Петр',
+        last_name: 'Петров',
+        username: 'chat_only',
+        phone: null,
+        upd_date: '2024-03-25T10:00:00.000Z',
+        relatedChats: [
+          {
+            type: 'supergroup' as const,
+            peer_id: '9100',
+            title: 'Excluded Candidate Chat',
+          },
+        ],
+      },
     },
-  },
-  {
-    id: 'result-2',
-    runId: 'run-2',
-    dlContactId: '2',
-    tgmbaseUserId: '1002',
-    strictTelegramIdMatch: false,
-    usernameMatch: false,
-    phoneMatch: false,
-    chatActivityMatch: true,
-    createdAt: '2024-03-25T10:00:02.000Z',
-    dlContact: {
-      id: '2',
-      importFileId: '11',
-      originalFileName: 'chat-only.xlsx',
-      telegramId: null,
-      username: null,
-      phone: null,
-      firstName: 'Петр',
-      lastName: 'Петров',
-      fullName: 'Петр Петров',
-      region: 'СПб',
-      sourceRowIndex: 3,
-    },
-    user: {
-      id: '1002',
-      user_id: '654321',
-      bot: false,
-      scam: false,
-      premium: false,
-      first_name: 'Петр',
-      last_name: 'Петров',
-      username: 'chat_only',
-      phone: null,
-      upd_date: '2024-03-25T10:00:00.000Z',
-      relatedChats: [
-        {
-          type: 'supergroup' as const,
-          peer_id: '9100',
-          title: 'Excluded Candidate Chat',
-        },
-      ],
-    },
-  },
   ],
 }))
 
@@ -457,9 +457,7 @@ describe('TelegramDlUploadPage', () => {
     expect((await screen.findAllByText('Петр Петров')).length).toBeGreaterThan(0)
 
     await user.click(screen.getAllByRole('button', { name: /Комментарии/i })[1])
-    expect(
-      await screen.findByText('Комментарий только из исключаемого чата')
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Комментарий только из исключаемого чата')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Исключить чат 9100/i }))
 
@@ -467,7 +465,9 @@ describe('TelegramDlUploadPage', () => {
       expect(telegramDlUploadService.excludeChat).toHaveBeenCalledWith('run-2', '9100')
     })
     await waitFor(() => {
-      expect(vi.mocked(telegramDlUploadService.getMatchResults).mock.calls.length).toBeGreaterThanOrEqual(2)
+      expect(
+        vi.mocked(telegramDlUploadService.getMatchResults).mock.calls.length
+      ).toBeGreaterThanOrEqual(2)
     })
   })
 

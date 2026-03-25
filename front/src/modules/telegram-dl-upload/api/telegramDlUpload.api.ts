@@ -354,13 +354,16 @@ export const telegramDlUploadService = {
 
   async excludeChat(runId: string, peerId: string): Promise<TelegramDlMatchRun> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/dl-match/runs/${runId}/excluded-chats`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ peerId }),
-      })
+      const response = await createRequest(
+        `${API_URL}/telegram/dl-match/runs/${runId}/excluded-chats`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ peerId }),
+        }
+      )
       const run = await handleResponse<TelegramDlMatchRun>(
         response,
         'Не удалось исключить чат из матчинга'
