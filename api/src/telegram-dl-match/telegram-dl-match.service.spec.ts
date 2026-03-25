@@ -7,6 +7,18 @@ const createPrismaMock = () => ({
     count: vi.fn(),
     findMany: vi.fn(),
   },
+  message: {
+    findMany: vi.fn(),
+  },
+  channel: {
+    findMany: vi.fn(),
+  },
+  supergroup: {
+    findMany: vi.fn(),
+  },
+  group: {
+    findMany: vi.fn(),
+  },
   user: {
     findMany: vi.fn(),
   },
@@ -137,6 +149,19 @@ describe('TelegramDlMatchService', () => {
       ])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
+    prisma.message.findMany
+      .mockResolvedValueOnce([
+        { from_id: 100n, peer_id: 9001n },
+        { from_id: 100n, peer_id: 9002n },
+      ])
+      .mockResolvedValueOnce([{ from_id: 200n, peer_id: 9003n }]);
+    prisma.channel.findMany
+      .mockResolvedValueOnce([{ channel_id: 9002n, title: 'Channel Alpha' }])
+      .mockResolvedValueOnce([]);
+    prisma.supergroup.findMany
+      .mockResolvedValueOnce([{ supergroup_id: 9001n, title: 'Supergroup Alpha' }])
+      .mockResolvedValueOnce([{ supergroup_id: 9003n, title: 'Supergroup Beta' }]);
+    prisma.group.findMany.mockResolvedValue([]);
     prisma.dlMatchResult.createMany.mockResolvedValue({ count: 1 });
 
     const service = new TelegramDlMatchService(
@@ -155,6 +180,29 @@ describe('TelegramDlMatchService', () => {
     expect(run.status).toBe('DONE');
     expect(prisma.dlContact.findMany).toHaveBeenCalledTimes(3);
     expect(prisma.dlMatchResult.createMany).toHaveBeenCalledTimes(2);
+    expect(prisma.dlMatchResult.createMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            tgmbaseUserSnapshot: expect.objectContaining({
+              relatedChats: [
+                {
+                  type: 'supergroup',
+                  peer_id: '9001',
+                  title: 'Supergroup Alpha',
+                },
+                {
+                  type: 'channel',
+                  peer_id: '9002',
+                  title: 'Channel Alpha',
+                },
+              ],
+            }),
+          }),
+        ]),
+      }),
+    );
     expect(prisma.dlMatchRun.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -197,6 +245,13 @@ describe('TelegramDlMatchService', () => {
         tgmbaseUserSnapshot: {
           user_id: '123',
           username: 'alpha',
+          relatedChats: [
+            {
+              type: 'supergroup',
+              peer_id: '9001',
+              title: 'Supergroup Alpha',
+            },
+          ],
         },
         createdAt: new Date('2026-03-25T00:00:00.000Z'),
       },
@@ -213,7 +268,19 @@ describe('TelegramDlMatchService', () => {
       id: '1',
       status: 'DONE',
     });
-    await expect(service.getResults('1')).resolves.toHaveLength(1);
+    await expect(service.getResults('1')).resolves.toEqual([
+      expect.objectContaining({
+        user: expect.objectContaining({
+          relatedChats: [
+            {
+              type: 'supergroup',
+              peer_id: '9001',
+              title: 'Supergroup Alpha',
+            },
+          ],
+        }),
+      }),
+    ]);
   });
 
   it('marks run as failed when matching throws', async () => {

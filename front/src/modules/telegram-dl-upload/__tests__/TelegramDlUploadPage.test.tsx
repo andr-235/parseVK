@@ -101,6 +101,18 @@ vi.mock('../api/telegramDlUpload.api', () => ({
           username: 'user_one',
           phone: '79990000001',
           upd_date: '2024-03-25T10:00:00.000Z',
+          relatedChats: [
+            {
+              type: 'supergroup',
+              peer_id: '9001',
+              title: 'Supergroup Alpha',
+            },
+            {
+              type: 'channel',
+              peer_id: '9002',
+              title: 'Channel Alpha',
+            },
+          ],
         },
       },
     ]),
@@ -308,6 +320,9 @@ describe('TelegramDlUploadPage', () => {
 
     expect(await screen.findByText('Совпадения tgmbase')).toBeInTheDocument()
     expect(screen.getAllByText('Иван Иванов').length).toBeGreaterThan(0)
+    expect(screen.getByText('Связи tgmbase')).toBeInTheDocument()
+    expect(screen.getByText(/supergroup: Supergroup Alpha \(9001\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/channel: Channel Alpha \(9002\)/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Выгрузить XLSX/i })).toBeEnabled()
 
     fireEvent.click(screen.getByRole('button', { name: /Выгрузить XLSX/i }))

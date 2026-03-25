@@ -104,6 +104,7 @@ export default function TelegramDlMatchResultsTable({
             <TableRow className="border-white/10 hover:bg-transparent">
               <TableHead>DL контакт</TableHead>
               <TableHead>tgmbase user</TableHead>
+              <TableHead>Связи tgmbase</TableHead>
               <TableHead>Тип совпадения</TableHead>
             </TableRow>
           </TableHeader>
@@ -130,6 +131,19 @@ export default function TelegramDlMatchResultsTable({
                     username: {result.user?.username ?? '—'}
                   </div>
                   <div className="text-xs text-slate-400">phone: {result.user?.phone ?? '—'}</div>
+                </TableCell>
+                <TableCell className="text-slate-200">
+                  {result.user?.relatedChats?.length ? (
+                    <div className="max-h-24 space-y-1 overflow-y-auto pr-2 text-xs text-slate-300">
+                      {result.user.relatedChats.map((chat) => (
+                        <div key={`${chat.type}:${chat.peer_id}`}>
+                          {chat.type}: {chat.title} ({chat.peer_id})
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500">Нет данных</div>
+                  )}
                 </TableCell>
                 <TableCell className="space-y-2">
                   <div className="flex flex-wrap gap-2">

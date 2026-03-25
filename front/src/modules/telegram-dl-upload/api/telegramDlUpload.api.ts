@@ -132,6 +132,11 @@ export interface TelegramDlMatchResultUser {
   username: string | null
   phone: string | null
   upd_date: string | null
+  relatedChats?: Array<{
+    type: 'group' | 'supergroup' | 'channel'
+    peer_id: string
+    title: string
+  }>
 }
 
 export interface TelegramDlMatchResult {

@@ -20,6 +20,14 @@ export interface TelegramDlMatchResultDto {
   usernameMatch: boolean;
   phoneMatch: boolean;
   dlContact: Record<string, unknown>;
-  user: Record<string, unknown> | null;
+  user:
+    | (Record<string, unknown> & {
+        relatedChats?: Array<{
+          type: 'group' | 'supergroup' | 'channel';
+          peer_id: string;
+          title: string;
+        }>;
+      })
+    | null;
   createdAt: string;
 }

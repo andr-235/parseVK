@@ -20,6 +20,7 @@ export class TelegramDlMatchExporter {
       { header: 'Tgmbase User ID', key: 'userId', width: 18 },
       { header: 'Tgmbase Username', key: 'userUsername', width: 20 },
       { header: 'Tgmbase Phone', key: 'userPhone', width: 18 },
+      { header: 'Tgmbase Chats', key: 'userRelatedChats', width: 38 },
       { header: 'Strict ID Match', key: 'strict', width: 14 },
       { header: 'Username Match', key: 'usernameMatch', width: 16 },
       { header: 'Phone Match', key: 'phoneMatch', width: 14 },
@@ -30,6 +31,11 @@ export class TelegramDlMatchExporter {
     for (const result of results) {
       const dlSnapshot = result.dlContact;
       const userSnapshot = result.user ?? {};
+      const relatedChats = Array.isArray(userSnapshot.relatedChats)
+        ? userSnapshot.relatedChats
+            .map((item) => `${item.type}: ${item.title} (${item.peer_id})`)
+            .join('\n')
+        : '';
 
       worksheet.addRow({
         dlTelegramId: dlSnapshot.telegramId ?? '',
@@ -40,11 +46,17 @@ export class TelegramDlMatchExporter {
         userId: userSnapshot.user_id ?? '',
         userUsername: userSnapshot.username ?? '',
         userPhone: userSnapshot.phone ?? '',
+        userRelatedChats: relatedChats,
         strict: result.strictTelegramIdMatch ? 'Да' : 'Нет',
         usernameMatch: result.usernameMatch ? 'Да' : 'Нет',
         phoneMatch: result.phoneMatch ? 'Да' : 'Нет',
       });
     }
+
+    worksheet.getColumn('userRelatedChats').alignment = {
+      wrapText: true,
+      vertical: 'top',
+    };
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);

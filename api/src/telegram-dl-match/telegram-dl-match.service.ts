@@ -39,6 +39,12 @@ type DlMatchResultCreateManyInput = Parameters<
     : never
   : never;
 
+type RelatedChatSnapshot = {
+  type: 'group' | 'supergroup' | 'channel';
+  peer_id: string;
+  title: string;
+};
+
 @Injectable()
 export class TelegramDlMatchService {
   private readonly logger = new Logger(TelegramDlMatchService.name);
@@ -326,6 +332,14 @@ export class TelegramDlMatchService {
       ]);
     });
 
+    const relatedChatsByUserId = await this.loadRelatedChatsByUserIds([
+      ...new Set(
+        [...strictMatches, ...usernameMatches, ...phoneMatches].map((item) =>
+          item.user_id.toString(),
+        ),
+      ),
+    ]);
+
     const rows: DlMatchResultCreateManyInput[] = [];
 
     for (const contact of contacts) {
@@ -343,7 +357,10 @@ export class TelegramDlMatchService {
           usernameMatch: match.usernameMatch,
           phoneMatch: match.phoneMatch,
           dlContactSnapshot: this.buildDlContactSnapshot(contact),
-          tgmbaseUserSnapshot: match.snapshot,
+          tgmbaseUserSnapshot: this.buildUserSnapshot(
+            match.snapshot,
+            relatedChatsByUserId.get(match.userId.toString()) ?? [],
+          ),
         });
       }
     }
@@ -379,7 +396,7 @@ export class TelegramDlMatchService {
         strictTelegramIdMatch: boolean;
         usernameMatch: boolean;
         phoneMatch: boolean;
-        snapshot: Prisma.InputJsonObject;
+        snapshot: user;
       }
     >();
 
@@ -397,7 +414,7 @@ export class TelegramDlMatchService {
         strictTelegramIdMatch: false,
         usernameMatch: false,
         phoneMatch: false,
-        snapshot: this.buildUserSnapshot(matchedUser),
+        snapshot: matchedUser,
       };
 
       merged.set(key, {
@@ -451,7 +468,10 @@ export class TelegramDlMatchService {
     return snapshot;
   }
 
-  private buildUserSnapshot(matchedUser: user) {
+  private buildUserSnapshot(
+    matchedUser: user,
+    relatedChats: RelatedChatSnapshot[],
+  ) {
     const snapshot: Prisma.InputJsonObject = {
       user_id: matchedUser.user_id.toString(),
       username: matchedUser.username,
@@ -462,9 +482,123 @@ export class TelegramDlMatchService {
       scam: matchedUser.scam,
       bot: matchedUser.bot,
       upd_date: matchedUser.upd_date?.toISOString() ?? null,
+      relatedChats: relatedChats as unknown as Prisma.InputJsonValue,
     };
 
     return snapshot;
+  }
+
+  private async loadRelatedChatsByUserIds(userIds: string[]) {
+    const lookup = new Map<string, RelatedChatSnapshot[]>();
+    if (userIds.length === 0) {
+      return lookup;
+    }
+
+    const startedAt = Date.now();
+    const numericUserIds = userIds.map((item) => BigInt(item));
+    const messagePairs = await this.prisma.message.findMany({
+      where: {
+        from_id: {
+          in: numericUserIds,
+        },
+      },
+      select: {
+        from_id: true,
+        peer_id: true,
+      },
+      distinct: ['from_id', 'peer_id'],
+    });
+
+    const peerIds = [...new Set(messagePairs.map((item) => item.peer_id.toString()))].map(
+      (item) => BigInt(item),
+    );
+    if (peerIds.length === 0) {
+      return lookup;
+    }
+
+    const [groups, supergroups, channels] = await Promise.all([
+      this.prisma.group.findMany({
+        where: {
+          group_id: {
+            in: peerIds,
+          },
+        },
+        select: {
+          group_id: true,
+          title: true,
+        },
+      }),
+      this.prisma.supergroup.findMany({
+        where: {
+          supergroup_id: {
+            in: peerIds,
+          },
+        },
+        select: {
+          supergroup_id: true,
+          title: true,
+        },
+      }),
+      this.prisma.channel.findMany({
+        where: {
+          channel_id: {
+            in: peerIds,
+          },
+        },
+        select: {
+          channel_id: true,
+          title: true,
+        },
+      }),
+    ]);
+
+    const chatsByPeerId = new Map<string, RelatedChatSnapshot>();
+    groups.forEach((item) => {
+      chatsByPeerId.set(item.group_id.toString(), {
+        type: 'group',
+        peer_id: item.group_id.toString(),
+        title: item.title,
+      });
+    });
+    supergroups.forEach((item) => {
+      chatsByPeerId.set(item.supergroup_id.toString(), {
+        type: 'supergroup',
+        peer_id: item.supergroup_id.toString(),
+        title: item.title,
+      });
+    });
+    channels.forEach((item) => {
+      chatsByPeerId.set(item.channel_id.toString(), {
+        type: 'channel',
+        peer_id: item.channel_id.toString(),
+        title: item.title,
+      });
+    });
+
+    messagePairs.forEach((item) => {
+      if (!item.from_id) {
+        return;
+      }
+
+      const chat = chatsByPeerId.get(item.peer_id.toString());
+      if (!chat) {
+        return;
+      }
+
+      const userId = item.from_id.toString();
+      const current = lookup.get(userId) ?? [];
+      if (current.some((existing) => existing.peer_id === chat.peer_id)) {
+        return;
+      }
+
+      lookup.set(userId, [...current, chat]);
+    });
+
+    this.logger.log(
+      `Матчинг DL relatedChats: users=${userIds.length} messagePairs=${messagePairs.length} resolvedChats=${chatsByPeerId.size} durationMs=${Date.now() - startedAt}`,
+    );
+
+    return lookup;
   }
 
   private mapRun(run: DlMatchRun): TelegramDlMatchRunDto {
@@ -514,6 +648,9 @@ export class TelegramDlMatchService {
           ? null
           : {
               id: item.tgmbaseUserId?.toString() ?? null,
+              relatedChats: Array.isArray(userSnapshot.relatedChats)
+                ? userSnapshot.relatedChats
+                : [],
               ...userSnapshot,
             },
       createdAt: item.createdAt.toISOString(),
