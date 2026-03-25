@@ -78,13 +78,25 @@ describe('TelegramDlImportController', () => {
   });
 
   it('returns imported contacts list', async () => {
-    service.getContacts.mockResolvedValue([
-      { id: 1, originalFileName: 'test.xlsx' },
-    ]);
+    service.getContacts.mockResolvedValue({
+      items: [{ id: 1, originalFileName: 'test.xlsx' }],
+      total: 1,
+      limit: 100,
+      offset: 0,
+    });
 
     await expect(
-      controller.getContacts({ fileName: 'test.xlsx' }),
-    ).resolves.toEqual([{ id: 1, originalFileName: 'test.xlsx' }]);
-    expect(service.getContacts).toHaveBeenCalledWith({ fileName: 'test.xlsx' });
+      controller.getContacts({ fileName: 'test.xlsx', limit: 100, offset: 0 }),
+    ).resolves.toEqual({
+      items: [{ id: 1, originalFileName: 'test.xlsx' }],
+      total: 1,
+      limit: 100,
+      offset: 0,
+    });
+    expect(service.getContacts).toHaveBeenCalledWith({
+      fileName: 'test.xlsx',
+      limit: 100,
+      offset: 0,
+    });
   });
 });

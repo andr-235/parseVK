@@ -16,6 +16,40 @@ import type {
 import type { TelegramDlImportFilesQueryDto } from './dto/telegram-dl-import-files-query.dto.js';
 import type { TelegramDlImportContactsQueryDto } from './dto/telegram-dl-import-contacts-query.dto.js';
 
+interface TelegramDlImportContactsPageDto {
+  items: Array<{
+    id: string;
+    importFileId: string | null;
+    originalFileName: string;
+    isActive: boolean;
+    telegramId: string | null;
+    username: string | null;
+    phone: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    description: string | null;
+    region: string | null;
+    joinedAt: string | null;
+    channelsRaw: string | null;
+    fullName: string | null;
+    address: string | null;
+    vkUrl: string | null;
+    email: string | null;
+    telegramContact: string | null;
+    instagram: string | null;
+    viber: string | null;
+    odnoklassniki: string | null;
+    birthDateText: string | null;
+    usernameExtra: string | null;
+    geo: string | null;
+    sourceRowIndex: number;
+    createdAt: string;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 interface ImportFileProcessingResult extends TelegramDlImportFileDto {
   succeeded: boolean;
 }
@@ -99,49 +133,104 @@ export class TelegramDlImportService {
   }
 
   async getContacts(query: TelegramDlImportContactsQueryDto) {
-    const items = await this.prisma.dlContact.findMany({
-      where: {
-        importFile: {
-          ...(query.fileName ? { originalFileName: query.fileName } : {}),
-          ...(query.activeOnly !== undefined
-            ? { isActive: query.activeOnly }
-            : {}),
-        },
-      },
-      include: {
-        importFile: true,
-      },
-      orderBy: [{ createdAt: 'desc' }],
-    });
+    const limit = query.limit ?? 100;
+    const offset = query.offset ?? 0;
+    const importFileWhere = {
+      ...(query.fileName
+        ? {
+            originalFileName: {
+              contains: query.fileName,
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+      ...(query.activeOnly !== undefined ? { isActive: query.activeOnly } : {}),
+    };
+    const where = {
+      ...(query.telegramId
+        ? {
+            telegramId: {
+              contains: query.telegramId,
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+      ...(query.username
+        ? {
+            username: {
+              contains: query.username,
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+      ...(query.phone
+        ? {
+            phone: {
+              contains: query.phone,
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+      ...(Object.keys(importFileWhere).length > 0
+        ? { importFile: importFileWhere }
+        : {}),
+    };
 
-    return items.map((item) => ({
-      id: item.id.toString(),
-      importFileId: item.importFileId?.toString() ?? null,
-      originalFileName: item.importFile.originalFileName,
-      isActive: item.importFile.isActive,
-      telegramId: item.telegramId,
-      username: item.username,
-      phone: item.phone,
-      firstName: item.firstName,
-      lastName: item.lastName,
-      description: item.description,
-      region: item.region,
-      joinedAt: item.joinedAt?.toISOString() ?? null,
-      channelsRaw: item.channelsRaw,
-      fullName: item.fullName,
-      address: item.address,
-      vkUrl: item.vkUrl,
-      email: item.email,
-      telegramContact: item.telegramContact,
-      instagram: item.instagram,
-      viber: item.viber,
-      odnoklassniki: item.odnoklassniki,
-      birthDateText: item.birthDateText,
-      usernameExtra: item.usernameExtra,
-      geo: item.geo,
-      sourceRowIndex: item.sourceRowIndex,
-      createdAt: item.createdAt.toISOString(),
-    }));
+    this.logger.log(
+      `Запрос DL-контактов: limit=${limit} offset=${offset} file=${query.fileName ?? '-'} telegramId=${query.telegramId ?? '-'} username=${query.username ?? '-'} phone=${query.phone ?? '-'}`,
+    );
+
+    const startedAt = Date.now();
+    const [total, items] = await Promise.all([
+      this.prisma.dlContact.count({ where }),
+      this.prisma.dlContact.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        include: {
+          importFile: true,
+        },
+        orderBy: [{ createdAt: 'desc' }],
+      }),
+    ]);
+
+    this.logger.log(
+      `DL-контакты загружены: total=${total} returned=${items.length} durationMs=${Date.now() - startedAt}`,
+    );
+
+    return {
+      items: items.map((item) => ({
+        id: item.id.toString(),
+        importFileId: item.importFileId?.toString() ?? null,
+        originalFileName: item.importFile.originalFileName,
+        isActive: item.importFile.isActive,
+        telegramId: item.telegramId,
+        username: item.username,
+        phone: item.phone,
+        firstName: item.firstName,
+        lastName: item.lastName,
+        description: item.description,
+        region: item.region,
+        joinedAt: item.joinedAt?.toISOString() ?? null,
+        channelsRaw: item.channelsRaw,
+        fullName: item.fullName,
+        address: item.address,
+        vkUrl: item.vkUrl,
+        email: item.email,
+        telegramContact: item.telegramContact,
+        instagram: item.instagram,
+        viber: item.viber,
+        odnoklassniki: item.odnoklassniki,
+        birthDateText: item.birthDateText,
+        usernameExtra: item.usernameExtra,
+        geo: item.geo,
+        sourceRowIndex: item.sourceRowIndex,
+        createdAt: item.createdAt.toISOString(),
+      })),
+      total,
+      limit,
+      offset,
+    } satisfies TelegramDlImportContactsPageDto;
   }
 
   private async processFile(

@@ -8,34 +8,39 @@ import { telegramDlUploadService } from '../api/telegramDlUpload.api'
 vi.mock('../api/telegramDlUpload.api', () => ({
   telegramDlUploadService: {
     getFiles: vi.fn().mockResolvedValue([]),
-    getContacts: vi.fn().mockResolvedValue([
-      {
-        id: '1',
-        importFileId: '10',
-        originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
-        telegramId: '123456',
-        username: 'user_one',
-        phone: '79990000001',
-        firstName: 'Иван',
-        lastName: 'Иванов',
-        fullName: 'Иван Иванов',
-        region: 'Москва',
-        sourceRowIndex: 2,
-        description: 'Контакт из DL',
-        joinedAt: '2024-01-01T00:00:00.000Z',
-        address: 'Москва',
-        vkUrl: null,
-        email: null,
-        telegramContact: null,
-        instagram: null,
-        viber: null,
-        odnoklassniki: null,
-        birthDateText: null,
-        usernameExtra: null,
-        geo: null,
-        createdAt: '2024-01-01T00:00:00.000Z',
-      },
-    ]),
+    getContacts: vi.fn().mockResolvedValue({
+      items: [
+        {
+          id: '1',
+          importFileId: '10',
+          originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
+          telegramId: '123456',
+          username: 'user_one',
+          phone: '79990000001',
+          firstName: 'Иван',
+          lastName: 'Иванов',
+          fullName: 'Иван Иванов',
+          region: 'Москва',
+          sourceRowIndex: 2,
+          description: 'Контакт из DL',
+          joinedAt: '2024-01-01T00:00:00.000Z',
+          address: 'Москва',
+          vkUrl: null,
+          email: null,
+          telegramContact: null,
+          instagram: null,
+          viber: null,
+          odnoklassniki: null,
+          birthDateText: null,
+          usernameExtra: null,
+          geo: null,
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
+      ],
+      total: 241,
+      limit: 100,
+      offset: 0,
+    }),
     getMatchRuns: vi.fn().mockResolvedValue([
       {
         id: 'run-1',
@@ -190,6 +195,89 @@ describe('TelegramDlUploadPage', () => {
     expect(screen.getByRole('button', { name: /Найти совпадения в tgmbase/i })).toBeInTheDocument()
     expect(await screen.findByText('groupexport_ab3army_2024-10-15.xlsx')).toBeInTheDocument()
     expect(screen.getByText(/telegramId:\s*123456/i)).toBeInTheDocument()
+    expect(screen.getByText('Всего: 241')).toBeInTheDocument()
+    expect(screen.getByText('Страница: 1 / 3')).toBeInTheDocument()
+  })
+
+  it('switches contacts pages in the match tab', async () => {
+    const user = userEvent.setup()
+    vi.mocked(telegramDlUploadService.getContacts)
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: '1',
+            importFileId: '10',
+            originalFileName: 'page-1.xlsx',
+            telegramId: '123456',
+            username: 'user_one',
+            phone: '79990000001',
+            firstName: 'Иван',
+            lastName: 'Иванов',
+            fullName: 'Иван Иванов',
+            region: 'Москва',
+            sourceRowIndex: 2,
+            description: 'Контакт из DL',
+            joinedAt: '2024-01-01T00:00:00.000Z',
+            address: 'Москва',
+            vkUrl: null,
+            email: null,
+            telegramContact: null,
+            instagram: null,
+            viber: null,
+            odnoklassniki: null,
+            birthDateText: null,
+            usernameExtra: null,
+            geo: null,
+            createdAt: '2024-01-01T00:00:00.000Z',
+          },
+        ],
+        total: 241,
+        limit: 100,
+        offset: 0,
+      })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: '2',
+            importFileId: '11',
+            originalFileName: 'page-2.xlsx',
+            telegramId: '654321',
+            username: 'user_two',
+            phone: '79990000002',
+            firstName: 'Петр',
+            lastName: 'Петров',
+            fullName: 'Петр Петров',
+            region: 'СПб',
+            sourceRowIndex: 3,
+            description: 'Контакт из DL',
+            joinedAt: '2024-01-02T00:00:00.000Z',
+            address: 'СПб',
+            vkUrl: null,
+            email: null,
+            telegramContact: null,
+            instagram: null,
+            viber: null,
+            odnoklassniki: null,
+            birthDateText: null,
+            usernameExtra: null,
+            geo: null,
+            createdAt: '2024-01-02T00:00:00.000Z',
+          },
+        ],
+        total: 241,
+        limit: 100,
+        offset: 100,
+      })
+
+    renderPage()
+
+    await user.click(screen.getByRole('tab', { name: /Матчинг DL/i }))
+    await screen.findByText('page-1.xlsx')
+
+    await user.click(screen.getByRole('button', { name: /Следующая страница/i }))
+
+    expect(await screen.findByText('page-2.xlsx')).toBeInTheDocument()
+    expect(screen.getByText('Страница: 2 / 3')).toBeInTheDocument()
   })
 
   it('runs matching, shows results, exports xlsx, and switches back to contacts', async () => {

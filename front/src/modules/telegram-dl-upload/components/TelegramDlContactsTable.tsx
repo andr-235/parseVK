@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import SectionCard from '@/shared/components/SectionCard'
 import { EmptyState } from '@/shared/components/EmptyState'
@@ -9,38 +10,49 @@ import type { TelegramDlImportContact } from '@/modules/telegram-dl-upload/api/t
 
 interface TelegramDlContactsTableProps {
   contacts: TelegramDlImportContact[]
+  total: number
+  pageIndex: number
+  pageCount: number
+  pageSize: number
   isLoading: boolean
-}
-
-const matchesText = (value: string | null | undefined, filter: string) => {
-  if (!filter.trim()) {
-    return true
-  }
-
-  return (value ?? '').toLowerCase().includes(filter.trim().toLowerCase())
+  fileFilter: string
+  telegramIdFilter: string
+  usernameFilter: string
+  phoneFilter: string
+  onFileFilterChange: (value: string) => void
+  onTelegramIdFilterChange: (value: string) => void
+  onUsernameFilterChange: (value: string) => void
+  onPhoneFilterChange: (value: string) => void
+  onNextPage: () => void
+  onPreviousPage: () => void
+  canGoToNextPage: boolean
+  canGoToPreviousPage: boolean
 }
 
 export default function TelegramDlContactsTable({
   contacts,
+  total,
+  pageIndex,
+  pageCount,
+  pageSize,
   isLoading,
+  fileFilter,
+  telegramIdFilter,
+  usernameFilter,
+  phoneFilter,
+  onFileFilterChange,
+  onTelegramIdFilterChange,
+  onUsernameFilterChange,
+  onPhoneFilterChange,
+  onNextPage,
+  onPreviousPage,
+  canGoToNextPage,
+  canGoToPreviousPage,
 }: TelegramDlContactsTableProps) {
-  const [fileFilter, setFileFilter] = useState('')
-  const [telegramIdFilter, setTelegramIdFilter] = useState('')
-  const [usernameFilter, setUsernameFilter] = useState('')
-  const [phoneFilter, setPhoneFilter] = useState('')
-
-  const visibleContacts = contacts.filter(
-    (contact) =>
-      matchesText(contact.originalFileName, fileFilter) &&
-      matchesText(contact.telegramId, telegramIdFilter) &&
-      matchesText(contact.username, usernameFilter) &&
-      matchesText(contact.phone, phoneFilter)
-  )
-
   return (
     <SectionCard
       title="Полная DL-база"
-      description="Все контакты из выгрузок DL с базовыми фильтрами по файлу и идентификаторам."
+      description="Контакты из выгрузок DL с серверными фильтрами и постраничной загрузкой."
       className="border border-white/10 bg-slate-950/80 text-slate-100 shadow-soft-md backdrop-blur-2xl"
       headerClassName="border-white/10"
       contentClassName="space-y-4"
@@ -48,42 +60,75 @@ export default function TelegramDlContactsTable({
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Input
           value={fileFilter}
-          onChange={(event) => setFileFilter(event.target.value)}
+          onChange={(event) => onFileFilterChange(event.target.value)}
           placeholder="Файл импорта"
           aria-label="Фильтр по файлу"
         />
         <Input
           value={telegramIdFilter}
-          onChange={(event) => setTelegramIdFilter(event.target.value)}
+          onChange={(event) => onTelegramIdFilterChange(event.target.value)}
           placeholder="telegramId"
           aria-label="Фильтр по telegramId"
         />
         <Input
           value={usernameFilter}
-          onChange={(event) => setUsernameFilter(event.target.value)}
+          onChange={(event) => onUsernameFilterChange(event.target.value)}
           placeholder="username"
           aria-label="Фильтр по username"
         />
         <Input
           value={phoneFilter}
-          onChange={(event) => setPhoneFilter(event.target.value)}
+          onChange={(event) => onPhoneFilterChange(event.target.value)}
           placeholder="phone"
           aria-label="Фильтр по phone"
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
         <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
-          Показано: {visibleContacts.length}
+          Показано: {contacts.length}
         </Badge>
         <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
-          Всего: {contacts.length}
+          Всего: {total}
         </Badge>
+          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+            Страница: {pageIndex} / {pageCount}
+          </Badge>
+          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+            Лимит: {pageSize}
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onPreviousPage}
+            disabled={!canGoToPreviousPage || isLoading}
+            className="gap-2"
+          >
+            <ChevronLeft className="size-4" />
+            Предыдущая страница
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onNextPage}
+            disabled={!canGoToNextPage || isLoading}
+            className="gap-2"
+          >
+            Следующая страница
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
         <LoadingState message="Загружаю контакты DL" />
-      ) : visibleContacts.length === 0 ? (
+      ) : contacts.length === 0 ? (
         <EmptyState
           variant="custom"
           title="Контакты не найдены"
@@ -100,7 +145,7 @@ export default function TelegramDlContactsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visibleContacts.map((contact) => (
+            {contacts.map((contact) => (
               <TableRow key={contact.id} className="border-white/10">
                 <TableCell className="max-w-[280px] truncate text-slate-100">
                   {contact.originalFileName}

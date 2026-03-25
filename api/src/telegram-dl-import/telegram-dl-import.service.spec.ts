@@ -17,6 +17,7 @@ const createPrismaMock = () => ({
   },
   dlContact: {
     createMany: vi.fn(),
+    count: vi.fn(),
     findMany: vi.fn(),
   },
 });
@@ -388,47 +389,106 @@ describe('TelegramDlImportService', () => {
         },
       },
     ]);
+    prisma.dlContact.count.mockResolvedValue(1);
 
     const service = new TelegramDlImportService(
       prisma as never,
       parser as never,
     );
 
-    await expect(service.getContacts({})).resolves.toEqual([
-      expect.objectContaining({
-        id: '101',
-        originalFileName: 'dl.xlsx',
+    await expect(
+      service.getContacts({
+        fileName: 'dl',
         telegramId: '123',
         username: 'alpha',
-        phone: '+79990000001',
-        firstName: 'Alpha',
-        lastName: 'One',
-        description: 'desc',
-        region: 'region',
-        joinedAt: '2024-01-01T00:00:00.000Z',
-        channelsRaw: 'channels',
-        fullName: 'Alpha One',
-        address: 'address',
-        vkUrl: 'vk',
-        email: 'alpha@example.com',
-        telegramContact: '@alpha',
-        instagram: 'inst',
-        viber: 'viber',
-        odnoklassniki: 'ok',
-        birthDateText: '1990-01-01',
-        usernameExtra: 'alpha_extra',
-        geo: 'geo',
-        sourceRowIndex: 7,
-        createdAt: '2024-01-02T00:00:00.000Z',
-        isActive: true,
+        phone: '+7999',
+        limit: 50,
+        offset: 100,
       }),
-    ]);
+    ).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          id: '101',
+          originalFileName: 'dl.xlsx',
+          telegramId: '123',
+          username: 'alpha',
+          phone: '+79990000001',
+          firstName: 'Alpha',
+          lastName: 'One',
+          description: 'desc',
+          region: 'region',
+          joinedAt: '2024-01-01T00:00:00.000Z',
+          channelsRaw: 'channels',
+          fullName: 'Alpha One',
+          address: 'address',
+          vkUrl: 'vk',
+          email: 'alpha@example.com',
+          telegramContact: '@alpha',
+          instagram: 'inst',
+          viber: 'viber',
+          odnoklassniki: 'ok',
+          birthDateText: '1990-01-01',
+          usernameExtra: 'alpha_extra',
+          geo: 'geo',
+          sourceRowIndex: 7,
+          createdAt: '2024-01-02T00:00:00.000Z',
+          isActive: true,
+        }),
+      ],
+      total: 1,
+      limit: 50,
+      offset: 100,
+    });
     expect(prisma.dlContact.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        take: 50,
+        skip: 100,
+        where: {
+          telegramId: {
+            contains: '123',
+            mode: 'insensitive',
+          },
+          username: {
+            contains: 'alpha',
+            mode: 'insensitive',
+          },
+          phone: {
+            contains: '+7999',
+            mode: 'insensitive',
+          },
+          importFile: {
+            originalFileName: {
+              contains: 'dl',
+              mode: 'insensitive',
+            },
+          },
+        },
         include: {
           importFile: true,
         },
       }),
     );
+    expect(prisma.dlContact.count).toHaveBeenCalledWith({
+      where: {
+        telegramId: {
+          contains: '123',
+          mode: 'insensitive',
+        },
+        username: {
+          contains: 'alpha',
+          mode: 'insensitive',
+        },
+        phone: {
+          contains: '+7999',
+          mode: 'insensitive',
+        },
+        importFile: {
+          originalFileName: {
+            contains: 'dl',
+            mode: 'insensitive',
+          },
+        },
+      },
+    });
   });
 });

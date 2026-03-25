@@ -1,5 +1,6 @@
 import type {
   TelegramDlImportContact,
+  TelegramDlImportContactsPage,
   TelegramDlImportFile,
   TelegramDlImportUploadResponse,
   TelegramDlMatchResult,
@@ -14,9 +15,26 @@ export interface UseTelegramDlUploadResult {
   isUploading: boolean
   uploadError: unknown
   uploadResult: TelegramDlImportUploadResponse | undefined
+  contactsPage: TelegramDlImportContactsPage
   contacts: TelegramDlImportContact[]
+  contactsTotal: number
+  contactsPageIndex: number
+  contactsPageCount: number
+  contactsPageSize: number
   isContactsLoading: boolean
   contactsError: unknown
+  setContactsFileFilter: (value: string) => void
+  setContactsTelegramIdFilter: (value: string) => void
+  setContactsUsernameFilter: (value: string) => void
+  setContactsPhoneFilter: (value: string) => void
+  contactsFileFilter: string
+  contactsTelegramIdFilter: string
+  contactsUsernameFilter: string
+  contactsPhoneFilter: string
+  goToNextContactsPage: () => void
+  goToPreviousContactsPage: () => void
+  canGoToNextContactsPage: boolean
+  canGoToPreviousContactsPage: boolean
   matchRuns: TelegramDlMatchRun[]
   isMatchRunsLoading: boolean
   matchRunsError: unknown

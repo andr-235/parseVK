@@ -53,7 +53,7 @@ export interface TelegramDlImportUploadResponse {
 
 export interface TelegramDlImportContact {
   id: string
-  importFileId: string
+  importFileId: string | null
   originalFileName: string
   telegramId: string | null
   username: string | null
@@ -76,6 +76,22 @@ export interface TelegramDlImportContact {
   usernameExtra: string | null
   geo: string | null
   createdAt: string
+}
+
+export interface TelegramDlImportContactsQuery {
+  fileName?: string
+  telegramId?: string
+  username?: string
+  phone?: string
+  limit?: number
+  offset?: number
+}
+
+export interface TelegramDlImportContactsPage {
+  items: TelegramDlImportContact[]
+  total: number
+  limit: number
+  offset: number
 }
 
 export interface TelegramDlMatchRun {
@@ -153,6 +169,32 @@ const createFailedFileResult = (file: File, error: string): TelegramDlImportFile
   error,
 })
 
+const buildContactsQueryString = (params: TelegramDlImportContactsQuery = {}) => {
+  const search = new URLSearchParams()
+
+  if (params.fileName?.trim()) {
+    search.set('fileName', params.fileName.trim())
+  }
+  if (params.telegramId?.trim()) {
+    search.set('telegramId', params.telegramId.trim())
+  }
+  if (params.username?.trim()) {
+    search.set('username', params.username.trim())
+  }
+  if (params.phone?.trim()) {
+    search.set('phone', params.phone.trim())
+  }
+  if (typeof params.limit === 'number') {
+    search.set('limit', String(params.limit))
+  }
+  if (typeof params.offset === 'number') {
+    search.set('offset', String(params.offset))
+  }
+
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}
+
 export const telegramDlUploadService = {
   async upload(files: File[]): Promise<TelegramDlImportUploadResponse> {
     const chunks = chunkFiles(files, UPLOAD_CHUNK_SIZE)
@@ -216,10 +258,14 @@ export const telegramDlUploadService = {
     )
   },
 
-  async getContacts(): Promise<TelegramDlImportContact[]> {
+  async getContacts(
+    params: TelegramDlImportContactsQuery = {}
+  ): Promise<TelegramDlImportContactsPage> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/dl-import/contacts`)
-      return await handleResponse<TelegramDlImportContact[]>(
+      const response = await createRequest(
+        `${API_URL}/telegram/dl-import/contacts${buildContactsQueryString(params)}`
+      )
+      return await handleResponse<TelegramDlImportContactsPage>(
         response,
         'Не удалось загрузить контакты DL'
       )

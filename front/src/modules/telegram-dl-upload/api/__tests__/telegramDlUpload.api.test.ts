@@ -111,7 +111,7 @@ describe('telegramDlUploadService.match workflow', () => {
   it('loads contacts and match runs for the workspace', async () => {
     const { telegramDlUploadService } = await import('../telegramDlUpload.api')
     const matchService = telegramDlUploadService as unknown as {
-      getContacts: () => Promise<unknown>
+      getContacts: (params?: Record<string, unknown>) => Promise<unknown>
       getMatchRuns: () => Promise<unknown>
     }
 
@@ -119,34 +119,39 @@ describe('telegramDlUploadService.match workflow', () => {
       .fn()
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify([
-            {
-              id: '1',
-              importFileId: '10',
-              originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
-              telegramId: '123456',
-              username: 'user_one',
-              phone: '79990000001',
-              firstName: 'Иван',
-              lastName: 'Иванов',
-              fullName: 'Иван Иванов',
-              region: 'Москва',
-              sourceRowIndex: 2,
-              description: 'Контакт из DL',
-              joinedAt: '2024-01-01T00:00:00.000Z',
-              address: 'Москва',
-              vkUrl: null,
-              email: null,
-              telegramContact: null,
-              instagram: null,
-              viber: null,
-              odnoklassniki: null,
-              birthDateText: null,
-              usernameExtra: null,
-              geo: null,
-              createdAt: '2024-01-01T00:00:00.000Z',
-            },
-          ]),
+          JSON.stringify({
+            items: [
+              {
+                id: '1',
+                importFileId: '10',
+                originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
+                telegramId: '123456',
+                username: 'user_one',
+                phone: '79990000001',
+                firstName: 'Иван',
+                lastName: 'Иванов',
+                fullName: 'Иван Иванов',
+                region: 'Москва',
+                sourceRowIndex: 2,
+                description: 'Контакт из DL',
+                joinedAt: '2024-01-01T00:00:00.000Z',
+                address: 'Москва',
+                vkUrl: null,
+                email: null,
+                telegramContact: null,
+                instagram: null,
+                viber: null,
+                odnoklassniki: null,
+                birthDateText: null,
+                usernameExtra: null,
+                geo: null,
+                createdAt: '2024-01-01T00:00:00.000Z',
+              },
+            ],
+            total: 501,
+            limit: 100,
+            offset: 200,
+          }),
           {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
@@ -176,34 +181,44 @@ describe('telegramDlUploadService.match workflow', () => {
         )
       ) as typeof fetch
 
-    await expect(matchService.getContacts()).resolves.toEqual([
-      {
-        id: '1',
-        importFileId: '10',
-        originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
-        telegramId: '123456',
-        username: 'user_one',
-        phone: '79990000001',
-        firstName: 'Иван',
-        lastName: 'Иванов',
-        fullName: 'Иван Иванов',
-        region: 'Москва',
-        sourceRowIndex: 2,
-        description: 'Контакт из DL',
-        joinedAt: '2024-01-01T00:00:00.000Z',
-        address: 'Москва',
-        vkUrl: null,
-        email: null,
-        telegramContact: null,
-        instagram: null,
-        viber: null,
-        odnoklassniki: null,
-        birthDateText: null,
-        usernameExtra: null,
-        geo: null,
-        createdAt: '2024-01-01T00:00:00.000Z',
-      },
-    ])
+    await expect(matchService.getContacts({ limit: 100, offset: 200 })).resolves.toEqual({
+      items: [
+        {
+          id: '1',
+          importFileId: '10',
+          originalFileName: 'groupexport_ab3army_2024-10-15.xlsx',
+          telegramId: '123456',
+          username: 'user_one',
+          phone: '79990000001',
+          firstName: 'Иван',
+          lastName: 'Иванов',
+          fullName: 'Иван Иванов',
+          region: 'Москва',
+          sourceRowIndex: 2,
+          description: 'Контакт из DL',
+          joinedAt: '2024-01-01T00:00:00.000Z',
+          address: 'Москва',
+          vkUrl: null,
+          email: null,
+          telegramContact: null,
+          instagram: null,
+          viber: null,
+          odnoklassniki: null,
+          birthDateText: null,
+          usernameExtra: null,
+          geo: null,
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
+      ],
+      total: 501,
+      limit: 100,
+      offset: 200,
+    })
+    expect(globalThis.fetch).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/api/telegram/dl-import/contacts?limit=100&offset=200'),
+      expect.any(Object)
+    )
 
     await expect(matchService.getMatchRuns()).resolves.toEqual([
       {
