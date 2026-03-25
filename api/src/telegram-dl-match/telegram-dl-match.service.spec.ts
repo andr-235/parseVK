@@ -62,7 +62,7 @@ describe('TelegramDlMatchService', () => {
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
 
-    prisma.dlMatchRun.update.mockImplementation(async ({ data }) => ({
+    prisma.dlMatchRun.update.mockImplementation(({ data }) => ({
       id: 10n,
       status: data.status ?? 'RUNNING',
       contactsTotal: data.contactsTotal ?? 0,
