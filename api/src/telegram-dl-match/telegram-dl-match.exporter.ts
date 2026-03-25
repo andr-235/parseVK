@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
-import type { TelegramDlMatchResultDto } from './dto/telegram-dl-match-response.dto.js';
+import type {
+  TelegramDlMatchResultDto,
+  TelegramDlMatchResultMessagesGroupDto,
+} from './dto/telegram-dl-match-response.dto.js';
 
 @Injectable()
 export class TelegramDlMatchExporter {
   async exportRun(
     runId: string,
     results: TelegramDlMatchResultDto[],
+    messagesByResultId: Map<string, TelegramDlMatchResultMessagesGroupDto[]>,
   ): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Совпадения');
@@ -21,9 +25,11 @@ export class TelegramDlMatchExporter {
       { header: 'Tgmbase Username', key: 'userUsername', width: 20 },
       { header: 'Tgmbase Phone', key: 'userPhone', width: 18 },
       { header: 'Tgmbase Chats', key: 'userRelatedChats', width: 38 },
+      { header: 'Tgmbase Comments', key: 'userComments', width: 54 },
       { header: 'Strict ID Match', key: 'strict', width: 14 },
       { header: 'Username Match', key: 'usernameMatch', width: 16 },
       { header: 'Phone Match', key: 'phoneMatch', width: 14 },
+      { header: 'Chat Activity Match', key: 'chatActivityMatch', width: 18 },
     ];
 
     worksheet.getRow(1).font = { bold: true };
@@ -36,6 +42,16 @@ export class TelegramDlMatchExporter {
             .map((item) => `${item.type}: ${item.title} (${item.peer_id})`)
             .join('\n')
         : '';
+      const comments = (messagesByResultId.get(result.id) ?? [])
+        .map((group) =>
+          [
+            `${group.chatType}: ${group.title} (${group.peerId})`,
+            ...group.messages.map((message) =>
+              `${message.messageDate ?? ''} ${message.text ?? ''}`.trim(),
+            ),
+          ].join('\n'),
+        )
+        .join('\n\n');
 
       worksheet.addRow({
         dlTelegramId: dlSnapshot.telegramId ?? '',
@@ -47,13 +63,19 @@ export class TelegramDlMatchExporter {
         userUsername: userSnapshot.username ?? '',
         userPhone: userSnapshot.phone ?? '',
         userRelatedChats: relatedChats,
+        userComments: comments,
         strict: result.strictTelegramIdMatch ? 'Да' : 'Нет',
         usernameMatch: result.usernameMatch ? 'Да' : 'Нет',
         phoneMatch: result.phoneMatch ? 'Да' : 'Нет',
+        chatActivityMatch: result.chatActivityMatch ? 'Да' : 'Нет',
       });
     }
 
     worksheet.getColumn('userRelatedChats').alignment = {
+      wrapText: true,
+      vertical: 'top',
+    };
+    worksheet.getColumn('userComments').alignment = {
       wrapText: true,
       vertical: 'top',
     };

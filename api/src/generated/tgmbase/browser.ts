@@ -82,3 +82,13 @@ export type DlMatchRun = Prisma.DlMatchRunModel
  * 
  */
 export type DlMatchResult = Prisma.DlMatchResultModel
+/**
+ * Model DlMatchResultChat
+ * 
+ */
+export type DlMatchResultChat = Prisma.DlMatchResultChatModel
+/**
+ * Model DlMatchResultMessage
+ * 
+ */
+export type DlMatchResultMessage = Prisma.DlMatchResultMessageModel

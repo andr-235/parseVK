@@ -9,7 +9,6 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
 import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
@@ -48,6 +47,7 @@ export type DlMatchResultMinAggregateOutputType = {
   strictTelegramIdMatch: boolean | null
   usernameMatch: boolean | null
   phoneMatch: boolean | null
+  chatActivityMatch: boolean | null
   createdAt: Date | null
 }
 
@@ -59,6 +59,7 @@ export type DlMatchResultMaxAggregateOutputType = {
   strictTelegramIdMatch: boolean | null
   usernameMatch: boolean | null
   phoneMatch: boolean | null
+  chatActivityMatch: boolean | null
   createdAt: Date | null
 }
 
@@ -70,6 +71,7 @@ export type DlMatchResultCountAggregateOutputType = {
   strictTelegramIdMatch: number
   usernameMatch: number
   phoneMatch: number
+  chatActivityMatch: number
   dlContactSnapshot: number
   tgmbaseUserSnapshot: number
   createdAt: number
@@ -99,6 +101,7 @@ export type DlMatchResultMinAggregateInputType = {
   strictTelegramIdMatch?: true
   usernameMatch?: true
   phoneMatch?: true
+  chatActivityMatch?: true
   createdAt?: true
 }
 
@@ -110,6 +113,7 @@ export type DlMatchResultMaxAggregateInputType = {
   strictTelegramIdMatch?: true
   usernameMatch?: true
   phoneMatch?: true
+  chatActivityMatch?: true
   createdAt?: true
 }
 
@@ -121,6 +125,7 @@ export type DlMatchResultCountAggregateInputType = {
   strictTelegramIdMatch?: true
   usernameMatch?: true
   phoneMatch?: true
+  chatActivityMatch?: true
   dlContactSnapshot?: true
   tgmbaseUserSnapshot?: true
   createdAt?: true
@@ -221,6 +226,7 @@ export type DlMatchResultGroupByOutputType = {
   strictTelegramIdMatch: boolean
   usernameMatch: boolean
   phoneMatch: boolean
+  chatActivityMatch: boolean
   dlContactSnapshot: runtime.JsonValue
   tgmbaseUserSnapshot: runtime.JsonValue | null
   createdAt: Date
@@ -257,12 +263,15 @@ export type DlMatchResultWhereInput = {
   strictTelegramIdMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
   usernameMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
   phoneMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
+  chatActivityMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
   dlContactSnapshot?: Prisma.JsonFilter<"DlMatchResult">
   tgmbaseUserSnapshot?: Prisma.JsonNullableFilter<"DlMatchResult">
   createdAt?: Prisma.DateTimeFilter<"DlMatchResult"> | Date | string
   run?: Prisma.XOR<Prisma.DlMatchRunScalarRelationFilter, Prisma.DlMatchRunWhereInput>
   dlContact?: Prisma.XOR<Prisma.DlContactScalarRelationFilter, Prisma.DlContactWhereInput>
   tgmbaseUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.userWhereInput> | null
+  chats?: Prisma.DlMatchResultChatListRelationFilter
+  messages?: Prisma.DlMatchResultMessageListRelationFilter
 }
 
 export type DlMatchResultOrderByWithRelationInput = {
@@ -273,12 +282,15 @@ export type DlMatchResultOrderByWithRelationInput = {
   strictTelegramIdMatch?: Prisma.SortOrder
   usernameMatch?: Prisma.SortOrder
   phoneMatch?: Prisma.SortOrder
+  chatActivityMatch?: Prisma.SortOrder
   dlContactSnapshot?: Prisma.SortOrder
   tgmbaseUserSnapshot?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   run?: Prisma.DlMatchRunOrderByWithRelationInput
   dlContact?: Prisma.DlContactOrderByWithRelationInput
   tgmbaseUser?: Prisma.userOrderByWithRelationInput
+  chats?: Prisma.DlMatchResultChatOrderByRelationAggregateInput
+  messages?: Prisma.DlMatchResultMessageOrderByRelationAggregateInput
 }
 
 export type DlMatchResultWhereUniqueInput = Prisma.AtLeast<{
@@ -292,12 +304,15 @@ export type DlMatchResultWhereUniqueInput = Prisma.AtLeast<{
   strictTelegramIdMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
   usernameMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
   phoneMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
+  chatActivityMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
   dlContactSnapshot?: Prisma.JsonFilter<"DlMatchResult">
   tgmbaseUserSnapshot?: Prisma.JsonNullableFilter<"DlMatchResult">
   createdAt?: Prisma.DateTimeFilter<"DlMatchResult"> | Date | string
   run?: Prisma.XOR<Prisma.DlMatchRunScalarRelationFilter, Prisma.DlMatchRunWhereInput>
   dlContact?: Prisma.XOR<Prisma.DlContactScalarRelationFilter, Prisma.DlContactWhereInput>
   tgmbaseUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.userWhereInput> | null
+  chats?: Prisma.DlMatchResultChatListRelationFilter
+  messages?: Prisma.DlMatchResultMessageListRelationFilter
 }, "id">
 
 export type DlMatchResultOrderByWithAggregationInput = {
@@ -308,6 +323,7 @@ export type DlMatchResultOrderByWithAggregationInput = {
   strictTelegramIdMatch?: Prisma.SortOrder
   usernameMatch?: Prisma.SortOrder
   phoneMatch?: Prisma.SortOrder
+  chatActivityMatch?: Prisma.SortOrder
   dlContactSnapshot?: Prisma.SortOrder
   tgmbaseUserSnapshot?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -329,6 +345,7 @@ export type DlMatchResultScalarWhereWithAggregatesInput = {
   strictTelegramIdMatch?: Prisma.BoolWithAggregatesFilter<"DlMatchResult"> | boolean
   usernameMatch?: Prisma.BoolWithAggregatesFilter<"DlMatchResult"> | boolean
   phoneMatch?: Prisma.BoolWithAggregatesFilter<"DlMatchResult"> | boolean
+  chatActivityMatch?: Prisma.BoolWithAggregatesFilter<"DlMatchResult"> | boolean
   dlContactSnapshot?: Prisma.JsonWithAggregatesFilter<"DlMatchResult">
   tgmbaseUserSnapshot?: Prisma.JsonNullableWithAggregatesFilter<"DlMatchResult">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"DlMatchResult"> | Date | string
@@ -339,12 +356,15 @@ export type DlMatchResultCreateInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   run: Prisma.DlMatchRunCreateNestedOneWithoutResultsInput
   dlContact: Prisma.DlContactCreateNestedOneWithoutMatchResultsInput
   tgmbaseUser?: Prisma.userCreateNestedOneWithoutDlMatchesInput
+  chats?: Prisma.DlMatchResultChatCreateNestedManyWithoutResultInput
+  messages?: Prisma.DlMatchResultMessageCreateNestedManyWithoutResultInput
 }
 
 export type DlMatchResultUncheckedCreateInput = {
@@ -355,9 +375,12 @@ export type DlMatchResultUncheckedCreateInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedCreateNestedManyWithoutResultInput
+  messages?: Prisma.DlMatchResultMessageUncheckedCreateNestedManyWithoutResultInput
 }
 
 export type DlMatchResultUpdateInput = {
@@ -365,12 +388,15 @@ export type DlMatchResultUpdateInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   run?: Prisma.DlMatchRunUpdateOneRequiredWithoutResultsNestedInput
   dlContact?: Prisma.DlContactUpdateOneRequiredWithoutMatchResultsNestedInput
   tgmbaseUser?: Prisma.userUpdateOneWithoutDlMatchesNestedInput
+  chats?: Prisma.DlMatchResultChatUpdateManyWithoutResultNestedInput
+  messages?: Prisma.DlMatchResultMessageUpdateManyWithoutResultNestedInput
 }
 
 export type DlMatchResultUncheckedUpdateInput = {
@@ -381,9 +407,12 @@ export type DlMatchResultUncheckedUpdateInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedUpdateManyWithoutResultNestedInput
+  messages?: Prisma.DlMatchResultMessageUncheckedUpdateManyWithoutResultNestedInput
 }
 
 export type DlMatchResultCreateManyInput = {
@@ -394,6 +423,7 @@ export type DlMatchResultCreateManyInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -404,6 +434,7 @@ export type DlMatchResultUpdateManyMutationInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -417,6 +448,7 @@ export type DlMatchResultUncheckedUpdateManyInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -440,6 +472,7 @@ export type DlMatchResultCountOrderByAggregateInput = {
   strictTelegramIdMatch?: Prisma.SortOrder
   usernameMatch?: Prisma.SortOrder
   phoneMatch?: Prisma.SortOrder
+  chatActivityMatch?: Prisma.SortOrder
   dlContactSnapshot?: Prisma.SortOrder
   tgmbaseUserSnapshot?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -460,6 +493,7 @@ export type DlMatchResultMaxOrderByAggregateInput = {
   strictTelegramIdMatch?: Prisma.SortOrder
   usernameMatch?: Prisma.SortOrder
   phoneMatch?: Prisma.SortOrder
+  chatActivityMatch?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -471,6 +505,7 @@ export type DlMatchResultMinOrderByAggregateInput = {
   strictTelegramIdMatch?: Prisma.SortOrder
   usernameMatch?: Prisma.SortOrder
   phoneMatch?: Prisma.SortOrder
+  chatActivityMatch?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -479,6 +514,11 @@ export type DlMatchResultSumOrderByAggregateInput = {
   runId?: Prisma.SortOrder
   dlContactId?: Prisma.SortOrder
   tgmbaseUserId?: Prisma.SortOrder
+}
+
+export type DlMatchResultScalarRelationFilter = {
+  is?: Prisma.DlMatchResultWhereInput
+  isNot?: Prisma.DlMatchResultWhereInput
 }
 
 export type DlMatchResultCreateNestedManyWithoutTgmbaseUserInput = {
@@ -607,16 +647,47 @@ export type DlMatchResultUncheckedUpdateManyWithoutRunNestedInput = {
   deleteMany?: Prisma.DlMatchResultScalarWhereInput | Prisma.DlMatchResultScalarWhereInput[]
 }
 
+export type DlMatchResultCreateNestedOneWithoutChatsInput = {
+  create?: Prisma.XOR<Prisma.DlMatchResultCreateWithoutChatsInput, Prisma.DlMatchResultUncheckedCreateWithoutChatsInput>
+  connectOrCreate?: Prisma.DlMatchResultCreateOrConnectWithoutChatsInput
+  connect?: Prisma.DlMatchResultWhereUniqueInput
+}
+
+export type DlMatchResultUpdateOneRequiredWithoutChatsNestedInput = {
+  create?: Prisma.XOR<Prisma.DlMatchResultCreateWithoutChatsInput, Prisma.DlMatchResultUncheckedCreateWithoutChatsInput>
+  connectOrCreate?: Prisma.DlMatchResultCreateOrConnectWithoutChatsInput
+  upsert?: Prisma.DlMatchResultUpsertWithoutChatsInput
+  connect?: Prisma.DlMatchResultWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DlMatchResultUpdateToOneWithWhereWithoutChatsInput, Prisma.DlMatchResultUpdateWithoutChatsInput>, Prisma.DlMatchResultUncheckedUpdateWithoutChatsInput>
+}
+
+export type DlMatchResultCreateNestedOneWithoutMessagesInput = {
+  create?: Prisma.XOR<Prisma.DlMatchResultCreateWithoutMessagesInput, Prisma.DlMatchResultUncheckedCreateWithoutMessagesInput>
+  connectOrCreate?: Prisma.DlMatchResultCreateOrConnectWithoutMessagesInput
+  connect?: Prisma.DlMatchResultWhereUniqueInput
+}
+
+export type DlMatchResultUpdateOneRequiredWithoutMessagesNestedInput = {
+  create?: Prisma.XOR<Prisma.DlMatchResultCreateWithoutMessagesInput, Prisma.DlMatchResultUncheckedCreateWithoutMessagesInput>
+  connectOrCreate?: Prisma.DlMatchResultCreateOrConnectWithoutMessagesInput
+  upsert?: Prisma.DlMatchResultUpsertWithoutMessagesInput
+  connect?: Prisma.DlMatchResultWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DlMatchResultUpdateToOneWithWhereWithoutMessagesInput, Prisma.DlMatchResultUpdateWithoutMessagesInput>, Prisma.DlMatchResultUncheckedUpdateWithoutMessagesInput>
+}
+
 export type DlMatchResultCreateWithoutTgmbaseUserInput = {
   id?: bigint | number
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   run: Prisma.DlMatchRunCreateNestedOneWithoutResultsInput
   dlContact: Prisma.DlContactCreateNestedOneWithoutMatchResultsInput
+  chats?: Prisma.DlMatchResultChatCreateNestedManyWithoutResultInput
+  messages?: Prisma.DlMatchResultMessageCreateNestedManyWithoutResultInput
 }
 
 export type DlMatchResultUncheckedCreateWithoutTgmbaseUserInput = {
@@ -626,9 +697,12 @@ export type DlMatchResultUncheckedCreateWithoutTgmbaseUserInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedCreateNestedManyWithoutResultInput
+  messages?: Prisma.DlMatchResultMessageUncheckedCreateNestedManyWithoutResultInput
 }
 
 export type DlMatchResultCreateOrConnectWithoutTgmbaseUserInput = {
@@ -668,6 +742,7 @@ export type DlMatchResultScalarWhereInput = {
   strictTelegramIdMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
   usernameMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
   phoneMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
+  chatActivityMatch?: Prisma.BoolFilter<"DlMatchResult"> | boolean
   dlContactSnapshot?: Prisma.JsonFilter<"DlMatchResult">
   tgmbaseUserSnapshot?: Prisma.JsonNullableFilter<"DlMatchResult">
   createdAt?: Prisma.DateTimeFilter<"DlMatchResult"> | Date | string
@@ -678,11 +753,14 @@ export type DlMatchResultCreateWithoutDlContactInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   run: Prisma.DlMatchRunCreateNestedOneWithoutResultsInput
   tgmbaseUser?: Prisma.userCreateNestedOneWithoutDlMatchesInput
+  chats?: Prisma.DlMatchResultChatCreateNestedManyWithoutResultInput
+  messages?: Prisma.DlMatchResultMessageCreateNestedManyWithoutResultInput
 }
 
 export type DlMatchResultUncheckedCreateWithoutDlContactInput = {
@@ -692,9 +770,12 @@ export type DlMatchResultUncheckedCreateWithoutDlContactInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedCreateNestedManyWithoutResultInput
+  messages?: Prisma.DlMatchResultMessageUncheckedCreateNestedManyWithoutResultInput
 }
 
 export type DlMatchResultCreateOrConnectWithoutDlContactInput = {
@@ -728,11 +809,14 @@ export type DlMatchResultCreateWithoutRunInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   dlContact: Prisma.DlContactCreateNestedOneWithoutMatchResultsInput
   tgmbaseUser?: Prisma.userCreateNestedOneWithoutDlMatchesInput
+  chats?: Prisma.DlMatchResultChatCreateNestedManyWithoutResultInput
+  messages?: Prisma.DlMatchResultMessageCreateNestedManyWithoutResultInput
 }
 
 export type DlMatchResultUncheckedCreateWithoutRunInput = {
@@ -742,9 +826,12 @@ export type DlMatchResultUncheckedCreateWithoutRunInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedCreateNestedManyWithoutResultInput
+  messages?: Prisma.DlMatchResultMessageUncheckedCreateNestedManyWithoutResultInput
 }
 
 export type DlMatchResultCreateOrConnectWithoutRunInput = {
@@ -773,6 +860,158 @@ export type DlMatchResultUpdateManyWithWhereWithoutRunInput = {
   data: Prisma.XOR<Prisma.DlMatchResultUpdateManyMutationInput, Prisma.DlMatchResultUncheckedUpdateManyWithoutRunInput>
 }
 
+export type DlMatchResultCreateWithoutChatsInput = {
+  id?: bigint | number
+  strictTelegramIdMatch?: boolean
+  usernameMatch?: boolean
+  phoneMatch?: boolean
+  chatActivityMatch?: boolean
+  dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  run: Prisma.DlMatchRunCreateNestedOneWithoutResultsInput
+  dlContact: Prisma.DlContactCreateNestedOneWithoutMatchResultsInput
+  tgmbaseUser?: Prisma.userCreateNestedOneWithoutDlMatchesInput
+  messages?: Prisma.DlMatchResultMessageCreateNestedManyWithoutResultInput
+}
+
+export type DlMatchResultUncheckedCreateWithoutChatsInput = {
+  id?: bigint | number
+  runId: bigint | number
+  dlContactId: bigint | number
+  tgmbaseUserId?: bigint | number | null
+  strictTelegramIdMatch?: boolean
+  usernameMatch?: boolean
+  phoneMatch?: boolean
+  chatActivityMatch?: boolean
+  dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  messages?: Prisma.DlMatchResultMessageUncheckedCreateNestedManyWithoutResultInput
+}
+
+export type DlMatchResultCreateOrConnectWithoutChatsInput = {
+  where: Prisma.DlMatchResultWhereUniqueInput
+  create: Prisma.XOR<Prisma.DlMatchResultCreateWithoutChatsInput, Prisma.DlMatchResultUncheckedCreateWithoutChatsInput>
+}
+
+export type DlMatchResultUpsertWithoutChatsInput = {
+  update: Prisma.XOR<Prisma.DlMatchResultUpdateWithoutChatsInput, Prisma.DlMatchResultUncheckedUpdateWithoutChatsInput>
+  create: Prisma.XOR<Prisma.DlMatchResultCreateWithoutChatsInput, Prisma.DlMatchResultUncheckedCreateWithoutChatsInput>
+  where?: Prisma.DlMatchResultWhereInput
+}
+
+export type DlMatchResultUpdateToOneWithWhereWithoutChatsInput = {
+  where?: Prisma.DlMatchResultWhereInput
+  data: Prisma.XOR<Prisma.DlMatchResultUpdateWithoutChatsInput, Prisma.DlMatchResultUncheckedUpdateWithoutChatsInput>
+}
+
+export type DlMatchResultUpdateWithoutChatsInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  run?: Prisma.DlMatchRunUpdateOneRequiredWithoutResultsNestedInput
+  dlContact?: Prisma.DlContactUpdateOneRequiredWithoutMatchResultsNestedInput
+  tgmbaseUser?: Prisma.userUpdateOneWithoutDlMatchesNestedInput
+  messages?: Prisma.DlMatchResultMessageUpdateManyWithoutResultNestedInput
+}
+
+export type DlMatchResultUncheckedUpdateWithoutChatsInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  runId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  dlContactId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  tgmbaseUserId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  messages?: Prisma.DlMatchResultMessageUncheckedUpdateManyWithoutResultNestedInput
+}
+
+export type DlMatchResultCreateWithoutMessagesInput = {
+  id?: bigint | number
+  strictTelegramIdMatch?: boolean
+  usernameMatch?: boolean
+  phoneMatch?: boolean
+  chatActivityMatch?: boolean
+  dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  run: Prisma.DlMatchRunCreateNestedOneWithoutResultsInput
+  dlContact: Prisma.DlContactCreateNestedOneWithoutMatchResultsInput
+  tgmbaseUser?: Prisma.userCreateNestedOneWithoutDlMatchesInput
+  chats?: Prisma.DlMatchResultChatCreateNestedManyWithoutResultInput
+}
+
+export type DlMatchResultUncheckedCreateWithoutMessagesInput = {
+  id?: bigint | number
+  runId: bigint | number
+  dlContactId: bigint | number
+  tgmbaseUserId?: bigint | number | null
+  strictTelegramIdMatch?: boolean
+  usernameMatch?: boolean
+  phoneMatch?: boolean
+  chatActivityMatch?: boolean
+  dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedCreateNestedManyWithoutResultInput
+}
+
+export type DlMatchResultCreateOrConnectWithoutMessagesInput = {
+  where: Prisma.DlMatchResultWhereUniqueInput
+  create: Prisma.XOR<Prisma.DlMatchResultCreateWithoutMessagesInput, Prisma.DlMatchResultUncheckedCreateWithoutMessagesInput>
+}
+
+export type DlMatchResultUpsertWithoutMessagesInput = {
+  update: Prisma.XOR<Prisma.DlMatchResultUpdateWithoutMessagesInput, Prisma.DlMatchResultUncheckedUpdateWithoutMessagesInput>
+  create: Prisma.XOR<Prisma.DlMatchResultCreateWithoutMessagesInput, Prisma.DlMatchResultUncheckedCreateWithoutMessagesInput>
+  where?: Prisma.DlMatchResultWhereInput
+}
+
+export type DlMatchResultUpdateToOneWithWhereWithoutMessagesInput = {
+  where?: Prisma.DlMatchResultWhereInput
+  data: Prisma.XOR<Prisma.DlMatchResultUpdateWithoutMessagesInput, Prisma.DlMatchResultUncheckedUpdateWithoutMessagesInput>
+}
+
+export type DlMatchResultUpdateWithoutMessagesInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  run?: Prisma.DlMatchRunUpdateOneRequiredWithoutResultsNestedInput
+  dlContact?: Prisma.DlContactUpdateOneRequiredWithoutMatchResultsNestedInput
+  tgmbaseUser?: Prisma.userUpdateOneWithoutDlMatchesNestedInput
+  chats?: Prisma.DlMatchResultChatUpdateManyWithoutResultNestedInput
+}
+
+export type DlMatchResultUncheckedUpdateWithoutMessagesInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  runId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  dlContactId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  tgmbaseUserId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedUpdateManyWithoutResultNestedInput
+}
+
 export type DlMatchResultCreateManyTgmbaseUserInput = {
   id?: bigint | number
   runId: bigint | number
@@ -780,6 +1019,7 @@ export type DlMatchResultCreateManyTgmbaseUserInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -790,11 +1030,14 @@ export type DlMatchResultUpdateWithoutTgmbaseUserInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   run?: Prisma.DlMatchRunUpdateOneRequiredWithoutResultsNestedInput
   dlContact?: Prisma.DlContactUpdateOneRequiredWithoutMatchResultsNestedInput
+  chats?: Prisma.DlMatchResultChatUpdateManyWithoutResultNestedInput
+  messages?: Prisma.DlMatchResultMessageUpdateManyWithoutResultNestedInput
 }
 
 export type DlMatchResultUncheckedUpdateWithoutTgmbaseUserInput = {
@@ -804,9 +1047,12 @@ export type DlMatchResultUncheckedUpdateWithoutTgmbaseUserInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedUpdateManyWithoutResultNestedInput
+  messages?: Prisma.DlMatchResultMessageUncheckedUpdateManyWithoutResultNestedInput
 }
 
 export type DlMatchResultUncheckedUpdateManyWithoutTgmbaseUserInput = {
@@ -816,6 +1062,7 @@ export type DlMatchResultUncheckedUpdateManyWithoutTgmbaseUserInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -828,6 +1075,7 @@ export type DlMatchResultCreateManyDlContactInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -838,11 +1086,14 @@ export type DlMatchResultUpdateWithoutDlContactInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   run?: Prisma.DlMatchRunUpdateOneRequiredWithoutResultsNestedInput
   tgmbaseUser?: Prisma.userUpdateOneWithoutDlMatchesNestedInput
+  chats?: Prisma.DlMatchResultChatUpdateManyWithoutResultNestedInput
+  messages?: Prisma.DlMatchResultMessageUpdateManyWithoutResultNestedInput
 }
 
 export type DlMatchResultUncheckedUpdateWithoutDlContactInput = {
@@ -852,9 +1103,12 @@ export type DlMatchResultUncheckedUpdateWithoutDlContactInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedUpdateManyWithoutResultNestedInput
+  messages?: Prisma.DlMatchResultMessageUncheckedUpdateManyWithoutResultNestedInput
 }
 
 export type DlMatchResultUncheckedUpdateManyWithoutDlContactInput = {
@@ -864,6 +1118,7 @@ export type DlMatchResultUncheckedUpdateManyWithoutDlContactInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -876,6 +1131,7 @@ export type DlMatchResultCreateManyRunInput = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
@@ -886,11 +1142,14 @@ export type DlMatchResultUpdateWithoutRunInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dlContact?: Prisma.DlContactUpdateOneRequiredWithoutMatchResultsNestedInput
   tgmbaseUser?: Prisma.userUpdateOneWithoutDlMatchesNestedInput
+  chats?: Prisma.DlMatchResultChatUpdateManyWithoutResultNestedInput
+  messages?: Prisma.DlMatchResultMessageUpdateManyWithoutResultNestedInput
 }
 
 export type DlMatchResultUncheckedUpdateWithoutRunInput = {
@@ -900,9 +1159,12 @@ export type DlMatchResultUncheckedUpdateWithoutRunInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  chats?: Prisma.DlMatchResultChatUncheckedUpdateManyWithoutResultNestedInput
+  messages?: Prisma.DlMatchResultMessageUncheckedUpdateManyWithoutResultNestedInput
 }
 
 export type DlMatchResultUncheckedUpdateManyWithoutRunInput = {
@@ -912,11 +1174,50 @@ export type DlMatchResultUncheckedUpdateManyWithoutRunInput = {
   strictTelegramIdMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   usernameMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   phoneMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  chatActivityMatch?: Prisma.BoolFieldUpdateOperationsInput | boolean
   dlContactSnapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   tgmbaseUserSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+
+/**
+ * Count Type DlMatchResultCountOutputType
+ */
+
+export type DlMatchResultCountOutputType = {
+  chats: number
+  messages: number
+}
+
+export type DlMatchResultCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  chats?: boolean | DlMatchResultCountOutputTypeCountChatsArgs
+  messages?: boolean | DlMatchResultCountOutputTypeCountMessagesArgs
+}
+
+/**
+ * DlMatchResultCountOutputType without action
+ */
+export type DlMatchResultCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DlMatchResultCountOutputType
+   */
+  select?: Prisma.DlMatchResultCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * DlMatchResultCountOutputType without action
+ */
+export type DlMatchResultCountOutputTypeCountChatsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DlMatchResultChatWhereInput
+}
+
+/**
+ * DlMatchResultCountOutputType without action
+ */
+export type DlMatchResultCountOutputTypeCountMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DlMatchResultMessageWhereInput
+}
 
 
 export type DlMatchResultSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -927,12 +1228,16 @@ export type DlMatchResultSelect<ExtArgs extends runtime.Types.Extensions.Interna
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot?: boolean
   tgmbaseUserSnapshot?: boolean
   createdAt?: boolean
   run?: boolean | Prisma.DlMatchRunDefaultArgs<ExtArgs>
   dlContact?: boolean | Prisma.DlContactDefaultArgs<ExtArgs>
   tgmbaseUser?: boolean | Prisma.DlMatchResult$tgmbaseUserArgs<ExtArgs>
+  chats?: boolean | Prisma.DlMatchResult$chatsArgs<ExtArgs>
+  messages?: boolean | Prisma.DlMatchResult$messagesArgs<ExtArgs>
+  _count?: boolean | Prisma.DlMatchResultCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["dlMatchResult"]>
 
 export type DlMatchResultSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -943,6 +1248,7 @@ export type DlMatchResultSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot?: boolean
   tgmbaseUserSnapshot?: boolean
   createdAt?: boolean
@@ -959,6 +1265,7 @@ export type DlMatchResultSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot?: boolean
   tgmbaseUserSnapshot?: boolean
   createdAt?: boolean
@@ -975,16 +1282,20 @@ export type DlMatchResultSelectScalar = {
   strictTelegramIdMatch?: boolean
   usernameMatch?: boolean
   phoneMatch?: boolean
+  chatActivityMatch?: boolean
   dlContactSnapshot?: boolean
   tgmbaseUserSnapshot?: boolean
   createdAt?: boolean
 }
 
-export type DlMatchResultOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "runId" | "dlContactId" | "tgmbaseUserId" | "strictTelegramIdMatch" | "usernameMatch" | "phoneMatch" | "dlContactSnapshot" | "tgmbaseUserSnapshot" | "createdAt", ExtArgs["result"]["dlMatchResult"]>
+export type DlMatchResultOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "runId" | "dlContactId" | "tgmbaseUserId" | "strictTelegramIdMatch" | "usernameMatch" | "phoneMatch" | "chatActivityMatch" | "dlContactSnapshot" | "tgmbaseUserSnapshot" | "createdAt", ExtArgs["result"]["dlMatchResult"]>
 export type DlMatchResultInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   run?: boolean | Prisma.DlMatchRunDefaultArgs<ExtArgs>
   dlContact?: boolean | Prisma.DlContactDefaultArgs<ExtArgs>
   tgmbaseUser?: boolean | Prisma.DlMatchResult$tgmbaseUserArgs<ExtArgs>
+  chats?: boolean | Prisma.DlMatchResult$chatsArgs<ExtArgs>
+  messages?: boolean | Prisma.DlMatchResult$messagesArgs<ExtArgs>
+  _count?: boolean | Prisma.DlMatchResultCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type DlMatchResultIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   run?: boolean | Prisma.DlMatchRunDefaultArgs<ExtArgs>
@@ -1003,6 +1314,8 @@ export type $DlMatchResultPayload<ExtArgs extends runtime.Types.Extensions.Inter
     run: Prisma.$DlMatchRunPayload<ExtArgs>
     dlContact: Prisma.$DlContactPayload<ExtArgs>
     tgmbaseUser: Prisma.$userPayload<ExtArgs> | null
+    chats: Prisma.$DlMatchResultChatPayload<ExtArgs>[]
+    messages: Prisma.$DlMatchResultMessagePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: bigint
@@ -1012,6 +1325,7 @@ export type $DlMatchResultPayload<ExtArgs extends runtime.Types.Extensions.Inter
     strictTelegramIdMatch: boolean
     usernameMatch: boolean
     phoneMatch: boolean
+    chatActivityMatch: boolean
     dlContactSnapshot: runtime.JsonValue
     tgmbaseUserSnapshot: runtime.JsonValue | null
     createdAt: Date
@@ -1412,6 +1726,8 @@ export interface Prisma__DlMatchResultClient<T, Null = never, ExtArgs extends ru
   run<T extends Prisma.DlMatchRunDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DlMatchRunDefaultArgs<ExtArgs>>): Prisma.Prisma__DlMatchRunClient<runtime.Types.Result.GetResult<Prisma.$DlMatchRunPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   dlContact<T extends Prisma.DlContactDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DlContactDefaultArgs<ExtArgs>>): Prisma.Prisma__DlContactClient<runtime.Types.Result.GetResult<Prisma.$DlContactPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   tgmbaseUser<T extends Prisma.DlMatchResult$tgmbaseUserArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DlMatchResult$tgmbaseUserArgs<ExtArgs>>): Prisma.Prisma__userClient<runtime.Types.Result.GetResult<Prisma.$userPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  chats<T extends Prisma.DlMatchResult$chatsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DlMatchResult$chatsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DlMatchResultChatPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  messages<T extends Prisma.DlMatchResult$messagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DlMatchResult$messagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DlMatchResultMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1448,6 +1764,7 @@ export interface DlMatchResultFieldRefs {
   readonly strictTelegramIdMatch: Prisma.FieldRef<"DlMatchResult", 'Boolean'>
   readonly usernameMatch: Prisma.FieldRef<"DlMatchResult", 'Boolean'>
   readonly phoneMatch: Prisma.FieldRef<"DlMatchResult", 'Boolean'>
+  readonly chatActivityMatch: Prisma.FieldRef<"DlMatchResult", 'Boolean'>
   readonly dlContactSnapshot: Prisma.FieldRef<"DlMatchResult", 'Json'>
   readonly tgmbaseUserSnapshot: Prisma.FieldRef<"DlMatchResult", 'Json'>
   readonly createdAt: Prisma.FieldRef<"DlMatchResult", 'DateTime'>
@@ -1863,6 +2180,54 @@ export type DlMatchResult$tgmbaseUserArgs<ExtArgs extends runtime.Types.Extensio
    */
   include?: Prisma.userInclude<ExtArgs> | null
   where?: Prisma.userWhereInput
+}
+
+/**
+ * DlMatchResult.chats
+ */
+export type DlMatchResult$chatsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DlMatchResultChat
+   */
+  select?: Prisma.DlMatchResultChatSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DlMatchResultChat
+   */
+  omit?: Prisma.DlMatchResultChatOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DlMatchResultChatInclude<ExtArgs> | null
+  where?: Prisma.DlMatchResultChatWhereInput
+  orderBy?: Prisma.DlMatchResultChatOrderByWithRelationInput | Prisma.DlMatchResultChatOrderByWithRelationInput[]
+  cursor?: Prisma.DlMatchResultChatWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DlMatchResultChatScalarFieldEnum | Prisma.DlMatchResultChatScalarFieldEnum[]
+}
+
+/**
+ * DlMatchResult.messages
+ */
+export type DlMatchResult$messagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DlMatchResultMessage
+   */
+  select?: Prisma.DlMatchResultMessageSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DlMatchResultMessage
+   */
+  omit?: Prisma.DlMatchResultMessageOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DlMatchResultMessageInclude<ExtArgs> | null
+  where?: Prisma.DlMatchResultMessageWhereInput
+  orderBy?: Prisma.DlMatchResultMessageOrderByWithRelationInput | Prisma.DlMatchResultMessageOrderByWithRelationInput[]
+  cursor?: Prisma.DlMatchResultMessageWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DlMatchResultMessageScalarFieldEnum | Prisma.DlMatchResultMessageScalarFieldEnum[]
 }
 
 /**

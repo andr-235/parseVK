@@ -193,16 +193,53 @@ model DlMatchResult {
   strictTelegramIdMatch Boolean      @default(false) @map("strict_telegram_id_match")
   usernameMatch        Boolean      @default(false) @map("username_match")
   phoneMatch           Boolean      @default(false) @map("phone_match")
+  chatActivityMatch    Boolean      @default(false) @map("chat_activity_match")
   dlContactSnapshot    Json         @map("dl_contact_snapshot")
   tgmbaseUserSnapshot   Json?        @map("tgmbase_user_snapshot")
   createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   run                  DlMatchRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
   dlContact            DlContact    @relation(fields: [dlContactId], references: [id], onDelete: Cascade)
   tgmbaseUser          user?        @relation(fields: [tgmbaseUserId], references: [user_id], onDelete: SetNull)
+  chats                DlMatchResultChat[]
+  messages             DlMatchResultMessage[]
 
   @@index([runId])
   @@index([dlContactId])
   @@index([tgmbaseUserId])
   @@index([runId, dlContactId])
   @@map("dl_match_result")
+}
+
+model DlMatchResultChat {
+  id         BigInt        @id @default(autoincrement())
+  resultId   BigInt        @map("result_id")
+  peerId     String        @map("peer_id") @db.Text
+  chatType   String        @map("chat_type") @db.VarChar(32)
+  title      String        @db.Text
+  isExcluded Boolean       @default(false) @map("is_excluded")
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  result     DlMatchResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@index([resultId])
+  @@index([peerId])
+  @@index([resultId, isExcluded])
+  @@map("dl_match_result_chat")
+}
+
+model DlMatchResultMessage {
+  id          BigInt        @id @default(autoincrement())
+  resultId    BigInt        @map("result_id")
+  peerId      String        @map("peer_id") @db.Text
+  messageId   String        @map("message_id") @db.Text
+  messageDate DateTime?     @map("message_date") @db.Timestamptz(6)
+  text        String?       @db.Text
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  result      DlMatchResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@index([resultId])
+  @@index([peerId])
+  @@index([messageId])
+  @@index([resultId, peerId])
+  @@map("dl_match_result_message")
 }

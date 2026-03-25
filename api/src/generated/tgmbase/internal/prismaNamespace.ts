@@ -396,7 +396,9 @@ export const ModelName = {
   DlImportFile: 'DlImportFile',
   DlContact: 'DlContact',
   DlMatchRun: 'DlMatchRun',
-  DlMatchResult: 'DlMatchResult'
+  DlMatchResult: 'DlMatchResult',
+  DlMatchResultChat: 'DlMatchResultChat',
+  DlMatchResultMessage: 'DlMatchResultMessage'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -412,7 +414,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "channel" | "group" | "keyword" | "message" | "snitch_admin" | "supergroup" | "telegramnotify" | "user" | "dlImportBatch" | "dlImportFile" | "dlContact" | "dlMatchRun" | "dlMatchResult"
+    modelProps: "channel" | "group" | "keyword" | "message" | "snitch_admin" | "supergroup" | "telegramnotify" | "user" | "dlImportBatch" | "dlImportFile" | "dlContact" | "dlMatchRun" | "dlMatchResult" | "dlMatchResultChat" | "dlMatchResultMessage"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1378,6 +1380,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    DlMatchResultChat: {
+      payload: Prisma.$DlMatchResultChatPayload<ExtArgs>
+      fields: Prisma.DlMatchResultChatFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DlMatchResultChatFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DlMatchResultChatFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload>
+        }
+        findFirst: {
+          args: Prisma.DlMatchResultChatFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DlMatchResultChatFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload>
+        }
+        findMany: {
+          args: Prisma.DlMatchResultChatFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload>[]
+        }
+        create: {
+          args: Prisma.DlMatchResultChatCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload>
+        }
+        createMany: {
+          args: Prisma.DlMatchResultChatCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DlMatchResultChatCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload>[]
+        }
+        delete: {
+          args: Prisma.DlMatchResultChatDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload>
+        }
+        update: {
+          args: Prisma.DlMatchResultChatUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload>
+        }
+        deleteMany: {
+          args: Prisma.DlMatchResultChatDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DlMatchResultChatUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DlMatchResultChatUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload>[]
+        }
+        upsert: {
+          args: Prisma.DlMatchResultChatUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultChatPayload>
+        }
+        aggregate: {
+          args: Prisma.DlMatchResultChatAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDlMatchResultChat>
+        }
+        groupBy: {
+          args: Prisma.DlMatchResultChatGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlMatchResultChatGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DlMatchResultChatCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlMatchResultChatCountAggregateOutputType> | number
+        }
+      }
+    }
+    DlMatchResultMessage: {
+      payload: Prisma.$DlMatchResultMessagePayload<ExtArgs>
+      fields: Prisma.DlMatchResultMessageFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DlMatchResultMessageFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DlMatchResultMessageFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload>
+        }
+        findFirst: {
+          args: Prisma.DlMatchResultMessageFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DlMatchResultMessageFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload>
+        }
+        findMany: {
+          args: Prisma.DlMatchResultMessageFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload>[]
+        }
+        create: {
+          args: Prisma.DlMatchResultMessageCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload>
+        }
+        createMany: {
+          args: Prisma.DlMatchResultMessageCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DlMatchResultMessageCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload>[]
+        }
+        delete: {
+          args: Prisma.DlMatchResultMessageDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload>
+        }
+        update: {
+          args: Prisma.DlMatchResultMessageUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload>
+        }
+        deleteMany: {
+          args: Prisma.DlMatchResultMessageDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DlMatchResultMessageUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DlMatchResultMessageUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload>[]
+        }
+        upsert: {
+          args: Prisma.DlMatchResultMessageUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DlMatchResultMessagePayload>
+        }
+        aggregate: {
+          args: Prisma.DlMatchResultMessageAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDlMatchResultMessage>
+        }
+        groupBy: {
+          args: Prisma.DlMatchResultMessageGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlMatchResultMessageGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DlMatchResultMessageCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DlMatchResultMessageCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1612,12 +1762,40 @@ export const DlMatchResultScalarFieldEnum = {
   strictTelegramIdMatch: 'strictTelegramIdMatch',
   usernameMatch: 'usernameMatch',
   phoneMatch: 'phoneMatch',
+  chatActivityMatch: 'chatActivityMatch',
   dlContactSnapshot: 'dlContactSnapshot',
   tgmbaseUserSnapshot: 'tgmbaseUserSnapshot',
   createdAt: 'createdAt'
 } as const
 
 export type DlMatchResultScalarFieldEnum = (typeof DlMatchResultScalarFieldEnum)[keyof typeof DlMatchResultScalarFieldEnum]
+
+
+export const DlMatchResultChatScalarFieldEnum = {
+  id: 'id',
+  resultId: 'resultId',
+  peerId: 'peerId',
+  chatType: 'chatType',
+  title: 'title',
+  isExcluded: 'isExcluded',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DlMatchResultChatScalarFieldEnum = (typeof DlMatchResultChatScalarFieldEnum)[keyof typeof DlMatchResultChatScalarFieldEnum]
+
+
+export const DlMatchResultMessageScalarFieldEnum = {
+  id: 'id',
+  resultId: 'resultId',
+  peerId: 'peerId',
+  messageId: 'messageId',
+  messageDate: 'messageDate',
+  text: 'text',
+  createdAt: 'createdAt'
+} as const
+
+export type DlMatchResultMessageScalarFieldEnum = (typeof DlMatchResultMessageScalarFieldEnum)[keyof typeof DlMatchResultMessageScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1872,6 +2050,8 @@ export type GlobalOmitConfig = {
   dlContact?: Prisma.DlContactOmit
   dlMatchRun?: Prisma.DlMatchRunOmit
   dlMatchResult?: Prisma.DlMatchResultOmit
+  dlMatchResultChat?: Prisma.DlMatchResultChatOmit
+  dlMatchResultMessage?: Prisma.DlMatchResultMessageOmit
 }
 
 /* Types for Logging */

@@ -139,6 +139,20 @@ export interface TelegramDlMatchResultUser {
   }>
 }
 
+export interface TelegramDlMatchResultMessage {
+  messageId: string
+  messageDate: string | null
+  text: string | null
+}
+
+export interface TelegramDlMatchResultMessagesGroup {
+  peerId: string
+  chatType: 'group' | 'supergroup' | 'channel'
+  title: string
+  isExcluded: boolean
+  messages: TelegramDlMatchResultMessage[]
+}
+
 export interface TelegramDlMatchResult {
   id: string
   runId: string
@@ -147,6 +161,7 @@ export interface TelegramDlMatchResult {
   strictTelegramIdMatch: boolean
   usernameMatch: boolean
   phoneMatch: boolean
+  chatActivityMatch: boolean
   createdAt: string
   dlContact: TelegramDlMatchResultContact
   user: TelegramDlMatchResultUser | null
@@ -315,6 +330,65 @@ export const telegramDlUploadService = {
       )
     } catch (error) {
       toast.error('Не удалось загрузить результаты матчинга')
+      throw error
+    }
+  },
+
+  async getMatchResultMessages(
+    runId: string,
+    resultId: string
+  ): Promise<TelegramDlMatchResultMessagesGroup[]> {
+    try {
+      const response = await createRequest(
+        `${API_URL}/telegram/dl-match/runs/${runId}/results/${resultId}/messages`
+      )
+      return await handleResponse<TelegramDlMatchResultMessagesGroup[]>(
+        response,
+        'Не удалось загрузить комментарии матчинга'
+      )
+    } catch (error) {
+      toast.error('Не удалось загрузить комментарии матчинга')
+      throw error
+    }
+  },
+
+  async excludeChat(runId: string, peerId: string): Promise<TelegramDlMatchRun> {
+    try {
+      const response = await createRequest(`${API_URL}/telegram/dl-match/runs/${runId}/excluded-chats`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ peerId }),
+      })
+      const run = await handleResponse<TelegramDlMatchRun>(
+        response,
+        'Не удалось исключить чат из матчинга'
+      )
+      toast.success('Чат исключён из результатов матчинга')
+      return run
+    } catch (error) {
+      toast.error('Не удалось исключить чат из матчинга')
+      throw error
+    }
+  },
+
+  async restoreChat(runId: string, peerId: string): Promise<TelegramDlMatchRun> {
+    try {
+      const response = await createRequest(
+        `${API_URL}/telegram/dl-match/runs/${runId}/excluded-chats/${peerId}`,
+        {
+          method: 'DELETE',
+        }
+      )
+      const run = await handleResponse<TelegramDlMatchRun>(
+        response,
+        'Не удалось вернуть чат в матчинг'
+      )
+      toast.success('Чат возвращён в результаты матчинга')
+      return run
+    } catch (error) {
+      toast.error('Не удалось вернуть чат в матчинг')
       throw error
     }
   },

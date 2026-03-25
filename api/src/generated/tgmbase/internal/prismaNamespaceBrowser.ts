@@ -63,7 +63,9 @@ export const ModelName = {
   DlImportFile: 'DlImportFile',
   DlContact: 'DlContact',
   DlMatchRun: 'DlMatchRun',
-  DlMatchResult: 'DlMatchResult'
+  DlMatchResult: 'DlMatchResult',
+  DlMatchResultChat: 'DlMatchResultChat',
+  DlMatchResultMessage: 'DlMatchResultMessage'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -277,12 +279,40 @@ export const DlMatchResultScalarFieldEnum = {
   strictTelegramIdMatch: 'strictTelegramIdMatch',
   usernameMatch: 'usernameMatch',
   phoneMatch: 'phoneMatch',
+  chatActivityMatch: 'chatActivityMatch',
   dlContactSnapshot: 'dlContactSnapshot',
   tgmbaseUserSnapshot: 'tgmbaseUserSnapshot',
   createdAt: 'createdAt'
 } as const
 
 export type DlMatchResultScalarFieldEnum = (typeof DlMatchResultScalarFieldEnum)[keyof typeof DlMatchResultScalarFieldEnum]
+
+
+export const DlMatchResultChatScalarFieldEnum = {
+  id: 'id',
+  resultId: 'resultId',
+  peerId: 'peerId',
+  chatType: 'chatType',
+  title: 'title',
+  isExcluded: 'isExcluded',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DlMatchResultChatScalarFieldEnum = (typeof DlMatchResultChatScalarFieldEnum)[keyof typeof DlMatchResultChatScalarFieldEnum]
+
+
+export const DlMatchResultMessageScalarFieldEnum = {
+  id: 'id',
+  resultId: 'resultId',
+  peerId: 'peerId',
+  messageId: 'messageId',
+  messageDate: 'messageDate',
+  text: 'text',
+  createdAt: 'createdAt'
+} as const
+
+export type DlMatchResultMessageScalarFieldEnum = (typeof DlMatchResultMessageScalarFieldEnum)[keyof typeof DlMatchResultMessageScalarFieldEnum]
 
 
 export const SortOrder = {

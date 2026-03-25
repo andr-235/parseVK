@@ -4,17 +4,20 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../generated/tgmbase/client.js';
 import type {
   DlContact,
   DlMatchResult,
+  DlMatchResultChat,
+  DlMatchResultMessage,
   DlMatchRun,
-  Prisma,
   user,
-} from '../generated/tgmbase/client.js';
-import { TgmbasePrismaService } from '../tgmbase-prisma/tgmbase-prisma.service.js';
-import { normalizeTelegramIdentifier } from '../telegram/utils/normalize-telegram-identifier.util.js';
+} from '@/generated/tgmbase/client';
+import { TgmbasePrismaService } from '@/tgmbase-prisma/tgmbase-prisma.service';
+import { normalizeTelegramIdentifier } from '@/telegram/utils/normalize-telegram-identifier.util';
 import type {
   TelegramDlMatchResultDto,
+  TelegramDlMatchResultMessagesGroupDto,
   TelegramDlMatchRunDto,
 } from './dto/telegram-dl-match-response.dto.js';
 import type { TelegramDlMatchResultsQueryDto } from './dto/telegram-dl-match-results-query.dto.js';
@@ -27,23 +30,51 @@ type DlContactWithImportFile = DlContact & {
   };
 };
 
-type DlMatchResultCreateManyInput = Parameters<
-  TgmbasePrismaService['dlMatchResult']['createMany']
->[0] extends infer T
-  ? NonNullable<T> extends { data: infer D }
-    ? D extends Array<infer U>
-      ? U
-      : D extends infer U | Array<infer U>
-        ? U
-        : never
-    : never
-  : never;
-
 type RelatedChatSnapshot = {
   type: 'group' | 'supergroup' | 'channel';
   peer_id: string;
   title: string;
 };
+
+type RelatedMessageSnapshot = {
+  peer_id: string;
+  message_id: string;
+  message_date: string | null;
+  text: string | null;
+};
+
+type BuiltDlMatchResult = {
+  runId: bigint;
+  dlContactId: bigint;
+  tgmbaseUserId: bigint | null;
+  strictTelegramIdMatch: boolean;
+  usernameMatch: boolean;
+  phoneMatch: boolean;
+  chatActivityMatch: boolean;
+  dlContactSnapshot: Prisma.InputJsonObject;
+  tgmbaseUserSnapshot: Prisma.InputJsonObject | null;
+  chats: Array<{
+    peerId: string;
+    chatType: 'group' | 'supergroup' | 'channel';
+    title: string;
+  }>;
+  messages: Array<{
+    peerId: string;
+    messageId: string;
+    messageDate: Date | null;
+    text: string | null;
+  }>;
+};
+
+type DlMatchResultWithChats = DlMatchResult & {
+  chats?: DlMatchResultChat[];
+};
+const ACTIVE_SIGNAL_OR_CLAUSE: Prisma.DlMatchResultWhereInput[] = [
+  { strictTelegramIdMatch: true },
+  { usernameMatch: true },
+  { phoneMatch: true },
+  { chatActivityMatch: true },
+];
 
 @Injectable()
 export class TelegramDlMatchService {
@@ -129,9 +160,7 @@ export class TelegramDlMatchService {
         const results = await this.buildResults(normalizedRunId, contacts);
 
         if (results.length > 0) {
-          await this.prisma.dlMatchResult.createMany({
-            data: results,
-          });
+          await this.persistResults(results);
         }
 
         processedContacts += contacts.length;
@@ -158,7 +187,7 @@ export class TelegramDlMatchService {
         });
 
         this.logger.log(
-          `Матчинг DL batch: runId=${normalizedRunId.toString()} processed=${processedContacts}/${contactsTotal} batchContacts=${contacts.length} batchMatches=${results.length} totalMatches=${matchesTotal} durationMs=${Date.now() - batchStartedAt} lastContactId=${lastContactId?.toString() ?? '-'}`,
+          `Матчинг DL batch: runId=${normalizedRunId.toString()} processed=${processedContacts}/${contactsTotal} batchContacts=${contacts.length} batchMatches=${results.length} durationMs=${Date.now() - batchStartedAt} lastContactId=${lastContactId?.toString() ?? '-'}`,
         );
       }
 
@@ -180,14 +209,7 @@ export class TelegramDlMatchService {
         `Матчинг DL завершен: runId=${normalizedRunId.toString()} contactsTotal=${contactsTotal} matchesTotal=${matchesTotal} durationMs=${Date.now() - runStartedAt}`,
       );
 
-      return {
-        ...this.mapRun(finalized),
-        contactsTotal,
-        matchesTotal,
-        strictMatchesTotal,
-        usernameMatchesTotal,
-        phoneMatchesTotal,
-      };
+      return this.mapRun(finalized);
     } catch (error) {
       await this.prisma.dlMatchRun.update({
         where: { id: normalizedRunId },
@@ -234,14 +256,90 @@ export class TelegramDlMatchService {
     const items = await this.prisma.dlMatchResult.findMany({
       where: {
         runId: BigInt(runId),
+        OR: ACTIVE_SIGNAL_OR_CLAUSE,
         ...(query.strictOnly === 'true' ? { strictTelegramIdMatch: true } : {}),
         ...(query.usernameOnly === 'true' ? { usernameMatch: true } : {}),
         ...(query.phoneOnly === 'true' ? { phoneMatch: true } : {}),
+      },
+      include: {
+        chats: {
+          where: { isExcluded: false },
+          orderBy: [{ peerId: 'asc' }],
+        },
       },
       orderBy: [{ createdAt: 'desc' }],
     });
 
     return items.map((item) => this.mapResult(item));
+  }
+
+  async getResultMessages(
+    runId: string,
+    resultId: string,
+  ): Promise<TelegramDlMatchResultMessagesGroupDto[]> {
+    const result = await this.prisma.dlMatchResult.findFirst({
+      where: {
+        id: BigInt(resultId),
+        runId: BigInt(runId),
+      },
+      include: {
+        chats: {
+          orderBy: [{ peerId: 'asc' }],
+        },
+        messages: {
+          orderBy: [{ messageDate: 'desc' }, { messageId: 'desc' }],
+        },
+      },
+    });
+
+    if (!result) {
+      throw new NotFoundException(
+        `Result ${resultId} not found in run ${runId}`,
+      );
+    }
+
+    const messagesByPeerId = new Map<string, DlMatchResultMessage[]>();
+    result.messages.forEach((message) => {
+      const current = messagesByPeerId.get(message.peerId) ?? [];
+      current.push(message);
+      messagesByPeerId.set(message.peerId, current);
+    });
+
+    return result.chats.map((chat) => ({
+      peerId: chat.peerId,
+      chatType: chat.chatType as 'group' | 'supergroup' | 'channel',
+      title: chat.title,
+      isExcluded: chat.isExcluded,
+      messages: (messagesByPeerId.get(chat.peerId) ?? []).map((message) => ({
+        messageId: message.messageId,
+        messageDate: message.messageDate?.toISOString() ?? null,
+        text: message.text ?? null,
+      })),
+    }));
+  }
+
+  async excludeChat(
+    runId: string,
+    peerId: string,
+  ): Promise<TelegramDlMatchRunDto> {
+    if (!peerId.trim()) {
+      throw new BadRequestException('peerId is required');
+    }
+
+    await this.updateExcludedChatState(runId, peerId, true);
+    return this.getRunById(runId);
+  }
+
+  async restoreChat(
+    runId: string,
+    peerId: string,
+  ): Promise<TelegramDlMatchRunDto> {
+    if (!peerId.trim()) {
+      throw new BadRequestException('peerId is required');
+    }
+
+    await this.updateExcludedChatState(runId, peerId, false);
+    return this.getRunById(runId);
   }
 
   async exportRun(runId: string, query: TelegramDlMatchResultsQueryDto) {
@@ -250,7 +348,14 @@ export class TelegramDlMatchService {
       throw new BadRequestException('Run is not completed yet');
     }
     const results = await this.getResults(runId, query);
-    const buffer = await this.exporter.exportRun(runId, results);
+    const messagesByResultId = await this.loadActiveMessagesByResultIds(
+      results.map((result) => result.id),
+    );
+    const buffer = await this.exporter.exportRun(
+      runId,
+      results,
+      messagesByResultId,
+    );
 
     return {
       buffer,
@@ -262,7 +367,7 @@ export class TelegramDlMatchService {
   private async buildResults(
     runId: bigint,
     contacts: DlContactWithImportFile[],
-  ) {
+  ): Promise<BuiltDlMatchResult[]> {
     const strictIds = [
       ...new Set(
         contacts
@@ -332,7 +437,7 @@ export class TelegramDlMatchService {
       ]);
     });
 
-    const relatedChatsByUserId = await this.loadRelatedChatsByUserIds([
+    const activityByUserId = await this.loadChatActivityByUserIds([
       ...new Set(
         [...strictMatches, ...usernameMatches, ...phoneMatches].map((item) =>
           item.user_id.toString(),
@@ -340,7 +445,7 @@ export class TelegramDlMatchService {
       ),
     ]);
 
-    const rows: DlMatchResultCreateManyInput[] = [];
+    const rows: BuiltDlMatchResult[] = [];
 
     for (const contact of contacts) {
       const matches = this.findMatches(contact, {
@@ -349,6 +454,10 @@ export class TelegramDlMatchService {
         phoneMatchesByValue,
       });
       for (const match of matches) {
+        const activity = activityByUserId.get(match.userId.toString()) ?? {
+          chats: [],
+          messages: [],
+        };
         rows.push({
           runId,
           dlContactId: contact.id,
@@ -356,11 +465,25 @@ export class TelegramDlMatchService {
           strictTelegramIdMatch: match.strictTelegramIdMatch,
           usernameMatch: match.usernameMatch,
           phoneMatch: match.phoneMatch,
+          chatActivityMatch: activity.chats.length > 0,
           dlContactSnapshot: this.buildDlContactSnapshot(contact),
           tgmbaseUserSnapshot: this.buildUserSnapshot(
             match.snapshot,
-            relatedChatsByUserId.get(match.userId.toString()) ?? [],
+            activity.chats,
           ),
+          chats: activity.chats.map((chat) => ({
+            peerId: chat.peer_id,
+            chatType: chat.type,
+            title: chat.title,
+          })),
+          messages: activity.messages.map((message) => ({
+            peerId: message.peer_id,
+            messageId: message.message_id,
+            messageDate: message.message_date
+              ? new Date(message.message_date)
+              : null,
+            text: message.text,
+          })),
         });
       }
     }
@@ -452,7 +575,7 @@ export class TelegramDlMatchService {
   }
 
   private buildDlContactSnapshot(contact: DlContactWithImportFile) {
-    const snapshot: Prisma.InputJsonObject = {
+    return {
       importFileId: contact.importFileId?.toString() ?? null,
       sourceRowIndex: contact.sourceRowIndex,
       telegramId: contact.telegramId,
@@ -463,16 +586,14 @@ export class TelegramDlMatchService {
       fullName: contact.fullName,
       region: contact.region,
       originalFileName: contact.importFile.originalFileName,
-    };
-
-    return snapshot;
+    } satisfies Prisma.InputJsonObject;
   }
 
   private buildUserSnapshot(
     matchedUser: user,
     relatedChats: RelatedChatSnapshot[],
   ) {
-    const snapshot: Prisma.InputJsonObject = {
+    return {
       user_id: matchedUser.user_id.toString(),
       username: matchedUser.username,
       phone: matchedUser.phone,
@@ -483,20 +604,24 @@ export class TelegramDlMatchService {
       bot: matchedUser.bot,
       upd_date: matchedUser.upd_date?.toISOString() ?? null,
       relatedChats: relatedChats as unknown as Prisma.InputJsonValue,
-    };
-
-    return snapshot;
+    } satisfies Prisma.InputJsonObject;
   }
 
-  private async loadRelatedChatsByUserIds(userIds: string[]) {
-    const lookup = new Map<string, RelatedChatSnapshot[]>();
+  private async loadChatActivityByUserIds(userIds: string[]) {
+    const lookup = new Map<
+      string,
+      {
+        chats: RelatedChatSnapshot[];
+        messages: RelatedMessageSnapshot[];
+      }
+    >();
     if (userIds.length === 0) {
       return lookup;
     }
 
     const startedAt = Date.now();
     const numericUserIds = userIds.map((item) => BigInt(item));
-    const messagePairs = await this.prisma.message.findMany({
+    const messageRows = await this.prisma.message.findMany({
       where: {
         from_id: {
           in: numericUserIds,
@@ -505,12 +630,15 @@ export class TelegramDlMatchService {
       select: {
         from_id: true,
         peer_id: true,
+        message_id: true,
+        date: true,
+        message: true,
       },
-      distinct: ['from_id', 'peer_id'],
+      orderBy: [{ date: 'desc' }],
     });
 
     const peerIds = [
-      ...new Set(messagePairs.map((item) => item.peer_id.toString())),
+      ...new Set(messageRows.map((item) => item.peer_id.toString())),
     ].map((item) => BigInt(item));
     if (peerIds.length === 0) {
       return lookup;
@@ -575,7 +703,8 @@ export class TelegramDlMatchService {
       });
     });
 
-    messagePairs.forEach((item) => {
+    let persistedMessages = 0;
+    messageRows.forEach((item) => {
       if (!item.from_id) {
         return;
       }
@@ -586,19 +715,257 @@ export class TelegramDlMatchService {
       }
 
       const userId = item.from_id.toString();
-      const current = lookup.get(userId) ?? [];
-      if (current.some((existing) => existing.peer_id === chat.peer_id)) {
-        return;
+      const current = lookup.get(userId) ?? {
+        chats: [],
+        messages: [],
+      };
+      if (
+        !current.chats.some((existing) => existing.peer_id === chat.peer_id)
+      ) {
+        current.chats.push(chat);
       }
-
-      lookup.set(userId, [...current, chat]);
+      current.messages.push({
+        peer_id: chat.peer_id,
+        message_id: item.message_id.toString(),
+        message_date: item.date?.toISOString() ?? null,
+        text: item.message ?? null,
+      });
+      persistedMessages += 1;
+      lookup.set(userId, current);
     });
 
     this.logger.log(
-      `Матчинг DL relatedChats: users=${userIds.length} messagePairs=${messagePairs.length} resolvedChats=${chatsByPeerId.size} durationMs=${Date.now() - startedAt}`,
+      `Матчинг DL relatedChats: users=${userIds.length} messages=${persistedMessages} resolvedChats=${chatsByPeerId.size} durationMs=${Date.now() - startedAt}`,
     );
 
     return lookup;
+  }
+
+  private async persistResults(results: BuiltDlMatchResult[]) {
+    for (const result of results) {
+      await this.prisma.$transaction(async (tx) => {
+        const created = await tx.dlMatchResult.create({
+          data: {
+            runId: result.runId,
+            dlContactId: result.dlContactId,
+            tgmbaseUserId: result.tgmbaseUserId,
+            strictTelegramIdMatch: result.strictTelegramIdMatch,
+            usernameMatch: result.usernameMatch,
+            phoneMatch: result.phoneMatch,
+            chatActivityMatch: result.chatActivityMatch,
+            dlContactSnapshot: result.dlContactSnapshot,
+            tgmbaseUserSnapshot: result.tgmbaseUserSnapshot ?? Prisma.JsonNull,
+          },
+        });
+
+        if (result.chats.length > 0) {
+          await tx.dlMatchResultChat.createMany({
+            data: result.chats.map((chat) => ({
+              resultId: created.id,
+              peerId: chat.peerId,
+              chatType: chat.chatType,
+              title: chat.title,
+            })),
+          });
+        }
+
+        if (result.messages.length > 0) {
+          await tx.dlMatchResultMessage.createMany({
+            data: result.messages.map((message) => ({
+              resultId: created.id,
+              peerId: message.peerId,
+              messageId: message.messageId,
+              messageDate: message.messageDate,
+              text: message.text,
+            })),
+          });
+        }
+      });
+    }
+  }
+
+  private async updateExcludedChatState(
+    runId: string,
+    peerId: string,
+    isExcluded: boolean,
+  ) {
+    const normalizedRunId = BigInt(runId);
+    const affectedChats = await this.prisma.dlMatchResultChat.findMany({
+      where: {
+        peerId,
+        result: {
+          runId: normalizedRunId,
+        },
+      },
+      select: {
+        resultId: true,
+      },
+    });
+
+    if (affectedChats.length === 0) {
+      return;
+    }
+
+    const affectedResultIds = [
+      ...new Set(affectedChats.map((item) => item.resultId)),
+    ];
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.dlMatchResultChat.updateMany({
+        where: {
+          peerId,
+          result: {
+            runId: normalizedRunId,
+          },
+        },
+        data: {
+          isExcluded,
+        },
+      });
+
+      const activeChatGroups = await tx.dlMatchResultChat.groupBy({
+        by: ['resultId'],
+        where: {
+          resultId: {
+            in: affectedResultIds,
+          },
+          isExcluded: false,
+        },
+      });
+
+      const activeResultIds = new Set(
+        activeChatGroups.map((item) => item.resultId.toString()),
+      );
+      const hasActivity = affectedResultIds.filter((resultId) =>
+        activeResultIds.has(resultId.toString()),
+      );
+      const noActivity = affectedResultIds.filter(
+        (resultId) => !activeResultIds.has(resultId.toString()),
+      );
+
+      if (hasActivity.length > 0) {
+        await tx.dlMatchResult.updateMany({
+          where: {
+            id: { in: hasActivity },
+          },
+          data: {
+            chatActivityMatch: true,
+          },
+        });
+      }
+
+      if (noActivity.length > 0) {
+        await tx.dlMatchResult.updateMany({
+          where: {
+            id: { in: noActivity },
+          },
+          data: {
+            chatActivityMatch: false,
+          },
+        });
+      }
+
+      const activeResults = await tx.dlMatchResult.findMany({
+        where: {
+          runId: normalizedRunId,
+          OR: ACTIVE_SIGNAL_OR_CLAUSE,
+        },
+        select: {
+          strictTelegramIdMatch: true,
+          usernameMatch: true,
+          phoneMatch: true,
+        },
+      });
+
+      await tx.dlMatchRun.update({
+        where: { id: normalizedRunId },
+        data: {
+          matchesTotal: activeResults.length,
+          strictMatchesTotal: activeResults.filter(
+            (item) => item.strictTelegramIdMatch,
+          ).length,
+          usernameMatchesTotal: activeResults.filter(
+            (item) => item.usernameMatch,
+          ).length,
+          phoneMatchesTotal: activeResults.filter((item) => item.phoneMatch)
+            .length,
+        },
+      });
+    });
+  }
+
+  private async loadActiveMessagesByResultIds(resultIds: string[]) {
+    if (resultIds.length === 0) {
+      return new Map<string, TelegramDlMatchResultMessagesGroupDto[]>();
+    }
+
+    const numericResultIds = resultIds.map((item) => BigInt(item));
+    const [chats, messages] = await Promise.all([
+      this.prisma.dlMatchResultChat.findMany({
+        where: {
+          resultId: { in: numericResultIds },
+          isExcluded: false,
+        },
+        orderBy: [{ peerId: 'asc' }],
+      }),
+      this.prisma.dlMatchResultMessage.findMany({
+        where: {
+          resultId: { in: numericResultIds },
+        },
+        orderBy: [{ messageDate: 'desc' }, { messageId: 'desc' }],
+      }),
+    ]);
+
+    const activePeerIdsByResultId = new Map<string, Set<string>>();
+    chats.forEach((chat) => {
+      const resultId = chat.resultId.toString();
+      const current =
+        activePeerIdsByResultId.get(resultId) ?? new Set<string>();
+      current.add(chat.peerId);
+      activePeerIdsByResultId.set(resultId, current);
+    });
+
+    const messagesByResultAndPeer = new Map<string, DlMatchResultMessage[]>();
+    messages.forEach((message) => {
+      const resultId = message.resultId.toString();
+      const activePeerIds = activePeerIdsByResultId.get(resultId);
+      if (!activePeerIds?.has(message.peerId)) {
+        return;
+      }
+
+      const key = `${resultId}:${message.peerId}`;
+      const current = messagesByResultAndPeer.get(key) ?? [];
+      current.push(message);
+      messagesByResultAndPeer.set(key, current);
+    });
+
+    const grouped = new Map<string, TelegramDlMatchResultMessagesGroupDto[]>();
+    chats.forEach((chat) => {
+      const resultId = chat.resultId.toString();
+      const current = grouped.get(resultId) ?? [];
+      current.push({
+        peerId: chat.peerId,
+        chatType: chat.chatType as 'group' | 'supergroup' | 'channel',
+        title: chat.title,
+        isExcluded: chat.isExcluded,
+        messages: (
+          messagesByResultAndPeer.get(`${resultId}:${chat.peerId}`) ?? []
+        )
+          .sort((left, right) => {
+            const leftDate = left.messageDate?.getTime() ?? 0;
+            const rightDate = right.messageDate?.getTime() ?? 0;
+            return rightDate - leftDate;
+          })
+          .map((message) => ({
+            messageId: message.messageId,
+            messageDate: message.messageDate?.toISOString() ?? null,
+            text: message.text ?? null,
+          })),
+      });
+      grouped.set(resultId, current);
+    });
+
+    return grouped;
   }
 
   private mapRun(run: DlMatchRun): TelegramDlMatchRunDto {
@@ -616,11 +983,24 @@ export class TelegramDlMatchService {
     };
   }
 
-  private mapResult(item: DlMatchResult): TelegramDlMatchResultDto {
+  private mapResult(item: DlMatchResultWithChats): TelegramDlMatchResultDto {
     const dlSnapshot =
       (item.dlContactSnapshot as Record<string, unknown> | null) ?? {};
     const userSnapshot =
       (item.tgmbaseUserSnapshot as Record<string, unknown> | null) ?? null;
+    const activeChats =
+      item.chats?.map((chat) => ({
+        type: chat.chatType as 'group' | 'supergroup' | 'channel',
+        peer_id: chat.peerId,
+        title: chat.title,
+      })) ??
+      (Array.isArray(userSnapshot?.relatedChats)
+        ? (userSnapshot.relatedChats as Array<{
+            type: 'group' | 'supergroup' | 'channel';
+            peer_id: string;
+            title: string;
+          }>)
+        : []);
 
     return {
       id: item.id.toString(),
@@ -630,6 +1010,7 @@ export class TelegramDlMatchService {
       strictTelegramIdMatch: item.strictTelegramIdMatch,
       usernameMatch: item.usernameMatch,
       phoneMatch: item.phoneMatch,
+      chatActivityMatch: item.chatActivityMatch,
       dlContact: {
         id: item.dlContactId.toString(),
         importFileId: dlSnapshot.importFileId ?? null,
@@ -648,9 +1029,7 @@ export class TelegramDlMatchService {
           ? null
           : {
               id: item.tgmbaseUserId?.toString() ?? null,
-              relatedChats: Array.isArray(userSnapshot.relatedChats)
-                ? userSnapshot.relatedChats
-                : [],
+              relatedChats: activeChats,
               ...userSnapshot,
             },
       createdAt: item.createdAt.toISOString(),

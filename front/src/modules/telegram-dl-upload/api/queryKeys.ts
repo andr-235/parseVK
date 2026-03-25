@@ -9,4 +9,6 @@ export const telegramDlUploadQueryKeys = {
   matchRun: (runId: string) => [...telegramDlUploadQueryKeys.matchRuns(), runId] as const,
   matchResults: (runId: string) =>
     [...telegramDlUploadQueryKeys.matchRun(runId), 'results'] as const,
+  matchResultMessages: (runId: string, resultId: string) =>
+    [...telegramDlUploadQueryKeys.matchResults(runId), resultId, 'messages'] as const,
 }

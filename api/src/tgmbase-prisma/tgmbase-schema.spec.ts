@@ -21,7 +21,7 @@ describe('tgmbase prisma schema', () => {
   it('stores dl contact string fields as text to support long xlsx values', () => {
     const schemaPath = join(process.cwd(), 'prisma', 'tgmbase.prisma');
     const schema = readFileSync(schemaPath, 'utf8');
-    const dlContactModel = schema.match(/model DlContact \{[\s\S]*?\n\}/)?.[0];
+    const dlContactModel = schema.match(/model DlContact \{[\s\S]*?\n}/)?.[0];
 
     expect(dlContactModel).toBeTruthy();
     expect(dlContactModel).not.toContain('@db.VarChar');
@@ -33,7 +33,14 @@ describe('tgmbase prisma schema', () => {
 
     expect(schema).toMatch(/model DlMatchRun \{/);
     expect(schema).toMatch(/model DlMatchResult \{/);
+    expect(schema).toMatch(/model DlMatchResultChat \{/);
+    expect(schema).toMatch(/model DlMatchResultMessage \{/);
+    expect(schema).toMatch(
+      /chatActivityMatch\s+Boolean\s+@default\(false\)\s+@map\("chat_activity_match"\)/,
+    );
     expect(schema).toMatch(/@@map\("dl_match_run"\)/);
     expect(schema).toMatch(/@@map\("dl_match_result"\)/);
+    expect(schema).toMatch(/@@map\("dl_match_result_chat"\)/);
+    expect(schema).toMatch(/@@map\("dl_match_result_message"\)/);
   });
 });

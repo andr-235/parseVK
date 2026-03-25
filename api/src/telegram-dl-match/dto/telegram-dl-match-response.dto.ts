@@ -11,6 +11,20 @@ export interface TelegramDlMatchRunDto {
   error?: string | null;
 }
 
+export interface TelegramDlMatchResultMessageDto {
+  messageId: string;
+  messageDate: string | null;
+  text: string | null;
+}
+
+export interface TelegramDlMatchResultMessagesGroupDto {
+  peerId: string;
+  chatType: 'group' | 'supergroup' | 'channel';
+  title: string;
+  isExcluded: boolean;
+  messages: TelegramDlMatchResultMessageDto[];
+}
+
 export interface TelegramDlMatchResultDto {
   id: string;
   runId: string;
@@ -19,6 +33,7 @@ export interface TelegramDlMatchResultDto {
   strictTelegramIdMatch: boolean;
   usernameMatch: boolean;
   phoneMatch: boolean;
+  chatActivityMatch: boolean;
   dlContact: Record<string, unknown>;
   user:
     | (Record<string, unknown> & {
