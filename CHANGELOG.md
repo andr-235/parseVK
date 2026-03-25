@@ -1,3 +1,10 @@
+# [0.30.0](https://github.com/andr-235/parseVK/compare/v0.29.4...v0.30.0) (2026-03-25)
+
+
+### Features
+
+* вынесен dl матчинг в фоновую очередь ([ac970eb](https://github.com/andr-235/parseVK/commit/ac970ebbe5d6f65d9a79c815b26465662d73d57e))
+
 ## [0.29.4](https://github.com/andr-235/parseVK/compare/v0.29.3...v0.29.4) (2026-03-25)
 
 
