@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type {
@@ -18,6 +19,7 @@ import type {
 } from './dto/telegram-dl-match-response.dto.js';
 import type { TelegramDlMatchResultsQueryDto } from './dto/telegram-dl-match-results-query.dto.js';
 import { TelegramDlMatchExporter } from './telegram-dl-match.exporter.js';
+import { TelegramDlMatchQueueProducer } from './queues/telegram-dl-match.queue.js';
 
 type DlContactWithImportFile = DlContact & {
   importFile: {
@@ -39,9 +41,13 @@ type DlMatchResultCreateManyInput = Parameters<
 
 @Injectable()
 export class TelegramDlMatchService {
+  private readonly logger = new Logger(TelegramDlMatchService.name);
+  private batchSize = 1000;
+
   constructor(
     private readonly prisma: TgmbasePrismaService,
     private readonly exporter: TelegramDlMatchExporter,
+    private readonly queue: TelegramDlMatchQueueProducer,
   ) {}
 
   async createRun(): Promise<TelegramDlMatchRunDto> {
@@ -52,35 +58,106 @@ export class TelegramDlMatchService {
     });
 
     try {
-      const contacts = await this.prisma.dlContact.findMany({
-        include: {
-          importFile: true,
+      await this.queue.enqueue({ runId: run.id.toString() });
+
+      this.logger.log(
+        `Матчинг DL поставлен в очередь: runId=${run.id.toString()}`,
+      );
+
+      return this.mapRun(run);
+    } catch (error) {
+      await this.prisma.dlMatchRun.update({
+        where: { id: run.id },
+        data: {
+          status: 'FAILED',
+          finishedAt: new Date(),
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to enqueue dl match run',
         },
-        orderBy: [{ createdAt: 'desc' }],
       });
 
-      const results = await this.buildResults(run.id, contacts);
+      throw error;
+    }
+  }
 
-      if (results.length > 0) {
-        await this.prisma.dlMatchResult.createMany({
-          data: results,
+  async processRun(runId: string | bigint): Promise<TelegramDlMatchRunDto> {
+    const normalizedRunId = typeof runId === 'string' ? BigInt(runId) : runId;
+
+    try {
+      const contactsTotal = await this.prisma.dlContact.count();
+      let processedContacts = 0;
+      let matchesTotal = 0;
+      let strictMatchesTotal = 0;
+      let usernameMatchesTotal = 0;
+      let phoneMatchesTotal = 0;
+      let lastContactId: bigint | null = null;
+      const runStartedAt = Date.now();
+
+      this.logger.log(
+        `Матчинг DL стартовал: runId=${normalizedRunId.toString()} contactsTotal=${contactsTotal} batchSize=${this.batchSize}`,
+      );
+
+      while (true) {
+        const contacts: DlContactWithImportFile[] =
+          await this.prisma.dlContact.findMany({
+            take: this.batchSize,
+            ...(lastContactId !== null
+              ? {
+                  skip: 1,
+                  cursor: { id: lastContactId },
+                }
+              : {}),
+            include: {
+              importFile: true,
+            },
+            orderBy: [{ id: 'asc' }],
+          });
+
+        if (contacts.length === 0) {
+          break;
+        }
+
+        const batchStartedAt = Date.now();
+        const results = await this.buildResults(normalizedRunId, contacts);
+
+        if (results.length > 0) {
+          await this.prisma.dlMatchResult.createMany({
+            data: results,
+          });
+        }
+
+        processedContacts += contacts.length;
+        matchesTotal += results.length;
+        strictMatchesTotal += results.filter(
+          (item) => item.strictTelegramIdMatch,
+        ).length;
+        usernameMatchesTotal += results.filter(
+          (item) => item.usernameMatch,
+        ).length;
+        phoneMatchesTotal += results.filter((item) => item.phoneMatch).length;
+        lastContactId = contacts.at(-1)?.id ?? lastContactId;
+
+        await this.prisma.dlMatchRun.update({
+          where: { id: normalizedRunId },
+          data: {
+            status: 'RUNNING',
+            contactsTotal: processedContacts,
+            matchesTotal,
+            strictMatchesTotal,
+            usernameMatchesTotal,
+            phoneMatchesTotal,
+          },
         });
+
+        this.logger.log(
+          `Матчинг DL batch: runId=${normalizedRunId.toString()} processed=${processedContacts}/${contactsTotal} batchContacts=${contacts.length} batchMatches=${results.length} totalMatches=${matchesTotal} durationMs=${Date.now() - batchStartedAt} lastContactId=${lastContactId?.toString() ?? '-'}`,
+        );
       }
 
-      const strictMatchesTotal = results.filter(
-        (item) => item.strictTelegramIdMatch,
-      ).length;
-      const usernameMatchesTotal = results.filter(
-        (item) => item.usernameMatch,
-      ).length;
-      const phoneMatchesTotal = results.filter(
-        (item) => item.phoneMatch,
-      ).length;
-      const contactsTotal = contacts.length;
-      const matchesTotal = results.length;
-
       const finalized = await this.prisma.dlMatchRun.update({
-        where: { id: run.id },
+        where: { id: normalizedRunId },
         data: {
           status: 'DONE',
           contactsTotal,
@@ -93,6 +170,10 @@ export class TelegramDlMatchService {
         },
       });
 
+      this.logger.log(
+        `Матчинг DL завершен: runId=${normalizedRunId.toString()} contactsTotal=${contactsTotal} matchesTotal=${matchesTotal} durationMs=${Date.now() - runStartedAt}`,
+      );
+
       return {
         ...this.mapRun(finalized),
         contactsTotal,
@@ -103,13 +184,18 @@ export class TelegramDlMatchService {
       };
     } catch (error) {
       await this.prisma.dlMatchRun.update({
-        where: { id: run.id },
+        where: { id: normalizedRunId },
         data: {
           status: 'FAILED',
           finishedAt: new Date(),
           error: error instanceof Error ? error.message : 'Unknown error',
         },
       });
+
+      this.logger.error(
+        `Матчинг DL завершился ошибкой: runId=${normalizedRunId.toString()} error=${error instanceof Error ? error.message : error}`,
+        error instanceof Error ? error.stack : undefined,
+      );
 
       throw error;
     }
@@ -171,10 +257,83 @@ export class TelegramDlMatchService {
     runId: bigint,
     contacts: DlContactWithImportFile[],
   ) {
+    const strictIds = [
+      ...new Set(
+        contacts
+          .map((contact) => this.normalizeTelegramId(contact.telegramId))
+          .filter((value): value is bigint => value !== null),
+      ),
+    ];
+    const usernames = [
+      ...new Set(
+        contacts
+          .map((contact) => contact.username?.trim())
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ];
+    const phones = [
+      ...new Set(
+        contacts
+          .map((contact) => contact.phone?.trim())
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ];
+
+    const [strictMatches, usernameMatches, phoneMatches] = await Promise.all([
+      strictIds.length > 0
+        ? this.prisma.user.findMany({
+            where: { user_id: { in: strictIds } },
+          })
+        : Promise.resolve<user[]>([]),
+      usernames.length > 0
+        ? this.prisma.user.findMany({
+            where: { username: { in: usernames } },
+          })
+        : Promise.resolve<user[]>([]),
+      phones.length > 0
+        ? this.prisma.user.findMany({
+            where: { phone: { in: phones } },
+          })
+        : Promise.resolve<user[]>([]),
+    ]);
+
+    const strictMatchesById = new Map<string, user[]>();
+    const usernameMatchesByValue = new Map<string, user[]>();
+    const phoneMatchesByValue = new Map<string, user[]>();
+
+    strictMatches.forEach((item) => {
+      const key = item.user_id.toString();
+      strictMatchesById.set(key, [...(strictMatchesById.get(key) ?? []), item]);
+    });
+    usernameMatches.forEach((item) => {
+      if (!item.username) {
+        return;
+      }
+
+      usernameMatchesByValue.set(item.username, [
+        ...(usernameMatchesByValue.get(item.username) ?? []),
+        item,
+      ]);
+    });
+    phoneMatches.forEach((item) => {
+      if (!item.phone) {
+        return;
+      }
+
+      phoneMatchesByValue.set(item.phone, [
+        ...(phoneMatchesByValue.get(item.phone) ?? []),
+        item,
+      ]);
+    });
+
     const rows: DlMatchResultCreateManyInput[] = [];
 
     for (const contact of contacts) {
-      const matches = await this.findMatches(contact);
+      const matches = this.findMatches(contact, {
+        strictMatchesById,
+        usernameMatchesByValue,
+        phoneMatchesByValue,
+      });
       for (const match of matches) {
         rows.push({
           runId,
@@ -192,27 +351,26 @@ export class TelegramDlMatchService {
     return rows;
   }
 
-  private async findMatches(contact: DlContactWithImportFile) {
+  private findMatches(
+    contact: DlContactWithImportFile,
+    lookup: {
+      strictMatchesById: Map<string, user[]>;
+      usernameMatchesByValue: Map<string, user[]>;
+      phoneMatchesByValue: Map<string, user[]>;
+    },
+  ) {
     const byUserId = this.normalizeTelegramId(contact.telegramId);
     const strictMatches = byUserId
-      ? await this.prisma.user.findMany({
-          where: { user_id: byUserId },
-        })
+      ? (lookup.strictMatchesById.get(byUserId.toString()) ?? [])
       : [];
-
-    const usernameMatches =
-      contact.username && contact.username.trim().length > 0
-        ? await this.prisma.user.findMany({
-            where: { username: contact.username.trim() },
-          })
-        : [];
-
-    const phoneMatches =
-      contact.phone && contact.phone.trim().length > 0
-        ? await this.prisma.user.findMany({
-            where: { phone: contact.phone.trim() },
-          })
-        : [];
+    const normalizedUsername = contact.username?.trim() ?? '';
+    const usernameMatches = normalizedUsername
+      ? (lookup.usernameMatchesByValue.get(normalizedUsername) ?? [])
+      : [];
+    const normalizedPhone = contact.phone?.trim() ?? '';
+    const phoneMatches = normalizedPhone
+      ? (lookup.phoneMatchesByValue.get(normalizedPhone) ?? [])
+      : [];
 
     const merged = new Map<
       string,

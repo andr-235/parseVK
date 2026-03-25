@@ -28,6 +28,7 @@ export default function TelegramDlMatchToolbar({
   onExport,
 }: TelegramDlMatchToolbarProps) {
   const canExport = activeMatchRun?.status === 'DONE'
+  const isRunActive = activeMatchRun?.status === 'RUNNING'
   const statusLabel = viewMode === 'contacts' ? 'Вся база' : 'Результаты последнего запуска'
 
   return (
@@ -52,11 +53,11 @@ export default function TelegramDlMatchToolbar({
             type="button"
             variant="outline"
             onClick={onRunMatch}
-            disabled={isCreatingMatchRun}
+            disabled={isCreatingMatchRun || isRunActive}
             className="gap-2"
           >
             <Play className="size-4" />
-            {isCreatingMatchRun ? 'Проверяю...' : 'Найти совпадения в tgmbase'}
+            {isCreatingMatchRun || isRunActive ? 'Проверяю...' : 'Найти совпадения в tgmbase'}
           </Button>
           <Button
             type="button"

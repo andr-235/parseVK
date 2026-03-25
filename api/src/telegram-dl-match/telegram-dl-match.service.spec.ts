@@ -1,9 +1,10 @@
+import { Logger } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { TelegramDlMatchService } from './telegram-dl-match.service.js';
 
 const createPrismaMock = () => ({
-  $transaction: vi.fn(),
   dlContact: {
+    count: vi.fn(),
     findMany: vi.fn(),
   },
   user: {
@@ -21,50 +22,152 @@ const createPrismaMock = () => ({
   },
 });
 
-describe('TelegramDlMatchService', () => {
-  it('creates strict, username and phone matches and persists aggregates', async () => {
-    const prisma = createPrismaMock();
-    prisma.dlContact.findMany.mockResolvedValue([
-      {
-        id: 1n,
-        telegramId: '123',
-        username: 'alpha',
-        phone: '+79990000001',
-        firstName: 'Alpha',
-        lastName: 'One',
-        fullName: 'Alpha One',
-        region: 'Moscow',
-        importFile: { originalFileName: 'dl.xlsx' },
-      },
-    ]);
-    prisma.user.findMany.mockResolvedValue([
-      {
-        user_id: 123n,
-        bot: false,
-        scam: false,
-        premium: true,
-        first_name: 'Alpha',
-        last_name: 'One',
-        username: 'alpha',
-        phone: '+79990000001',
-        upd_date: new Date('2026-03-25T00:00:00.000Z'),
-      },
-    ]);
-    prisma.dlMatchRun.create.mockResolvedValue({ id: 10n, status: 'RUNNING' });
-    prisma.dlMatchRun.update.mockResolvedValue({ id: 10n, status: 'DONE' });
-    prisma.dlMatchResult.createMany.mockResolvedValue({ count: 1 });
-    prisma.$transaction.mockImplementation(
-      (callback: (tx: unknown) => unknown) => callback(prisma),
-    );
+const createQueueProducerMock = () => ({
+  enqueue: vi.fn(),
+});
 
-    const service = new TelegramDlMatchService(prisma as never);
+describe('TelegramDlMatchService', () => {
+  it('creates run, enqueues background job and returns RUNNING immediately', async () => {
+    const prisma = createPrismaMock();
+    const queue = createQueueProducerMock();
+    prisma.dlMatchRun.create.mockResolvedValue({
+      id: 10n,
+      status: 'RUNNING',
+      contactsTotal: 0,
+      matchesTotal: 0,
+      strictMatchesTotal: 0,
+      usernameMatchesTotal: 0,
+      phoneMatchesTotal: 0,
+      createdAt: new Date('2026-03-25T00:00:00.000Z'),
+      finishedAt: null,
+      error: null,
+    });
+
+    const service = new TelegramDlMatchService(
+      prisma as never,
+      {} as never,
+      queue as never,
+    );
     const run = await service.createRun();
 
+    expect(run.status).toBe('RUNNING');
+    expect(queue.enqueue).toHaveBeenCalledWith({ runId: '10' });
+    expect(prisma.dlContact.findMany).not.toHaveBeenCalled();
+  });
+
+  it('processes contacts in batches and logs progress', async () => {
+    const prisma = createPrismaMock();
+    const queue = createQueueProducerMock();
+    const logSpy = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+
+    prisma.dlMatchRun.update.mockImplementation(async ({ data }) => ({
+      id: 10n,
+      status: data.status ?? 'RUNNING',
+      contactsTotal: data.contactsTotal ?? 0,
+      matchesTotal: data.matchesTotal ?? 0,
+      strictMatchesTotal: data.strictMatchesTotal ?? 0,
+      usernameMatchesTotal: data.usernameMatchesTotal ?? 0,
+      phoneMatchesTotal: data.phoneMatchesTotal ?? 0,
+      finishedAt: data.finishedAt ?? null,
+      error: data.error ?? null,
+    }));
+    prisma.dlContact.count.mockResolvedValue(2);
+    prisma.dlContact.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 1n,
+          importFileId: 1n,
+          telegramId: '100',
+          username: 'alpha',
+          phone: '+70000000001',
+          firstName: 'Alpha',
+          lastName: 'One',
+          fullName: 'Alpha One',
+          region: 'Moscow',
+          sourceRowIndex: 1,
+          importFile: { originalFileName: 'dl-1.xlsx' },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 2n,
+          importFileId: 2n,
+          telegramId: '200',
+          username: 'beta',
+          phone: '+70000000002',
+          firstName: 'Beta',
+          lastName: 'Two',
+          fullName: 'Beta Two',
+          region: 'SPB',
+          sourceRowIndex: 2,
+          importFile: { originalFileName: 'dl-2.xlsx' },
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    prisma.user.findMany
+      .mockResolvedValueOnce([
+        {
+          user_id: 100n,
+          bot: false,
+          scam: false,
+          premium: false,
+          first_name: 'Alpha',
+          last_name: 'One',
+          username: 'alpha',
+          phone: '+70000000001',
+          upd_date: new Date('2026-03-25T00:00:00.000Z'),
+        },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          user_id: 200n,
+          bot: false,
+          scam: false,
+          premium: false,
+          first_name: 'Beta',
+          last_name: 'Two',
+          username: 'beta',
+          phone: '+70000000002',
+          upd_date: new Date('2026-03-25T00:00:00.000Z'),
+        },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    prisma.dlMatchResult.createMany.mockResolvedValue({ count: 1 });
+
+    const service = new TelegramDlMatchService(
+      prisma as never,
+      {} as never,
+      queue as never,
+    );
+    (
+      service as unknown as {
+        batchSize: number;
+      }
+    ).batchSize = 1;
+
+    const run = await service.processRun('10');
+
     expect(run.status).toBe('DONE');
-    expect(run.contactsTotal).toBe(1);
-    expect(run.matchesTotal).toBe(1);
-    expect(run.strictMatchesTotal).toBe(1);
-    expect(prisma.dlMatchResult.createMany).toHaveBeenCalledTimes(1);
+    expect(prisma.dlContact.findMany).toHaveBeenCalledTimes(3);
+    expect(prisma.dlMatchResult.createMany).toHaveBeenCalledTimes(2);
+    expect(prisma.dlMatchRun.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'RUNNING',
+          contactsTotal: 1,
+          matchesTotal: 1,
+        }),
+      }),
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Матчинг DL batch'),
+    );
+    logSpy.mockRestore();
   });
 
   it('returns saved runs and results', async () => {
@@ -99,7 +202,11 @@ describe('TelegramDlMatchService', () => {
       },
     ]);
 
-    const service = new TelegramDlMatchService(prisma as never);
+    const service = new TelegramDlMatchService(
+      prisma as never,
+      {} as never,
+      createQueueProducerMock() as never,
+    );
 
     await expect(service.getRuns()).resolves.toHaveLength(1);
     await expect(service.getRunById('1')).resolves.toMatchObject({
@@ -111,13 +218,17 @@ describe('TelegramDlMatchService', () => {
 
   it('marks run as failed when matching throws', async () => {
     const prisma = createPrismaMock();
+    prisma.dlContact.count.mockResolvedValue(1);
     prisma.dlContact.findMany.mockRejectedValue(new Error('boom'));
-    prisma.dlMatchRun.create.mockResolvedValue({ id: 20n, status: 'RUNNING' });
     prisma.dlMatchRun.update.mockResolvedValue({ id: 20n, status: 'FAILED' });
 
-    const service = new TelegramDlMatchService(prisma as never);
+    const service = new TelegramDlMatchService(
+      prisma as never,
+      {} as never,
+      createQueueProducerMock() as never,
+    );
 
-    await expect(service.createRun()).rejects.toThrow('boom');
+    await expect(service.processRun('20')).rejects.toThrow('boom');
     expect(prisma.dlMatchRun.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 20n },

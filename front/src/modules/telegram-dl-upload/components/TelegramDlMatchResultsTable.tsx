@@ -80,6 +80,18 @@ export default function TelegramDlMatchResultsTable({
 
       {isLoading ? (
         <LoadingState message="Загружаю совпадения tgmbase" />
+      ) : activeMatchRun?.status === 'RUNNING' ? (
+        <EmptyState
+          variant="custom"
+          title="Матчинг выполняется"
+          description="Фоновый запуск обрабатывает DL-контакты батчами. Результаты появятся после завершения."
+        />
+      ) : activeMatchRun?.status === 'FAILED' ? (
+        <EmptyState
+          variant="custom"
+          title="Матчинг завершился ошибкой"
+          description={activeMatchRun.error ?? 'Проверь логи backend и запусти матчинг повторно.'}
+        />
       ) : visibleResults.length === 0 ? (
         <EmptyState
           variant="custom"

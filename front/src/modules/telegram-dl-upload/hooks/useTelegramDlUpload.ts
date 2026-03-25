@@ -10,6 +10,7 @@ import {
 import type { UseTelegramDlUploadResult } from './useTelegramDlUpload.types'
 
 const CONTACTS_PAGE_SIZE = 100
+const MATCH_RUN_POLL_INTERVAL_MS = 3000
 
 const EMPTY_CONTACTS_PAGE: TelegramDlImportContactsPage = {
   items: [],
@@ -62,6 +63,8 @@ export const useTelegramDlUpload = (): UseTelegramDlUploadResult => {
       : ['telegram-dl-upload', 'match-run', 'idle'],
     queryFn: () => telegramDlUploadService.getMatchRun(activeMatchRunId ?? ''),
     enabled: activeMatchRunId !== null,
+    refetchInterval: (query) =>
+      query.state.data?.status === 'RUNNING' ? MATCH_RUN_POLL_INTERVAL_MS : false,
   })
 
   const matchResultsQuery = useQuery({
@@ -69,7 +72,10 @@ export const useTelegramDlUpload = (): UseTelegramDlUploadResult => {
       ? telegramDlUploadQueryKeys.matchResults(activeMatchRunId)
       : ['telegram-dl-upload', 'match-results', 'idle'],
     queryFn: () => telegramDlUploadService.getMatchResults(activeMatchRunId ?? ''),
-    enabled: activeMatchRunId !== null && viewMode === 'results',
+    enabled:
+      activeMatchRunId !== null &&
+      viewMode === 'results' &&
+      activeMatchRunQuery.data?.status === 'DONE',
   })
 
   const uploadMutation = useMutation({
@@ -194,7 +200,10 @@ export const useTelegramDlUpload = (): UseTelegramDlUploadResult => {
     matchResults,
     isMatchRunLoading:
       activeMatchRunId !== null &&
-      (activeMatchRunQuery.isLoading || (viewMode === 'results' && matchResultsQuery.isLoading)),
+      (activeMatchRunQuery.isLoading ||
+        (viewMode === 'results' &&
+          activeMatchRun?.status === 'DONE' &&
+          matchResultsQuery.isLoading)),
     matchRunError: activeMatchRunQuery.error ?? matchResultsQuery.error,
     displayMode: viewMode,
     showContacts,

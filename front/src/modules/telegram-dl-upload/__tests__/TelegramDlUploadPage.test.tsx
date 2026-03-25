@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import TelegramDlUploadPage from '../components/TelegramDlUploadPage'
 import { telegramDlUploadService } from '../api/telegramDlUpload.api'
@@ -106,14 +106,14 @@ vi.mock('../api/telegramDlUpload.api', () => ({
     ]),
     createMatchRun: vi.fn().mockResolvedValue({
       id: 'run-2',
-      status: 'DONE',
-      contactsTotal: 1,
-      matchesTotal: 1,
-      strictMatchesTotal: 1,
+      status: 'RUNNING',
+      contactsTotal: 0,
+      matchesTotal: 0,
+      strictMatchesTotal: 0,
       usernameMatchesTotal: 0,
       phoneMatchesTotal: 0,
       createdAt: '2024-03-25T10:00:00.000Z',
-      finishedAt: '2024-03-25T10:00:01.000Z',
+      finishedAt: null,
       error: null,
     }),
     exportMatchRun: vi.fn().mockResolvedValue(undefined),
@@ -145,6 +145,10 @@ vi.mock('../api/telegramDlUpload.api', () => ({
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(telegramDlUploadService.getFiles).mockResolvedValue([])
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 const renderPage = () => {
@@ -281,25 +285,91 @@ describe('TelegramDlUploadPage', () => {
   })
 
   it('runs matching, shows results, exports xlsx, and switches back to contacts', async () => {
-    const user = userEvent.setup()
     const matchService = telegramDlUploadService as unknown as {
       exportMatchRun: (runId: string) => Promise<void>
     }
+    vi.mocked(telegramDlUploadService.getMatchRun).mockResolvedValue({
+      id: 'run-2',
+      status: 'DONE',
+      contactsTotal: 100,
+      matchesTotal: 5,
+      strictMatchesTotal: 3,
+      usernameMatchesTotal: 1,
+      phoneMatchesTotal: 1,
+      createdAt: '2024-03-25T10:00:00.000Z',
+      finishedAt: '2024-03-25T10:01:00.000Z',
+      error: null,
+    })
     renderPage()
 
-    await user.click(screen.getByRole('tab', { name: /Матчинг DL/i }))
-    await user.click(await screen.findByRole('button', { name: /Найти совпадения в tgmbase/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /Матчинг DL/i }))
+    expect(await screen.findByText('Полная DL-база')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Найти совпадения в tgmbase/i }))
 
     expect(await screen.findByText('Совпадения tgmbase')).toBeInTheDocument()
     expect(screen.getAllByText('Иван Иванов').length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: /Выгрузить XLSX/i })).toBeEnabled()
 
-    await user.click(screen.getByRole('button', { name: /Выгрузить XLSX/i }))
-    expect(matchService.exportMatchRun).toHaveBeenCalledWith('run-2')
+    fireEvent.click(screen.getByRole('button', { name: /Выгрузить XLSX/i }))
+    await waitFor(() => {
+      expect(matchService.exportMatchRun).toHaveBeenCalledWith('run-2')
+    })
 
-    await user.click(screen.getByRole('button', { name: /Показать всю DL-базу/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Показать всю DL-базу/i }))
     expect(await screen.findByText('Полная DL-база')).toBeInTheDocument()
   })
+
+  it('polls active run until status becomes done', async () => {
+    vi.mocked(telegramDlUploadService.createMatchRun).mockResolvedValue({
+      id: 'run-poll',
+      status: 'RUNNING',
+      contactsTotal: 0,
+      matchesTotal: 0,
+      strictMatchesTotal: 0,
+      usernameMatchesTotal: 0,
+      phoneMatchesTotal: 0,
+      createdAt: '2024-03-25T10:00:00.000Z',
+      finishedAt: null,
+      error: null,
+    })
+    vi.mocked(telegramDlUploadService.getMatchRun)
+      .mockResolvedValueOnce({
+        id: 'run-poll',
+        status: 'RUNNING',
+        contactsTotal: 100,
+        matchesTotal: 10,
+        strictMatchesTotal: 8,
+        usernameMatchesTotal: 1,
+        phoneMatchesTotal: 1,
+        createdAt: '2024-03-25T10:00:00.000Z',
+        finishedAt: null,
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        id: 'run-poll',
+        status: 'DONE',
+        contactsTotal: 100,
+        matchesTotal: 10,
+        strictMatchesTotal: 8,
+        usernameMatchesTotal: 1,
+        phoneMatchesTotal: 1,
+        createdAt: '2024-03-25T10:00:00.000Z',
+        finishedAt: '2024-03-25T10:01:00.000Z',
+        error: null,
+      })
+
+    renderPage()
+
+    fireEvent.click(screen.getByRole('tab', { name: /Матчинг DL/i }))
+    expect(await screen.findByText('Полная DL-база')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Найти совпадения в tgmbase/i }))
+
+    expect(await screen.findByText(/Матчинг выполняется/i)).toBeInTheDocument()
+    await new Promise((resolve) => setTimeout(resolve, 3200))
+    await waitFor(() => {
+      expect(telegramDlUploadService.getMatchRun).toHaveBeenCalledTimes(2)
+    })
+  }, 10000)
 
   it('tracks multiple selected files in the upload card', () => {
     renderPage()
