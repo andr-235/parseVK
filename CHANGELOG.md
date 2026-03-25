@@ -1,3 +1,11 @@
+## [0.31.1](https://github.com/andr-235/parseVK/compare/v0.31.0...v0.31.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* переработана dl матчинг ([763df65](https://github.com/andr-235/parseVK/commit/763df657b4c62058bc5588ba7e34164b9f71611e))
+* переработана dl матчинг ([c3996ec](https://github.com/andr-235/parseVK/commit/c3996ec9fe2576193463ebcf3b54b26fc482f180))
+
 # [0.31.0](https://github.com/andr-235/parseVK/compare/v0.30.0...v0.31.0) (2026-03-25)
 
 
