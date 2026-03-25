@@ -36,7 +36,9 @@ export class TelegramDlMatchProcessor extends WorkerHost {
   @OnWorkerEvent('failed')
   onFailed(job: Job<TelegramDlMatchJobData> | undefined, error: Error) {
     if (!job) {
-      this.logger.error(`DL match job failed without payload: ${error.message}`);
+      this.logger.error(
+        `DL match job failed without payload: ${error.message}`,
+      );
       return;
     }
 
