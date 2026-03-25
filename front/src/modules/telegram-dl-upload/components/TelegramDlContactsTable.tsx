@@ -86,12 +86,12 @@ export default function TelegramDlContactsTable({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-        <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
-          Показано: {contacts.length}
-        </Badge>
-        <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
-          Всего: {total}
-        </Badge>
+          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+            Показано: {contacts.length}
+          </Badge>
+          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+            Всего: {total}
+          </Badge>
           <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
             Страница: {pageIndex} / {pageCount}
           </Badge>

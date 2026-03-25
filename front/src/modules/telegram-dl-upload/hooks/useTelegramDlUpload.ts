@@ -115,16 +115,14 @@ export const useTelegramDlUpload = (): UseTelegramDlUploadResult => {
   const contactsPageIndex = Math.floor(contactsPage.offset / contactsPage.limit) + 1
   const contactsPageCount = Math.max(1, Math.ceil(contactsPage.total / contactsPage.limit))
   const canGoToPreviousContactsPage = contactsPage.offset > 0
-  const canGoToNextContactsPage = contactsPage.offset + contactsPage.items.length < contactsPage.total
+  const canGoToNextContactsPage =
+    contactsPage.offset + contactsPage.items.length < contactsPage.total
   const matchResults = matchResultsQuery.data ?? []
   const matchRuns = matchRunsQuery.data ?? []
 
   const showContacts = () => setViewMode('contacts')
 
-  const updateContactsFilter = (
-    setter: (value: string) => void,
-    value: string,
-  ) => {
+  const updateContactsFilter = (setter: (value: string) => void, value: string) => {
     setter(value)
     setContactsOffset(0)
   }
