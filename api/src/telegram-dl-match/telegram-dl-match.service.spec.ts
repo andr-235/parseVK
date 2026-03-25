@@ -159,8 +159,12 @@ describe('TelegramDlMatchService', () => {
       .mockResolvedValueOnce([{ channel_id: 9002n, title: 'Channel Alpha' }])
       .mockResolvedValueOnce([]);
     prisma.supergroup.findMany
-      .mockResolvedValueOnce([{ supergroup_id: 9001n, title: 'Supergroup Alpha' }])
-      .mockResolvedValueOnce([{ supergroup_id: 9003n, title: 'Supergroup Beta' }]);
+      .mockResolvedValueOnce([
+        { supergroup_id: 9001n, title: 'Supergroup Alpha' },
+      ])
+      .mockResolvedValueOnce([
+        { supergroup_id: 9003n, title: 'Supergroup Beta' },
+      ]);
     prisma.group.findMany.mockResolvedValue([]);
     prisma.dlMatchResult.createMany.mockResolvedValue({ count: 1 });
 

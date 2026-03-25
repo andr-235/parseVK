@@ -509,9 +509,9 @@ export class TelegramDlMatchService {
       distinct: ['from_id', 'peer_id'],
     });
 
-    const peerIds = [...new Set(messagePairs.map((item) => item.peer_id.toString()))].map(
-      (item) => BigInt(item),
-    );
+    const peerIds = [
+      ...new Set(messagePairs.map((item) => item.peer_id.toString())),
+    ].map((item) => BigInt(item));
     if (peerIds.length === 0) {
       return lookup;
     }
