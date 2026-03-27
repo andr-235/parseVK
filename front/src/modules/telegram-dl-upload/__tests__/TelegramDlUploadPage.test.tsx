@@ -98,6 +98,49 @@ const { defaultMatchResults } = vi.hoisted(() => ({
         ],
       },
     },
+    {
+      id: 'result-3',
+      runId: 'run-2',
+      dlContactId: '3',
+      tgmbaseUserId: '1003',
+      strictTelegramIdMatch: true,
+      usernameMatch: false,
+      phoneMatch: false,
+      chatActivityMatch: true,
+      createdAt: '2024-03-25T10:00:03.000Z',
+      dlContact: {
+        id: '3',
+        importFileId: '12',
+        originalFileName: 'shared-chat.xlsx',
+        telegramId: '777777',
+        username: 'shared_chat_user',
+        phone: null,
+        firstName: 'Сергей',
+        lastName: 'Сергеев',
+        fullName: 'Сергей Сергеев',
+        region: 'Новосибирск',
+        sourceRowIndex: 4,
+      },
+      user: {
+        id: '1003',
+        user_id: '777777',
+        bot: false,
+        scam: false,
+        premium: false,
+        first_name: 'Сергей',
+        last_name: 'Сергеев',
+        username: 'shared_chat_user',
+        phone: null,
+        upd_date: '2024-03-25T10:00:00.000Z',
+        relatedChats: [
+          {
+            type: 'supergroup' as const,
+            peer_id: '9100',
+            title: 'Excluded Candidate Chat',
+          },
+        ],
+      },
+    },
   ],
 }))
 
@@ -446,7 +489,7 @@ describe('TelegramDlUploadPage', () => {
     const user = userEvent.setup()
     vi.mocked(telegramDlUploadService.getMatchResults)
       .mockResolvedValueOnce(defaultMatchResults)
-      .mockResolvedValueOnce([defaultMatchResults[0]])
+      .mockResolvedValueOnce([defaultMatchResults[0], defaultMatchResults[2]])
 
     renderPage()
 
@@ -459,7 +502,7 @@ describe('TelegramDlUploadPage', () => {
     await user.click(screen.getAllByRole('button', { name: /Комментарии/i })[1])
     expect(await screen.findByText('Комментарий только из исключаемого чата')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /Исключить чат 9100/i }))
+    await user.click(screen.getAllByRole('button', { name: /Исключить чат 9100/i })[0])
 
     await waitFor(() => {
       expect(telegramDlUploadService.excludeChat).toHaveBeenCalledWith('run-2', '9100')
@@ -468,6 +511,9 @@ describe('TelegramDlUploadPage', () => {
       expect(
         vi.mocked(telegramDlUploadService.getMatchResults).mock.calls.length
       ).toBeGreaterThanOrEqual(2)
+    })
+    await waitFor(() => {
+      expect(screen.queryAllByText(/Excluded Candidate Chat \(9100\)/i)).toHaveLength(0)
     })
   })
 

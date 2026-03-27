@@ -35,6 +35,45 @@ interface TelegramDlMatchResultRowProps {
   onChatExcluded: (peerId: string) => void
 }
 
+const applyExcludedChats = (
+  results: TelegramDlMatchResult[],
+  excludedPeerIds: string[]
+): TelegramDlMatchResult[] => {
+  if (excludedPeerIds.length === 0) {
+    return results
+  }
+
+  const excludedSet = new Set(excludedPeerIds)
+
+  return results.reduce<TelegramDlMatchResult[]>((next, item) => {
+    const remainingChats =
+      item.user?.relatedChats?.filter((chat) => !excludedSet.has(chat.peer_id)) ?? []
+    const nextChatActivityMatch = item.chatActivityMatch && remainingChats.length > 0
+
+    if (
+      !item.strictTelegramIdMatch &&
+      !item.usernameMatch &&
+      !item.phoneMatch &&
+      !nextChatActivityMatch
+    ) {
+      return next
+    }
+
+    next.push({
+      ...item,
+      chatActivityMatch: nextChatActivityMatch,
+      user: item.user
+        ? {
+            ...item.user,
+            relatedChats: remainingChats,
+          }
+        : null,
+    })
+
+    return next
+  }, [])
+}
+
 function TelegramDlMatchResultRow({
   result,
   runId,
@@ -59,26 +98,21 @@ function TelegramDlMatchResultRow({
         telegramDlUploadQueryKeys.matchResults(runId),
         (current) =>
           current
-            ?.map((item) => {
+            ?.reduce<TelegramDlMatchResult[]>((next, item) => {
               const remainingChats =
                 item.user?.relatedChats?.filter((chat) => chat.peer_id !== peerId) ?? []
               const nextChatActivityMatch = item.chatActivityMatch && remainingChats.length > 0
 
               if (
-                item.id === result.id &&
                 !item.strictTelegramIdMatch &&
                 !item.usernameMatch &&
                 !item.phoneMatch &&
                 !nextChatActivityMatch
               ) {
-                return null
+                return next
               }
 
-              if (item.id !== result.id) {
-                return item
-              }
-
-              return {
+              next.push({
                 ...item,
                 chatActivityMatch: nextChatActivityMatch,
                 user: item.user
@@ -87,9 +121,10 @@ function TelegramDlMatchResultRow({
                       relatedChats: remainingChats,
                     }
                   : null,
-              }
-            })
-            .filter((item): item is TelegramDlMatchResult => item !== null) ?? []
+              })
+
+              return next
+            }, []) ?? []
       )
       await queryClient.invalidateQueries({
         queryKey: telegramDlUploadQueryKeys.matchRun(runId),
@@ -242,42 +277,21 @@ export default function TelegramDlMatchResultsTable({
   activeMatchRun,
 }: TelegramDlMatchResultsTableProps) {
   const [filter, setFilter] = useState<MatchFilter>('all')
-  const [localResults, setLocalResults] = useState<TelegramDlMatchResult[]>(results)
+  const [excludedPeerIds, setExcludedPeerIds] = useState<string[]>([])
+  const [localResults, setLocalResults] = useState<TelegramDlMatchResult[]>(
+    applyExcludedChats(results, [])
+  )
 
   useEffect(() => {
-    setLocalResults(results)
-  }, [results])
+    setLocalResults(applyExcludedChats(results, excludedPeerIds))
+  }, [results, excludedPeerIds])
+
+  useEffect(() => {
+    setExcludedPeerIds([])
+  }, [activeMatchRun?.id])
 
   const handleChatExcluded = (peerId: string) => {
-    setLocalResults((current) => {
-      return current.reduce<TelegramDlMatchResult[]>((next, item) => {
-        const remainingChats =
-          item.user?.relatedChats?.filter((chat) => chat.peer_id !== peerId) ?? []
-        const nextChatActivityMatch = item.chatActivityMatch && remainingChats.length > 0
-
-        if (
-          !item.strictTelegramIdMatch &&
-          !item.usernameMatch &&
-          !item.phoneMatch &&
-          !nextChatActivityMatch
-        ) {
-          return next
-        }
-
-        next.push({
-          ...item,
-          chatActivityMatch: nextChatActivityMatch,
-          user: item.user
-            ? {
-                ...item.user,
-                relatedChats: remainingChats,
-              }
-            : null,
-        })
-
-        return next
-      }, [])
-    })
+    setExcludedPeerIds((current) => (current.includes(peerId) ? current : [...current, peerId]))
   }
 
   const visibleResults = localResults.filter((result) => {
