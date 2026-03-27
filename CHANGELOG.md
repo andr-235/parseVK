@@ -1,3 +1,10 @@
+## [0.31.3](https://github.com/andr-235/parseVK/compare/v0.31.2...v0.31.3) (2026-03-27)
+
+
+### Bug Fixes
+
+* скрывать исключенный чат во всех совпадениях ([927b0dc](https://github.com/andr-235/parseVK/commit/927b0dcf336d82231cc04226422a4c6536dbb0ff))
+
 ## [0.31.2](https://github.com/andr-235/parseVK/compare/v0.31.1...v0.31.2) (2026-03-27)
 
 
