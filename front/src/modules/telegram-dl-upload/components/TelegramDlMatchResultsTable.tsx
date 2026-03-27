@@ -97,34 +97,33 @@ function TelegramDlMatchResultRow({
       queryClient.setQueryData<TelegramDlMatchResult[]>(
         telegramDlUploadQueryKeys.matchResults(runId),
         (current) =>
-          current
-            ?.reduce<TelegramDlMatchResult[]>((next, item) => {
-              const remainingChats =
-                item.user?.relatedChats?.filter((chat) => chat.peer_id !== peerId) ?? []
-              const nextChatActivityMatch = item.chatActivityMatch && remainingChats.length > 0
+          current?.reduce<TelegramDlMatchResult[]>((next, item) => {
+            const remainingChats =
+              item.user?.relatedChats?.filter((chat) => chat.peer_id !== peerId) ?? []
+            const nextChatActivityMatch = item.chatActivityMatch && remainingChats.length > 0
 
-              if (
-                !item.strictTelegramIdMatch &&
-                !item.usernameMatch &&
-                !item.phoneMatch &&
-                !nextChatActivityMatch
-              ) {
-                return next
-              }
-
-              next.push({
-                ...item,
-                chatActivityMatch: nextChatActivityMatch,
-                user: item.user
-                  ? {
-                      ...item.user,
-                      relatedChats: remainingChats,
-                    }
-                  : null,
-              })
-
+            if (
+              !item.strictTelegramIdMatch &&
+              !item.usernameMatch &&
+              !item.phoneMatch &&
+              !nextChatActivityMatch
+            ) {
               return next
-            }, []) ?? []
+            }
+
+            next.push({
+              ...item,
+              chatActivityMatch: nextChatActivityMatch,
+              user: item.user
+                ? {
+                    ...item.user,
+                    relatedChats: remainingChats,
+                  }
+                : null,
+            })
+
+            return next
+          }, []) ?? []
       )
       await queryClient.invalidateQueries({
         queryKey: telegramDlUploadQueryKeys.matchRun(runId),
