@@ -1,3 +1,10 @@
+## [0.31.2](https://github.com/andr-235/parseVK/compare/v0.31.1...v0.31.2) (2026-03-27)
+
+
+### Bug Fixes
+
+* исправить валидацию peerId для excluded chats ([1bcb430](https://github.com/andr-235/parseVK/commit/1bcb43019a4c0a9009d18935df726977c47f60d6))
+
 ## [0.31.1](https://github.com/andr-235/parseVK/compare/v0.31.0...v0.31.1) (2026-03-25)
 
 
