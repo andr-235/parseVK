@@ -68,6 +68,9 @@ type BuiltDlMatchResult = {
 
 type DlMatchResultWithChats = DlMatchResult & {
   chats?: DlMatchResultChat[];
+  _count?: {
+    chats: number;
+  };
 };
 const ACTIVE_SIGNAL_OR_CLAUSE: Prisma.DlMatchResultWhereInput[] = [
   { strictTelegramIdMatch: true },
@@ -266,11 +269,22 @@ export class TelegramDlMatchService {
           where: { isExcluded: false },
           orderBy: [{ peerId: 'asc' }],
         },
+        _count: {
+          select: {
+            chats: true,
+          },
+        },
       },
       orderBy: [{ createdAt: 'desc' }],
     });
 
-    return items.map((item) => this.mapResult(item));
+    return items
+      .filter((item) => {
+        const totalChats = item._count?.chats ?? 0;
+        const activeChats = item.chats?.length ?? 0;
+        return totalChats === 0 || activeChats > 0;
+      })
+      .map((item) => this.mapResult(item));
   }
 
   async getResultMessages(

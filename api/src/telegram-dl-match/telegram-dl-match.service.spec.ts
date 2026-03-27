@@ -344,6 +344,76 @@ describe('TelegramDlMatchService', () => {
     ]);
   });
 
+  it('hides strict matches when all related chats are excluded', async () => {
+    const prisma = createPrismaMock();
+    prisma.dlMatchResult.findMany.mockResolvedValue([
+      {
+        id: 11n,
+        runId: 1n,
+        dlContactId: 21n,
+        tgmbaseUserId: 31n,
+        strictTelegramIdMatch: true,
+        usernameMatch: false,
+        phoneMatch: false,
+        chatActivityMatch: false,
+        dlContactSnapshot: {
+          telegramId: '123',
+        },
+        tgmbaseUserSnapshot: {
+          user_id: '123',
+          username: 'alpha',
+          relatedChats: [
+            {
+              type: 'supergroup',
+              peer_id: '-1001424415743',
+              title: 'Рожа фашизма',
+            },
+          ],
+        },
+        createdAt: new Date('2026-03-25T00:00:00.000Z'),
+        chats: [],
+        _count: {
+          chats: 1,
+        },
+      },
+      {
+        id: 12n,
+        runId: 1n,
+        dlContactId: 22n,
+        tgmbaseUserId: 32n,
+        strictTelegramIdMatch: true,
+        usernameMatch: false,
+        phoneMatch: false,
+        chatActivityMatch: false,
+        dlContactSnapshot: {
+          telegramId: '456',
+        },
+        tgmbaseUserSnapshot: {
+          user_id: '456',
+          username: 'beta',
+        },
+        createdAt: new Date('2026-03-25T00:00:01.000Z'),
+        chats: [],
+        _count: {
+          chats: 0,
+        },
+      },
+    ]);
+
+    const service = new TelegramDlMatchService(
+      prisma as never,
+      {} as never,
+      createQueueProducerMock() as never,
+    );
+
+    await expect(service.getResults('1')).resolves.toEqual([
+      expect.objectContaining({
+        id: '12',
+        strictTelegramIdMatch: true,
+      }),
+    ]);
+  });
+
   it('excludes peer ids and hides results with no signals left', async () => {
     const prisma = createPrismaMock();
     prisma.dlMatchResultChat.findMany.mockResolvedValue([
