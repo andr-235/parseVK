@@ -2,31 +2,37 @@ services:
   db:
     image: postgres:15-alpine
     restart: always
-    ports:
-      - "5433:5432"
+    # Порт закрыт наружу, доступ только внутри сети Docker
+    # ports:
+    #   - "127.0.0.1:5433:5432"  # Раскомментируй только для локальной отладки
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: vk_api
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-vk_api}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d vk_api"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - backend
 
   redis:
     image: redis:7-alpine
     restart: always
-    ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "no"]
+    # Порт закрыт наружу
+    # ports:
+    #   - "127.0.0.1:6379:6379"  # Раскомментируй только для локальной отладки
+    command: ["redis-server", "--appendonly", "no", "--requirepass", "${REDIS_PASSWORD}"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - backend
 
   db_backup:
     build:
@@ -38,27 +44,29 @@ services:
     environment:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
-      POSTGRES_DB: vk_api
-      POSTGRES_USER: postgres
-      PGPASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-vk_api}
+      POSTGRES_USER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
       BACKUP_DIR: /backups
       BACKUP_KEEP_DAYS: 7
       BACKUP_SCHEDULE: "0 3 * * *"
     volumes:
       - postgres_backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h db -U postgres -d vk_api || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -h db -U $${POSTGRES_USER} -d $${POSTGRES_DB} || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - backend
 
   api:
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
       args:
-        DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/vk_api?schema=public}
+        DATABASE_URL: ${DATABASE_URL}
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
         NPM_REGISTRY_FALLBACK: ${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org/}
     depends_on:
@@ -67,16 +75,20 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/vk_api?schema=public}
-      VK_TOKEN: ${VK_TOKEN:-vk1.a.MgXnY9V9Mbxs9nZ0WXQlL9cMOyO8co3kBZQZY8KpuDQpWxqEvgsJLLYO0K5z917B0sSdBUxGDy0d-p43-GvzjtDaB_aqkDWYeuHPikQ8uzyiZnHvP_CkIl47k8WP5TbIbaK_I55C8A2qVmg96YG2mWROCUwjkTqCpEmL8TTaFhZE5YvDi_Ma-7RjYBgyuF7lQdZsew2bb2iqa5JWvAwrgw}
+      DATABASE_URL: ${DATABASE_URL}
+      VK_TOKEN: ${VK_TOKEN}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       MONITOR_DATABASE_URL: ${MONITOR_DATABASE_URL:-}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
     healthcheck:
       test: ["CMD", "node", "/app/healthcheck.mjs"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 120s
+    networks:
+      - backend
+      - frontend
 
   frontend:
     build:
@@ -103,11 +115,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - frontend
 
   prometheus:
     image: prom/prometheus:latest
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"  # Доступ только локально
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -119,15 +133,17 @@ services:
       - "--storage.tsdb.retention.time=200h"
       - "--web.enable-lifecycle"
     networks:
-      - default
+      - backend
+      - monitoring
     depends_on:
       api:
         condition: service_healthy
 
   node-exporter:
     image: prom/node-exporter:latest
-    ports:
-      - "9100:9100"
+    # Порт закрыт наружу
+    # ports:
+    #   - "9100:9100"
     command:
       - "--path.rootfs=/host"
       - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
@@ -136,25 +152,35 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
     networks:
-      - default
+      - monitoring
 
   grafana:
     image: grafana/grafana:latest
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"  # Доступ только локально
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_SECURITY_ANGULAR_SUPPORT_DISABLED=true
     networks:
-      - default
+      - monitoring
     depends_on:
       prometheus:
         condition: service_started
+
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
+  monitoring:
+    driver: bridge
 
 volumes:
   postgres_data:
