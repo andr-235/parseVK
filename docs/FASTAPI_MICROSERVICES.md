@@ -54,9 +54,14 @@ Nginx проксирует:
 ## Security defaults
 
 Для local/dev refresh cookie запускается с `GATEWAY_REFRESH_COOKIE_SECURE=false`, потому что
-smoke идёт по HTTP. В production нужно выставлять:
+smoke идёт по HTTP. В этом режиме используются cookie names без `__Host-`, иначе браузер
+и `curl` отбросят cookie как невалидные.
+
+В production нужно выставлять:
 
 ```text
+GATEWAY_REFRESH_COOKIE_NAME=__Host-refresh_token
+GATEWAY_CSRF_COOKIE_NAME=__Host-csrf_token
 GATEWAY_REFRESH_COOKIE_SECURE=true
 GATEWAY_REFRESH_COOKIE_SAMESITE=lax
 FASTAPI_INTERNAL_SERVICE_TOKEN=<strong shared secret>

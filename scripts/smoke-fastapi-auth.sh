@@ -4,6 +4,7 @@ set -eu
 GATEWAY_URL="${GATEWAY_URL:-http://127.0.0.1:3002}"
 SMOKE_USERNAME="${SMOKE_USERNAME:-${IDENTITY_ADMIN_USERNAME:-admin}}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-${IDENTITY_ADMIN_PASSWORD:-admin-change-me}}"
+CSRF_COOKIE_NAME="${CSRF_COOKIE_NAME:-${GATEWAY_CSRF_COOKIE_NAME:-csrf_token}}"
 
 COOKIE_JAR="$(mktemp)"
 trap 'rm -f "$COOKIE_JAR"' EXIT
@@ -26,7 +27,7 @@ json_get() {
 }
 
 csrf_token() {
-  awk '$6 == "__Host-csrf_token" { value = $7 } END { print value }' "$COOKIE_JAR"
+  awk -v name="$CSRF_COOKIE_NAME" '$6 == name { value = $7 } END { print value }' "$COOKIE_JAR"
 }
 
 echo "1. health"
