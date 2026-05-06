@@ -2,7 +2,14 @@
 name = "parsevk-api-gateway"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "pydantic-settings>=2.4"]
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic-settings>=2.4",
+  "httpx>=0.27",
+  "PyJWT>=2.9",
+  "cryptography>=43.0",
+]
 
 [project.optional-dependencies]
 test = ["httpx>=0.27", "pytest>=8.3", "pytest-asyncio>=0.23"]
