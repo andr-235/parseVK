@@ -1,0 +1,21 @@
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+asyncio_mode = "auto"
+testpaths = [
+  "libs/py/common/tests",
+  "services/api-gateway/tests",
+  "services/identity-service/tests",
+]
+pythonpath = [
+  "libs/py/common",
+  "services/api-gateway",
+  "services/identity-service",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
+ignore = ["S101"]
