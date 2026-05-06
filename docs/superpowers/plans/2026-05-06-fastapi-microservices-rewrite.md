@@ -68,7 +68,7 @@ Do not remove or replace the current NestJS `api/` service during this stage.
 - Create: `services/identity-service/app/core/jwt.py`
 - Create: `services/identity-service/tests/test_health.py`
 
-- [ ] **Step 1: Create root Python workspace metadata**
+- [x] **Step 1: Create root Python workspace metadata**
 
 Add root `pyproject.toml`:
 
@@ -95,7 +95,7 @@ select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
 ignore = ["S101"]
 ```
 
-- [ ] **Step 2: Create `libs/py/common` package**
+- [x] **Step 2: Create `libs/py/common` package**
 
 Use package name `parsevk-common` in `libs/py/common/pyproject.toml`:
 
@@ -203,7 +203,7 @@ def is_sensitive_key(key: str) -> bool:
     return key.lower() in SENSITIVE_HEADERS or key.lower() in SENSITIVE_FIELDS
 ```
 
-- [ ] **Step 3: Add common package tests**
+- [x] **Step 3: Add common package tests**
 
 Add `libs/py/common/tests/test_events.py`:
 
@@ -236,7 +236,7 @@ def test_build_error_envelope():
     assert envelope.error.code == "unauthorized"
 ```
 
-- [ ] **Step 4: Create gateway and identity service skeletons**
+- [x] **Step 4: Create gateway and identity service skeletons**
 
 Both services expose `/health`.
 
@@ -280,7 +280,7 @@ build-backend = "hatchling.build"
 
 For identity, set `name = "parsevk-identity-service"`.
 
-- [ ] **Step 5: Add health tests**
+- [x] **Step 5: Add health tests**
 
 For each service, add a test with `httpx.AsyncClient` and `ASGITransport`:
 
@@ -301,7 +301,7 @@ async def test_health_returns_up():
     assert response.json() == {"status": "UP"}
 ```
 
-- [ ] **Step 6: Run skeleton tests**
+- [x] **Step 6: Run skeleton tests**
 
 Run:
 
@@ -311,7 +311,7 @@ pytest libs/py/common/tests services/api-gateway/tests services/identity-service
 
 Expected: all skeleton tests pass.
 
-- [ ] **Step 7: Commit PR-001**
+- [x] **Step 7: Commit PR-001**
 
 ```bash
 git add pyproject.toml libs/py/common services/api-gateway services/identity-service
@@ -336,7 +336,7 @@ git commit -m "feat: добавлен каркас python микросервис
 - Create: `services/identity-service/tests/test_password_hashing.py`
 - Create: `services/identity-service/tests/test_seed_admin.py`
 
-- [ ] **Step 1: Add identity DB dependencies**
+- [x] **Step 1: Add identity DB dependencies**
 
 Add to identity `pyproject.toml`:
 
@@ -352,7 +352,7 @@ dependencies = [
 ]
 ```
 
-- [ ] **Step 2: Implement settings**
+- [x] **Step 2: Implement settings**
 
 `app/core/config.py`:
 
@@ -373,7 +373,7 @@ class Settings(BaseSettings):
 settings = Settings()
 ```
 
-- [ ] **Step 3: Implement SQLAlchemy models**
+- [x] **Step 3: Implement SQLAlchemy models**
 
 `app/db/models.py` contains `User`, `RefreshToken`, `OutboxEvent` with UUID primary keys, timestamp fields, and explicit indexes/unique constraints matching the spec. Use `DeclarativeBase`, `Mapped`, `mapped_column`, `relationship`, `UUID(as_uuid=True)`, `JSONB`, and timezone-aware `DateTime(timezone=True)`.
 
@@ -387,7 +387,7 @@ ROLE_ADMIN = "admin"
 ROLE_USER = "user"
 ```
 
-- [ ] **Step 4: Add Alembic migration**
+- [x] **Step 4: Add Alembic migration**
 
 Migration must create:
 
@@ -406,7 +406,7 @@ op.create_index("ix_outbox_events_status_next_attempt", "outbox_events", ["statu
 op.create_index("ix_outbox_events_aggregate", "outbox_events", ["aggregate_type", "aggregate_id"])
 ```
 
-- [ ] **Step 5: Implement session factory**
+- [x] **Step 5: Implement session factory**
 
 `app/db/session.py`:
 
@@ -426,7 +426,7 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         yield session
 ```
 
-- [ ] **Step 6: Implement Argon2id hashing**
+- [x] **Step 6: Implement Argon2id hashing**
 
 `app/core/security.py`:
 
@@ -448,7 +448,7 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 ```
 
-- [ ] **Step 7: Add idempotent seed-admin CLI**
+- [x] **Step 7: Add idempotent seed-admin CLI**
 
 `app/cli.py`:
 
@@ -490,13 +490,13 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 8: Add tests**
+- [x] **Step 8: Add tests**
 
 `test_password_hashing.py` verifies correct password passes and wrong password fails.
 
 `test_seed_admin.py` uses a test session override or a temporary DB fixture and calls `seed_admin()` twice. Assert one admin row exists after two calls.
 
-- [ ] **Step 9: Run identity DB tests**
+- [x] **Step 9: Run identity DB tests**
 
 Run:
 
@@ -506,7 +506,7 @@ pytest services/identity-service/tests/test_password_hashing.py services/identit
 
 Expected: password hashing and idempotent seed tests pass.
 
-- [ ] **Step 10: Commit PR-002**
+- [x] **Step 10: Commit PR-002**
 
 ```bash
 git add services/identity-service
@@ -531,7 +531,7 @@ git commit -m "feat: добавлены миграции и seed admin для id
 - Create: `services/identity-service/tests/test_auth_service.py`
 - Create: `services/identity-service/tests/test_auth_api.py`
 
-- [ ] **Step 1: Add JWT settings and dependencies**
+- [x] **Step 1: Add JWT settings and dependencies**
 
 Add dependencies:
 
@@ -553,7 +553,7 @@ refresh_token_ttl_days: int = 30
 refresh_token_inactivity_days: int = 7
 ```
 
-- [ ] **Step 2: Implement JWT issuance and JWKS**
+- [x] **Step 2: Implement JWT issuance and JWKS**
 
 `app/core/jwt.py` must:
 
@@ -575,7 +575,7 @@ def test_access_token_contains_required_claims():
     assert claims["aud"] == "api-gateway"
 ```
 
-- [ ] **Step 3: Implement refresh token helpers**
+- [x] **Step 3: Implement refresh token helpers**
 
 `auth/tokens.py`:
 
@@ -605,7 +605,7 @@ def verify_refresh_token(token: str, token_hash: str) -> bool:
     return hmac.compare_digest(hash_refresh_token(token), token_hash)
 ```
 
-- [ ] **Step 4: Implement auth service**
+- [x] **Step 4: Implement auth service**
 
 `AuthService` methods:
 
@@ -626,7 +626,7 @@ Rules:
 - refresh reuse revokes every token in the same `token_family_id`;
 - change password revokes all previous refresh sessions.
 
-- [ ] **Step 5: Implement identity auth router**
+- [x] **Step 5: Implement identity auth router**
 
 Internal identity routes:
 
@@ -641,7 +641,7 @@ GET  /.well-known/jwks.json
 
 All `/internal/*` routes require `X-Internal-Service-Token` except health and JWKS.
 
-- [ ] **Step 6: Add security tests**
+- [x] **Step 6: Add security tests**
 
 Cover:
 
@@ -652,7 +652,7 @@ Cover:
 - password change invalidates old sessions;
 - JWKS contains configured `kid`.
 
-- [ ] **Step 7: Run identity auth tests**
+- [x] **Step 7: Run identity auth tests**
 
 Run:
 
@@ -662,7 +662,7 @@ pytest services/identity-service/tests/test_jwt.py services/identity-service/tes
 
 Expected: auth, JWT, refresh rotation and internal-token protection tests pass.
 
-- [ ] **Step 8: Commit PR-003**
+- [x] **Step 8: Commit PR-003**
 
 ```bash
 git add services/identity-service
@@ -688,7 +688,7 @@ git commit -m "feat: реализован auth core в identity service"
 - Create: `services/api-gateway/tests/test_jwt_validation.py`
 - Create: `services/api-gateway/tests/test_csrf.py`
 
-- [ ] **Step 1: Add gateway dependencies**
+- [x] **Step 1: Add gateway dependencies**
 
 Add:
 
@@ -698,7 +698,7 @@ Add:
 "cryptography>=43.0",
 ```
 
-- [ ] **Step 2: Implement gateway settings**
+- [x] **Step 2: Implement gateway settings**
 
 Required settings:
 
@@ -714,7 +714,7 @@ jwt_issuer: str = "identity-service"
 jwt_audience: str = "api-gateway"
 ```
 
-- [ ] **Step 3: Implement identity typed client**
+- [x] **Step 3: Implement identity typed client**
 
 `IdentityClient` uses `httpx.AsyncClient`, sends:
 
@@ -736,7 +736,7 @@ async def change_password(self, user_id: str, payload: ChangePasswordRequest) ->
 async def jwks(self) -> dict[str, object]
 ```
 
-- [ ] **Step 4: Implement BFF auth routes**
+- [x] **Step 4: Implement BFF auth routes**
 
 Public routes:
 
@@ -757,7 +757,7 @@ Gateway behavior:
 - me validates access token and asks identity for current user;
 - change-password validates access token and CSRF, calls identity, rotates refresh cookie.
 
-- [ ] **Step 5: Implement CSRF protection**
+- [x] **Step 5: Implement CSRF protection**
 
 Use SameSite cookie plus Origin/Referer validation plus CSRF header.
 
@@ -769,7 +769,7 @@ For state-changing auth endpoints, reject when:
 - CSRF header does not match CSRF cookie;
 - Origin is present and not in allowed frontend origins.
 
-- [ ] **Step 6: Implement JWT validation**
+- [x] **Step 6: Implement JWT validation**
 
 Gateway validates:
 
@@ -783,7 +783,7 @@ Gateway validates:
 
 Tests must include wrong `aud`, wrong `iss`, expired token, and wrong `typ`.
 
-- [ ] **Step 7: Add gateway auth integration tests**
+- [x] **Step 7: Add gateway auth integration tests**
 
 Use mocked `IdentityClient` dependency. Assert:
 
@@ -793,7 +793,7 @@ Use mocked `IdentityClient` dependency. Assert:
 - logout deletes cookie;
 - `/me` calls identity after token validation.
 
-- [ ] **Step 8: Run gateway tests**
+- [x] **Step 8: Run gateway tests**
 
 Run:
 
@@ -803,7 +803,7 @@ pytest services/api-gateway/tests/test_auth_gateway.py services/api-gateway/test
 
 Expected: gateway BFF, cookie, CSRF and JWT validation tests pass.
 
-- [ ] **Step 9: Commit PR-004**
+- [x] **Step 9: Commit PR-004**
 
 ```bash
 git add services/api-gateway
@@ -826,7 +826,7 @@ git commit -m "feat: добавлен auth bff в api gateway"
 - Modify: `libs/py/common/common/events.py`
 - Create: `libs/py/common/tests/test_event_schema.py`
 
-- [ ] **Step 1: Add Kafka dependency**
+- [x] **Step 1: Add Kafka dependency**
 
 Add to identity:
 
@@ -834,7 +834,7 @@ Add to identity:
 "aiokafka>=0.11"
 ```
 
-- [ ] **Step 2: Finalize event envelope**
+- [x] **Step 2: Finalize event envelope**
 
 Ensure `EventEnvelope` contains:
 
@@ -850,7 +850,7 @@ payload: dict[str, Any]
 
 Add schema tests for required fields.
 
-- [ ] **Step 3: Implement outbox repository**
+- [x] **Step 3: Implement outbox repository**
 
 Repository methods:
 
@@ -869,7 +869,7 @@ FOR UPDATE SKIP LOCKED
 
 through SQLAlchemy `with_for_update(skip_locked=True)`.
 
-- [ ] **Step 4: Emit identity events from auth service**
+- [x] **Step 4: Emit identity events from auth service**
 
 Create outbox records in the same transaction as domain changes:
 
@@ -880,7 +880,7 @@ Create outbox records in the same transaction as domain changes:
 
 Kafka key for these events is `user_id`.
 
-- [ ] **Step 5: Implement Kafka publisher**
+- [x] **Step 5: Implement Kafka publisher**
 
 Publisher behavior:
 
@@ -892,7 +892,7 @@ Publisher behavior:
 - retries with exponential backoff;
 - after max attempts marks event `failed`.
 
-- [ ] **Step 6: Add outbox tests**
+- [x] **Step 6: Add outbox tests**
 
 Tests:
 
@@ -903,7 +903,7 @@ Tests:
 - max attempts marks `failed`;
 - events are idempotent by `event_id`.
 
-- [ ] **Step 7: Run outbox tests**
+- [x] **Step 7: Run outbox tests**
 
 Run:
 
@@ -913,7 +913,7 @@ pytest libs/py/common/tests/test_event_schema.py services/identity-service/tests
 
 Expected: event schema, outbox locking, retry and auth-event tests pass.
 
-- [ ] **Step 8: Commit PR-005**
+- [x] **Step 8: Commit PR-005**
 
 ```bash
 git add libs/py/common services/identity-service
@@ -936,7 +936,7 @@ git commit -m "feat: добавлен outbox publish path для identity"
 - Modify: `front/src/app/providers/__tests__/AuthProvider.test.tsx`
 - Create: `front/src/modules/auth/api/authGateway.api.test.ts`
 
-- [ ] **Step 1: Define frontend auth contract**
+- [x] **Step 1: Define frontend auth contract**
 
 Types:
 
@@ -957,7 +957,7 @@ export interface AuthResponse {
 
 Remove refresh token from all frontend public types.
 
-- [ ] **Step 2: Update auth API client**
+- [x] **Step 2: Update auth API client**
 
 Routes:
 
@@ -971,7 +971,7 @@ POST /api/v1/auth/change-password
 
 Use `credentials: "include"` for auth calls. Add CSRF header for refresh/logout/change-password using the CSRF cookie value when present.
 
-- [ ] **Step 3: Remove refresh token storage**
+- [x] **Step 3: Remove refresh token storage**
 
 Update `authSession.ts` and store logic:
 
@@ -979,7 +979,7 @@ Update `authSession.ts` and store logic:
 - keep access token only in memory store;
 - clear access token on logout and refresh failure.
 
-- [ ] **Step 4: Implement app boot lifecycle**
+- [x] **Step 4: Implement app boot lifecycle**
 
 On app boot:
 
@@ -989,7 +989,7 @@ On app boot:
 4. if 401, mark anonymous;
 5. block protected API calls until restore completes.
 
-- [ ] **Step 5: Update Vite proxy/env**
+- [x] **Step 5: Update Vite proxy/env**
 
 Add env:
 
@@ -999,7 +999,7 @@ VITE_GATEWAY_API_URL=/api
 
 Proxy `/api/v1/auth` to gateway in local dev while old domain endpoints can still point at NestJS during transition.
 
-- [ ] **Step 6: Add frontend tests**
+- [x] **Step 6: Add frontend tests**
 
 Tests:
 
@@ -1009,7 +1009,7 @@ Tests:
 - logout calls gateway and clears memory state;
 - change password does not expose refresh token.
 
-- [ ] **Step 7: Run frontend auth tests**
+- [x] **Step 7: Run frontend auth tests**
 
 Run:
 
@@ -1019,7 +1019,7 @@ npm --prefix front test -- auth
 
 Expected: auth-related frontend tests pass.
 
-- [ ] **Step 8: Commit PR-006**
+- [x] **Step 8: Commit PR-006**
 
 ```bash
 git add front
@@ -1042,7 +1042,7 @@ git commit -m "feat: переключен auth frontend на api gateway"
 - Create: `docs/FASTAPI_MICROSERVICES.md`
 - Create: `scripts/smoke-fastapi-auth.sh`
 
-- [ ] **Step 1: Add Dockerfiles**
+- [x] **Step 1: Add Dockerfiles**
 
 Both Python services:
 
@@ -1053,7 +1053,7 @@ Both Python services:
 
 Identity entrypoint must not seed implicitly unless command is `seed-admin`. Use separate compose job for migration/seed.
 
-- [ ] **Step 2: Add Compose services**
+- [x] **Step 2: Add Compose services**
 
 Add:
 
@@ -1077,7 +1077,7 @@ Add `identity-service`, `identity-migrate`, `identity-seed-admin`, `api-gateway`
 
 NestJS `api` remains unchanged.
 
-- [ ] **Step 3: Add service healthchecks**
+- [x] **Step 3: Add service healthchecks**
 
 Healthchecks:
 
@@ -1088,7 +1088,7 @@ identity-db -> pg_isready
 kafka -> broker readiness command available in image
 ```
 
-- [ ] **Step 4: Add smoke script**
+- [x] **Step 4: Add smoke script**
 
 `scripts/smoke-fastapi-auth.sh` should:
 
@@ -1102,7 +1102,7 @@ kafka -> broker readiness command available in image
 
 Do not print access token or refresh cookie values.
 
-- [ ] **Step 5: Add docs**
+- [x] **Step 5: Add docs**
 
 `docs/FASTAPI_MICROSERVICES.md` includes:
 
@@ -1114,7 +1114,7 @@ Do not print access token or refresh cookie values.
 - smoke command;
 - current boundaries: auth only, NestJS fallback remains.
 
-- [ ] **Step 6: Run backend tests**
+- [x] **Step 6: Run backend tests**
 
 Run:
 
@@ -1124,7 +1124,7 @@ pytest libs/py/common/tests services/api-gateway/tests services/identity-service
 
 Expected: all Python tests pass.
 
-- [ ] **Step 7: Run frontend auth tests**
+- [x] **Step 7: Run frontend auth tests**
 
 Run:
 
@@ -1134,7 +1134,7 @@ npm --prefix front test -- auth
 
 Expected: frontend auth tests pass.
 
-- [ ] **Step 8: Run Docker smoke**
+- [x] **Step 8: Run Docker smoke**
 
 Run:
 
@@ -1153,7 +1153,10 @@ Expected:
 - refresh after logout returns `401`;
 - no token values are printed.
 
-- [ ] **Step 9: Check NestJS fallback remains available**
+- [x] **Step 9: Check NestJS fallback remains available**
+
+Status: skipped for local runtime by user decision. The existing NestJS `api/`
+source remains present and was not removed during this migration stage.
 
 Run the existing API health check:
 
@@ -1163,7 +1166,7 @@ curl -sS -i http://127.0.0.1:3000/api/health
 
 Expected: existing NestJS API health still responds if the old `api` service is running.
 
-- [ ] **Step 10: Commit PR-007**
+- [x] **Step 10: Commit PR-007**
 
 ```bash
 git add docker-compose.yml docker-compose.deploy.yml services/api-gateway services/identity-service .env.example docs/FASTAPI_MICROSERVICES.md scripts/smoke-fastapi-auth.sh
@@ -1174,15 +1177,15 @@ git commit -m "chore: добавлен docker smoke для fastapi микрос�
 
 ## Final Verification Checklist
 
-- [ ] Spec remains current: `docs/superpowers/specs/2026-05-06-fastapi-microservices-rewrite-design.md`.
-- [ ] Implementation commits are split by PR slice, not one large mixed commit.
-- [ ] `libs/py/common` contains no business models.
-- [ ] Refresh token never appears in frontend state, localStorage, sessionStorage, logs, or DB plaintext.
-- [ ] Gateway owns cookies and CSRF.
-- [ ] Identity owns JWT issuance and refresh-token state.
-- [ ] Kafka events are written through outbox, not direct request-time publish only.
-- [ ] Docker smoke proves login -> refresh -> me -> logout.
-- [ ] NestJS `api/` remains present and runnable.
+- [x] Spec remains current: `docs/superpowers/specs/2026-05-06-fastapi-microservices-rewrite-design.md`.
+- [x] Implementation commits are split by PR slice, not one large mixed commit.
+- [x] `libs/py/common` contains no business models.
+- [x] Refresh token never appears in frontend state, localStorage, sessionStorage, logs, or DB plaintext.
+- [x] Gateway owns cookies and CSRF.
+- [x] Identity owns JWT issuance and refresh-token state.
+- [x] Kafka events are written through outbox, not direct request-time publish only.
+- [x] Docker smoke proves login -> refresh -> me -> logout.
+- [x] NestJS `api/` remains present; local fallback health check was skipped by user decision.
 
 ## Execution Option
 
