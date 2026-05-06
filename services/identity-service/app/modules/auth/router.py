@@ -16,6 +16,7 @@ from app.modules.auth.schemas import (
     RefreshRequest,
 )
 from app.modules.auth.service import AuthError, AuthResult, AuthService, BadAuthRequest
+from app.modules.outbox.service import add_identity_event
 from app.modules.users.repository import UsersRepository
 
 router = APIRouter()
@@ -46,6 +47,14 @@ class RefreshTokensRepository:
             token.revoked_at = now
 
 
+class OutboxRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def add_identity_event(self, event_type: str, user_id: str) -> None:
+        await add_identity_event(self.session, event_type=event_type, user_id=user_id)
+
+
 async def require_internal_token(
     x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
 ) -> None:
@@ -57,6 +66,7 @@ async def get_auth_service(session: AsyncSession = Depends(get_session)) -> Auth
     return AuthService(
         users=UsersRepository(session),
         refresh_tokens=RefreshTokensRepository(session),
+        outbox=OutboxRepository(session),
         refresh_token_ttl_days=settings.refresh_token_ttl_days,
     )
 

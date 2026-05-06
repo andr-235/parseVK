@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
@@ -27,8 +28,15 @@ class FakeSession:
     async def scalar(self, statement):
         return self.state["user"]
 
-    def add(self, user):
-        self.state["user"] = user
+    def add(self, value):
+        if hasattr(value, "username"):
+            self.state["user"] = value
+            return
+        self.state["outbox_events"].append(value)
+
+    async def flush(self):
+        if self.state["user"].id is None:
+            self.state["user"].id = uuid4()
 
     async def commit(self):
         self.state["commits"] += 1
@@ -44,7 +52,7 @@ class FakeSessionFactory:
 
 @pytest.mark.asyncio
 async def test_seed_admin_is_idempotent(monkeypatch):
-    state = {"user": None, "commits": 0}
+    state = {"user": None, "commits": 0, "outbox_events": []}
     session_factory = FakeSessionFactory(state)
     monkeypatch.setattr(cli, "AsyncSessionLocal", session_factory)
     monkeypatch.setattr(settings, "admin_username", "admin")
@@ -57,3 +65,5 @@ async def test_seed_admin_is_idempotent(monkeypatch):
     assert state["commits"] == 1
     assert state["user"].username == "admin"
     assert state["user"].email == "admin@example.com"
+    assert len(state["outbox_events"]) == 1
+    assert state["outbox_events"][0].event_type == "identity.user_created"

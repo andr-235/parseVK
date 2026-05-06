@@ -14,6 +14,7 @@ from app.modules.auth.tokens import (
     verify_refresh_token,
 )
 from app.modules.users.schemas import UserDto
+from common.events import EventEnvelope
 
 
 class AuthError(Exception):
@@ -41,6 +42,10 @@ class RefreshTokensRepo(Protocol):
     async def revoke_family(self, token_family_id: UUID) -> None: ...
 
 
+class OutboxRepo(Protocol):
+    async def add_identity_event(self, event_type: str, user_id: str) -> None: ...
+
+
 @dataclass(frozen=True)
 class AuthResult:
     access_token: str
@@ -54,10 +59,12 @@ class AuthService:
         *,
         users: UsersRepo,
         refresh_tokens: RefreshTokensRepo,
+        outbox: OutboxRepo | None = None,
         refresh_token_ttl_days: int = 30,
     ):
         self.users = users
         self.refresh_tokens = refresh_tokens
+        self.outbox = outbox
         self.refresh_token_ttl_days = refresh_token_ttl_days
 
     async def login(
@@ -66,6 +73,7 @@ class AuthService:
         user = await self.users.find_by_username(username)
         if not user or not verify_password(password, user.password_hash) or not user.is_active:
             raise AuthError("Invalid credentials")
+        await self._add_identity_event("identity.user_logged_in", str(user.id))
         return await self._issue_auth_result(user, user_agent=user_agent, ip=ip)
 
     async def refresh(
@@ -109,6 +117,7 @@ class AuthService:
         stored = await self.refresh_tokens.find_by_hash(hash_refresh_token(refresh_token))
         if stored and stored.revoked_at is None:
             stored.revoked_at = utc_now()
+            await self._add_identity_event("identity.user_logged_out", str(stored.user_id))
 
     async def me(self, user_id: UUID) -> UserDto:
         user = await self.users.find_by_id(user_id)
@@ -128,6 +137,7 @@ class AuthService:
         user.password_changed_at = utc_now()
         await self.users.revoke_all_refresh_tokens(user.id)
         await self.users.save_user(user)
+        await self._add_identity_event("identity.password_changed", str(user.id))
         return await self._issue_auth_result(user, user_agent=None, ip=None)
 
     async def _issue_auth_result(
@@ -175,3 +185,7 @@ class AuthService:
             is_active=user.is_active,
             is_superuser=user.is_superuser,
         )
+
+    async def _add_identity_event(self, event_type: str, user_id: str) -> None:
+        if self.outbox is not None:
+            await self.outbox.add_identity_event(event_type, user_id)
