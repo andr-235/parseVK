@@ -1,4 +1,5 @@
 const rawBaseUrl = (import.meta.env.VITE_API_URL ?? '').trim()
+const rawGatewayBaseUrl = (import.meta.env.VITE_GATEWAY_API_URL ?? '').trim()
 
 const fallbackBase = '/api'
 
@@ -21,3 +22,4 @@ const normalize = (value: string): string => {
 }
 
 export const API_URL = normalize(rawBaseUrl)
+export const GATEWAY_API_URL = normalize(rawGatewayBaseUrl || rawBaseUrl)

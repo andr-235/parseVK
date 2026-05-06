@@ -92,8 +92,8 @@ function AdminUsersPage() {
     }
   }
 
-  const handleDeleteUser = async (userId: number) => {
-    if (currentUser?.id === userId) {
+  const handleDeleteUser = async (user: AdminUser) => {
+    if (currentUser?.username === user.username) {
       setSubmitError('Нельзя удалить текущего пользователя')
       return
     }
@@ -103,11 +103,11 @@ function AdminUsersPage() {
       return
     }
 
-    setDeletingId(userId)
+    setDeletingId(user.id)
     setSubmitError(null)
     try {
-      await adminUsersService.deleteUser(userId)
-      setUsers((prev) => prev.filter((user) => user.id !== userId))
+      await adminUsersService.deleteUser(user.id)
+      setUsers((prev) => prev.filter((item) => item.id !== user.id))
     } catch {
       setSubmitError('Не удалось удалить пользователя')
     } finally {
@@ -284,7 +284,7 @@ function AdminUsersPage() {
                 </TableHeader>
                 <TableBody>
                   {sortedUsers.map((user) => {
-                    const isCurrent = currentUser?.id === user.id
+                    const isCurrent = currentUser?.username === user.username
                     const isTemporarilyBlocked = Boolean(user.isTemporaryPassword)
                     return (
                       <TableRow key={user.id}>
@@ -330,7 +330,7 @@ function AdminUsersPage() {
                               variant="ghost"
                               size="sm"
                               disabled={deletingId === user.id || isCurrent}
-                              onClick={() => handleDeleteUser(user.id)}
+                              onClick={() => handleDeleteUser(user)}
                               title={isCurrent ? 'Нельзя удалить себя' : 'Удалить пользователя'}
                             >
                               <Trash2 className="h-4 w-4" />

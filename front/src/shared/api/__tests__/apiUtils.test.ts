@@ -19,12 +19,12 @@ describe('createRequest', () => {
     vi.clearAllMocks()
     useAuthStore.setState({
       accessToken: 'old-access-token',
-      refreshToken: 'refresh-token',
       user: {
-        id: 1,
+        id: 'user-1',
         username: 'admin',
         role: 'admin',
-        isTemporaryPassword: false,
+        isActive: true,
+        isSuperuser: true,
       },
     })
   })

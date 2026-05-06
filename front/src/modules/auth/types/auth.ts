@@ -1,19 +1,24 @@
 export type UserRole = 'admin' | 'user'
 
 export interface AuthUser {
-  id: number
+  id: string
   username: string
   role: UserRole
-  isTemporaryPassword: boolean
+  isActive: boolean
+  isSuperuser: boolean
+  isTemporaryPassword?: boolean
 }
 
 export interface AuthResponse {
   accessToken: string
-  refreshToken: string
   user: AuthUser
 }
 
-export interface AdminUser extends AuthUser {
+export interface AdminUser {
+  id: number
+  username: string
+  role: UserRole
+  isTemporaryPassword?: boolean
   createdAt: string
   updatedAt: string
 }

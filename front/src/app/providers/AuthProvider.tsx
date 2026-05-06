@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Spinner } from '@/shared/ui/spinner'
 import { getRefreshDelayMs, isTokenExpired, refreshAccessToken } from '@/modules/auth'
 import { useAuthStore } from '@/modules/auth/store'
@@ -9,28 +9,30 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const accessToken = useAuthStore((state) => state.accessToken)
-  const refreshToken = useAuthStore((state) => state.refreshToken)
   const [isReady, setIsReady] = useState(false)
+  const hasBootstrapped = useRef(false)
 
   useEffect(() => {
     let isMounted = true
+
+    if (hasBootstrapped.current && !accessToken) {
+      setIsReady(true)
+      return
+    }
 
     const bootstrap = async () => {
       const { clearAuth } = useAuthStore.getState()
       const needsRefresh = !accessToken || isTokenExpired(accessToken)
 
       if (needsRefresh) {
-        if (!refreshToken) {
+        const refreshedToken = await refreshAccessToken()
+        if (!refreshedToken) {
           clearAuth()
-        } else {
-          const refreshedToken = await refreshAccessToken()
-          if (!refreshedToken) {
-            clearAuth()
-          }
         }
       }
 
       if (isMounted) {
+        hasBootstrapped.current = true
         setIsReady(true)
       }
     }
@@ -40,10 +42,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       isMounted = false
     }
-  }, [accessToken, refreshToken])
+  }, [accessToken])
 
   useEffect(() => {
-    if (!accessToken || !refreshToken) {
+    if (!accessToken) {
       return
     }
 
@@ -54,7 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [accessToken, refreshToken])
+  }, [accessToken])
 
   if (!isReady) {
     return (

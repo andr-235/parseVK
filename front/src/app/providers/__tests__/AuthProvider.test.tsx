@@ -21,12 +21,12 @@ describe('AuthProvider', () => {
     vi.clearAllMocks()
     useAuthStore.setState({
       accessToken: 'valid-access-token',
-      refreshToken: 'refresh-token',
       user: {
-        id: 1,
+        id: 'user-1',
         username: 'admin',
         role: 'admin',
-        isTemporaryPassword: false,
+        isActive: true,
+        isSuperuser: true,
       },
     })
   })
@@ -69,10 +69,24 @@ describe('AuthProvider', () => {
     await waitFor(() => {
       expect(refreshAccessTokenMock).toHaveBeenCalledTimes(1)
       expect(useAuthStore.getState().accessToken).toBeNull()
-      expect(useAuthStore.getState().refreshToken).toBeNull()
       expect(useAuthStore.getState().user).toBeNull()
     })
     await waitFor(() => {
+      expect(screen.getByText('app')).toBeInTheDocument()
+    })
+  })
+
+  it('tries to restore session on bootstrap without an access token', async () => {
+    useAuthStore.getState().clearAuth()
+
+    render(
+      <AuthProvider>
+        <div>app</div>
+      </AuthProvider>
+    )
+
+    await waitFor(() => {
+      expect(refreshAccessTokenMock).toHaveBeenCalledTimes(1)
       expect(screen.getByText('app')).toBeInTheDocument()
     })
   })

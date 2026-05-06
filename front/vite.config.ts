@@ -90,6 +90,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/api/v1/auth': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,

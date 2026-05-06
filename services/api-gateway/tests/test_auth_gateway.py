@@ -22,6 +22,7 @@ class FakeGatewayService:
     def __init__(self):
         self.logout_called = False
         self.me_called = False
+        self.change_password_payload = None
 
     async def login(self, payload, *, request_id, correlation_id):
         return self._auth_response("access-login"), "refresh-login"
@@ -35,6 +36,10 @@ class FakeGatewayService:
     async def me(self, access_token, *, request_id, correlation_id):
         self.me_called = True
         return self._user()
+
+    async def change_password(self, access_token, payload, *, request_id, correlation_id):
+        self.change_password_payload = payload
+        return self._auth_response("access-changed"), "refresh-changed"
 
     def _user(self):
         return IdentityUser(
@@ -73,6 +78,16 @@ async def test_login_sets_refresh_cookie():
         )
 
     assert response.status_code == 200
+    assert response.json() == {
+        "accessToken": "access-login",
+        "user": {
+            "id": response.json()["user"]["id"],
+            "username": "admin",
+            "role": "admin",
+            "isActive": True,
+            "isSuperuser": True,
+        },
+    }
     set_cookie = response.headers.get("set-cookie", "")
     assert settings.refresh_cookie_name in set_cookie
     assert "HttpOnly" in set_cookie
@@ -97,4 +112,32 @@ async def test_me_calls_identity_after_token_validation():
         )
 
     assert response.status_code == 200
+    assert set(response.json()) == {"id", "username", "role", "isActive", "isSuperuser"}
     assert service.me_called
+
+
+@pytest.mark.asyncio
+async def test_change_password_accepts_frontend_camel_case_payload():
+    app = create_app()
+    service = FakeGatewayService()
+
+    async def get_service():
+        return service
+
+    app.dependency_overrides[get_auth_service] = get_service
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        client.cookies.set(settings.csrf_cookie_name, "csrf-token")
+        response = await client.post(
+            "/api/v1/auth/change-password",
+            json={"oldPassword": "old-password", "newPassword": "NewPassword1"},
+            headers={
+                "Authorization": "Bearer access-token",
+                settings.csrf_header_name: "csrf-token",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["accessToken"] == "access-changed"
+    assert service.change_password_payload.old_password == "old-password"
+    assert service.change_password_payload.new_password == "NewPassword1"

@@ -6,7 +6,7 @@ from common.headers import CORRELATION_ID_HEADER, REQUEST_ID_HEADER
 
 from app.clients.identity.client import IdentityClient
 from app.core.config import settings
-from app.modules.auth.schemas import AuthResponse, ChangePasswordRequest, LoginRequest
+from app.modules.auth.schemas import AuthResponse, AuthUser, ChangePasswordRequest, LoginRequest
 from app.modules.auth.service import GatewayAuthService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -121,7 +121,7 @@ async def logout(
     return {"status": "ok"}
 
 
-@router.get("/me")
+@router.get("/me", response_model=AuthUser)
 async def me(
     request: Request,
     authorization: str | None = Header(default=None, alias="Authorization"),

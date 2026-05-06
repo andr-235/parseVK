@@ -51,13 +51,6 @@ const RequireAdmin = ({ children }: { children: ReactNode }) => {
 }
 
 const RequirePasswordChange = ({ children }: { children: ReactNode }) => {
-  const user = useAuthStore((state) => state.user)
-  const location = useLocation()
-
-  if (user?.isTemporaryPassword && location.pathname !== '/login') {
-    return <Navigate to="/login" replace />
-  }
-
   return <>{children}</>
 }
 
