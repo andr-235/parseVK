@@ -1,5 +1,15 @@
+import sys
+from pathlib import Path
+
 import pytest
 from httpx import ASGITransport, AsyncClient
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.modules.pop("_service_path", None)
+
+from _service_path import use_service_path
+
+use_service_path()
 
 from app.main import create_app
 

@@ -8,8 +8,6 @@ testpaths = [
 ]
 pythonpath = [
   "libs/py/common",
-  "services/api-gateway",
-  "services/identity-service",
 ]
 
 [tool.ruff]
