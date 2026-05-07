@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 
+from app.modules.tasks.router import router as tasks_router
+
 
 def create_app() -> FastAPI:
     app = FastAPI(title="parseVK Tasks Service")
@@ -8,6 +10,7 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "UP"}
 
+    app.include_router(tasks_router)
     return app
 
 
