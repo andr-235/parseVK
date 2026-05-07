@@ -134,6 +134,7 @@ scope TEXT NULL
 mode TEXT NULL
 group_ids BIGINT[] NOT NULL DEFAULT '{}'
 post_limit INT NULL
+source TEXT NOT NULL DEFAULT 'manual'
 total_items INT NOT NULL DEFAULT 0
 processed_items INT NOT NULL DEFAULT 0
 progress DOUBLE PRECISION NOT NULL DEFAULT 0
@@ -164,9 +165,11 @@ status IN ('pending', 'running', 'done', 'failed', 'cancelled')
 progress >= 0 AND progress <= 1
 total_items >= 0
 processed_items >= 0
+processed_items <= total_items
 post_limit IS NULL OR post_limit BETWEEN 1 AND 100
 scope IS NULL OR scope IN ('all', 'selected')
 mode IS NULL OR mode IN ('recent_posts', 'recheck_group')
+source IN ('manual', 'automation')
 ```
 
 `title` is generated server-side when the request has no title. Format:
@@ -181,6 +184,7 @@ mapper that derives processed count as `totalItems * progress`.
 
 ```text
 id BIGSERIAL PK
+owner_user_id TEXT NOT NULL
 aggregate_type TEXT NOT NULL DEFAULT 'task'
 aggregate_id TEXT NULL
 task_id BIGINT NULL FK tasks(id) ON DELETE SET NULL
@@ -200,9 +204,10 @@ task.automation_settings_updated
 task.automation_run_requested
 ```
 
-Audit event names do not include versions. Versioned event names are reserved
-for outbox. Example: `audit.event_type = task.created`,
-`outbox.event_type = task.created.v1`.
+Audit and outbox event names use the same base type. Outbox versioning is stored
+only in `event_version`, matching the existing identity outbox style. Example:
+`audit.event_type = task.created`, `outbox.event_type = task.created`,
+`outbox.event_version = 1`.
 
 `task.deleted` audit rows must survive hard delete. Before deleting the task,
 the service writes audit and outbox records with a snapshot:
@@ -220,10 +225,12 @@ the service writes audit and outbox records with a snapshot:
 
 ### `task_automation_settings`
 
-Single-row table:
+Automation settings are scoped by `owner_user_id`. The table has one row per
+owner, not one global row for the whole service.
 
 ```text
-id BIGINT PK DEFAULT 1 CHECK (id = 1)
+id BIGSERIAL PK
+owner_user_id TEXT NOT NULL UNIQUE
 enabled BOOLEAN NOT NULL DEFAULT false
 run_hour INT NOT NULL DEFAULT 9 CHECK (run_hour BETWEEN 0 AND 23)
 run_minute INT NOT NULL DEFAULT 0 CHECK (run_minute BETWEEN 0 AND 59)
@@ -238,9 +245,10 @@ The service creates the row idempotently through a seed/init command or first
 access. Hidden startup mutation is avoided unless explicitly configured for
 local/dev.
 
-Every automation run locks the singleton settings row in a transaction before
+Every automation settings read/update is scoped by `owner_user_id`. Manual
+automation run locks the current owner's settings row in a transaction before
 checking active tasks and creating a new task. This prevents two concurrent
-manual runs from creating duplicate pending tasks.
+manual runs for the same owner from creating duplicate pending tasks.
 
 This slice keeps `timezone_offset_minutes` for compatibility with the existing
 frontend contract. It does not model daylight saving time. A later hardening
@@ -268,6 +276,7 @@ created_at TIMESTAMPTZ NOT NULL
 ```
 
 Kafka key is `task_id`. Consumers must be idempotent by `event_id`.
+Application code updates `updated_at` on every mutation.
 
 ## API Contract
 
@@ -285,6 +294,11 @@ GET    /api/v1/tasks/automation/settings
 POST   /api/v1/tasks/automation/settings
 POST   /api/v1/tasks/automation/run
 ```
+
+The `/tasks/automation/*` path is preserved for frontend compatibility. Gateway
+and `tasks-service` must register automation routes before dynamic
+`/tasks/{task_id}` routes. Tests must cover that
+`GET /api/v1/tasks/automation/settings` does not hit `/api/v1/tasks/{task_id}`.
 
 Internal `tasks-service` routes:
 
@@ -319,6 +333,16 @@ Validation rules:
 - `groupIds`: required only for `selected`, integers only;
 - `postLimit`: 1..100, default 10.
 
+Pagination:
+
+```text
+page >= 1
+limit BETWEEN 1 AND 100
+default page = 1
+default limit = 20
+ORDER BY created_at DESC, id DESC
+```
+
 Task detail response:
 
 ```json
@@ -335,6 +359,7 @@ Task detail response:
   "mode": "recent_posts",
   "groupIds": [1, 2],
   "postLimit": 10,
+  "source": "manual",
   "stats": null,
   "error": null,
   "skippedGroupsMessage": null,
@@ -366,7 +391,7 @@ List response remains compatible with current frontend:
 2. creates a task with `pending` status;
 3. stores normalized task config in explicit columns and `description`;
 4. writes `task.created` audit log;
-5. writes `task.created.v1` outbox event;
+5. writes `task.created` outbox event with `event_version = 1`;
 6. returns task detail.
 
 No VK parsing is executed in this stage.
@@ -379,7 +404,8 @@ No VK parsing is executed in this stage.
 - forbidden for `running` and `done`, returns `409`;
 - sets status to `pending`;
 - clears error;
-- writes `task.resumed` audit and `task.resumed.v1` outbox event.
+- writes `task.resumed` audit and `task.resumed` outbox event with
+  `event_version = 1`.
 
 ### Check
 
@@ -388,8 +414,7 @@ No VK parsing is executed in this stage.
 - if task is `running`, leaves it unchanged;
 - if task is `pending`, keeps it pending and emits check event;
 - if task is terminal, returns current state;
-- writes `task.checked` audit event;
-- writes `task.checked.v1` outbox event only when external observers need it.
+- writes `task.checked` audit event only.
 
 Because execution is not migrated yet, check does not call VK.
 
@@ -400,10 +425,14 @@ Because execution is not migrated yet, check does not call VK.
 - allowed for `pending`, `failed`, `cancelled`, and `done`;
 - forbidden for `running`, returns `409`;
 - writes `task.deleted` audit with `task_snapshot`;
-- writes `task.deleted.v1` outbox event with the same snapshot before deletion
-  in the same transaction using the task id as aggregate id;
+- writes `task.deleted` outbox event with `event_version = 1` and the same
+  snapshot before deletion in the same transaction using the task id as
+  aggregate id;
 - deletes task row after audit/outbox writes;
 - returns `204`.
+
+If a task does not belong to `owner_user_id`, return `404`, not `403`, to avoid
+revealing task id existence across users.
 
 ### Automation Settings
 
@@ -423,23 +452,35 @@ Because execution is not migrated yet, check does not call VK.
 ```
 
 `POST /tasks/automation/settings` validates and persists settings.
+Both endpoints operate on the authenticated `owner_user_id` received from
+gateway.
 
 ### Automation Run
 
 `POST /tasks/automation/run`:
 
-1. checks that no task is currently `running`;
+1. checks that the owner has no active automation task;
 2. finds the latest completed task with reusable config;
-3. creates a new pending task with the configured `postLimit`;
+3. creates a new pending task with `source = "automation"` and the configured
+   `postLimit`;
 4. updates `last_run_at`;
 5. emits audit and outbox events.
 
 The active-task check and task creation happen in one transaction while holding
-the singleton settings row lock.
+the current owner's settings row lock.
+
+Active automation task means:
+
+```text
+owner_user_id = current user
+source = 'automation'
+status IN ('pending', 'running')
+```
 
 Latest completed task means:
 
 ```text
+owner_user_id = current user
 status = 'done'
 scope IS NOT NULL
 mode IS NOT NULL
@@ -451,9 +492,9 @@ group_ids is available
 Successful run writes:
 
 1. `task.created` audit for the new task;
-2. `task.created.v1` outbox event;
+2. `task.created` outbox event with `event_version = 1`;
 3. `task.automation_run_requested` audit event;
-4. `task.automation_run_requested.v1` outbox event;
+4. `task.automation_run_requested` outbox event with `event_version = 1`;
 5. `settings.last_run_at` update.
 
 If no completed task exists, returns:
@@ -467,9 +508,8 @@ If no completed task exists, returns:
 ```
 
 When no completed task exists, no task row and no `task.created` event are
-created. The service may write `task.automation_run_requested` audit with
-`started=false`; it does not write outbox unless downstream consumers need
-no-op requests.
+created. The service writes `task.automation_run_requested` audit with
+`started=false` and does not write an outbox event.
 
 ## Gateway Responsibilities
 
@@ -500,19 +540,24 @@ the supported progress mechanism for this slice.
 
 Outbox event envelope uses `libs/py/common/common/events.py`.
 
-Initial event types:
-
-```text
-task.created.v1
-task.resumed.v1
-task.checked.v1
-task.deleted.v1
-task.automation_settings_updated.v1
-task.automation_run_requested.v1
-```
-
 Payloads must not include access tokens, refresh tokens, passwords, cookies, or
 Authorization headers.
+
+Initial outbox event types:
+
+```text
+task.created
+task.resumed
+task.deleted
+task.automation_settings_updated
+task.automation_run_requested
+```
+
+`task.checked` is audit-only in this slice and does not create an outbox event.
+
+For compatibility with the existing common event envelope and identity outbox,
+`event_type` does not contain a version suffix; `event_version` carries the
+numeric version.
 
 `Idempotency-Key` is optional for task-creating operations in this slice. If
 implemented, `tasks-service` stores it per `owner_user_id` and repeated requests
@@ -532,13 +577,16 @@ Python tests:
 - running task delete returns `409`;
 - completed field is derived from `status == "done"`;
 - automation settings validation;
-- automation settings table cannot have more than one row;
+- automation settings table has at most one row per `owner_user_id`;
 - automation run with and without completed task;
-- concurrent automation run creates only one task;
+- automation run searches latest completed task inside current `owner_user_id`;
+- automation run blocks when current owner has pending/running automation task;
+- concurrent automation run for the same owner creates only one task;
 - outbox event creation;
 - delete writes outbox before task row deletion;
 - delete audit persists with nullable `task_id` and snapshot;
 - gateway tasks client and routes;
+- automation routes are registered before dynamic `{task_id}` routes;
 - internal token protection;
 - response uses camelCase frontend fields;
 - no Authorization/cookie/token values are present in outbox payload.
@@ -578,6 +626,8 @@ health -> auth login -> create task -> list -> detail -> audit -> automation set
   Kafka/WebSocket progress is implemented.
 - Automation run creates a pending task but does not execute parsing in this
   stage.
+- Automation run is per-user and blocks only when the same owner already has a
+  pending/running automation task.
 - Duplicate POST can create duplicate tasks if the client retries without
   `Idempotency-Key`. This is documented as a follow-up hardening path.
 
@@ -589,9 +639,14 @@ health -> auth login -> create task -> list -> detail -> audit -> automation set
    nullable `task_id` and task snapshot.
 3. Status source of truth: `status` is canonical; `completed` is response-only
    compatibility field.
-4. Automation concurrency: manual run uses transaction-level lock on singleton
-   settings row.
-5. Timezone model: keep `timezone_offset_minutes` for compatibility in this
+4. Automation settings ownership: settings are per-user, keyed by
+   `owner_user_id`.
+5. Automation concurrency: manual run uses transaction-level lock on the current
+   owner's settings row and blocks duplicate pending/running automation tasks.
+6. Timezone model: keep `timezone_offset_minutes` for compatibility in this
    slice; consider IANA timezone later.
-6. Scope boundary: `tasks-service` owns tasks API, DB, audit, automation
+7. Outbox event naming: use base `event_type` plus numeric `event_version`, same
+   as identity outbox; no `.v1` suffix in `event_type`.
+8. Check behavior: `task.checked` is audit-only in this slice.
+9. Scope boundary: `tasks-service` owns tasks API, DB, audit, automation
    settings and outbox; VK execution moves to the later `vk-service` migration.
