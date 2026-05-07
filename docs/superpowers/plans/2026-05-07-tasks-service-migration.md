@@ -1822,62 +1822,12 @@ class TasksClient:
 
 - [ ] **Step 4: Add gateway tasks router**
 
-Create `services/api-gateway/app/modules/tasks/service.py`:
-
-```python
-from fastapi import HTTPException, Request, status
-
-from app.clients.tasks.client import TasksClient
-from app.modules.auth.router import bearer_token, get_auth_service, request_ids
-from app.modules.auth.service import GatewayAuthService
-
-
-class TasksGatewayService:
-    def __init__(self, tasks_client: TasksClient, auth_service: GatewayAuthService):
-        self.tasks_client = tasks_client
-        self.auth_service = auth_service
-
-    async def forward(
-        self,
-        request: Request,
-        method: str,
-        path: str,
-        *,
-        json: dict | None = None,
-        params: dict | None = None,
-    ):
-        authorization = request.headers.get("Authorization")
-        try:
-            claims = await self.auth_service.validate_token(bearer_token(authorization))
-        except Exception as exc:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized") from exc
-
-        request_id, correlation_id = request_ids(request)
-        try:
-            return await self.tasks_client.request(
-                method,
-                path,
-                user_id=str(claims["sub"]),
-                request_id=request_id,
-                correlation_id=correlation_id,
-                json=json,
-                params=params,
-            )
-        except Exception as exc:
-            status_code = getattr(getattr(exc, "response", None), "status_code", 502)
-            detail = getattr(getattr(exc, "response", None), "text", "Tasks service error")
-            raise HTTPException(status_code=status_code, detail=detail) from exc
-
-
-def get_tasks_gateway_service() -> TasksGatewayService:
-    return TasksGatewayService(TasksClient(), get_auth_service())
-```
-
 Create `services/api-gateway/app/modules/tasks/router.py`. Register automation routes before `{task_id}` routes:
 
 ```python
 from fastapi import APIRouter, Depends, Request, Response
 
+from app.modules.auth.service import get_bearer_token
 from app.modules.tasks.service import TasksGatewayService, get_tasks_gateway_service
 
 router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
