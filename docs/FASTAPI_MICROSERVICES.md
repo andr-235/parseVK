@@ -8,8 +8,10 @@
 - `api-gateway` - публичный BFF для frontend auth.
 - `identity-service` - пользователи, Argon2id password hashes, RS256 JWT, refresh rotation.
 - `identity-db` - отдельная PostgreSQL база identity.
+- `tasks-service` - per-user задачи, audit log, automation settings, task outbox.
+- `tasks-db` - отдельная PostgreSQL база tasks.
 - `kafka` - Apache Kafka в single-node KRaft режиме для local/dev.
-- `outbox_events` - транзакционный publish path для identity events.
+- `outbox_events` - транзакционный publish path для identity/task events.
 
 Kafka в compose работает в combined `broker,controller` режиме только для local/dev.
 Production topology нужно описывать отдельно.
@@ -17,7 +19,7 @@ Production topology нужно описывать отдельно.
 ## Локальный запуск
 
 ```bash
-docker compose up -d identity-db kafka identity-migrate identity-seed-admin identity-service api-gateway
+docker compose up -d identity-db identity-migrate identity-seed-admin identity-service tasks-db tasks-migrate tasks-service api-gateway
 ```
 
 Проверка health:
@@ -35,6 +37,16 @@ IDENTITY_ADMIN_PASSWORD=admin-change-me scripts/smoke-fastapi-auth.sh
 Скрипт проходит non-destructive flow: `login -> refresh -> me -> logout`.
 `change-password` не выполняется автоматически, чтобы не менять seed admin пароль.
 
+Smoke tasks flow:
+
+```bash
+IDENTITY_ADMIN_PASSWORD=admin-change-me scripts/smoke-fastapi-tasks.sh
+```
+
+Скрипт проходит flow: `login -> create task -> list -> detail -> audit -> automation settings -> delete`.
+`tasks-service` не выполняет VK parsing в этом срезе; новые задачи могут оставаться
+в `pending` до реализации `vk-service`.
+
 ## Frontend routing
 
 Frontend собирается с:
@@ -47,9 +59,10 @@ VITE_GATEWAY_API_URL=/api
 Nginx проксирует:
 
 - `/api/v1/auth/*` в `api-gateway`;
+- `/api/v1/tasks/*` в `api-gateway`;
 - остальные `/api/*` в текущий NestJS `api`.
 
-Так frontend auth уже идёт через FastAPI BFF, а остальной функционал остаётся на рабочем API.
+Так frontend auth и tasks уже идут через FastAPI BFF, а остальной функционал остаётся на рабочем API.
 
 ## Security defaults
 

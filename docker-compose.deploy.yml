@@ -147,6 +147,66 @@ services:
     networks:
       - default
 
+  tasks-db:
+    image: postgres:15-alpine
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "127.0.0.1:5435:5432"
+    environment:
+      POSTGRES_USER: ${TASKS_POSTGRES_USER:-tasks}
+      POSTGRES_PASSWORD: ${TASKS_POSTGRES_PASSWORD:-tasks}
+      POSTGRES_DB: ${TASKS_POSTGRES_DB:-tasks}
+    volumes:
+      - tasks_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+
+  tasks-migrate:
+    image: parsevk-tasks-service:local
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/tasks-service/Dockerfile
+    restart: "no"
+    depends_on:
+      tasks-db:
+        condition: service_healthy
+    environment:
+      TASKS_DATABASE_URL: postgresql+asyncpg://${TASKS_POSTGRES_USER:-tasks}:${TASKS_POSTGRES_PASSWORD:-tasks}@tasks-db:5432/${TASKS_POSTGRES_DB:-tasks}
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - default
+
+  tasks-service:
+    image: parsevk-tasks-service:local
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/tasks-service/Dockerfile
+    restart: always
+    depends_on:
+      tasks-migrate:
+        condition: service_completed_successfully
+    environment:
+      TASKS_DATABASE_URL: postgresql+asyncpg://${TASKS_POSTGRES_USER:-tasks}:${TASKS_POSTGRES_PASSWORD:-tasks}@tasks-db:5432/${TASKS_POSTGRES_DB:-tasks}
+      TASKS_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
+      TASKS_OUTBOX_PUBLISH_ENABLED: ${TASKS_OUTBOX_PUBLISH_ENABLED:-false}
+      TASKS_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - default
+
   api-gateway:
     image: parsevk-api-gateway:local
     pull_policy: never
@@ -159,8 +219,11 @@ services:
     depends_on:
       identity-service:
         condition: service_healthy
+      tasks-service:
+        condition: service_healthy
     environment:
       GATEWAY_IDENTITY_BASE_URL: http://identity-service:8000
+      GATEWAY_TASKS_BASE_URL: http://tasks-service:8000
       GATEWAY_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       GATEWAY_REFRESH_COOKIE_NAME: ${GATEWAY_REFRESH_COOKIE_NAME:-refresh_token}
       GATEWAY_CSRF_COOKIE_NAME: ${GATEWAY_CSRF_COOKIE_NAME:-csrf_token}
@@ -369,6 +432,8 @@ volumes:
     name: parsevk_postgres_backups
   identity_postgres_data:
     name: parsevk_identity_postgres_data
+  tasks_postgres_data:
+    name: parsevk_tasks_postgres_data
   prometheus_data:
     name: parsevk_prometheus_data
   grafana_data:
