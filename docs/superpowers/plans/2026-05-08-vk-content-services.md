@@ -1,4 +1,4 @@
-# VK and Content Services Implementation Plan
+# VK and Content Services Implementation Plan — Revised
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -6,7 +6,7 @@
 
 **Architecture:** `tasks-service` remains task lifecycle owner. `vk-service` consumes task events, calls VK API, writes `vk-db`, updates task execution state, and publishes `vk.*` events. `content-service` consumes `vk.*` events into its own `content-db` and serves read API through `api-gateway`.
 
-**Tech Stack:** FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, pytest, httpx, aiokafka, PostgreSQL, Apache Kafka, Docker Compose.
+**Tech Stack:** FastAPI, Pydantic v2, SQLAlchemy 2 async, Alembic, pytest, httpx, aiokafka `>=0.14,<1.0`, PostgreSQL, Apache Kafka, Docker Compose.
 
 ---
 
@@ -23,7 +23,7 @@ frontend read paths are migrated.
 
 ## PR Slicing
 
-1. `PR-015`: `tasks-service` internal execution API.
+1. `PR-015`: `tasks-service` internal execution API with `runId` idempotency.
 2. `PR-016`: `vk-service` skeleton, DB, Alembic, health.
 3. `PR-017`: `vk-service` task event consumer and lifecycle callbacks.
 4. `PR-018`: `vk-service` VK API adapter and canonical storage.
@@ -38,16 +38,69 @@ frontend read paths are migrated.
 - `content-service` never talks to external VK API.
 - `content-service` has its own `content-db`; it does not read `vk-db` directly.
 - Kafka events use `event_type` without `.v1`; numeric version is in `event_version`.
-- Every consumer is idempotent by `event_id`.
+- Execution callbacks are idempotent by `runId`.
+- Every consumer is idempotent by `(consumer_name, event_id)`.
+- Domain upserts use natural external keys, not generated row ids.
+- Outbox rows that represent domain events use `dedupe_key` where repeated
+  retries could create duplicate events.
+- FastAPI long-running consumers/publishers are wired through lifespan, not
+  deprecated startup/shutdown event handlers.
+- Pydantic models use `ConfigDict(validate_by_name=True, validate_by_alias=True)`
+  instead of `populate_by_name=True`.
+- Async FastAPI tests use `httpx.AsyncClient` with `ASGITransport` and pin
+  `anyio_backend = "asyncio"` to avoid accidental Trio execution.
 - Never log VK token, access token, refresh token, password, private key,
   `Authorization`, or `Set-Cookie`.
 - Use one SQLAlchemy `AsyncSession` per request/job.
 
 ---
 
+## Pre-flight Before PR-015
+
+Before changing execution callbacks, verify the actual `tasks-service` ORM and
+Alembic state. Do not assume columns exist.
+
+- [ ] **Step 1: Inspect current Task model fields**
+
+Run:
+
+```bash
+rg -n "processed_items|progress|stats|execution_run_id|status" services/tasks-service/app/db/models.py services/tasks-service/alembic/versions
+```
+
+Expected:
+
+- `processed_items`, `progress`, and `stats` already exist;
+- `execution_run_id` does not exist yet and must be added by PR-015.
+
+- [ ] **Step 2: Inspect Alembic heads**
+
+Run:
+
+```bash
+docker compose run --rm tasks-migrate alembic heads
+```
+
+Expected: a single head revision. If this command cannot run locally because
+Docker images are not present, use:
+
+```bash
+find services/tasks-service/alembic/versions -maxdepth 1 -type f -name '*.py' -print
+```
+
+Expected: one current migration file before PR-015.
+
+- [ ] **Step 3: Update PR-015 file list if reality differs**
+
+If any expected field is missing, add it through an Alembic migration in PR-015
+before service code writes to it. Do not write application code against columns
+that are not present in the SQLAlchemy model and migration.
+
 ## Task 1: PR-015 Tasks Execution Internal API
 
 **Files:**
+- Modify: `services/tasks-service/app/db/models.py`
+- Create: `services/tasks-service/alembic/versions/20260508_0002_add_task_execution_run_id.py`
 - Modify: `services/tasks-service/app/modules/tasks/schemas.py`
 - Modify: `services/tasks-service/app/modules/tasks/repository.py`
 - Modify: `services/tasks-service/app/modules/tasks/service.py`
@@ -72,6 +125,11 @@ use_service_path()
 
 from app.main import create_app
 from app.modules.tasks.router import get_tasks_service
+
+
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
 
 
 class FakeTasksService:
@@ -151,7 +209,7 @@ async def test_progress_validation_rejects_processed_gt_total(app):
         response = await client.post(
             "/internal/tasks/1/execution/progress",
             headers=headers(),
-            json={"processedItems": 11, "totalItems": 10, "progress": 1, "stats": {}},
+            json={"runId": "run-1", "processedItems": 11, "totalItems": 10, "progress": 1, "stats": {}},
         )
 
     assert response.status_code == 422
@@ -163,12 +221,12 @@ async def test_complete_and_fail_routes(app):
         complete = await client.post(
             "/internal/tasks/1/execution/complete",
             headers=headers(),
-            json={"processedItems": 10, "totalItems": 10, "stats": {"posts": 10}},
+            json={"runId": "run-1", "processedItems": 10, "totalItems": 10, "stats": {"posts": 10}},
         )
         failed = await client.post(
             "/internal/tasks/2/execution/fail",
             headers=headers(),
-            json={"error": "VK API rate limit exceeded", "processedItems": 1, "totalItems": 10, "stats": {}},
+            json={"runId": "run-2", "error": "VK API rate limit exceeded", "processedItems": 1, "totalItems": 10, "stats": {}},
         )
 
     assert complete.status_code == 200
@@ -187,7 +245,40 @@ pytest services/tasks-service/tests/test_task_execution_api.py -q
 
 Expected: fails because execution routes and schemas do not exist.
 
-- [ ] **Step 3: Add execution schemas**
+- [ ] **Step 3: Add execution run column**
+
+Add to `Task` in `services/tasks-service/app/db/models.py`:
+
+```python
+execution_run_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+```
+
+Create Alembic migration
+`services/tasks-service/alembic/versions/20260508_0002_add_task_execution_run_id.py`:
+
+```python
+"""add task execution run id"""
+
+import sqlalchemy as sa
+from alembic import op
+
+revision = "20260508_0002"
+down_revision = "20260507_0001"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.add_column("tasks", sa.Column("execution_run_id", sa.String(length=128), nullable=True))
+    op.create_index("ix_tasks_execution_run_id", "tasks", ["execution_run_id"])
+
+
+def downgrade() -> None:
+    op.drop_index("ix_tasks_execution_run_id", table_name="tasks")
+    op.drop_column("tasks", "execution_run_id")
+```
+
+- [ ] **Step 4: Add execution schemas**
 
 Add to `services/tasks-service/app/modules/tasks/schemas.py`:
 
@@ -199,16 +290,17 @@ class ExecutionStartRequest(BaseModel):
     run_id: UUID | str = Field(alias="runId")
     worker: str
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class ExecutionProgressRequest(BaseModel):
+    run_id: UUID | str = Field(alias="runId")
     processed_items: int = Field(ge=0, alias="processedItems")
     total_items: int = Field(ge=0, alias="totalItems")
     progress: float = Field(ge=0, le=1)
     stats: dict[str, Any] | None = None
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
     @model_validator(mode="after")
     def validate_counts(self) -> "ExecutionProgressRequest":
@@ -218,11 +310,12 @@ class ExecutionProgressRequest(BaseModel):
 
 
 class ExecutionCompleteRequest(BaseModel):
+    run_id: UUID | str = Field(alias="runId")
     processed_items: int = Field(ge=0, alias="processedItems")
     total_items: int = Field(ge=0, alias="totalItems")
     stats: dict[str, Any] | None = None
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
     @model_validator(mode="after")
     def validate_counts(self) -> "ExecutionCompleteRequest":
@@ -232,12 +325,13 @@ class ExecutionCompleteRequest(BaseModel):
 
 
 class ExecutionFailRequest(BaseModel):
+    run_id: UUID | str = Field(alias="runId")
     error: str = Field(min_length=1, max_length=2000)
     processed_items: int = Field(default=0, ge=0, alias="processedItems")
     total_items: int = Field(default=0, ge=0, alias="totalItems")
     stats: dict[str, Any] | None = None
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
     @model_validator(mode="after")
     def validate_counts(self) -> "ExecutionFailRequest":
@@ -246,7 +340,7 @@ class ExecutionFailRequest(BaseModel):
         return self
 ```
 
-- [ ] **Step 4: Add repository method by task id**
+- [ ] **Step 5: Add repository method by task id**
 
 Add to `TasksRepository`:
 
@@ -255,7 +349,7 @@ async def get_task_by_id(self, task_id: int) -> Task | None:
     return await self.session.get(Task, task_id)
 ```
 
-- [ ] **Step 5: Add service execution methods**
+- [ ] **Step 6: Add service execution methods**
 
 Add methods to `TasksService`:
 
@@ -265,9 +359,14 @@ async def start_execution(self, task_id: int, payload, request_id=None, correlat
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     if task.status == "running":
+        if task.execution_run_id == str(payload.run_id):
+            return task_to_response(task)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task already running")
     if task.status == "done":
+        if task.execution_run_id == str(payload.run_id):
+            return task_to_response(task)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task already completed")
+    task.execution_run_id = str(payload.run_id)
     task.status = "running"
     task.error = None
     await self.repository.add_audit(
@@ -289,6 +388,8 @@ async def update_execution_progress(self, task_id: int, payload, request_id=None
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     if task.status != "running":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task is not running")
+    if task.execution_run_id != str(payload.run_id):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Execution run mismatch")
     task.processed_items = payload.processed_items
     task.total_items = payload.total_items
     task.progress = payload.progress
@@ -300,8 +401,12 @@ async def complete_execution(self, task_id: int, payload, request_id=None, corre
     task = await self.repository.get_task_by_id(task_id)
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if task.status == "done" and task.execution_run_id == str(payload.run_id):
+        return task_to_response(task)
     if task.status != "running":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task is not running")
+    if task.execution_run_id != str(payload.run_id):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Execution run mismatch")
     task.status = "done"
     task.processed_items = payload.processed_items
     task.total_items = payload.total_items
@@ -324,6 +429,11 @@ async def fail_execution(self, task_id: int, payload, request_id=None, correlati
     task = await self.repository.get_task_by_id(task_id)
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if task.status == "failed" and task.execution_run_id == str(payload.run_id):
+        return task_to_response(task)
+    if task.execution_run_id and task.execution_run_id != str(payload.run_id):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Execution run mismatch")
+    task.execution_run_id = str(payload.run_id)
     task.status = "failed"
     task.error = payload.error
     task.processed_items = payload.processed_items
@@ -344,7 +454,7 @@ async def fail_execution(self, task_id: int, payload, request_id=None, correlati
     return task_to_response(task)
 ```
 
-- [ ] **Step 6: Add routes before dynamic task id reads**
+- [ ] **Step 7: Add routes before dynamic task id reads**
 
 Import execution schemas and add routes before `@router.get("/{task_id}")`:
 
@@ -356,7 +466,7 @@ async def start_execution(...):
 
 Repeat for `/progress`, `/complete`, and `/fail`.
 
-- [ ] **Step 7: Run tasks-service tests**
+- [ ] **Step 8: Run tasks-service tests**
 
 Run:
 
@@ -366,7 +476,7 @@ pytest services/tasks-service/tests -q
 
 Expected: all tasks-service tests pass.
 
-- [ ] **Step 8: Commit PR-015**
+- [ ] **Step 9: Commit PR-015**
 
 ```bash
 git add services/tasks-service
@@ -404,7 +514,7 @@ name = "parsevk-vk-service"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-  "aiokafka>=0.11",
+  "aiokafka>=0.14,<1.0",
   "alembic>=1.13",
   "asyncpg>=0.29",
   "fastapi>=0.115",
@@ -441,6 +551,7 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_tasks: str = "parsevk.tasks.events"
     kafka_topic_vk: str = "parsevk.vk.events"
+    kafka_consumer_enabled: bool = False
     outbox_publish_enabled: bool = False
     vk_token: str = Field(default="", repr=False)
     use_fake_vk_adapter: bool = True
@@ -461,7 +572,24 @@ Implement models from the spec:
 - `ProcessedEvent`
 - `OutboxEvent`
 
-Use unique constraints on VK external keys and `processed_events.event_id`.
+Use unique constraints on VK external keys.
+
+`ProcessedEvent` must use:
+
+```text
+consumer_name TEXT NOT NULL
+event_id UUID NOT NULL
+event_type TEXT NOT NULL
+processed_at TIMESTAMPTZ NOT NULL
+UNIQUE (consumer_name, event_id)
+```
+
+`OutboxEvent` must include:
+
+```text
+dedupe_key TEXT NULL
+UNIQUE (dedupe_key) WHERE dedupe_key IS NOT NULL
+```
 
 - [ ] **Step 4: Add Alembic migration**
 
@@ -472,6 +600,7 @@ vk_posts(vk_group_id, date)
 vk_comments(vk_owner_id, vk_post_id)
 vk_task_runs(task_id)
 outbox_events(status, next_attempt_at)
+processed_events(consumer_name, event_id)
 ```
 
 - [ ] **Step 5: Add health and model tests**
@@ -484,7 +613,35 @@ pytest services/vk-service/tests/test_health.py services/vk-service/tests/test_m
 
 Expected: health returns `{"status":"UP"}` and model tables/unique constraints exist.
 
-- [ ] **Step 6: Commit PR-016**
+- [ ] **Step 6: Add lifespan placeholder**
+
+`services/vk-service/app/main.py` must use FastAPI lifespan even before the
+Kafka consumer is fully wired:
+
+```python
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="parseVK VK Service", lifespan=lifespan)
+
+    @app.get("/health")
+    async def health() -> dict[str, str]:
+        return {"status": "UP"}
+
+    return app
+```
+
+Do not use `@app.on_event("startup")` or `@app.on_event("shutdown")`.
+
+- [ ] **Step 7: Commit PR-016**
 
 ```bash
 git add services/vk-service
@@ -509,9 +666,9 @@ Client methods:
 
 ```python
 start_execution(task_id: int, run_id: str) -> dict
-update_progress(task_id: int, processed_items: int, total_items: int, progress: float, stats: dict) -> dict
-complete_execution(task_id: int, processed_items: int, total_items: int, stats: dict) -> dict
-fail_execution(task_id: int, error: str, processed_items: int, total_items: int, stats: dict) -> dict
+update_progress(task_id: int, run_id: str, processed_items: int, total_items: int, progress: float, stats: dict) -> dict
+complete_execution(task_id: int, run_id: str, processed_items: int, total_items: int, stats: dict) -> dict
+fail_execution(task_id: int, run_id: str, error: str, processed_items: int, total_items: int, stats: dict) -> dict
 ```
 
 Headers:
@@ -550,15 +707,22 @@ Handler behavior:
 
 ```text
 task.created/task.resumed:
-  if event_id processed -> ack no-op
-  create/find vk_task_runs by task_id
-  call tasks-service start_execution
-  commit processed event
+  if (consumer_name, event_id) processed -> ack no-op
+  runId = event_id string
+  create/find vk_task_runs by task_id and run_id
+  call tasks-service start_execution(task_id, runId)
+  later progress/complete/fail callbacks must reuse the same runId
+  commit processed event in the same DB transaction as local state
 
 task.deleted:
   mark local run cancelled if present
   commit processed event
 ```
+
+The stable `runId = event_id` rule is intentional: if the process crashes after
+the HTTP `start_execution` callback but before local commit, Kafka retry sends
+the same event with the same run id, and `tasks-service` can return an
+idempotent success instead of `409`.
 
 - [ ] **Step 4: Add tests**
 
@@ -569,7 +733,33 @@ Test:
 - `task.deleted` marks run cancelled;
 - `task.created` calls start execution.
 
-- [ ] **Step 5: Commit PR-017**
+- [ ] **Step 5: Wire consumer through lifespan**
+
+Modify `services/vk-service/app/main.py` lifespan to start/stop the Kafka
+consumer task only when consumer mode is enabled:
+
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    consumer = TaskEventsConsumer()
+    task = None
+    if settings.kafka_consumer_enabled:
+        task = asyncio.create_task(consumer.run_forever())
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        await consumer.stop()
+```
+
+The exact class names may differ, but lifecycle ownership must stay in lifespan.
+Tests should instantiate handlers directly and should not require a running Kafka
+broker.
+
+- [ ] **Step 6: Commit PR-017**
 
 ```bash
 git add services/vk-service
@@ -660,6 +850,21 @@ git commit -m "feat: добавлено vk ingestion хранилище"
 - [ ] **Step 1: Add outbox service**
 
 Use same envelope shape as `tasks-service`, topic `parsevk.vk.events`.
+Add `dedupe_key` support to the local outbox model/service. For collected domain
+events use deterministic keys:
+
+```text
+vk.group_collected:{vk_group_id}
+vk.author_collected:{vk_author_id}
+vk.post_collected:{vk_owner_id}:{vk_post_id}
+vk.comment_collected:{vk_owner_id}:{vk_post_id}:{vk_comment_id}
+vk.task_completed:{task_id}:{run_id}
+vk.task_failed:{task_id}:{run_id}
+```
+
+Progress events may omit `dedupe_key` or use a coarse key only if the service
+intentionally wants to collapse updates. Do not use a unique dedupe key that
+prevents later progress updates for the same task.
 
 Event types:
 
@@ -718,6 +923,23 @@ git commit -m "feat: добавлен outbox vk events"
 Follow `tasks-service` package/Dockerfile/test path pattern. Prefix env vars
 with `CONTENT_`.
 
+`pyproject.toml` dependencies must include:
+
+```toml
+dependencies = [
+  "aiokafka>=0.14,<1.0",
+  "alembic>=1.13",
+  "asyncpg>=0.29",
+  "fastapi>=0.115",
+  "pydantic-settings>=2.4",
+  "sqlalchemy[asyncio]>=2.0",
+  "uvicorn[standard]>=0.30",
+]
+```
+
+`app/main.py` must use lifespan for projection consumer startup/shutdown. Do not
+use deprecated startup/shutdown event decorators.
+
 - [ ] **Step 2: Add content DB models**
 
 Implement:
@@ -729,6 +951,9 @@ Implement:
 - `ProcessedEvent`
 
 Use unique `external_key` for posts/comments.
+`ProcessedEvent` must use `UNIQUE (consumer_name, event_id)`, not only
+`UNIQUE (event_id)`, so multiple consumers can track the same Kafka event
+independently.
 
 - [ ] **Step 3: Add projection consumer**
 
@@ -741,6 +966,10 @@ vk.post_collected -> upsert content_posts
 vk.comment_collected -> upsert content_comments and increment/update post comments_count
 duplicate event_id -> no-op
 ```
+
+Duplicate means `(consumer_name, event_id)` already exists. Upserts still use
+domain keys such as `external_key`, so replayed events cannot duplicate rows even
+if the processed-event write is retried.
 
 - [ ] **Step 4: Run tests and commit**
 
@@ -858,12 +1087,20 @@ Add:
 VK_SERVICE_POSTGRES_USER=vk
 VK_SERVICE_POSTGRES_PASSWORD=vk_dev_password_change_me
 VK_SERVICE_POSTGRES_DB=vk
+VK_SERVICE_DATABASE_URL=postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk
+VK_SERVICE_KAFKA_CONSUMER_ENABLED=true
 VK_SERVICE_USE_FAKE_VK_ADAPTER=true
 VK_SERVICE_VK_TOKEN=
 CONTENT_POSTGRES_USER=content
 CONTENT_POSTGRES_PASSWORD=content_dev_password_change_me
 CONTENT_POSTGRES_DB=content
+CONTENT_DATABASE_URL=postgresql+asyncpg://content:content_dev_password_change_me@content-db:5432/content
+CONTENT_KAFKA_CONSUMER_ENABLED=true
 ```
+
+Compose must use the `*_POSTGRES_*` variables for Postgres containers and the
+`*_DATABASE_URL` variables for application containers. Do not construct one set
+while the app reads only the other.
 
 - [ ] **Step 3: Add smoke script**
 
@@ -880,6 +1117,15 @@ content-service projection stores post/comment
 gateway GET /api/v1/content/posts returns at least one post
 task detail is done
 ```
+
+Smoke fallback rule:
+
+If local compose has `tasks-service` outbox publishing disabled or Kafka is not
+receiving `task.created`, the smoke script may inject the same envelope directly
+into `parsevk.tasks.events` through a small producer command/container. This is
+only a local smoke fallback; production flow must use `tasks-service` outbox.
+The injected envelope must use the real `taskId` returned by create-task and a
+stable `event_id`, so `runId = event_id` remains deterministic.
 
 - [ ] **Step 4: Run final verification**
 
@@ -909,8 +1155,14 @@ git commit -m "chore: добавлен smoke для vk и content сервисо
 - [ ] `content-service` does not read `vk-db` directly.
 - [ ] `content-service` read API is only exposed through `api-gateway`.
 - [ ] Kafka event types have no `.v1` suffix.
-- [ ] Consumers are idempotent by `event_id`.
+- [ ] Execution callbacks are idempotent by stable `runId`.
+- [ ] Consumers are idempotent by `(consumer_name, event_id)`.
+- [ ] Domain writes are idempotent by natural external keys.
+- [ ] Outbox domain events use deterministic `dedupe_key`.
+- [ ] Kafka consumers/publishers are managed through FastAPI lifespan.
 - [ ] `tasks-service` remains task status/progress source of truth.
+- [ ] Compose env provides both DB container credentials and service
+      `*_DATABASE_URL` values.
 - [ ] No tokens/secrets appear in Kafka payloads, outbox rows, or logs.
 - [ ] Docker smoke proves create task -> VK ingestion -> content read -> task done.
 - [ ] NestJS `api/` remains present as fallback.
