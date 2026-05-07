@@ -34,6 +34,9 @@ class TasksRepository:
             select(Task).where(Task.owner_user_id == owner_user_id, Task.id == task_id)
         )
 
+    async def get_task_by_id(self, task_id: int) -> Task | None:
+        return await self.session.get(Task, task_id)
+
     async def list_audit(self, owner_user_id: str, task_id: int) -> list[TaskAuditLog]:
         result = await self.session.scalars(
             select(TaskAuditLog)

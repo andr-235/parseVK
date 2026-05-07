@@ -71,3 +71,57 @@ class TaskAuditLogResponse(BaseModel):
     created_at: datetime | str = Field(alias="createdAt")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class ExecutionStartRequest(BaseModel):
+    run_id: str = Field(alias="runId")
+    worker: str
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class ExecutionProgressRequest(BaseModel):
+    run_id: str = Field(alias="runId")
+    processed_items: int = Field(ge=0, alias="processedItems")
+    total_items: int = Field(ge=0, alias="totalItems")
+    progress: float = Field(ge=0, le=1)
+    stats: dict[str, Any] | None = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> "ExecutionProgressRequest":
+        if self.processed_items > self.total_items:
+            raise ValueError("processedItems must be less than or equal to totalItems")
+        return self
+
+
+class ExecutionCompleteRequest(BaseModel):
+    run_id: str = Field(alias="runId")
+    processed_items: int = Field(ge=0, alias="processedItems")
+    total_items: int = Field(ge=0, alias="totalItems")
+    stats: dict[str, Any] | None = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> "ExecutionCompleteRequest":
+        if self.processed_items > self.total_items:
+            raise ValueError("processedItems must be less than or equal to totalItems")
+        return self
+
+
+class ExecutionFailRequest(BaseModel):
+    run_id: str = Field(alias="runId")
+    error: str = Field(min_length=1, max_length=2000)
+    processed_items: int = Field(default=0, ge=0, alias="processedItems")
+    total_items: int = Field(default=0, ge=0, alias="totalItems")
+    stats: dict[str, Any] | None = None
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> "ExecutionFailRequest":
+        if self.processed_items > self.total_items:
+            raise ValueError("processedItems must be less than or equal to totalItems")
+        return self

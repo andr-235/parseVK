@@ -55,6 +55,7 @@ class Task(Base):
     processed_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     progress: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     stats: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    execution_run_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     skipped_groups_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
