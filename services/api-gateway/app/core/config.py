@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     app_name: str = "parseVK API Gateway"
     identity_base_url: str = "http://identity-service:8000"
+    tasks_base_url: str = "http://tasks-service:8000"
     internal_service_token: str = "dev-internal-token"
     refresh_cookie_name: str = "__Host-refresh_token"
     refresh_cookie_secure: bool = True
