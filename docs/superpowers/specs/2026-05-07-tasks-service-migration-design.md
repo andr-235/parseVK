@@ -275,7 +275,13 @@ last_error TEXT NULL
 created_at TIMESTAMPTZ NOT NULL
 ```
 
-Kafka key is `task_id`. Consumers must be idempotent by `event_id`.
+Kafka key:
+
+- task lifecycle events: `task_id`;
+- automation settings events: `owner_user_id`;
+- automation run requested events: new `task_id` when a task was created.
+
+Consumers must be idempotent by `event_id`.
 Application code updates `updated_at` on every mutation.
 
 ## API Contract
@@ -285,14 +291,14 @@ Gateway public routes:
 ```text
 POST   /api/v1/tasks/parse
 GET    /api/v1/tasks
+GET    /api/v1/tasks/automation/settings
+POST   /api/v1/tasks/automation/settings
+POST   /api/v1/tasks/automation/run
 GET    /api/v1/tasks/{task_id}
 GET    /api/v1/tasks/{task_id}/audit-log
 POST   /api/v1/tasks/{task_id}/resume
 POST   /api/v1/tasks/{task_id}/check
 DELETE /api/v1/tasks/{task_id}
-GET    /api/v1/tasks/automation/settings
-POST   /api/v1/tasks/automation/settings
-POST   /api/v1/tasks/automation/run
 ```
 
 The `/tasks/automation/*` path is preserved for frontend compatibility. Gateway
@@ -305,14 +311,14 @@ Internal `tasks-service` routes:
 ```text
 POST   /internal/tasks/parse
 GET    /internal/tasks
+GET    /internal/tasks/automation/settings
+POST   /internal/tasks/automation/settings
+POST   /internal/tasks/automation/run
 GET    /internal/tasks/{task_id}
 GET    /internal/tasks/{task_id}/audit-log
 POST   /internal/tasks/{task_id}/resume
 POST   /internal/tasks/{task_id}/check
 DELETE /internal/tasks/{task_id}
-GET    /internal/tasks/automation/settings
-POST   /internal/tasks/automation/settings
-POST   /internal/tasks/automation/run
 ```
 
 The frontend request body for parse task remains compatible:
@@ -332,6 +338,14 @@ Validation rules:
 - `mode`: `recent_posts` or `recheck_group`, default `recent_posts`;
 - `groupIds`: required only for `selected`, integers only;
 - `postLimit`: 1..100, default 10.
+
+`groupIds` behavior:
+
+- `scope = "selected"`: `groupIds` is required and must be a non-empty list of
+  integers;
+- `scope = "all"`: `groupIds` is accepted for frontend compatibility but
+  ignored and normalized to `[]`;
+- stored tasks always keep normalized `group_ids`.
 
 Pagination:
 
@@ -455,6 +469,28 @@ revealing task id existence across users.
 Both endpoints operate on the authenticated `owner_user_id` received from
 gateway.
 
+`POST /tasks/automation/settings` behavior:
+
+- validates settings;
+- creates or updates the owner's settings row;
+- writes `task.automation_settings_updated` audit event;
+- writes `task.automation_settings_updated` outbox event with
+  `event_version = 1`;
+- uses `aggregate_type = "task_automation_settings"` and
+  `aggregate_id = owner_user_id`;
+- returns updated settings response.
+
+`isRunning` is true when the current owner has an automation task with:
+
+```text
+source = 'automation'
+status IN ('pending', 'running')
+```
+
+`nextRunAt` is `null` when automation is disabled. When enabled, it is computed
+from `run_hour`, `run_minute`, and `timezone_offset_minutes` as the next future
+run time and returned as a UTC ISO timestamp.
+
 ### Automation Run
 
 `POST /tasks/automation/run`:
@@ -482,9 +518,10 @@ Latest completed task means:
 ```text
 owner_user_id = current user
 status = 'done'
-scope IS NOT NULL
+scope = 'all'
+OR
+scope = 'selected' AND group_ids is non-empty
 mode IS NOT NULL
-group_ids is available
 ```
 
 `postLimit` comes from automation settings, not from the old task.
@@ -573,6 +610,9 @@ Python tests:
 - list/detail/resume/check/delete are scoped by `owner_user_id`;
 - user A cannot access user B task;
 - validation for `scope`, `groupIds`, `postLimit`, `mode`;
+- `scope=all` request with `groupIds` stores normalized `group_ids=[]`;
+- `scope=selected` request without `groupIds` returns validation error;
+- `scope=selected` request with empty `groupIds` returns validation error;
 - resume/check/delete behavior;
 - running task delete returns `409`;
 - completed field is derived from `status == "done"`;
