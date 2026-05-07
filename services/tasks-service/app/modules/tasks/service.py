@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Task, TaskAuditLog
+from app.modules.outbox.service import OutboxService
 from app.modules.tasks.mapper import audit_to_response, task_to_response
 from app.modules.tasks.repository import TasksRepository
 from app.modules.tasks.schemas import CreateParseTaskRequest
@@ -12,6 +13,7 @@ from app.modules.tasks.schemas import CreateParseTaskRequest
 class TasksService:
     def __init__(self, session: AsyncSession):
         self.repository = TasksRepository(session)
+        self.outbox = OutboxService(session)
 
     async def create_parse_task(
         self,
@@ -50,6 +52,13 @@ class TasksService:
                 event_type="task.created",
                 event_data={"taskId": str(task.id), "source": "manual"},
             )
+        )
+        await self.outbox.add_event(
+            event_type="task.created",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            correlation_id=correlation_id,
+            payload={"taskId": str(task.id), "ownerUserId": owner_user_id, "source": task.source},
         )
         return task_to_response(task)
 
@@ -94,6 +103,12 @@ class TasksService:
                 event_data={"taskId": str(task.id)},
             )
         )
+        await self.outbox.add_event(
+            event_type="task.resumed",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            payload={"taskId": str(task.id), "ownerUserId": owner_user_id},
+        )
         task = await self.repository.touch_task(task)
         return task_to_response(task)
 
@@ -136,5 +151,11 @@ class TasksService:
                 event_type="task.deleted",
                 event_data={"taskSnapshot": snapshot},
             )
+        )
+        await self.outbox.add_event(
+            event_type="task.deleted",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            payload={"taskId": str(task.id), "ownerUserId": owner_user_id, "taskSnapshot": snapshot},
         )
         await self.repository.delete_task(task)

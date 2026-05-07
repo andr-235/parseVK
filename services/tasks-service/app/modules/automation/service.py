@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from app.db.models import Task, TaskAuditLog
 from app.modules.automation.repository import AutomationRepository
 from app.modules.automation.schemas import AutomationSettingsUpdate
+from app.modules.outbox.service import OutboxService
 from app.modules.tasks.mapper import task_to_response
 from app.modules.tasks.repository import TasksRepository
 
@@ -11,6 +12,7 @@ class AutomationService:
     def __init__(self, session):
         self.repository = AutomationRepository(session)
         self.tasks = TasksRepository(session)
+        self.outbox = OutboxService(session)
 
     async def get_settings(self, owner_user_id: str) -> dict:
         settings = await self.repository.get_or_create_settings(owner_user_id)
@@ -38,6 +40,17 @@ class AutomationService:
                 event_type="task.automation_settings_updated",
                 event_data={"enabled": settings.enabled, "postLimit": settings.post_limit},
             )
+        )
+        await self.outbox.add_event(
+            event_type="task.automation_settings_updated",
+            aggregate_type="task_automation_settings",
+            aggregate_id=owner_user_id,
+            correlation_id=correlation_id,
+            payload={
+                "ownerUserId": owner_user_id,
+                "enabled": settings.enabled,
+                "postLimit": settings.post_limit,
+            },
         )
         return await self._settings_response(owner_user_id, settings)
 
@@ -108,6 +121,13 @@ class AutomationService:
                 event_type="task.automation_run_requested",
                 event_data={"started": True, "taskId": str(task.id)},
             )
+        )
+        await self.outbox.add_event(
+            event_type="task.automation_run_requested",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            correlation_id=correlation_id,
+            payload={"taskId": str(task.id), "ownerUserId": owner_user_id, "source": "automation"},
         )
         await self.repository.update_last_run_at(settings)
         return {
