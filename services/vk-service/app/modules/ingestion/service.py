@@ -26,10 +26,11 @@ class IngestionResult:
 
 
 class IngestionService:
-    def __init__(self, *, adapter: VkApiAdapter, repository, tasks_client: TasksClient):
+    def __init__(self, *, adapter: VkApiAdapter, repository, tasks_client: TasksClient, outbox_service=None):
         self.adapter = adapter
         self.repository = repository
         self.tasks_client = tasks_client
+        self.outbox = outbox_service
 
     async def execute(self, task_run: Any, *, correlation_id: str | None = None) -> IngestionResult:
         try:
@@ -44,8 +45,22 @@ class IngestionService:
                 request_id=task_run.run_id,
                 correlation_id=correlation_id,
             )
+            if self.outbox:
+                await self.outbox.emit_task_completed(
+                    task_id=task_run.task_id,
+                    run_id=task_run.run_id,
+                    stats=result.stats(),
+                    correlation_id=correlation_id,
+                )
             return result
         except Exception as exc:
+            if self.outbox:
+                await self.outbox.emit_task_failed(
+                    task_id=task_run.task_id,
+                    run_id=task_run.run_id,
+                    error=str(exc),
+                    correlation_id=correlation_id,
+                )
             await self.tasks_client.fail_execution(
                 task_run.task_id,
                 task_run.run_id,
@@ -71,6 +86,8 @@ class IngestionService:
         for group in groups:
             group_id = int(group["id"])
             await self.repository.upsert_group(group)
+            if self.outbox:
+                await self.outbox.emit_group_collected(group, correlation_id=correlation_id)
             result.groups += 1
 
             posts = await self.adapter.get_posts(group_id, mode=task_run.mode, post_limit=task_run.post_limit)
@@ -78,6 +95,8 @@ class IngestionService:
                 if await self._upsert_post_author(post):
                     result.authors += 1
                 await self.repository.upsert_post(post, task_id=task_run.task_id, group_id=group_id)
+                if self.outbox:
+                    await self.outbox.emit_post_collected(post, task_id=task_run.task_id, correlation_id=correlation_id)
                 result.posts += 1
 
                 comments = await self.adapter.get_comments(int(post["owner_id"]), int(post["id"]))
@@ -85,6 +104,10 @@ class IngestionService:
                     if await self._upsert_comment_author(comment):
                         result.authors += 1
                     await self.repository.upsert_comment(comment, task_id=task_run.task_id)
+                    if self.outbox:
+                        await self.outbox.emit_comment_collected(
+                            comment, task_id=task_run.task_id, correlation_id=correlation_id
+                        )
                     result.comments += 1
 
                 await self.tasks_client.update_progress(
@@ -97,6 +120,16 @@ class IngestionService:
                     request_id=task_run.run_id,
                     correlation_id=correlation_id,
                 )
+                if self.outbox:
+                    await self.outbox.emit_task_progress_updated(
+                        task_id=task_run.task_id,
+                        run_id=task_run.run_id,
+                        processed_items=result.processed_items,
+                        total_items=result.processed_items,
+                        progress=1,
+                        stats=result.stats(),
+                        correlation_id=correlation_id,
+                    )
         return result
 
     async def _upsert_post_author(self, post: dict) -> bool:
@@ -104,13 +137,10 @@ class IngestionService:
         if from_id is None:
             return False
         await self.repository.upsert_author(
-            {
-                "vk_author_id": int(from_id),
-                "type": "group" if int(from_id) < 0 else "user",
-                "display_name": str(from_id),
-                "raw": {"from_id": from_id},
-            }
+            self._author_payload(from_id)
         )
+        if self.outbox:
+            await self.outbox.emit_author_collected(self._author_payload(from_id))
         return True
 
     async def _upsert_comment_author(self, comment: dict) -> bool:
@@ -118,11 +148,16 @@ class IngestionService:
         if from_id is None:
             return False
         await self.repository.upsert_author(
-            {
-                "vk_author_id": int(from_id),
-                "type": "group" if int(from_id) < 0 else "user",
-                "display_name": str(from_id),
-                "raw": {"from_id": from_id},
-            }
+            self._author_payload(from_id)
         )
+        if self.outbox:
+            await self.outbox.emit_author_collected(self._author_payload(from_id))
         return True
+
+    def _author_payload(self, from_id) -> dict:
+        return {
+            "vk_author_id": int(from_id),
+            "type": "group" if int(from_id) < 0 else "user",
+            "display_name": str(from_id),
+            "raw": {"from_id": from_id},
+        }
