@@ -1,7 +1,9 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/shared/api'
+import { GATEWAY_API_URL } from '@/shared/api'
 import { createRequest, handleResponse } from '@/shared/api'
 import type { ITaskAutomationRunResponse, ITaskAutomationSettings } from '@/shared/types'
+
+const TASK_AUTOMATION_API_URL = `${GATEWAY_API_URL}/v1/tasks/automation`
 
 export interface UpdateTaskAutomationSettingsRequest {
   enabled: boolean
@@ -14,7 +16,7 @@ export interface UpdateTaskAutomationSettingsRequest {
 export const taskAutomationService = {
   async fetchSettings(): Promise<ITaskAutomationSettings> {
     try {
-      const response = await createRequest(`${API_URL}/tasks/automation/settings`)
+      const response = await createRequest(`${TASK_AUTOMATION_API_URL}/settings`)
       return await handleResponse<ITaskAutomationSettings>(
         response,
         'Failed to load automation settings'
@@ -29,7 +31,7 @@ export const taskAutomationService = {
     payload: UpdateTaskAutomationSettingsRequest
   ): Promise<ITaskAutomationSettings> {
     try {
-      const response = await createRequest(`${API_URL}/tasks/automation/settings`, {
+      const response = await createRequest(`${TASK_AUTOMATION_API_URL}/settings`, {
         method: 'POST',
         body: JSON.stringify(payload),
       })
@@ -48,7 +50,7 @@ export const taskAutomationService = {
 
   async runAutomation(): Promise<ITaskAutomationRunResponse> {
     try {
-      const response = await createRequest(`${API_URL}/tasks/automation/run`, {
+      const response = await createRequest(`${TASK_AUTOMATION_API_URL}/run`, {
         method: 'POST',
       })
 

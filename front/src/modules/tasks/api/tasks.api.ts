@@ -1,13 +1,15 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/shared/api'
+import { GATEWAY_API_URL } from '@/shared/api'
 import { createRequest, handleResponse } from '@/shared/api'
 import type { CreateParsingTaskDto } from '@/shared/types'
 import type { IParsingTaskResult, IParsingTaskSummary } from '@/shared/types'
 
+const TASKS_API_URL = `${GATEWAY_API_URL}/v1/tasks`
+
 export const tasksService = {
   async fetchTasks(): Promise<IParsingTaskSummary[]> {
     try {
-      const response = await createRequest(`${API_URL}/tasks`)
+      const response = await createRequest(TASKS_API_URL)
 
       if (response.status === 404) {
         return []
@@ -28,7 +30,7 @@ export const tasksService = {
 
   async fetchTaskDetails(taskId: number | string): Promise<IParsingTaskResult> {
     try {
-      const response = await createRequest(`${API_URL}/tasks/${taskId}`)
+      const response = await createRequest(`${TASKS_API_URL}/${taskId}`)
       return await handleResponse<IParsingTaskResult>(response, 'Failed to fetch task details')
     } catch (error) {
       toast.error('Не удалось загрузить детали задачи')
@@ -38,7 +40,7 @@ export const tasksService = {
 
   async createParsingTask(dto: CreateParsingTaskDto): Promise<IParsingTaskResult> {
     try {
-      const response = await createRequest(`${API_URL}/tasks/parse`, {
+      const response = await createRequest(`${TASKS_API_URL}/parse`, {
         method: 'POST',
         body: JSON.stringify(dto),
       })
@@ -58,7 +60,7 @@ export const tasksService = {
   async resumeTask(taskId: number | string): Promise<IParsingTaskResult> {
     try {
       const id = encodeURIComponent(String(taskId))
-      const response = await createRequest(`${API_URL}/tasks/${id}/resume`, {
+      const response = await createRequest(`${TASKS_API_URL}/${id}/resume`, {
         method: 'POST',
       })
 
@@ -74,7 +76,7 @@ export const tasksService = {
   async checkTask(taskId: number | string): Promise<IParsingTaskResult> {
     try {
       const id = encodeURIComponent(String(taskId))
-      const response = await createRequest(`${API_URL}/tasks/${id}/check`, {
+      const response = await createRequest(`${TASKS_API_URL}/${id}/check`, {
         method: 'POST',
       })
 
@@ -94,7 +96,7 @@ export const tasksService = {
   async deleteTask(taskId: number | string): Promise<void> {
     try {
       const id = encodeURIComponent(String(taskId))
-      const response = await createRequest(`${API_URL}/tasks/${id}`, {
+      const response = await createRequest(`${TASKS_API_URL}/${id}`, {
         method: 'DELETE',
       })
 
