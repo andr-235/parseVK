@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
 
 from app.core.config import settings
+from app.modules.content.router import router as content_router
 from app.modules.projections.consumer import ProjectionConsumer
 
 
@@ -29,6 +30,8 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "UP"}
+
+    app.include_router(content_router)
 
     return app
 
