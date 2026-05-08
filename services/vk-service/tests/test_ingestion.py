@@ -82,10 +82,27 @@ async def test_selected_task_collects_only_requested_groups():
 
 
 @pytest.mark.anyio
-async def test_scope_all_without_group_source_fails_task():
+async def test_scope_all_uses_default_group_source():
     repository = FakeRepository()
     tasks_client = FakeTasksClient()
     service = IngestionService(adapter=FakeVkApiClient(), repository=repository, tasks_client=tasks_client)
+
+    result = await service.execute(task_run(scope="all", group_ids=[]))
+
+    assert result.groups == 1
+    assert [group["id"] for group in repository.groups] == [1]
+
+
+@pytest.mark.anyio
+async def test_scope_all_without_configured_group_source_fails_task():
+    repository = FakeRepository()
+    tasks_client = FakeTasksClient()
+    service = IngestionService(
+        adapter=FakeVkApiClient(),
+        repository=repository,
+        tasks_client=tasks_client,
+        default_group_ids=[],
+    )
 
     with pytest.raises(RuntimeError, match="No group source configured for scope=all"):
         await service.execute(task_run(scope="all", group_ids=[]))

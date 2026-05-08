@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     outbox_publish_enabled: bool = False
     vk_token: str = Field(default="", repr=False)
     use_fake_vk_adapter: bool = True
+    default_group_ids: list[int] = [1]
 
 
 settings = Settings()

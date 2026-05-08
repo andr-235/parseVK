@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.clients.tasks.client import TasksClient
+from app.core.config import settings
 from app.modules.vk_api.client import VkApiAdapter
 
 
@@ -26,11 +27,20 @@ class IngestionResult:
 
 
 class IngestionService:
-    def __init__(self, *, adapter: VkApiAdapter, repository, tasks_client: TasksClient, outbox_service=None):
+    def __init__(
+        self,
+        *,
+        adapter: VkApiAdapter,
+        repository,
+        tasks_client: TasksClient,
+        outbox_service=None,
+        default_group_ids: list[int] | None = None,
+    ):
         self.adapter = adapter
         self.repository = repository
         self.tasks_client = tasks_client
         self.outbox = outbox_service
+        self.default_group_ids = settings.default_group_ids if default_group_ids is None else default_group_ids
 
     async def execute(self, task_run: Any, *, correlation_id: str | None = None) -> IngestionResult:
         try:
@@ -76,7 +86,10 @@ class IngestionService:
     def _group_ids(self, task_run: Any) -> list[int]:
         if task_run.scope == "selected":
             return [int(item) for item in task_run.group_ids]
-        raise RuntimeError("No group source configured for scope=all")
+        group_ids = [int(item) for item in self.default_group_ids]
+        if not group_ids:
+            raise RuntimeError("No group source configured for scope=all")
+        return group_ids
 
     async def _collect(
         self, task_run: Any, group_ids: list[int], *, correlation_id: str | None = None

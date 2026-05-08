@@ -55,9 +55,7 @@ services:
       - backend
 
   kafka:
-    image: apache/kafka:4.1.0
-    profiles:
-      - kafka
+    image: apache/kafka:latest
     restart: always
     ports:
       - "127.0.0.1:9092:9092"
@@ -73,6 +71,21 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - backend
+
+  kafka-init:
+    image: apache/kafka:latest
+    restart: "no"
+    depends_on:
+      kafka:
+        condition: service_started
+    command: >
+      /bin/sh -c "
+      until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 2; done;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.tasks.events --partitions 1 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.vk.events --partitions 1 --replication-factor 1
+      "
     networks:
       - backend
 
@@ -172,11 +185,136 @@ services:
     depends_on:
       tasks-migrate:
         condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
     environment:
       TASKS_DATABASE_URL: postgresql+asyncpg://${TASKS_POSTGRES_USER:-tasks}:${TASKS_POSTGRES_PASSWORD:-tasks}@tasks-db:5432/${TASKS_POSTGRES_DB:-tasks}
       TASKS_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
-      TASKS_OUTBOX_PUBLISH_ENABLED: ${TASKS_OUTBOX_PUBLISH_ENABLED:-false}
+      TASKS_OUTBOX_PUBLISH_ENABLED: ${TASKS_OUTBOX_PUBLISH_ENABLED:-true}
       TASKS_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+  vk-db:
+    image: postgres:16
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "127.0.0.1:5436:5432"
+    environment:
+      POSTGRES_USER: ${VK_SERVICE_POSTGRES_USER:-vk}
+      POSTGRES_PASSWORD: ${VK_SERVICE_POSTGRES_PASSWORD:-vk_dev_password_change_me}
+      POSTGRES_DB: ${VK_SERVICE_POSTGRES_DB:-vk}
+    volumes:
+      - vk_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  vk-migrate:
+    build:
+      context: .
+      dockerfile: services/vk-service/Dockerfile
+    restart: "no"
+    depends_on:
+      vk-db:
+        condition: service_healthy
+    environment:
+      VK_SERVICE_DATABASE_URL: ${VK_SERVICE_DATABASE_URL:-postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk}
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - backend
+
+  vk-service:
+    build:
+      context: .
+      dockerfile: services/vk-service/Dockerfile
+    restart: always
+    depends_on:
+      vk-migrate:
+        condition: service_completed_successfully
+      tasks-service:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      VK_SERVICE_DATABASE_URL: ${VK_SERVICE_DATABASE_URL:-postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk}
+      VK_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
+      VK_SERVICE_TASKS_BASE_URL: http://tasks-service:8000
+      VK_SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      VK_SERVICE_KAFKA_CONSUMER_ENABLED: ${VK_SERVICE_KAFKA_CONSUMER_ENABLED:-true}
+      VK_SERVICE_OUTBOX_PUBLISH_ENABLED: ${VK_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
+      VK_SERVICE_USE_FAKE_VK_ADAPTER: ${VK_SERVICE_USE_FAKE_VK_ADAPTER:-true}
+      VK_SERVICE_DEFAULT_GROUP_IDS: '${VK_SERVICE_DEFAULT_GROUP_IDS:-[1]}'
+      VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+  content-db:
+    image: postgres:16
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "127.0.0.1:5437:5432"
+    environment:
+      POSTGRES_USER: ${CONTENT_POSTGRES_USER:-content}
+      POSTGRES_PASSWORD: ${CONTENT_POSTGRES_PASSWORD:-content_dev_password_change_me}
+      POSTGRES_DB: ${CONTENT_POSTGRES_DB:-content}
+    volumes:
+      - content_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  content-migrate:
+    build:
+      context: .
+      dockerfile: services/content-service/Dockerfile
+    restart: "no"
+    depends_on:
+      content-db:
+        condition: service_healthy
+    environment:
+      CONTENT_DATABASE_URL: ${CONTENT_DATABASE_URL:-postgresql+asyncpg://content:content_dev_password_change_me@content-db:5432/content}
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - backend
+
+  content-service:
+    build:
+      context: .
+      dockerfile: services/content-service/Dockerfile
+    restart: always
+    depends_on:
+      content-migrate:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      CONTENT_DATABASE_URL: ${CONTENT_DATABASE_URL:-postgresql+asyncpg://content:content_dev_password_change_me@content-db:5432/content}
+      CONTENT_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
+      CONTENT_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CONTENT_KAFKA_CONSUMER_ENABLED: ${CONTENT_KAFKA_CONSUMER_ENABLED:-true}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s
@@ -198,9 +336,12 @@ services:
         condition: service_healthy
       tasks-service:
         condition: service_healthy
+      content-service:
+        condition: service_healthy
     environment:
       GATEWAY_IDENTITY_BASE_URL: http://identity-service:8000
       GATEWAY_TASKS_BASE_URL: http://tasks-service:8000
+      GATEWAY_CONTENT_BASE_URL: http://content-service:8000
       GATEWAY_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       GATEWAY_REFRESH_COOKIE_NAME: ${GATEWAY_REFRESH_COOKIE_NAME:-refresh_token}
       GATEWAY_CSRF_COOKIE_NAME: ${GATEWAY_CSRF_COOKIE_NAME:-csrf_token}
@@ -381,6 +522,10 @@ volumes:
     name: parsevk_identity_postgres_data
   tasks_postgres_data:
     name: parsevk_tasks_postgres_data
+  vk_postgres_data:
+    name: parsevk_vk_postgres_data
+  content_postgres_data:
+    name: parsevk_content_postgres_data
   prometheus_data:
     name: parsevk_prometheus_data
   grafana_data:

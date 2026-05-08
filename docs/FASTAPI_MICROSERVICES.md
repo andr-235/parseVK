@@ -10,6 +10,10 @@
 - `identity-db` - отдельная PostgreSQL база identity.
 - `tasks-service` - per-user задачи, audit log, automation settings, task outbox.
 - `tasks-db` - отдельная PostgreSQL база tasks.
+- `vk-service` - execution/ingestion VK задач, canonical VK storage, `vk.*` outbox.
+- `vk-db` - отдельная PostgreSQL база canonical VK данных.
+- `content-service` - frontend read models по `vk.*` events.
+- `content-db` - отдельная PostgreSQL база read models.
 - `kafka` - Apache Kafka в single-node KRaft режиме для local/dev.
 - `outbox_events` - транзакционный publish path для identity/task events.
 
@@ -19,7 +23,7 @@ Production topology нужно описывать отдельно.
 ## Локальный запуск
 
 ```bash
-docker compose up -d identity-db identity-migrate identity-seed-admin identity-service tasks-db tasks-migrate tasks-service api-gateway
+docker compose up -d identity-db identity-migrate identity-seed-admin identity-service tasks-db tasks-migrate tasks-service vk-db vk-migrate vk-service content-db content-migrate content-service api-gateway
 ```
 
 Проверка health:
@@ -47,6 +51,17 @@ IDENTITY_ADMIN_PASSWORD=admin-change-me scripts/smoke-fastapi-tasks.sh
 `tasks-service` не выполняет VK parsing в этом срезе; новые задачи могут оставаться
 в `pending` до реализации `vk-service`.
 
+Smoke VK/content flow:
+
+```bash
+IDENTITY_ADMIN_PASSWORD=admin-change-me scripts/smoke-fastapi-vk-content.sh
+```
+
+Скрипт проверяет flow: `login -> create scope=all task без выбора групп -> wait task done -> gateway content posts`.
+Для локального dev по умолчанию используется `VK_SERVICE_USE_FAKE_VK_ADAPTER=true`, поэтому
+реальный VK token не нужен до включения настоящего adapter. Для `scope=all` локальный
+источник групп задаётся через `VK_SERVICE_DEFAULT_GROUP_IDS`, по умолчанию `[1]`.
+
 ## Frontend routing
 
 Frontend собирается с:
@@ -60,6 +75,7 @@ Nginx проксирует:
 
 - `/api/v1/auth/*` в `api-gateway`;
 - `/api/v1/tasks/*` в `api-gateway`;
+- `/api/v1/content/*` в `api-gateway`;
 - остальные `/api/*` в текущий NestJS `api`.
 
 Так frontend auth и tasks уже идут через FastAPI BFF, а остальной функционал остаётся на рабочем API.

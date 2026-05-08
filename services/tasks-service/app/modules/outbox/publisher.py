@@ -1,10 +1,14 @@
 import json
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.models import OutboxEvent
 from app.modules.outbox.repository import OutboxRepository
+
+if TYPE_CHECKING:
+    from aiokafka import AIOKafkaProducer
 
 
 def kafka_key_for_event(event_type: str, payload: dict, aggregate_id: str) -> str:
@@ -38,7 +42,7 @@ class OutboxPublisher:
 
         return len(events)
 
-    async def _publish_event(self, producer: AIOKafkaProducer, event: OutboxEvent) -> None:
+    async def _publish_event(self, producer: "AIOKafkaProducer", event: OutboxEvent) -> None:
         key = kafka_key_for_event(event.event_type, event.payload, event.aggregate_id)
         await producer.send_and_wait(
             settings.kafka_topic_tasks,

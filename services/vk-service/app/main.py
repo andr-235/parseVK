@@ -4,22 +4,29 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
 
 from app.core.config import settings
+from app.modules.outbox.publisher import publish_outbox_forever
 from app.modules.tasks.consumer import TaskEventsConsumer
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     consumer = TaskEventsConsumer()
-    task = None
+    consumer_task = None
+    publisher_task = None
     if settings.kafka_consumer_enabled:
-        task = asyncio.create_task(consumer.run_forever())
+        consumer_task = asyncio.create_task(consumer.run_forever())
+    if settings.outbox_publish_enabled:
+        publisher_task = asyncio.create_task(publish_outbox_forever())
     try:
         yield
     finally:
-        if task:
-            task.cancel()
-            with suppress(asyncio.CancelledError):
-                await task
+        for task in (consumer_task, publisher_task):
+            if task:
+                task.cancel()
+        for task in (consumer_task, publisher_task):
+            if task:
+                with suppress(asyncio.CancelledError):
+                    await task
         await consumer.stop()
 
 

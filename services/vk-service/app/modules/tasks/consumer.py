@@ -6,8 +6,14 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.clients.tasks.client import TasksClient
 from app.core.config import settings
 from app.db.session import SessionLocal
+from app.modules.ingestion.repository import IngestionRepository
+from app.modules.ingestion.service import IngestionService
+from app.modules.outbox.repository import OutboxRepository
+from app.modules.outbox.service import OutboxService
 from app.modules.tasks.events import TaskEvent
 from app.modules.tasks.service import TaskEventsHandler, TaskEventsRepository
+from app.modules.vk_api.client import VkApiClient
+from app.modules.vk_api.fake_client import FakeVkApiClient
 
 
 class TaskEventsConsumer:
@@ -47,7 +53,16 @@ class TaskEventsConsumer:
             async with session.begin():
                 repository = TaskEventsRepository(session)
                 handler = TaskEventsHandler(repository, self.tasks_client)
-                await handler.handle(event)
+                task_run = await handler.handle(event)
+                if task_run is not None and event.event_type in {"task.created", "task.resumed"}:
+                    adapter = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+                    ingestion = IngestionService(
+                        adapter=adapter,
+                        repository=IngestionRepository(session),
+                        tasks_client=self.tasks_client,
+                        outbox_service=OutboxService(OutboxRepository(session)),
+                    )
+                    await ingestion.execute(task_run, correlation_id=event.correlation_id)
 
     async def stop(self) -> None:
         if self._consumer is not None:

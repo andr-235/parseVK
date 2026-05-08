@@ -16,13 +16,6 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-@dataclass
-class TaskRunState:
-    task_id: int
-    run_id: str
-    status: str
-
-
 class TaskEventsRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -77,7 +70,7 @@ class TaskEventsHandler:
         self.tasks_client = tasks_client
         self.consumer_name = consumer_name
 
-    async def handle(self, event: TaskEvent) -> TaskRunState | None:
+    async def handle(self, event: TaskEvent):
         if await self.repository.is_processed(self.consumer_name, event.event_id):
             return None
 
@@ -90,14 +83,14 @@ class TaskEventsHandler:
         await self.repository.save()
         return result
 
-    async def _handle_created_or_resumed(self, event: TaskEvent) -> TaskRunState:
+    async def _handle_created_or_resumed(self, event: TaskEvent):
         task_id = event.task_id()
         run_id = str(event.event_id)
         task_run = await self.repository.get_task_run(task_id)
         if task_run is None:
             task_run = await self.repository.create_task_run(event, run_id)
         elif task_run.status == "running":
-            return TaskRunState(task_id=task_id, run_id=task_run.run_id, status=task_run.status)
+            return task_run
         else:
             task_run.run_id = run_id
 
@@ -110,9 +103,9 @@ class TaskEventsHandler:
         task_run.status = "running"
         task_run.started_at = task_run.started_at or utcnow()
         task_run.updated_at = utcnow()
-        return TaskRunState(task_id=task_id, run_id=run_id, status="running")
+        return task_run
 
-    async def _handle_deleted(self, event: TaskEvent) -> TaskRunState | None:
+    async def _handle_deleted(self, event: TaskEvent):
         task_id = event.task_id()
         task_run = await self.repository.get_task_run(task_id)
         if task_run is None:
@@ -120,4 +113,4 @@ class TaskEventsHandler:
         task_run.status = "cancelled"
         task_run.finished_at = utcnow()
         task_run.updated_at = utcnow()
-        return TaskRunState(task_id=task_id, run_id=task_run.run_id, status="cancelled")
+        return task_run

@@ -1,8 +1,14 @@
 import json
+import asyncio
+import logging
 from datetime import datetime
 from uuid import UUID
 
 from app.core.config import settings
+from app.db.session import SessionLocal
+from app.modules.outbox.repository import OutboxRepository
+
+logger = logging.getLogger(__name__)
 
 
 def json_default(value):
@@ -58,3 +64,18 @@ class OutboxPublisher:
         if self._producer is not None:
             await self._producer.stop()
             self._producer = None
+
+
+async def publish_outbox_forever() -> None:
+    while True:
+        try:
+            async with SessionLocal() as session:
+                async with session.begin():
+                    publisher = OutboxPublisher(OutboxRepository(session))
+                    try:
+                        await publisher.publish_pending()
+                    finally:
+                        await publisher.stop()
+        except Exception:
+            logger.exception("vk outbox publish loop failed")
+        await asyncio.sleep(2)
