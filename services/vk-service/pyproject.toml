@@ -11,6 +11,7 @@ dependencies = [
   "pydantic-settings>=2.4",
   "sqlalchemy[asyncio]>=2.0",
   "uvicorn[standard]>=0.30",
+  "vk_api>=11.9",
 ]
 
 [project.optional-dependencies]

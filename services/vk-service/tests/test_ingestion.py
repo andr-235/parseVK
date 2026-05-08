@@ -53,6 +53,45 @@ class FakeTasksClient:
         self.calls.append(("fail", task_id, run_id, error, processed_items, total_items, stats))
 
 
+class FakeVkApiNamespace:
+    def __init__(self, calls):
+        self.calls = calls
+        self.groups = self
+        self.wall = self
+
+    def getById(self, **kwargs):
+        self.calls.append(("groups.getById", kwargs))
+        return {"groups": [{"id": 1, "name": "Group 1"}]}
+
+    def get(self, **kwargs):
+        self.calls.append(("wall.get", kwargs))
+        return {"items": [{"id": 10, "owner_id": -1, "from_id": -1, "text": "post"}]}
+
+    def getComments(self, **kwargs):
+        self.calls.append(("wall.getComments", kwargs))
+        return {"items": [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}]}
+
+
+class FakeVkApiSession:
+    def __init__(self, calls):
+        self.calls = calls
+
+    def get_api(self):
+        return FakeVkApiNamespace(self.calls)
+
+
+def fake_vk_session_factory(calls):
+    def factory(**kwargs):
+        calls.append(("VkApi", kwargs))
+        return FakeVkApiSession(calls)
+
+    return factory
+
+
+async def run_inline(func, *args, **kwargs):
+    return func(*args, **kwargs)
+
+
 def task_run(scope="selected", group_ids=None):
     return SimpleNamespace(
         task_id=10,
@@ -116,3 +155,23 @@ async def test_real_vk_adapter_requires_token_without_leaking_secret():
 
     with pytest.raises(VkApiConfigurationError, match="VK token is not configured"):
         await client.get_groups([1])
+
+
+@pytest.mark.anyio
+async def test_real_vk_adapter_uses_vk_api_library_session():
+    calls = []
+    client = VkApiClient(token="vk-token", vk_session_factory=fake_vk_session_factory(calls), call_runner=run_inline)
+
+    groups = await client.get_groups([1])
+    posts = await client.get_posts(1, mode="recent_posts", post_limit=1)
+    comments = await client.get_comments(-1, 10)
+
+    assert groups == [{"id": 1, "name": "Group 1"}]
+    assert posts == [{"id": 10, "owner_id": -1, "from_id": -1, "text": "post"}]
+    assert comments == [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}]
+    assert calls == [
+        ("VkApi", {"token": "vk-token", "api_version": "5.199"}),
+        ("groups.getById", {"group_ids": "1"}),
+        ("wall.get", {"owner_id": -1, "count": 1}),
+        ("wall.getComments", {"owner_id": -1, "post_id": 10, "count": 100}),
+    ]
