@@ -1,0 +1,261 @@
+package github
+
+import (
+	"context"
+	"errors"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/domain"
+)
+
+func TestParseIssueJSON(t *testing.T) {
+	t.Parallel()
+
+	issue, err := parseIssueJSON([]byte(`{"number":108,"title":"Add adapter","state":"OPEN","headRefName":"feature"}`))
+	if err != nil {
+		t.Fatalf("parseIssueJSON returned error: %v", err)
+	}
+
+	want := domain.Issue{
+		ID:     domain.TaskID(108),
+		Title:  "Add adapter",
+		State:  domain.IssueStateOpen,
+		Branch: domain.BranchName("feature"),
+	}
+	if !reflect.DeepEqual(issue, want) {
+		t.Fatalf("issue = %#v, want %#v", issue, want)
+	}
+}
+
+func TestParsePullRequestsJSON(t *testing.T) {
+	t.Parallel()
+
+	prs, err := parsePullRequestsJSON([]byte(`[
+		{"number":7,"title":"Open PR","state":"OPEN","isDraft":true,"mergedAt":null},
+		{"number":8,"title":"Merged PR","state":"MERGED","isDraft":false,"mergedAt":"2026-05-22T00:00:00Z"}
+	]`))
+	if err != nil {
+		t.Fatalf("parsePullRequestsJSON returned error: %v", err)
+	}
+
+	want := []domain.PullRequest{
+		{
+			Number: domain.TaskID(7),
+			Title:  "Open PR",
+			State:  domain.PullRequestStateDraft,
+			Draft:  true,
+			Merged: false,
+		},
+		{
+			Number: domain.TaskID(8),
+			Title:  "Merged PR",
+			State:  domain.PullRequestStateMerged,
+			Draft:  false,
+			Merged: true,
+		},
+	}
+	if !reflect.DeepEqual(prs, want) {
+		t.Fatalf("prs = %#v, want %#v", prs, want)
+	}
+}
+
+func TestCommandArguments(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		run  func(*ShellAdapter) error
+		args []string
+	}{
+		{
+			name: "get issue",
+			run: func(adapter *ShellAdapter) error {
+				_, err := adapter.GetIssue(context.Background(), 108)
+				return err
+			},
+			args: []string{"issue", "view", "108", "--json", "number,title,state,headRefName"},
+		},
+		{
+			name: "close issue with comment",
+			run: func(adapter *ShellAdapter) error {
+				return adapter.CloseIssue(context.Background(), 108, "Done")
+			},
+			args: []string{"issue", "close", "108", "--comment", "Done"},
+		},
+		{
+			name: "list pull requests",
+			run: func(adapter *ShellAdapter) error {
+				_, err := adapter.ListPullRequests(context.Background(), PullRequestFilter{
+					State:  "open",
+					Head:   "feature",
+					Base:   "main",
+					Search: "issue 108",
+				})
+				return err
+			},
+			args: []string{"pr", "list", "--state", "open", "--head", "feature", "--base", "main", "--search", "issue 108", "--json", "number,title,state,isDraft,mergedAt"},
+		},
+		{
+			name: "merge pull request",
+			run: func(adapter *ShellAdapter) error {
+				return adapter.MergePullRequest(context.Background(), 7, MergePullRequestInput{
+					Method:       "squash",
+					DeleteBranch: true,
+					Auto:         true,
+				})
+			},
+			args: []string{"pr", "merge", "7", "--squash", "--delete-branch", "--auto"},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var got []string
+			adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
+				got = append([]string(nil), args...)
+				return commandResult{stdout: commandOutputFor(args)}, nil
+			})
+
+			if err := tt.run(adapter); err != nil {
+				t.Fatalf("run returned error: %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.args) {
+				t.Fatalf("args = %#v, want %#v", got, tt.args)
+			}
+		})
+	}
+}
+
+func TestCreateIssueRunsCreateThenView(t *testing.T) {
+	t.Parallel()
+
+	var got [][]string
+	adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
+		got = append(got, append([]string(nil), args...))
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "create" {
+			return commandResult{stdout: "https://github.com/andr-235/parseVK/issues/108"}, nil
+		}
+
+		return commandResult{stdout: `{"number":108,"title":"Issue","state":"OPEN","headRefName":"feature"}`}, nil
+	})
+
+	issue, err := adapter.CreateIssue(context.Background(), CreateIssueInput{
+		Title:  "Title",
+		Body:   "Body",
+		Labels: []string{"go", "cli"},
+	})
+	if err != nil {
+		t.Fatalf("CreateIssue returned error: %v", err)
+	}
+	if issue.ID != domain.TaskID(108) {
+		t.Fatalf("issue ID = %d, want 108", issue.ID)
+	}
+
+	want := [][]string{
+		{"issue", "create", "--title", "Title", "--body", "Body", "--label", "go", "--label", "cli"},
+		{"issue", "view", "108", "--json", "number,title,state,headRefName"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("args = %#v, want %#v", got, want)
+	}
+}
+
+func TestCreatePullRequestRunsCreateThenView(t *testing.T) {
+	t.Parallel()
+
+	var got [][]string
+	adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
+		got = append(got, append([]string(nil), args...))
+		if len(args) >= 2 && args[0] == "pr" && args[1] == "create" {
+			return commandResult{stdout: "https://github.com/andr-235/parseVK/pull/7"}, nil
+		}
+
+		return commandResult{stdout: `{"number":7,"title":"PR","state":"OPEN","isDraft":true,"mergedAt":null}`}, nil
+	})
+
+	pr, err := adapter.CreatePullRequest(context.Background(), CreatePullRequestInput{
+		Title: "Title",
+		Body:  "Body",
+		Head:  "feature",
+		Base:  "main",
+		Draft: true,
+	})
+	if err != nil {
+		t.Fatalf("CreatePullRequest returned error: %v", err)
+	}
+	if pr.Number != domain.TaskID(7) {
+		t.Fatalf("PR number = %d, want 7", pr.Number)
+	}
+
+	want := [][]string{
+		{"pr", "create", "--title", "Title", "--body", "Body", "--head", "feature", "--base", "main", "--draft"},
+		{"pr", "view", "7", "--json", "number,title,state,isDraft,mergedAt"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("args = %#v, want %#v", got, want)
+	}
+}
+
+func TestCommandErrorsIncludeOperationArgsExitCodeAndOutput(t *testing.T) {
+	t.Parallel()
+
+	adapter := newShellAdapterWithRunner(func(context.Context, string, ...string) (commandResult, error) {
+		return commandResult{stdout: "stdout text", stderr: "stderr text"}, fakeExitError{code: 2}
+	})
+
+	_, err := adapter.GetIssue(context.Background(), 108)
+	if err == nil {
+		t.Fatalf("expected command error")
+	}
+
+	message := err.Error()
+	for _, want := range []string{"get issue", "issue view 108", "exit code 2", "stdout text", "stderr text"} {
+		if !strings.Contains(message, want) {
+			t.Fatalf("error = %q, want it to contain %q", message, want)
+		}
+	}
+}
+
+func TestProjectMethodsReturnNotImplemented(t *testing.T) {
+	t.Parallel()
+
+	adapter := newShellAdapterWithRunner(func(context.Context, string, ...string) (commandResult, error) {
+		t.Fatal("runner must not be called by project stubs")
+		return commandResult{}, nil
+	})
+
+	if _, err := adapter.GetProjectItem(context.Background(), 108); !errors.Is(err, ErrProjectNotImplemented) {
+		t.Fatalf("GetProjectItem error = %v, want ErrProjectNotImplemented", err)
+	}
+	if err := adapter.SetProjectStatus(context.Background(), 108, domain.ProjectStatusReview); !errors.Is(err, ErrProjectNotImplemented) {
+		t.Fatalf("SetProjectStatus error = %v, want ErrProjectNotImplemented", err)
+	}
+}
+
+type fakeExitError struct {
+	code int
+}
+
+func (err fakeExitError) Error() string {
+	return "exit status"
+}
+
+func (err fakeExitError) ExitCode() int {
+	return err.code
+}
+
+func commandOutputFor(args []string) string {
+	if len(args) >= 2 && args[0] == "pr" && (args[1] == "list" || args[1] == "create") {
+		if args[1] == "list" {
+			return `[{"number":7,"title":"PR","state":"OPEN","isDraft":false,"mergedAt":null}]`
+		}
+		return `{"number":7,"title":"PR","state":"OPEN","isDraft":false,"mergedAt":null}`
+	}
+
+	return `{"number":108,"title":"Issue","state":"OPEN","headRefName":"feature"}`
+}
