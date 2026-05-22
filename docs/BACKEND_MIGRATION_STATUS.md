@@ -13,6 +13,12 @@ explicitly switched off.
 - `fallback` - frontend still uses NestJS.
 - `not-started` - no new FastAPI domain exists yet.
 
+## Frontend Public Paths
+* **Auth**: Routed through FastAPI API-Gateway `/api/v1/auth/*`.
+* **Tasks**: Routed through FastAPI API-Gateway `/api/v1/tasks/*` (except some websockets).
+* **Content Reads (basic)**: Routed through FastAPI API-Gateway `/api/v1/content/*` for unfiltered `comments`, `authors`, and `groups`.
+* **All other endpoints**: Routed through the old NestJS fallback `/api/v1/*` implicitly.
+
 ## Endpoint Map
 
 | Old NestJS endpoint | New service / endpoint | Status | Remaining work |
