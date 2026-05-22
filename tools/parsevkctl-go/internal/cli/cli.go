@@ -1,11 +1,16 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/commands"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/config"
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/git"
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/github"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/version"
 )
 
@@ -38,11 +43,140 @@ func Run(args []string, stdout io.Writer, stderr io.Writer) int {
 	case "config":
 		return runConfig(rest[1:], opts, stdout, stderr)
 
+	case "doctor":
+		return runDoctor(opts, stdout, stderr)
+
+	case "task":
+		return runTask(rest[1:], opts, stdout, stderr)
+
 	default:
 		fmt.Fprintf(stderr, "Error: unknown command %q\n\n", rest[0])
 		printHelp(stderr)
 		return 2
 	}
+}
+
+func runDoctor(opts options, stdout io.Writer, stderr io.Writer) int {
+	validation := config.ValidateFile(opts.configPath)
+	cfg := config.Config{}
+	if validation.Valid {
+		loaded, err := config.Load(validation.Path)
+		if err != nil {
+			validation.Valid = false
+			validation.Errors = []string{err.Error()}
+		} else {
+			cfg = loaded
+		}
+	}
+
+	return commands.RunDoctorCommand(context.Background(), commands.DoctorRunInput{
+		DoctorInput: commands.DoctorInput{
+			ConfigValidation: validation,
+			Config:           cfg,
+			Git:              git.NewShellAdapter(),
+			GitHub:           github.NewShellAdapter(),
+		},
+		JSON:   opts.jsonOutput,
+		Stdout: stdout,
+		Stderr: stderr,
+	})
+}
+
+func runTask(args []string, opts options, stdout io.Writer, stderr io.Writer) int {
+	if len(args) == 0 {
+		fmt.Fprintln(stderr, "Error: task command requires a subcommand")
+		fmt.Fprintln(stderr, "Usage: parsevkctl task status <issue> [--json]")
+		fmt.Fprintln(stderr, "       parsevkctl task sync <issue> [--json]")
+		return 2
+	}
+
+	switch args[0] {
+	case "status":
+		if len(args) != 2 {
+			fmt.Fprintln(stderr, "Error: task status requires an issue number")
+			return 2
+		}
+		issueNumber, err := strconv.Atoi(args[1])
+		if err != nil || issueNumber <= 0 {
+			fmt.Fprintln(stderr, "Error: issue number must be a positive integer")
+			return 2
+		}
+		cfg, ok := loadCommandConfig(opts, stderr)
+		if !ok {
+			return 1
+		}
+		return commands.RunTaskStatus(context.Background(), commands.TaskStatusInput{
+			IssueNumber: issueNumber,
+			Config:      cfg,
+			Git:         git.NewShellAdapter(),
+			GitHub:      github.NewShellAdapter(),
+			JSON:        opts.jsonOutput,
+			Stdout:      stdout,
+			Stderr:      stderr,
+		})
+	case "sync":
+		if len(args) < 2 || len(args) > 3 {
+			fmt.Fprintln(stderr, "Error: task sync requires an issue number")
+			return 2
+		}
+		issueNumber, err := strconv.Atoi(args[1])
+		if err != nil || issueNumber <= 0 {
+			fmt.Fprintln(stderr, "Error: issue number must be a positive integer")
+			return 2
+		}
+		apply := false
+		if len(args) == 3 {
+			if args[2] != "--apply" {
+				fmt.Fprintf(stderr, "Error: unknown task sync flag %q\n", args[2])
+				return 2
+			}
+			apply = true
+		}
+		if apply {
+			return commands.RunTaskSync(context.Background(), commands.SyncRunInput{
+				Apply:  true,
+				Stdout: stdout,
+				Stderr: stderr,
+			})
+		}
+		cfg, ok := loadCommandConfig(opts, stderr)
+		if !ok {
+			return 1
+		}
+		return commands.RunTaskSync(context.Background(), commands.SyncRunInput{
+			SyncInput: commands.SyncInput{
+				IssueNumber: issueNumber,
+				Config:      cfg,
+				Git:         git.NewShellAdapter(),
+				GitHub:      github.NewShellAdapter(),
+			},
+			Apply:  apply,
+			JSON:   opts.jsonOutput,
+			Stdout: stdout,
+			Stderr: stderr,
+		})
+	default:
+		fmt.Fprintf(stderr, "Error: unknown task subcommand %q\n", args[0])
+		return 2
+	}
+}
+
+func loadCommandConfig(opts options, stderr io.Writer) (config.Config, bool) {
+	validation := config.ValidateFile(opts.configPath)
+	if !validation.Valid {
+		fmt.Fprintln(stderr, "Error: config is invalid")
+		for _, err := range validation.Errors {
+			fmt.Fprintln(stderr, "-", err)
+		}
+		return config.Config{}, false
+	}
+
+	cfg, err := config.Load(validation.Path)
+	if err != nil {
+		fmt.Fprintln(stderr, "Error: failed to load config:", err)
+		return config.Config{}, false
+	}
+	return cfg, true
 }
 
 func parseGlobalOptions(args []string) (options, []string, error) {
@@ -125,9 +259,15 @@ Usage:
   parsevkctl --help
   parsevkctl --version
   parsevkctl config validate [--config <path>] [--json]
+  parsevkctl doctor [--config <path>] [--json]
+  parsevkctl task status <issue> [--config <path>] [--json]
+  parsevkctl task sync <issue> [--config <path>] [--json]
 
 Commands:
   config validate   Validate parsevkctl config without GitHub or git side effects
+  doctor            Check local config, git and GitHub read access
+  task status       Show read-only task state summary
+  task sync         Preview task state drift and suggested fixes
 
 Global flags:
   --config <path>   Path to config.json

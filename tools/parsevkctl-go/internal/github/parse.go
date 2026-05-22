@@ -14,6 +14,7 @@ type issueJSON struct {
 	Number      int    `json:"number"`
 	Title       string `json:"title"`
 	State       string `json:"state"`
+	URL         string `json:"url"`
 	HeadRefName string `json:"headRefName"`
 	Labels      []struct {
 		Name string `json:"name"`
@@ -26,6 +27,9 @@ type pullRequestJSON struct {
 	State    string  `json:"state"`
 	IsDraft  bool    `json:"isDraft"`
 	MergedAt *string `json:"mergedAt"`
+	URL      string  `json:"url"`
+	Base     string  `json:"baseRefName"`
+	Head     string  `json:"headRefName"`
 }
 
 func parseIssueJSON(data []byte) (domain.Issue, error) {
@@ -65,6 +69,7 @@ func issueFromJSON(raw issueJSON) domain.Issue {
 		ID:     domain.TaskID(raw.Number),
 		Title:  raw.Title,
 		State:  normalizeIssueState(raw.State),
+		URL:    raw.URL,
 		Branch: domain.BranchName(raw.HeadRefName),
 		Labels: issueLabelsFromJSON(raw.Labels),
 	}
@@ -95,6 +100,9 @@ func pullRequestFromJSON(raw pullRequestJSON) domain.PullRequest {
 		State:  state,
 		Draft:  raw.IsDraft,
 		Merged: merged,
+		URL:    raw.URL,
+		Base:   raw.Base,
+		Head:   raw.Head,
 	}
 }
 

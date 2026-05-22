@@ -37,3 +37,33 @@ Task branches use this format:
 `<type>/issue-<number>-<slug>`
 
 Supported branch types: `feat`, `fix`, `docs`, `refactor`, `test`, `ci`, `chore`, `perf`, `build`, `hotfix`.
+
+## Read-only commands
+
+The Go CLI currently exposes the first user-facing read-only task commands:
+
+```powershell
+go run ./cmd/parsevkctl doctor
+go run ./cmd/parsevkctl task status 112
+go run ./cmd/parsevkctl task sync 112
+```
+
+`parsevkctl doctor` checks local configuration, git readability, GitHub CLI read access and Project status availability where the adapter supports it. Human output uses `OK`, `WARN` and `FAIL` lines, and critical failures return a non-zero exit code.
+
+`parsevkctl task status <issue>` shows the issue, Project status, linked pull request, current branch, expected task branch, working tree state, derived lifecycle state and suggested next command.
+
+`parsevkctl task sync <issue>` is preview-only in this stage. It shows current state, drift items and suggested safe fixes, but does not update Project status, close issues, create branches, create PRs or merge anything.
+
+Machine-readable output is available through the global `--json` flag:
+
+```powershell
+go run ./cmd/parsevkctl --json doctor
+go run ./cmd/parsevkctl --json task status 112
+go run ./cmd/parsevkctl --json task sync 112
+```
+
+`task sync --apply` is intentionally not implemented yet and returns:
+
+```text
+task sync --apply is not implemented in Go yet; this command is preview-only
+```
