@@ -53,7 +53,8 @@ COPY deploy/backend-entrypoint.sh /app/entrypoint.sh
 COPY deploy/run-migrations.sh /app/run-migrations.sh
 COPY deploy/backend-healthcheck.mjs /app/healthcheck.mjs
 
-RUN chmod +x /app/entrypoint.sh /app/run-migrations.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh /app/run-migrations.sh \
+    && chmod +x /app/entrypoint.sh /app/run-migrations.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 EXPOSE 3000

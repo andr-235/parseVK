@@ -5,6 +5,9 @@ testpaths = [
   "libs/py/common/tests",
   "services/api-gateway/tests",
   "services/identity-service/tests",
+  "services/tasks-service/tests",
+  "services/vk-service/tests",
+  "services/content-service/tests",
 ]
 pythonpath = [
   "libs/py/common",
