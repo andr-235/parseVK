@@ -18,7 +18,7 @@ function GroupsPage() {
     setSearchTerm,
     handleAddGroup,
     handleUrlChange,
-    handleFileUpload,
+    handleFilesSelect,
     handleDeleteAllGroups,
     handleRegionSearch,
     handleAddRegionGroup,
@@ -36,7 +36,7 @@ function GroupsPage() {
           url={url}
           onUrlChange={handleUrlChange}
           onAdd={handleAddGroup}
-          onFileUpload={handleFileUpload}
+          onFilesSelect={handleFilesSelect}
         />
       </div>
 

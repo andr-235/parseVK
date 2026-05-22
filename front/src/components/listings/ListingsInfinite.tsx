@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
+import { useIntersectionObserver } from '@/hooks/common/useIntersectionObserver'
 import {
-  useInfiniteListings,
+  useInfiniteScroll as useInfiniteListings,
   type UseInfiniteFetcher,
-} from '@/hooks/listings/useInfiniteListings'
+} from '@/hooks/common/useInfiniteScroll'
 import type { IListing } from '@/types/common'
 import { ListingsTable } from './ListingsTable'
 import type {
@@ -48,7 +49,6 @@ export function ListingsInfinite({
   onLoadingChange,
 }: ListingsInfiniteProps) {
   const sentinelRef = useRef<HTMLDivElement | null>(null)
-  const observerRef = useRef<IntersectionObserver | null>(null)
   const [observerAvailable, setObserverAvailable] = useState(true)
 
   const { items, loading, initialLoading, error, hasMore, meta, loadMore, reset } =
@@ -76,47 +76,29 @@ export function ListingsInfinite({
   }, [loading, onLoadingChange])
 
   useEffect(() => {
-    if (!observerAvailable || !hasMore) {
-      observerRef.current?.disconnect()
-      return
-    }
-
     if (typeof IntersectionObserver === 'undefined') {
       setObserverAvailable(false)
-      return
     }
+  }, [])
 
-    const sentinel = sentinelRef.current
-    if (!sentinel) return
-
-    try {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          const [entry] = entries
-          if (entry?.isIntersecting && !loading) {
-            handleLoadMore().catch((err) => {
-              if (import.meta.env.DEV) {
-                console.error('Failed to load more listings:', err)
-              }
-            })
-          }
-        },
-        { root: null, rootMargin: '0px 0px 400px 0px', threshold: 0 }
-      )
-
-      observer.observe(sentinel)
-      observerRef.current = observer
-    } catch (observerError) {
-      console.error('IntersectionObserver init error', observerError)
-      setObserverAvailable(false)
+  useIntersectionObserver(
+    sentinelRef,
+    () => {
+      handleLoadMore().catch((err) => {
+        if (import.meta.env.DEV) {
+          console.error('Failed to load more listings:', err)
+        }
+      })
+    },
+    {
+      enabled: observerAvailable && hasMore && !loading,
+      rootMargin: '0px 0px 400px 0px',
+      threshold: 0,
     }
-
-    return () => observerRef.current?.disconnect()
-  }, [handleLoadMore, hasMore, loading, observerAvailable])
+  )
 
   useEffect(() => {
     return () => {
-      observerRef.current?.disconnect()
       reset()
     }
   }, [reset])

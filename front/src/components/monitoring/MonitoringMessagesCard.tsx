@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useIntersectionObserver } from '@/hooks/common/useIntersectionObserver'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -141,27 +142,19 @@ export function MonitoringMessagesCard({
     return () => clearTimeout(timeoutId)
   }, [hasMore, isLoading, isLoadingMore, isRefreshing, messages.length])
 
-  useEffect(() => {
-    if (isLoading || isRefreshing || isLoadingMore || !hasMore) return
-
-    const target = observerTargetRef.current
-    if (!target) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMoreRef.current && !isBusyRef.current) {
-          onLoadMoreRef.current()
-        }
-      },
-      { threshold: 0.1, rootMargin: '200px' }
-    )
-
-    observer.observe(target)
-
-    return () => {
-      observer.disconnect()
+  useIntersectionObserver(
+    observerTargetRef,
+    () => {
+      if (hasMoreRef.current && !isBusyRef.current) {
+        onLoadMoreRef.current()
+      }
+    },
+    {
+      enabled: hasMore && !isLoading && !isRefreshing && !isLoadingMore,
+      threshold: 0.1,
+      rootMargin: '200px',
     }
-  }, [hasMore, isLoading, isLoadingMore, isRefreshing])
+  )
 
   useEffect(() => {
     if (messages.length === 0) {

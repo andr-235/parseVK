@@ -28,7 +28,7 @@ export type UseInfiniteFetcher<T, M = unknown, P = Record<string, unknown>> = (
   params: UseInfiniteFetcherParams<P>
 ) => Promise<FetchResponse<T, M>>
 
-interface UseInfiniteListingsOptions<T, M = unknown, P = Record<string, unknown>> {
+interface UseInfiniteScrollOptions<T, M = unknown, P = Record<string, unknown>> {
   fetcher: UseInfiniteFetcher<T, M, P>
   limit?: number
   params?: P
@@ -36,7 +36,7 @@ interface UseInfiniteListingsOptions<T, M = unknown, P = Record<string, unknown>
   dependencies?: ReadonlyArray<unknown>
 }
 
-interface UseInfiniteListingsResult<T, M = unknown> {
+interface UseInfiniteScrollResult<T, M = unknown> {
   items: T[]
   loading: boolean
   initialLoading: boolean
@@ -52,9 +52,9 @@ type Mode = 'cursor' | 'page' | null
 const isCursorResponse = <T, M>(response: FetchResponse<T, M>): response is CursorResponse<T, M> =>
   'nextCursor' in response
 
-export function useInfiniteListings<T, M = unknown, P = Record<string, unknown>>(
-  options: UseInfiniteListingsOptions<T, M, P>
-): UseInfiniteListingsResult<T, M> {
+export function useInfiniteScroll<T, M = unknown, P = Record<string, unknown>>(
+  options: UseInfiniteScrollOptions<T, M, P>
+): UseInfiniteScrollResult<T, M> {
   const { fetcher, limit = 20, params, enabled = true, dependencies = [] } = options
 
   const [items, setItems] = useState<T[]>([])
@@ -173,7 +173,7 @@ export function useInfiniteListings<T, M = unknown, P = Record<string, unknown>>
     const schedule = requestAnimationFrame(() => {
       loadMore().catch((error) => {
         if (import.meta.env.DEV) {
-          console.error('Failed to load more listings:', error)
+          console.error('Failed to load more items:', error)
         }
       })
     })

@@ -1,9 +1,10 @@
-import { useState, useRef, type ChangeEvent } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { listingsService } from '@/api/listings/listings.api'
 import { Spinner } from '@/components/ui/spinner'
 import { Upload, FileJson } from 'lucide-react'
+import FileUpload from '@/components/common/FileUpload'
 
 interface ImportListingsModalProps {
   isOpen: boolean
@@ -18,16 +19,11 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
   if (!isOpen) return null
 
   const resolvedUploadSource = uploadSourceMode === 'custom' ? customSource : uploadSourceMode
 
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
+  const handleImportFile = async (file: File) => {
     setIsUploading(true)
     setError(null)
     try {
@@ -43,15 +39,7 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
       setError('Не удалось импортировать объявления. Проверьте формат файла.')
     } finally {
       setIsUploading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
     }
-  }
-
-  const handleUploadClick = () => {
-    if (isUploading) return
-    fileInputRef.current?.click()
   }
 
   return (
@@ -157,30 +145,15 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
             >
               Отмена
             </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
+            <FileUpload
               accept="application/json,.json"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <Button
-              onClick={handleUploadClick}
+              onFilesSelect={([file]) => handleImportFile(file)}
               disabled={isUploading}
-              className="group relative h-11 overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-              <span className="relative flex items-center gap-2">
-                {isUploading ? (
-                  <>
-                    <Spinner className="size-4" />
-                    Загрузка...
-                  </>
-                ) : (
-                  'Выбрать файл'
-                )}
-              </span>
-            </Button>
+              isLoading={isUploading}
+              buttonText={isUploading ? 'Загрузка...' : 'Выбрать файл'}
+              buttonClassName="group relative h-11 overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              uploadIcon={isUploading ? <Spinner className="size-4" /> : <></>}
+            />
           </div>
         </div>
 

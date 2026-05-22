@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useKeywordsStore } from '@/store/keywords'
 // Использование services для одноразовой операции (пересчет совпадений)
@@ -66,17 +66,15 @@ export const useKeywordsViewModel = () => {
     [updateKeywordCategory]
   )
 
-  const handleFileUpload = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
+  const handleFilesSelect = useCallback(
+    async (files: File[]) => {
+      const file = files[0]
       if (!file) return
 
       try {
         await loadFromFile(file)
       } catch (error) {
         console.error('Failed to upload keywords from file', error)
-      } finally {
-        event.target.value = ''
       }
     },
     [loadFromFile]
@@ -130,8 +128,8 @@ export const useKeywordsViewModel = () => {
 
     return keywords.filter(
       (k) =>
-        k.word.toLowerCase().includes(normalizedSearch) ||
-        (k.category && k.category.toLowerCase().includes(normalizedSearch))
+          k.word.toLowerCase().includes(normalizedSearch) ||
+          (k.category && k.category.toLowerCase().includes(normalizedSearch))
     )
   }, [keywords, searchTerm])
 
@@ -256,7 +254,7 @@ export const useKeywordsViewModel = () => {
     handleAddKeyword,
     handleAddPhrase,
     handleUpdateKeywordCategory,
-    handleFileUpload,
+    handleFilesSelect,
     handleRecalculate,
     handleRebuildForms,
     handleManageForms,

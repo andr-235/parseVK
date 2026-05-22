@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useIntersectionObserver } from '@/hooks/common/useIntersectionObserver'
 import { useGroupsStore } from '@/store/groups'
 import type { IRegionGroupSearchItem } from '@/types/common'
 
@@ -52,35 +53,20 @@ export const useGroupsViewModel = () => {
     void fetchGroups({ reset: true })
   }, [fetchGroups, isLoading, page])
 
-  useEffect(() => {
-    const target = loadMoreRef.current
-    if (!target || !hasMore) {
-      return
+  useIntersectionObserver(
+    loadMoreRef,
+    () => {
+      void loadMoreGroups().catch((error) => {
+        if (import.meta.env.DEV) {
+          console.error('Failed to load more groups:', error)
+        }
+      })
+    },
+    {
+      enabled: hasMore && !isLoading && !isLoadingMore,
+      threshold: 0.1,
     }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting || isLoading || isLoadingMore) {
-            return
-          }
-
-          void loadMoreGroups().catch((error) => {
-            if (import.meta.env.DEV) {
-              console.error('Failed to load more groups:', error)
-            }
-          })
-        })
-      },
-      { root: null, threshold: 0.1 }
-    )
-
-    observer.observe(target)
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [hasMore, isLoading, isLoadingMore, loadMoreGroups])
+  )
 
   const handleAddGroup = useCallback(async () => {
     if (await addGroup(url)) {
@@ -92,9 +78,9 @@ export const useGroupsViewModel = () => {
     setUrl(target.value)
   }, [])
 
-  const handleFileUpload = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
+  const handleFilesSelect = useCallback(
+    async (files: File[]) => {
+      const file = files[0]
       if (file) {
         await loadFromFile(file)
       }
@@ -165,7 +151,7 @@ export const useGroupsViewModel = () => {
     setSearchTerm,
     handleAddGroup,
     handleUrlChange,
-    handleFileUpload,
+    handleFilesSelect,
     handleDeleteAllGroups,
     handleRegionSearch,
     handleAddRegionGroup,

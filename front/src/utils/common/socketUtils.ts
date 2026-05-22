@@ -1,3 +1,5 @@
+import { io, type Socket, type ManagerOptions, type SocketOptions } from 'socket.io-client'
+
 export const resolveSocketBaseUrl = (): string | null => {
   const raw = import.meta.env.VITE_API_WS_URL
   const trimmed = typeof raw === 'string' ? raw.trim() : ''
@@ -36,4 +38,22 @@ export const normalizeSocketBase = (url: string): string => {
   } while (trimmed !== previous)
 
   return trimmed
+}
+
+export const createNamespaceSocket = (
+  namespace: string,
+  options?: Partial<ManagerOptions & SocketOptions>
+): Socket | null => {
+  const baseUrl = resolveSocketBaseUrl()
+  if (!baseUrl) {
+    return null
+  }
+  const normalizedBase = normalizeSocketBase(baseUrl)
+  const prefix = namespace.startsWith('/') ? '' : '/'
+  const namespaceUrl = `${normalizedBase}${prefix}${namespace}`
+
+  if (options) {
+    return io(namespaceUrl, options)
+  }
+  return io(namespaceUrl)
 }

@@ -29,7 +29,7 @@ function KeywordsPage() {
     handleAddKeyword,
     handleAddPhrase,
     handleUpdateKeywordCategory,
-    handleFileUpload,
+    handleFilesSelect,
     handleRecalculate,
     handleRebuildForms,
     handleManageForms,
@@ -71,7 +71,7 @@ function KeywordsPage() {
           onAddPhrase={handleAddPhrase}
           onRecalculate={handleRecalculate}
           onRebuildForms={handleRebuildForms}
-          onFileUpload={handleFileUpload}
+          onFilesSelect={handleFilesSelect}
         />
       </div>
 

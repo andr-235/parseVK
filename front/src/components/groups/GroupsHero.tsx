@@ -5,10 +5,10 @@ interface GroupsHeroProps {
   url: string
   onUrlChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onAdd: () => void
-  onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onFilesSelect: (files: File[]) => void
 }
 
-export const GroupsHero = ({ url, onUrlChange, onAdd, onFileUpload }: GroupsHeroProps) => {
+export const GroupsHero = ({ url, onUrlChange, onAdd, onFilesSelect }: GroupsHeroProps) => {
   return (
     <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
       <div className="space-y-2.5">
@@ -25,7 +25,7 @@ export const GroupsHero = ({ url, onUrlChange, onAdd, onFileUpload }: GroupsHero
 
       <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
         <GroupInput url={url} onUrlChange={onUrlChange} onAdd={onAdd} />
-        <FileUpload onUpload={onFileUpload} buttonText="Импорт" className="shrink-0" />
+        <FileUpload onFilesSelect={onFilesSelect} buttonText="Импорт" className="shrink-0" />
       </div>
     </div>
   )

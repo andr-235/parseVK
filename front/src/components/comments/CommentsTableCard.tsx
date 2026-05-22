@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useRef } from 'react'
+import { useIntersectionObserver } from '@/hooks/common/useIntersectionObserver'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -122,25 +123,19 @@ const CommentsTableCard = memo(function CommentsTableCard({
     return () => clearTimeout(timeoutId)
   }, [isLoading, isLoadingMore, hasMore, hasComments])
 
-  useEffect(() => {
-    const target = observerTargetRef.current
-    if (!target) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMoreRef.current && !isLoadingMoreRef.current) {
-          onLoadMoreRef.current()
-        }
-      },
-      { threshold: 0.1, rootMargin: '200px' }
-    )
-
-    observer.observe(target)
-
-    return () => {
-      observer.disconnect()
+  useIntersectionObserver(
+    observerTargetRef,
+    () => {
+      if (hasMoreRef.current && !isLoadingMoreRef.current) {
+        onLoadMoreRef.current()
+      }
+    },
+    {
+      enabled: hasComments && hasMore,
+      threshold: 0.1,
+      rootMargin: '200px',
     }
-  }, [hasComments, hasMore])
+  )
 
   // Memoized render function (rerender optimization)
   const renderCommentsList = useCallback(

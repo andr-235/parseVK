@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import type { IListing } from '@/types/common'
-import type { UseInfiniteFetcher } from '@/hooks/listings/useInfiniteListings'
+import type { UseInfiniteFetcher } from '@/hooks/common/useInfiniteScroll'
 // Использование services для создания fetcher функции для useInfiniteListings
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { listingsService } from '@/api/listings/listings.api'

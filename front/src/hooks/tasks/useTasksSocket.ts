@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
-import { io, type Socket } from 'socket.io-client'
+import { type Socket } from 'socket.io-client'
 import { useTasksStore } from '@/store/tasks'
 import type { TaskStatsInfo, TaskStatus } from '@/store/tasks'
 import { normalizeId, rebuildTaskList, toTaskKey } from '@/store/tasks'
-import { resolveSocketBaseUrl, normalizeSocketBase } from '@/utils/common'
+import { createNamespaceSocket } from '@/utils/common'
 
 export type GatewayTaskStatus = 'pending' | 'running' | 'done' | 'failed'
 
@@ -234,8 +234,12 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
       return
     }
 
-    const baseUrl = resolveSocketBaseUrl()
-    if (!baseUrl) {
+    const socket = createNamespaceSocket('tasks') as Socket<
+      TaskServerEvents,
+      TaskClientEvents
+    > | null
+
+    if (!socket) {
       if (import.meta.env.DEV) {
         console.warn(
           '[useTasksSocket] VITE_API_WS_URL is not defined, skipping websocket connection'
@@ -244,13 +248,6 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
       onConnectError?.()
       return
     }
-
-    const normalizedBase = normalizeSocketBase(baseUrl)
-    const namespaceUrl = normalizedBase.endsWith('/')
-      ? `${normalizedBase}tasks`
-      : `${normalizedBase}/tasks`
-
-    const socket: Socket<TaskServerEvents, TaskClientEvents> = io(namespaceUrl)
 
     socket.on('connect', () => {
       useTasksStore.setState((state) => {

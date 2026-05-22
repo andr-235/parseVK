@@ -2,7 +2,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus, RefreshCw } from 'lucide-react'
 import FileUpload from '@/components/common/FileUpload'
-import type { ChangeEvent } from 'react'
 
 interface KeywordsFormProps {
   keywordValue: string
@@ -18,7 +17,7 @@ interface KeywordsFormProps {
   onAddPhrase: () => void
   onRecalculate: () => void
   onRebuildForms: () => void
-  onFileUpload: (event: ChangeEvent<HTMLInputElement>) => void
+  onFilesSelect: (files: File[]) => void
 }
 
 export const KeywordsForm = ({
@@ -35,7 +34,7 @@ export const KeywordsForm = ({
   onAddPhrase,
   onRecalculate,
   onRebuildForms,
-  onFileUpload,
+  onFilesSelect,
 }: KeywordsFormProps) => {
   const isKeywordDisabled = keywordValue.trim().length === 0
   const isPhraseDisabled = phraseValue.trim().length === 0
@@ -91,7 +90,7 @@ export const KeywordsForm = ({
             <RefreshCw className={`mr-2 size-4 ${isRecalculating ? 'animate-spin' : ''}`} />
             Пересчитать
           </Button>
-          <FileUpload onUpload={onFileUpload} buttonText="Импорт" className="flex-1 lg:flex-none" />
+          <FileUpload onFilesSelect={onFilesSelect} buttonText="Импорт" className="flex-1 lg:flex-none" />
         </div>
       </div>
 

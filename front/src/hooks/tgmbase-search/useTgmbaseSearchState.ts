@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
+import { type Socket } from 'socket.io-client'
 import { tgmbaseSearchService } from '@/api/tgmbase-search/tgmbaseSearch.api'
 import { useTgmbaseSearch } from '@/hooks/tgmbase-search/useTgmbaseSearch'
 import type {
@@ -7,7 +7,7 @@ import type {
   TgmbaseSearchProgressEvent,
   TgmbaseSearchResponse,
 } from '@/types/common'
-import { mergeListsById, resolveSocketBaseUrl, normalizeSocketBase } from '@/utils/common'
+import { mergeListsById, createNamespaceSocket } from '@/utils/common'
 
 const DEFAULT_PAGE_SIZE = 20
 const SEARCH_BATCH_SIZE = 200
@@ -54,13 +54,10 @@ export function useTgmbaseSearchState() {
   const connectToSearchProgress = (searchId: string) => {
     socketRef.current?.disconnect()
 
-    const baseUrl = resolveSocketBaseUrl()
-    if (!baseUrl) {
+    const socket = createNamespaceSocket('tgmbase-search')
+    if (!socket) {
       return
     }
-
-    const namespaceUrl = `${normalizeSocketBase(baseUrl)}/tgmbase-search`
-    const socket: Socket = io(namespaceUrl)
     socketRef.current = socket
 
     socket.on('connect', () => {
