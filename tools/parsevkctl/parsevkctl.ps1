@@ -291,6 +291,10 @@ function Cleanup-AfterPr {
         return
     }
 
+    if ([string]::IsNullOrWhiteSpace($DefaultBranch)) {
+        throw "Default branch is not specified for cleanup."
+    }
+
     if ($FeatureBranch -eq $DefaultBranch) {
         Write-Host "Warning: Refusing to delete default branch. Skipping PR cleanup." -ForegroundColor Yellow
         return
@@ -517,9 +521,15 @@ function Open-PullRequest {
 
     $currentBranch = Get-CurrentBranch
 
-    if ($currentBranch -eq $config.defaultBranch) {
-        throw "Refusing to create PR from default branch: $currentBranch"
-    }
+    $prTitle = $issue.title
+    $prBody = @"
+Closes #$IssueNumber
+
+Created via parsevkctl.
+"@
+
+    # Run strict validations before modifying remote state
+    Assert-CanCreatePullRequest -IssueNumber $IssueNumber -PrBody $prBody
 
     Write-Host ("Current branch: " + $currentBranch) -ForegroundColor Cyan
     Write-Host ("Pushing branch to origin...") -ForegroundColor Cyan
@@ -530,13 +540,6 @@ function Open-PullRequest {
         "origin",
         $currentBranch
     )
-
-    $prTitle = $issue.title
-    $prBody = @"
-Closes #$IssueNumber
-
-Created via parsevkctl.
-"@
 
     Write-Host "Creating pull request..." -ForegroundColor Cyan
 
@@ -576,23 +579,22 @@ function Find-PullRequestForIssue {
         "--repo", $config.repo,
         "--state", $PrState,
         "--limit", "100",
-        "--json", "number,title,url,state,body,headRefName,isDraft"
+        "--json", "number,title,url,state,body,headRefName,baseRefName,isDraft,mergeable"
     )
 
     if ($null -eq $prs) {
-        return $null
+        return @()
     }
 
-    $pattern = Get-PrClosingPattern -IssueNumber $IssueNumber
+    $pattern = "(?i)(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+#$IssueNumber\b"
 
     $matched = $prs |
         Where-Object {
             ($_.body -match $pattern) -or
             ($_.title -match "#$IssueNumber\b")
-        } |
-        Select-Object -First 1
+        }
 
-    return $matched
+    return @($matched)
 }
 
 function Show-TaskStatus {
@@ -628,7 +630,11 @@ function Show-TaskStatus {
         }
     }
 
-    $pr = Find-PullRequestForIssue -IssueNumber $IssueNumber -PrState "all"
+    $matchingPrs = Find-PullRequestForIssue -IssueNumber $IssueNumber -PrState "all"
+    $pr = $null
+    if ($matchingPrs.Count -gt 0) {
+        $pr = $matchingPrs[0]
+    }
     $currentBranch = Get-CurrentBranch
     $workingTreeStatus = git status --porcelain
 
@@ -680,18 +686,22 @@ function Merge-Task {
 
     Write-Host ("Finding pull request for issue #" + $IssueNumber + "...") -ForegroundColor Cyan
 
-    $pr = Find-PullRequestForIssue -IssueNumber $IssueNumber
+    $matchingPrs = @(Find-PullRequestForIssue -IssueNumber $IssueNumber -PrState "open")
 
-    if ($null -eq $pr) {
+    if ($matchingPrs.Count -eq 0) {
         throw "Open PR not found for issue #$IssueNumber. PR body must contain: Closes #$IssueNumber"
     }
-
-    if ($pr.isDraft -eq $true) {
-        throw "PR #$($pr.number) is draft. Refusing to merge."
+    if ($matchingPrs.Count -gt 1) {
+        throw "Multiple open PRs found for issue #$IssueNumber: $(($matchingPrs | Select-Object -ExpandProperty number) -join ', '). Exactly one open PR is required."
     }
+
+    $pr = $matchingPrs[0]
 
     Write-Host ("Found PR #" + $pr.number + ": " + $pr.title) -ForegroundColor Green
     Write-Host $pr.url
+
+    # Fail-fast validation (skipping slow CI checks first)
+    Assert-CanMergePullRequest -IssueNumber $IssueNumber -Pr $pr -SkipCIChecks
 
     if ($config.merge.requireChecks -eq $true) {
         Write-Host "Waiting for PR checks..." -ForegroundColor Cyan
@@ -706,6 +716,9 @@ function Merge-Task {
     else {
         Write-Host "Checks are not required by config. Skipping check wait." -ForegroundColor Yellow
     }
+
+    # Full validation (verifying everything including CI checks status)
+    Assert-CanMergePullRequest -IssueNumber $IssueNumber -Pr $pr
 
     $mergeArgs = @(
         "pr", "merge",

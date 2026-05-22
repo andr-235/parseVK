@@ -1,6 +1,11 @@
 $libPath = Join-Path $PSScriptRoot "parsevkctl.lib.ps1"
 . $libPath
 
+function Get-Config {}
+function Get-CurrentBranch {}
+function Assert-GitClean {}
+function Find-PullRequestForIssue {}
+
 $scriptPath = Join-Path $PSScriptRoot "parsevkctl.ps1"
 $scriptContent = Get-Content -LiteralPath $scriptPath -Raw -Encoding UTF8
 $tokens = $null
@@ -464,6 +469,165 @@ Describe "parsevkctl PR closing keyword pattern" {
         "Closes #80" | Should Not Match $pattern
         "Closes 79" | Should Not Match $pattern
         "Close branch #79" | Should Not Match $pattern
+    }
+}
+
+Describe "parsevkctl Get-BranchIssueNumber" {
+    It "extracts issue number from various valid branch names" {
+        Get-BranchIssueNumber -BranchName "feat/issue-77-add-guardrails" | Should Be 77
+        Get-BranchIssueNumber -BranchName "fix/issue-123-some-bug" | Should Be 123
+    }
+
+    It "returns null for branch names without issue number" {
+        Get-BranchIssueNumber -BranchName "main" | Should Be $null
+        Get-BranchIssueNumber -BranchName "feat/77-no-issue-word" | Should Be $null
+    }
+}
+
+Describe "parsevkctl Assert-CanCreatePullRequest" {
+    BeforeEach {
+        Mock Get-Config {
+            return [PSCustomObject]@{
+                repo = "owner/repo"
+                defaultBranch = "main"
+            }
+        }
+        Mock Get-CurrentBranch { return "feat/issue-77-test" }
+        Mock Assert-GitClean {}
+        Mock Get-GitCommitsCount { return 5 }
+        Mock Get-GitUpstream { return $null }
+        Mock Find-PullRequestForIssue { return $null }
+    }
+
+    It "passes for a fully valid state" {
+        { Assert-CanCreatePullRequest -IssueNumber 77 -PrBody "Closes #77" } | Should Not Throw
+    }
+
+    It "throws when current branch is default branch" {
+        Mock Get-CurrentBranch { return "main" }
+        { Assert-CanCreatePullRequest -IssueNumber 77 -PrBody "Closes #77" } | Should Throw "Refusing to create PR from default branch"
+    }
+
+    It "throws when current branch issue number does not match requested issue number" {
+        { Assert-CanCreatePullRequest -IssueNumber 88 -PrBody "Closes #88" } | Should Throw "does not match requested issue number"
+    }
+
+    It "throws when branch name does not match enterprise branch naming regex" {
+        Mock Get-CurrentBranch { return "invalid-branch-name-77" }
+        { Assert-CanCreatePullRequest -IssueNumber 77 -PrBody "Closes #77" } | Should Throw "does not match enterprise branch naming regex"
+    }
+
+    It "throws when working tree is not clean" {
+        Mock Assert-GitClean { throw "Working tree is not clean" }
+        { Assert-CanCreatePullRequest -IssueNumber 77 -PrBody "Closes #77" } | Should Throw "Working tree is not clean"
+    }
+
+    It "throws when branch has 0 commits compared to default branch" {
+        Mock Get-GitCommitsCount { return 0 }
+        { Assert-CanCreatePullRequest -IssueNumber 77 -PrBody "Closes #77" } | Should Throw "has no commits compared to default branch"
+    }
+
+    It "throws when upstream points to different branch" {
+        Mock Get-GitUpstream { return "origin/some-other-branch" }
+        { Assert-CanCreatePullRequest -IssueNumber 77 -PrBody "Closes #77" } | Should Throw "Branch upstream is set to"
+    }
+
+    It "throws when an open PR already exists for the issue" {
+        Mock Find-PullRequestForIssue {
+            return [PSCustomObject]@{ number = 10; url = "https://github.com/pr/10" }
+        }
+        { Assert-CanCreatePullRequest -IssueNumber 77 -PrBody "Closes #77" } | Should Throw "An open pull request already exists"
+    }
+
+    It "throws when PR body does not contain Closes #issue" {
+        { Assert-CanCreatePullRequest -IssueNumber 77 -PrBody "Some description without closing keyword" } | Should Throw "PR body must contain"
+    }
+}
+
+Describe "parsevkctl Assert-CanMergePullRequest" {
+    BeforeEach {
+        Mock Get-Config {
+            return [PSCustomObject]@{
+                repo = "owner/repo"
+                defaultBranch = "main"
+                merge = [PSCustomObject]@{
+                    requireChecks = $true
+                }
+            }
+        }
+        Mock Get-PrChecksStatus {
+            return [PSCustomObject]@{
+                Output = "All checks passed"
+                ExitCode = 0
+            }
+        }
+    }
+
+    $validPr = [PSCustomObject]@{
+        number = 42
+        isDraft = $false
+        baseRefName = "main"
+        headRefName = "feat/issue-77-test"
+        body = "Closes #77"
+        mergeable = "MERGEABLE"
+    }
+
+    It "passes for a fully valid state" {
+        { Assert-CanMergePullRequest -IssueNumber 77 -Pr $validPr } | Should Not Throw
+    }
+
+    It "throws when PR object is null" {
+        { Assert-CanMergePullRequest -IssueNumber 77 -Pr $null } | Should Throw "Pull request object is required"
+    }
+
+    It "throws when PR is draft" {
+        $draftPr = $validPr | Select-Object *
+        $draftPr.isDraft = $true
+        { Assert-CanMergePullRequest -IssueNumber 77 -Pr $draftPr } | Should Throw "is draft. Refusing to merge"
+    }
+
+    It "throws when PR base branch does not match config defaultBranch" {
+        $wrongBasePr = $validPr | Select-Object *
+        $wrongBasePr.baseRefName = "develop"
+        { Assert-CanMergePullRequest -IssueNumber 77 -Pr $wrongBasePr } | Should Throw "does not match configured default branch"
+    }
+
+    It "throws when PR head branch is the default branch" {
+        $wrongHeadPr = $validPr | Select-Object *
+        $wrongHeadPr.headRefName = "main"
+        { Assert-CanMergePullRequest -IssueNumber 77 -Pr $wrongHeadPr } | Should Throw "cannot be the default branch"
+    }
+
+    It "throws when PR body does not contain closing keyword" {
+        $noClosesPr = $validPr | Select-Object *
+        $noClosesPr.body = "Just fixed a bug in #77"
+        { Assert-CanMergePullRequest -IssueNumber 77 -Pr $noClosesPr } | Should Throw "PR body must contain a closing keyword"
+    }
+
+    It "throws when mergeable state is not MERGEABLE" {
+        $conflictedPr = $validPr | Select-Object *
+        $conflictedPr.mergeable = "CONFLICTING"
+        { Assert-CanMergePullRequest -IssueNumber 77 -Pr $conflictedPr } | Should Throw "is not in a mergeable state"
+    }
+
+    It "throws when checks fail and requireChecks is enabled" {
+        Mock Get-PrChecksStatus {
+            return [PSCustomObject]@{
+                Output = "Checks failed!"
+                ExitCode = 1
+            }
+        }
+        { Assert-CanMergePullRequest -IssueNumber 77 -Pr $validPr } | Should Throw "PR checks are not successful"
+    }
+
+    It "does not check status checks if SkipCIChecks switch is provided" {
+        Mock Get-PrChecksStatus {
+            return [PSCustomObject]@{
+                Output = "Checks failed!"
+                ExitCode = 1
+            }
+        }
+        { Assert-CanMergePullRequest -IssueNumber 77 -Pr $validPr -SkipCIChecks } | Should Not Throw
     }
 }
 
