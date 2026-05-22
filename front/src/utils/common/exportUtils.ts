@@ -1,8 +1,5 @@
 import type { BadgeProps } from '@/components/ui/badge'
-import type {
-  ExportJobStatus,
-  JobLogLevel,
-} from '@/types/vkFriendsExport/vkFriendsExport'
+import type { ExportJobStatus, JobLogLevel } from '@/types/common'
 
 export const STATUS_LABELS: Record<ExportJobStatus, string> = {
   PENDING: 'В ожидании',
@@ -28,6 +25,14 @@ export const LOG_LEVEL_CLASSES: Record<JobLogLevel, string> = {
   info: 'text-text-secondary',
   warn: 'text-accent-warning',
   error: 'text-destructive',
+}
+
+export const toOptionalString = (value: string): string | undefined => {
+  const normalized = value.trim()
+  if (!normalized) {
+    return undefined
+  }
+  return normalized
 }
 
 export const toOptionalNumber = (value: string): number | undefined => {
