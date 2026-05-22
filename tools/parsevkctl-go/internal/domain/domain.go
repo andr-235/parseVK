@@ -22,6 +22,7 @@ type Issue struct {
 	Title  string
 	State  IssueState
 	Branch BranchName
+	Labels []string
 }
 
 type PullRequestState string

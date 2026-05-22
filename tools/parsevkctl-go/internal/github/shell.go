@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	issueJSONFields       = "number,title,state,headRefName"
+	issueJSONFields       = "number,title,state,headRefName,labels"
 	pullRequestJSONFields = "number,title,state,isDraft,mergedAt"
 )
 

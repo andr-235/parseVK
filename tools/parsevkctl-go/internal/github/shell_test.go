@@ -13,7 +13,7 @@ import (
 func TestParseIssueJSON(t *testing.T) {
 	t.Parallel()
 
-	issue, err := parseIssueJSON([]byte(`{"number":108,"title":"Add adapter","state":"OPEN","headRefName":"feature"}`))
+	issue, err := parseIssueJSON([]byte(`{"number":108,"title":"Add adapter","state":"OPEN","headRefName":"feature","labels":[{"name":"type: docs"},{"name":"go"}]}`))
 	if err != nil {
 		t.Fatalf("parseIssueJSON returned error: %v", err)
 	}
@@ -23,6 +23,7 @@ func TestParseIssueJSON(t *testing.T) {
 		Title:  "Add adapter",
 		State:  domain.IssueStateOpen,
 		Branch: domain.BranchName("feature"),
+		Labels: []string{"type: docs", "go"},
 	}
 	if !reflect.DeepEqual(issue, want) {
 		t.Fatalf("issue = %#v, want %#v", issue, want)
@@ -75,7 +76,7 @@ func TestCommandArguments(t *testing.T) {
 				_, err := adapter.GetIssue(context.Background(), 108)
 				return err
 			},
-			args: []string{"issue", "view", "108", "--json", "number,title,state,headRefName"},
+			args: []string{"issue", "view", "108", "--json", "number,title,state,headRefName,labels"},
 		},
 		{
 			name: "close issue with comment",
@@ -158,7 +159,7 @@ func TestCreateIssueRunsCreateThenView(t *testing.T) {
 
 	want := [][]string{
 		{"issue", "create", "--title", "Title", "--body", "Body", "--label", "go", "--label", "cli"},
-		{"issue", "view", "108", "--json", "number,title,state,headRefName"},
+		{"issue", "view", "108", "--json", "number,title,state,headRefName,labels"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("args = %#v, want %#v", got, want)
