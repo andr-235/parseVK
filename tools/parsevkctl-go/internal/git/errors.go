@@ -1,9 +1,12 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
+
+var ErrLocalBranchNotFound = errors.New("local branch not found")
 
 type CommandError struct {
 	Operation string

@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -107,6 +108,14 @@ func (adapter *ShellAdapter) DeleteLocalBranch(ctx context.Context, branch strin
 	}
 
 	_, err := adapter.runGit(ctx, "delete local branch", "branch", deleteFlag, branch)
+	if err == nil {
+		return nil
+	}
+
+	exists, existsErr := adapter.localBranchExists(ctx, branch)
+	if existsErr == nil && !exists {
+		return fmt.Errorf("%w: %v", ErrLocalBranchNotFound, err)
+	}
 	return err
 }
 
@@ -165,6 +174,27 @@ func (adapter *ShellAdapter) runGit(ctx context.Context, operation string, args 
 	}
 
 	return result, nil
+}
+
+func (adapter *ShellAdapter) localBranchExists(ctx context.Context, branch string) (bool, error) {
+	_, err := adapter.runGit(ctx, "verify local branch", "show-ref", "--verify", "--quiet", "refs/heads/"+strings.TrimSpace(branch))
+	if err == nil {
+		return true, nil
+	}
+	if exitCodeOf(err) == 1 {
+		return false, nil
+	}
+	return false, err
+}
+
+func exitCodeOf(err error) int {
+	var exitErr interface {
+		ExitCode() int
+	}
+	if errors.As(err, &exitErr) {
+		return exitErr.ExitCode()
+	}
+	return -1
 }
 
 func runCommand(ctx context.Context, name string, args ...string) (commandResult, error) {

@@ -193,10 +193,14 @@ func (adapter *ShellAdapter) GetProjectItem(ctx context.Context, issueNumber int
 	if err := adapter.validateProjectConfig(); err != nil {
 		return domain.ProjectItem{}, err
 	}
+	owner, err := adapter.projectOwnerArg(ctx)
+	if err != nil {
+		return domain.ProjectItem{}, err
+	}
 
 	result, err := adapter.runGH(ctx, "list project items",
 		"project", "item-list", strconv.Itoa(adapter.config.ProjectNumber),
-		"--owner", adapter.config.ProjectOwner,
+		"--owner", owner,
 		"--limit", "200",
 		"--format", "json",
 	)
@@ -345,9 +349,14 @@ func (adapter *ShellAdapter) validateProjectConfig() error {
 }
 
 func (adapter *ShellAdapter) getStatusField(ctx context.Context) (projectField, error) {
+	owner, err := adapter.projectOwnerArg(ctx)
+	if err != nil {
+		return projectField{}, err
+	}
+
 	result, err := adapter.runGH(ctx, "list project fields",
 		"project", "field-list", strconv.Itoa(adapter.config.ProjectNumber),
-		"--owner", adapter.config.ProjectOwner,
+		"--owner", owner,
 		"--limit", "100",
 		"--format", "json",
 	)
@@ -364,6 +373,22 @@ func (adapter *ShellAdapter) getStatusField(ctx context.Context) (projectField, 
 		}
 	}
 	return projectField{}, fmt.Errorf("project field not found: Status")
+}
+
+func (adapter *ShellAdapter) projectOwnerArg(ctx context.Context) (string, error) {
+	owner := strings.TrimSpace(adapter.config.ProjectOwner)
+	if owner == "@me" {
+		return owner, nil
+	}
+
+	result, err := adapter.runGH(ctx, "get authenticated user", "api", "user", "--jq", ".login")
+	if err != nil {
+		return "", err
+	}
+	if strings.EqualFold(strings.TrimSpace(result.stdout), owner) {
+		return "@me", nil
+	}
+	return owner, nil
 }
 
 type projectItemsJSON struct {

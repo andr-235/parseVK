@@ -251,9 +251,12 @@ func TestProjectMethodsReturnNotImplemented(t *testing.T) {
 func TestCheckProjectStatusFieldUsesConfiguredProject(t *testing.T) {
 	t.Parallel()
 
-	var got []string
+	var got [][]string
 	adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
-		got = append([]string(nil), args...)
+		got = append(got, append([]string(nil), args...))
+		if len(args) >= 2 && args[0] == "api" && args[1] == "user" {
+			return commandResult{stdout: "andr-235"}, nil
+		}
 		return commandResult{stdout: projectFieldsOutput()}, nil
 	})
 	adapter.config = config.Config{
@@ -268,7 +271,42 @@ func TestCheckProjectStatusFieldUsesConfiguredProject(t *testing.T) {
 		t.Fatalf("CheckProjectStatusField returned error: %v", err)
 	}
 
-	want := []string{"project", "field-list", "2", "--owner", "andr-235", "--limit", "100", "--format", "json"}
+	want := [][]string{
+		{"api", "user", "--jq", ".login"},
+		{"project", "field-list", "2", "--owner", "@me", "--limit", "100", "--format", "json"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("args = %#v, want %#v", got, want)
+	}
+}
+
+func TestCheckProjectStatusFieldKeepsOrganizationOwner(t *testing.T) {
+	t.Parallel()
+
+	var got [][]string
+	adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
+		got = append(got, append([]string(nil), args...))
+		if len(args) >= 2 && args[0] == "api" && args[1] == "user" {
+			return commandResult{stdout: "andr-235"}, nil
+		}
+		return commandResult{stdout: projectFieldsOutput()}, nil
+	})
+	adapter.config = config.Config{
+		Repo:          "parsevk-org/parseVK",
+		ProjectOwner:  "parsevk-org",
+		ProjectNumber: 2,
+		ProjectID:     "project-id",
+		ProjectTitle:  "parsevk development",
+	}
+
+	if err := adapter.CheckProjectStatusField(context.Background()); err != nil {
+		t.Fatalf("CheckProjectStatusField returned error: %v", err)
+	}
+
+	want := [][]string{
+		{"api", "user", "--jq", ".login"},
+		{"project", "field-list", "2", "--owner", "parsevk-org", "--limit", "100", "--format", "json"},
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("args = %#v, want %#v", got, want)
 	}
