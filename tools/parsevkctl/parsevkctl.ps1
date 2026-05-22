@@ -861,6 +861,40 @@ function Merge-Task {
         }
     }
 
+    # Generate Conventional Commit subject for squash merge
+    $type = "feat"
+    if ($pr.headRefName -match '^([^/]+)/issue-') {
+        $branchType = $Matches[1].ToLowerInvariant()
+        $allowedTypes = @('feat', 'fix', 'docs', 'refactor', 'test', 'ci', 'chore', 'perf', 'build', 'hotfix')
+        if ($allowedTypes -contains $branchType) {
+            $type = $branchType
+        }
+    }
+
+    $subject = $pr.title
+    $allowedTypes = @('feat', 'fix', 'docs', 'refactor', 'test', 'ci', 'chore', 'perf', 'build', 'hotfix')
+    $hasType = $false
+    foreach ($t in $allowedTypes) {
+        if ($subject -match "^$t\s*:\s*") {
+            $hasType = $true
+            break
+        }
+    }
+
+    if (-not $hasType) {
+        $cleanTitle = $pr.title
+        if ($cleanTitle -match '^(\p{L})(.*)$') {
+            $firstChar = $Matches[1].ToLowerInvariant()
+            $rest = $Matches[2]
+            $cleanTitle = "$firstChar$rest"
+        }
+        $subject = "${type}: $cleanTitle"
+    }
+
+    if ($subject -notmatch "\(#$IssueNumber\)$") {
+        $subject = "$subject (#$IssueNumber)"
+    }
+
     if (Get-DryRun) {
         Write-Host "Would validate merge capability for PR #$($pr.number)" -ForegroundColor Cyan
         try {
@@ -880,7 +914,7 @@ function Merge-Task {
         }
 
         $mergeMethod = "squash"
-        Write-Host "Would merge pull request #$($pr.number) using $mergeMethod merge" -ForegroundColor Cyan
+        Write-Host "Would merge pull request #$($pr.number) using $mergeMethod merge with commit subject: '$subject'" -ForegroundColor Cyan
         Write-Host "Would set project status for issue #$IssueNumber to: $($config.statuses.done)" -ForegroundColor Cyan
         Write-Host "Would close issue #$IssueNumber" -ForegroundColor Cyan
 
@@ -917,6 +951,7 @@ function Merge-Task {
         [string]$pr.number,
         "--repo", $config.repo,
         "--squash",
+        "--subject", $subject,
         "--delete-branch"
     )
 
