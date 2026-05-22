@@ -73,6 +73,19 @@ func TestDeleteLocalBranchRejectsProtectedBranches(t *testing.T) {
 	}
 }
 
+func TestDeleteLocalBranchClassifiesMissingBranch(t *testing.T) {
+	t.Parallel()
+
+	adapter := newShellAdapterWithRunner(func(context.Context, string, ...string) (commandResult, error) {
+		return commandResult{stderr: "error: branch 'feature' not found."}, errors.New("exit status 1")
+	})
+
+	err := adapter.DeleteLocalBranch(context.Background(), "feature", false)
+	if !errors.Is(err, ErrLocalBranchNotFound) {
+		t.Fatalf("error = %v, want ErrLocalBranchNotFound", err)
+	}
+}
+
 func TestEmptyBranchValidation(t *testing.T) {
 	t.Parallel()
 

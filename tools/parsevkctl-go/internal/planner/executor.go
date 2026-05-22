@@ -2,6 +2,7 @@ package planner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/domain"
@@ -165,7 +166,11 @@ func (e Executor) executeOperation(ctx context.Context, operation Operation, cre
 		if err != nil {
 			return ExecutionResult{}, err
 		}
-		return ExecutionResult{}, e.Git.DeleteLocalBranch(ctx, payload.Branch, payload.Force)
+		err = e.Git.DeleteLocalBranch(ctx, payload.Branch, payload.Force)
+		if errors.Is(err, git.ErrLocalBranchNotFound) {
+			return ExecutionResult{}, nil
+		}
+		return ExecutionResult{}, err
 	case OperationBranchDeleteRemote:
 		payload, err := payloadAs[GitRefPayload](operation.Payload)
 		if err != nil {

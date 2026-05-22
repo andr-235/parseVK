@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/domain"
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/git"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/github"
 )
 
@@ -87,6 +88,56 @@ func TestExecutorCallsAdaptersInExpectedOrder(t *testing.T) {
 	}
 	if !reflect.DeepEqual(recorder.calls, want) {
 		t.Fatalf("calls = %#v, want %#v", recorder.calls, want)
+	}
+}
+
+func TestExecutorTreatsMissingLocalBranchCleanupAsNoop(t *testing.T) {
+	fakeGit := &fakeGitAdapter{failOn: "DeleteLocalBranch", failErr: git.ErrLocalBranchNotFound}
+	executor := Executor{Git: fakeGit, GitHub: &fakeGitHubAdapter{}}
+	plan := Plan{
+		Command: "task merge",
+		Issue:   129,
+		Operations: []Operation{
+			{
+				ID:      "branch-delete-local-task-branch",
+				Type:    OperationBranchDeleteLocal,
+				Payload: DeleteLocalBranchPayload{Branch: "feat/issue-129-cleanup"},
+			},
+		},
+	}
+
+	if err := executor.Execute(context.Background(), plan); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	wantGitCalls := []string{"DeleteLocalBranch:feat/issue-129-cleanup"}
+	if !reflect.DeepEqual(fakeGit.calls, wantGitCalls) {
+		t.Fatalf("git calls = %#v, want %#v", fakeGit.calls, wantGitCalls)
+	}
+}
+
+func TestExecutorKeepsDeleteLocalBranchFailuresStrict(t *testing.T) {
+	failErr := errors.New("permission denied")
+	fakeGit := &fakeGitAdapter{failOn: "DeleteLocalBranch", failErr: failErr}
+	executor := Executor{Git: fakeGit, GitHub: &fakeGitHubAdapter{}}
+	plan := Plan{
+		Command: "task merge",
+		Issue:   129,
+		Operations: []Operation{
+			{
+				ID:      "branch-delete-local-task-branch",
+				Type:    OperationBranchDeleteLocal,
+				Payload: DeleteLocalBranchPayload{Branch: "feat/issue-129-cleanup"},
+			},
+		},
+	}
+
+	err := executor.Execute(context.Background(), plan)
+	if err == nil {
+		t.Fatal("Execute returned nil error")
+	}
+	if !errors.Is(err, failErr) {
+		t.Fatalf("Execute error = %v, want %v", err, failErr)
 	}
 }
 

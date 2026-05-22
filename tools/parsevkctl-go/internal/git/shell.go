@@ -107,6 +107,9 @@ func (adapter *ShellAdapter) DeleteLocalBranch(ctx context.Context, branch strin
 	}
 
 	_, err := adapter.runGit(ctx, "delete local branch", "branch", deleteFlag, branch)
+	if isLocalBranchNotFound(err, branch) {
+		return fmt.Errorf("%w: %v", ErrLocalBranchNotFound, err)
+	}
 	return err
 }
 

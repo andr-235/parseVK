@@ -1,9 +1,12 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
+
+var ErrLocalBranchNotFound = errors.New("local branch not found")
 
 type CommandError struct {
 	Operation string
@@ -29,4 +32,15 @@ func (err CommandError) Error() string {
 
 func (err CommandError) Unwrap() error {
 	return err.Err
+}
+
+func isLocalBranchNotFound(err error, branch string) bool {
+	var commandErr CommandError
+	if !errors.As(err, &commandErr) {
+		return false
+	}
+
+	branch = strings.TrimSpace(branch)
+	output := strings.ToLower(commandErr.Stderr + "\n" + commandErr.Stdout)
+	return strings.Contains(output, "branch '"+strings.ToLower(branch)+"' not found")
 }
