@@ -181,6 +181,10 @@ func (adapter *ShellAdapter) GetProjectItem(context.Context, int) (domain.Projec
 	return domain.ProjectItem{}, ErrProjectNotImplemented
 }
 
+func (adapter *ShellAdapter) AddProjectItem(context.Context, int) error {
+	return ErrProjectNotImplemented
+}
+
 func (adapter *ShellAdapter) SetProjectStatus(context.Context, int, domain.ProjectStatus) error {
 	return ErrProjectNotImplemented
 }

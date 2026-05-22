@@ -14,6 +14,14 @@ Run: go run ./cmd/parsevkctl --help
 
 `internal/task` contains pure lifecycle state derivation and transition validation for task automation. Command handlers will use this package later to map issue, project, pull request and branch snapshots into valid task lifecycle actions.
 
+## Planner and executor
+
+`internal/planner` builds side-effect-free operation plans for task lifecycle commands. A plan describes the intended Git, GitHub and project operations in stable order and can be serialized to JSON.
+
+The planner does not call Git or GitHub directly. `Executor` applies a plan serially through the typed `internal/git` and `internal/github` adapters, stopping at the first failed operation with an operation-scoped error and recovery hint.
+
+`RenderDryRun` renders the same plan as deterministic human-readable lines without executing anything.
+
 ## Git adapter
 
 `internal/git` centralizes local Git operations for the Go rewrite. It exposes an adapter interface for repository actions and currently implements it with a shell-based adapter that calls `git` directly.

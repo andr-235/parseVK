@@ -110,6 +110,18 @@ func (adapter *ShellAdapter) DeleteLocalBranch(ctx context.Context, branch strin
 	return err
 }
 
+func (adapter *ShellAdapter) DeleteRemoteBranch(ctx context.Context, remote string, branch string) error {
+	if err := validateRemoteAndBranch(remote, branch); err != nil {
+		return err
+	}
+	if isProtectedBranch(branch) {
+		return fmt.Errorf("refusing to delete protected branch %q", strings.TrimSpace(branch))
+	}
+
+	_, err := adapter.runGit(ctx, "delete remote branch", "push", remote, "--delete", branch)
+	return err
+}
+
 func (adapter *ShellAdapter) PushBranch(ctx context.Context, remote string, branch string, setUpstream bool) error {
 	if err := validateRemoteAndBranch(remote, branch); err != nil {
 		return err
