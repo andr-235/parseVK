@@ -76,13 +76,61 @@ func TestDeleteLocalBranchRejectsProtectedBranches(t *testing.T) {
 func TestDeleteLocalBranchClassifiesMissingBranch(t *testing.T) {
 	t.Parallel()
 
-	adapter := newShellAdapterWithRunner(func(context.Context, string, ...string) (commandResult, error) {
-		return commandResult{stderr: "error: branch 'feature' not found."}, errors.New("exit status 1")
+	var got [][]string
+	adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
+		got = append(got, append([]string(nil), args...))
+		if len(args) >= 2 && args[0] == "branch" {
+			return commandResult{stderr: "error: branch 'feature' not found."}, errors.New("exit status 1")
+		}
+		return commandResult{}, fakeExitError{code: 1}
 	})
 
 	err := adapter.DeleteLocalBranch(context.Background(), "feature", false)
 	if !errors.Is(err, ErrLocalBranchNotFound) {
 		t.Fatalf("error = %v, want ErrLocalBranchNotFound", err)
+	}
+
+	want := [][]string{
+		{"branch", "-d", "feature"},
+		{"show-ref", "--verify", "--quiet", "refs/heads/feature"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("args = %#v, want %#v", got, want)
+	}
+}
+
+func TestDeleteLocalBranchClassifiesLocalizedMissingBranch(t *testing.T) {
+	t.Parallel()
+
+	adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
+		if len(args) >= 2 && args[0] == "branch" {
+			return commandResult{stderr: "ошибка: ветка не найдена"}, errors.New("exit status 1")
+		}
+		return commandResult{}, fakeExitError{code: 1}
+	})
+
+	err := adapter.DeleteLocalBranch(context.Background(), "feature", false)
+	if !errors.Is(err, ErrLocalBranchNotFound) {
+		t.Fatalf("error = %v, want ErrLocalBranchNotFound", err)
+	}
+}
+
+func TestDeleteLocalBranchKeepsFailuresStrictWhenBranchStillExists(t *testing.T) {
+	t.Parallel()
+
+	adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
+		if len(args) >= 2 && args[0] == "branch" {
+			return commandResult{stderr: "permission denied"}, errors.New("exit status 1")
+		}
+		return commandResult{}, nil
+	})
+
+	err := adapter.DeleteLocalBranch(context.Background(), "feature", false)
+	if err == nil {
+		t.Fatalf("expected delete failure")
+	}
+	if errors.Is(err, ErrLocalBranchNotFound) {
+		t.Fatalf("error = %v, must not be ErrLocalBranchNotFound", err)
 	}
 }
 
@@ -264,4 +312,16 @@ func TestCommandErrorsIncludeOperationAndOutput(t *testing.T) {
 			t.Fatalf("error = %q, want it to contain %q", message, want)
 		}
 	}
+}
+
+type fakeExitError struct {
+	code int
+}
+
+func (err fakeExitError) Error() string {
+	return "exit status"
+}
+
+func (err fakeExitError) ExitCode() int {
+	return err.code
 }
