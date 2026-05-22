@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	issueJSONFields       = "number,title,state,headRefName,labels"
-	pullRequestJSONFields = "number,title,state,isDraft,mergedAt"
+	issueJSONFields       = "number,title,state,url,headRefName,labels"
+	pullRequestJSONFields = "number,title,state,isDraft,mergedAt,url,baseRefName,headRefName"
 )
 
 type commandResult struct {

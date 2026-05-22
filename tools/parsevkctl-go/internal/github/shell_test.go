@@ -13,7 +13,7 @@ import (
 func TestParseIssueJSON(t *testing.T) {
 	t.Parallel()
 
-	issue, err := parseIssueJSON([]byte(`{"number":108,"title":"Add adapter","state":"OPEN","headRefName":"feature","labels":[{"name":"type: docs"},{"name":"go"}]}`))
+	issue, err := parseIssueJSON([]byte(`{"number":108,"title":"Add adapter","state":"OPEN","url":"https://github.test/issues/108","headRefName":"feature","labels":[{"name":"type: docs"},{"name":"go"}]}`))
 	if err != nil {
 		t.Fatalf("parseIssueJSON returned error: %v", err)
 	}
@@ -22,6 +22,7 @@ func TestParseIssueJSON(t *testing.T) {
 		ID:     domain.TaskID(108),
 		Title:  "Add adapter",
 		State:  domain.IssueStateOpen,
+		URL:    "https://github.test/issues/108",
 		Branch: domain.BranchName("feature"),
 		Labels: []string{"type: docs", "go"},
 	}
@@ -34,8 +35,8 @@ func TestParsePullRequestsJSON(t *testing.T) {
 	t.Parallel()
 
 	prs, err := parsePullRequestsJSON([]byte(`[
-		{"number":7,"title":"Open PR","state":"OPEN","isDraft":true,"mergedAt":null},
-		{"number":8,"title":"Merged PR","state":"MERGED","isDraft":false,"mergedAt":"2026-05-22T00:00:00Z"}
+		{"number":7,"title":"Open PR","state":"OPEN","isDraft":true,"mergedAt":null,"url":"https://github.test/pull/7","baseRefName":"main","headRefName":"feature"},
+		{"number":8,"title":"Merged PR","state":"MERGED","isDraft":false,"mergedAt":"2026-05-22T00:00:00Z","url":"https://github.test/pull/8","baseRefName":"main","headRefName":"feature-2"}
 	]`))
 	if err != nil {
 		t.Fatalf("parsePullRequestsJSON returned error: %v", err)
@@ -48,6 +49,9 @@ func TestParsePullRequestsJSON(t *testing.T) {
 			State:  domain.PullRequestStateDraft,
 			Draft:  true,
 			Merged: false,
+			URL:    "https://github.test/pull/7",
+			Base:   "main",
+			Head:   "feature",
 		},
 		{
 			Number: domain.TaskID(8),
@@ -55,6 +59,9 @@ func TestParsePullRequestsJSON(t *testing.T) {
 			State:  domain.PullRequestStateMerged,
 			Draft:  false,
 			Merged: true,
+			URL:    "https://github.test/pull/8",
+			Base:   "main",
+			Head:   "feature-2",
 		},
 	}
 	if !reflect.DeepEqual(prs, want) {
@@ -76,7 +83,7 @@ func TestCommandArguments(t *testing.T) {
 				_, err := adapter.GetIssue(context.Background(), 108)
 				return err
 			},
-			args: []string{"issue", "view", "108", "--json", "number,title,state,headRefName,labels"},
+			args: []string{"issue", "view", "108", "--json", "number,title,state,url,headRefName,labels"},
 		},
 		{
 			name: "close issue with comment",
@@ -96,7 +103,7 @@ func TestCommandArguments(t *testing.T) {
 				})
 				return err
 			},
-			args: []string{"pr", "list", "--state", "open", "--head", "feature", "--base", "main", "--search", "issue 108", "--json", "number,title,state,isDraft,mergedAt"},
+			args: []string{"pr", "list", "--state", "open", "--head", "feature", "--base", "main", "--search", "issue 108", "--json", "number,title,state,isDraft,mergedAt,url,baseRefName,headRefName"},
 		},
 		{
 			name: "merge pull request",
@@ -159,7 +166,7 @@ func TestCreateIssueRunsCreateThenView(t *testing.T) {
 
 	want := [][]string{
 		{"issue", "create", "--title", "Title", "--body", "Body", "--label", "go", "--label", "cli"},
-		{"issue", "view", "108", "--json", "number,title,state,headRefName,labels"},
+		{"issue", "view", "108", "--json", "number,title,state,url,headRefName,labels"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("args = %#v, want %#v", got, want)
@@ -195,7 +202,7 @@ func TestCreatePullRequestRunsCreateThenView(t *testing.T) {
 
 	want := [][]string{
 		{"pr", "create", "--title", "Title", "--body", "Body", "--head", "feature", "--base", "main", "--draft"},
-		{"pr", "view", "7", "--json", "number,title,state,isDraft,mergedAt"},
+		{"pr", "view", "7", "--json", "number,title,state,isDraft,mergedAt,url,baseRefName,headRefName"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("args = %#v, want %#v", got, want)

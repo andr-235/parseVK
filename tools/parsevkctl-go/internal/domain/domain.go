@@ -21,6 +21,7 @@ type Issue struct {
 	ID     TaskID
 	Title  string
 	State  IssueState
+	URL    string
 	Branch BranchName
 	Labels []string
 }
@@ -41,6 +42,9 @@ type PullRequest struct {
 	State  PullRequestState
 	Draft  bool
 	Merged bool
+	URL    string
+	Base   string
+	Head   string
 }
 
 type ProjectStatus string
