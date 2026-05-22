@@ -202,3 +202,118 @@ When run in Dry-Run mode:
 - Git commands, simulated pull request structures, and planned branch switches are printed to the console.
 - Output always ends with the line: `No changes were made.`.
 
+## Machine-Readable JSON Output
+
+For CI/CD pipelines and scripting automation, `parsevkctl` supports a global `-Json` switch. When `-Json` is specified:
+- All human-readable `Write-Host` logs are suppressed.
+- The command outputs a single valid JSON payload on standard output (`stdout`).
+- Any error or unhandled exception will print a JSON error payload and exit with code `1`.
+
+### Supported Commands & JSON Payloads
+
+#### 1. `task create`
+```json
+{
+  "command": "task create",
+  "issue": 123,
+  "title": "Task title",
+  "status": "Todo",
+  "result": "created"
+}
+```
+
+#### 2. `task start`
+```json
+{
+  "command": "task start",
+  "issue": 123,
+  "status": "In Progress",
+  "branch": "feat/issue-123-task-slug",
+  "defaultBranch": "fastapi-microservices-rewrite",
+  "result": "started"
+}
+```
+
+#### 3. `task pr`
+```json
+{
+  "command": "task pr",
+  "issue": 123,
+  "status": "Review",
+  "prNumber": 12,
+  "prUrl": "https://github.com/andr-235/parseVK/pull/12",
+  "result": "pr_created"
+}
+```
+
+#### 4. `task merge`
+```json
+{
+  "command": "task merge",
+  "issue": 123,
+  "status": "Done",
+  "prNumber": 12,
+  "result": "merged"
+}
+```
+
+#### 5. `task status`
+```json
+{
+  "command": "task status",
+  "issue": 123,
+  "title": "Task Title",
+  "state": "OPEN",
+  "url": "https://github.com/andr-235/parseVK/issues/123",
+  "projectStatus": "In Progress",
+  "pr": {
+    "number": 12,
+    "title": "PR Title",
+    "url": "https://github.com/andr-235/parseVK/pull/12",
+    "state": "OPEN",
+    "draft": "not draft"
+  },
+  "branch": "feat/issue-123-task-slug",
+  "workingTree": "clean"
+}
+```
+
+#### 6. `task doctor`
+```json
+{
+  "command": "task doctor",
+  "ready": true,
+  "failures": 0,
+  "warnings": 0,
+  "checks": [
+    {
+      "name": "GitHub CLI (gh) installed",
+      "status": "OK",
+      "message": ""
+    }
+  ]
+}
+```
+
+### Error Payload Format
+
+If a command fails or invalid arguments are supplied, the script outputs the following schema on `stdout` and exits with code `1`:
+
+```json
+{
+  "command": "task start",
+  "error": "Working tree is not clean. Commit/stash changes first...",
+  "result": "failed"
+}
+```
+
+### Automation Example
+
+You can parse the output directly in PowerShell using `ConvertFrom-Json`:
+
+```powershell
+$status = .\tools\parsevkctl\parsevkctl.ps1 task status 123 -Json | ConvertFrom-Json
+Write-Host "Current branch: $($status.branch)"
+```
+
+
