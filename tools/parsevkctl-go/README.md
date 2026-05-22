@@ -10,6 +10,10 @@ Run: go run ./cmd/parsevkctl --help
 
 `internal/domain` contains pure Go types for tasks, issues, pull requests, project items and lifecycle state. It also owns validation helpers and task state derivation logic, without dependencies on the CLI, Git, GitHub, Project adapters or output rendering.
 
+## Task lifecycle
+
+`internal/task` contains pure lifecycle state derivation and transition validation for task automation. Command handlers will use this package later to map issue, project, pull request and branch snapshots into valid task lifecycle actions.
+
 ## Git adapter
 
 `internal/git` centralizes local Git operations for the Go rewrite. It exposes an adapter interface for repository actions and currently implements it with a shell-based adapter that calls `git` directly.
