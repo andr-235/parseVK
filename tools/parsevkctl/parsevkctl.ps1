@@ -14,10 +14,17 @@ param(
     [switch]$AssignMe,
     [switch]$NoBranch,
     [switch]$AllowDirty,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$Json
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($Json) {
+    function Write-Host {
+        # Suppress Write-Host outputs when outputting machine-readable JSON
+    }
+}
 
 # Force UTF-8 for external commands (like gh and git) and console output
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -481,7 +488,7 @@ function Start-Task {
         } else {
             Write-Host "Branch creation skipped." -ForegroundColor Yellow
         }
-        return
+        return $null
     }
 
     if (Get-DryRun) {
@@ -507,7 +514,7 @@ function Start-Task {
         Write-Host "Would run: git switch $($config.defaultBranch)" -ForegroundColor Cyan
         Write-Host "Would run: git pull --ff-only origin $($config.defaultBranch)" -ForegroundColor Cyan
         Write-Host "Would run: git switch -c $branchName" -ForegroundColor Cyan
-        return
+        return $branchName
     }
 
     Write-Host ("Creating branch: " + $branchName) -ForegroundColor Cyan
@@ -519,6 +526,7 @@ function Start-Task {
 
     Write-Host ""
     Write-Host ("Task started on branch: " + $branchName) -ForegroundColor Green
+    return $branchName
 }
 
 function Full-Task {
@@ -670,7 +678,10 @@ Created via parsevkctl.
 
         Write-Host "Would set project status for issue #$IssueNumber to: $($config.statuses.review)" -ForegroundColor Cyan
         Write-Host "Would run PR cleanup for branch: $featureBranch" -ForegroundColor Cyan
-        return
+        return [PSCustomObject]@{
+            prNumber = 999
+            prUrl = "https://github.com/$($config.repo)/pull/999"
+        }
     }
 
     # Run strict validations before modifying remote state
@@ -708,7 +719,17 @@ Created via parsevkctl.
     Write-Host ""
     Write-Host ("Issue #" + $IssueNumber + " moved to Review.") -ForegroundColor Green
 
+    $prNumber = $null
+    if ($prUrl -match "/pull/(\d+)") {
+        $prNumber = [int]$Matches[1]
+    }
+
     Cleanup-AfterPr -FeatureBranch $currentBranch -DefaultBranch $config.defaultBranch
+
+    return [PSCustomObject]@{
+        prNumber = $prNumber
+        prUrl = $prUrl.Trim()
+    }
 }
 
 function Find-PullRequestForIssue {
@@ -765,7 +786,9 @@ function Show-TaskStatus {
     $projectStatus = "unknown"
 
     if ($null -eq $item) {
-        Write-Host ("Warning: issue #" + $IssueNumber + " not found in project " + $config.projectTitle + ".") -ForegroundColor Yellow
+        if (-not $Json) {
+            Write-Host ("Warning: issue #" + $IssueNumber + " not found in project " + $config.projectTitle + ".") -ForegroundColor Yellow
+        }
     }
     else {
         $null = Get-StatusField -Config $config
@@ -793,32 +816,58 @@ function Show-TaskStatus {
         $workingTreeState = "dirty"
     }
 
-    Write-Host ("Issue: #" + $issue.number)
-    Write-Host ("Issue title: " + $issue.title)
-    Write-Host ("Issue state: " + $issue.state)
-    Write-Host ("Issue URL: " + $issue.url)
-    Write-Host ("Project status: " + $projectStatus)
+    $statusData = [PSCustomObject]@{
+        command = "task status"
+        issue = $issue.number
+        title = $issue.title
+        state = $issue.state
+        url = $issue.url
+        projectStatus = $projectStatus
+        pr = if ($null -eq $pr) { $null } else {
+            $draftStatus = if ($pr.isDraft -eq $true) { "draft" } else { "not draft" }
+            [PSCustomObject]@{
+                number = $pr.number
+                title = $pr.title
+                url = $pr.url
+                state = $pr.state
+                draft = $draftStatus
+            }
+        }
+        branch = $currentBranch
+        workingTree = $workingTreeState
+    }
 
-    if ($null -eq $pr) {
-        Write-Host "Linked PR: none"
+    if ($Json) {
+        Write-Output ($statusData | ConvertTo-Json -Depth 10)
     }
     else {
-        $draftStatus = "not draft"
+        Write-Host ("Issue: #" + $issue.number)
+        Write-Host ("Issue title: " + $issue.title)
+        Write-Host ("Issue state: " + $issue.state)
+        Write-Host ("Issue URL: " + $issue.url)
+        Write-Host ("Project status: " + $projectStatus)
 
-        if ($pr.isDraft -eq $true) {
-            $draftStatus = "draft"
+        if ($null -eq $pr) {
+            Write-Host "Linked PR: none"
+        }
+        else {
+            $draftStatus = "not draft"
+
+            if ($pr.isDraft -eq $true) {
+                $draftStatus = "draft"
+            }
+
+            Write-Host ("Linked PR: #" + $pr.number)
+            Write-Host ("PR number: " + $pr.number)
+            Write-Host ("PR title: " + $pr.title)
+            Write-Host ("PR URL: " + $pr.url)
+            Write-Host ("PR state: " + $pr.state)
+            Write-Host ("PR draft: " + $draftStatus)
         }
 
-        Write-Host ("Linked PR: #" + $pr.number)
-        Write-Host ("PR number: " + $pr.number)
-        Write-Host ("PR title: " + $pr.title)
-        Write-Host ("PR URL: " + $pr.url)
-        Write-Host ("PR state: " + $pr.state)
-        Write-Host ("PR draft: " + $draftStatus)
+        Write-Host ("Current branch: " + $currentBranch)
+        Write-Host ("Working tree: " + $workingTreeState)
     }
-
-    Write-Host ("Current branch: " + $currentBranch)
-    Write-Host ("Working tree: " + $workingTreeState)
 }
 
 function Merge-Task {
@@ -923,7 +972,7 @@ function Merge-Task {
             Write-Host "Would switch back to default branch: $($config.defaultBranch)" -ForegroundColor Cyan
             Write-Host "Would pull default branch: git pull --ff-only origin $($config.defaultBranch)" -ForegroundColor Cyan
         }
-        return
+        return $pr.number
     }
 
     # Fail-fast validation (skipping slow CI checks first)
@@ -1006,6 +1055,7 @@ function Merge-Task {
 
     Write-Host ""
     Write-Host ("Task #" + $IssueNumber + " completed.") -ForegroundColor Green
+    return $pr.number
 }
 
 function Complete-Task {
@@ -1073,12 +1123,15 @@ function Complete-Task {
 }
 
 function Invoke-Doctor {
-    Write-Host "Running parsevkctl doctor diagnostics..." -ForegroundColor Cyan
-    Write-Host ""
+    if (-not $Json) {
+        Write-Host "Running parsevkctl doctor diagnostics..." -ForegroundColor Cyan
+        Write-Host ""
+    }
 
     $ctx = @{
         Failures = 0
         Warnings = 0
+        Checks = @()
     }
 
     function Report-Check {
@@ -1095,9 +1148,18 @@ function Invoke-Doctor {
             $color = "Red"
             $ctx.Failures++
         }
-        Write-Host ("[{0,-4}] {1}" -f $Status, $Name) -ForegroundColor $color
-        if (-not [string]::IsNullOrWhiteSpace($Message)) {
-            Write-Host "       $Message" -ForegroundColor DarkGray
+
+        $ctx.Checks += [PSCustomObject]@{
+            name = $Name
+            status = $Status
+            message = $Message
+        }
+
+        if (-not $Json) {
+            Write-Host ("[{0,-4}] {1}" -f $Status, $Name) -ForegroundColor $color
+            if (-not [string]::IsNullOrWhiteSpace($Message)) {
+                Write-Host "       $Message" -ForegroundColor DarkGray
+            }
         }
     }
 
@@ -1278,14 +1340,24 @@ function Invoke-Doctor {
         Report-Check "Working tree status" "FAIL" "Skipped because not inside a Git worktree."
     }
 
-    Write-Host ""
-    if ($ctx.Failures -gt 0) {
-        Write-Host "Result: NOT READY" -ForegroundColor Red
-        return $false
-    } else {
-        Write-Host "Result: READY" -ForegroundColor Green
-        return $true
+    $result = [PSCustomObject]@{
+        command = "task doctor"
+        ready = ($ctx.Failures -eq 0)
+        failures = $ctx.Failures
+        warnings = $ctx.Warnings
+        checks = $ctx.Checks
     }
+
+    if (-not $Json) {
+        Write-Host ""
+        if ($result.ready) {
+            Write-Host "Result: READY" -ForegroundColor Green
+        } else {
+            Write-Host "Result: NOT READY" -ForegroundColor Red
+        }
+    }
+
+    return $result
 }
 
 function Show-Help {
@@ -1325,137 +1397,216 @@ function Show-Help {
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task pr 62"
 }
 
-if ($Entity -eq "test" -or ($Entity -eq "task" -and $Action -eq "test")) {
-    $testPath = Join-Path $PSScriptRoot "parsevkctl.Tests.ps1"
-    if (-not (Test-Path $testPath)) {
-        throw "Tests file not found: $testPath"
+try {
+    if ($Entity -eq "test" -or ($Entity -eq "task" -and $Action -eq "test")) {
+        $testPath = Join-Path $PSScriptRoot "parsevkctl.Tests.ps1"
+        if (-not (Test-Path $testPath)) {
+            throw "Tests file not found: $testPath"
+        }
+        Invoke-Pester -Path $testPath
+        exit $LASTEXITCODE
     }
-    Invoke-Pester -Path $testPath
-    exit $LASTEXITCODE
-}
 
-if ($Entity -eq "config" -and $Action -eq "validate") {
-    $config = Get-Config
-    Write-Host "Configuration is valid." -ForegroundColor Green
-    exit 0
-}
-
-if ($Entity -eq "task" -and $Action -eq "doctor") {
-    $ready = Invoke-Doctor
-    if ($ready) {
+    if ($Entity -eq "config" -and $Action -eq "validate") {
+        $config = Get-Config
+        Write-Host "Configuration is valid." -ForegroundColor Green
         exit 0
-    } else {
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "doctor") {
+        $result = Invoke-Doctor
+        if ($Json) {
+            Write-Output ($result | ConvertTo-Json -Depth 10)
+        }
+        if ($result.ready) {
+            exit 0
+        } else {
+            exit 1
+        }
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "create") {
+        $issueNumber = New-Task -TaskTitle $Value -TaskBody $Body -TaskLabel $Label -ShouldAssignMe:$AssignMe
+        
+        $config = Get-Config
+        $result = [PSCustomObject]@{
+            command = "task create"
+            issue = $issueNumber
+            title = $Value
+            status = $config.statuses.todo
+            result = "created"
+        }
+
+        if ($Json) {
+            Write-Output ($result | ConvertTo-Json -Depth 10)
+        } else {
+            if (Get-DryRun) {
+                Write-Host "No changes were made." -ForegroundColor Yellow
+            }
+        }
+        exit 0
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "full") {
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            throw "Task title is required."
+        }
+
+        Full-Task `
+            -TaskTitle $Value `
+            -TaskBody $Body `
+            -TaskLabel $Label `
+            -ShouldAssignMe:$AssignMe `
+            -SkipBranch:$NoBranch `
+            -ShouldAllowDirty:$AllowDirty
+
+        if (Get-DryRun) {
+            Write-Host "No changes were made." -ForegroundColor Yellow
+        }
+        exit 0
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "start") {
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            throw "Issue number is required."
+        }
+
+        $config = Get-Config
+        $issueNumber = [int]$Value
+        $branchName = Start-Task -IssueNumber $issueNumber -SkipBranch:$NoBranch -ShouldAllowDirty:$AllowDirty
+        
+        $result = [PSCustomObject]@{
+            command = "task start"
+            issue = $issueNumber
+            status = $config.statuses.inProgress
+            branch = if ($NoBranch) { $null } else { $branchName }
+            defaultBranch = $config.defaultBranch
+            result = "started"
+        }
+
+        if ($Json) {
+            Write-Output ($result | ConvertTo-Json -Depth 10)
+        } else {
+            if (Get-DryRun) {
+                Write-Host "No changes were made." -ForegroundColor Yellow
+            }
+        }
+        exit 0
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "move") {
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            throw "Issue number is required."
+        }
+
+        Move-Task -IssueNumber ([int]$Value) -TargetStatus $Status
+        if (Get-DryRun) {
+            Write-Host "No changes were made." -ForegroundColor Yellow
+        }
+        exit 0
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "review") {
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            throw "Issue number is required."
+        }
+
+        Review-Task -IssueNumber ([int]$Value)
+        if (Get-DryRun) {
+            Write-Host "No changes were made." -ForegroundColor Yellow
+        }
+        exit 0
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "pr") {
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            throw "Issue number is required."
+        }
+
+        $config = Get-Config
+        $issueNumber = [int]$Value
+        $prInfo = Open-PullRequest -IssueNumber $issueNumber
+        
+        $result = [PSCustomObject]@{
+            command = "task pr"
+            issue = $issueNumber
+            status = $config.statuses.review
+            prNumber = $prInfo.prNumber
+            prUrl = $prInfo.prUrl
+            result = "pr_created"
+        }
+
+        if ($Json) {
+            Write-Output ($result | ConvertTo-Json -Depth 10)
+        } else {
+            if (Get-DryRun) {
+                Write-Host "No changes were made." -ForegroundColor Yellow
+            }
+        }
+        exit 0
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "status") {
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            throw "Issue number is required."
+        }
+
+        Show-TaskStatus -IssueNumber ([int]$Value)
+        exit 0
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "done") {
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            throw "Issue number is required."
+        }
+
+        Complete-Task -IssueNumber ([int]$Value)
+        if (Get-DryRun) {
+            Write-Host "No changes were made." -ForegroundColor Yellow
+        }
+        exit 0
+    }
+
+    if ($Entity -eq "task" -and $Action -eq "merge") {
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            throw "Issue number is required."
+        }
+
+        $config = Get-Config
+        $issueNumber = [int]$Value
+        $prNumber = Merge-Task -IssueNumber $issueNumber
+        
+        $result = [PSCustomObject]@{
+            command = "task merge"
+            issue = $issueNumber
+            status = $config.statuses.done
+            prNumber = $prNumber
+            result = "merged"
+        }
+
+        if ($Json) {
+            Write-Output ($result | ConvertTo-Json -Depth 10)
+        } else {
+            if (Get-DryRun) {
+                Write-Host "No changes were made." -ForegroundColor Yellow
+            }
+        }
+        exit 0
+    }
+
+    Show-Help
+    exit 1
+}
+catch {
+    if ($Json) {
+        $errObj = [PSCustomObject]@{
+            command = "$Entity $Action"
+            error = $_.Exception.Message
+            result = "failed"
+        }
+        Write-Output ($errObj | ConvertTo-Json -Depth 10)
         exit 1
+    } else {
+        throw $_
     }
 }
-
-if ($Entity -eq "task" -and $Action -eq "create") {
-    $null = New-Task -TaskTitle $Value -TaskBody $Body -TaskLabel $Label -ShouldAssignMe:$AssignMe
-    if (Get-DryRun) {
-        Write-Host "No changes were made." -ForegroundColor Yellow
-    }
-    exit 0
-}
-
-if ($Entity -eq "task" -and $Action -eq "full") {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Task title is required."
-    }
-
-    Full-Task `
-        -TaskTitle $Value `
-        -TaskBody $Body `
-        -TaskLabel $Label `
-        -ShouldAssignMe:$AssignMe `
-        -SkipBranch:$NoBranch `
-        -ShouldAllowDirty:$AllowDirty
-
-    if (Get-DryRun) {
-        Write-Host "No changes were made." -ForegroundColor Yellow
-    }
-    exit 0
-}
-
-if ($Entity -eq "task" -and $Action -eq "start") {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Issue number is required."
-    }
-
-    Start-Task -IssueNumber ([int]$Value) -SkipBranch:$NoBranch -ShouldAllowDirty:$AllowDirty
-    if (Get-DryRun) {
-        Write-Host "No changes were made." -ForegroundColor Yellow
-    }
-    exit 0
-}
-
-if ($Entity -eq "task" -and $Action -eq "move") {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Issue number is required."
-    }
-
-    Move-Task -IssueNumber ([int]$Value) -TargetStatus $Status
-    if (Get-DryRun) {
-        Write-Host "No changes were made." -ForegroundColor Yellow
-    }
-    exit 0
-}
-
-if ($Entity -eq "task" -and $Action -eq "review") {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Issue number is required."
-    }
-
-    Review-Task -IssueNumber ([int]$Value)
-    if (Get-DryRun) {
-        Write-Host "No changes were made." -ForegroundColor Yellow
-    }
-    exit 0
-}
-
-if ($Entity -eq "task" -and $Action -eq "pr") {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Issue number is required."
-    }
-
-    Open-PullRequest -IssueNumber ([int]$Value)
-    if (Get-DryRun) {
-        Write-Host "No changes were made." -ForegroundColor Yellow
-    }
-    exit 0
-}
-
-if ($Entity -eq "task" -and $Action -eq "status") {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Issue number is required."
-    }
-
-    Show-TaskStatus -IssueNumber ([int]$Value)
-    exit 0
-}
-
-if ($Entity -eq "task" -and $Action -eq "done") {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Issue number is required."
-    }
-
-    Complete-Task -IssueNumber ([int]$Value)
-    if (Get-DryRun) {
-        Write-Host "No changes were made." -ForegroundColor Yellow
-    }
-    exit 0
-}
-
-if ($Entity -eq "task" -and $Action -eq "merge") {
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Issue number is required."
-    }
-
-    Merge-Task -IssueNumber ([int]$Value)
-    if (Get-DryRun) {
-        Write-Host "No changes were made." -ForegroundColor Yellow
-    }
-    exit 0
-}
-
-Show-Help
-exit 1

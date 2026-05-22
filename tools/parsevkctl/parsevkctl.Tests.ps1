@@ -774,5 +774,72 @@ Describe "parsevkctl Dry-Run Mode" {
     }
 }
 
+Describe "parsevkctl JSON output" {
+    BeforeEach {
+        $scriptPath = Join-Path $PSScriptRoot "parsevkctl.ps1"
+    }
+
+    It "returns valid JSON for task doctor -Json" {
+        $output = & $scriptPath task doctor -Json | Out-String
+        $json = $output | ConvertFrom-Json
+        $json.command | Should Be "task doctor"
+        $json.ready | Should Not BeNullOrEmpty
+    }
+
+    It "returns valid JSON for task status -Json" {
+        $output = & $scriptPath task status 123 -Json -DryRun | Out-String
+        $json = $output | ConvertFrom-Json
+        $json.command | Should Be "task status"
+        $json.issue | Should Be 123
+    }
+
+    It "returns valid JSON for task create -Json" {
+        $output = & $scriptPath task create "Test JSON" -Body "Body" -Label "type: feat" -Json -DryRun | Out-String
+        $json = $output | ConvertFrom-Json
+        $json.command | Should Be "task create"
+        $json.issue | Should Be 123
+        $json.result | Should Be "created"
+    }
+
+    It "returns valid JSON for task start -Json" {
+        $output = & $scriptPath task start 123 -Json -DryRun | Out-String
+        $json = $output | ConvertFrom-Json
+        $json.command | Should Be "task start"
+        $json.issue | Should Be 123
+        $json.result | Should Be "started"
+        $json.branch | Should Be "feat/issue-123-simulated-issue-title"
+    }
+
+    It "returns valid JSON for task pr -Json" {
+        $output = & $scriptPath task pr 123 -Json -DryRun | Out-String
+        $json = $output | ConvertFrom-Json
+        $json.command | Should Be "task pr"
+        $json.issue | Should Be 123
+        $json.result | Should Be "pr_created"
+        $json.prNumber | Should Be 999
+    }
+
+    It "returns valid JSON for task merge -Json" {
+        $output = & $scriptPath task merge 123 -Json -DryRun | Out-String
+        $json = $output | ConvertFrom-Json
+        $json.command | Should Be "task merge"
+        $json.issue | Should Be 123
+        $json.result | Should Be "merged"
+        $json.prNumber | Should Be 999
+    }
+
+    It "returns valid JSON error payload on exception with exit code 1" {
+        $tempFile = Join-Path $PSScriptRoot "test_err.json"
+        $process = Start-Process powershell -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $scriptPath, "task", "start", "-Json" -RedirectStandardOutput $tempFile -PassThru -Wait
+        $process.ExitCode | Should Be 1
+        $errContent = Get-Content $tempFile -Raw | ConvertFrom-Json
+        $errContent.command | Should Be "task start"
+        $errContent.result | Should Be "failed"
+        $errContent.error | Should Not BeNullOrEmpty
+        Remove-Item $tempFile -ErrorAction SilentlyContinue
+    }
+}
+
+
 
 
