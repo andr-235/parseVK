@@ -1,27 +1,18 @@
 import type { WatchlistAuthorCard, WatchlistComment, WatchlistSettings } from '@/types'
+import { formatDateTime as sharedFormatDateTime } from '@/utils/common'
+
 /**
  * Форматирует дату и время в строку в формате ru-RU.
  * @param value - Значение даты в строке или null/undefined
  * @returns Отформатированная строка даты или '—' если значение пустое, или 'Неверная дата' если дата невалидна
  */
 export const formatDateTime = (value: string | null | undefined): string => {
-  if (!value) {
-    return '—'
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return 'Неверная дата'
-  }
-
-  return date.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return sharedFormatDateTime(value, {
+    emptyValue: '—',
+    invalidValue: 'Неверная дата',
   })
 }
+
 
 /**
  * Форматирует статус автора в читаемую строку.

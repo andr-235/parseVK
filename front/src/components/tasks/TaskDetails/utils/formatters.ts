@@ -1,6 +1,7 @@
+import { formatDateTime } from '@/utils/common'
 import type { TaskDetails as TaskDetailsType } from '@/types'
 
-export const formatDate = (value: string): string => new Date(value).toLocaleString('ru-RU')
+export const formatDate = (value: string): string => formatDateTime(value)
 
 export const getNumberFromObject = (
   source: Record<string, unknown>,

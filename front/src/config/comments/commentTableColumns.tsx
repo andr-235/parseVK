@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { highlightKeywords } from '@/utils/common/highlightKeywords'
-import { formatDateTime } from '@/utils/comments/formatDateTime'
-import { getAuthorInitials } from '@/utils/comments/getAuthorInitials'
+import { formatDateTime, getAuthorInitials } from '@/utils/common'
 import type { TableColumn, Comment, Keyword } from '@/types'
 
 export const getCommentTableColumns = (

@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { AuthorCard, AuthorSortField } from '@/types'
 import { resolveCityLabel } from '@/utils/authors/authorUtils'
 import { ArrowRight, Camera, Search, Trash2 } from 'lucide-react'
+import { formatDateTime, getAuthorInitials } from '@/utils/common'
 
 interface AuthorsTableCardProps {
   authors: AuthorCard[]
@@ -36,28 +37,7 @@ const formatMetricValue = (value: number | null | undefined): string => {
   return numberFormatter.format(value)
 }
 
-const formatDateTimeCell = (value: string | null | undefined): string => {
-  if (!value) {
-    return '—'
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return '—'
-  }
-  return date.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-const getInitials = (firstName: string, lastName: string): string => {
-  const first = firstName?.[0] ?? ''
-  const last = lastName?.[0] ?? ''
-  return `${first}${last}`.toUpperCase() || 'VK'
-}
+// Вспомогательные функции даты и инициалов импортируются из @/utils/common
 
 const resolveProfileUrl = (author: AuthorCard): string => {
   if (author.profileUrl) {
@@ -205,7 +185,7 @@ export function AuthorsTableCard({
                           <AvatarImage src={avatarUrl} alt={author.fullName} />
                         ) : (
                           <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                            {getInitials(author.firstName, author.lastName)}
+                            {getAuthorInitials(author.fullName)}
                           </AvatarFallback>
                         )}
                       </Avatar>
@@ -270,10 +250,10 @@ export function AuthorsTableCard({
                     {formatMetricValue(author.followersCount)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDateTimeCell(author.lastSeenAt)}
+                    {formatDateTime(author.lastSeenAt)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDateTimeCell(author.verifiedAt)}
+                    {formatDateTime(author.verifiedAt)}
                   </TableCell>
                   <TableCell className="text-right sticky right-0 bg-card z-10 group-hover:bg-muted/50 transition-colors">
                     <div className="flex justify-end gap-2">

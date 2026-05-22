@@ -1,3 +1,5 @@
+import { formatDateTime as sharedFormatDateTime } from '@/utils/common'
+
 /**
  * Утилиты для компонента AuthorAnalysis
  */
@@ -6,24 +8,12 @@
  * Форматирует дату и время в читаемый вид
  */
 export const formatDateTime = (value: string | null | undefined): string => {
-  if (!value) {
-    return 'Нет данных'
-  }
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return 'Нет данных'
-  }
-
-  return date.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return sharedFormatDateTime(value, {
+    emptyValue: 'Нет данных',
+    invalidValue: 'Нет данных',
   })
 }
+
 
 /**
  * Метки категорий для отображения

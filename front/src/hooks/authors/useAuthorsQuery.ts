@@ -1,3 +1,4 @@
+import { mergeListsById } from '@/utils/common'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 
@@ -58,12 +59,10 @@ export const useAuthorsQuery = (enabled: boolean) => {
     useAuthorsStore.setState((state) => {
       const incoming = query.data.items
       const existing = state.authors
-      const incomingIds = new Set(incoming.map((item) => item.id))
-      const extras = existing.filter((item) => !incomingIds.has(item.id))
 
       return {
         ...state,
-        authors: [...incoming, ...extras],
+        authors: mergeListsById(incoming, existing),
         total: query.data.total,
         hasMore: query.data.hasMore,
         isLoading: false,
