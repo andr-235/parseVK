@@ -120,6 +120,29 @@ function Get-ProjectItem {
         Select-Object -First 1
 }
 
+function Wait-ProjectItem {
+    param(
+        [object]$Config,
+        [int]$IssueNumber,
+        [int]$Attempts = 5,
+        [int]$DelaySeconds = 2
+    )
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        $item = Get-ProjectItem -Config $Config -IssueNumber $IssueNumber
+
+        if ($null -ne $item) {
+            return $item
+        }
+
+        if ($attempt -lt $Attempts) {
+            Start-Sleep -Seconds $DelaySeconds
+        }
+    }
+
+    return $null
+}
+
 function Get-StatusField {
     param([object]$Config)
 
@@ -152,21 +175,24 @@ function Set-TaskStatus {
 
     Write-Host ("Setting issue #" + $IssueNumber + " status to: " + $StatusName) -ForegroundColor Cyan
 
-    $item = Get-ProjectItem -Config $config -IssueNumber $IssueNumber
+    $item = Wait-ProjectItem -Config $config -IssueNumber $IssueNumber
 
     if ($null -eq $item) {
-        Write-Host "Issue is not found in project. Trying to add it..." -ForegroundColor Yellow
+        Write-Host "Issue is not visible in project yet. Trying to add it..." -ForegroundColor Yellow
 
-        Invoke-Native "gh" @(
-            "issue", "edit",
-            [string]$IssueNumber,
-            "--repo", $config.repo,
-            "--add-project", $config.projectTitle
-        )
+        try {
+            Invoke-Native "gh" @(
+                "issue", "edit",
+                [string]$IssueNumber,
+                "--repo", $config.repo,
+                "--add-project", $config.projectTitle
+            )
+        }
+        catch {
+            Write-Host "Project add command failed; waiting for an existing item..." -ForegroundColor Yellow
+        }
 
-        Start-Sleep -Seconds 3
-
-        $item = Get-ProjectItem -Config $config -IssueNumber $IssueNumber
+        $item = Wait-ProjectItem -Config $config -IssueNumber $IssueNumber
     }
 
     if ($null -eq $item) {
