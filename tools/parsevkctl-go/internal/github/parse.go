@@ -11,12 +11,11 @@ import (
 )
 
 type issueJSON struct {
-	Number      int    `json:"number"`
-	Title       string `json:"title"`
-	State       string `json:"state"`
-	URL         string `json:"url"`
-	HeadRefName string `json:"headRefName"`
-	Labels      []struct {
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	State  string `json:"state"`
+	URL    string `json:"url"`
+	Labels []struct {
 		Name string `json:"name"`
 	} `json:"labels"`
 }
@@ -70,7 +69,6 @@ func issueFromJSON(raw issueJSON) domain.Issue {
 		Title:  raw.Title,
 		State:  normalizeIssueState(raw.State),
 		URL:    raw.URL,
-		Branch: domain.BranchName(raw.HeadRefName),
 		Labels: issueLabelsFromJSON(raw.Labels),
 	}
 }

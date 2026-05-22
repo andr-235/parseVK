@@ -1,10 +1,25 @@
 # parsevkctl Go CLI
 
-New Go implementation of parsevkctl.
+Canonical implementation of parsevkctl.
 
 Build: go build ./cmd/parsevkctl
+Build local legacy-wrapper binary: ../parsevkctl/build.ps1
 Test: go test ./...
 Run: go run ./cmd/parsevkctl --help
+
+The old PowerShell entrypoint at `../parsevkctl/parsevkctl.ps1` is now only a
+thin legacy compatibility wrapper. It resolves a Go binary, forwards arguments
+unchanged, and preserves the Go process exit code. Existing calls such as
+`..\parsevkctl\parsevkctl.ps1 task start 123` continue to work temporarily, but
+new automation should call the Go CLI directly or build
+`../parsevkctl/bin/parsevkctl.exe`.
+
+Wrapper binary resolution order:
+
+1. `tools/parsevkctl/bin/parsevkctl.exe`
+2. `tools/parsevkctl-go/bin/parsevkctl.exe`
+3. `tools/parsevkctl-go/parsevkctl.exe`
+4. `parsevkctl` from `PATH`
 
 ## Domain model
 
@@ -70,7 +85,8 @@ task sync --apply is not implemented in Go yet; this command is preview-only
 
 ## Write commands
 
-The Go CLI is canonical for migrated commands. The PowerShell implementation remains in the repository as legacy automation for commands that have not moved yet.
+The Go CLI is canonical for write commands. The PowerShell entrypoint is a
+legacy wrapper only and no longer contains task workflow business logic.
 
 All write commands use `internal/planner` to build operation plans and `planner.Executor` to apply them through typed Git and GitHub adapters. CLI handlers do not call `git` or `gh` directly.
 

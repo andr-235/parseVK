@@ -13,7 +13,7 @@ import (
 func TestParseIssueJSON(t *testing.T) {
 	t.Parallel()
 
-	issue, err := parseIssueJSON([]byte(`{"number":108,"title":"Add adapter","state":"OPEN","url":"https://github.test/issues/108","headRefName":"feature","labels":[{"name":"type: docs"},{"name":"go"}]}`))
+	issue, err := parseIssueJSON([]byte(`{"number":108,"title":"Add adapter","state":"OPEN","url":"https://github.test/issues/108","labels":[{"name":"type: docs"},{"name":"go"}]}`))
 	if err != nil {
 		t.Fatalf("parseIssueJSON returned error: %v", err)
 	}
@@ -23,7 +23,6 @@ func TestParseIssueJSON(t *testing.T) {
 		Title:  "Add adapter",
 		State:  domain.IssueStateOpen,
 		URL:    "https://github.test/issues/108",
-		Branch: domain.BranchName("feature"),
 		Labels: []string{"type: docs", "go"},
 	}
 	if !reflect.DeepEqual(issue, want) {
@@ -83,7 +82,7 @@ func TestCommandArguments(t *testing.T) {
 				_, err := adapter.GetIssue(context.Background(), 108)
 				return err
 			},
-			args: []string{"issue", "view", "108", "--json", "number,title,state,url,headRefName,labels"},
+			args: []string{"issue", "view", "108", "--json", "number,title,state,url,labels"},
 		},
 		{
 			name: "close issue with comment",
@@ -149,7 +148,7 @@ func TestCreateIssueRunsCreateThenView(t *testing.T) {
 			return commandResult{stdout: "https://github.com/andr-235/parseVK/issues/108"}, nil
 		}
 
-		return commandResult{stdout: `{"number":108,"title":"Issue","state":"OPEN","headRefName":"feature"}`}, nil
+		return commandResult{stdout: `{"number":108,"title":"Issue","state":"OPEN"}`}, nil
 	})
 
 	issue, err := adapter.CreateIssue(context.Background(), CreateIssueInput{
@@ -166,7 +165,7 @@ func TestCreateIssueRunsCreateThenView(t *testing.T) {
 
 	want := [][]string{
 		{"issue", "create", "--title", "Title", "--body", "Body", "--label", "go", "--label", "cli"},
-		{"issue", "view", "108", "--json", "number,title,state,url,headRefName,labels"},
+		{"issue", "view", "108", "--json", "number,title,state,url,labels"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("args = %#v, want %#v", got, want)
@@ -265,5 +264,5 @@ func commandOutputFor(args []string) string {
 		return `{"number":7,"title":"PR","state":"OPEN","isDraft":false,"mergedAt":null}`
 	}
 
-	return `{"number":108,"title":"Issue","state":"OPEN","headRefName":"feature"}`
+	return `{"number":108,"title":"Issue","state":"OPEN"}`
 }
