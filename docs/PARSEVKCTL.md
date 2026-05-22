@@ -2,7 +2,7 @@
 
 `parsevkctl` is the local task workflow helper for the `andr-235/parseVK`
 repository. The Go CLI in `tools/parsevkctl-go` is the canonical
-implementation.
+implementation for task lifecycle commands.
 
 The historical PowerShell entrypoint remains temporarily for compatibility:
 
@@ -114,6 +114,19 @@ Merge the linked pull request and finish the issue:
 .\tools\parsevkctl\parsevkctl.ps1 task merge 123
 ```
 
+Create a new task issue:
+
+```powershell
+.\tools\parsevkctl\parsevkctl.ps1 task create "Title" --body "Optional body"
+```
+
+Show task state or preview drift without writes:
+
+```powershell
+.\tools\parsevkctl\parsevkctl.ps1 task status 123
+.\tools\parsevkctl\parsevkctl.ps1 task sync 123
+```
+
 Preview write operations without mutating GitHub or local git state:
 
 ```powershell
@@ -138,6 +151,37 @@ Todo -> In Progress -> Review -> Done
 - `In Progress`: task is started and a task branch is created.
 - `Review`: pull request is open and ready for review.
 - `Done`: pull request is merged and the issue is closed.
+
+## Post-PR and Post-Merge Cleanup
+
+`task pr <issue>` creates the PR, moves the Project item to `Review`, then
+switches back to the configured default branch and pulls it with `--ff-only`.
+It does not delete the local task branch at PR time because the branch is not
+merged yet.
+
+`task merge <issue>` merges the linked PR and passes `--delete-branch` to
+GitHub CLI when `merge.deleteBranch` is `true`. If the command is run from the
+PR head branch, it switches back to the configured default branch, pulls with
+`--ff-only`, and deletes the local task branch with `git branch -d`.
+
+Protected branches such as `main`, `master`, and
+`fastapi-microservices-rewrite` are never deleted by the Git adapter.
+
+## Migration Status
+
+The Go rewrite is canonical for the documented workflow:
+
+```text
+config validate
+doctor
+task create -> task start -> task status/task sync -> task pr -> task merge
+--json output
+legacy wrapper delegation
+```
+
+The remaining known limitation is intentional: `task sync <issue>` is
+preview/read-only. `task sync <issue> --apply` is not part of the completed
+migration surface and exits with a preview-only error.
 
 ## Branch Naming
 

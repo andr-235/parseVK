@@ -115,7 +115,7 @@ func TestDoctorAllOK(t *testing.T) {
 
 func TestDoctorWarnsWhenProjectUnavailable(t *testing.T) {
 	deps := okDeps()
-	deps.GitHub.projectErr = github.ErrProjectNotImplemented
+	deps.GitHub.projectFieldErr = github.ErrProjectNotImplemented
 
 	result := RunDoctor(context.Background(), DoctorInput{
 		ConfigValidation: config.ValidationResult{Path: "config.json", Valid: true},
@@ -128,6 +128,24 @@ func TestDoctorWarnsWhenProjectUnavailable(t *testing.T) {
 		t.Fatalf("exit = %d, want 0", result.ExitCode)
 	}
 	assertCheck(t, result.Checks, "project-status", CheckWarn)
+	deps.assertNoWrites(t)
+}
+
+func TestDoctorChecksProjectFieldAvailabilityWithoutIssueStub(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.projectErr = errors.New("project item not found for issue #1")
+
+	result := RunDoctor(context.Background(), DoctorInput{
+		ConfigValidation: config.ValidationResult{Path: "config.json", Valid: true},
+		Config:           deps.Config,
+		Git:              deps.Git,
+		GitHub:           deps.GitHub,
+	})
+
+	if result.ExitCode != 0 {
+		t.Fatalf("exit = %d, want 0", result.ExitCode)
+	}
+	assertCheck(t, result.Checks, "project-status", CheckOK)
 	deps.assertNoWrites(t)
 }
 
@@ -346,7 +364,7 @@ func TestTaskPRDryRunPlan(t *testing.T) {
 	}
 
 	got := planOperationTypes(result.Plan.Operations)
-	want := []string{"Git.PushBranch", "PullRequest.Create", "Project.SetStatus"}
+	want := []string{"Git.PushBranch", "PullRequest.Create", "Project.SetStatus", "Git.Switch", "Git.PullFastForward"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("operations = %#v, want %#v", got, want)
 	}
@@ -401,6 +419,9 @@ func TestTaskMergeRejectsWrongBaseBranch(t *testing.T) {
 
 func TestTaskMergeDryRunPlan(t *testing.T) {
 	deps := okDeps()
+	deleteBranch := true
+	deps.Config.Merge.DeleteBranch = &deleteBranch
+	deps.Git.currentBranch = "feat/issue-112-add-read-only-task-commands"
 	deps.GitHub.prs = []domain.PullRequest{{
 		Number: 9,
 		State:  domain.PullRequestStateOpen,
@@ -419,7 +440,7 @@ func TestTaskMergeDryRunPlan(t *testing.T) {
 	}
 
 	got := planOperationTypes(result.Plan.Operations)
-	want := []string{"PullRequest.Merge", "Project.SetStatus", "Issue.Close", "Git.Switch", "Git.PullFastForward"}
+	want := []string{"PullRequest.Merge", "Project.SetStatus", "Issue.Close", "Git.Switch", "Git.PullFastForward", "Branch.DeleteLocal"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("operations = %#v, want %#v", got, want)
 	}
@@ -569,12 +590,13 @@ func (f *fakeGit) HasCommitsAhead(context.Context, string, string) (bool, error)
 }
 
 type fakeGitHub struct {
-	issue       domain.Issue
-	prs         []domain.PullRequest
-	project     domain.ProjectItem
-	projectErr  error
-	allowWrites bool
-	writeCalls  []string
+	issue           domain.Issue
+	prs             []domain.PullRequest
+	project         domain.ProjectItem
+	projectErr      error
+	projectFieldErr error
+	allowWrites     bool
+	writeCalls      []string
 }
 
 func (f *fakeGitHub) GetIssue(context.Context, int) (domain.Issue, error) {
@@ -630,6 +652,9 @@ func (f *fakeGitHub) SetProjectStatus(context.Context, int, domain.ProjectStatus
 		return nil
 	}
 	return errors.New("write call")
+}
+func (f *fakeGitHub) CheckProjectStatusField(context.Context) error {
+	return f.projectFieldErr
 }
 
 func planOperationTypes(operations []planner.Operation) []string {

@@ -58,13 +58,12 @@ type CreateTaskInput struct {
 }
 
 type CreatePullRequestInput struct {
-	Issue             domain.Issue
-	BranchName        string
-	BaseBranch        string
-	Title             string
-	Body              string
-	TargetStatus      domain.ProjectStatus
-	DeleteLocalBranch bool
+	Issue        domain.Issue
+	BranchName   string
+	BaseBranch   string
+	Title        string
+	Body         string
+	TargetStatus domain.ProjectStatus
 }
 
 type MergeTaskInput struct {
@@ -74,6 +73,7 @@ type MergeTaskInput struct {
 	TargetStatus       domain.ProjectStatus
 	MergeMethod        string
 	DeleteRemoteBranch bool
+	DeleteLocalBranch  bool
 	CloseIssue         bool
 	SyncDefaultBranch  bool
 }
@@ -279,16 +279,20 @@ func NewCreatePullRequestPlan(input CreatePullRequestInput) (Plan, error) {
 			SafeToRetry: true,
 			Payload:     ProjectStatusPayload{IssueNumber: issueNumber, Status: targetStatus},
 		},
-	}
-
-	if input.DeleteLocalBranch {
-		operations = append(operations, Operation{
-			ID:          "branch-delete-local-task-branch",
-			Type:        OperationBranchDeleteLocal,
-			Description: fmt.Sprintf("Delete local task branch %s", branchName),
+		{
+			ID:          "git-switch-default-branch",
+			Type:        OperationGitSwitch,
+			Description: fmt.Sprintf("Switch to %s", baseBranch),
 			SafeToRetry: true,
-			Payload:     DeleteLocalBranchPayload{Branch: branchName},
-		})
+			Payload:     GitBranchPayload{Branch: baseBranch},
+		},
+		{
+			ID:          "git-pull-fast-forward-default-branch",
+			Type:        OperationGitPullFastForward,
+			Description: fmt.Sprintf("Pull %s with --ff-only from origin", baseBranch),
+			SafeToRetry: true,
+			Payload:     GitRefPayload{Remote: originRemote, Branch: baseBranch},
+		},
 	}
 
 	return Plan{
@@ -370,6 +374,15 @@ func NewMergeTaskPlan(input MergeTaskInput) (Plan, error) {
 				Payload:     GitRefPayload{Remote: originRemote, Branch: defaultBranch},
 			},
 		)
+	}
+	if input.DeleteLocalBranch {
+		operations = append(operations, Operation{
+			ID:          "branch-delete-local-task-branch",
+			Type:        OperationBranchDeleteLocal,
+			Description: fmt.Sprintf("Delete local task branch %s", input.PullRequest.Head),
+			SafeToRetry: true,
+			Payload:     DeleteLocalBranchPayload{Branch: input.PullRequest.Head},
+		})
 	}
 
 	return Plan{

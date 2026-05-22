@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/config"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/domain"
 )
 
@@ -242,6 +243,35 @@ func TestProjectMethodsReturnNotImplemented(t *testing.T) {
 	if err := adapter.SetProjectStatus(context.Background(), 108, domain.ProjectStatusReview); !errors.Is(err, ErrProjectNotImplemented) {
 		t.Fatalf("SetProjectStatus error = %v, want ErrProjectNotImplemented", err)
 	}
+	if err := adapter.CheckProjectStatusField(context.Background()); !errors.Is(err, ErrProjectNotImplemented) {
+		t.Fatalf("CheckProjectStatusField error = %v, want ErrProjectNotImplemented", err)
+	}
+}
+
+func TestCheckProjectStatusFieldUsesConfiguredProject(t *testing.T) {
+	t.Parallel()
+
+	var got []string
+	adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
+		got = append([]string(nil), args...)
+		return commandResult{stdout: projectFieldsOutput()}, nil
+	})
+	adapter.config = config.Config{
+		Repo:          "andr-235/parseVK",
+		ProjectOwner:  "andr-235",
+		ProjectNumber: 2,
+		ProjectID:     "project-id",
+		ProjectTitle:  "parsevk development",
+	}
+
+	if err := adapter.CheckProjectStatusField(context.Background()); err != nil {
+		t.Fatalf("CheckProjectStatusField returned error: %v", err)
+	}
+
+	want := []string{"project", "field-list", "2", "--owner", "andr-235", "--limit", "100", "--format", "json"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("args = %#v, want %#v", got, want)
+	}
 }
 
 type fakeExitError struct {
@@ -265,4 +295,8 @@ func commandOutputFor(args []string) string {
 	}
 
 	return `{"number":108,"title":"Issue","state":"OPEN"}`
+}
+
+func projectFieldsOutput() string {
+	return `{"fields":[{"id":"field-id","name":"Status","options":[{"id":"todo","name":"Todo"},{"id":"in-progress","name":"In Progress"},{"id":"review","name":"Review"},{"id":"done","name":"Done"}]}]}`
 }

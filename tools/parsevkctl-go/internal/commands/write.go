@@ -347,6 +347,7 @@ func BuildTaskMergePlan(ctx context.Context, input TaskIssueInput) (TaskMergePla
 		TargetStatus:       domain.ProjectStatusDone,
 		MergeMethod:        mergeStrategy(input.Config),
 		DeleteRemoteBranch: mergeDeletesBranch(input.Config),
+		DeleteLocalBranch:  mergeDeletesBranch(input.Config) && currentBranch == linked.Head && linked.Head != "",
 		CloseIssue:         true,
 		SyncDefaultBranch:  currentBranch != input.Config.DefaultBranch,
 	})

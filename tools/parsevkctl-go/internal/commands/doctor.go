@@ -46,6 +46,10 @@ type DoctorCheck struct {
 	Message string      `json:"message"`
 }
 
+type projectStatusFieldChecker interface {
+	CheckProjectStatusField(ctx context.Context) error
+}
+
 func RunDoctorCommand(ctx context.Context, input DoctorRunInput) int {
 	result := RunDoctor(ctx, input.DoctorInput)
 	if err := renderDoctor(input.Stdout, result, input.JSON); err != nil {
@@ -108,7 +112,18 @@ func RunDoctor(ctx context.Context, input DoctorInput) DoctorResult {
 		checks = append(checks, DoctorCheck{Name: "default-branch", Status: CheckOK, Message: "default branch reference is readable"})
 	}
 
-	if _, err := input.GitHub.GetProjectItem(ctx, 1); err != nil {
+	if checker, ok := input.GitHub.(projectStatusFieldChecker); ok {
+		if err := checker.CheckProjectStatusField(ctx); err != nil {
+			status := CheckWarn
+			message := projectUnavailableMessage(err)
+			if !errors.Is(err, github.ErrProjectNotImplemented) {
+				message = "project status check failed: " + err.Error()
+			}
+			checks = append(checks, DoctorCheck{Name: "project-status", Status: status, Message: message})
+		} else {
+			checks = append(checks, DoctorCheck{Name: "project-status", Status: CheckOK, Message: "project status field is available"})
+		}
+	} else if _, err := input.GitHub.GetProjectItem(ctx, 1); err != nil {
 		status := CheckWarn
 		message := projectUnavailableMessage(err)
 		if !errors.Is(err, github.ErrProjectNotImplemented) {
