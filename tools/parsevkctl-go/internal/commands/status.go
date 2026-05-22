@@ -14,6 +14,7 @@ import (
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/domain"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/git"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/github"
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/planner"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/task"
 )
 
@@ -268,4 +269,8 @@ func writeError(w io.Writer, err error) {
 		return
 	}
 	fmt.Fprintln(w, "Error:", strings.TrimSpace(err.Error()))
+	var operationErr planner.OperationError
+	if errors.As(err, &operationErr) && strings.TrimSpace(operationErr.RecoveryHint) != "" {
+		fmt.Fprintln(w, "Recovery:", strings.TrimSpace(operationErr.RecoveryHint))
+	}
 }

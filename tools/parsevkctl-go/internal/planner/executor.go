@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/domain"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/git"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/github"
 )
@@ -11,6 +12,11 @@ import (
 type Executor struct {
 	Git    git.Adapter
 	GitHub github.Adapter
+}
+
+type ExecutionResult struct {
+	CreatedIssue       *domain.Issue       `json:"createdIssue,omitempty"`
+	CreatedPullRequest *domain.PullRequest `json:"createdPullRequest,omitempty"`
 }
 
 type OperationError struct {
@@ -34,9 +40,17 @@ func (e OperationError) Unwrap() error {
 }
 
 func (e Executor) Execute(ctx context.Context, plan Plan) error {
+	_, err := e.ExecuteWithResult(ctx, plan)
+	return err
+}
+
+func (e Executor) ExecuteWithResult(ctx context.Context, plan Plan) (ExecutionResult, error) {
+	result := ExecutionResult{}
+	var createdIssueNumber int
 	for _, operation := range plan.Operations {
-		if err := e.executeOperation(ctx, operation); err != nil {
-			return OperationError{
+		operationResult, err := e.executeOperation(ctx, operation, createdIssueNumber)
+		if err != nil {
+			return result, OperationError{
 				OperationID:   operation.ID,
 				OperationType: operation.Type,
 				Message:       "operation failed",
@@ -44,91 +58,104 @@ func (e Executor) Execute(ctx context.Context, plan Plan) error {
 				Cause:         err,
 			}
 		}
+		if operationResult.CreatedIssue != nil {
+			result.CreatedIssue = operationResult.CreatedIssue
+			createdIssueNumber = int(operationResult.CreatedIssue.ID)
+		}
+		if operationResult.CreatedPullRequest != nil {
+			result.CreatedPullRequest = operationResult.CreatedPullRequest
+		}
 	}
 
-	return nil
+	return result, nil
 }
 
-func (e Executor) executeOperation(ctx context.Context, operation Operation) error {
+func (e Executor) executeOperation(ctx context.Context, operation Operation, createdIssueNumber int) (ExecutionResult, error) {
 	switch operation.Type {
 	case OperationIssueCreate:
 		payload, err := payloadAs[IssueCreatePayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		_, err = e.GitHub.CreateIssue(ctx, github.CreateIssueInput{
+		issue, err := e.GitHub.CreateIssue(ctx, github.CreateIssueInput{
 			Title:  payload.Title,
 			Body:   payload.Body,
 			Labels: payload.Labels,
 		})
-		return err
+		if err != nil {
+			return ExecutionResult{}, err
+		}
+		return ExecutionResult{CreatedIssue: &issue}, nil
 	case OperationIssueClose:
 		payload, err := payloadAs[IssueClosePayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.GitHub.CloseIssue(ctx, payload.IssueNumber, payload.Comment)
+		return ExecutionResult{}, e.GitHub.CloseIssue(ctx, resolveIssueNumber(payload.IssueNumber, createdIssueNumber), payload.Comment)
 	case OperationProjectAddItem:
 		payload, err := payloadAs[ProjectIssuePayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.GitHub.AddProjectItem(ctx, payload.IssueNumber)
+		return ExecutionResult{}, e.GitHub.AddProjectItem(ctx, resolveIssueNumber(payload.IssueNumber, createdIssueNumber))
 	case OperationProjectSetStatus:
 		payload, err := payloadAs[ProjectStatusPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.GitHub.SetProjectStatus(ctx, payload.IssueNumber, payload.Status)
+		return ExecutionResult{}, e.GitHub.SetProjectStatus(ctx, resolveIssueNumber(payload.IssueNumber, createdIssueNumber), payload.Status)
 	case OperationGitFetch:
 		payload, err := payloadAs[GitRefPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.Git.Fetch(ctx, payload.Remote, payload.Branch)
+		return ExecutionResult{}, e.Git.Fetch(ctx, payload.Remote, payload.Branch)
 	case OperationGitSwitch:
 		payload, err := payloadAs[GitBranchPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.Git.Switch(ctx, payload.Branch)
+		return ExecutionResult{}, e.Git.Switch(ctx, payload.Branch)
 	case OperationGitPullFastForward:
 		payload, err := payloadAs[GitRefPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.Git.PullFFOnly(ctx, payload.Remote, payload.Branch)
+		return ExecutionResult{}, e.Git.PullFFOnly(ctx, payload.Remote, payload.Branch)
 	case OperationGitCreateBranch:
 		payload, err := payloadAs[GitBranchPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.Git.CreateBranch(ctx, payload.Branch)
+		return ExecutionResult{}, e.Git.CreateBranch(ctx, payload.Branch)
 	case OperationGitPushBranch:
 		payload, err := payloadAs[GitRefPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.Git.PushBranch(ctx, payload.Remote, payload.Branch, true)
+		return ExecutionResult{}, e.Git.PushBranch(ctx, payload.Remote, payload.Branch, true)
 	case OperationPullRequestCreate:
 		payload, err := payloadAs[PullRequestPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		_, err = e.GitHub.CreatePullRequest(ctx, github.CreatePullRequestInput{
+		pr, err := e.GitHub.CreatePullRequest(ctx, github.CreatePullRequestInput{
 			Title: payload.Title,
 			Body:  payload.Body,
 			Head:  payload.Head,
 			Base:  payload.Base,
 			Draft: payload.Draft,
 		})
-		return err
+		if err != nil {
+			return ExecutionResult{}, err
+		}
+		return ExecutionResult{CreatedPullRequest: &pr}, nil
 	case OperationPullRequestMerge:
 		payload, err := payloadAs[MergePullRequestPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.GitHub.MergePullRequest(ctx, payload.Number, github.MergePullRequestInput{
+		return ExecutionResult{}, e.GitHub.MergePullRequest(ctx, payload.Number, github.MergePullRequestInput{
 			Method:       payload.Method,
 			DeleteBranch: payload.DeleteBranch,
 			Auto:         payload.Auto,
@@ -136,17 +163,17 @@ func (e Executor) executeOperation(ctx context.Context, operation Operation) err
 	case OperationBranchDeleteLocal:
 		payload, err := payloadAs[DeleteLocalBranchPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.Git.DeleteLocalBranch(ctx, payload.Branch, payload.Force)
+		return ExecutionResult{}, e.Git.DeleteLocalBranch(ctx, payload.Branch, payload.Force)
 	case OperationBranchDeleteRemote:
 		payload, err := payloadAs[GitRefPayload](operation.Payload)
 		if err != nil {
-			return err
+			return ExecutionResult{}, err
 		}
-		return e.Git.DeleteRemoteBranch(ctx, payload.Remote, payload.Branch)
+		return ExecutionResult{}, e.Git.DeleteRemoteBranch(ctx, payload.Remote, payload.Branch)
 	default:
-		return fmt.Errorf("unsupported operation type %q", operation.Type)
+		return ExecutionResult{}, fmt.Errorf("unsupported operation type %q", operation.Type)
 	}
 }
 
@@ -169,6 +196,13 @@ func payloadAs[T any](payload any) (T, error) {
 	}
 
 	return typed, nil
+}
+
+func resolveIssueNumber(payloadIssueNumber int, createdIssueNumber int) int {
+	if payloadIssueNumber > 0 {
+		return payloadIssueNumber
+	}
+	return createdIssueNumber
 }
 
 func recoveryHint(operation Operation) string {

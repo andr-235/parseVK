@@ -40,7 +40,7 @@ Supported branch types: `feat`, `fix`, `docs`, `refactor`, `test`, `ci`, `chore`
 
 ## Read-only commands
 
-The Go CLI currently exposes the first user-facing read-only task commands:
+The Go CLI exposes read-only task commands:
 
 ```powershell
 go run ./cmd/parsevkctl doctor
@@ -66,4 +66,43 @@ go run ./cmd/parsevkctl --json task sync 112
 
 ```text
 task sync --apply is not implemented in Go yet; this command is preview-only
+```
+
+## Write commands
+
+The Go CLI is canonical for migrated commands. The PowerShell implementation remains in the repository as legacy automation for commands that have not moved yet.
+
+All write commands use `internal/planner` to build operation plans and `planner.Executor` to apply them through typed Git and GitHub adapters. CLI handlers do not call `git` or `gh` directly.
+
+```powershell
+go run ./cmd/parsevkctl task create "Title" --body "Optional body"
+go run ./cmd/parsevkctl task start 113
+go run ./cmd/parsevkctl task pr 113
+go run ./cmd/parsevkctl task merge 113
+```
+
+`task create "Title" --body "..."` creates a GitHub issue, adds it to the configured Project when supported by the adapter, sets status to `Todo`, and prints the created issue number and URL. The title is required; the body is optional. The command does not guess at duplicate issues.
+
+`task start <issue>` loads the issue, validates that it is open, validates the lifecycle transition to `InProgress`, derives the task branch through `internal/branch`, sets Project status to `In Progress`, fetches the default branch, switches to it, pulls with `--ff-only`, and creates the task branch.
+
+`task pr <issue>` validates the current task branch, confirms the branch issue number matches the requested issue, checks that the working tree is clean and the branch is ahead of the default branch, pushes the branch, creates a PR with `Closes #<issue>` in the body, and sets Project status to `Review`. If an open PR already exists for the same branch/base, the command returns that PR instead of creating a duplicate.
+
+`task merge <issue>` finds the linked PR, requires exactly one PR, rejects draft PRs and wrong base branches, respects `merge.requireChecks`, merges the PR, sets Project status to `Done`, closes the issue if needed, switches to the default branch when safe, and pulls with `--ff-only`.
+
+Use `--dry-run` with any write command to render the operation plan without executing it:
+
+```powershell
+go run ./cmd/parsevkctl --dry-run task create "Title" --body "Body"
+go run ./cmd/parsevkctl --dry-run task start 113
+go run ./cmd/parsevkctl --dry-run task pr 113
+go run ./cmd/parsevkctl --dry-run task merge 113
+```
+
+`--dry-run` must not mutate GitHub issues, Project items, pull requests, branches, or local git state.
+
+Use `--json` to render machine-readable output where the output layer supports it:
+
+```powershell
+go run ./cmd/parsevkctl --json --dry-run task start 113
+go run ./cmd/parsevkctl --json task pr 113
 ```
