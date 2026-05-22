@@ -692,7 +692,7 @@ function Merge-Task {
         throw "Open PR not found for issue #$IssueNumber. PR body must contain: Closes #$IssueNumber"
     }
     if ($matchingPrs.Count -gt 1) {
-        throw "Multiple open PRs found for issue #$IssueNumber: $(($matchingPrs | Select-Object -ExpandProperty number) -join ', '). Exactly one open PR is required."
+        throw "Multiple open PRs found for issue #${IssueNumber}: $(($matchingPrs | Select-Object -ExpandProperty number) -join ', '). Exactly one open PR is required."
     }
 
     $pr = $matchingPrs[0]
