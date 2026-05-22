@@ -16,6 +16,7 @@ type Adapter interface {
 	MergePullRequest(ctx context.Context, number int, input MergePullRequestInput) error
 
 	GetProjectItem(ctx context.Context, issueNumber int) (domain.ProjectItem, error)
+	AddProjectItem(ctx context.Context, issueNumber int) error
 	SetProjectStatus(ctx context.Context, issueNumber int, status domain.ProjectStatus) error
 }
 
