@@ -324,6 +324,64 @@ services:
     networks:
       - backend
 
+  moderation-db:
+    image: postgres:16
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "127.0.0.1:5438:5432"
+    environment:
+      POSTGRES_USER: ${MODERATION_POSTGRES_USER:-moderation}
+      POSTGRES_PASSWORD: ${MODERATION_POSTGRES_PASSWORD:-moderation_dev_password_change_me}
+      POSTGRES_DB: ${MODERATION_POSTGRES_DB:-moderation}
+    volumes:
+      - moderation_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  moderation-migrate:
+    build:
+      context: .
+      dockerfile: services/moderation-service/Dockerfile
+    restart: "no"
+    depends_on:
+      moderation-db:
+        condition: service_healthy
+    environment:
+      MODERATION_DATABASE_URL: ${MODERATION_DATABASE_URL:-postgresql+asyncpg://moderation:moderation_dev_password_change_me@moderation-db:5432/moderation}
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - backend
+
+  moderation-service:
+    build:
+      context: .
+      dockerfile: services/moderation-service/Dockerfile
+    restart: always
+    depends_on:
+      moderation-migrate:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      MODERATION_DATABASE_URL: ${MODERATION_DATABASE_URL:-postgresql+asyncpg://moderation:moderation_dev_password_change_me@moderation-db:5432/moderation}
+      MODERATION_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
+      MODERATION_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MODERATION_KAFKA_CONSUMER_ENABLED: ${MODERATION_KAFKA_CONSUMER_ENABLED:-true}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
   api-gateway:
     build:
       context: .
@@ -338,10 +396,13 @@ services:
         condition: service_healthy
       content-service:
         condition: service_healthy
+      moderation-service:
+        condition: service_healthy
     environment:
       GATEWAY_IDENTITY_BASE_URL: http://identity-service:8000
       GATEWAY_TASKS_BASE_URL: http://tasks-service:8000
       GATEWAY_CONTENT_BASE_URL: http://content-service:8000
+      GATEWAY_MODERATION_BASE_URL: http://moderation-service:8000
       GATEWAY_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       GATEWAY_REFRESH_COOKIE_NAME: ${GATEWAY_REFRESH_COOKIE_NAME:-refresh_token}
       GATEWAY_CSRF_COOKIE_NAME: ${GATEWAY_CSRF_COOKIE_NAME:-csrf_token}
@@ -526,6 +587,8 @@ volumes:
     name: parsevk_vk_postgres_data
   content_postgres_data:
     name: parsevk_content_postgres_data
+  moderation_postgres_data:
+    name: parsevk_moderation_postgres_data
   prometheus_data:
     name: parsevk_prometheus_data
   grafana_data:

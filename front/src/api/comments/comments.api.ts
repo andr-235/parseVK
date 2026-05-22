@@ -74,26 +74,8 @@ const mapContentComment = (comment: ContentCommentDto): CommentResponseDto => ({
 export const getComments = async (
   params?: { offset?: number; limit?: number } & CommentsFilters
 ): Promise<GetCommentsResult> => {
-  if (!hasLegacyOnlyFilters(params)) {
-    const limit = params?.limit ?? 20
-    const page = offsetToPage(params?.offset, limit)
-    const response = await createRequest(contentCommentsUrl(page, limit))
-    const data = await handleResponse<ContentPageDto<ContentCommentDto>>(
-      response,
-      'Failed to fetch comments'
-    )
-
-    return {
-      items: mapComments(data.items.map(mapContentComment)),
-      total: data.total,
-      hasMore: data.hasMore,
-      readCount: 0,
-      unreadCount: data.total,
-    }
-  }
-
   const query = buildCommentsQuery(params)
-  const url = query ? `${API_URL}/comments?${query}` : `${API_URL}/comments`
+  const url = query ? `${GATEWAY_API_URL}/v1/comments?${query}` : `${GATEWAY_API_URL}/v1/comments`
   const response = await createRequest(url)
   const data = await handleResponse<GetCommentsDto>(response, 'Failed to fetch comments')
 
@@ -101,35 +83,16 @@ export const getComments = async (
     items: mapComments(data.items),
     total: data.total,
     hasMore: data.hasMore,
-    readCount: data.readCount,
-    unreadCount: data.unreadCount,
+    readCount: data.readCount ?? 0,
+    unreadCount: data.unreadCount ?? data.total,
   }
 }
 
 export const getCommentsCursor = async (
   params?: { cursor?: string; limit?: number } & CommentsFilters
 ): Promise<GetCommentsCursorResult> => {
-  if (!hasLegacyOnlyFilters(params)) {
-    const limit = params?.limit ?? 20
-    const page = params?.cursor ? Number.parseInt(params.cursor, 10) || 1 : 1
-    const response = await createRequest(contentCommentsUrl(page, limit))
-    const data = await handleResponse<ContentPageDto<ContentCommentDto>>(
-      response,
-      'Failed to fetch comments with cursor'
-    )
-
-    return {
-      items: mapComments(data.items.map(mapContentComment)),
-      nextCursor: data.hasMore ? String(data.page + 1) : null,
-      hasMore: data.hasMore,
-      total: data.total,
-      readCount: 0,
-      unreadCount: data.total,
-    }
-  }
-
   const query = buildCommentsQuery(params)
-  const url = query ? `${API_URL}/comments/cursor?${query}` : `${API_URL}/comments/cursor`
+  const url = query ? `${GATEWAY_API_URL}/v1/comments/cursor?${query}` : `${GATEWAY_API_URL}/v1/comments/cursor`
   const response = await createRequest(url)
   const data = await handleResponse<GetCommentsCursorDto>(
     response,
@@ -139,15 +102,15 @@ export const getCommentsCursor = async (
   return {
     items: mapComments(data.items),
     nextCursor: data.nextCursor ?? null,
-    hasMore: data.hasMore,
-    total: data.total,
-    readCount: data.readCount,
-    unreadCount: data.unreadCount,
+    hasMore: data.hasMore ?? (data.nextCursor !== null),
+    total: data.total ?? data.items.length,
+    readCount: data.readCount ?? 0,
+    unreadCount: data.unreadCount ?? data.total ?? data.items.length,
   }
 }
 
 export const updateReadStatus = async (id: number, isRead: boolean): Promise<Comment> => {
-  const response = await createRequest(`${API_URL}/comments/${id}/read`, {
+  const response = await createRequest(`${GATEWAY_API_URL}/v1/comments/${id}/read`, {
     method: 'PATCH',
     body: JSON.stringify({ isRead }),
   })
