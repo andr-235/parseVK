@@ -1,4 +1,4 @@
-import { TasksPage } from '@/modules/tasks'
+import TasksPage from '@/components/tasks/TasksPage';
 
 export default function Tasks() {
   return <TasksPage />

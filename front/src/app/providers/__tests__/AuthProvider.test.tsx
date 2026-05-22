@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
-import { useAuthStore } from '@/modules/auth/store'
+import { useAuthStore } from '@/store/auth'
 
 const { refreshAccessTokenMock, isTokenExpiredMock, getRefreshDelayMsMock } = vi.hoisted(() => ({
   refreshAccessTokenMock: vi.fn().mockResolvedValue('next-access-token'),
@@ -8,7 +8,7 @@ const { refreshAccessTokenMock, isTokenExpiredMock, getRefreshDelayMsMock } = vi
   getRefreshDelayMsMock: vi.fn(() => 1_000),
 }))
 
-vi.mock('@/modules/auth', () => ({
+vi.mock('@/config/auth/lib/authSession', () => ({
   refreshAccessToken: refreshAccessTokenMock,
   isTokenExpired: isTokenExpiredMock,
   getRefreshDelayMs: getRefreshDelayMsMock,

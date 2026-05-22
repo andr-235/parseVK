@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Spinner } from '@/shared/ui/spinner'
-import { getRefreshDelayMs, isTokenExpired, refreshAccessToken } from '@/modules/auth'
-import { useAuthStore } from '@/modules/auth/store'
+import { Spinner } from '@/components/ui/spinner'
+import { getRefreshDelayMs, isTokenExpired, refreshAccessToken } from '@/config/auth/lib/authSession';
+import { useAuthStore } from '@/store/auth'
 
 interface AuthProviderProps {
   children: ReactNode

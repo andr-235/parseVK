@@ -15,8 +15,8 @@ Object.defineProperty(globalThis, 'import', {
   configurable: true,
 })
 
-vi.mock('@/shared/api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/shared/api')>()
+vi.mock('@/api/common', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/common')>()
   const { QueryClient } = await import('@tanstack/react-query')
 
   return {

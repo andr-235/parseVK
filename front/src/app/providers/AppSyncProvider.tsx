@@ -1,20 +1,20 @@
 import { useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 
-import { useTasksQuery } from '@/modules/tasks/hooks/useTasksQuery'
-import { useGroupsQuery } from '@/modules/groups/hooks/useGroupsQuery'
-import { useKeywordsQuery } from '@/modules/keywords/hooks/useKeywordsQuery'
-import { useTaskAutomationQuery } from '@/modules/settings/hooks/useTaskAutomationQuery'
-import { useCommentsQuery } from '@/modules/comments/hooks/useCommentsQuery'
-import { useCommentsStore } from '@/modules/comments/store'
-import { useAuthorsQuery } from '@/modules/authors/hooks/useAuthorsQuery'
+import { useTasksQuery } from '@/hooks/tasks/useTasksQuery'
+import { useGroupsQuery } from '@/hooks/groups/useGroupsQuery'
+import { useKeywordsQuery } from '@/hooks/keywords/useKeywordsQuery'
+import { useTaskAutomationQuery } from '@/hooks/settings/useTaskAutomationQuery'
+import { useCommentsQuery } from '@/hooks/comments/useCommentsQuery'
+import { useCommentsStore } from '@/store/comments'
+import { useAuthorsQuery } from '@/hooks/authors/useAuthorsQuery'
 import {
   useWatchlistAuthorsQuery,
   useWatchlistSettingsQuery,
-} from '@/modules/watchlist/hooks/useWatchlistQueries'
-import { useTasksSocket } from '@/modules/tasks/hooks/useTasksSocket'
-import { useAuthStore } from '@/modules/auth/store'
-import { useKeywordsStore } from '@/modules/keywords/store'
+} from '@/hooks/watchlist/useWatchlistQueries'
+import { useTasksSocket } from '@/hooks/tasks/useTasksSocket'
+import { useAuthStore } from '@/store/auth'
+import { useKeywordsStore } from '@/store/keywords'
 
 const shouldSyncKeywords = (pathname: string): boolean => {
   return pathname.startsWith('/keywords') || pathname.startsWith('/comments')

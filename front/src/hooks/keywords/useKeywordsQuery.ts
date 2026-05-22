@@ -1,0 +1,57 @@
+import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+
+// Использование services напрямую в queryFn - стандартный паттерн React Query
+// Store обновляется через useEffect после получения данных
+import { keywordsService } from '@/api/keywords/keywords.api'
+import { keywordsQueryKeys } from '@/api/keywords/queryKeys'
+import { useKeywordsStore } from '@/store/keywords'
+
+const fetchKeywords = () => keywordsService.getAllKeywords()
+
+interface UseKeywordsQueryOptions {
+  enabled?: boolean
+}
+
+export const useKeywordsQuery = (options?: UseKeywordsQueryOptions) => {
+  const enabled = options?.enabled ?? true
+
+  const query = useQuery({
+    queryKey: keywordsQueryKeys.list(),
+    queryFn: fetchKeywords,
+    staleTime: 60_000,
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    enabled,
+  })
+
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    if (query.data) {
+      useKeywordsStore.setState({ keywords: query.data, isLoaded: true, isReady: true })
+    }
+  }, [enabled, query.data])
+
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    useKeywordsStore.setState({ isLoading: query.isFetching })
+  }, [enabled, query.isFetching])
+
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    if (!query.isFetching && query.error) {
+      useKeywordsStore.setState({ isReady: true })
+    }
+  }, [enabled, query.error, query.isFetching])
+
+  return query
+}
