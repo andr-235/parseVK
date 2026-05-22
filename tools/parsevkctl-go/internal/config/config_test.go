@@ -230,3 +230,121 @@ func TestValidateFileRejectsMissingExplicitPath(t *testing.T) {
 		t.Fatalf("expected missing path error")
 	}
 }
+
+func TestValidateRejectsMissingRequiredFields(t *testing.T) {
+	valid := Config{
+		Repo:          "andr-235/parseVK",
+		DefaultBranch: "main",
+		ProjectOwner:  "andr-235",
+		ProjectNumber: 1,
+		ProjectID:     "PVT_kw_TEST",
+		ProjectTitle:  "parseVK",
+		Statuses: Statuses{
+			Todo:       "Todo",
+			InProgress: "In Progress",
+			Review:     "Review",
+			Done:       "Done",
+		},
+		Merge: MergeSettings{
+			RequireChecks:  boolPtr(false),
+			AllowAutoMerge: boolPtr(false),
+		},
+	}
+
+	tests := []struct {
+		name          string
+		mutate        func(*Config)
+		expectedError string
+	}{
+		{
+			name: "missing repo",
+			mutate: func(cfg *Config) {
+				cfg.Repo = ""
+			},
+			expectedError: "missing field repo",
+		},
+		{
+			name: "missing defaultBranch",
+			mutate: func(cfg *Config) {
+				cfg.DefaultBranch = ""
+			},
+			expectedError: "missing field defaultBranch",
+		},
+		{
+			name: "missing projectOwner",
+			mutate: func(cfg *Config) {
+				cfg.ProjectOwner = ""
+			},
+			expectedError: "missing field projectOwner",
+		},
+		{
+			name: "missing projectId",
+			mutate: func(cfg *Config) {
+				cfg.ProjectID = ""
+			},
+			expectedError: "missing field projectId",
+		},
+		{
+			name: "missing projectTitle",
+			mutate: func(cfg *Config) {
+				cfg.ProjectTitle = ""
+			},
+			expectedError: "missing field projectTitle",
+		},
+		{
+			name: "missing projectNumber",
+			mutate: func(cfg *Config) {
+				cfg.ProjectNumber = 0
+			},
+			expectedError: "projectNumber must be a positive integer",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := valid
+			tt.mutate(&cfg)
+
+			errs := Validate(cfg)
+			if !contains(errs, tt.expectedError) {
+				t.Fatalf("expected %q, got: %v", tt.expectedError, errs)
+			}
+		})
+	}
+}
+
+func TestValidateFileReturnsStructuredValidationErrors(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+
+	raw := []byte(`{
+"repo": "parseVK",
+"defaultBranch": "main",
+"projectOwner": "andr-235",
+"projectNumber": 0,
+"projectId": "PVT_kw_TEST",
+"projectTitle": "parseVK",
+"statuses": {
+"todo": "Todo",
+"inProgress": "In Progress",
+"review": "Review",
+"done": "Done"
+},
+"merge": {
+"requireChecks": false,
+"allowAutoMerge": false
+}
+}`)
+
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	result := ValidateFile(path)
+	if result.Valid {
+		t.Fatalf("expected invalid config")
+	}
+	if len(result.ValidationErrors) == 0 {
+		t.Fatalf("expected structured validation errors")
+	}
+}

@@ -32,10 +32,16 @@ type MergeSettings struct {
 	AllowAutoMerge *bool `json:"allowAutoMerge"`
 }
 
+type ValidationError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
 type ValidationResult struct {
-	Path   string   `json:"path"`
-	Valid  bool     `json:"valid"`
-	Errors []string `json:"errors,omitempty"`
+	Path             string            `json:"path"`
+	Valid            bool              `json:"valid"`
+	Errors           []string          `json:"errors,omitempty"`
+	ValidationErrors []ValidationError `json:"validationErrors,omitempty"`
 }
 
 func DefaultPaths() []string {
@@ -140,8 +146,31 @@ func ValidateFile(explicitPath string) ValidationResult {
 	errs := Validate(cfg)
 
 	return ValidationResult{
-		Path:   path,
-		Valid:  len(errs) == 0,
-		Errors: errs,
+		Path:             path,
+		Valid:            len(errs) == 0,
+		Errors:           errs,
+		ValidationErrors: toValidationErrors(errs),
 	}
+}
+
+func toValidationErrors(errors []string) []ValidationError {
+	result := make([]ValidationError, 0, len(errors))
+
+	for _, message := range errors {
+		field := ""
+		if after, ok := strings.CutPrefix(message, "missing field "); ok {
+			field = after
+		} else if strings.HasPrefix(message, "projectNumber ") {
+			field = "projectNumber"
+		} else if strings.HasPrefix(message, "repo ") {
+			field = "repo"
+		}
+
+		result = append(result, ValidationError{
+			Field:   field,
+			Message: message,
+		})
+	}
+
+	return result
 }
