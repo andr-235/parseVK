@@ -282,6 +282,28 @@ func (adapter *ShellAdapter) SetProjectStatus(ctx context.Context, issueNumber i
 	return err
 }
 
+func (adapter *ShellAdapter) CheckProjectStatusField(ctx context.Context) error {
+	if err := adapter.validateProjectConfig(); err != nil {
+		return err
+	}
+	field, err := adapter.getStatusField(ctx)
+	if err != nil {
+		return err
+	}
+	required := []domain.ProjectStatus{
+		domain.ProjectStatusTodo,
+		domain.ProjectStatusInProgress,
+		domain.ProjectStatusReview,
+		domain.ProjectStatusDone,
+	}
+	for _, status := range required {
+		if !projectFieldHasOption(field, string(status)) {
+			return fmt.Errorf("status option not found: %s", status)
+		}
+	}
+	return nil
+}
+
 func (adapter *ShellAdapter) getPullRequest(ctx context.Context, number int) (domain.PullRequest, error) {
 	if err := validateNumber("pull request number", number); err != nil {
 		return domain.PullRequest{}, err
@@ -370,6 +392,15 @@ type projectField struct {
 type projectOption struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+func projectFieldHasOption(field projectField, name string) bool {
+	for _, option := range field.Options {
+		if option.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func parseProjectItemsJSON(data []byte) (projectItemsJSON, error) {

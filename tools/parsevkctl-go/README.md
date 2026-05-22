@@ -1,6 +1,8 @@
 # parsevkctl Go CLI
 
-Canonical implementation of parsevkctl.
+Canonical implementation of parsevkctl. New task workflow automation should use
+this Go CLI; `../parsevkctl/parsevkctl.ps1` is only a legacy compatibility
+wrapper.
 
 Build: go build ./cmd/parsevkctl
 Build local legacy-wrapper binary: ../parsevkctl/build.ps1
@@ -101,9 +103,9 @@ go run ./cmd/parsevkctl task merge 113
 
 `task start <issue>` loads the issue, validates that it is open, validates the lifecycle transition to `InProgress`, derives the task branch through `internal/branch`, sets Project status to `In Progress`, fetches the default branch, switches to it, pulls with `--ff-only`, and creates the task branch.
 
-`task pr <issue>` validates the current task branch, confirms the branch issue number matches the requested issue, checks that the working tree is clean and the branch is ahead of the default branch, pushes the branch, creates a PR with `Closes #<issue>` in the body, and sets Project status to `Review`. If an open PR already exists for the same branch/base, the command returns that PR instead of creating a duplicate.
+`task pr <issue>` validates the current task branch, confirms the branch issue number matches the requested issue, checks that the working tree is clean and the branch is ahead of the default branch, pushes the branch, creates a PR with `Closes #<issue>` in the body, sets Project status to `Review`, switches back to the default branch and pulls it with `--ff-only`. It keeps the local task branch after PR creation because that branch is not merged yet. If an open PR already exists for the same branch/base, the command returns that PR instead of creating a duplicate.
 
-`task merge <issue>` finds the linked PR, requires exactly one PR, rejects draft PRs and wrong base branches, respects `merge.requireChecks`, merges the PR, sets Project status to `Done`, closes the issue if needed, switches to the default branch when safe, and pulls with `--ff-only`.
+`task merge <issue>` finds the linked PR, requires exactly one PR, rejects draft PRs and wrong base branches, respects `merge.requireChecks`, merges the PR, sets Project status to `Done`, closes the issue if needed, switches to the default branch when safe, and pulls with `--ff-only`. When `merge.deleteBranch` is `true`, the merge operation asks GitHub to delete the remote PR branch and the local task branch is deleted with `git branch -d` when the command was run from that branch.
 
 Use `--dry-run` with any write command to render the operation plan without executing it:
 
