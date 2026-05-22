@@ -1,4 +1,4 @@
-﻿# parsevkctl Go CLI
+# parsevkctl Go CLI
 
 New Go implementation of parsevkctl.
 
