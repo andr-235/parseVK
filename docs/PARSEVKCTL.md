@@ -118,14 +118,24 @@ clean/dirty state of the working tree. If the issue is not visible in the
 Project, it prints a warning and continues. If no linked PR is found, it prints
 `Linked PR: none`.
 
-The PR command pushes the current branch, creates a pull request with `Closes #66`,
-moves the project card to `Review`, switches back to the configured default branch,
-pulls it with `git pull --ff-only origin <defaultBranch>`, and deletes only the local
-feature branch. If the working tree is not clean after PR creation, the local branch
-is kept and a warning is printed.
+The PR command pushes the current branch, creates a pull request with a structured enterprise-grade body template, moves the project card to `Review`, switches back to the configured default branch, pulls it with `git pull --ff-only origin <defaultBranch>`, and deletes only the local feature branch. If the working tree is not clean after PR creation, the local branch is kept and a warning is printed.
 
-The remote feature branch is intentionally kept while the pull request is open. It is
-deleted only by `task merge` after the PR is merged.
+### PR Body Template
+
+The generated Pull Request uses a deterministic template containing the following sections:
+- **Closing keyword**: `Closes #<issue-number>` at the top.
+- **Summary**: Key highlights of the PR. Custom summary can be specified via `-Summary "..."`. If not provided, defaults to `- <summary or placeholder>`.
+- **Test plan**: Interactive markdown checkboxes. Custom value can be passed via `-TestPlan` (recognized values: `manual` / `automated` / `none`). By default, all checkboxes are unchecked.
+- **Risk**: Risk assessment level. Custom risk can be passed via `-Risk "..."`. Defaults to `Low`.
+- **Notes**: General notes including the `Created via parsevkctl` mark.
+
+Example usage with custom PR body metadata:
+
+```powershell
+.\tools\parsevkctl\parsevkctl.ps1 task pr 66 -Summary "Added csv export feature" -TestPlan "manual" -Risk "Low"
+```
+
+The remote feature branch is intentionally kept while the pull request is open. It is deleted only by `task merge` after the PR is merged.
 
 After review approval, merge the task:
 

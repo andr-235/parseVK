@@ -750,6 +750,82 @@ Describe "parsevkctl Dry-Run Mode" {
         $joined | Should Match "Would set project status for issue #123 to: Review"
     }
 
+    It "Open-PullRequest with default parameters generates the deterministic PR body template" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        $script:SimulatedIssueTitle = "DryRun Test"
+        $script:SimulatedIssueLabel = "type: feat"
+        $script:SimulatedIssueNumber = 123
+
+        Open-PullRequest -IssueNumber 123
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "Closes #123"
+        $joined | Should Match "## Summary\s+-\s+<summary or placeholder>"
+        $joined | Should Match "## Test plan\s+-\s+\[ \]\s+Not run\s+-\s+\[ \]\s+Manual test\s+-\s+\[ \]\s+Automated tests"
+        $joined | Should Match "## Risk\s+-\s+Low"
+        $joined | Should Match "Created via parsevkctl."
+    }
+
+    It "Open-PullRequest with custom Summary parameter uses the summary" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        $script:SimulatedIssueTitle = "DryRun Test"
+        $script:SimulatedIssueLabel = "type: feat"
+        $script:SimulatedIssueNumber = 123
+
+        Open-PullRequest -IssueNumber 123 -Summary "Custom issue resolution description"
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "## Summary\s+-\s+Custom issue resolution description"
+    }
+
+    It "Open-PullRequest with custom TestPlan parameter checks correct checkboxes" {
+        $msgManual = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msgManual.Add([string]$Object) }
+        $script:SimulatedIssueTitle = "DryRun Test"
+        $script:SimulatedIssueLabel = "type: feat"
+        $script:SimulatedIssueNumber = 123
+
+        Open-PullRequest -IssueNumber 123 -TestPlan "manual"
+        $joinedManual = $msgManual -join "`n"
+        $joinedManual | Should Match "-\s+\[ \]\s+Not run"
+        $joinedManual | Should Match "-\s+\[x\]\s+Manual test"
+        $joinedManual | Should Match "-\s+\[ \]\s+Automated tests"
+
+        $msgAutomated = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msgAutomated.Add([string]$Object) }
+        Open-PullRequest -IssueNumber 123 -TestPlan "automated"
+        $joinedAutomated = $msgAutomated -join "`n"
+        $joinedAutomated | Should Match "-\s+\[ \]\s+Not run"
+        $joinedAutomated | Should Match "-\s+\[ \]\s+Manual test"
+        $joinedAutomated | Should Match "-\s+\[x\]\s+Automated tests"
+
+        $msgNone = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msgNone.Add([string]$Object) }
+        Open-PullRequest -IssueNumber 123 -TestPlan "none"
+        $joinedNone = $msgNone -join "`n"
+        $joinedNone | Should Match "-\s+\[x\]\s+Not run"
+        $joinedNone | Should Match "-\s+\[ \]\s+Manual test"
+        $joinedNone | Should Match "-\s+\[ \]\s+Automated tests"
+    }
+
+    It "Open-PullRequest with custom Risk parameter uses the risk" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        $script:SimulatedIssueTitle = "DryRun Test"
+        $script:SimulatedIssueLabel = "type: feat"
+        $script:SimulatedIssueNumber = 123
+
+        Open-PullRequest -IssueNumber 123 -Risk "High"
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "## Risk\s+-\s+High"
+    }
+
     It "Merge-Task in Dry-Run simulates PR and logs squash merge" {
         $msg = [System.Collections.Generic.List[string]]::new()
         Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
