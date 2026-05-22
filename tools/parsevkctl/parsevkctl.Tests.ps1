@@ -631,5 +631,148 @@ Describe "parsevkctl Assert-CanMergePullRequest" {
     }
 }
 
+Describe "parsevkctl Dry-Run Mode" {
+    BeforeEach {
+        $script:DryRun = $true
+        # Mock commands to prevent side effects in case of bugs
+        Mock Get-Config {
+            return [PSCustomObject]@{
+                repo = "owner/repo"
+                defaultBranch = "main"
+                projectOwner = "owner"
+                projectNumber = 1
+                projectId = "PVT_123"
+                projectTitle = "title"
+                statuses = [PSCustomObject]@{
+                    todo = "Todo"
+                    inProgress = "In Progress"
+                    review = "Review"
+                    done = "Done"
+                }
+                merge = [PSCustomObject]@{
+                    requireChecks = $true
+                    allowAutoMerge = $false
+                }
+            }
+        }
+        Mock Assert-CommandExists {}
+        Mock Assert-GitClean {}
+        Mock Get-CurrentBranch { return "main" }
+        Mock Invoke-GhJson { return $null }
+        Mock Invoke-Native { throw "Should not invoke native commands in dry-run!" }
+        Mock gh { throw "Should not invoke gh in dry-run!" }
+        Mock git { throw "Should not invoke git in dry-run!" }
+    }
+
+    AfterEach {
+        $script:DryRun = $false
+        $script:SimulatedIssueTitle = $null
+        $script:SimulatedIssueLabel = $null
+        $script:SimulatedIssueNumber = $null
+    }
+
+    It "defines Get-DryRun" {
+        Get-Command Get-DryRun -ErrorAction SilentlyContinue | Should Not Be $null
+    }
+
+    It "Get-DryRun returns true when script-scoped DryRun is active" {
+        $script:DryRun = $true
+        Get-DryRun | Should Be $true
+    }
+
+    It "New-Task in Dry-Run does not call gh/git and sets status mock" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        $issueNumber = New-Task -TaskTitle "DryRun Test" -TaskBody "Body test" -TaskLabel "type: feat" -ShouldAssignMe $true
+        $issueNumber | Should Be 123
+        $script:SimulatedIssueTitle | Should Be "DryRun Test"
+        $script:SimulatedIssueLabel | Should Be "type: feat"
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "Would create GitHub issue:"
+        $joined | Should Match "Would set project status for issue #123 to: Todo"
+    }
+
+    It "Start-Task in Dry-Run handles branch mockup and prints git commands" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        $script:SimulatedIssueTitle = "DryRun Test"
+        $script:SimulatedIssueLabel = "type: feat"
+        $script:SimulatedIssueNumber = 123
+
+        { Start-Task -IssueNumber 123 -SkipBranch $false -ShouldAllowDirty $false } | Should Not Throw
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "Would load issue #123"
+        $joined | Should Match "Would set project status to In Progress"
+        $joined | Should Match "Would create branch feat/issue-123-dryrun-test"
+        $joined | Should Match "Would run: git switch -c feat/issue-123-dryrun-test"
+    }
+
+    It "Full-Task runs full flow in Dry-Run without side effects" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        { Full-Task -TaskTitle "Full dry test" -TaskBody "Body" -TaskLabel "type: fix" -ShouldAssignMe $true -SkipBranch $false -ShouldAllowDirty $false } | Should Not Throw
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "Starting full task flow \(Dry-Run\)..."
+        $joined | Should Match "Would create GitHub issue:"
+        $joined | Should Match "Starting created issue #123 \(Dry-Run\)..."
+        $joined | Should Match "Would create branch fix/issue-123-full-dry-test"
+    }
+
+    It "Review-Task in Dry-Run prints planning message" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        Review-Task -IssueNumber 123
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "Would set project status for issue #123 to: Review"
+    }
+
+    It "Open-PullRequest in Dry-Run prints PR details and mocks branch" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        $script:SimulatedIssueTitle = "DryRun Test"
+        $script:SimulatedIssueLabel = "type: feat"
+        $script:SimulatedIssueNumber = 123
+
+        Open-PullRequest -IssueNumber 123
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "Would create Pull Request:"
+        $joined | Should Match "  Head: feat/issue-123-dryrun-test"
+        $joined | Should Match "Would set project status for issue #123 to: Review"
+    }
+
+    It "Merge-Task in Dry-Run simulates PR and logs squash merge" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        Merge-Task -IssueNumber 123
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "No open PR found for issue #123. Simulating merge plan..."
+        $joined | Should Match "Would merge pull request #999 using squash merge"
+        $joined | Should Match "Would close issue #123"
+    }
+
+    It "Complete-Task in Dry-Run logs issue completion" {
+        $msg = [System.Collections.Generic.List[string]]::new()
+        Mock Write-Host { param($Object, $ForegroundColor) $msg.Add([string]$Object) }
+
+        Complete-Task -IssueNumber 123
+
+        $joined = $msg -join "`n"
+        $joined | Should Match "Would set project status for issue #123 to: Done"
+        $joined | Should Match "Would close issue #123 with comment 'Completed via parsevkctl.'"
+    }
+}
+
 
 

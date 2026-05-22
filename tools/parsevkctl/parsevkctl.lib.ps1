@@ -392,3 +392,13 @@ function Assert-CanMergePullRequest {
     }
 }
 
+function Get-DryRun {
+    if ($null -ne $script:DryRun) {
+        return [bool]$script:DryRun
+    }
+    if ($null -ne $DryRun) {
+        return [bool]$DryRun
+    }
+    return $false
+}
+

@@ -175,3 +175,30 @@ Check local environment configuration and tools readiness:
 .\tools\parsevkctl\parsevkctl.ps1 task doctor
 ```
 
+## Dry-Run Mode
+
+For task-modifying operations, you can append the `-DryRun` switch to preview the planned actions without making any actual changes on GitHub, GitHub Projects, or your local Git state.
+
+Supported commands in Dry-Run mode:
+- `task create`
+- `task full`
+- `task start`
+- `task pr`
+- `task merge`
+- `task done`
+- `task move`
+- `task review`
+
+Example:
+
+```powershell
+.\tools\parsevkctl\parsevkctl.ps1 task start 73 -DryRun
+```
+
+When run in Dry-Run mode:
+- No branch is created.
+- GitHub Project status is not changed.
+- Local repository remains unaffected.
+- Git commands, simulated pull request structures, and planned branch switches are printed to the console.
+- Output always ends with the line: `No changes were made.`.
+

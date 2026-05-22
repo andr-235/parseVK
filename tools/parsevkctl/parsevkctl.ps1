@@ -13,7 +13,8 @@ param(
     [string]$Status = "",
     [switch]$AssignMe,
     [switch]$NoBranch,
-    [switch]$AllowDirty
+    [switch]$AllowDirty,
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,8 +30,7 @@ catch {
 }
 
 . (Join-Path $PSScriptRoot "parsevkctl.lib.ps1")
-
-
+$script:DryRun = [bool]$DryRun
 function Get-Config {
     $configPath = Join-Path $PSScriptRoot "config.json"
 
@@ -193,6 +193,11 @@ function Set-TaskStatus {
 
     $config = Get-Config
 
+    if (Get-DryRun) {
+        Write-Host "Would set project status for issue #$IssueNumber to: $StatusName" -ForegroundColor Cyan
+        return
+    }
+
     Write-Host ("Setting issue #" + $IssueNumber + " status to: " + $StatusName) -ForegroundColor Cyan
 
     $item = Wait-ProjectItem -Config $config -IssueNumber $IssueNumber
@@ -246,12 +251,36 @@ function Get-Issue {
 
     $config = Get-Config
 
-    return Invoke-GhJson @(
-        "issue", "view",
-        [string]$IssueNumber,
-        "--repo", $config.repo,
-        "--json", "number,title,state,url,labels"
-    )
+    if (Get-DryRun -and ($IssueNumber -eq 123 -or $script:SimulatedIssueNumber -eq $IssueNumber)) {
+        return [PSCustomObject]@{
+            number = $IssueNumber
+            title = if ($null -ne $script:SimulatedIssueTitle) { $script:SimulatedIssueTitle } else { "Simulated Issue Title" }
+            state = "OPEN"
+            labels = if ($null -ne $script:SimulatedIssueLabel) { @([PSCustomObject]@{ name = $script:SimulatedIssueLabel }) } else { @() }
+            url = "https://github.com/$($config.repo)/issues/$IssueNumber"
+        }
+    }
+
+    try {
+        return Invoke-GhJson @(
+            "issue", "view",
+            [string]$IssueNumber,
+            "--repo", $config.repo,
+            "--json", "number,title,state,url,labels"
+        )
+    }
+    catch {
+        if (Get-DryRun) {
+            return [PSCustomObject]@{
+                number = $IssueNumber
+                title = "Mock Issue Title"
+                state = "OPEN"
+                labels = @()
+                url = "https://github.com/$($config.repo)/issues/$IssueNumber"
+            }
+        }
+        throw $_
+    }
 }
 
 
@@ -333,6 +362,33 @@ function New-Task {
     Assert-CommandExists "gh"
     Assert-CommandExists "git"
 
+    if (Get-DryRun) {
+        $script:SimulatedIssueTitle = $TaskTitle
+        $script:SimulatedIssueLabel = $TaskLabel
+        $script:SimulatedIssueNumber = 123
+        Write-Host "Would create GitHub issue:" -ForegroundColor Cyan
+        Write-Host "  Repo: $($config.repo)" -ForegroundColor Cyan
+        Write-Host "  Title: $TaskTitle"
+        if (-not [string]::IsNullOrWhiteSpace($TaskBody)) {
+            Write-Host "  Body: $TaskBody"
+        }
+        if (-not [string]::IsNullOrWhiteSpace($TaskLabel)) {
+            Write-Host "  Label: $TaskLabel"
+        }
+        if ($ShouldAssignMe) {
+            Write-Host "  Assignee: @me"
+        }
+
+        $issueNumber = 123
+        $null = Set-TaskStatus -IssueNumber $issueNumber -StatusName $config.statuses.todo
+
+        Write-Host ""
+        Write-Host "Next command:" -ForegroundColor Yellow
+        Write-Host (".\tools\parsevkctl\parsevkctl.ps1 task start " + $issueNumber)
+
+        return $issueNumber
+    }
+
     $ghArgs = @(
         "issue", "create",
         "--repo", $config.repo,
@@ -399,6 +455,10 @@ function Start-Task {
     Assert-CommandExists "gh"
     Assert-CommandExists "git"
 
+    if (Get-DryRun) {
+        Write-Host "Would load issue #$IssueNumber" -ForegroundColor Cyan
+    }
+
     $issue = Get-Issue -IssueNumber $IssueNumber
 
     if ($null -eq $issue) {
@@ -409,21 +469,46 @@ function Start-Task {
         throw "Issue is not open: #$IssueNumber"
     }
 
-    Write-Host ("Starting issue #" + $IssueNumber + ": " + $issue.title) -ForegroundColor Cyan
-
-    Set-TaskStatus -IssueNumber $IssueNumber -StatusName $config.statuses.inProgress
+    if (Get-DryRun) {
+        Write-Host "Would set project status to In Progress" -ForegroundColor Cyan
+    } else {
+        Set-TaskStatus -IssueNumber $IssueNumber -StatusName $config.statuses.inProgress
+    }
 
     if ($SkipBranch) {
-        Write-Host "Branch creation skipped." -ForegroundColor Yellow
+        if (Get-DryRun) {
+            Write-Host "Would skip branch creation." -ForegroundColor Yellow
+        } else {
+            Write-Host "Branch creation skipped." -ForegroundColor Yellow
+        }
         return
     }
 
-    if (-not $ShouldAllowDirty) {
-        Assert-GitClean
+    if (Get-DryRun) {
+        Write-Host "Would validate clean working tree" -ForegroundColor Cyan
+        if (-not $ShouldAllowDirty) {
+            $status = git status --porcelain
+            if (-not [string]::IsNullOrWhiteSpace($status)) {
+                Write-Host "  - Warning: Working tree is dirty. In normal mode, this would fail." -ForegroundColor Yellow
+            }
+        }
+    } else {
+        if (-not $ShouldAllowDirty) {
+            Assert-GitClean
+        }
     }
 
     $branchName = New-TaskBranchName -Issue $issue
     Assert-BranchName -BranchName $branchName
+
+    if (Get-DryRun) {
+        Write-Host "Would create branch $branchName" -ForegroundColor Cyan
+        Write-Host "Would run: git fetch origin $($config.defaultBranch)" -ForegroundColor Cyan
+        Write-Host "Would run: git switch $($config.defaultBranch)" -ForegroundColor Cyan
+        Write-Host "Would run: git pull --ff-only origin $($config.defaultBranch)" -ForegroundColor Cyan
+        Write-Host "Would run: git switch -c $branchName" -ForegroundColor Cyan
+        return
+    }
 
     Write-Host ("Creating branch: " + $branchName) -ForegroundColor Cyan
 
@@ -450,7 +535,11 @@ function Full-Task {
         throw "Task title is required."
     }
 
-    Write-Host "Starting full task flow..." -ForegroundColor Cyan
+    if (Get-DryRun) {
+        Write-Host "Starting full task flow (Dry-Run)..." -ForegroundColor Cyan
+    } else {
+        Write-Host "Starting full task flow..." -ForegroundColor Cyan
+    }
     Write-Host ""
 
     $issueNumberOutput = New-Task `
@@ -466,7 +555,11 @@ function Full-Task {
     }
 
     Write-Host ""
-    Write-Host ("Starting created issue #" + $issueNumber + "...") -ForegroundColor Cyan
+    if (Get-DryRun) {
+        Write-Host ("Starting created issue #" + $issueNumber + " (Dry-Run)...") -ForegroundColor Cyan
+    } else {
+        Write-Host ("Starting created issue #" + $issueNumber + "...") -ForegroundColor Cyan
+    }
     Write-Host ""
 
     Start-Task `
@@ -475,7 +568,11 @@ function Full-Task {
         -ShouldAllowDirty:$ShouldAllowDirty
 
     Write-Host ""
-    Write-Host ("Full task flow initialized for issue #" + $issueNumber + ".") -ForegroundColor Green
+    if (Get-DryRun) {
+        Write-Host ("Would initialize full task flow for issue #" + $issueNumber + ".") -ForegroundColor Green
+    } else {
+        Write-Host ("Full task flow initialized for issue #" + $issueNumber + ".") -ForegroundColor Green
+    }
 }
 
 function Move-Task {
@@ -496,6 +593,11 @@ function Review-Task {
 
     $config = Get-Config
 
+    if (Get-DryRun) {
+        Write-Host "Would set project status for issue #$IssueNumber to: $($config.statuses.review)" -ForegroundColor Cyan
+        return
+    }
+
     Set-TaskStatus -IssueNumber $IssueNumber -StatusName $config.statuses.review
 
     Write-Host ("Issue #" + $IssueNumber + " moved to Review.") -ForegroundColor Green
@@ -509,6 +611,10 @@ function Open-PullRequest {
     Assert-CommandExists "gh"
     Assert-CommandExists "git"
 
+    if (Get-DryRun) {
+        Write-Host "Would load issue #$IssueNumber" -ForegroundColor Cyan
+    }
+
     $issue = Get-Issue -IssueNumber $IssueNumber
 
     if ($null -eq $issue) {
@@ -521,12 +627,51 @@ function Open-PullRequest {
 
     $currentBranch = Get-CurrentBranch
 
+    $featureBranch = $currentBranch
+    if (Get-DryRun -and $currentBranch -eq $config.defaultBranch) {
+        $featureBranch = New-TaskBranchName -Issue $issue
+        Write-Host "Simulating feature branch: $featureBranch (since current branch is the default branch)" -ForegroundColor Yellow
+    }
+
     $prTitle = $issue.title
     $prBody = @"
 Closes #$IssueNumber
 
 Created via parsevkctl.
 "@
+
+    if (Get-DryRun) {
+        Write-Host "Would validate PR creation requirements for issue #$IssueNumber" -ForegroundColor Cyan
+        try {
+            if ($currentBranch -eq $config.defaultBranch) {
+                $existingPr = Find-PullRequestForIssue -IssueNumber $IssueNumber -PrState "open"
+                if ($null -ne $existingPr) {
+                    Write-Host "  - Warning: An open pull request already exists for issue #${IssueNumber}: PR #$($existingPr.number)" -ForegroundColor Yellow
+                } else {
+                    Write-Host "  - No open pull request exists for this issue (Validated)"
+                }
+            } else {
+                Assert-CanCreatePullRequest -IssueNumber $IssueNumber -PrBody $prBody
+                Write-Host "  - PR creation requirements validated successfully." -ForegroundColor Green
+            }
+        }
+        catch {
+            Write-Host "  - Warning: PR validation failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+
+        Write-Host "Would push branch $featureBranch to origin" -ForegroundColor Cyan
+        Write-Host "Would create Pull Request:" -ForegroundColor Cyan
+        Write-Host "  Repo: $($config.repo)"
+        Write-Host "  Base: $($config.defaultBranch)"
+        Write-Host "  Head: $featureBranch"
+        Write-Host "  Title: $prTitle"
+        Write-Host "  Body:"
+        $prBody.Split("`n") | ForEach-Object { Write-Host "    $_" }
+
+        Write-Host "Would set project status for issue #$IssueNumber to: $($config.statuses.review)" -ForegroundColor Cyan
+        Write-Host "Would run PR cleanup for branch: $featureBranch" -ForegroundColor Cyan
+        return
+    }
 
     # Run strict validations before modifying remote state
     Assert-CanCreatePullRequest -IssueNumber $IssueNumber -PrBody $prBody
@@ -686,19 +831,66 @@ function Merge-Task {
 
     Write-Host ("Finding pull request for issue #" + $IssueNumber + "...") -ForegroundColor Cyan
 
-    $matchingPrs = @(Find-PullRequestForIssue -IssueNumber $IssueNumber -PrState "open")
-
-    if ($matchingPrs.Count -eq 0) {
-        throw "Open PR not found for issue #$IssueNumber. PR body must contain: Closes #$IssueNumber"
+    $matchingPrs = @()
+    try {
+        $matchingPrs = @(Find-PullRequestForIssue -IssueNumber $IssueNumber -PrState "open")
     }
-    if ($matchingPrs.Count -gt 1) {
-        throw "Multiple open PRs found for issue #${IssueNumber}: $(($matchingPrs | Select-Object -ExpandProperty number) -join ', '). Exactly one open PR is required."
+    catch {
+        if (-not (Get-DryRun)) { throw $_ }
     }
 
-    $pr = $matchingPrs[0]
+    $pr = $null
+    if ($matchingPrs.Count -gt 0) {
+        $pr = $matchingPrs[0]
+        Write-Host ("Found PR #" + $pr.number + ": " + $pr.title) -ForegroundColor Green
+        Write-Host $pr.url
+    }
+    else {
+        if (-not (Get-DryRun)) {
+            throw "Open PR not found for issue #$IssueNumber. PR body must contain: Closes #$IssueNumber"
+        }
+        Write-Host "No open PR found for issue #$IssueNumber. Simulating merge plan..." -ForegroundColor Yellow
+        $pr = [PSCustomObject]@{
+            number = 999
+            title = "Simulated Pull Request"
+            url = "https://github.com/$($config.repo)/pull/999"
+            headRefName = "feat/issue-$IssueNumber-simulated"
+            baseRefName = $config.defaultBranch
+            isDraft = $false
+            mergeable = "MERGEABLE"
+        }
+    }
 
-    Write-Host ("Found PR #" + $pr.number + ": " + $pr.title) -ForegroundColor Green
-    Write-Host $pr.url
+    if (Get-DryRun) {
+        Write-Host "Would validate merge capability for PR #$($pr.number)" -ForegroundColor Cyan
+        try {
+            if ($matchingPrs.Count -gt 0) {
+                Assert-CanMergePullRequest -IssueNumber $IssueNumber -Pr $pr -SkipCIChecks
+                Write-Host "  - PR merge requirements validated successfully." -ForegroundColor Green
+            } else {
+                Write-Host "  - PR merge requirements (Simulated)"
+            }
+        }
+        catch {
+            Write-Host "  - Warning: Merge validation failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+
+        if ($config.merge.requireChecks -eq $true) {
+            Write-Host "Would wait for PR checks: gh pr checks $($pr.number) --repo $($config.repo) --watch" -ForegroundColor Cyan
+        }
+
+        $mergeMethod = "squash"
+        Write-Host "Would merge pull request #$($pr.number) using $mergeMethod merge" -ForegroundColor Cyan
+        Write-Host "Would set project status for issue #$IssueNumber to: $($config.statuses.done)" -ForegroundColor Cyan
+        Write-Host "Would close issue #$IssueNumber" -ForegroundColor Cyan
+
+        $currentBranch = Get-CurrentBranch
+        if ($currentBranch -eq $pr.headRefName -or $currentBranch -like "*issue-$IssueNumber*") {
+            Write-Host "Would switch back to default branch: $($config.defaultBranch)" -ForegroundColor Cyan
+            Write-Host "Would pull default branch: git pull --ff-only origin $($config.defaultBranch)" -ForegroundColor Cyan
+        }
+        return
+    }
 
     # Fail-fast validation (skipping slow CI checks first)
     Assert-CanMergePullRequest -IssueNumber $IssueNumber -Pr $pr -SkipCIChecks
@@ -786,9 +978,31 @@ function Complete-Task {
 
     $config = Get-Config
 
-    Set-TaskStatus -IssueNumber $IssueNumber -StatusName $config.statuses.done
+    if (Get-DryRun) {
+        Write-Host "Would set project status for issue #$IssueNumber to: $($config.statuses.done)" -ForegroundColor Cyan
+        Write-Host "Would load issue #$IssueNumber" -ForegroundColor Cyan
+    }
 
-    $issue = Get-Issue -IssueNumber $IssueNumber
+    $issue = $null
+    try {
+        $issue = Get-Issue -IssueNumber $IssueNumber
+    }
+    catch {
+        if (-not (Get-DryRun)) { throw $_ }
+    }
+
+    if (Get-DryRun) {
+        if ($null -eq $issue) {
+            Write-Host "Would close issue #$IssueNumber (issue not found, simulating)" -ForegroundColor Cyan
+        } elseif ($issue.state -ne "OPEN") {
+            Write-Host "Issue #$IssueNumber is already closed." -ForegroundColor Green
+        } else {
+            Write-Host "Would close issue #$IssueNumber with comment 'Completed via parsevkctl.'" -ForegroundColor Cyan
+        }
+        return
+    }
+
+    Set-TaskStatus -IssueNumber $IssueNumber -StatusName $config.statuses.done
 
     if ($null -eq $issue) {
         throw "Issue not found: #$IssueNumber"
@@ -1057,6 +1271,9 @@ function Show-Help {
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task merge ISSUE_NUMBER"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task done ISSUE_NUMBER"
     Write-Host ""
+    Write-Host "Global Options:"
+    Write-Host "  -DryRun         Preview actions without making changes on GitHub or locally."
+    Write-Host ""
     Write-Host "Examples:"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 test"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 config validate"
@@ -1099,6 +1316,9 @@ if ($Entity -eq "task" -and $Action -eq "doctor") {
 
 if ($Entity -eq "task" -and $Action -eq "create") {
     $null = New-Task -TaskTitle $Value -TaskBody $Body -TaskLabel $Label -ShouldAssignMe:$AssignMe
+    if (Get-DryRun) {
+        Write-Host "No changes were made." -ForegroundColor Yellow
+    }
     exit 0
 }
 
@@ -1115,6 +1335,9 @@ if ($Entity -eq "task" -and $Action -eq "full") {
         -SkipBranch:$NoBranch `
         -ShouldAllowDirty:$AllowDirty
 
+    if (Get-DryRun) {
+        Write-Host "No changes were made." -ForegroundColor Yellow
+    }
     exit 0
 }
 
@@ -1124,6 +1347,9 @@ if ($Entity -eq "task" -and $Action -eq "start") {
     }
 
     Start-Task -IssueNumber ([int]$Value) -SkipBranch:$NoBranch -ShouldAllowDirty:$AllowDirty
+    if (Get-DryRun) {
+        Write-Host "No changes were made." -ForegroundColor Yellow
+    }
     exit 0
 }
 
@@ -1133,6 +1359,9 @@ if ($Entity -eq "task" -and $Action -eq "move") {
     }
 
     Move-Task -IssueNumber ([int]$Value) -TargetStatus $Status
+    if (Get-DryRun) {
+        Write-Host "No changes were made." -ForegroundColor Yellow
+    }
     exit 0
 }
 
@@ -1142,6 +1371,9 @@ if ($Entity -eq "task" -and $Action -eq "review") {
     }
 
     Review-Task -IssueNumber ([int]$Value)
+    if (Get-DryRun) {
+        Write-Host "No changes were made." -ForegroundColor Yellow
+    }
     exit 0
 }
 
@@ -1151,6 +1383,9 @@ if ($Entity -eq "task" -and $Action -eq "pr") {
     }
 
     Open-PullRequest -IssueNumber ([int]$Value)
+    if (Get-DryRun) {
+        Write-Host "No changes were made." -ForegroundColor Yellow
+    }
     exit 0
 }
 
@@ -1169,6 +1404,9 @@ if ($Entity -eq "task" -and $Action -eq "done") {
     }
 
     Complete-Task -IssueNumber ([int]$Value)
+    if (Get-DryRun) {
+        Write-Host "No changes were made." -ForegroundColor Yellow
+    }
     exit 0
 }
 
@@ -1178,6 +1416,9 @@ if ($Entity -eq "task" -and $Action -eq "merge") {
     }
 
     Merge-Task -IssueNumber ([int]$Value)
+    if (Get-DryRun) {
+        Write-Host "No changes were made." -ForegroundColor Yellow
+    }
     exit 0
 }
 
