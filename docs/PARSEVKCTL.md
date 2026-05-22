@@ -48,6 +48,18 @@ Create a pull request after committing changes:
 .\tools\parsevkctl\parsevkctl.ps1 task pr 66
 ```
 
+Check task diagnostics without changing GitHub or local git state:
+
+```powershell
+.\tools\parsevkctl\parsevkctl.ps1 task status 66
+```
+
+The status command prints the issue number, title, state, URL, current Project
+status, linked PR details when a PR is found, the current local branch, and the
+clean/dirty state of the working tree. If the issue is not visible in the
+Project, it prints a warning and continues. If no linked PR is found, it prints
+`Linked PR: none`.
+
 The PR command pushes the current branch, creates a pull request with `Closes #66`,
 moves the project card to `Review`, switches back to the configured default branch,
 pulls it with `git pull --ff-only origin <defaultBranch>`, and deletes only the local
