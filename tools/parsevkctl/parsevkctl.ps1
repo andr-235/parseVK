@@ -560,16 +560,19 @@ Created via parsevkctl.
 }
 
 function Find-PullRequestForIssue {
-    param([int]$IssueNumber)
+    param(
+        [int]$IssueNumber,
+        [string]$PrState = "open"
+    )
 
     $config = Get-Config
 
     $prs = Invoke-GhJson @(
         "pr", "list",
         "--repo", $config.repo,
-        "--state", "open",
+        "--state", $PrState,
         "--limit", "100",
-        "--json", "number,title,url,body,headRefName,isDraft"
+        "--json", "number,title,url,state,body,headRefName,isDraft"
     )
 
     if ($null -eq $prs) {
@@ -586,6 +589,81 @@ function Find-PullRequestForIssue {
         Select-Object -First 1
 
     return $matched
+}
+
+function Show-TaskStatus {
+    param([int]$IssueNumber)
+
+    $config = Get-Config
+
+    Assert-CommandExists "gh"
+    Assert-CommandExists "git"
+
+    try {
+        $issue = Get-Issue -IssueNumber $IssueNumber
+    }
+    catch {
+        throw "Issue not found: #$IssueNumber. $($_.Exception.Message)"
+    }
+
+    if ($null -eq $issue) {
+        throw "Issue not found: #$IssueNumber"
+    }
+
+    $item = Get-ProjectItem -Config $config -IssueNumber $IssueNumber
+    $projectStatus = "unknown"
+
+    if ($null -eq $item) {
+        Write-Host ("Warning: issue #" + $IssueNumber + " not found in project " + $config.projectTitle + ".") -ForegroundColor Yellow
+    }
+    else {
+        $null = Get-StatusField -Config $config
+
+        if (-not [string]::IsNullOrWhiteSpace($item.status)) {
+            $projectStatus = $item.status
+        }
+    }
+
+    $pr = Find-PullRequestForIssue -IssueNumber $IssueNumber -PrState "all"
+    $currentBranch = Get-CurrentBranch
+    $workingTreeStatus = git status --porcelain
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to get working tree status."
+    }
+
+    $workingTreeState = "clean"
+
+    if (-not [string]::IsNullOrWhiteSpace($workingTreeStatus)) {
+        $workingTreeState = "dirty"
+    }
+
+    Write-Host ("Issue: #" + $issue.number)
+    Write-Host ("Issue title: " + $issue.title)
+    Write-Host ("Issue state: " + $issue.state)
+    Write-Host ("Issue URL: " + $issue.url)
+    Write-Host ("Project status: " + $projectStatus)
+
+    if ($null -eq $pr) {
+        Write-Host "Linked PR: none"
+    }
+    else {
+        $draftStatus = "not draft"
+
+        if ($pr.isDraft -eq $true) {
+            $draftStatus = "draft"
+        }
+
+        Write-Host ("Linked PR: #" + $pr.number)
+        Write-Host ("PR number: " + $pr.number)
+        Write-Host ("PR title: " + $pr.title)
+        Write-Host ("PR URL: " + $pr.url)
+        Write-Host ("PR state: " + $pr.state)
+        Write-Host ("PR draft: " + $draftStatus)
+    }
+
+    Write-Host ("Current branch: " + $currentBranch)
+    Write-Host ("Working tree: " + $workingTreeState)
 }
 
 function Merge-Task {
@@ -738,6 +816,7 @@ function Show-Help {
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task start ISSUE_NUMBER -NoBranch"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task move ISSUE_NUMBER -Status STATUS"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task review ISSUE_NUMBER"
+    Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task status ISSUE_NUMBER"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task pr ISSUE_NUMBER"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task merge ISSUE_NUMBER"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task done ISSUE_NUMBER"
@@ -749,6 +828,7 @@ function Show-Help {
 Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task full `"Add docs`" -Body `"Create docs.`" -NoBranch"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task move 62 -Status Review"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task review 62"
+    Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task status 62"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task done 62"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task merge 62"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task pr 62"
@@ -808,6 +888,15 @@ if ($Entity -eq "task" -and $Action -eq "pr") {
     }
 
     Open-PullRequest -IssueNumber ([int]$Value)
+    exit 0
+}
+
+if ($Entity -eq "task" -and $Action -eq "status") {
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "Issue number is required."
+    }
+
+    Show-TaskStatus -IssueNumber ([int]$Value)
     exit 0
 }
 

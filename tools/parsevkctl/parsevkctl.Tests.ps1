@@ -64,3 +64,47 @@ Describe "parsevkctl PR cleanup" {
         $cleanup | Should Match 'Refusing to delete default branch'
     }
 }
+
+Describe "parsevkctl task status" {
+    It "defines Show-TaskStatus" {
+        Get-FunctionText "Show-TaskStatus" | Should Not BeNullOrEmpty
+    }
+
+    It "uses existing read helpers to collect diagnostics" {
+        $status = Get-FunctionText "Show-TaskStatus"
+
+        $status | Should Match "Get-Issue"
+        $status | Should Match "Get-ProjectItem"
+        $status | Should Match "Get-StatusField"
+        $status | Should Match "Find-PullRequestForIssue"
+        $status | Should Match "Get-CurrentBranch"
+        $status | Should Match "git status --porcelain"
+    }
+
+    It "does not mutate GitHub or git state" {
+        $status = Get-FunctionText "Show-TaskStatus"
+
+        $status | Should Not Match "Set-TaskStatus"
+        $status | Should Not Match "Invoke-Native"
+        $status | Should Not Match "item-edit"
+        $status | Should Not Match "issue edit"
+        $status | Should Not Match "issue close"
+        $status | Should Not Match "pr create"
+        $status | Should Not Match "pr merge"
+        $status | Should Not Match "git switch"
+        $status | Should Not Match "git push"
+    }
+
+    It "prints a clear Project warning and Linked PR none fallback" {
+        $status = Get-FunctionText "Show-TaskStatus"
+
+        $status | Should Match "Warning: issue #"
+        $status | Should Match "not found in project"
+        $status | Should Match "Linked PR: none"
+    }
+
+    It "routes task status and shows it in help" {
+        $scriptContent | Should Match 'task"\s+-and\s+\$Action -eq "status"'
+        $scriptContent | Should Match "task status ISSUE_NUMBER"
+    }
+}
