@@ -8,11 +8,28 @@ one predictable flow.
 
 - GitHub CLI (`gh`) must be installed and authenticated.
 - The working tree must be clean before starting a task that creates a branch.
+- The local configuration in `tools/parsevkctl/config.json` must be valid.
 - Run commands from the repository root:
 
 ```powershell
 .\tools\parsevkctl\parsevkctl.ps1 ...
 ```
+
+## Configuration Validation
+
+`parsevkctl` validates `tools/parsevkctl/config.json` before performing any task-related actions (e.g., creating issues, switching branches, creating PRs). This validation checks if all required fields are present and correctly formatted, preventing errors during remote network calls.
+
+You can manually trigger validation at any time:
+
+```powershell
+.\tools\parsevkctl\parsevkctl.ps1 config validate
+```
+
+Validation ensures:
+- `repo` is in `owner/name` format.
+- `projectNumber` is an integer.
+- `statuses` and other fields are non-empty strings.
+- `merge.requireChecks` and `merge.allowAutoMerge` are booleans.
 
 ## Kanban flow
 
@@ -103,4 +120,10 @@ Close a non-code task without a pull request only when that is intentional:
 
 ```powershell
 .\tools\parsevkctl\parsevkctl.ps1 task done 66
+```
+
+Validate the configuration file manually:
+
+```powershell
+.\tools\parsevkctl\parsevkctl.ps1 config validate
 ```

@@ -108,3 +108,147 @@ Describe "parsevkctl task status" {
         $scriptContent | Should Match "task status ISSUE_NUMBER"
     }
 }
+
+Describe "parsevkctl config validation" {
+    BeforeAll {
+        $functionText = Get-FunctionText "Assert-ConfigValid"
+        if ($null -eq $functionText) {
+            throw "Assert-ConfigValid function not found in script AST."
+        }
+        Invoke-Expression $functionText
+    }
+
+    It "defines Assert-ConfigValid" {
+        Get-FunctionText "Assert-ConfigValid" | Should Not BeNullOrEmpty
+    }
+
+    It "calls Assert-ConfigValid in Get-Config" {
+        $getConfig = Get-FunctionText "Get-Config"
+        $getConfig | Should Match "Assert-ConfigValid\s+-Config"
+    }
+
+    It "routes config validate and shows it in help" {
+        $scriptContent | Should Match 'config"\s+-and\s+\$Action -eq "validate"'
+        $scriptContent | Should Match "config validate"
+    }
+
+    It "passes for a valid configuration object" {
+        $validConfig = [PSCustomObject]@{
+            repo = "owner/name"
+            defaultBranch = "main"
+            projectOwner = "owner"
+            projectNumber = 1
+            projectId = "PVT_123"
+            projectTitle = "title"
+            statuses = [PSCustomObject]@{
+                todo = "Todo"
+                inProgress = "In Progress"
+                review = "Review"
+                done = "Done"
+            }
+            merge = [PSCustomObject]@{
+                requireChecks = $true
+                allowAutoMerge = $false
+            }
+        }
+
+        { Assert-ConfigValid -Config $validConfig } | Should Not Throw
+    }
+
+    It "throws when config is null" {
+        { Assert-ConfigValid -Config $null } | Should Throw "Config validation failed: Configuration object is null."
+    }
+
+    It "throws when repo is empty or invalid" {
+        $invalidConfig1 = [PSCustomObject]@{
+            repo = ""
+            defaultBranch = "main"
+            projectOwner = "owner"
+            projectNumber = 1
+            projectId = "PVT_123"
+            projectTitle = "title"
+            statuses = [PSCustomObject]@{ todo = "Todo"; inProgress = "In Progress"; review = "Review"; done = "Done" }
+            merge = [PSCustomObject]@{ requireChecks = $true; allowAutoMerge = $false }
+        }
+        $invalidConfig2 = [PSCustomObject]@{
+            repo = "invalid_repo_no_slash"
+            defaultBranch = "main"
+            projectOwner = "owner"
+            projectNumber = 1
+            projectId = "PVT_123"
+            projectTitle = "title"
+            statuses = [PSCustomObject]@{ todo = "Todo"; inProgress = "In Progress"; review = "Review"; done = "Done" }
+            merge = [PSCustomObject]@{ requireChecks = $true; allowAutoMerge = $false }
+        }
+
+        { Assert-ConfigValid -Config $invalidConfig1 } | Should Throw "Config validation failed: 'repo' is required and cannot be empty."
+        { Assert-ConfigValid -Config $invalidConfig2 } | Should Throw "Config validation failed: 'repo' must be in format 'owner/name' (got 'invalid_repo_no_slash')."
+    }
+
+    It "throws when defaultBranch is empty" {
+        $invalidConfig = [PSCustomObject]@{
+            repo = "owner/name"
+            defaultBranch = ""
+            projectOwner = "owner"
+            projectNumber = 1
+            projectId = "PVT_123"
+            projectTitle = "title"
+            statuses = [PSCustomObject]@{ todo = "Todo"; inProgress = "In Progress"; review = "Review"; done = "Done" }
+            merge = [PSCustomObject]@{ requireChecks = $true; allowAutoMerge = $false }
+        }
+        { Assert-ConfigValid -Config $invalidConfig } | Should Throw "Config validation failed: 'defaultBranch' is required and cannot be empty."
+    }
+
+    It "throws when projectNumber is not an integer" {
+        $invalidConfig = [PSCustomObject]@{
+            repo = "owner/name"
+            defaultBranch = "main"
+            projectOwner = "owner"
+            projectNumber = "one"
+            projectId = "PVT_123"
+            projectTitle = "title"
+            statuses = [PSCustomObject]@{ todo = "Todo"; inProgress = "In Progress"; review = "Review"; done = "Done" }
+            merge = [PSCustomObject]@{ requireChecks = $true; allowAutoMerge = $false }
+        }
+        { Assert-ConfigValid -Config $invalidConfig } | Should Throw "Config validation failed: 'projectNumber' must be an integer (got 'one')."
+    }
+
+    It "throws when a status is missing" {
+        $invalidConfig = [PSCustomObject]@{
+            repo = "owner/name"
+            defaultBranch = "main"
+            projectOwner = "owner"
+            projectNumber = 1
+            projectId = "PVT_123"
+            projectTitle = "title"
+            statuses = [PSCustomObject]@{ todo = ""; inProgress = "In Progress"; review = "Review"; done = "Done" }
+            merge = [PSCustomObject]@{ requireChecks = $true; allowAutoMerge = $false }
+        }
+        { Assert-ConfigValid -Config $invalidConfig } | Should Throw "Config validation failed: 'statuses.todo' is required and cannot be empty."
+    }
+
+    It "throws when merge flags are not booleans" {
+        $invalidConfig1 = [PSCustomObject]@{
+            repo = "owner/name"
+            defaultBranch = "main"
+            projectOwner = "owner"
+            projectNumber = 1
+            projectId = "PVT_123"
+            projectTitle = "title"
+            statuses = [PSCustomObject]@{ todo = "Todo"; inProgress = "In Progress"; review = "Review"; done = "Done" }
+            merge = [PSCustomObject]@{ requireChecks = "yes"; allowAutoMerge = $false }
+        }
+        $invalidConfig2 = [PSCustomObject]@{
+            repo = "owner/name"
+            defaultBranch = "main"
+            projectOwner = "owner"
+            projectNumber = 1
+            projectId = "PVT_123"
+            projectTitle = "title"
+            statuses = [PSCustomObject]@{ todo = "Todo"; inProgress = "In Progress"; review = "Review"; done = "Done" }
+            merge = [PSCustomObject]@{ requireChecks = $true; allowAutoMerge = $null }
+        }
+        { Assert-ConfigValid -Config $invalidConfig1 } | Should Throw "Config validation failed: 'merge.requireChecks' must be a boolean (got 'yes')."
+        { Assert-ConfigValid -Config $invalidConfig2 } | Should Throw "Config validation failed: 'merge.allowAutoMerge' is required."
+    }
+}
