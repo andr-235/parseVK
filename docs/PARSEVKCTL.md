@@ -49,7 +49,13 @@ Create a pull request after committing changes:
 ```
 
 The PR command pushes the current branch, creates a pull request with `Closes #66`,
-and moves the project card to `Review`.
+moves the project card to `Review`, switches back to the configured default branch,
+pulls it with `git pull --ff-only origin <defaultBranch>`, and deletes only the local
+feature branch. If the working tree is not clean after PR creation, the local branch
+is kept and a warning is printed.
+
+The remote feature branch is intentionally kept while the pull request is open. It is
+deleted only by `task merge` after the PR is merged.
 
 After review approval, merge the task:
 
@@ -57,8 +63,9 @@ After review approval, merge the task:
 .\tools\parsevkctl\parsevkctl.ps1 task merge 66
 ```
 
-The merge command finds the PR linked with `Closes #66`, merges it, moves the project
-card to `Done`, closes the issue, and returns to the default branch when needed.
+The merge command finds the PR linked with `Closes #66`, merges it, deletes the remote
+feature branch, moves the project card to `Done`, closes the issue, and returns to the
+default branch when needed.
 
 ## Useful variants
 

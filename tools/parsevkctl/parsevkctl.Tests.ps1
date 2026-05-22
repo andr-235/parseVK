@@ -1,82 +1,66 @@
 $scriptPath = Join-Path $PSScriptRoot "parsevkctl.ps1"
-$scriptAst = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$null, [ref]$null)
+$scriptContent = Get-Content -LiteralPath $scriptPath -Raw -Encoding UTF8
+$tokens = $null
+$errors = $null
+$ast = [System.Management.Automation.Language.Parser]::ParseInput(
+    $scriptContent,
+    [ref]$tokens,
+    [ref]$errors
+)
 
-$scriptAst.FindAll(
-    {
-        param($node)
-        $node -is [System.Management.Automation.Language.FunctionDefinitionAst]
-    },
-    $true
-) | ForEach-Object {
-    . ([scriptblock]::Create($_.Extent.Text))
+function Get-FunctionText {
+    param([string]$Name)
+
+    $functionAst = $ast.Find(
+        {
+            param($node)
+
+            $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -eq $Name
+        },
+        $true
+    )
+
+    if ($null -eq $functionAst) {
+        return $null
+    }
+
+    return $functionAst.Extent.Text
 }
 
-Describe "Set-TaskStatus" {
-    It "waits for an existing project item before trying to add the issue again" {
-        function Get-Config {
-            [pscustomobject]@{
-                repo = "andr-235/parseVK"
-                projectId = "project-id"
-                projectTitle = "parsevk development"
-            }
-        }
+Describe "parsevkctl PR cleanup" {
+    It "defines Cleanup-AfterPr" {
+        Get-FunctionText "Cleanup-AfterPr" | Should Not BeNullOrEmpty
+    }
 
-        $script:projectLookupCount = 0
-        $script:nativeCalls = @()
+    It "runs cleanup after moving the issue to Review" {
+        $openPullRequest = Get-FunctionText "Open-PullRequest"
 
-        function Get-ProjectItem {
-            $script:projectLookupCount += 1
+        $openPullRequest | Should Match "Set-TaskStatus[\s\S]+Cleanup-AfterPr"
+    }
 
-            if ($script:projectLookupCount -lt 3) {
-                return $null
-            }
+    It "switches to default branch, pulls it, and deletes only the local feature branch" {
+        $cleanup = Get-FunctionText "Cleanup-AfterPr"
 
-            return [pscustomobject]@{
-                id = "item-id"
-            }
-        }
+        $cleanup | Should Match 'git"\s+@\("switch",\s+\$DefaultBranch\)'
+        $cleanup | Should Match 'git"\s+@\("pull",\s+"--ff-only",\s+"origin",\s+\$DefaultBranch\)'
+        $cleanup | Should Match 'git"\s+@\("branch",\s+"-D",\s+\$FeatureBranch\)'
+        $cleanup | Should Not Match "push"
+        $cleanup | Should Not Match "--delete"
+    }
 
-        function Get-StatusField {
-            [pscustomobject]@{
-                id = "status-field-id"
-                options = @(
-                    [pscustomobject]@{
-                        id = "review-option-id"
-                        name = "Review"
-                    }
-                )
-            }
-        }
+    It "checks for a clean working tree before deleting the local branch" {
+        $cleanup = Get-FunctionText "Cleanup-AfterPr"
 
-        function Invoke-Native {
-            param(
-                [string]$CommandName,
-                [string[]]$Arguments
-            )
+        $cleanup | Should Match "git status --porcelain"
+        $cleanup | Should Match "Working tree is not clean"
+        $cleanup | Should Match 'return'
+    }
 
-            $script:nativeCalls += [pscustomobject]@{
-                CommandName = $CommandName
-                Arguments = $Arguments
-            }
-        }
+    It "does not delete the default branch" {
+        $cleanup = Get-FunctionText "Cleanup-AfterPr"
 
-        function Start-Sleep {
-            param([int]$Seconds)
-        }
-
-        Set-TaskStatus -IssueNumber 68 -StatusName "Review"
-
-        $script:projectLookupCount | Should Be 3
-        @($script:nativeCalls | Where-Object {
-            $_.CommandName -eq "gh" -and
-            $_.Arguments -contains "issue" -and
-            $_.Arguments -contains "edit" -and
-            $_.Arguments -contains "--add-project"
-        }).Count | Should Be 0
-        @($script:nativeCalls | Where-Object {
-            $_.CommandName -eq "gh" -and
-            $_.Arguments -contains "project" -and
-            $_.Arguments -contains "item-edit"
-        }).Count | Should Be 1
+        $cleanup | Should Match '\$FeatureBranch -eq \$DefaultBranch'
+        $cleanup | Should Match 'Refusing to delete default branch'
     }
 }

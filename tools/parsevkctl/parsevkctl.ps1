@@ -276,6 +276,38 @@ function Get-CurrentBranch {
     return $branch
 }
 
+function Cleanup-AfterPr {
+    param(
+        [string]$FeatureBranch,
+        [string]$DefaultBranch
+    )
+
+    if ([string]::IsNullOrWhiteSpace($FeatureBranch)) {
+        Write-Host "Warning: feature branch is empty. Skipping PR cleanup." -ForegroundColor Yellow
+        return
+    }
+
+    if ($FeatureBranch -eq $DefaultBranch) {
+        Write-Host "Warning: Refusing to delete default branch. Skipping PR cleanup." -ForegroundColor Yellow
+        return
+    }
+
+    $status = git status --porcelain
+
+    if (-not [string]::IsNullOrWhiteSpace($status)) {
+        Write-Host "Warning: Working tree is not clean after PR creation. Local branch was not deleted." -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host ("Switching back to default branch: " + $DefaultBranch) -ForegroundColor Cyan
+
+    Invoke-Native "git" @("switch", $DefaultBranch)
+    Invoke-Native "git" @("pull", "--ff-only", "origin", $DefaultBranch)
+    Invoke-Native "git" @("branch", "-D", $FeatureBranch)
+
+    Write-Host ("Local branch deleted: " + $FeatureBranch) -ForegroundColor Green
+}
+
 function New-Task {
     param(
         [string]$TaskTitle,
@@ -523,6 +555,8 @@ Created via parsevkctl.
 
     Write-Host ""
     Write-Host ("Issue #" + $IssueNumber + " moved to Review.") -ForegroundColor Green
+
+    Cleanup-AfterPr -FeatureBranch $currentBranch -DefaultBranch $config.defaultBranch
 }
 
 function Find-PullRequestForIssue {
