@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/commands"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/config"
@@ -17,6 +18,7 @@ import (
 type options struct {
 	configPath string
 	jsonOutput bool
+	dryRun     bool
 }
 
 func Run(args []string, stdout io.Writer, stderr io.Writer) int {
@@ -74,7 +76,7 @@ func runDoctor(opts options, stdout io.Writer, stderr io.Writer) int {
 			ConfigValidation: validation,
 			Config:           cfg,
 			Git:              git.NewShellAdapter(),
-			GitHub:           github.NewShellAdapter(),
+			GitHub:           github.NewShellAdapterWithConfig(cfg),
 		},
 		JSON:   opts.jsonOutput,
 		Stdout: stdout,
@@ -87,10 +89,33 @@ func runTask(args []string, opts options, stdout io.Writer, stderr io.Writer) in
 		fmt.Fprintln(stderr, "Error: task command requires a subcommand")
 		fmt.Fprintln(stderr, "Usage: parsevkctl task status <issue> [--json]")
 		fmt.Fprintln(stderr, "       parsevkctl task sync <issue> [--json]")
+		fmt.Fprintln(stderr, "       parsevkctl task create \"Title\" [--body \"...\"] [--dry-run] [--json]")
+		fmt.Fprintln(stderr, "       parsevkctl task start|pr|merge <issue> [--dry-run] [--json]")
 		return 2
 	}
 
 	switch args[0] {
+	case "create":
+		title, body, ok := parseTaskCreateArgs(args[1:], stderr)
+		if !ok {
+			return 2
+		}
+		cfg, ok := loadCommandConfig(opts, stderr)
+		if !ok {
+			return 1
+		}
+		return commands.RunTaskCreate(context.Background(), commands.TaskCreateRunInput{
+			TaskCreateInput: commands.TaskCreateInput{
+				Title:  title,
+				Body:   body,
+				Config: cfg,
+				GitHub: github.NewShellAdapterWithConfig(cfg),
+			},
+			DryRun: opts.dryRun,
+			JSON:   opts.jsonOutput,
+			Stdout: stdout,
+			Stderr: stderr,
+		})
 	case "status":
 		if len(args) != 2 {
 			fmt.Fprintln(stderr, "Error: task status requires an issue number")
@@ -109,11 +134,46 @@ func runTask(args []string, opts options, stdout io.Writer, stderr io.Writer) in
 			IssueNumber: issueNumber,
 			Config:      cfg,
 			Git:         git.NewShellAdapter(),
-			GitHub:      github.NewShellAdapter(),
+			GitHub:      github.NewShellAdapterWithConfig(cfg),
 			JSON:        opts.jsonOutput,
 			Stdout:      stdout,
 			Stderr:      stderr,
 		})
+	case "start", "pr", "merge":
+		if len(args) != 2 {
+			fmt.Fprintf(stderr, "Error: task %s requires an issue number\n", args[0])
+			return 2
+		}
+		issueNumber, err := strconv.Atoi(args[1])
+		if err != nil || issueNumber <= 0 {
+			fmt.Fprintln(stderr, "Error: issue number must be a positive integer")
+			return 2
+		}
+		cfg, ok := loadCommandConfig(opts, stderr)
+		if !ok {
+			return 1
+		}
+		input := commands.TaskRunInput{
+			TaskIssueInput: commands.TaskIssueInput{
+				IssueNumber: issueNumber,
+				Config:      cfg,
+				Git:         git.NewShellAdapter(),
+				GitHub:      github.NewShellAdapterWithConfig(cfg),
+			},
+			DryRun: opts.dryRun,
+			JSON:   opts.jsonOutput,
+			Stdout: stdout,
+			Stderr: stderr,
+		}
+		switch args[0] {
+		case "start":
+			return commands.RunTaskStart(context.Background(), input)
+		case "pr":
+			return commands.RunTaskPR(context.Background(), input)
+		case "merge":
+			return commands.RunTaskMerge(context.Background(), input)
+		}
+		return 2
 	case "sync":
 		if len(args) < 2 || len(args) > 3 {
 			fmt.Fprintln(stderr, "Error: task sync requires an issue number")
@@ -148,7 +208,7 @@ func runTask(args []string, opts options, stdout io.Writer, stderr io.Writer) in
 				IssueNumber: issueNumber,
 				Config:      cfg,
 				Git:         git.NewShellAdapter(),
-				GitHub:      github.NewShellAdapter(),
+				GitHub:      github.NewShellAdapterWithConfig(cfg),
 			},
 			Apply:  apply,
 			JSON:   opts.jsonOutput,
@@ -187,6 +247,8 @@ func parseGlobalOptions(args []string) (options, []string, error) {
 		switch args[i] {
 		case "--json":
 			opts.jsonOutput = true
+		case "--dry-run":
+			opts.dryRun = true
 
 		case "--config":
 			if i+1 >= len(args) {
@@ -201,6 +263,42 @@ func parseGlobalOptions(args []string) (options, []string, error) {
 	}
 
 	return opts, rest, nil
+}
+
+func parseTaskCreateArgs(args []string, stderr io.Writer) (string, string, bool) {
+	if len(args) == 0 {
+		fmt.Fprintln(stderr, "Error: task create requires a title")
+		return "", "", false
+	}
+
+	title := ""
+	body := ""
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--body":
+			if i+1 >= len(args) {
+				fmt.Fprintln(stderr, "Error: --body requires a value")
+				return "", "", false
+			}
+			body = args[i+1]
+			i++
+		default:
+			if strings.HasPrefix(args[i], "--") {
+				fmt.Fprintf(stderr, "Error: unknown task create flag %q\n", args[i])
+				return "", "", false
+			}
+			if title != "" {
+				fmt.Fprintln(stderr, "Error: task create accepts one title")
+				return "", "", false
+			}
+			title = args[i]
+		}
+	}
+	if strings.TrimSpace(title) == "" {
+		fmt.Fprintln(stderr, "Error: task create requires a title")
+		return "", "", false
+	}
+	return title, body, true
 }
 
 func runConfig(args []string, opts options, stdout io.Writer, stderr io.Writer) int {
@@ -262,14 +360,23 @@ Usage:
   parsevkctl doctor [--config <path>] [--json]
   parsevkctl task status <issue> [--config <path>] [--json]
   parsevkctl task sync <issue> [--config <path>] [--json]
+  parsevkctl task create "Title" [--body "..."] [--config <path>] [--dry-run] [--json]
+  parsevkctl task start <issue> [--config <path>] [--dry-run] [--json]
+  parsevkctl task pr <issue> [--config <path>] [--dry-run] [--json]
+  parsevkctl task merge <issue> [--config <path>] [--dry-run] [--json]
 
 Commands:
   config validate   Validate parsevkctl config without GitHub or git side effects
   doctor            Check local config, git and GitHub read access
   task status       Show read-only task state summary
   task sync         Preview task state drift and suggested fixes
+  task create       Create a GitHub issue and optionally add it to the Project
+  task start        Move an issue to In Progress and create a task branch
+  task pr           Push the task branch and create a pull request
+  task merge        Merge the linked pull request and finish the issue
 
 Global flags:
   --config <path>   Path to config.json
+  --dry-run         Render the operation plan without executing write operations
   --json            Render machine-readable JSON output`)
 }

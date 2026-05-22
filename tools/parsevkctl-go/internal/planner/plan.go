@@ -48,6 +48,15 @@ type StartTaskInput struct {
 	TargetStatus  domain.ProjectStatus
 }
 
+type CreateTaskInput struct {
+	Title              string
+	Body               string
+	Labels             []string
+	AddProjectItem     bool
+	ProjectIssueNumber int
+	TargetStatus       domain.ProjectStatus
+}
+
 type CreatePullRequestInput struct {
 	Issue             domain.Issue
 	BranchName        string
@@ -56,6 +65,17 @@ type CreatePullRequestInput struct {
 	Body              string
 	TargetStatus      domain.ProjectStatus
 	DeleteLocalBranch bool
+}
+
+type MergeTaskInput struct {
+	Issue              domain.Issue
+	PullRequest        domain.PullRequest
+	DefaultBranch      string
+	TargetStatus       domain.ProjectStatus
+	MergeMethod        string
+	DeleteRemoteBranch bool
+	CloseIssue         bool
+	SyncDefaultBranch  bool
 }
 
 type ProjectStatusPayload struct {
@@ -157,6 +177,59 @@ func NewStartTaskPlan(input StartTaskInput) (Plan, error) {
 	}, nil
 }
 
+func NewCreateTaskPlan(input CreateTaskInput) (Plan, error) {
+	title, err := validateNonEmpty("issue title", input.Title)
+	if err != nil {
+		return Plan{}, err
+	}
+
+	operations := []Operation{
+		{
+			ID:          "issue-create",
+			Type:        OperationIssueCreate,
+			Description: fmt.Sprintf("Create GitHub issue %q", title),
+			SafeToRetry: false,
+			Payload: IssueCreatePayload{
+				Title:  title,
+				Body:   input.Body,
+				Labels: input.Labels,
+			},
+		},
+	}
+
+	if input.AddProjectItem {
+		targetStatus, err := validateProjectStatus(input.TargetStatus)
+		if err != nil {
+			return Plan{}, err
+		}
+		issueDescription := "created issue"
+		if input.ProjectIssueNumber > 0 {
+			issueDescription = fmt.Sprintf("issue #%d", input.ProjectIssueNumber)
+		}
+		operations = append(operations,
+			Operation{
+				ID:          "project-add-item",
+				Type:        OperationProjectAddItem,
+				Description: fmt.Sprintf("Add %s to GitHub Project", issueDescription),
+				SafeToRetry: true,
+				Payload:     ProjectIssuePayload{IssueNumber: input.ProjectIssueNumber},
+			},
+			Operation{
+				ID:          "project-set-status-" + statusID(targetStatus),
+				Type:        OperationProjectSetStatus,
+				Description: fmt.Sprintf("Set project status for %s to %s", issueDescription, targetStatus),
+				SafeToRetry: true,
+				Payload:     ProjectStatusPayload{IssueNumber: input.ProjectIssueNumber, Status: targetStatus},
+			},
+		)
+	}
+
+	return Plan{
+		Command:    "task create",
+		Operations: operations,
+	}, nil
+}
+
 func NewCreatePullRequestPlan(input CreatePullRequestInput) (Plan, error) {
 	issueNumber, err := validateIssue(input.Issue)
 	if err != nil {
@@ -220,6 +293,87 @@ func NewCreatePullRequestPlan(input CreatePullRequestInput) (Plan, error) {
 
 	return Plan{
 		Command:    "task pr",
+		Issue:      issueNumber,
+		Operations: operations,
+	}, nil
+}
+
+func NewMergeTaskPlan(input MergeTaskInput) (Plan, error) {
+	issueNumber, err := validateIssue(input.Issue)
+	if err != nil {
+		return Plan{}, err
+	}
+	defaultBranch, err := validateNonEmpty("default branch", input.DefaultBranch)
+	if err != nil {
+		return Plan{}, err
+	}
+	if input.PullRequest.Number <= 0 {
+		return Plan{}, fmt.Errorf("pull request number must be a positive integer")
+	}
+	targetStatus, err := validateProjectStatus(input.TargetStatus)
+	if err != nil {
+		return Plan{}, err
+	}
+
+	method := strings.TrimSpace(input.MergeMethod)
+	if method == "" {
+		method = "merge"
+	}
+
+	operations := []Operation{}
+	if !input.PullRequest.Merged && input.PullRequest.State != domain.PullRequestStateMerged {
+		operations = append(operations, Operation{
+			ID:          "pull-request-merge",
+			Type:        OperationPullRequestMerge,
+			Description: fmt.Sprintf("Merge pull request #%d", input.PullRequest.Number),
+			SafeToRetry: false,
+			Payload: MergePullRequestPayload{
+				Number:       int(input.PullRequest.Number),
+				Method:       method,
+				DeleteBranch: input.DeleteRemoteBranch,
+			},
+		})
+	}
+
+	operations = append(operations, Operation{
+		ID:          "project-set-status-" + statusID(targetStatus),
+		Type:        OperationProjectSetStatus,
+		Description: fmt.Sprintf("Set project status for issue #%d to %s", issueNumber, targetStatus),
+		SafeToRetry: true,
+		Payload:     ProjectStatusPayload{IssueNumber: issueNumber, Status: targetStatus},
+	})
+
+	if input.CloseIssue && input.Issue.State != domain.IssueStateClosed {
+		operations = append(operations, Operation{
+			ID:          "issue-close",
+			Type:        OperationIssueClose,
+			Description: fmt.Sprintf("Close issue #%d", issueNumber),
+			SafeToRetry: true,
+			Payload:     IssueClosePayload{IssueNumber: issueNumber},
+		})
+	}
+
+	if input.SyncDefaultBranch {
+		operations = append(operations,
+			Operation{
+				ID:          "git-switch-default-branch",
+				Type:        OperationGitSwitch,
+				Description: fmt.Sprintf("Switch to %s", defaultBranch),
+				SafeToRetry: true,
+				Payload:     GitBranchPayload{Branch: defaultBranch},
+			},
+			Operation{
+				ID:          "git-pull-fast-forward-default-branch",
+				Type:        OperationGitPullFastForward,
+				Description: fmt.Sprintf("Pull %s with --ff-only from origin", defaultBranch),
+				SafeToRetry: true,
+				Payload:     GitRefPayload{Remote: originRemote, Branch: defaultBranch},
+			},
+		)
+	}
+
+	return Plan{
+		Command:    "task merge",
 		Issue:      issueNumber,
 		Operations: operations,
 	}, nil

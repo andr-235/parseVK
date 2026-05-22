@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/config"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/domain"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/github"
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/planner"
 )
 
 func TestTaskStatusHumanNoPR(t *testing.T) {
@@ -201,6 +203,229 @@ func TestSyncRejectsApply(t *testing.T) {
 	}
 }
 
+func TestTaskCreateDryRun(t *testing.T) {
+	deps := okDeps()
+
+	result, err := BuildTaskCreatePlan(context.Background(), TaskCreateInput{
+		Title:  "Go rewrite: add write task commands",
+		Body:   "Implement issue #113.",
+		Config: deps.Config,
+		GitHub: deps.GitHub,
+	})
+	if err != nil {
+		t.Fatalf("BuildTaskCreatePlan returned error: %v", err)
+	}
+
+	if result.Plan.Command != "task create" {
+		t.Fatalf("command = %q, want task create", result.Plan.Command)
+	}
+	got := planOperationTypes(result.Plan.Operations)
+	want := []string{"Issue.Create", "Project.AddItem", "Project.SetStatus"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("operations = %#v, want %#v", got, want)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskStartDryRunPlan(t *testing.T) {
+	deps := okDeps()
+
+	result, err := BuildTaskStartPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err != nil {
+		t.Fatalf("BuildTaskStartPlan returned error: %v", err)
+	}
+
+	got := planOperationTypes(result.Plan.Operations)
+	want := []string{"Project.SetStatus", "Git.Fetch", "Git.Switch", "Git.PullFastForward", "Git.CreateBranch"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("operations = %#v, want %#v", got, want)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskStartSuccessPath(t *testing.T) {
+	deps := okDeps()
+	deps.Git.allowWrites = true
+	deps.GitHub.allowWrites = true
+
+	var out bytes.Buffer
+	exit := RunTaskStart(context.Background(), TaskRunInput{
+		TaskIssueInput: TaskIssueInput{
+			IssueNumber: 112,
+			Config:      deps.Config,
+			Git:         deps.Git,
+			GitHub:      deps.GitHub,
+		},
+		Stdout: &out,
+	})
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0", exit)
+	}
+
+	wantGit := []string{"Fetch", "Switch", "PullFFOnly", "CreateBranch"}
+	if !reflect.DeepEqual(deps.Git.writeCalls, wantGit) {
+		t.Fatalf("git writes = %#v, want %#v", deps.Git.writeCalls, wantGit)
+	}
+	wantGitHub := []string{"SetProjectStatus"}
+	if !reflect.DeepEqual(deps.GitHub.writeCalls, wantGitHub) {
+		t.Fatalf("github writes = %#v, want %#v", deps.GitHub.writeCalls, wantGitHub)
+	}
+	if !strings.Contains(out.String(), "Branch: feat/issue-112-add-read-only-task-commands") {
+		t.Fatalf("stdout = %q", out.String())
+	}
+}
+
+func TestTaskStartRejectsClosedIssue(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.issue.State = domain.IssueStateClosed
+
+	_, err := BuildTaskStartPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "issue #112 is closed") {
+		t.Fatalf("err = %v, want closed issue error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskPRRejectsDirtyWorkingTree(t *testing.T) {
+	deps := okDeps()
+	deps.Git.currentBranch = "feat/issue-112-add-read-only-task-commands"
+	deps.Git.clean = false
+	deps.Git.files = []string{" M internal/file.go"}
+
+	_, err := BuildTaskPRPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "working tree is dirty") {
+		t.Fatalf("err = %v, want dirty tree error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskPRRejectsWrongBranchIssueNumber(t *testing.T) {
+	deps := okDeps()
+	deps.Git.currentBranch = "feat/issue-999-other-task"
+
+	_, err := BuildTaskPRPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "branch issue number 999 does not match requested issue #112") {
+		t.Fatalf("err = %v, want wrong branch issue error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskPRDryRunPlan(t *testing.T) {
+	deps := okDeps()
+	deps.Git.currentBranch = "feat/issue-112-add-read-only-task-commands"
+	deps.Git.ahead = true
+
+	result, err := BuildTaskPRPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err != nil {
+		t.Fatalf("BuildTaskPRPlan returned error: %v", err)
+	}
+
+	got := planOperationTypes(result.Plan.Operations)
+	want := []string{"Git.PushBranch", "PullRequest.Create", "Project.SetStatus"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("operations = %#v, want %#v", got, want)
+	}
+	if !strings.Contains(result.PullRequestBody, "Closes #112") {
+		t.Fatalf("PR body = %q", result.PullRequestBody)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskMergeRejectsDraftPR(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 9,
+		State:  domain.PullRequestStateOpen,
+		Draft:  true,
+		Base:   "fastapi-microservices-rewrite",
+		Head:   "feat/issue-112-add-read-only-task-commands",
+	}}
+
+	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "pull request #9 is draft") {
+		t.Fatalf("err = %v, want draft PR error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskMergeRejectsWrongBaseBranch(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 9,
+		State:  domain.PullRequestStateOpen,
+		Base:   "main",
+		Head:   "feat/issue-112-add-read-only-task-commands",
+	}}
+
+	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "base branch \"main\" does not match \"fastapi-microservices-rewrite\"") {
+		t.Fatalf("err = %v, want wrong base error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskMergeDryRunPlan(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 9,
+		State:  domain.PullRequestStateOpen,
+		Base:   "fastapi-microservices-rewrite",
+		Head:   "feat/issue-112-add-read-only-task-commands",
+	}}
+
+	result, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err != nil {
+		t.Fatalf("BuildTaskMergePlan returned error: %v", err)
+	}
+
+	got := planOperationTypes(result.Plan.Operations)
+	want := []string{"PullRequest.Merge", "Project.SetStatus", "Issue.Close", "Git.Switch", "Git.PullFastForward"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("operations = %#v, want %#v", got, want)
+	}
+	deps.assertNoWrites(t)
+}
+
 func assertCheck(t *testing.T, checks []DoctorCheck, name string, status CheckStatus) {
 	t.Helper()
 	for _, check := range checks {
@@ -275,8 +500,10 @@ func (d commandDeps) assertNoWrites(t *testing.T) {
 type fakeGit struct {
 	currentBranch string
 	clean         bool
+	ahead         bool
 	files         []string
 	err           error
+	allowWrites   bool
 	writeCalls    []string
 }
 
@@ -290,42 +517,64 @@ func (f *fakeGit) IsWorkTreeClean(context.Context) (bool, []string, error) {
 
 func (f *fakeGit) Fetch(context.Context, string, string) error {
 	f.writeCalls = append(f.writeCalls, "Fetch")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGit) Switch(context.Context, string) error {
 	f.writeCalls = append(f.writeCalls, "Switch")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGit) PullFFOnly(context.Context, string, string) error {
 	f.writeCalls = append(f.writeCalls, "PullFFOnly")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGit) CreateBranch(context.Context, string) error {
 	f.writeCalls = append(f.writeCalls, "CreateBranch")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGit) DeleteLocalBranch(context.Context, string, bool) error {
 	f.writeCalls = append(f.writeCalls, "DeleteLocalBranch")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGit) DeleteRemoteBranch(context.Context, string, string) error {
 	f.writeCalls = append(f.writeCalls, "DeleteRemoteBranch")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGit) PushBranch(context.Context, string, string, bool) error {
 	f.writeCalls = append(f.writeCalls, "PushBranch")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGit) HasCommitsAhead(context.Context, string, string) (bool, error) {
-	return false, f.err
+	return f.ahead, f.err
 }
 
 type fakeGitHub struct {
-	issue      domain.Issue
-	prs        []domain.PullRequest
-	project    domain.ProjectItem
-	projectErr error
-	writeCalls []string
+	issue       domain.Issue
+	prs         []domain.PullRequest
+	project     domain.ProjectItem
+	projectErr  error
+	allowWrites bool
+	writeCalls  []string
 }
 
 func (f *fakeGitHub) GetIssue(context.Context, int) (domain.Issue, error) {
@@ -333,10 +582,16 @@ func (f *fakeGitHub) GetIssue(context.Context, int) (domain.Issue, error) {
 }
 func (f *fakeGitHub) CreateIssue(context.Context, github.CreateIssueInput) (domain.Issue, error) {
 	f.writeCalls = append(f.writeCalls, "CreateIssue")
+	if f.allowWrites {
+		return f.issue, nil
+	}
 	return domain.Issue{}, errors.New("write call")
 }
 func (f *fakeGitHub) CloseIssue(context.Context, int, string) error {
 	f.writeCalls = append(f.writeCalls, "CloseIssue")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGitHub) ListPullRequests(context.Context, github.PullRequestFilter) ([]domain.PullRequest, error) {
@@ -344,10 +599,16 @@ func (f *fakeGitHub) ListPullRequests(context.Context, github.PullRequestFilter)
 }
 func (f *fakeGitHub) CreatePullRequest(context.Context, github.CreatePullRequestInput) (domain.PullRequest, error) {
 	f.writeCalls = append(f.writeCalls, "CreatePullRequest")
+	if f.allowWrites {
+		return domain.PullRequest{Number: 9, State: domain.PullRequestStateOpen}, nil
+	}
 	return domain.PullRequest{}, errors.New("write call")
 }
 func (f *fakeGitHub) MergePullRequest(context.Context, int, github.MergePullRequestInput) error {
 	f.writeCalls = append(f.writeCalls, "MergePullRequest")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGitHub) GetProjectItem(context.Context, int) (domain.ProjectItem, error) {
@@ -358,9 +619,23 @@ func (f *fakeGitHub) GetProjectItem(context.Context, int) (domain.ProjectItem, e
 }
 func (f *fakeGitHub) AddProjectItem(context.Context, int) error {
 	f.writeCalls = append(f.writeCalls, "AddProjectItem")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
 }
 func (f *fakeGitHub) SetProjectStatus(context.Context, int, domain.ProjectStatus) error {
 	f.writeCalls = append(f.writeCalls, "SetProjectStatus")
+	if f.allowWrites {
+		return nil
+	}
 	return errors.New("write call")
+}
+
+func planOperationTypes(operations []planner.Operation) []string {
+	types := make([]string, len(operations))
+	for i, operation := range operations {
+		types[i] = string(operation.Type)
+	}
+	return types
 }

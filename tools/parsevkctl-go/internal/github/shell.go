@@ -3,11 +3,13 @@ package github
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
 
+	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/config"
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/domain"
 )
 
@@ -26,6 +28,7 @@ type commandRunner func(ctx context.Context, name string, args ...string) (comma
 type ShellAdapter struct {
 	ghPath string
 	runner commandRunner
+	config config.Config
 }
 
 func NewShellAdapter() *ShellAdapter {
@@ -37,6 +40,12 @@ func newShellAdapterWithRunner(runner commandRunner) *ShellAdapter {
 		ghPath: "gh",
 		runner: runner,
 	}
+}
+
+func NewShellAdapterWithConfig(cfg config.Config) *ShellAdapter {
+	adapter := NewShellAdapter()
+	adapter.config = cfg
+	return adapter
 }
 
 func (adapter *ShellAdapter) GetIssue(ctx context.Context, number int) (domain.Issue, error) {
@@ -177,16 +186,100 @@ func (adapter *ShellAdapter) MergePullRequest(ctx context.Context, number int, i
 	return err
 }
 
-func (adapter *ShellAdapter) GetProjectItem(context.Context, int) (domain.ProjectItem, error) {
-	return domain.ProjectItem{}, ErrProjectNotImplemented
+func (adapter *ShellAdapter) GetProjectItem(ctx context.Context, issueNumber int) (domain.ProjectItem, error) {
+	if err := validateNumber("issue number", issueNumber); err != nil {
+		return domain.ProjectItem{}, err
+	}
+	if err := adapter.validateProjectConfig(); err != nil {
+		return domain.ProjectItem{}, err
+	}
+
+	result, err := adapter.runGH(ctx, "list project items",
+		"project", "item-list", strconv.Itoa(adapter.config.ProjectNumber),
+		"--owner", adapter.config.ProjectOwner,
+		"--limit", "200",
+		"--format", "json",
+	)
+	if err != nil {
+		return domain.ProjectItem{}, err
+	}
+
+	items, err := parseProjectItemsJSON([]byte(result.stdout))
+	if err != nil {
+		return domain.ProjectItem{}, err
+	}
+	for _, item := range items.Items {
+		if item.Content.Number == issueNumber || strings.HasSuffix(item.Content.URL, "/issues/"+strconv.Itoa(issueNumber)) {
+			return domain.ProjectItem{
+				ID:     item.ID,
+				Status: domain.NormalizeProjectStatus(item.Status),
+			}, nil
+		}
+	}
+	return domain.ProjectItem{}, fmt.Errorf("project item not found for issue #%d", issueNumber)
 }
 
-func (adapter *ShellAdapter) AddProjectItem(context.Context, int) error {
-	return ErrProjectNotImplemented
+func (adapter *ShellAdapter) AddProjectItem(ctx context.Context, issueNumber int) error {
+	if err := validateNumber("issue number", issueNumber); err != nil {
+		return err
+	}
+	if err := adapter.validateProjectConfig(); err != nil {
+		return err
+	}
+
+	_, err := adapter.runGH(ctx, "add issue to project",
+		"issue", "edit", strconv.Itoa(issueNumber),
+		"--repo", adapter.config.Repo,
+		"--add-project", adapter.config.ProjectTitle,
+	)
+	return err
 }
 
-func (adapter *ShellAdapter) SetProjectStatus(context.Context, int, domain.ProjectStatus) error {
-	return ErrProjectNotImplemented
+func (adapter *ShellAdapter) SetProjectStatus(ctx context.Context, issueNumber int, status domain.ProjectStatus) error {
+	if err := validateNumber("issue number", issueNumber); err != nil {
+		return err
+	}
+	if status == "" || status == domain.ProjectStatusUnknown {
+		return fmt.Errorf("project status must not be empty or unknown")
+	}
+	if err := adapter.validateProjectConfig(); err != nil {
+		return err
+	}
+
+	item, err := adapter.GetProjectItem(ctx, issueNumber)
+	if err != nil {
+		if addErr := adapter.AddProjectItem(ctx, issueNumber); addErr != nil {
+			return fmt.Errorf("project item unavailable and add failed: %w", addErr)
+		}
+		item, err = adapter.GetProjectItem(ctx, issueNumber)
+		if err != nil {
+			return err
+		}
+	}
+
+	field, err := adapter.getStatusField(ctx)
+	if err != nil {
+		return err
+	}
+	optionID := ""
+	for _, option := range field.Options {
+		if option.Name == string(status) {
+			optionID = option.ID
+			break
+		}
+	}
+	if optionID == "" {
+		return fmt.Errorf("status option not found: %s", status)
+	}
+
+	_, err = adapter.runGH(ctx, "edit project item status",
+		"project", "item-edit",
+		"--id", item.ID,
+		"--project-id", adapter.config.ProjectID,
+		"--field-id", field.ID,
+		"--single-select-option-id", optionID,
+	)
+	return err
 }
 
 func (adapter *ShellAdapter) getPullRequest(ctx context.Context, number int) (domain.PullRequest, error) {
@@ -216,6 +309,83 @@ func (adapter *ShellAdapter) runGH(ctx context.Context, operation string, args .
 	}
 
 	return result, nil
+}
+
+func (adapter *ShellAdapter) validateProjectConfig() error {
+	if strings.TrimSpace(adapter.config.Repo) == "" ||
+		strings.TrimSpace(adapter.config.ProjectOwner) == "" ||
+		adapter.config.ProjectNumber <= 0 ||
+		strings.TrimSpace(adapter.config.ProjectID) == "" ||
+		strings.TrimSpace(adapter.config.ProjectTitle) == "" {
+		return ErrProjectNotImplemented
+	}
+	return nil
+}
+
+func (adapter *ShellAdapter) getStatusField(ctx context.Context) (projectField, error) {
+	result, err := adapter.runGH(ctx, "list project fields",
+		"project", "field-list", strconv.Itoa(adapter.config.ProjectNumber),
+		"--owner", adapter.config.ProjectOwner,
+		"--limit", "100",
+		"--format", "json",
+	)
+	if err != nil {
+		return projectField{}, err
+	}
+	fields, err := parseProjectFieldsJSON([]byte(result.stdout))
+	if err != nil {
+		return projectField{}, err
+	}
+	for _, field := range fields.Fields {
+		if field.Name == "Status" {
+			return field, nil
+		}
+	}
+	return projectField{}, fmt.Errorf("project field not found: Status")
+}
+
+type projectItemsJSON struct {
+	Items []projectItemJSON `json:"items"`
+}
+
+type projectItemJSON struct {
+	ID      string `json:"id"`
+	Status  string `json:"status"`
+	Content struct {
+		Number int    `json:"number"`
+		URL    string `json:"url"`
+	} `json:"content"`
+}
+
+type projectFieldsJSON struct {
+	Fields []projectField `json:"fields"`
+}
+
+type projectField struct {
+	ID      string          `json:"id"`
+	Name    string          `json:"name"`
+	Options []projectOption `json:"options"`
+}
+
+type projectOption struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func parseProjectItemsJSON(data []byte) (projectItemsJSON, error) {
+	var items projectItemsJSON
+	if err := json.Unmarshal(data, &items); err != nil {
+		return projectItemsJSON{}, fmt.Errorf("parse project items JSON: %w", err)
+	}
+	return items, nil
+}
+
+func parseProjectFieldsJSON(data []byte) (projectFieldsJSON, error) {
+	var fields projectFieldsJSON
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return projectFieldsJSON{}, fmt.Errorf("parse project fields JSON: %w", err)
+	}
+	return fields, nil
 }
 
 func runCommand(ctx context.Context, name string, args ...string) (commandResult, error) {

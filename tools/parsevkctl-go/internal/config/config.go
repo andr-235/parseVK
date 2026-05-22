@@ -28,8 +28,10 @@ type Statuses struct {
 }
 
 type MergeSettings struct {
-	RequireChecks  *bool `json:"requireChecks"`
-	AllowAutoMerge *bool `json:"allowAutoMerge"`
+	Strategy       string `json:"strategy"`
+	DeleteBranch   *bool  `json:"deleteBranch"`
+	RequireChecks  *bool  `json:"requireChecks"`
+	AllowAutoMerge *bool  `json:"allowAutoMerge"`
 }
 
 type ValidationError struct {
