@@ -20,6 +20,14 @@ class UsersRepository:
         self.session.add(user)
         await self.session.flush()
 
+    async def list_users(self) -> list[User]:
+        result = await self.session.scalars(select(User).order_by(User.created_at.desc()))
+        return list(result)
+
+    async def delete_user(self, user: User) -> None:
+        await self.session.delete(user)
+        await self.session.flush()
+
     async def revoke_all_refresh_tokens(self, user_id: UUID) -> None:
         tokens = await self.session.scalars(
             select(RefreshToken).where(
