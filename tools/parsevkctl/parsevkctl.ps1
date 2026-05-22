@@ -1,4 +1,4 @@
-﻿param(
+param(
     [Parameter(Position = 0)]
     [string]$Entity,
 
@@ -18,6 +18,79 @@
 
 $ErrorActionPreference = "Stop"
 
+function Assert-ConfigValid {
+    param(
+        [object]$Config
+    )
+
+    if ($null -eq $Config) {
+        throw "Config validation failed: Configuration object is null."
+    }
+
+    # repo
+    if ([string]::IsNullOrWhiteSpace($Config.repo)) {
+        throw "Config validation failed: 'repo' is required and cannot be empty."
+    }
+    if ($Config.repo -notmatch '^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$') {
+        throw "Config validation failed: 'repo' must be in format 'owner/name' (got '$($Config.repo)')."
+    }
+
+    # defaultBranch
+    if ([string]::IsNullOrWhiteSpace($Config.defaultBranch)) {
+        throw "Config validation failed: 'defaultBranch' is required and cannot be empty."
+    }
+
+    # projectOwner
+    if ([string]::IsNullOrWhiteSpace($Config.projectOwner)) {
+        throw "Config validation failed: 'projectOwner' is required and cannot be empty."
+    }
+
+    # projectNumber
+    if ($null -eq $Config.projectNumber) {
+        throw "Config validation failed: 'projectNumber' is required."
+    }
+    if (-not ($Config.projectNumber -is [int] -or $Config.projectNumber -is [long])) {
+        throw "Config validation failed: 'projectNumber' must be an integer (got '$($Config.projectNumber)')."
+    }
+
+    # projectId
+    if ([string]::IsNullOrWhiteSpace($Config.projectId)) {
+        throw "Config validation failed: 'projectId' is required and cannot be empty."
+    }
+
+    # projectTitle
+    if ([string]::IsNullOrWhiteSpace($Config.projectTitle)) {
+        throw "Config validation failed: 'projectTitle' is required and cannot be empty."
+    }
+
+    # statuses
+    if ($null -eq $Config.statuses) {
+        throw "Config validation failed: 'statuses' section is required."
+    }
+    $requiredStatuses = @('todo', 'inProgress', 'review', 'done')
+    foreach ($statusKey in $requiredStatuses) {
+        $statusValue = $Config.statuses.$statusKey
+        if ([string]::IsNullOrWhiteSpace($statusValue)) {
+            throw "Config validation failed: 'statuses.$statusKey' is required and cannot be empty."
+        }
+    }
+
+    # merge
+    if ($null -eq $Config.merge) {
+        throw "Config validation failed: 'merge' section is required."
+    }
+    $requiredMergeFlags = @('requireChecks', 'allowAutoMerge')
+    foreach ($flagKey in $requiredMergeFlags) {
+        $flagValue = $Config.merge.$flagKey
+        if ($null -eq $flagValue) {
+            throw "Config validation failed: 'merge.$flagKey' is required."
+        }
+        if (-not ($flagValue -is [bool])) {
+            throw "Config validation failed: 'merge.$flagKey' must be a boolean (got '$flagValue')."
+        }
+    }
+}
+
 function Get-Config {
     $configPath = Join-Path $PSScriptRoot "config.json"
 
@@ -25,7 +98,9 @@ function Get-Config {
         throw "Config not found: $configPath"
     }
 
-    return Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    Assert-ConfigValid -Config $config
+    return $config
 }
 
 function Assert-CommandExists {
@@ -810,6 +885,7 @@ function Show-Help {
     Write-Host "parsevkctl" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Usage:"
+    Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 config validate"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task create TITLE -Body BODY"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task start ISSUE_NUMBER"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task full TITLE -Body BODY"
@@ -822,16 +898,23 @@ function Show-Help {
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task done ISSUE_NUMBER"
     Write-Host ""
     Write-Host "Examples:"
+    Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 config validate"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task create `"Add README`" -Body `"Create project setup docs.`""
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task start 62 -NoBranch"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task full `"Add VK API client`" -Body `"Implement VK API client.`""
-Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task full `"Add docs`" -Body `"Create docs.`" -NoBranch"
+    Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task full `"Add docs`" -Body `"Create docs.`" -NoBranch"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task move 62 -Status Review"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task review 62"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task status 62"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task done 62"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task merge 62"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task pr 62"
+}
+
+if ($Entity -eq "config" -and $Action -eq "validate") {
+    $config = Get-Config
+    Write-Host "Configuration is valid." -ForegroundColor Green
+    exit 0
 }
 
 if ($Entity -eq "task" -and $Action -eq "create") {
