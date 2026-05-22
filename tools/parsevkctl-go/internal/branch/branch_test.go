@@ -63,6 +63,12 @@ func TestNewTaskBranchNameTransliteratesRussianTitle(t *testing.T) {
 	assertEqual(t, got, "docs/issue-123-dokumentirovat-parsevkctl")
 }
 
+func TestSlugifyTitleMatchesPowerShellTransliteration(t *testing.T) {
+	got := SlugifyTitle("Ёжик хочет щуку")
+
+	assertEqual(t, got, "yozhik-khochet-shchuku")
+}
+
 func TestSlugifyTitleCleansDuplicatedDashes(t *testing.T) {
 	got := SlugifyTitle("fix: handle --- gh___retry   failure")
 

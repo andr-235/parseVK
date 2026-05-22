@@ -15,6 +15,9 @@ type issueJSON struct {
 	Title       string `json:"title"`
 	State       string `json:"state"`
 	HeadRefName string `json:"headRefName"`
+	Labels      []struct {
+		Name string `json:"name"`
+	} `json:"labels"`
 }
 
 type pullRequestJSON struct {
@@ -63,7 +66,23 @@ func issueFromJSON(raw issueJSON) domain.Issue {
 		Title:  raw.Title,
 		State:  normalizeIssueState(raw.State),
 		Branch: domain.BranchName(raw.HeadRefName),
+		Labels: issueLabelsFromJSON(raw.Labels),
 	}
+}
+
+func issueLabelsFromJSON(rawLabels []struct {
+	Name string `json:"name"`
+}) []string {
+	labels := make([]string, 0, len(rawLabels))
+	for _, label := range rawLabels {
+		if strings.TrimSpace(label.Name) == "" {
+			continue
+		}
+
+		labels = append(labels, label.Name)
+	}
+
+	return labels
 }
 
 func pullRequestFromJSON(raw pullRequestJSON) domain.PullRequest {
