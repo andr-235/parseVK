@@ -17,3 +17,11 @@ Run: go run ./cmd/parsevkctl --help
 ## GitHub adapter
 
 `internal/github` centralizes GitHub operations for the Go rewrite. It exposes a typed adapter boundary for issues, pull requests and project status operations, and currently shells out to `gh` behind that boundary while returning `internal/domain` types.
+
+## Branch naming
+
+Task branches use this format:
+
+`<type>/issue-<number>-<slug>`
+
+Supported branch types: `feat`, `fix`, `docs`, `refactor`, `test`, `ci`, `chore`, `perf`, `build`, `hotfix`.
