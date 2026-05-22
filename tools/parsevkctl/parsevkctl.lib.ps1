@@ -264,9 +264,19 @@ function Get-GitUpstream {
         [string]$CurrentBranch
     )
 
-    $upstream = git rev-parse --abbrev-ref "@{u}" 2>$null
-    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($upstream)) {
-        return $upstream.Trim()
+    $oldPreference = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    try {
+        $upstream = git rev-parse --abbrev-ref "@{u}" 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($upstream)) {
+            return $upstream.Trim()
+        }
+    }
+    catch {
+        # Ignore NativeCommandError
+    }
+    finally {
+        $ErrorActionPreference = $oldPreference
     }
     return $null
 }
