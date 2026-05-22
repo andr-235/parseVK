@@ -7,7 +7,7 @@ func TestValidateAcceptsValidConfig(t *testing.T) {
 		Repo:          "andr-235/parseVK",
 		DefaultBranch: "fastapi-microservices-rewrite",
 		ProjectOwner:  "andr-235",
-		ProjectNumber: float64(1),
+		ProjectNumber: 1,
 		ProjectID:     "PVT_kw_TEST",
 		ProjectTitle:  "parseVK",
 		Statuses: Statuses{
@@ -17,8 +17,8 @@ func TestValidateAcceptsValidConfig(t *testing.T) {
 			Done:       "Done",
 		},
 		Merge: MergeSettings{
-			RequireChecks:  false,
-			AllowAutoMerge: false,
+			RequireChecks:  boolPtr(false),
+			AllowAutoMerge: boolPtr(false),
 		},
 	}
 
@@ -33,7 +33,7 @@ func TestValidateRejectsBadRepoFormat(t *testing.T) {
 		Repo:          "parseVK",
 		DefaultBranch: "main",
 		ProjectOwner:  "andr-235",
-		ProjectNumber: float64(1),
+		ProjectNumber: 1,
 		ProjectID:     "PVT_kw_TEST",
 		ProjectTitle:  "parseVK",
 		Statuses: Statuses{
@@ -56,7 +56,7 @@ func TestValidateRejectsMissingStatus(t *testing.T) {
 		Repo:          "andr-235/parseVK",
 		DefaultBranch: "main",
 		ProjectOwner:  "andr-235",
-		ProjectNumber: float64(1),
+		ProjectNumber: 1,
 		ProjectID:     "PVT_kw_TEST",
 		ProjectTitle:  "parseVK",
 		Statuses: Statuses{
@@ -81,4 +81,32 @@ func contains(values []string, expected string) bool {
 	}
 
 	return false
+}
+
+func boolPtr(value bool) *bool { return &value }
+
+func TestValidateRejectsMissingMergeFlags(t *testing.T) {
+	cfg := Config{
+		Repo:          "andr-235/parseVK",
+		DefaultBranch: "main",
+		ProjectOwner:  "andr-235",
+		ProjectNumber: 1,
+		ProjectID:     "PVT_kw_TEST",
+		ProjectTitle:  "parseVK",
+		Statuses: Statuses{
+			Todo:       "Todo",
+			InProgress: "In Progress",
+			Review:     "Review",
+			Done:       "Done",
+		},
+	}
+
+	errs := Validate(cfg)
+
+	if !contains(errs, "missing field merge.requireChecks") {
+		t.Fatalf("expected missing requireChecks error, got: %v", errs)
+	}
+	if !contains(errs, "missing field merge.allowAutoMerge") {
+		t.Fatalf("expected missing allowAutoMerge error, got: %v", errs)
+	}
 }

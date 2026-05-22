@@ -13,7 +13,7 @@ type Config struct {
 	Repo          string        `json:"repo"`
 	DefaultBranch string        `json:"defaultBranch"`
 	ProjectOwner  string        `json:"projectOwner"`
-	ProjectNumber any           `json:"projectNumber"`
+	ProjectNumber int           `json:"projectNumber"`
 	ProjectID     string        `json:"projectId"`
 	ProjectTitle  string        `json:"projectTitle"`
 	Statuses      Statuses      `json:"statuses"`
@@ -28,8 +28,8 @@ type Statuses struct {
 }
 
 type MergeSettings struct {
-	RequireChecks  bool `json:"requireChecks"`
-	AllowAutoMerge bool `json:"allowAutoMerge"`
+	RequireChecks  *bool `json:"requireChecks"`
+	AllowAutoMerge *bool `json:"allowAutoMerge"`
 }
 
 type ValidationResult struct {
@@ -92,8 +92,8 @@ func Validate(cfg Config) []string {
 	require("projectId", cfg.ProjectID)
 	require("projectTitle", cfg.ProjectTitle)
 
-	if cfg.ProjectNumber == nil {
-		errs = append(errs, "missing field projectNumber")
+	if cfg.ProjectNumber <= 0 {
+		errs = append(errs, "projectNumber must be a positive integer")
 	}
 
 	if strings.TrimSpace(cfg.Repo) != "" {
@@ -107,6 +107,13 @@ func Validate(cfg Config) []string {
 	require("statuses.inProgress", cfg.Statuses.InProgress)
 	require("statuses.review", cfg.Statuses.Review)
 	require("statuses.done", cfg.Statuses.Done)
+
+	if cfg.Merge.RequireChecks == nil {
+		errs = append(errs, "missing field merge.requireChecks")
+	}
+	if cfg.Merge.AllowAutoMerge == nil {
+		errs = append(errs, "missing field merge.allowAutoMerge")
+	}
 
 	return errs
 }
