@@ -1,5 +1,9 @@
 # VK and Content Services Implementation Plan — Revised
 
+> Status note, 2026-05-22: this checklist is stale. The factual migration
+> status is tracked in `docs/BACKEND_MIGRATION_STATUS.md`; use this plan as
+> historical implementation context, not as the current source of truth.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add `vk-service` for VK execution/canonical storage and `content-service` for frontend read models.

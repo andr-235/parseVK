@@ -32,29 +32,32 @@ docker compose up -d identity-db identity-migrate identity-seed-admin identity-s
 curl -fsS http://127.0.0.1:3002/health
 ```
 
-Smoke auth flow:
+Shell smoke-СЃРєСЂРёРїС‚С‹ `scripts/smoke-fastapi-*.sh` СѓРґР°Р»РµРЅС‹ РєР°Рє РЅРµРЅР°РґС‘Р¶РЅС‹Рµ.
+Р”Р»СЏ end-to-end РїСЂРѕРІРµСЂРєРё РЅСѓР¶РЅРѕ СЃРґРµР»Р°С‚СЊ РЅРѕРІС‹Р№ integration-test based replacement.
+
+Manual auth flow:
 
 ```bash
-IDENTITY_ADMIN_PASSWORD=admin-change-me scripts/smoke-fastapi-auth.sh
+curl -fsS http://127.0.0.1:3002/health
 ```
 
 Скрипт проходит non-destructive flow: `login -> refresh -> me -> logout`.
 `change-password` не выполняется автоматически, чтобы не менять seed admin пароль.
 
-Smoke tasks flow:
+Manual tasks flow:
 
 ```bash
-IDENTITY_ADMIN_PASSWORD=admin-change-me scripts/smoke-fastapi-tasks.sh
+curl -fsS http://127.0.0.1:3002/api/v1/tasks
 ```
 
 Скрипт проходит flow: `login -> create task -> list -> detail -> audit -> automation settings -> delete`.
 `tasks-service` не выполняет VK parsing в этом срезе; новые задачи могут оставаться
 в `pending` до реализации `vk-service`.
 
-Smoke VK/content flow:
+Manual VK/content flow:
 
 ```bash
-IDENTITY_ADMIN_PASSWORD=admin-change-me scripts/smoke-fastapi-vk-content.sh
+curl -fsS http://127.0.0.1:3002/api/v1/content/posts
 ```
 
 Скрипт проверяет flow: `login -> create scope=all task без выбора групп -> wait task done -> gateway content posts`.
