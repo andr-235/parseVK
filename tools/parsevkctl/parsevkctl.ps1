@@ -15,6 +15,9 @@ param(
     [switch]$NoBranch,
     [switch]$AllowDirty,
     [switch]$DryRun,
+    [string]$Summary = "",
+    [string]$TestPlan = "",
+    [string]$Risk = "",
     [switch]$Json
 )
 
@@ -612,7 +615,12 @@ function Review-Task {
 }
 
 function Open-PullRequest {
-    param([int]$IssueNumber)
+    param(
+        [int]$IssueNumber,
+        [string]$Summary = "",
+        [string]$TestPlan = "",
+        [string]$Risk = ""
+    )
 
     $config = Get-Config
 
@@ -642,9 +650,58 @@ function Open-PullRequest {
     }
 
     $prTitle = $issue.title
+
+    $summaryText = "- <summary or placeholder>"
+    if (-not [string]::IsNullOrWhiteSpace($Summary)) {
+        if ($Summary -match "^[-*]") {
+            $summaryText = $Summary
+        } else {
+            $summaryText = "- $Summary"
+        }
+    }
+
+    $testNotRun = " "
+    $testManual = " "
+    $testAutomated = " "
+    if (-not [string]::IsNullOrWhiteSpace($TestPlan)) {
+        $tpLower = $TestPlan.ToLower().Trim()
+        if ($tpLower -eq "manual" -or $tpLower -eq "manual test") {
+            $testManual = "x"
+        } elseif ($tpLower -eq "automated" -or $tpLower -eq "automated tests" -or $tpLower -eq "auto") {
+            $testAutomated = "x"
+        } elseif ($tpLower -eq "none" -or $tpLower -eq "not run" -or $tpLower -eq "no") {
+            $testNotRun = "x"
+        } else {
+            if ($tpLower -match "auto|unit|pester") {
+                $testAutomated = "x"
+            } elseif ($tpLower -match "none|not|no run") {
+                $testNotRun = "x"
+            } else {
+                $testManual = "x"
+            }
+        }
+    }
+
+    $riskText = "Low"
+    if (-not [string]::IsNullOrWhiteSpace($Risk)) {
+        $riskText = $Risk
+    }
+
     $prBody = @"
 Closes #$IssueNumber
 
+## Summary
+$summaryText
+
+## Test plan
+- [$testNotRun] Not run
+- [$testManual] Manual test
+- [$testAutomated] Automated tests
+
+## Risk
+- $riskText
+
+## Notes
 Created via parsevkctl.
 "@
 
@@ -1525,7 +1582,7 @@ try {
 
         $config = Get-Config
         $issueNumber = [int]$Value
-        $prInfo = Open-PullRequest -IssueNumber $issueNumber
+        $prInfo = Open-PullRequest -IssueNumber $issueNumber -Summary $Summary -TestPlan $TestPlan -Risk $Risk
         
         $result = [PSCustomObject]@{
             command = "task pr"
