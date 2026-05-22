@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { declOfNumber } from '@/utils/common'
 
 type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn<Group>[]
 
@@ -28,21 +29,6 @@ interface GroupsTableCardProps {
   columns: ColumnsFactory
   searchTerm: string
   onSearchChange: (value: string) => void
-}
-
-const getCounterLabel = (count: number) => {
-  const remainder10 = count % 10
-  const remainder100 = count % 100
-
-  if (remainder10 === 1 && remainder100 !== 11) {
-    return 'группа'
-  }
-
-  if (remainder10 >= 2 && remainder10 <= 4 && (remainder100 < 12 || remainder100 > 14)) {
-    return 'группы'
-  }
-
-  return 'групп'
 }
 
 function GroupsTableCard({
@@ -92,7 +78,7 @@ function GroupsTableCard({
           </h2>
           {!isLoading && (
             <Badge className="border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-mono-accent text-xs text-cyan-400">
-              {badgeText} {getCounterLabel(totalCount)}
+              {badgeText} {declOfNumber(totalCount, ['группа', 'группы', 'групп'])}
             </Badge>
           )}
         </div>

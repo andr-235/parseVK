@@ -3,6 +3,7 @@ import { io, type Socket } from 'socket.io-client'
 import { useTasksStore } from '@/store/tasks'
 import type { TaskStatsInfo, TaskStatus } from '@/store/tasks'
 import { normalizeId, rebuildTaskList, toTaskKey } from '@/store/tasks'
+import { resolveSocketBaseUrl, normalizeSocketBase } from '@/utils/common'
 
 export type GatewayTaskStatus = 'pending' | 'running' | 'done' | 'failed'
 
@@ -233,23 +234,7 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
       return
     }
 
-    const resolveBaseUrl = (): string | null => {
-      const raw = import.meta.env.VITE_API_WS_URL
-      const trimmed = typeof raw === 'string' ? raw.trim() : ''
-
-      if (trimmed === '' || trimmed.toLowerCase() === 'auto') {
-        if (typeof window === 'undefined') {
-          return null
-        }
-
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-        return `${protocol}//${window.location.host}`
-      }
-
-      return trimmed
-    }
-
-    const baseUrl = resolveBaseUrl()
+    const baseUrl = resolveSocketBaseUrl()
     if (!baseUrl) {
       if (import.meta.env.DEV) {
         console.warn(
@@ -260,28 +245,7 @@ export const useTasksSocket = (options?: UseTasksSocketOptions): void => {
       return
     }
 
-    const normalizeBase = (url: string): string => {
-      let trimmed = url.trim().replace(/\/$/, '')
-
-      if (!/^wss?:\/\//i.test(trimmed)) {
-        try {
-          const absolute = new URL(
-            trimmed,
-            typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
-          )
-          trimmed = absolute.origin + absolute.pathname.replace(/\/$/, '')
-        } catch {
-          // Игнорируем ошибки парсинга URL
-        }
-      }
-
-      trimmed = trimmed.replace(/\/api$/i, '')
-      trimmed = trimmed.replace(/\/tasks$/i, '')
-
-      return trimmed
-    }
-
-    const normalizedBase = normalizeBase(baseUrl)
+    const normalizedBase = normalizeSocketBase(baseUrl)
     const namespaceUrl = normalizedBase.endsWith('/')
       ? `${normalizedBase}tasks`
       : `${normalizedBase}/tasks`

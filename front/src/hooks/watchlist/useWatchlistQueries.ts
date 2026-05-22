@@ -11,6 +11,7 @@ import {
   mapWatchlistAuthor,
   mapWatchlistSettings,
 } from '@/store/watchlist'
+import { mergeListsById } from '@/utils/common'
 
 const fetchWatchlistAuthors = async () => {
   const response = await watchlistService.getAuthors(
@@ -38,9 +39,8 @@ export const mergeWatchlistAuthors = (
   existing: ReturnType<typeof mapWatchlistAuthor>[],
   total: number
 ) => {
-  const incomingIds = new Set(incoming.map((item) => item.id))
-  const extras = existing.filter((item) => !incomingIds.has(item.id) && item.status !== 'STOPPED')
-  const mergedAuthors = [...incoming, ...extras]
+  const existingActive = existing.filter((item) => item.status !== 'STOPPED')
+  const mergedAuthors = mergeListsById(incoming, existingActive)
 
   return {
     authors: mergedAuthors,

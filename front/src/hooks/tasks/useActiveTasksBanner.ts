@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { Task } from '@/types'
 import { calculateTaskProgress } from '@/utils/tasks/taskProgress'
-import { formatNumber, declOfNumber } from '@/utils/tasks/numberFormat'
+import { formatNumber, declOfNumber } from '@/utils/common'
 
 interface UseActiveTasksBannerResult {
   shouldRender: boolean

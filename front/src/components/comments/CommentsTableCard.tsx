@@ -11,6 +11,7 @@ import { PostGroupCard } from './PostGroupCard'
 import { CommentCategoryFilters } from './CommentCategoryFilters'
 import useCommentsTableCardController from '@/hooks/comments/useCommentsTableCardController'
 import type { CategorizedComment, CategorizedGroup } from '@/types/comments/commentsTable'
+import { declOfNumber } from '@/utils/common'
 
 interface CommentsTableCardProps {
   groupedComments: CategorizedGroup[]
@@ -31,21 +32,6 @@ interface CommentsTableCardProps {
   onAddToWatchlist?: (commentId: number) => void
   watchlistPending?: Record<number, boolean>
   keywordCommentsTotal: number
-}
-
-const getCommentLabel = (count: number) => {
-  const remainder10 = count % 10
-  const remainder100 = count % 100
-
-  if (remainder10 === 1 && remainder100 !== 11) {
-    return 'комментарий'
-  }
-
-  if (remainder10 >= 2 && remainder10 <= 4 && (remainder100 < 12 || remainder100 > 14)) {
-    return 'комментария'
-  }
-
-  return 'комментариев'
 }
 
 const CommentsTableCard = memo(function CommentsTableCard({
@@ -368,7 +354,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
                 Показано: {renderedCount}
               </p>
               <p className="font-monitoring-body text-sm text-slate-400">
-                Всего по фильтру: {totalCount} {getCommentLabel(totalCount)}
+                Всего по фильтру: {totalCount} {declOfNumber(totalCount, ['комментарий', 'комментария', 'комментариев'])}
               </p>
 
               <div ref={observerTargetRef} className="flex w-full justify-center py-4">

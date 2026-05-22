@@ -10,6 +10,7 @@ import {
 } from '@/api/comments/query/buildCommentsSearchQuery'
 import type { Comment, Keyword } from '@/types'
 import { getCommentCategories } from '@/utils/comments/getCommentCategories'
+import { useDebounce } from '@/hooks/common'
 
 type ReadFilter = 'all' | 'unread' | 'read'
 type CommentWithKeywords = { comment: Comment; matchedKeywords: Keyword[] }
@@ -249,6 +250,8 @@ const useCommentsViewModel = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('comments')
   const [watchlistPending, setWatchlistPending] = useState<Record<number, boolean>>({})
 
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
+
   const hasKeywords = keywords.length > 0
   const shouldFilterByKeywordComments = showKeywordComments && hasKeywords
   const shouldFilterByKeywordPosts = showKeywordPosts && hasKeywords
@@ -257,11 +260,11 @@ const useCommentsViewModel = () => {
     () =>
       buildKeywordFilters({
         keywords,
-        searchTerm,
+        searchTerm: debouncedSearchTerm,
         shouldFilterByKeywordComments,
         shouldFilterByKeywordPosts,
       }),
-    [keywords, searchTerm, shouldFilterByKeywordComments, shouldFilterByKeywordPosts]
+    [keywords, debouncedSearchTerm, shouldFilterByKeywordComments, shouldFilterByKeywordPosts]
   )
 
   const fetchFilters = useMemo(

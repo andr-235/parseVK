@@ -14,6 +14,7 @@ import {
 } from './watchlistStore.utils'
 import { watchlistQueryKeys } from '@/api/watchlist/queryKeys'
 import { queryClient } from '@/api/common'
+import { mergeListsById } from '@/utils/common'
 
 type WatchlistAuthorsQueryData = {
   items: WatchlistAuthorCard[]
@@ -95,15 +96,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
       const mapped: WatchlistAuthorCard[] = response.items.map(mapWatchlistAuthor)
 
       set((prev) => ({
-        authors: reset
-          ? mapped
-          : [
-              ...prev.authors,
-              ...mapped.filter(
-                (author: WatchlistAuthorCard) =>
-                  !prev.authors.some((existing) => existing.id === author.id)
-              ),
-            ],
+        authors: reset ? mapped : mergeListsById(prev.authors, mapped),
         totalAuthors: response.total,
         hasMoreAuthors: response.hasMore,
         isLoadingAuthors: false,
@@ -114,15 +107,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
       queryClient.setQueryData<WatchlistAuthorsQueryData>(
         watchlistQueryKeys.authors(),
         (prevData) => ({
-          items: reset
-            ? mapped
-            : [
-                ...(prevData?.items ?? []),
-                ...mapped.filter(
-                  (author: WatchlistAuthorCard) =>
-                    !(prevData?.items ?? []).some((existing) => existing.id === author.id)
-                ),
-              ],
+          items: reset ? mapped : mergeListsById(prevData?.items ?? [], mapped),
           total: response.total,
           hasMore: response.hasMore,
         })

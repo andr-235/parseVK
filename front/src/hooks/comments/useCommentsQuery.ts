@@ -10,6 +10,7 @@ import { commentsQueryKeys } from '@/api/comments/queryKeys'
 import { useCommentsStore } from '@/store/comments'
 import { COMMENTS_PAGE_SIZE } from '@/store/comments'
 import type { CommentsQueryData } from '@/types/comments/commentsCache.types'
+import { mergeListsById } from '@/utils/common'
 
 const buildFetchParams = (filters: CommentsFilters) => ({
   limit: COMMENTS_PAGE_SIZE,
@@ -40,10 +41,11 @@ export const mergeCommentsSyncData = (
     'comments' | 'nextCursor' | 'hasMore' | 'totalCount' | 'readCount' | 'unreadCount'
   >
 ) => {
-  const incomingIds = new Set(incoming.comments.map((comment) => comment.id))
-  const extras = existing.comments.filter((comment) => !incomingIds.has(comment.id))
-  const mergedComments = [...incoming.comments, ...extras]
-  const hasLoadedExtraPages = extras.length > 0
+  const mergedComments = mergeListsById(
+    incoming.comments as unknown as typeof existing.comments,
+    existing.comments
+  )
+  const hasLoadedExtraPages = mergedComments.length > incoming.comments.length
   const allLoaded = mergedComments.length >= incoming.totalCount
 
   return {

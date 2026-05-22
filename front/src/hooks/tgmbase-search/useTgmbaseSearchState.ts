@@ -7,6 +7,7 @@ import type {
   TgmbaseSearchProgressEvent,
   TgmbaseSearchResponse,
 } from '@/types/common'
+import { mergeListsById, resolveSocketBaseUrl, normalizeSocketBase } from '@/utils/common'
 
 const DEFAULT_PAGE_SIZE = 20
 const SEARCH_BATCH_SIZE = 200
@@ -33,40 +34,6 @@ const createSearchId = () =>
   typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : `tgmbase-${Date.now()}-${Math.random().toString(36).slice(2)}`
-
-const resolveSocketBaseUrl = (): string | null => {
-  const raw = import.meta.env.VITE_API_WS_URL
-  const trimmed = typeof raw === 'string' ? raw.trim() : ''
-
-  if (trimmed === '' || trimmed.toLowerCase() === 'auto') {
-    if (typeof window === 'undefined') {
-      return null
-    }
-
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${protocol}//${window.location.host}`
-  }
-
-  return trimmed
-}
-
-const normalizeSocketBase = (url: string): string => {
-  let trimmed = url.trim().replace(/\/$/, '')
-
-  if (!/^wss?:\/\//i.test(trimmed)) {
-    try {
-      const absolute = new URL(
-        trimmed,
-        typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
-      )
-      trimmed = absolute.origin + absolute.pathname.replace(/\/$/, '')
-    } catch {
-      return trimmed
-    }
-  }
-
-  return trimmed.replace(/\/api$/i, '').replace(/\/tgmbase-search$/i, '')
-}
 
 export function useTgmbaseSearchState() {
   const [input, setInput] = useState('')
@@ -241,13 +208,7 @@ export function useTgmbaseSearchState() {
               ...nextItem,
               messagesPage: {
                 ...nextItem.messagesPage,
-                items: [
-                  ...currentItem.messagesPage.items,
-                  ...nextItem.messagesPage.items.filter(
-                    (message) =>
-                      !currentItem.messagesPage.items.some((existing) => existing.id === message.id)
-                  ),
-                ],
+                items: mergeListsById(currentItem.messagesPage.items, nextItem.messagesPage.items),
               },
             }
           }),
