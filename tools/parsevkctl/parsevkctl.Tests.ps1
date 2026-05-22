@@ -292,3 +292,91 @@ Describe "parsevkctl task doctor" {
     }
 }
 
+Describe "parsevkctl enterprise branch naming" {
+    BeforeAll {
+        $funcs = @("Convert-CyrillicToLatin", "Get-BranchType", "New-TaskBranchName", "Test-BranchName", "Assert-BranchName")
+        foreach ($f in $funcs) {
+            $functionText = Get-FunctionText $f
+            if ($null -eq $functionText) {
+                throw "$f function not found in script AST."
+            }
+            Invoke-Expression $functionText
+        }
+    }
+
+    It "transliterates Russian Cyrillic characters to readable Latin" {
+        Convert-CyrillicToLatin "$([char]0x0421)$([char]0x0434)$([char]0x0435)$([char]0x043B)$([char]0x0430)$([char]0x0442)$([char]0x044C) enterprise-grade naming" | Should Be "sdelat enterprise-grade naming"
+        Convert-CyrillicToLatin "$([char]0x041F)$([char]0x0440)$([char]0x0438)$([char]0x0432)$([char]0x0435)$([char]0x0442) $([char]0x043C)$([char]0x0438)$([char]0x0440) 123" | Should Be "privet mir 123"
+        Convert-CyrillicToLatin "$([char]0x0451)$([char]0x0436)$([char]0x044A)$([char]0x044B)$([char]0x044C)" | Should Be "yozhy"
+    }
+
+    It "resolves branch type from labels and title prefix" {
+        # 1. Label matches
+        $issue1 = [PSCustomObject]@{
+            number = 73
+            title = "Some issue title"
+            labels = @([PSCustomObject]@{ name = "type: fix" })
+        }
+        Get-BranchType -Issue $issue1 | Should Be "fix"
+
+        # 2. Title prefix matches
+        $issue2 = [PSCustomObject]@{
+            number = 73
+            title = "docs: document everything"
+            labels = $null
+        }
+        Get-BranchType -Issue $issue2 | Should Be "docs"
+
+        # 3. Default matches
+        $issue3 = [PSCustomObject]@{
+            number = 73
+            title = "regular title"
+            labels = $null
+        }
+        Get-BranchType -Issue $issue3 | Should Be "feat"
+    }
+
+    It "generates a valid enterprise branch name" {
+        $issue = [PSCustomObject]@{
+            number = 73
+            title = "$([char]0x0421)$([char]0x0434)$([char]0x0435)$([char]0x043B)$([char]0x0430)$([char]0x0442)$([char]0x044C) enterprise-grade naming $([char]0x0434)$([char]0x043B)$([char]0x044F) task branches $([char]0x0432) parsevkctl"
+            labels = @([PSCustomObject]@{ name = "type: feat" })
+        }
+        $branchName = New-TaskBranchName -Issue $issue
+        $branchName | Should Be "feat/issue-73-sdelat-enterprise-grade-naming-dlya-task-branche"
+    }
+
+    It "trims long slugs to max 48 characters" {
+        $issue = [PSCustomObject]@{
+            number = 99
+            title = "a-very-very-very-very-very-long-issue-title-that-must-be-truncated-to-max-chars-and-no-trailing-dash"
+            labels = $null
+        }
+        $branchName = New-TaskBranchName -Issue $issue
+        $branchName | Should Be "feat/issue-99-a-very-very-very-very-very-long-issue-title-that"
+    }
+
+    It "removes title prefix from slug" {
+        $issue = [PSCustomObject]@{
+            number = 74
+            title = "refactor: extract project status client"
+            labels = $null
+        }
+        $branchName = New-TaskBranchName -Issue $issue
+        $branchName | Should Be "refactor/issue-74-extract-project-status-client"
+    }
+
+    It "validates branch names against enterprise regex" {
+        Test-BranchName "feat/issue-73-enterprise-branch-naming" | Should Be $true
+        Test-BranchName "fix/issue-72-handle-gh-retry-failure" | Should Be $true
+        Test-BranchName "docs/issue-66-document-parsevkctl-workflow" | Should Be $true
+        Test-BranchName "refactor/issue-74-extract-project-status-client" | Should Be $true
+        Test-BranchName "ci/issue-75-add-pr-validation-workflow" | Should Be $true
+
+        Test-BranchName "invalid/issue-73-enterprise-branch-naming" | Should Be $false
+        Test-BranchName "feat/issue-73-enterprise--branch" | Should Be $false
+        Test-BranchName "feat/issue-73-enterprise-branch-" | Should Be $false
+        Test-BranchName "feat/issue-abc-enterprise-branch" | Should Be $false
+    }
+}
+
