@@ -70,6 +70,21 @@ Todo -> In Progress -> Review -> Done
 - `Review`: pull request is open and ready for review.
 - `Done`: pull request is merged and the issue is closed.
 
+## Branch Naming Convention
+
+When starting a task, a Git branch is created using the following enterprise-grade format:
+
+```text
+<type>/issue-<number>-<slug>
+```
+
+- **Allowed Types**: `feat`, `fix`, `docs`, `refactor`, `test`, `ci`, `chore`, `perf`, `build`, `hotfix`.
+- **Type Resolution**:
+  1. Uses the issue label if it has the format `type: <type>` (e.g., `type: feat`).
+  2. Otherwise, uses the title prefix if it exists (e.g., `fix: fix bug`).
+  3. Defaults to `feat` if no type is matched.
+- **Slug Rules**: The issue title (excluding any matched prefix) is converted to lowercase kebab-case, Cyrillic characters are transliterated to Latin, all non-alphanumeric characters (except single dashes) are removed, and the slug is truncated to a maximum of 48 characters with no leading/trailing dashes.
+
 ## Common workflow
 
 Start a new task, create the issue, add it to the project, assign it to yourself, and

@@ -320,7 +320,7 @@ function Get-Issue {
         "issue", "view",
         [string]$IssueNumber,
         "--repo", $config.repo,
-        "--json", "number,title,state,url"
+        "--json", "number,title,state,url,labels"
     )
 }
 
@@ -340,6 +340,142 @@ function ConvertTo-BranchSlug {
     }
 
     return $slug
+}
+
+function Convert-CyrillicToLatin {
+    param([string]$Text)
+
+    if ([string]::IsNullOrEmpty($Text)) {
+        return ""
+    }
+
+    $map = @{}
+    # Populate Cyrillic mapping dynamically using character codes to prevent file encoding parser issues in Windows PowerShell
+    $map[[string][char]0x0430] = 'a'
+    $map[[string][char]0x0431] = 'b'
+    $map[[string][char]0x0432] = 'v'
+    $map[[string][char]0x0433] = 'g'
+    $map[[string][char]0x0434] = 'd'
+    $map[[string][char]0x0435] = 'e'
+    $map[[string][char]0x0451] = 'yo'
+    $map[[string][char]0x0436] = 'zh'
+    $map[[string][char]0x0437] = 'z'
+    $map[[string][char]0x0438] = 'i'
+    $map[[string][char]0x0439] = 'y'
+    $map[[string][char]0x043a] = 'k'
+    $map[[string][char]0x043b] = 'l'
+    $map[[string][char]0x043c] = 'm'
+    $map[[string][char]0x043d] = 'n'
+    $map[[string][char]0x043e] = 'o'
+    $map[[string][char]0x043f] = 'p'
+    $map[[string][char]0x0440] = 'r'
+    $map[[string][char]0x0441] = 's'
+    $map[[string][char]0x0442] = 't'
+    $map[[string][char]0x0443] = 'u'
+    $map[[string][char]0x0444] = 'f'
+    $map[[string][char]0x0445] = 'kh'
+    $map[[string][char]0x0446] = 'ts'
+    $map[[string][char]0x0447] = 'ch'
+    $map[[string][char]0x0448] = 'sh'
+    $map[[string][char]0x0449] = 'shch'
+    $map[[string][char]0x044a] = ''
+    $map[[string][char]0x044b] = 'y'
+    $map[[string][char]0x044c] = ''
+    $map[[string][char]0x044d] = 'e'
+    $map[[string][char]0x044e] = 'yu'
+    $map[[string][char]0x044f] = 'ya'
+
+    $chars = $Text.ToCharArray()
+    $result = [System.Text.StringBuilder]::new()
+
+    foreach ($c in $chars) {
+        $cStr = [string]$c
+        $key = $cStr.ToLowerInvariant()
+        if ($map.ContainsKey($key)) {
+            $null = $result.Append($map[$key])
+        } else {
+            $null = $result.Append($c)
+        }
+    }
+
+    return $result.ToString()
+}
+
+function Get-BranchType {
+    param(
+        [object]$Issue
+    )
+
+    $allowedTypes = @('feat', 'fix', 'docs', 'refactor', 'test', 'ci', 'chore', 'perf', 'build', 'hotfix')
+
+    if ($null -ne $Issue.labels) {
+        foreach ($label in $Issue.labels) {
+            $labelName = $label.name
+            if ($labelName -match '^type:\s*(.+)$') {
+                $typeVal = $Matches[1].Trim().ToLowerInvariant()
+                if ($allowedTypes -contains $typeVal) {
+                    return $typeVal
+                }
+            }
+        }
+    }
+
+    if ($Issue.title -match '^([a-zA-Z0-9]+):\s*') {
+        $prefixVal = $Matches[1].Trim().ToLowerInvariant()
+        if ($allowedTypes -contains $prefixVal) {
+            return $prefixVal
+        }
+    }
+
+    return 'feat'
+}
+
+function New-TaskBranchName {
+    param(
+        [object]$Issue
+    )
+
+    $type = Get-BranchType -Issue $Issue
+
+    $titleWithoutPrefix = $Issue.title
+    $allowedTypes = @('feat', 'fix', 'docs', 'refactor', 'test', 'ci', 'chore', 'perf', 'build', 'hotfix')
+    foreach ($t in $allowedTypes) {
+        if ($titleWithoutPrefix -match "^${t}:\s*(.*)$") {
+            $titleWithoutPrefix = $Matches[1]
+            break
+        }
+    }
+
+    $latinText = Convert-CyrillicToLatin -Text $titleWithoutPrefix
+    $slug = $latinText.ToLowerInvariant()
+    $slug = $slug -replace "[^a-z0-9]+", "-"
+    $slug = $slug -replace "-+", "-"
+    $slug = $slug.Trim("-")
+
+    if ([string]::IsNullOrWhiteSpace($slug)) {
+        $slug = "task"
+    }
+
+    if ($slug.Length -gt 48) {
+        $slug = $slug.Substring(0, 48).Trim("-")
+    }
+
+    return "$type/issue-$($Issue.number)-$slug"
+}
+
+function Test-BranchName {
+    param([string]$BranchName)
+
+    $regex = '^(feat|fix|docs|refactor|test|ci|chore|perf|build|hotfix)/issue-\d+-[a-z0-9]+(-[a-z0-9]+)*$'
+    return $BranchName -cmatch $regex
+}
+
+function Assert-BranchName {
+    param([string]$BranchName)
+
+    if (-not (Test-BranchName -BranchName $BranchName)) {
+        throw "Branch name '$BranchName' is invalid. It must match format '<type>/issue-<number>-<slug>' using allowed types and valid slug rules."
+    }
 }
 
 function Assert-GitClean {
@@ -504,8 +640,8 @@ function Start-Task {
         Assert-GitClean
     }
 
-    $slug = ConvertTo-BranchSlug -Text $issue.title
-    $branchName = "feature/$IssueNumber-$slug"
+    $branchName = New-TaskBranchName -Issue $issue
+    Assert-BranchName -BranchName $branchName
 
     Write-Host ("Creating branch: " + $branchName) -ForegroundColor Cyan
 
