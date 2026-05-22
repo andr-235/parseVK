@@ -18,6 +18,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Force UTF-8 for external commands (like gh and git) and console output
+$OutputEncoding = [System.Text.Encoding]::UTF8
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding = [System.Text.Encoding]::UTF8
+}
+catch {
+    # Ignore if console host doesn't support changing encoding
+}
+
 function Assert-ConfigValid {
     param(
         [object]$Config
