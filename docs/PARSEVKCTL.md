@@ -31,6 +31,32 @@ Validation ensures:
 - `statuses` and other fields are non-empty strings.
 - `merge.requireChecks` and `merge.allowAutoMerge` are booleans.
 
+## Environment Diagnostics (Doctor)
+
+Before starting work or troubleshooting setup issues, you can run a preflight environment check to verify if the local machine and repository are fully ready for `parsevkctl`:
+
+```powershell
+.\tools\parsevkctl\parsevkctl.ps1 task doctor
+```
+
+This read-only command performs the following checks:
+- GitHub CLI (`gh`) is installed.
+- Git is installed.
+- GitHub CLI is successfully authenticated (`gh auth status`).
+- The command is executed inside a Git worktree.
+- The `origin` remote exists.
+- The local repository matches the repository configured in `config.json`.
+- The `config.json` configuration file loads and is valid.
+- The default branch exists locally or on remote origin.
+- The GitHub Project is present and accessible.
+- The Project has the `Status` field available.
+- The required statuses (`Todo`, `In Progress`, `Review`, `Done`) exist in the project.
+- Shows the current working tree clean/dirty status.
+
+Diagnostics output uses human-readable `[OK]`, `[WARN]`, and `[FAIL]` status markers. The command returns:
+- `Result: READY` (exit code 0) if all checks passed (warnings like a dirty working tree are non-critical).
+- `Result: NOT READY` (exit code 1) if any critical check fails.
+
 ## Kanban flow
 
 Tasks move through these statuses:
@@ -127,3 +153,10 @@ Validate the configuration file manually:
 ```powershell
 .\tools\parsevkctl\parsevkctl.ps1 config validate
 ```
+
+Check local environment configuration and tools readiness:
+
+```powershell
+.\tools\parsevkctl\parsevkctl.ps1 task doctor
+```
+

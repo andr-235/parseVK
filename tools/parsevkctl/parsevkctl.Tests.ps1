@@ -252,3 +252,43 @@ Describe "parsevkctl config validation" {
         { Assert-ConfigValid -Config $invalidConfig2 } | Should Throw "Config validation failed: 'merge.allowAutoMerge' is required."
     }
 }
+
+Describe "parsevkctl task doctor" {
+    It "defines Test-CommandExists" {
+        Get-FunctionText "Test-CommandExists" | Should Not BeNullOrEmpty
+    }
+
+    It "defines Invoke-Doctor" {
+        Get-FunctionText "Invoke-Doctor" | Should Not BeNullOrEmpty
+    }
+
+    It "routes task doctor and shows it in help" {
+        $scriptContent | Should Match 'task"\s+-and\s+\$Action -eq "doctor"'
+        $scriptContent | Should Match "task doctor"
+    }
+
+    It "does not mutate GitHub or git state" {
+        $doctor = Get-FunctionText "Invoke-Doctor"
+
+        $doctor | Should Not Match "Set-TaskStatus"
+        $doctor | Should Not Match "issue edit"
+        $doctor | Should Not Match "issue close"
+        $doctor | Should Not Match "pr create"
+        $doctor | Should Not Match "pr merge"
+        $doctor | Should Not Match "git switch"
+        $doctor | Should Not Match "git push"
+    }
+
+    It "calls essential read-only CLI commands" {
+        $doctor = Get-FunctionText "Invoke-Doctor"
+
+        $doctor | Should Match "gh auth status"
+        $doctor | Should Match "git rev-parse --is-inside-work-tree"
+        $doctor | Should Match "git remote"
+        $doctor | Should Match "git remote get-url origin"
+        $doctor | Should Match "git branch --list"
+        $doctor | Should Match "Get-StatusField"
+        $doctor | Should Match "git status --porcelain"
+    }
+}
+

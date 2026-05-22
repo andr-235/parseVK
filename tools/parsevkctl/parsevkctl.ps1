@@ -121,6 +121,11 @@ function Assert-CommandExists {
     }
 }
 
+function Test-CommandExists {
+    param([string]$CommandName)
+    return [bool](Get-Command $CommandName -ErrorAction SilentlyContinue)
+}
+
 function Invoke-Native {
     param(
         [string]$CommandName,
@@ -891,11 +896,228 @@ function Complete-Task {
     }
 }
 
+function Invoke-Doctor {
+    Write-Host "Running parsevkctl doctor diagnostics..." -ForegroundColor Cyan
+    Write-Host ""
+
+    $ctx = @{
+        Failures = 0
+        Warnings = 0
+    }
+
+    function Report-Check {
+        param(
+            [string]$Name,
+            [string]$Status, # OK, WARN, FAIL
+            [string]$Message = ""
+        )
+        $color = "Green"
+        if ($Status -eq "WARN") {
+            $color = "Yellow"
+            $ctx.Warnings++
+        } elseif ($Status -eq "FAIL") {
+            $color = "Red"
+            $ctx.Failures++
+        }
+        Write-Host ("[{0,-4}] {1}" -f $Status, $Name) -ForegroundColor $color
+        if (-not [string]::IsNullOrWhiteSpace($Message)) {
+            Write-Host "       $Message" -ForegroundColor DarkGray
+        }
+    }
+
+    # 1. gh installed
+    $ghInstalled = Test-CommandExists "gh"
+    if ($ghInstalled) {
+        Report-Check "GitHub CLI (gh) installed" "OK"
+    } else {
+        Report-Check "GitHub CLI (gh) installed" "FAIL" "gh is not installed or not in PATH."
+    }
+
+    # 2. git installed
+    $gitInstalled = Test-CommandExists "git"
+    if ($gitInstalled) {
+        Report-Check "Git installed" "OK"
+    } else {
+        Report-Check "Git installed" "FAIL" "git is not installed or not in PATH."
+    }
+
+    # 3. gh auth status works
+    if ($ghInstalled) {
+        $null = gh auth status 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Report-Check "GitHub CLI authenticated" "OK"
+        } else {
+            Report-Check "GitHub CLI authenticated" "FAIL" "gh auth status returned non-zero. Run 'gh auth login' to authenticate."
+        }
+    } else {
+        Report-Check "GitHub CLI authenticated" "FAIL" "Skipped because gh is not installed."
+    }
+
+    # 4. inside a git worktree
+    $isWorktree = $false
+    if ($gitInstalled) {
+        $isInside = git rev-parse --is-inside-work-tree 2>$null
+        if ($LASTEXITCODE -eq 0 -and $isInside.Trim() -eq "true") {
+            $isWorktree = $true
+            Report-Check "Inside a Git worktree" "OK"
+        } else {
+            Report-Check "Inside a Git worktree" "FAIL" "Current directory is not inside a Git worktree."
+        }
+    } else {
+        Report-Check "Inside a Git worktree" "FAIL" "Skipped because git is not installed."
+    }
+
+    # 5. origin remote exists
+    $originExists = $false
+    if ($isWorktree) {
+        $remotes = git remote 2>$null
+        if ($remotes -contains "origin") {
+            $originExists = $true
+            Report-Check "Git origin remote exists" "OK"
+        } else {
+            Report-Check "Git origin remote exists" "FAIL" "No 'origin' remote found in this repository."
+        }
+    } else {
+        Report-Check "Git origin remote exists" "FAIL" "Skipped because not inside a Git worktree."
+    }
+
+    # 6. config.json loads and passes validation
+    $config = $null
+    try {
+        $config = Get-Config
+        Report-Check "Config config.json is valid" "OK"
+    } catch {
+        Report-Check "Config config.json is valid" "FAIL" $_.Exception.Message
+    }
+
+    # 7. current repo matches config.repo
+    if ($originExists -and $null -ne $config) {
+        $originUrl = (git remote get-url origin 2>$null).Trim()
+        if ($originUrl -match "[:/]([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+?)(?:\.git)?$") {
+            $detectedRepo = $Matches[1]
+            if ($detectedRepo.ToLowerInvariant() -eq $config.repo.ToLowerInvariant()) {
+                Report-Check "Current repository matches config.repo" "OK" "Matched: $detectedRepo"
+            } else {
+                Report-Check "Current repository matches config.repo" "FAIL" "Repo mismatch. Local origin: '$detectedRepo', config: '$($config.repo)'"
+            }
+        } else {
+            Report-Check "Current repository matches config.repo" "FAIL" "Failed to parse repository name from remote URL: $originUrl"
+        }
+    } else {
+        Report-Check "Current repository matches config.repo" "FAIL" "Skipped because git origin or config is unavailable."
+    }
+
+    # 8. default branch exists locally or on origin
+    if ($isWorktree -and $null -ne $config) {
+        $defaultBranch = $config.defaultBranch
+        $localBranchExists = [bool](git branch --list $defaultBranch 2>$null)
+        $remoteBranchExists = [bool](git branch -r --list "origin/$defaultBranch" 2>$null)
+        if ($localBranchExists -or $remoteBranchExists) {
+            Report-Check "Default branch '$defaultBranch' exists" "OK" "Local: $localBranchExists, Remote: $remoteBranchExists"
+        } else {
+            Report-Check "Default branch '$defaultBranch' exists" "FAIL" "Branch '$defaultBranch' was not found locally or on origin."
+        }
+    } else {
+        Report-Check "Default branch exists" "FAIL" "Skipped because git or config is unavailable."
+    }
+
+    # 9. Project config is present (GitHub project exists)
+    $projectExists = $false
+    if ($ghInstalled -and $null -ne $config) {
+        try {
+            $projectInfo = Invoke-GhJson @(
+                "project", "view",
+                [string]$config.projectNumber,
+                "--owner", $config.projectOwner,
+                "--format", "json"
+            )
+            if ($null -ne $projectInfo) {
+                $projectExists = $true
+                Report-Check "GitHub Project configuration is present" "OK" "Project: $($projectInfo.title) (ID: $($projectInfo.id))"
+            } else {
+                Report-Check "GitHub Project configuration is present" "FAIL" "Project view returned no data."
+            }
+        } catch {
+            Report-Check "GitHub Project configuration is present" "FAIL" "Project not found or inaccessible. Details: $($_.Exception.Message)"
+        }
+    } else {
+        Report-Check "GitHub Project configuration is present" "FAIL" "Skipped because gh or config is unavailable."
+    }
+
+    # 10. Project Status field is available
+    $statusField = $null
+    if ($projectExists) {
+        try {
+            $statusField = Get-StatusField -Config $config
+            if ($null -ne $statusField) {
+                Report-Check "Project 'Status' field is available" "OK" "Field ID: $($statusField.id)"
+            } else {
+                Report-Check "Project 'Status' field is available" "FAIL" "Get-StatusField returned null."
+            }
+        } catch {
+            Report-Check "Project 'Status' field is available" "FAIL" $_.Exception.Message
+        }
+    } else {
+        Report-Check "Project 'Status' field is available" "FAIL" "Skipped because project was not found."
+    }
+
+    # 11. Required statuses exist in Project (Todo, In Progress, Review, Done)
+    if ($null -ne $statusField -and $null -ne $config) {
+        $requiredStatuses = @(
+            $config.statuses.todo,
+            $config.statuses.inProgress,
+            $config.statuses.review,
+            $config.statuses.done
+        )
+        $missingStatuses = @()
+        foreach ($statusName in $requiredStatuses) {
+            $option = $statusField.options | Where-Object { $_.name -eq $statusName }
+            if ($null -eq $option) {
+                $missingStatuses += $statusName
+            }
+        }
+        if ($missingStatuses.Count -eq 0) {
+            Report-Check "Required statuses exist in Project (Todo, In Progress, Review, Done)" "OK"
+        } else {
+            $available = ($statusField.options | ForEach-Object { $_.name }) -join ", "
+            Report-Check "Required statuses exist in Project" "FAIL" "Missing: $($missingStatuses -join ', '). Available: $available"
+        }
+    } else {
+        Report-Check "Required statuses exist in Project" "FAIL" "Skipped because 'Status' field is unavailable."
+    }
+
+    # 12. Working tree status is shown
+    if ($isWorktree) {
+        $workingTreeStatus = git status --porcelain 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            if ([string]::IsNullOrWhiteSpace($workingTreeStatus)) {
+                Report-Check "Working tree status" "OK" "Working tree is clean."
+            } else {
+                Report-Check "Working tree status" "WARN" "Working tree is dirty (has uncommitted changes)."
+            }
+        } else {
+            Report-Check "Working tree status" "FAIL" "Failed to get git status."
+        }
+    } else {
+        Report-Check "Working tree status" "FAIL" "Skipped because not inside a Git worktree."
+    }
+
+    Write-Host ""
+    if ($ctx.Failures -gt 0) {
+        Write-Host "Result: NOT READY" -ForegroundColor Red
+        return $false
+    } else {
+        Write-Host "Result: READY" -ForegroundColor Green
+        return $true
+    }
+}
+
 function Show-Help {
     Write-Host "parsevkctl" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Usage:"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 config validate"
+    Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task doctor"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task create TITLE -Body BODY"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task start ISSUE_NUMBER"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task full TITLE -Body BODY"
@@ -909,6 +1131,7 @@ function Show-Help {
     Write-Host ""
     Write-Host "Examples:"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 config validate"
+    Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task doctor"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task create `"Add README`" -Body `"Create project setup docs.`""
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task start 62 -NoBranch"
     Write-Host "  .\tools\parsevkctl\parsevkctl.ps1 task full `"Add VK API client`" -Body `"Implement VK API client.`""
@@ -925,6 +1148,15 @@ if ($Entity -eq "config" -and $Action -eq "validate") {
     $config = Get-Config
     Write-Host "Configuration is valid." -ForegroundColor Green
     exit 0
+}
+
+if ($Entity -eq "task" -and $Action -eq "doctor") {
+    $ready = Invoke-Doctor
+    if ($ready) {
+        exit 0
+    } else {
+        exit 1
+    }
 }
 
 if ($Entity -eq "task" -and $Action -eq "create") {
