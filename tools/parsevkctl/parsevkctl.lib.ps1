@@ -264,9 +264,19 @@ function Get-GitUpstream {
         [string]$CurrentBranch
     )
 
-    $upstream = git rev-parse --abbrev-ref "@{u}" 2>$null
-    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($upstream)) {
-        return $upstream.Trim()
+    $oldPreference = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    try {
+        $upstream = git rev-parse --abbrev-ref "@{u}" 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($upstream)) {
+            return $upstream.Trim()
+        }
+    }
+    catch {
+        # Ignore NativeCommandError
+    }
+    finally {
+        $ErrorActionPreference = $oldPreference
     }
     return $null
 }
@@ -390,5 +400,15 @@ function Assert-CanMergePullRequest {
             throw "PR checks are not successful (or are still in progress). Please ensure all checks pass before merging. Output:`n$($checksResult.Output)"
         }
     }
+}
+
+function Get-DryRun {
+    if ($null -ne $script:DryRun) {
+        return [bool]$script:DryRun
+    }
+    if ($null -ne $DryRun) {
+        return [bool]$DryRun
+    }
+    return $false
 }
 
