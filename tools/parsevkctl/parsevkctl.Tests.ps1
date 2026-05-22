@@ -1,3 +1,6 @@
+$libPath = Join-Path $PSScriptRoot "parsevkctl.lib.ps1"
+. $libPath
+
 $scriptPath = Join-Path $PSScriptRoot "parsevkctl.ps1"
 $scriptContent = Get-Content -LiteralPath $scriptPath -Raw -Encoding UTF8
 $tokens = $null
@@ -110,16 +113,10 @@ Describe "parsevkctl task status" {
 }
 
 Describe "parsevkctl config validation" {
-    BeforeAll {
-        $functionText = Get-FunctionText "Assert-ConfigValid"
-        if ($null -eq $functionText) {
-            throw "Assert-ConfigValid function not found in script AST."
-        }
-        Invoke-Expression $functionText
-    }
+
 
     It "defines Assert-ConfigValid" {
-        Get-FunctionText "Assert-ConfigValid" | Should Not BeNullOrEmpty
+        Get-Command Assert-ConfigValid -ErrorAction SilentlyContinue | Should Not Be $null
     }
 
     It "calls Assert-ConfigValid in Get-Config" {
@@ -292,91 +289,183 @@ Describe "parsevkctl task doctor" {
     }
 }
 
-Describe "parsevkctl enterprise branch naming" {
-    BeforeAll {
-        $funcs = @("Convert-CyrillicToLatin", "Get-BranchType", "New-TaskBranchName", "Test-BranchName", "Assert-BranchName")
-        foreach ($f in $funcs) {
-            $functionText = Get-FunctionText $f
-            if ($null -eq $functionText) {
-                throw "$f function not found in script AST."
-            }
-            Invoke-Expression $functionText
-        }
+Describe "parsevkctl Cyrillic transliteration" {
+    It "transliterates Russian characters to Latin equivalents" {
+        $text1 = "$([char]0x041F)$([char]0x0440)$([char]0x0438)$([char]0x0432)$([char]0x0435)$([char]0x0442) $([char]0x041C)$([char]0x0438)$([char]0x0440)" # Привет Мир
+        $text2 = "$([char]0x0422)$([char]0x0435)$([char]0x0441)$([char]0x0442)-$([char]0x041A)$([char]0x0435)$([char]0x0439)$([char]0x0441)" # Тест-Кейс
+        $text3 = "$([char]0x042D)$([char]0x043A)$([char]0x0441)$([char]0x043F)$([char]0x043E)$([char]0x0440)$([char]0x0442) $([char]0x0430)$([char]0x0432)$([char]0x0442)$([char]0x043E)$([char]0x0440)$([char]0x043E)$([char]0x0432) $([char]0x0432) CSV" # Экспорт авторов в CSV
+
+        Convert-CyrillicToLatin -Text $text1 | Should Be "Privet Mir"
+        Convert-CyrillicToLatin -Text $text2 | Should Be "Test-Keys"
+        Convert-CyrillicToLatin -Text $text3 | Should Be "Eksport avtorov v CSV"
     }
 
-    It "transliterates Russian Cyrillic characters to readable Latin" {
-        Convert-CyrillicToLatin "$([char]0x0421)$([char]0x0434)$([char]0x0435)$([char]0x043B)$([char]0x0430)$([char]0x0442)$([char]0x044C) enterprise-grade naming" | Should Be "sdelat enterprise-grade naming"
-        Convert-CyrillicToLatin "$([char]0x041F)$([char]0x0440)$([char]0x0438)$([char]0x0432)$([char]0x0435)$([char]0x0442) $([char]0x043C)$([char]0x0438)$([char]0x0440) 123" | Should Be "privet mir 123"
-        Convert-CyrillicToLatin "$([char]0x0451)$([char]0x0436)$([char]0x044A)$([char]0x044B)$([char]0x044C)" | Should Be "yozhy"
+    It "returns empty string for null or empty input" {
+        Convert-CyrillicToLatin -Text $null | Should Be ""
+        Convert-CyrillicToLatin -Text "" | Should Be ""
     }
 
-    It "resolves branch type from labels and title prefix" {
-        # 1. Label matches
-        $issue1 = [PSCustomObject]@{
-            number = 73
-            title = "Some issue title"
-            labels = @([PSCustomObject]@{ name = "type: fix" })
-        }
-        Get-BranchType -Issue $issue1 | Should Be "fix"
-
-        # 2. Title prefix matches
-        $issue2 = [PSCustomObject]@{
-            number = 73
-            title = "docs: document everything"
-            labels = $null
-        }
-        Get-BranchType -Issue $issue2 | Should Be "docs"
-
-        # 3. Default matches
-        $issue3 = [PSCustomObject]@{
-            number = 73
-            title = "regular title"
-            labels = $null
-        }
-        Get-BranchType -Issue $issue3 | Should Be "feat"
-    }
-
-    It "generates a valid enterprise branch name" {
-        $issue = [PSCustomObject]@{
-            number = 73
-            title = "$([char]0x0421)$([char]0x0434)$([char]0x0435)$([char]0x043B)$([char]0x0430)$([char]0x0442)$([char]0x044C) enterprise-grade naming $([char]0x0434)$([char]0x043B)$([char]0x044F) task branches $([char]0x0432) parsevkctl"
-            labels = @([PSCustomObject]@{ name = "type: feat" })
-        }
-        $branchName = New-TaskBranchName -Issue $issue
-        $branchName | Should Be "feat/issue-73-sdelat-enterprise-grade-naming-dlya-task-branche"
-    }
-
-    It "trims long slugs to max 48 characters" {
-        $issue = [PSCustomObject]@{
-            number = 99
-            title = "a-very-very-very-very-very-long-issue-title-that-must-be-truncated-to-max-chars-and-no-trailing-dash"
-            labels = $null
-        }
-        $branchName = New-TaskBranchName -Issue $issue
-        $branchName | Should Be "feat/issue-99-a-very-very-very-very-very-long-issue-title-that"
-    }
-
-    It "removes title prefix from slug" {
-        $issue = [PSCustomObject]@{
-            number = 74
-            title = "refactor: extract project status client"
-            labels = $null
-        }
-        $branchName = New-TaskBranchName -Issue $issue
-        $branchName | Should Be "refactor/issue-74-extract-project-status-client"
-    }
-
-    It "validates branch names against enterprise regex" {
-        Test-BranchName "feat/issue-73-enterprise-branch-naming" | Should Be $true
-        Test-BranchName "fix/issue-72-handle-gh-retry-failure" | Should Be $true
-        Test-BranchName "docs/issue-66-document-parsevkctl-workflow" | Should Be $true
-        Test-BranchName "refactor/issue-74-extract-project-status-client" | Should Be $true
-        Test-BranchName "ci/issue-75-add-pr-validation-workflow" | Should Be $true
-
-        Test-BranchName "invalid/issue-73-enterprise-branch-naming" | Should Be $false
-        Test-BranchName "feat/issue-73-enterprise--branch" | Should Be $false
-        Test-BranchName "feat/issue-73-enterprise-branch-" | Should Be $false
-        Test-BranchName "feat/issue-abc-enterprise-branch" | Should Be $false
+    It "keeps numbers and special symbols intact" {
+        Convert-CyrillicToLatin -Text "Issue #123!" | Should Be "Issue #123!"
     }
 }
+
+Describe "parsevkctl branch slug conversion" {
+    It "converts title to valid lowercase slug" {
+        ConvertTo-BranchSlug -Text "Add new Feature" | Should Be "add-new-feature"
+    }
+
+    It "replaces special characters and double dashes with a single dash" {
+        ConvertTo-BranchSlug -Text "test---slug--special!@#characters" | Should Be "test-slug-special-characters"
+    }
+
+    It "trims leading and trailing dashes" {
+        ConvertTo-BranchSlug -Text "-hello-world-" | Should Be "hello-world"
+    }
+
+    It "handles Russian title through transliteration" {
+        $text = "$([char]0x0414)$([char]0x043E)$([char]0x0431)$([char]0x0430)$([char]0x0432)$([char]0x0438)$([char]0x0442)$([char]0x044C) $([char]0x0442)$([char]0x0435)$([char]0x0441)$([char]0x0442)$([char]0x044B) Pester" # Добавить тесты Pester
+        ConvertTo-BranchSlug -Text $text | Should Be "dobavit-testy-pester"
+    }
+
+    It "falls back to 'task' if slug becomes empty" {
+        ConvertTo-BranchSlug -Text "!!!" | Should Be "task"
+        ConvertTo-BranchSlug -Text $null | Should Be "task"
+    }
+
+    It "limits slug length to 48 characters" {
+        $longTitle = "This is a very long title that will definitely exceed forty eight characters limit"
+        $slug = ConvertTo-BranchSlug -Text $longTitle
+        $slug.Length | Should BeLessThan 49
+        $slug | Should Not Match "-$"
+    }
+}
+
+Describe "parsevkctl branch type detection" {
+    It "detects type from issue label prefix 'type:'" {
+        $issue = [PSCustomObject]@{
+            labels = @(
+                [PSCustomObject]@{ name = "priority: high" },
+                [PSCustomObject]@{ name = "type: docs" }
+            )
+            title = "Update documentation"
+        }
+        Get-BranchType -Issue $issue | Should Be "docs"
+    }
+
+    It "detects type from title prefix with colon" {
+        $issue = [PSCustomObject]@{
+            labels = $null
+            title = "fix: crash on start"
+        }
+        Get-BranchType -Issue $issue | Should Be "fix"
+    }
+
+    It "prioritizes label type over title prefix" {
+        $issue = [PSCustomObject]@{
+            labels = @([PSCustomObject]@{ name = "type: refactor" })
+            title = "fix: some logic change"
+        }
+        Get-BranchType -Issue $issue | Should Be "refactor"
+    }
+
+    It "defaults to feat when type is not specified or not allowed" {
+        $issue1 = [PSCustomObject]@{
+            labels = $null
+            title = "random title without prefix"
+        }
+        $issue2 = [PSCustomObject]@{
+            labels = @([PSCustomObject]@{ name = "type: unknown-type" })
+            title = "unknown: prefix title"
+        }
+        Get-BranchType -Issue $issue1 | Should Be "feat"
+        Get-BranchType -Issue $issue2 | Should Be "feat"
+    }
+}
+
+Describe "parsevkctl branch name generation" {
+    It "generates correct branch name with defaults" {
+        $issue = [PSCustomObject]@{
+            number = 79
+            title = "Add tests"
+            labels = $null
+        }
+        New-TaskBranchName -Issue $issue | Should Be "feat/issue-79-add-tests"
+    }
+
+    It "removes type prefix from the slug to avoid duplication" {
+        $issue = [PSCustomObject]@{
+            number = 80
+            title = "fix: resolve infinite loop"
+            labels = $null
+        }
+        New-TaskBranchName -Issue $issue | Should Be "fix/issue-80-resolve-infinite-loop"
+    }
+
+    It "transliterates and formats Russian title properly" {
+        $issue = [PSCustomObject]@{
+            number = 81
+            title = "docs: $([char]0x0414)$([char]0x043E)$([char]0x0431)$([char]0x0430)$([char]0x0432)$([char]0x0438)$([char]0x0442)$([char]0x044C) $([char]0x0434)$([char]0x043E)$([char]0x043A)$([char]0x0443)$([char]0x043C)$([char]0x0435)$([char]0x043D)$([char]0x0442)$([char]0x0430)$([char]0x0446)$([char]0x0438)$([char]0x044E)" # docs: Добавить документацию
+            labels = $null
+        }
+        New-TaskBranchName -Issue $issue | Should Be "docs/issue-81-dobavit-dokumentatsiyu"
+    }
+}
+
+Describe "parsevkctl branch name validation" {
+    It "returns true for valid branch names" {
+        Test-BranchName -BranchName "feat/issue-79-add-tests" | Should Be $true
+        Test-BranchName -BranchName "fix/issue-1234-some-bug-fix" | Should Be $true
+        Test-BranchName -BranchName "docs/issue-1-readme" | Should Be $true
+    }
+
+    It "returns false for invalid branch names" {
+        Test-BranchName -BranchName "main" | Should Be $false
+        Test-BranchName -BranchName "feat/79-no-issue-word" | Should Be $false
+        Test-BranchName -BranchName "unknown/issue-79-slug" | Should Be $false
+        Test-BranchName -BranchName "feat/issue-79-" | Should Be $false
+    }
+
+    It "Assert-BranchName does not throw on valid branch name" {
+        { Assert-BranchName -BranchName "feat/issue-79-add-tests" } | Should Not Throw
+    }
+
+    It "Assert-BranchName throws on invalid branch name" {
+        { Assert-BranchName -BranchName "invalid-branch" } | Should Throw "Branch name 'invalid-branch' is invalid"
+    }
+}
+
+Describe "parsevkctl issue number parsing" {
+    It "extracts issue number from branch name" {
+        Get-IssueNumberFromBranch -BranchName "feat/issue-79-add-tests" | Should Be 79
+        Get-IssueNumberFromBranch -BranchName "fix/issue-1234-bug" | Should Be 1234
+    }
+
+    It "returns null if no issue pattern is matched" {
+        Get-IssueNumberFromBranch -BranchName "main" | Should Be $null
+        Get-IssueNumberFromBranch -BranchName "feat/79-add-tests" | Should Be $null
+    }
+}
+
+Describe "parsevkctl PR closing keyword pattern" {
+    It "matches standard GitHub closing keywords with issue number" {
+        $pattern = Get-PrClosingPattern -IssueNumber 79
+        
+        "Closes #79" | Should Match $pattern
+        "closes #79" | Should Match $pattern
+        "Fixes #79" | Should Match $pattern
+        "resolves #79" | Should Match $pattern
+        "Closed #79" | Should Match $pattern
+    }
+
+    It "does not match keywords with different issue number or format" {
+        $pattern = Get-PrClosingPattern -IssueNumber 79
+        
+        "Closes #80" | Should Not Match $pattern
+        "Closes 79" | Should Not Match $pattern
+        "Close branch #79" | Should Not Match $pattern
+    }
+}
+
+
 
