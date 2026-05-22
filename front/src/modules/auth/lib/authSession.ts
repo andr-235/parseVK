@@ -2,7 +2,7 @@ import { GATEWAY_API_URL } from '@/shared/api'
 import { useAuthStore } from '@/modules/auth/store'
 import type { AuthResponse } from '@/modules/auth/types'
 
-const CSRF_COOKIE_NAME = '__Host-csrf_token'
+const CSRF_COOKIE_NAMES = ['csrf_token', '__Host-csrf_token'] as const
 const CSRF_HEADER_NAME = 'X-CSRF-Token'
 
 const parseJwtPayload = (token: string): Record<string, unknown> | null => {
@@ -52,7 +52,7 @@ export const readCookie = (name: string): string | null => {
 }
 
 export const buildCsrfHeaders = (): HeadersInit => {
-  const csrfToken = readCookie(CSRF_COOKIE_NAME)
+  const csrfToken = CSRF_COOKIE_NAMES.map((name) => readCookie(name)).find(Boolean)
   return csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}
 }
 
