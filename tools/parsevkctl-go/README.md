@@ -13,3 +13,7 @@ Run: go run ./cmd/parsevkctl --help
 ## Git adapter
 
 `internal/git` centralizes local Git operations for the Go rewrite. It exposes an adapter interface for repository actions and currently implements it with a shell-based adapter that calls `git` directly.
+
+## GitHub adapter
+
+`internal/github` centralizes GitHub operations for the Go rewrite. It exposes a typed adapter boundary for issues, pull requests and project status operations, and currently shells out to `gh` behind that boundary while returning `internal/domain` types.
