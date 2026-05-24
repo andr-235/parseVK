@@ -163,3 +163,12 @@ go build -o bin/parsevkctl.exe ./cmd/parsevkctl
 .\bin\parsevkctl.exe config validate
 .\bin\parsevkctl.exe doctor
 ```
+
+## CI
+
+The `parsevkctl` Go CLI is validated by
+`.github/workflows/parsevkctl.yml`. The workflow runs Go tests, builds
+`bin/parsevkctl.exe`, validates config discovery, and blocks stale references
+to the removed PowerShell wrapper. `doctor` remains a manual/local validation
+command because it depends on local git state, authenticated GitHub CLI access,
+and GitHub Project permissions.

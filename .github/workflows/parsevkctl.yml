@@ -1,0 +1,77 @@
+name: parsevkctl
+
+on:
+  pull_request:
+    paths:
+      - "tools/parsevkctl-go/**"
+      - "docs/PARSEVKCTL.md"
+      - "docs/PARSEVKCTL_GO_MIGRATION_AUDIT.md"
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".github/workflows/parsevkctl.yml"
+  push:
+    branches:
+      - fastapi-microservices-rewrite
+
+jobs:
+  validate:
+    name: Validate Go CLI
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/parsevkctl-go/go.mod
+
+      - name: Check stale PowerShell wrapper references
+        run: |
+          $forbidden = @(
+            "tools/parsevkctl/parsevkctl.ps1",
+            ".\tools\parsevkctl\parsevkctl.ps1",
+            "tools/parsevkctl/build.ps1",
+            "tools/parsevkctl/parsevkctl.Tests.ps1",
+            "tools/parsevkctl/parsevkctl.lib.ps1"
+          )
+
+          $roots = @(
+            "docs",
+            "AGENTS.md",
+            "GEMINI.md",
+            "tools/parsevkctl-go/README.md"
+          )
+
+          $files = foreach ($root in $roots) {
+            if (Test-Path -LiteralPath $root -PathType Container) {
+              Get-ChildItem -LiteralPath $root -Recurse -File
+            } elseif (Test-Path -LiteralPath $root -PathType Leaf) {
+              Get-Item -LiteralPath $root
+            }
+          }
+
+          $matches = $files | Select-String -SimpleMatch -Pattern $forbidden
+          if ($matches) {
+            $matches | ForEach-Object {
+              "{0}:{1}: {2}" -f $_.Path, $_.LineNumber, $_.Line.Trim()
+            }
+            throw "Found stale references to removed parsevkctl PowerShell wrapper files."
+          }
+
+      - name: Run Go tests
+        working-directory: tools/parsevkctl-go
+        run: go test ./...
+
+      - name: Build Windows binary
+        working-directory: tools/parsevkctl-go
+        run: go build -o bin/parsevkctl.exe ./cmd/parsevkctl
+
+      - name: Validate config discovery
+        working-directory: tools/parsevkctl-go
+        run: .\bin\parsevkctl.exe config validate
