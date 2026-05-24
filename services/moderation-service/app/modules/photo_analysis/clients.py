@@ -21,7 +21,10 @@ class VkServiceClient:
                 resp.raise_for_status()
                 return resp.json()
         except Exception as exc:
-            logger.error(f"Failed to contact vk-service for user photos: {exc}")
+            logger.error(
+                "Failed to contact vk-service for user photos: error_type=%s",
+                type(exc).__name__,
+            )
             raise exc
 
 
@@ -38,10 +41,13 @@ class ContentServiceClient:
                 if resp.status_code == 200:
                     return True
                 logger.warning(
-                    f"Content-service verify returned status {resp.status_code}: {resp.text}"
+                    "Content-service verify returned status %s", resp.status_code
                 )
         except Exception as exc:
-            logger.error(f"Failed to contact content-service for verify author: {exc}")
+            logger.error(
+                "Failed to contact content-service for verify author: error_type=%s",
+                type(exc).__name__,
+            )
         return False
 
 
@@ -50,6 +56,7 @@ class ImageModerationWebhookClient:
         self.url = settings.image_moderation_webhook_url
         self.timeout = settings.image_moderation_timeout_seconds
         self.retries = settings.image_moderation_retry_count
+        self.verify_ssl = settings.image_moderation_verify_ssl
 
     async def moderate_photos(self, image_urls: list[str]) -> list[dict]:
         if not image_urls:
@@ -65,12 +72,7 @@ class ImageModerationWebhookClient:
 
         for attempt in range(self.retries):
             try:
-                # Disable SSL verification for self-signed certificates on local test environments (e.g. 192.168.88.12)
-                verify_ssl = True
-                if "192.168.88.12" in self.url:
-                    verify_ssl = False
-
-                async with httpx.AsyncClient(verify=verify_ssl) as client:
+                async with httpx.AsyncClient(verify=self.verify_ssl) as client:
                     resp = await client.post(
                         self.url,
                         json=payload,
@@ -85,7 +87,10 @@ class ImageModerationWebhookClient:
                     return data["results"]
             except Exception as exc:
                 logger.warning(
-                    f"Attempt {attempt + 1}/{self.retries} failed for image moderation webhook: {exc}"
+                    "Attempt %s/%s failed for image moderation webhook: error_type=%s",
+                    attempt + 1,
+                    self.retries,
+                    type(exc).__name__,
                 )
                 if attempt == self.retries - 1:
                     logger.error("All attempts to image moderation webhook failed")

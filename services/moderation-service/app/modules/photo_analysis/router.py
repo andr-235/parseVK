@@ -55,12 +55,13 @@ async def get_summary(
     return await service.get_summary_by_vk_user(vk_user_id)
 
 
-@router.delete("/vk/{vk_user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/vk/{vk_user_id}")
 async def delete_analyses(
     vk_user_id: int,
     service: PhotoAnalysisService = Depends(get_photo_analysis_service),
 ):
     await service.delete_by_vk_user(vk_user_id)
+    return {"message": "Analyses deleted successfully"}
 
 
 @router.post("/bulk-summaries", response_model=dict[int, PhotoAnalysisSummarySchema])

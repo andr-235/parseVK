@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import PhotoAnalysis
+from app.modules.photo_analysis.adapter import WebhookModerationAdapter
 from app.modules.photo_analysis.clients import (
     VkServiceClient,
     ContentServiceClient,
@@ -39,16 +40,7 @@ def get_max_photo_size(sizes: list[dict]) -> str | None:
     return sizes[0].get("url")
 
 
-def create_suspicion_level(has_suspicious: bool, confidence: float | None) -> str:
-    if not has_suspicious:
-        return "NONE"
-    if confidence is not None:
-        if confidence >= 90.0:
-            return "HIGH"
-        if confidence >= 70.0:
-            return "MEDIUM"
-        return "LOW"
-    return "LOW"
+# create_suspicion_level has been moved to WebhookModerationAdapter
 
 
 def build_summary_dto(items: list[PhotoAnalysis], total_count: int) -> PhotoAnalysisSummarySchema:
@@ -176,55 +168,19 @@ class PhotoAnalysisService:
         # Parse and save results
         now = utcnow()
         for idx, p in enumerate(photos_to_process):
-            # В NestJS WebhookModerationAdapter адаптирует rawResponse, рассчитывая confidencePct, subcategories, is_illegal
             raw = moderation_raw_results[idx] if idx < len(moderation_raw_results) else {}
-            
-            categories = []
-            if raw.get("category"):
-                if isinstance(raw["category"], list):
-                    categories.extend([str(c).strip() for c in raw["category"] if c])
-                elif isinstance(raw["category"], str):
-                    categories.append(raw["category"].strip())
-            if raw.get("subcategory"):
-                if isinstance(raw["subcategory"], list):
-                    categories.extend([str(c).strip() for c in raw["subcategory"] if c])
-                elif isinstance(raw["subcategory"], str):
-                    categories.append(raw["subcategory"].strip())
-            
-            categories = list(set(filter(None, categories)))
-            explanation = raw.get("description").strip() if isinstance(raw.get("description"), str) else None
-            
-            # Extract confidence
-            pct = raw.get("confidencePct")
-            if pct is not None:
-                try:
-                    confidence = float(pct)
-                except ValueError:
-                    confidence = None
-            else:
-                conf = raw.get("confidence")
-                if conf is not None:
-                    try:
-                        c_val = float(conf)
-                        confidence = c_val * 100.0 if c_val <= 1.0 else c_val
-                    except ValueError:
-                        confidence = None
-                else:
-                    confidence = None
-            
-            has_suspicious = bool(raw.get("is_illegal"))
-            suspicion_level = create_suspicion_level(has_suspicious, confidence)
+            adapted = WebhookModerationAdapter.adapt(raw)
 
             stmt = insert(PhotoAnalysis).values(
                 author_vk_id=vk_user_id,
                 photo_url=p["url"],
                 photo_vk_id=p["photo_vk_id"],
                 analysis_result=raw,
-                has_suspicious=has_suspicious,
-                suspicion_level=suspicion_level,
-                categories=categories,
-                confidence=confidence,
-                explanation=explanation,
+                has_suspicious=adapted["has_suspicious"],
+                suspicion_level=adapted["suspicion_level"],
+                categories=adapted["categories"],
+                confidence=adapted["confidence"],
+                explanation=adapted["explanation"],
                 analyzed_at=now,
                 created_at=now,
                 updated_at=now,

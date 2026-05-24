@@ -150,3 +150,39 @@ async def test_analyze_by_vk_user_external_moderation_failure(mock_vk_cls, mock_
     assert mock_vk_inst.get_user_photos.call_count == 1
     assert mock_webhook_inst.moderate_photos.call_count == 1
     assert session.commit.call_count == 0  # Transaction should abort and not commit
+
+
+def test_webhook_moderation_adapter_parsing():
+    from app.modules.photo_analysis.adapter import WebhookModerationAdapter
+
+    # 1. Test has_suspicious boolean parsing
+    assert WebhookModerationAdapter.parse_boolean("false") is False
+    assert WebhookModerationAdapter.parse_boolean("True") is True
+    assert WebhookModerationAdapter.parse_boolean(True) is True
+    assert WebhookModerationAdapter.parse_boolean(False) is False
+    assert WebhookModerationAdapter.parse_boolean(None) is False
+
+    # 2. Test suspicion level adapter calculations
+    assert WebhookModerationAdapter.create_suspicion_level(False, 99.0) == "NONE"
+    assert WebhookModerationAdapter.create_suspicion_level(True, 95.0) == "HIGH"
+    assert WebhookModerationAdapter.create_suspicion_level(True, 85.0) == "MEDIUM"
+    assert WebhookModerationAdapter.create_suspicion_level(True, 65.0) == "LOW"
+    assert WebhookModerationAdapter.create_suspicion_level(True, None) == "LOW"
+
+    # 3. Test full adaptation pipeline
+    raw_response = {
+        "is_illegal": "True",
+        "confidence": 0.85,
+        "category": "violence",
+        "subcategory": ["weapons", "hate speech"],
+        "description": "  Test violence detected  "
+    }
+
+    adapted = WebhookModerationAdapter.adapt(raw_response)
+
+    assert adapted["has_suspicious"] is True
+    assert adapted["suspicion_level"] == "MEDIUM"  # 85% confidence (from 0.85 * 100)
+    assert set(adapted["categories"]) == {"violence", "weapons", "hate speech"}
+    assert adapted["confidence"] == 85.0
+    assert adapted["explanation"] == "Test violence detected"
+

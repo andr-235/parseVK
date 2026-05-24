@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     image_moderation_webhook_url: str = "https://192.168.88.12/webhook/image-moderation"
     image_moderation_timeout_seconds: float = 10.0
     image_moderation_retry_count: int = 3
+    image_moderation_verify_ssl: bool = True
     internal_service_token: str = "dev-internal-token"
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_vk: str = "parsevk.vk.events"

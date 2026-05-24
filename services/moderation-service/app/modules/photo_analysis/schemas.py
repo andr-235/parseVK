@@ -3,9 +3,9 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class AnalyzePhotosSchema(BaseModel):
-    limit: int | None = None
+    limit: int | None = Field(default=None, ge=1, le=200)
     force: bool = False
-    offset: int = 0
+    offset: int = Field(default=0, ge=0)
 
 
 class PhotoAnalysisItemSchema(BaseModel):
