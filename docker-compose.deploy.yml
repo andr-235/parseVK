@@ -13,7 +13,7 @@ x-api-environment: &api-environment
 
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:15.18-alpine
     restart: always
     ports:
       - "127.0.0.1:5433:5432"
@@ -32,7 +32,7 @@ services:
       - default
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4.9-alpine
     restart: always
     ports:
       - "127.0.0.1:6379:6379"
@@ -46,7 +46,7 @@ services:
       - default
 
   identity-db:
-    image: postgres:15-alpine
+    image: postgres:15.18-alpine
     platform: linux/amd64
     restart: always
     ports:
@@ -161,7 +161,7 @@ services:
       - default
 
   tasks-db:
-    image: postgres:15-alpine
+    image: postgres:15.18-alpine
     platform: linux/amd64
     restart: always
     ports:
@@ -223,7 +223,7 @@ services:
       - default
 
   vk-db:
-    image: postgres:15-alpine
+    image: postgres:15.18-alpine
     platform: linux/amd64
     restart: always
     ports:
@@ -292,7 +292,7 @@ services:
       - default
 
   content-db:
-    image: postgres:15-alpine
+    image: postgres:15.18-alpine
     platform: linux/amd64
     restart: always
     ports:
@@ -503,7 +503,7 @@ services:
       - default
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.11.3
     # Keep Prometheus running after failures or host restarts.
     restart: always
     ports:
@@ -539,7 +539,7 @@ services:
         condition: service_started
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.11.1
     ports:
       - "127.0.0.1:9100:9100"
     command:
@@ -553,7 +553,7 @@ services:
       - default
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.0.1-security-01
     # Keep Grafana running after failures or host restarts.
     restart: always
     ports:

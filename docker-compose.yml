@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:16.14
     restart: always
     # Порт закрыт наружу, доступ только внутри сети Docker
     # ports:
@@ -20,7 +20,7 @@ services:
       - backend
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4.9-alpine
     restart: always
     # Порт закрыт наружу
     # ports:
@@ -35,7 +35,7 @@ services:
       - backend
 
   identity-db:
-    image: postgres:16
+    image: postgres:16.14
     platform: linux/amd64
     restart: always
     ports:
@@ -55,7 +55,7 @@ services:
       - backend
 
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.1.0
     restart: always
     ports:
       - "127.0.0.1:9092:9092"
@@ -75,7 +75,7 @@ services:
       - backend
 
   kafka-init:
-    image: apache/kafka:latest
+    image: apache/kafka:4.1.0
     restart: "no"
     depends_on:
       kafka:
@@ -144,7 +144,7 @@ services:
       - backend
 
   tasks-db:
-    image: postgres:16
+    image: postgres:16.14
     platform: linux/amd64
     restart: always
     ports:
@@ -202,7 +202,7 @@ services:
       - backend
 
   vk-db:
-    image: postgres:16
+    image: postgres:16.14
     platform: linux/amd64
     restart: always
     ports:
@@ -267,7 +267,7 @@ services:
       - backend
 
   content-db:
-    image: postgres:16
+    image: postgres:16.14
     platform: linux/amd64
     restart: always
     ports:
@@ -325,7 +325,7 @@ services:
       - backend
 
   moderation-db:
-    image: postgres:16
+    image: postgres:16.14
     platform: linux/amd64
     restart: always
     ports:
@@ -510,7 +510,7 @@ services:
       - frontend
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.11.3
     ports:
       - "127.0.0.1:9090:9090"  # Доступ только локально
     volumes:
@@ -531,7 +531,7 @@ services:
         condition: service_healthy
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.11.1
     # Порт закрыт наружу
     # ports:
     #   - "9100:9100"
@@ -546,7 +546,7 @@ services:
       - monitoring
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.0.1-security-01
     ports:
       - "127.0.0.1:3001:3000"  # Доступ только локально
     volumes:

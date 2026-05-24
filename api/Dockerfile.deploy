@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM oven/bun:1 AS build
+FROM oven/bun:1.3.14 AS build
 
 WORKDIR /app
 
@@ -30,7 +30,7 @@ RUN for i in 1 2 3; do \
     && bunx tsc -p tsconfig.build.json \
     && (test -f /app/dist/src/main.js || test -f /app/dist/main.js) || (echo "Build failed: main.js not found" && ls -laR /app/dist && exit 1)
 
-FROM oven/bun:1
+FROM oven/bun:1.3.14
 
 WORKDIR /app
 
