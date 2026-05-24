@@ -1,3 +1,6 @@
+import csv
+import io
+import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -40,19 +43,21 @@ CSV_FIELD_LABELS = {
 }
 
 
-def escape_csv(value) -> str:
+def normalize_csv_value(value) -> str:
     if value is None:
         return ""
     if isinstance(value, list):
-        return escape_csv("; ".join(str(item) for item in value))
+        return "; ".join(str(item) for item in value)
     if isinstance(value, (str, int, float, bool)):
-        text = str(value)
-    else:
-        import json
+        return str(value)
+    return json.dumps(value, ensure_ascii=False)
 
-        text = json.dumps(value, ensure_ascii=False)
-    escaped = text.replace('"', '""')
-    return f'"{escaped}"' if any(char in text for char in [",", "\n", "\r", ";"]) else escaped
+
+def csv_line(values: list) -> str:
+    buffer = io.StringIO(newline="")
+    writer = csv.writer(buffer, lineterminator="")
+    writer.writerow([normalize_csv_value(value) for value in values])
+    return buffer.getvalue()
 
 
 def parse_csv_fields(value: str | None) -> list[str]:
@@ -64,11 +69,11 @@ def parse_csv_fields(value: str | None) -> list[str]:
 
 
 def format_csv_header(fields: list[str]) -> str:
-    return ",".join(escape_csv(CSV_FIELD_LABELS.get(field, field)) for field in fields)
+    return csv_line([CSV_FIELD_LABELS.get(field, field) for field in fields])
 
 
 def format_csv_row(item: dict, fields: list[str]) -> str:
-    return ",".join(escape_csv(_field_value(item, field)) for field in fields)
+    return csv_line([_field_value(item, field) for field in fields])
 
 
 def build_csv_filename(*, source: str | None = None, export_all: bool = False) -> str:

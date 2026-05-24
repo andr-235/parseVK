@@ -79,6 +79,22 @@ class ListingsGatewayService:
         finally:
             await file.close()
 
+    async def import_multipart_request(self, request: Request):
+        await self.claims(request)
+        form = await request.form()
+        file = form.get("file")
+        if file is None or not hasattr(file, "read") or not hasattr(file, "filename"):
+            raise_bad_request("Неверный формат запроса импорта", ["file is required"])
+        source = form.get("source")
+        update_existing_raw = form.get("updateExisting")
+        update_existing = parse_optional_bool(update_existing_raw)
+        return await self.import_multipart(
+            request,
+            file,
+            source if isinstance(source, str) else None,
+            update_existing,
+        )
+
     async def parse_upload(self, file: UploadFile):
         self.validate_filename(file.filename)
         self.validate_content_type(file)
@@ -165,3 +181,13 @@ def raise_bad_request(message: str, errors: list[str]):
 
 def get_listings_gateway_service() -> ListingsGatewayService:
     return ListingsGatewayService(ContentClient(), get_auth_service())
+
+
+def parse_optional_bool(value) -> bool | None:
+    if value in {None, ""}:
+        return None
+    if value in {True, "true", "1", "yes", "on"}:
+        return True
+    if value in {False, "false", "0", "no", "off"}:
+        return False
+    return None

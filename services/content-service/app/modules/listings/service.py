@@ -41,6 +41,36 @@ LISTING_FIELD_KEYS = {
     "metadata",
 }
 
+STRING_FIELDS = {
+    "source",
+    "externalId",
+    "title",
+    "description",
+    "currency",
+    "address",
+    "city",
+    "contactName",
+    "contactPhone",
+    "sourceAuthorName",
+    "sourceAuthorPhone",
+    "sourceAuthorUrl",
+    "sourcePostedAt",
+}
+
+NUMERIC_FIELDS = {
+    "price",
+    "latitude",
+    "longitude",
+    "rooms",
+    "areaTotal",
+    "areaLiving",
+    "areaKitchen",
+    "floor",
+    "floorsTotal",
+}
+
+DATE_FIELDS = {"publishedAt", "sourceParsedAt"}
+
 FIELD_TO_COLUMN = {
     "source": "source",
     "externalId": "external_id",
@@ -144,6 +174,7 @@ class ListingsService:
 
     async def import_listings(self, payload: Any) -> dict:
         request = self.normalize_import_payload(payload)
+        self.validate_import_items(request["listings"])
         errors = []
         created = updated = skipped = 0
 
@@ -235,6 +266,57 @@ class ListingsService:
         if metadata is not None or extra:
             result["metadata"] = {**(metadata or {}), **extra}
         return result
+
+    def validate_import_items(self, listings: list[Any]) -> None:
+        item_errors: list[str] = []
+        for index, item in enumerate(listings):
+            errors = self.validate_import_item(item)
+            if errors:
+                item_errors.append(f"Элемент {index}: {'; '.join(errors)}")
+        if item_errors:
+            raise_validation("Данные объявлений содержат ошибки", item_errors)
+
+    def validate_import_item(self, item: Any) -> list[str]:
+        if not isinstance(item, dict):
+            return ["элемент не является объектом объявления"]
+
+        errors: list[str] = []
+        allowed_fields = LISTING_FIELD_KEYS | {
+            "author",
+            "author_phone",
+            "phone",
+            "author_url",
+            "posted_at",
+            "postedAt",
+            "parsed_at",
+            "parsedAt",
+        }
+        for key, value in item.items():
+            if key not in allowed_fields:
+                continue
+            if value is None:
+                continue
+            if key == "url":
+                if not isinstance(value, str) or not value.strip():
+                    errors.append("url обязателен")
+            elif key in STRING_FIELDS or key in {"author", "author_phone", "phone", "author_url", "posted_at", "postedAt", "parsed_at", "parsedAt"}:
+                if not isinstance(value, str):
+                    errors.append(f"{key} должен быть строкой")
+            elif key in NUMERIC_FIELDS:
+                if not isinstance(value, (str, int, float)):
+                    errors.append(f"{key} должен быть строкой или числом")
+            elif key in DATE_FIELDS:
+                if not isinstance(value, str) or self.date_value(value) is None:
+                    errors.append(f"{key} должен быть датой в формате ISO")
+            elif key == "images":
+                if not isinstance(value, list):
+                    errors.append("images должен быть массивом строк")
+                elif any(not isinstance(image, str) for image in value):
+                    errors.append("каждый элемент images должен быть строкой")
+            elif key == "metadata":
+                if not isinstance(value, dict):
+                    errors.append("metadata должен быть объектом")
+        return errors
 
     def build_listing_data(self, item: dict) -> dict:
         metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else None

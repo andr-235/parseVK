@@ -56,6 +56,13 @@ class FakeListingsGatewayService:
         await file.close()
         return {"processed": 1, "created": 1, "updated": 0, "skipped": 0, "failed": 0, "errors": []}
 
+    async def import_multipart_request(self, request):
+        form = await request.form()
+        file = form.get("file")
+        source = form.get("source")
+        update_existing = form.get("updateExisting") == "true"
+        return await self.import_multipart(request, file, source, update_existing)
+
 
 @pytest.fixture
 def fake_service():
@@ -164,7 +171,12 @@ async def test_gateway_multipart_import_rejects_unsafe_files(
     content_type,
     expected,
 ):
-    app.dependency_overrides.clear()
+    service = ListingsGatewayService(FakeContentClient(), FakeAuthService())
+
+    async def override_service():
+        return service
+
+    app.dependency_overrides[get_listings_gateway_service] = override_service
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/v1/data/import",
@@ -178,7 +190,12 @@ async def test_gateway_multipart_import_rejects_unsafe_files(
 
 
 class FakeAuthService:
+    def __init__(self, *, fail=False):
+        self.fail = fail
+
     async def validate_token(self, access_token):
+        if self.fail:
+            raise ValueError("bad token")
         return {"sub": "user-42"}
 
 
@@ -205,6 +222,13 @@ class FakeRequest:
     headers = {"Authorization": "Bearer token"}
 
 
+class FormRaisesRequest:
+    headers = {}
+
+    async def form(self):
+        raise AssertionError("form should not be parsed before auth")
+
+
 @pytest.mark.asyncio
 async def test_gateway_multipart_closes_upload_on_parser_failure():
     service = ListingsGatewayService(FakeContentClient(), FakeAuthService())
@@ -214,6 +238,16 @@ async def test_gateway_multipart_closes_upload_on_parser_failure():
         await service.import_multipart(FakeRequest(), file, None, None)
 
     assert file.closed is True
+
+
+@pytest.mark.asyncio
+async def test_gateway_multipart_auth_runs_before_form_parsing():
+    service = ListingsGatewayService(FakeContentClient(), FakeAuthService(fail=True))
+
+    with pytest.raises(Exception) as exc_info:
+        await service.import_multipart_request(FormRaisesRequest())
+
+    assert exc_info.value.status_code == 401
 
 
 @pytest.mark.asyncio
