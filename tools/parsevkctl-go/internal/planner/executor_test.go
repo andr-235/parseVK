@@ -234,6 +234,10 @@ func (f *fakeGitHubAdapter) MergePullRequest(context.Context, int, github.MergeP
 	return nil
 }
 
+func (f *fakeGitHubAdapter) GetPullRequestChecks(context.Context, int) (domain.PullRequestChecks, error) {
+	return domain.PullRequestChecks{}, nil
+}
+
 func (f *fakeGitHubAdapter) GetProjectItem(context.Context, int) (domain.ProjectItem, error) {
 	return domain.ProjectItem{}, nil
 }

@@ -59,6 +59,10 @@ boundary for issues, pull requests and project status operations, and currently
 shells out to `gh` behind that boundary while returning `internal/domain`
 types.
 
+The adapter also reads pull request check status for `task merge` when
+`merge.requireChecks` is enabled. It prefers `gh pr checks <number> --json`
+and falls back to conservative text parsing when JSON output is unavailable.
+
 ## Branch naming
 
 Task branches use this format:
@@ -142,6 +146,23 @@ default branch when safe, and pulls with `--ff-only`. When
 `merge.deleteBranch` is `true`, the merge operation asks GitHub to delete the
 remote PR branch and the local task branch is deleted with `git branch -d` when
 the command was run from that branch.
+
+`merge.requireChecks` controls PR check enforcement:
+
+```json
+"merge": {
+  "requireChecks": true
+}
+```
+
+- `true`: `task merge` requires the linked PR to have at least one check and
+  allows merge only when all checks are successful, skipped, or neutral.
+- `false`: `task merge` does not enforce check status.
+
+With `true`, missing checks, pending checks, failed checks, and unknown check
+states block merge with an error that names the affected checks. The default
+project config still uses `false`; enabling required checks belongs in a
+separate rollout.
 
 Use `--dry-run` with any write command to render the operation plan without
 executing it:

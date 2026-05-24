@@ -447,6 +447,146 @@ func TestTaskMergeDryRunPlan(t *testing.T) {
 	deps.assertNoWrites(t)
 }
 
+func TestTaskMergeRequireChecksAllowsGreenChecks(t *testing.T) {
+	deps := okDeps()
+	requireChecks := true
+	deps.Config.Merge.RequireChecks = &requireChecks
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 9,
+		State:  domain.PullRequestStateOpen,
+		Base:   "fastapi-microservices-rewrite",
+		Head:   "feat/issue-112-add-read-only-task-commands",
+	}}
+	deps.GitHub.checks = domain.PullRequestChecks{
+		PullRequestNumber: 9,
+		Total:             2,
+		Successful:        2,
+		Checks: []domain.PullRequestCheck{
+			{Name: "parsevkctl / test", State: domain.CheckStateSuccess, Bucket: domain.CheckStateSuccess},
+			{Name: "docs / optional", State: domain.CheckStateSkipped, Bucket: domain.CheckStateSuccess},
+		},
+	}
+
+	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err != nil {
+		t.Fatalf("BuildTaskMergePlan returned error: %v", err)
+	}
+	if deps.GitHub.checkCalls != 1 {
+		t.Fatalf("check calls = %d, want 1", deps.GitHub.checkCalls)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskMergeRequireChecksBlocksZeroChecks(t *testing.T) {
+	deps := okDeps()
+	requireChecks := true
+	deps.Config.Merge.RequireChecks = &requireChecks
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 9,
+		State:  domain.PullRequestStateOpen,
+		Base:   "fastapi-microservices-rewrite",
+		Head:   "feat/issue-112-add-read-only-task-commands",
+	}}
+	deps.GitHub.checks = domain.PullRequestChecks{PullRequestNumber: 9}
+
+	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "pull request #9 has no checks") {
+		t.Fatalf("err = %v, want no checks error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskMergeRequireChecksBlocksPendingFailedAndUnknownChecks(t *testing.T) {
+	tests := []struct {
+		name  string
+		check domain.PullRequestCheck
+		want  string
+	}{
+		{
+			name:  "pending",
+			check: domain.PullRequestCheck{Name: "parsevkctl / test", State: domain.CheckStatePending, Bucket: domain.CheckStatePending},
+			want:  "pull request #9 has pending checks: parsevkctl / test",
+		},
+		{
+			name:  "failed",
+			check: domain.PullRequestCheck{Name: "frontend / typecheck", State: domain.CheckStateFailure, Bucket: domain.CheckStateFailure},
+			want:  "pull request #9 has failed checks: frontend / typecheck",
+		},
+		{
+			name:  "unknown",
+			check: domain.PullRequestCheck{Name: "ci / mystery", State: domain.CheckStateUnknown, Bucket: domain.CheckStateUnknown},
+			want:  "pull request #9 has unknown check states: ci / mystery",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deps := okDeps()
+			requireChecks := true
+			deps.Config.Merge.RequireChecks = &requireChecks
+			deps.GitHub.prs = []domain.PullRequest{{
+				Number: 9,
+				State:  domain.PullRequestStateOpen,
+				Base:   "fastapi-microservices-rewrite",
+				Head:   "feat/issue-112-add-read-only-task-commands",
+			}}
+			deps.GitHub.checks = domain.PullRequestChecks{
+				PullRequestNumber: 9,
+				Total:             1,
+				Checks:            []domain.PullRequestCheck{tt.check},
+			}
+
+			_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
+				IssueNumber: 112,
+				Config:      deps.Config,
+				Git:         deps.Git,
+				GitHub:      deps.GitHub,
+			})
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("err = %v, want it to contain %q", err, tt.want)
+			}
+			deps.assertNoWrites(t)
+		})
+	}
+}
+
+func TestTaskMergeRequireChecksFalseDoesNotLoadChecks(t *testing.T) {
+	deps := okDeps()
+	requireChecks := false
+	deps.Config.Merge.RequireChecks = &requireChecks
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 9,
+		State:  domain.PullRequestStateOpen,
+		Base:   "fastapi-microservices-rewrite",
+		Head:   "feat/issue-112-add-read-only-task-commands",
+	}}
+	deps.GitHub.checkErr = errors.New("must not be called")
+
+	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err != nil {
+		t.Fatalf("BuildTaskMergePlan returned error: %v", err)
+	}
+	if deps.GitHub.checkCalls != 0 {
+		t.Fatalf("check calls = %d, want 0", deps.GitHub.checkCalls)
+	}
+	deps.assertNoWrites(t)
+}
+
 func assertCheck(t *testing.T, checks []DoctorCheck, name string, status CheckStatus) {
 	t.Helper()
 	for _, check := range checks {
@@ -592,6 +732,9 @@ func (f *fakeGit) HasCommitsAhead(context.Context, string, string) (bool, error)
 type fakeGitHub struct {
 	issue           domain.Issue
 	prs             []domain.PullRequest
+	checks          domain.PullRequestChecks
+	checkErr        error
+	checkCalls      int
 	project         domain.ProjectItem
 	projectErr      error
 	projectFieldErr error
@@ -632,6 +775,13 @@ func (f *fakeGitHub) MergePullRequest(context.Context, int, github.MergePullRequ
 		return nil
 	}
 	return errors.New("write call")
+}
+func (f *fakeGitHub) GetPullRequestChecks(context.Context, int) (domain.PullRequestChecks, error) {
+	f.checkCalls++
+	if f.checkErr != nil {
+		return domain.PullRequestChecks{}, f.checkErr
+	}
+	return f.checks, nil
 }
 func (f *fakeGitHub) GetProjectItem(context.Context, int) (domain.ProjectItem, error) {
 	if f.projectErr != nil {

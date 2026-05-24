@@ -16,6 +16,7 @@ import (
 const (
 	issueJSONFields       = "number,title,state,url,labels"
 	pullRequestJSONFields = "number,title,state,isDraft,mergedAt,url,baseRefName,headRefName"
+	checkJSONFields       = "name,state,bucket,workflow,startedAt,completedAt,link"
 )
 
 type commandResult struct {
@@ -184,6 +185,36 @@ func (adapter *ShellAdapter) MergePullRequest(ctx context.Context, number int, i
 
 	_, err := adapter.runGH(ctx, "merge pull request", args...)
 	return err
+}
+
+func (adapter *ShellAdapter) GetPullRequestChecks(ctx context.Context, prNumber int) (domain.PullRequestChecks, error) {
+	if err := validateNumber("pull request number", prNumber); err != nil {
+		return domain.PullRequestChecks{}, err
+	}
+
+	result, err := adapter.runGH(ctx, "get pull request checks", "pr", "checks", strconv.Itoa(prNumber), "--json", checkJSONFields)
+	if strings.TrimSpace(result.stdout) != "" {
+		checks, parseErr := parsePullRequestChecksJSON(prNumber, []byte(result.stdout))
+		if parseErr == nil {
+			return checks, nil
+		}
+		if err == nil {
+			return domain.PullRequestChecks{}, parseErr
+		}
+	}
+	if err == nil {
+		return parsePullRequestChecksJSON(prNumber, []byte(result.stdout))
+	}
+
+	textResult, textErr := adapter.runGH(ctx, "get pull request checks", "pr", "checks", strconv.Itoa(prNumber))
+	if strings.TrimSpace(textResult.stdout) != "" {
+		return parsePullRequestChecksText(prNumber, textResult.stdout)
+	}
+	if textErr != nil {
+		return domain.PullRequestChecks{}, fmt.Errorf("get pull request checks JSON failed: %v; text fallback failed: %w", err, textErr)
+	}
+
+	return parsePullRequestChecksText(prNumber, textResult.stdout)
 }
 
 func (adapter *ShellAdapter) GetProjectItem(ctx context.Context, issueNumber int) (domain.ProjectItem, error) {
