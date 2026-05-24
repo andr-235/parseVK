@@ -7,8 +7,9 @@ silently after `docker compose pull` or image rebuilds.
 
 | Component | Image tag |
 | --- | --- |
-| PostgreSQL 15 deploy databases and backup image | `postgres:15.18-alpine` |
-| PostgreSQL 16 local service databases | `postgres:16.14` |
+| PostgreSQL legacy deploy database | `postgres:15.18-alpine` |
+| PostgreSQL deploy service databases and local service databases | `postgres:16.14` |
+| PostgreSQL backup image | `postgres:16.14-alpine` |
 | Redis | `redis:7.4.9-alpine` |
 | Kafka | `apache/kafka:4.1.0` |
 | Prometheus | `prom/prometheus:v3.11.3` |

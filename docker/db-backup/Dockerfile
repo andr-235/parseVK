@@ -1,4 +1,4 @@
-FROM postgres:15.18-alpine
+FROM postgres:16.14-alpine
 
 RUN apk add --no-cache bash tzdata
 
