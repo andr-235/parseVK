@@ -274,16 +274,18 @@ class WatchlistService:
         for author in active_authors:
             author.last_checked_at = now_time
 
-        await self.session.commit()
-
         if not settings_rec.track_all_comments:
             logger.debug("Monitoring of comments disabled in settings. Only checkmarks updated.")
+            await self.session.commit()
             return 0
 
         total_new_comments = 0
         for author in active_authors:
             new_comments = await self._refresh_author_record(author)
             total_new_comments += new_comments
+
+        # Commit everything in one transaction at the very end to hold the advisory lock
+        await self.session.commit()
 
         logger.debug(
             f"Processed {len(active_authors)} watchlist authors, found {total_new_comments} new comments"
@@ -382,11 +384,9 @@ class WatchlistService:
             # Update database status fields
             author.last_checked_at = datetime.now(timezone.utc)
             if new_comments_count > 0:
-                author.found_comments_count += new_comments_count
+                author.found_comments_count = (author.found_comments_count or 0) + new_comments_count
             if latest_activity and (not author.last_activity_at or latest_activity > author.last_activity_at):
                 author.last_activity_at = latest_activity
-
-            await self.session.commit()
 
         return new_comments_count
 

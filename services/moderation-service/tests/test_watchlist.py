@@ -19,8 +19,9 @@ def anyio_backend():
 
 
 class _ScalarResult:
-    def __init__(self, val):
+    def __init__(self, val, rowcount=0):
         self._val = val
+        self.rowcount = rowcount
 
     def scalar(self):
         return self._val
@@ -115,3 +116,45 @@ async def test_refresh_active_authors_skips_when_locked(mock_get):
 
     assert res == 0
     assert session.commit.call_count == 0
+
+
+@pytest.mark.anyio
+@patch("httpx.AsyncClient.get")
+async def test_refresh_active_authors_success(mock_get):
+    session = AsyncMock()
+
+    settings = WatchlistSettings(id=1, track_all_comments=True, max_authors=5)
+    author = WatchlistAuthor(
+        id=10,
+        author_vk_id=8888,
+        status="ACTIVE",
+        last_activity_at=None,
+        monitoring_started_at=datetime.now(timezone.utc),
+    )
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = [
+        {"id": 444, "date": 1716500000, "text": "тест коммент"}
+    ]
+    mock_get.return_value = mock_resp
+
+    # 1. pg_try_advisory_xact_lock (True)
+    # 2. get_or_create_settings (settings)
+    # 3. select active authors ([author])
+    # 4. posts_stmt inside _refresh_author_record (['123:456'])
+    # 5. insert into ModerationComment (res with rowcount = 1)
+    session.execute.side_effect = [
+        _ScalarResult(True),
+        _ScalarResult(settings),
+        _ScalarResult([author]),
+        _ScalarResult(["123:456"]),
+        _ScalarResult(1, rowcount=1),
+    ]
+
+    service = WatchlistService(session)
+    res = await service.refresh_active_authors()
+
+    assert res == 1
+    # Check that commit was called exactly once in refresh_active_authors, and NOT in _refresh_author_record
+    assert session.commit.call_count == 1
