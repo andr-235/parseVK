@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, Query, Request
+from fastapi import APIRouter, Body, Depends, Query
 
 from app.core.security import require_auth
 from app.modules.comments.service import CommentsGatewayService, get_comments_gateway_service

@@ -1,6 +1,3 @@
-import math
-from collections import defaultdict
-
 import httpx
 from fastapi import HTTPException
 
