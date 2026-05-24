@@ -1,4 +1,4 @@
-import { API_URL, GATEWAY_API_URL, createRequest, handleResponse } from '@/api/common'
+import { GATEWAY_API_URL, createRequest, handleResponse } from '@/api/common'
 import type { CommentsFilters } from './query/commentsQuery.types'
 import type { CommentResponseDto, GetCommentsCursorDto, GetCommentsDto } from './dto/comments.dto'
 import type { CommentsSearchRequestDto, CommentsSearchResponseDto } from './dto/commentsSearch.dto'
@@ -25,51 +25,6 @@ type GetCommentsCursorResult = {
   readCount: number
   unreadCount: number
 }
-
-type ContentPageDto<T> = {
-  items: T[]
-  total: number
-  page: number
-  limit: number
-  hasMore: boolean
-}
-
-type ContentCommentDto = {
-  id: number
-  vkOwnerId?: number | null
-  vkPostId?: number | null
-  vkCommentId?: number | null
-  authorVkId?: number | null
-  date?: string | null
-  text?: string | null
-}
-
-const CONTENT_COMMENTS_API_URL = `${GATEWAY_API_URL}/v1/content/comments`
-
-const hasLegacyOnlyFilters = (params?: CommentsFilters): boolean =>
-  Boolean(
-    params?.keywords?.length ||
-      params?.keywordSource ||
-      (params?.readStatus && params.readStatus !== 'all') ||
-      params?.search?.trim()
-  )
-
-const offsetToPage = (offset = 0, limit = 20): number => Math.floor(offset / limit) + 1
-
-const contentCommentsUrl = (page: number, limit: number): string =>
-  `${CONTENT_COMMENTS_API_URL}?page=${page}&limit=${limit}`
-
-const mapContentComment = (comment: ContentCommentDto): CommentResponseDto => ({
-  id: comment.id,
-  ownerId: comment.vkOwnerId ?? null,
-  postId: comment.vkPostId ?? null,
-  vkCommentId: comment.vkCommentId ?? null,
-  fromId: comment.authorVkId ?? null,
-  authorVkId: comment.authorVkId ?? null,
-  text: comment.text ?? '',
-  createdAt: comment.date ?? null,
-  publishedAt: comment.date ?? null,
-})
 
 export const getComments = async (
   params?: { offset?: number; limit?: number } & CommentsFilters
@@ -126,7 +81,7 @@ export const updateReadStatus = async (id: number, isRead: boolean): Promise<Com
 export const searchComments = async (
   params: CommentsSearchRequestDto
 ): Promise<CommentsSearchResult> => {
-  const response = await createRequest(`${API_URL}/comments/search`, {
+  const response = await createRequest(`${GATEWAY_API_URL}/v1/comments/search`, {
     method: 'POST',
     body: JSON.stringify(buildCommentsSearchPayload(params)),
   })

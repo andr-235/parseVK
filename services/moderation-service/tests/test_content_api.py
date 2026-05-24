@@ -34,13 +34,39 @@ class FakeModerationService:
             matched_keywords=["тест"]
         )
 
-    async def get_comments(self, page: int, limit: int, read_status: str | None = None, search: str | None = None):
-        return [self.comment]
-
-    async def get_comments_cursor(self, cursor: str | None, limit: int, read_status: str | None = None, search: str | None = None):
+    async def get_comments(
+        self,
+        page: int,
+        limit: int,
+        read_status: str | None = None,
+        search: str | None = None,
+        keywords: list[str] | None = None,
+        keyword_source: str | None = None,
+    ):
         return {
             "items": [self.comment],
-            "next_cursor": "cursor_123"
+            "total": 1,
+            "has_more": False,
+            "read_count": 0,
+            "unread_count": 1,
+        }
+
+    async def get_comments_cursor(
+        self,
+        cursor: str | None,
+        limit: int,
+        read_status: str | None = None,
+        search: str | None = None,
+        keywords: list[str] | None = None,
+        keyword_source: str | None = None,
+    ):
+        return {
+            "items": [self.comment],
+            "next_cursor": "cursor_123",
+            "has_more": False,
+            "total": 1,
+            "read_count": 0,
+            "unread_count": 1,
         }
 
     async def update_read_status(self, id: int, is_read: bool) -> ModerationComment | None:
@@ -76,26 +102,107 @@ async def test_moderation_internal_api_requires_token(app):
 @pytest.mark.anyio
 async def test_moderation_comments_pagination_and_read_status(app):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # 1. Проверяем получение комментариев
+        # 1. Получение комментариев — новый формат с stats
         listed = await client.get("/internal/moderation/comments?page=1&limit=10", headers=headers())
         assert listed.status_code == 200
-        items = listed.json()
-        assert len(items) == 1
-        assert items[0]["id"] == 42
-        assert items[0]["is_read"] is False
+        data = listed.json()
+        assert "items" in data
+        assert "total" in data
+        assert "has_more" in data
+        assert "read_count" in data
+        assert "unread_count" in data
+        assert len(data["items"]) == 1
+        assert data["items"][0]["id"] == 42
+        assert data["items"][0]["is_read"] is False
+        assert data["total"] == 1
+        assert data["has_more"] is False
+        assert data["unread_count"] == 1
 
-        # 2. Проверяем получение с курсором
+        # 2. Cursor — новый формат с stats
         cursor_listed = await client.get("/internal/moderation/comments/cursor?limit=10", headers=headers())
         assert cursor_listed.status_code == 200
         cursor_data = cursor_listed.json()
         assert len(cursor_data["items"]) == 1
         assert cursor_data["next_cursor"] == "cursor_123"
+        assert "has_more" in cursor_data
+        assert "total" in cursor_data
+        assert "read_count" in cursor_data
+        assert "unread_count" in cursor_data
 
-        # 3. Проверяем обновление статуса прочитанности
+        # 3. Обновление статуса прочитанности
         patched = await client.patch(
-            "/internal/moderation/comments/42/read", 
-            json={"is_read": True}, 
-            headers=headers()
+            "/internal/moderation/comments/42/read",
+            json={"is_read": True},
+            headers=headers(),
         )
         assert patched.status_code == 200
         assert patched.json()["is_read"] is True
+
+
+@pytest.mark.anyio
+async def test_moderation_comments_keywords_filter(app):
+    """keywords передаётся как повторяющийся query-параметр."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/internal/moderation/comments?keywords=тест&keywords=другой",
+            headers=headers(),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+
+
+@pytest.mark.anyio
+async def test_moderation_comments_read_status_filter(app):
+    """readStatus=unread/read/all возвращает stats-поля."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for status in ["unread", "read", "all"]:
+            response = await client.get(
+                f"/internal/moderation/comments?readStatus={status}",
+                headers=headers(),
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert "items" in data
+            assert "read_count" in data
+            assert "unread_count" in data
+
+
+@pytest.mark.anyio
+async def test_moderation_comments_search_filter(app):
+    """search query parameter принимается корректно."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/internal/moderation/comments?search=Тестовый",
+            headers=headers(),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+
+
+@pytest.mark.anyio
+async def test_moderation_cursor_has_more_semantics(app):
+    """has_more в cursor-ответе — bool, не просто наличие items."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/internal/moderation/comments/cursor?limit=10",
+            headers=headers(),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data["has_more"], bool)
+        # next_cursor type check: must be str or None
+        assert data["next_cursor"] is None or isinstance(data["next_cursor"], str)
+
+
+@pytest.mark.anyio
+async def test_moderation_read_status_update_not_found(app):
+    """Обновление несуществующего комментария возвращает 404."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.patch(
+            "/internal/moderation/comments/9999/read",
+            json={"is_read": True},
+            headers=headers(),
+        )
+        assert response.status_code == 404

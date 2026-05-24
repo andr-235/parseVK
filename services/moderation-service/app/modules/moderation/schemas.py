@@ -31,3 +31,21 @@ class VkEvent(BaseModel):
     payload: dict
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class CommentModerationList(BaseModel):
+    items: list[CommentModerationState]
+    total: int
+    has_more: bool
+    read_count: int
+    unread_count: int
+
+
+class CommentModerationCursorList(BaseModel):
+    items: list[CommentModerationState]
+    next_cursor: str | None
+    has_more: bool
+    total: int
+    read_count: int
+    unread_count: int
+
