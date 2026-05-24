@@ -106,11 +106,11 @@ class WatchlistGatewayService:
         # Adapt frontend camelCase to backend snake_case
         backend_payload = {}
         if "trackAllComments" in payload:
-            backend_payload["track_all_comments"] = payload["track_all_comments"]
+            backend_payload["track_all_comments"] = payload["trackAllComments"]
         if "pollIntervalMinutes" in payload:
-            backend_payload["poll_interval_minutes"] = payload["poll_interval_minutes"]
+            backend_payload["poll_interval_minutes"] = payload["pollIntervalMinutes"]
         if "maxAuthors" in payload:
-            backend_payload["max_authors"] = payload["max_authors"]
+            backend_payload["max_authors"] = payload["maxAuthors"]
 
         async with httpx.AsyncClient() as client:
             resp = await client.patch(

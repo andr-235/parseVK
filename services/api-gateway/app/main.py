@@ -1,16 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.middleware import RequestIdMiddleware
 from app.core.config import settings
-from app.modules.auth.router import router as auth_router
-from app.modules.content.router import router as content_router
-from app.modules.tasks.router import router as tasks_router
+from app.core.middleware import RequestIdMiddleware
 from app.modules.admin_users.router import router as admin_users_router
-
-
+from app.modules.auth.router import router as auth_router
 from app.modules.comments.router import router as comments_router
+from app.modules.content.router import router as content_router
 from app.modules.keywords.router import router as keywords_router
+from app.modules.listings.router import router as listings_router
+from app.modules.tasks.router import router as tasks_router
+from app.modules.telegram_tgmbase.router import router as telegram_tgmbase_router
+
 
 def create_app() -> FastAPI:
     app = FastAPI(title="parseVK API Gateway")
@@ -37,6 +38,8 @@ def create_app() -> FastAPI:
     app.include_router(comments_router)
     app.include_router(keywords_router)
     app.include_router(watchlist_router)
+    app.include_router(listings_router)
+    app.include_router(telegram_tgmbase_router)
 
     return app
 

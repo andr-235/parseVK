@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/api/common'
+import { GATEWAY_API_URL } from '@/api/common'
 import { buildQueryString, createRequest, handleResponse } from '@/api/common'
 import type {
   IListing,
@@ -90,7 +90,7 @@ export const listingsService = {
     try {
       const { signal, ...rest } = options
       const query = buildQueryString(rest)
-      const response = await createRequest(`${API_URL}/listings?${query}`, { signal })
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings?${query}`, { signal })
 
       return await handleResponse<IListingsResponse>(response, 'Failed to load listings')
     } catch (error) {
@@ -127,7 +127,7 @@ export const listingsService = {
         }
       })
 
-      const response = await createRequest(`${API_URL}/data/import`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/data/import`, {
         method: 'POST',
         body: JSON.stringify({ listings: normalizedListings, updateExisting }),
       })
@@ -194,7 +194,7 @@ export const listingsService = {
       }
 
       const query = buildQueryString(queryParams)
-      const url = `${API_URL}/listings/export${query ? `?${query}` : ''}`
+      const url = `${GATEWAY_API_URL}/v1/listings/export${query ? `?${query}` : ''}`
       const response = await createRequest(url)
 
       if (!response.ok) {
@@ -240,7 +240,7 @@ export const listingsService = {
 
   async updateListing(id: number, payload: ListingUpdatePayload): Promise<IListing> {
     try {
-      const response = await createRequest(`${API_URL}/listings/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(payload),
       })
@@ -260,7 +260,7 @@ export const listingsService = {
 
   async archiveListing(id: number): Promise<IListing> {
     try {
-      const response = await createRequest(`${API_URL}/listings/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ archived: true }),
       })
@@ -279,7 +279,7 @@ export const listingsService = {
 
   async restoreListing(id: number): Promise<IListing> {
     try {
-      const response = await createRequest(`${API_URL}/listings/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ archived: false }),
       })
@@ -318,7 +318,7 @@ export const listingsService = {
         sourceParsedAt: new Date().toISOString(),
       }
 
-      const response = await createRequest(`${API_URL}/data/import`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/data/import`, {
         method: 'POST',
         body: JSON.stringify({ listings: [item], updateExisting: false }),
       })
@@ -337,7 +337,7 @@ export const listingsService = {
 
   async deleteListing(id: number): Promise<void> {
     try {
-      const response = await createRequest(`${API_URL}/listings/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings/${id}`, {
         method: 'DELETE',
       })
 

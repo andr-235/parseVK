@@ -10,12 +10,19 @@ logger = logging.getLogger("moderation-service.watchlist-monitor")
 async def publish_watchlist_monitor_forever(session_factory: async_sessionmaker) -> None:
     logger.info("Watchlist monitor background loop started")
     while True:
+        sleep_seconds = 60  # fallback sleep duration
         try:
             async with session_factory() as session:
                 async with session.begin():
                     service = WatchlistService(session)
                     await service.refresh_active_authors()
-        except Exception:
-            logger.exception("Watchlist monitor loop execution failed")
 
-        await asyncio.sleep(60)
+                    # Fetch current settings to dynamically adjust the poll interval
+                    settings_rec = await service.get_or_create_settings()
+                    poll_interval = settings_rec.poll_interval_minutes
+                    sleep_seconds = max(poll_interval * 60, 30)
+        except Exception:
+            logger.exception("Watchlist monitor loop execution failed. Falling back to 60s sleep.")
+            sleep_seconds = 60
+
+        await asyncio.sleep(sleep_seconds)

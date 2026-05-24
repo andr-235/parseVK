@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.modules.content.router import router as content_router
+from app.modules.listings.router import router as listings_router
 from app.modules.projections.consumer import ProjectionConsumer
 
 
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
         return {"status": "UP"}
 
     app.include_router(content_router)
+    app.include_router(listings_router)
 
     return app
 

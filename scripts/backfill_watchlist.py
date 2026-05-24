@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import sys
 import asyncpg
 
@@ -14,10 +15,14 @@ NEW_DB_URL = os.getenv(
 )
 
 
+def mask_dsn(dsn: str) -> str:
+    return re.sub(r"(postgresql://[^:]+:)([^@]+)(@)", r"\1*****\3", dsn)
+
+
 async def backfill():
     print("Starting Watchlist Data Backfill...")
-    print(f"Old DB: {OLD_DB_URL}")
-    print(f"New DB: {NEW_DB_URL}")
+    print(f"Old DB: {mask_dsn(OLD_DB_URL)}")
+    print(f"New DB: {mask_dsn(NEW_DB_URL)}")
 
     try:
         old_conn = await asyncpg.connect(OLD_DB_URL)

@@ -58,7 +58,39 @@ class ContentClient:
         request_id: str | None = None,
         correlation_id: str | None = None,
         params: dict | None = None,
+        json: Any | None = None,
     ) -> Any:
+        try:
+            response = await self._client.request(
+                method,
+                path,
+                headers=self._headers(user_id=user_id, request_id=request_id, correlation_id=correlation_id),
+                params=params,
+                json=json,
+            )
+            response.raise_for_status()
+            if not response.content:
+                return None
+            return response.json()
+        except httpx.HTTPStatusError as exc:
+            try:
+                detail: Any = exc.response.json()
+            except ValueError:
+                detail = exc.response.text
+            raise ContentClientHTTPError(status_code=exc.response.status_code, detail=detail) from exc
+        except httpx.RequestError as exc:
+            raise ContentClientUnavailableError("Content service is unavailable") from exc
+
+    async def raw_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        user_id: str,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+        params: dict | None = None,
+    ) -> httpx.Response:
         try:
             response = await self._client.request(
                 method,
@@ -67,7 +99,7 @@ class ContentClient:
                 params=params,
             )
             response.raise_for_status()
-            return response.json()
+            return response
         except httpx.HTTPStatusError as exc:
             try:
                 detail: Any = exc.response.json()
