@@ -148,6 +148,73 @@ func TestValidateFileAcceptsValidJSON(t *testing.T) {
 	}
 }
 
+func TestResolvePathUsesGoOwnedConfigByDefault(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "tools", "parsevkctl-go")
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(`{}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	previousDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(previousDir); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	})
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+
+	path, err := ResolvePath("")
+	if err != nil {
+		t.Fatalf("ResolvePath returned error: %v", err)
+	}
+
+	want := filepath.Join("tools", "parsevkctl-go", "config.json")
+	if path != want {
+		t.Fatalf("path = %q, want %q", path, want)
+	}
+}
+
+func TestResolvePathUsesLocalConfigWhenRunFromGoToolDirectory(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "tools", "parsevkctl-go")
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(`{}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	previousDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(previousDir); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	})
+	if err := os.Chdir(configDir); err != nil {
+		t.Fatal(err)
+	}
+
+	path, err := ResolvePath("")
+	if err != nil {
+		t.Fatalf("ResolvePath returned error: %v", err)
+	}
+
+	if path != "config.json" {
+		t.Fatalf("path = %q, want config.json", path)
+	}
+}
+
 func TestValidateFileRejectsInvalidProjectNumberType(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.json")

@@ -48,9 +48,9 @@ type ValidationResult struct {
 
 func DefaultPaths() []string {
 	return []string{
-		filepath.Join("tools", "parsevkctl", "config.json"),
+		filepath.Join("tools", "parsevkctl-go", "config.json"),
+		"config.json",
 		filepath.Join(".tools", "parsevkctl", "config.json"),
-		filepath.Join("..", "parsevkctl", "config.json"),
 	}
 }
 
@@ -68,7 +68,7 @@ func ResolvePath(explicitPath string) (string, error) {
 		}
 	}
 
-	return "", errors.New("config not found; pass --config <path> or create tools/parsevkctl/config.json")
+	return "", errors.New("config not found; pass --config <path> or create tools/parsevkctl-go/config.json")
 }
 
 func Load(path string) (Config, error) {

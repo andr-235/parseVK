@@ -1,142 +1,101 @@
 # parsevkctl
 
 `parsevkctl` is the local task workflow helper for the `andr-235/parseVK`
-repository. The Go CLI in `tools/parsevkctl-go` is the canonical
-implementation for task lifecycle commands.
+repository. The CLI is Go-only and lives under `tools/parsevkctl-go`.
 
-The historical PowerShell entrypoint remains temporarily for compatibility:
+The legacy PowerShell wrapper has been removed. Use `go run` during
+development or build the local binary under `tools/parsevkctl-go/bin`.
 
-```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task start 123
+## Configuration
+
+The default configuration file is:
+
+```text
+tools/parsevkctl-go/config.json
 ```
 
-That script is now only a thin legacy wrapper. It resolves a Go binary, forwards
-all arguments unchanged, and returns the Go process exit code. It does not
-contain task workflow business logic and does not fall back to the old
-PowerShell implementation.
-
-## Build the Local Binary
-
-Build the repository-local binary used by the legacy wrapper:
-
-```powershell
-.\tools\parsevkctl\build.ps1
-```
-
-Equivalent manual command:
-
-```powershell
-cd tools/parsevkctl-go
-go build -o ../parsevkctl/bin/parsevkctl.exe ./cmd/parsevkctl
-```
-
-The wrapper resolves the Go binary in this order:
-
-1. `tools/parsevkctl/bin/parsevkctl.exe`
-2. `tools/parsevkctl-go/bin/parsevkctl.exe`
-3. `tools/parsevkctl-go/parsevkctl.exe`
-4. `parsevkctl` from `PATH`
-
-If no binary is found, the wrapper prints a build command and exits with code
-`1`.
+When commands are run from `tools/parsevkctl-go`, the CLI also discovers the
+local `config.json` in that directory. You can override discovery with
+`--config <path>`.
 
 ## Direct Go Invocation
 
-During development you can run the Go CLI directly:
+```powershell
+cd tools/parsevkctl-go
+go run ./cmd/parsevkctl config validate
+go run ./cmd/parsevkctl doctor
+go run ./cmd/parsevkctl task start 123
+go run ./cmd/parsevkctl task pr 123
+go run ./cmd/parsevkctl task merge 123
+```
+
+## Build the Local Binary
 
 ```powershell
 cd tools/parsevkctl-go
-go run ./cmd/parsevkctl --help
-go run ./cmd/parsevkctl --version
-go run ./cmd/parsevkctl config validate
+go build -o bin/parsevkctl.exe ./cmd/parsevkctl
+.\bin\parsevkctl.exe config validate
 ```
 
-After building the local binary, direct invocation from the repository root is
-also available:
+From the repository root, run the built binary as:
 
 ```powershell
-.\tools\parsevkctl\bin\parsevkctl.exe --help
-.\tools\parsevkctl\bin\parsevkctl.exe --version
-.\tools\parsevkctl\bin\parsevkctl.exe config validate
+.\tools\parsevkctl-go\bin\parsevkctl.exe doctor
+.\tools\parsevkctl-go\bin\parsevkctl.exe task status 123
 ```
-
-## Legacy PowerShell Invocation
-
-Existing calls continue to work while callers migrate:
-
-```powershell
-.\tools\parsevkctl\parsevkctl.ps1 --help
-.\tools\parsevkctl\parsevkctl.ps1 --version
-.\tools\parsevkctl\parsevkctl.ps1 config validate
-.\tools\parsevkctl\parsevkctl.ps1 task start 123
-```
-
-The output comes from the Go CLI, not from PowerShell workflow code.
 
 ## Requirements
 
-- Go is required to build the local binary.
+- Go is required to run or build the CLI.
 - GitHub CLI (`gh`) must be installed and authenticated for GitHub operations.
 - Git must be installed for branch and repository operations.
-- The local configuration in `tools/parsevkctl/config.json` must be valid.
-- The working tree must be clean before starting task commands that create or
-  update branches.
+- The local configuration in `tools/parsevkctl-go/config.json` must be valid.
+- The working tree must be clean before task commands that create or update
+  branches.
 
 ## Common Commands
 
-Validate configuration:
+Create a new task issue:
 
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 config validate
-```
-
-Check local environment:
-
-```powershell
-.\tools\parsevkctl\parsevkctl.ps1 doctor
+go run ./cmd/parsevkctl task create "Title" --body "Optional body"
 ```
 
 Start an existing issue and create its branch:
 
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task start 123
+go run ./cmd/parsevkctl task start 123
 ```
 
 Create a pull request after committing changes:
 
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task pr 123
+go run ./cmd/parsevkctl task pr 123
 ```
 
 Merge the linked pull request and finish the issue:
 
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task merge 123
-```
-
-Create a new task issue:
-
-```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task create "Title" --body "Optional body"
+go run ./cmd/parsevkctl task merge 123
 ```
 
 Show task state or preview drift without writes:
 
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task status 123
-.\tools\parsevkctl\parsevkctl.ps1 task sync 123
+go run ./cmd/parsevkctl task status 123
+go run ./cmd/parsevkctl task sync 123
 ```
 
 Preview write operations without mutating GitHub or local git state:
 
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 --dry-run task start 123
+go run ./cmd/parsevkctl --dry-run task start 123
 ```
 
 Machine-readable output is available with `--json`:
 
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 --json task status 123
+go run ./cmd/parsevkctl --json task status 123
 ```
 
 ## Kanban Flow
@@ -169,14 +128,13 @@ Protected branches such as `main`, `master`, and
 
 ## Migration Status
 
-The Go rewrite is canonical for the documented workflow:
+The Go CLI is canonical for the documented workflow:
 
 ```text
 config validate
 doctor
 task create -> task start -> task status/task sync -> task pr -> task merge
 --json output
-legacy wrapper delegation
 ```
 
 The remaining known limitation is intentional: `task sync <issue>` is
@@ -196,16 +154,12 @@ Supported branch types: `feat`, `fix`, `docs`, `refactor`, `test`, `ci`,
 
 ## Validation
 
-Recommended local validation for wrapper migration changes:
+Recommended local validation:
 
 ```powershell
 cd tools/parsevkctl-go
 go test ./...
-go build ./cmd/parsevkctl
-
-cd ../..
-.\tools\parsevkctl\build.ps1
-.\tools\parsevkctl\parsevkctl.ps1 --help
-.\tools\parsevkctl\parsevkctl.ps1 --version
-.\tools\parsevkctl\parsevkctl.ps1 config validate
+go build -o bin/parsevkctl.exe ./cmd/parsevkctl
+.\bin\parsevkctl.exe config validate
+.\bin\parsevkctl.exe doctor
 ```
