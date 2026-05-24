@@ -117,6 +117,26 @@ docs / optional	skipping	0s	https://github.test/checks/4`)
 	}
 }
 
+func TestParsePullRequestChecksTextPrefersTabSeparatedStateColumn(t *testing.T) {
+	t.Parallel()
+
+	checks, err := parsePullRequestChecksText(17, "pending migrations / test\tpass\t1m\thttps://github.test/checks/1\nfail-safe check\tpass\t1m\thttps://github.test/checks/2")
+	if err != nil {
+		t.Fatalf("parsePullRequestChecksText returned error: %v", err)
+	}
+
+	if checks.Total != 2 || checks.Successful != 2 || checks.Pending != 0 || checks.Failed != 0 {
+		t.Fatalf("unexpected totals: %#v", checks)
+	}
+	want := []domain.PullRequestCheck{
+		{Name: "pending migrations / test", State: domain.CheckStateSuccess, Bucket: domain.CheckStateSuccess},
+		{Name: "fail-safe check", State: domain.CheckStateSuccess, Bucket: domain.CheckStateSuccess},
+	}
+	if !reflect.DeepEqual(checks.Checks, want) {
+		t.Fatalf("checks = %#v, want %#v", checks.Checks, want)
+	}
+}
+
 func TestCommandArguments(t *testing.T) {
 	t.Parallel()
 

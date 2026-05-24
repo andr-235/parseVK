@@ -91,6 +91,17 @@ func parsePullRequestChecksText(prNumber int, output string) (domain.PullRequest
 		if trimmed == "" {
 			continue
 		}
+		if strings.Contains(line, "\t") {
+			columns := strings.Split(line, "\t")
+			name := strings.TrimSpace(columns[0])
+			state := ""
+			if len(columns) > 1 {
+				state = strings.TrimSpace(columns[1])
+			}
+			checks = append(checks, pullRequestCheckFromParts("", name, state, ""))
+			continue
+		}
+
 		fields := strings.Fields(trimmed)
 		if len(fields) < 2 {
 			checks = append(checks, pullRequestCheckFromParts("", trimmed, "", ""))
@@ -98,13 +109,6 @@ func parsePullRequestChecksText(prNumber int, output string) (domain.PullRequest
 		}
 
 		stateIndex := len(fields) - 1
-		for i, field := range fields {
-			if classifyCheckState(field) != domain.CheckStateUnknown {
-				stateIndex = i
-				break
-			}
-		}
-
 		name := strings.Join(fields[:stateIndex], " ")
 		if strings.TrimSpace(name) == "" {
 			name = trimmed
