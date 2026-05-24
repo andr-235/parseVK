@@ -53,9 +53,9 @@ def validate_access_token(token: str, jwks: dict[str, Any]) -> dict[str, Any]:
 _jwks_cache: dict[str, Any] | None = None
 
 
-async def get_jwks() -> dict[str, Any]:
+async def get_jwks(force_refresh: bool = False) -> dict[str, Any]:
     global _jwks_cache
-    if _jwks_cache is None:
+    if _jwks_cache is None or force_refresh:
         from app.clients.identity.client import IdentityClient
         client = IdentityClient()
         try:
@@ -72,12 +72,19 @@ async def require_auth(authorization: str | None = Header(default=None)) -> dict
             detail="Missing or invalid credentials",
         )
     token = authorization.split(" ", 1)[1]
+    
+    jwks = await get_jwks()
     try:
-        jwks = await get_jwks()
         return validate_access_token(token, jwks)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid access token",
-        ) from exc
+    except Exception:
+        # On validation failure (e.g. key rotated/unknown), force refresh JWKS cache and try once more
+        try:
+            jwks = await get_jwks(force_refresh=True)
+            return validate_access_token(token, jwks)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid access token",
+            ) from exc
+
 

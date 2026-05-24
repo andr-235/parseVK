@@ -45,3 +45,31 @@ async def test_comments_endpoint_requires_auth():
         # Request without Auth header should be rejected with 401
         response = await client.get("/api/v1/comments")
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_require_auth_forces_refresh_on_failure():
+    from unittest.mock import AsyncMock, patch
+    import app.core.security
+    from app.core.security import require_auth
+    
+    # Setup initial cache with an old key
+    app.core.security._jwks_cache = {"keys": [{"kid": "old-key"}]}
+    
+    # Mock IdentityClient to return updated JWKS with the correct key
+    from test_jwt_validation import make_token
+    token, new_jwks = make_token()
+    
+    with patch("app.clients.identity.client.IdentityClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.jwks.return_value = new_jwks
+        mock_client_cls.return_value = mock_client
+        
+        # Call require_auth with the new token
+        # The first validation will fail because kid is new-key, not in old-key cache
+        # It should force refresh and succeed
+        claims = await require_auth(authorization=f"Bearer {token}")
+        assert claims is not None
+        assert claims["typ"] == "access"
+        assert mock_client.jwks.called
+
