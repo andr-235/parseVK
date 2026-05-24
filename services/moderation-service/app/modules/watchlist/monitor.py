@@ -13,14 +13,13 @@ async def publish_watchlist_monitor_forever(session_factory: async_sessionmaker)
         sleep_seconds = 60  # fallback sleep duration
         try:
             async with session_factory() as session:
-                async with session.begin():
-                    service = WatchlistService(session)
-                    await service.refresh_active_authors()
+                service = WatchlistService(session)
+                await service.refresh_active_authors()
 
-                    # Fetch current settings to dynamically adjust the poll interval
-                    settings_rec = await service.get_or_create_settings()
-                    poll_interval = settings_rec.poll_interval_minutes
-                    sleep_seconds = max(poll_interval * 60, 30)
+                # Fetch current settings to dynamically adjust the poll interval
+                settings_rec = await service.get_or_create_settings()
+                poll_interval = settings_rec.poll_interval_minutes
+                sleep_seconds = max(poll_interval * 60, 30)
         except Exception:
             logger.exception("Watchlist monitor loop execution failed. Falling back to 60s sleep.")
             sleep_seconds = 60

@@ -54,10 +54,16 @@ class WatchlistGatewayService:
         }
 
     async def create_author(self, payload: dict) -> dict:
+        backend_payload = {}
+        if "authorVkId" in payload:
+            backend_payload["author_vk_id"] = payload["authorVkId"]
+        if "commentId" in payload:
+            backend_payload["comment_id"] = payload["commentId"]
+
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{self.moderation_url}/internal/watchlist/authors",
-                json=payload,
+                json=backend_payload,
                 headers=self.headers,
             )
             if resp.status_code == 404:
