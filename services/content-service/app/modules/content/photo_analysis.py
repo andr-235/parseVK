@@ -41,14 +41,13 @@ class PhotoAnalysisClient:
                     return {int(k): v for k, v in data.items()}
                 else:
                     logger.warning(
-                        "Bulk photo analysis summaries failed with status %s: %s. Falling back to single queries.",
+                        "Bulk photo analysis summaries failed with status %s. Falling back to single queries.",
                         response.status_code,
-                        response.text,
                     )
         except Exception as exc:
             logger.warning(
-                "Bulk photo analysis summaries failed: %s. Falling back to single queries.",
-                exc,
+                "Bulk photo analysis summaries failed: error_type=%s. Falling back to single queries.",
+                type(exc).__name__,
             )
 
         # 2. Fallback to parallel single queries
@@ -69,9 +68,9 @@ class PhotoAnalysisClient:
                         return vk_author_id, response.json()
                 except (httpx.HTTPError, ValueError) as exc:
                     logger.warning(
-                        "Photo analysis summary unavailable for author %s: %s",
+                        "Photo analysis summary unavailable for author %s: error_type=%s",
                         vk_author_id,
-                        exc,
+                        type(exc).__name__,
                     )
                     return vk_author_id, None
 
