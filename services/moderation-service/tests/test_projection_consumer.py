@@ -1,6 +1,8 @@
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4
+from uuid import uuid4, UUID
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -9,8 +11,9 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.db.models import ContentAuthor, ContentComment, ContentGroup, ContentPost, ProcessedEvent
-from app.modules.projections.service import ProjectionService, VkEvent
+from app.db.models import ModerationComment, ProcessedEvent
+from app.modules.moderation.schemas import VkEvent
+from app.modules.moderation.service import ModerationService, CONSUMER_NAME
 
 
 @pytest.fixture
@@ -18,39 +21,11 @@ def anyio_backend():
     return "asyncio"
 
 
-class FakeRepository:
-    def __init__(self):
-        self.processed = set()
-        self.groups = []
-        self.authors = []
-        self.posts = []
-        self.comments = []
-        self.incremented = []
-        self.saved = 0
-
-    async def is_processed(self, consumer_name, event_id):
-        return (consumer_name, event_id) in self.processed
-
-    async def mark_processed(self, consumer_name, event_id, event_type):
-        self.processed.add((consumer_name, event_id))
-
-    async def upsert_group(self, group):
-        self.groups.append(group)
-
-    async def upsert_author(self, author):
-        self.authors.append(author)
-
-    async def upsert_post(self, post, *, task_id=None):
-        self.posts.append((post, task_id))
-
-    async def upsert_comment(self, comment, *, task_id=None):
-        self.comments.append((comment, task_id))
-
-    async def increment_post_comments_count(self, post_external_key):
-        self.incremented.append(post_external_key)
-
-    async def save(self):
-        self.saved += 1
+def test_model_tables_exist():
+    assert ModerationComment.__tablename__ == "moderation_comments"
+    assert ProcessedEvent.__tablename__ == "processed_events"
+    names = {item.name for item in ProcessedEvent.__table__.constraints if item.name}
+    assert "uq_processed_events_consumer_event" in names
 
 
 def envelope(event_type, payload):
@@ -65,42 +40,70 @@ def envelope(event_type, payload):
     )
 
 
-def test_model_tables_exist_and_processed_key_is_per_consumer():
-    assert ContentGroup.__tablename__ == "content_groups"
-    assert ContentAuthor.__tablename__ == "content_authors"
-    assert ContentPost.__tablename__ == "content_posts"
-    assert ContentComment.__tablename__ == "content_comments"
-    assert ProcessedEvent.__tablename__ == "processed_events"
-    names = {item.name for item in ProcessedEvent.__table__.constraints if item.name}
-    assert "uq_processed_events_consumer_event" in names
+@pytest.mark.anyio
+async def test_handle_event_inserts_comment_and_marks_processed():
+    # Создаем мок сессии
+    session = AsyncMock()
+    session.add = MagicMock()
+    
+    # Эмулируем, что событие еще не обработано
+    session.scalar.return_value = None
+    
+    service = ModerationService(session)
+    
+    event_payload = {
+        "comment": {
+            "id": 789,
+            "owner_id": 123,
+            "post_id": 456,
+            "from_id": 999,
+            "date": 1600000000,
+            "text": "Привет, мир!"
+        }
+    }
+    event = envelope("vk.comment_collected", event_payload)
+    
+    # Вызываем обработчик события
+    result = await service.handle_event(event)
+    
+    assert result is True
+    
+    # Проверяем, что проверили, было ли событие обработано
+    session.scalar.assert_called_once()
+    
+    # Проверяем, что событие помечено как обработанное (добавлено в сессию)
+    added_objects = [args[0] for args, _ in session.add.call_args_list]
+    assert len(added_objects) == 1
+    assert isinstance(added_objects[0], ProcessedEvent)
+    assert added_objects[0].event_id == event.event_id
+    assert added_objects[0].consumer_name == CONSUMER_NAME
+    
+    # Проверяем, что вызван execute для upsert_comment (SQLAlchemy insert statement)
+    assert session.execute.call_count == 1
+    
+    # Проверяем, что транзакция закомичена
+    assert session.commit.call_count == 1
 
 
 @pytest.mark.anyio
-async def test_projection_upserts_vk_events_and_marks_processed():
-    repository = FakeRepository()
-    service = ProjectionService(repository)
-
-    await service.handle(envelope("vk.group_collected", {"group": {"id": 1, "name": "Group"}}))
-    await service.handle(envelope("vk.author_collected", {"author": {"vk_author_id": 2, "type": "user"}}))
-    await service.handle(envelope("vk.post_collected", {"taskId": 10, "post": {"owner_id": -1, "id": 3}}))
-    await service.handle(
-        envelope("vk.comment_collected", {"taskId": 10, "comment": {"owner_id": -1, "post_id": 3, "id": 4}})
-    )
-
-    assert repository.groups == [{"id": 1, "name": "Group"}]
-    assert repository.authors == [{"vk_author_id": 2, "type": "user"}]
-    assert repository.posts == [({"owner_id": -1, "id": 3}, 10)]
-    assert repository.comments == [({"owner_id": -1, "post_id": 3, "id": 4}, 10)]
-    assert repository.incremented == ["-1:3"]
-    assert repository.saved == 4
-
-
-@pytest.mark.anyio
-async def test_duplicate_event_is_noop():
-    repository = FakeRepository()
-    service = ProjectionService(repository)
-    event = envelope("vk.group_collected", {"group": {"id": 1}})
-
-    assert await service.handle(event) is True
-    assert await service.handle(event) is False
-    assert repository.groups == [{"id": 1}]
+async def test_handle_duplicate_event_is_skipped():
+    session = AsyncMock()
+    
+    # Эмулируем, что событие уже было обработано
+    session.scalar.return_value = uuid4()
+    
+    service = ModerationService(session)
+    
+    event = envelope("vk.comment_collected", {"comment": {"id": 1}})
+    
+    # Обрабатываем событие
+    result = await service.handle_event(event)
+    
+    assert result is False
+    
+    # Метод execute не должен вызываться для дубликата
+    assert session.execute.call_count == 0
+    # add не должен вызываться для дубликата
+    assert session.add.call_count == 0
+    # commit не должен вызываться для дубликата
+    assert session.commit.call_count == 0
