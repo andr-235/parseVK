@@ -1,10 +1,10 @@
 import logging
-from sqlalchemy import select, delete, func, or_
+from sqlalchemy import select, delete, update, func, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from fastapi import BackgroundTasks, HTTPException, status
 
-from app.db.models import Keyword, KeywordForm, KeywordFormExclusion, KeywordRecalculationJob
+from app.db.models import Keyword, KeywordForm, KeywordFormExclusion, KeywordRecalculationJob, ModerationComment
 from app.modules.keywords.morphology import KeywordMorphologyService, normalize_for_keyword_match
 from app.modules.keywords.recalculation import RecalculationWorker
 
@@ -61,11 +61,12 @@ class KeywordsService:
         # Синхронизируем формы
         await self.sync_generated_forms(keyword.id)
 
-        # Запускаем локальный фоновый пересчет для этого слова
-        if background_tasks:
-            background_tasks.add_task(self.recalculator._execute_recalculate, keyword.id)
-        else:
-            await self.recalculator._execute_recalculate(keyword.id)
+        # Запускаем пересчет через единую persistent job model
+        await self.recalculate_keyword_matches(
+            requested_by=f"add_keyword:{keyword.id}",
+            background_tasks=background_tasks,
+            single_keyword_id=keyword.id
+        )
 
         return keyword
 
@@ -128,14 +129,15 @@ class KeywordsService:
                     success.append(kw)
                     created_count += 1
 
-                # Пересчет совпадений
-                if background_tasks:
-                    background_tasks.add_task(self.recalculator._execute_recalculate, kw.id)
-                else:
-                    await self.recalculator._execute_recalculate(kw.id)
-
             except Exception as e:
                 failed.append({"word": word, "error": str(e)})
+
+        # Запускаем полный пересчет через единую persistent job model для всех добавленных слов
+        if success:
+            await self.recalculate_keyword_matches(
+                requested_by="bulk_add_keywords",
+                background_tasks=background_tasks
+            )
 
         return {
             "success": success,
@@ -210,14 +212,33 @@ class KeywordsService:
                 detail="Keyword not found"
             )
 
+        word_to_delete = keyword.word
+
+        # Удаляем из БД
         await self.session.delete(keyword)
         await self.session.commit()
+
+        # Очищаем matched_keywords в комментариях
+        stmt_clean = update(ModerationComment).where(
+            ModerationComment.matched_keywords.contains([word_to_delete])
+        ).values(
+            matched_keywords=ModerationComment.matched_keywords.op('-')(word_to_delete)
+        )
+        await self.session.execute(stmt_clean)
+        await self.session.commit()
+
         return {"success": True, "id": id}
 
     async def delete_all_keywords(self) -> dict:
         stmt = delete(Keyword)
         result = await self.session.execute(stmt)
         await self.session.commit()
+
+        # Очищаем matched_keywords во всех комментариях
+        stmt_clean = update(ModerationComment).values(matched_keywords=[])
+        await self.session.execute(stmt_clean)
+        await self.session.commit()
+
         return {"success": True, "count": result.rowcount}
 
     async def sync_generated_forms(self, keyword_id: int) -> None:
@@ -286,7 +307,12 @@ class KeywordsService:
             "exclusions": exclusions
         }
 
-    async def add_manual_keyword_form(self, id: int, form: str) -> dict:
+    async def add_manual_keyword_form(
+        self,
+        id: int,
+        form: str,
+        background_tasks: BackgroundTasks | None = None
+    ) -> dict:
         stmt = select(Keyword).where(Keyword.id == id)
         result = await self.session.execute(stmt)
         keyword = result.scalar_one_or_none()
@@ -316,10 +342,19 @@ class KeywordsService:
             self.session.add(f_obj)
             await self.session.commit()
 
-        await self.recalculator._execute_recalculate(id)
+        await self.recalculate_keyword_matches(
+            requested_by=f"add_manual_form:{id}",
+            background_tasks=background_tasks,
+            single_keyword_id=id
+        )
         return await self.get_keyword_forms(id)
 
-    async def remove_manual_keyword_form(self, id: int, form: str) -> dict:
+    async def remove_manual_keyword_form(
+        self,
+        id: int,
+        form: str,
+        background_tasks: BackgroundTasks | None = None
+    ) -> dict:
         normalized_form = normalize_for_keyword_match(form)
         stmt_del = delete(KeywordForm).where(
             KeywordForm.keyword_id == id,
@@ -329,10 +364,19 @@ class KeywordsService:
         await self.session.execute(stmt_del)
         await self.session.commit()
 
-        await self.recalculator._execute_recalculate(id)
+        await self.recalculate_keyword_matches(
+            requested_by=f"remove_manual_form:{id}",
+            background_tasks=background_tasks,
+            single_keyword_id=id
+        )
         return await self.get_keyword_forms(id)
 
-    async def add_keyword_form_exclusion(self, id: int, form: str) -> dict:
+    async def add_keyword_form_exclusion(
+        self,
+        id: int,
+        form: str,
+        background_tasks: BackgroundTasks | None = None
+    ) -> dict:
         stmt = select(Keyword).where(Keyword.id == id)
         result = await self.session.execute(stmt)
         keyword = result.scalar_one_or_none()
@@ -361,10 +405,19 @@ class KeywordsService:
             await self.session.commit()
 
         await self.sync_generated_forms(id)
-        await self.recalculator._execute_recalculate(id)
+        await self.recalculate_keyword_matches(
+            requested_by=f"add_exclusion:{id}",
+            background_tasks=background_tasks,
+            single_keyword_id=id
+        )
         return await self.get_keyword_forms(id)
 
-    async def remove_keyword_form_exclusion(self, id: int, form: str) -> dict:
+    async def remove_keyword_form_exclusion(
+        self,
+        id: int,
+        form: str,
+        background_tasks: BackgroundTasks | None = None
+    ) -> dict:
         normalized_form = normalize_for_keyword_match(form)
         stmt_del = delete(KeywordFormExclusion).where(
             KeywordFormExclusion.keyword_id == id,
@@ -374,13 +427,18 @@ class KeywordsService:
         await self.session.commit()
 
         await self.sync_generated_forms(id)
-        await self.recalculator._execute_recalculate(id)
+        await self.recalculate_keyword_matches(
+            requested_by=f"remove_exclusion:{id}",
+            background_tasks=background_tasks,
+            single_keyword_id=id
+        )
         return await self.get_keyword_forms(id)
 
     async def recalculate_keyword_matches(
         self,
         requested_by: str | None = None,
-        background_tasks: BackgroundTasks | None = None
+        background_tasks: BackgroundTasks | None = None,
+        single_keyword_id: int | None = None
     ) -> KeywordRecalculationJob:
         # Проверяем наличие активной задачи
         active_job = await self.recalculator.get_active_job()
@@ -390,7 +448,8 @@ class KeywordsService:
         # Создаем новую задачу
         job = KeywordRecalculationJob(
             status="pending",
-            requested_by=requested_by
+            requested_by=requested_by,
+            single_keyword_id=single_keyword_id
         )
         self.session.add(job)
         await self.session.commit()

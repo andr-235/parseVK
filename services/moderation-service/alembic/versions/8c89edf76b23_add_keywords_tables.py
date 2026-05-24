@@ -23,6 +23,7 @@ def upgrade() -> None:
     op.create_table('keyword_recalculation_jobs',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('status', sa.String(length=32), nullable=False),
+    sa.Column('single_keyword_id', sa.BigInteger(), nullable=True),
     sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('finished_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('error', sa.Text(), nullable=True),

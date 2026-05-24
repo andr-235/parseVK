@@ -26,9 +26,7 @@ def build_match_pattern(escaped_keyword: str, normalized_word: str, is_phrase: b
     boundary_start = f"(?<!{WORD_CHARS_PATTERN})" if starts_with_word_char else ""
     boundary_end = f"(?!{WORD_CHARS_PATTERN})" if ends_with_word_char else ""
 
-    if is_phrase:
-        return f"{boundary_start}{escaped_keyword}{boundary_end}"
-    return f"{boundary_start}{escaped_keyword}"
+    return f"{boundary_start}{escaped_keyword}{boundary_end}"
 
 
 class RecalculationWorker:
@@ -65,7 +63,7 @@ class RecalculationWorker:
             await session.commit()
             return len(stale_jobs)
 
-    async def run_recalculation(self, job_id: int, single_keyword_id: int | None = None) -> None:
+    async def run_recalculation(self, job_id: int) -> None:
         async with self.session_maker() as session:
             # Получаем и лочим задачу
             stmt = select(KeywordRecalculationJob).where(KeywordRecalculationJob.id == job_id).with_for_update()
@@ -82,6 +80,7 @@ class RecalculationWorker:
 
             job.status = "running"
             job.started_at = utcnow()
+            single_keyword_id = job.single_keyword_id
             session.add(job)
             await session.commit()
 

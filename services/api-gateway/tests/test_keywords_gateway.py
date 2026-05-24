@@ -32,6 +32,32 @@ def test_format_keyword():
     assert formatted["updatedAt"] == "2026-05-24T12:05:00Z"
 
 
+def test_format_job():
+    service = KeywordsGatewayService()
+    
+    raw = {
+        "id": 1,
+        "status": "pending",
+        "single_keyword_id": 12,
+        "started_at": "2026-05-24T12:00:00Z",
+        "finished_at": None,
+        "error": None,
+        "requested_by": "api",
+        "created_at": "2026-05-24T11:59:00Z"
+    }
+    
+    formatted = service._format_job(raw)
+    
+    assert formatted["id"] == 1
+    assert formatted["status"] == "pending"
+    assert formatted["singleKeywordId"] == 12
+    assert formatted["startedAt"] == "2026-05-24T12:00:00Z"
+    assert formatted["finishedAt"] is None
+    assert formatted["error"] is None
+    assert formatted["requestedBy"] == "api"
+    assert formatted["createdAt"] == "2026-05-24T11:59:00Z"
+
+
 class DummyFile:
     def __init__(self, filename: str, content: bytes):
         self.filename = filename

@@ -117,36 +117,56 @@ async def get_keyword_forms(
 async def add_manual_keyword_form(
     id: int,
     payload: KeywordFormDto,
+    background_tasks: BackgroundTasks,
     service: KeywordsService = Depends(get_keywords_service),
 ):
-    return await service.add_manual_keyword_form(id=id, form=payload.form)
+    return await service.add_manual_keyword_form(
+        id=id,
+        form=payload.form,
+        background_tasks=background_tasks
+    )
 
 
 @router.delete("/{id}/forms/manual", response_model=KeywordFormsResponse)
 async def remove_manual_keyword_form(
     id: int,
     payload: KeywordFormDto,
+    background_tasks: BackgroundTasks,
     service: KeywordsService = Depends(get_keywords_service),
 ):
-    return await service.remove_manual_keyword_form(id=id, form=payload.form)
+    return await service.remove_manual_keyword_form(
+        id=id,
+        form=payload.form,
+        background_tasks=background_tasks
+    )
 
 
 @router.post("/{id}/forms/exclusions", response_model=KeywordFormsResponse)
 async def add_keyword_form_exclusion(
     id: int,
     payload: KeywordFormDto,
+    background_tasks: BackgroundTasks,
     service: KeywordsService = Depends(get_keywords_service),
 ):
-    return await service.add_keyword_form_exclusion(id=id, form=payload.form)
+    return await service.add_keyword_form_exclusion(
+        id=id,
+        form=payload.form,
+        background_tasks=background_tasks
+    )
 
 
 @router.delete("/{id}/forms/exclusions", response_model=KeywordFormsResponse)
 async def remove_keyword_form_exclusion(
     id: int,
     payload: KeywordFormDto,
+    background_tasks: BackgroundTasks,
     service: KeywordsService = Depends(get_keywords_service),
 ):
-    return await service.remove_keyword_form_exclusion(id=id, form=payload.form)
+    return await service.remove_keyword_form_exclusion(
+        id=id,
+        form=payload.form,
+        background_tasks=background_tasks
+    )
 
 
 @router.post("/recalculate-matches", response_model=KeywordRecalculationJobResponse)

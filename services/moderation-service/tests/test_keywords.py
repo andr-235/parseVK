@@ -47,9 +47,69 @@ def test_build_match_pattern():
     pattern_word = build_match_pattern("тест", "тест", is_phrase=False)
     assert "teст" not in pattern_word
     assert pattern_word.startswith("(?<![a-zA-Z0-9_\\u0400-\\u04FF])")
-    assert not pattern_word.endswith("(?![a-zA-Z0-9_\\u0400-\\u04FF])")
+    assert pattern_word.endswith("(?![a-zA-Z0-9_\\u0400-\\u04FF])")
 
     # Проверка фразы (поиск по полному совпадению с границами с обоих сторон)
     pattern_phrase = build_match_pattern("черная кошка", "черная кошка", is_phrase=True)
     assert pattern_phrase.startswith("(?<![a-zA-Z0-9_\\u0400-\\u04FF])")
     assert pattern_phrase.endswith("(?![a-zA-Z0-9_\\u0400-\\u04FF])")
+
+
+from unittest.mock import AsyncMock, MagicMock
+from app.modules.keywords.service import KeywordsService
+from app.db.models import Keyword
+
+
+@pytest.mark.anyio
+async def test_keywords_service_add_new():
+    session = MagicMock()
+    session.execute = AsyncMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    session.add = MagicMock()
+    
+    # Mocking select(Keyword).where(...)
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    session.execute.return_value = mock_result
+    
+    session_maker = AsyncMock()
+    service = KeywordsService(session, session_maker)
+    
+    # Замокаем внутренние методы, чтобы не запускать реальный пересчет
+    service.sync_generated_forms = AsyncMock()
+    service.recalculate_keyword_matches = AsyncMock()
+    
+    kw = await service.add_keyword("кошка", category="животные", is_phrase=False)
+    
+    assert kw.word == "кошка"
+    assert kw.category == "животные"
+    assert kw.is_phrase is False
+    
+    session.add.assert_called_once()
+    service.sync_generated_forms.assert_called_once_with(kw.id)
+    service.recalculate_keyword_matches.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_keywords_service_delete():
+    session = MagicMock()
+    session.execute = AsyncMock()
+    session.commit = AsyncMock()
+    session.delete = AsyncMock()
+    
+    # Mocking select(Keyword).where(...)
+    kw = Keyword(id=1, word="собака", category="животные")
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = kw
+    session.execute.return_value = mock_result
+    
+    session_maker = AsyncMock()
+    service = KeywordsService(session, session_maker)
+    
+    res = await service.delete_keyword(1)
+    
+    assert res["success"] is True
+    assert res["id"] == 1
+    
+    session.delete.assert_called_once_with(kw)

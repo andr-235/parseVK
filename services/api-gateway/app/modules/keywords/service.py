@@ -9,6 +9,37 @@ class KeywordsGatewayService:
         self.moderation_url = settings.moderation_base_url
         self.headers = {"X-Internal-Service-Token": settings.internal_service_token}
 
+    async def _request(self, method: str, path: str, **kwargs) -> dict:
+        url = f"{self.moderation_url}{path}"
+        async with httpx.AsyncClient() as client:
+            try:
+                resp = await client.request(method, url, headers=self.headers, **kwargs)
+                resp.raise_for_status()
+                return resp.json()
+            except httpx.HTTPStatusError as e:
+                try:
+                    detail = e.response.json().get("detail", str(e))
+                except Exception:
+                    detail = e.response.text or str(e)
+                raise HTTPException(status_code=e.response.status_code, detail=detail)
+            except httpx.RequestError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"Moderation service unavailable: {str(e)}"
+                )
+
+    def _format_job(self, job: dict) -> dict:
+        return {
+            "id": job["id"],
+            "status": job["status"],
+            "singleKeywordId": job.get("single_keyword_id"),
+            "startedAt": job.get("started_at"),
+            "finishedAt": job.get("finished_at"),
+            "error": job.get("error"),
+            "requestedBy": job.get("requested_by"),
+            "createdAt": job.get("created_at"),
+        }
+
     def _format_keyword(self, kw: dict) -> dict:
         return {
             "id": kw["id"],
@@ -24,15 +55,7 @@ class KeywordsGatewayService:
         if search:
             params["search"] = search
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.moderation_url}/internal/moderation/keywords",
-                params=params,
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request("GET", "/internal/moderation/keywords", params=params)
         return {
             "keywords": [self._format_keyword(kw) for kw in raw["keywords"]],
             "total": raw["total"],
@@ -47,28 +70,15 @@ class KeywordsGatewayService:
             "category": payload.get("category"),
             "is_phrase": payload.get("isPhrase", False),
         }
-
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.moderation_url}/internal/moderation/keywords/add",
-                json=body,
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request("POST", "/internal/moderation/keywords/add", json=body)
         return self._format_keyword(raw)
 
     async def bulk_add_keywords(self, payload: dict) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.moderation_url}/internal/moderation/keywords/bulk-add",
-                json={"words": payload.get("words", [])},
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request(
+            "POST",
+            "/internal/moderation/keywords/bulk-add",
+            json={"words": payload.get("words", [])},
+        )
         return {
             "success": [self._format_keyword(kw) for kw in raw["success"]],
             "failed": raw["failed"],
@@ -108,15 +118,11 @@ class KeywordsGatewayService:
                 detail="File encoding must be UTF-8",
             )
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.moderation_url}/internal/moderation/keywords/upload-content",
-                json={"content": content_str},
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request(
+            "POST",
+            "/internal/moderation/keywords/upload-content",
+            json={"content": content_str},
+        )
         return {
             "success": [self._format_keyword(kw) for kw in raw["success"]],
             "failed": raw["failed"],
@@ -128,50 +134,25 @@ class KeywordsGatewayService:
         }
 
     async def update_keyword_category(self, id: int, payload: dict) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.patch(
-                f"{self.moderation_url}/internal/moderation/keywords/{id}",
-                json={"category": payload.get("category")},
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request(
+            "PATCH",
+            f"/internal/moderation/keywords/{id}",
+            json={"category": payload.get("category")},
+        )
         return self._format_keyword(raw)
 
     async def delete_all_keywords(self) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.delete(
-                f"{self.moderation_url}/internal/moderation/keywords/all",
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request("DELETE", "/internal/moderation/keywords/all")
         # Мапим count для фронтенда IDeleteResponse
         return {"count": raw.get("count", 0)}
 
     async def delete_keyword(self, id: int) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.delete(
-                f"{self.moderation_url}/internal/moderation/keywords/{id}",
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        await self._request("DELETE", f"/internal/moderation/keywords/{id}")
         # Возвращаем удаленный KeywordResponse для полной совместимости
         return {"id": id, "success": True}
 
     async def get_keyword_forms(self, id: int) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.moderation_url}/internal/moderation/keywords/{id}/forms",
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request("GET", f"/internal/moderation/keywords/{id}/forms")
         return {
             "keywordId": raw["keyword_id"],
             "word": raw["word"],
@@ -182,15 +163,11 @@ class KeywordsGatewayService:
         }
 
     async def add_manual_keyword_form(self, id: int, payload: dict) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.moderation_url}/internal/moderation/keywords/{id}/forms/manual",
-                json={"form": payload.get("form")},
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request(
+            "POST",
+            f"/internal/moderation/keywords/{id}/forms/manual",
+            json={"form": payload.get("form")},
+        )
         return {
             "keywordId": raw["keyword_id"],
             "word": raw["word"],
@@ -201,16 +178,11 @@ class KeywordsGatewayService:
         }
 
     async def remove_manual_keyword_form(self, id: int, payload: dict) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.request(
-                "DELETE",
-                f"{self.moderation_url}/internal/moderation/keywords/{id}/forms/manual",
-                json={"form": payload.get("form")},
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request(
+            "DELETE",
+            f"/internal/moderation/keywords/{id}/forms/manual",
+            json={"form": payload.get("form")},
+        )
         return {
             "keywordId": raw["keyword_id"],
             "word": raw["word"],
@@ -221,15 +193,11 @@ class KeywordsGatewayService:
         }
 
     async def add_keyword_form_exclusion(self, id: int, payload: dict) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.moderation_url}/internal/moderation/keywords/{id}/forms/exclusions",
-                json={"form": payload.get("form")},
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request(
+            "POST",
+            f"/internal/moderation/keywords/{id}/forms/exclusions",
+            json={"form": payload.get("form")},
+        )
         return {
             "keywordId": raw["keyword_id"],
             "word": raw["word"],
@@ -240,16 +208,11 @@ class KeywordsGatewayService:
         }
 
     async def remove_keyword_form_exclusion(self, id: int, payload: dict) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.request(
-                "DELETE",
-                f"{self.moderation_url}/internal/moderation/keywords/{id}/forms/exclusions",
-                json={"form": payload.get("form")},
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request(
+            "DELETE",
+            f"/internal/moderation/keywords/{id}/forms/exclusions",
+            json={"form": payload.get("form")},
+        )
         return {
             "keywordId": raw["keyword_id"],
             "word": raw["word"],
@@ -260,31 +223,15 @@ class KeywordsGatewayService:
         }
 
     async def recalculate_keyword_matches(self) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.moderation_url}/internal/moderation/keywords/recalculate-matches",
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
+        raw = await self._request("POST", "/internal/moderation/keywords/recalculate-matches")
+        return self._format_job(raw)
 
-        # Возвращаем заглушку IKeywordFormsRebuildResponse для совместимости с фронтом
-        return {
-            "processed": 0,
-            "updated": 0,
-            "created": 0,
-            "deleted": 0,
-        }
+    async def get_recalculation_job_status(self, id: int) -> dict:
+        raw = await self._request("GET", f"/internal/moderation/keywords/recalculation-jobs/{id}")
+        return self._format_job(raw)
 
     async def rebuild_keyword_forms(self) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.moderation_url}/internal/moderation/keywords/rebuild-forms",
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-
+        raw = await self._request("POST", "/internal/moderation/keywords/rebuild-forms")
         return {
             "keywordsRebuilt": raw.get("keywords_rebuilt", 0),
             "processed": raw.get("processed", 0),

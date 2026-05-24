@@ -46,6 +46,7 @@ class ProcessedEvent(Base):
 
 
 from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 
 
 class Keyword(Base):
@@ -57,6 +58,19 @@ class Keyword(Base):
     is_phrase: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    keyword_forms = relationship(
+        "KeywordForm",
+        back_populates="keyword",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    keyword_form_exclusions = relationship(
+        "KeywordFormExclusion",
+        back_populates="keyword",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class KeywordForm(Base):
@@ -73,6 +87,8 @@ class KeywordForm(Base):
     source: Mapped[str] = mapped_column(String(32), nullable=False)  # "generated" | "manual"
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
+    keyword = relationship("Keyword", back_populates="keyword_forms")
+
 
 class KeywordFormExclusion(Base):
     __tablename__ = "keyword_form_exclusions"
@@ -87,12 +103,15 @@ class KeywordFormExclusion(Base):
     form: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
+    keyword = relationship("Keyword", back_populates="keyword_form_exclusions")
+
 
 class KeywordRecalculationJob(Base):
     __tablename__ = "keyword_recalculation_jobs"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")  # "pending" | "running" | "succeeded" | "failed"
+    single_keyword_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -117,6 +117,14 @@ async def recalculate_keyword_matches(
     return await service.recalculate_keyword_matches()
 
 
+@router.get("/recalculation-jobs/{id}")
+async def get_recalculation_job_status(
+    id: int,
+    service: KeywordsGatewayService = Depends(get_keywords_gateway_service),
+):
+    return await service.get_recalculation_job_status(id)
+
+
 @router.post("/rebuild-forms")
 async def rebuild_keyword_forms(
     service: KeywordsGatewayService = Depends(get_keywords_gateway_service),
