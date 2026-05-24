@@ -64,56 +64,71 @@ class RecalculationWorker:
             return len(stale_jobs)
 
     async def run_recalculation(self, job_id: int) -> None:
-        async with self.session_maker() as session:
-            # Получаем и лочим задачу
-            stmt = select(KeywordRecalculationJob).where(KeywordRecalculationJob.id == job_id).with_for_update()
-            result = await session.execute(stmt)
-            job = result.scalar_one_or_none()
-
-            if not job:
-                logger.error(f"Recalculation job {job_id} not found")
-                return
-
-            if job.status == "failed" or job.status == "succeeded":
-                logger.warning(f"Job {job_id} already finished")
-                return
-
-            job.status = "running"
-            job.started_at = utcnow()
-            single_keyword_id = job.single_keyword_id
-            session.add(job)
-            await session.commit()
-
-        # Запускаем пересчет в try-except для гарантированной записи ошибок
-        try:
-            stats = await self._execute_recalculate(single_keyword_id)
-
+        current_job_id = job_id
+        
+        while current_job_id is not None:
             async with self.session_maker() as session:
-                stmt = select(KeywordRecalculationJob).where(KeywordRecalculationJob.id == job_id).with_for_update()
+                # Получаем и лочим задачу
+                stmt = select(KeywordRecalculationJob).where(KeywordRecalculationJob.id == current_job_id).with_for_update()
                 result = await session.execute(stmt)
-                job = result.scalar_one()
-                job.status = "succeeded"
-                job.finished_at = utcnow()
-                job.processed = stats.get("processed", 0)
-                job.updated = stats.get("updated", 0)
-                job.created = stats.get("created", 0)
-                job.deleted = stats.get("deleted", 0)
+                job = result.scalar_one_or_none()
+
+                if not job:
+                    logger.error(f"Recalculation job {current_job_id} not found")
+                    break
+
+                if job.status == "failed" or job.status == "succeeded":
+                    logger.warning(f"Job {current_job_id} already finished")
+                    break
+
+                job.status = "running"
+                job.started_at = utcnow()
+                single_keyword_id = job.single_keyword_id
                 session.add(job)
                 await session.commit()
 
-            logger.info(f"Recalculation job {job_id} completed successfully. Stats: {stats}")
+            # Запускаем пересчет в try-except для гарантированной записи ошибок
+            try:
+                stats = await self._execute_recalculate(single_keyword_id)
 
-        except Exception as e:
-            logger.exception(f"Error in recalculation job {job_id}")
+                async with self.session_maker() as session:
+                    stmt = select(KeywordRecalculationJob).where(KeywordRecalculationJob.id == current_job_id).with_for_update()
+                    result = await session.execute(stmt)
+                    job = result.scalar_one()
+                    job.status = "succeeded"
+                    job.finished_at = utcnow()
+                    job.processed = stats.get("processed", 0)
+                    job.updated = stats.get("updated", 0)
+                    job.created = stats.get("created", 0)
+                    job.deleted = stats.get("deleted", 0)
+                    session.add(job)
+                    await session.commit()
+
+                logger.info(f"Recalculation job {current_job_id} completed successfully. Stats: {stats}")
+
+            except Exception as e:
+                logger.exception(f"Error in recalculation job {current_job_id}")
+                async with self.session_maker() as session:
+                    stmt = select(KeywordRecalculationJob).where(KeywordRecalculationJob.id == current_job_id).with_for_update()
+                    result = await session.execute(stmt)
+                    job = result.scalar_one()
+                    job.status = "failed"
+                    job.finished_at = utcnow()
+                    job.error = str(e)
+                    session.add(job)
+                    await session.commit()
+
+            # Проверяем, есть ли следующая pending задача в очереди
             async with self.session_maker() as session:
-                stmt = select(KeywordRecalculationJob).where(KeywordRecalculationJob.id == job_id).with_for_update()
-                result = await session.execute(stmt)
-                job = result.scalar_one()
-                job.status = "failed"
-                job.finished_at = utcnow()
-                job.error = str(e)
-                session.add(job)
-                await session.commit()
+                stmt_next = select(KeywordRecalculationJob).where(
+                    KeywordRecalculationJob.status == "pending"
+                ).order_by(KeywordRecalculationJob.id.asc()).limit(1)
+                result_next = await session.execute(stmt_next)
+                next_job = result_next.scalar_one_or_none()
+                if next_job:
+                    current_job_id = next_job.id
+                else:
+                    current_job_id = None
 
     async def _execute_recalculate(self, single_keyword_id: int | None = None) -> dict:
         processed = 0

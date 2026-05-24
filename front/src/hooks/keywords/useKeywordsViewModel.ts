@@ -88,10 +88,14 @@ export const useKeywordsViewModel = () => {
 
     try {
       const result = await keywordsService.recalculateKeywordMatches()
-      toast.success(
-        `Обработано: ${result.processed}, обновлено: ${result.updated}, создано: ${result.created}, удалено: ${result.deleted}`,
-        { id: toastId, duration: 5000 }
-      )
+      if (result.processed === 0 && result.updated === 0 && result.created === 0 && result.deleted === 0) {
+        toast.success('Пересчет совпадений ключевых слов запущен в фоновом режиме', { id: toastId, duration: 4000 })
+      } else {
+        toast.success(
+          `Обработано: ${result.processed}, обновлено: ${result.updated}, создано: ${result.created}, удалено: ${result.deleted}`,
+          { id: toastId, duration: 5000 }
+        )
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Ошибка при пересчете совпадений', {
         id: toastId,
@@ -109,10 +113,16 @@ export const useKeywordsViewModel = () => {
 
     try {
       const result = await keywordsService.rebuildKeywordForms()
-      toast.success(
-        `Слов обновлено: ${result.keywordsRebuilt}, обработано: ${result.processed}, обновлено: ${result.updated}, создано: ${result.created}, удалено: ${result.deleted}`,
-        { id: toastId, duration: 6000 }
-      )
+      if (result.keywordsRebuilt === 0 && result.processed === 0 && result.updated === 0 && result.created === 0 && result.deleted === 0) {
+        toast.success('Пересборка словоформ и пересчет совпадений запущены', { id: toastId, duration: 4000 })
+      } else if (result.processed === 0 && result.updated === 0 && result.created === 0 && result.deleted === 0) {
+        toast.success(`Пересобрано словоформ для ${result.keywordsRebuilt} слов. Пересчет запущен в фоне.`, { id: toastId, duration: 5000 })
+      } else {
+        toast.success(
+          `Слов обновлено: ${result.keywordsRebuilt}, обработано: ${result.processed}, обновлено: ${result.updated}, создано: ${result.created}, удалено: ${result.deleted}`,
+          { id: toastId, duration: 6000 }
+        )
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Ошибка при пересборке словоформ', {
         id: toastId,

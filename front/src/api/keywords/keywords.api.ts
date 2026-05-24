@@ -174,7 +174,6 @@ export const keywordsService = {
         created: number
         deleted: number
       }>(response, 'Failed to recalculate keyword matches')
-      toast.success('Пересчёт совпадений ключевых слов завершён')
       return result
     } catch (error) {
       toast.error('Не удалось пересчитать совпадения ключевых слов')
@@ -192,7 +191,6 @@ export const keywordsService = {
         response,
         'Failed to rebuild keyword forms'
       )
-      toast.success('Словоформы ключевых слов пересобраны')
       return result
     } catch (error) {
       toast.error('Не удалось пересобрать словоформы ключевых слов')

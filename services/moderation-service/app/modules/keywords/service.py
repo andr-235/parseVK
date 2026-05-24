@@ -498,8 +498,17 @@ class KeywordsService:
         await self.session.commit()
         await self.session.refresh(job)
 
+        # Проверяем, есть ли запущенный воркер (статус running)
+        has_running = any(j.status == "running" for j in active_jobs)
+
         if background_tasks:
-            background_tasks.add_task(self.recalculator.run_recalculation, job.id)
+            if not has_running:
+                background_tasks.add_task(self.recalculator.run_recalculation, job.id)
+            else:
+                logger.info(
+                    f"Recalculation job {job.id} created as pending. "
+                    f"It will be processed by the already running worker."
+                )
         else:
             # Синхронно (для тестов или ручного полного пересчета из API)
             await self.recalculator.run_recalculation(job.id)
