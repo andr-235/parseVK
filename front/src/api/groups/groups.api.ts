@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/api/common'
+import { API_URL, GATEWAY_API_URL } from '@/api/common'
 import { buildQueryString, createRequest, handleResponse } from '@/api/common'
 import type {
   IGroupResponse,
@@ -9,6 +9,8 @@ import type {
 } from '@/types/common'
 import type { SaveGroupDto } from '@/types/common'
 
+const CONTENT_GROUPS_API_URL = `${GATEWAY_API_URL}/v1/content/groups`
+
 export const groupsService = {
   async fetchGroups(params?: { page?: number; limit?: number }): Promise<IGroupsListResponse> {
     try {
@@ -16,7 +18,7 @@ export const groupsService = {
         page: params?.page,
         limit: params?.limit,
       })
-      const url = `${API_URL}/groups${query ? `?${query}` : ''}`
+      const url = `${CONTENT_GROUPS_API_URL}${query ? `?${query}` : ''}`
       const response = await createRequest(url)
 
       const data = await handleResponse<IGroupsListResponse>(response, 'Failed to fetch groups')

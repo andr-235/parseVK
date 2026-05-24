@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_vk: str = "parsevk.vk.events"
     kafka_consumer_enabled: bool = False
+    photo_analysis_base_url: str | None = None
+    photo_analysis_timeout_seconds: float = 1.5
+    photo_analysis_max_concurrency: int = 5
+    photo_analysis_enrichment_budget_seconds: float = 2.0
 
 
 settings = Settings()

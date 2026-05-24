@@ -546,7 +546,7 @@ export interface AuthorCardResponse {
   screenName: string | null
   profileUrl: string | null
   city: Record<string, unknown> | string | null
-  summary: PhotoAnalysisSummary
+  summary: PhotoAnalysisSummary | null
   photosCount: number | null
   audiosCount: number | null
   videosCount: number | null
