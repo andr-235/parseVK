@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,5 +18,12 @@ class Settings(BaseSettings):
     use_fake_vk_adapter: bool = True
     default_group_ids: list[int] = [1]
 
+    @model_validator(mode="after")
+    def validate_vk_token(self) -> "Settings":
+        if not self.use_fake_vk_adapter and not self.vk_token:
+            raise ValueError("VK_SERVICE_VK_TOKEN is required when VK_SERVICE_USE_FAKE_VK_ADAPTER is false")
+        return self
+
 
 settings = Settings()
+
