@@ -5,9 +5,8 @@ Audit date: 2026-05-23.
 ## Scope
 
 Issue #126 audited the final Go rewrite migration surface for `parsevkctl`.
-The Go CLI is the canonical implementation; the PowerShell entrypoint at
-`tools/parsevkctl/parsevkctl.ps1` is a legacy wrapper that delegates to the Go
-binary and preserves its exit code.
+The Go CLI is the canonical implementation. The legacy PowerShell wrapper was
+removed after the Go workflow reached command parity.
 
 ## Command Parity
 
@@ -22,7 +21,6 @@ Verified workflow surface:
 - `parsevkctl task pr <issue>`
 - `parsevkctl task merge <issue>`
 - `parsevkctl --json ...`
-- `tools/parsevkctl/parsevkctl.ps1 ...`
 
 `task sync --apply` remains intentionally unsupported. It is not required for
 the completed migration because `task sync` is documented as preview/read-only.

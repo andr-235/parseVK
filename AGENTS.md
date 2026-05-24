@@ -6,8 +6,10 @@ Codex Agent Playbook
 Основная идея
 Пользователь формулирует задачу локально в Codex. Codex сам ведёт задачу через GitHub Issue, GitHub Project Kanban, git-ветку, Pull Request и merge, используя локальный инструмент:
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1
+cd tools/parsevkctl-go
+go run ./cmd/parsevkctl --help
 ```
+Команды ниже выполняются из `tools/parsevkctl-go`, если не указано иное.
 Используй `parsevkctl` для всех операций жизненного цикла задачи. Не управляй Issue, Project status, PR и merge вручную через случайные `gh`-команды, если для этого уже есть команда `parsevkctl`.
 Kanban flow
 Обязательный порядок статусов:
@@ -29,29 +31,30 @@ git branch --show-current
 ```
 Если рабочее дерево чистое, запустить полный старт задачи:
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task full "TASK_TITLE" -Body "TASK_DESCRIPTION" -AssignMe
+go run ./cmd/parsevkctl task create "TASK_TITLE" --body "TASK_DESCRIPTION"
+go run ./cmd/parsevkctl task start ISSUE_NUMBER
 ```
 Если рабочее дерево грязное и пользователь не просил продолжать с текущими изменениями — остановиться и объяснить, что есть незакоммиченные изменения.
 Если пользователь явно разрешил создать только карточку без ветки, использовать:
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task full "TASK_TITLE" -Body "TASK_DESCRIPTION" -AssignMe -NoBranch
+go run ./cmd/parsevkctl task create "TASK_TITLE" --body "TASK_DESCRIPTION"
 ```
 Работа с существующей задачей
 Взять существующую Issue в работу:
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task start ISSUE_NUMBER
+go run ./cmd/parsevkctl task start ISSUE_NUMBER
 ```
-Только переместить карточку в `In Progress`, без создания ветки:
+Просмотреть состояние задачи без изменений:
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task start ISSUE_NUMBER -NoBranch
+go run ./cmd/parsevkctl task status ISSUE_NUMBER
 ```
-Ручной перевод в `Review`:
+Создать PR и перевести карточку в `Review`:
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task review ISSUE_NUMBER
+go run ./cmd/parsevkctl task pr ISSUE_NUMBER
 ```
-Ручное завершение без PR использовать только для non-code задач или явного override:
+Смёржить связанный PR и перевести карточку в `Done`:
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task done ISSUE_NUMBER
+go run ./cmd/parsevkctl task merge ISSUE_NUMBER
 ```
 Реализация задачи
 После старта задачи Codex должен:
@@ -116,7 +119,7 @@ test/145-gateway-integration-checks
 Создание Pull Request
 После реализации, проверок и commit вызвать:
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task pr ISSUE_NUMBER
+go run ./cmd/parsevkctl task pr ISSUE_NUMBER
 ```
 Команда должна:
 запушить текущую ветку;
@@ -141,7 +144,7 @@ Closes #145
 Merge задачи
 Нормальный путь завершения code-задачи:
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task merge ISSUE_NUMBER
+go run ./cmd/parsevkctl task merge ISSUE_NUMBER
 ```
 Merge разрешён только если:
 PR не draft;
