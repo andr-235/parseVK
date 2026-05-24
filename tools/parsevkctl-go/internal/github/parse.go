@@ -31,6 +31,13 @@ type pullRequestJSON struct {
 	Head     string  `json:"headRefName"`
 }
 
+type pullRequestCheckJSON struct {
+	Name     string `json:"name"`
+	State    string `json:"state"`
+	Bucket   string `json:"bucket"`
+	Workflow string `json:"workflow"`
+}
+
 func parseIssueJSON(data []byte) (domain.Issue, error) {
 	var raw issueJSON
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -63,6 +70,55 @@ func parsePullRequestsJSON(data []byte) ([]domain.PullRequest, error) {
 	return prs, nil
 }
 
+func parsePullRequestChecksJSON(prNumber int, data []byte) (domain.PullRequestChecks, error) {
+	var raw []pullRequestCheckJSON
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return domain.PullRequestChecks{}, fmt.Errorf("parse pull request checks JSON: %w", err)
+	}
+
+	checks := make([]domain.PullRequestCheck, 0, len(raw))
+	for _, item := range raw {
+		checks = append(checks, pullRequestCheckFromParts(item.Workflow, item.Name, item.State, item.Bucket))
+	}
+	return summarizePullRequestChecks(prNumber, checks), nil
+}
+
+func parsePullRequestChecksText(prNumber int, output string) (domain.PullRequestChecks, error) {
+	lines := strings.Split(output, "\n")
+	checks := make([]domain.PullRequestCheck, 0, len(lines))
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if strings.Contains(line, "\t") {
+			columns := strings.Split(line, "\t")
+			name := strings.TrimSpace(columns[0])
+			state := ""
+			if len(columns) > 1 {
+				state = strings.TrimSpace(columns[1])
+			}
+			checks = append(checks, pullRequestCheckFromParts("", name, state, ""))
+			continue
+		}
+
+		fields := strings.Fields(trimmed)
+		if len(fields) < 2 {
+			checks = append(checks, pullRequestCheckFromParts("", trimmed, "", ""))
+			continue
+		}
+
+		stateIndex := len(fields) - 1
+		name := strings.Join(fields[:stateIndex], " ")
+		if strings.TrimSpace(name) == "" {
+			name = trimmed
+		}
+		checks = append(checks, pullRequestCheckFromParts("", name, fields[stateIndex], ""))
+	}
+
+	return summarizePullRequestChecks(prNumber, checks), nil
+}
+
 func issueFromJSON(raw issueJSON) domain.Issue {
 	return domain.Issue{
 		ID:     domain.TaskID(raw.Number),
@@ -86,6 +142,72 @@ func issueLabelsFromJSON(rawLabels []struct {
 	}
 
 	return labels
+}
+
+func pullRequestCheckFromParts(workflow string, name string, state string, bucketValue string) domain.PullRequestCheck {
+	checkName := strings.TrimSpace(name)
+	workflowName := strings.TrimSpace(workflow)
+	if workflowName != "" && checkName != "" && !strings.EqualFold(workflowName, checkName) {
+		checkName = workflowName + " / " + checkName
+	}
+	if checkName == "" {
+		checkName = "(unnamed check)"
+	}
+
+	normalized := classifyCheckState(state)
+	bucket := classifyCheckState(bucketValue)
+	if bucket == domain.CheckStateUnknown {
+		bucket = normalized
+	}
+	if bucket == domain.CheckStateSkipped {
+		bucket = domain.CheckStateSuccess
+	}
+
+	return domain.PullRequestCheck{
+		Name:   checkName,
+		State:  normalized,
+		Bucket: bucket,
+	}
+}
+
+func classifyCheckState(state string) domain.CheckState {
+	normalized := strings.ToUpper(strings.TrimSpace(state))
+	normalized = strings.TrimSuffix(normalized, ":")
+
+	switch normalized {
+	case "SUCCESS", "PASSED", "PASS", "COMPLETED":
+		return domain.CheckStateSuccess
+	case "SKIPPED", "SKIPPING", "NEUTRAL":
+		return domain.CheckStateSkipped
+	case "PENDING", "QUEUED", "IN_PROGRESS", "WAITING", "REQUESTED":
+		return domain.CheckStatePending
+	case "FAILURE", "FAILED", "FAIL", "ERROR", "CANCELLED", "CANCEL", "TIMED_OUT", "ACTION_REQUIRED":
+		return domain.CheckStateFailure
+	default:
+		return domain.CheckStateUnknown
+	}
+}
+
+func summarizePullRequestChecks(prNumber int, checks []domain.PullRequestCheck) domain.PullRequestChecks {
+	summary := domain.PullRequestChecks{
+		PullRequestNumber: prNumber,
+		Total:             len(checks),
+		Checks:            checks,
+	}
+	for _, check := range checks {
+		switch check.Bucket {
+		case domain.CheckStateSuccess:
+			summary.Successful++
+		case domain.CheckStatePending:
+			summary.Pending++
+		case domain.CheckStateFailure:
+			summary.Failed++
+		}
+		if check.State == domain.CheckStateSkipped {
+			summary.Skipped++
+		}
+	}
+	return summary
 }
 
 func pullRequestFromJSON(raw pullRequestJSON) domain.PullRequest {

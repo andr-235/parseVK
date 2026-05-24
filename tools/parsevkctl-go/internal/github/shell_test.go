@@ -69,6 +69,74 @@ func TestParsePullRequestsJSON(t *testing.T) {
 	}
 }
 
+func TestParsePullRequestChecksJSONBucketsStates(t *testing.T) {
+	t.Parallel()
+
+	checks, err := parsePullRequestChecksJSON(17, []byte(`[
+		{"name":"test","state":"SUCCESS","workflow":"parsevkctl"},
+		{"name":"typecheck","state":"IN_PROGRESS","workflow":"frontend"},
+		{"name":"lint","state":"FAILED","workflow":"backend"},
+		{"name":"optional","state":"NEUTRAL","workflow":"docs"},
+		{"name":"mystery","state":"STALE","workflow":"ci"}
+	]`))
+	if err != nil {
+		t.Fatalf("parsePullRequestChecksJSON returned error: %v", err)
+	}
+
+	if checks.PullRequestNumber != 17 {
+		t.Fatalf("pull request number = %d, want 17", checks.PullRequestNumber)
+	}
+	if checks.Total != 5 || checks.Successful != 2 || checks.Pending != 1 || checks.Failed != 1 || checks.Skipped != 1 {
+		t.Fatalf("unexpected totals: %#v", checks)
+	}
+	want := []domain.PullRequestCheck{
+		{Name: "parsevkctl / test", State: domain.CheckStateSuccess, Bucket: domain.CheckStateSuccess},
+		{Name: "frontend / typecheck", State: domain.CheckStatePending, Bucket: domain.CheckStatePending},
+		{Name: "backend / lint", State: domain.CheckStateFailure, Bucket: domain.CheckStateFailure},
+		{Name: "docs / optional", State: domain.CheckStateSkipped, Bucket: domain.CheckStateSuccess},
+		{Name: "ci / mystery", State: domain.CheckStateUnknown, Bucket: domain.CheckStateUnknown},
+	}
+	if !reflect.DeepEqual(checks.Checks, want) {
+		t.Fatalf("checks = %#v, want %#v", checks.Checks, want)
+	}
+}
+
+func TestParsePullRequestChecksTextBucketsStates(t *testing.T) {
+	t.Parallel()
+
+	checks, err := parsePullRequestChecksText(17, `parsevkctl / test	pass	1m	https://github.test/checks/1
+frontend / typecheck	pending	0s	https://github.test/checks/2
+backend / lint	fail	10s	https://github.test/checks/3
+docs / optional	skipping	0s	https://github.test/checks/4`)
+	if err != nil {
+		t.Fatalf("parsePullRequestChecksText returned error: %v", err)
+	}
+
+	if checks.Total != 4 || checks.Successful != 2 || checks.Pending != 1 || checks.Failed != 1 || checks.Skipped != 1 {
+		t.Fatalf("unexpected totals: %#v", checks)
+	}
+}
+
+func TestParsePullRequestChecksTextPrefersTabSeparatedStateColumn(t *testing.T) {
+	t.Parallel()
+
+	checks, err := parsePullRequestChecksText(17, "pending migrations / test\tpass\t1m\thttps://github.test/checks/1\nfail-safe check\tpass\t1m\thttps://github.test/checks/2")
+	if err != nil {
+		t.Fatalf("parsePullRequestChecksText returned error: %v", err)
+	}
+
+	if checks.Total != 2 || checks.Successful != 2 || checks.Pending != 0 || checks.Failed != 0 {
+		t.Fatalf("unexpected totals: %#v", checks)
+	}
+	want := []domain.PullRequestCheck{
+		{Name: "pending migrations / test", State: domain.CheckStateSuccess, Bucket: domain.CheckStateSuccess},
+		{Name: "fail-safe check", State: domain.CheckStateSuccess, Bucket: domain.CheckStateSuccess},
+	}
+	if !reflect.DeepEqual(checks.Checks, want) {
+		t.Fatalf("checks = %#v, want %#v", checks.Checks, want)
+	}
+}
+
 func TestCommandArguments(t *testing.T) {
 	t.Parallel()
 
@@ -106,6 +174,14 @@ func TestCommandArguments(t *testing.T) {
 			args: []string{"pr", "list", "--state", "open", "--head", "feature", "--base", "main", "--search", "issue 108", "--json", "number,title,state,isDraft,mergedAt,url,baseRefName,headRefName"},
 		},
 		{
+			name: "get pull request checks",
+			run: func(adapter *ShellAdapter) error {
+				_, err := adapter.GetPullRequestChecks(context.Background(), 7)
+				return err
+			},
+			args: []string{"pr", "checks", "7", "--json", "name,state,bucket,workflow,startedAt,completedAt,link"},
+		},
+		{
 			name: "merge pull request",
 			run: func(adapter *ShellAdapter) error {
 				return adapter.MergePullRequest(context.Background(), 7, MergePullRequestInput{
@@ -136,6 +212,22 @@ func TestCommandArguments(t *testing.T) {
 				t.Fatalf("args = %#v, want %#v", got, tt.args)
 			}
 		})
+	}
+}
+
+func TestGetPullRequestChecksParsesJSONStdoutWhenGHReturnsNonZero(t *testing.T) {
+	t.Parallel()
+
+	adapter := newShellAdapterWithRunner(func(context.Context, string, ...string) (commandResult, error) {
+		return commandResult{stdout: `[{"name":"typecheck","state":"COMPLETED","bucket":"fail","workflow":"frontend"}]`}, fakeExitError{code: 1}
+	})
+
+	checks, err := adapter.GetPullRequestChecks(context.Background(), 7)
+	if err != nil {
+		t.Fatalf("GetPullRequestChecks returned error: %v", err)
+	}
+	if checks.Failed != 1 {
+		t.Fatalf("failed checks = %d, want 1; checks=%#v", checks.Failed, checks)
 	}
 }
 
@@ -325,6 +417,9 @@ func (err fakeExitError) ExitCode() int {
 }
 
 func commandOutputFor(args []string) string {
+	if len(args) >= 3 && args[0] == "pr" && args[1] == "checks" {
+		return `[{"name":"test","state":"SUCCESS","workflow":"parsevkctl"}]`
+	}
 	if len(args) >= 2 && args[0] == "pr" && (args[1] == "list" || args[1] == "create") {
 		if args[1] == "list" {
 			return `[{"number":7,"title":"PR","state":"OPEN","isDraft":false,"mergedAt":null}]`

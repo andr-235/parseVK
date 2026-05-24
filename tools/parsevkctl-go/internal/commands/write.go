@@ -321,7 +321,13 @@ func BuildTaskMergePlan(ctx context.Context, input TaskIssueInput) (TaskMergePla
 		return TaskMergePlanResult{}, fmt.Errorf("pull request #%d base branch %q does not match %q", linked.Number, linked.Base, input.Config.DefaultBranch)
 	}
 	if requireChecks(input.Config) {
-		return TaskMergePlanResult{}, fmt.Errorf("merge.requireChecks=true but check status adapter is not implemented; verify checks manually or disable requireChecks in config")
+		checks, err := input.GitHub.GetPullRequestChecks(ctx, int(linked.Number))
+		if err != nil {
+			return TaskMergePlanResult{}, fmt.Errorf("get checks for pull request #%d: %w", linked.Number, err)
+		}
+		if err := validatePullRequestChecks(checks); err != nil {
+			return TaskMergePlanResult{}, err
+		}
 	}
 
 	currentState := task.DeriveState(task.LifecycleSnapshot{
@@ -443,6 +449,51 @@ Created via parsevkctl.
 
 func requireChecks(cfg config.Config) bool {
 	return cfg.Merge.RequireChecks != nil && *cfg.Merge.RequireChecks
+}
+
+func validatePullRequestChecks(checks domain.PullRequestChecks) error {
+	prNumber := checks.PullRequestNumber
+	if checks.Total == 0 || len(checks.Checks) == 0 {
+		return fmt.Errorf("pull request #%d has no checks; merge.requireChecks=true requires at least one successful check", prNumber)
+	}
+
+	pending := checkNamesByBucket(checks.Checks, domain.CheckStatePending)
+	if len(pending) > 0 {
+		return fmt.Errorf("pull request #%d has pending checks: %s", prNumber, strings.Join(pending, ", "))
+	}
+	failed := checkNamesByBucket(checks.Checks, domain.CheckStateFailure)
+	if len(failed) > 0 {
+		return fmt.Errorf("pull request #%d has failed checks: %s", prNumber, strings.Join(failed, ", "))
+	}
+	unknown := checkNamesWithUnknownState(checks.Checks)
+	if len(unknown) > 0 {
+		return fmt.Errorf("pull request #%d has unknown check states: %s; update parsevkctl check-state mapping or inspect the PR manually", prNumber, strings.Join(unknown, ", "))
+	}
+	if checks.Successful == 0 {
+		return fmt.Errorf("pull request #%d has no successful checks; merge.requireChecks=true requires at least one successful check", prNumber)
+	}
+
+	return nil
+}
+
+func checkNamesByBucket(checks []domain.PullRequestCheck, bucket domain.CheckState) []string {
+	names := []string{}
+	for _, check := range checks {
+		if check.Bucket == bucket {
+			names = append(names, check.Name)
+		}
+	}
+	return names
+}
+
+func checkNamesWithUnknownState(checks []domain.PullRequestCheck) []string {
+	names := []string{}
+	for _, check := range checks {
+		if check.State == domain.CheckStateUnknown || check.Bucket == domain.CheckStateUnknown {
+			names = append(names, check.Name)
+		}
+	}
+	return names
 }
 
 func mergeStrategy(cfg config.Config) string {

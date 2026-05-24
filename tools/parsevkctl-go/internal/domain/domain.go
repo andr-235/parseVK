@@ -47,6 +47,32 @@ type PullRequest struct {
 	Head   string
 }
 
+type CheckState string
+
+const (
+	CheckStateSuccess CheckState = "success"
+	CheckStatePending CheckState = "pending"
+	CheckStateFailure CheckState = "failure"
+	CheckStateSkipped CheckState = "skipped"
+	CheckStateUnknown CheckState = "unknown"
+)
+
+type PullRequestChecks struct {
+	PullRequestNumber int
+	Total             int
+	Successful        int
+	Pending           int
+	Failed            int
+	Skipped           int
+	Checks            []PullRequestCheck
+}
+
+type PullRequestCheck struct {
+	Name   string
+	State  CheckState
+	Bucket CheckState
+}
+
 type ProjectStatus string
 
 const (

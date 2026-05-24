@@ -18,6 +18,21 @@ When commands are run from `tools/parsevkctl-go`, the CLI also discovers the
 local `config.json` in that directory. You can override discovery with
 `--config <path>`.
 
+Merge check enforcement is controlled by:
+
+```json
+"merge": {
+  "requireChecks": true
+}
+```
+
+When `merge.requireChecks` is `true`, `task merge` loads the linked pull
+request checks through GitHub CLI and allows merge only when at least one check
+exists and all checks are successful, skipped, or neutral. Missing checks,
+pending checks, failed checks, and unknown check states block the merge with an
+actionable error that names the affected checks. When `merge.requireChecks` is
+`false`, `task merge` does not enforce PR checks.
+
 ## Direct Go Invocation
 
 ```powershell
@@ -122,6 +137,12 @@ merged yet.
 GitHub CLI when `merge.deleteBranch` is `true`. If the command is run from the
 PR head branch, it switches back to the configured default branch, pulls with
 `--ff-only`, and deletes the local task branch with `git branch -d`.
+
+If `merge.requireChecks` is `true`, `task merge` checks the linked PR before
+building the merge plan. It blocks PRs with no checks, pending checks, failed
+checks, or unknown check states. Successful, skipped, and neutral checks are
+accepted. The project config currently keeps `merge.requireChecks` set to
+`false`; enabling it should be a separate rollout after CI is stable.
 
 Protected branches such as `main`, `master`, and
 `fastapi-microservices-rewrite` are never deleted by the Git adapter.

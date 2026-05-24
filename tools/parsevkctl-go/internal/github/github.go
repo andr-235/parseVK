@@ -14,6 +14,7 @@ type Adapter interface {
 	ListPullRequests(ctx context.Context, filter PullRequestFilter) ([]domain.PullRequest, error)
 	CreatePullRequest(ctx context.Context, input CreatePullRequestInput) (domain.PullRequest, error)
 	MergePullRequest(ctx context.Context, number int, input MergePullRequestInput) error
+	GetPullRequestChecks(ctx context.Context, prNumber int) (domain.PullRequestChecks, error)
 
 	GetProjectItem(ctx context.Context, issueNumber int) (domain.ProjectItem, error)
 	AddProjectItem(ctx context.Context, issueNumber int) error
