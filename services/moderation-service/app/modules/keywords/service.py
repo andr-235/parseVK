@@ -107,10 +107,9 @@ class KeywordsService:
             result = await self.session.execute(stmt)
             existing_keywords = {kw.word: kw for kw in result.scalars().all()}
 
-        for word in words:
-            normalized_word = normalize_for_keyword_match(word)
+        for normalized_word in unique_words:
             if not normalized_word:
-                failed.append({"word": word, "error": "Keyword cannot be empty"})
+                failed.append({"word": "", "error": "Keyword cannot be empty"})
                 continue
 
             try:
@@ -130,7 +129,8 @@ class KeywordsService:
                     created_count += 1
 
             except Exception as e:
-                failed.append({"word": word, "error": str(e)})
+                await self.session.rollback()
+                failed.append({"word": normalized_word, "error": str(e)})
 
         # Запускаем полный пересчет через единую persistent job model для всех добавленных слов
         if success:
@@ -143,7 +143,7 @@ class KeywordsService:
             "success": success,
             "failed": failed,
             "stats": {
-                "total": len(words),
+                "total": len(unique_words),
                 "success": len(success),
                 "failed": len(failed),
                 "created": created_count,
