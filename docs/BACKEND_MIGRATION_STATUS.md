@@ -37,7 +37,7 @@ Every controller from legacy NestJS `api/src/*` is mapped explicitly below:
 | `groups/groups.controller.ts` | `groups` | `api-gateway /api/v1/content/groups/*` -> `content-service` | `partial` | Unfiltered groups read/details are migrated to `content-service`. Settings, upload, and CRUD stay on NestJS `fallback`. |
 | `metrics/metrics.controller.ts` | `metrics` | NestJS Prometheus endpoints | `intentionally kept` | Maintained in NestJS for backwards monitoring compatibility. |
 | `data-import/data-import.controller.ts` | `data` | None | `fallback` | Data import endpoints still stay on NestJS. |
-| `keywords/keywords.controller.ts` | `keywords` | None | `fallback` | Keyword CRUD and settings stay on NestJS. |
+| `keywords/keywords.controller.ts` | `keywords` | `api-gateway /api/v1/keywords/*` -> `moderation-service` | `partial` | Keyword CRUD, forms management, and persistent background recalculation jobs are migrated. Frontend uses Gateway. |
 | `listings/listings.controller.ts` | `listings` | None | `fallback` | Listings and exports stay on NestJS. |
 | `watchlist/watchlist.controller.ts` | `watchlist` | None | `fallback` | Group watchlist monitoring stays on NestJS. |
 | `photo-analysis/photo-analysis.controller.ts` | `photo-analysis` | None | `fallback` | Photo analysis and categorization stays on NestJS. |
