@@ -505,10 +505,22 @@ class KeywordsService:
             if not has_running:
                 background_tasks.add_task(self.recalculator.run_recalculation, job.id)
             else:
-                logger.info(
-                    f"Recalculation job {job.id} created as pending. "
-                    f"It will be processed by the already running worker."
+                # Гонка: проверяем состояние в БД после коммита нашей pending задачи
+                stmt_running = select(KeywordRecalculationJob).where(
+                    KeywordRecalculationJob.status == "running"
                 )
+                result_running = await self.session.execute(stmt_running)
+                still_running = result_running.scalar_one_or_none() is not None
+
+                if not still_running:
+                    # Если воркер успел завершиться до коммита нашей pending задачи
+                    # и не забрал ее, запускаем новый фоновый процесс.
+                    background_tasks.add_task(self.recalculator.run_recalculation, job.id)
+                else:
+                    logger.info(
+                        f"Recalculation job {job.id} created as pending. "
+                        f"It will be processed by the already running worker."
+                    )
         else:
             # Синхронно (для тестов или ручного полного пересчета из API)
             await self.recalculator.run_recalculation(job.id)

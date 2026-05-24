@@ -171,11 +171,12 @@ async def remove_keyword_form_exclusion(
 
 @router.post("/recalculate-matches", response_model=KeywordFormsRebuildResponse)
 async def recalculate_keyword_matches(
+    background_tasks: BackgroundTasks,
     service: KeywordsService = Depends(get_keywords_service),
 ):
     job = await service.recalculate_keyword_matches(
         requested_by="api",
-        background_tasks=None,
+        background_tasks=background_tasks,
     )
     return {
         "keywords_rebuilt": 0,
