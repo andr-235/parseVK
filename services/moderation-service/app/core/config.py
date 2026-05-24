@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     app_name: str = "parseVK Moderation Service"
     database_url: str = "postgresql+asyncpg://moderation:moderation@moderation-db:5432/moderation"
+    vk_service_base_url: str = "http://vk-service:8000"
     internal_service_token: str = "dev-internal-token"
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_vk: str = "parsevk.vk.events"

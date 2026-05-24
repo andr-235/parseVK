@@ -21,10 +21,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Failed to cleanup stale recalculation jobs on startup: {e}")
 
+    from app.modules.watchlist.monitor import publish_watchlist_monitor_forever
+
     consumer = ProjectionConsumer()
     task = None
+    monitor_task = None
     if settings.kafka_consumer_enabled:
         task = asyncio.create_task(consumer.run_forever())
+    
+    # Запускаем фоновый мониторинг авторов watchlist
+    monitor_task = asyncio.create_task(publish_watchlist_monitor_forever(async_session_maker))
+
     try:
         yield
     finally:
@@ -32,6 +39,10 @@ async def lifespan(app: FastAPI):
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+        if monitor_task:
+            monitor_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await monitor_task
         await consumer.stop()
 
 
@@ -43,9 +54,11 @@ def create_app() -> FastAPI:
         return {"status": "UP"}
 
     from app.modules.keywords.router import router as keywords_router
+    from app.modules.watchlist.router import router as watchlist_router
 
     app.include_router(moderation_router)
     app.include_router(keywords_router)
+    app.include_router(watchlist_router)
 
     return app
 

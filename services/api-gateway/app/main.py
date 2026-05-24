@@ -29,12 +29,15 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "UP"}
 
+    from app.modules.watchlist.router import router as watchlist_router
+
     app.include_router(auth_router)
     app.include_router(content_router)
     app.include_router(tasks_router)
     app.include_router(admin_users_router)
     app.include_router(comments_router)
     app.include_router(keywords_router)
+    app.include_router(watchlist_router)
     app.include_router(listings_router)
     app.include_router(telegram_tgmbase_router)
 

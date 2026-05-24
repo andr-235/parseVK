@@ -140,8 +140,11 @@ async def get_author(
 async def list_authors_bulk(
     vk_author_ids: list[int],
     repository: ContentRepository = Depends(get_content_repository),
+    photo_analysis_client: PhotoAnalysisClient = Depends(get_photo_analysis_client),
 ):
-    return await repository.list_authors_bulk(vk_author_ids)
+    items = await repository.list_authors_bulk(vk_author_ids)
+    await enrich_author_summaries(items, photo_analysis_client)
+    return items
 
 
 @router.post("/posts/bulk")

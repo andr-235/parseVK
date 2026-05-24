@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/api/common'
+import { GATEWAY_API_URL } from '@/api/common'
 import { buildQueryString, createRequest, handleResponse } from '@/api/common'
 import type {
   IWatchlistAuthorDetailsResponse,
@@ -30,7 +30,7 @@ export const watchlistService = {
         limit: params?.limit,
         excludeStopped: params?.excludeStopped,
       })
-      const url = query ? `${API_URL}/watchlist/authors?${query}` : `${API_URL}/watchlist/authors`
+      const url = query ? `${GATEWAY_API_URL}/v1/watchlist/authors?${query}` : `${GATEWAY_API_URL}/v1/watchlist/authors`
       const response = await createRequest(url)
 
       return await handleResponse<IWatchlistAuthorListResponse>(
@@ -50,7 +50,7 @@ export const watchlistService = {
     authorVkId?: number
   }): Promise<IWatchlistAuthorResponse> {
     try {
-      const response = await createRequest(`${API_URL}/watchlist/authors`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/watchlist/authors`, {
         method: 'POST',
         body: JSON.stringify(payload),
       })
@@ -78,8 +78,8 @@ export const watchlistService = {
         limit: params?.limit,
       })
       const url = query
-        ? `${API_URL}/watchlist/authors/${id}?${query}`
-        : `${API_URL}/watchlist/authors/${id}`
+        ? `${GATEWAY_API_URL}/v1/watchlist/authors/${id}?${query}`
+        : `${GATEWAY_API_URL}/v1/watchlist/authors/${id}`
 
       const response = await createRequest(url)
 
@@ -100,7 +100,7 @@ export const watchlistService = {
     payload: { status?: WatchlistStatus }
   ): Promise<IWatchlistAuthorResponse> {
     try {
-      const response = await createRequest(`${API_URL}/watchlist/authors/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/watchlist/authors/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(payload),
       })
@@ -117,7 +117,7 @@ export const watchlistService = {
 
   async getSettings(options?: WatchlistRequestOptions): Promise<IWatchlistSettingsResponse> {
     try {
-      const response = await createRequest(`${API_URL}/watchlist/settings`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/watchlist/settings`)
 
       return await handleResponse<IWatchlistSettingsResponse>(
         response,
@@ -135,7 +135,7 @@ export const watchlistService = {
     payload: Partial<IWatchlistSettingsResponse>
   ): Promise<IWatchlistSettingsResponse> {
     try {
-      const response = await createRequest(`${API_URL}/watchlist/settings`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/watchlist/settings`, {
         method: 'PATCH',
         body: JSON.stringify(payload),
       })

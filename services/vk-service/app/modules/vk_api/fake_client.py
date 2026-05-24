@@ -38,3 +38,24 @@ class FakeVkApiClient:
                 "text": f"Comment for {owner_id}_{post_id}",
             }
         ]
+
+    async def get_author_comments_for_post(
+        self,
+        owner_id: int,
+        post_id: int,
+        author_vk_id: int,
+        baseline: datetime | None = None,
+        batch_size: int = 100,
+        max_pages: int = 10,
+        thread_items_count: int = 10,
+    ) -> list[dict]:
+        return [
+            {
+                "id": post_id * 1000 + 1,
+                "owner_id": owner_id,
+                "post_id": post_id,
+                "from_id": author_vk_id,
+                "date": int(datetime(2026, 5, 8, tzinfo=timezone.utc).timestamp()),
+                "text": f"Comment for {owner_id}_{post_id} by author {author_vk_id}",
+            }
+        ]
