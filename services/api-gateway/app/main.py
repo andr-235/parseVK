@@ -9,6 +9,8 @@ from app.modules.tasks.router import router as tasks_router
 from app.modules.admin_users.router import router as admin_users_router
 
 
+from app.modules.comments.router import router as comments_router
+
 def create_app() -> FastAPI:
     app = FastAPI(title="parseVK API Gateway")
 
@@ -29,6 +31,7 @@ def create_app() -> FastAPI:
     app.include_router(content_router)
     app.include_router(tasks_router)
     app.include_router(admin_users_router)
+    app.include_router(comments_router)
 
     return app
 

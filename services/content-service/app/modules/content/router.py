@@ -74,3 +74,19 @@ async def get_author(vk_author_id: int, repository: ContentRepository = Depends(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found")
     return row
+
+
+@router.post("/authors/bulk")
+async def list_authors_bulk(
+    vk_author_ids: list[int],
+    repository: ContentRepository = Depends(get_content_repository),
+):
+    return await repository.list_authors_bulk(vk_author_ids)
+
+
+@router.post("/posts/bulk")
+async def list_posts_bulk(
+    external_keys: list[str],
+    repository: ContentRepository = Depends(get_content_repository),
+):
+    return await repository.list_posts_bulk(external_keys)

@@ -51,6 +51,14 @@ class ContentRepository:
         row = await self.session.scalar(select(ContentAuthor).where(ContentAuthor.vk_author_id == vk_author_id))
         return self.author_to_dict(row) if row else None
 
+    async def list_authors_bulk(self, vk_author_ids: list[int]) -> list[dict]:
+        rows = await self.session.scalars(select(ContentAuthor).where(ContentAuthor.vk_author_id.in_(vk_author_ids)))
+        return [self.author_to_dict(row) for row in rows]
+
+    async def list_posts_bulk(self, external_keys: list[str]) -> list[dict]:
+        rows = await self.session.scalars(select(ContentPost).where(ContentPost.external_key.in_(external_keys)))
+        return [self.post_to_dict(row) for row in rows]
+
     async def _paginate(self, stmt: Select, page: int, limit: int, *order_by) -> tuple[list, int]:
         offset = (page - 1) * limit
         total = await self.session.scalar(select(func.count()).select_from(stmt.subquery()))
