@@ -1,5 +1,6 @@
 from typing import Any
 
+from fastapi import Header, HTTPException, status
 import jwt
 from jwt import PyJWKClientError
 from jwt.algorithms import RSAAlgorithm
@@ -47,3 +48,36 @@ def validate_access_token(token: str, jwks: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Invalid access token type")
 
     return claims
+
+
+_jwks_cache: dict[str, Any] | None = None
+
+
+async def get_jwks() -> dict[str, Any]:
+    global _jwks_cache
+    if _jwks_cache is None:
+        from app.clients.identity.client import IdentityClient
+        client = IdentityClient()
+        try:
+            _jwks_cache = await client.jwks()
+        finally:
+            await client.close()
+    return _jwks_cache
+
+
+async def require_auth(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid credentials",
+        )
+    token = authorization.split(" ", 1)[1]
+    try:
+        jwks = await get_jwks()
+        return validate_access_token(token, jwks)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid access token",
+        ) from exc
+
