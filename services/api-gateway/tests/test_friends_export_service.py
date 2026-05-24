@@ -112,6 +112,36 @@ async def test_start_delegates_to_adapter():
     assert result.status == JobStatus.RUNNING
 
 
+@pytest.mark.asyncio
+async def test_start_reraises_http_400():
+    adapter = _make_adapter(
+        start_export=AsyncMock(
+            side_effect=HTTPException(status_code=400, detail="Missing params")
+        )
+    )
+    service = FriendsExportService(adapter)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.start({})
+
+    assert exc_info.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_start_wraps_unexpected_error_as_502():
+    adapter = _make_adapter(
+        start_export=AsyncMock(side_effect=RuntimeError("db connection lost"))
+    )
+    service = FriendsExportService(adapter)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.start({"user_id": 1})
+
+    assert exc_info.value.status_code == 502
+    # Raw internal error message must not leak to the client
+    assert "db connection lost" not in exc_info.value.detail
+
+
 # ---------------------------------------------------------------------------
 # get_job()
 # ---------------------------------------------------------------------------
@@ -160,6 +190,27 @@ async def test_get_job_wraps_unexpected_error_as_502():
 # ---------------------------------------------------------------------------
 # stream()
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_stream_returns_404_before_opening_sse_when_job_missing():
+    """
+    Pre-validation must raise HTTPException(404) as a proper HTTP response,
+    not inside a broken SSE body.
+    """
+    adapter = _make_adapter(
+        get_job=AsyncMock(
+            side_effect=HTTPException(status_code=404, detail="Job not found")
+        )
+    )
+    service = FriendsExportService(adapter)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.stream("missing-job")
+
+    assert exc_info.value.status_code == 404
+    # get_job called once (pre-validation); stream_job must NOT be called
+    adapter.get_job.assert_awaited_once_with("missing-job")
 
 
 @pytest.mark.asyncio

@@ -22,7 +22,7 @@ Ref: FASTAPI-MIG-010B / docs/FASTAPI_MIG_010_FRIENDS_EXPORT_INVENTORY.md
 from __future__ import annotations
 
 import json
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Literal
 
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
@@ -64,10 +64,19 @@ class FriendsExportService:
         """
         Start a new export job.
 
-        Delegates entirely to the adapter; validation of provider-specific
-        params (user_id vs fid) is the adapter's responsibility.
+        Re-raises HTTPException (e.g. 400 for invalid params) unchanged.
+        Wraps unexpected errors as HTTP 502 — consistent with get_job()
+        and download_xlsx().
         """
-        return await self._adapter.start_export(params)
+        try:
+            return await self._adapter.start_export(params)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="Upstream error starting friends export",
+            ) from exc
 
     async def get_job(self, job_id: str) -> FriendsJobDetailResponse:
         """
@@ -89,17 +98,24 @@ class FriendsExportService:
         """
         Build a StreamingResponse that forwards SSE events from the adapter.
 
+        Pre-validates that the job exists before opening the SSE stream.
+        This ensures 404/400 errors are returned as proper HTTP responses
+        rather than inside a broken streaming body where FastAPI can no
+        longer set the status code.
+
         The response media type is `text/event-stream`.
         `X-Accel-Buffering: no` disables Nginx proxy buffering so events
         reach the client immediately.
         """
+        # Pre-validation: raises HTTPException(404/400/502) before the
+        # streaming response is opened, so the caller gets a normal HTTP
+        # error instead of a broken SSE stream.
+        await self.get_job(job_id)
 
         async def _generate() -> AsyncIterator[str]:
             try:
                 async for event in self._adapter.stream_job(job_id):
                     yield _serialise_sse_event(event)
-            except HTTPException:
-                raise
             except Exception:
                 # Emit a safe error event and close the stream rather than
                 # leaking a raw exception traceback to the client.
@@ -118,7 +134,7 @@ class FriendsExportService:
         )
 
     async def download_xlsx(
-        self, job_id: str, provider: str
+        self, job_id: str, provider: Literal["vk", "ok"]
     ) -> StreamingResponse:
         """
         Download the XLSX file for a completed job.
