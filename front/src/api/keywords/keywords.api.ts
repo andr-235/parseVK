@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/api/common'
+import { GATEWAY_API_URL } from '@/api/common'
 import { createRequest, handleResponse } from '@/api/common'
 import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '@/types/common'
 
@@ -27,7 +27,7 @@ export const keywordsService = {
     isPhrase?: boolean
   ): Promise<IKeywordResponse> {
     try {
-      const response = await createRequest(`${API_URL}/keywords/add`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/keywords/add`, {
         method: 'POST',
         body: JSON.stringify({ word, category, isPhrase }),
       })
@@ -43,7 +43,7 @@ export const keywordsService = {
 
   async updateKeywordCategory(id: number, category?: string | null): Promise<IKeywordResponse> {
     try {
-      const response = await createRequest(`${API_URL}/keywords/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/keywords/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ category: category ?? null }),
       })
@@ -62,7 +62,7 @@ export const keywordsService = {
 
   async bulkAddKeywords(words: string[]): Promise<IBulkAddResponse> {
     try {
-      const response = await createRequest(`${API_URL}/keywords/bulk-add`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/keywords/bulk-add`, {
         method: 'POST',
         body: JSON.stringify({ words }),
       })
@@ -81,7 +81,7 @@ export const keywordsService = {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await createRequest(`${API_URL}/keywords/upload`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/keywords/upload`, {
         method: 'POST',
         body: formData,
       })
@@ -107,7 +107,7 @@ export const keywordsService = {
           page: String(page),
           limit: String(pageSize),
         })
-        const response = await createRequest(`${API_URL}/keywords?${searchParams.toString()}`)
+        const response = await createRequest(`${GATEWAY_API_URL}/keywords?${searchParams.toString()}`)
         const result = await handleResponse<{
           keywords: IKeywordResponse[]
           total: number
@@ -129,7 +129,7 @@ export const keywordsService = {
 
   async deleteAllKeywords(): Promise<IDeleteResponse> {
     try {
-      const response = await createRequest(`${API_URL}/keywords/all`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/keywords/all`, {
         method: 'DELETE',
       })
 
@@ -144,7 +144,7 @@ export const keywordsService = {
 
   async deleteKeyword(id: number): Promise<IKeywordResponse> {
     try {
-      const response = await createRequest(`${API_URL}/keywords/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/keywords/${id}`, {
         method: 'DELETE',
       })
 
@@ -164,7 +164,7 @@ export const keywordsService = {
     deleted: number
   }> {
     try {
-      const response = await createRequest(`${API_URL}/keywords/recalculate-matches`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/keywords/recalculate-matches`, {
         method: 'POST',
       })
 
@@ -184,7 +184,7 @@ export const keywordsService = {
 
   async rebuildKeywordForms(): Promise<IKeywordFormsRebuildResponse> {
     try {
-      const response = await createRequest(`${API_URL}/keywords/rebuild-forms`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/keywords/rebuild-forms`, {
         method: 'POST',
       })
 
@@ -201,12 +201,12 @@ export const keywordsService = {
   },
 
   async getKeywordForms(id: number): Promise<IKeywordFormsResponse> {
-    const response = await createRequest(`${API_URL}/keywords/${id}/forms`)
+    const response = await createRequest(`${GATEWAY_API_URL}/keywords/${id}/forms`)
     return handleResponse<IKeywordFormsResponse>(response, 'Failed to fetch keyword forms')
   },
 
   async addManualKeywordForm(id: number, form: string): Promise<IKeywordFormsResponse> {
-    const response = await createRequest(`${API_URL}/keywords/${id}/forms/manual`, {
+    const response = await createRequest(`${GATEWAY_API_URL}/keywords/${id}/forms/manual`, {
       method: 'POST',
       body: JSON.stringify({ form }),
     })
@@ -220,7 +220,7 @@ export const keywordsService = {
   },
 
   async removeManualKeywordForm(id: number, form: string): Promise<IKeywordFormsResponse> {
-    const response = await createRequest(`${API_URL}/keywords/${id}/forms/manual`, {
+    const response = await createRequest(`${GATEWAY_API_URL}/keywords/${id}/forms/manual`, {
       method: 'DELETE',
       body: JSON.stringify({ form }),
     })
@@ -234,7 +234,7 @@ export const keywordsService = {
   },
 
   async addKeywordFormExclusion(id: number, form: string): Promise<IKeywordFormsResponse> {
-    const response = await createRequest(`${API_URL}/keywords/${id}/forms/exclusions`, {
+    const response = await createRequest(`${GATEWAY_API_URL}/keywords/${id}/forms/exclusions`, {
       method: 'POST',
       body: JSON.stringify({ form }),
     })
@@ -248,7 +248,7 @@ export const keywordsService = {
   },
 
   async removeKeywordFormExclusion(id: number, form: string): Promise<IKeywordFormsResponse> {
-    const response = await createRequest(`${API_URL}/keywords/${id}/forms/exclusions`, {
+    const response = await createRequest(`${GATEWAY_API_URL}/keywords/${id}/forms/exclusions`, {
       method: 'DELETE',
       body: JSON.stringify({ form }),
     })

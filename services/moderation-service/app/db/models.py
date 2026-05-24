@@ -43,3 +43,59 @@ class ProcessedEvent(Base):
     event_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     event_type: Mapped[str] = mapped_column(Text, nullable=False)
     processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+from sqlalchemy import ForeignKey
+
+
+class Keyword(Base):
+    __tablename__ = "keywords"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    word: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    category: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_phrase: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class KeywordForm(Base):
+    __tablename__ = "keyword_forms"
+    __table_args__ = (
+        UniqueConstraint("keyword_id", "form", "source", name="uq_keyword_forms_keyword_form_source"),
+        Index("ix_keyword_forms_keyword_id", "keyword_id"),
+        Index("ix_keyword_forms_form", "form"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    keyword_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("keywords.id", ondelete="CASCADE"), nullable=False)
+    form: Mapped[str] = mapped_column(String(255), nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)  # "generated" | "manual"
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class KeywordFormExclusion(Base):
+    __tablename__ = "keyword_form_exclusions"
+    __table_args__ = (
+        UniqueConstraint("keyword_id", "form", name="uq_keyword_form_exclusions_keyword_form"),
+        Index("ix_keyword_form_exclusions_keyword_id", "keyword_id"),
+        Index("ix_keyword_form_exclusions_form", "form"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    keyword_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("keywords.id", ondelete="CASCADE"), nullable=False)
+    form: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class KeywordRecalculationJob(Base):
+    __tablename__ = "keyword_recalculation_jobs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")  # "pending" | "running" | "succeeded" | "failed"
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    requested_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
