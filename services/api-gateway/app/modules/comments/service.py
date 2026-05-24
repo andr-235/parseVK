@@ -98,11 +98,13 @@ class CommentsGatewayService:
             is_read = payload.get("is_read")
         if is_read is None:
             raise HTTPException(status_code=422, detail="isRead field is required")
+        if not isinstance(is_read, bool):
+            raise HTTPException(status_code=422, detail="isRead field must be a boolean")
 
         async with httpx.AsyncClient() as client:
             resp = await client.patch(
                 f"{self.moderation_url}/internal/moderation/comments/{id}/read",
-                json={"is_read": bool(is_read)},
+                json={"is_read": is_read},
                 headers=self.headers,
             )
             resp.raise_for_status()

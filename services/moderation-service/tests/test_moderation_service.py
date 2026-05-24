@@ -60,6 +60,14 @@ def make_comment(id: int, *, is_read: bool, matched_keywords: list[str]) -> Mode
     )
 
 
+def make_undated_comment(
+    id: int, *, is_read: bool, matched_keywords: list[str]
+) -> ModerationComment:
+    comment = make_comment(id, is_read=is_read, matched_keywords=matched_keywords)
+    comment.date = None
+    return comment
+
+
 @pytest.mark.anyio
 async def test_get_comments_counts_before_read_status_and_slices_limit_plus_one():
     items = [
@@ -93,6 +101,21 @@ async def test_get_comments_total_uses_unread_count_after_read_status():
     assert result["total"] == 2
     assert result["has_more"] is False
     assert [comment.id for comment in result["items"]] == [2, 1]
+
+
+@pytest.mark.anyio
+async def test_get_comments_cursor_generates_stable_cursor_for_null_dates():
+    items = [
+        make_undated_comment(2, is_read=False, matched_keywords=["foo"]),
+        make_undated_comment(1, is_read=False, matched_keywords=["foo"]),
+    ]
+    session = RecordingSession(stats=(0, 2), items=items)
+
+    result = await ModerationService(session).get_comments_cursor(cursor=None, limit=1)
+
+    assert result["next_cursor"] == "null_2"
+    assert result["has_more"] is True
+    assert [comment.id for comment in result["items"]] == [2]
 
 
 def test_build_base_filters_keeps_multi_keyword_or_filter():

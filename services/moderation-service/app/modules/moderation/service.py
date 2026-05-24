@@ -144,12 +144,21 @@ class ModerationService:
         if cursor:
             try:
                 parts = cursor.split("_")
-                if len(parts) == 2:
+                if len(parts) == 2 and parts[0] == "null":
+                    cursor_id = int(parts[1])
+                    stmt = stmt.where(
+                        ModerationComment.date.is_(None) & (ModerationComment.id < cursor_id)
+                    )
+                elif len(parts) == 2:
                     cursor_date = datetime.fromtimestamp(float(parts[0]), timezone.utc)
                     cursor_id = int(parts[1])
                     stmt = stmt.where(
-                        (ModerationComment.date < cursor_date) |
-                        ((ModerationComment.date == cursor_date) & (ModerationComment.id < cursor_id))
+                        (ModerationComment.date < cursor_date)
+                        | (
+                            (ModerationComment.date == cursor_date)
+                            & (ModerationComment.id < cursor_id)
+                        )
+                        | ModerationComment.date.is_(None)
                     )
             except (ValueError, IndexError):
                 pass
@@ -168,6 +177,8 @@ class ModerationService:
             last = items[-1]
             if last.date:
                 next_cursor = f"{last.date.timestamp()}_{last.id}"
+            else:
+                next_cursor = f"null_{last.id}"
                 
         return {
             "items": items,
