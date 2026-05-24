@@ -147,6 +147,18 @@ async def list_authors_bulk(
     return items
 
 
+@router.patch("/authors/{vk_author_id}/verify")
+async def verify_author(
+    vk_author_id: int,
+    repository: ContentRepository = Depends(get_content_repository),
+):
+    success = await repository.verify_author(vk_author_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found")
+    return {"status": "success"}
+
+
+
 @router.post("/posts/bulk")
 async def list_posts_bulk(
     external_keys: list[str],

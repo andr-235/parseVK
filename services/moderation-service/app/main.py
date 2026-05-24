@@ -5,7 +5,9 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.modules.moderation.router import router as moderation_router
+from app.modules.photo_analysis.router import router as photo_analysis_router
 from app.modules.moderation.consumer import ProjectionConsumer
+
 
 
 @asynccontextmanager
@@ -59,6 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(moderation_router)
     app.include_router(keywords_router)
     app.include_router(watchlist_router)
+    app.include_router(photo_analysis_router)
 
     return app
 

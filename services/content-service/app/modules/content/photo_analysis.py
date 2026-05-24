@@ -23,6 +23,34 @@ class PhotoAnalysisClient:
         if not self.base_url or not vk_author_ids:
             return {}
 
+        headers = {"X-Internal-Service-Token": settings.internal_service_token}
+
+        # 1. Try bulk request to moderation-service
+        try:
+            async with httpx.AsyncClient(
+                base_url=self.base_url.rstrip("/"),
+                timeout=httpx.Timeout(timeout=self.timeout, connect=min(self.timeout, 1.0)),
+            ) as client:
+                response = await client.post(
+                    "/photo-analysis/bulk-summaries",
+                    json={"vk_author_ids": vk_author_ids},
+                    headers=headers,
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    return {int(k): v for k, v in data.items()}
+                else:
+                    logger.warning(
+                        "Bulk photo analysis summaries failed with status %s. Falling back to single queries.",
+                        response.status_code,
+                    )
+        except Exception as exc:
+            logger.warning(
+                "Bulk photo analysis summaries failed: error_type=%s. Falling back to single queries.",
+                type(exc).__name__,
+            )
+
+        # 2. Fallback to parallel single queries
         async with httpx.AsyncClient(
             base_url=self.base_url.rstrip("/"),
             timeout=httpx.Timeout(timeout=self.timeout, connect=min(self.timeout, 1.0)),
@@ -32,14 +60,17 @@ class PhotoAnalysisClient:
             async def fetch_summary(vk_author_id: int) -> tuple[int, dict[str, Any] | None]:
                 try:
                     async with semaphore:
-                        response = await client.get(f"/photo-analysis/vk/{vk_author_id}/summary")
+                        response = await client.get(
+                            f"/photo-analysis/vk/{vk_author_id}/summary",
+                            headers=headers
+                        )
                         response.raise_for_status()
                         return vk_author_id, response.json()
                 except (httpx.HTTPError, ValueError) as exc:
                     logger.warning(
-                        "Photo analysis summary unavailable for author %s: %s",
+                        "Photo analysis summary unavailable for author %s: error_type=%s",
                         vk_author_id,
-                        exc,
+                        type(exc).__name__,
                     )
                     return vk_author_id, None
 
@@ -51,3 +82,4 @@ class PhotoAnalysisClient:
             if summary is not None:
                 summaries[vk_author_id] = summary
         return summaries
+

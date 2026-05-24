@@ -217,11 +217,25 @@ class ContentRepository:
             "friendsCount": None,
             "followersCount": None,
             "lastSeenAt": None,
-            "verifiedAt": None,
-            "isVerified": False,
+            "verifiedAt": dt(row.verified_at),
+            "isVerified": bool(row.verified_at),
             "createdAt": dt(row.updated_at),
             "updatedAt": dt(row.updated_at),
         }
+
+    async def verify_author(self, vk_author_id: int) -> bool:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        row = await self.session.scalar(
+            select(ContentAuthor).where(ContentAuthor.vk_author_id == vk_author_id)
+        )
+        if not row:
+            return False
+        row.verified_at = now
+        row.updated_at = now
+        await self.session.commit()
+        return True
+
 
     def _group_order(self, sort_by: str | None, sort_order: str):
         direction = sort_order if sort_order in {"asc", "desc"} else "desc"

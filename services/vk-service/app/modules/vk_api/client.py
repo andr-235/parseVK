@@ -34,6 +34,10 @@ class VkApiAdapter(Protocol):
     ) -> list[dict]:
         raise NotImplementedError
 
+    async def get_user_photos(self, user_id: int, count: int = 100, offset: int = 0) -> list[dict]:
+        raise NotImplementedError
+
+
 
 class VkApiConfigurationError(RuntimeError):
     pass
@@ -203,3 +207,15 @@ class VkApiClient:
                     if oldest is None or nested_oldest < oldest:
                         oldest = nested_oldest
         return oldest
+
+    async def get_user_photos(self, user_id: int, count: int = 100, offset: int = 0) -> list[dict]:
+        response = await self._call(
+            "photos.getAll",
+            owner_id=user_id,
+            count=min(max(count, 1), 200),
+            offset=offset,
+            extended=0,
+            photo_sizes=1,
+        )
+        return list(response.get("items") or [])
+

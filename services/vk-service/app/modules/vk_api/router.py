@@ -33,3 +33,14 @@ async def get_author_comments_for_post(
         max_pages=max_pages,
         thread_items_count=thread_items_count,
     )
+
+
+@router.get("/users/{user_id}/photos")
+async def get_user_photos(
+    user_id: int,
+    count: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> list[dict]:
+    client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+    return await client.get_user_photos(user_id=user_id, count=count, offset=offset)
+

@@ -59,3 +59,21 @@ class FakeVkApiClient:
                 "text": f"Comment for {owner_id}_{post_id} by author {author_vk_id}",
             }
         ]
+
+    async def get_user_photos(self, user_id: int, count: int = 100, offset: int = 0) -> list[dict]:
+        return [
+            {
+                "id": 100 + index,
+                "owner_id": user_id,
+                "album_id": -6,
+                "date": 1716500000 + index,
+                "text": f"Photo {index} description",
+                "sizes": [
+                    {"type": "s", "url": "https://example.com/s.jpg", "width": 75, "height": 75},
+                    {"type": "m", "url": "https://example.com/m.jpg", "width": 130, "height": 130},
+                    {"type": "x", "url": "https://example.com/x.jpg", "width": 604, "height": 604},
+                ]
+            }
+            for index in range(min(count, 5))
+        ]
+
