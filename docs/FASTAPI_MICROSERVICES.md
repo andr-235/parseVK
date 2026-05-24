@@ -32,8 +32,9 @@ docker compose up -d identity-db identity-migrate identity-seed-admin identity-s
 curl -fsS http://127.0.0.1:3002/health
 ```
 
-Shell smoke-СЃРєСЂРёРїС‚С‹ `scripts/smoke-fastapi-*.sh` СѓРґР°Р»РµРЅС‹ РєР°Рє РЅРµРЅР°РґС‘Р¶РЅС‹Рµ.
-Р”Р»СЏ end-to-end РїСЂРѕРІРµСЂРєРё РЅСѓР¶РЅРѕ СЃРґРµР»Р°С‚СЊ РЅРѕРІС‹Р№ integration-test based replacement.
+Shell smoke-скрипты `scripts/smoke-fastapi-*.sh` удалены как ненадёжные.
+Для проведения сквозных интеграционных тестов используйте руководство `docs/MANUAL_SMOKE_CHECKS.md`.
+
 
 Manual auth flow:
 
