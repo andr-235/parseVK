@@ -30,6 +30,9 @@ async def lifespan(app: FastAPI):
         await consumer.stop()
 
 
+from app.modules.vk_api.router import router as vk_router
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
@@ -37,6 +40,7 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "UP"}
 
+    app.include_router(vk_router)
     return app
 
 

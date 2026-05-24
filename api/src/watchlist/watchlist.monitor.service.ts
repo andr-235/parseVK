@@ -16,10 +16,9 @@ export class WatchlistMonitorService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly watchlistService: WatchlistService) {}
 
   onModuleInit(): void {
-    void this.handleTick();
-    this.intervalId = setInterval(() => {
-      void this.handleTick();
-    }, MONITOR_INTERVAL_MS);
+    this.logger.log(
+      'Фоновый мониторинг списка "На карандаше" отключен в NestJS (мигрировано на FastAPI/gateway)',
+    );
   }
 
   onModuleDestroy(): void {

@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from uuid import UUID as PyUUID
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Index, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, DateTime, Index, String, Text, UniqueConstraint, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
@@ -17,6 +17,7 @@ class ModerationComment(Base):
     __table_args__ = (
         Index("ix_moderation_comments_date_id", "date", "id"),
         Index("ix_moderation_comments_is_read", "is_read"),
+        Index("ix_moderation_comments_watchlist_author_id", "watchlist_author_id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -28,7 +29,10 @@ class ModerationComment(Base):
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     source: Mapped[str] = mapped_column(String(32), nullable=False, default="TASK")
     matched_keywords: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    watchlist_author_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("watchlist_authors.id", ondelete="SET NULL"), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+    watchlist_author = relationship("WatchlistAuthor", back_populates="comments")
 
 
 class ProcessedEvent(Base):
@@ -121,4 +125,42 @@ class KeywordRecalculationJob(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     requested_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class WatchlistSettings(Base):
+    __tablename__ = "watchlist_settings"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    track_all_comments: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    poll_interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    max_authors: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    authors = relationship("WatchlistAuthor", back_populates="settings", cascade="all, delete-orphan")
+
+
+class WatchlistAuthor(Base):
+    __tablename__ = "watchlist_authors"
+    __table_args__ = (
+        UniqueConstraint("author_vk_id", "settings_id", name="uq_watchlist_authors_author_settings"),
+        Index("ix_watchlist_authors_status", "status"),
+        Index("ix_watchlist_authors_settings_id", "settings_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    author_vk_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    source_comment_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACTIVE")
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    found_comments_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    monitoring_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    monitoring_stopped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    settings_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("watchlist_settings.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    settings = relationship("WatchlistSettings", back_populates="authors")
+    comments = relationship("ModerationComment", back_populates="watchlist_author")
 
