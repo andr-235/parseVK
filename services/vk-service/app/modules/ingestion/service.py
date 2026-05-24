@@ -42,10 +42,36 @@ class IngestionService:
         self.outbox = outbox_service
         self.default_group_ids = settings.default_group_ids if default_group_ids is None else default_group_ids
 
+    def _sanitize_error(self, error: str) -> str:
+        token = None
+        if hasattr(self.adapter, "token") and self.adapter.token:
+            token = self.adapter.token
+        else:
+            token = settings.vk_token
+
+        if token and token in error:
+            return error.replace(token, "<redacted>")
+        return error
+
     async def execute(self, task_run: Any, *, correlation_id: str | None = None) -> IngestionResult:
+        from datetime import datetime, timezone
+        def utcnow() -> datetime:
+            return datetime.now(timezone.utc)
+
+        import httpx
+        import sqlalchemy.exc
+        import asyncio
+
         try:
             group_ids = self._group_ids(task_run)
             result = await self._collect(task_run, group_ids, correlation_id=correlation_id)
+            
+            task_run.status = "done"
+            task_run.finished_at = utcnow()
+            task_run.processed_items = result.processed_items
+            task_run.total_items = result.processed_items
+            task_run.updated_at = utcnow()
+
             await self.tasks_client.complete_execution(
                 task_run.task_id,
                 task_run.run_id,
@@ -64,24 +90,66 @@ class IngestionService:
                 )
             return result
         except Exception as exc:
+            sanitized_error = self._sanitize_error(str(exc))
+            
+            task_run.status = "failed"
+            task_run.finished_at = utcnow()
+            task_run.last_error = sanitized_error
+            task_run.processed_items = getattr(task_run, "processed_items", 0)
+            task_run.total_items = getattr(task_run, "total_items", 0)
+            task_run.updated_at = utcnow()
+
             if self.outbox:
                 await self.outbox.emit_task_failed(
                     task_id=task_run.task_id,
                     run_id=task_run.run_id,
-                    error=str(exc),
+                    error=sanitized_error,
                     correlation_id=correlation_id,
                 )
-            await self.tasks_client.fail_execution(
-                task_run.task_id,
-                task_run.run_id,
-                str(exc),
-                getattr(task_run, "processed_items", 0),
-                getattr(task_run, "total_items", 0),
-                {},
-                request_id=task_run.run_id,
-                correlation_id=correlation_id,
-            )
-            raise
+            try:
+                await self.tasks_client.fail_execution(
+                    task_run.task_id,
+                    task_run.run_id,
+                    sanitized_error,
+                    task_run.processed_items,
+                    task_run.total_items,
+                    {},
+                    request_id=task_run.run_id,
+                    correlation_id=correlation_id,
+                )
+            except httpx.HTTPStatusError as callback_exc:
+                if callback_exc.response.status_code == 409:
+                    detail = "Unknown conflict"
+                    try:
+                        detail = callback_exc.response.json().get("detail", detail)
+                    except Exception:
+                        pass
+                    task_run.last_error = f"{sanitized_error} | Callback conflict: {detail}"
+                    
+                    import logging
+                    logger = logging.getLogger("vk-service.ingestion")
+                    logger.warning(
+                        "Fail callback returned 409 for task_id=%s, run_id=%s. Detail: %s. Not retrying as tasks-service is in a different lifecycle state.",
+                        task_run.task_id,
+                        task_run.run_id,
+                        detail,
+                    )
+                else:
+                    # Все остальные HTTP ошибки (400-499, 500+) пробрасываем наверх для ретрая Kafka
+                    raise callback_exc from exc
+            except (httpx.RequestError, sqlalchemy.exc.DBAPIError, asyncio.CancelledError) as callback_exc:
+                raise callback_exc from exc
+
+            is_infra_error = isinstance(exc, (sqlalchemy.exc.DBAPIError, asyncio.CancelledError))
+            if isinstance(exc, httpx.RequestError) and not isinstance(exc, httpx.HTTPStatusError):
+                is_infra_error = True
+            elif isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500:
+                is_infra_error = True
+
+            if is_infra_error:
+                raise
+            
+            return IngestionResult()
 
     def _group_ids(self, task_run: Any) -> list[int]:
         if task_run.scope == "selected":

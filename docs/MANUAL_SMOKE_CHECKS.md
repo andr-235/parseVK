@@ -217,23 +217,105 @@ Authorization: Bearer <your_access_token>
 
 ---
 
-## 4. VK Ingestion Flow (Fake Adapter)
-**Goal**: Verify E2E ingestion and Kafka message propagation.
+## 4. VK Ingestion Flow
 
-By default in local dev, `VK_SERVICE_USE_FAKE_VK_ADAPTER` is enabled, permitting full testing without real credentials.
+**Goal**: Verify E2E ingestion, idempotency, config validation, and safe error masking.
+
+### 4.1 Startup Configuration Fast-Fail Check
+**Goal**: Verify that the service fails fast with a configuration error when the real adapter is enabled but the token is missing.
+
+1. Configure your local `.env` with:
+   ```env
+   VK_SERVICE_USE_FAKE_VK_ADAPTER=false
+   VK_SERVICE_VK_TOKEN=
+   ```
+2. Restart `vk-service`:
+   ```bash
+   docker compose up -d --force-recreate vk-service
+   ```
+3. Observe the logs:
+   ```bash
+   docker compose logs vk-service
+   ```
+4. **Expected Output**: The service must fail to start and log a clear configuration validation error containing `"VK_SERVICE_VK_TOKEN is required when VK_SERVICE_USE_FAKE_VK_ADAPTER is false"`. No secrets must appear.
+5. Revert your `.env` configuration back to use the fake adapter:
+   ```env
+   VK_SERVICE_USE_FAKE_VK_ADAPTER=true
+   ```
+   And restart the service:
+   ```bash
+   docker compose up -d --force-recreate vk-service
+   ```
+
+---
+
+### 4.2 Success E2E Flow (Fake Adapter)
+**Goal**: Verify successful parse execution, idempotency, and canonical records propagation.
 
 1. **Trigger Ingestion**:
-   Execute a task creation (Section 3.1) with `{"scope": "all", "groupIds": [1]}`.
-2. **Observe Ingestion Logs**:
-   ```bash
-   docker compose logs -f vk-service
+   ```http
+   POST http://localhost:3002/api/v1/tasks/parse
+   Authorization: Bearer <your_access_token>
+   Content-Type: application/json
+
+   {
+     "scope": "selected",
+     "groupIds": [1],
+     "postLimit": 5,
+     "mode": "recent_posts"
+   }
    ```
-   - Verify that log entries confirm processing of the event `parsevk.tasks.events`.
-   - **Crucial Security Check**: Ensure NO tokens or credentials appear in the output. Real tokens must appear only as `<redacted>` in warnings or error logs.
-3. **Observe outbox payload**:
-   Verify that database outbox records and Kafka payloads do NOT contain raw secrets or tokens.
-4. **Completion**:
-   Query `GET http://localhost:3002/api/v1/tasks/<task_id>` repeatedly. The task status should transition from `pending` -> `processing` -> `completed`.
+   Observe the returned task ID (`<task_id>`).
+
+2. **Check Ingestion Progress**:
+   Query the task repeatedly:
+   ```http
+   GET http://localhost:3002/api/v1/tasks/<task_id>
+   Authorization: Bearer <your_access_token>
+   ```
+   **Expected Behavior**:
+   - Status transitions from `pending` -> `running` -> `done`.
+   - `processedItems` and `totalItems` match exactly the number of collected items.
+
+3. **Verify Database Records & Idempotency**:
+   - Verify that groups, posts, authors, and comments are populated in `vk-db`.
+   - Replay/resend the same event or trigger a task check, and verify that **no duplicate rows** are created in the database and the task status remains `done`.
+
+---
+
+### 4.3 Runtime Failure Check
+**Goal**: Verify that runtime exceptions fail the task cleanly and redact sensitive data.
+
+1. Temporarily configure `vk-service` default group ids to be empty in `.env`:
+   ```env
+   VK_SERVICE_DEFAULT_GROUP_IDS=[]
+   ```
+   Restart the service:
+   ```bash
+   docker compose up -d --force-recreate vk-service
+   ```
+
+2. Trigger a task with `scope == "all"`:
+   ```http
+   POST http://localhost:3002/api/v1/tasks/parse
+   Authorization: Bearer <your_access_token>
+   Content-Type: application/json
+
+   {
+     "scope": "all"
+   }
+   ```
+
+3. **Observe Failure**:
+   Query the task status:
+   ```http
+   GET http://localhost:3002/api/v1/tasks/<task_id>
+   Authorization: Bearer <your_access_token>
+   ```
+   **Expected Behavior**:
+   - The task transitions to status `failed`.
+   - The field `error` contains a sanitized message: `"No group source configured for scope=all"`.
+   - Verify logs or task logs and ensure that no tokens or raw credentials appear. Any error messages that contain sensitive data must be masked with `<redacted>`.
 
 ---
 

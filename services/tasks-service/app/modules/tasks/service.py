@@ -58,7 +58,15 @@ class TasksService:
             aggregate_type="task",
             aggregate_id=str(task.id),
             correlation_id=correlation_id,
-            payload={"taskId": str(task.id), "ownerUserId": owner_user_id, "source": task.source},
+            payload={
+                "taskId": str(task.id),
+                "ownerUserId": owner_user_id,
+                "scope": task.scope,
+                "mode": task.mode,
+                "groupIds": task.group_ids,
+                "postLimit": task.post_limit,
+                "source": task.source,
+            },
         )
         return task_to_response(task)
 
@@ -218,7 +226,15 @@ class TasksService:
             event_type="task.resumed",
             aggregate_type="task",
             aggregate_id=str(task.id),
-            payload={"taskId": str(task.id), "ownerUserId": owner_user_id},
+            payload={
+                "taskId": str(task.id),
+                "ownerUserId": owner_user_id,
+                "scope": task.scope,
+                "mode": task.mode,
+                "groupIds": task.group_ids,
+                "postLimit": task.post_limit,
+                "source": task.source,
+            },
         )
         task = await self.repository.touch_task(task)
         return task_to_response(task)

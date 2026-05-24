@@ -143,9 +143,16 @@ async def test_scope_all_without_configured_group_source_fails_task():
         default_group_ids=[],
     )
 
-    with pytest.raises(RuntimeError, match="No group source configured for scope=all"):
-        await service.execute(task_run(scope="all", group_ids=[]))
+    run = task_run(scope="all", group_ids=[])
+    run.status = "running"
+    run.finished_at = None
+    run.last_error = None
 
+    await service.execute(run)
+
+    assert run.status == "failed"
+    assert run.finished_at is not None
+    assert "No group source configured for scope=all" in run.last_error
     assert tasks_client.calls == [("fail", 10, "run-10", "No group source configured for scope=all", 0, 0, {})]
 
 
@@ -175,3 +182,75 @@ async def test_real_vk_adapter_uses_vk_api_library_session():
         ("wall.get", {"owner_id": -1, "count": 1}),
         ("wall.getComments", {"owner_id": -1, "post_id": 10, "count": 100}),
     ]
+
+
+def test_settings_validation_enforces_token_when_fake_disabled():
+    from pydantic import ValidationError
+    from app.core.config import Settings
+    
+    settings_fake = Settings(use_fake_vk_adapter=True, vk_token="")
+    assert settings_fake.use_fake_vk_adapter is True
+    
+    with pytest.raises(ValidationError, match="VK_SERVICE_VK_TOKEN is required when VK_SERVICE_USE_FAKE_VK_ADAPTER is false"):
+        Settings(use_fake_vk_adapter=False, vk_token="")
+        
+    settings_real = Settings(use_fake_vk_adapter=False, vk_token="real-token")
+    assert settings_real.vk_token == "real-token"
+
+
+@pytest.mark.anyio
+async def test_ingestion_updates_task_run_fields_on_success():
+    repository = FakeRepository()
+    tasks_client = FakeTasksClient()
+    service = IngestionService(adapter=FakeVkApiClient(), repository=repository, tasks_client=tasks_client)
+
+    run = task_run()
+    run.status = "running"
+    run.finished_at = None
+
+    await service.execute(run)
+
+    assert run.status == "done"
+    assert run.finished_at is not None
+    assert run.processed_items == 3
+    assert run.total_items == 3
+
+
+@pytest.mark.anyio
+async def test_ingestion_updates_task_run_fields_on_failure():
+    repository = FakeRepository()
+    tasks_client = FakeTasksClient()
+    service = IngestionService(
+        adapter=FakeVkApiClient(),
+        repository=repository,
+        tasks_client=tasks_client,
+        default_group_ids=[],
+    )
+
+    run = task_run(scope="all", group_ids=[])
+    run.status = "running"
+    run.finished_at = None
+    run.last_error = None
+
+    await service.execute(run)
+
+    assert run.status == "failed"
+    assert run.finished_at is not None
+    assert "No group source configured for scope=all" in run.last_error
+    assert run.processed_items == 0
+
+
+def test_vk_token_redaction():
+    repository = FakeRepository()
+    tasks_client = FakeTasksClient()
+    
+    class MockAdapter:
+        token = "secret-token-123"
+        
+    service = IngestionService(adapter=MockAdapter(), repository=repository, tasks_client=tasks_client)
+
+    err = "Failed with secret-token-123 in message"
+    sanitized = service._sanitize_error(err)
+    assert sanitized == "Failed with <redacted> in message"
+
+

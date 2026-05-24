@@ -66,6 +66,12 @@ curl -fsS http://127.0.0.1:3002/api/v1/content/posts
 реальный VK token не нужен до включения настоящего adapter. Для `scope=all` локальный
 источник групп задаётся через `VK_SERVICE_DEFAULT_GROUP_IDS`, по умолчанию `[1]`.
 
+При переводе в production (`VK_SERVICE_USE_FAKE_VK_ADAPTER=false`) строго требуется задать
+безопасный `VK_SERVICE_VK_TOKEN`. Сервис автоматически проверяет наличие токена на этапе
+инициализации конфигурации (Fast-Fail Startup) и безопасно маскирует любые упоминания токена
+в исключениях и логах с помощью заглушки `<redacted>`. Токен никогда не передается в Kafka,
+базу данных outbox или логи аудита.
+
 ## Frontend routing
 
 Frontend собирается с:

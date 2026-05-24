@@ -87,19 +87,51 @@ class TaskEventsHandler:
         task_id = event.task_id()
         run_id = str(event.event_id)
         task_run = await self.repository.get_task_run(task_id)
-        if task_run is None:
-            task_run = await self.repository.create_task_run(event, run_id)
-        elif task_run.status == "running":
-            return task_run
-        else:
+        
+        if task_run is not None:
+            if task_run.status == "done":
+                return None
+            if task_run.status == "running":
+                return None
             task_run.run_id = run_id
+        else:
+            task_run = await self.repository.create_task_run(event, run_id)
 
-        await self.tasks_client.start_execution(
-            task_id,
-            run_id,
-            request_id=run_id,
-            correlation_id=event.correlation_id,
-        )
+        import httpx
+        import logging
+
+        logger = logging.getLogger("vk-service.tasks")
+
+        try:
+            await self.tasks_client.start_execution(
+                task_id,
+                run_id,
+                request_id=run_id,
+                correlation_id=event.correlation_id,
+            )
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 409:
+                detail = "Unknown conflict"
+                try:
+                    detail = exc.response.json().get("detail", detail)
+                except Exception:
+                    pass
+
+                # Любой 409 конфликт от start_execution означает, что tasks-service находится в несовместимом состоянии
+                # (например, запущен другой run_id или задача уже выполнена). Это different-run conflict.
+                logger.warning(
+                    "Execution conflict for task_id=%s, run_id=%s. Conflict detail: %s. Transitioning local run to failed.",
+                    task_id,
+                    run_id,
+                    detail,
+                )
+                task_run.status = "failed"
+                task_run.finished_at = utcnow()
+                task_run.last_error = f"Conflict: {detail} (run {run_id})."
+                await self.repository.save()
+                return None
+            raise
+
         task_run.status = "running"
         task_run.started_at = task_run.started_at or utcnow()
         task_run.updated_at = utcnow()

@@ -86,3 +86,96 @@ async def test_outbox_loop_continues_after_publish_error(monkeypatch):
         await main.publish_outbox_forever()
 
     assert calls == 2
+
+
+@pytest.mark.anyio
+async def test_tasks_service_outbox_events_contract():
+    from unittest.mock import AsyncMock, MagicMock
+    from app.modules.tasks.service import TasksService
+    from app.modules.tasks.schemas import CreateParseTaskRequest
+    
+    session = AsyncMock()
+    service = TasksService(session)
+    
+    task_mock = MagicMock()
+    task_mock.id = 42
+    task_mock.owner_user_id = "user-1"
+    task_mock.scope = "selected"
+    task_mock.mode = "recent_posts"
+    task_mock.group_ids = [1, 2]
+    task_mock.post_limit = 10
+    task_mock.source = "manual"
+    
+    service.repository.create_task = AsyncMock(return_value=task_mock)
+    service.repository.add_audit = AsyncMock()
+    service.outbox.add_event = AsyncMock()
+    
+    payload = CreateParseTaskRequest(
+        scope="selected",
+        groupIds=[1, 2],
+        postLimit=10,
+        mode="recent_posts"
+    )
+    
+    await service.create_parse_task("user-1", payload)
+    
+    service.outbox.add_event.assert_called_with(
+        event_type="task.created",
+        aggregate_type="task",
+        aggregate_id="42",
+        correlation_id=None,
+        payload={
+            "taskId": "42",
+            "ownerUserId": "user-1",
+            "scope": "selected",
+            "mode": "recent_posts",
+            "groupIds": [1, 2],
+            "postLimit": 10,
+            "source": "manual",
+        }
+    )
+
+    task_mock.scope = "all"
+    task_mock.group_ids = []
+    payload_all = CreateParseTaskRequest(
+        scope="all",
+        groupIds=[1, 2],
+        postLimit=10,
+        mode="recent_posts"
+    )
+    await service.create_parse_task("user-1", payload_all)
+    service.outbox.add_event.assert_called_with(
+        event_type="task.created",
+        aggregate_type="task",
+        aggregate_id="42",
+        correlation_id=None,
+        payload={
+            "taskId": "42",
+            "ownerUserId": "user-1",
+            "scope": "all",
+            "mode": "recent_posts",
+            "groupIds": [],
+            "postLimit": 10,
+            "source": "manual",
+        }
+    )
+
+    service.repository.get_task = AsyncMock(return_value=task_mock)
+    service.repository.touch_task = AsyncMock(return_value=task_mock)
+    
+    await service.resume_task("user-1", 42)
+    service.outbox.add_event.assert_called_with(
+        event_type="task.resumed",
+        aggregate_type="task",
+        aggregate_id="42",
+        payload={
+            "taskId": "42",
+            "ownerUserId": "user-1",
+            "scope": "all",
+            "mode": "recent_posts",
+            "groupIds": [],
+            "postLimit": 10,
+            "source": "manual",
+        }
+    )
+

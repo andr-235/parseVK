@@ -73,3 +73,12 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .ai-factory/
 .worktrees/
 /tools/parsevkctl/bin/
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+

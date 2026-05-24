@@ -54,6 +54,8 @@ class FakeTaskRun:
         self.started_at = None
         self.finished_at = None
         self.updated_at = None
+        self.last_error = None
+
 
 
 class FakeTasksClient:
@@ -143,3 +145,56 @@ def test_missing_task_id_is_validation_safe():
         task_event.task_id()
 
     assert "taskId" in str(error.value)
+
+
+@pytest.mark.anyio
+async def test_completed_task_event_does_not_move_lifecycle_backward():
+    repository = FakeRepository()
+    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="done")
+    tasks_client = FakeTasksClient()
+    handler = TaskEventsHandler(repository, tasks_client)
+
+    result = await handler.handle(event(task_id=1))
+
+    assert result is None
+    assert repository.runs[1].status == "done"
+    assert len(tasks_client.calls) == 0
+
+
+@pytest.mark.anyio
+async def test_running_task_event_same_run_id_returns_none_preventing_reexecution():
+    repository = FakeRepository()
+    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="running")
+    tasks_client = FakeTasksClient()
+    handler = TaskEventsHandler(repository, tasks_client)
+
+    task_event = event(task_id=1)
+    task_event.payload["taskId"] = "1"
+    
+    result = await handler._handle_created_or_resumed(task_event)
+
+    assert result is None
+    assert len(tasks_client.calls) == 0
+
+
+@pytest.mark.anyio
+async def test_conflict_409_different_run_id_marks_failed_without_loop():
+    repository = FakeRepository()
+    tasks_client = FakeTasksClient()
+    
+    import httpx
+    async def mock_start_execution(*args, **kwargs):
+        resp = httpx.Response(status_code=409, json={"detail": "Task already running"})
+        raise httpx.HTTPStatusError("Conflict", request=httpx.Request("POST", "http://test"), response=resp)
+        
+    tasks_client.start_execution = mock_start_execution
+    handler = TaskEventsHandler(repository, tasks_client)
+
+    task_event = event(task_id=1)
+    result = await handler.handle(task_event)
+
+    assert result is None
+    assert repository.runs[1].status == "failed"
+    assert "Conflict: Task already running" in repository.runs[1].last_error
+
+
