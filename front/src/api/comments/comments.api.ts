@@ -126,7 +126,7 @@ export const updateReadStatus = async (id: number, isRead: boolean): Promise<Com
 export const searchComments = async (
   params: CommentsSearchRequestDto
 ): Promise<CommentsSearchResult> => {
-  const response = await createRequest(`${API_URL}/comments/search`, {
+  const response = await createRequest(`${GATEWAY_API_URL}/v1/comments/search`, {
     method: 'POST',
     body: JSON.stringify(buildCommentsSearchPayload(params)),
   })
