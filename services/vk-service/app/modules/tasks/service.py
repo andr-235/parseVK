@@ -117,16 +117,20 @@ class TaskEventsHandler:
                 except Exception:
                     pass
 
-                if task_run.run_id == run_id and task_run.status in {"running", "done"}:
+                # Классифицируем 409 ошибку на основе detail
+                # Same-run idempotent conflict: "Execution run mismatch"
+                if "mismatch" in detail.lower():
                     logger.info(
-                        "Idempotent conflict check: task %s is already running/completed with run_id %s.",
+                        "Idempotent conflict check: task %s already active or completed with same run_id %s. Detail: %s.",
                         task_id,
                         run_id,
+                        detail,
                     )
                     return None
 
+                # Different-run conflict: "already running", "already completed", "Invalid task transition"
                 logger.warning(
-                    "Execution conflict for task_id=%s, run_id=%s. Conflict detail: %s.",
+                    "Execution conflict for task_id=%s, run_id=%s. Conflict detail: %s. Transitioning local run to failed.",
                     task_id,
                     run_id,
                     detail,

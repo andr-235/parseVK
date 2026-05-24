@@ -82,36 +82,16 @@ mypy .
 ```
 Если подходящих проверок нет, явно сообщи, что автоматические проверки не найдены, и опиши ручную валидацию.
 Commit rules для задач parseVK
-Commit message должен использовать Conventional Commits и единый AI agent standard из этого документа.
-Subject должен быть на английском языке.
-Формат subject:
+Commit message должен быть на русском и использовать Conventional Commits из этого документа.
+Формат:
 ```text
-<type>(<scope>): <short summary>
+<тип>: <краткое описание> (#ISSUE_NUMBER)
 ```
 Примеры:
 ```text
-feat(api-gateway): add admin users migration checks
-fix(parsevkctl): make branch cleanup idempotent
-docs(migration): update backend migration status map
-test(moderation): fix integration test collection
-chore(deps): add uv lock for moderation service
-```
-Не начинай commit subject с task ID вроде `FASTAPI-MIG-001`.
-Task ID и issue links указывай в body commit или PR:
-```text
-Refs: FASTAPI-MIG-001
-Closes #145
-```
-Branch naming:
-```text
-<type>/<issue-number>-<short-kebab-summary>
-```
-Примеры:
-```text
-docs/145-backend-migration-status
-fix/130-parsevkctl-branch-cleanup
-feat/127-moderation-service
-test/145-gateway-integration-checks
+feat: добавлен экспорт авторов в CSV (#64)
+fix: исправлено форматирование даты комментария (#65)
+refactor: унифицированы утилиты работы с авторами (#66)
 ```
 Создание Pull Request
 После реализации, проверок и commit вызвать:
@@ -124,20 +104,6 @@ test/145-gateway-integration-checks
 добавить `Closes #ISSUE_NUMBER` в body;
 перевести карточку в `Review`.
 Codex не должен создавать PR из default branch.
-PR title должен использовать тот же Conventional Commit format:
-```text
-docs(migration): update backend migration status and checks
-```
-PR body должен включать:
-```md
-Closes #145
-
-## Summary
-- ...
-
-## Validation
-- [ ] ...
-```
 Merge задачи
 Нормальный путь завершения code-задачи:
 ```powershell
@@ -152,11 +118,6 @@ GitHub checks прошли, если они есть;
 не добавлены secrets;
 `.env` и локальные конфиги не попали в commit;
 изменения соответствуют исходной задаче.
-GitHub-generated merge commits можно оставлять в формате:
-```text
-Merge pull request #<number> from <branch>
-```
-Не имитируй этот формат вручную для обычных commits.
 Codex должен остановиться на стадии PR и запросить review, если изменения затрагивают:
 GitHub Actions workflows;
 deployment configuration;
@@ -363,48 +324,28 @@ Code Review
 Производительность (O(n²) алгоритмы, утечки памяти).
 Безопасность (SQL injection, XSS, path traversal).
 Commit-сообщения
-Всегда генерируй commit subjects на английском языке.
-Используй Conventional Commits.
-Формат: `<type>(<scope>): <summary>`
+Всегда генерируй commit messages на русском языке.
+Формат: `<тип>: <краткое описание>`
 Типы:
 `feat` — новая функциональность
 `fix` — исправление ошибки
+`refactor` — рефакторинг без изменения логики
 `docs` — документация (README, AGENTS.md, docstrings)
 `test` — тесты (новые, исправления)
-`refactor` — рефакторинг без изменения логики
 `chore` — конфиг, зависимости, build (package.json, Dockerfile)
-`ci` — CI/CD pipeline (GitHub Actions, .gitlab-ci.yml)
-`build` — build system или packaging changes
 `perf` — оптимизация производительности
-`style` — formatting-only change
+`ci` — CI/CD pipeline (GitHub Actions, .gitlab-ci.yml)
 `security` — исправления безопасности
-Rules:
-Используй lowercase type и scope.
-Используй imperative mood.
-Держи subject короче 72 символов, когда это практично.
-Не начинай subject с task ID вроде `FASTAPI-MIG-001`.
-Task IDs и issue links указывай в body:
-```text
-Refs: FASTAPI-MIG-001
-Closes #145
-```
-Не включай secrets, tokens, cookies, passwords или raw credentials.
 Примеры:
 ```
-feat(api-gateway): add admin users migration checks
-fix(parsevkctl): make branch cleanup idempotent
-docs(migration): update backend migration status map
-test(moderation): fix integration test collection
-chore(deps): add uv lock for moderation service
+feat: добавлен парсер конфигурации JSON с валидацией
+fix: исправлена обработка пустых строк в tokenizer
+refactor: перемещена логика кэширования в отдельный класс
+docs: обновлена документация по API
+test: добавлены тесты граничных случаев для парсера
+perf: оптимизирован алгоритм поиска с O(n²) на O(n log n)
+security: исправлена SQL injection уязвимость в query builder
 ```
-Branch names:
-```text
-<type>/<issue-number>-<short-kebab-summary>
-```
-Pull request titles use the same Conventional Commit format as commits.
-Pull request bodies include `Closes #ISSUE_NUMBER`, summary, and validation notes.
-Future AI tasks must explicitly say: `Follow AGENTS.md.`
-GitHub-generated merge commits may keep the default `Merge pull request #...` format.
 ---
 🗣️ Примеры коммуникации
 При успешном изменении

@@ -117,18 +117,36 @@ class IngestionService:
                     request_id=task_run.run_id,
                     correlation_id=correlation_id,
                 )
-            except Exception as callback_exc:
-                is_retryable = False
-                if isinstance(callback_exc, (sqlalchemy.exc.DBAPIError, asyncio.CancelledError)):
-                    is_retryable = True
-                elif isinstance(callback_exc, httpx.HTTPStatusError):
-                    if callback_exc.response.status_code >= 500:
-                        is_retryable = True
-                elif isinstance(callback_exc, httpx.RequestError):
-                    is_retryable = True
-
-                if is_retryable:
+            except httpx.HTTPStatusError as callback_exc:
+                if callback_exc.response.status_code == 409:
+                    detail = "Unknown conflict"
+                    try:
+                        detail = callback_exc.response.json().get("detail", detail)
+                    except Exception:
+                        pass
+                    task_run.last_error = f"{sanitized_error} | Callback conflict: {detail}"
+                    
+                    import logging
+                    logger = logging.getLogger("vk-service.ingestion")
+                    logger.warning(
+                        "Fail callback returned 409 for task_id=%s, run_id=%s. Detail: %s. Not retrying as tasks-service is in a different lifecycle state.",
+                        task_run.task_id,
+                        task_run.run_id,
+                        detail,
+                    )
+                elif callback_exc.response.status_code >= 500:
                     raise callback_exc from exc
+                else:
+                    import logging
+                    logger = logging.getLogger("vk-service.ingestion")
+                    logger.error(
+                        "Fail callback failed with 4xx for task_id=%s, run_id=%s. Status: %s.",
+                        task_run.task_id,
+                        task_run.run_id,
+                        callback_exc.response.status_code,
+                    )
+            except (httpx.RequestError, sqlalchemy.exc.DBAPIError, asyncio.CancelledError) as callback_exc:
+                raise callback_exc from exc
 
             is_infra_error = isinstance(exc, (sqlalchemy.exc.DBAPIError, asyncio.CancelledError))
             if isinstance(exc, httpx.RequestError) and not isinstance(exc, httpx.HTTPStatusError):

@@ -197,3 +197,26 @@ async def test_conflict_409_different_run_id_marks_failed_without_loop():
     assert repository.runs[1].status == "failed"
     assert "Conflict: Task already running" in repository.runs[1].last_error
 
+
+@pytest.mark.anyio
+async def test_conflict_409_same_run_idempotent_mismatch_returns_none():
+    repository = FakeRepository()
+    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="pending")
+    tasks_client = FakeTasksClient()
+    
+    import httpx
+    async def mock_start_execution(*args, **kwargs):
+        resp = httpx.Response(status_code=409, json={"detail": "Execution run mismatch"})
+        raise httpx.HTTPStatusError("Conflict", request=httpx.Request("POST", "http://test"), response=resp)
+        
+    tasks_client.start_execution = mock_start_execution
+    handler = TaskEventsHandler(repository, tasks_client)
+
+    task_event = event(task_id=1)
+    result = await handler.handle(task_event)
+
+    assert result is None
+    assert repository.runs[1].status == "pending"
+    assert repository.runs[1].last_error is None
+
+
