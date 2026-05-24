@@ -147,9 +147,8 @@ class KeywordsGatewayService:
         return {"count": raw.get("count", 0)}
 
     async def delete_keyword(self, id: int) -> dict:
-        await self._request("DELETE", f"/internal/moderation/keywords/{id}")
-        # Возвращаем удаленный KeywordResponse для полной совместимости
-        return {"id": id, "success": True}
+        raw = await self._request("DELETE", f"/internal/moderation/keywords/{id}")
+        return self._format_keyword(raw)
 
     async def get_keyword_forms(self, id: int) -> dict:
         raw = await self._request("GET", f"/internal/moderation/keywords/{id}/forms")
@@ -224,7 +223,12 @@ class KeywordsGatewayService:
 
     async def recalculate_keyword_matches(self) -> dict:
         raw = await self._request("POST", "/internal/moderation/keywords/recalculate-matches")
-        return self._format_job(raw)
+        return {
+            "processed": raw.get("processed", 0),
+            "updated": raw.get("updated", 0),
+            "created": raw.get("created", 0),
+            "deleted": raw.get("deleted", 0),
+        }
 
     async def get_recalculation_job_status(self, id: int) -> dict:
         raw = await self._request("GET", f"/internal/moderation/keywords/recalculation-jobs/{id}")

@@ -109,7 +109,8 @@ async def test_keywords_service_delete():
     
     res = await service.delete_keyword(1)
     
-    assert res["success"] is True
-    assert res["id"] == 1
+    assert res.word == "собака"
+    assert res.category == "животные"
+    assert res.id == 1
     
     session.delete.assert_called_once_with(kw)

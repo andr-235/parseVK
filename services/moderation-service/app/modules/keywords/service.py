@@ -201,7 +201,7 @@ class KeywordsService:
             "limit": limit
         }
 
-    async def delete_keyword(self, id: int) -> dict:
+    async def delete_keyword(self, id: int) -> Keyword:
         stmt = select(Keyword).where(Keyword.id == id)
         result = await self.session.execute(stmt)
         keyword = result.scalar_one_or_none()
@@ -211,6 +211,16 @@ class KeywordsService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Keyword not found"
             )
+
+        # Сохраняем копию полей для возврата
+        deleted_kw = Keyword(
+            id=keyword.id,
+            word=keyword.word,
+            category=keyword.category,
+            is_phrase=keyword.is_phrase,
+            created_at=keyword.created_at,
+            updated_at=keyword.updated_at
+        )
 
         word_to_delete = keyword.word
 
@@ -227,7 +237,7 @@ class KeywordsService:
         await self.session.execute(stmt_clean)
         await self.session.commit()
 
-        return {"success": True, "id": id}
+        return deleted_kw
 
     async def delete_all_keywords(self) -> dict:
         stmt = delete(Keyword)
@@ -440,16 +450,49 @@ class KeywordsService:
         background_tasks: BackgroundTasks | None = None,
         single_keyword_id: int | None = None
     ) -> KeywordRecalculationJob:
-        # Проверяем наличие активной задачи
-        active_job = await self.recalculator.get_active_job()
-        if active_job:
-            return active_job
+        # 1. Получаем все активные задачи (в статусе pending или running)
+        stmt_active = select(KeywordRecalculationJob).where(
+            KeywordRecalculationJob.status.in_(["pending", "running"])
+        ).order_by(KeywordRecalculationJob.id.asc())
+        result_active = await self.session.execute(stmt_active)
+        active_jobs = result_active.scalars().all()
+
+        if active_jobs:
+            # Если есть хотя бы одна активная задача полного пересчета (single_keyword_id is None),
+            # она гарантированно пересчитает и наше новое ключевое слово. Возвращаем её.
+            for job in active_jobs:
+                if job.single_keyword_id is None:
+                    return job
+
+            # Если все активные задачи — это пересчеты для одного слова:
+            # Проверяем, есть ли среди них задача для НАШЕГО слова
+            for job in active_jobs:
+                if single_keyword_id is not None and job.single_keyword_id == single_keyword_id:
+                    return job
+
+            # Если есть активная задача в статусе "pending", мы можем просто "апгрейднуть" её до полного пересчета
+            pending_jobs = [j for j in active_jobs if j.status == "pending"]
+            if pending_jobs:
+                pending_job = pending_jobs[0]
+                pending_job.single_keyword_id = None  # Апгрейдим до полного пересчета
+                pending_job.requested_by = f"{pending_job.requested_by}+coalesced"
+                self.session.add(pending_job)
+                await self.session.commit()
+                await self.session.refresh(pending_job)
+                return pending_job
+
+        # 2. Если апгрейд невозможен (все активные задачи уже "running" для других слов)
+        # или активных задач нет, мы создаем новую задачу.
+        # Если есть активные задачи (running для других слов), новая джоба должна быть полным пересчетом.
+        final_single_id = single_keyword_id
+        if active_jobs:
+            final_single_id = None
 
         # Создаем новую задачу
         job = KeywordRecalculationJob(
             status="pending",
             requested_by=requested_by,
-            single_keyword_id=single_keyword_id
+            single_keyword_id=final_single_id
         )
         self.session.add(job)
         await self.session.commit()
@@ -458,8 +501,10 @@ class KeywordsService:
         if background_tasks:
             background_tasks.add_task(self.recalculator.run_recalculation, job.id)
         else:
-            # Синхронно (только в тестах)
+            # Синхронно (для тестов или ручного полного пересчета из API)
             await self.recalculator.run_recalculation(job.id)
+            # Перегружаем объект, чтобы получить обновленные воркером статы
+            await self.session.refresh(job)
 
         return job
 

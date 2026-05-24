@@ -94,6 +94,10 @@ class RecalculationWorker:
                 job = result.scalar_one()
                 job.status = "succeeded"
                 job.finished_at = utcnow()
+                job.processed = stats.get("processed", 0)
+                job.updated = stats.get("updated", 0)
+                job.created = stats.get("created", 0)
+                job.deleted = stats.get("deleted", 0)
                 session.add(job)
                 await session.commit()
 

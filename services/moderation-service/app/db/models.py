@@ -112,6 +112,10 @@ class KeywordRecalculationJob(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")  # "pending" | "running" | "succeeded" | "failed"
     single_keyword_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    processed: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    updated: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    created: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    deleted: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)

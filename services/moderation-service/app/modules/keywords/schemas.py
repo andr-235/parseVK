@@ -73,6 +73,11 @@ class KeywordsListResponse(BaseModel):
 class KeywordRecalculationJobResponse(BaseModel):
     id: int
     status: str
+    single_keyword_id: int | None = None
+    processed: int = 0
+    updated: int = 0
+    created: int = 0
+    deleted: int = 0
     started_at: datetime | None = None
     finished_at: datetime | None = None
     error: str | None = None

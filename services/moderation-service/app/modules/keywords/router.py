@@ -97,7 +97,7 @@ async def delete_all_keywords(
     return await service.delete_all_keywords()
 
 
-@router.delete("/{id}")
+@router.delete("/{id}", response_model=KeywordResponse)
 async def delete_keyword(
     id: int,
     service: KeywordsService = Depends(get_keywords_service),
@@ -169,15 +169,21 @@ async def remove_keyword_form_exclusion(
     )
 
 
-@router.post("/recalculate-matches", response_model=KeywordRecalculationJobResponse)
+@router.post("/recalculate-matches", response_model=KeywordFormsRebuildResponse)
 async def recalculate_keyword_matches(
-    background_tasks: BackgroundTasks,
     service: KeywordsService = Depends(get_keywords_service),
 ):
-    return await service.recalculate_keyword_matches(
+    job = await service.recalculate_keyword_matches(
         requested_by="api",
-        background_tasks=background_tasks,
+        background_tasks=None,
     )
+    return {
+        "keywords_rebuilt": 0,
+        "processed": job.processed,
+        "updated": job.updated,
+        "created": job.created,
+        "deleted": job.deleted,
+    }
 
 
 @router.get("/recalculation-jobs/{id}", response_model=KeywordRecalculationJobResponse)
