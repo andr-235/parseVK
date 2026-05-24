@@ -24,13 +24,16 @@ const normalizeSummary = (summary?: PhotoAnalysisSummary | null): PhotoAnalysisS
     return fallback
   }
 
+  const summaryCategories = Array.isArray(summary.categories) ? summary.categories : []
+  const summaryLevels = Array.isArray(summary.levels) ? summary.levels : []
+
   const categories = fallback.categories.map((category) => {
-    const existing = summary.categories.find((item) => item.name === category.name)
+    const existing = summaryCategories.find((item) => item.name === category.name)
     return existing ? { ...existing } : { ...category }
   })
 
   const levels = fallback.levels.map((level) => {
-    const existing = summary.levels.find((item) => item.level === level.level)
+    const existing = summaryLevels.find((item) => item.level === level.level)
     return existing ? { ...existing } : { ...level }
   })
 
@@ -76,6 +79,16 @@ const mapAuthorDetails = (author: AuthorDetailsResponse): AuthorDetails => ({
 })
 
 const CONTENT_AUTHORS_API_URL = `${GATEWAY_API_URL}/v1/content/authors`
+const FASTAPI_AUTHOR_SORT_FIELDS = new Set<AuthorSortField>(['fullName', 'updatedAt'])
+
+const canUseContentAuthorsApi = (params: {
+  city?: string
+  verified?: boolean
+  sortBy?: AuthorSortField
+}): boolean =>
+  !params.city?.trim() &&
+  params.verified === undefined &&
+  (!params.sortBy || FASTAPI_AUTHOR_SORT_FIELDS.has(params.sortBy))
 
 export const authorsService = {
   async fetchAuthors(
@@ -99,7 +112,8 @@ export const authorsService = {
         sortBy: params.sortBy,
         sortOrder: params.sortOrder,
       })
-      const url = query ? `${CONTENT_AUTHORS_API_URL}?${query}` : CONTENT_AUTHORS_API_URL
+      const baseUrl = canUseContentAuthorsApi(params) ? CONTENT_AUTHORS_API_URL : `${API_URL}/authors`
+      const url = query ? `${baseUrl}?${query}` : baseUrl
       const response = await createRequest(url)
 
       const data = await handleResponse<AuthorsListResponse>(

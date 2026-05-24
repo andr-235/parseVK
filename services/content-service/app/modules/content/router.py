@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -10,6 +11,7 @@ from app.modules.content.photo_analysis import PhotoAnalysisClient
 from app.modules.content.repository import ContentRepository
 
 logger = logging.getLogger(__name__)
+SUPPORTED_AUTHOR_SORT_FIELDS = {"fullName", "updatedAt"}
 
 router = APIRouter(
     prefix="/internal/content",
@@ -106,6 +108,7 @@ async def list_authors(
     repository: ContentRepository = Depends(get_content_repository),
     photo_analysis_client: PhotoAnalysisClient = Depends(get_photo_analysis_client),
 ):
+    validate_author_query_params(city=city, verified=verified, sort_by=sort_by)
     resolved_offset = offset if offset is not None else ((page or 1) - 1) * limit
     payload = await repository.list_authors(
         offset=resolved_offset,
@@ -170,6 +173,29 @@ def parse_optional_bool(value: Any) -> bool | None:
     return None
 
 
+def validate_author_query_params(
+    *,
+    city: str | None,
+    verified: str | None,
+    sort_by: str | None,
+) -> None:
+    if normalize_text(city) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Author city filter is not supported by the content projection",
+        )
+    if verified not in {None, "", "all"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Author verified filter is not supported by the content projection",
+        )
+    if sort_by and sort_by not in SUPPORTED_AUTHOR_SORT_FIELDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported author sort field: {sort_by}",
+        )
+
+
 async def enrich_author_summaries(
     items: list[dict],
     photo_analysis_client: PhotoAnalysisClient,
@@ -183,7 +209,10 @@ async def enrich_author_summaries(
         return
 
     try:
-        summaries = await photo_analysis_client.summaries_by_vk_author_ids(vk_author_ids)
+        summaries = await asyncio.wait_for(
+            photo_analysis_client.summaries_by_vk_author_ids(vk_author_ids),
+            timeout=getattr(photo_analysis_client, "enrichment_budget_seconds", 2.0),
+        )
     except Exception as exc:
         logger.warning("Photo analysis enrichment failed: %s", exc)
         return

@@ -245,9 +245,9 @@ class ContentRepository:
         fields = {
             "fullName": ContentAuthor.display_name,
             "updatedAt": ContentAuthor.updated_at,
-            "city": ContentAuthor.display_name,
-            "verifiedAt": ContentAuthor.updated_at,
         }
+        if sort_by and sort_by not in fields:
+            raise ValueError(f"Unsupported author sort field: {sort_by}")
         field = fields.get(sort_by or "updatedAt", ContentAuthor.updated_at)
         primary = (
             field.asc().nulls_last()

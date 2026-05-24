@@ -6,7 +6,7 @@ Issue: #148
 
 | Legacy NestJS endpoint | FastAPI/gateway endpoint | Status |
 |---|---|---|
-| `GET /authors` | `GET /api/v1/content/authors` | migrated: list, search, verified filter, city empty-state handling, sort, offset pagination |
+| `GET /authors` | `GET /api/v1/content/authors` | migrated: list, search, `fullName`/`updatedAt` sorting, offset pagination |
 | `GET /authors/:vkUserId` | `GET /api/v1/content/authors/:vkUserId` | migrated: detail contract from content projection |
 | `POST /authors/refresh` | none | follow-up: requires authors saver/VK refresh dependency outside content-service |
 | `DELETE /authors/:vkUserId` | none | follow-up: legacy deletes Author plus related comments; content projection is read-model only |
@@ -24,4 +24,6 @@ Issue: #148
 
 - Authors photo-analysis summary enrichment is best-effort. If `CONTENT_PHOTO_ANALYSIS_BASE_URL` is not configured, times out, or returns an error, authors endpoints still return the base read model with `summary: null`.
 - The content-service read model currently contains a smaller VK projection than the legacy Prisma model. Missing fields are preserved as nullable legacy keys to keep frontend rendering stable while richer projection work remains a follow-up.
-- Frontend read clients now use gateway/FastAPI for authors list/details and groups list. Write/admin operations still call the legacy NestJS API.
+- Direct FastAPI author reads reject projection-limited params with HTTP 400: `city`, `verified`, and `sortBy` values other than `fullName` or `updatedAt`.
+- Frontend authors reads use gateway/FastAPI only for projection-supported requests: no `city`, no `verified`, and no unsupported `sortBy`. City/verified filters and counters/lastSeen/verified sorting still route to legacy NestJS until richer author projection is available.
+- Frontend groups reads use gateway/FastAPI. Write/admin operations still call the legacy NestJS API.

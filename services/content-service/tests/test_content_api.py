@@ -1,4 +1,5 @@
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -159,12 +160,18 @@ class FakeRepository:
 
 
 class FakePhotoAnalysisClient:
-    def __init__(self, *, fail=False):
+    def __init__(self, *, fail=False, delay_seconds=0, enrichment_budget_seconds=2.0):
         self.fail = fail
+        self.delay_seconds = delay_seconds
+        self.enrichment_budget_seconds = enrichment_budget_seconds
         self.calls = []
 
     async def summaries_by_vk_author_ids(self, vk_author_ids):
         self.calls.append(vk_author_ids)
+        if self.delay_seconds:
+            import anyio
+
+            await anyio.sleep(self.delay_seconds)
         if self.fail:
             raise RuntimeError("analysis unavailable")
         return {
@@ -236,7 +243,7 @@ async def test_authors_list_supports_legacy_filters_sort_and_offset_pagination(
 ):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(
-            "/internal/content/authors?offset=0&limit=1&search=ada&sortBy=fullName&sortOrder=asc&verified=false",
+            "/internal/content/authors?offset=0&limit=1&search=ada&sortBy=fullName&sortOrder=asc",
             headers=headers(),
         )
 
@@ -253,11 +260,28 @@ async def test_authors_list_supports_legacy_filters_sort_and_offset_pagination(
         1,
         "ada",
         None,
-        False,
+        None,
         "fullName",
         "asc",
     )
     assert photo_analysis_client.calls == [[101]]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "query",
+    [
+        "sortBy=photosCount",
+        "city=Yakutsk",
+        "verified=true",
+        "verified=false",
+    ],
+)
+async def test_authors_reject_projection_limited_query_params(app, query):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(f"/internal/content/authors?{query}", headers=headers())
+
+    assert response.status_code == 400
 
 
 @pytest.mark.anyio
@@ -267,6 +291,27 @@ async def test_authors_empty_state_keeps_legacy_shape(app):
 
     assert response.status_code == 200
     assert response.json() == {"items": [], "total": 0, "hasMore": False}
+
+
+@pytest.mark.anyio
+async def test_authors_accept_updated_at_sort(app, repository):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/internal/content/authors?sortBy=updatedAt&sortOrder=desc",
+            headers=headers(),
+        )
+
+    assert response.status_code == 200
+    assert repository.calls[0] == (
+        "list_authors",
+        0,
+        20,
+        None,
+        None,
+        None,
+        "updatedAt",
+        "desc",
+    )
 
 
 @pytest.mark.anyio
@@ -299,6 +344,32 @@ async def test_author_photo_analysis_failure_does_not_fail_response(repository):
 
     assert response.status_code == 200
     assert response.json()["items"][0]["summary"] is None
+
+
+@pytest.mark.anyio
+async def test_author_photo_analysis_slow_client_uses_global_budget(repository):
+    app = create_app()
+
+    async def repository_override():
+        return repository
+
+    async def photo_analysis_client_override():
+        return FakePhotoAnalysisClient(delay_seconds=0.2, enrichment_budget_seconds=0.05)
+
+    app.dependency_overrides[get_content_repository] = repository_override
+    app.dependency_overrides[get_photo_analysis_client] = photo_analysis_client_override
+
+    started = time.perf_counter()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/internal/content/authors?limit=2",
+            headers=headers(),
+        )
+    elapsed = time.perf_counter() - started
+
+    assert response.status_code == 200
+    assert elapsed < 0.15
+    assert [item["summary"] for item in response.json()["items"]] == [None, None]
 
 
 @pytest.mark.anyio

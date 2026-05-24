@@ -54,7 +54,7 @@ describe('authors api migration routing', () => {
     await authorsService.fetchAuthors({ offset: 20, limit: 10 })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/content/authors?page=3&limit=10',
+      '/api/v1/content/authors?offset=20&limit=10',
       expect.any(Object)
     )
   })
@@ -98,8 +98,82 @@ describe('authors api migration routing', () => {
   it('keeps filtered authors on legacy authors api', async () => {
     const { authorsService } = await import('./authors.api')
 
-    await authorsService.fetchAuthors({ limit: 10, search: 'ivan' })
+    await authorsService.fetchAuthors({ limit: 10, city: 'Yakutsk' })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/authors?limit=10&search=ivan', expect.any(Object))
+    expect(fetchMock).toHaveBeenCalledWith('/api/authors?limit=10&city=Yakutsk', expect.any(Object))
+  })
+
+  it('keeps verified filter on legacy authors api', async () => {
+    const { authorsService } = await import('./authors.api')
+
+    await authorsService.fetchAuthors({ limit: 10, verified: false })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/authors?limit=10&verified=false', expect.any(Object))
+  })
+
+  it('keeps unsupported author sort fields on legacy authors api', async () => {
+    const { authorsService } = await import('./authors.api')
+
+    await authorsService.fetchAuthors({ limit: 10, sortBy: 'photosCount', sortOrder: 'desc' })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/authors?limit=10&sortBy=photosCount&sortOrder=desc',
+      expect.any(Object)
+    )
+  })
+
+  it('uses content gateway for projection-supported author search and sort', async () => {
+    const { authorsService } = await import('./authors.api')
+
+    await authorsService.fetchAuthors({ limit: 10, search: 'ivan', sortBy: 'fullName' })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/content/authors?limit=10&search=ivan&sortBy=fullName',
+      expect.any(Object)
+    )
+  })
+
+  it('normalizes malformed photo-analysis summaries', async () => {
+    const { authorsService } = await import('./authors.api')
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 1,
+              vkUserId: 100,
+              firstName: 'Test',
+              lastName: 'User',
+              fullName: 'Test User',
+              photo50: null,
+              photo100: null,
+              photo200: null,
+              domain: null,
+              screenName: null,
+              profileUrl: null,
+              city: null,
+              summary: { total: 1, suspicious: 0, categories: null, levels: {} },
+              photosCount: null,
+              audiosCount: null,
+              videosCount: null,
+              friendsCount: null,
+              followersCount: null,
+              lastSeenAt: null,
+              verifiedAt: null,
+              isVerified: false,
+            },
+          ],
+          total: 1,
+          hasMore: false,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    )
+
+    const result = await authorsService.fetchAuthors({ limit: 10 })
+
+    expect(result.items[0].summary.categories).toEqual([])
+    expect(result.items[0].summary.levels).toEqual([])
   })
 })
