@@ -117,18 +117,8 @@ class TaskEventsHandler:
                 except Exception:
                     pass
 
-                # Классифицируем 409 ошибку на основе detail
-                # Same-run idempotent conflict: "Execution run mismatch"
-                if "mismatch" in detail.lower():
-                    logger.info(
-                        "Idempotent conflict check: task %s already active or completed with same run_id %s. Detail: %s.",
-                        task_id,
-                        run_id,
-                        detail,
-                    )
-                    return None
-
-                # Different-run conflict: "already running", "already completed", "Invalid task transition"
+                # Любой 409 конфликт от start_execution означает, что tasks-service находится в несовместимом состоянии
+                # (например, запущен другой run_id или задача уже выполнена). Это different-run conflict.
                 logger.warning(
                     "Execution conflict for task_id=%s, run_id=%s. Conflict detail: %s. Transitioning local run to failed.",
                     task_id,

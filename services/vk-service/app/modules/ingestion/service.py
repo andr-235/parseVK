@@ -134,17 +134,9 @@ class IngestionService:
                         task_run.run_id,
                         detail,
                     )
-                elif callback_exc.response.status_code >= 500:
-                    raise callback_exc from exc
                 else:
-                    import logging
-                    logger = logging.getLogger("vk-service.ingestion")
-                    logger.error(
-                        "Fail callback failed with 4xx for task_id=%s, run_id=%s. Status: %s.",
-                        task_run.task_id,
-                        task_run.run_id,
-                        callback_exc.response.status_code,
-                    )
+                    # Все остальные HTTP ошибки (400-499, 500+) пробрасываем наверх для ретрая Kafka
+                    raise callback_exc from exc
             except (httpx.RequestError, sqlalchemy.exc.DBAPIError, asyncio.CancelledError) as callback_exc:
                 raise callback_exc from exc
 
