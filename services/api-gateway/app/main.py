@@ -11,6 +11,8 @@ from app.modules.keywords.router import router as keywords_router
 from app.modules.listings.router import router as listings_router
 from app.modules.tasks.router import router as tasks_router
 from app.modules.telegram_tgmbase.router import router as telegram_tgmbase_router
+from app.modules.photo_analysis.router import router as photo_analysis_router
+
 
 
 def create_app() -> FastAPI:
@@ -40,6 +42,7 @@ def create_app() -> FastAPI:
     app.include_router(watchlist_router)
     app.include_router(listings_router)
     app.include_router(telegram_tgmbase_router)
+    app.include_router(photo_analysis_router)
 
     return app
 

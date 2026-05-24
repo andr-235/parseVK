@@ -30,7 +30,9 @@ class ContentAuthor(Base):
     vk_author_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True)
     type: Mapped[str] = mapped_column(String(32), nullable=False)
     display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column("verifiedAt", DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
 
 
 class ContentPost(Base):

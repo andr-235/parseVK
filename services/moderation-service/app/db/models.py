@@ -164,3 +164,28 @@ class WatchlistAuthor(Base):
     settings = relationship("WatchlistSettings", back_populates="authors")
     comments = relationship("ModerationComment", back_populates="watchlist_author")
 
+
+class PhotoAnalysis(Base):
+    __tablename__ = "photo_analyses"
+    __table_args__ = (
+        UniqueConstraint("author_vk_id", "photo_vk_id", name="uq_photo_analyses_author_photo"),
+        Index("ix_photo_analyses_author_vk_id", "author_vk_id"),
+        Index("ix_photo_analyses_suspicion_level", "suspicion_level"),
+        Index("ix_photo_analyses_analyzed_at", "analyzed_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    author_vk_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    photo_url: Mapped[str] = mapped_column(Text, nullable=False)
+    photo_vk_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    analysis_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    has_suspicious: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    suspicion_level: Mapped[str] = mapped_column(String(32), nullable=False, default="NONE")
+    categories: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    confidence: Mapped[float | None] = mapped_column(nullable=True)
+    explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
