@@ -84,7 +84,7 @@ func TestExecutorCallsAdaptersInExpectedOrder(t *testing.T) {
 	want := []string{
 		"git.PushBranch:origin:ai/mbp-111-planner:true",
 		"github.CreatePullRequest:Go rewrite: add planner executor:ai/mbp-111-planner:fastapi-microservices-rewrite",
-		"github.SetProjectStatus:111:Review",
+		"github.UpdateIssueLabels:111:ai:in-progress:ai:needs-review",
 	}
 	if !reflect.DeepEqual(recorder.calls, want) {
 		t.Fatalf("calls = %#v, want %#v", recorder.calls, want)
@@ -205,6 +205,10 @@ func (f *fakeGitAdapter) PushBranch(_ context.Context, remote string, branch str
 
 func (f *fakeGitAdapter) HasCommitsAhead(context.Context, string, string) (bool, error) {
 	return false, nil
+}
+
+func (f *fakeGitAdapter) ChangedFilesBetween(context.Context, string, string) ([]string, error) {
+	return nil, nil
 }
 
 func (f *fakeGitAdapter) record(method string, detail string) error {

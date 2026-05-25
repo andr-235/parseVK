@@ -92,9 +92,7 @@ func TestNewCreatePullRequestPlanOperationOrder(t *testing.T) {
 	want := []OperationType{
 		OperationGitPushBranch,
 		OperationPullRequestCreate,
-		OperationProjectSetStatus,
-		OperationGitSwitch,
-		OperationGitPullFastForward,
+		OperationIssueUpdateLabels,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("operation types = %#v, want %#v", got, want)
@@ -103,9 +101,7 @@ func TestNewCreatePullRequestPlanOperationOrder(t *testing.T) {
 	wantIDs := []string{
 		"git-push-task-branch",
 		"pull-request-create",
-		"project-set-status-review",
-		"git-switch-default-branch",
-		"git-pull-fast-forward-default-branch",
+		"issue-update-review-labels",
 	}
 	if got := operationIDs(plan); !reflect.DeepEqual(got, wantIDs) {
 		t.Fatalf("operation IDs = %#v, want %#v", got, wantIDs)

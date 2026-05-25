@@ -366,6 +366,7 @@ func TestTaskStartRejectsClosedIssue(t *testing.T) {
 func TestTaskPRRejectsDirtyWorkingTree(t *testing.T) {
 	deps := okDeps()
 	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
+	deps.GitHub.issue.Labels = []string{"ai:in-progress", "type:infra"}
 	deps.Git.clean = false
 	deps.Git.files = []string{" M internal/file.go"}
 
@@ -384,6 +385,7 @@ func TestTaskPRRejectsDirtyWorkingTree(t *testing.T) {
 func TestTaskPRRejectsWrongBranchIssueNumber(t *testing.T) {
 	deps := okDeps()
 	deps.Git.currentBranch = "ai/mbp-999-other-task"
+	deps.GitHub.issue.Labels = []string{"ai:in-progress", "type:infra"}
 
 	_, err := BuildTaskPRPlan(context.Background(), TaskIssueInput{
 		IssueNumber: 112,
@@ -397,10 +399,46 @@ func TestTaskPRRejectsWrongBranchIssueNumber(t *testing.T) {
 	deps.assertNoWrites(t)
 }
 
+func TestTaskPRRejectsMissingInProgressLabel(t *testing.T) {
+	deps := okDeps()
+	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
+	deps.GitHub.issue.Labels = []string{"ai:ready", "type:infra"}
+
+	_, err := BuildTaskPRPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "does not have required label ai:in-progress") {
+		t.Fatalf("err = %v, want missing ai:in-progress error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskPRRejectsDefaultBranch(t *testing.T) {
+	deps := okDeps()
+	deps.Git.currentBranch = "fastapi-microservices-rewrite"
+	deps.GitHub.issue.Labels = []string{"ai:in-progress", "type:infra"}
+
+	_, err := BuildTaskPRPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "current branch is the default branch") {
+		t.Fatalf("err = %v, want default branch error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
 func TestTaskPRDryRunPlan(t *testing.T) {
 	deps := okDeps()
 	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
 	deps.Git.ahead = true
+	deps.Git.changedFiles = []string{"tools/parsevkctl-go/internal/commands/write.go", "tools/parsevkctl-go/internal/commands/commands_test.go"}
+	deps.GitHub.issue.Labels = []string{"ai:in-progress", "type:infra"}
 	deps.GitHub.project = domain.ProjectItem{ID: "item-1", Status: domain.ProjectStatusInProgress}
 
 	result, err := BuildTaskPRPlan(context.Background(), TaskIssueInput{
@@ -414,14 +452,80 @@ func TestTaskPRDryRunPlan(t *testing.T) {
 	}
 
 	got := planOperationTypes(result.Plan.Operations)
-	want := []string{"Git.PushBranch", "PullRequest.Create", "Project.SetStatus", "Git.Switch", "Git.PullFastForward"}
+	want := []string{"Git.PushBranch", "PullRequest.Create", "Issue.UpdateLabels"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("operations = %#v, want %#v", got, want)
 	}
-	if !strings.Contains(result.PullRequestBody, "Closes #112") {
-		t.Fatalf("PR body = %q", result.PullRequestBody)
+	for _, want := range []string{
+		"## Summary",
+		"Closes #112",
+		"## Changed Files",
+		"- [ ] tools/parsevkctl-go/internal/commands/write.go",
+		"## Validation",
+		"## Risks",
+		"## AI Handoff",
+	} {
+		if !strings.Contains(result.PullRequestBody, want) {
+			t.Fatalf("PR body missing %q:\n%s", want, result.PullRequestBody)
+		}
+	}
+	if result.DefaultBranch != "fastapi-microservices-rewrite" {
+		t.Fatalf("default branch = %q, want fastapi-microservices-rewrite", result.DefaultBranch)
+	}
+	if result.Title != deps.GitHub.issue.Title {
+		t.Fatalf("title = %q, want issue title", result.Title)
 	}
 	deps.assertNoWrites(t)
+}
+
+func TestTaskPRSuccessOutputIncludesSummary(t *testing.T) {
+	deps := okDeps()
+	deps.Git.allowWrites = true
+	deps.GitHub.allowWrites = true
+	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
+	deps.Git.ahead = true
+	deps.GitHub.issue.Labels = []string{"ai:in-progress", "type:infra"}
+	deps.GitHub.createdPR = domain.PullRequest{
+		Number: 9,
+		URL:    "https://github.test/pull/9",
+		State:  domain.PullRequestStateOpen,
+	}
+
+	var out bytes.Buffer
+	exit := RunTaskPR(context.Background(), TaskRunInput{
+		TaskIssueInput: TaskIssueInput{
+			IssueNumber: 112,
+			Config:      deps.Config,
+			Git:         deps.Git,
+			GitHub:      deps.GitHub,
+		},
+		Stdout: &out,
+	})
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0; output=%s", exit, out.String())
+	}
+	text := out.String()
+	for _, want := range []string{
+		"Pull request created",
+		"Issue: #112",
+		"Title: MBP-112: Add read-only task commands",
+		"Base branch: fastapi-microservices-rewrite",
+		"Head branch: ai/mbp-112-add-read-only-task-commands",
+		"PR: https://github.test/pull/9",
+		"removed: ai:in-progress",
+		"added: ai:needs-review",
+		"ask ChatGPT to review the PR first",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("output missing %q:\n%s", want, text)
+		}
+	}
+	if !reflect.DeepEqual(deps.Git.writeCalls, []string{"PushBranch"}) {
+		t.Fatalf("git writes = %#v, want PushBranch", deps.Git.writeCalls)
+	}
+	if !reflect.DeepEqual(deps.GitHub.writeCalls, []string{"CreatePullRequest", "UpdateIssueLabels"}) {
+		t.Fatalf("github writes = %#v, want PR create and label update", deps.GitHub.writeCalls)
+	}
 }
 
 func TestTaskMergeRejectsDraftPR(t *testing.T) {
@@ -714,6 +818,7 @@ type fakeGit struct {
 	defaultBranch      string
 	clean              bool
 	ahead              bool
+	changedFiles       []string
 	files              []string
 	localBranchExists  bool
 	remoteBranchExists bool
@@ -798,6 +903,10 @@ func (f *fakeGit) HasCommitsAhead(context.Context, string, string) (bool, error)
 	return f.ahead, f.err
 }
 
+func (f *fakeGit) ChangedFilesBetween(context.Context, string, string) ([]string, error) {
+	return f.changedFiles, f.err
+}
+
 type fakeGitHub struct {
 	issue           domain.Issue
 	labels          []github.Label
@@ -810,6 +919,7 @@ type fakeGitHub struct {
 	project         domain.ProjectItem
 	projectErr      error
 	projectFieldErr error
+	createdPR       domain.PullRequest
 	allowWrites     bool
 	writeCalls      []string
 }
@@ -858,6 +968,9 @@ func (f *fakeGitHub) ListPullRequests(context.Context, github.PullRequestFilter)
 func (f *fakeGitHub) CreatePullRequest(context.Context, github.CreatePullRequestInput) (domain.PullRequest, error) {
 	f.writeCalls = append(f.writeCalls, "CreatePullRequest")
 	if f.allowWrites {
+		if f.createdPR.Number > 0 {
+			return f.createdPR, nil
+		}
 		return domain.PullRequest{Number: 9, State: domain.PullRequestStateOpen}, nil
 	}
 	return domain.PullRequest{}, errors.New("write call")

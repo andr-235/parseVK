@@ -16,4 +16,5 @@ type Adapter interface {
 	DeleteRemoteBranch(ctx context.Context, remote string, branch string) error
 	PushBranch(ctx context.Context, remote string, branch string, setUpstream bool) error
 	HasCommitsAhead(ctx context.Context, base string, head string) (bool, error)
+	ChangedFilesBetween(ctx context.Context, base string, head string) ([]string, error)
 }

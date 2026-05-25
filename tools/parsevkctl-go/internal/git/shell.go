@@ -196,6 +196,22 @@ func (adapter *ShellAdapter) HasCommitsAhead(ctx context.Context, base string, h
 	return parseAheadCount(result.stdout)
 }
 
+func (adapter *ShellAdapter) ChangedFilesBetween(ctx context.Context, base string, head string) ([]string, error) {
+	if strings.TrimSpace(base) == "" {
+		return nil, fmt.Errorf("base ref must not be empty")
+	}
+	if strings.TrimSpace(head) == "" {
+		return nil, fmt.Errorf("head ref must not be empty")
+	}
+
+	result, err := adapter.runGit(ctx, "diff name-only", "diff", "--name-only", base+"..."+head)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseNameOnlyOutput(result.stdout), nil
+}
+
 func (adapter *ShellAdapter) runGit(ctx context.Context, operation string, args ...string) (commandResult, error) {
 	result, err := adapter.runner(ctx, adapter.gitPath, args...)
 	if err != nil {
@@ -267,6 +283,22 @@ func parseAheadCount(output string) (bool, error) {
 	}
 
 	return count > 0, nil
+}
+
+func parseNameOnlyOutput(output string) []string {
+	if strings.TrimSpace(output) == "" {
+		return nil
+	}
+
+	lines := strings.Split(strings.TrimRight(output, "\r\n"), "\n")
+	files := make([]string, 0, len(lines))
+	for _, line := range lines {
+		file := strings.TrimSpace(strings.TrimRight(line, "\r"))
+		if file != "" {
+			files = append(files, file)
+		}
+	}
+	return files
 }
 
 func parseDefaultBranch(output string) (string, error) {

@@ -252,8 +252,7 @@ func NewCreatePullRequestPlan(input CreatePullRequestInput) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	targetStatus, err := validateProjectStatus(input.TargetStatus)
-	if err != nil {
+	if _, err := validateProjectStatus(input.TargetStatus); err != nil {
 		return Plan{}, err
 	}
 
@@ -278,25 +277,15 @@ func NewCreatePullRequestPlan(input CreatePullRequestInput) (Plan, error) {
 			},
 		},
 		{
-			ID:          "project-set-status-" + statusID(targetStatus),
-			Type:        OperationProjectSetStatus,
-			Description: fmt.Sprintf("Set project status for issue #%d to %s", issueNumber, targetStatus),
+			ID:          "issue-update-review-labels",
+			Type:        OperationIssueUpdateLabels,
+			Description: fmt.Sprintf("Replace ai:in-progress with ai:needs-review on issue #%d", issueNumber),
 			SafeToRetry: true,
-			Payload:     ProjectStatusPayload{IssueNumber: issueNumber, Status: targetStatus},
-		},
-		{
-			ID:          "git-switch-default-branch",
-			Type:        OperationGitSwitch,
-			Description: fmt.Sprintf("Switch to %s", baseBranch),
-			SafeToRetry: true,
-			Payload:     GitBranchPayload{Branch: baseBranch},
-		},
-		{
-			ID:          "git-pull-fast-forward-default-branch",
-			Type:        OperationGitPullFastForward,
-			Description: fmt.Sprintf("Pull %s with --ff-only from origin", baseBranch),
-			SafeToRetry: true,
-			Payload:     GitRefPayload{Remote: originRemote, Branch: baseBranch},
+			Payload: IssueLabelsPayload{
+				IssueNumber: issueNumber,
+				Remove:      []string{"ai:in-progress"},
+				Add:         []string{"ai:needs-review"},
+			},
 		},
 	}
 

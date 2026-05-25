@@ -68,9 +68,14 @@ type IssueResult struct {
 
 type TaskPRPlanResult struct {
 	Plan            planner.Plan `json:"plan"`
+	Issue           IssueResult  `json:"issue"`
+	Title           string       `json:"title"`
+	DefaultBranch   string       `json:"defaultBranch"`
 	BranchName      string       `json:"branchName"`
 	PullRequestBody string       `json:"pullRequestBody"`
 	ExistingPR      *PRResult    `json:"existingPullRequest,omitempty"`
+	RemovedLabel    string       `json:"removedLabel"`
+	AddedLabel      string       `json:"addedLabel"`
 }
 
 type TaskMergePlanResult struct {
@@ -159,10 +164,10 @@ func RunTaskPR(ctx context.Context, input TaskRunInput) int {
 		return renderJSON(input.Stdout, execution)
 	}
 	if execution.CreatedPullRequest != nil {
-		fmt.Fprintf(output(input.Stdout), "Pull request: #%d %s\n", execution.CreatedPullRequest.Number, execution.CreatedPullRequest.URL)
+		renderTaskPRCreated(input.Stdout, result, *execution.CreatedPullRequest)
 		return 0
 	}
-	fmt.Fprintf(output(input.Stdout), "Pull request created for issue #%d.\n", input.IssueNumber)
+	renderTaskPRCreated(input.Stdout, result, domain.PullRequest{})
 	return 0
 }
 
@@ -292,10 +297,25 @@ func BuildTaskPRPlan(ctx context.Context, input TaskIssueInput) (TaskPRPlanResul
 	if issue.State != domain.IssueStateOpen {
 		return TaskPRPlanResult{}, fmt.Errorf("issue #%d is not open", input.IssueNumber)
 	}
+	if !hasLabel(issue.Labels, "ai:in-progress") {
+		return TaskPRPlanResult{}, fmt.Errorf("issue #%d does not have required label ai:in-progress", input.IssueNumber)
+	}
+	projectStatus = domain.ProjectStatusInProgress
+
+	defaultBranch, err := input.Git.DefaultBranch(ctx)
+	if err != nil {
+		return TaskPRPlanResult{}, fmt.Errorf("detect default branch: %w", err)
+	}
+	if strings.TrimSpace(defaultBranch) == "" {
+		return TaskPRPlanResult{}, fmt.Errorf("default branch cannot be detected")
+	}
 
 	currentBranch, err := input.Git.CurrentBranch(ctx)
 	if err != nil {
 		return TaskPRPlanResult{}, fmt.Errorf("read current branch: %w", err)
+	}
+	if currentBranch == defaultBranch {
+		return TaskPRPlanResult{}, fmt.Errorf("current branch is the default branch %q; create PRs only from ai task branches", defaultBranch)
 	}
 	parsedBranch, err := branch.ParseTaskBranchName(currentBranch)
 	if err != nil {
@@ -305,8 +325,16 @@ func BuildTaskPRPlan(ctx context.Context, input TaskIssueInput) (TaskPRPlanResul
 		return TaskPRPlanResult{}, fmt.Errorf("branch issue number %d does not match requested issue #%d; suggested next command: parsevkctl task status %d", parsedBranch.IssueNumber, input.IssueNumber, input.IssueNumber)
 	}
 
-	if existing := existingOpenPR(prs, currentBranch, input.Config.DefaultBranch); existing != nil {
-		return TaskPRPlanResult{ExistingPR: &PRResult{Number: int(existing.Number), URL: existing.URL}, BranchName: currentBranch}, nil
+	if existing := existingOpenPR(prs, currentBranch, defaultBranch); existing != nil {
+		return TaskPRPlanResult{
+			Issue:         IssueResult{Number: int(issue.ID), Title: issue.Title},
+			Title:         issue.Title,
+			DefaultBranch: defaultBranch,
+			ExistingPR:    &PRResult{Number: int(existing.Number), URL: existing.URL},
+			BranchName:    currentBranch,
+			RemovedLabel:  "ai:in-progress",
+			AddedLabel:    "ai:needs-review",
+		}, nil
 	}
 
 	clean, files, err := input.Git.IsWorkTreeClean(ctx)
@@ -317,12 +345,16 @@ func BuildTaskPRPlan(ctx context.Context, input TaskIssueInput) (TaskPRPlanResul
 		return TaskPRPlanResult{}, fmt.Errorf("working tree is dirty (%s); commit or stash changes, then run: parsevkctl task pr %d", strings.Join(files, ", "), input.IssueNumber)
 	}
 
-	hasAhead, err := input.Git.HasCommitsAhead(ctx, input.Config.DefaultBranch, currentBranch)
+	hasAhead, err := input.Git.HasCommitsAhead(ctx, defaultBranch, currentBranch)
 	if err != nil {
-		return TaskPRPlanResult{}, fmt.Errorf("check commits ahead of %s: %w", input.Config.DefaultBranch, err)
+		return TaskPRPlanResult{}, fmt.Errorf("check commits ahead of %s: %w", defaultBranch, err)
 	}
 	if !hasAhead {
-		return TaskPRPlanResult{}, fmt.Errorf("branch %q has no commits ahead of %s; commit changes, then run: parsevkctl task pr %d", currentBranch, input.Config.DefaultBranch, input.IssueNumber)
+		return TaskPRPlanResult{}, fmt.Errorf("branch %q has no commits ahead of %s; commit changes, then run: parsevkctl task pr %d", currentBranch, defaultBranch, input.IssueNumber)
+	}
+	changedFiles, err := input.Git.ChangedFilesBetween(ctx, defaultBranch, currentBranch)
+	if err != nil {
+		return TaskPRPlanResult{}, fmt.Errorf("read changed files against %s: %w", defaultBranch, err)
 	}
 
 	currentState := task.DeriveState(task.LifecycleSnapshot{
@@ -338,11 +370,11 @@ func BuildTaskPRPlan(ctx context.Context, input TaskIssueInput) (TaskPRPlanResul
 		return TaskPRPlanResult{}, err
 	}
 
-	body := pullRequestBody(input.IssueNumber)
+	body := pullRequestBody(input.IssueNumber, changedFiles)
 	plan, err := planner.NewCreatePullRequestPlan(planner.CreatePullRequestInput{
 		Issue:        issue,
 		BranchName:   currentBranch,
-		BaseBranch:   input.Config.DefaultBranch,
+		BaseBranch:   defaultBranch,
 		Title:        issue.Title,
 		Body:         body,
 		TargetStatus: domain.ProjectStatusReview,
@@ -350,7 +382,16 @@ func BuildTaskPRPlan(ctx context.Context, input TaskIssueInput) (TaskPRPlanResul
 	if err != nil {
 		return TaskPRPlanResult{}, err
 	}
-	return TaskPRPlanResult{Plan: plan, BranchName: currentBranch, PullRequestBody: body}, nil
+	return TaskPRPlanResult{
+		Plan:            plan,
+		Issue:           IssueResult{Number: int(issue.ID), Title: issue.Title},
+		Title:           issue.Title,
+		DefaultBranch:   defaultBranch,
+		BranchName:      currentBranch,
+		PullRequestBody: body,
+		RemovedLabel:    "ai:in-progress",
+		AddedLabel:      "ai:needs-review",
+	}, nil
 }
 
 func BuildTaskMergePlan(ctx context.Context, input TaskIssueInput) (TaskMergePlanResult, error) {
@@ -476,23 +517,44 @@ func exactlyOneLinkedPR(issueNumber int, prs []domain.PullRequest) (*domain.Pull
 	return &prs[0], nil
 }
 
-func pullRequestBody(issueNumber int) string {
-	return fmt.Sprintf(`Closes #%d
+func pullRequestBody(issueNumber int, changedFiles []string) string {
+	changedFilesSection := "- [ ] Changed files could not be detected; review `git diff --name-only <default-branch>...HEAD` manually."
+	if len(changedFiles) > 0 {
+		lines := make([]string, 0, len(changedFiles))
+		for _, file := range changedFiles {
+			lines = append(lines, fmt.Sprintf("- [ ] %s", file))
+		}
+		changedFilesSection = strings.Join(lines, "\n")
+	}
 
-## Summary
-- ...
+	return fmt.Sprintf(`## Summary
+- Implemented changes for issue #%d.
 
-## Test plan
-- [ ] Not run
-- [ ] Manual test
-- [ ] Automated tests
+## Issue
 
-## Risk
-- Low
+Closes #%d
 
-## Notes
-Created via parsevkctl.
-`, issueNumber)
+## Changed Files
+
+%s
+
+## Validation
+
+- [ ] go fmt ./...
+- [ ] go test ./...
+- [ ] manual validation completed if required
+
+## Risks
+
+- Medium risk: this PR changes parsevkctl workflow behavior.
+
+## AI Handoff
+
+Next step:
+
+- Review this PR in ChatGPT first.
+- Do not leave an official GitHub review until explicitly requested.
+`, issueNumber, issueNumber, changedFilesSection)
 }
 
 func hasLabel(labels []string, want string) bool {
@@ -522,6 +584,31 @@ func renderTaskStarted(w io.Writer, result TaskStartPlanResult) {
 	fmt.Fprintln(out, "  commit")
 	fmt.Fprintln(out, "  push branch")
 	fmt.Fprintln(out, "  create PR")
+}
+
+func renderTaskPRCreated(w io.Writer, result TaskPRPlanResult, pr domain.PullRequest) {
+	out := output(w)
+	fmt.Fprintln(out, "Pull request created")
+	fmt.Fprintln(out)
+	fmt.Fprintf(out, "Issue: #%d\n", result.Issue.Number)
+	fmt.Fprintf(out, "Title: %s\n", result.Title)
+	fmt.Fprintf(out, "Base branch: %s\n", result.DefaultBranch)
+	fmt.Fprintf(out, "Head branch: %s\n", result.BranchName)
+	if pr.URL != "" {
+		fmt.Fprintf(out, "PR: %s\n", pr.URL)
+	} else if pr.Number > 0 {
+		fmt.Fprintf(out, "PR: #%d\n", pr.Number)
+	} else {
+		fmt.Fprintln(out, "PR: created")
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Labels:")
+	fmt.Fprintf(out, "  removed: %s\n", result.RemovedLabel)
+	fmt.Fprintf(out, "  added: %s\n", result.AddedLabel)
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Next:")
+	fmt.Fprintln(out, "  ask ChatGPT to review the PR first")
+	fmt.Fprintln(out, "  only leave GitHub review after explicit command")
 }
 
 func requireChecks(cfg config.Config) bool {

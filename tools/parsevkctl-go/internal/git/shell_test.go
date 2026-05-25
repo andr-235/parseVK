@@ -230,6 +230,16 @@ func TestParseAheadCountRejectsInvalidOutput(t *testing.T) {
 	}
 }
 
+func TestParseNameOnlyOutput(t *testing.T) {
+	t.Parallel()
+
+	got := parseNameOnlyOutput("tools/parsevkctl-go/internal/commands/write.go\r\n\nREADME.md\n")
+	want := []string{"tools/parsevkctl-go/internal/commands/write.go", "README.md"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("files = %#v, want %#v", got, want)
+	}
+}
+
 func TestCommandArguments(t *testing.T) {
 	t.Parallel()
 
@@ -317,6 +327,14 @@ func TestCommandArguments(t *testing.T) {
 				return err
 			},
 			args: []string{"rev-list", "--count", "origin/main..HEAD"},
+		},
+		{
+			name: "changed files between",
+			run: func(adapter *ShellAdapter) error {
+				_, err := adapter.ChangedFilesBetween(context.Background(), "origin/main", "HEAD")
+				return err
+			},
+			args: []string{"diff", "--name-only", "origin/main...HEAD"},
 		},
 	}
 
