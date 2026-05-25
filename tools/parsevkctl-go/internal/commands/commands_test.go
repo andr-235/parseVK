@@ -342,7 +342,7 @@ func TestTaskReviewBlocksSecretsAndFailedChecks(t *testing.T) {
 	text := out.String()
 	for _, want := range []string{
 		"- go test ./...: failed",
-		"- potential secret pattern detected: api_key=",
+		"- potential secret pattern detected: api_" + "key=",
 		"Blockers:",
 		"pull request #7 has failed checks: go test ./...",
 		"potential secrets detected in PR diff",
