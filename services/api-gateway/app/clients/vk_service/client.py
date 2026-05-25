@@ -99,6 +99,7 @@ class VkServiceClient:
     async def get_xlsx_bytes(
         self,
         job_id: str,
+        provider: str = "vk",
         *,
         user_id: str,
         request_id: str | None = None,
@@ -106,7 +107,7 @@ class VkServiceClient:
     ) -> bytes:
         try:
             response = await self._client.get(
-                f"/internal/vk/friends/jobs/{job_id}/download/xlsx",
+                f"/internal/{provider}/friends/jobs/{job_id}/download/xlsx",
                 headers=self._headers(
                     user_id=user_id,
                     request_id=request_id,
