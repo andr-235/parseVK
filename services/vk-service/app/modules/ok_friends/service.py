@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import select
 
 from app.core.config import settings
+from app.core.redaction import redact_secrets
 from app.db.session import SessionLocal
 from app.db.models import OkFriendsExportJob, OkFriendsJobLog, OkFriendsRecord
 from app.modules.ok_friends.schemas import JobStatus
@@ -190,6 +191,7 @@ class OkFriendsExportService:
             return job
 
     async def append_log(self, job_id: uuid.UUID, level: str, message: str, meta: Any = None) -> None:
+        message = redact_secrets(message)
         async with self.session_factory() as session:
             async with session.begin():
                 log_entry = OkFriendsJobLog(
@@ -207,6 +209,8 @@ class OkFriendsExportService:
         total_count: int | None = None,
         warning: str | None = None,
     ) -> None:
+        if warning is not None:
+            warning = redact_secrets(warning)
         async with self.session_factory() as session:
             async with session.begin():
                 stmt = select(OkFriendsExportJob).where(OkFriendsExportJob.id == job_id)
@@ -227,6 +231,8 @@ class OkFriendsExportService:
         warning: str | None,
         xlsx_path: str,
     ) -> None:
+        if warning is not None:
+            warning = redact_secrets(warning)
         async with self.session_factory() as session:
             async with session.begin():
                 stmt = select(OkFriendsExportJob).where(OkFriendsExportJob.id == job_id)
@@ -249,6 +255,9 @@ class OkFriendsExportService:
         total_count: int | None = None,
         warning: str | None = None,
     ) -> None:
+        error = redact_secrets(error)
+        if warning is not None:
+            warning = redact_secrets(warning)
         async with self.session_factory() as session:
             async with session.begin():
                 stmt = select(OkFriendsExportJob).where(OkFriendsExportJob.id == job_id)

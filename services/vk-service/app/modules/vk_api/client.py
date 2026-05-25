@@ -8,6 +8,7 @@ except ImportError:  # pragma: no cover - dependency is installed in the service
     vk_api = None
 
 from app.core.config import settings
+from app.core.redaction import redact_secrets
 
 VK_API_VERSION = "5.199"
 
@@ -80,9 +81,7 @@ class VkApiClient:
 
     def _safe_error_message(self, exc: Exception) -> str:
         message = str(exc) or "VK API error"
-        if self.token:
-            message = message.replace(self.token, "<redacted>")
-        return message
+        return redact_secrets(message)
 
     async def get_groups(self, group_ids: list[int]) -> list[dict]:
         if not group_ids:

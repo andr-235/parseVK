@@ -5,6 +5,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 from app.core.config import settings
+from app.core.redaction import redact_secrets
 
 logger = logging.getLogger(__name__)
 
@@ -100,26 +101,29 @@ class OkApiClient:
         try:
             response = await self._client.get(url, params=query_params)
             if not response.is_success:
-                logger.error(f"OK API error HTTP {response.status_code}: {response.text}")
-                raise RuntimeError(f"OK API request failed with HTTP {response.status_code}")
+                err_text = redact_secrets(response.text)
+                logger.error(f"OK API error HTTP {response.status_code}: {err_text}")
+                raise RuntimeError(redact_secrets(f"OK API request failed with HTTP {response.status_code}"))
 
             data = response.json()
             if isinstance(data, dict):
                 if "error_code" in data:
-                    err_msg = data.get("error_msg") or "Unknown error"
+                    err_msg = redact_secrets(data.get("error_msg") or "Unknown error")
                     logger.error(f"OK API error: {data['error_code']} - {err_msg}")
-                    raise RuntimeError(f"OK API error: {err_msg}")
+                    raise RuntimeError(redact_secrets(f"OK API error: {err_msg}"))
                 if "error" in data and data["error"]:
                     err = data["error"]
                     if isinstance(err, dict):
-                        err_msg = err.get("error_msg") or "Unknown error"
+                        err_msg = redact_secrets(err.get("error_msg") or "Unknown error")
                         logger.error(f"OK API error: {err.get('error_code')} - {err_msg}")
-                        raise RuntimeError(f"OK API error: {err_msg}")
+                        raise RuntimeError(redact_secrets(f"OK API error: {err_msg}"))
 
             return data
         except Exception as exc:
             if not isinstance(exc, RuntimeError):
-                logger.exception("OK API call exception")
+                masked_exc_msg = redact_secrets(str(exc))
+                logger.error(f"OK API call exception: {masked_exc_msg}")
+                raise RuntimeError(masked_exc_msg) from exc
             raise
 
     async def friends_get(self, **params) -> list[str]:
