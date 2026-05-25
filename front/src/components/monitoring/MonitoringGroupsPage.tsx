@@ -1,17 +1,19 @@
 import { useParams } from 'react-router-dom'
-import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { DatabaseZap, Pencil, RefreshCw, SlidersHorizontal, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import SearchInput from '@/components/common/SearchInput'
 import { EmptyState } from '@/components/common/EmptyState'
-import { LoadingState } from '@/components/common/LoadingState'
 import { cn } from '@/utils/common'
 import { useMonitoringGroupsViewModel } from '@/hooks/monitoring/useMonitoringGroupsViewModel'
+import { getMonitoringGroupsCountLabel } from '@/hooks/monitoring/monitoringGroupsViewModel.utils'
 import { MonitoringGroupsHero } from '@/components/monitoring/MonitoringGroupsHero'
+import type { MonitoringGroupStatusTone } from '@/hooks/monitoring/monitoringGroupsViewModel.utils'
 import type { MonitoringMessenger } from '@/types/common'
 
 const MONITORING_SOURCES = {
@@ -24,6 +26,14 @@ const MONITORING_SOURCES = {
     messenger: 'max' as MonitoringMessenger,
   },
 } as const
+
+const STATUS_BADGE_CLASSES: Record<MonitoringGroupStatusTone, string> = {
+  success: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
+  info: 'border-sky-500/25 bg-sky-500/10 text-sky-300',
+  warning: 'border-amber-500/25 bg-amber-500/10 text-amber-300',
+}
+
+const tableSkeletonRows = Array.from({ length: 5 }, (_, index) => index)
 
 function MonitoringGroupsPage() {
   const { sourceKey } = useParams()
@@ -38,6 +48,8 @@ function MonitoringGroupsPage() {
     isLoading,
     error,
     reloadGroups,
+    syncEnabled,
+    setSyncEnabled,
     searchTerm,
     setSearchTerm,
     categoryFilter,
@@ -59,40 +71,45 @@ function MonitoringGroupsPage() {
 
   const hasGroups = totalGroups > 0
   const hasFilteredGroups = groups.length > 0
-  const hasFilters = searchTerm.trim() || categoryFilter.trim()
-  const countLabel = hasFilters ? `${groups.length} из ${totalGroups}` : `${totalGroups}`
+  const hasFilters = Boolean(searchTerm.trim() || categoryFilter.trim())
+  const countLabel = getMonitoringGroupsCountLabel({
+    shown: groups.length,
+    total: totalGroups,
+    hasFilters,
+  })
+  const isInitialLoading = isLoading && !hasGroups
+  const isRefreshing = isLoading && hasGroups
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setCategoryFilter('')
+  }
 
   return (
-    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
-      {/* Hero Section - fade in first */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <MonitoringGroupsHero
-          sourceName={activeSource.label}
-          sourceKey={activeSourceKey}
-          totalGroups={totalGroups}
-        />
-      </div>
+    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-8 px-4 py-6 font-monitoring-body md:px-8">
+      <MonitoringGroupsHero
+        sourceName={activeSource.label}
+        sourceKey={activeSourceKey}
+        totalGroups={totalGroups}
+      />
 
-      {/* Add/Edit Group Section - staggered animation */}
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
-        <div className="flex items-center gap-4">
-          <h2 className="font-monitoring-display text-2xl font-semibold text-white">
-            {editingId ? 'Редактировать группу' : 'Добавить группу'}
-          </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
-        </div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(300px,360px)_minmax(0,1fr)]">
+        <section className="space-y-4">
+          <div>
+            <h2 className="font-monitoring-display text-xl font-semibold text-text-primary">
+              {editingId ? 'Редактирование группы' : 'Новая группа'}
+            </h2>
+            <p className="mt-1 text-sm text-text-secondary">
+              Добавьте chat_id, понятное имя и категорию для быстрого поиска в мониторинге.
+            </p>
+          </div>
 
-        <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
-          <p className="text-sm text-slate-400 mb-4">
-            Укажите chat_id, название и категорию. Запись будет обновлена, если chat_id уже есть.
-          </p>
-          <div className="space-y-4">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <Card className="border border-border/70 bg-background-secondary/70 p-4 shadow-soft-sm">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label
                   htmlFor="monitoring-chat-id"
-                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                  className="text-xs font-semibold uppercase tracking-wide text-text-secondary"
                 >
                   Chat ID
                 </Label>
@@ -101,13 +118,15 @@ function MonitoringGroupsPage() {
                   value={chatId}
                   onChange={(event) => setChatId(event.target.value)}
                   placeholder="Например: 1200348"
-                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                  disabled={isSaving}
+                  className="h-10 border-border/70 bg-background/60 text-text-primary placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20"
                 />
               </div>
+
               <div className="space-y-2">
                 <Label
                   htmlFor="monitoring-group-name"
-                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                  className="text-xs font-semibold uppercase tracking-wide text-text-secondary"
                 >
                   Название
                 </Label>
@@ -116,13 +135,15 @@ function MonitoringGroupsPage() {
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Название группы"
-                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                  disabled={isSaving}
+                  className="h-10 border-border/70 bg-background/60 text-text-primary placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20"
                 />
               </div>
+
               <div className="space-y-2">
                 <Label
                   htmlFor="monitoring-group-category"
-                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                  className="text-xs font-semibold uppercase tracking-wide text-text-secondary"
                 >
                   Категория
                 </Label>
@@ -130,9 +151,10 @@ function MonitoringGroupsPage() {
                   id="monitoring-group-category"
                   value={category}
                   onChange={(event) => setCategory(event.target.value)}
-                  placeholder="Новостные, оппозиционные и т.д."
+                  placeholder="Новости, региональные, другое"
                   list="monitoring-group-categories"
-                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                  disabled={isSaving}
+                  className="h-10 border-border/70 bg-background/60 text-text-primary placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20"
                 />
                 <datalist id="monitoring-group-categories">
                   {categorySuggestions.map((value) => (
@@ -140,158 +162,315 @@ function MonitoringGroupsPage() {
                   ))}
                 </datalist>
               </div>
-              <div className="flex flex-wrap items-end gap-2">
-                <Button
-                  onClick={saveGroup}
-                  disabled={isSaving}
-                  className="h-11 bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40 transition-all duration-300"
-                >
-                  {editingId ? 'Сохранить' : 'Добавить'}
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button onClick={saveGroup} disabled={isSaving} className="h-10 flex-1">
+                  {editingId ? 'Сохранить изменения' : 'Добавить группу'}
                 </Button>
                 {editingId && (
                   <Button
                     variant="outline"
                     onClick={resetForm}
                     disabled={isSaving}
-                    className="h-11 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 transition-all duration-200"
+                    className="h-10"
                   >
                     Отмена
                   </Button>
                 )}
               </div>
             </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </section>
 
-      {/* Groups List Section - staggered animation */}
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <h2 className="font-monitoring-display text-2xl font-semibold text-white">
-              Список групп
-            </h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
-            {!isLoading && (
+        <section className="min-w-0 space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="font-monitoring-display text-xl font-semibold text-text-primary">
+                Группы мониторинга
+              </h2>
+              <p className="mt-1 text-sm text-text-secondary">
+                Список источников, которые участвуют в текущем потоке мониторинга.
+              </p>
+            </div>
+            {!isInitialLoading && (
               <Badge
                 variant="outline"
-                className="border-white/10 bg-slate-900/50 px-3 py-1 text-xs text-slate-400 font-mono-accent"
+                className="w-fit border-border/70 bg-background-secondary/70 font-mono-accent text-xs text-text-secondary"
               >
                 {countLabel}
               </Badge>
             )}
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <SearchInput
-              value={searchTerm}
-              onChange={setSearchTerm}
-              placeholder="Поиск по названию или chat_id"
-              className="h-10 w-full sm:w-[240px] border-white/10 bg-slate-800/50 text-white"
-            />
-            <Input
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              placeholder="Категория"
-              list="monitoring-group-categories"
-              className="h-10 w-full sm:w-[180px] border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => reloadGroups()}
-              disabled={isLoading}
-              className="h-10 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 transition-all duration-200"
-            >
-              <RefreshCw className={cn('mr-2 w-4 h-4', isLoading && 'animate-spin')} />
-              Обновить
-            </Button>
-          </div>
-        </div>
 
-        <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
-          {isLoading && !hasGroups && (
-            <div className="py-8">
-              <LoadingState message="Загружаем группы мониторинга…" />
-            </div>
-          )}
+          <Card className="overflow-hidden border border-border/70 bg-background-secondary/70 shadow-soft-sm">
+            <div className="border-b border-border/60 bg-background/45 p-3">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+                  <span className="inline-flex items-center gap-2 font-mono-accent font-semibold uppercase tracking-wide">
+                    <SlidersHorizontal className="size-4 text-accent-primary" />
+                    Фильтры
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="border-border/70 bg-background-secondary/80 text-text-primary"
+                  >
+                    Источник: {activeSource.label}
+                  </Badge>
+                  {isRefreshing && (
+                    <span className="inline-flex items-center gap-1 text-accent-info">
+                      <RefreshCw className="size-3 animate-spin" />
+                      Обновление
+                    </span>
+                  )}
+                </div>
 
-          {!isLoading && error && (
-            <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
-              Ошибка: {error}
-            </div>
-          )}
-
-          {!isLoading && !error && !hasGroups && (
-            <EmptyState
-              variant="custom"
-              icon="💬"
-              title="Группы не заданы"
-              description="Добавьте chat_id и название — список поможет быстрее ориентироваться в потоке мониторинга."
-            />
-          )}
-
-          {!isLoading && !error && hasGroups && !hasFilteredGroups && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="text-sm text-muted-foreground">
-                По запросу «{searchTerm || categoryFilter}» ничего не найдено
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+                  <SearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="Поиск по названию, chat_id, категории"
+                    className="h-10 w-full border-border/70 bg-background/60 text-text-primary lg:w-[300px]"
+                  />
+                  <Input
+                    value={categoryFilter}
+                    onChange={(event) => setCategoryFilter(event.target.value)}
+                    placeholder="Категория"
+                    list="monitoring-group-categories"
+                    className="h-10 w-full border-border/70 bg-background/60 text-text-primary placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 lg:w-[180px]"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-pressed={syncEnabled}
+                    onClick={() => setSyncEnabled(!syncEnabled)}
+                    className={cn(
+                      'h-10 justify-start',
+                      syncEnabled &&
+                        'border-accent-primary/40 bg-accent-primary/10 text-accent-primary'
+                    )}
+                  >
+                    <DatabaseZap className="size-4" />
+                    Sync
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => reloadGroups()}
+                    disabled={isLoading}
+                    className="h-10"
+                  >
+                    <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
+                    Обновить
+                  </Button>
+                </div>
               </div>
             </div>
-          )}
 
-          {!isLoading && !error && hasFilteredGroups && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Название</TableHead>
-                  <TableHead>Chat ID</TableHead>
-                  <TableHead>Категория</TableHead>
-                  <TableHead className="text-right">Действия</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groups.map((group) => {
-                  const isEditing = editingId === group.id
-                  return (
-                    <TableRow key={group.id} className={isEditing ? 'bg-muted/30' : undefined}>
-                      <TableCell className="font-medium text-text-primary">
-                        <div className="flex flex-col">
-                          <span>{group.name}</span>
+            <div className="p-3 md:p-4">
+              {isInitialLoading && (
+                <div className="space-y-3" aria-busy="true" aria-live="polite">
+                  {tableSkeletonRows.map((row) => (
+                    <div
+                      key={row}
+                      className="grid gap-3 rounded-xl border border-border/50 bg-background/35 p-3 md:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr_0.8fr_96px]"
+                    >
+                      <Skeleton className="h-5" />
+                      <Skeleton className="h-5" />
+                      <Skeleton className="h-5" />
+                      <Skeleton className="h-5" />
+                      <Skeleton className="h-5" />
+                      <Skeleton className="h-5" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!isLoading && error && (
+                <div className="rounded-xl border border-destructive/35 bg-destructive/10 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-destructive">Не удалось загрузить группы</p>
+                      <p className="mt-1 text-sm text-text-secondary">{error}</p>
+                    </div>
+                    <Button variant="outline" onClick={() => reloadGroups()} className="h-9">
+                      <RefreshCw className="size-4" />
+                      Повторить
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {!isLoading && !error && !hasGroups && (
+                <EmptyState
+                  variant="custom"
+                  title="Группы мониторинга не заданы"
+                  description="Добавьте chat_id, название и категорию. После сохранения группа появится в списке источников для мониторинга."
+                  className="border border-dashed border-border/60 bg-background/35"
+                />
+              )}
+
+              {!isLoading && !error && hasGroups && !hasFilteredGroups && (
+                <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/60 bg-background/35 p-8 text-center">
+                  <p className="font-semibold text-text-primary">Фильтры не нашли группы</p>
+                  <p className="max-w-[420px] text-sm text-text-secondary">
+                    Измените поиск или категорию, чтобы вернуться к списку источников.
+                  </p>
+                  <Button variant="outline" onClick={clearFilters} className="h-9">
+                    Сбросить фильтры
+                  </Button>
+                </div>
+              )}
+
+              {!isInitialLoading && !error && hasFilteredGroups && (
+                <>
+                  <div className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-background/45">
+                          <TableHead>Название</TableHead>
+                          <TableHead>Источник</TableHead>
+                          <TableHead>Chat ID</TableHead>
+                          <TableHead>Категория</TableHead>
+                          <TableHead>Статус</TableHead>
+                          <TableHead>Обновлено</TableHead>
+                          <TableHead className="text-right">Действия</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {groups.map((group) => {
+                          const isEditing = editingId === group.id
+
+                          return (
+                            <TableRow
+                              key={group.id}
+                              className={cn(
+                                'border-border/50',
+                                isEditing && 'bg-accent-primary/10'
+                              )}
+                            >
+                              <TableCell className="min-w-[220px] font-medium text-text-primary">
+                                {group.name}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className="border-border/70 bg-background/60 text-text-secondary"
+                                >
+                                  {group.sourceLabel}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-mono-accent text-xs text-text-secondary">
+                                {group.chatId}
+                              </TableCell>
+                              <TableCell className="text-sm text-text-secondary">
+                                {group.categoryLabel}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'whitespace-nowrap',
+                                    STATUS_BADGE_CLASSES[group.statusTone]
+                                  )}
+                                >
+                                  {group.statusLabel}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap font-mono-accent text-xs text-text-secondary">
+                                {group.updatedLabel}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => startEdit(group)}
+                                    disabled={isSaving}
+                                    className="h-8 text-text-secondary hover:text-text-primary"
+                                  >
+                                    <Pencil className="size-4" />
+                                    Изменить
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteGroup(group.id)}
+                                    disabled={isSaving}
+                                    className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  >
+                                    <Trash2 className="size-4" />
+                                    Удалить
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="space-y-3 md:hidden">
+                    {groups.map((group) => (
+                      <div
+                        key={group.id}
+                        className={cn(
+                          'rounded-xl border border-border/60 bg-background/35 p-3',
+                          editingId === group.id && 'border-accent-primary/40 bg-accent-primary/10'
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="truncate font-semibold text-text-primary">
+                              {group.name}
+                            </h3>
+                            <p className="mt-1 font-mono-accent text-xs text-text-secondary">
+                              {group.chatId}
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn('shrink-0', STATUS_BADGE_CLASSES[group.statusTone])}
+                          >
+                            {group.statusLabel}
+                          </Badge>
                         </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {group.chatId}
-                      </TableCell>
-                      <TableCell>{group.category ?? '—'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-text-secondary">
+                          <span>Источник: {group.sourceLabel}</span>
+                          <span>Категория: {group.categoryLabel}</span>
+                          <span className="col-span-2">Обновлено: {group.updatedLabel}</span>
+                        </div>
+                        <div className="mt-3 flex gap-2">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => startEdit(group)}
-                            className="h-8 text-text-primary"
+                            disabled={isSaving}
+                            className="h-9 flex-1"
                           >
-                            <Pencil className="mr-2 size-4" />
+                            <Pencil className="size-4" />
                             Изменить
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => deleteGroup(group.id)}
-                            className="h-8 text-destructive hover:text-destructive"
+                            disabled={isSaving}
+                            className="h-9 flex-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           >
-                            <Trash2 className="mr-2 size-4" />
+                            <Trash2 className="size-4" />
                             Удалить
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </Card>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+        </section>
       </div>
     </div>
   )
