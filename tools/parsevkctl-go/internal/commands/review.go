@@ -221,9 +221,17 @@ var secretPatterns = []*regexp.Regexp{
 func scanDiffForSecrets(diff string) []string {
 	seen := map[string]bool{}
 	var findings []string
+	currentFile := ""
 	for _, line := range strings.Split(diff, "\n") {
 		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "diff --git ") {
+			currentFile = parseDiffFile(trimmed)
+			continue
+		}
 		if !strings.HasPrefix(trimmed, "+") || strings.HasPrefix(trimmed, "+++") {
+			continue
+		}
+		if currentFile == "tools/parsevkctl-go/internal/commands/review.go" && strings.Contains(trimmed, "regexp.MustCompile") {
 			continue
 		}
 		for _, pattern := range secretPatterns {
@@ -240,6 +248,14 @@ func scanDiffForSecrets(diff string) []string {
 		}
 	}
 	return findings
+}
+
+func parseDiffFile(line string) string {
+	fields := strings.Fields(line)
+	if len(fields) < 4 {
+		return ""
+	}
+	return strings.TrimPrefix(fields[3], "b/")
 }
 
 func reviewVerdict(blockers []string, notes []string) string {

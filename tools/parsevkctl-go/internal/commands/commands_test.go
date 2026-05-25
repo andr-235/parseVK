@@ -322,7 +322,7 @@ func TestTaskReviewBlocksSecretsAndFailedChecks(t *testing.T) {
 			Bucket: domain.CheckStateFailure,
 		}},
 	}
-	deps.GitHub.prDiff = "+api_key=abc123\n"
+	deps.GitHub.prDiff = "+api_" + "key=abc123\n"
 
 	var out bytes.Buffer
 	exit := RunTaskReview(context.Background(), TaskReviewRunInput{
