@@ -13,8 +13,8 @@ import type {
   DlMatchRun,
   user,
 } from '@/generated/tgmbase/client';
-import { TgmbasePrismaService } from '@/tgmbase-prisma/tgmbase-prisma.service';
-import { normalizeTelegramIdentifier } from '@/telegram/utils/normalize-telegram-identifier.util';
+import { TgmbasePrismaService } from '../tgmbase-prisma/tgmbase-prisma.service.js';
+import { normalizeTelegramIdentifier } from '../telegram/utils/normalize-telegram-identifier.util.js';
 import type {
   TelegramDlMatchResultDto,
   TelegramDlMatchResultMessagesGroupDto,

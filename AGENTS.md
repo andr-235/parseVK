@@ -3,6 +3,139 @@
 Этот документ определяет основные правила, философию и стандарты работы агента Codex в репозитории `andr-235/parseVK`.
 
 ---
+🚦 ParseVK GitHub Project automation
+Этот раздел имеет приоритет для workflow задач разработки в репозитории `andr-235/parseVK`.
+Основная идея
+Пользователь формулирует задачу локально в Codex. Codex сам ведёт задачу через GitHub Issue, GitHub Project Kanban, git-ветку, Pull Request и merge, используя локальный инструмент:
+```powershell
+cd tools/parsevkctl-go
+go run ./cmd/parsevkctl --help
+```
+Команды ниже выполняются из `tools/parsevkctl-go`, если не указано иное.
+Используй `parsevkctl` для всех операций жизненного цикла задачи. Не управляй Issue, Project status, PR и merge вручную через случайные `gh`-команды, если для этого уже есть команда `parsevkctl`.
+Kanban flow
+Обязательный порядок статусов:
+```text
+Todo -> In Progress -> Review -> Done
+```
+Назначение статусов:
+`Todo` — задача создана и добавлена в проект.
+`In Progress` — задача взята в работу, создана ветка.
+`Review` — код готов, PR создан, нужна проверка.
+`Done` — PR смёржен, issue закрыта.
+Старт новой задачи
+Когда пользователь даёт локальную задачу, например: `Сделай экспорт авторов в CSV`, Codex должен:
+Сформировать понятный title и body для GitHub Issue.
+Проверить состояние репозитория:
+```powershell
+git status
+git branch --show-current
+```
+Если рабочее дерево чистое, запустить полный старт задачи:
+```powershell
+go run ./cmd/parsevkctl task create "TASK_TITLE" --body "TASK_DESCRIPTION"
+go run ./cmd/parsevkctl task start ISSUE_NUMBER
+```
+Если рабочее дерево грязное и пользователь не просил продолжать с текущими изменениями — остановиться и объяснить, что есть незакоммиченные изменения.
+Если пользователь явно разрешил создать только карточку без ветки, использовать:
+```powershell
+go run ./cmd/parsevkctl task create "TASK_TITLE" --body "TASK_DESCRIPTION"
+```
+Работа с существующей задачей
+Взять существующую Issue в работу:
+```powershell
+go run ./cmd/parsevkctl task start ISSUE_NUMBER
+```
+Просмотреть состояние задачи без изменений:
+```powershell
+go run ./cmd/parsevkctl task status ISSUE_NUMBER
+```
+Создать PR и перевести карточку в `Review`:
+```powershell
+go run ./cmd/parsevkctl task pr ISSUE_NUMBER
+```
+Смёржить связанный PR и перевести карточку в `Done`:
+```powershell
+go run ./cmd/parsevkctl task merge ISSUE_NUMBER
+```
+Реализация задачи
+После старта задачи Codex должен:
+Работать только в task/feature ветке, не в default branch.
+Вносить минимальные и точечные изменения.
+Не смешивать несколько несвязанных задач в один PR.
+Не трогать пользовательские staged/unstaged изменения, если они не относятся к задаче.
+Перед commit выполнить релевантные проверки.
+Ищи команды проверок в:
+```text
+package.json
+front/package.json
+backend/package.json
+pyproject.toml
+requirements.txt
+Makefile
+docker-compose.yml
+```
+Предпочтительные проверки:
+```powershell
+npm test
+npm run lint
+npm run typecheck
+npm run build
+pytest
+ruff check .
+mypy .
+```
+Если подходящих проверок нет, явно сообщи, что автоматические проверки не найдены, и опиши ручную валидацию.
+Commit rules для задач parseVK
+Commit message должен использовать Conventional Commits и единый AI agent standard из этого документа.
+Subject должен быть на английском языке.
+Формат subject:
+```text
+<type>(<scope>): <short summary>
+```
+Примеры:
+```text
+feat(api-gateway): add admin users migration checks
+fix(parsevkctl): make branch cleanup idempotent
+docs(migration): update backend migration status map
+test(moderation): fix integration test collection
+chore(deps): add uv lock for moderation service
+```
+Не начинай commit subject с task ID вроде `FASTAPI-MIG-001`.
+Task ID и issue links указывай в body commit или PR:
+```text
+Refs: FASTAPI-MIG-001
+Closes #145
+```
+Branch naming:
+```text
+<type>/<issue-number>-<short-kebab-summary>
+```
+Примеры:
+```text
+docs/145-backend-migration-status
+fix/130-parsevkctl-branch-cleanup
+feat/127-moderation-service
+test/145-gateway-integration-checks
+```
+Создание Pull Request
+После реализации, проверок и commit вызвать:
+```powershell
+go run ./cmd/parsevkctl task pr ISSUE_NUMBER
+```
+Команда должна:
+запушить текущую ветку;
+создать Pull Request;
+добавить `Closes #ISSUE_NUMBER` в body;
+перевести карточку в `Review`.
+Codex не должен создавать PR из default branch.
+PR title должен использовать тот же Conventional Commit format:
+```text
+docs(migration): update backend migration status and checks
+```
+PR body должен включать:
+```md
+Closes #145
 
 ## 🚦 Core Repository Instructions (Основные ИИ-правила)
 
@@ -237,7 +370,6 @@ private config files
 
 Ключевая миссия:
 Работать как встроенный инженер-тиммейт, помогая писать, изменять и сопровождать код, сохраняя высокое качество, безопасность и читаемость без нарушения пользовательских намерений.
-
 ---
 
 ## 🛠️ Принципы работы

@@ -1,0 +1,211 @@
+# parsevkctl Go CLI
+
+Canonical Go-only implementation of `parsevkctl`.
+
+```powershell
+go test ./...
+go run ./cmd/parsevkctl config validate
+go run ./cmd/parsevkctl doctor
+```
+
+Build a repository-local binary:
+
+```powershell
+go build -o bin/parsevkctl.exe ./cmd/parsevkctl
+.\bin\parsevkctl.exe config validate
+```
+
+The default configuration path from the repository root is
+`tools/parsevkctl-go/config.json`. When commands are run from this directory,
+the CLI also discovers `config.json` directly.
+
+## Domain model
+
+`internal/domain` contains pure Go types for tasks, issues, pull requests,
+project items and lifecycle state. It also owns validation helpers and task
+state derivation logic, without dependencies on the CLI, Git, GitHub, Project
+adapters or output rendering.
+
+## Task lifecycle
+
+`internal/task` contains pure lifecycle state derivation and transition
+validation for task automation. Command handlers use this package to map issue,
+project, pull request and branch snapshots into valid task lifecycle actions.
+
+## Planner and executor
+
+`internal/planner` builds side-effect-free operation plans for task lifecycle
+commands. A plan describes the intended Git, GitHub and project operations in
+stable order and can be serialized to JSON.
+
+The planner does not call Git or GitHub directly. `Executor` applies a plan
+serially through the typed `internal/git` and `internal/github` adapters,
+stopping at the first failed operation with an operation-scoped error and
+recovery hint.
+
+`RenderDryRun` renders the same plan as deterministic human-readable lines
+without executing anything.
+
+## Git adapter
+
+`internal/git` centralizes local Git operations. It exposes an adapter interface
+for repository actions and currently implements it with a shell-based adapter
+that calls `git` directly.
+
+## GitHub adapter
+
+`internal/github` centralizes GitHub operations. It exposes a typed adapter
+boundary for issues, pull requests and project status operations, and currently
+shells out to `gh` behind that boundary while returning `internal/domain`
+types.
+
+The adapter also reads pull request check status for `task merge` when
+`merge.requireChecks` is enabled. It prefers `gh pr checks <number> --json`
+and falls back to conservative text parsing when JSON output is unavailable.
+
+## Branch naming
+
+AI task branches use this format:
+
+`ai/mbp-<issue-number>-<slug>`
+
+The slug is derived from the issue title, lowercased, dash-separated, cleaned
+for git branch compatibility, and capped at 60 characters. If the issue title
+starts with `MBP-<issue-number>:`, that prefix is removed before slugging.
+
+## Read-only commands
+
+```powershell
+go run ./cmd/parsevkctl doctor
+go run ./cmd/parsevkctl task status 112
+go run ./cmd/parsevkctl task sync 112
+go run ./cmd/parsevkctl task review 112
+```
+
+`parsevkctl doctor` checks local configuration, git readability, GitHub CLI read
+access and Project status availability where the adapter supports it. Human
+output uses `OK`, `WARN` and `FAIL` lines, and critical failures return a
+non-zero exit code.
+
+`parsevkctl task status <issue>` is a read-only diagnostic report. It shows
+issue metadata and labels, inferred workflow stage, repository default branch,
+current branch, expected AI task branch, clean or dirty worktree state, local
+and remote branch existence, linked pull request metadata, mergeability,
+`Closes #<issue>` linkage, GitHub checks when available, blockers, notes and
+one suggested next command. It does not update labels, Project fields, issues,
+pull requests or local branches.
+
+`parsevkctl task sync <issue>` is preview-only. It shows current state, drift
+items and suggested safe fixes, but does not update Project status, close
+issues, create branches, create PRs or merge anything.
+
+`parsevkctl task review <issue>` is a read-only local PR review gate. It loads
+the issue and linked PR, validates the PR is open, non-draft, based on the
+configured default branch, and contains `Closes #<issue>` in the body. It lists
+changed files, checks practical parsevkctl/docs scope, reports mergeability,
+prints GitHub checks without overstating missing checks, scans the PR diff for
+obvious secret patterns, separates blockers from notes, and ends with one of
+the workflow verdicts. It never creates GitHub reviews, approvals, comments,
+label updates, merges, or branch changes.
+
+Machine-readable output is available through the global `--json` flag:
+
+```powershell
+go run ./cmd/parsevkctl --json doctor
+go run ./cmd/parsevkctl --json task status 112
+go run ./cmd/parsevkctl --json task sync 112
+go run ./cmd/parsevkctl --json task review 112
+```
+
+`task sync --apply` is intentionally not implemented yet and returns:
+
+```text
+task sync --apply is not implemented in Go yet; this command is preview-only
+```
+
+## Write commands
+
+All write commands use `internal/planner` to build operation plans and
+`planner.Executor` to apply them through typed Git and GitHub adapters. CLI
+handlers do not call `git` or `gh` directly.
+
+```powershell
+go run ./cmd/parsevkctl task create "Title" --body "Optional body"
+go run ./cmd/parsevkctl task start 113
+go run ./cmd/parsevkctl task pr 113
+go run ./cmd/parsevkctl task merge 113
+```
+
+`task create "Title" --body "..."` creates a GitHub issue, adds it to the
+configured Project when supported by the adapter, sets status to `Todo`, and
+prints the created issue number and URL. The title is required; the body is
+optional. The command does not guess at duplicate issues.
+
+`task start <issue>` loads the issue, validates that it is open and has
+`ai:ready`, verifies the working tree is clean, detects the repository default
+branch from `origin`, rejects existing local or remote target branches, fetches
+the default branch, switches to it, pulls with `--ff-only`, creates the
+`ai/mbp-...` task branch, then replaces `ai:ready` with `ai:in-progress`.
+
+`task pr <issue>` validates the current task branch, confirms the branch issue
+number matches the requested issue, checks that the working tree is clean and
+the branch is ahead of the default branch, pushes the branch, creates a PR with
+`Closes #<issue>` in the body, sets Project status to `Review`, switches back
+to the default branch and pulls it with `--ff-only`. It keeps the local task
+branch after PR creation because that branch is not merged yet. If an open PR
+already exists for the same branch/base, the command returns that PR instead of
+creating a duplicate.
+
+`task merge <issue>` finds the linked PR and runs the same local read-only gate
+as `task review <issue>`. It does not create GitHub approvals and never calls
+`gh pr review --approve`. The gate requires an open non-draft PR, the repository
+default branch as base, `Closes #<issue>`, `ai:needs-review`, mergeable state,
+listed changed files, required PR body sections, non-failing checks, and a clean
+lightweight secret scan. If any blocker is found, merge stops before writes.
+
+When the local gate passes, `task merge` uses the configured merge strategy,
+replaces `ai:needs-review` with `review:passed` and `ai:approved`, sets Project
+status to `Done`, closes the issue if needed, switches to the default branch,
+pulls with `--ff-only`, deletes the local task branch with `git branch -d`, and
+deletes the remote task branch if it still exists. If local branch deletion
+fails because Git does not consider the branch merged, rerun only after deciding
+that is safe with `--force-delete-local-branch`.
+
+`merge.requireChecks` controls PR check enforcement:
+
+```json
+"merge": {
+  "requireChecks": true
+}
+```
+
+- `true`: `task merge` requires the linked PR to have at least one check and
+  allows merge only when all checks are successful, skipped, or neutral.
+- `false`: missing checks are allowed, but `task merge` still prints that no
+  GitHub checks were found and that missing checks are allowed by configuration.
+
+With `true`, missing checks, pending checks, failed checks, and unknown check
+states block merge with an error that names the affected checks. The default
+project config still uses `false`; enabling required checks belongs in a
+separate rollout.
+
+Use `--dry-run` with any write command to render the operation plan without
+executing it:
+
+```powershell
+go run ./cmd/parsevkctl --dry-run task create "Title" --body "Body"
+go run ./cmd/parsevkctl --dry-run task start 113
+go run ./cmd/parsevkctl --dry-run task pr 113
+go run ./cmd/parsevkctl --dry-run task merge 113
+```
+
+`--dry-run` must not mutate GitHub issues, Project items, pull requests,
+branches, or local git state.
+
+Use `--json` to render machine-readable output where the output layer supports
+it:
+
+```powershell
+go run ./cmd/parsevkctl --json --dry-run task start 113
+go run ./cmd/parsevkctl --json task pr 113
+```
