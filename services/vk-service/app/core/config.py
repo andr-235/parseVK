@@ -16,12 +16,23 @@ class Settings(BaseSettings):
     outbox_publish_enabled: bool = False
     vk_token: str = Field(default="", repr=False)
     use_fake_vk_adapter: bool = True
+    ok_access_token: str = Field(default="", repr=False)
+    ok_application_key: str = Field(default="", repr=False)
+    ok_application_secret_key: str = Field(default="", repr=False)
+    use_fake_ok_adapter: bool = True
     default_group_ids: list[int] = [1]
 
     @model_validator(mode="after")
     def validate_vk_token(self) -> "Settings":
         if not self.use_fake_vk_adapter and not self.vk_token:
             raise ValueError("VK_SERVICE_VK_TOKEN is required when VK_SERVICE_USE_FAKE_VK_ADAPTER is false")
+        return self
+
+    @model_validator(mode="after")
+    def validate_ok_token(self) -> "Settings":
+        if not self.use_fake_ok_adapter:
+            if not self.ok_access_token or not self.ok_application_key or not self.ok_application_secret_key:
+                raise ValueError("OK credentials are required when use_fake_ok_adapter is false")
         return self
 
 

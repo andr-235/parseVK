@@ -59,7 +59,7 @@ jobs:
 
       - name: Upload API audit results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: api-audit-results
           path: api/audit-api.json
@@ -67,7 +67,7 @@ jobs:
 
       - name: Upload Frontend audit results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-audit-results
           path: front/audit-frontend.json
@@ -126,12 +126,12 @@ jobs:
           echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build API image for scanning
         id: build-api
         if: steps.detect-changes.outputs.api_changed == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/backend.Dockerfile
@@ -146,7 +146,7 @@ jobs:
       - name: Build Frontend image for scanning
         id: build-frontend
         if: steps.detect-changes.outputs.frontend_changed == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/frontend.Dockerfile

@@ -32,6 +32,7 @@ async def lifespan(app: FastAPI):
 
 from app.modules.vk_api.router import router as vk_router
 from app.modules.vk_friends.router import router as vk_friends_router
+from app.modules.ok_friends.router import router as ok_friends_router
 
 
 def create_app() -> FastAPI:
@@ -43,6 +44,7 @@ def create_app() -> FastAPI:
 
     app.include_router(vk_router)
     app.include_router(vk_friends_router)
+    app.include_router(ok_friends_router)
     return app
 
 
