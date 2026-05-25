@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/api/common'
+import { GATEWAY_API_URL } from '@/api/common'
 import { createRequest, handleResponse } from '@/api/common'
 import { saveReportBlob } from '@/utils/common'
 import type { ExportJobStatus, JobLogLevel, ExportStreamEvent, StreamHandlers } from '@/api/common/sse'
@@ -53,7 +53,7 @@ export type VkFriendsStreamEvent = ExportStreamEvent
 export const vkFriendsExportService = {
   async export(payload: { params: VkFriendsParams }): Promise<VkFriendsExportResponse> {
     try {
-      const response = await createRequest(`${API_URL}/vk/friends/export`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/vk/friends/export`, {
         method: 'POST',
         body: JSON.stringify(payload),
       })
@@ -67,7 +67,7 @@ export const vkFriendsExportService = {
 
   async getJob(jobId: string): Promise<VkFriendsJobResponse> {
     try {
-      const response = await createRequest(`${API_URL}/vk/friends/jobs/${jobId}`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}`)
       return await handleResponse<VkFriendsJobResponse>(response, 'Failed to fetch job')
     } catch (error) {
       toast.error('Не удалось загрузить статус экспорта')
@@ -80,7 +80,7 @@ export const vkFriendsExportService = {
 
     const run = async () => {
       try {
-        const response = await createRequest(`${API_URL}/vk/friends/jobs/${jobId}/stream`, {
+        const response = await createRequest(`${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}/stream`, {
           headers: {
             Accept: 'text/event-stream',
           },
@@ -113,7 +113,7 @@ export const vkFriendsExportService = {
 
   async downloadJobFile(jobId: string, type: 'xlsx'): Promise<void> {
     try {
-      const response = await createRequest(`${API_URL}/vk/friends/jobs/${jobId}/download/${type}`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}/download/${type}`)
 
       if (!response.ok) {
         const text = await response.text().catch(() => '')
