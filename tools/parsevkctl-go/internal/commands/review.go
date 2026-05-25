@@ -231,6 +231,8 @@ func isExpectedReviewScope(file string) bool {
 		"cmd/parsevkctl/",
 		"internal/",
 		"docs/ai-workflow/",
+		"services/",
+		"front/",
 	}
 	for _, prefix := range prefixes {
 		if strings.HasPrefix(normalized, prefix) {

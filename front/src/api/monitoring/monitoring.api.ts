@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/api/common'
+import { GATEWAY_API_URL } from '@/api/common'
 import { createRequest, handleResponse } from '@/api/common'
 import type {
   IMonitorGroupDeleteResponse,
@@ -91,8 +91,8 @@ export const monitoringService = {
     try {
       const query = buildQuery(params)
       const url = query
-        ? `${API_URL}/monitoring/messages?${query}`
-        : `${API_URL}/monitoring/messages`
+        ? `${GATEWAY_API_URL}/v1/monitoring/messages?${query}`
+        : `${GATEWAY_API_URL}/v1/monitoring/messages`
       const response = await createRequest(url)
 
       return await handleResponse<IMonitorMessagesResponse>(
@@ -108,7 +108,7 @@ export const monitoringService = {
   async fetchGroups(params?: MonitorGroupsParams): Promise<IMonitorGroupsResponse> {
     try {
       const query = buildGroupsQuery(params)
-      const url = query ? `${API_URL}/monitoring/groups?${query}` : `${API_URL}/monitoring/groups`
+      const url = query ? `${GATEWAY_API_URL}/v1/monitoring/groups?${query}` : `${GATEWAY_API_URL}/v1/monitoring/groups`
       const response = await createRequest(url)
 
       return await handleResponse<IMonitorGroupsResponse>(
@@ -128,7 +128,7 @@ export const monitoringService = {
     category?: string | null
   }): Promise<IMonitorGroupResponse> {
     try {
-      const response = await createRequest(`${API_URL}/monitoring/groups`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/monitoring/groups`, {
         method: 'POST',
         body: JSON.stringify(payload),
       })
@@ -155,7 +155,7 @@ export const monitoringService = {
     }
   ): Promise<IMonitorGroupResponse> {
     try {
-      const response = await createRequest(`${API_URL}/monitoring/groups/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/monitoring/groups/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(payload),
       })
@@ -174,7 +174,7 @@ export const monitoringService = {
 
   async deleteGroup(id: number): Promise<IMonitorGroupDeleteResponse> {
     try {
-      const response = await createRequest(`${API_URL}/monitoring/groups/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/monitoring/groups/${id}`, {
         method: 'DELETE',
       })
 

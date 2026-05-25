@@ -38,6 +38,8 @@ def create_app() -> FastAPI:
         return {"status": "READY"}
 
     from app.modules.watchlist.router import router as watchlist_router
+    from app.modules.monitoring.router import router as monitoring_router
+    from app.modules.metrics.router import router as metrics_router
 
     app.include_router(auth_router)
     app.include_router(content_router)
@@ -51,6 +53,8 @@ def create_app() -> FastAPI:
     app.include_router(photo_analysis_router)
     app.include_router(vk_friends_router)
     app.include_router(ok_friends_router)
+    app.include_router(monitoring_router)
+    app.include_router(metrics_router)
 
     return app
 
