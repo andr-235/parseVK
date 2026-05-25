@@ -186,6 +186,8 @@ func RunTaskPR(ctx context.Context, input TaskRunInput) int {
 }
 
 func RunTaskMerge(ctx context.Context, input TaskRunInput) int {
+	fmt.Fprintln(input.Stdout, "Use $parsevk-merge-gate before running this command.")
+	fmt.Fprintln(input.Stdout)
 	result, err := BuildTaskMergePlan(ctx, input.TaskIssueInput)
 	if err != nil {
 		if input.DryRun && isMergeBlocked(err) {
@@ -632,12 +634,13 @@ Closes #%d
 
 - Medium risk: this PR changes parsevkctl workflow behavior.
 
-## AI Handoff
+## AI Workflow
 
-Next step:
+Before merge, run:
+- '$parsevk-pr-review'
+- '$parsevk-merge-gate'
 
-- Review this PR in ChatGPT first.
-- Do not leave an official GitHub review until explicitly requested.
+Do not create GitHub approve from the same user.
 `, issueNumber, issueNumber, changedFilesSection)
 }
 
@@ -691,8 +694,7 @@ func renderTaskPRCreated(w io.Writer, result TaskPRPlanResult, pr domain.PullReq
 	fmt.Fprintf(out, "  added: %s\n", result.AddedLabel)
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Next:")
-	fmt.Fprintln(out, "  ask ChatGPT to review the PR first")
-	fmt.Fprintln(out, "  only leave GitHub review after explicit command")
+	fmt.Fprintln(out, "  run $parsevk-pr-review to review the PR")
 }
 
 func requireChecks(cfg config.Config) bool {
