@@ -1,0 +1,22 @@
+# parseVK execution policy rules (Starlark)
+
+# ALLOW commands (Read-only checks)
+prefix_rule(pattern=["git", "status"], decision="allow", justification="Check local working tree status")
+prefix_rule(pattern=["git", "diff"], decision="allow", justification="Analyze local changes")
+prefix_rule(pattern=["git", "log"], decision="allow", justification="Inspect commit history")
+prefix_rule(pattern=["gh", "issue", "view"], decision="allow", justification="View issue description and state")
+prefix_rule(pattern=["gh", "pr", "view"], decision="allow", justification="Check Pull Request status")
+prefix_rule(pattern=["gh", "pr", "diff"], decision="allow", justification="Review PR diff on GitHub")
+
+# PROMPT commands (State mutations requiring confirmation)
+prefix_rule(pattern=["git", "push"], decision="prompt", justification="Verify target branch before pushing changes")
+prefix_rule(pattern=["gh", "pr", "create"], decision="prompt", justification="Confirm details before opening a new Pull Request")
+prefix_rule(pattern=["gh", "issue", "edit"], decision="prompt", justification="Confirm issue updates")
+prefix_rule(pattern=["gh", "pr", "merge"], decision="prompt", justification="Confirm before merging Pull Request")
+prefix_rule(pattern=["git", "branch", "-d"], decision="prompt", justification="Confirm branch deletion")
+
+# FORBIDDEN commands (Dangerous or unsafe workflow actions)
+prefix_rule(pattern=["gh", "pr", "review", "--approve"], decision="forbidden", justification="Self-approving Pull Requests from same account is strictly forbidden.")
+prefix_rule(pattern=["git", "push", "--force"], decision="forbidden", justification="Force pushing branches is destructive and forbidden.")
+prefix_rule(pattern=["git", "reset", "--hard"], decision="forbidden", justification="Hard resetting git history can lead to dataloss.")
+prefix_rule(pattern=["rm", "-rf"], decision="forbidden", justification="Recursive directory removal is blocked for safety.")

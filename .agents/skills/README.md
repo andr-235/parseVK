@@ -1,26 +1,32 @@
-# parseVK Repo-Scoped Codex Skills
+# parseVK Repository Skills
 
-These are Codex repository-scoped skills for the parseVK AI-assisted development workflow.
+Этот каталог содержит воспроизводимые процедуры (Skills) для автоматизации воркфлоу разработки в проекте `parseVK` с использованием ИИ-агента Codex.
 
-Codex repository skills belong under:
+## Архитектура папки Skill
 
-```text
-.agents/skills/
-```
-
-Each skill is a directory with a required `SKILL.md` file. Optional supporting files may live under `references/`, `scripts/`, `assets/`, or `agents/` inside that skill directory.
-
-Do not place Codex skills under `docs/ai-skills/`. The `docs/` directory remains for human-facing project documentation and long-term architecture notes.
-
-The workflow architecture is:
+Каждая папка навыка оформлена как самостоятельный пакет со следующей структурой:
 
 ```text
-GitHub Issue = task source of truth
-GitHub PR = implementation artifact
-Codex Skill = reusable reasoning/process guide
-parsevkctl = deterministic helper CLI
-docs/ = long-term human/project documentation
-.agents/skills = repo-scoped AI workflow skills
+parsevk-skill-name/
+  SKILL.md            # Главный файл с инструкциями (обязателен)
+  references/         # Длинные чеклисты, стандарты, политики (опционально)
+  scripts/            # Вспомогательные read-only скрипты (опционально)
+  assets/             # Шаблоны issues, PR, отчетов (опционально)
+  agents/
+    openai.yaml       # Интеграционные метаданные и настройки вызова (опционально)
 ```
 
-`parsevkctl` should remain a thin deterministic CLI for task lifecycle operations. Complex AI reasoning workflows belong in skills. GitHub Issues and Pull Requests remain the source of truth for task scope, implementation state, review, and merge decisions.
+## Правила создания навыков
+
+1. **`SKILL.md`**:
+   - Обязательно должен содержать YAML frontmatter с полями `name` и `description`.
+   - `description` должен быть максимально точным, поскольку Codex выбирает навыки по описанию (implicit invocation).
+   - Должен содержать разделы: Purpose, When to use, When not to use, Inputs, Procedure, Output format, Safety rules, Validation expectations.
+
+2. **`scripts/`**:
+   - Все скрипты должны быть **строго read-only**.
+   - Скрипты собирают факты (статусы, списки файлов, утечки), но не изменяют состояние репозитория.
+
+3. **`agents/openai.yaml`**:
+   - Содержит настройки интерфейса и политики вызова.
+   - Для потенциально опасных навыков (например, проверка мерджа) параметр `allow_implicit_invocation` должен быть установлен в `false`.
