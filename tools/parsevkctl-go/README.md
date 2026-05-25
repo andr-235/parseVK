@@ -87,9 +87,13 @@ access and Project status availability where the adapter supports it. Human
 output uses `OK`, `WARN` and `FAIL` lines, and critical failures return a
 non-zero exit code.
 
-`parsevkctl task status <issue>` shows the issue, Project status, linked pull
-request, current branch, expected AI task branch, working tree state, derived
-lifecycle state and suggested next command.
+`parsevkctl task status <issue>` is a read-only diagnostic report. It shows
+issue metadata and labels, inferred workflow stage, repository default branch,
+current branch, expected AI task branch, clean or dirty worktree state, local
+and remote branch existence, linked pull request metadata, mergeability,
+`Closes #<issue>` linkage, GitHub checks when available, blockers, notes and
+one suggested next command. It does not update labels, Project fields, issues,
+pull requests or local branches.
 
 `parsevkctl task sync <issue>` is preview-only. It shows current state, drift
 items and suggested safe fixes, but does not update Project status, close
