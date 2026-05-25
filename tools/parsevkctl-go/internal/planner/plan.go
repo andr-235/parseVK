@@ -12,6 +12,7 @@ type OperationType string
 const (
 	OperationIssueCreate        OperationType = "Issue.Create"
 	OperationIssueClose         OperationType = "Issue.Close"
+	OperationIssueUpdateLabels  OperationType = "Issue.UpdateLabels"
 	OperationProjectAddItem     OperationType = "Project.AddItem"
 	OperationProjectSetStatus   OperationType = "Project.SetStatus"
 	OperationGitFetch           OperationType = "Git.Fetch"
@@ -45,7 +46,6 @@ type StartTaskInput struct {
 	Issue         domain.Issue
 	DefaultBranch string
 	BranchName    string
-	TargetStatus  domain.ProjectStatus
 }
 
 type CreateTaskInput struct {
@@ -85,6 +85,12 @@ type ProjectStatusPayload struct {
 
 type ProjectIssuePayload struct {
 	IssueNumber int `json:"issueNumber"`
+}
+
+type IssueLabelsPayload struct {
+	IssueNumber int      `json:"issueNumber"`
+	Remove      []string `json:"remove,omitempty"`
+	Add         []string `json:"add,omitempty"`
 }
 
 type GitRefPayload struct {
@@ -129,22 +135,10 @@ func NewStartTaskPlan(input StartTaskInput) (Plan, error) {
 	if err != nil {
 		return Plan{}, err
 	}
-	targetStatus, err := validateProjectStatus(input.TargetStatus)
-	if err != nil {
-		return Plan{}, err
-	}
-
 	return Plan{
 		Command: "task start",
 		Issue:   issueNumber,
 		Operations: []Operation{
-			{
-				ID:          "project-set-status-" + statusID(targetStatus),
-				Type:        OperationProjectSetStatus,
-				Description: fmt.Sprintf("Set project status for issue #%d to %s", issueNumber, targetStatus),
-				SafeToRetry: true,
-				Payload:     ProjectStatusPayload{IssueNumber: issueNumber, Status: targetStatus},
-			},
 			{
 				ID:          "git-fetch-default-branch",
 				Type:        OperationGitFetch,
@@ -172,6 +166,17 @@ func NewStartTaskPlan(input StartTaskInput) (Plan, error) {
 				Description: fmt.Sprintf("Create task branch %s", branchName),
 				SafeToRetry: false,
 				Payload:     GitBranchPayload{Branch: branchName},
+			},
+			{
+				ID:          "issue-update-ai-labels",
+				Type:        OperationIssueUpdateLabels,
+				Description: fmt.Sprintf("Replace ai:ready with ai:in-progress on issue #%d", issueNumber),
+				SafeToRetry: true,
+				Payload: IssueLabelsPayload{
+					IssueNumber: issueNumber,
+					Remove:      []string{"ai:ready"},
+					Add:         []string{"ai:in-progress"},
+				},
 			},
 		},
 	}, nil

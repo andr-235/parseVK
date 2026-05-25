@@ -39,8 +39,8 @@ func TestTaskStatusHumanNoPR(t *testing.T) {
 		"Issue: Open",
 		"Project: unavailable",
 		"Pull request: none",
-		"Current branch: feat/issue-112-read-only-commands",
-		"Expected branch: feat/issue-112-add-read-only-task-commands",
+		"Current branch: ai/mbp-112-read-only-commands",
+		"Expected branch: ai/mbp-112-add-read-only-task-commands",
 		"Working tree: clean",
 		"Lifecycle state: InProgress",
 		"Suggested next command: parsevkctl task pr <issue>",
@@ -61,7 +61,7 @@ func TestTaskStatusJSONOpenPR(t *testing.T) {
 		State:  domain.PullRequestStateOpen,
 		URL:    "https://github.test/pr/7",
 		Base:   "fastapi-microservices-rewrite",
-		Head:   "feat/issue-112-add-read-only-task-commands",
+		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
 
 	var out bytes.Buffer
@@ -259,7 +259,7 @@ func TestTaskStartDryRunPlan(t *testing.T) {
 	}
 
 	got := planOperationTypes(result.Plan.Operations)
-	want := []string{"Project.SetStatus", "Git.Fetch", "Git.Switch", "Git.PullFastForward", "Git.CreateBranch"}
+	want := []string{"Git.Fetch", "Git.Switch", "Git.PullFastForward", "Git.CreateBranch", "Issue.UpdateLabels"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("operations = %#v, want %#v", got, want)
 	}
@@ -289,13 +289,62 @@ func TestTaskStartSuccessPath(t *testing.T) {
 	if !reflect.DeepEqual(deps.Git.writeCalls, wantGit) {
 		t.Fatalf("git writes = %#v, want %#v", deps.Git.writeCalls, wantGit)
 	}
-	wantGitHub := []string{"SetProjectStatus"}
+	wantGitHub := []string{"UpdateIssueLabels"}
 	if !reflect.DeepEqual(deps.GitHub.writeCalls, wantGitHub) {
 		t.Fatalf("github writes = %#v, want %#v", deps.GitHub.writeCalls, wantGitHub)
 	}
-	if !strings.Contains(out.String(), "Branch: feat/issue-112-add-read-only-task-commands") {
+	if !strings.Contains(out.String(), "Task branch: ai/mbp-112-add-read-only-task-commands") {
 		t.Fatalf("stdout = %q", out.String())
 	}
+}
+
+func TestTaskStartRejectsMissingReadyLabel(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.issue.Labels = []string{"type:infra"}
+
+	_, err := BuildTaskStartPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "does not have required label ai:ready") {
+		t.Fatalf("err = %v, want missing ai:ready error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskStartRejectsDirtyWorkingTree(t *testing.T) {
+	deps := okDeps()
+	deps.Git.clean = false
+	deps.Git.files = []string{" M internal/file.go"}
+
+	_, err := BuildTaskStartPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "working tree is dirty") {
+		t.Fatalf("err = %v, want dirty tree error", err)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskStartRejectsExistingLocalBranch(t *testing.T) {
+	deps := okDeps()
+	deps.Git.localBranchExists = true
+
+	_, err := BuildTaskStartPlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "already exists locally") {
+		t.Fatalf("err = %v, want local branch exists error", err)
+	}
+	deps.assertNoWrites(t)
 }
 
 func TestTaskStartRejectsClosedIssue(t *testing.T) {
@@ -316,7 +365,7 @@ func TestTaskStartRejectsClosedIssue(t *testing.T) {
 
 func TestTaskPRRejectsDirtyWorkingTree(t *testing.T) {
 	deps := okDeps()
-	deps.Git.currentBranch = "feat/issue-112-add-read-only-task-commands"
+	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
 	deps.Git.clean = false
 	deps.Git.files = []string{" M internal/file.go"}
 
@@ -334,7 +383,7 @@ func TestTaskPRRejectsDirtyWorkingTree(t *testing.T) {
 
 func TestTaskPRRejectsWrongBranchIssueNumber(t *testing.T) {
 	deps := okDeps()
-	deps.Git.currentBranch = "feat/issue-999-other-task"
+	deps.Git.currentBranch = "ai/mbp-999-other-task"
 
 	_, err := BuildTaskPRPlan(context.Background(), TaskIssueInput{
 		IssueNumber: 112,
@@ -350,8 +399,9 @@ func TestTaskPRRejectsWrongBranchIssueNumber(t *testing.T) {
 
 func TestTaskPRDryRunPlan(t *testing.T) {
 	deps := okDeps()
-	deps.Git.currentBranch = "feat/issue-112-add-read-only-task-commands"
+	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
 	deps.Git.ahead = true
+	deps.GitHub.project = domain.ProjectItem{ID: "item-1", Status: domain.ProjectStatusInProgress}
 
 	result, err := BuildTaskPRPlan(context.Background(), TaskIssueInput{
 		IssueNumber: 112,
@@ -381,7 +431,7 @@ func TestTaskMergeRejectsDraftPR(t *testing.T) {
 		State:  domain.PullRequestStateOpen,
 		Draft:  true,
 		Base:   "fastapi-microservices-rewrite",
-		Head:   "feat/issue-112-add-read-only-task-commands",
+		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
 
 	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
@@ -402,7 +452,7 @@ func TestTaskMergeRejectsWrongBaseBranch(t *testing.T) {
 		Number: 9,
 		State:  domain.PullRequestStateOpen,
 		Base:   "main",
-		Head:   "feat/issue-112-add-read-only-task-commands",
+		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
 
 	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
@@ -421,12 +471,12 @@ func TestTaskMergeDryRunPlan(t *testing.T) {
 	deps := okDeps()
 	deleteBranch := true
 	deps.Config.Merge.DeleteBranch = &deleteBranch
-	deps.Git.currentBranch = "feat/issue-112-add-read-only-task-commands"
+	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
 	deps.GitHub.prs = []domain.PullRequest{{
 		Number: 9,
 		State:  domain.PullRequestStateOpen,
 		Base:   "fastapi-microservices-rewrite",
-		Head:   "feat/issue-112-add-read-only-task-commands",
+		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
 
 	result, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
@@ -455,7 +505,7 @@ func TestTaskMergeRequireChecksAllowsGreenChecks(t *testing.T) {
 		Number: 9,
 		State:  domain.PullRequestStateOpen,
 		Base:   "fastapi-microservices-rewrite",
-		Head:   "feat/issue-112-add-read-only-task-commands",
+		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
 	deps.GitHub.checks = domain.PullRequestChecks{
 		PullRequestNumber: 9,
@@ -490,7 +540,7 @@ func TestTaskMergeRequireChecksBlocksZeroChecks(t *testing.T) {
 		Number: 9,
 		State:  domain.PullRequestStateOpen,
 		Base:   "fastapi-microservices-rewrite",
-		Head:   "feat/issue-112-add-read-only-task-commands",
+		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
 	deps.GitHub.checks = domain.PullRequestChecks{PullRequestNumber: 9}
 
@@ -538,7 +588,7 @@ func TestTaskMergeRequireChecksBlocksPendingFailedAndUnknownChecks(t *testing.T)
 				Number: 9,
 				State:  domain.PullRequestStateOpen,
 				Base:   "fastapi-microservices-rewrite",
-				Head:   "feat/issue-112-add-read-only-task-commands",
+				Head:   "ai/mbp-112-add-read-only-task-commands",
 			}}
 			deps.GitHub.checks = domain.PullRequestChecks{
 				PullRequestNumber: 9,
@@ -568,7 +618,7 @@ func TestTaskMergeRequireChecksFalseDoesNotLoadChecks(t *testing.T) {
 		Number: 9,
 		State:  domain.PullRequestStateOpen,
 		Base:   "fastapi-microservices-rewrite",
-		Head:   "feat/issue-112-add-read-only-task-commands",
+		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
 	deps.GitHub.checkErr = errors.New("must not be called")
 
@@ -633,17 +683,18 @@ func okDeps() commandDeps {
 			},
 		},
 		Git: &fakeGit{
-			currentBranch: "feat/issue-112-read-only-commands",
+			currentBranch: "ai/mbp-112-read-only-commands",
 			clean:         true,
 		},
 		GitHub: &fakeGitHub{
 			issue: domain.Issue{
-				ID:    112,
-				Title: "Add read-only task commands",
-				State: domain.IssueStateOpen,
-				URL:   "https://github.test/issues/112",
+				ID:     112,
+				Title:  "MBP-112: Add read-only task commands",
+				State:  domain.IssueStateOpen,
+				URL:    "https://github.test/issues/112",
+				Labels: []string{"ai:ready", "type:infra"},
 			},
-			project: domain.ProjectItem{ID: "item-1", Status: domain.ProjectStatusInProgress},
+			project: domain.ProjectItem{ID: "item-1", Status: domain.ProjectStatusTodo},
 		},
 	}
 }
@@ -659,21 +710,39 @@ func (d commandDeps) assertNoWrites(t *testing.T) {
 }
 
 type fakeGit struct {
-	currentBranch string
-	clean         bool
-	ahead         bool
-	files         []string
-	err           error
-	allowWrites   bool
-	writeCalls    []string
+	currentBranch      string
+	defaultBranch      string
+	clean              bool
+	ahead              bool
+	files              []string
+	localBranchExists  bool
+	remoteBranchExists bool
+	err                error
+	allowWrites        bool
+	writeCalls         []string
 }
 
 func (f *fakeGit) CurrentBranch(context.Context) (string, error) {
 	return f.currentBranch, f.err
 }
 
+func (f *fakeGit) DefaultBranch(context.Context) (string, error) {
+	if f.defaultBranch != "" {
+		return f.defaultBranch, f.err
+	}
+	return "fastapi-microservices-rewrite", f.err
+}
+
 func (f *fakeGit) IsWorkTreeClean(context.Context) (bool, []string, error) {
 	return f.clean, f.files, f.err
+}
+
+func (f *fakeGit) LocalBranchExists(context.Context, string) (bool, error) {
+	return f.localBranchExists, f.err
+}
+
+func (f *fakeGit) RemoteBranchExists(context.Context, string, string) (bool, error) {
+	return f.remoteBranchExists, f.err
 }
 
 func (f *fakeGit) Fetch(context.Context, string, string) error {
@@ -757,6 +826,13 @@ func (f *fakeGitHub) CreateIssue(context.Context, github.CreateIssueInput) (doma
 }
 func (f *fakeGitHub) CloseIssue(context.Context, int, string) error {
 	f.writeCalls = append(f.writeCalls, "CloseIssue")
+	if f.allowWrites {
+		return nil
+	}
+	return errors.New("write call")
+}
+func (f *fakeGitHub) UpdateIssueLabels(context.Context, int, []string, []string) error {
+	f.writeCalls = append(f.writeCalls, "UpdateIssueLabels")
 	if f.allowWrites {
 		return nil
 	}

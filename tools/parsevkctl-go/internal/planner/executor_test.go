@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/andr-235/parseVK/tools/parsevkctl-go/internal/domain"
@@ -20,8 +21,7 @@ func TestExecutorStopsOnFirstFailedOperation(t *testing.T) {
 	plan, err := NewStartTaskPlan(StartTaskInput{
 		Issue:         domain.Issue{ID: 111},
 		DefaultBranch: "fastapi-microservices-rewrite",
-		BranchName:    "feat/issue-111-planner",
-		TargetStatus:  domain.ProjectStatusInProgress,
+		BranchName:    "ai/mbp-111-planner",
 	})
 	if err != nil {
 		t.Fatalf("NewStartTaskPlan returned error: %v", err)
@@ -54,8 +54,8 @@ func TestExecutorStopsOnFirstFailedOperation(t *testing.T) {
 	if !reflect.DeepEqual(fakeGit.calls, wantGitCalls) {
 		t.Fatalf("git calls = %#v, want %#v", fakeGit.calls, wantGitCalls)
 	}
-	if len(fakeGitHub.calls) != 1 || fakeGitHub.calls[0] != "SetProjectStatus:111:In Progress" {
-		t.Fatalf("github calls = %#v, want SetProjectStatus only", fakeGitHub.calls)
+	if len(fakeGitHub.calls) != 0 {
+		t.Fatalf("github calls = %#v, want none before failed pull", fakeGitHub.calls)
 	}
 }
 
@@ -67,7 +67,7 @@ func TestExecutorCallsAdaptersInExpectedOrder(t *testing.T) {
 
 	plan, err := NewCreatePullRequestPlan(CreatePullRequestInput{
 		Issue:        domain.Issue{ID: 111},
-		BranchName:   "feat/issue-111-planner",
+		BranchName:   "ai/mbp-111-planner",
 		BaseBranch:   "fastapi-microservices-rewrite",
 		Title:        "Go rewrite: add planner executor",
 		Body:         "Closes #111",
@@ -82,8 +82,8 @@ func TestExecutorCallsAdaptersInExpectedOrder(t *testing.T) {
 	}
 
 	want := []string{
-		"git.PushBranch:origin:feat/issue-111-planner:true",
-		"github.CreatePullRequest:Go rewrite: add planner executor:feat/issue-111-planner:fastapi-microservices-rewrite",
+		"git.PushBranch:origin:ai/mbp-111-planner:true",
+		"github.CreatePullRequest:Go rewrite: add planner executor:ai/mbp-111-planner:fastapi-microservices-rewrite",
 		"github.SetProjectStatus:111:Review",
 	}
 	if !reflect.DeepEqual(recorder.calls, want) {
@@ -160,8 +160,18 @@ type fakeGitAdapter struct {
 
 func (f *fakeGitAdapter) CurrentBranch(context.Context) (string, error) { return "", nil }
 
+func (f *fakeGitAdapter) DefaultBranch(context.Context) (string, error) {
+	return "fastapi-microservices-rewrite", nil
+}
+
 func (f *fakeGitAdapter) IsWorkTreeClean(context.Context) (bool, []string, error) {
 	return true, nil, nil
+}
+
+func (f *fakeGitAdapter) LocalBranchExists(context.Context, string) (bool, error) { return false, nil }
+
+func (f *fakeGitAdapter) RemoteBranchExists(context.Context, string, string) (bool, error) {
+	return false, nil
 }
 
 func (f *fakeGitAdapter) Fetch(_ context.Context, remote string, branch string) error {
@@ -219,6 +229,13 @@ func (f *fakeGitHubAdapter) CreateIssue(context.Context, github.CreateIssueInput
 }
 
 func (f *fakeGitHubAdapter) CloseIssue(context.Context, int, string) error { return nil }
+
+func (f *fakeGitHubAdapter) UpdateIssueLabels(_ context.Context, issueNumber int, remove []string, add []string) error {
+	call := "UpdateIssueLabels:" + strconv.Itoa(issueNumber) + ":" + strings.Join(remove, ",") + ":" + strings.Join(add, ",")
+	f.calls = append(f.calls, call)
+	f.recorder.add("github." + call)
+	return nil
+}
 
 func (f *fakeGitHubAdapter) ListLabels(context.Context) ([]github.Label, error) { return nil, nil }
 

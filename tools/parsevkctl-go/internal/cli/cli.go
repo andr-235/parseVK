@@ -181,6 +181,7 @@ func runTask(args []string, opts options, stdout io.Writer, stderr io.Writer) in
 				Config:      cfg,
 				Git:         git.NewShellAdapter(),
 				GitHub:      github.NewShellAdapterWithConfig(cfg),
+				DryRun:      opts.dryRun,
 			},
 			DryRun: opts.dryRun,
 			JSON:   opts.jsonOutput,

@@ -65,12 +65,13 @@ and falls back to conservative text parsing when JSON output is unavailable.
 
 ## Branch naming
 
-Task branches use this format:
+AI task branches use this format:
 
-`<type>/issue-<number>-<slug>`
+`ai/mbp-<issue-number>-<slug>`
 
-Supported branch types: `feat`, `fix`, `docs`, `refactor`, `test`, `ci`,
-`chore`, `perf`, `build`, `hotfix`.
+The slug is derived from the issue title, lowercased, dash-separated, cleaned
+for git branch compatibility, and capped at 60 characters. If the issue title
+starts with `MBP-<issue-number>:`, that prefix is removed before slugging.
 
 ## Read-only commands
 
@@ -86,7 +87,7 @@ output uses `OK`, `WARN` and `FAIL` lines, and critical failures return a
 non-zero exit code.
 
 `parsevkctl task status <issue>` shows the issue, Project status, linked pull
-request, current branch, expected task branch, working tree state, derived
+request, current branch, expected AI task branch, working tree state, derived
 lifecycle state and suggested next command.
 
 `parsevkctl task sync <issue>` is preview-only. It shows current state, drift
@@ -125,10 +126,11 @@ configured Project when supported by the adapter, sets status to `Todo`, and
 prints the created issue number and URL. The title is required; the body is
 optional. The command does not guess at duplicate issues.
 
-`task start <issue>` loads the issue, validates that it is open, validates the
-lifecycle transition to `InProgress`, derives the task branch through
-`internal/branch`, sets Project status to `In Progress`, fetches the default
-branch, switches to it, pulls with `--ff-only`, and creates the task branch.
+`task start <issue>` loads the issue, validates that it is open and has
+`ai:ready`, verifies the working tree is clean, detects the repository default
+branch from `origin`, rejects existing local or remote target branches, fetches
+the default branch, switches to it, pulls with `--ff-only`, creates the
+`ai/mbp-...` task branch, then replaces `ai:ready` with `ai:in-progress`.
 
 `task pr <issue>` validates the current task branch, confirms the branch issue
 number matches the requested issue, checks that the working tree is clean and

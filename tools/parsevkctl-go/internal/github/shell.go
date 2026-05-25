@@ -105,6 +105,30 @@ func (adapter *ShellAdapter) CloseIssue(ctx context.Context, number int, comment
 	return err
 }
 
+func (adapter *ShellAdapter) UpdateIssueLabels(ctx context.Context, number int, remove []string, add []string) error {
+	if err := validateNumber("issue number", number); err != nil {
+		return err
+	}
+
+	args := []string{"issue", "edit", strconv.Itoa(number)}
+	for _, label := range remove {
+		if strings.TrimSpace(label) != "" {
+			args = append(args, "--remove-label", label)
+		}
+	}
+	for _, label := range add {
+		if strings.TrimSpace(label) != "" {
+			args = append(args, "--add-label", label)
+		}
+	}
+	if len(args) == 3 {
+		return fmt.Errorf("at least one label update is required")
+	}
+
+	_, err := adapter.runGH(ctx, "update issue labels", args...)
+	return err
+}
+
 func (adapter *ShellAdapter) ListLabels(ctx context.Context) ([]Label, error) {
 	result, err := adapter.runGH(ctx, "list labels", "label", "list", "--limit", "200", "--json", "name,color,description")
 	if err != nil {

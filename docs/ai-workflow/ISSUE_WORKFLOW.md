@@ -55,26 +55,25 @@ cd tools/parsevkctl-go
 go run ./cmd/parsevkctl task start ISSUE_NUMBER
 ```
 
-`task start` moves the Project item to `In Progress`, updates the configured
-default branch, and creates the task branch.
+`task start` validates the open issue has `ai:ready`, checks for a clean
+worktree, updates the repository default branch, creates the AI task branch,
+and replaces `ai:ready` with `ai:in-progress`.
 
 ## Branch Naming
 
-Task branches should follow the repository branch naming convention:
+AI task branches should follow the repository branch naming convention:
 
 ```text
-<type>/issue-<number>-<short-kebab-summary>
+ai/mbp-<issue-number>-<short-kebab-summary>
 ```
 
 Examples:
 
 ```text
-docs/issue-185-add-github-ai-workflow-templates
-fix/issue-130-parsevkctl-branch-cleanup
-feat/issue-127-moderation-service
+ai/mbp-185-add-github-ai-workflow-templates
+ai/mbp-130-parsevkctl-branch-cleanup
+ai/mbp-127-moderation-service
 ```
-
-The branch type should match the primary change type.
 
 ## AI Session Expectations
 

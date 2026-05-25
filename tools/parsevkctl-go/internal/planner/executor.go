@@ -93,6 +93,12 @@ func (e Executor) executeOperation(ctx context.Context, operation Operation, cre
 			return ExecutionResult{}, err
 		}
 		return ExecutionResult{}, e.GitHub.CloseIssue(ctx, resolveIssueNumber(payload.IssueNumber, createdIssueNumber), payload.Comment)
+	case OperationIssueUpdateLabels:
+		payload, err := payloadAs[IssueLabelsPayload](operation.Payload)
+		if err != nil {
+			return ExecutionResult{}, err
+		}
+		return ExecutionResult{}, e.GitHub.UpdateIssueLabels(ctx, resolveIssueNumber(payload.IssueNumber, createdIssueNumber), payload.Remove, payload.Add)
 	case OperationProjectAddItem:
 		payload, err := payloadAs[ProjectIssuePayload](operation.Payload)
 		if err != nil {
@@ -218,7 +224,7 @@ func recoveryHint(operation Operation) string {
 		return "Check the local git state, resolve the reported git error, then rerun the task operation."
 	case OperationPullRequestCreate, OperationPullRequestMerge:
 		return "Check pull request state and GitHub permissions, then rerun the task operation."
-	case OperationIssueCreate, OperationIssueClose:
+	case OperationIssueCreate, OperationIssueClose, OperationIssueUpdateLabels:
 		return "Check issue state and GitHub permissions, then rerun the task operation."
 	default:
 		return "Resolve the adapter error and rerun the task operation."

@@ -10,6 +10,7 @@ type Adapter interface {
 	GetIssue(ctx context.Context, number int) (domain.Issue, error)
 	CreateIssue(ctx context.Context, input CreateIssueInput) (domain.Issue, error)
 	CloseIssue(ctx context.Context, number int, comment string) error
+	UpdateIssueLabels(ctx context.Context, number int, remove []string, add []string) error
 	ListLabels(ctx context.Context) ([]Label, error)
 	CreateLabel(ctx context.Context, label Label) error
 

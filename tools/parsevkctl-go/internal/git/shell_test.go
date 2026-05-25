@@ -197,6 +197,30 @@ func TestParseAheadCount(t *testing.T) {
 	}
 }
 
+func TestParseDefaultBranch(t *testing.T) {
+	t.Parallel()
+
+	branch, err := parseDefaultBranch(`* remote origin
+  Fetch URL: https://github.com/andr-235/parseVK.git
+  HEAD branch: main
+  Remote branches:
+    main tracked`)
+	if err != nil {
+		t.Fatalf("parseDefaultBranch returned error: %v", err)
+	}
+	if branch != "main" {
+		t.Fatalf("branch = %q, want main", branch)
+	}
+}
+
+func TestParseDefaultBranchRejectsUnknown(t *testing.T) {
+	t.Parallel()
+
+	if _, err := parseDefaultBranch("  HEAD branch: (unknown)"); err == nil {
+		t.Fatalf("expected unknown default branch error")
+	}
+}
+
 func TestParseAheadCountRejectsInvalidOutput(t *testing.T) {
 	t.Parallel()
 
@@ -214,6 +238,30 @@ func TestCommandArguments(t *testing.T) {
 		run  func(*ShellAdapter) error
 		args []string
 	}{
+		{
+			name: "default branch",
+			run: func(adapter *ShellAdapter) error {
+				_, err := adapter.DefaultBranch(context.Background())
+				return err
+			},
+			args: []string{"remote", "show", "origin"},
+		},
+		{
+			name: "local branch exists",
+			run: func(adapter *ShellAdapter) error {
+				_, err := adapter.LocalBranchExists(context.Background(), "feature")
+				return err
+			},
+			args: []string{"show-ref", "--verify", "--quiet", "refs/heads/feature"},
+		},
+		{
+			name: "remote branch exists",
+			run: func(adapter *ShellAdapter) error {
+				_, err := adapter.RemoteBranchExists(context.Background(), "origin", "feature")
+				return err
+			},
+			args: []string{"ls-remote", "--exit-code", "--heads", "origin", "feature"},
+		},
 		{
 			name: "fetch",
 			run:  func(adapter *ShellAdapter) error { return adapter.Fetch(context.Background(), "origin", "main") },
@@ -280,6 +328,9 @@ func TestCommandArguments(t *testing.T) {
 			var got []string
 			adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
 				got = append([]string(nil), args...)
+				if len(args) >= 3 && args[0] == "remote" && args[1] == "show" {
+					return commandResult{stdout: "  HEAD branch: main"}, nil
+				}
 				return commandResult{stdout: "1"}, nil
 			})
 

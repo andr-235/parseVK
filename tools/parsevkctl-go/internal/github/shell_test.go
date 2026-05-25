@@ -161,6 +161,13 @@ func TestCommandArguments(t *testing.T) {
 			args: []string{"issue", "close", "108", "--comment", "Done"},
 		},
 		{
+			name: "update issue labels",
+			run: func(adapter *ShellAdapter) error {
+				return adapter.UpdateIssueLabels(context.Background(), 108, []string{"ai:ready"}, []string{"ai:in-progress"})
+			},
+			args: []string{"issue", "edit", "108", "--remove-label", "ai:ready", "--add-label", "ai:in-progress"},
+		},
+		{
 			name: "list pull requests",
 			run: func(adapter *ShellAdapter) error {
 				_, err := adapter.ListPullRequests(context.Background(), PullRequestFilter{

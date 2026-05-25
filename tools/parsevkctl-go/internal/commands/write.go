@@ -29,6 +29,7 @@ type TaskIssueInput struct {
 	Config      config.Config
 	Git         git.Adapter
 	GitHub      github.Adapter
+	DryRun      bool
 }
 
 type TaskRunInput struct {
@@ -52,9 +53,17 @@ type TaskPlanResult struct {
 }
 
 type TaskStartPlanResult struct {
-	Plan       planner.Plan `json:"plan"`
-	BranchName string       `json:"branchName"`
-	Status     string       `json:"status"`
+	Plan          planner.Plan `json:"plan"`
+	Issue         IssueResult  `json:"issue"`
+	DefaultBranch string       `json:"defaultBranch"`
+	BranchName    string       `json:"branchName"`
+	RemovedLabel  string       `json:"removedLabel"`
+	AddedLabel    string       `json:"addedLabel"`
+}
+
+type IssueResult struct {
+	Number int    `json:"number"`
+	Title  string `json:"title"`
 }
 
 type TaskPRPlanResult struct {
@@ -119,7 +128,7 @@ func RunTaskStart(ctx context.Context, input TaskRunInput) int {
 	if input.JSON {
 		return renderJSON(input.Stdout, result)
 	}
-	fmt.Fprintf(output(input.Stdout), "Task started.\nBranch: %s\nStatus: %s\n", result.BranchName, result.Status)
+	renderTaskStarted(input.Stdout, result)
 	return 0
 }
 
@@ -208,10 +217,43 @@ func BuildTaskStartPlan(ctx context.Context, input TaskIssueInput) (TaskStartPla
 	if issue.State == domain.IssueStateClosed {
 		return TaskStartPlanResult{}, fmt.Errorf("issue #%d is closed; suggested next command: parsevkctl task status %d", input.IssueNumber, input.IssueNumber)
 	}
+	if !hasLabel(issue.Labels, "ai:ready") {
+		return TaskStartPlanResult{}, fmt.Errorf("issue #%d does not have required label ai:ready", input.IssueNumber)
+	}
 
 	branchName, err := branch.NewTaskBranchName(issue)
 	if err != nil {
 		return TaskStartPlanResult{}, fmt.Errorf("derive branch name: %w", err)
+	}
+	if !input.DryRun {
+		clean, files, err := input.Git.IsWorkTreeClean(ctx)
+		if err != nil {
+			return TaskStartPlanResult{}, fmt.Errorf("read working tree status: %w", err)
+		}
+		if !clean {
+			return TaskStartPlanResult{}, fmt.Errorf("working tree is dirty (%s); commit or stash changes, then run: parsevkctl task start %d", strings.Join(files, ", "), input.IssueNumber)
+		}
+	}
+	defaultBranch, err := input.Git.DefaultBranch(ctx)
+	if err != nil {
+		return TaskStartPlanResult{}, fmt.Errorf("detect default branch: %w", err)
+	}
+	if strings.TrimSpace(defaultBranch) == "" {
+		return TaskStartPlanResult{}, fmt.Errorf("default branch cannot be detected")
+	}
+	localExists, err := input.Git.LocalBranchExists(ctx, branchName)
+	if err != nil {
+		return TaskStartPlanResult{}, fmt.Errorf("check local branch %q: %w", branchName, err)
+	}
+	if localExists {
+		return TaskStartPlanResult{}, fmt.Errorf("target branch %q already exists locally", branchName)
+	}
+	remoteExists, err := input.Git.RemoteBranchExists(ctx, "origin", branchName)
+	if err != nil {
+		return TaskStartPlanResult{}, fmt.Errorf("check remote branch %q: %w", branchName, err)
+	}
+	if remoteExists {
+		return TaskStartPlanResult{}, fmt.Errorf("target branch %q already exists on origin", branchName)
 	}
 
 	currentState := task.DeriveState(task.LifecycleSnapshot{
@@ -226,14 +268,20 @@ func BuildTaskStartPlan(ctx context.Context, input TaskIssueInput) (TaskStartPla
 
 	plan, err := planner.NewStartTaskPlan(planner.StartTaskInput{
 		Issue:         issue,
-		DefaultBranch: input.Config.DefaultBranch,
+		DefaultBranch: defaultBranch,
 		BranchName:    branchName,
-		TargetStatus:  domain.ProjectStatusInProgress,
 	})
 	if err != nil {
 		return TaskStartPlanResult{}, err
 	}
-	return TaskStartPlanResult{Plan: plan, BranchName: branchName, Status: string(domain.ProjectStatusInProgress)}, nil
+	return TaskStartPlanResult{
+		Plan:          plan,
+		Issue:         IssueResult{Number: int(issue.ID), Title: issue.Title},
+		DefaultBranch: defaultBranch,
+		BranchName:    branchName,
+		RemovedLabel:  "ai:ready",
+		AddedLabel:    "ai:in-progress",
+	}, nil
 }
 
 func BuildTaskPRPlan(ctx context.Context, input TaskIssueInput) (TaskPRPlanResult, error) {
@@ -447,6 +495,35 @@ Created via parsevkctl.
 `, issueNumber)
 }
 
+func hasLabel(labels []string, want string) bool {
+	for _, label := range labels {
+		if strings.EqualFold(strings.TrimSpace(label), want) {
+			return true
+		}
+	}
+	return false
+}
+
+func renderTaskStarted(w io.Writer, result TaskStartPlanResult) {
+	out := output(w)
+	fmt.Fprintln(out, "Task started")
+	fmt.Fprintln(out)
+	fmt.Fprintf(out, "Issue: #%d\n", result.Issue.Number)
+	fmt.Fprintf(out, "Title: %s\n", result.Issue.Title)
+	fmt.Fprintf(out, "Default branch: %s\n", result.DefaultBranch)
+	fmt.Fprintf(out, "Task branch: %s\n", result.BranchName)
+	fmt.Fprintln(out, "Labels:")
+	fmt.Fprintf(out, "  removed: %s\n", result.RemovedLabel)
+	fmt.Fprintf(out, "  added: %s\n", result.AddedLabel)
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Next:")
+	fmt.Fprintln(out, "  implement changes")
+	fmt.Fprintln(out, "  run validation")
+	fmt.Fprintln(out, "  commit")
+	fmt.Fprintln(out, "  push branch")
+	fmt.Fprintln(out, "  create PR")
+}
+
 func requireChecks(cfg config.Config) bool {
 	return cfg.Merge.RequireChecks != nil && *cfg.Merge.RequireChecks
 }
@@ -514,6 +591,7 @@ func renderPlan(w io.Writer, plan planner.Plan, jsonOutput bool) int {
 	if jsonOutput {
 		return renderJSON(w, plan)
 	}
+	fmt.Fprintln(output(w), "DRY RUN: no changes were made")
 	for _, line := range planner.RenderDryRun(plan) {
 		fmt.Fprintln(output(w), line)
 	}

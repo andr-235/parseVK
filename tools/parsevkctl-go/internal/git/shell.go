@@ -16,6 +16,8 @@ var protectedBranches = map[string]struct{}{
 	"fastapi-microservices-rewrite": {},
 }
 
+const originRemote = "origin"
+
 type commandResult struct {
 	stdout string
 	stderr string
@@ -48,6 +50,15 @@ func (adapter *ShellAdapter) CurrentBranch(ctx context.Context) (string, error) 
 	return result.stdout, nil
 }
 
+func (adapter *ShellAdapter) DefaultBranch(ctx context.Context) (string, error) {
+	result, err := adapter.runGit(ctx, "detect default branch", "remote", "show", originRemote)
+	if err != nil {
+		return "", err
+	}
+
+	return parseDefaultBranch(result.stdout)
+}
+
 func (adapter *ShellAdapter) IsWorkTreeClean(ctx context.Context) (bool, []string, error) {
 	result, err := adapter.runGit(ctx, "status", "status", "--short")
 	if err != nil {
@@ -56,6 +67,29 @@ func (adapter *ShellAdapter) IsWorkTreeClean(ctx context.Context) (bool, []strin
 
 	clean, files := parseStatusOutput(result.stdout)
 	return clean, files, nil
+}
+
+func (adapter *ShellAdapter) LocalBranchExists(ctx context.Context, branch string) (bool, error) {
+	if err := validateBranch(branch); err != nil {
+		return false, err
+	}
+
+	return adapter.localBranchExists(ctx, branch)
+}
+
+func (adapter *ShellAdapter) RemoteBranchExists(ctx context.Context, remote string, branch string) (bool, error) {
+	if err := validateRemoteAndBranch(remote, branch); err != nil {
+		return false, err
+	}
+
+	_, err := adapter.runGit(ctx, "verify remote branch", "ls-remote", "--exit-code", "--heads", remote, branch)
+	if err == nil {
+		return true, nil
+	}
+	if exitCodeOf(err) == 2 {
+		return false, nil
+	}
+	return false, err
 }
 
 func (adapter *ShellAdapter) Fetch(ctx context.Context, remote string, branch string) error {
@@ -233,6 +267,23 @@ func parseAheadCount(output string) (bool, error) {
 	}
 
 	return count > 0, nil
+}
+
+func parseDefaultBranch(output string) (string, error) {
+	for _, line := range strings.Split(output, "\n") {
+		trimmed := strings.TrimSpace(line)
+		branch, ok := strings.CutPrefix(trimmed, "HEAD branch:")
+		if !ok {
+			continue
+		}
+		branch = strings.TrimSpace(branch)
+		if branch == "" || branch == "(unknown)" {
+			break
+		}
+		return branch, nil
+	}
+
+	return "", fmt.Errorf("default branch cannot be detected from git remote show origin")
 }
 
 func validateRemoteAndBranch(remote string, branch string) error {

@@ -15,8 +15,7 @@ func TestNewStartTaskPlanOperationOrder(t *testing.T) {
 			Title: "Add planner",
 		},
 		DefaultBranch: "fastapi-microservices-rewrite",
-		BranchName:    "feat/issue-111-planner",
-		TargetStatus:  domain.ProjectStatusInProgress,
+		BranchName:    "ai/mbp-111-planner",
 	})
 	if err != nil {
 		t.Fatalf("NewStartTaskPlan returned error: %v", err)
@@ -31,22 +30,22 @@ func TestNewStartTaskPlanOperationOrder(t *testing.T) {
 
 	got := operationTypes(plan)
 	want := []OperationType{
-		OperationProjectSetStatus,
 		OperationGitFetch,
 		OperationGitSwitch,
 		OperationGitPullFastForward,
 		OperationGitCreateBranch,
+		OperationIssueUpdateLabels,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("operation types = %#v, want %#v", got, want)
 	}
 
 	wantIDs := []string{
-		"project-set-status-in-progress",
 		"git-fetch-default-branch",
 		"git-switch-default-branch",
 		"git-pull-fast-forward-default-branch",
 		"git-create-task-branch",
+		"issue-update-ai-labels",
 	}
 	if got := operationIDs(plan); !reflect.DeepEqual(got, wantIDs) {
 		t.Fatalf("operation IDs = %#v, want %#v", got, wantIDs)
@@ -59,8 +58,7 @@ func TestNewStartTaskPlanValidation(t *testing.T) {
 	if _, err := NewStartTaskPlan(StartTaskInput{
 		Issue:         issue,
 		DefaultBranch: "",
-		BranchName:    "feat/issue-111-planner",
-		TargetStatus:  domain.ProjectStatusInProgress,
+		BranchName:    "ai/mbp-111-planner",
 	}); err == nil {
 		t.Fatal("NewStartTaskPlan with empty default branch returned nil error")
 	}
@@ -69,7 +67,6 @@ func TestNewStartTaskPlanValidation(t *testing.T) {
 		Issue:         issue,
 		DefaultBranch: "fastapi-microservices-rewrite",
 		BranchName:    "",
-		TargetStatus:  domain.ProjectStatusInProgress,
 	}); err == nil {
 		t.Fatal("NewStartTaskPlan with empty branch returned nil error")
 	}
@@ -81,7 +78,7 @@ func TestNewCreatePullRequestPlanOperationOrder(t *testing.T) {
 			ID:    111,
 			Title: "Add planner",
 		},
-		BranchName:   "feat/issue-111-planner",
+		BranchName:   "ai/mbp-111-planner",
 		BaseBranch:   "fastapi-microservices-rewrite",
 		Title:        "Go rewrite: add planner executor",
 		Body:         "Closes #111",
@@ -118,7 +115,7 @@ func TestNewCreatePullRequestPlanOperationOrder(t *testing.T) {
 func TestPlanJSONSerialization(t *testing.T) {
 	plan, err := NewCreatePullRequestPlan(CreatePullRequestInput{
 		Issue:        domain.Issue{ID: 111},
-		BranchName:   "feat/issue-111-planner",
+		BranchName:   "ai/mbp-111-planner",
 		BaseBranch:   "fastapi-microservices-rewrite",
 		Title:        "Go rewrite: add planner executor",
 		Body:         "Closes #111",
@@ -150,8 +147,7 @@ func TestRenderDryRunOutput(t *testing.T) {
 	plan, err := NewStartTaskPlan(StartTaskInput{
 		Issue:         domain.Issue{ID: 111},
 		DefaultBranch: "fastapi-microservices-rewrite",
-		BranchName:    "feat/issue-111-planner",
-		TargetStatus:  domain.ProjectStatusInProgress,
+		BranchName:    "ai/mbp-111-planner",
 	})
 	if err != nil {
 		t.Fatalf("NewStartTaskPlan returned error: %v", err)
@@ -160,11 +156,11 @@ func TestRenderDryRunOutput(t *testing.T) {
 	got := RenderDryRun(plan)
 	want := []string{
 		"task start #111",
-		"1. [Project.SetStatus] Set project status for issue #111 to In Progress",
-		"2. [Git.Fetch] Fetch origin/fastapi-microservices-rewrite",
-		"3. [Git.Switch] Switch to fastapi-microservices-rewrite",
-		"4. [Git.PullFastForward] Pull fastapi-microservices-rewrite with --ff-only from origin",
-		"5. [Git.CreateBranch] Create task branch feat/issue-111-planner",
+		"1. [Git.Fetch] Fetch origin/fastapi-microservices-rewrite",
+		"2. [Git.Switch] Switch to fastapi-microservices-rewrite",
+		"3. [Git.PullFastForward] Pull fastapi-microservices-rewrite with --ff-only from origin",
+		"4. [Git.CreateBranch] Create task branch ai/mbp-111-planner",
+		"5. [Issue.UpdateLabels] Replace ai:ready with ai:in-progress on issue #111",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("RenderDryRun = %#v, want %#v", got, want)

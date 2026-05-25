@@ -82,6 +82,11 @@ Start an existing issue and create its branch:
 go run ./cmd/parsevkctl task start 123
 ```
 
+`task start` requires an open issue with `ai:ready`, a clean worktree, and no
+existing local or remote target branch. It creates
+`ai/mbp-<issue-number>-<slug>` and replaces `ai:ready` with
+`ai:in-progress`.
+
 Create a pull request after committing changes:
 
 ```powershell

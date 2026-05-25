@@ -12,28 +12,15 @@ import (
 )
 
 const (
-	defaultBranchType = "feat"
-	fallbackSlug      = "task"
-	maxSlugLength     = 48
+	aiBranchType  = "ai"
+	fallbackSlug  = "task"
+	maxSlugLength = 60
 )
 
 var (
-	branchNamePattern = regexp.MustCompile(`^([a-z]+)/issue-([0-9]+)-([a-z0-9-]+)$`)
-	prefixPattern     = regexp.MustCompile(`^([A-Za-z]+):\s*`)
+	branchNamePattern = regexp.MustCompile(`^(ai)/mbp-([0-9]+)-([a-z0-9-]+)$`)
+	mbpPrefixPattern  = regexp.MustCompile(`(?i)^MBP-([0-9]+):\s*`)
 )
-
-var supportedTypes = map[string]struct{}{
-	"feat":     {},
-	"fix":      {},
-	"docs":     {},
-	"refactor": {},
-	"test":     {},
-	"ci":       {},
-	"chore":    {},
-	"perf":     {},
-	"build":    {},
-	"hotfix":   {},
-}
 
 var cyrillicTransliteration = map[rune]string{
 	'а': "a", 'б': "b", 'в': "v", 'г': "g", 'д': "d", 'е': "e", 'ё': "yo",
@@ -55,9 +42,8 @@ func NewTaskBranchName(issue domain.Issue) (string, error) {
 		return "", errors.New("issue number must be a positive integer")
 	}
 
-	branchType := ResolveBranchType(issue.Title, issue.Labels)
 	slug := SlugifyTitle(issue.Title)
-	name := fmt.Sprintf("%s/issue-%d-%s", branchType, issueNumber, slug)
+	name := fmt.Sprintf("%s/mbp-%d-%s", aiBranchType, issueNumber, slug)
 	if err := ValidateTaskBranchName(name); err != nil {
 		return "", err
 	}
@@ -90,11 +76,7 @@ func ValidateTaskBranchName(name string) error {
 
 	matches := branchNamePattern.FindStringSubmatch(name)
 	if matches == nil {
-		return errors.New("branch name must match <type>/issue-<number>-<slug>")
-	}
-
-	if !isSupportedType(matches[1]) {
-		return fmt.Errorf("unsupported branch type %q", matches[1])
+		return errors.New("branch name must match ai/mbp-<number>-<slug>")
 	}
 
 	issueNumber, err := strconv.Atoi(matches[2])
@@ -110,7 +92,7 @@ func ValidateTaskBranchName(name string) error {
 }
 
 func SlugifyTitle(title string) string {
-	title = stripConventionalPrefix(title)
+	title = stripMBPPrefix(title)
 
 	var builder strings.Builder
 	lastDash := false
@@ -156,43 +138,14 @@ func SlugifyTitle(title string) string {
 	return slug
 }
 
-func ResolveBranchType(title string, labels []string) string {
-	for _, label := range labels {
-		labelType, ok := strings.CutPrefix(strings.ToLower(strings.TrimSpace(label)), "type:")
-		if !ok {
-			continue
-		}
-
-		branchType := strings.TrimSpace(labelType)
-		if isSupportedType(branchType) {
-			return branchType
-		}
-	}
-
-	matches := prefixPattern.FindStringSubmatch(strings.TrimSpace(title))
-	if len(matches) == 2 {
-		branchType := strings.ToLower(matches[1])
-		if isSupportedType(branchType) {
-			return branchType
-		}
-	}
-
-	return defaultBranchType
-}
-
-func stripConventionalPrefix(title string) string {
+func stripMBPPrefix(title string) string {
 	trimmed := strings.TrimSpace(title)
-	matches := prefixPattern.FindStringSubmatch(trimmed)
-	if len(matches) != 2 || !isSupportedType(strings.ToLower(matches[1])) {
+	matches := mbpPrefixPattern.FindStringSubmatch(trimmed)
+	if len(matches) != 2 {
 		return trimmed
 	}
 
-	return prefixPattern.ReplaceAllString(trimmed, "")
-}
-
-func isSupportedType(branchType string) bool {
-	_, ok := supportedTypes[branchType]
-	return ok
+	return mbpPrefixPattern.ReplaceAllString(trimmed, "")
 }
 
 func validateSlug(slug string) error {
