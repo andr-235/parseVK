@@ -7,6 +7,7 @@ from app.clients.vk_service.client import (
     VkServiceClientUnavailableError,
 )
 from fastapi import HTTPException
+from app.core.redaction import redact_secrets
 from app.modules.friends_export.models import (
     DoneEventData,
     ErrorEventData,
@@ -57,7 +58,7 @@ class VkFriendsAdapter:
                 jobId=res["jobId"], status=JobStatus(res["status"])
             )
         except VkServiceClientHTTPError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+            raise HTTPException(status_code=exc.status_code, detail=redact_secrets(exc.detail)) from exc
         except VkServiceClientUnavailableError as exc:
             raise HTTPException(status_code=502, detail="VK service is unavailable") from exc
 
@@ -78,8 +79,8 @@ class VkFriendsAdapter:
                 status=JobStatus(job["status"]),
                 fetchedCount=job["fetchedCount"],
                 totalCount=job["totalCount"],
-                warning=job["warning"],
-                error=job["error"],
+                warning=redact_secrets(job["warning"]) if job.get("warning") else None,
+                error=redact_secrets(job["error"]) if job.get("error") else None,
                 xlsxPath=job["xlsxPath"],
                 createdAt=job["createdAt"],
             )
@@ -88,7 +89,7 @@ class VkFriendsAdapter:
                 FriendsJobLogEntry(
                     id=log["id"],
                     level=log["level"],
-                    message=log["message"],
+                    message=redact_secrets(log["message"]),
                     meta=log["meta"],
                     createdAt=log["createdAt"],
                 )
@@ -97,7 +98,7 @@ class VkFriendsAdapter:
 
             return FriendsJobDetailResponse(job=job_state, logs=log_entries)
         except VkServiceClientHTTPError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+            raise HTTPException(status_code=exc.status_code, detail=redact_secrets(exc.detail)) from exc
         except VkServiceClientUnavailableError as exc:
             raise HTTPException(status_code=502, detail="VK service is unavailable") from exc
 
@@ -119,7 +120,7 @@ class VkFriendsAdapter:
                 )
             except Exception as exc:
                 yield SseErrorEvent(
-                    data=ErrorEventData(message="Upstream connection lost")
+                    data=ErrorEventData(message=redact_secrets(f"Upstream connection lost: {exc}"))
                 )
                 return
 
@@ -134,7 +135,7 @@ class VkFriendsAdapter:
                     yield SseLogEvent(
                         data=LogEventData(
                             level=log["level"],
-                            message=log["message"],
+                            message=redact_secrets(log["message"]),
                             meta=log["meta"],
                         )
                     )
@@ -157,14 +158,12 @@ class VkFriendsAdapter:
 
             # 3. Check termination status
             if status == JobStatus.DONE.value:
-                # Map server path to frontend-accessible relative path or download URL
-                # In NestJS: CompletedJob.xlsxPath is passed in done event
                 yield SseDoneEvent(
                     data=DoneEventData(
                         jobId=job["id"],
                         fetchedCount=fetched,
                         totalCount=total,
-                        warning=job["warning"],
+                        warning=redact_secrets(job["warning"]) if job.get("warning") else None,
                         xlsxPath=job["xlsxPath"],
                     )
                 )
@@ -172,7 +171,7 @@ class VkFriendsAdapter:
 
             if status == JobStatus.FAILED.value:
                 yield SseErrorEvent(
-                    data=ErrorEventData(message=job.get("error") or "Export failed")
+                    data=ErrorEventData(message=redact_secrets(job.get("error") or "Export failed"))
                 )
                 return
 

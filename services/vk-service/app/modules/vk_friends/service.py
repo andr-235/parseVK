@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import select
 
 from app.core.config import settings
+from app.core.redaction import redact_secrets
 from app.db.session import SessionLocal
 from app.db.models import VkFriendsExportJob, VkFriendsJobLog, VkFriendsRecord
 from app.modules.vk_friends.schemas import JobStatus
@@ -56,6 +57,7 @@ class VkFriendsExportService:
             return job
 
     async def append_log(self, job_id: uuid.UUID, level: str, message: str, meta: Any = None) -> None:
+        message = redact_secrets(message)
         async with self.session_factory() as session:
             async with session.begin():
                 log_entry = VkFriendsJobLog(
@@ -73,6 +75,8 @@ class VkFriendsExportService:
         total_count: int | None = None,
         warning: str | None = None,
     ) -> None:
+        if warning is not None:
+            warning = redact_secrets(warning)
         async with self.session_factory() as session:
             async with session.begin():
                 stmt = select(VkFriendsExportJob).where(VkFriendsExportJob.id == job_id)
@@ -93,6 +97,8 @@ class VkFriendsExportService:
         warning: str | None,
         xlsx_path: str,
     ) -> None:
+        if warning is not None:
+            warning = redact_secrets(warning)
         async with self.session_factory() as session:
             async with session.begin():
                 stmt = select(VkFriendsExportJob).where(VkFriendsExportJob.id == job_id)
@@ -115,6 +121,9 @@ class VkFriendsExportService:
         total_count: int | None = None,
         warning: str | None = None,
     ) -> None:
+        error = redact_secrets(error)
+        if warning is not None:
+            warning = redact_secrets(warning)
         async with self.session_factory() as session:
             async with session.begin():
                 stmt = select(VkFriendsExportJob).where(VkFriendsExportJob.id == job_id)
