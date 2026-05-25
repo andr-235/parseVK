@@ -1,0 +1,31 @@
+name: Docs
+description: Documentation task
+title: "[docs] "
+labels: ["documentation"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      placeholder: What documentation is missing, stale, or misleading?
+    validations:
+      required: true
+
+  - type: textarea
+    id: docs_target
+    attributes:
+      label: Documentation target
+      placeholder: Which docs/files should be added or updated?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ] Documentation is accurate.
+        - [ ] Examples are runnable or clearly marked as illustrative.
+        - [ ] Links and commands are valid.
+    validations:
+      required: true
