@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/api/common'
+import { GATEWAY_API_URL } from '@/api/common'
 import { createRequest, handleResponse } from '@/api/common'
 import { saveReportBlob } from '@/utils/common'
 import type { ExportJobStatus, JobLogLevel, ExportStreamEvent, StreamHandlers } from '@/api/common/sse'
@@ -45,7 +45,7 @@ export type OkFriendsStreamEvent = ExportStreamEvent
 export const okFriendsExportService = {
   async export(payload: { params: OkFriendsParams }): Promise<OkFriendsExportResponse> {
     try {
-      const response = await createRequest(`${API_URL}/ok/friends/export`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/ok/friends/export`, {
         method: 'POST',
         body: JSON.stringify(payload),
       })
@@ -59,7 +59,7 @@ export const okFriendsExportService = {
 
   async getJob(jobId: string): Promise<OkFriendsJobResponse> {
     try {
-      const response = await createRequest(`${API_URL}/ok/friends/jobs/${jobId}`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/ok/friends/jobs/${jobId}`)
       return await handleResponse<OkFriendsJobResponse>(response, 'Failed to fetch job')
     } catch (error) {
       toast.error('Не удалось загрузить статус экспорта')
@@ -72,7 +72,7 @@ export const okFriendsExportService = {
 
     const run = async () => {
       try {
-        const response = await createRequest(`${API_URL}/ok/friends/jobs/${jobId}/stream`, {
+        const response = await createRequest(`${GATEWAY_API_URL}/v1/ok/friends/jobs/${jobId}/stream`, {
           headers: {
             Accept: 'text/event-stream',
           },
@@ -105,7 +105,7 @@ export const okFriendsExportService = {
 
   async downloadJobFile(jobId: string, type: 'xlsx'): Promise<void> {
     try {
-      const response = await createRequest(`${API_URL}/ok/friends/jobs/${jobId}/download/${type}`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/ok/friends/jobs/${jobId}/download/${type}`)
 
       if (!response.ok) {
         const text = await response.text().catch(() => '')

@@ -36,7 +36,7 @@ describe('comments api migration routing', () => {
     await getComments({ offset: 20, limit: 10 })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/content/comments?page=3&limit=10',
+      '/api/v1/comments?offset=20&limit=10',
       expect.any(Object)
     )
   })
@@ -47,12 +47,12 @@ describe('comments api migration routing', () => {
     await getCommentsCursor({ limit: 25 })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/content/comments?page=1&limit=25',
+      '/api/v1/comments/cursor?limit=25',
       expect.any(Object)
     )
   })
 
-  it('keeps read status updates on legacy comments api', async () => {
+  it('keeps read status updates on gateway api', async () => {
     const { updateReadStatus } = await import('./comments.api')
 
     fetchMock.mockResolvedValueOnce(
@@ -64,14 +64,14 @@ describe('comments api migration routing', () => {
 
     await updateReadStatus(1, true)
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/comments/1/read', expect.any(Object))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/comments/1/read', expect.any(Object))
   })
 
-  it('keeps filtered comments on legacy comments api', async () => {
+  it('keeps filtered comments on gateway api', async () => {
     const { getComments } = await import('./comments.api')
 
     await getComments({ limit: 10, search: 'urgent' })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/comments?limit=10&search=urgent', expect.any(Object))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/comments?limit=10&search=urgent', expect.any(Object))
   })
 })

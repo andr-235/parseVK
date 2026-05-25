@@ -5,6 +5,7 @@ vi.mock('@/api/common', async () => {
     await vi.importActual<typeof import('@/api/common/apiUtils')>('@/api/common/apiUtils')
   return {
     API_URL: '/api',
+    GATEWAY_API_URL: '/api',
     createRequest: (url: string, options?: RequestInit) => fetch(url, options),
     handleResponse: actual.handleResponse,
   }
