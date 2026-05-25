@@ -6,7 +6,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.db.models import OutboxEvent, ProcessedEvent, VkAuthor, VkComment, VkGroup, VkPost, VkTaskRun
+from app.db.models import OutboxEvent, ProcessedEvent, VkAuthor, VkComment, VkGroup, VkPost, VkTaskRun, VkFriendsExportJob, VkFriendsJobLog, VkFriendsRecord
 
 
 def constraint_names(model) -> set[str]:
@@ -25,6 +25,9 @@ def test_model_tables_exist():
     assert VkTaskRun.__tablename__ == "vk_task_runs"
     assert ProcessedEvent.__tablename__ == "processed_events"
     assert OutboxEvent.__tablename__ == "outbox_events"
+    assert VkFriendsExportJob.__tablename__ == "vk_friends_export_jobs"
+    assert VkFriendsJobLog.__tablename__ == "vk_friends_job_logs"
+    assert VkFriendsRecord.__tablename__ == "vk_friends_records"
 
 
 def test_domain_unique_constraints_exist():
@@ -40,3 +43,5 @@ def test_event_idempotency_and_outbox_indexes_exist():
     assert "ix_processed_events_consumer_event" in index_names(ProcessedEvent)
     assert "ix_outbox_events_status_next_attempt" in index_names(OutboxEvent)
     assert "uq_outbox_events_dedupe_key" in index_names(OutboxEvent)
+    assert "ix_vk_friends_job_logs_job_id" in index_names(VkFriendsJobLog)
+    assert "ix_vk_friends_records_job_id" in index_names(VkFriendsRecord)
