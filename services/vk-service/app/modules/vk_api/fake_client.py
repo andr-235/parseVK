@@ -77,3 +77,26 @@ class FakeVkApiClient:
             for index in range(min(count, 5))
         ]
 
+    async def friends_get(self, **params) -> dict:
+        count = params.get("count", 1000)
+        offset = params.get("offset", 0)
+        total = 15
+        items = []
+        if offset < total:
+            items = [
+                {
+                    "id": 200000 + i,
+                    "first_name": f"Friend_{i}",
+                    "last_name": f"Last_{i}",
+                    "sex": 1 if i % 2 == 0 else 2,
+                    "online": i % 3 == 0,
+                    "domain": f"id200000_{i}",
+                }
+                for i in range(offset, min(offset + count, total))
+            ]
+        return {
+            "count": total,
+            "items": items
+        }
+
+

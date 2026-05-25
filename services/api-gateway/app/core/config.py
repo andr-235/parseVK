@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     tasks_base_url: str = "http://tasks-service:8000"
     content_base_url: str = "http://content-service:8000"
     moderation_base_url: str = "http://moderation-service:8000"
+    vk_service_base_url: str = "http://vk-service:8000"
     internal_service_token: str = "dev-internal-token"
     listings_import_max_bytes: int = 5 * 1024 * 1024
     refresh_cookie_name: str = "__Host-refresh_token"

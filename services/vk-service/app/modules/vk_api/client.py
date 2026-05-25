@@ -219,3 +219,7 @@ class VkApiClient:
         )
         return list(response.get("items") or [])
 
+    async def friends_get(self, **params) -> dict:
+        return await self._call("friends.get", **params)
+
+
