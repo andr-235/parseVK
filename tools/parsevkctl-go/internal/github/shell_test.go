@@ -265,6 +265,47 @@ func TestCreateIssueRunsCreateThenView(t *testing.T) {
 	}
 }
 
+func TestCreateLabelMapsAlreadyExistsError(t *testing.T) {
+	t.Parallel()
+
+	adapter := newShellAdapterWithRunner(func(context.Context, string, ...string) (commandResult, error) {
+		return commandResult{stderr: "label with this name already exists"}, fakeExitError{code: 1}
+	})
+
+	err := adapter.CreateLabel(context.Background(), Label{Name: "type:feature", Color: "1f883d"})
+	if !errors.Is(err, ErrLabelAlreadyExists) {
+		t.Fatalf("CreateLabel error = %v, want ErrLabelAlreadyExists", err)
+	}
+}
+
+func TestLabelCommandArguments(t *testing.T) {
+	t.Parallel()
+
+	var got [][]string
+	adapter := newShellAdapterWithRunner(func(_ context.Context, _ string, args ...string) (commandResult, error) {
+		got = append(got, append([]string(nil), args...))
+		if len(args) >= 2 && args[0] == "label" && args[1] == "list" {
+			return commandResult{stdout: `[{"name":"type:feature","color":"1f883d","description":"Feature work"}]`}, nil
+		}
+		return commandResult{}, nil
+	})
+
+	if _, err := adapter.ListLabels(context.Background()); err != nil {
+		t.Fatalf("ListLabels returned error: %v", err)
+	}
+	if err := adapter.CreateLabel(context.Background(), Label{Name: "type:feature", Color: "1f883d", Description: "Feature work"}); err != nil {
+		t.Fatalf("CreateLabel returned error: %v", err)
+	}
+
+	want := [][]string{
+		{"label", "list", "--limit", "200", "--json", "name,color,description"},
+		{"label", "create", "type:feature", "--color", "1f883d", "--description", "Feature work"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("args = %#v, want %#v", got, want)
+	}
+}
+
 func TestCreatePullRequestRunsCreateThenView(t *testing.T) {
 	t.Parallel()
 

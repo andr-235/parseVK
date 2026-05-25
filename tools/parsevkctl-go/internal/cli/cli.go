@@ -48,6 +48,9 @@ func Run(args []string, stdout io.Writer, stderr io.Writer) int {
 	case "doctor":
 		return runDoctor(opts, stdout, stderr)
 
+	case "labels":
+		return runLabels(rest[1:], opts, stdout, stderr)
+
 	case "task":
 		return runTask(rest[1:], opts, stdout, stderr)
 
@@ -56,6 +59,25 @@ func Run(args []string, stdout io.Writer, stderr io.Writer) int {
 		printHelp(stderr)
 		return 2
 	}
+}
+
+func runLabels(args []string, opts options, stdout io.Writer, stderr io.Writer) int {
+	if len(args) != 1 || args[0] != "bootstrap" {
+		fmt.Fprintln(stderr, "Error: labels command requires bootstrap")
+		fmt.Fprintln(stderr, "Usage: parsevkctl labels bootstrap [--dry-run] [--json]")
+		return 2
+	}
+	cfg, ok := loadCommandConfig(opts, stderr)
+	if !ok {
+		return 1
+	}
+	return commands.RunLabelsBootstrap(context.Background(), commands.LabelsBootstrapRunInput{
+		GitHub: github.NewShellAdapterWithConfig(cfg),
+		DryRun: opts.dryRun,
+		JSON:   opts.jsonOutput,
+		Stdout: stdout,
+		Stderr: stderr,
+	})
 }
 
 func runDoctor(opts options, stdout io.Writer, stderr io.Writer) int {
@@ -358,6 +380,7 @@ Usage:
   parsevkctl --version
   parsevkctl config validate [--config <path>] [--json]
   parsevkctl doctor [--config <path>] [--json]
+  parsevkctl labels bootstrap [--config <path>] [--dry-run] [--json]
   parsevkctl task status <issue> [--config <path>] [--json]
   parsevkctl task sync <issue> [--config <path>] [--json]
   parsevkctl task create "Title" [--body "..."] [--config <path>] [--dry-run] [--json]
@@ -368,6 +391,7 @@ Usage:
 Commands:
   config validate   Validate parsevkctl config without GitHub or git side effects
   doctor            Check local config, git and GitHub read access
+  labels bootstrap  Create missing standard GitHub labels for parseVK workflow
   task status       Show read-only task state summary
   task sync         Preview task state drift and suggested fixes
   task create       Create a GitHub issue and optionally add it to the Project
