@@ -1,0 +1,22 @@
+# parseVK Command Safety Rules
+
+allow:
+  - git status
+  - git diff
+  - git log
+  - gh issue view
+  - gh pr view
+  - gh pr diff
+
+prompt:
+  - git push
+  - gh pr create
+  - gh issue edit
+  - gh pr merge
+  - git branch -d
+
+forbidden:
+  - gh pr review --approve
+  - git push --force
+  - git reset --hard
+  - rm -rf

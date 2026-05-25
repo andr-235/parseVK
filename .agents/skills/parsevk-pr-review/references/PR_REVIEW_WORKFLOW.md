@@ -1,107 +1,26 @@
-# parseVK PR Review Workflow
+# PR Review Workflow в parseVK
 
-This workflow defines how Codex or ChatGPT should review parseVK Pull Requests.
+Этот документ регламентирует пошаговый процесс проведения Code Review.
 
-## Core rule
+## Шаг 1. Инициализация и сбор данных
+Используйте скрипт сбора метаданных `scripts/pr-summary.sh`. Соберите:
+- Название PR, описание, статус (Draft / Ready).
+- Связанный Issue (проверьте наличие ключевой фразы `Closes #XXX` или `Fixes #XXX`).
+- Список измененных файлов.
 
-Review happens in chat first. Do not submit an official GitHub PR review, approval, or request changes unless the user explicitly asks for that GitHub action.
+## Шаг 2. Проверка соответствия границам (Scope Audit)
+- Сравните список файлов со Scope в связанном Issue.
+- Любое изменение файлов в других микросервисах или глобальных конфигурациях, не указанное в Scope, считается выходом за границы задачи (Out of Scope).
+- При обнаружении таких файлов ревью сразу переводится в статус **Нужны правки**.
 
-## Review inputs
+## Шаг 3. Стандарты качества кода
+Проверьте код на соответствие:
+- Отсутствие "магических чисел" и неявных зависимостей.
+- Соблюдение принципа DRY (поиск дублирующего кода).
+- Достаточное покрытие тестами критических изменений.
+- Отсутствие отладочных принтов (`print()`, `console.log()`), которые не должны попадать в продакшн.
 
-Collect:
-
-- PR number or URL
-- PR state and draft status
-- base branch and head branch
-- PR title and body
-- linked issue and `Closes #...` reference
-- changed files
-- diff
-- validation evidence
-- check status
-
-## Scope review
-
-Compare the PR against the linked issue:
-
-- Goal
-- Scope
-- Out of Scope
-- Acceptance Criteria
-- Validation
-- Risk
-- Required Handoff
-
-Flag any changed file that is not explained by the issue. Application services, frontend, Docker, database, CI/CD, and GitHub Actions require explicit issue scope.
-
-## Validation review
-
-Separate evidence from claims:
-
-- Passing GitHub checks are evidence.
-- Local command output is evidence.
-- PR body checkboxes are claims unless paired with output or check results.
-- Missing validation must be called out.
-- Failed or pending checks block merge unless explicitly explained and accepted.
-
-## Risk review
-
-Look for:
-
-- secrets, tokens, keys, cookies, private config, or `.env` files
-- authentication or authorization changes
-- database migrations or schema changes
-- deployment or CI/CD changes
-- broad refactors
-- generated files or lockfile changes outside scope
-- unrelated service changes
-
-## Findings
-
-Use blockers for issues that should prevent merge:
-
-- scope mismatch
-- missing required validation
-- failing checks
-- likely bug or regression
-- security or secret exposure
-- unsafe merge state
-
-Use notes for non-blocking observations:
-
-- naming, clarity, small cleanup
-- optional follow-up
-- documentation polish
-- test coverage suggestions when risk is low
-
-## Final verdicts
-
-Use exactly one:
-
-- `Можно мержить` - no blockers, scope fits, validation is adequate.
-- `Пока не мержить` - clear blocker prevents merge.
-- `Нужны правки` - implementation changes are required before merge.
-- `Нужно больше проверки` - no definite code blocker, but validation evidence is insufficient.
-
-## Output template
-
-```md
-## Verdict
-<one verdict>
-
-## Blockers
-- <none or list>
-
-## Notes
-- <none or list>
-
-## Validation
-- <checks reviewed and missing evidence>
-
-## Scope check
-- <whether changed files match issue scope>
-```
-
-## GitHub review actions
-
-Only after explicit user request, convert the chat review into a GitHub PR review. Keep the GitHub review concise and do not change the verdict unless new evidence appears.
+## Шаг 4. Оформление отчета
+Все замечания группируйте по двум категориям:
+- **Blockers (Блокирующие)** — проблемы безопасности, баги, выход за Scope, отсутствие тестов. Требуют исправления перед мерджем.
+- **Notes (Неблокирующие)** — стиль, форматирование, архитектурные рекомендации на будущее. Не препятствуют мерджу.

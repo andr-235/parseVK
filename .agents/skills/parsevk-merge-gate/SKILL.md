@@ -1,68 +1,39 @@
 ---
 name: parsevk-merge-gate
-description: Use when deciding whether a parseVK PR is ready to merge; verify open non-draft PR state, correct base, linked issue, scope, checks, secrets, and review blockers. Do not use for implementation, issue drafting, or official GitHub approval.
+description: Use when validating if a parseVK Pull Request is ready to merge. Evaluates open state, branch matching, CI checks, secret scans, and review status. Do not use for code implementation or planning.
 ---
 
-# parseVK Merge Gate
+# parseVK Merge Gate Skill
+
+## Purpose
+Навык описывает жесткие критерии и проверки перед слиянием (merge) Pull Request в целевую ветку `main`.
 
 ## When to use
-
-Use this skill when deciding whether a parseVK PR can be merged or when checking merge readiness after review.
+- Перед запуском команды `parsevkctl task merge ISSUE_NUMBER`.
+- При вынесении окончательного решения о готовности фичи к релизу.
 
 ## When not to use
-
-Do not use this skill to implement fixes, draft issues, create PRs, or submit GitHub approvals.
-
-Do not use it to bypass branch protection, failing checks, unresolved blockers, or missing issue linkage.
+- Во время написания кода или локального тестирования.
+- Для рецензирования (Code Review) в чате.
 
 ## Inputs
-
-- Issue number
-- PR number
-- PR state and draft status
-- base branch
-- linked issue reference
-- changed files
-- checks
-- review findings
+- Ссылка на Pull Request или номер PR.
+- Ссылка на связанное Issue.
 
 ## Procedure
-
-1. Confirm the PR is open.
-2. Confirm the PR is not draft.
-3. Confirm the base branch is correct for the task.
-4. Confirm the PR links or closes the intended issue.
-5. Confirm changed files match the issue scope.
-6. Confirm checks are passing or any missing/failing checks are explicitly explained.
-7. Scan changed paths and diff for obvious secrets or private config.
-8. Confirm there are no blocking review findings.
-9. Do not require GitHub approve from the same user.
-10. If ready, use `parsevkctl task merge ISSUE_NUMBER` for the lifecycle merge.
+1. **Проверка состояния PR**: Запустите read-only скрипт `scripts/merge-gate.sh`. PR должен быть открыт (`state: OPEN`) и не находиться в состоянии черновика (`isDraft: false`).
+2. **Проверка целевой ветки**: Базовая ветка должна быть корректной (обычно `main`).
+3. **Проверка связи с Issue**: Описание PR обязано содержать конструкцию `Closes #ISSUE_NUMBER` или `Fixes #ISSUE_NUMBER`.
+4. **Проверка статуса CI/CD**: Убедитесь, что все автоматические проверки (GitHub Actions) прошли успешно.
+5. **Проверка безопасности**: Запустите скрипт проверки секретов `scripts/secret-scan.sh`. Обнаружение секретов — абсолютный блокиратор слияния.
+6. **Проверка рецензий (Code Review)**:
+   - Все блокирующие замечания (Blockers) из Code Review должны быть устранены.
+   - **Обратите внимание**: Аппрув на GitHub от того же пользователя, который создал PR, не требуется для слияния.
+7. **Формирование отчета**: Заполните отчет по шаблону `assets/merge-report-template.md`.
 
 ## Output format
-
-```md
-## Merge gate
-- PR open: yes/no
-- Draft: yes/no
-- Base branch: ok/not ok
-- Linked issue: ok/not ok
-- Scope: ok/not ok
-- Checks: ok/not ok
-- Secrets: ok/not ok
-- Blockers: none/list
-
-## Decision
-Можно мержить / Пока не мержить / Нужно больше проверки
-```
+Отчет о готовности к слиянию по шаблону `assets/merge-report-template.md`.
 
 ## Safety rules
-
-- Never merge from the default branch as a task branch.
-- Never merge with unresolved conflicts.
-- Never merge obvious secrets, `.env`, private keys, tokens, cookies, or passwords.
-- Stop before merge for security/auth changes, deployment changes, migrations, CI/CD changes, or large refactors unless review explicitly clears them.
-
-## Validation expectations
-
-Use actual PR and check data where available. If GitHub checks are unavailable, state that and identify the local validation that supports or limits the decision.
+- Скрипт `scripts/merge-gate.sh` должен быть строго read-only.
+- Навык запрещено вызывать неявно. Только явный вызов `$parsevk-merge-gate` или через `/skills`.

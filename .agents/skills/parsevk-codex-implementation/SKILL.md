@@ -1,76 +1,48 @@
 ---
 name: parsevk-codex-implementation
-description: Use when implementing a scoped parseVK GitHub Issue with Codex; follow the linked issue, preserve scope, run relevant validation, and produce a final handoff. Do not use for issue drafting, PR review, merge approval, or unrelated refactors.
+description: Use when implementing a scoped parseVK GitHub Issue with Codex. Guides the execution, code modification, local testing, and validation of code changes. Do not use for issue planning, PR review, or merge gates.
 ---
 
-# parseVK Codex Implementation
+# parseVK Codex Implementation Skill
+
+## Purpose
+Навык управляет процессом безопасной и точечной реализации задачи в коде согласно описанию GitHub Issue.
 
 ## When to use
-
-Use this skill when Codex is implementing an existing parseVK GitHub Issue.
-
-The GitHub Issue is the source of truth for the task. The PR is the implementation artifact.
+- Во время написания кода для решения конкретного Issue.
+- При создании новых сервисов, компонентов или багфиксе.
+- При локальном запуске проверочных тестов во время разработки.
 
 ## When not to use
-
-Do not use this skill for creating the issue, reviewing another PR, deciding whether to merge, or making broad refactors outside the issue scope.
-
-Do not use it when the current branch does not match the issue branch, the working tree contains unrelated changes that would be touched, or the task requires secrets or production access.
+- При составлении или планировании задач.
+- При проверке пулл-реквестов в чате (ревью).
+- При подготовке к слиянию ветки в `main`.
 
 ## Inputs
-
-- Issue number and body
-- Current branch and git status
-- Acceptance criteria
-- Out-of-scope section
-- Relevant validation commands
+- GitHub Issue (номер, название, описание, критерии приемки).
+- Текущая task-ветка в Git.
 
 ## Procedure
-
-1. Read the issue before editing.
-2. Confirm the branch matches the task and is not a default branch.
-3. Inspect the working tree and avoid user changes unrelated to the issue.
-4. Implement only the requested scope.
-5. Respect the out-of-scope section.
-6. Avoid unrelated refactors, formatting churn, dependency changes, and service changes.
-7. Keep `parsevkctl` deterministic and thin; do not add AI reasoning as CLI behavior.
-8. Run relevant validation commands from project metadata such as `package.json`, `pyproject.toml`, `Makefile`, or task instructions.
-9. Never claim tests or checks passed unless they actually ran and completed successfully.
-10. Commit with a Conventional Commit subject in English and include issue links in the body when appropriate.
-11. Create the PR through `parsevkctl task pr ISSUE_NUMBER` when implementation and validation are ready.
+1. **Чтение и разбор задачи**: Перед написанием кода внимательно прочитайте Goal, Scope и Out of Scope в Issue.
+2. **Локализация изменений**: Убедитесь, что вы находитесь в ветке задачи, а не в `main`. Не трогайте файлы за пределами Scope задачи.
+3. **Хирургическая правка кода**:
+   - Пишите минимальный, точечный код, решающий задачу.
+   - Избегайте побочных рефакторингов (например, форматирования несвязанных файлов, переписывания других методов).
+   - Для сложных правок сперва составьте `task.md`.
+4. **Запуск проверок**:
+   - Найдите подходящие тесты и линтеры с помощью `references/validation-matrix.md`.
+   - Запустите тесты локально.
+   - **Строгое правило**: Никогда не пишите в отчетах, что тесты пройдены, если вы их физически не запускали.
+5. **Анализ измененных файлов**: Запустите read-only скрипт `scripts/changed-files.sh` для проверки списка измененных файлов. Если там есть файлы вне Scope, откатите их точечно.
+6. **Коммит изменений**: Сделайте коммит согласно commit rules из `AGENTS.md` (Conventional Commits, imperative mood, Refs: #ISSUE, Closes #ISSUE).
 
 ## Output format
-
-Final handoff must include:
-
-```md
-## Summary
-- ...
-
-## Changed files
-- ...
-
-## Validation
-- `command` - result
-
-## Risks
-- ...
-
-## Not done
-- ...
-
-## Next
-- ...
-```
+Краткое описание выполненных изменений в чате и результаты тестов.
 
 ## Safety rules
-
-- Do not modify application services unless the issue explicitly requires it.
-- Do not modify frontend, Docker, database, CI/CD, or GitHub Actions unless explicitly in scope.
-- Do not include `.env`, secrets, tokens, keys, cookies, or private config.
-- Do not run destructive git commands.
-- Do not mix unrelated tasks in one PR.
+- Все скрипты проверки и анализа в папке `scripts/` должны быть строго read-only. Запрещено выполнять запись файлов, `git checkout`, `git pull`, `git push`, `gh pr` из скриптов.
+- Не коммитьте `.env`, `.env.local`, приватные ключи и API-токены.
 
 ## Validation expectations
-
-Prefer focused checks that match the changed files. If checks cannot run, state the exact command attempted, the failure reason, and the impact on confidence.
+- Тесты проходят успешно (pass).
+- Вывод `scripts/changed-files.sh` содержит только файлы из Scope задачи.
