@@ -201,6 +201,55 @@ func TestTaskStatusReportsInconsistentLabelsAsUnknown(t *testing.T) {
 	deps.assertNoWrites(t)
 }
 
+func TestTaskStatusKeepsOpenPRWithPendingChecksInReview(t *testing.T) {
+	deps := okDeps()
+	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
+	deps.Git.localBranchExists = true
+	deps.Git.remoteBranchExists = true
+	deps.GitHub.issue.Labels = []string{"ai:needs-review"}
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 7,
+		Title:  "MBP-112: Add read-only task commands",
+		State:  domain.PullRequestStateOpen,
+		Base:   deps.Config.DefaultBranch,
+		Head:   "ai/mbp-112-add-read-only-task-commands",
+	}}
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		7: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        "Closes #112",
+			Mergeable:   github.MergeableStateMergeable,
+		},
+	}
+	deps.GitHub.checks = domain.PullRequestChecks{
+		PullRequestNumber: 7,
+		Total:             1,
+		Pending:           1,
+		Checks: []domain.PullRequestCheck{{
+			Name:   "parsevkctl / Validate Go CLI",
+			State:  domain.CheckStatePending,
+			Bucket: domain.CheckStatePending,
+		}},
+	}
+
+	result, err := BuildStatus(context.Background(), TaskStatusInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err != nil {
+		t.Fatalf("BuildStatus returned error: %v", err)
+	}
+	if result.WorkflowStage != "Needs Review" {
+		t.Fatalf("stage = %q, want Needs Review", result.WorkflowStage)
+	}
+	if result.SuggestedCommand != "parsevkctl task review 112" {
+		t.Fatalf("next = %q, want review command", result.SuggestedCommand)
+	}
+	deps.assertNoWrites(t)
+}
+
 func TestDoctorAllOK(t *testing.T) {
 	deps := okDeps()
 	deps.ConfigValidation = config.ValidationResult{Path: "config.json", Valid: true}

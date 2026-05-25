@@ -412,9 +412,6 @@ func inferWorkflowStage(issue domain.Issue, pr *domain.PullRequest, localBranchE
 	if issue.State == domain.IssueStateClosed && pr != nil && pr.Merged {
 		return "Done"
 	}
-	if len(gate.Blockers) > 0 && hasLabel(issue.Labels, "ai:needs-review") {
-		return "Blocked"
-	}
 	if issue.State == domain.IssueStateOpen && hasLabel(issue.Labels, "ai:ready") && !localBranchExists && !remoteBranchExists && pr == nil {
 		return "Ready for AI"
 	}
