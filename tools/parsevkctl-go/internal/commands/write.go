@@ -520,8 +520,13 @@ func exactlyOneLinkedPR(issueNumber int, prs []domain.PullRequest) (*domain.Pull
 func pullRequestBody(issueNumber int, changedFiles []string) string {
 	changedFilesSection := "- [ ] Changed files could not be detected; review `git diff --name-only <default-branch>...HEAD` manually."
 	if len(changedFiles) > 0 {
+		limit := 30
 		lines := make([]string, 0, len(changedFiles))
-		for _, file := range changedFiles {
+		for idx, file := range changedFiles {
+			if idx >= limit {
+				lines = append(lines, fmt.Sprintf("- [ ] ... and %d more files.", len(changedFiles)-limit))
+				break
+			}
 			lines = append(lines, fmt.Sprintf("- [ ] %s", file))
 		}
 		changedFilesSection = strings.Join(lines, "\n")
