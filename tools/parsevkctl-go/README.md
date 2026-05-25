@@ -152,13 +152,20 @@ branch after PR creation because that branch is not merged yet. If an open PR
 already exists for the same branch/base, the command returns that PR instead of
 creating a duplicate.
 
-`task merge <issue>` finds the linked PR, requires exactly one PR, rejects draft
-PRs and wrong base branches, respects `merge.requireChecks`, merges the PR,
-sets Project status to `Done`, closes the issue if needed, switches to the
-default branch when safe, and pulls with `--ff-only`. When
-`merge.deleteBranch` is `true`, the merge operation asks GitHub to delete the
-remote PR branch and the local task branch is deleted with `git branch -d` when
-the command was run from that branch.
+`task merge <issue>` finds the linked PR and runs the same local read-only gate
+as `task review <issue>`. It does not create GitHub approvals and never calls
+`gh pr review --approve`. The gate requires an open non-draft PR, the repository
+default branch as base, `Closes #<issue>`, `ai:needs-review`, mergeable state,
+listed changed files, required PR body sections, non-failing checks, and a clean
+lightweight secret scan. If any blocker is found, merge stops before writes.
+
+When the local gate passes, `task merge` uses the configured merge strategy,
+replaces `ai:needs-review` with `review:passed` and `ai:approved`, sets Project
+status to `Done`, closes the issue if needed, switches to the default branch,
+pulls with `--ff-only`, deletes the local task branch with `git branch -d`, and
+deletes the remote task branch if it still exists. If local branch deletion
+fails because Git does not consider the branch merged, rerun only after deciding
+that is safe with `--force-delete-local-branch`.
 
 `merge.requireChecks` controls PR check enforcement:
 
@@ -170,7 +177,8 @@ the command was run from that branch.
 
 - `true`: `task merge` requires the linked PR to have at least one check and
   allows merge only when all checks are successful, skipped, or neutral.
-- `false`: `task merge` does not enforce check status.
+- `false`: missing checks are allowed, but `task merge` still prints that no
+  GitHub checks were found and that missing checks are allowed by configuration.
 
 With `true`, missing checks, pending checks, failed checks, and unknown check
 states block merge with an error that names the affected checks. The default

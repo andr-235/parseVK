@@ -161,7 +161,21 @@ func (adapter *ShellAdapter) DeleteRemoteBranch(ctx context.Context, remote stri
 		return fmt.Errorf("refusing to delete protected branch %q", strings.TrimSpace(branch))
 	}
 
-	_, err := adapter.runGit(ctx, "delete remote branch", "push", remote, "--delete", branch)
+	exists, err := adapter.RemoteBranchExists(ctx, remote, branch)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+
+	_, err = adapter.runGit(ctx, "delete remote branch", "push", remote, "--delete", branch)
+	if err != nil {
+		existsAfter, existsErr := adapter.RemoteBranchExists(ctx, remote, branch)
+		if existsErr == nil && !existsAfter {
+			return nil
+		}
+	}
 	return err
 }
 
