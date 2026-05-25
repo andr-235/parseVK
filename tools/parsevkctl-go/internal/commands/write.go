@@ -491,6 +491,7 @@ func BuildTaskMergePlan(ctx context.Context, input TaskIssueInput) (TaskMergePla
 			return TaskMergePlanResult{}, fmt.Errorf("check remote branch %q: %w", linked.Head, err)
 		}
 	}
+	deleteLocalBranch := mergeDeletesBranch(input.Config) && localBranchExists && linked.Head != ""
 	plan, err := planner.NewMergeTaskPlan(planner.MergeTaskInput{
 		Issue:                  issue,
 		PullRequest:            *linked,
@@ -498,8 +499,8 @@ func BuildTaskMergePlan(ctx context.Context, input TaskIssueInput) (TaskMergePla
 		TargetStatus:           domain.ProjectStatusDone,
 		MergeMethod:            mergeStrategy(input.Config),
 		DeleteRemoteBranch:     false,
-		DeleteLocalBranch:      mergeDeletesBranch(input.Config) && localBranchExists && linked.Head != "",
-		ForceDeleteLocalBranch: input.ForceDeleteLocalBranch,
+		DeleteLocalBranch:      deleteLocalBranch,
+		ForceDeleteLocalBranch: input.ForceDeleteLocalBranch || deleteLocalBranch,
 		DeleteRemoteAfterMerge: mergeDeletesBranch(input.Config) && remoteBranchExists && linked.Head != "",
 		CloseIssue:             true,
 		SyncDefaultBranch:      true,
