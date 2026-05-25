@@ -236,7 +236,7 @@ func TestTaskReviewAllowsCleanOpenPR(t *testing.T) {
 	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
 		7: {
 			PullRequest: deps.GitHub.prs[0],
-			Body:        "## Issue\n\nCloses #112\n",
+			Body:        pullRequestBody(112, []string{"tools/parsevkctl-go/internal/commands/review.go", "tools/parsevkctl-go/README.md"}),
 			Mergeable:   github.MergeableStateMergeable,
 			Files:       []string{"tools/parsevkctl-go/internal/commands/review.go", "tools/parsevkctl-go/README.md"},
 		},
@@ -686,6 +686,36 @@ func TestTaskMergeRejectsDraftPR(t *testing.T) {
 	deps.assertNoWrites(t)
 }
 
+func TestTaskMergeRejectsMissingReviewGateSections(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.issue.Labels = []string{"ai:needs-review", "type:infra"}
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 9,
+		State:  domain.PullRequestStateOpen,
+		Base:   deps.Config.DefaultBranch,
+		Head:   "ai/mbp-112-add-read-only-task-commands",
+	}}
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		9: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        "Closes #112",
+			Mergeable:   github.MergeableStateMergeable,
+			Files:       []string{"tools/parsevkctl-go/internal/commands/write.go"},
+		},
+	}
+
+	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err == nil || !strings.Contains(err.Error(), "PR body is missing required section: Summary") {
+		t.Fatalf("err = %v, want missing Summary blocker", err)
+	}
+	deps.assertNoWrites(t)
+}
+
 func TestTaskMergeRejectsWrongBaseBranch(t *testing.T) {
 	deps := okDeps()
 	deps.GitHub.prs = []domain.PullRequest{{
@@ -712,12 +742,23 @@ func TestTaskMergeDryRunPlan(t *testing.T) {
 	deleteBranch := true
 	deps.Config.Merge.DeleteBranch = &deleteBranch
 	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
+	deps.Git.localBranchExists = true
+	deps.Git.remoteBranchExists = true
+	deps.GitHub.issue.Labels = []string{"ai:needs-review", "type:infra"}
 	deps.GitHub.prs = []domain.PullRequest{{
 		Number: 9,
 		State:  domain.PullRequestStateOpen,
 		Base:   "fastapi-microservices-rewrite",
 		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		9: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        pullRequestBody(112, []string{"tools/parsevkctl-go/internal/commands/write.go"}),
+			Mergeable:   github.MergeableStateMergeable,
+			Files:       []string{"tools/parsevkctl-go/internal/commands/write.go"},
+		},
+	}
 
 	result, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
 		IssueNumber: 112,
@@ -730,23 +771,96 @@ func TestTaskMergeDryRunPlan(t *testing.T) {
 	}
 
 	got := planOperationTypes(result.Plan.Operations)
-	want := []string{"PullRequest.Merge", "Project.SetStatus", "Issue.Close", "Git.Switch", "Git.PullFastForward", "Branch.DeleteLocal"}
+	want := []string{"PullRequest.Merge", "Issue.UpdateLabels", "Project.SetStatus", "Issue.Close", "Git.Switch", "Git.PullFastForward", "Branch.DeleteLocal", "Branch.DeleteRemote"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("operations = %#v, want %#v", got, want)
 	}
+	if result.LocalGate == nil || len(result.LocalGate.Blockers) != 0 {
+		t.Fatalf("local gate = %#v, want clean gate", result.LocalGate)
+	}
 	deps.assertNoWrites(t)
+}
+
+func TestTaskMergeSuccessRunsGateAndCleanup(t *testing.T) {
+	deps := okDeps()
+	deleteBranch := true
+	deps.Config.Merge.DeleteBranch = &deleteBranch
+	deps.Git.allowWrites = true
+	deps.GitHub.allowWrites = true
+	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
+	deps.Git.localBranchExists = true
+	deps.Git.remoteBranchExists = true
+	deps.GitHub.issue.Labels = []string{"ai:needs-review", "type:infra"}
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 9,
+		State:  domain.PullRequestStateOpen,
+		Base:   deps.Config.DefaultBranch,
+		Head:   "ai/mbp-112-add-read-only-task-commands",
+	}}
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		9: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        pullRequestBody(112, []string{"tools/parsevkctl-go/internal/commands/write.go"}),
+			Mergeable:   github.MergeableStateMergeable,
+			Files:       []string{"tools/parsevkctl-go/internal/commands/write.go"},
+		},
+	}
+
+	var out bytes.Buffer
+	exit := RunTaskMerge(context.Background(), TaskRunInput{
+		TaskIssueInput: TaskIssueInput{
+			IssueNumber: 112,
+			Config:      deps.Config,
+			Git:         deps.Git,
+			GitHub:      deps.GitHub,
+		},
+		Stdout: &out,
+		Stderr: io.Discard,
+	})
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0; output=%s", exit, out.String())
+	}
+	if !reflect.DeepEqual(deps.GitHub.writeCalls, []string{"MergePullRequest", "UpdateIssueLabels", "SetProjectStatus", "CloseIssue"}) {
+		t.Fatalf("github writes = %#v", deps.GitHub.writeCalls)
+	}
+	if !reflect.DeepEqual(deps.Git.writeCalls, []string{"Switch", "PullFFOnly", "DeleteLocalBranch", "DeleteRemoteBranch"}) {
+		t.Fatalf("git writes = %#v", deps.Git.writeCalls)
+	}
+	for _, want := range []string{
+		"Merge completed",
+		"Issue: #112",
+		"PR: #9",
+		"Local gate:",
+		"- Blockers: none",
+		"added: review:passed",
+		"added: ai:approved",
+		"deleted local branch: ai/mbp-112-add-read-only-task-commands",
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("output missing %q:\n%s", want, out.String())
+		}
+	}
 }
 
 func TestTaskMergeRequireChecksAllowsGreenChecks(t *testing.T) {
 	deps := okDeps()
 	requireChecks := true
 	deps.Config.Merge.RequireChecks = &requireChecks
+	deps.GitHub.issue.Labels = []string{"ai:needs-review", "type:infra"}
 	deps.GitHub.prs = []domain.PullRequest{{
 		Number: 9,
 		State:  domain.PullRequestStateOpen,
 		Base:   "fastapi-microservices-rewrite",
 		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		9: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        pullRequestBody(112, []string{"tools/parsevkctl-go/internal/commands/write.go"}),
+			Mergeable:   github.MergeableStateMergeable,
+			Files:       []string{"tools/parsevkctl-go/internal/commands/write.go"},
+		},
+	}
 	deps.GitHub.checks = domain.PullRequestChecks{
 		PullRequestNumber: 9,
 		Total:             2,
@@ -854,13 +968,21 @@ func TestTaskMergeRequireChecksFalseDoesNotLoadChecks(t *testing.T) {
 	deps := okDeps()
 	requireChecks := false
 	deps.Config.Merge.RequireChecks = &requireChecks
+	deps.GitHub.issue.Labels = []string{"ai:needs-review", "type:infra"}
 	deps.GitHub.prs = []domain.PullRequest{{
 		Number: 9,
 		State:  domain.PullRequestStateOpen,
 		Base:   "fastapi-microservices-rewrite",
 		Head:   "ai/mbp-112-add-read-only-task-commands",
 	}}
-	deps.GitHub.checkErr = errors.New("must not be called")
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		9: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        pullRequestBody(112, []string{"tools/parsevkctl-go/internal/commands/write.go"}),
+			Mergeable:   github.MergeableStateMergeable,
+			Files:       []string{"tools/parsevkctl-go/internal/commands/write.go"},
+		},
+	}
 
 	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
 		IssueNumber: 112,
@@ -871,8 +993,8 @@ func TestTaskMergeRequireChecksFalseDoesNotLoadChecks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildTaskMergePlan returned error: %v", err)
 	}
-	if deps.GitHub.checkCalls != 0 {
-		t.Fatalf("check calls = %d, want 0", deps.GitHub.checkCalls)
+	if deps.GitHub.checkCalls != 1 {
+		t.Fatalf("check calls = %d, want 1", deps.GitHub.checkCalls)
 	}
 	deps.assertNoWrites(t)
 }

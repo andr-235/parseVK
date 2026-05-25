@@ -16,9 +16,10 @@ import (
 )
 
 type options struct {
-	configPath string
-	jsonOutput bool
-	dryRun     bool
+	configPath             string
+	jsonOutput             bool
+	dryRun                 bool
+	forceDeleteLocalBranch bool
 }
 
 func Run(args []string, stdout io.Writer, stderr io.Writer) int {
@@ -203,11 +204,12 @@ func runTask(args []string, opts options, stdout io.Writer, stderr io.Writer) in
 		}
 		input := commands.TaskRunInput{
 			TaskIssueInput: commands.TaskIssueInput{
-				IssueNumber: issueNumber,
-				Config:      cfg,
-				Git:         git.NewShellAdapter(),
-				GitHub:      github.NewShellAdapterWithConfig(cfg),
-				DryRun:      opts.dryRun,
+				IssueNumber:            issueNumber,
+				Config:                 cfg,
+				Git:                    git.NewShellAdapter(),
+				GitHub:                 github.NewShellAdapterWithConfig(cfg),
+				DryRun:                 opts.dryRun,
+				ForceDeleteLocalBranch: opts.forceDeleteLocalBranch,
 			},
 			DryRun: opts.dryRun,
 			JSON:   opts.jsonOutput,
@@ -298,6 +300,8 @@ func parseGlobalOptions(args []string) (options, []string, error) {
 			opts.jsonOutput = true
 		case "--dry-run":
 			opts.dryRun = true
+		case "--force-delete-local-branch":
+			opts.forceDeleteLocalBranch = true
 
 		case "--config":
 			if i+1 >= len(args) {
@@ -414,7 +418,7 @@ Usage:
   parsevkctl task create "Title" [--body "..."] [--config <path>] [--dry-run] [--json]
   parsevkctl task start <issue> [--config <path>] [--dry-run] [--json]
   parsevkctl task pr <issue> [--config <path>] [--dry-run] [--json]
-  parsevkctl task merge <issue> [--config <path>] [--dry-run] [--json]
+  parsevkctl task merge <issue> [--config <path>] [--dry-run] [--force-delete-local-branch] [--json]
 
 Commands:
   config validate   Validate parsevkctl config without GitHub or git side effects
@@ -431,5 +435,7 @@ Commands:
 Global flags:
   --config <path>   Path to config.json
   --dry-run         Render the operation plan without executing write operations
+  --force-delete-local-branch
+                   Allow task merge to force-delete the local task branch
   --json            Render machine-readable JSON output`)
 }

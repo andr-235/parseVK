@@ -111,6 +111,8 @@ func BuildTaskReview(ctx context.Context, input TaskIssueInput) (ReviewResult, e
 	}
 
 	result.Blockers = append(result.Blockers, reviewIssueAndPRBlockers(input, issue, pr, details.Body, details.Mergeable)...)
+	result.Blockers = append(result.Blockers, reviewChangedFilesBlockers(details.Files)...)
+	result.Blockers = append(result.Blockers, reviewScopeBlockers(result.Scope)...)
 	result.Checks, result.Blockers, result.NonBlockingNotes = reviewChecks(checks, checkErr, input.Config, result.Blockers, result.NonBlockingNotes)
 	if diffErr != nil {
 		result.NonBlockingNotes = append(result.NonBlockingNotes, fmt.Sprintf("could not read PR diff: %v", diffErr))
@@ -147,10 +149,42 @@ func reviewIssueAndPRBlockers(input TaskIssueInput, issue domain.Issue, pr domai
 	if !strings.Contains(body, fmt.Sprintf("Closes #%d", input.IssueNumber)) {
 		blockers = append(blockers, fmt.Sprintf("pull request #%d body does not contain Closes #%d", pr.Number, input.IssueNumber))
 	}
+	for _, section := range requiredPRBodySections() {
+		if !hasMarkdownSection(body, section) {
+			blockers = append(blockers, fmt.Sprintf("PR body is missing required section: %s", section))
+		}
+	}
 	if mergeable == github.MergeableStateConflicting {
 		blockers = append(blockers, fmt.Sprintf("pull request #%d has merge conflicts", pr.Number))
+	} else if mergeable != github.MergeableStateMergeable {
+		blockers = append(blockers, fmt.Sprintf("pull request #%d mergeable state is %q", pr.Number, mergeable))
 	}
 	return blockers
+}
+
+func requiredPRBodySections() []string {
+	return []string{"Summary", "Issue", "Changed Files", "Validation", "Risks", "AI Handoff"}
+}
+
+func hasMarkdownSection(body string, section string) bool {
+	pattern := regexp.MustCompile(`(?im)^#{1,6}\s+` + regexp.QuoteMeta(section) + `\s*$`)
+	return pattern.MatchString(body)
+}
+
+func reviewChangedFilesBlockers(files []string) []string {
+	if len(files) == 0 {
+		return []string{"changed files are unavailable"}
+	}
+	return nil
+}
+
+func reviewScopeBlockers(scope []string) []string {
+	for _, item := range scope {
+		if strings.HasPrefix(item, "Needs check:") {
+			return []string{item}
+		}
+	}
+	return nil
 }
 
 func reviewChecks(checks domain.PullRequestChecks, err error, cfg config.Config, blockers []string, notes []string) ([]string, []string, []string) {
@@ -163,8 +197,9 @@ func reviewChecks(checks domain.PullRequestChecks, err error, cfg config.Config,
 			blockers = append(blockers, fmt.Sprintf("pull request #%d has no checks; merge.requireChecks=true requires at least one successful check", checks.PullRequestNumber))
 		} else {
 			notes = append(notes, "No GitHub checks found")
+			notes = append(notes, "Missing checks allowed by configuration")
 		}
-		return []string{"No GitHub checks found"}, blockers, notes
+		return []string{"No GitHub checks found", "Missing checks allowed by configuration"}, blockers, notes
 	}
 	if err := validatePullRequestChecks(checks); err != nil {
 		blockers = append(blockers, err.Error())

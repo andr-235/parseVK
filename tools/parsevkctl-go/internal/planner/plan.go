@@ -67,15 +67,18 @@ type CreatePullRequestInput struct {
 }
 
 type MergeTaskInput struct {
-	Issue              domain.Issue
-	PullRequest        domain.PullRequest
-	DefaultBranch      string
-	TargetStatus       domain.ProjectStatus
-	MergeMethod        string
-	DeleteRemoteBranch bool
-	DeleteLocalBranch  bool
-	CloseIssue         bool
-	SyncDefaultBranch  bool
+	Issue                  domain.Issue
+	PullRequest            domain.PullRequest
+	DefaultBranch          string
+	TargetStatus           domain.ProjectStatus
+	MergeMethod            string
+	DeleteRemoteBranch     bool
+	DeleteLocalBranch      bool
+	ForceDeleteLocalBranch bool
+	DeleteRemoteAfterMerge bool
+	CloseIssue             bool
+	SyncDefaultBranch      bool
+	UpdateReviewLabels     bool
 }
 
 type ProjectStatusPayload struct {
@@ -333,6 +336,20 @@ func NewMergeTaskPlan(input MergeTaskInput) (Plan, error) {
 		})
 	}
 
+	if input.UpdateReviewLabels {
+		operations = append(operations, Operation{
+			ID:          "issue-update-passed-review-labels",
+			Type:        OperationIssueUpdateLabels,
+			Description: fmt.Sprintf("Replace ai:needs-review with review:passed and ai:approved on issue #%d", issueNumber),
+			SafeToRetry: true,
+			Payload: IssueLabelsPayload{
+				IssueNumber: issueNumber,
+				Remove:      []string{"ai:needs-review"},
+				Add:         []string{"review:passed", "ai:approved"},
+			},
+		})
+	}
+
 	operations = append(operations, Operation{
 		ID:          "project-set-status-" + statusID(targetStatus),
 		Type:        OperationProjectSetStatus,
@@ -375,7 +392,16 @@ func NewMergeTaskPlan(input MergeTaskInput) (Plan, error) {
 			Type:        OperationBranchDeleteLocal,
 			Description: fmt.Sprintf("Delete local task branch %s", input.PullRequest.Head),
 			SafeToRetry: true,
-			Payload:     DeleteLocalBranchPayload{Branch: input.PullRequest.Head},
+			Payload:     DeleteLocalBranchPayload{Branch: input.PullRequest.Head, Force: input.ForceDeleteLocalBranch},
+		})
+	}
+	if input.DeleteRemoteAfterMerge {
+		operations = append(operations, Operation{
+			ID:          "branch-delete-remote-task-branch",
+			Type:        OperationBranchDeleteRemote,
+			Description: fmt.Sprintf("Delete remote task branch origin/%s if it still exists", input.PullRequest.Head),
+			SafeToRetry: true,
+			Payload:     GitRefPayload{Remote: originRemote, Branch: input.PullRequest.Head},
 		})
 	}
 
