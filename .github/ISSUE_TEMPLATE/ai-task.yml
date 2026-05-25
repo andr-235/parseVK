@@ -1,0 +1,108 @@
+name: AI-assisted task
+description: Plan a scoped task for the parseVK AI-assisted development workflow.
+title: "MBP-XXX: "
+labels:
+  - ai:ready
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for tasks that should move through the Issue -> AI branch -> PR -> review -> merge workflow.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: Describe the outcome this task should achieve.
+      placeholder: Add repository templates and workflow documentation for AI-assisted development.
+    validations:
+      required: true
+
+  - type: input
+    id: service
+    attributes:
+      label: Service
+      description: Name the affected service, tool, or area.
+      placeholder: parsevkctl
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List the files, behavior, or documentation that are in scope.
+      placeholder: |
+        - Add ...
+        - Update ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of Scope
+      description: List areas the AI agent must not change.
+      placeholder: |
+        - Do not change application code.
+        - Do not change CI/CD workflows.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Use checkboxes for concrete completion requirements.
+      placeholder: |
+        - [ ] File exists
+        - [ ] No application code is changed
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation-commands
+    attributes:
+      label: Validation Commands
+      description: Commands the agent should run before opening the PR.
+      placeholder: |
+        ```bash
+        git diff --name-only
+        ```
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk-level
+    attributes:
+      label: Risk Level
+      description: Estimate the risk if the task is implemented exactly as scoped.
+      options:
+        - low
+        - medium
+        - high
+    validations:
+      required: true
+
+  - type: input
+    id: expected-ai-sessions
+    attributes:
+      label: Expected AI Sessions
+      description: Estimate how many AI sessions should be needed.
+      placeholder: "1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: required-handoff
+    attributes:
+      label: Required Handoff
+      description: Information the agent must provide when the task is ready for review.
+      value: |
+        - summary
+        - changed files
+        - validation commands run
+        - risks
+        - next suggested issue
+    validations:
+      required: true
