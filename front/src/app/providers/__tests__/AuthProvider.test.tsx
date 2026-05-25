@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
-import { useAuthStore } from '@/modules/auth/store'
+import { useAuthStore } from '@/store/auth'
 
 const { refreshAccessTokenMock, isTokenExpiredMock, getRefreshDelayMsMock } = vi.hoisted(() => ({
   refreshAccessTokenMock: vi.fn().mockResolvedValue('next-access-token'),
@@ -8,7 +8,7 @@ const { refreshAccessTokenMock, isTokenExpiredMock, getRefreshDelayMsMock } = vi
   getRefreshDelayMsMock: vi.fn(() => 1_000),
 }))
 
-vi.mock('@/modules/auth', () => ({
+vi.mock('@/config/auth/lib/authSession', () => ({
   refreshAccessToken: refreshAccessTokenMock,
   isTokenExpired: isTokenExpiredMock,
   getRefreshDelayMs: getRefreshDelayMsMock,
@@ -21,12 +21,12 @@ describe('AuthProvider', () => {
     vi.clearAllMocks()
     useAuthStore.setState({
       accessToken: 'valid-access-token',
-      refreshToken: 'refresh-token',
       user: {
-        id: 1,
+        id: 'user-1',
         username: 'admin',
         role: 'admin',
-        isTemporaryPassword: false,
+        isActive: true,
+        isSuperuser: true,
       },
     })
   })
@@ -69,10 +69,24 @@ describe('AuthProvider', () => {
     await waitFor(() => {
       expect(refreshAccessTokenMock).toHaveBeenCalledTimes(1)
       expect(useAuthStore.getState().accessToken).toBeNull()
-      expect(useAuthStore.getState().refreshToken).toBeNull()
       expect(useAuthStore.getState().user).toBeNull()
     })
     await waitFor(() => {
+      expect(screen.getByText('app')).toBeInTheDocument()
+    })
+  })
+
+  it('tries to restore session on bootstrap without an access token', async () => {
+    useAuthStore.getState().clearAuth()
+
+    render(
+      <AuthProvider>
+        <div>app</div>
+      </AuthProvider>
+    )
+
+    await waitFor(() => {
+      expect(refreshAccessTokenMock).toHaveBeenCalledTimes(1)
       expect(screen.getByText('app')).toBeInTheDocument()
     })
   })

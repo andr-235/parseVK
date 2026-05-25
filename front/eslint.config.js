@@ -24,9 +24,9 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
-  // Правила для компонентов модулей - запрет импорта store
+  // Правила для компонентов - запрет импорта store
   {
-    files: ['src/modules/**/components/**/*.{ts,tsx}'],
+    files: ['src/components/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -34,20 +34,20 @@ export default defineConfig([
           paths: [
             {
               name: '@/store',
-              message: 'Компоненты не должны импортировать store напрямую. Используйте хуки модуля.',
+              message: 'Компоненты не должны импортировать store напрямую. Используйте хуки.',
             },
           ],
           patterns: [
             {
-              group: ['../store', '../../store', '../../../store'],
-              message: 'Компоненты не должны импортировать store напрямую. Используйте хуки модуля.',
+              group: ['**/store', '**/store/*', '@/store/*'],
+              message: 'Компоненты не должны импортировать store напрямую. Используйте хуки.',
             },
           ],
         },
       ],
     },
   },
-  // Правила для utils - запрет импорта services/store
+  // Правила для utils - запрет импорта api/store
   {
     files: ['src/utils/**/*.{ts,tsx}'],
     rules: {
@@ -56,8 +56,8 @@ export default defineConfig([
         {
           paths: [
             {
-              name: '@/services',
-              message: 'Utils должны быть чистыми функциями без зависимостей от services.',
+              name: '@/api',
+              message: 'Utils должны быть чистыми функциями без зависимостей от API.',
             },
             {
               name: '@/store',
@@ -66,11 +66,11 @@ export default defineConfig([
           ],
           patterns: [
             {
-              group: ['../services/*', '../../services/*'],
-              message: 'Utils должны быть чистыми функциями без зависимостей от services.',
+              group: ['**/api', '**/api/*', '@/api/*'],
+              message: 'Utils должны быть чистыми функциями без зависимостей от API.',
             },
             {
-              group: ['../store/*', '../../store/*'],
+              group: ['**/store', '**/store/*', '@/store/*'],
               message: 'Utils должны быть чистыми функциями без зависимостей от store.',
             },
           ],
@@ -78,13 +78,11 @@ export default defineConfig([
       ],
     },
   },
-  // Архитектурные границы между модулями
-  // Запрет глубоких кросс-модульных импортов (через eslint-plugin-boundaries)
+  // Архитектурные границы
   {
     files: ['src/**/*.{ts,tsx}'],
     plugins: { boundaries },
     settings: {
-      // Настройка резолвера для работы с TypeScript алиасами (@/)
       'import/resolver': {
         typescript: {
           alwaysTryTypes: true,
@@ -93,14 +91,14 @@ export default defineConfig([
       'boundaries/include': ['src/**/*.{ts,tsx}'],
       'boundaries/elements': [
         {
-          type: 'module',
-          // Каждая папка внутри modules/ — отдельный элемент
-          pattern: 'src/modules/(*)',
+          type: 'component-feature',
+          pattern: 'src/components/!(ui|common|__tests__)/',
           capture: ['name'],
         },
         {
-          type: 'shared',
-          pattern: 'src/shared/**',
+          type: 'hook-feature',
+          pattern: 'src/hooks/!(common|__tests__)/',
+          capture: ['name'],
         },
         {
           type: 'pages',
@@ -113,21 +111,27 @@ export default defineConfig([
       ],
     },
     rules: {
-      // Запрет кросс-модульных импортов в обход публичного API (index.ts)
-      'boundaries/entry-point': [
+      // Компоненты фич не должны импортировать из других фич
+      'boundaries/element-types': [
         'error',
         {
-          default: 'disallow',
+          default: 'allow',
           rules: [
-            // При импорте из модуля разрешаем только корневой index.ts
             {
-              target: [['module', { name: '*' }]],
-              allow: ['index.ts'],
+              from: ['component-feature'],
+              disallow: [
+                ['component-feature', { name: '!${from.name}' }],
+                ['hook-feature', { name: '!${from.name}' }],
+              ],
+              message: 'Компоненты фичи "${from.name}" не должны зависеть от компонентов или хуков другой фичи "${to.name}".',
             },
-            // shared, pages и app-types не имеют ограничения entry-point
             {
-              target: ['shared', 'pages', 'app-types'],
-              allow: '**',
+              from: ['hook-feature'],
+              disallow: [
+                ['component-feature', { name: '*' }],
+                ['hook-feature', { name: '!${from.name}' }],
+              ],
+              message: 'Хуки фичи "${from.name}" не должны зависеть от компонентов или хуков другой фичи "${to.name}".',
             },
           ],
         },

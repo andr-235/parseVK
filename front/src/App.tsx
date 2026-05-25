@@ -1,10 +1,10 @@
 import { useEffect, Suspense, lazy, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { Sidebar } from '@/shared/components/Sidebar'
-import MainContent from '@/shared/components/MainContent'
+import { Sidebar } from '@/components/common/Sidebar'
+import MainContent from '@/components/common/MainContent'
 import AppSyncProvider from '@/app/providers/AppSyncProvider'
-import { useAuthStore } from '@/modules/auth/store'
+import { useAuthStore } from '@/store/auth'
 
 // Lazy load pages
 const Tasks = lazy(() => import('@/pages/Tasks'))
@@ -27,7 +27,7 @@ const AdminUsers = lazy(() => import('@/pages/AdminUsers'))
 const ChangePassword = lazy(() => import('@/pages/ChangePassword'))
 const VkFriendsExportPage = lazy(() => import('@/pages/VkFriendsExportPage'))
 const OkFriendsExportPage = lazy(() => import('@/pages/OkFriendsExportPage'))
-import { ErrorBoundary } from '@/shared/components/ErrorBoundary'
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 
 const RequireAuth = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
@@ -51,13 +51,6 @@ const RequireAdmin = ({ children }: { children: ReactNode }) => {
 }
 
 const RequirePasswordChange = ({ children }: { children: ReactNode }) => {
-  const user = useAuthStore((state) => state.user)
-  const location = useLocation()
-
-  if (user?.isTemporaryPassword && location.pathname !== '/login') {
-    return <Navigate to="/login" replace />
-  }
-
   return <>{children}</>
 }
 
