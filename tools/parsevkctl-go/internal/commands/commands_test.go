@@ -897,6 +897,20 @@ func TestTaskMergeDryRunPlan(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("operations = %#v, want %#v", got, want)
 	}
+	var deleteLocalPayload planner.DeleteLocalBranchPayload
+	for _, operation := range result.Plan.Operations {
+		if operation.Type == planner.OperationBranchDeleteLocal {
+			var ok bool
+			deleteLocalPayload, ok = operation.Payload.(planner.DeleteLocalBranchPayload)
+			if !ok {
+				t.Fatalf("delete local payload type = %T, want planner.DeleteLocalBranchPayload", operation.Payload)
+			}
+			break
+		}
+	}
+	if !deleteLocalPayload.Force {
+		t.Fatalf("delete local payload Force = false, want true for post-merge cleanup")
+	}
 	if result.LocalGate == nil || len(result.LocalGate.Blockers) != 0 {
 		t.Fatalf("local gate = %#v, want clean gate", result.LocalGate)
 	}

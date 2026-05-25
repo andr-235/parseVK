@@ -55,5 +55,6 @@ Merge only when:
 Example:
 
 ```powershell
-.\tools\parsevkctl\parsevkctl.ps1 task merge <issue-number>
+cd tools/parsevkctl-go
+go run ./cmd/parsevkctl task merge <issue-number>
 ```
