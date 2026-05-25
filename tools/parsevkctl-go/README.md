@@ -79,6 +79,7 @@ starts with `MBP-<issue-number>:`, that prefix is removed before slugging.
 go run ./cmd/parsevkctl doctor
 go run ./cmd/parsevkctl task status 112
 go run ./cmd/parsevkctl task sync 112
+go run ./cmd/parsevkctl task review 112
 ```
 
 `parsevkctl doctor` checks local configuration, git readability, GitHub CLI read
@@ -94,12 +95,22 @@ lifecycle state and suggested next command.
 items and suggested safe fixes, but does not update Project status, close
 issues, create branches, create PRs or merge anything.
 
+`parsevkctl task review <issue>` is a read-only local PR review gate. It loads
+the issue and linked PR, validates the PR is open, non-draft, based on the
+configured default branch, and contains `Closes #<issue>` in the body. It lists
+changed files, checks practical parsevkctl/docs scope, reports mergeability,
+prints GitHub checks without overstating missing checks, scans the PR diff for
+obvious secret patterns, separates blockers from notes, and ends with one of
+the workflow verdicts. It never creates GitHub reviews, approvals, comments,
+label updates, merges, or branch changes.
+
 Machine-readable output is available through the global `--json` flag:
 
 ```powershell
 go run ./cmd/parsevkctl --json doctor
 go run ./cmd/parsevkctl --json task status 112
 go run ./cmd/parsevkctl --json task sync 112
+go run ./cmd/parsevkctl --json task review 112
 ```
 
 `task sync --apply` is intentionally not implemented yet and returns:

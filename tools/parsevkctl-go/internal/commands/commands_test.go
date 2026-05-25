@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -221,6 +222,140 @@ func TestSyncRejectsApply(t *testing.T) {
 	}
 }
 
+func TestTaskReviewAllowsCleanOpenPR(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.issue.Labels = []string{"ai:needs-review", "service:parsevkctl"}
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 7,
+		Title:  "MBP-112: Add task review command",
+		State:  domain.PullRequestStateOpen,
+		URL:    "https://github.test/pr/7",
+		Base:   deps.Config.DefaultBranch,
+		Head:   "ai/mbp-112-add-task-review-command",
+	}}
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		7: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        "## Issue\n\nCloses #112\n",
+			Mergeable:   github.MergeableStateMergeable,
+			Files:       []string{"tools/parsevkctl-go/internal/commands/review.go", "tools/parsevkctl-go/README.md"},
+		},
+	}
+	deps.GitHub.checks = domain.PullRequestChecks{
+		PullRequestNumber: 7,
+		Total:             1,
+		Successful:        1,
+		Checks: []domain.PullRequestCheck{{
+			Name:   "go test ./...",
+			State:  domain.CheckStateSuccess,
+			Bucket: domain.CheckStateSuccess,
+		}},
+	}
+	deps.GitHub.prDiff = "diff --git a/tools/parsevkctl-go/internal/commands/review.go b/tools/parsevkctl-go/internal/commands/review.go\n+package commands\n"
+
+	var out bytes.Buffer
+	exit := RunTaskReview(context.Background(), TaskReviewRunInput{
+		TaskIssueInput: TaskIssueInput{
+			IssueNumber: 112,
+			Config:      deps.Config,
+			Git:         deps.Git,
+			GitHub:      deps.GitHub,
+		},
+		Stdout: &out,
+		Stderr: io.Discard,
+	})
+
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0; output:\n%s", exit, out.String())
+	}
+	text := out.String()
+	for _, want := range []string{
+		"PR Review Report",
+		"Issue: #112",
+		"PR: #7",
+		"Mergeable: true",
+		"- tools/parsevkctl-go/internal/commands/review.go",
+		"- go test ./...: passed",
+		"Secrets:",
+		"- OK: no obvious secrets found",
+		"Blockers:",
+		"- none",
+		"Non-blocking notes:",
+		"- no official GitHub approve was created",
+		"Verdict:",
+		"Можно мержить",
+		"Next:",
+		"parsevkctl task merge 112",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("output missing %q:\n%s", want, text)
+		}
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskReviewBlocksSecretsAndFailedChecks(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.issue.Labels = []string{"ai:needs-review"}
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 7,
+		Title:  "MBP-112: Add task review command",
+		State:  domain.PullRequestStateOpen,
+		Base:   deps.Config.DefaultBranch,
+		Head:   "ai/mbp-112-add-task-review-command",
+	}}
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		7: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        "Closes #112",
+			Mergeable:   github.MergeableStateMergeable,
+			Files:       []string{"tools/parsevkctl-go/internal/commands/review.go"},
+		},
+	}
+	deps.GitHub.checks = domain.PullRequestChecks{
+		PullRequestNumber: 7,
+		Total:             1,
+		Failed:            1,
+		Checks: []domain.PullRequestCheck{{
+			Name:   "go test ./...",
+			State:  domain.CheckStateFailure,
+			Bucket: domain.CheckStateFailure,
+		}},
+	}
+	deps.GitHub.prDiff = "+api_key=abc123\n"
+
+	var out bytes.Buffer
+	exit := RunTaskReview(context.Background(), TaskReviewRunInput{
+		TaskIssueInput: TaskIssueInput{
+			IssueNumber: 112,
+			Config:      deps.Config,
+			Git:         deps.Git,
+			GitHub:      deps.GitHub,
+		},
+		Stdout: &out,
+		Stderr: io.Discard,
+	})
+
+	if exit != 1 {
+		t.Fatalf("exit = %d, want 1; output:\n%s", exit, out.String())
+	}
+	text := out.String()
+	for _, want := range []string{
+		"- go test ./...: failed",
+		"- potential secret pattern detected: api_key=",
+		"Blockers:",
+		"pull request #7 has failed checks: go test ./...",
+		"potential secrets detected in PR diff",
+		"Verdict:",
+		"Пока не мержить",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("output missing %q:\n%s", want, text)
+		}
+	}
+	deps.assertNoWrites(t)
+}
+
 func TestTaskCreateDryRun(t *testing.T) {
 	deps := okDeps()
 
@@ -435,6 +570,7 @@ func TestTaskPRRejectsDefaultBranch(t *testing.T) {
 
 func TestTaskPRDryRunPlan(t *testing.T) {
 	deps := okDeps()
+	deps.Git.defaultBranch = "main"
 	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
 	deps.Git.ahead = true
 	deps.Git.changedFiles = []string{"tools/parsevkctl-go/internal/commands/write.go", "tools/parsevkctl-go/internal/commands/commands_test.go"}
@@ -912,6 +1048,8 @@ type fakeGitHub struct {
 	labels          []github.Label
 	createdLabels   []github.Label
 	prs             []domain.PullRequest
+	prDetails       map[int]github.PullRequestDetails
+	prDiff          string
 	checks          domain.PullRequestChecks
 	checkErr        error
 	createLabelErr  error
@@ -964,6 +1102,22 @@ func (f *fakeGitHub) CreateLabel(_ context.Context, label github.Label) error {
 }
 func (f *fakeGitHub) ListPullRequests(context.Context, github.PullRequestFilter) ([]domain.PullRequest, error) {
 	return f.prs, nil
+}
+func (f *fakeGitHub) GetPullRequestDetails(_ context.Context, number int) (github.PullRequestDetails, error) {
+	if f.prDetails != nil {
+		if details, ok := f.prDetails[number]; ok {
+			return details, nil
+		}
+	}
+	for _, pr := range f.prs {
+		if int(pr.Number) == number {
+			return github.PullRequestDetails{PullRequest: pr}, nil
+		}
+	}
+	return github.PullRequestDetails{}, errors.New("pull request not found")
+}
+func (f *fakeGitHub) GetPullRequestDiff(context.Context, int) (string, error) {
+	return f.prDiff, nil
 }
 func (f *fakeGitHub) CreatePullRequest(context.Context, github.CreatePullRequestInput) (domain.PullRequest, error) {
 	f.writeCalls = append(f.writeCalls, "CreatePullRequest")

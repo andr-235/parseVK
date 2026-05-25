@@ -111,6 +111,7 @@ func runTask(args []string, opts options, stdout io.Writer, stderr io.Writer) in
 		fmt.Fprintln(stderr, "Error: task command requires a subcommand")
 		fmt.Fprintln(stderr, "Usage: parsevkctl task status <issue> [--json]")
 		fmt.Fprintln(stderr, "       parsevkctl task sync <issue> [--json]")
+		fmt.Fprintln(stderr, "       parsevkctl task review <issue> [--json]")
 		fmt.Fprintln(stderr, "       parsevkctl task create \"Title\" [--body \"...\"] [--dry-run] [--json]")
 		fmt.Fprintln(stderr, "       parsevkctl task start|pr|merge <issue> [--dry-run] [--json]")
 		return 2
@@ -160,6 +161,31 @@ func runTask(args []string, opts options, stdout io.Writer, stderr io.Writer) in
 			JSON:        opts.jsonOutput,
 			Stdout:      stdout,
 			Stderr:      stderr,
+		})
+	case "review":
+		if len(args) != 2 {
+			fmt.Fprintln(stderr, "Error: task review requires an issue number")
+			return 2
+		}
+		issueNumber, err := strconv.Atoi(args[1])
+		if err != nil || issueNumber <= 0 {
+			fmt.Fprintln(stderr, "Error: issue number must be a positive integer")
+			return 2
+		}
+		cfg, ok := loadCommandConfig(opts, stderr)
+		if !ok {
+			return 1
+		}
+		return commands.RunTaskReview(context.Background(), commands.TaskReviewRunInput{
+			TaskIssueInput: commands.TaskIssueInput{
+				IssueNumber: issueNumber,
+				Config:      cfg,
+				Git:         git.NewShellAdapter(),
+				GitHub:      github.NewShellAdapterWithConfig(cfg),
+			},
+			JSON:   opts.jsonOutput,
+			Stdout: stdout,
+			Stderr: stderr,
 		})
 	case "start", "pr", "merge":
 		if len(args) != 2 {
@@ -384,6 +410,7 @@ Usage:
   parsevkctl labels bootstrap [--config <path>] [--dry-run] [--json]
   parsevkctl task status <issue> [--config <path>] [--json]
   parsevkctl task sync <issue> [--config <path>] [--json]
+  parsevkctl task review <issue> [--config <path>] [--json]
   parsevkctl task create "Title" [--body "..."] [--config <path>] [--dry-run] [--json]
   parsevkctl task start <issue> [--config <path>] [--dry-run] [--json]
   parsevkctl task pr <issue> [--config <path>] [--dry-run] [--json]
@@ -395,6 +422,7 @@ Commands:
   labels bootstrap  Create missing standard GitHub labels for parseVK workflow
   task status       Show read-only task state summary
   task sync         Preview task state drift and suggested fixes
+  task review       Run a read-only local PR review gate
   task create       Create a GitHub issue and optionally add it to the Project
   task start        Move an issue to In Progress and create a task branch
   task pr           Push the task branch and create a pull request

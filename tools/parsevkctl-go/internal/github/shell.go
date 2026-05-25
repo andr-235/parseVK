@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	issueJSONFields       = "number,title,state,url,labels"
-	pullRequestJSONFields = "number,title,state,isDraft,mergedAt,url,baseRefName,headRefName"
-	checkJSONFields       = "name,state,bucket,workflow,startedAt,completedAt,link"
+	issueJSONFields              = "number,title,state,url,labels"
+	pullRequestJSONFields        = "number,title,state,isDraft,mergedAt,url,baseRefName,headRefName"
+	pullRequestDetailsJSONFields = "number,title,state,isDraft,mergedAt,url,baseRefName,headRefName,body,mergeable,files"
+	checkJSONFields              = "name,state,bucket,workflow,startedAt,completedAt,link"
 )
 
 type commandResult struct {
@@ -184,6 +185,31 @@ func (adapter *ShellAdapter) ListPullRequests(ctx context.Context, filter PullRe
 	}
 
 	return parsePullRequestsJSON([]byte(result.stdout))
+}
+
+func (adapter *ShellAdapter) GetPullRequestDetails(ctx context.Context, number int) (PullRequestDetails, error) {
+	if err := validateNumber("pull request number", number); err != nil {
+		return PullRequestDetails{}, err
+	}
+
+	result, err := adapter.runGH(ctx, "get pull request", "pr", "view", strconv.Itoa(number), "--json", pullRequestDetailsJSONFields)
+	if err != nil {
+		return PullRequestDetails{}, err
+	}
+
+	return parsePullRequestDetailsJSON([]byte(result.stdout))
+}
+
+func (adapter *ShellAdapter) GetPullRequestDiff(ctx context.Context, number int) (string, error) {
+	if err := validateNumber("pull request number", number); err != nil {
+		return "", err
+	}
+
+	result, err := adapter.runGH(ctx, "get pull request diff", "pr", "diff", strconv.Itoa(number))
+	if err != nil {
+		return "", err
+	}
+	return result.stdout, nil
 }
 
 func (adapter *ShellAdapter) CreatePullRequest(ctx context.Context, input CreatePullRequestInput) (domain.PullRequest, error) {
