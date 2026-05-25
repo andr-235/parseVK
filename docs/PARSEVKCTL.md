@@ -31,7 +31,8 @@ request checks through GitHub CLI and allows merge only when at least one check
 exists and all checks are successful, skipped, or neutral. Missing checks,
 pending checks, failed checks, and unknown check states block the merge with an
 actionable error that names the affected checks. When `merge.requireChecks` is
-`false`, `task merge` does not enforce PR checks.
+`false`, missing checks are allowed, but the command still reports that no
+GitHub checks were found and that missing checks are allowed by configuration.
 
 ## Direct Go Invocation
 
@@ -138,10 +139,20 @@ switches back to the configured default branch and pulls it with `--ff-only`.
 It does not delete the local task branch at PR time because the branch is not
 merged yet.
 
-`task merge <issue>` merges the linked PR and passes `--delete-branch` to
-GitHub CLI when `merge.deleteBranch` is `true`. If the command is run from the
-PR head branch, it switches back to the configured default branch, pulls with
-`--ff-only`, and deletes the local task branch with `git branch -d`.
+`task merge <issue>` runs the same local gate as `task review <issue>` before
+merge. It does not depend on GitHub approval and does not call
+`gh pr review --approve`. The gate blocks draft PRs, wrong base branches,
+missing `Closes #<issue>`, missing `ai:needs-review`, unmergeable PRs,
+unlisted changed files, missing PR body sections, failing checks, and obvious
+secret patterns in the PR diff.
+
+After the gate passes, `task merge` uses the configured merge strategy, updates
+labels from `ai:needs-review` to `review:passed` and `ai:approved`, moves the
+Project item to `Done`, closes the issue, switches to the repository default
+branch, pulls with `--ff-only`, deletes the local task branch with
+`git branch -d`, and deletes the remote task branch if it still exists.
+Use `--force-delete-local-branch` only when normal local branch deletion fails
+and you have explicitly decided that force deletion is safe.
 
 If `merge.requireChecks` is `true`, `task merge` checks the linked PR before
 building the merge plan. It blocks PRs with no checks, pending checks, failed

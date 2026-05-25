@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -25,11 +26,12 @@ type TaskCreateInput struct {
 }
 
 type TaskIssueInput struct {
-	IssueNumber int
-	Config      config.Config
-	Git         git.Adapter
-	GitHub      github.Adapter
-	DryRun      bool
+	IssueNumber            int
+	Config                 config.Config
+	Git                    git.Adapter
+	GitHub                 github.Adapter
+	DryRun                 bool
+	ForceDeleteLocalBranch bool
 }
 
 type TaskRunInput struct {
@@ -79,8 +81,20 @@ type TaskPRPlanResult struct {
 }
 
 type TaskMergePlanResult struct {
-	Plan        planner.Plan `json:"plan"`
-	PullRequest PRResult     `json:"pullRequest"`
+	Plan               planner.Plan  `json:"plan"`
+	PullRequest        PRResult      `json:"pullRequest"`
+	Issue              IssueResult   `json:"issue"`
+	BaseBranch         string        `json:"baseBranch"`
+	HeadBranch         string        `json:"headBranch"`
+	LocalGate          *ReviewResult `json:"localGate"`
+	DeletedLocal       bool          `json:"deleteLocalBranch"`
+	DeletedRemote      bool          `json:"deleteRemoteBranch"`
+	RemovedLabel       string        `json:"removedLabel"`
+	AddedLabels        []string      `json:"addedLabels"`
+	PulledBranch       string        `json:"pulledBranch"`
+	CurrentBranch      string        `json:"currentBranch"`
+	LocalBranchExists  bool          `json:"localBranchExists"`
+	RemoteBranchExists bool          `json:"remoteBranchExists"`
 }
 
 type PRResult struct {
@@ -174,11 +188,23 @@ func RunTaskPR(ctx context.Context, input TaskRunInput) int {
 func RunTaskMerge(ctx context.Context, input TaskRunInput) int {
 	result, err := BuildTaskMergePlan(ctx, input.TaskIssueInput)
 	if err != nil {
-		writeError(input.Stderr, err)
+		if input.DryRun && isMergeBlocked(err) {
+			fmt.Fprintln(output(input.Stdout), "DRY RUN: no changes were made")
+			fmt.Fprintln(output(input.Stdout))
+			renderMergeBlocked(input.Stdout, err)
+		} else if isMergeBlocked(err) {
+			renderMergeBlocked(input.Stderr, err)
+		} else {
+			writeError(input.Stderr, err)
+		}
 		return 1
 	}
 	if input.DryRun {
-		return renderPlan(input.Stdout, result.Plan, input.JSON)
+		if input.JSON {
+			return renderJSON(input.Stdout, result)
+		}
+		renderTaskMergeDryRun(input.Stdout, result)
+		return 0
 	}
 
 	executor := planner.Executor{Git: input.Git, GitHub: input.GitHub}
@@ -189,7 +215,7 @@ func RunTaskMerge(ctx context.Context, input TaskRunInput) int {
 	if input.JSON {
 		return renderJSON(input.Stdout, result)
 	}
-	fmt.Fprintf(output(input.Stdout), "Task merged via PR #%d.\n", result.PullRequest.Number)
+	renderTaskMergeCompleted(input.Stdout, result)
 	return 0
 }
 
@@ -399,28 +425,29 @@ func BuildTaskPRPlan(ctx context.Context, input TaskIssueInput) (TaskPRPlanResul
 }
 
 func BuildTaskMergePlan(ctx context.Context, input TaskIssueInput) (TaskMergePlanResult, error) {
-	issue, projectStatus, prs, err := loadIssueContext(ctx, input)
+	defaultBranch, err := workflowDefaultBranch(ctx, input)
+	if err != nil {
+		return TaskMergePlanResult{}, fmt.Errorf("detect default branch: %w", err)
+	}
+	if strings.TrimSpace(defaultBranch) == "" {
+		return TaskMergePlanResult{}, fmt.Errorf("default branch cannot be detected")
+	}
+	gateInput := input
+	gateInput.Config.DefaultBranch = defaultBranch
+	gate, err := BuildTaskReview(ctx, gateInput)
+	if err != nil {
+		return TaskMergePlanResult{}, err
+	}
+	if len(gate.Blockers) > 0 {
+		return TaskMergePlanResult{}, mergeBlockedError(gate.Blockers)
+	}
+	issue, projectStatus, prs, err := loadIssueContext(ctx, gateInput)
 	if err != nil {
 		return TaskMergePlanResult{}, err
 	}
 	linked, err := exactlyOneLinkedPR(input.IssueNumber, prs)
 	if err != nil {
 		return TaskMergePlanResult{}, err
-	}
-	if linked.Draft {
-		return TaskMergePlanResult{}, fmt.Errorf("pull request #%d is draft; mark it ready for review before merge", linked.Number)
-	}
-	if linked.Base != input.Config.DefaultBranch {
-		return TaskMergePlanResult{}, fmt.Errorf("pull request #%d base branch %q does not match %q", linked.Number, linked.Base, input.Config.DefaultBranch)
-	}
-	if requireChecks(input.Config) {
-		checks, err := input.GitHub.GetPullRequestChecks(ctx, int(linked.Number))
-		if err != nil {
-			return TaskMergePlanResult{}, fmt.Errorf("get checks for pull request #%d: %w", linked.Number, err)
-		}
-		if err := validatePullRequestChecks(checks); err != nil {
-			return TaskMergePlanResult{}, err
-		}
 	}
 
 	currentState := task.DeriveState(task.LifecycleSnapshot{
@@ -439,21 +466,69 @@ func BuildTaskMergePlan(ctx context.Context, input TaskIssueInput) (TaskMergePla
 	if err != nil {
 		return TaskMergePlanResult{}, fmt.Errorf("read current branch: %w", err)
 	}
+	if !input.DryRun {
+		clean, files, err := input.Git.IsWorkTreeClean(ctx)
+		if err != nil {
+			return TaskMergePlanResult{}, fmt.Errorf("read working tree status: %w", err)
+		}
+		if !clean {
+			return TaskMergePlanResult{}, fmt.Errorf("working tree is dirty (%s); commit or stash changes, then run: parsevkctl task merge %d", strings.Join(files, ", "), input.IssueNumber)
+		}
+	}
+	localBranchExists := false
+	if strings.TrimSpace(linked.Head) != "" {
+		localBranchExists, err = input.Git.LocalBranchExists(ctx, linked.Head)
+		if err != nil {
+			return TaskMergePlanResult{}, fmt.Errorf("check local branch %q: %w", linked.Head, err)
+		}
+	}
+	remoteBranchExists := false
+	if strings.TrimSpace(linked.Head) != "" && mergeDeletesBranch(input.Config) {
+		remoteBranchExists, err = input.Git.RemoteBranchExists(ctx, "origin", linked.Head)
+		if err != nil {
+			return TaskMergePlanResult{}, fmt.Errorf("check remote branch %q: %w", linked.Head, err)
+		}
+	}
 	plan, err := planner.NewMergeTaskPlan(planner.MergeTaskInput{
-		Issue:              issue,
-		PullRequest:        *linked,
-		DefaultBranch:      input.Config.DefaultBranch,
-		TargetStatus:       domain.ProjectStatusDone,
-		MergeMethod:        mergeStrategy(input.Config),
-		DeleteRemoteBranch: mergeDeletesBranch(input.Config),
-		DeleteLocalBranch:  mergeDeletesBranch(input.Config) && currentBranch == linked.Head && linked.Head != "",
-		CloseIssue:         true,
-		SyncDefaultBranch:  currentBranch != input.Config.DefaultBranch,
+		Issue:                  issue,
+		PullRequest:            *linked,
+		DefaultBranch:          defaultBranch,
+		TargetStatus:           domain.ProjectStatusDone,
+		MergeMethod:            mergeStrategy(input.Config),
+		DeleteRemoteBranch:     false,
+		DeleteLocalBranch:      mergeDeletesBranch(input.Config) && localBranchExists && linked.Head != "",
+		ForceDeleteLocalBranch: input.ForceDeleteLocalBranch,
+		DeleteRemoteAfterMerge: mergeDeletesBranch(input.Config) && remoteBranchExists && linked.Head != "",
+		CloseIssue:             true,
+		SyncDefaultBranch:      true,
+		UpdateReviewLabels:     true,
 	})
 	if err != nil {
 		return TaskMergePlanResult{}, err
 	}
-	return TaskMergePlanResult{Plan: plan, PullRequest: PRResult{Number: int(linked.Number), URL: linked.URL}}, nil
+	return TaskMergePlanResult{
+		Plan:               plan,
+		PullRequest:        PRResult{Number: int(linked.Number), URL: linked.URL},
+		Issue:              IssueResult{Number: int(issue.ID), Title: issue.Title},
+		BaseBranch:         linked.Base,
+		HeadBranch:         linked.Head,
+		LocalGate:          &gate,
+		DeletedLocal:       mergeDeletesBranch(input.Config) && localBranchExists && linked.Head != "",
+		DeletedRemote:      mergeDeletesBranch(input.Config) && remoteBranchExists && linked.Head != "",
+		RemovedLabel:       "ai:needs-review",
+		AddedLabels:        []string{"review:passed", "ai:approved"},
+		PulledBranch:       defaultBranch,
+		CurrentBranch:      currentBranch,
+		LocalBranchExists:  localBranchExists,
+		RemoteBranchExists: remoteBranchExists,
+	}, nil
+}
+
+func workflowDefaultBranch(ctx context.Context, input TaskIssueInput) (string, error) {
+	if configured := strings.TrimSpace(input.Config.DefaultBranch); configured != "" {
+		return configured, nil
+	}
+	return input.Git.DefaultBranch(ctx)
 }
 
 func loadIssueContext(ctx context.Context, input TaskIssueInput) (domain.Issue, domain.ProjectStatus, []domain.PullRequest, error) {
@@ -681,6 +756,125 @@ func mergeDeletesBranch(cfg config.Config) bool {
 		return false
 	}
 	return *cfg.Merge.DeleteBranch
+}
+
+type mergeBlockersError struct {
+	Blockers []string
+}
+
+func (err mergeBlockersError) Error() string {
+	return "merge blocked: " + strings.Join(err.Blockers, "; ")
+}
+
+func mergeBlockedError(blockers []string) error {
+	return mergeBlockersError{Blockers: append([]string(nil), blockers...)}
+}
+
+func isMergeBlocked(err error) bool {
+	var blockersErr mergeBlockersError
+	return errors.As(err, &blockersErr)
+}
+
+func renderMergeBlocked(w io.Writer, err error) {
+	out := output(w)
+	fmt.Fprintln(out, "Merge blocked")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Blockers:")
+	var blockersErr mergeBlockersError
+	if errors.As(err, &blockersErr) {
+		for idx, blocker := range blockersErr.Blockers {
+			fmt.Fprintf(out, "%d. %s\n", idx+1, blocker)
+		}
+	} else {
+		fmt.Fprintf(out, "1. %s\n", err.Error())
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "No changes were made.")
+}
+
+func renderTaskMergeDryRun(w io.Writer, result TaskMergePlanResult) {
+	out := output(w)
+	fmt.Fprintln(out, "DRY RUN: no changes were made")
+	fmt.Fprintln(out)
+	renderTaskMergeSummary(out, result)
+	fmt.Fprintln(out)
+	renderTaskMergeGate(out, result)
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Plan:")
+	for _, line := range planner.RenderDryRun(result.Plan) {
+		fmt.Fprintln(out, line)
+	}
+}
+
+func renderTaskMergeCompleted(w io.Writer, result TaskMergePlanResult) {
+	out := output(w)
+	fmt.Fprintln(out, "Merge completed")
+	fmt.Fprintln(out)
+	renderTaskMergeSummary(out, result)
+	fmt.Fprintln(out)
+	renderTaskMergeGate(out, result)
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Merge:")
+	fmt.Fprintln(out, "- PR merged: yes")
+	fmt.Fprintln(out, "- Issue closed: yes")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Labels:")
+	fmt.Fprintf(out, "- removed: %s\n", result.RemovedLabel)
+	for _, label := range result.AddedLabels {
+		fmt.Fprintf(out, "- added: %s\n", label)
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Cleanup:")
+	fmt.Fprintf(out, "- checked out: %s\n", result.PulledBranch)
+	fmt.Fprintf(out, "- pulled: %s\n", result.PulledBranch)
+	if result.DeletedLocal {
+		fmt.Fprintf(out, "- deleted local branch: %s\n", result.HeadBranch)
+	} else {
+		fmt.Fprintf(out, "- local branch: not found or deletion disabled\n")
+	}
+	if result.DeletedRemote {
+		fmt.Fprintf(out, "- deleted remote branch: origin/%s\n", result.HeadBranch)
+	} else {
+		fmt.Fprintln(out, "- remote branch: already deleted or deletion disabled")
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "Next:")
+	fmt.Fprintln(out, "- create or start the next issue")
+}
+
+func renderTaskMergeSummary(w io.Writer, result TaskMergePlanResult) {
+	fmt.Fprintf(w, "Issue: #%d\n", result.Issue.Number)
+	fmt.Fprintf(w, "PR: #%d\n", result.PullRequest.Number)
+	fmt.Fprintf(w, "Base branch: %s\n", result.BaseBranch)
+	fmt.Fprintf(w, "Head branch: %s\n", result.HeadBranch)
+}
+
+func renderTaskMergeGate(w io.Writer, result TaskMergePlanResult) {
+	fmt.Fprintln(w, "Local gate:")
+	if result.LocalGate == nil {
+		fmt.Fprintln(w, "- Blockers: unknown")
+		return
+	}
+	fmt.Fprintln(w, "- PR open: OK")
+	fmt.Fprintf(w, "- Draft: %t\n", result.LocalGate.PullRequest.Draft)
+	fmt.Fprintln(w, "- Base branch: OK")
+	fmt.Fprintln(w, "- Closes issue: OK")
+	fmt.Fprintf(w, "- Mergeable: %s\n", result.LocalGate.PullRequest.Mergeable)
+	if len(result.LocalGate.Checks) == 0 {
+		fmt.Fprintln(w, "- Checks: none")
+	} else {
+		fmt.Fprintf(w, "- Checks: %s\n", strings.Join(result.LocalGate.Checks, "; "))
+	}
+	if len(result.LocalGate.Secrets) == 0 {
+		fmt.Fprintln(w, "- Secrets: OK")
+	} else {
+		fmt.Fprintf(w, "- Secrets: %s\n", strings.Join(result.LocalGate.Secrets, "; "))
+	}
+	if len(result.LocalGate.Blockers) == 0 {
+		fmt.Fprintln(w, "- Blockers: none")
+	} else {
+		fmt.Fprintf(w, "- Blockers: %s\n", strings.Join(result.LocalGate.Blockers, "; "))
+	}
 }
 
 func renderPlan(w io.Writer, plan planner.Plan, jsonOutput bool) int {
