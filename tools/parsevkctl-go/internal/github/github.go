@@ -10,6 +10,8 @@ type Adapter interface {
 	GetIssue(ctx context.Context, number int) (domain.Issue, error)
 	CreateIssue(ctx context.Context, input CreateIssueInput) (domain.Issue, error)
 	CloseIssue(ctx context.Context, number int, comment string) error
+	ListLabels(ctx context.Context) ([]Label, error)
+	CreateLabel(ctx context.Context, label Label) error
 
 	ListPullRequests(ctx context.Context, filter PullRequestFilter) ([]domain.PullRequest, error)
 	CreatePullRequest(ctx context.Context, input CreatePullRequestInput) (domain.PullRequest, error)

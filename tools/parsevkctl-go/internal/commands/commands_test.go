@@ -731,9 +731,12 @@ func (f *fakeGit) HasCommitsAhead(context.Context, string, string) (bool, error)
 
 type fakeGitHub struct {
 	issue           domain.Issue
+	labels          []github.Label
+	createdLabels   []github.Label
 	prs             []domain.PullRequest
 	checks          domain.PullRequestChecks
 	checkErr        error
+	createLabelErr  error
 	checkCalls      int
 	project         domain.ProjectItem
 	projectErr      error
@@ -755,6 +758,20 @@ func (f *fakeGitHub) CreateIssue(context.Context, github.CreateIssueInput) (doma
 func (f *fakeGitHub) CloseIssue(context.Context, int, string) error {
 	f.writeCalls = append(f.writeCalls, "CloseIssue")
 	if f.allowWrites {
+		return nil
+	}
+	return errors.New("write call")
+}
+func (f *fakeGitHub) ListLabels(context.Context) ([]github.Label, error) {
+	return f.labels, nil
+}
+func (f *fakeGitHub) CreateLabel(_ context.Context, label github.Label) error {
+	f.writeCalls = append(f.writeCalls, "CreateLabel")
+	if f.createLabelErr != nil {
+		return f.createLabelErr
+	}
+	if f.allowWrites {
+		f.createdLabels = append(f.createdLabels, label)
 		return nil
 	}
 	return errors.New("write call")

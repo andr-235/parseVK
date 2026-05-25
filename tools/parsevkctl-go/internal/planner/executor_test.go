@@ -220,6 +220,10 @@ func (f *fakeGitHubAdapter) CreateIssue(context.Context, github.CreateIssueInput
 
 func (f *fakeGitHubAdapter) CloseIssue(context.Context, int, string) error { return nil }
 
+func (f *fakeGitHubAdapter) ListLabels(context.Context) ([]github.Label, error) { return nil, nil }
+
+func (f *fakeGitHubAdapter) CreateLabel(context.Context, github.Label) error { return nil }
+
 func (f *fakeGitHubAdapter) ListPullRequests(context.Context, github.PullRequestFilter) ([]domain.PullRequest, error) {
 	return nil, nil
 }

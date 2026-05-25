@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -101,6 +102,39 @@ func (adapter *ShellAdapter) CloseIssue(ctx context.Context, number int, comment
 	}
 
 	_, err := adapter.runGH(ctx, "close issue", args...)
+	return err
+}
+
+func (adapter *ShellAdapter) ListLabels(ctx context.Context) ([]Label, error) {
+	result, err := adapter.runGH(ctx, "list labels", "label", "list", "--limit", "200", "--json", "name,color,description")
+	if err != nil {
+		return nil, err
+	}
+
+	var labels []Label
+	if err := json.Unmarshal([]byte(result.stdout), &labels); err != nil {
+		return nil, fmt.Errorf("parse labels JSON: %w", err)
+	}
+	return labels, nil
+}
+
+func (adapter *ShellAdapter) CreateLabel(ctx context.Context, label Label) error {
+	if strings.TrimSpace(label.Name) == "" {
+		return fmt.Errorf("label name must not be empty")
+	}
+	if strings.TrimSpace(label.Color) == "" {
+		return fmt.Errorf("label color must not be empty")
+	}
+
+	args := []string{"label", "create", label.Name, "--color", label.Color}
+	if strings.TrimSpace(label.Description) != "" {
+		args = append(args, "--description", label.Description)
+	}
+
+	_, err := adapter.runGH(ctx, "create label", args...)
+	if isLabelAlreadyExistsError(err) {
+		return ErrLabelAlreadyExists
+	}
 	return err
 }
 
@@ -366,6 +400,19 @@ func (adapter *ShellAdapter) runGH(ctx context.Context, operation string, args .
 	}
 
 	return result, nil
+}
+
+func isLabelAlreadyExistsError(err error) bool {
+	var commandErr CommandError
+	if !errors.As(err, &commandErr) {
+		return false
+	}
+
+	text := strings.ToLower(commandErr.Stderr + " " + commandErr.Stdout)
+	if commandErr.Err != nil {
+		text += " " + strings.ToLower(commandErr.Err.Error())
+	}
+	return strings.Contains(text, "already exists")
 }
 
 func (adapter *ShellAdapter) validateProjectConfig() error {

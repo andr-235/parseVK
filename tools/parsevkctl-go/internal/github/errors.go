@@ -7,6 +7,7 @@ import (
 )
 
 var ErrProjectNotImplemented = errors.New("github project operations are not implemented")
+var ErrLabelAlreadyExists = errors.New("github label already exists")
 
 type CommandError struct {
 	Operation string
