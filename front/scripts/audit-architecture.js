@@ -1,33 +1,31 @@
 #!/usr/bin/env node
 
 /**
- * Скрипт для аудита архитектуры фронтенд-проекта
+ * Скрипт для аудита архитектуры фронтенд-проекта (Слоистая архитектура)
  * Проверяет соответствие структуры и правил зависимостей
  */
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'fs'
-import { join, dirname } from 'path'
+import { join, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const SRC_DIR = join(__dirname, '..', 'src')
+const SRC_DIR = resolve(__dirname, '..', 'src')
 
 const errors = []
 const warnings = []
 
-// Стандартные папки модуля
-const MODULE_REQUIRED_DIRS = ['components', 'hooks']
-const MODULE_OPTIONAL_DIRS = ['config', 'types', 'utils', 'constants']
+// Разрешенные папки на верхнем уровне src/
+const ALLOWED_SRC_DIRS = ['app', 'pages', 'components', 'hooks', 'api', 'store', 'utils', 'types', 'config']
 
 // Запрещенные импорты
 const FORBIDDEN_IMPORTS = {
-  'modules/**/components/**/*.{ts,tsx}': [
+  'components/**/*.{ts,tsx}': [
     { pattern: /from ['"]@\/store/, message: 'Компоненты не должны импортировать store напрямую' },
-    { pattern: /from ['"]\.\.\/store/, message: 'Компоненты не должны импортировать store напрямую' },
   ],
   'utils/**/*.{ts,tsx}': [
-    { pattern: /from ['"]@\/services/, message: 'Utils должны быть чистыми функциями без зависимостей от services' },
+    { pattern: /from ['"]@\/api/, message: 'Utils должны быть чистыми функциями без зависимостей от api' },
     { pattern: /from ['"]@\/store/, message: 'Utils должны быть чистыми функциями без зависимостей от store' },
   ],
 }
@@ -52,27 +50,38 @@ function getAllFiles(dir, fileList = []) {
 }
 
 function checkRelativeImports(filePath, content) {
-  const relativeImportPattern = /from ['"]\.\.\/+/
-  const matches = content.match(relativeImportPattern)
+  // Ищем относительные импорты вида: from '../...' или from '../../...'
+  const relativeImportPattern = /from\s+['"](\.\.[^'"]+)['"]/g
+  let match
 
-  if (matches) {
-    // Исключаем импорты внутри модулей (они должны использовать @/)
-    if (filePath.includes('/modules/')) {
+  while ((match = relativeImportPattern.exec(content)) !== null) {
+    const relImport = match[1]
+    const absImportPath = resolve(dirname(filePath), relImport)
+    
+    const fileRelPath = filePath.replace(SRC_DIR, '').replace(/\\/g, '/')
+    const importRelPath = absImportPath.replace(SRC_DIR, '').replace(/\\/g, '/')
+    
+    // Получаем имя слоя текущего файла и импортируемого файла (например, 'components' или 'hooks')
+    const fileLayer = fileRelPath.split('/')[1]
+    const importLayer = importRelPath.split('/')[1]
+    
+    // Если слои отличаются, это нарушение (нельзя импортировать из components в hooks по относительному пути)
+    if (fileLayer && importLayer && fileLayer !== importLayer) {
       errors.push({
-        file: filePath.replace(SRC_DIR, ''),
-        message: 'Модули должны использовать alias @/ вместо относительных импортов',
-        line: content.substring(0, content.indexOf(matches[0])).split('\n').length,
+        file: fileRelPath,
+        message: `Запрещено импортировать между разными слоями по относительному пути (${fileLayer} -> ${importLayer}). Используйте alias @/`,
+        line: content.substring(0, match.index).split('\n').length,
       })
     }
   }
 }
 
 function checkForbiddenImports(filePath, content) {
-  const relativePath = filePath.replace(SRC_DIR, '')
+  const relativePath = filePath.replace(SRC_DIR, '').replace(/\\/g, '/')
 
-  // Проверка для компонентов модулей
-  if (relativePath.match(/modules\/[^/]+\/components\/.+\.[tj]sx?$/)) {
-    FORBIDDEN_IMPORTS['modules/**/components/**/*.{ts,tsx}'].forEach(({ pattern, message }) => {
+  // Проверка для компонентов
+  if (relativePath.startsWith('/components/')) {
+    FORBIDDEN_IMPORTS['components/**/*.{ts,tsx}'].forEach(({ pattern, message }) => {
       if (pattern.test(content)) {
         const line = content.split('\n').findIndex((line) => pattern.test(line)) + 1
         errors.push({
@@ -85,7 +94,7 @@ function checkForbiddenImports(filePath, content) {
   }
 
   // Проверка для utils
-  if (relativePath.match(/^\/utils\/.+\.[tj]sx?$/)) {
+  if (relativePath.startsWith('/utils/')) {
     FORBIDDEN_IMPORTS['utils/**/*.{ts,tsx}'].forEach(({ pattern, message }) => {
       if (pattern.test(content)) {
         const line = content.split('\n').findIndex((line) => pattern.test(line)) + 1
@@ -97,46 +106,54 @@ function checkForbiddenImports(filePath, content) {
       }
     })
   }
+
+  // Проверка на использование старых путей @/shared/ и @/modules/
+  const legacySharedPattern = /from ['"]@\/shared/
+  const legacyModulesPattern = /from ['"]@\/modules/
+  
+  if (legacySharedPattern.test(content)) {
+    const line = content.split('\n').findIndex((line) => legacySharedPattern.test(line)) + 1
+    errors.push({
+      file: relativePath,
+      message: 'Обнаружен устаревший импорт из @/shared. Используйте новые слои (@/components/ui, @/components/common, @/hooks/common и т.д.)',
+      line,
+    })
+  }
+
+  if (legacyModulesPattern.test(content)) {
+    const line = content.split('\n').findIndex((line) => legacyModulesPattern.test(line)) + 1
+    errors.push({
+      file: relativePath,
+      message: 'Обнаружен устаревший импорт из @/modules. Используйте новые слои (@/components/{feature}, @/hooks/{feature} и т.g.)',
+      line,
+    })
+  }
 }
 
-function checkModuleStructure(modulePath, moduleName) {
-  const requiredDirs = MODULE_REQUIRED_DIRS.filter((dir) => !existsSync(join(modulePath, dir)))
+function checkSrcStructure() {
+  if (!existsSync(SRC_DIR)) return
 
-  if (requiredDirs.length > 0) {
-    errors.push({
-      file: `modules/${moduleName}/`,
-      message: `Отсутствуют обязательные папки: ${requiredDirs.join(', ')}`,
-    })
-  }
-
-  // Проверка на наличие types.ts вместо types/
-  const typesFile = join(modulePath, 'types.ts')
-  if (existsSync(typesFile)) {
-    warnings.push({
-      file: `modules/${moduleName}/types.ts`,
-      message: 'Рекомендуется использовать папку types/ вместо файла types.ts для единообразия',
-    })
-  }
+  const items = readdirSync(SRC_DIR)
+  items.forEach((item) => {
+    const itemPath = join(SRC_DIR, item)
+    if (statSync(itemPath).isDirectory()) {
+      if (!ALLOWED_SRC_DIRS.includes(item)) {
+        errors.push({
+          file: `src/${item}/`,
+          message: `Папка не разрешена на верхнем уровне src/. Разрешенные папки: ${ALLOWED_SRC_DIRS.join(', ')}`,
+        })
+      }
+    }
+  })
 }
 
 function auditArchitecture() {
-  console.log('🔍 Запуск аудита архитектуры...\n')
+  console.log('🔍 Запуск аудита новой архитектуры...\n')
 
-  // Проверка структуры модулей
-  const modulesDir = join(SRC_DIR, 'modules')
-  if (existsSync(modulesDir)) {
-    const modules = readdirSync(modulesDir).filter((item) => {
-      const itemPath = join(modulesDir, item)
-      return statSync(itemPath).isDirectory()
-    })
+  // Проверка папок на верхнем уровне src/
+  checkSrcStructure()
 
-    modules.forEach((moduleName) => {
-      const modulePath = join(modulesDir, moduleName)
-      checkModuleStructure(modulePath, moduleName)
-    })
-  }
-
-  // Проверка импортов
+  // Проверка импортов во всех файлах
   const files = getAllFiles(SRC_DIR)
 
   files.forEach((filePath) => {
@@ -153,7 +170,7 @@ function auditArchitecture() {
   console.log('📊 Результаты аудита:\n')
 
   if (errors.length === 0 && warnings.length === 0) {
-    console.log('✅ Все проверки пройдены успешно!\n')
+    console.log('✅ Все проверки новой архитектуры пройдены успешно!\n')
     return 0
   }
 

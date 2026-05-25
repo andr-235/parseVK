@@ -1,4 +1,4 @@
-import { MetricsPage } from '@/modules/metrics'
+import MetricsPage from '@/components/metrics/MetricsPage';
 
 export default function Metrics() {
   return <MetricsPage />

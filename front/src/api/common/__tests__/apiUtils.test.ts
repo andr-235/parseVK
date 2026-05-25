@@ -1,0 +1,53 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createRequest } from '../apiUtils'
+import { useAuthStore } from '@/store/auth'
+
+const { refreshAccessTokenMock } = vi.hoisted(() => ({
+  refreshAccessTokenMock: vi.fn(),
+}))
+
+vi.mock('@/config/auth/lib/authSession', async () => {
+  const actual = await vi.importActual<typeof import('@/config/auth/lib/authSession')>('@/config/auth/lib/authSession')
+  return {
+    ...actual,
+    refreshAccessToken: refreshAccessTokenMock,
+  }
+})
+
+describe('createRequest', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useAuthStore.setState({
+      accessToken: 'old-access-token',
+      user: {
+        id: 'user-1',
+        username: 'admin',
+        role: 'admin',
+        isActive: true,
+        isSuperuser: true,
+      },
+    })
+  })
+
+  it('retries the original request with a new access token after 401', async () => {
+    refreshAccessTokenMock.mockResolvedValue('new-access-token')
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    globalThis.fetch = fetchMock as typeof fetch
+
+    const response = await createRequest('/comments')
+
+    expect(response.status).toBe(200)
+    expect(refreshAccessTokenMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    const firstHeaders = new Headers(fetchMock.mock.calls[0]?.[1]?.headers)
+    const retryHeaders = new Headers(fetchMock.mock.calls[1]?.[1]?.headers)
+
+    expect(firstHeaders.get('Authorization')).toBe('Bearer old-access-token')
+    expect(retryHeaders.get('Authorization')).toBe('Bearer new-access-token')
+  })
+})

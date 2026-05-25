@@ -26,11 +26,11 @@
 - ✅ Настроены стили уведомлений
 
 ### 5. **Dark Mode**
-- ✅ Создан `themeStore` с использованием Zustand
-- ✅ Реализован компонент `ThemeToggle`
-- ✅ Добавлены CSS переменные для цветов
-- ✅ Настроены плавные переходы между темами
-- ✅ Состояние темы сохраняется в localStorage
+- ✅ Темный режим включен по умолчанию на глобальном уровне в [App.tsx](file:///C:/Users/Андрей/Desktop/Разработка/parseVK/front/src/App.tsx)
+- ✅ Настроены CSS-переменные для темной темы в [index.css](file:///C:/Users/Андрей/Desktop/Разработка/parseVK/front/src/index.css)
+- ✅ Настроен современный glassmorphic-стиль интерфейса для темного оформления
+- 📌 Реализация полноценного переключателя тем (Dark/Light Mode) перенесена в список будущих задач
+
 
 ### 6. **Сортировка таблиц**
 - ✅ Добавлена возможность сортировки по колонкам
@@ -76,15 +76,13 @@
 - `.prettierignore` - исключения для Prettier
 - `.env` - переменные окружения
 - `.env.example` - пример переменных окружения
-- `src/stores/themeStore.ts` - store для темы
-- `src/components/ThemeToggle.tsx` - переключатель темы
-- `src/components/SearchInput.tsx` - компонент поиска
+- `src/components/common/SearchInput.tsx` - компонент поиска
 
 ### Модифицированные файлы
 - `src/App.tsx` - добавлены Router и Toaster
-- `src/App.css` - CSS переменные для dark mode
-- `src/components/Sidebar.tsx` - NavLink вместо кликов
-- `src/components/Table.tsx` - сортировка и поиск
+- `src/index.css` - CSS переменные для dark mode и глобальные стили
+- `src/components/common/Sidebar/Sidebar.tsx` - NavLink вместо кликов
+- `src/components/ui/table.tsx` - сортировка и поиск в таблицах
 - `src/pages/Keywords.tsx` - добавлен поиск
 - `src/pages/Tasks.tsx` - toast вместо alert
 - `src/types/index.ts` - добавлено поле sortable

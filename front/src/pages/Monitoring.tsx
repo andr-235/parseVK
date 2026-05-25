@@ -1,4 +1,4 @@
-import { MonitoringPage } from '@/modules/monitoring'
+import MonitoringPage from '@/components/monitoring/MonitoringPage';
 
 export default function Monitoring() {
   return <MonitoringPage />

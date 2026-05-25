@@ -1,0 +1,4 @@
+REQUEST_ID_HEADER = "X-Request-ID"
+CORRELATION_ID_HEADER = "X-Correlation-ID"
+INTERNAL_SERVICE_TOKEN_HEADER = "X-Internal-Service-Token"
+CALLER_SERVICE_HEADER = "X-Caller-Service"
