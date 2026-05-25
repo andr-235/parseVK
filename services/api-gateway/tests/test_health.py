@@ -22,3 +22,13 @@ async def test_health_returns_up():
 
     assert response.status_code == 200
     assert response.json() == {"status": "UP"}
+
+
+@pytest.mark.asyncio
+async def test_ready_returns_ready():
+    app = create_app()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/ready")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "READY"}

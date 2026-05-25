@@ -33,6 +33,10 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "UP"}
 
+    @app.get("/ready")
+    async def ready() -> dict[str, str]:
+        return {"status": "READY"}
+
     from app.modules.watchlist.router import router as watchlist_router
 
     app.include_router(auth_router)
