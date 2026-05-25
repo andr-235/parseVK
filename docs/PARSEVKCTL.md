@@ -107,6 +107,12 @@ go run ./cmd/parsevkctl task status 123
 go run ./cmd/parsevkctl task sync 123
 ```
 
+`task status <issue>` is diagnostic only. It reads issue metadata, labels,
+linked PR metadata, mergeability, GitHub checks, default branch, current branch,
+worktree cleanliness, expected task branch, and local/remote branch existence.
+It reports blockers and notes, infers the workflow stage, and prints one next
+`parsevkctl` command without changing GitHub or local git state.
+
 Preview write operations without mutating GitHub or local git state:
 
 ```powershell

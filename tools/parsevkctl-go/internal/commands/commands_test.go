@@ -36,15 +36,18 @@ func TestTaskStatusHumanNoPR(t *testing.T) {
 	}
 	text := out.String()
 	for _, want := range []string{
-		"Task status #112",
-		"Issue: Open",
-		"Project: unavailable",
-		"Pull request: none",
-		"Current branch: ai/mbp-112-read-only-commands",
-		"Expected branch: ai/mbp-112-add-read-only-task-commands",
-		"Working tree: clean",
-		"Lifecycle state: InProgress",
-		"Suggested next command: parsevkctl task pr <issue>",
+		"Task Status",
+		"- Number: #112",
+		"- State: OPEN",
+		"- Labels: ai:ready, type:infra",
+		"- Stage: Ready for AI",
+		"- Current branch: ai/mbp-112-read-only-commands",
+		"- Expected branch: ai/mbp-112-add-read-only-task-commands",
+		"- Worktree clean: true",
+		"- Local branch exists: false",
+		"- Remote branch exists: false",
+		"- None",
+		"parsevkctl task start 112",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("output missing %q:\n%s", want, text)
@@ -91,6 +94,158 @@ func TestTaskStatusJSONOpenPR(t *testing.T) {
 	}
 	if len(got.Warnings) != 0 {
 		t.Fatalf("warnings = %#v, want none", got.Warnings)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskStatusHumanFullReportWithReadyToMergePR(t *testing.T) {
+	deps := okDeps()
+	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
+	deps.Git.defaultBranch = "fastapi-microservices-rewrite"
+	deps.Git.localBranchExists = true
+	deps.Git.remoteBranchExists = true
+	deps.GitHub.issue.Labels = []string{"ai:needs-review", "type:infra", "service:parsevkctl", "risk:low"}
+	deps.GitHub.project = domain.ProjectItem{ID: "item-1", Status: domain.ProjectStatusReview}
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 7,
+		Title:  "MBP-112: Add read-only task commands",
+		State:  domain.PullRequestStateOpen,
+		URL:    "https://github.test/pr/7",
+		Base:   "fastapi-microservices-rewrite",
+		Head:   "ai/mbp-112-add-read-only-task-commands",
+	}}
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		7: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        "Closes #112\n\n## Summary\n- done",
+			Mergeable:   github.MergeableStateMergeable,
+			Files:       []string{"tools/parsevkctl-go/internal/commands/status.go"},
+		},
+	}
+	deps.GitHub.checks = domain.PullRequestChecks{
+		PullRequestNumber: 7,
+		Total:             1,
+		Successful:        1,
+		Checks: []domain.PullRequestCheck{{
+			Name:   "go test ./...",
+			State:  domain.CheckStateSuccess,
+			Bucket: domain.CheckStateSuccess,
+		}},
+	}
+
+	var out bytes.Buffer
+	exit := RunTaskStatus(context.Background(), TaskStatusInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+		JSON:        false,
+		Stdout:      &out,
+		Stderr:      io.Discard,
+	})
+
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0; output:\n%s", exit, out.String())
+	}
+	text := out.String()
+	for _, want := range []string{
+		"Task Status",
+		"- Number: #112",
+		"- Labels: ai:needs-review, type:infra, service:parsevkctl, risk:low",
+		"- Stage: Ready to Merge",
+		"- Default branch: fastapi-microservices-rewrite",
+		"- Current branch: ai/mbp-112-add-read-only-task-commands",
+		"- Local branch exists: true",
+		"- Remote branch exists: true",
+		"- Number: #7",
+		"- Mergeable: true",
+		"- Closes issue: true",
+		"- go test ./...: passed",
+		"- Blockers: none",
+		"parsevkctl task merge 112",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("output missing %q:\n%s", want, text)
+		}
+	}
+	if deps.GitHub.checkCalls != 1 {
+		t.Fatalf("check calls = %d, want 1", deps.GitHub.checkCalls)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskStatusReportsInconsistentLabelsAsUnknown(t *testing.T) {
+	deps := okDeps()
+	deps.GitHub.issue.Labels = []string{"ai:ready", "ai:needs-review"}
+	deps.Git.localBranchExists = false
+	deps.Git.remoteBranchExists = false
+
+	result, err := BuildStatus(context.Background(), TaskStatusInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err != nil {
+		t.Fatalf("BuildStatus returned error: %v", err)
+	}
+	if result.WorkflowStage != "Unknown" {
+		t.Fatalf("stage = %q, want Unknown", result.WorkflowStage)
+	}
+	if result.SuggestedCommand != "Inspect labels and PR linkage manually." {
+		t.Fatalf("next = %q, want manual inspection", result.SuggestedCommand)
+	}
+	if len(result.Gate.Blockers) == 0 {
+		t.Fatalf("blockers = %#v, want inconsistent labels blocker", result.Gate.Blockers)
+	}
+	deps.assertNoWrites(t)
+}
+
+func TestTaskStatusKeepsOpenPRWithPendingChecksInReview(t *testing.T) {
+	deps := okDeps()
+	deps.Git.currentBranch = "ai/mbp-112-add-read-only-task-commands"
+	deps.Git.localBranchExists = true
+	deps.Git.remoteBranchExists = true
+	deps.GitHub.issue.Labels = []string{"ai:needs-review"}
+	deps.GitHub.prs = []domain.PullRequest{{
+		Number: 7,
+		Title:  "MBP-112: Add read-only task commands",
+		State:  domain.PullRequestStateOpen,
+		Base:   deps.Config.DefaultBranch,
+		Head:   "ai/mbp-112-add-read-only-task-commands",
+	}}
+	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
+		7: {
+			PullRequest: deps.GitHub.prs[0],
+			Body:        "Closes #112",
+			Mergeable:   github.MergeableStateMergeable,
+		},
+	}
+	deps.GitHub.checks = domain.PullRequestChecks{
+		PullRequestNumber: 7,
+		Total:             1,
+		Pending:           1,
+		Checks: []domain.PullRequestCheck{{
+			Name:   "parsevkctl / Validate Go CLI",
+			State:  domain.CheckStatePending,
+			Bucket: domain.CheckStatePending,
+		}},
+	}
+
+	result, err := BuildStatus(context.Background(), TaskStatusInput{
+		IssueNumber: 112,
+		Config:      deps.Config,
+		Git:         deps.Git,
+		GitHub:      deps.GitHub,
+	})
+	if err != nil {
+		t.Fatalf("BuildStatus returned error: %v", err)
+	}
+	if result.WorkflowStage != "Needs Review" {
+		t.Fatalf("stage = %q, want Needs Review", result.WorkflowStage)
+	}
+	if result.SuggestedCommand != "parsevkctl task review 112" {
+		t.Fatalf("next = %q, want review command", result.SuggestedCommand)
 	}
 	deps.assertNoWrites(t)
 }
