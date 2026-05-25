@@ -59,14 +59,6 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: '@/shared/ui',
-        replacement: path.resolve(__dirname, './src/shared/ui'),
-      },
-      {
-        find: '@/shared/components',
-        replacement: path.resolve(__dirname, './src/shared/components'),
-      },
-      {
         find: '@/hooks',
         replacement: path.resolve(__dirname, './src/hooks'),
       },
@@ -90,6 +82,18 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/api/v1/auth': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+      },
+      '/api/v1/tasks': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+      },
+      '/api/v1/content': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,

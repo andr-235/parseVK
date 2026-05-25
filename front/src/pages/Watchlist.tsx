@@ -1,4 +1,4 @@
-import { WatchlistPage } from '@/modules/watchlist'
+import WatchlistPage from '@/components/watchlist/WatchlistPage';
 
 export default function Watchlist() {
   return <WatchlistPage />
