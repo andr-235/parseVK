@@ -414,7 +414,7 @@ Usage:
   parsevkctl labels bootstrap [--config <path>] [--dry-run] [--json]
   parsevkctl task status <issue> [--config <path>] [--json]
   parsevkctl task sync <issue> [--config <path>] [--json]
-  parsevkctl task review <issue> [--config <path>] [--json]
+  parsevkctl task review <issue> [--config <path>] [--json] (deprecated)
   parsevkctl task create "Title" [--body "..."] [--config <path>] [--dry-run] [--json]
   parsevkctl task start <issue> [--config <path>] [--dry-run] [--json]
   parsevkctl task pr <issue> [--config <path>] [--dry-run] [--json]
@@ -426,11 +426,11 @@ Commands:
   labels bootstrap  Create missing standard GitHub labels for parseVK workflow
   task status       Show read-only task state summary
   task sync         Preview task state drift and suggested fixes
-  task review       Run a read-only local PR review gate
+  task review       (Deprecated) Use $parsevk-pr-review instead
   task create       Create a GitHub issue and optionally add it to the Project
   task start        Move an issue to In Progress and create a task branch
   task pr           Push the task branch and create a pull request
-  task merge        Merge the linked pull request and finish the issue
+  task merge        Merge the linked pull request (mechanical merge checks only, use $parsevk-merge-gate first)
 
 Global flags:
   --config <path>   Path to config.json

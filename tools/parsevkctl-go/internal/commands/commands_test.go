@@ -391,7 +391,7 @@ func TestTaskReviewAllowsCleanOpenPR(t *testing.T) {
 	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
 		7: {
 			PullRequest: deps.GitHub.prs[0],
-			Body:        pullRequestBody(112, []string{"tools/parsevkctl-go/internal/commands/review.go", "tools/parsevkctl-go/README.md"}),
+			Body:        "Closes #112",
 			Mergeable:   github.MergeableStateMergeable,
 			Files:       []string{"tools/parsevkctl-go/internal/commands/review.go", "tools/parsevkctl-go/README.md"},
 		},
@@ -406,7 +406,6 @@ func TestTaskReviewAllowsCleanOpenPR(t *testing.T) {
 			Bucket: domain.CheckStateSuccess,
 		}},
 	}
-	deps.GitHub.prDiff = "diff --git a/tools/parsevkctl-go/internal/commands/review.go b/tools/parsevkctl-go/internal/commands/review.go\n+package commands\n"
 
 	var out bytes.Buffer
 	exit := RunTaskReview(context.Background(), TaskReviewRunInput{
@@ -425,6 +424,7 @@ func TestTaskReviewAllowsCleanOpenPR(t *testing.T) {
 	}
 	text := out.String()
 	for _, want := range []string{
+		"WARNING: task review is deprecated. Use $parsevk-pr-review instead.",
 		"PR Review Report",
 		"Issue: #112",
 		"PR: #7",
@@ -432,11 +432,11 @@ func TestTaskReviewAllowsCleanOpenPR(t *testing.T) {
 		"- tools/parsevkctl-go/internal/commands/review.go",
 		"- go test ./...: passed",
 		"Secrets:",
-		"- OK: no obvious secrets found",
+		"- OK: manual secret review required",
 		"Blockers:",
 		"- none",
 		"Non-blocking notes:",
-		"- no official GitHub approve was created",
+		"- task review is deprecated; use $parsevk-pr-review",
 		"Verdict:",
 		"Можно мержить",
 		"Next:",
@@ -449,7 +449,7 @@ func TestTaskReviewAllowsCleanOpenPR(t *testing.T) {
 	deps.assertNoWrites(t)
 }
 
-func TestTaskReviewBlocksSecretsAndFailedChecks(t *testing.T) {
+func TestTaskReviewBlocksFailedChecks(t *testing.T) {
 	deps := okDeps()
 	deps.GitHub.issue.Labels = []string{"ai:needs-review"}
 	deps.GitHub.prs = []domain.PullRequest{{
@@ -477,7 +477,6 @@ func TestTaskReviewBlocksSecretsAndFailedChecks(t *testing.T) {
 			Bucket: domain.CheckStateFailure,
 		}},
 	}
-	deps.GitHub.prDiff = "+api_" + "key=abc123\n"
 
 	var out bytes.Buffer
 	exit := RunTaskReview(context.Background(), TaskReviewRunInput{
@@ -497,10 +496,8 @@ func TestTaskReviewBlocksSecretsAndFailedChecks(t *testing.T) {
 	text := out.String()
 	for _, want := range []string{
 		"- go test ./...: failed",
-		"- potential secret pattern detected: api_" + "key=",
 		"Blockers:",
 		"pull request #7 has failed checks: go test ./...",
-		"potential secrets detected in PR diff",
 		"Verdict:",
 		"Пока не мержить",
 	} {
@@ -754,7 +751,7 @@ func TestTaskPRDryRunPlan(t *testing.T) {
 		"- [ ] tools/parsevkctl-go/internal/commands/write.go",
 		"## Validation",
 		"## Risks",
-		"## AI Handoff",
+		"## AI Workflow",
 	} {
 		if !strings.Contains(result.PullRequestBody, want) {
 			t.Fatalf("PR body missing %q:\n%s", want, result.PullRequestBody)
@@ -805,7 +802,7 @@ func TestTaskPRSuccessOutputIncludesSummary(t *testing.T) {
 		"PR: https://github.test/pull/9",
 		"removed: ai:in-progress",
 		"added: ai:needs-review",
-		"ask ChatGPT to review the PR first",
+		"run $parsevk-pr-review to review the PR",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("output missing %q:\n%s", want, text)
@@ -837,36 +834,6 @@ func TestTaskMergeRejectsDraftPR(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "pull request #9 is draft") {
 		t.Fatalf("err = %v, want draft PR error", err)
-	}
-	deps.assertNoWrites(t)
-}
-
-func TestTaskMergeRejectsMissingReviewGateSections(t *testing.T) {
-	deps := okDeps()
-	deps.GitHub.issue.Labels = []string{"ai:needs-review", "type:infra"}
-	deps.GitHub.prs = []domain.PullRequest{{
-		Number: 9,
-		State:  domain.PullRequestStateOpen,
-		Base:   deps.Config.DefaultBranch,
-		Head:   "ai/mbp-112-add-read-only-task-commands",
-	}}
-	deps.GitHub.prDetails = map[int]github.PullRequestDetails{
-		9: {
-			PullRequest: deps.GitHub.prs[0],
-			Body:        "Closes #112",
-			Mergeable:   github.MergeableStateMergeable,
-			Files:       []string{"tools/parsevkctl-go/internal/commands/write.go"},
-		},
-	}
-
-	_, err := BuildTaskMergePlan(context.Background(), TaskIssueInput{
-		IssueNumber: 112,
-		Config:      deps.Config,
-		Git:         deps.Git,
-		GitHub:      deps.GitHub,
-	})
-	if err == nil || !strings.Contains(err.Error(), "PR body is missing required section: Summary") {
-		t.Fatalf("err = %v, want missing Summary blocker", err)
 	}
 	deps.assertNoWrites(t)
 }

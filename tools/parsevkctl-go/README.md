@@ -2,6 +2,20 @@
 
 Canonical Go-only implementation of `parsevkctl`.
 
+> [!IMPORTANT]
+> `parsevkctl` is a deterministic helper CLI. AI workflow reasoning lives in `.agents/skills/`, role-specific review lives in `.codex/agents/`, and dangerous command control lives in `.codex/rules/`.
+
+### Responsibility Boundaries
+
+| Responsibility | Owner |
+|---|---|
+| Issue planning | `.agents/skills/parsevk-github-task-planning` |
+| Implementation behavior | `.agents/skills/parsevk-codex-implementation` |
+| PR review | `.agents/skills/parsevk-pr-review` |
+| Merge decision reasoning | `.agents/skills/parsevk-merge-gate` |
+| Mechanical GitHub/Git operations | `parsevkctl` |
+| Dangerous command policy | `.codex/rules/parsevk.rules` |
+
 ```powershell
 go test ./...
 go run ./cmd/parsevkctl config validate
@@ -99,14 +113,7 @@ pull requests or local branches.
 items and suggested safe fixes, but does not update Project status, close
 issues, create branches, create PRs or merge anything.
 
-`parsevkctl task review <issue>` is a read-only local PR review gate. It loads
-the issue and linked PR, validates the PR is open, non-draft, based on the
-configured default branch, and contains `Closes #<issue>` in the body. It lists
-changed files, checks practical parsevkctl/docs scope, reports mergeability,
-prints GitHub checks without overstating missing checks, scans the PR diff for
-obvious secret patterns, separates blockers from notes, and ends with one of
-the workflow verdicts. It never creates GitHub reviews, approvals, comments,
-label updates, merges, or branch changes.
+`parsevkctl task review <issue>` is **deprecated**. Use `$parsevk-pr-review` for actual PR review. This command only loads basic PR status and checks mechanical validation items for compatibility (PR exists, is open, non-draft, base matches, Closes #<issue> present) without making semantic review decisions or producing review verdicts.
 
 Machine-readable output is available through the global `--json` flag:
 
@@ -156,20 +163,9 @@ branch after PR creation because that branch is not merged yet. If an open PR
 already exists for the same branch/base, the command returns that PR instead of
 creating a duplicate.
 
-`task merge <issue>` finds the linked PR and runs the same local read-only gate
-as `task review <issue>`. It does not create GitHub approvals and never calls
-`gh pr review --approve`. The gate requires an open non-draft PR, the repository
-default branch as base, `Closes #<issue>`, `ai:needs-review`, mergeable state,
-listed changed files, required PR body sections, non-failing checks, and a clean
-lightweight secret scan. If any blocker is found, merge stops before writes.
+`task merge <issue>` finds the linked PR and performs mechanical validation checks (checks that PR exists, is open, non-draft, based on the correct base branch, has no merge conflicts, contains `Closes #<issue>` in the body, and has no failing status checks). Before running this command, make sure to execute `$parsevk-merge-gate` to complete the AI-assisted review process. The command will output a recommendation to do so.
 
-When the local gate passes, `task merge` uses the configured merge strategy,
-replaces `ai:needs-review` with `review:passed` and `ai:approved`, sets Project
-status to `Done`, closes the issue if needed, switches to the default branch,
-pulls with `--ff-only`, deletes the local task branch with `git branch -d`, and
-deletes the remote task branch if it still exists. If local branch deletion
-fails because Git does not consider the branch merged, rerun only after deciding
-that is safe with `--force-delete-local-branch`.
+When the mechanical checks pass, `task merge` uses the configured merge strategy, replaces `ai:needs-review` with `review:passed` and `ai:approved`, sets Project status to `Done`, closes the issue if needed, switches to the default branch, pulls with `--ff-only`, deletes the local task branch with `git branch -d`, and deletes the remote task branch if it still exists. If local branch deletion fails because Git does not consider the branch merged, rerun only after deciding that is safe with `--force-delete-local-branch`.
 
 `merge.requireChecks` controls PR check enforcement:
 
