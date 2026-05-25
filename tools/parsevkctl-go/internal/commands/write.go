@@ -302,9 +302,13 @@ func BuildTaskPRPlan(ctx context.Context, input TaskIssueInput) (TaskPRPlanResul
 	}
 	projectStatus = domain.ProjectStatusInProgress
 
-	defaultBranch, err := input.Git.DefaultBranch(ctx)
-	if err != nil {
-		return TaskPRPlanResult{}, fmt.Errorf("detect default branch: %w", err)
+	defaultBranch := strings.TrimSpace(input.Config.DefaultBranch)
+	if defaultBranch == "" {
+		detected, err := input.Git.DefaultBranch(ctx)
+		if err != nil {
+			return TaskPRPlanResult{}, fmt.Errorf("detect default branch: %w", err)
+		}
+		defaultBranch = detected
 	}
 	if strings.TrimSpace(defaultBranch) == "" {
 		return TaskPRPlanResult{}, fmt.Errorf("default branch cannot be detected")

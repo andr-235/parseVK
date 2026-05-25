@@ -21,14 +21,19 @@ type issueJSON struct {
 }
 
 type pullRequestJSON struct {
-	Number   int     `json:"number"`
-	Title    string  `json:"title"`
-	State    string  `json:"state"`
-	IsDraft  bool    `json:"isDraft"`
-	MergedAt *string `json:"mergedAt"`
-	URL      string  `json:"url"`
-	Base     string  `json:"baseRefName"`
-	Head     string  `json:"headRefName"`
+	Number    int     `json:"number"`
+	Title     string  `json:"title"`
+	State     string  `json:"state"`
+	IsDraft   bool    `json:"isDraft"`
+	MergedAt  *string `json:"mergedAt"`
+	URL       string  `json:"url"`
+	Base      string  `json:"baseRefName"`
+	Head      string  `json:"headRefName"`
+	Body      string  `json:"body"`
+	Mergeable string  `json:"mergeable"`
+	Files     []struct {
+		Path string `json:"path"`
+	} `json:"files"`
 }
 
 type pullRequestCheckJSON struct {
@@ -54,6 +59,26 @@ func parsePullRequestJSON(data []byte) (domain.PullRequest, error) {
 	}
 
 	return pullRequestFromJSON(raw), nil
+}
+
+func parsePullRequestDetailsJSON(data []byte) (PullRequestDetails, error) {
+	var raw pullRequestJSON
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return PullRequestDetails{}, fmt.Errorf("parse pull request details JSON: %w", err)
+	}
+
+	files := make([]string, 0, len(raw.Files))
+	for _, file := range raw.Files {
+		if strings.TrimSpace(file.Path) != "" {
+			files = append(files, file.Path)
+		}
+	}
+	return PullRequestDetails{
+		PullRequest: pullRequestFromJSON(raw),
+		Body:        raw.Body,
+		Mergeable:   normalizeMergeableState(raw.Mergeable),
+		Files:       files,
+	}, nil
 }
 
 func parsePullRequestsJSON(data []byte) ([]domain.PullRequest, error) {
@@ -254,6 +279,17 @@ func normalizePullRequestState(state string, draft bool, merged bool) domain.Pul
 		return domain.PullRequestStateMerged
 	default:
 		return domain.PullRequestStateNone
+	}
+}
+
+func normalizeMergeableState(state string) MergeableState {
+	switch strings.ToUpper(strings.TrimSpace(state)) {
+	case "MERGEABLE":
+		return MergeableStateMergeable
+	case "CONFLICTING":
+		return MergeableStateConflicting
+	default:
+		return MergeableStateUnknown
 	}
 }
 

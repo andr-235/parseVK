@@ -61,3 +61,16 @@ func TestConfigValidateUsesGoOwnedDefaultConfig(t *testing.T) {
 		t.Fatalf("stdout does not include valid result: %q", stdout.String())
 	}
 }
+
+func TestHelpIncludesTaskReview(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	exit := Run([]string{"--help"}, &stdout, &stderr)
+
+	if exit != 0 {
+		t.Fatalf("exit = %d, want 0; stderr=%q", exit, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "parsevkctl task review <issue>") {
+		t.Fatalf("help does not include task review:\n%s", stdout.String())
+	}
+}

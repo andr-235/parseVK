@@ -249,6 +249,14 @@ func (f *fakeGitHubAdapter) ListPullRequests(context.Context, github.PullRequest
 	return nil, nil
 }
 
+func (f *fakeGitHubAdapter) GetPullRequestDetails(context.Context, int) (github.PullRequestDetails, error) {
+	return github.PullRequestDetails{}, nil
+}
+
+func (f *fakeGitHubAdapter) GetPullRequestDiff(context.Context, int) (string, error) {
+	return "", nil
+}
+
 func (f *fakeGitHubAdapter) CreatePullRequest(_ context.Context, input github.CreatePullRequestInput) (domain.PullRequest, error) {
 	f.calls = append(f.calls, "CreatePullRequest:"+input.Head+":"+input.Base)
 	f.recorder.add("github.CreatePullRequest:" + input.Title + ":" + input.Head + ":" + input.Base)
