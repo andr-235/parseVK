@@ -28,6 +28,7 @@ const ChangePassword = lazy(() => import('@/pages/ChangePassword'))
 const VkFriendsExportPage = lazy(() => import('@/pages/VkFriendsExportPage'))
 const OkFriendsExportPage = lazy(() => import('@/pages/OkFriendsExportPage'))
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary'
+import { Spinner } from '@/shared/ui/spinner'
 
 const RequireAuth = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
@@ -70,7 +71,7 @@ const AppLayout = () => {
         <Suspense
           fallback={
             <div className="flex h-full items-center justify-center">
-              <div className="text-muted-foreground">Загрузка...</div>
+              <Spinner className="size-8 text-accent-primary" />
             </div>
           }
         >
@@ -136,8 +137,8 @@ function App() {
             element={
               <Suspense
                 fallback={
-                  <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-                    Загрузка...
+                  <div className="flex min-h-screen items-center justify-center">
+                    <Spinner className="size-8 text-accent-primary" />
                   </div>
                 }
               >
