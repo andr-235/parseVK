@@ -58,7 +58,7 @@ function TasksHero({
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="space-y-3">
           <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
-            Задачи <span className="text-accent-info">парсинга</span>
+            Задачи парсинга
           </h1>
           <p className="text-text-secondary max-w-2xl text-lg">
             Управляйте сбором данных из ВКонтакте. Создавайте новые задачи или настройте

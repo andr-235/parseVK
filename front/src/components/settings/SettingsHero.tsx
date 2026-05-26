@@ -16,8 +16,6 @@ export const SettingsHero = () => {
       icon: Zap,
       title: 'Автоматизация',
       subtitle: 'Расписание парсинга',
-      bgGradientClass: 'from-accent-info/20 to-accent-primary/20',
-      borderGradientClass: 'via-accent-info/50',
       iconBgClass: 'bg-accent-info/10',
       iconTextClass: 'text-accent-info',
       customContent: (
@@ -46,8 +44,6 @@ export const SettingsHero = () => {
       icon: Send,
       title: 'Telegram',
       subtitle: 'Интеграция и уведомления',
-      bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
-      borderGradientClass: 'via-accent-primary/50',
       iconBgClass: 'bg-accent-primary/10',
       iconTextClass: 'text-accent-primary',
     },
@@ -55,8 +51,6 @@ export const SettingsHero = () => {
       icon: SettingsIcon,
       title: 'Конфигурация',
       subtitle: 'Общие параметры',
-      bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
-      borderGradientClass: 'via-accent-primary/50',
       iconBgClass: 'bg-accent-primary/10',
       iconTextClass: 'text-accent-primary',
     },
@@ -93,7 +87,7 @@ export const SettingsHero = () => {
 
   const titleNode = (
     <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-text-light">
-      Настройки <span className="text-accent-info">системы</span>
+      Настройки системы
     </h1>
   )
 
