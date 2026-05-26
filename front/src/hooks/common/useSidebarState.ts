@@ -1,17 +1,36 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 
 type SectionKey = 'vk' | 'monitoring' | 'parsing' | 'telegram'
 
+const isNarrowViewport = () =>
+  typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+
 export const useSidebarState = () => {
   const location = useLocation()
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(() => isNarrowViewport())
   const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
     vk: true,
     monitoring: true,
     parsing: false,
     telegram: false,
   })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const handleViewportChange = () => {
+      if (mediaQuery.matches) {
+        setIsCollapsed(true)
+      }
+    }
+
+    handleViewportChange()
+    mediaQuery.addEventListener('change', handleViewportChange)
+
+    return () => mediaQuery.removeEventListener('change', handleViewportChange)
+  }, [])
 
   const toggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev)

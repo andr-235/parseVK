@@ -24,6 +24,9 @@ type MonitorGroupsParams = {
   sync?: boolean
 }
 
+const MONITORING_MESSAGES_ERROR_TOAST_ID = 'monitoring-messages-fetch-error'
+const MONITORING_GROUPS_ERROR_TOAST_ID = 'monitoring-groups-fetch-error'
+
 const buildQuery = (params?: MonitorMessagesParams): string => {
   if (!params) return ''
 
@@ -100,7 +103,9 @@ export const monitoringService = {
         'Failed to fetch monitoring messages'
       )
     } catch (error) {
-      toast.error('Не удалось загрузить мониторинг')
+      toast.error('Не удалось загрузить мониторинг', {
+        id: MONITORING_MESSAGES_ERROR_TOAST_ID,
+      })
       throw error
     }
   },
@@ -116,7 +121,9 @@ export const monitoringService = {
         'Failed to fetch monitoring groups'
       )
     } catch (error) {
-      toast.error('Не удалось загрузить группы мониторинга')
+      toast.error('Не удалось загрузить группы мониторинга', {
+        id: MONITORING_GROUPS_ERROR_TOAST_ID,
+      })
       throw error
     }
   },

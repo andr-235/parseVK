@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { monitoringService } from '@/api/monitoring/monitoring.api'
 import type { IMonitorGroupResponse, MonitoringMessenger } from '@/types/common'
+import { buildMonitoringGroupRows } from '@/hooks/monitoring/monitoringGroupsViewModel.utils'
 
 const DEFAULT_CATEGORY_SUGGESTIONS = [
   'Новостные',
@@ -24,6 +25,7 @@ export const useMonitoringGroupsViewModel = ({ messenger }: MonitoringGroupsView
 
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [syncEnabled, setSyncEnabled] = useState(true)
 
   const [chatId, setChatId] = useState('')
   const [name, setName] = useState('')
@@ -37,7 +39,7 @@ export const useMonitoringGroupsViewModel = ({ messenger }: MonitoringGroupsView
     try {
       const response = await monitoringService.fetchGroups({
         messenger,
-        sync: messenger === 'whatsapp' || messenger === 'max',
+        sync: syncEnabled,
       })
       setGroups(response.items)
       setTotalGroups(response.total)
@@ -46,32 +48,22 @@ export const useMonitoringGroupsViewModel = ({ messenger }: MonitoringGroupsView
     } finally {
       setIsLoading(false)
     }
-  }, [messenger])
+  }, [messenger, syncEnabled])
 
   useEffect(() => {
     void loadGroups()
   }, [loadGroups])
 
-  const filteredGroups = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
-    const normalizedCategory = categoryFilter.trim().toLowerCase()
-
-    const items = groups.filter((group) => {
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        group.name.toLowerCase().includes(normalizedSearch) ||
-        group.chatId.toLowerCase().includes(normalizedSearch) ||
-        (group.category ?? '').toLowerCase().includes(normalizedSearch)
-
-      const matchesCategory =
-        normalizedCategory.length === 0 ||
-        (group.category ?? '').toLowerCase().includes(normalizedCategory)
-
-      return matchesSearch && matchesCategory
-    })
-
-    return items.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
-  }, [categoryFilter, groups, searchTerm])
+  const filteredGroups = useMemo(
+    () =>
+      buildMonitoringGroupRows({
+        groups,
+        searchTerm,
+        categoryFilter,
+        editingId,
+      }),
+    [categoryFilter, editingId, groups, searchTerm]
+  )
 
   const categorySuggestions = useMemo(() => {
     const fromGroups = groups
@@ -148,6 +140,8 @@ export const useMonitoringGroupsViewModel = ({ messenger }: MonitoringGroupsView
     error,
     reloadGroups: loadGroups,
     isSaving,
+    syncEnabled,
+    setSyncEnabled,
     searchTerm,
     setSearchTerm,
     categoryFilter,
