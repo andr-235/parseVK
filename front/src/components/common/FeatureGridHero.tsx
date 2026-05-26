@@ -70,7 +70,7 @@ export const FeatureGridHero = ({
                         <h3 className="font-monitoring-display text-sm font-semibold text-text-primary truncate">
                           {card.title}
                         </h3>
-                        <p className="text-xs text-text-secondary break-words">{card.subtitle}</p>
+                        <p className="text-xs text-text-secondary wrap-break-word">{card.subtitle}</p>
                       </>
                     )}
                   </div>

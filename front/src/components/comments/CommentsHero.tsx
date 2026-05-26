@@ -19,7 +19,7 @@ function CommentsHero({ totalCount, readCount, unreadCount }: CommentsHeroProps)
           Управляйте обратной связью из сообществ и отслеживайте важные сообщения в реальном времени
         </p>
         {/* Decorative line */}
-        <div className="h-px w-16 bg-gradient-to-r from-cyan-400/50 via-cyan-400/80 to-transparent" />
+        <div className="h-px w-16 bg-linear-to-r from-cyan-400/50 via-cyan-400/80 to-transparent" />
       </div>
 
       {/* Metrics badges */}

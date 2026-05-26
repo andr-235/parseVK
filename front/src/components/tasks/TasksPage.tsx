@@ -30,7 +30,7 @@ function TasksPage() {
   } = useTasksViewModel()
 
   return (
-    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+    <div className="flex flex-col gap-10 max-w-400 mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <TasksHero
           onCreateTask={handleOpenCreateModal}
@@ -47,23 +47,17 @@ function TasksPage() {
       </div>
 
       <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
-        <div className="flex items-center gap-4">
-          <h2 className="font-monitoring-display text-2xl font-semibold text-white">
-            Активные задачи
-          </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
-        </div>
+        <h2 className="font-monitoring-display text-xl font-semibold text-foreground">
+          Активные задачи
+        </h2>
 
         <ActiveTasksBanner tasks={activeTasks} isCreating={isCreating} />
       </div>
 
       <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
-        <div className="flex items-center gap-4">
-          <h2 className="font-monitoring-display text-2xl font-semibold text-white">
-            История запусков
-          </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
-        </div>
+        <h2 className="font-monitoring-display text-xl font-semibold text-foreground">
+          История запусков
+        </h2>
 
         <TasksList emptyMessage={emptyMessage} onTaskSelect={handleTaskSelect} />
       </div>
