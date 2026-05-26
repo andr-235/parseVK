@@ -71,6 +71,14 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
     checkTask(task.id)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      // Prevent page scroll on Space; Enter has no default to suppress here
+      if (e.key === ' ') e.preventDefault()
+      onSelect(task.id)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -104,8 +112,12 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
   return (
     <div className="relative">
       <Card
+        role="button"
+        tabIndex={0}
+        aria-label={`Задача: ${task.title || `#${task.id}`}, статус: ${task.status}`}
         onClick={() => onSelect(task.id)}
-        className="group relative overflow-hidden transition-all duration-200 cursor-pointer border border-border/60 bg-background-secondary hover:bg-background-secondary/90 shadow-soft-sm hover:border-accent-info/50"
+        onKeyDown={handleKeyDown}
+        className="group relative overflow-hidden transition-all duration-200 cursor-pointer border border-border/60 bg-background-secondary hover:bg-background-secondary/90 shadow-soft-sm hover:border-accent-info/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-info focus-visible:border-accent-info/60"
       >
         <div className="flex flex-col gap-4 p-5">
           {/* Header */}
