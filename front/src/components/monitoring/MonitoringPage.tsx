@@ -32,6 +32,8 @@ function MonitoringPage() {
   const activeSourceKey = normalizedSourceKey === 'max' ? 'max' : 'whatsapp'
   const [isKeywordsExpanded, setIsKeywordsExpanded] = useState(false)
   const keywordsPreviewCount = 8
+  const activeSources = useMemo(() => [...activeSource.sources], [activeSource.sources])
+
   const {
     messages,
     searchInput,
@@ -53,7 +55,7 @@ function MonitoringPage() {
     changeTimeRange,
     loadMore,
     refreshNow,
-  } = useMonitoringViewModel({ sources: [...activeSource.sources] })
+  } = useMonitoringViewModel({ sources: activeSources })
 
   const isAutoRefreshActive = autoRefresh && page === 1
   const autoRefreshLabel = autoRefresh

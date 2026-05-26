@@ -201,23 +201,6 @@ export function MonitoringMessagesCard({
     isBusyRef.current = isLoading || isRefreshing || isLoadingMore
   }, [hasMore, isLoading, isLoadingMore, isRefreshing, onLoadMore])
 
-  useEffect(() => {
-    if (isLoading || isRefreshing || isLoadingMore || !hasMore) return
-
-    const target = observerTargetRef.current
-    if (!target) return
-
-    const timeoutId = setTimeout(() => {
-      const rect = target.getBoundingClientRect()
-      const isInViewport = rect.top < window.innerHeight + 200
-
-      if (isInViewport && hasMoreRef.current && !isBusyRef.current) {
-        onLoadMoreRef.current()
-      }
-    }, 100)
-
-    return () => clearTimeout(timeoutId)
-  }, [hasMore, isLoading, isLoadingMore, isRefreshing, messages.length])
 
   useIntersectionObserver(
     observerTargetRef,
