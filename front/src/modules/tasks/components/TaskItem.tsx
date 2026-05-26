@@ -60,7 +60,10 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
-    deleteTask(task.id)
+    const confirmed = window.confirm('Удалить задачу? Это действие необратимо.')
+    if (confirmed) {
+      deleteTask(task.id)
+    }
   }
 
   const handleCheck = (e: React.MouseEvent) => {
@@ -71,15 +74,15 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+        return 'text-accent-success bg-accent-success/10 border-accent-success/20'
       case 'failed':
-        return 'text-rose-500 bg-rose-500/10 border-rose-500/20'
+        return 'text-accent-danger bg-accent-danger/10 border-accent-danger/20'
       case 'running':
-        return 'text-sky-500 bg-sky-500/10 border-sky-500/20'
+        return 'text-accent-info bg-accent-info/10 border-accent-info/20'
       case 'processing':
-        return 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20'
+        return 'text-accent-primary bg-accent-primary/10 border-accent-primary/20'
       default:
-        return 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+        return 'text-accent-warning bg-accent-warning/10 border-accent-warning/20'
     }
   }
 
@@ -100,16 +103,10 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
 
   return (
     <div className="relative">
-      {/* Glow Effect */}
-      <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-50" />
-
       <Card
         onClick={() => onSelect(task.id)}
-        className="group relative overflow-hidden transition-all duration-300 cursor-pointer border border-white/10 bg-slate-900/80 backdrop-blur-2xl hover:shadow-xl hover:shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98]"
+        className="group relative overflow-hidden transition-all duration-200 cursor-pointer border border-border/60 bg-background-secondary hover:bg-background-secondary/90 shadow-soft-sm hover:border-accent-info/50"
       >
-        {/* Top Border Glow */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
-
         <div className="flex flex-col gap-4 p-5">
           {/* Header */}
           <div className="flex items-start justify-between gap-4">
@@ -130,7 +127,7 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
                 </Badge>
               </div>
 
-              <div className="flex items-center gap-3 text-sm text-slate-400 font-mono-accent">
+              <div className="flex items-center gap-3 text-sm text-text-secondary font-mono-accent">
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>
@@ -153,19 +150,19 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 -mr-2 text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                  className="h-8 w-8 -mr-2 text-text-secondary hover:text-white hover:bg-background-primary/40 transition-colors"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-48 border-white/10 bg-slate-900/95 backdrop-blur-2xl"
+                className="w-48 border-border bg-background-secondary shadow-soft-md"
               >
                 {(task.status === 'failed' || task.status === 'completed') && (
                   <DropdownMenuItem
                     onClick={handleResume}
-                    className="text-slate-300 hover:text-white"
+                    className="text-text-primary hover:text-white"
                   >
                     <RotateCw className="w-4 h-4 mr-2" />
                     Перезапустить
@@ -174,7 +171,7 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
                 {isActive && (
                   <DropdownMenuItem
                     onClick={handleCheck}
-                    className="text-slate-300 hover:text-white"
+                    className="text-text-primary hover:text-white"
                   >
                     <RotateCw className="w-4 h-4 mr-2" />
                     Проверить статус
@@ -194,9 +191,9 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
           {/* Progress */}
           {isActive ? (
             <div className="space-y-2">
-              <div className="flex justify-between text-xs font-medium text-slate-400 font-mono-accent">
+              <div className="flex justify-between text-xs font-medium text-text-secondary font-mono-accent">
                 <span>Прогресс</span>
-                <span className="text-cyan-400">{percent}%</span>
+                <span className="text-accent-info">{percent}%</span>
               </div>
               <ProgressBar
                 current={progress.processed}
@@ -206,7 +203,7 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
                 showLabel={false}
                 className="gap-1.5"
               />
-              <div className="flex justify-between text-xs text-slate-500 font-mono-accent">
+              <div className="flex justify-between text-xs text-text-secondary/70 font-mono-accent">
                 <span>
                   Обработано: {progress.processed} из {progress.total}
                 </span>
@@ -216,38 +213,35 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
               </div>
             </div>
           ) : (
-            <Separator className="bg-white/10" />
+            <Separator className="bg-border/60" />
           )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-4 pt-1">
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500 flex items-center gap-1.5 font-mono-accent uppercase tracking-wider">
+              <span className="text-xs text-text-secondary/70 flex items-center gap-1.5 font-mono-accent uppercase tracking-wider">
                 <Users className="w-3.5 h-3.5" />
                 Группы
               </span>
-              <span className="text-sm font-medium text-slate-200">{groupsCount}</span>
+              <span className="text-sm font-medium text-text-primary">{groupsCount}</span>
             </div>
 
-            <div className="flex flex-col gap-1 border-l border-white/10 pl-4">
-              <span className="text-xs text-slate-500 flex items-center gap-1.5 font-mono-accent uppercase tracking-wider">
+            <div className="flex flex-col gap-1 border-l border-border/60 pl-4">
+              <span className="text-xs text-text-secondary/70 flex items-center gap-1.5 font-mono-accent uppercase tracking-wider">
                 <FileText className="w-3.5 h-3.5" />
                 Посты
               </span>
-              <span className="text-sm font-medium text-slate-200">{postsCount}</span>
+              <span className="text-sm font-medium text-text-primary">{postsCount}</span>
             </div>
 
-            <div className="flex flex-col gap-1 border-l border-white/10 pl-4">
-              <span className="text-xs text-slate-500 flex items-center gap-1.5 font-mono-accent uppercase tracking-wider">
+            <div className="flex flex-col gap-1 border-l border-border/60 pl-4">
+              <span className="text-xs text-text-secondary/70 flex items-center gap-1.5 font-mono-accent uppercase tracking-wider">
                 <MessageSquare className="w-3.5 h-3.5" />
                 Комменты
               </span>
-              <span className="text-sm font-medium text-slate-200">{commentsCount}</span>
+              <span className="text-sm font-medium text-text-primary">{commentsCount}</span>
             </div>
           </div>
-
-          {/* Bottom Accent Line */}
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-500/50 via-blue-500/50 to-purple-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
       </Card>
     </div>

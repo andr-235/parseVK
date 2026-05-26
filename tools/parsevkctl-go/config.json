@@ -1,0 +1,20 @@
+{
+  "repo": "andr-235/parseVK",
+  "projectOwner": "andr-235",
+  "projectNumber": 2,
+  "projectId": "PVT_kwHOCJBloc4BYcpQ",
+  "projectTitle": "parsevk development",
+  "defaultBranch": "main",
+  "statuses": {
+    "todo": "Todo",
+    "inProgress": "In Progress",
+    "review": "Review",
+    "done": "Done"
+  },
+  "merge": {
+    "strategy": "squash",
+    "deleteBranch": true,
+    "requireChecks": false,
+    "allowAutoMerge": false
+  }
+}

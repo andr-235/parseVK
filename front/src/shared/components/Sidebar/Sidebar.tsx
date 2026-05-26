@@ -116,18 +116,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
     setIsCollapsed(false)
   }, [setIsCollapsed])
 
-  // Мемоизируем particles для предотвращения пересоздания на каждом рендере (rendering-hoist-jsx)
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 8 }, (_, i) => ({
-        id: i,
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        animationDelay: `${Math.random() * 10}s`,
-        animationDuration: `${15 + Math.random() * 10}s`,
-      })),
-    []
-  )
+
 
   return (
     <aside className={getSidebarClasses(isCollapsed)}>
@@ -141,21 +130,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
         }}
       />
 
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {particles.map((particle) => (
-          <div
-            key={particle.id}
-            className="absolute h-1 w-1 rounded-full bg-cyan-400/30 animate-float"
-            style={{
-              left: particle.left,
-              top: particle.top,
-              animationDelay: particle.animationDelay,
-              animationDuration: particle.animationDuration,
-            }}
-          />
-        ))}
-      </div>
+
 
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full">
@@ -198,7 +173,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
               onToggle={handleParsingToggle}
               isCollapsed={isCollapsed}
               isActive={isParsingActive}
-              collapsedLabel="Недвижимость"
+              collapsedLabel="Парсинг"
             />
 
             <SidebarSection
@@ -254,23 +229,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
         />
       </div>
 
-      {/* Floating animation keyframes */}
-      <style>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0) translateX(0);
-            opacity: 0;
-          }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          50% {
-            transform: translateY(-100vh) translateX(50px);
-          }
-        }
-        .animate-float {
-          animation: float linear infinite;
-        }
-      `}</style>
+
     </aside>
   )
 }
