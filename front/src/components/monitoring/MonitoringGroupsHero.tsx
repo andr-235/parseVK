@@ -51,9 +51,9 @@ export const MonitoringGroupsHero = ({
       <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 xl:grid-cols-4">
         {/* Total Groups Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 opacity-50 blur-lg" />
+          <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-cyan-500/20 to-blue-500/20 opacity-50 blur-lg" />
           <Card className="relative overflow-hidden border border-white/10 bg-slate-900/80 p-4 backdrop-blur-2xl">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-400/50 to-transparent" />
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
                 <Users className="w-5 h-5" />
@@ -72,9 +72,9 @@ export const MonitoringGroupsHero = ({
 
         {/* Chat ID Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-50 blur-lg" />
+          <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-blue-500/20 to-purple-500/20 opacity-50 blur-lg" />
           <Card className="relative overflow-hidden border border-white/10 bg-slate-900/80 p-4 backdrop-blur-2xl">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
+            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-blue-400/50 to-transparent" />
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
                 <Link className="w-5 h-5" />
@@ -91,9 +91,9 @@ export const MonitoringGroupsHero = ({
 
         {/* Categories Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-50 blur-lg" />
+          <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-purple-500/20 to-pink-500/20 opacity-50 blur-lg" />
           <Card className="relative overflow-hidden border border-white/10 bg-slate-900/80 p-4 backdrop-blur-2xl">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent" />
+            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-400/50 to-transparent" />
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
                 <Tag className="w-5 h-5" />
@@ -110,9 +110,9 @@ export const MonitoringGroupsHero = ({
 
         {/* Management Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-pink-500/20 to-cyan-500/20 opacity-50 blur-lg" />
+          <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-pink-500/20 to-cyan-500/20 opacity-50 blur-lg" />
           <Card className="relative overflow-hidden border border-white/10 bg-slate-900/80 p-4 backdrop-blur-2xl">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pink-400/50 to-transparent" />
+            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-pink-400/50 to-transparent" />
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400">
                 <List className="w-5 h-5" />

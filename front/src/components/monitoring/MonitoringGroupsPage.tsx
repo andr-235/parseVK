@@ -86,7 +86,7 @@ function MonitoringGroupsPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-8 px-4 py-6 font-monitoring-body md:px-8">
+    <div className="mx-auto flex w-full max-w-400 flex-col gap-8 px-4 py-6 font-monitoring-body md:px-8">
       <MonitoringGroupsHero
         sourceName={activeSource.label}
         sourceKey={activeSourceKey}
@@ -229,14 +229,14 @@ function MonitoringGroupsPage() {
                     value={searchTerm}
                     onChange={setSearchTerm}
                     placeholder="Поиск по названию, chat_id, категории"
-                    className="h-10 w-full border-border/70 bg-background/60 text-text-primary lg:w-[300px]"
+                    className="h-10 w-full border-border/70 bg-background/60 text-text-primary lg:w-75"
                   />
                   <Input
                     value={categoryFilter}
                     onChange={(event) => setCategoryFilter(event.target.value)}
                     placeholder="Категория"
                     list="monitoring-group-categories"
-                    className="h-10 w-full border-border/70 bg-background/60 text-text-primary placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 lg:w-[180px]"
+                    className="h-10 w-full border-border/70 bg-background/60 text-text-primary placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 lg:w-45"
                   />
                   <Button
                     type="button"
@@ -311,9 +311,9 @@ function MonitoringGroupsPage() {
               )}
 
               {!isLoading && !error && hasGroups && !hasFilteredGroups && (
-                <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/60 bg-background/35 p-8 text-center">
+                <div className="flex min-h-55 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/60 bg-background/35 p-8 text-center">
                   <p className="font-semibold text-text-primary">Фильтры не нашли группы</p>
-                  <p className="max-w-[420px] text-sm text-text-secondary">
+                  <p className="max-w-105 text-sm text-text-secondary">
                     Измените поиск или категорию, чтобы вернуться к списку источников.
                   </p>
                   <Button variant="outline" onClick={clearFilters} className="h-9">
@@ -349,7 +349,7 @@ function MonitoringGroupsPage() {
                                 isEditing && 'bg-accent-primary/10'
                               )}
                             >
-                              <TableCell className="min-w-[220px] font-medium text-text-primary">
+                              <TableCell className="min-w-55 font-medium text-text-primary">
                                 {group.name}
                               </TableCell>
                               <TableCell>

@@ -116,7 +116,7 @@ function ErrorState({ error, onRetry }: { error: string; onRetry?: () => void })
       {onRetry && (
         <Button
           onClick={onRetry}
-          className="bg-gradient-to-r from-red-500 to-amber-600 text-white shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+          className="bg-linear-to-r from-red-500 to-amber-600 text-white shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
         >
           Повторить попытку
         </Button>

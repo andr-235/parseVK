@@ -250,7 +250,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
                   : 'w-full justify-start text-slate-400 hover:text-red-400 hover:bg-red-500/5'
               )}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 to-pink-500/0 opacity-0 transition-opacity duration-300 group-hover:from-red-500/10 group-hover:to-pink-500/10 group-hover:opacity-100" />
+              <div className="absolute inset-0 bg-linear-to-r from-red-500/0 to-pink-500/0 opacity-0 transition-opacity duration-300 group-hover:from-red-500/10 group-hover:to-pink-500/10 group-hover:opacity-100" />
               <LogOut className="relative h-4 w-4" />
               {!isCollapsed && <span className="relative">Выйти</span>}
             </Button>
