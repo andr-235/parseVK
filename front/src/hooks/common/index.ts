@@ -5,4 +5,5 @@ export * from './useTableSorting'
 export * from './useSidebarData'
 export * from './useSidebarState'
 export * from './useDebounce'
+export * from './useFocusTrap'
 

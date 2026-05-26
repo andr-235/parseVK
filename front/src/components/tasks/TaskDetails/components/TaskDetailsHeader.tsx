@@ -22,7 +22,7 @@ export const TaskDetailsHeader = ({
 }: TaskDetailsHeaderProps) => {
   return (
     <header className="flex items-center justify-between gap-4 border-b border-border/60 px-8 py-6">
-      <h2 className="text-2xl font-bold tracking-tight text-foreground">Детали задачи #{taskId}</h2>
+      <h2 id="task-details-title" className="text-2xl font-bold tracking-tight text-foreground">Детали задачи #{taskId}</h2>
       <div className="flex items-center gap-3">
         <Button
           variant="secondary"

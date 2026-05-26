@@ -5,6 +5,7 @@ import { TaskDetailsHeader } from './TaskDetails/components/TaskDetailsHeader'
 import { TaskStatsGrid } from './TaskDetails/components/TaskStatsGrid'
 import { TaskProgressSection } from './TaskDetails/components/TaskProgressSection'
 import { GroupsTable } from './TaskDetails/components/GroupsTable/GroupsTable'
+import { useFocusTrap } from '@/hooks/common'
 
 interface TaskDetailsProps {
   task: TaskDetailsType | undefined
@@ -14,6 +15,11 @@ interface TaskDetailsProps {
 function TaskDetails({ task, onClose }: TaskDetailsProps) {
   const { isResuming, isChecking, canResume, handleResume, handleCheck } = useTaskActions(task)
   const stats = useTaskStats(task)
+  
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isOpen: !!task && !!stats,
+    onClose,
+  })
 
   if (!task || !stats) {
     return null
@@ -25,6 +31,10 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
       onClick={onClose}
     >
       <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="task-details-title"
         className="flex w-full max-h-[90vh] max-w-5xl flex-col overflow-hidden rounded-3xl bg-background-secondary border border-border/60 shadow-xl text-foreground"
         onClick={(e) => e.stopPropagation()}
       >
