@@ -25,7 +25,7 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
       onClick={onClose}
     >
       <div
-        className="flex w-full max-h-[90vh] max-w-5xl flex-col overflow-hidden rounded-3xl glassmorphic-surface text-foreground"
+        className="flex w-full max-h-[90vh] max-w-5xl flex-col overflow-hidden rounded-3xl bg-background-secondary border border-border/60 shadow-xl text-foreground"
         onClick={(e) => e.stopPropagation()}
       >
         <TaskDetailsHeader

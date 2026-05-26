@@ -16,10 +16,10 @@ export const SettingsHero = () => {
       icon: Zap,
       title: 'Автоматизация',
       subtitle: 'Расписание парсинга',
-      bgGradientClass: 'from-cyan-500/20 to-blue-500/20',
-      borderGradientClass: 'via-cyan-400/50',
-      iconBgClass: 'bg-cyan-500/10',
-      iconTextClass: 'text-cyan-400',
+      bgGradientClass: 'from-accent-info/20 to-accent-primary/20',
+      borderGradientClass: 'via-accent-info/50',
+      iconBgClass: 'bg-accent-info/10',
+      iconTextClass: 'text-accent-info',
       customContent: (
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -31,14 +31,14 @@ export const SettingsHero = () => {
               className={cn(
                 'uppercase text-[10px] tracking-wider font-semibold rounded-full font-mono-accent',
                 automationEnabled
-                  ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
-                  : 'border border-slate-500/25 bg-slate-500/10 text-slate-400'
+                  ? 'border border-accent-success/25 bg-accent-success/10 text-accent-success'
+                  : 'border border-border/60 bg-background-primary/50 text-text-secondary'
               )}
             >
               {automationEnabled ? 'Вкл' : 'Выкл'}
             </Badge>
           </div>
-          <p className="text-xs text-slate-400">Расписание парсинга</p>
+          <p className="text-xs text-text-secondary">Расписание парсинга</p>
         </div>
       ),
     },
@@ -46,19 +46,19 @@ export const SettingsHero = () => {
       icon: Send,
       title: 'Telegram',
       subtitle: 'Интеграция и уведомления',
-      bgGradientClass: 'from-blue-500/20 to-purple-500/20',
-      borderGradientClass: 'via-blue-400/50',
-      iconBgClass: 'bg-blue-500/10',
-      iconTextClass: 'text-blue-400',
+      bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
+      borderGradientClass: 'via-accent-primary/50',
+      iconBgClass: 'bg-accent-primary/10',
+      iconTextClass: 'text-accent-primary',
     },
     {
       icon: SettingsIcon,
       title: 'Конфигурация',
       subtitle: 'Общие параметры',
-      bgGradientClass: 'from-purple-500/20 to-cyan-500/20',
-      borderGradientClass: 'via-purple-400/50',
-      iconBgClass: 'bg-purple-500/10',
-      iconTextClass: 'text-purple-400',
+      bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
+      borderGradientClass: 'via-accent-primary/50',
+      iconBgClass: 'bg-accent-primary/10',
+      iconTextClass: 'text-accent-primary',
     },
   ]
 
@@ -69,13 +69,13 @@ export const SettingsHero = () => {
       className={cn(
         'group relative h-11 shrink-0 overflow-hidden font-semibold text-white shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed',
         automationEnabled
-          ? 'bg-gradient-to-r from-cyan-500 to-blue-500 shadow-cyan-500/25 hover:shadow-cyan-500/40'
-          : 'bg-slate-700 shadow-slate-700/25'
+          ? 'bg-accent-primary shadow-accent-primary/25 hover:shadow-accent-primary/40'
+          : 'bg-background-secondary border border-border/60 text-text-secondary shadow-soft-sm'
       )}
       disabled={!settings || isTriggering || settings?.isRunning}
     >
       {automationEnabled && (
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-accent-primary opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       )}
       {isTriggering || settings?.isRunning ? (
         <>
@@ -93,7 +93,7 @@ export const SettingsHero = () => {
 
   const titleNode = (
     <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
-      Настройки <span className="text-cyan-400">системы</span>
+      Настройки <span className="text-accent-info">системы</span>
     </h1>
   )
 

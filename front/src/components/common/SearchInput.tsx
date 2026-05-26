@@ -25,7 +25,7 @@ interface SearchInputProps {
 }
 
 const GLASS_WRAPPER_CLASSES =
-  'glassmorphic-surface overflow-hidden rounded-2xl px-3 py-1.5 focus-within:border-accent-primary/50 focus-within:shadow-soft-md'
+  'bg-background-secondary border border-border/60 overflow-hidden rounded-2xl px-3 py-1.5 focus-within:border-accent-primary/50 focus-within:shadow-soft-md'
 
 const GLASS_INPUT_CLASSES =
   'h-12 w-full rounded-[1.75rem] border-0 bg-transparent text-base font-medium text-text-primary caret-accent-primary placeholder:text-text-secondary/70 selection:bg-accent-primary/20 selection:text-text-primary focus:outline-none focus:ring-0 dark:text-text-light dark:placeholder:text-text-light/60 dark:selection:bg-accent-primary/40'
@@ -119,6 +119,7 @@ const SearchInput = memo(function SearchInput({
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
+        aria-label={placeholder}
       />
       {value && (
         <button

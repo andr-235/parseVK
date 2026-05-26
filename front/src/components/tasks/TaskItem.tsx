@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useCallback } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import {
@@ -53,31 +53,31 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
   const progressTone =
     task.status === 'failed' ? 'danger' : task.status === 'completed' ? 'success' : 'primary'
 
-  const handleResume = (e: React.MouseEvent) => {
+  const handleResume = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     resumeTask(task.id)
-  }
+  }, [resumeTask, task.id])
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     const confirmed = window.confirm('Удалить задачу? Это действие необратимо.')
     if (confirmed) {
       deleteTask(task.id)
     }
-  }
+  }, [deleteTask, task.id])
 
-  const handleCheck = (e: React.MouseEvent) => {
+  const handleCheck = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     checkTask(task.id)
-  }
+  }, [checkTask, task.id])
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       // Prevent page scroll on Space; Enter has no default to suppress here
       if (e.key === ' ') e.preventDefault()
       onSelect(task.id)
     }
-  }
+  }, [onSelect, task.id])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -163,6 +163,7 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 -mr-2 text-text-secondary hover:text-white hover:bg-background-primary/40 transition-colors"
+                  aria-label="Действия с задачей"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </Button>

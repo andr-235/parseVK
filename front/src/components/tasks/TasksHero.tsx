@@ -71,6 +71,7 @@ function TasksHero({
           size="lg"
           className="h-11 shrink-0 bg-accent-primary font-semibold text-white shadow-soft-sm transition-all duration-200 hover:bg-accent-primary/90 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={isCreating || areGroupsLoading || !hasGroups}
+          aria-label="Создать новую задачу парсинга"
         >
           {isCreating ? (
             <>
@@ -118,6 +119,7 @@ function TasksHero({
                   size="icon"
                   onClick={onOpenAutomationSettings}
                   className="hover:bg-background-primary/40 transition-colors"
+                  aria-label="Открыть настройки автоматизации"
                 >
                   <Settings className="w-5 h-5 text-text-secondary hover:text-text-primary transition-colors" />
                 </Button>
@@ -162,6 +164,7 @@ function TasksHero({
               className="h-12 w-full text-base font-medium border-border/60 bg-background-primary/50 text-text-primary hover:bg-background-secondary hover:border-accent-info/50 transition-all duration-200"
               onClick={onAutomationRun}
               disabled={isAutomationLoading || isAutomationTriggering || automation?.isRunning}
+              aria-label="Запустить автоматический сбор данных сейчас"
             >
               {isAutomationTriggering ? (
                 <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
