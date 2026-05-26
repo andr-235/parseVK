@@ -27,7 +27,7 @@ export const AdminUsersHero = ({ totalUsers, onRefresh, isLoading }: AdminUsersH
           onClick={onRefresh}
           size="lg"
           variant="outline"
-          className="h-11 shrink-0 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+          className="h-11 shrink-0 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
           disabled={isLoading}
         >
           <RefreshCw className={cn('mr-2 w-5 h-5', isLoading && 'animate-spin')} />
@@ -38,9 +38,7 @@ export const AdminUsersHero = ({ totalUsers, onRefresh, isLoading }: AdminUsersH
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Users Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
                 <Users className="w-5 h-5" />
@@ -59,9 +57,7 @@ export const AdminUsersHero = ({ totalUsers, onRefresh, isLoading }: AdminUsersH
 
         {/* Roles Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
                 <Shield className="w-5 h-5" />
@@ -76,9 +72,7 @@ export const AdminUsersHero = ({ totalUsers, onRefresh, isLoading }: AdminUsersH
 
         {/* Create User Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
                 <UserPlus className="w-5 h-5" />
@@ -95,9 +89,7 @@ export const AdminUsersHero = ({ totalUsers, onRefresh, isLoading }: AdminUsersH
 
         {/* Security Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-pink-500/20 to-cyan-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pink-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400">
                 <Key className="w-5 h-5" />

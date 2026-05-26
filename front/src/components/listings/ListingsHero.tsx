@@ -44,7 +44,7 @@ export const ListingsHero = ({
             onClick={onImport}
             size="lg"
             variant="outline"
-            className="h-11 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+            className="h-11 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
           >
             <Upload className="mr-2 w-5 h-5" />
             Импорт
@@ -53,7 +53,7 @@ export const ListingsHero = ({
             onClick={onExport}
             size="lg"
             variant="outline"
-            className="h-11 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+            className="h-11 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
           >
             <Download className="mr-2 w-5 h-5" />
             Экспорт
@@ -62,7 +62,7 @@ export const ListingsHero = ({
             onClick={onRefresh}
             size="lg"
             variant="outline"
-            className="h-11 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+            className="h-11 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
             disabled={isListLoading}
           >
             <RefreshCw className={cn('mr-2 w-5 h-5', isListLoading && 'animate-spin')} />
@@ -74,9 +74,7 @@ export const ListingsHero = ({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Database Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
                 <Database className="w-5 h-5" />
@@ -93,9 +91,7 @@ export const ListingsHero = ({
 
         {/* Import Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
                 <Upload className="w-5 h-5" />
@@ -110,9 +106,7 @@ export const ListingsHero = ({
 
         {/* Filter Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
                 <Filter className="w-5 h-5" />
@@ -129,9 +123,7 @@ export const ListingsHero = ({
 
         {/* Archive Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-pink-500/20 to-cyan-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pink-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400">
                 <Archive className="w-5 h-5" />

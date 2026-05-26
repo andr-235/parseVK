@@ -42,7 +42,7 @@ export const MonitoringHero = ({
                   ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
                   : autoRefresh
                     ? 'border border-amber-500/25 bg-amber-500/10 text-amber-400'
-                    : 'border border-slate-500/25 bg-slate-500/10 text-slate-400'
+                    : 'border border-border/60 bg-background/50 text-slate-400'
               )}
             >
               <span
@@ -69,7 +69,7 @@ export const MonitoringHero = ({
             onClick={onRefresh}
             size="sm"
             variant="outline"
-            className="h-10 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+            className="h-10 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
             disabled={isLoading || isRefreshing}
           >
             <RefreshCw className={cn('mr-2 w-4 h-4', isRefreshing && 'animate-spin')} />
@@ -82,7 +82,7 @@ export const MonitoringHero = ({
               'h-10 transition-all duration-200',
               autoRefresh
                 ? 'bg-linear-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/40'
-                : 'border border-white/10 bg-slate-800/50 text-white hover:bg-white/5'
+                : 'border border-border/60 bg-background/50 text-white hover:bg-white/5'
             )}
           >
             {autoRefresh ? (
@@ -103,9 +103,7 @@ export const MonitoringHero = ({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Monitoring Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-cyan-500/20 to-blue-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
                 <Activity className="w-5 h-5" />
@@ -122,9 +120,7 @@ export const MonitoringHero = ({
 
         {/* Keywords Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-blue-500/20 to-purple-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-blue-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
                 <Search className="w-5 h-5" />
@@ -141,9 +137,7 @@ export const MonitoringHero = ({
 
         {/* Auto-refresh Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-purple-500/20 to-pink-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
                 <RefreshCw className="w-5 h-5" />
@@ -160,9 +154,7 @@ export const MonitoringHero = ({
 
         {/* Live View Card */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-pink-500/20 to-cyan-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-pink-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400">
                 <Eye className="w-5 h-5" />

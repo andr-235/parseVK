@@ -21,7 +21,7 @@ export const KeywordsHero = ({ totalKeywords }: KeywordsHeroProps) => {
 
         {/* Stats Badge */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/50 px-4 py-2 text-sm backdrop-blur-sm">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background-secondary px-4 py-2 text-sm shadow-soft-sm">
             <Hash className="w-4 h-4 text-cyan-400" />
             <span className="text-slate-400">Всего слов:</span>
             <span className="font-mono-accent font-semibold text-white">{totalKeywords}</span>
@@ -32,9 +32,7 @@ export const KeywordsHero = ({ totalKeywords }: KeywordsHeroProps) => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* Feature Card 1 */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
                 <BookMarked className="w-5 h-5" />
@@ -53,9 +51,7 @@ export const KeywordsHero = ({ totalKeywords }: KeywordsHeroProps) => {
 
         {/* Feature Card 2 */}
         <div className="relative">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
                 <Tag className="w-5 h-5" />
@@ -74,9 +70,7 @@ export const KeywordsHero = ({ totalKeywords }: KeywordsHeroProps) => {
 
         {/* Feature Card 3 */}
         <div className="relative sm:col-span-2 lg:col-span-1">
-          <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-cyan-500/20 opacity-50 blur-lg" />
-          <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-400/50 to-transparent" />
+          <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
                 <Hash className="w-5 h-5" />

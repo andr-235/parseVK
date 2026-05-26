@@ -69,19 +69,18 @@ function TasksHero({
         <Button
           onClick={onCreateTask}
           size="lg"
-          className="group relative h-11 shrink-0 overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-11 shrink-0 bg-cyan-500 font-semibold text-white shadow-soft-sm transition-all duration-200 hover:bg-cyan-600 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={isCreating || areGroupsLoading || !hasGroups}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           {isCreating ? (
             <>
-              <span className="relative w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-              <span className="relative">Создание...</span>
+              <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+              <span>Создание...</span>
             </>
           ) : (
             <>
-              <Plus className="relative w-5 h-5 mr-2" />
-              <span className="relative">Новая задача</span>
+              <Plus className="w-5 h-5 mr-2" />
+              <span>Новая задача</span>
             </>
           )}
         </Button>
@@ -90,13 +89,7 @@ function TasksHero({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* Automation Status Card */}
         <div className="relative md:col-span-2">
-          {/* Glow Effect */}
-          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl" />
-
-          <Card className="relative overflow-hidden border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur-2xl">
-            {/* Top Border Glow */}
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-
+          <Card className="relative overflow-hidden border border-border/60 bg-background-secondary shadow-soft-sm">
             <div className="flex flex-col justify-between gap-5 p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -110,7 +103,7 @@ function TasksHero({
                         'uppercase text-[10px] tracking-wider font-semibold rounded-full font-mono-accent',
                         automationEnabled
                           ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
-                          : 'border border-white/10 bg-slate-800/50 text-slate-400'
+                          : 'border border-border/60 bg-background/50 text-slate-400'
                       )}
                     >
                       {automationEnabled ? 'Включено' : 'Выключено'}
@@ -143,7 +136,7 @@ function TasksHero({
                   </div>
                 </div>
 
-                <div className="w-px h-8 bg-white/10" />
+                <div className="w-px h-8 bg-border/60" />
 
                 <div className="flex items-center gap-2.5 text-sm">
                   <div className="p-2 rounded-full bg-purple-500/10 text-purple-400">
@@ -163,16 +156,10 @@ function TasksHero({
 
         {/* Quick Action Card */}
         <div className="relative">
-          {/* Glow Effect */}
-          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 opacity-50 blur-xl" />
-
-          <Card className="relative flex flex-col items-center justify-center gap-3 p-6 text-center border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur-2xl overflow-hidden">
-            {/* Top Border Glow */}
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-
+          <Card className="relative flex flex-col items-center justify-center gap-3 p-6 text-center border border-border/60 bg-background-secondary shadow-soft-sm overflow-hidden">
             <Button
               variant="outline"
-              className="h-12 w-full text-base font-medium border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+              className="h-12 w-full text-base font-medium border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
               onClick={onAutomationRun}
               disabled={isAutomationLoading || isAutomationTriggering || automation?.isRunning}
             >

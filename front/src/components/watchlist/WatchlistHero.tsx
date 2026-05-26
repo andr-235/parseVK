@@ -63,7 +63,7 @@ function WatchlistHeroComponent({
           onClick={handleRefresh}
           size="lg"
           variant="outline"
-          className="h-11 shrink-0 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+          className="h-11 shrink-0 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
           disabled={isLoadingAuthors}
         >
           <RefreshCw className={cn('mr-2 w-5 h-5', isLoadingAuthors && 'animate-spin')} />
@@ -74,13 +74,7 @@ function WatchlistHeroComponent({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* Monitoring Status Card */}
         <div className="relative md:col-span-2">
-          {/* Glow Effect */}
-          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl" />
-
-          <Card className="relative overflow-hidden border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur-2xl">
-            {/* Top Border Glow */}
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-
+          <Card className="relative overflow-hidden border border-border/60 bg-background-secondary shadow-soft-sm">
             <div className="flex flex-col justify-between gap-5 p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -123,7 +117,7 @@ function WatchlistHeroComponent({
                   </div>
                 </div>
 
-                <div className="w-px h-8 bg-white/10" />
+                <div className="w-px h-8 bg-border/60" />
 
                 <div className="flex items-center gap-2.5 text-sm">
                   <div className="p-2 rounded-full bg-purple-500/10 text-purple-400">
@@ -143,13 +137,7 @@ function WatchlistHeroComponent({
 
         {/* Quick Action Card */}
         <div className="relative">
-          {/* Glow Effect */}
-          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 opacity-50 blur-xl" />
-
-          <Card className="relative flex flex-col gap-4 p-6 border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur-2xl overflow-hidden">
-            {/* Top Border Glow */}
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-
+          <Card className="relative flex flex-col gap-4 p-6 border border-border/60 bg-background-secondary shadow-soft-sm overflow-hidden">
             <div className="space-y-1">
               <h3 className="font-monitoring-display text-sm font-semibold text-white">
                 Режим отслеживания
@@ -164,8 +152,8 @@ function WatchlistHeroComponent({
               className={cn(
                 'h-12 w-full text-base font-medium transition-all duration-200',
                 trackingEnabled
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40'
-                  : 'border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50'
+                  ? 'bg-cyan-500 text-white shadow-soft-sm hover:bg-cyan-600'
+                  : 'border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50'
               )}
               onClick={handleToggleTrackAll}
               disabled={isUpdatingSettings}
