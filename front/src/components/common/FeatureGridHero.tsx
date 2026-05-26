@@ -6,10 +6,10 @@ export interface HeroCardConfig {
   icon: React.ComponentType<{ className?: string }>
   title: string | ReactNode
   subtitle: string
-  bgGradientClass?: string // default: "from-cyan-500/20 to-blue-500/20"
-  borderGradientClass?: string // default: "via-cyan-400/50"
-  iconBgClass?: string // default: "bg-cyan-500/10"
-  iconTextClass?: string // default: "text-cyan-400"
+  bgGradientClass?: string // default: "from-accent-primary/20 to-accent-info/20"
+  borderGradientClass?: string // default: "via-accent-primary/50"
+  iconBgClass?: string // default: "bg-accent-primary/10"
+  iconTextClass?: string // default: "text-accent-primary"
   customContent?: ReactNode
 }
 
@@ -33,14 +33,14 @@ export const FeatureGridHero = ({
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="space-y-3">
           {typeof title === 'string' ? (
-            <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
+            <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-text-light">
               {title}
             </h1>
           ) : (
             title
           )}
           {description && (
-            <p className="text-slate-300 max-w-2xl text-lg">
+            <p className="text-text-secondary max-w-2xl text-lg">
               {description}
             </p>
           )}
@@ -52,8 +52,8 @@ export const FeatureGridHero = ({
       <div className={cn('grid', colsClass)}>
         {cards.map((card, index) => {
           const Icon = card.icon
-          const iconBgClass = card.iconBgClass || 'bg-cyan-500/10'
-          const iconTextClass = card.iconTextClass || 'text-cyan-400'
+          const iconBgClass = card.iconBgClass || 'bg-accent-primary/10'
+          const iconTextClass = card.iconTextClass || 'text-accent-primary'
 
           return (
             <div key={index} className="relative h-full">
@@ -67,10 +67,10 @@ export const FeatureGridHero = ({
                       card.customContent
                     ) : (
                       <>
-                        <h3 className="font-monitoring-display text-sm font-semibold text-white truncate">
+                        <h3 className="font-monitoring-display text-sm font-semibold text-text-primary truncate">
                           {card.title}
                         </h3>
-                        <p className="text-xs text-slate-400 break-words">{card.subtitle}</p>
+                        <p className="text-xs text-text-secondary break-words">{card.subtitle}</p>
                       </>
                     )}
                   </div>

@@ -12,28 +12,28 @@ export const TelegramHero = () => {
       icon: Send,
       title: 'Синхронизация',
       subtitle: 'Загрузка участников чатов',
-      bgGradientClass: 'from-blue-500/20 to-purple-500/20',
-      borderGradientClass: 'via-blue-400/50',
-      iconBgClass: 'bg-blue-500/10',
-      iconTextClass: 'text-blue-400',
+      bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
+      borderGradientClass: 'via-accent-primary/50',
+      iconBgClass: 'bg-accent-primary/10',
+      iconTextClass: 'text-accent-primary',
     },
     {
       icon: Users,
       title: 'Участники',
       subtitle: 'База членов сообществ',
-      bgGradientClass: 'from-purple-500/20 to-pink-500/20',
-      borderGradientClass: 'via-purple-400/50',
-      iconBgClass: 'bg-purple-500/10',
-      iconTextClass: 'text-purple-400',
+      bgGradientClass: 'from-accent-info/20 to-accent-primary/20',
+      borderGradientClass: 'via-accent-info/50',
+      iconBgClass: 'bg-accent-info/10',
+      iconTextClass: 'text-accent-info',
     },
     {
       icon: MessageSquare,
       title: 'Чаты',
       subtitle: 'Группы и каналы',
-      bgGradientClass: 'from-pink-500/20 to-cyan-500/20',
-      borderGradientClass: 'via-pink-400/50',
-      iconBgClass: 'bg-pink-500/10',
-      iconTextClass: 'text-pink-400',
+      bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
+      borderGradientClass: 'via-accent-primary/50',
+      iconBgClass: 'bg-accent-primary/10',
+      iconTextClass: 'text-accent-primary',
     },
   ]
 
@@ -41,7 +41,7 @@ export const TelegramHero = () => {
     <FeatureGridHero
       title={
         <>
-          Telegram <span className="text-cyan-400">интеграция</span>
+          Telegram <span className="text-accent-info">интеграция</span>
         </>
       }
       description="Управление сессиями Telegram API для автоматической синхронизации участников чатов и групп. Получайте актуальные данные о членах сообществ."

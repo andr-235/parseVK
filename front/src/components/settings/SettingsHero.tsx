@@ -23,7 +23,7 @@ export const SettingsHero = () => {
       customContent: (
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h3 className="font-monitoring-display text-sm font-semibold text-white">
+            <h3 className="font-monitoring-display text-sm font-semibold text-text-primary">
               Автоматизация
             </h3>
             <Badge
@@ -67,7 +67,7 @@ export const SettingsHero = () => {
       onClick={handleRunNow}
       size="lg"
       className={cn(
-        'group relative h-11 shrink-0 overflow-hidden font-semibold text-white shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed',
+        'group relative h-11 shrink-0 overflow-hidden font-semibold text-text-light shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed',
         automationEnabled
           ? 'bg-accent-primary shadow-accent-primary/25 hover:shadow-accent-primary/40'
           : 'bg-background-secondary border border-border/60 text-text-secondary shadow-soft-sm'
@@ -92,7 +92,7 @@ export const SettingsHero = () => {
   )
 
   const titleNode = (
-    <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
+    <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-text-light">
       Настройки <span className="text-accent-info">системы</span>
     </h1>
   )
