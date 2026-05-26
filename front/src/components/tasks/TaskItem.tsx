@@ -71,14 +71,6 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
     checkTask(task.id)
   }, [checkTask, task.id])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      // Prevent page scroll on Space; Enter has no default to suppress here
-      if (e.key === ' ') e.preventDefault()
-      onSelect(task.id)
-    }
-  }, [onSelect, task.id])
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -112,12 +104,7 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
   return (
     <div className="relative">
       <Card
-        role="button"
-        tabIndex={0}
-        aria-label={`Задача: ${task.title || `#${task.id}`}, статус: ${task.status}`}
-        onClick={() => onSelect(task.id)}
-        onKeyDown={handleKeyDown}
-        className="group relative overflow-hidden transition-all duration-200 cursor-pointer border border-border/60 bg-background-secondary hover:bg-background-secondary/90 shadow-soft-sm hover:border-accent-info/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-info focus-visible:border-accent-info/60"
+        className="group relative overflow-hidden transition-all duration-200 cursor-pointer border border-border/60 bg-background-secondary hover:bg-background-secondary/90 shadow-soft-sm hover:border-accent-info/50 focus-within:ring-2 focus-within:ring-accent-info focus-within:border-accent-info/60"
       >
         <div className="flex flex-col gap-4 p-5">
           {/* Header */}
@@ -125,12 +112,19 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-monitoring-display font-semibold text-lg leading-none truncate text-white">
-                  {task.title || `Задача #${task.id}`}
+                  <button
+                    type="button"
+                    onClick={() => onSelect(task.id)}
+                    className="text-left font-semibold text-white hover:text-accent-info focus:outline-none after:absolute after:inset-0 after:rounded-[20px] after:z-0"
+                    aria-label={`Открыть задачу: ${task.title || `Задача #${task.id}`}, статус: ${getTaskStatusText(task.status)}`}
+                  >
+                    {task.title || `Задача #${task.id}`}
+                  </button>
                 </h3>
                 <Badge
                   variant="outline"
                   className={cn(
-                    'gap-1.5 h-6 rounded-full text-[11px] font-semibold tracking-wide font-mono-accent',
+                    'relative z-10 gap-1.5 h-6 rounded-full text-[11px] font-semibold tracking-wide font-mono-accent',
                     getStatusColor(task.status)
                   )}
                 >
@@ -157,48 +151,50 @@ const TaskItem = memo(({ task, onSelect }: TaskItemProps) => {
               </div>
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 -mr-2 text-text-secondary hover:text-white hover:bg-background-primary/40 transition-colors"
-                  aria-label="Действия с задачей"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-48 border-border bg-background-secondary shadow-soft-md"
-              >
-                {(task.status === 'failed' || task.status === 'completed') && (
-                  <DropdownMenuItem
-                    onClick={handleResume}
-                    className="text-text-primary hover:text-white"
+            <div className="relative z-10">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 -mr-2 text-text-secondary hover:text-white hover:bg-background-primary/40 transition-colors"
+                    aria-label="Действия с задачей"
                   >
-                    <RotateCw className="w-4 h-4 mr-2" />
-                    Перезапустить
-                  </DropdownMenuItem>
-                )}
-                {isActive && (
-                  <DropdownMenuItem
-                    onClick={handleCheck}
-                    className="text-text-primary hover:text-white"
-                  >
-                    <RotateCw className="w-4 h-4 mr-2" />
-                    Проверить статус
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  className="text-rose-400 focus:text-rose-400 hover:bg-rose-500/10"
-                  onClick={handleDelete}
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-48 border-border bg-background-secondary shadow-soft-md"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Удалить
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  {(task.status === 'failed' || task.status === 'completed') && (
+                    <DropdownMenuItem
+                      onClick={handleResume}
+                      className="text-text-primary hover:text-white"
+                    >
+                      <RotateCw className="w-4 h-4 mr-2" />
+                      Перезапустить
+                    </DropdownMenuItem>
+                  )}
+                  {isActive && (
+                    <DropdownMenuItem
+                      onClick={handleCheck}
+                      className="text-text-primary hover:text-white"
+                    >
+                      <RotateCw className="w-4 h-4 mr-2" />
+                      Проверить статус
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    className="text-rose-400 focus:text-rose-400 hover:bg-rose-500/10"
+                    onClick={handleDelete}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Удалить
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Progress */}
