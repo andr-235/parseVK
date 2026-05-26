@@ -93,17 +93,14 @@ const CommentCard = memo(function CommentCard({
   return (
     <div
       className={cn(
-        'group relative flex gap-4 rounded-lg border border-white/5 bg-slate-900/30 p-5 backdrop-blur-sm transition-all duration-300',
-        'hover:border-white/10 hover:bg-slate-900/50 hover:shadow-lg',
+        'group relative flex gap-4 rounded-lg border border-border/40 bg-background-secondary/30 p-5 transition-all duration-300',
+        'hover:border-border/60 hover:bg-background-secondary/70 hover:shadow-soft-sm',
         comment.isRead && 'opacity-70 hover:opacity-100'
       )}
     >
-      {/* Subtle glow on hover */}
-      <div className="pointer-events-none absolute -inset-px rounded-lg bg-gradient-to-r from-cyan-500/0 via-blue-500/0 to-purple-500/0 opacity-0 blur-xl transition-opacity duration-500 group-hover:from-cyan-500/10 group-hover:via-blue-500/10 group-hover:to-purple-500/10 group-hover:opacity-100" />
-
       {/* Avatar column */}
       <div className="relative shrink-0">
-        <Avatar className="size-11 border border-white/10 shadow-lg transition-transform duration-300 group-hover:scale-105">
+        <Avatar className="size-11 border border-border/60 shadow-soft-sm transition-transform duration-300 group-hover:scale-105">
           {comment.authorAvatar ? (
             <AvatarImage
               src={comment.authorAvatar}
@@ -112,7 +109,7 @@ const CommentCard = memo(function CommentCard({
               className="object-cover"
             />
           ) : null}
-          <AvatarFallback className="bg-cyan-500/10 font-monitoring-display text-sm font-semibold text-cyan-400">
+          <AvatarFallback className="bg-accent-info/10 font-monitoring-display text-sm font-semibold text-accent-info">
             {getAuthorInitials(comment.author)}
           </AvatarFallback>
         </Avatar>
@@ -130,7 +127,7 @@ const CommentCard = memo(function CommentCard({
                   href={comment.authorUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-monitoring-display text-base font-semibold text-white transition-colors duration-200 hover:text-cyan-400"
+                  className="font-monitoring-display text-base font-semibold text-white transition-colors duration-200 hover:text-accent-info"
                 >
                   {comment.author}
                 </a>
@@ -141,24 +138,24 @@ const CommentCard = memo(function CommentCard({
               )}
 
               {comment.authorId && (
-                <span className="rounded border border-white/10 bg-slate-800/50 px-2 py-0.5 font-mono-accent text-[10px] text-slate-400">
+                <span className="rounded border border-border/60 bg-background-primary/50 px-2 py-0.5 font-mono-accent text-[10px] text-text-secondary">
                   ID: {comment.authorId}
                 </span>
               )}
             </div>
 
             {/* Metadata */}
-            <div className="flex items-center gap-2 font-mono-accent text-xs text-slate-400">
+            <div className="flex items-center gap-2 font-mono-accent text-xs text-text-secondary">
               <time
                 dateTime={comment.publishedAt ?? comment.createdAt}
-                className="transition-colors hover:text-slate-300"
+                className="transition-colors hover:text-text-primary"
               >
                 {formatDateTime(comment.publishedAt ?? comment.createdAt)}
               </time>
               {comment.isRead && (
                 <>
-                  <span className="text-slate-600">•</span>
-                  <span className="flex items-center gap-1 text-green-500/80">
+                  <span className="text-text-secondary/50">•</span>
+                  <span className="flex items-center gap-1 text-accent-success">
                     <CheckCircle2 className="size-3" />
                     Прочитано
                   </span>
@@ -175,7 +172,7 @@ const CommentCard = memo(function CommentCard({
                     onClick={() => onCategoryClick?.(category)}
                     className="rounded-full"
                   >
-                    <Badge className="h-6 border border-cyan-500/20 bg-cyan-500/10 px-2.5 font-mono-accent text-[10px] font-medium text-cyan-300 hover:bg-cyan-500/20">
+                    <Badge className="h-6 border border-accent-info/20 bg-accent-info/10 px-2.5 font-mono-accent text-[10px] font-medium text-accent-info hover:bg-accent-info/20">
                       {category}
                     </Badge>
                   </button>
@@ -193,7 +190,7 @@ const CommentCard = memo(function CommentCard({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 text-slate-400 transition-colors hover:bg-white/5 hover:text-cyan-400"
+                      className="size-8 text-text-secondary transition-colors hover:bg-background-primary/40 hover:text-accent-info"
                       asChild
                     >
                       <a href={comment.commentUrl} target="_blank" rel="noopener noreferrer">
@@ -201,7 +198,7 @@ const CommentCard = memo(function CommentCard({
                       </a>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent className="border-white/10 bg-slate-900/95 backdrop-blur-xl">
+                  <TooltipContent className="border-border bg-background-secondary shadow-soft-md">
                     Открыть в VK
                   </TooltipContent>
                 </Tooltip>
@@ -212,11 +209,11 @@ const CommentCard = memo(function CommentCard({
 
         {/* Post context */}
         {shouldShowPost && hasPostContent && (
-          <div className="relative space-y-3 rounded-lg border-l-2 border-cyan-500/30 bg-slate-800/30 py-3 pl-4 pr-3">
+          <div className="relative space-y-3 rounded-lg border-l-2 border-accent-info/30 bg-background-primary/30 py-3 pl-4 pr-3">
             {/* Context label */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-mono-accent text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <span className="font-mono-accent text-[10px] font-bold uppercase tracking-wider text-text-secondary/70">
                   Контекст поста
                 </span>
                 {fromPost.length > 0 && (
@@ -224,7 +221,7 @@ const CommentCard = memo(function CommentCard({
                     {fromPost.map((kw) => (
                       <Badge
                         key={kw.id}
-                        className="h-5 border-0 bg-amber-500/10 px-1.5 font-mono-accent text-[9px] text-amber-400"
+                        className="h-5 border-0 bg-accent-warning/10 px-1.5 font-mono-accent text-[9px] text-accent-warning"
                       >
                         {getMatchedKeywordLabel(kw, comment.postText)}
                       </Badge>
@@ -235,7 +232,7 @@ const CommentCard = memo(function CommentCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-6 text-slate-400 transition-colors hover:text-white"
+                className="size-6 text-text-secondary transition-colors hover:text-white"
                 onClick={handleOpenModal}
                 title="Открыть полный текст поста"
               >
@@ -254,7 +251,7 @@ const CommentCard = memo(function CommentCard({
                     loading="lazy"
                   />
                 )}
-                <span className="font-monitoring-body text-xs font-semibold text-slate-200">
+                <span className="font-monitoring-body text-xs font-semibold text-text-primary">
                   {comment.postGroup.name}
                 </span>
               </div>
@@ -264,7 +261,7 @@ const CommentCard = memo(function CommentCard({
             {comment.postText && (
               <div
                 className={cn(
-                  'cursor-pointer whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-300 transition-colors hover:text-white',
+                  'cursor-pointer whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary transition-colors hover:text-white',
                   !isPostExpanded && 'line-clamp-4'
                 )}
                 onClick={handleTogglePostExpand}
@@ -286,7 +283,7 @@ const CommentCard = memo(function CommentCard({
                 {fromComment.map((kw) => (
                   <Badge
                     key={kw.id}
-                    className="h-5 border-0 bg-amber-500/10 px-1.5 font-mono-accent text-[9px] text-amber-400"
+                    className="h-5 border-0 bg-accent-warning/10 px-1.5 font-mono-accent text-[9px] text-accent-warning"
                   >
                     {getMatchedKeywordLabel(kw, comment.text)}
                   </Badge>
@@ -314,8 +311,8 @@ const CommentCard = memo(function CommentCard({
             className={cn(
               'h-8 gap-2 px-3 font-mono-accent text-xs font-medium transition-all',
               comment.isRead
-                ? 'text-slate-400 hover:bg-white/5 hover:text-white'
-                : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40'
+                ? 'text-text-secondary hover:bg-background-primary/40 hover:text-white'
+                : 'bg-accent-primary text-text-light shadow-soft-sm hover:bg-accent-primary/90'
             )}
           >
             {comment.isRead ? (
@@ -340,8 +337,8 @@ const CommentCard = memo(function CommentCard({
               className={cn(
                 'h-8 gap-2 px-3 font-mono-accent text-xs font-medium',
                 comment.isWatchlisted
-                  ? 'text-slate-500 opacity-70'
-                  : 'text-slate-400 hover:bg-white/5 hover:text-cyan-400'
+                  ? 'text-text-secondary/50'
+                  : 'text-text-secondary hover:bg-background-primary/40 hover:text-accent-info'
               )}
             >
               {isWatchlistLoading ? (

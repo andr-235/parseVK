@@ -79,16 +79,16 @@ export const PostGroupCard = memo(function PostGroupCard({
   }, [postAttachments])
 
   return (
-    <div className="mb-4 overflow-hidden rounded-xl border border-white/10 bg-slate-900/30 backdrop-blur-sm">
+    <div className="mb-4 overflow-hidden rounded-xl border border-border/60 bg-background-secondary/30">
       {/* Post Header/Content */}
-      <div className="border-b border-white/5 bg-slate-800/30 p-4">
+      <div className="border-b border-border/40 bg-background-primary/30 p-4">
         <div className="mb-3 flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
             {postGroup?.photo && (
               <img
                 src={postGroup.photo}
                 alt=""
-                className="size-6 rounded-full border border-white/10"
+                className="size-6 rounded-full border border-border/60"
                 loading="lazy"
               />
             )}
@@ -97,7 +97,7 @@ export const PostGroupCard = memo(function PostGroupCard({
             </span>
             <Badge
               variant="outline"
-              className="h-5 border-white/10 bg-slate-800/50 font-mono-accent text-[10px] text-slate-400"
+              className="h-5 border-border/60 bg-background-primary/50 font-mono-accent text-[10px] text-text-secondary"
             >
               Контекст поста
             </Badge>
@@ -107,7 +107,7 @@ export const PostGroupCard = memo(function PostGroupCard({
                   <Badge
                     key={kw.id}
                     variant="secondary"
-                    className="h-5 border-0 bg-amber-500/10 px-1.5 font-mono-accent text-[9px] text-amber-400"
+                    className="h-5 border-0 bg-accent-warning/10 px-1.5 font-mono-accent text-[9px] text-accent-warning"
                   >
                     {getMatchedKeywordLabel(kw, postText)}
                   </Badge>
@@ -120,7 +120,7 @@ export const PostGroupCard = memo(function PostGroupCard({
             variant="ghost"
             size="sm"
             onClick={handleToggleExpand}
-            className="size-8 p-0 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+            className="size-8 p-0 text-text-secondary transition-colors hover:bg-background-primary/40 hover:text-white"
           >
             {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
           </Button>
@@ -129,7 +129,7 @@ export const PostGroupCard = memo(function PostGroupCard({
         {postText && (
           <div
             className={cn(
-              'cursor-pointer whitespace-pre-wrap break-words font-monitoring-body text-sm leading-relaxed text-slate-200 transition-colors hover:text-white',
+              'cursor-pointer whitespace-pre-wrap break-words font-monitoring-body text-sm leading-relaxed text-text-primary transition-colors hover:text-white',
               !isPostTextExpanded && 'line-clamp-3'
             )}
             onClick={handleTogglePostText}
@@ -152,8 +152,8 @@ export const PostGroupCard = memo(function PostGroupCard({
       {isExpanded &&
         (showKeywordComments === true ||
           (showKeywordComments === false && showKeywordPosts === false)) && (
-          <div className="divide-y divide-white/5">
-            <div className="bg-slate-900/50 px-4 py-2 font-mono-accent text-xs font-medium uppercase tracking-wider text-slate-400">
+          <div className="divide-y divide-border/40">
+            <div className="bg-background-secondary/50 px-4 py-2 font-mono-accent text-xs font-medium uppercase tracking-wider text-text-secondary">
               Найденные комментарии ({comments.length})
             </div>
             {comments.map(({ comment, matchedKeywords, index }) => (

@@ -21,13 +21,13 @@ export const CommentCategoryFilters = memo(function CommentCategoryFilters({
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-sm">
+    <div className="space-y-3 rounded-2xl border border-border/60 bg-background-secondary/40 p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="font-mono-accent text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <span className="font-mono-accent text-xs font-semibold uppercase tracking-wider text-text-secondary/70">
             Категории
           </span>
-          <Badge className="border-0 bg-slate-800/60 px-2 py-0.5 font-mono-accent text-[10px] text-slate-300">
+          <Badge className="border-0 bg-background-primary/50 px-2 py-0.5 font-mono-accent text-[10px] text-text-secondary">
             {categories.length}
           </Badge>
         </div>
@@ -36,7 +36,7 @@ export const CommentCategoryFilters = memo(function CommentCategoryFilters({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 font-mono-accent text-xs text-slate-400 hover:bg-white/5 hover:text-white"
+            className="h-8 px-2 font-mono-accent text-xs text-text-secondary hover:bg-background-primary/40 hover:text-white"
             onClick={onClear}
           >
             Сбросить
@@ -58,8 +58,8 @@ export const CommentCategoryFilters = memo(function CommentCategoryFilters({
               className={cn(
                 'h-8 rounded-full border px-3 font-mono-accent text-xs font-medium transition-all duration-200',
                 isSelected
-                  ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-lg shadow-cyan-500/10 hover:bg-cyan-500/20'
-                  : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20 hover:text-white'
+                  ? 'border-accent-info/20 bg-accent-info/10 text-accent-info hover:bg-accent-info/20'
+                  : 'border-border/60 bg-transparent text-text-secondary hover:border-border hover:text-white'
               )}
             >
               {category}

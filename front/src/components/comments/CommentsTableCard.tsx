@@ -232,10 +232,10 @@ const CommentsTableCard = memo(function CommentsTableCard({
             <CardTitle className="font-monitoring-display text-xl font-semibold tracking-tight text-white">
               Лента комментариев
             </CardTitle>
-            <CardDescription className="mt-1.5 font-monitoring-body text-slate-300">
+            <CardDescription className="mt-1.5 font-monitoring-body text-text-secondary">
               {subtitle}
               {keywordCommentsTotal > 0 && (
-                <span className="ml-2 inline-flex items-center rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 font-mono-accent text-xs font-medium text-cyan-400">
+                <span className="ml-2 inline-flex items-center rounded-md border border-accent-info/20 bg-accent-info/10 px-2 py-1 font-mono-accent text-xs font-medium text-accent-info">
                   {keywordCommentsTotal} с ключами
                 </span>
               )}
@@ -244,11 +244,11 @@ const CommentsTableCard = memo(function CommentsTableCard({
           {/* Stats badge */}
           <div className="hidden items-center gap-2 sm:flex">
             {isLoading ? (
-              <Spinner className="size-4 text-slate-400" />
+              <Spinner className="size-4 text-text-secondary" />
             ) : (
               <Badge
                 variant="secondary"
-                className="border-white/10 bg-slate-800/50 font-mono-accent font-normal text-slate-300"
+                className="border-border/60 bg-background-secondary font-mono-accent font-normal text-text-secondary"
               >
                 Всего по фильтру: {totalCount}
               </Badge>
@@ -282,12 +282,12 @@ const CommentsTableCard = memo(function CommentsTableCard({
                   return (
                     <div key={group.category} className="space-y-2">
                       {/* Category header (Sticky) */}
-                      <div className="group/header sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-slate-900/95 py-2 backdrop-blur supports-[backdrop-filter]:bg-slate-900/80">
-                        <h3 className="flex items-center gap-2 font-mono-accent text-sm font-bold uppercase tracking-wider text-slate-400">
+                      <div className="group/header sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-background-secondary/95 py-2">
+                        <h3 className="flex items-center gap-2 font-mono-accent text-sm font-bold uppercase tracking-wider text-text-secondary">
                           {group.category}
                           <Badge
                             variant="secondary"
-                            className="h-5 min-w-[1.5rem] justify-center rounded-full border-0 bg-cyan-500/10 px-2 font-mono-accent text-[10px] text-cyan-400"
+                            className="h-5 min-w-[1.5rem] justify-center rounded-full border-0 bg-accent-info/10 px-2 font-mono-accent text-[10px] text-accent-info"
                           >
                             {group.comments.length}
                           </Badge>
@@ -295,7 +295,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="size-8 p-0 text-slate-400 opacity-0 transition-opacity hover:bg-white/5 hover:text-white group-hover/header:opacity-100"
+                          className="size-8 p-0 text-text-secondary opacity-0 transition-opacity hover:bg-background-primary/40 hover:text-white group-hover/header:opacity-100"
                           onClick={() => toggleCategory(group.category)}
                         >
                           {isExpanded ? (
@@ -307,7 +307,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
                       </div>
 
                       {isExpanded && (
-                        <div className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/30 shadow-sm backdrop-blur-sm">
+                        <div className="divide-y divide-border/40 overflow-hidden rounded-2xl border border-border/60 bg-background-secondary/40 shadow-soft-sm">
                           {renderCommentsList(group.comments)}
                         </div>
                       )}
@@ -322,14 +322,14 @@ const CommentsTableCard = memo(function CommentsTableCard({
               hasCommentsWithoutKeywords && (
                 <div className="space-y-2">
                   {hasKeywordGroups && (
-                    <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-900/95 py-2 backdrop-blur supports-[backdrop-filter]:bg-slate-900/80">
-                      <h3 className="font-mono-accent text-sm font-bold uppercase tracking-wider text-slate-400">
+                    <div className="sticky top-0 z-10 border-b border-border/60 bg-background-secondary/95 py-2">
+                      <h3 className="font-mono-accent text-sm font-bold uppercase tracking-wider text-text-secondary">
                         Остальные комментарии
                       </h3>
                     </div>
                   )}
 
-                  <div className="divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/30 shadow-sm backdrop-blur-sm">
+                  <div className="divide-y divide-border/40 overflow-hidden rounded-2xl border border-border/60 bg-background-secondary/40 shadow-soft-sm">
                     {renderCommentsList(filteredCommentsWithoutKeywords)}
                   </div>
                 </div>
@@ -342,19 +342,19 @@ const CommentsTableCard = memo(function CommentsTableCard({
                 if (hasMore && !isLoadingMore) onLoadMore()
               }}
             >
-              <p className="font-monitoring-body text-sm text-slate-400">
+              <p className="font-monitoring-body text-sm text-text-secondary">
                 Загружено: {loadedCount}
               </p>
-              <p className="font-monitoring-body text-sm text-slate-400">
+              <p className="font-monitoring-body text-sm text-text-secondary">
                 Показано: {renderedCount}
               </p>
-              <p className="font-monitoring-body text-sm text-slate-400">
+              <p className="font-monitoring-body text-sm text-text-secondary">
                 Всего по фильтру: {totalCount} {declOfNumber(totalCount, ['комментарий', 'комментария', 'комментариев'])}
               </p>
 
               <div ref={observerTargetRef} className="flex w-full justify-center py-4">
                 {hasMore && isLoadingMore && (
-                  <div className="flex items-center gap-2 font-monitoring-body text-sm text-slate-400">
+                  <div className="flex items-center gap-2 font-monitoring-body text-sm text-text-secondary">
                     <Spinner className="size-4" />
                     Загрузка...
                   </div>
