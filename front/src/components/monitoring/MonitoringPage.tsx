@@ -310,6 +310,7 @@ function MonitoringPage() {
           hasMore={hasMore}
           onLoadMore={loadMore}
           usedKeywords={usedKeywords}
+          onRefresh={refreshNow}
         />
       </div>
     </div>

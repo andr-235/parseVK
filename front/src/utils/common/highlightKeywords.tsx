@@ -1,7 +1,7 @@
 import type { Keyword } from '@/types/common'
 import { buildKeywordPattern, normalizeForKeywordMatch } from '@/utils/common/keywordMatching'
 
-export function highlightKeywords(text: string, keywords: Keyword[]) {
+export function highlightKeywords(text: string, keywords: Keyword[], highlightClassName?: string) {
   if (!text || keywords.length === 0) {
     return text
   }
@@ -78,7 +78,10 @@ export function highlightKeywords(text: string, keywords: Keyword[]) {
 
     if (normalizedKeywords.has(normalizedPart)) {
       return (
-        <span key={index} className="text-yellow-600 dark:text-yellow-300 font-semibold">
+        <span
+          key={index}
+          className={highlightClassName || 'text-yellow-600 dark:text-yellow-300 font-semibold'}
+        >
           {part}
         </span>
       )
