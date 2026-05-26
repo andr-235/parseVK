@@ -64,10 +64,14 @@ function MonitoringPage() {
       : 'Автообновление включено'
     : 'Автообновление выключено'
 
-  const lastUpdatedLabel = useMemo(() => {
-    if (!lastUpdatedAt) return '—'
+  const lastUpdatedLabel = useMemo<React.ReactNode>(() => {
+    if (!lastUpdatedAt) {
+      return <span className="text-slate-500/70 italic text-sm font-normal">не обновлялось</span>
+    }
     const date = new Date(lastUpdatedAt)
-    if (Number.isNaN(date.getTime())) return '—'
+    if (Number.isNaN(date.getTime())) {
+      return <span className="text-slate-500/70 italic text-sm font-normal">не обновлялось</span>
+    }
     return new Intl.DateTimeFormat('ru-RU', {
       dateStyle: 'short',
       timeStyle: 'short',
