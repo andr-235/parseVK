@@ -1,14 +1,13 @@
 import { useEffect, useState, useMemo } from 'react'
 import { metricsService, type ParsedMetrics } from '@/api/metrics/metrics.api'
 import { Card } from '@/components/ui/card'
+import { StatusBadge, type StatusBadgeTone } from '@/components/ui/status-badge'
 import {
   Activity,
   Cpu,
   Server,
   Layers,
-  CheckCircle2,
   AlertTriangle,
-  XCircle,
   RefreshCw,
   Clock,
   ChevronDown,
@@ -131,32 +130,14 @@ function MetricsPage() {
     return { status, label }
   }, [metrics])
 
-  const getStatusStyles = (status: 'healthy' | 'degraded' | 'down') => {
+  const getStatusTone = (status: 'healthy' | 'degraded' | 'down'): StatusBadgeTone => {
     switch (status) {
       case 'healthy':
-        return {
-          bg: 'bg-green-500/10 text-green-400 border-green-500/20',
-          dotBg: 'bg-green-500',
-          pingBg: 'bg-green-500',
-          text: 'text-green-400',
-          icon: <CheckCircle2 className="h-4 w-4 text-green-400" />
-        }
+        return 'success'
       case 'degraded':
-        return {
-          bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-          dotBg: 'bg-amber-500',
-          pingBg: 'bg-amber-500',
-          text: 'text-amber-400',
-          icon: <AlertTriangle className="h-4 w-4 text-amber-400" />
-        }
+        return 'warning'
       case 'down':
-        return {
-          bg: 'bg-red-500/10 text-red-400 border-red-500/20',
-          dotBg: 'bg-red-500',
-          pingBg: 'bg-red-500',
-          text: 'text-red-400',
-          icon: <XCircle className="h-4 w-4 text-red-400" />
-        }
+        return 'danger'
     }
   }
 
@@ -293,13 +274,9 @@ function MetricsPage() {
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Сетевой Шлюз</span>
               <h3 className="text-sm font-semibold text-slate-200">API Gateway</h3>
             </div>
-            <div className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusStyles(gatewayInfo.status).bg}`}>
-              <span className="relative flex h-1.5 w-1.5">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getStatusStyles(gatewayInfo.status).pingBg}`} />
-                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${getStatusStyles(gatewayInfo.status).dotBg}`} />
-              </span>
-              <span>{gatewayInfo.label}</span>
-            </div>
+            <StatusBadge tone={getStatusTone(gatewayInfo.status)} pulse>
+              {gatewayInfo.label}
+            </StatusBadge>
           </div>
           <div className="mt-4 flex items-baseline justify-between">
             <span className="text-xs text-slate-400">P95 задержка:</span>
@@ -320,13 +297,9 @@ function MetricsPage() {
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Контроллер VK</span>
               <h3 className="text-sm font-semibold text-slate-200">VK API Service</h3>
             </div>
-            <div className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusStyles(vkInfo.status).bg}`}>
-              <span className="relative flex h-1.5 w-1.5">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getStatusStyles(vkInfo.status).pingBg}`} />
-                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${getStatusStyles(vkInfo.status).dotBg}`} />
-              </span>
-              <span>{vkInfo.label}</span>
-            </div>
+            <StatusBadge tone={getStatusTone(vkInfo.status)} pulse>
+              {vkInfo.label}
+            </StatusBadge>
           </div>
           <div className="mt-4 flex items-baseline justify-between">
             <span className="text-xs text-slate-400">P95 задержка:</span>
@@ -347,13 +320,9 @@ function MetricsPage() {
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Фоновый Воркер</span>
               <h3 className="text-sm font-semibold text-slate-200">Tasks Queue</h3>
             </div>
-            <div className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusStyles(tasksInfo.status).bg}`}>
-              <span className="relative flex h-1.5 w-1.5">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getStatusStyles(tasksInfo.status).pingBg}`} />
-                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${getStatusStyles(tasksInfo.status).dotBg}`} />
-              </span>
-              <span>{tasksInfo.label}</span>
-            </div>
+            <StatusBadge tone={getStatusTone(tasksInfo.status)} pulse>
+              {tasksInfo.label}
+            </StatusBadge>
           </div>
           <div className="mt-4 flex items-baseline justify-between">
             <span className="text-xs text-slate-400">Активные задачи:</span>
@@ -368,13 +337,9 @@ function MetricsPage() {
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Системная Среда</span>
               <h3 className="text-sm font-semibold text-slate-200">Node.js Runtime</h3>
             </div>
-            <div className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusStyles(systemInfo.status).bg}`}>
-              <span className="relative flex h-1.5 w-1.5">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getStatusStyles(systemInfo.status).pingBg}`} />
-                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${getStatusStyles(systemInfo.status).dotBg}`} />
-              </span>
-              <span>{systemInfo.label}</span>
-            </div>
+            <StatusBadge tone={getStatusTone(systemInfo.status)} pulse>
+              {systemInfo.label}
+            </StatusBadge>
           </div>
           <div className="mt-4 flex items-baseline justify-between">
             <span className="text-xs text-slate-400">Потребление RAM (RSS):</span>
