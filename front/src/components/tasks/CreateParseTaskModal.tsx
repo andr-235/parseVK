@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Search, X, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Group } from '@/types'
@@ -31,6 +32,16 @@ function CreateParseTaskModal({
     handleDeselectAll,
     getDisplayName,
   } = useCreateParseTaskModal(groups, isOpen)
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   const handleSubmit = (mode: 'recent_posts' | 'recheck_group') => {
     if (isLoading) {
@@ -212,7 +223,9 @@ function CreateParseTaskModal({
             disabled={isLoading || selectedIds.size === 0}
             className="group relative h-11 overflow-hidden bg-accent-primary font-semibold text-text-light shadow-soft-sm transition-all duration-300 hover:bg-accent-primary/90 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className="relative">{isLoading ? 'Создание...' : 'Перепроверить группу'}</span>
+            <span className="relative">
+              {isLoading ? 'Создание...' : `Перепроверить группу (${selectedIds.size})`}
+            </span>
           </Button>
         </footer>
       </div>
