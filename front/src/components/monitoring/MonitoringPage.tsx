@@ -29,7 +29,6 @@ function MonitoringPage() {
   const normalizedSourceKey = sourceKey?.toLowerCase()
   const activeSource =
     normalizedSourceKey === 'max' ? MONITORING_SOURCES.max : MONITORING_SOURCES.whatsapp
-  const activeSourceKey = normalizedSourceKey === 'max' ? 'max' : 'whatsapp'
   const [isKeywordsExpanded, setIsKeywordsExpanded] = useState(false)
   const keywordsPreviewCount = 8
   const activeSources = useMemo(() => [...activeSource.sources], [activeSource.sources])
@@ -89,7 +88,6 @@ function MonitoringPage() {
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <MonitoringHero
           sourceName={activeSource.label}
-          sourceKey={activeSourceKey}
           autoRefresh={autoRefresh}
           isAutoRefreshActive={isAutoRefreshActive}
           autoRefreshLabel={autoRefreshLabel}
