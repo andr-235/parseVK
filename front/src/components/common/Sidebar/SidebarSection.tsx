@@ -44,18 +44,12 @@ export function SidebarSection({
       >
         {isCollapsed ? (
           <div className="relative">
-            {isActive && (
-              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-cyan-500/30 to-blue-500/30 blur-sm" />
-            )}
             <div className="relative">{icon}</div>
           </div>
         ) : (
           <>
             <div className="flex items-center gap-3 flex-1">
               <div className="relative">
-                {isActive && (
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-cyan-500/30 to-blue-500/30 blur-sm" />
-                )}
                 <div className="relative">{icon}</div>
               </div>
               <span className="transition-transform duration-200 group-hover:translate-x-0.5">

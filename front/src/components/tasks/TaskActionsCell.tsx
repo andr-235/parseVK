@@ -75,6 +75,11 @@ function TaskActionsCell({ task }: TaskActionsCellProps) {
       return
     }
 
+    const confirmed = window.confirm('Удалить задачу? Это действие необратимо.')
+    if (!confirmed) {
+      return
+    }
+
     setIsDeleting(true)
     try {
       await deleteTask(task.id)
