@@ -49,7 +49,7 @@ const parseKeywordsInput = (value: string): string[] | undefined => {
 }
 
 type MonitoringViewModelOptions = {
-  sources?: string[]
+  sources?: readonly string[] | string[]
 }
 
 export const useMonitoringViewModel = ({ sources }: MonitoringViewModelOptions = {}) => {
@@ -70,6 +70,15 @@ export const useMonitoringViewModel = ({ sources }: MonitoringViewModelOptions =
 
   const isFetchingRef = useRef(false)
   const hasLoadedRef = useRef(false)
+
+  // Стабилизируем ссылку на sources, чтобы предотвратить бесконечные циклы запросов
+  const sourcesRef = useRef(sources)
+  const stableSources = useMemo(() => {
+    if (JSON.stringify(sourcesRef.current) !== JSON.stringify(sources)) {
+      sourcesRef.current = sources
+    }
+    return sourcesRef.current
+  }, [sources])
 
   type FetchMessagesOptions = {
     overrideKeywords?: string[]
@@ -106,7 +115,7 @@ export const useMonitoringViewModel = ({ sources }: MonitoringViewModelOptions =
           page: requestedPage,
           keywords: overrideKeywords ?? appliedKeywords,
           from,
-          sources,
+          sources: stableSources ? [...stableSources] : undefined,
         })
 
         setMessages((current) => (append ? [...current, ...response.items] : response.items))
@@ -128,7 +137,7 @@ export const useMonitoringViewModel = ({ sources }: MonitoringViewModelOptions =
         isFetchingRef.current = false
       }
     },
-    [appliedKeywords, limit, sources, timeRange]
+    [appliedKeywords, limit, stableSources, timeRange]
   )
 
   useEffect(() => {

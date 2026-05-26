@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { highlightKeywords } from '@/utils/common/highlightKeywords'
+import { cn } from '@/utils/common'
+import { MessageSquareDashed, AlertTriangle, LayoutList, LayoutGrid } from 'lucide-react'
 import type { Keyword } from '@/types'
 import type { IMonitorMessageResponse } from '@/types/common'
 
@@ -16,9 +18,9 @@ interface MonitoringMessagesCardProps {
   hasMore: boolean
   onLoadMore: () => void
   usedKeywords: string[]
+  onRefresh?: () => void
 }
 
-const formatFallback = '—'
 const sourceLabels: Record<string, string> = {
   messages: 'WhatsApp',
   messages_max: 'Max',
@@ -53,6 +55,76 @@ const resolveContentKind = (value?: string | null) => {
   return 'link'
 }
 
+function MonitoringMessageSkeleton({ density }: { density: 'comfortable' | 'compact' }) {
+  const isCompact = density === 'compact'
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-white/5 bg-slate-900/40 animate-pulse",
+        isCompact ? "p-3" : "p-5"
+      )}
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-16 rounded-full bg-slate-800" />
+            <div className="h-5 w-24 rounded-full bg-slate-800" />
+            <div className="h-4 w-32 rounded bg-slate-800" />
+          </div>
+          <div className="h-4 w-20 rounded bg-slate-800" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-full rounded bg-slate-800" />
+          <div className="h-4 w-[90%] rounded bg-slate-800" />
+          {!isCompact && <div className="h-4 w-[75%] rounded bg-slate-800" />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EmptyState({ usedKeywords }: { usedKeywords: string[] }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-slate-900/20 py-12 px-6 text-center animate-in fade-in-0 duration-500">
+      <div className="p-3 rounded-full bg-slate-800/40 text-slate-400 mb-4 border border-white/5 shadow-soft-sm">
+        <MessageSquareDashed className="w-8 h-8" />
+      </div>
+      <h3 className="font-monitoring-display text-lg font-semibold text-white mb-2">
+        Сообщений не найдено
+      </h3>
+      <p className="text-sm text-slate-400 max-w-md mb-4">
+        {usedKeywords.length > 0
+          ? "Не обнаружено сообщений, содержащих активные ключевые слова за выбранный временной период. Попробуйте изменить параметры поиска или увеличить интервал времени."
+          : "Для отображения ленты сообщений задайте ключевые слова в блоке поиска выше или измените период времени."}
+      </p>
+    </div>
+  )
+}
+
+function ErrorState({ error, onRetry }: { error: string; onRetry?: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/5 py-10 px-6 text-center animate-in fade-in-0 duration-500">
+      <div className="p-3 rounded-full bg-destructive/10 text-destructive mb-4 border border-destructive/20 shadow-soft-sm">
+        <AlertTriangle className="w-8 h-8 animate-pulse" />
+      </div>
+      <h3 className="font-monitoring-display text-lg font-semibold text-white mb-2">
+        Не удалось загрузить сообщения
+      </h3>
+      <p className="text-sm text-slate-400 max-w-md mb-5">
+        Произошла ошибка при получении данных с сервера: <span className="text-destructive/95 font-mono text-xs">{error}</span>
+      </p>
+      {onRetry && (
+        <Button
+          onClick={onRetry}
+          className="bg-gradient-to-r from-red-500 to-amber-600 text-white shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+        >
+          Повторить попытку
+        </Button>
+      )}
+    </div>
+  )
+}
+
 export function MonitoringMessagesCard({
   messages,
   isLoading,
@@ -62,8 +134,10 @@ export function MonitoringMessagesCard({
   hasMore,
   onLoadMore,
   usedKeywords,
+  onRefresh,
 }: MonitoringMessagesCardProps) {
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({})
+  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable')
   const observerTargetRef = useRef<HTMLDivElement>(null)
   const onLoadMoreRef = useRef(onLoadMore)
   const hasMoreRef = useRef(hasMore)
@@ -90,29 +164,32 @@ export function MonitoringMessagesCard({
     }))
   }, [usedKeywords])
 
-  const formatDate = (value: string | null) => {
-    if (!value) return formatFallback
+  const renderDateValue = (value: string | null) => {
+    if (!value) return <span className="text-slate-500/70 italic text-[11px] font-normal">нет даты</span>
     const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return formatFallback
+    if (Number.isNaN(date.getTime())) return <span className="text-slate-500/70 italic text-[11px] font-normal">нет даты</span>
     return formatter.format(date)
   }
 
-  const formatMetaValue = (value?: string | null) => {
-    if (!value) return formatFallback
-    const trimmed = value.trim()
-    return trimmed.length > 0 ? trimmed : formatFallback
+  const renderMetaValue = (value?: string | null) => {
+    if (!value || value.trim().length === 0) {
+      return <span className="text-slate-500/70 italic text-[11px] font-normal">не указан</span>
+    }
+    return value.trim()
   }
 
   const formatSource = (value?: string | null) => {
-    if (!value) return formatFallback
+    if (!value || value.trim().length === 0) {
+      return <span className="text-slate-500/70 italic text-[11px] font-normal">не указан</span>
+    }
     const trimmed = value.trim()
-    if (trimmed.length === 0) return formatFallback
     const tableName = trimmed.split('.').pop() ?? trimmed
     return sourceLabels[tableName] ?? tableName
   }
 
   const resolveSourceVisual = (value?: string | null) => {
-    const label = formatSource(value)
+    const rawLabel = formatSource(value)
+    const label = typeof rawLabel === 'string' ? rawLabel : 'не указан'
     const key = label.toLowerCase()
     const logo = sourceLogos[key]
     return { label, logo }
@@ -124,23 +201,6 @@ export function MonitoringMessagesCard({
     isBusyRef.current = isLoading || isRefreshing || isLoadingMore
   }, [hasMore, isLoading, isLoadingMore, isRefreshing, onLoadMore])
 
-  useEffect(() => {
-    if (isLoading || isRefreshing || isLoadingMore || !hasMore) return
-
-    const target = observerTargetRef.current
-    if (!target) return
-
-    const timeoutId = setTimeout(() => {
-      const rect = target.getBoundingClientRect()
-      const isInViewport = rect.top < window.innerHeight + 200
-
-      if (isInViewport && hasMoreRef.current && !isBusyRef.current) {
-        onLoadMoreRef.current()
-      }
-    }, 100)
-
-    return () => clearTimeout(timeoutId)
-  }, [hasMore, isLoading, isLoadingMore, isRefreshing, messages.length])
 
   useIntersectionObserver(
     observerTargetRef,
@@ -169,16 +229,46 @@ export function MonitoringMessagesCard({
     }))
   }
 
+  const isCompact = density === 'compact'
+
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden border border-border/60 bg-slate-900/60 shadow-xl backdrop-blur-2xl">
       <CardHeader className="flex flex-col gap-3 border-b border-border/60 bg-muted/20 p-6 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <CardTitle className="font-monitoring-display text-lg">Лента сообщений</CardTitle>
-          <p className="text-xs text-muted-foreground">
+          <CardTitle className="font-monitoring-display text-lg text-white">Лента сообщений</CardTitle>
+          <p className="text-xs text-muted-foreground font-monitoring-body">
             Живая подборка совпадений по активным ключам.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 border border-border/60 bg-slate-800/40 p-0.5 rounded-lg shadow-soft-sm">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setDensity('comfortable')}
+              className={cn(
+                "h-7 w-7 rounded-md text-slate-400 hover:text-white transition-all duration-200",
+                density === 'comfortable' && "bg-slate-700/60 text-white shadow-soft-sm"
+              )}
+              title="Просторный вид"
+            >
+              <LayoutList className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setDensity('compact')}
+              className={cn(
+                "h-7 w-7 rounded-md text-slate-400 hover:text-white transition-all duration-200",
+                density === 'compact' && "bg-slate-700/60 text-white shadow-soft-sm"
+              )}
+              title="Компактный вид"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
           <Badge
             variant="outline"
             className="rounded-full border-border/60 bg-background/70 px-3 py-1 text-[11px] font-semibold shadow-soft-sm backdrop-blur"
@@ -186,28 +276,26 @@ export function MonitoringMessagesCard({
             Показано: {messages.length}
           </Badge>
           {isRefreshing && !isLoading && (
-            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-2 text-xs text-muted-foreground font-mono-accent">
               <span className="size-2 rounded-full bg-sky-400 motion-safe:animate-pulse" />
               Обновляем…
             </span>
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 p-6">
+      <CardContent className={cn("p-6", isCompact ? "space-y-3" : "space-y-5")}>
         {isLoading && (
-          <div className="rounded-2xl border border-dashed border-border/60 bg-background/60 p-6 text-sm text-muted-foreground">
-            Загрузка сообщений…
+          <div className="space-y-4">
+            <MonitoringMessageSkeleton density={density} />
+            <MonitoringMessageSkeleton density={density} />
+            <MonitoringMessageSkeleton density={density} />
           </div>
         )}
         {!isLoading && error && (
-          <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
-            Ошибка: {error}
-          </div>
+          <ErrorState error={error} onRetry={onRefresh} />
         )}
         {!isLoading && !error && messages.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border/60 bg-background/60 p-6 text-sm text-muted-foreground">
-            Сообщений не найдено
-          </div>
+          <EmptyState usedKeywords={usedKeywords} />
         )}
         {!isLoading &&
           !error &&
@@ -230,16 +318,21 @@ export function MonitoringMessagesCard({
             return (
               <div
                 key={messageId}
-                className="group relative overflow-hidden rounded-2xl border border-border/60 bg-background/70 p-4 shadow-soft-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-soft-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4"
+                className={cn(
+                  "group relative overflow-hidden rounded-xl border border-border/60 bg-slate-900/40 shadow-soft-sm transition duration-300 hover:border-cyan-500/35 hover:-translate-y-0.5 hover:shadow-soft-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4",
+                  isCompact ? "p-3" : "p-5"
+                )}
                 style={{ animationDelay: `${delay}ms` }}
               >
-                <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-sky-400/70 via-emerald-400/50 to-amber-300/60 opacity-80" />
-                <div className="flex flex-col gap-3 pl-3">
+                <div className={cn("flex flex-col", isCompact ? "gap-2" : "gap-3.5")}>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge
                         variant="outline"
-                        className="rounded-full border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-200"
+                        className={cn(
+                          "rounded-full border-sky-500/35 bg-sky-500/10 px-2 py-0.5 font-semibold uppercase tracking-[0.15em] text-sky-700 dark:text-sky-200",
+                          isCompact ? "text-[9px]" : "text-[10px]"
+                        )}
                         title={sourceVisual.label}
                         aria-label={`Площадка: ${sourceVisual.label}`}
                       >
@@ -247,7 +340,7 @@ export function MonitoringMessagesCard({
                           <img
                             src={sourceVisual.logo.src}
                             alt={sourceVisual.logo.label}
-                            className="h-4 w-auto"
+                            className={isCompact ? "h-3.5 w-auto" : "h-4 w-auto"}
                             loading="lazy"
                           />
                         ) : (
@@ -256,24 +349,37 @@ export function MonitoringMessagesCard({
                       </Badge>
                       <Badge
                         variant="outline"
-                        className="rounded-full border-border/60 bg-background/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-primary shadow-soft-sm backdrop-blur"
+                        className={cn(
+                          "rounded-full border-border/60 bg-slate-800/80 px-2.5 py-0.5 font-semibold uppercase tracking-[0.15em] text-text-primary shadow-soft-sm backdrop-blur",
+                          isCompact ? "text-[9px]" : "text-[10px]"
+                        )}
                       >
-                        Чат: {formatMetaValue(message.chat)}
+                        Чат: {renderMetaValue(message.chat)}
                       </Badge>
-                      <span>Автор: {formatMetaValue(message.author)}</span>
+                      <span className={cn("font-medium", isCompact ? "text-[11px]" : "text-xs")}>
+                        Автор: {renderMetaValue(message.author)}
+                      </span>
                     </div>
-                    <span>{formatDate(message.createdAt)}</span>
+                    <span className={cn("font-mono-accent opacity-80", isCompact ? "text-[11px]" : "text-xs")}>
+                      {renderDateValue(message.createdAt)}
+                    </span>
                   </div>
 
                   <div
-                    className={`whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 ${
-                      shouldClampText ? 'line-clamp-4' : ''
-                    }`}
+                    className={cn(
+                      "whitespace-pre-wrap leading-relaxed text-foreground/90 font-monitoring-body transition-all duration-200",
+                      isCompact ? "text-[13px]" : "text-sm",
+                      shouldClampText ? "line-clamp-4" : ""
+                    )}
                   >
                     {hasText
-                      ? highlightKeywords(message.text ?? '', highlightKeywordEntries)
+                      ? highlightKeywords(
+                          message.text ?? '',
+                          highlightKeywordEntries,
+                          "mx-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium font-mono-accent text-[12px] inline-block align-middle select-all"
+                        )
                       : !contentUrl
-                        ? 'Сообщение без текста'
+                        ? <span className="text-slate-500/70 italic text-xs">Сообщение без текста</span>
                         : null}
                   </div>
                   {shouldToggleText && (
@@ -282,7 +388,10 @@ export function MonitoringMessagesCard({
                       variant="ghost"
                       size="sm"
                       onClick={() => toggleExpanded(messageId)}
-                      className="h-8 px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-text-primary"
+                      className={cn(
+                        "h-8 px-2 font-semibold uppercase tracking-[0.2em] text-text-primary hover:bg-slate-800/40",
+                        isCompact ? "text-[9px]" : "text-[10px]"
+                      )}
                     >
                       {isExpanded ? 'Свернуть текст' : 'Развернуть текст'}
                     </Button>
@@ -292,7 +401,11 @@ export function MonitoringMessagesCard({
                     {contentUrl && (
                       <Badge
                         variant="outline"
-                        className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${contentBadgeStyle}`}
+                        className={cn(
+                          "rounded-full px-3 py-1 font-semibold uppercase tracking-[0.18em]",
+                          contentBadgeStyle,
+                          isCompact ? "text-[9px]" : "text-[10px]"
+                        )}
                       >
                         {contentLabel}
                       </Badge>
@@ -300,7 +413,7 @@ export function MonitoringMessagesCard({
                   </div>
 
                   {contentUrl && (
-                    <div className="rounded-xl border border-border/50 bg-background/60 p-3">
+                    <div className={cn("rounded-xl border border-border/50 bg-background/60", isCompact ? "p-2" : "p-3")}>
                       {contentKind === 'image' && (
                         <a href={contentUrl} target="_blank" rel="noreferrer">
                           <img
@@ -355,7 +468,7 @@ export function MonitoringMessagesCard({
                 {isLoadingMore ? 'Загружаем…' : 'Показать ещё'}
               </Button>
             ) : (
-              <span className="text-xs text-muted-foreground">Это все найденные сообщения</span>
+              <span className="text-xs text-muted-foreground font-monitoring-body">Это все найденные сообщения</span>
             )}
           </div>
         )}

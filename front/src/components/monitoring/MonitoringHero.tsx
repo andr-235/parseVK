@@ -1,4 +1,3 @@
-import { NavLink } from 'react-router-dom'
 import { Activity, Eye, RefreshCw, Pause, Play, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -7,7 +6,6 @@ import { cn } from '@/utils/common'
 
 interface MonitoringHeroProps {
   sourceName: string
-  sourceKey: string
   autoRefresh: boolean
   isAutoRefreshActive: boolean
   autoRefreshLabel: string
@@ -17,17 +15,8 @@ interface MonitoringHeroProps {
   onToggleAutoRefresh: () => void
 }
 
-const getNavButtonClasses = (isActive: boolean) =>
-  cn(
-    'h-10 px-4 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200',
-    isActive
-      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
-      : 'border border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50'
-  )
-
 export const MonitoringHero = ({
   sourceName,
-  sourceKey,
   autoRefresh,
   isAutoRefreshActive,
   autoRefreshLabel,
@@ -36,8 +25,6 @@ export const MonitoringHero = ({
   onRefresh,
   onToggleAutoRefresh,
 }: MonitoringHeroProps) => {
-  const messagesPath = `/monitoring/${sourceKey}`
-  const groupsPath = `/monitoring/${sourceKey}/groups`
 
   return (
     <div className="flex flex-col gap-8">
@@ -77,49 +64,39 @@ export const MonitoringHero = ({
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <NavLink to={messagesPath} className={({ isActive }) => getNavButtonClasses(isActive)}>
-              Сообщения
-            </NavLink>
-            <NavLink to={groupsPath} className={({ isActive }) => getNavButtonClasses(isActive)}>
-              Группы
-            </NavLink>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={onRefresh}
-              size="sm"
-              variant="outline"
-              className="h-10 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
-              disabled={isLoading || isRefreshing}
-            >
-              <RefreshCw className={cn('mr-2 w-4 h-4', isRefreshing && 'animate-spin')} />
-              Обновить
-            </Button>
-            <Button
-              onClick={onToggleAutoRefresh}
-              size="sm"
-              className={cn(
-                'h-10 transition-all duration-200',
-                autoRefresh
-                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/40'
-                  : 'border border-white/10 bg-slate-800/50 text-white hover:bg-white/5'
-              )}
-            >
-              {autoRefresh ? (
-                <>
-                  <Pause className="mr-2 w-4 h-4" />
-                  Остановить
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 w-4 h-4" />
-                  Запустить
-                </>
-              )}
-            </Button>
-          </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            onClick={onRefresh}
+            size="sm"
+            variant="outline"
+            className="h-10 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+            disabled={isLoading || isRefreshing}
+          >
+            <RefreshCw className={cn('mr-2 w-4 h-4', isRefreshing && 'animate-spin')} />
+            Обновить
+          </Button>
+          <Button
+            onClick={onToggleAutoRefresh}
+            size="sm"
+            className={cn(
+              'h-10 transition-all duration-200',
+              autoRefresh
+                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/40'
+                : 'border border-white/10 bg-slate-800/50 text-white hover:bg-white/5'
+            )}
+          >
+            {autoRefresh ? (
+              <>
+                <Pause className="mr-2 w-4 h-4" />
+                Остановить
+              </>
+            ) : (
+              <>
+                <Play className="mr-2 w-4 h-4" />
+                Запустить
+              </>
+            )}
+          </Button>
         </div>
       </div>
 

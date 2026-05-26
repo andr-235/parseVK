@@ -29,9 +29,10 @@ function MonitoringPage() {
   const normalizedSourceKey = sourceKey?.toLowerCase()
   const activeSource =
     normalizedSourceKey === 'max' ? MONITORING_SOURCES.max : MONITORING_SOURCES.whatsapp
-  const activeSourceKey = normalizedSourceKey === 'max' ? 'max' : 'whatsapp'
   const [isKeywordsExpanded, setIsKeywordsExpanded] = useState(false)
   const keywordsPreviewCount = 8
+  const activeSources = useMemo(() => [...activeSource.sources], [activeSource.sources])
+
   const {
     messages,
     searchInput,
@@ -53,7 +54,7 @@ function MonitoringPage() {
     changeTimeRange,
     loadMore,
     refreshNow,
-  } = useMonitoringViewModel({ sources: [...activeSource.sources] })
+  } = useMonitoringViewModel({ sources: activeSources })
 
   const isAutoRefreshActive = autoRefresh && page === 1
   const autoRefreshLabel = autoRefresh
@@ -62,10 +63,14 @@ function MonitoringPage() {
       : 'Автообновление включено'
     : 'Автообновление выключено'
 
-  const lastUpdatedLabel = useMemo(() => {
-    if (!lastUpdatedAt) return '—'
+  const lastUpdatedLabel = useMemo<React.ReactNode>(() => {
+    if (!lastUpdatedAt) {
+      return <span className="text-slate-500/70 italic text-sm font-normal">не обновлялось</span>
+    }
     const date = new Date(lastUpdatedAt)
-    if (Number.isNaN(date.getTime())) return '—'
+    if (Number.isNaN(date.getTime())) {
+      return <span className="text-slate-500/70 italic text-sm font-normal">не обновлялось</span>
+    }
     return new Intl.DateTimeFormat('ru-RU', {
       dateStyle: 'short',
       timeStyle: 'short',
@@ -83,7 +88,6 @@ function MonitoringPage() {
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <MonitoringHero
           sourceName={activeSource.label}
-          sourceKey={activeSourceKey}
           autoRefresh={autoRefresh}
           isAutoRefreshActive={isAutoRefreshActive}
           autoRefreshLabel={autoRefreshLabel}
@@ -310,6 +314,7 @@ function MonitoringPage() {
           hasMore={hasMore}
           onLoadMore={loadMore}
           usedKeywords={usedKeywords}
+          onRefresh={refreshNow}
         />
       </div>
     </div>
