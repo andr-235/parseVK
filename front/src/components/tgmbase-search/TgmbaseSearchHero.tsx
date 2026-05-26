@@ -2,10 +2,9 @@ import { Badge } from '@/components/ui/badge'
 
 export function TgmbaseSearchHero() {
   return (
-    <section className="relative overflow-hidden rounded-card border border-cyan-400/20 bg-slate-950/80 p-6 text-white shadow-soft-sm">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_40%)]" />
+    <section className="relative overflow-hidden rounded-card border border-border/60 bg-background-secondary p-6 text-white shadow-soft-sm">
       <div className="relative space-y-4">
-        <Badge className="w-fit border-cyan-400/30 bg-cyan-400/10 text-cyan-200" variant="outline">
+        <Badge className="w-fit border-cyan-500/20 bg-cyan-500/10 text-cyan-400" variant="outline">
           TGMB Search
         </Badge>
         <div className="space-y-2">

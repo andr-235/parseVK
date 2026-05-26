@@ -52,26 +52,12 @@ export const FeatureGridHero = ({
       <div className={cn('grid', colsClass)}>
         {cards.map((card, index) => {
           const Icon = card.icon
-          const bgGradientClass = card.bgGradientClass || 'from-cyan-500/20 to-blue-500/20'
-          const borderGradientClass = card.borderGradientClass || 'via-cyan-400/50'
           const iconBgClass = card.iconBgClass || 'bg-cyan-500/10'
           const iconTextClass = card.iconTextClass || 'text-cyan-400'
 
           return (
-            <div key={index} className="relative">
-              <div
-                className={cn(
-                  'absolute -inset-0.5 rounded-xl opacity-50 blur-lg transition-opacity duration-300 bg-gradient-to-r',
-                  bgGradientClass
-                )}
-              />
-              <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden h-full">
-                <div
-                  className={cn(
-                    'absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent',
-                    borderGradientClass
-                  )}
-                />
+            <div key={index} className="relative h-full">
+              <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden h-full">
                 <div className="flex items-start gap-3 h-full">
                   <div className={cn('p-2 rounded-lg shrink-0', iconBgClass, iconTextClass)}>
                     <Icon className="w-5 h-5" />
