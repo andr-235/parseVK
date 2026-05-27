@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { KeyRound, RefreshCw, Trash2, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -13,7 +12,7 @@ import { cn } from '@/utils/common'
 import { adminUsersService } from '@/api/adminUsers/adminUsers.api'
 import { useCurrentUser } from '@/hooks/adminUsers/useCurrentUser'
 import { PageHeader } from '@/components/common'
-import { Shield, UserPlus, Users, Key } from 'lucide-react'
+import { Shield, UserPlus, Users, Key, KeyRound, RefreshCw, Trash2 } from 'lucide-react'
 import type { AdminUser, UserRole } from '@/types/auth'
 
 const roleLabelMap: Record<UserRole, string> = {
