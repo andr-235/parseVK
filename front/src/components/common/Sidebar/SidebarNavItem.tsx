@@ -4,23 +4,33 @@ import type { SidebarNavItem as SidebarNavItemType } from './types'
 
 interface SidebarNavItemProps {
   item: SidebarNavItemType
+  isCollapsed?: boolean
 }
 
-export function SidebarNavItem({ item }: SidebarNavItemProps) {
+export function SidebarNavItem({ item, isCollapsed = false }: SidebarNavItemProps) {
   return (
-    <NavLink to={item.path} className={({ isActive }) => getNavItemClasses(isActive)}>
-      <div className="relative flex flex-1 items-center justify-between animate-in fade-in-0 slide-in-from-left-2 duration-500">
-        <span className="transition-transform duration-200 group-hover:translate-x-0.5">
-          {item.label}
-        </span>
-        {item.badge && (
-          <span className="relative inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/50 px-2 py-0.5 text-[10px] text-cyan-400 backdrop-blur-sm font-mono-accent ml-auto">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-cyan-500" />
-            </span>
-            {item.badge}
+    <NavLink
+      to={item.path}
+      className={({ isActive }) => getNavItemClasses(isActive, isCollapsed)}
+      title={isCollapsed ? item.label : undefined}
+    >
+      <div className="flex items-center gap-3 w-full">
+        {item.icon && (
+          <span className="flex items-center justify-center shrink-0">
+            {item.icon}
           </span>
+        )}
+        {!isCollapsed && (
+          <div className="relative flex flex-1 items-center justify-between animate-in fade-in-0 slide-in-from-left-2 duration-300">
+            <span className="transition-transform duration-200 group-hover:translate-x-0.5 select-none">
+              {item.label}
+            </span>
+            {item.badge && (
+              <span className="relative inline-flex items-center rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400 font-medium font-mono-accent ml-auto select-none">
+                {item.badge}
+              </span>
+            )}
+          </div>
         )}
       </div>
     </NavLink>

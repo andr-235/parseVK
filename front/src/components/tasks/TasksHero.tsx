@@ -15,7 +15,6 @@ interface TasksHeroProps {
   onCreateTask: () => void
   isCreating: boolean
   areGroupsLoading: boolean
-  hasGroups: boolean
   formattedLastUpdated: string
   automation: TasksHeroAutomationInfo | null
   onAutomationRun: () => void
@@ -42,7 +41,6 @@ function TasksHero({
   onCreateTask,
   isCreating,
   areGroupsLoading,
-  hasGroups,
   automation,
   onAutomationRun,
   onOpenAutomationSettings,
@@ -57,10 +55,10 @@ function TasksHero({
     <div className="flex flex-col gap-8">
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="space-y-3">
-          <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
+          <h1 className="font-monitoring-display text-3xl font-semibold tracking-tight text-white">
             Задачи парсинга
           </h1>
-          <p className="text-text-secondary max-w-2xl text-lg">
+          <p className="font-monitoring-body text-sm font-normal text-text-secondary max-w-xl">
             Управляйте сбором данных из ВКонтакте. Создавайте новые задачи или настройте
             автоматический парсинг по расписанию.
           </p>
@@ -69,33 +67,33 @@ function TasksHero({
         <Button
           onClick={onCreateTask}
           size="lg"
-          className="h-11 shrink-0 bg-accent-primary font-semibold text-white shadow-soft-sm transition-all duration-200 hover:bg-accent-primary/90 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isCreating || areGroupsLoading || !hasGroups}
+          className="h-10 shrink-0 bg-accent-primary px-6 text-sm font-semibold tracking-wide text-text-light shadow-soft-sm transition-all duration-200 hover:bg-accent-primary/90 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isCreating || areGroupsLoading}
           aria-label="Создать новую задачу парсинга"
         >
           {isCreating ? (
             <>
-              <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
               <span>Создание...</span>
             </>
           ) : (
             <>
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="w-4 h-4 mr-2" />
               <span>Новая задача</span>
             </>
           )}
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-stretch">
         {/* Automation Status Card */}
-        <div className="relative md:col-span-2">
-          <Card className="relative overflow-hidden border border-border/60 bg-background-secondary shadow-soft-sm">
-            <div className="flex flex-col justify-between gap-5 p-6">
+        <div className="relative md:col-span-2 flex">
+          <Card className="relative overflow-hidden border border-border/60 bg-background-secondary shadow-soft-sm h-full w-full flex flex-col justify-between">
+            <div className="flex flex-col justify-between gap-5 p-6 h-full w-full">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-monitoring-display font-semibold text-white">
+                    <h3 className="font-monitoring-body text-base font-semibold text-text-primary">
                       Автоматизация
                     </h3>
                     <Badge
@@ -110,7 +108,7 @@ function TasksHero({
                       {automationEnabled ? 'Включено' : 'Выключено'}
                     </Badge>
                   </div>
-                  <p className="text-sm text-text-secondary">
+                  <p className="font-monitoring-body text-sm font-normal text-text-secondary">
                     Настройте регулярный сбор данных без вашего участия
                   </p>
                 </div>
@@ -131,10 +129,10 @@ function TasksHero({
                     <Clock className="w-4 h-4" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-xs text-text-secondary/70 font-medium uppercase tracking-wide font-mono-accent">
+                    <span className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70">
                       Следующий запуск
                     </span>
-                    <span className="font-semibold text-text-primary">{nextRunText}</span>
+                    <span className="font-mono-accent text-xs font-medium text-text-primary">{nextRunText}</span>
                   </div>
                 </div>
 
@@ -145,10 +143,10 @@ function TasksHero({
                     <Calendar className="w-4 h-4" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-xs text-text-secondary/70 font-medium uppercase tracking-wide font-mono-accent">
+                    <span className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70">
                       Последний запуск
                     </span>
-                    <span className="font-semibold text-text-primary">{lastRunText}</span>
+                    <span className="font-mono-accent text-xs font-medium text-text-primary">{lastRunText}</span>
                   </div>
                 </div>
               </div>
@@ -157,23 +155,23 @@ function TasksHero({
         </div>
 
         {/* Quick Action Card */}
-        <div className="relative">
-          <Card className="relative flex flex-col items-center justify-center gap-3 p-6 text-center border border-border/60 bg-background-secondary shadow-soft-sm overflow-hidden">
+        <div className="relative flex">
+          <Card className="relative flex flex-col items-center justify-center gap-4 p-6 text-center border border-border/60 bg-background-secondary shadow-soft-sm overflow-hidden h-full w-full">
             <Button
               variant="outline"
-              className="h-12 w-full text-base font-medium border-border/60 bg-background-primary/50 text-text-primary hover:bg-background-secondary hover:border-accent-info/50 transition-all duration-200"
+              className="h-10 w-full text-sm font-semibold border-accent-primary/20 bg-accent-primary/5 text-accent-primary hover:bg-accent-primary hover:text-text-light hover:border-accent-primary transition-all duration-200"
               onClick={onAutomationRun}
               disabled={isAutomationLoading || isAutomationTriggering || automation?.isRunning}
               aria-label="Запустить автоматический сбор данных сейчас"
             >
               {isAutomationTriggering ? (
-                <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
               ) : (
-                <Play className="w-5 h-5 mr-2 fill-current" />
+                <Play className="w-4 h-4 mr-2 fill-current" />
               )}
               Запустить сейчас
             </Button>
-            <p className="text-xs text-text-secondary/70 px-4">
+            <p className="font-monitoring-body text-xs font-normal text-text-secondary/70 px-4 leading-relaxed">
               Принудительный запуск парсинга всех активных групп
             </p>
           </Card>

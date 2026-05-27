@@ -1,4 +1,20 @@
-import type { SidebarItem, SidebarNavEntry } from './types'
+import { createElement } from 'react'
+import {
+  ListTodo,
+  Users,
+  MessageSquare,
+  User,
+  Eye,
+  Key,
+  Download,
+  MessageCircle,
+  Building,
+  Home,
+  Send,
+  Search,
+  DownloadCloud,
+} from 'lucide-react'
+import type { SidebarItem, SidebarNavItem } from './types'
 
 type SidebarItemConfig = Pick<SidebarItem, 'label' | 'path'>
 
@@ -11,47 +27,107 @@ export const createVkSubItems = (
   commentsCount: number,
   watchlistCount: number,
   authorsTotal: number
-): SidebarNavEntry[] => {
+): SidebarNavItem[] => {
   return [
-    { label: 'Задачи', path: '/tasks', badge: formatCount(tasksCount) },
-    { label: 'Группы', path: '/groups' },
-    { label: 'Комментарии', path: '/comments', badge: formatCount(commentsCount) },
-    { label: 'Авторы', path: '/authors', badge: formatCount(authorsTotal) },
-    { label: 'На карандаше', path: '/watchlist', badge: formatCount(watchlistCount) },
-    { label: 'Ключевые слова', path: '/keywords' },
-    { label: 'Экспорт друзей VK', path: '/vk/friends-export' },
-    { label: 'Экспорт друзей OK', path: '/ok/friends-export' },
+    {
+      label: 'Задачи',
+      path: '/tasks',
+      badge: formatCount(tasksCount),
+      icon: createElement(ListTodo, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Группы',
+      path: '/groups',
+      icon: createElement(Users, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Комментарии',
+      path: '/comments',
+      badge: formatCount(commentsCount),
+      icon: createElement(MessageSquare, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Авторы',
+      path: '/authors',
+      badge: formatCount(authorsTotal),
+      icon: createElement(User, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'На карандаше',
+      path: '/watchlist',
+      badge: formatCount(watchlistCount),
+      icon: createElement(Eye, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Ключевые слова',
+      path: '/keywords',
+      icon: createElement(Key, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Экспорт друзей VK',
+      path: '/vk/friends-export',
+      icon: createElement(Download, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Экспорт друзей OK',
+      path: '/ok/friends-export',
+      icon: createElement(Download, { className: 'h-4 w-4' }),
+    },
   ]
 }
 
-export const createMonitoringSubItems = (): SidebarNavEntry[] => {
+export const createMonitoringSubItems = (): SidebarNavItem[] => {
   return [
     {
-      label: 'WhatsApp',
-      items: [
-        { label: 'Группы', path: '/monitoring/whatsapp/groups' },
-        { label: 'Сообщения', path: '/monitoring/whatsapp' },
-      ],
+      label: 'WhatsApp: Сообщения',
+      path: '/monitoring/whatsapp',
+      icon: createElement(MessageCircle, { className: 'h-4 w-4' }),
     },
     {
-      label: 'Max',
-      items: [
-        { label: 'Группы', path: '/monitoring/max/groups' },
-        { label: 'Сообщения', path: '/monitoring/max' },
-      ],
+      label: 'WhatsApp: Группы',
+      path: '/monitoring/whatsapp/groups',
+      icon: createElement(Building, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Max: Сообщения',
+      path: '/monitoring/max',
+      icon: createElement(MessageCircle, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Max: Группы',
+      path: '/monitoring/max/groups',
+      icon: createElement(Building, { className: 'h-4 w-4' }),
     },
   ]
 }
 
-export const createParsingSubItems = (): SidebarNavEntry[] => {
-  return [{ label: 'Недвижимость', path: '/listings' }]
+export const createParsingSubItems = (): SidebarNavItem[] => {
+  return [
+    {
+      label: 'Недвижимость',
+      path: '/listings',
+      icon: createElement(Home, { className: 'h-4 w-4' }),
+    },
+  ]
 }
 
-export const createTelegramSubItems = (): SidebarNavEntry[] => {
+export const createTelegramSubItems = (): SidebarNavItem[] => {
   return [
-    { label: 'Выгрузка пользователей', path: '/telegram' },
-    { label: 'Поиск по местным каналам', path: '/tgmbase-search' },
-    { label: 'Выгрузка с ДЛ', path: '/telegram/dl-upload' },
+    {
+      label: 'Выгрузка пользователей',
+      path: '/telegram',
+      icon: createElement(Send, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Поиск по местным каналам',
+      path: '/tgmbase-search',
+      icon: createElement(Search, { className: 'h-4 w-4' }),
+    },
+    {
+      label: 'Выгрузка с ДЛ',
+      path: '/telegram/dl-upload',
+      icon: createElement(DownloadCloud, { className: 'h-4 w-4' }),
+    },
   ]
 }
 

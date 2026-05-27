@@ -36,7 +36,6 @@ function TasksPage() {
           onCreateTask={handleOpenCreateModal}
           isCreating={isCreating}
           areGroupsLoading={areGroupsLoading}
-          hasGroups={hasGroups}
           formattedLastUpdated={formattedLastUpdated}
           automation={automationSettings}
           onAutomationRun={handleAutomationRun}
@@ -46,20 +45,12 @@ function TasksPage() {
         />
       </div>
 
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
-        <h2 className="font-monitoring-display text-xl font-semibold text-foreground">
-          Активные задачи
-        </h2>
-
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
         <ActiveTasksBanner tasks={activeTasks} isCreating={isCreating} />
       </div>
 
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
-        <h2 className="font-monitoring-display text-xl font-semibold text-foreground">
-          История запусков
-        </h2>
-
-        <TasksList emptyMessage={emptyMessage} onTaskSelect={handleTaskSelect} />
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+        <TasksList emptyMessage={emptyMessage} onTaskSelect={handleTaskSelect} hasGroups={hasGroups} />
       </div>
 
       {selectedTaskId && (

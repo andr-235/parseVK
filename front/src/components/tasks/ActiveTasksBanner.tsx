@@ -30,15 +30,15 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
       <CardHeader className="pb-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <CardTitle className="font-monitoring-display text-lg text-foreground">
+            <CardTitle className="font-monitoring-body text-base font-semibold text-text-primary">
               Активные процессы парсинга
             </CardTitle>
-            <CardDescription className="text-muted-foreground">{subtitle}</CardDescription>
+            <CardDescription className="font-monitoring-body text-sm font-normal text-text-secondary">{subtitle}</CardDescription>
           </div>
           {indicatorText && (
             <Badge
               variant="outline"
-              className="gap-2 rounded-md border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 font-mono-accent"
+              className="gap-2 rounded-md border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 font-monitoring-body text-xs font-semibold uppercase tracking-wider"
             >
               <span className="relative flex h-2 w-2">
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />

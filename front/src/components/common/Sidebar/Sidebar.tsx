@@ -1,10 +1,9 @@
 import { useMemo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Users, Building, Send, Settings, UserCog, LogOut, Activity, Cpu } from 'lucide-react'
+import { Send, Settings, UserCog, Cpu } from 'lucide-react'
 import { useSidebarState } from '@/hooks/common'
 import { useSidebarData } from '@/hooks/common'
 import { useAuthSession } from '@/hooks/auth/useAuthSession'
-import { Button } from '@/components/ui/button'
 import {
   createPrimaryItems,
   createMonitoringSubItems,
@@ -14,29 +13,20 @@ import {
   SECONDARY_ITEMS_CONFIG,
 } from './constants'
 import { getSidebarClasses, getPrimaryNavItemClasses } from './utils'
-import { cn } from '@/utils/common'
 import { SidebarHeader } from './SidebarHeader'
-import { SidebarSection } from './SidebarSection'
+import { SidebarNavItem } from './SidebarNavItem'
 import { SidebarFooter } from './SidebarFooter'
-import type { SidebarNavEntry, SidebarProps, SidebarItem } from './types'
-
-const collectNavPaths = (items: SidebarNavEntry[]): string[] => {
-  return items.flatMap((item) =>
-    'items' in item ? item.items.map((entry) => entry.path) : [item.path]
-  )
-}
+import { SidebarCollapseButton } from './SidebarCollapseButton'
+import type { SidebarProps, SidebarItem } from './types'
 
 export function Sidebar({ title = 'Центр аналитики' }: SidebarProps) {
-  const { user, clearAuth } = useAuthSession()
+  const { user } = useAuthSession()
   const isAdmin = user?.role === 'admin'
 
   const {
     isCollapsed,
     toggleCollapse,
     setIsCollapsed,
-    isSectionActive,
-    isSectionExpanded,
-    toggleSection,
   } = useSidebarState()
 
   const { tasksCount, commentsCount, watchlistCount, authorsTotal } = useSidebarData()
@@ -86,36 +76,6 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
     [isAdmin]
   )
 
-  const vkPaths = useMemo(() => collectNavPaths(vkSubItems), [vkSubItems])
-  const monitoringPaths = useMemo(() => collectNavPaths(monitoringSubItems), [monitoringSubItems])
-  const parsingPaths = useMemo(() => collectNavPaths(parsingSubItems), [parsingSubItems])
-  const telegramPaths = useMemo(() => collectNavPaths(telegramSubItems), [telegramSubItems])
-
-  const isVkActive = isSectionActive(vkPaths)
-  const isMonitoringActive = isSectionActive(monitoringPaths)
-  const isParsingActive = isSectionActive(parsingPaths)
-  const isTelegramActive = isSectionActive(telegramPaths)
-  const isVkExpanded = isSectionExpanded('vk')
-  const isMonitoringExpanded = isSectionExpanded('monitoring')
-  const isParsingExpanded = isSectionExpanded('parsing')
-  const isTelegramExpanded = isSectionExpanded('telegram')
-
-  const handleVkToggle = useCallback(() => {
-    toggleSection('vk')
-  }, [toggleSection])
-
-  const handleParsingToggle = useCallback(() => {
-    toggleSection('parsing')
-  }, [toggleSection])
-
-  const handleMonitoringToggle = useCallback(() => {
-    toggleSection('monitoring')
-  }, [toggleSection])
-
-  const handleTelegramToggle = useCallback(() => {
-    toggleSection('telegram')
-  }, [toggleSection])
-
   const handleExpand = useCallback(() => {
     setIsCollapsed(false)
   }, [setIsCollapsed])
@@ -124,72 +84,72 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
 
   return (
     <aside className={getSidebarClasses(isCollapsed)}>
-      {/* Grid Overlay Background */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                           linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px',
-        }}
-      />
-
-
-
+      <SidebarCollapseButton isCollapsed={isCollapsed} onToggle={toggleCollapse} />
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full">
         <SidebarHeader
           title={title}
           isCollapsed={isCollapsed}
-          onToggleCollapse={toggleCollapse}
           onExpand={handleExpand}
         />
 
-        <div className="flex-1 py-5 px-3 overflow-y-auto">
+        <div className="flex-1 py-5 px-3 overflow-y-auto no-scrollbar">
           <nav className="space-y-6">
-            <SidebarSection
-              title="ВКонтакте"
-              icon={<Users className="h-4 w-4" />}
-              items={vkSubItems}
-              isExpanded={isVkExpanded}
-              onToggle={handleVkToggle}
-              isCollapsed={isCollapsed}
-              isActive={isVkActive}
-              collapsedLabel="Основное"
-            />
+            {/* Группа ВКонтакте */}
+            <div className="space-y-1">
+              {!isCollapsed && (
+                <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono-accent">
+                  ВКонтакте
+                </div>
+              )}
+              <div className="space-y-1">
+                {vkSubItems.map((item) => (
+                  <SidebarNavItem key={item.path} item={item} isCollapsed={isCollapsed} />
+                ))}
+              </div>
+            </div>
 
-            <SidebarSection
-              title="Мониторинг"
-              icon={<Activity className="h-4 w-4" />}
-              items={monitoringSubItems}
-              isExpanded={isMonitoringExpanded}
-              onToggle={handleMonitoringToggle}
-              isCollapsed={isCollapsed}
-              isActive={isMonitoringActive}
-              collapsedLabel="Мониторинг"
-            />
+            {/* Группа Мониторинг */}
+            <div className="space-y-1">
+              {!isCollapsed && (
+                <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono-accent">
+                  Мониторинг
+                </div>
+              )}
+              <div className="space-y-1">
+                {monitoringSubItems.map((item) => (
+                  <SidebarNavItem key={item.path} item={item} isCollapsed={isCollapsed} />
+                ))}
+              </div>
+            </div>
 
-            <SidebarSection
-              title="Парсинг"
-              icon={<Building className="h-4 w-4" />}
-              items={parsingSubItems}
-              isExpanded={isParsingExpanded}
-              onToggle={handleParsingToggle}
-              isCollapsed={isCollapsed}
-              isActive={isParsingActive}
-              collapsedLabel="Парсинг"
-            />
+            {/* Группа Парсинг */}
+            <div className="space-y-1">
+              {!isCollapsed && (
+                <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono-accent">
+                  Парсинг
+                </div>
+              )}
+              <div className="space-y-1">
+                {parsingSubItems.map((item) => (
+                  <SidebarNavItem key={item.path} item={item} isCollapsed={isCollapsed} />
+                ))}
+              </div>
+            </div>
 
-            <SidebarSection
-              title="Telegram"
-              icon={<Send className="h-4 w-4" />}
-              items={telegramSubItems}
-              isExpanded={isTelegramExpanded}
-              onToggle={handleTelegramToggle}
-              isCollapsed={isCollapsed}
-              isActive={isTelegramActive}
-              collapsedLabel="Telegram"
-            />
+            {/* Группа Telegram */}
+            <div className="space-y-1">
+              {!isCollapsed && (
+                <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono-accent">
+                  Telegram
+                </div>
+              )}
+              <div className="space-y-1">
+                {telegramSubItems.map((item) => (
+                  <SidebarNavItem key={item.path} item={item} isCollapsed={isCollapsed} />
+                ))}
+              </div>
+            </div>
 
             {primaryItems.length > 0 && (
               <div className="space-y-1 animate-in fade-in-0 slide-in-from-bottom-3 duration-700 delay-300">
@@ -212,24 +172,6 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
         <SidebarFooter
           items={secondaryItems}
           isCollapsed={isCollapsed}
-          onExpand={handleExpand}
-          footerAction={
-            <Button
-              variant="ghost"
-              size={isCollapsed ? 'icon-sm' : 'sm'}
-              onClick={clearAuth}
-              className={cn(
-                'group relative overflow-hidden transition-all duration-300',
-                isCollapsed
-                  ? 'h-8 w-8 hover:border-red-400/30 hover:shadow-lg hover:shadow-red-500/20'
-                  : 'w-full justify-start text-slate-400 hover:text-red-400 hover:bg-red-500/5'
-              )}
-            >
-              <div className="absolute inset-0 bg-linear-to-r from-red-500/0 to-pink-500/0 opacity-0 transition-opacity duration-300 group-hover:from-red-500/10 group-hover:to-pink-500/10 group-hover:opacity-100" />
-              <LogOut className="relative h-4 w-4" />
-              {!isCollapsed && <span className="relative">Выйти</span>}
-            </Button>
-          }
         />
       </div>
 

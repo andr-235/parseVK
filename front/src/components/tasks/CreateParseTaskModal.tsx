@@ -73,15 +73,15 @@ function CreateParseTaskModal({
           <div className="space-y-1">
             <h2
               id="create-parse-modal-title"
-              className="font-monitoring-display text-2xl font-bold tracking-tight text-white"
+              className="font-monitoring-display text-xl font-semibold tracking-tight text-white"
             >
               Создание задачи на парсинг групп
             </h2>
-            <p className="text-sm text-text-secondary">
+            <p className="font-monitoring-body text-sm font-normal text-text-secondary">
               Сформируйте список групп с помощью поиска и быстрых действий. Мы сразу подсчитаем
               выбранные сообщества и подскажем, сколько осталось.
             </p>
-            <p className="text-xs uppercase tracking-[0.2em] text-accent-info/80">
+            <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-accent-info/80">
               Выберите действие: обычный парсинг или полная перепроверка группы
             </p>
           </div>
@@ -99,29 +99,29 @@ function CreateParseTaskModal({
           {/* Stats & Actions */}
           <section className="mb-6 flex flex-col gap-4 rounded-2xl border border-border/60 bg-background-primary/30 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <span className="text-4xl font-bold text-accent-info font-monitoring-display">
+              <span className="font-monitoring-display text-3xl font-semibold tracking-tight text-accent-info">
                 {selectedIds.size}
               </span>
               <div className="flex flex-col">
-                <span className="text-xs font-bold uppercase tracking-wider text-text-secondary/70 font-mono-accent">
+                <span className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70">
                   Выбрано групп
                 </span>
-                <span className="text-sm text-text-secondary">
-                  из <span className="text-text-primary font-medium">{groups.length}</span> доступных •
-                  найдено <span className="text-text-primary font-medium">{filteredGroups.length}</span>
+                <span className="font-monitoring-body text-sm font-normal text-text-secondary">
+                  из <span className="font-mono-accent text-xs font-medium text-text-primary">{groups.length}</span> доступных •
+                  найдено <span className="font-mono-accent text-xs font-medium text-text-primary">{filteredGroups.length}</span>
                 </span>
               </div>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={handleSelectAll}
-                className="rounded-lg border border-border/60 bg-background-secondary/50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-text-secondary transition-all hover:bg-background-primary/40 hover:text-white hover:border-accent-info/50"
+                className="rounded-lg border border-border/60 bg-background-secondary/50 px-4 py-2 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary transition-all hover:bg-background-primary/40 hover:text-white hover:border-accent-info/50"
               >
                 Выбрать все
               </button>
               <button
                 onClick={handleDeselectAll}
-                className="rounded-lg border border-transparent px-4 py-2 text-xs font-bold uppercase tracking-wide text-text-secondary/70 transition-all hover:bg-background-primary/40 hover:text-white"
+                className="rounded-lg border border-transparent px-4 py-2 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70 transition-all hover:bg-background-primary/40 hover:text-white"
               >
                 Снять выделение
               </button>
@@ -133,12 +133,12 @@ function CreateParseTaskModal({
             <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-secondary" />
             <input
               type="text"
-              className="w-full rounded-xl border border-border/60 bg-background-primary/50 py-3.5 pl-12 pr-4 text-sm text-text-primary placeholder:text-text-secondary/50 transition-all focus:border-accent-info/50 focus:outline-none focus:ring-2 focus:ring-accent-info/20"
+              className="w-full rounded-xl border border-border/60 bg-background-primary/50 py-3.5 pl-12 pr-4 font-monitoring-body text-sm font-normal text-text-primary placeholder:text-text-secondary/50 transition-all focus:border-accent-info/50 focus:outline-none focus:ring-2 focus:ring-accent-info/20"
               placeholder="Поиск по названию, ссылке или ID"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            <div className="mt-2 px-1 text-xs text-text-secondary">
+            <div className="mt-2 px-1 font-monitoring-body text-xs font-normal text-text-secondary">
               Начните вводить название или идентификатор — список обновится мгновенно.
             </div>
           </div>
@@ -148,10 +148,10 @@ function CreateParseTaskModal({
             {filteredGroups.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-background-primary/30 py-12 text-center">
                 <Search className="mb-3 h-8 w-8 text-text-secondary" />
-                <h3 className="font-monitoring-display text-base font-medium text-white">
+                <h3 className="font-monitoring-body text-base font-semibold text-white">
                   Не нашли подходящих групп
                 </h3>
-                <p className="text-sm text-text-secondary">
+                <p className="font-monitoring-body text-sm font-normal text-text-secondary">
                   Попробуйте изменить запрос или сбросить фильтры
                 </p>
               </div>
@@ -183,9 +183,9 @@ function CreateParseTaskModal({
                       )}
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-white">{displayName}</span>
+                      <span className="font-monitoring-body text-sm font-normal text-white">{displayName}</span>
                       {group.vkId ? (
-                        <span className="text-xs text-text-secondary font-mono-accent">
+                        <span className="font-mono-accent text-xs font-medium text-text-secondary">
                           vk.com/club{group.vkId}
                         </span>
                       ) : null}

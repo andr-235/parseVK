@@ -2,21 +2,21 @@
 name: "parseVK"
 description: "A dense operator console for social intelligence monitoring, parsing, exports and diagnostics."
 colors:
-  command-blue: "#3b82f6"
+  command-blue: "#f2643d"
   signal-sky: "#38bdf8"
-  success-green: "#22c55e"
-  warning-amber: "#f59e0b"
+  success-green: "#5fa879"
+  warning-amber: "#e9ad54"
   danger-red: "#ef4444"
-  console-ink: "#0b1220"
-  panel-slate: "#111827"
-  sidebar-navy: "#0f172a"
-  divider-slate: "#1f2937"
-  primary-text: "#e5e7eb"
-  secondary-text: "#94a3b8"
-  light-text: "#f8fafc"
-  chart-blue: "#60a5fa"
-  chart-green: "#34d399"
-  chart-orange: "#fb923c"
+  console-ink: "#18181b"
+  panel-slate: "#0f0f11"
+  sidebar-navy: "#141416"
+  divider-slate: "#27272a"
+  primary-text: "#d4d4d8"
+  secondary-text: "#a1a1aa"
+  light-text: "#f4f4f5"
+  chart-blue: "#f2643d"
+  chart-green: "#5fa879"
+  chart-orange: "#e9ad54"
 typography:
   display:
     fontFamily: "Outfit, Space Grotesk, sans-serif"
@@ -56,9 +56,9 @@ typography:
     letterSpacing: "normal"
 rounded:
   sm: "0.5rem"
-  md: "0.625rem"
-  lg: "0.75rem"
-  card: "20px"
+  md: "0.75rem"
+  lg: "1rem"
+  card: "24px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -119,7 +119,7 @@ The system explicitly rejects marketing composition, oversized hero treatment, d
 
 ## 2. Colors
 
-The palette is a restrained dark console palette: deep slate surfaces, clear text contrast, one command blue and a small semantic state vocabulary.
+The palette is a soft dark SaaS-style palette: deep comfortable slate surfaces, gentle text contrast that avoids eye strain, one primary accent blue and a small semantic state vocabulary.
 
 ### Primary
 
@@ -131,19 +131,19 @@ The palette is a restrained dark console palette: deep slate surfaces, clear tex
 
 ### Tertiary
 
-- **Success Green**: completed, connected, imported, synchronized and healthy states.
+- **Success Green**: completed, connected, imported, synchronized and healthy states (using a softer emerald #10b981).
 - **Warning Amber**: partial, stale, queued, delayed, rate-limited or needs-review states.
 - **Danger Red**: failed, destructive, invalid, disconnected and unrecoverable states.
 
 ### Neutral
 
-- **Console Ink**: the application background and deepest content surface.
-- **Panel Slate**: cards, popovers, inputs and repeated operational panels.
-- **Sidebar Navy**: global navigation, persistent product areas and shell structure.
-- **Divider Slate**: borders, table rules, input strokes and subtle separators.
-- **Primary Text**: body copy, table values and normal labels on dark surfaces.
-- **Secondary Text**: metadata, helper text, muted counters and secondary descriptions.
-- **Light Text**: foreground on saturated action or destructive backgrounds.
+- **Console Ink**: the application background and deepest content surface (#18181b).
+- **Panel Slate**: cards, popovers, inputs and repeated operational panels (#0f0f11).
+- **Sidebar Navy**: global navigation, persistent product areas and shell structure (#141416).
+- **Divider Slate**: borders, table rules, input strokes and subtle separators (#27272a).
+- **Primary Text**: body copy, table values and normal labels on dark surfaces (#d4d4d8).
+- **Secondary Text**: metadata, helper text, muted counters and secondary descriptions (#a1a1aa).
+- **Light Text**: foreground on saturated action or destructive backgrounds (#f4f4f5).
 
 ### Named Rules
 
@@ -164,11 +164,17 @@ The palette is a restrained dark console palette: deep slate surfaces, clear tex
 ### Hierarchy
 
 - **Display** (600, 1.875rem, 1.2): page identity and high-level screen titles only.
+  * Tailwind: `font-monitoring-display text-3xl font-semibold tracking-tight text-white`
 - **Headline** (600, 1.25rem, 1.3): section headers, panel titles and important group labels.
+  * Tailwind: `font-monitoring-display text-xl font-semibold text-white`
 - **Title** (600, 1rem, 1.35): card titles, table group names and compact detail headings.
+  * Tailwind: `font-monitoring-body text-base font-semibold text-text-primary`
 - **Body** (400, 0.875rem, 1.5): tables, descriptions, row values and form content. Prose should stay near 65 to 75 characters when the layout permits it.
+  * Tailwind: `font-monitoring-body text-sm font-normal text-text-primary`
 - **Label** (600, 0.75rem, 1.35): chips, column labels, button text and compact metadata.
+  * Tailwind: `font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary`
 - **Mono** (500, 0.75rem, 1.4): IDs, timestamps, numeric counters, task codes and log-like fragments.
+  * Tailwind: `font-mono-accent text-xs font-medium text-text-secondary`
 
 ### Named Rules
 

@@ -22,64 +22,64 @@ export const TaskStatsGrid = ({
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-accent-primary mb-1">
+        <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-accent-primary mb-1">
           Название
         </p>
-        <p className="text-sm font-medium text-foreground truncate" title={task.title || undefined}>
+        <p className="font-monitoring-body text-sm font-normal text-text-primary truncate" title={task.title || undefined}>
           {task.title || 'Без названия'}
         </p>
       </div>
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Статус
         </p>
-        <span className={`${STATUS_BADGE_BASE} ${taskStatusClasses[task.status]}`}>
+        <span className={`${STATUS_BADGE_BASE} ${taskStatusClasses[task.status]} font-monitoring-body text-xs font-semibold uppercase tracking-wider`}>
           {getTaskStatusText(task.status)}
         </span>
       </div>
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Охват
         </p>
-        <p className="text-sm font-medium text-foreground truncate">{scopeLabel}</p>
+        <p className="font-monitoring-body text-sm font-normal text-text-primary truncate">{scopeLabel}</p>
       </div>
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Создана
         </p>
-        <p className="text-sm font-medium text-foreground">{formatDate(task.createdAt)}</p>
+        <p className="font-mono-accent text-xs font-medium text-text-primary">{formatDate(task.createdAt)}</p>
       </div>
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Режим
         </p>
-        <p className="text-sm font-medium text-foreground">{modeLabel ?? 'Последние посты'}</p>
+        <p className="font-monitoring-body text-sm font-normal text-text-primary">{modeLabel ?? 'Последние посты'}</p>
       </div>
       {task.mode !== 'recheck_group' && (
         <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+          <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
             Лимит постов
           </p>
-          <p className="text-sm font-medium text-foreground">{task.postLimit ?? '—'}</p>
+          <p className="font-mono-accent text-xs font-medium text-text-primary">{task.postLimit ?? '—'}</p>
         </div>
       )}
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Всего групп
         </p>
-        <p className="text-sm font-medium text-foreground">{totalGroups}</p>
+        <p className="font-mono-accent text-xs font-medium text-text-primary">{totalGroups}</p>
       </div>
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Постов
         </p>
-        <p className="text-sm font-medium text-foreground">{postsCount ?? 0}</p>
+        <p className="font-mono-accent text-xs font-medium text-text-primary">{postsCount ?? 0}</p>
       </div>
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+        <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Комментариев
         </p>
-        <p className="text-sm font-medium text-foreground">{commentsCountTotal ?? 0}</p>
+        <p className="font-mono-accent text-xs font-medium text-text-primary">{commentsCountTotal ?? 0}</p>
       </div>
     </div>
   )

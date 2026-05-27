@@ -4,6 +4,7 @@ export interface SidebarNavItem {
   label: string
   path: string
   badge?: string
+  icon?: React.ReactNode
 }
 
 export interface SidebarNavGroup {

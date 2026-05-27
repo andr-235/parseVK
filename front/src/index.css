@@ -5,25 +5,25 @@
 
 @layer base {
   :root {
-    --bg-primary: #0b1220;
-    --bg-secondary: #111827;
-    --bg-sidebar: #0f172a;
-    --bg-sidebar-hover: #111827;
-    --text-primary: #e5e7eb;
-    --text-secondary: #94a3b8;
-    --text-light: #f8fafc;
-    --border-color: #1f2937;
-    --shadow: rgba(0, 0, 0, 0.55);
-    --accent-primary: #3b82f6;
+    --bg-primary: #18181b; /* Тёплый благородный графит Zinc 900 */
+    --bg-secondary: #0f0f11; /* Глубокий угольно-черный для карточек */
+    --bg-sidebar: #141416; /* Промежуточный тёмный графит */
+    --bg-sidebar-hover: #1f1f23;
+    --text-primary: #d4d4d8; /* Мягкий основной текст Zinc 300 */
+    --text-secondary: #a1a1aa; /* Приглушенный текст Zinc 400 */
+    --text-light: #f4f4f5; /* Мягкий светлый текст Zinc 100 вместо ослепительно белого */
+    --border-color: #27272a; /* Границы Zinc 800 */
+    --shadow: rgba(0, 0, 0, 0.4);
+    --accent-primary: #f2643d; /* Terracotta Orange */
     --accent-info: #38bdf8;
-    --accent-success: #22c55e;
-    --accent-warning: #f59e0b;
+    --accent-success: #5fa879; /* Травянисто-зеленый Grapho */
+    --accent-warning: #e9ad54; /* Горчично-желтый Grapho */
     --accent-danger: #ef4444;
-    --card-border-radius: 20px;
-    --glass-bg: rgba(15, 23, 42, 0.65);
-    --glass-border: rgba(148, 163, 184, 0.2);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    --glass-blur: 10px;
+    --card-border-radius: 24px; /* Крупные, мягкие SaaS скругления Grapho */
+    --glass-bg: rgba(24, 24, 27, 0.45);
+    --glass-border: rgba(161, 161, 170, 0.1);
+    --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    --glass-blur: 8px;
   }
 
   body {
@@ -85,42 +85,45 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Переопределяем чистый белый цвет на мягкий Zinc, чтобы убрать слепящий белый */
+  --color-white: #f4f4f5;
 }
 
 :root {
-  --radius: 0.75rem;
-  --background: #0b1220;
-  --foreground: #e5e7eb;
-  --card: #111827;
-  --card-foreground: #e5e7eb;
-  --popover: #111827;
-  --popover-foreground: #e5e7eb;
-  --primary: #3b82f6;
-  --primary-foreground: #f8fafc;
-  --secondary: #1f2937;
-  --secondary-foreground: #e5e7eb;
-  --muted: #111827;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
-  --accent-foreground: #93c5fd;
+  --radius: 1.5rem; /* Мягкие скругления карточек Grapho (24px) */
+  --background: #18181b;
+  --foreground: #d4d4d8;
+  --card: #0f0f11;
+  --card-foreground: #d4d4d8;
+  --popover: #0f0f11;
+  --popover-foreground: #d4d4d8;
+  --primary: #f2643d;
+  --primary-foreground: #f4f4f5;
+  --secondary: #27272a;
+  --secondary-foreground: #d4d4d8;
+  --muted: #0f0f11;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272a;
+  --accent-foreground: #f2643d;
   --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
-  --border: #1f2937;
-  --input: #1f2937;
-  --ring: rgba(59, 130, 246, 0.5);
-  --chart-1: #60a5fa;
-  --chart-2: #34d399;
-  --chart-3: #f59e0b;
+  --destructive-foreground: #f4f4f5;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: rgba(242, 100, 61, 0.3); /* Оранжевая подсветка колец фокуса */
+  --chart-1: #f2643d;
+  --chart-2: #5fa879;
+  --chart-3: #e9ad54;
   --chart-4: #fb923c;
   --chart-5: #f87171;
-  --sidebar: #0f172a;
-  --sidebar-foreground: #e5e7eb;
-  --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #f8fafc;
-  --sidebar-accent: rgba(59, 130, 246, 0.18);
-  --sidebar-accent-foreground: #e5e7eb;
-  --sidebar-border: #1f2937;
-  --sidebar-ring: rgba(59, 130, 246, 0.5);
+  --sidebar: #141416;
+  --sidebar-foreground: #d4d4d8;
+  --sidebar-primary: #f2643d;
+  --sidebar-primary-foreground: #f4f4f5;
+  --sidebar-accent: rgba(242, 100, 61, 0.08);
+  --sidebar-accent-foreground: #d4d4d8;
+  --sidebar-border: #27272a;
+  --sidebar-ring: rgba(242, 100, 61, 0.3);
 }
 
 @layer base {
@@ -189,6 +192,15 @@
 }
 
 @layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .glassmorphic-surface {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
