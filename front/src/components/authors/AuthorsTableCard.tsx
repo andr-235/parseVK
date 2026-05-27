@@ -1,20 +1,13 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { TableSortButton } from '@/components/ui/table-sort-button'
+import { useMemo } from 'react'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import type { AuthorCard, AuthorSortField } from '@/types'
+import type { AuthorCard, AuthorSortField, TableColumn } from '@/types'
 import { resolveCityLabel } from '@/utils/authors/authorUtils'
 import { ArrowRight, Camera, Trash2 } from 'lucide-react'
 import { formatDateTime, getAuthorInitials } from '@/utils/common'
 import { DataTableCard } from '@/components/common/DataTableCard'
+import { DataTable } from '@/components/common/DataTable'
 
 interface AuthorsTableCardProps {
   authors: AuthorCard[]
@@ -77,9 +70,184 @@ export function AuthorsTableCard({
   emptyTitle,
   emptyDescription,
 }: AuthorsTableCardProps) {
-  const resolveSortDirection = (field: AuthorSortField) => (sortBy === field ? sortOrder : null)
-
   const showEmptyState = !isLoading && authors.length === 0
+
+  const columns = useMemo<TableColumn<AuthorCard>[]>(() => [
+    {
+      header: 'Автор',
+      key: 'fullName',
+      sortable: true,
+      cellClassName: 'w-[300px]',
+      render: (author) => {
+        const profileUrl = resolveProfileUrl(author)
+        const avatarUrl = author.photo200 ?? author.photo100 ?? author.photo50 ?? undefined
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border border-border/20">
+              {avatarUrl ? (
+                <AvatarImage src={avatarUrl} alt={author.fullName} />
+              ) : (
+                <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                  {getAuthorInitials(author.fullName)}
+                </AvatarFallback>
+              )}
+            </Avatar>
+
+            <div className="flex flex-col gap-0.5">
+              <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
+                {author.fullName}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {author.screenName ? `@${author.screenName}` : `id${author.vkUserId}`}
+                </span>
+                <a
+                  href={profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-primary/80 hover:text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onVerifyAuthor(author)
+                  }}
+                  onAuxClick={(e) => {
+                    if (e.button !== 1) {
+                      return
+                    }
+                    e.stopPropagation()
+                    onVerifyAuthor(author)
+                  }}
+                >
+                  VK
+                </a>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    },
+    {
+      header: 'Город',
+      key: 'city',
+      sortable: true,
+      cellClassName: 'w-[200px] text-sm text-muted-foreground',
+      render: (author) => resolveCityLabel(author.city) ?? '—'
+    },
+    {
+      header: 'Фото',
+      key: 'photosCount',
+      sortable: true,
+      render: (author) => (
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium">
+            {formatMetricValue(author.photosCount)}
+          </span>
+          {author.summary.suspicious > 0 && (
+            <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
+              Подозр: {formatMetricValue(author.summary.suspicious)}
+            </span>
+          )}
+        </div>
+      )
+    },
+    {
+      header: 'Аудио',
+      key: 'audiosCount',
+      sortable: true,
+      cellClassName: 'text-sm text-muted-foreground',
+      render: (author) => formatMetricValue(author.audiosCount)
+    },
+    {
+      header: 'Видео',
+      key: 'videosCount',
+      sortable: true,
+      cellClassName: 'text-sm text-muted-foreground',
+      render: (author) => formatMetricValue(author.videosCount)
+    },
+    {
+      header: 'Друзья',
+      key: 'friendsCount',
+      sortable: true,
+      cellClassName: 'text-sm text-muted-foreground',
+      render: (author) => formatMetricValue(author.friendsCount)
+    },
+    {
+      header: 'Подписчики',
+      key: 'followersCount',
+      sortable: true,
+      cellClassName: 'text-sm text-muted-foreground',
+      render: (author) => formatMetricValue(author.followersCount)
+    },
+    {
+      header: 'Дата входа',
+      key: 'lastSeenAt',
+      sortable: true,
+      cellClassName: 'text-sm text-muted-foreground',
+      render: (author) => formatDateTime(author.lastSeenAt)
+    },
+    {
+      header: 'Дата проверки',
+      key: 'verifiedAt',
+      sortable: true,
+      cellClassName: 'text-sm text-muted-foreground',
+      render: (author) => formatDateTime(author.verifiedAt)
+    },
+    {
+      header: 'Действия',
+      key: 'actions',
+      headerClassName: 'text-right sticky right-0 bg-muted/30 backdrop-blur-sm z-10',
+      cellClassName: 'text-right sticky right-0 bg-card z-10 group-hover:bg-muted/50 transition-colors',
+      render: (author) => (
+        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 w-8 p-0 rounded-full"
+            onClick={() => onAnalyzePhotos(author)}
+            disabled={isAnalyzing && analyzingVkUserId === author.vkUserId}
+            title="Анализ фотографий"
+          >
+            {isAnalyzing && analyzingVkUserId === author.vkUserId ? (
+              <Spinner className="h-3.5 w-3.5" />
+            ) : (
+              <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-8 w-8 p-0 rounded-full"
+            onClick={() => onDeleteAuthor(author)}
+            disabled={deletingVkUserId === author.vkUserId}
+            title="Удалить автора и его комментарии"
+          >
+            {deletingVkUserId === author.vkUserId ? (
+              <Spinner className="h-3.5 w-3.5" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5 text-destructive-foreground" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 rounded-full hover:bg-primary/10 hover:text-primary"
+            onClick={() => onOpenDetails(author)}
+            title="Открыть детали"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )
+    }
+  ], [
+    onAnalyzePhotos,
+    onDeleteAuthor,
+    onOpenDetails,
+    onVerifyAuthor,
+    isAnalyzing,
+    analyzingVkUserId,
+    deletingVkUserId
+  ])
 
   return (
     <DataTableCard
@@ -93,221 +261,13 @@ export function AuthorsTableCard({
       emptyDescription={emptyDescription}
       contentClassName="p-0!"
     >
-      <div className="relative w-full overflow-auto">
-        <Table>
-          <TableHeader className="bg-muted/30">
-            <TableRow>
-              <TableHead className="w-[300px]">
-                <TableSortButton
-                  onClick={() => onSortChange('fullName')}
-                  direction={resolveSortDirection('fullName')}
-                  className="justify-start"
-                >
-                  Автор
-                </TableSortButton>
-              </TableHead>
-              <TableHead className="w-[200px]">
-                <TableSortButton
-                  onClick={() => onSortChange('city')}
-                  direction={resolveSortDirection('city')}
-                  className="justify-start"
-                >
-                  Город
-                </TableSortButton>
-              </TableHead>
-              <TableHead>
-                <TableSortButton
-                  onClick={() => onSortChange('photosCount')}
-                  direction={resolveSortDirection('photosCount')}
-                >
-                  Фото
-                </TableSortButton>
-              </TableHead>
-              <TableHead>
-                <TableSortButton
-                  onClick={() => onSortChange('audiosCount')}
-                  direction={resolveSortDirection('audiosCount')}
-                >
-                  Аудио
-                </TableSortButton>
-              </TableHead>
-              <TableHead>
-                <TableSortButton
-                  onClick={() => onSortChange('videosCount')}
-                  direction={resolveSortDirection('videosCount')}
-                >
-                  Видео
-                </TableSortButton>
-              </TableHead>
-              <TableHead>
-                <TableSortButton
-                  onClick={() => onSortChange('friendsCount')}
-                  direction={resolveSortDirection('friendsCount')}
-                >
-                  Друзья
-                </TableSortButton>
-              </TableHead>
-              <TableHead>
-                <TableSortButton
-                  onClick={() => onSortChange('followersCount')}
-                  direction={resolveSortDirection('followersCount')}
-                >
-                  Подписчики
-                </TableSortButton>
-              </TableHead>
-              <TableHead>
-                <TableSortButton
-                  onClick={() => onSortChange('lastSeenAt')}
-                  direction={resolveSortDirection('lastSeenAt')}
-                >
-                  Дата входа
-                </TableSortButton>
-              </TableHead>
-              <TableHead>
-                <TableSortButton
-                  onClick={() => onSortChange('verifiedAt')}
-                  direction={resolveSortDirection('verifiedAt')}
-                >
-                  Дата проверки
-                </TableSortButton>
-              </TableHead>
-              <TableHead className="text-right sticky right-0 bg-muted/30 backdrop-blur-sm z-10">
-                Действия
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {authors.map((author) => {
-              const profileUrl = resolveProfileUrl(author)
-              const avatarUrl = author.photo200 ?? author.photo100 ?? author.photo50 ?? undefined
-              const cityLabel = resolveCityLabel(author.city)
-
-              return (
-                <TableRow key={author.id} className="group">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 border border-border/20">
-                        {avatarUrl ? (
-                          <AvatarImage src={avatarUrl} alt={author.fullName} />
-                        ) : (
-                          <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                            {getAuthorInitials(author.fullName)}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
-                          {author.fullName}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {author.screenName ? `@${author.screenName}` : `id${author.vkUserId}`}
-                          </span>
-                          <a
-                            href={profileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] text-primary/80 hover:text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onVerifyAuthor(author)
-                            }}
-                            onAuxClick={(e) => {
-                              if (e.button !== 1) {
-                                return
-                              }
-                              e.stopPropagation()
-                              onVerifyAuthor(author)
-                            }}
-                          >
-                            VK
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="text-sm text-muted-foreground">
-                    {cityLabel ?? '—'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm font-medium">
-                        {formatMetricValue(author.photosCount)}
-                      </span>
-                      {author.summary.suspicious > 0 && (
-                        <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
-                          Подозр: {formatMetricValue(author.summary.suspicious)}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatMetricValue(author.audiosCount)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatMetricValue(author.videosCount)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatMetricValue(author.friendsCount)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatMetricValue(author.followersCount)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDateTime(author.lastSeenAt)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDateTime(author.verifiedAt)}
-                  </TableCell>
-                  <TableCell className="text-right sticky right-0 bg-card z-10 group-hover:bg-muted/50 transition-colors">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0 rounded-full"
-                        onClick={() => onAnalyzePhotos(author)}
-                        disabled={isAnalyzing && analyzingVkUserId === author.vkUserId}
-                        title="Анализ фотографий"
-                      >
-                        {isAnalyzing && analyzingVkUserId === author.vkUserId ? (
-                          <Spinner className="h-3.5 w-3.5" />
-                        ) : (
-                          <Camera className="h-3.5 w-3.5 text-muted-foreground" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="h-8 w-8 p-0 rounded-full"
-                        onClick={() => onDeleteAuthor(author)}
-                        disabled={deletingVkUserId === author.vkUserId}
-                        title="Удалить автора и его комментарии"
-                      >
-                        {deletingVkUserId === author.vkUserId ? (
-                          <Spinner className="h-3.5 w-3.5" />
-                        ) : (
-                          <Trash2 className="h-3.5 w-3.5 text-destructive-foreground" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 rounded-full hover:bg-primary/10 hover:text-primary"
-                        onClick={() => onOpenDetails(author)}
-                        title="Открыть детали"
-                      >
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        data={authors}
+        columns={columns}
+        isLoading={isLoading}
+        sortState={{ key: sortBy, direction: sortOrder }}
+        onRequestSort={(key) => onSortChange(key as AuthorSortField)}
+      />
 
       {hasMore && (
         <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">

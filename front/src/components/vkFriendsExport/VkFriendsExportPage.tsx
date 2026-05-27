@@ -80,7 +80,7 @@ function VkFriendsExportPage() {
               <Button
                 onClick={handleGenerateXlsx}
                 disabled={isExportLoading}
-                variant="primary"
+                variant="default"
                 className="w-full h-10 shadow-soft-sm font-semibold hover:shadow-soft-md transition-all duration-200 cursor-pointer"
               >
                 {isExportLoading ? (
