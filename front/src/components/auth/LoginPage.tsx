@@ -10,15 +10,6 @@ import { useAuthSession } from '@/hooks/auth/useAuthSession'
 
 const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
 
-// Static array constant for animated background particles to prevent GC churn on typing/re-renders
-const DECORATIVE_PARTICLES = [...Array(20)].map((_, i) => ({
-  id: i,
-  left: `${(i * 7 + 13) % 100}%`,
-  top: `${(i * 11 + 23) % 100}%`,
-  delay: `${(i * 0.7).toFixed(1)}s`,
-  duration: `${(15 + (i * 1.3) % 10).toFixed(1)}s`,
-}))
-
 function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -139,17 +130,13 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background px-4 py-8 font-monitoring-body">
-      {/* Animated Mesh Gradient Background (A11y Hidden) */}
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background-primary px-4 py-8 font-monitoring-body">
+      {/* Mesh Gradient Background (A11y Hidden) */}
       <div className="absolute inset-0 opacity-60" aria-hidden="true">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#24130d] via-[#101012] to-[#1a110e]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background-secondary via-background-primary to-background-secondary" />
         <div
-          className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px] animate-pulse"
+          className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-accent-primary/10 blur-[120px] animate-pulse"
           style={{ animationDuration: '8s' }}
-        />
-        <div
-          className="absolute right-0 bottom-0 h-[600px] w-[600px] rounded-full bg-orange-500/5 blur-[120px] animate-pulse"
-          style={{ animationDuration: '12s', animationDelay: '2s' }}
         />
       </div>
 
@@ -164,35 +151,19 @@ function LoginPage() {
         }}
       />
 
-      {/* Floating Particles (A11y Hidden) */}
-      <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-        {DECORATIVE_PARTICLES.map((particle) => (
-          <div
-            key={particle.id}
-            className="absolute h-1 w-1 rounded-full bg-primary/30 animate-float"
-            style={{
-              left: particle.left,
-              top: particle.top,
-              animationDelay: particle.delay,
-              animationDuration: particle.duration,
-            }}
-          />
-        ))}
-      </div>
-
       {/* Main Card Container */}
       <div className="relative z-10 w-full max-w-md">
         {/* Card using semantic border variables */}
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-card/90 shadow-2xl backdrop-blur-2xl">
+        <div className="relative overflow-hidden rounded-card border border-border bg-background-secondary/90 shadow-soft-lg backdrop-blur-2xl">
           {/* Top Border Glow */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent-primary/30 to-transparent" />
 
           {/* Header */}
           <div className="relative px-8 pt-10 pb-6 text-center">
             {/* Logo with Glow */}
             <div className="mb-6 inline-block animate-in fade-in-0 zoom-in-95 duration-700">
               <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl" />
+                <div className="absolute inset-0 rounded-full bg-accent-primary/10 blur-xl" />
                 <BrandLogo
                   size="lg"
                   className="relative drop-shadow-[0_0_30px_rgba(242,100,61,0.2)] transition-transform duration-300 hover:scale-105"
@@ -201,27 +172,27 @@ function LoginPage() {
             </div>
 
             {/* Title */}
-            <h1 className="mb-2 font-monitoring-display text-3xl font-bold tracking-tight text-white animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+            <h1 className="mb-2 font-monitoring-display text-3xl font-bold tracking-tight text-text-light animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
               {mustChangePassword ? (
                 <>
-                  Смена <span className="text-primary">пароля</span>
+                  Смена <span className="text-accent-primary">пароля</span>
                 </>
               ) : (
                 <>
-                  Центр <span className="text-primary">аналитики</span>
+                  Центр <span className="text-accent-primary">аналитики</span>
                 </>
               )}
             </h1>
 
             {/* Subtitle */}
-            <p className="text-sm text-zinc-400 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+            <p className="text-sm text-text-secondary animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
               {mustChangePassword
                 ? `Пользователь ${authUser?.username ?? ''} должен установить новый пароль`
-                : 'Система аналитики и мониторинга VK'}
+                 : 'Система аналитики и мониторинга VK'}
             </p>
 
             {/* Decorative Line */}
-            <div className="mx-auto mt-4 h-px w-16 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+            <div className="mx-auto mt-4 h-px w-16 bg-gradient-to-r from-transparent via-accent-primary/30 to-transparent" />
           </div>
 
           {/* Form Container */}
@@ -232,7 +203,7 @@ function LoginPage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="username"
-                      className="text-xs font-medium uppercase tracking-wider text-zinc-400"
+                      className="text-xs font-semibold uppercase tracking-wider text-text-secondary"
                     >
                       Логин
                     </Label>
@@ -244,10 +215,9 @@ function LoginPage() {
                         onChange={(event) => setUsername(event.target.value)}
                         placeholder="Введите логин"
                         disabled={isChanging}
-                        className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                        className="h-11 border-border bg-background-primary/50 text-text-light placeholder:text-text-secondary/60 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                         required
                       />
-                      <div className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 transition-opacity duration-200 peer-focus:opacity-100" />
                     </div>
                   </div>
                 )}
@@ -255,7 +225,7 @@ function LoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="old-password"
-                    className="text-xs font-medium uppercase tracking-wider text-zinc-400"
+                    className="text-xs font-semibold uppercase tracking-wider text-text-secondary"
                   >
                     Текущий пароль
                   </Label>
@@ -265,9 +235,9 @@ function LoginPage() {
                     autoComplete="current-password"
                     value={oldPassword}
                     onChange={(event) => setOldPassword(event.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Введите текущий пароль"
                     disabled={isChanging}
-                    className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                    className="h-11 border-border bg-background-primary/50 text-text-light placeholder:text-text-secondary/60 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                     required
                   />
                 </div>
@@ -275,7 +245,7 @@ function LoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="new-password"
-                    className="text-xs font-medium uppercase tracking-wider text-zinc-400"
+                    className="text-xs font-semibold uppercase tracking-wider text-text-secondary"
                   >
                     Новый пароль
                   </Label>
@@ -287,10 +257,10 @@ function LoginPage() {
                     onChange={(event) => setNewPassword(event.target.value)}
                     placeholder="Минимум 8 символов"
                     disabled={isChanging}
-                    className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                    className="h-11 border-border bg-background-primary/50 text-text-light placeholder:text-text-secondary/60 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                     required
                   />
-                  <p className="text-xs text-zinc-500 font-mono-accent">
+                  <p className="text-xs text-text-secondary font-mono-accent">
                     Min 8 chars · A-Z · a-z · 0-9
                   </p>
                 </div>
@@ -298,7 +268,7 @@ function LoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="confirm-password"
-                    className="text-xs font-medium uppercase tracking-wider text-zinc-400"
+                    className="text-xs font-semibold uppercase tracking-wider text-text-secondary"
                   >
                     Повторите пароль
                   </Label>
@@ -308,26 +278,29 @@ function LoginPage() {
                     autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Повторите новый пароль"
                     disabled={isChanging}
-                    className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                    className="h-11 border-border bg-background-primary/50 text-text-light placeholder:text-text-secondary/60 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                     required
                   />
                 </div>
 
                 {error && (
-                  <div className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-                    <span className="font-mono-accent">⚠</span> {error}
+                  <div
+                    role="alert"
+                    aria-live="assertive"
+                    className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-accent-danger/20 bg-accent-danger/10 px-4 py-3 text-sm text-accent-danger"
+                  >
+                    <span className="font-mono-accent" aria-hidden="true">⚠</span> {error}
                   </div>
                 )}
 
                 <div className="flex flex-col gap-3 pt-2">
                   <Button
-                    className="group relative h-11 overflow-hidden bg-gradient-to-r from-primary to-orange-600 font-semibold text-white shadow-lg shadow-primary/15 transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group relative h-11 overflow-hidden bg-primary font-semibold text-text-light shadow-soft-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-soft-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     type="submit"
                     disabled={isChanging}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-orange-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     <span className="relative flex items-center justify-center gap-2">
                       {isChanging ? (
                         <>
@@ -341,6 +314,8 @@ function LoginPage() {
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
+                            aria-hidden="true"
+                            focusable="false"
                           >
                             <path
                               strokeLinecap="round"
@@ -360,7 +335,7 @@ function LoginPage() {
                       type="button"
                       variant="ghost"
                       onClick={handleLogout}
-                      className="h-11 text-zinc-400 hover:text-white hover:bg-zinc-800/40 transition-colors"
+                      className="h-11 text-text-secondary hover:text-text-light hover:bg-background-sidebar-hover/40 transition-colors"
                     >
                       Выйти из системы
                     </Button>
@@ -369,7 +344,7 @@ function LoginPage() {
                       type="button"
                       variant="ghost"
                       onClick={handleSwitchToLogin}
-                      className="h-11 text-zinc-400 hover:text-white hover:bg-zinc-800/40 transition-colors"
+                      className="h-11 text-text-secondary hover:text-text-light hover:bg-background-sidebar-hover/40 transition-colors"
                     >
                       ← Вернуться ко входу
                     </Button>
@@ -381,7 +356,7 @@ function LoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="username"
-                    className="text-xs font-medium uppercase tracking-wider text-zinc-400"
+                    className="text-xs font-semibold uppercase tracking-wider text-text-secondary"
                   >
                     Логин
                   </Label>
@@ -393,7 +368,7 @@ function LoginPage() {
                       onChange={(event) => setUsername(event.target.value)}
                       placeholder="Введите логин"
                       disabled={isSubmitting}
-                      className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                      className="h-11 border-border bg-background-primary/50 text-text-light placeholder:text-text-secondary/60 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                       required
                     />
                   </div>
@@ -402,7 +377,7 @@ function LoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="password"
-                    className="text-xs font-medium uppercase tracking-wider text-zinc-400"
+                    className="text-xs font-semibold uppercase tracking-wider text-text-secondary"
                   >
                     Пароль
                   </Label>
@@ -412,27 +387,30 @@ function LoginPage() {
                     autoComplete="current-password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Введите пароль"
                     disabled={isSubmitting}
-                    className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                    className="h-11 border-border bg-background-primary/50 text-text-light placeholder:text-text-secondary/60 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                     required
                   />
-                  <p className="text-xs text-zinc-500 font-mono-accent">Минимум 8 символов</p>
+                  <p className="text-xs text-text-secondary font-mono-accent">Минимум 8 символов</p>
                 </div>
 
                 {error && (
-                  <div className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-                    <span className="font-mono-accent">⚠</span> {error}
+                  <div
+                    role="alert"
+                    aria-live="assertive"
+                    className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-accent-danger/20 bg-accent-danger/10 px-4 py-3 text-sm text-accent-danger"
+                  >
+                    <span className="font-mono-accent" aria-hidden="true">⚠</span> {error}
                   </div>
                 )}
 
                 <div className="flex flex-col gap-3 pt-2">
                   <Button
-                    className="group relative h-11 overflow-hidden bg-gradient-to-r from-primary to-orange-600 font-semibold text-white shadow-lg shadow-primary/15 transition-all duration-300 hover:shadow-xl hover:shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group relative h-11 overflow-hidden bg-primary font-semibold text-text-light shadow-soft-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-soft-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     type="submit"
                     disabled={isSubmitting}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-orange-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     <span className="relative flex items-center justify-center gap-2">
                       {isSubmitting ? (
                         <>
@@ -446,6 +424,8 @@ function LoginPage() {
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
+                            aria-hidden="true"
+                            focusable="false"
                           >
                             <path
                               strokeLinecap="round"
@@ -464,7 +444,7 @@ function LoginPage() {
                     type="button"
                     variant="ghost"
                     onClick={handleSwitchToChangePassword}
-                    className="h-11 text-zinc-400 hover:text-white hover:bg-zinc-800/40 transition-colors"
+                    className="h-11 text-text-secondary hover:text-text-light hover:bg-background-sidebar-hover/40 transition-colors"
                   >
                     Сменить пароль
                   </Button>
@@ -474,41 +454,20 @@ function LoginPage() {
           </div>
 
           {/* Bottom Accent Line */}
-          <div className="h-1 bg-gradient-to-r from-primary via-orange-500 to-primary" />
+          <div className="h-1 bg-gradient-to-r from-accent-primary via-orange-500 to-accent-primary" />
         </div>
 
         {/* Version Badge using unified border variables */}
         <div className="mt-6 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-4 py-1.5 text-xs text-zinc-400 backdrop-blur-sm font-mono-accent">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background-secondary/50 px-4 py-1.5 text-xs text-text-secondary backdrop-blur-sm font-mono-accent">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-primary opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-primary" />
             </span>
             System Online
           </span>
         </div>
       </div>
-
-      <style>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0) translateX(0);
-            opacity: 0;
-          }
-          10% {
-            opacity: 1;
-          }
-          90% {
-            opacity: 1;
-          }
-          50% {
-            transform: translateY(-100vh) translateX(50px);
-          }
-        }
-        .animate-float {
-          animation: float linear infinite;
-        }
-      `}</style>
     </div>
   )
 }
