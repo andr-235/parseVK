@@ -13,6 +13,7 @@ import { Shield, UserPlus, Users, Key, KeyRound, RefreshCw, Trash2 } from 'lucid
 import type { AdminUser, UserRole } from '@/types/auth'
 import type { TableColumn } from '@/types'
 import { DataTable } from '@/components/common/DataTable'
+import { cn } from '@/utils/common'
 
 const roleLabelMap: Record<UserRole, string> = {
   admin: 'Администратор',
