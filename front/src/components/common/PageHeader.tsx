@@ -1,8 +1,8 @@
-import React, { type ReactNode } from 'react'
-import { Card, CardHeader, CardDescription, CardFooter } from '@/components/ui/card'
+import { type ReactNode } from 'react'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/utils/common'
-import PageTitle from './PageTitle'
+import { Globe, Terminal, FileSpreadsheet } from 'lucide-react'
 
 export interface PageHeaderCardConfig {
   icon: React.ComponentType<{ className?: string }>
@@ -26,148 +26,102 @@ interface PageHeaderProps {
   title: string | ReactNode
   description?: string
   actions?: ReactNode
-  variant?: 'simple' | 'hero' | 'grid' | 'badges'
+  variant?: string // Игнорируем, так как теперь всегда console
   cards?: PageHeaderCardConfig[]
   badges?: PageHeaderBadgeConfig[]
   footer?: ReactNode
   className?: string
   colsClass?: string // default: "grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+  // Новые опциональные параметры для метаданных экспорта
+  platformLabel?: string
+  platformColorClass?: string
+  apiMethod?: string
+  formatLabel?: string
 }
 
 export const PageHeader = ({
   title,
   description,
   actions,
-  variant = 'simple',
   cards = [],
   badges = [],
-  footer,
   className,
   colsClass = 'grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4',
+  platformLabel,
+  platformColorClass,
+  apiMethod,
+  formatLabel,
 }: PageHeaderProps) => {
-  if (variant === 'hero') {
-    return (
-      <Card
-        className={cn(
-          'relative overflow-hidden border border-border/60 shadow-soft-sm',
-          'bg-gradient-to-br from-accent-primary/10 via-background-secondary to-background-secondary/95',
-          className
-        )}
-      >
-        <div className="pointer-events-none absolute -right-24 top-1/2 hidden h-64 w-64 -translate-y-1/2 rounded-full bg-accent-primary/15 blur-3xl md:block" />
-
-        <CardHeader className="relative z-10 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-3">
-            <PageTitle className="font-semibold text-text-primary">{title}</PageTitle>
-            {description && (
-              <CardDescription className="max-w-xl text-sm leading-relaxed md:max-w-lg md:text-base">
-                {description}
-              </CardDescription>
-            )}
-          </div>
-
-          {actions && (
-            <div className="flex w-full flex-col items-stretch gap-3 md:w-auto md:items-end shrink-0">
-              {actions}
-            </div>
-          )}
-        </CardHeader>
-
-        {footer && (
-          <CardFooter className="relative z-10 flex flex-wrap gap-2 pt-0">{footer}</CardFooter>
-        )}
-      </Card>
-    )
-  }
-
   return (
-    <div className={cn('flex flex-col gap-8', className)}>
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-        <div className="space-y-3">
-          {typeof title === 'string' ? (
-            <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-text-light">
-              {title}
-            </h1>
-          ) : (
-            title
-          )}
+    <div className={cn('flex flex-col gap-8 w-full font-monitoring-body animate-in fade-in-0 duration-700', className)}>
+      
+      {/* Unified High-density Console Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 p-6 rounded-card border border-border/50 bg-background-secondary/90 shadow-soft-sm relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-primary/5 via-transparent to-transparent opacity-20" />
+        
+        <div className="relative space-y-2 z-10">
+          <div className="flex flex-wrap items-center gap-2">
+          </div>
+          <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-text-light">
+            {title}
+          </h1>
           {description && (
-            <p className="text-text-secondary max-w-2xl text-lg font-monitoring-body">
+            <p className="text-text-secondary max-w-3xl text-sm leading-relaxed font-monitoring-body">
               {description}
             </p>
           )}
         </div>
 
-        {actions && <div className="shrink-0">{actions}</div>}
+        {/* Dynamic Right Section: Metadata Tags or Action Buttons */}
+        <div className="flex flex-wrap items-center gap-3 shrink-0 relative z-10">
+          {/* Render console-style platform metadata if provided */}
+          {platformLabel && (
+            <div className="flex items-center gap-2 border border-border/50 bg-background-primary px-3 py-2 rounded-lg font-mono-accent text-xs shadow-soft-sm">
+              <Globe className="size-4 text-text-secondary" />
+              <span className="text-text-secondary">Источник:</span>
+              <span className={platformColorClass || 'text-accent-primary'}>{platformLabel}</span>
+            </div>
+          )}
+          
+          {apiMethod && (
+            <div className="flex items-center gap-2 border border-border/50 bg-background-primary px-3 py-2 rounded-lg font-mono-accent text-xs shadow-soft-sm">
+              <Terminal className="size-4 text-text-secondary" />
+              <span className="text-text-secondary">Метод:</span>
+              <span className="text-text-primary">{apiMethod}</span>
+            </div>
+          )}
+          
+          {formatLabel && (
+            <div className="flex items-center gap-2 border border-border/50 bg-background-primary px-3 py-2 rounded-lg font-mono-accent text-xs shadow-soft-sm">
+              <FileSpreadsheet className="size-4 text-text-secondary" />
+              <span className="text-text-secondary">Формат:</span>
+              <span className="text-accent-primary">{formatLabel}</span>
+            </div>
+          )}
+
+          {/* Render standard actions */}
+          {actions && <div className="flex items-center gap-3">{actions}</div>}
+        </div>
       </div>
 
-      {variant === 'grid' && cards.length > 0 && (
+      {/* Standardized Console Cards Grid */}
+      {cards.length > 0 && (
         <div className={cn('grid', colsClass)}>
           {cards.map((card, index) => {
             const Icon = card.icon
-
-            let bgGradient = card.bgGradientClass
-            let borderGradient = card.borderGradientClass
-            let iconBg = card.iconBgClass
-            let iconText = card.iconTextClass
-
-            if (!bgGradient && !borderGradient && !iconBg && !iconText) {
-              const styles = [
-                {
-                  bgGradient: 'from-accent-primary/20 to-accent-info/20',
-                  borderGradient: 'via-accent-primary/50',
-                  iconBg: 'bg-accent-primary/10',
-                  iconText: 'text-accent-primary',
-                },
-                {
-                  bgGradient: 'from-accent-info/20 to-accent-primary/20',
-                  borderGradient: 'via-accent-info/50',
-                  iconBg: 'bg-accent-info/10',
-                  iconText: 'text-accent-info',
-                },
-              ]
-              const style = styles[index % styles.length]
-              bgGradient = style.bgGradient
-              borderGradient = style.borderGradient
-              iconBg = style.iconBg
-              iconText = style.iconText
-            }
-
-            const finalIconBgClass = iconBg || 'bg-accent-primary/10'
-            const finalIconTextClass = iconText || 'text-accent-primary'
-
             return (
-              <div key={index} className="relative h-full">
-                <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden h-full">
-                  {bgGradient && (
-                    <div
-                      className={cn('absolute inset-0 bg-gradient-to-br opacity-5', bgGradient)}
-                    />
-                  )}
-                  {borderGradient && (
-                    <div
-                      className={cn(
-                        'absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent',
-                        borderGradient
-                      )}
-                    />
-                  )}
+              <div key={index} className="relative h-full animate-in fade-in-0 slide-in-from-bottom-2 duration-500 delay-75">
+                <Card className="relative border border-border/50 bg-background-secondary/95 shadow-soft-sm p-5 overflow-hidden h-full">
                   <div className="relative flex items-start gap-3 h-full z-10">
-                    <div
-                      className={cn(
-                        'p-2 rounded-lg shrink-0',
-                        finalIconBgClass,
-                        finalIconTextClass
-                      )}
-                    >
+                    <div className="p-2 rounded-lg shrink-0 bg-accent-primary/10 text-accent-primary">
                       <Icon className="w-5 h-5" />
                     </div>
-                    <div className="space-y-1 flex-1 min-w-0">
+                    <div className="space-y-1 flex-1 min-w-0 font-monitoring-body">
                       {card.customContent ? (
                         card.customContent
                       ) : (
                         <>
-                          <h3 className="font-monitoring-display text-sm font-semibold text-text-primary truncate">
+                          <h3 className="font-monitoring-body text-sm font-semibold text-text-primary truncate">
                             {card.title}
                           </h3>
                           <p className="text-xs text-text-secondary wrap-break-word">
@@ -184,7 +138,8 @@ export const PageHeader = ({
         </div>
       )}
 
-      {variant === 'badges' && badges.length > 0 && (
+      {/* Standardized Badges Row */}
+      {badges.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
           {badges.map((badge, index) => {
             const Icon = badge.icon
@@ -192,11 +147,11 @@ export const PageHeader = ({
               <Badge
                 key={index}
                 className={cn(
-                  'flex items-center gap-2 border border-border/60 bg-background-secondary px-4 py-2 font-mono-accent text-sm text-text-primary transition-all duration-200 shadow-soft-sm',
+                  'flex items-center gap-2 border border-border/50 bg-background-secondary px-4 py-2 font-mono-accent text-sm text-text-primary transition-all duration-200 shadow-soft-sm',
                   badge.className
                 )}
               >
-                <Icon className="size-4" />
+                <Icon className="size-4 text-text-secondary" />
                 <span className="font-semibold">{badge.value}</span>
                 <span className="text-xs text-text-secondary">{badge.label}</span>
               </Badge>
