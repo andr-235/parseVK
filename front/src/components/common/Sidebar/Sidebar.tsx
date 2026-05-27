@@ -36,10 +36,10 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
     [tasksCount, commentsCount, watchlistCount, authorsTotal]
   )
 
-  const monitoringSubItems = createMonitoringSubItems()
+  const monitoringSubItems = useMemo(() => createMonitoringSubItems(), [])
 
-  const parsingSubItems = createParsingSubItems()
-  const telegramSubItems = createTelegramSubItems()
+  const parsingSubItems = useMemo(() => createParsingSubItems(), [])
+  const telegramSubItems = useMemo(() => createTelegramSubItems(), [])
 
   const primaryItems = useMemo<SidebarItem[]>(
     () =>

@@ -43,13 +43,14 @@ export function SidebarFooter({ items, isCollapsed }: SidebarFooterProps) {
         {isCollapsed ? (
           <button
             onClick={clearAuth}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:text-red-400 border border-border cursor-pointer mx-auto transition-all hover:scale-105"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-hover text-text-secondary hover:text-red-400 border border-border cursor-pointer mx-auto transition-all hover:scale-105"
             title="Выйти из системы"
+            aria-label="Выйти из системы"
           >
             <LogOut className="h-4 w-4" />
           </button>
         ) : (
-          <div className="flex items-center gap-3 rounded-2xl bg-zinc-900/60 border border-border p-3 select-none">
+          <div className="flex items-center gap-3 rounded-2xl bg-card/60 border border-border p-3 select-none">
             {/* Avatar */}
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm border border-primary/15">
               {getAvatarChar()}
@@ -57,10 +58,10 @@ export function SidebarFooter({ items, isCollapsed }: SidebarFooterProps) {
             
             {/* Info */}
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-xs font-semibold text-zinc-100 truncate">
+              <span className="text-xs font-semibold text-text-light truncate">
                 {user?.username || 'Оператор'}
               </span>
-              <span className="text-[10px] text-zinc-500 truncate">
+              <span className="text-[10px] text-text-secondary/70 truncate">
                 {user?.username ? `${user.username.toLowerCase()}@parsevk.local` : 'operator@parsevk.local'}
               </span>
             </div>
@@ -68,8 +69,9 @@ export function SidebarFooter({ items, isCollapsed }: SidebarFooterProps) {
             {/* Logout Button */}
             <button
               onClick={clearAuth}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-all shrink-0"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-all shrink-0"
               title="Выйти"
+              aria-label="Выйти из системы"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
@@ -79,10 +81,11 @@ export function SidebarFooter({ items, isCollapsed }: SidebarFooterProps) {
 
       {/* Footer Version Info */}
       {!isCollapsed && (
-        <div className="mt-4 flex justify-end text-[9px] text-zinc-600 font-mono-accent tracking-wider select-none animate-in fade-in-0 duration-700 delay-200">
+        <div className="mt-4 flex justify-end text-[9px] text-text-secondary/50 font-mono-accent tracking-wider select-none animate-in fade-in-0 duration-700 delay-200">
           v{APP_VERSION}
         </div>
       )}
     </div>
   )
 }
+

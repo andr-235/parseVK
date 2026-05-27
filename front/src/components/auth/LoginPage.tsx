@@ -10,6 +10,15 @@ import { useAuthSession } from '@/hooks/auth/useAuthSession'
 
 const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
 
+// Static array constant for animated background particles to prevent GC churn on typing/re-renders
+const DECORATIVE_PARTICLES = [...Array(20)].map((_, i) => ({
+  id: i,
+  left: `${(i * 7 + 13) % 100}%`,
+  top: `${(i * 11 + 23) % 100}%`,
+  delay: `${(i * 0.7).toFixed(1)}s`,
+  duration: `${(15 + (i * 1.3) % 10).toFixed(1)}s`,
+}))
+
 function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -131,8 +140,8 @@ function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background px-4 py-8 font-monitoring-body">
-      {/* Animated Mesh Gradient Background */}
-      <div className="absolute inset-0 opacity-60">
+      {/* Animated Mesh Gradient Background (A11y Hidden) */}
+      <div className="absolute inset-0 opacity-60" aria-hidden="true">
         <div className="absolute inset-0 bg-gradient-to-br from-[#24130d] via-[#101012] to-[#1a110e]" />
         <div
           className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px] animate-pulse"
@@ -144,9 +153,10 @@ function LoginPage() {
         />
       </div>
 
-      {/* Grid Overlay */}
+      {/* Grid Overlay (A11y Hidden) */}
       <div
         className="absolute inset-0 opacity-[0.03]"
+        aria-hidden="true"
         style={{
           backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
                            linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
@@ -154,17 +164,17 @@ function LoginPage() {
         }}
       />
 
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
+      {/* Floating Particles (A11y Hidden) */}
+      <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+        {DECORATIVE_PARTICLES.map((particle) => (
           <div
-            key={i}
+            key={particle.id}
             className="absolute h-1 w-1 rounded-full bg-primary/30 animate-float"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 10}s`,
-              animationDuration: `${15 + Math.random() * 10}s`,
+              left: particle.left,
+              top: particle.top,
+              animationDelay: particle.delay,
+              animationDuration: particle.duration,
             }}
           />
         ))}
@@ -172,8 +182,8 @@ function LoginPage() {
 
       {/* Main Card Container */}
       <div className="relative z-10 w-full max-w-md">
-        {/* Card */}
-        <div className="relative overflow-hidden rounded-2xl border border-[#2a2a30] bg-[#131316]/90 shadow-2xl backdrop-blur-2xl">
+        {/* Card using semantic border variables */}
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-card/90 shadow-2xl backdrop-blur-2xl">
           {/* Top Border Glow */}
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
@@ -234,7 +244,7 @@ function LoginPage() {
                         onChange={(event) => setUsername(event.target.value)}
                         placeholder="Введите логин"
                         disabled={isChanging}
-                        className="h-11 border-[#2a2a30] bg-[#1c1c21] text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                        className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                         required
                       />
                       <div className="absolute inset-0 -z-10 rounded-lg bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 transition-opacity duration-200 peer-focus:opacity-100" />
@@ -257,7 +267,7 @@ function LoginPage() {
                     onChange={(event) => setOldPassword(event.target.value)}
                     placeholder="••••••••"
                     disabled={isChanging}
-                    className="h-11 border-[#2a2a30] bg-[#1c1c21] text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                    className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                     required
                   />
                 </div>
@@ -277,7 +287,7 @@ function LoginPage() {
                     onChange={(event) => setNewPassword(event.target.value)}
                     placeholder="Минимум 8 символов"
                     disabled={isChanging}
-                    className="h-11 border-[#2a2a30] bg-[#1c1c21] text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                    className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                     required
                   />
                   <p className="text-xs text-zinc-500 font-mono-accent">
@@ -300,7 +310,7 @@ function LoginPage() {
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     placeholder="••••••••"
                     disabled={isChanging}
-                    className="h-11 border-[#2a2a30] bg-[#1c1c21] text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                    className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                     required
                   />
                 </div>
@@ -383,7 +393,7 @@ function LoginPage() {
                       onChange={(event) => setUsername(event.target.value)}
                       placeholder="Введите логин"
                       disabled={isSubmitting}
-                      className="h-11 border-[#2a2a30] bg-[#1c1c21] text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                      className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                       required
                     />
                   </div>
@@ -404,7 +414,7 @@ function LoginPage() {
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="••••••••"
                     disabled={isSubmitting}
-                    className="h-11 border-[#2a2a30] bg-[#1c1c21] text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                    className="h-11 border-border bg-background/50 text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                     required
                   />
                   <p className="text-xs text-zinc-500 font-mono-accent">Минимум 8 символов</p>
@@ -467,9 +477,9 @@ function LoginPage() {
           <div className="h-1 bg-gradient-to-r from-primary via-orange-500 to-primary" />
         </div>
 
-        {/* Version Badge */}
+        {/* Version Badge using unified border variables */}
         <div className="mt-6 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#2a2a30] bg-[#131316]/50 px-4 py-1.5 text-xs text-zinc-400 backdrop-blur-sm font-mono-accent">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-4 py-1.5 text-xs text-zinc-400 backdrop-blur-sm font-mono-accent">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
@@ -504,3 +514,4 @@ function LoginPage() {
 }
 
 export default LoginPage
+
