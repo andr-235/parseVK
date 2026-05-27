@@ -16,9 +16,7 @@ export function SidebarNavItem({ item, isCollapsed = false }: SidebarNavItemProp
     >
       <div className="flex items-center gap-3 w-full">
         {item.icon && (
-          <span className="flex items-center justify-center shrink-0">
-            {item.icon}
-          </span>
+          <span className="flex items-center justify-center shrink-0">{item.icon}</span>
         )}
         {!isCollapsed && (
           <div className="relative flex flex-1 items-center justify-between animate-in fade-in-0 slide-in-from-left-2 duration-300">

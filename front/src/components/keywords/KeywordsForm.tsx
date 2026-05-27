@@ -90,7 +90,11 @@ export const KeywordsForm = ({
             <RefreshCw className={`mr-2 size-4 ${isRecalculating ? 'animate-spin' : ''}`} />
             Пересчитать
           </Button>
-          <FileUpload onFilesSelect={onFilesSelect} buttonText="Импорт" className="flex-1 lg:flex-none" />
+          <FileUpload
+            onFilesSelect={onFilesSelect}
+            buttonText="Импорт"
+            className="flex-1 lg:flex-none"
+          />
         </div>
       </div>
 

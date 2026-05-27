@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import toast from 'react-hot-toast'
-import { useGroupsStore } from '@/store/groups/groupsStore';
-import { useTaskAutomationStore } from '@/store/settings/taskAutomationStore';
+import { useGroupsStore } from '@/store/groups/groupsStore'
+import { useTaskAutomationStore } from '@/store/settings/taskAutomationStore'
 import { useTasksStore } from '@/store/tasks'
 import { useTasksQuery } from '@/hooks/tasks/useTasksQuery'
 import { useTasksSocket } from '@/hooks/tasks/useTasksSocket'

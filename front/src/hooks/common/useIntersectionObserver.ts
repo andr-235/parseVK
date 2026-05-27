@@ -7,7 +7,12 @@ export interface UseIntersectionObserverOptions extends IntersectionObserverInit
 export function useIntersectionObserver(
   targetRef: RefObject<HTMLElement | null>,
   onIntersect: () => void,
-  { enabled = true, root = null, rootMargin = '0px', threshold = 0 }: UseIntersectionObserverOptions = {}
+  {
+    enabled = true,
+    root = null,
+    rootMargin = '0px',
+    threshold = 0,
+  }: UseIntersectionObserverOptions = {}
 ): void {
   useEffect(() => {
     if (!enabled) return

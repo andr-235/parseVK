@@ -12,7 +12,7 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
-  ArrowUpRight
+  ArrowUpRight,
 } from 'lucide-react'
 
 function MetricsPage() {
@@ -152,7 +152,7 @@ function MetricsPage() {
           .sort((a, b) => b[1] - a[1])
           .map(([status, count]) => {
             const percentage = total > 0 ? (count / total) * 100 : 0
-            
+
             let barColor = 'bg-slate-600'
             let textColor = 'text-slate-400'
             if (status.startsWith('2')) {
@@ -164,7 +164,11 @@ function MetricsPage() {
             } else if (status.startsWith('4')) {
               barColor = 'bg-amber-500/80'
               textColor = 'text-amber-400'
-            } else if (status.startsWith('5') || status.toLowerCase() === 'failed' || status.toLowerCase() === 'error') {
+            } else if (
+              status.startsWith('5') ||
+              status.toLowerCase() === 'failed' ||
+              status.toLowerCase() === 'error'
+            ) {
               barColor = 'bg-red-500/80'
               textColor = 'text-red-400'
             }
@@ -220,9 +224,12 @@ function MetricsPage() {
         <div className="mb-4 rounded-full bg-red-500/10 p-3 text-red-500 border border-red-500/20">
           <AlertTriangle className="h-8 w-8" />
         </div>
-        <h3 className="mb-2 text-lg font-semibold text-slate-200">Не удалось загрузить метрики системы</h3>
+        <h3 className="mb-2 text-lg font-semibold text-slate-200">
+          Не удалось загрузить метрики системы
+        </h3>
         <p className="mb-6 max-w-md text-sm text-slate-400">
-          Произошла техническая ошибка при обращении к серверному шлюзу Prometheus. Убедитесь, что сервис работает стабильно.
+          Произошла техническая ошибка при обращении к серверному шлюзу Prometheus. Убедитесь, что
+          сервис работает стабильно.
         </p>
         <button
           onClick={() => void fetchMetrics(false)}
@@ -242,9 +249,12 @@ function MetricsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100 font-display">Здоровье системы</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100 font-display">
+            Здоровье системы
+          </h1>
           <p className="text-sm text-slate-400">
-            Оперативный пульт мониторинга шлюзов, очередей задач и аппаратных ресурсов аналитического центра.
+            Оперативный пульт мониторинга шлюзов, очередей задач и аппаратных ресурсов
+            аналитического центра.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -271,7 +281,9 @@ function MetricsPage() {
         <Card className="relative overflow-hidden bg-slate-900/50 border border-slate-800 p-4 transition-all duration-300 hover:border-slate-700/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Сетевой Шлюз</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                Сетевой Шлюз
+              </span>
               <h3 className="text-sm font-semibold text-slate-200">API Gateway</h3>
             </div>
             <StatusBadge tone={getStatusTone(gatewayInfo.status)} pulse>
@@ -294,7 +306,9 @@ function MetricsPage() {
         <Card className="relative overflow-hidden bg-slate-900/50 border border-slate-800 p-4 transition-all duration-300 hover:border-slate-700/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Контроллер VK</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                Контроллер VK
+              </span>
               <h3 className="text-sm font-semibold text-slate-200">VK API Service</h3>
             </div>
             <StatusBadge tone={getStatusTone(vkInfo.status)} pulse>
@@ -317,7 +331,9 @@ function MetricsPage() {
         <Card className="relative overflow-hidden bg-slate-900/50 border border-slate-800 p-4 transition-all duration-300 hover:border-slate-700/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Фоновый Воркер</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                Фоновый Воркер
+              </span>
               <h3 className="text-sm font-semibold text-slate-200">Tasks Queue</h3>
             </div>
             <StatusBadge tone={getStatusTone(tasksInfo.status)} pulse>
@@ -326,7 +342,9 @@ function MetricsPage() {
           </div>
           <div className="mt-4 flex items-baseline justify-between">
             <span className="text-xs text-slate-400">Активные задачи:</span>
-            <span className="text-xs font-mono font-bold text-slate-300">{metrics.tasks.active}</span>
+            <span className="text-xs font-mono font-bold text-slate-300">
+              {metrics.tasks.active}
+            </span>
           </div>
         </Card>
 
@@ -334,7 +352,9 @@ function MetricsPage() {
         <Card className="relative overflow-hidden bg-slate-900/50 border border-slate-800 p-4 transition-all duration-300 hover:border-slate-700/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Системная Среда</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                Системная Среда
+              </span>
               <h3 className="text-sm font-semibold text-slate-200">Node.js Runtime</h3>
             </div>
             <StatusBadge tone={getStatusTone(systemInfo.status)} pulse>
@@ -343,7 +363,9 @@ function MetricsPage() {
           </div>
           <div className="mt-4 flex items-baseline justify-between">
             <span className="text-xs text-slate-400">Потребление RAM (RSS):</span>
-            <span className="text-xs font-mono font-bold text-slate-300">{metrics.system.memory.rss.toFixed(0)} МБ</span>
+            <span className="text-xs font-mono font-bold text-slate-300">
+              {metrics.system.memory.rss.toFixed(0)} МБ
+            </span>
           </div>
         </Card>
       </div>
@@ -363,26 +385,36 @@ function MetricsPage() {
 
             <div className="mt-5 space-y-4">
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Всего обработано</span>
-                <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">{metrics.httpRequests.total}</div>
+                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                  Всего обработано
+                </span>
+                <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">
+                  {metrics.httpRequests.total}
+                </div>
               </div>
 
               {/* Latency subgrid */}
               <div className="grid grid-cols-3 gap-2 border-y border-slate-800/60 py-3 text-center">
                 <div className="space-y-1">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">P50</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                    P50
+                  </span>
                   <div className="text-xs font-mono font-semibold text-slate-300">
                     {(metrics.httpRequests.duration.p50 * 1000).toFixed(0)}мс
                   </div>
                 </div>
                 <div className="space-y-1 border-x border-slate-800/60">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">P95</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                    P95
+                  </span>
                   <div className="text-xs font-mono font-semibold text-slate-300">
                     {(metrics.httpRequests.duration.p95 * 1000).toFixed(0)}мс
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">P99</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                    P99
+                  </span>
                   <div className="text-xs font-mono font-semibold text-slate-300">
                     {(metrics.httpRequests.duration.p99 * 1000).toFixed(0)}мс
                   </div>
@@ -391,8 +423,13 @@ function MetricsPage() {
 
               {/* Status Code Distribution */}
               <div className="space-y-2">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">Распределение статусов</span>
-                {renderStatusDistribution(metrics.httpRequests.byStatus, metrics.httpRequests.total)}
+                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">
+                  Распределение статусов
+                </span>
+                {renderStatusDistribution(
+                  metrics.httpRequests.byStatus,
+                  metrics.httpRequests.total
+                )}
               </div>
             </div>
           </div>
@@ -411,20 +448,28 @@ function MetricsPage() {
 
             <div className="mt-5 space-y-4">
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Запросы к ВКонтакте</span>
-                <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">{metrics.vkApi.total}</div>
+                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                  Запросы к ВКонтакте
+                </span>
+                <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">
+                  {metrics.vkApi.total}
+                </div>
               </div>
 
               {/* Latency subgrid */}
               <div className="grid grid-cols-2 gap-2 border-y border-slate-800/60 py-3 text-center">
                 <div className="space-y-1 border-r border-slate-800/60">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">P50 задержка</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                    P50 задержка
+                  </span>
                   <div className="text-xs font-mono font-semibold text-slate-300">
                     {(metrics.vkApi.duration.p50 * 1000).toFixed(0)}мс
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">P95 задержка</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                    P95 задержка
+                  </span>
                   <div className="text-xs font-mono font-semibold text-slate-300">
                     {(metrics.vkApi.duration.p95 * 1000).toFixed(0)}мс
                   </div>
@@ -433,7 +478,9 @@ function MetricsPage() {
 
               {/* VK API Status Breakdown */}
               <div className="space-y-2">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">Статусы вызовов API</span>
+                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">
+                  Статусы вызовов API
+                </span>
                 {renderStatusDistribution(metrics.vkApi.byStatus, metrics.vkApi.total)}
               </div>
             </div>
@@ -454,17 +501,27 @@ function MetricsPage() {
             <div className="mt-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Всего задач</span>
-                  <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">{metrics.tasks.total}</div>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                    Всего задач
+                  </span>
+                  <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">
+                    {metrics.tasks.total}
+                  </div>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Активные авторы</span>
-                  <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">{metrics.watchlist.activeAuthors}</div>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                    Активные авторы
+                  </span>
+                  <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">
+                    {metrics.watchlist.activeAuthors}
+                  </div>
                 </div>
               </div>
 
               <div className="border-t border-slate-800/60 pt-4 space-y-3">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">Распределение состояний задач</span>
+                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">
+                  Распределение состояний задач
+                </span>
                 {renderStatusDistribution(metrics.tasks.byStatus, metrics.tasks.total)}
               </div>
             </div>
@@ -480,7 +537,9 @@ function MetricsPage() {
         >
           <div className="flex items-center gap-2">
             <Cpu className="h-4 w-4 text-slate-500" />
-            <span className="text-sm font-semibold text-slate-300">Системные ресурсы & Аппаратная среда</span>
+            <span className="text-sm font-semibold text-slate-300">
+              Системные ресурсы & Аппаратная среда
+            </span>
           </div>
           {systemOpen ? (
             <ChevronUp className="h-4 w-4 text-slate-500" />
@@ -495,7 +554,9 @@ function MetricsPage() {
               {/* Memory panel */}
               <div className="space-y-3">
                 <div className="flex items-center gap-1.5 border-b border-slate-800/60 pb-2">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Выделение оперативной памяти</span>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                    Выделение оперативной памяти
+                  </span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
@@ -522,7 +583,9 @@ function MetricsPage() {
               {/* CPU panel */}
               <div className="space-y-3">
                 <div className="flex items-center gap-1.5 border-b border-slate-800/60 pb-2">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Процессорное время CPU</span>
+                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                    Процессорное время CPU
+                  </span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">

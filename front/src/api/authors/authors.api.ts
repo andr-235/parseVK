@@ -112,7 +112,9 @@ export const authorsService = {
         sortBy: params.sortBy,
         sortOrder: params.sortOrder,
       })
-      const baseUrl = canUseContentAuthorsApi(params) ? CONTENT_AUTHORS_API_URL : `${API_URL}/authors`
+      const baseUrl = canUseContentAuthorsApi(params)
+        ? CONTENT_AUTHORS_API_URL
+        : `${API_URL}/authors`
       const url = query ? `${baseUrl}?${query}` : baseUrl
       const response = await createRequest(url)
 

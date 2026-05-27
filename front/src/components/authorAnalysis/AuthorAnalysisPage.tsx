@@ -1,4 +1,4 @@
-import { useAuthorData } from '@/hooks/authors/useAuthorData';
+import { useAuthorData } from '@/hooks/authors/useAuthorData'
 import { usePhotoAnalysis } from '@/hooks/authorAnalysis/usePhotoAnalysis'
 import { AuthorHeroSection } from '@/components/authorAnalysis/AuthorHeroSection'
 import { AnalysisSummarySection } from '@/components/authorAnalysis/AnalysisSummarySection'

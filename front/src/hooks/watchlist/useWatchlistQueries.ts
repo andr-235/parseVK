@@ -6,11 +6,7 @@ import { useEffect } from 'react'
 import { watchlistService } from '@/api/watchlist/watchlist.api'
 import { watchlistQueryKeys } from '@/api/watchlist/queryKeys'
 import { useWatchlistStore } from '@/store/watchlist'
-import {
-  WATCHLIST_PAGE_SIZE,
-  mapWatchlistAuthor,
-  mapWatchlistSettings,
-} from '@/store/watchlist'
+import { WATCHLIST_PAGE_SIZE, mapWatchlistAuthor, mapWatchlistSettings } from '@/store/watchlist'
 import { mergeListsById } from '@/utils/common'
 
 const fetchWatchlistAuthors = async () => {

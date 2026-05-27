@@ -26,10 +26,7 @@ const TasksList = ({ onTaskSelect, emptyMessage, hasGroups }: TasksListProps) =>
             <div className="border-b border-border/60 bg-muted/10 h-10" />
             {/* Table Rows skeletons */}
             {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="border-b border-border/40 h-16 flex items-center px-6 gap-4"
-              >
+              <div key={i} className="border-b border-border/40 h-16 flex items-center px-6 gap-4">
                 <div className="h-4 w-8 bg-muted rounded" />
                 <div className="h-4 w-48 bg-muted rounded" />
                 <div className="h-5 w-24 bg-muted rounded-full" />
@@ -54,12 +51,13 @@ const TasksList = ({ onTaskSelect, emptyMessage, hasGroups }: TasksListProps) =>
             Нет активных групп для парсинга
           </h4>
           <p className="text-text-secondary max-w-[360px] text-sm font-normal leading-relaxed font-monitoring-body mb-5">
-            Сначала необходимо импортировать или добавить группы в систему на странице «Группы», чтобы настроить сбор данных.
+            Сначала необходимо импортировать или добавить группы в систему на странице «Группы»,
+            чтобы настроить сбор данных.
           </p>
           <Button
             variant="outline"
             className="h-10 border-border hover:border-accent-primary/50 text-text-primary hover:text-accent-primary transition-all duration-200"
-            onClick={() => window.location.href = '/groups'}
+            onClick={() => (window.location.href = '/groups')}
           >
             Перейти к группам
           </Button>
@@ -84,11 +82,7 @@ const TasksList = ({ onTaskSelect, emptyMessage, hasGroups }: TasksListProps) =>
 
   return (
     <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
-      <TasksTableCard
-        tasks={tasks}
-        emptyMessage={emptyMessage}
-        onTaskSelect={onTaskSelect}
-      />
+      <TasksTableCard tasks={tasks} emptyMessage={emptyMessage} onTaskSelect={onTaskSelect} />
     </div>
   )
 }

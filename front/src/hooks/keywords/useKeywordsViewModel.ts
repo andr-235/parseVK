@@ -88,8 +88,16 @@ export const useKeywordsViewModel = () => {
 
     try {
       const result = await keywordsService.recalculateKeywordMatches()
-      if (result.processed === 0 && result.updated === 0 && result.created === 0 && result.deleted === 0) {
-        toast.success('Пересчет совпадений ключевых слов запущен в фоновом режиме', { id: toastId, duration: 4000 })
+      if (
+        result.processed === 0 &&
+        result.updated === 0 &&
+        result.created === 0 &&
+        result.deleted === 0
+      ) {
+        toast.success('Пересчет совпадений ключевых слов запущен в фоновом режиме', {
+          id: toastId,
+          duration: 4000,
+        })
       } else {
         toast.success(
           `Обработано: ${result.processed}, обновлено: ${result.updated}, создано: ${result.created}, удалено: ${result.deleted}`,
@@ -113,10 +121,27 @@ export const useKeywordsViewModel = () => {
 
     try {
       const result = await keywordsService.rebuildKeywordForms()
-      if (result.keywordsRebuilt === 0 && result.processed === 0 && result.updated === 0 && result.created === 0 && result.deleted === 0) {
-        toast.success('Пересборка словоформ и пересчет совпадений запущены', { id: toastId, duration: 4000 })
-      } else if (result.processed === 0 && result.updated === 0 && result.created === 0 && result.deleted === 0) {
-        toast.success(`Пересобрано словоформ для ${result.keywordsRebuilt} слов. Пересчет запущен в фоне.`, { id: toastId, duration: 5000 })
+      if (
+        result.keywordsRebuilt === 0 &&
+        result.processed === 0 &&
+        result.updated === 0 &&
+        result.created === 0 &&
+        result.deleted === 0
+      ) {
+        toast.success('Пересборка словоформ и пересчет совпадений запущены', {
+          id: toastId,
+          duration: 4000,
+        })
+      } else if (
+        result.processed === 0 &&
+        result.updated === 0 &&
+        result.created === 0 &&
+        result.deleted === 0
+      ) {
+        toast.success(
+          `Пересобрано словоформ для ${result.keywordsRebuilt} слов. Пересчет запущен в фоне.`,
+          { id: toastId, duration: 5000 }
+        )
       } else {
         toast.success(
           `Слов обновлено: ${result.keywordsRebuilt}, обработано: ${result.processed}, обновлено: ${result.updated}, создано: ${result.created}, удалено: ${result.deleted}`,
@@ -138,8 +163,8 @@ export const useKeywordsViewModel = () => {
 
     return keywords.filter(
       (k) =>
-          k.word.toLowerCase().includes(normalizedSearch) ||
-          (k.category && k.category.toLowerCase().includes(normalizedSearch))
+        k.word.toLowerCase().includes(normalizedSearch) ||
+        (k.category && k.category.toLowerCase().includes(normalizedSearch))
     )
   }, [keywords, searchTerm])
 

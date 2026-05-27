@@ -18,7 +18,7 @@ vi.mock('@/api/common', () => {
       return searchParams.toString()
     },
     createRequest: (url: string, options: RequestInit = {}) => fetch(url, options),
-    handleResponse: async <T,>(response: Response) => response.json() as Promise<T>,
+    handleResponse: async <T>(response: Response) => response.json() as Promise<T>,
   }
 })
 vi.mock('@/types', () => {
@@ -108,7 +108,10 @@ describe('authors api migration routing', () => {
 
     await authorsService.fetchAuthors({ limit: 10, verified: false })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/authors?limit=10&verified=false', expect.any(Object))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/authors?limit=10&verified=false',
+      expect.any(Object)
+    )
   })
 
   it('keeps unsupported author sort fields on legacy authors api', async () => {

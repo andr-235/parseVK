@@ -60,8 +60,8 @@ function MonitoringMessageSkeleton({ density }: { density: 'comfortable' | 'comp
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-white/5 bg-slate-900/40 animate-pulse",
-        isCompact ? "p-3" : "p-5"
+        'relative overflow-hidden rounded-xl border border-white/5 bg-slate-900/40 animate-pulse',
+        isCompact ? 'p-3' : 'p-5'
       )}
     >
       <div className="flex flex-col gap-3">
@@ -94,8 +94,8 @@ function EmptyState({ usedKeywords }: { usedKeywords: string[] }) {
       </h3>
       <p className="text-sm text-slate-400 max-w-md mb-4">
         {usedKeywords.length > 0
-          ? "Не обнаружено сообщений, содержащих активные ключевые слова за выбранный временной период. Попробуйте изменить параметры поиска или увеличить интервал времени."
-          : "Для отображения ленты сообщений задайте ключевые слова в блоке поиска выше или измените период времени."}
+          ? 'Не обнаружено сообщений, содержащих активные ключевые слова за выбранный временной период. Попробуйте изменить параметры поиска или увеличить интервал времени.'
+          : 'Для отображения ленты сообщений задайте ключевые слова в блоке поиска выше или измените период времени.'}
       </p>
     </div>
   )
@@ -111,7 +111,8 @@ function ErrorState({ error, onRetry }: { error: string; onRetry?: () => void })
         Не удалось загрузить сообщения
       </h3>
       <p className="text-sm text-slate-400 max-w-md mb-5">
-        Произошла ошибка при получении данных с сервера: <span className="text-destructive/95 font-mono text-xs">{error}</span>
+        Произошла ошибка при получении данных с сервера:{' '}
+        <span className="text-destructive/95 font-mono text-xs">{error}</span>
       </p>
       {onRetry && (
         <Button
@@ -165,9 +166,11 @@ export function MonitoringMessagesCard({
   }, [usedKeywords])
 
   const renderDateValue = (value: string | null) => {
-    if (!value) return <span className="text-slate-500/70 italic text-[11px] font-normal">нет даты</span>
+    if (!value)
+      return <span className="text-slate-500/70 italic text-[11px] font-normal">нет даты</span>
     const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return <span className="text-slate-500/70 italic text-[11px] font-normal">нет даты</span>
+    if (Number.isNaN(date.getTime()))
+      return <span className="text-slate-500/70 italic text-[11px] font-normal">нет даты</span>
     return formatter.format(date)
   }
 
@@ -200,7 +203,6 @@ export function MonitoringMessagesCard({
     hasMoreRef.current = hasMore
     isBusyRef.current = isLoading || isRefreshing || isLoadingMore
   }, [hasMore, isLoading, isLoadingMore, isRefreshing, onLoadMore])
-
 
   useIntersectionObserver(
     observerTargetRef,
@@ -235,7 +237,9 @@ export function MonitoringMessagesCard({
     <Card className="overflow-hidden border border-border/60 bg-slate-900/60 shadow-xl backdrop-blur-2xl">
       <CardHeader className="flex flex-col gap-3 border-b border-border/60 bg-muted/20 p-6 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <CardTitle className="font-monitoring-display text-lg text-white">Лента сообщений</CardTitle>
+          <CardTitle className="font-monitoring-display text-lg text-white">
+            Лента сообщений
+          </CardTitle>
           <p className="text-xs text-muted-foreground font-monitoring-body">
             Живая подборка совпадений по активным ключам.
           </p>
@@ -248,8 +252,8 @@ export function MonitoringMessagesCard({
               size="icon"
               onClick={() => setDensity('comfortable')}
               className={cn(
-                "h-7 w-7 rounded-md text-slate-400 hover:text-white transition-all duration-200",
-                density === 'comfortable' && "bg-slate-700/60 text-white shadow-soft-sm"
+                'h-7 w-7 rounded-md text-slate-400 hover:text-white transition-all duration-200',
+                density === 'comfortable' && 'bg-slate-700/60 text-white shadow-soft-sm'
               )}
               title="Просторный вид"
             >
@@ -261,8 +265,8 @@ export function MonitoringMessagesCard({
               size="icon"
               onClick={() => setDensity('compact')}
               className={cn(
-                "h-7 w-7 rounded-md text-slate-400 hover:text-white transition-all duration-200",
-                density === 'compact' && "bg-slate-700/60 text-white shadow-soft-sm"
+                'h-7 w-7 rounded-md text-slate-400 hover:text-white transition-all duration-200',
+                density === 'compact' && 'bg-slate-700/60 text-white shadow-soft-sm'
               )}
               title="Компактный вид"
             >
@@ -283,7 +287,7 @@ export function MonitoringMessagesCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className={cn("p-6", isCompact ? "space-y-3" : "space-y-5")}>
+      <CardContent className={cn('p-6', isCompact ? 'space-y-3' : 'space-y-5')}>
         {isLoading && (
           <div className="space-y-4">
             <MonitoringMessageSkeleton density={density} />
@@ -291,9 +295,7 @@ export function MonitoringMessagesCard({
             <MonitoringMessageSkeleton density={density} />
           </div>
         )}
-        {!isLoading && error && (
-          <ErrorState error={error} onRetry={onRefresh} />
-        )}
+        {!isLoading && error && <ErrorState error={error} onRetry={onRefresh} />}
         {!isLoading && !error && messages.length === 0 && (
           <EmptyState usedKeywords={usedKeywords} />
         )}
@@ -319,19 +321,19 @@ export function MonitoringMessagesCard({
               <div
                 key={messageId}
                 className={cn(
-                  "group relative overflow-hidden rounded-xl border border-border/60 bg-slate-900/40 shadow-soft-sm transition duration-300 hover:border-primary/35 hover:-translate-y-0.5 hover:shadow-soft-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4",
-                  isCompact ? "p-3" : "p-5"
+                  'group relative overflow-hidden rounded-xl border border-border/60 bg-slate-900/40 shadow-soft-sm transition duration-300 hover:border-primary/35 hover:-translate-y-0.5 hover:shadow-soft-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4',
+                  isCompact ? 'p-3' : 'p-5'
                 )}
                 style={{ animationDelay: `${delay}ms` }}
               >
-                <div className={cn("flex flex-col", isCompact ? "gap-2" : "gap-3.5")}>
+                <div className={cn('flex flex-col', isCompact ? 'gap-2' : 'gap-3.5')}>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge
                         variant="outline"
                         className={cn(
-                          "rounded-full border-sky-500/35 bg-sky-500/10 px-2 py-0.5 font-semibold uppercase tracking-[0.15em] text-sky-700 dark:text-sky-200",
-                          isCompact ? "text-[9px]" : "text-[10px]"
+                          'rounded-full border-sky-500/35 bg-sky-500/10 px-2 py-0.5 font-semibold uppercase tracking-[0.15em] text-sky-700 dark:text-sky-200',
+                          isCompact ? 'text-[9px]' : 'text-[10px]'
                         )}
                         title={sourceVisual.label}
                         aria-label={`Площадка: ${sourceVisual.label}`}
@@ -340,7 +342,7 @@ export function MonitoringMessagesCard({
                           <img
                             src={sourceVisual.logo.src}
                             alt={sourceVisual.logo.label}
-                            className={isCompact ? "h-3.5 w-auto" : "h-4 w-auto"}
+                            className={isCompact ? 'h-3.5 w-auto' : 'h-4 w-auto'}
                             loading="lazy"
                           />
                         ) : (
@@ -350,37 +352,42 @@ export function MonitoringMessagesCard({
                       <Badge
                         variant="outline"
                         className={cn(
-                          "rounded-full border-border/60 bg-slate-800/80 px-2.5 py-0.5 font-semibold uppercase tracking-[0.15em] text-text-primary shadow-soft-sm backdrop-blur",
-                          isCompact ? "text-[9px]" : "text-[10px]"
+                          'rounded-full border-border/60 bg-slate-800/80 px-2.5 py-0.5 font-semibold uppercase tracking-[0.15em] text-text-primary shadow-soft-sm backdrop-blur',
+                          isCompact ? 'text-[9px]' : 'text-[10px]'
                         )}
                       >
                         Чат: {renderMetaValue(message.chat)}
                       </Badge>
-                      <span className={cn("font-medium", isCompact ? "text-[11px]" : "text-xs")}>
+                      <span className={cn('font-medium', isCompact ? 'text-[11px]' : 'text-xs')}>
                         Автор: {renderMetaValue(message.author)}
                       </span>
                     </div>
-                    <span className={cn("font-mono-accent opacity-80", isCompact ? "text-[11px]" : "text-xs")}>
+                    <span
+                      className={cn(
+                        'font-mono-accent opacity-80',
+                        isCompact ? 'text-[11px]' : 'text-xs'
+                      )}
+                    >
                       {renderDateValue(message.createdAt)}
                     </span>
                   </div>
 
                   <div
                     className={cn(
-                      "whitespace-pre-wrap leading-relaxed text-foreground/90 font-monitoring-body transition-all duration-200",
-                      isCompact ? "text-[13px]" : "text-sm",
-                      shouldClampText ? "line-clamp-4" : ""
+                      'whitespace-pre-wrap leading-relaxed text-foreground/90 font-monitoring-body transition-all duration-200',
+                      isCompact ? 'text-[13px]' : 'text-sm',
+                      shouldClampText ? 'line-clamp-4' : ''
                     )}
                   >
-                    {hasText
-                      ? highlightKeywords(
-                          message.text ?? '',
-                          highlightKeywordEntries,
-                          "mx-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium font-mono-accent text-[12px] inline-block align-middle select-all"
-                        )
-                      : !contentUrl
-                        ? <span className="text-slate-500/70 italic text-xs">Сообщение без текста</span>
-                        : null}
+                    {hasText ? (
+                      highlightKeywords(
+                        message.text ?? '',
+                        highlightKeywordEntries,
+                        'mx-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium font-mono-accent text-[12px] inline-block align-middle select-all'
+                      )
+                    ) : !contentUrl ? (
+                      <span className="text-slate-500/70 italic text-xs">Сообщение без текста</span>
+                    ) : null}
                   </div>
                   {shouldToggleText && (
                     <Button
@@ -389,8 +396,8 @@ export function MonitoringMessagesCard({
                       size="sm"
                       onClick={() => toggleExpanded(messageId)}
                       className={cn(
-                        "h-8 px-2 font-semibold uppercase tracking-[0.2em] text-text-primary hover:bg-slate-800/40",
-                        isCompact ? "text-[9px]" : "text-[10px]"
+                        'h-8 px-2 font-semibold uppercase tracking-[0.2em] text-text-primary hover:bg-slate-800/40',
+                        isCompact ? 'text-[9px]' : 'text-[10px]'
                       )}
                     >
                       {isExpanded ? 'Свернуть текст' : 'Развернуть текст'}
@@ -402,9 +409,9 @@ export function MonitoringMessagesCard({
                       <Badge
                         variant="outline"
                         className={cn(
-                          "rounded-full px-3 py-1 font-semibold uppercase tracking-[0.18em]",
+                          'rounded-full px-3 py-1 font-semibold uppercase tracking-[0.18em]',
                           contentBadgeStyle,
-                          isCompact ? "text-[9px]" : "text-[10px]"
+                          isCompact ? 'text-[9px]' : 'text-[10px]'
                         )}
                       >
                         {contentLabel}
@@ -413,7 +420,12 @@ export function MonitoringMessagesCard({
                   </div>
 
                   {contentUrl && (
-                    <div className={cn("rounded-xl border border-border/50 bg-background/60", isCompact ? "p-2" : "p-3")}>
+                    <div
+                      className={cn(
+                        'rounded-xl border border-border/50 bg-background/60',
+                        isCompact ? 'p-2' : 'p-3'
+                      )}
+                    >
                       {contentKind === 'image' && (
                         <a href={contentUrl} target="_blank" rel="noreferrer">
                           <img
@@ -468,7 +480,9 @@ export function MonitoringMessagesCard({
                 {isLoadingMore ? 'Загружаем…' : 'Показать ещё'}
               </Button>
             ) : (
-              <span className="text-xs text-muted-foreground font-monitoring-body">Это все найденные сообщения</span>
+              <span className="text-xs text-muted-foreground font-monitoring-body">
+                Это все найденные сообщения
+              </span>
             )}
           </div>
         )}

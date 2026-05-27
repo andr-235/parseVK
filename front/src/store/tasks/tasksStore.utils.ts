@@ -1,4 +1,4 @@
-import { useGroupsStore } from '@/store/groups/groupsStore';
+import { useGroupsStore } from '@/store/groups/groupsStore'
 import type {
   GroupMetadata,
   GroupStatus,

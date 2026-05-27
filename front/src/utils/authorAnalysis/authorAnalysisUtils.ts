@@ -14,7 +14,6 @@ export const formatDateTime = (value: string | null | undefined): string => {
   })
 }
 
-
 /**
  * Метки категорий для отображения
  */

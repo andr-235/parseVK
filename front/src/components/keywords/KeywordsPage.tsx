@@ -77,7 +77,9 @@ function KeywordsPage() {
               <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background-secondary px-4 py-2 text-sm shadow-soft-sm">
                 <Hash className="w-4 h-4 text-accent-primary" />
                 <span className="text-text-secondary">Всего слов:</span>
-                <span className="font-mono-accent font-semibold text-text-light">{keywords.length}</span>
+                <span className="font-mono-accent font-semibold text-text-light">
+                  {keywords.length}
+                </span>
               </span>
             </div>
           }

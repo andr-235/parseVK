@@ -1,19 +1,17 @@
 import { memo, useMemo, useCallback, useState, useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import SearchInput from '@/components/common/SearchInput'
 import { Table, TableCaption } from '@/components/ui/table'
 import { useTableSorting } from '@/hooks/common'
 import { useKeyboardNavigation } from '@/hooks/common'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
 import { filterValidAuthors, validateAuthorId } from '@/utils/watchlist/watchlistUtils'
 import { logger } from '@/utils/watchlist/logger'
-import { LoadingState, EmptyState } from './WatchlistStates'
+import { WATCHLIST_CONSTANTS } from '@/config/watchlist/watchlist'
 import { WatchlistAuthorsTableHeader } from './WatchlistAuthorsTableHeader'
 import { WatchlistAuthorsTableBody } from './WatchlistAuthorsTableBody'
 import { VirtualizedTableBody } from './VirtualizedTableBody'
+import { DataTableCard } from '@/components/common/DataTableCard'
 import toast from 'react-hot-toast'
 
 interface WatchlistTableCardProps {
@@ -105,122 +103,112 @@ export const WatchlistTableCard = memo(
     const hasData = sortedAuthors.length > 0 && authorColumns.length > 0
     const useVirtualization = sortedAuthors.length > 50 && authorColumns.length > 0
 
-    const badgeText = searchTerm.trim()
-      ? `${sortedAuthors.length} из ${totalAuthors}`
-      : `${totalAuthors}`
+    const badgeText = useMemo(() => {
+      return searchTerm.trim() ? `${sortedAuthors.length} из ${totalAuthors}` : `${totalAuthors}`
+    }, [sortedAuthors.length, totalAuthors, searchTerm])
+
+    const headerActions = useMemo(() => {
+      if (!onRefresh) return null
+      return (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRefresh}
+          disabled={isLoadingAuthors}
+          className="h-10 text-muted-foreground hover:text-primary"
+          title="Обновить список"
+        >
+          <RefreshCw className={`mr-2 size-4 ${isLoadingAuthors ? 'animate-spin' : ''}`} />
+          Обновить
+        </Button>
+      )
+    }, [onRefresh, isLoadingAuthors])
 
     return (
-      <Card className="overflow-hidden rounded-xl border border-border shadow-sm">
-        <div className="flex flex-col gap-4 border-b bg-muted/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold tracking-tight">Авторы</h2>
-            {!isLoading && (
-              <Badge
-                variant="secondary"
-                className="bg-background/50 px-2 py-0.5 text-xs font-normal text-muted-foreground"
-              >
-                {badgeText}
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <SearchInput
-              value={searchTerm}
-              onChange={onSearchChange}
-              placeholder="Поиск автора..."
-              className="h-9 w-full sm:w-[250px]"
-            />
-            {onRefresh && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onRefresh}
-                disabled={isLoadingAuthors}
-                className="h-9 text-muted-foreground hover:text-primary"
-                title="Обновить список"
-              >
-                <RefreshCw className={`mr-2 size-4 ${isLoadingAuthors ? 'animate-spin' : ''}`} />
-                Обновить
-              </Button>
-            )}
-          </div>
+      <DataTableCard
+        title="Авторы"
+        badgeText={badgeText}
+        searchTerm={searchTerm}
+        onSearchChange={onSearchChange}
+        searchPlaceholder="Поиск автора..."
+        headerActions={headerActions}
+        isLoading={isLoading}
+        loadingMessage="Загружаем список авторов…"
+        isEmpty={isEmpty}
+        emptyIcon="👥"
+        emptyTitle="Список наблюдения пуст"
+        emptyDescription={
+          WATCHLIST_CONSTANTS.EMPTY_AUTHORS_MESSAGE ||
+          'Добавьте авторов для отслеживания их активности.'
+        }
+        contentClassName="p-0!"
+      >
+        <div aria-live="polite" aria-atomic="true" className="sr-only" key="aria-live">
+          {isLoadingMoreAuthors && 'Загружаем дополнительные авторы...'}
+          {hasData && `Загружено ${sortedAuthors.length} авторов из ${totalAuthors}`}
         </div>
 
-        <CardContent className="p-0">
-          <div aria-live="polite" aria-atomic="true" className="sr-only" key="aria-live">
-            {isLoading && 'Загружаем список авторов...'}
-            {isLoadingMoreAuthors && 'Загружаем дополнительные авторы...'}
-            {isEmpty && 'Список авторов пуст'}
-            {hasData && `Загружено ${sortedAuthors.length} авторов из ${totalAuthors}`}
-          </div>
-
-          {isLoading && <LoadingState key="loading-state" />}
-
-          {!isLoading && isEmpty && <EmptyState key="empty-state" />}
-
-          {hasData && (
-            <Table
-              ref={tableRef}
-              role="grid"
-              aria-label="Таблица авторов в списке наблюдения"
-              aria-rowcount={sortedAuthors.length}
-              aria-colcount={authorColumns.length}
-              aria-activedescendant={
-                focusedRowIndex !== null
-                  ? `author-row-${sortedAuthors[focusedRowIndex]?.id}`
-                  : undefined
-              }
-              key="authors-table"
-            >
-              <WatchlistAuthorsTableHeader
+        {hasData && (
+          <Table
+            ref={tableRef}
+            role="grid"
+            aria-label="Таблица авторов в списке наблюдения"
+            aria-rowcount={sortedAuthors.length}
+            aria-colcount={authorColumns.length}
+            aria-activedescendant={
+              focusedRowIndex !== null
+                ? `author-row-${sortedAuthors[focusedRowIndex]?.id}`
+                : undefined
+            }
+            key="authors-table"
+          >
+            <WatchlistAuthorsTableHeader
+              authorColumns={authorColumns}
+              authorSortState={authorSortState}
+              requestAuthorSort={requestAuthorSort}
+            />
+            {useVirtualization ? (
+              <tbody>
+                <tr>
+                  <td colSpan={authorColumns.length} style={{ padding: 0, border: 'none' }}>
+                    <VirtualizedTableBody
+                      sortedAuthors={sortedAuthors}
+                      authorColumns={authorColumns}
+                      focusedRowIndex={focusedRowIndex}
+                      onSelectAuthor={handleSelectAuthor}
+                      height={400}
+                      itemSize={48}
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            ) : (
+              <WatchlistAuthorsTableBody
+                sortedAuthors={sortedAuthors}
                 authorColumns={authorColumns}
-                authorSortState={authorSortState}
-                requestAuthorSort={requestAuthorSort}
+                focusedRowIndex={focusedRowIndex}
+                onSelectAuthor={handleSelectAuthor}
+                onKeyDown={handleKeyDown}
               />
-              {useVirtualization ? (
-                <tbody>
-                  <tr>
-                    <td colSpan={authorColumns.length} style={{ padding: 0, border: 'none' }}>
-                      <VirtualizedTableBody
-                        sortedAuthors={sortedAuthors}
-                        authorColumns={authorColumns}
-                        focusedRowIndex={focusedRowIndex}
-                        onSelectAuthor={handleSelectAuthor}
-                        height={400}
-                        itemSize={48}
-                      />
-                    </td>
-                  </tr>
-                </tbody>
+            )}
+            <TableCaption className="pb-4">
+              {hasMoreAuthors ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingAuthors || isLoadingMoreAuthors || isLoadingMore}
+                  className="mt-2"
+                >
+                  {isLoadingMoreAuthors || isLoadingMore ? 'Загружаем...' : 'Загрузить ещё'}
+                </Button>
               ) : (
-                <WatchlistAuthorsTableBody
-                  sortedAuthors={sortedAuthors}
-                  authorColumns={authorColumns}
-                  focusedRowIndex={focusedRowIndex}
-                  onSelectAuthor={handleSelectAuthor}
-                  onKeyDown={handleKeyDown}
-                />
+                `Показано ${sortedAuthors.length} авторов`
               )}
-              <TableCaption className="pb-4">
-                {hasMoreAuthors ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleLoadMore}
-                    disabled={isLoadingAuthors || isLoadingMoreAuthors || isLoadingMore}
-                    className="mt-2"
-                  >
-                    {isLoadingMoreAuthors || isLoadingMore ? 'Загружаем...' : 'Загрузить ещё'}
-                  </Button>
-                ) : (
-                  `Показано ${sortedAuthors.length} авторов`
-                )}
-              </TableCaption>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+            </TableCaption>
+          </Table>
+        )}
+      </DataTableCard>
     )
   }
 )

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Spinner } from '@/components/ui/spinner'
-import { getRefreshDelayMs, isTokenExpired, refreshAccessToken } from '@/config/auth/lib/authSession';
+import {
+  getRefreshDelayMs,
+  isTokenExpired,
+  refreshAccessToken,
+} from '@/config/auth/lib/authSession'
 import { useAuthStore } from '@/store/auth'
 
 interface AuthProviderProps {

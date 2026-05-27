@@ -23,11 +23,7 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
   const { user } = useAuthSession()
   const isAdmin = user?.role === 'admin'
 
-  const {
-    isCollapsed,
-    toggleCollapse,
-    setIsCollapsed,
-  } = useSidebarState()
+  const { isCollapsed, toggleCollapse, setIsCollapsed } = useSidebarState()
 
   const { tasksCount, commentsCount, watchlistCount, authorsTotal } = useSidebarData()
 
@@ -80,18 +76,12 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
     setIsCollapsed(false)
   }, [setIsCollapsed])
 
-
-
   return (
     <aside className={getSidebarClasses(isCollapsed)}>
       <SidebarCollapseButton isCollapsed={isCollapsed} onToggle={toggleCollapse} />
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full">
-        <SidebarHeader
-          title={title}
-          isCollapsed={isCollapsed}
-          onExpand={handleExpand}
-        />
+        <SidebarHeader title={title} isCollapsed={isCollapsed} onExpand={handleExpand} />
 
         <div className="flex-1 py-5 px-3 overflow-y-auto no-scrollbar">
           <nav className="space-y-6">
@@ -169,13 +159,8 @@ export function Sidebar({ title = 'Центр аналитики' }: SidebarProp
           </nav>
         </div>
 
-        <SidebarFooter
-          items={secondaryItems}
-          isCollapsed={isCollapsed}
-        />
+        <SidebarFooter items={secondaryItems} isCollapsed={isCollapsed} />
       </div>
-
-
     </aside>
   )
 }

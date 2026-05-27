@@ -7,10 +7,10 @@ import TelegramSyncCard from '@/components/telegram/TelegramSyncCard'
 import TelegramMembersCard from '@/components/telegram/TelegramMembersCard'
 
 const PAGE_CARDS = [
-  { icon: Link,         title: 'Сессии',         subtitle: 'Управление подключениями к API' },
-  { icon: Send,         title: 'Синхронизация',   subtitle: 'Загрузка участников чатов'     },
-  { icon: Users,        title: 'Участники',       subtitle: 'База членов сообществ'          },
-  { icon: MessageSquare, title: 'Чаты',           subtitle: 'Группы и каналы'               },
+  { icon: Link, title: 'Сессии', subtitle: 'Управление подключениями к API' },
+  { icon: Send, title: 'Синхронизация', subtitle: 'Загрузка участников чатов' },
+  { icon: Users, title: 'Участники', subtitle: 'База членов сообществ' },
+  { icon: MessageSquare, title: 'Чаты', subtitle: 'Группы и каналы' },
 ]
 
 function TelegramPage() {

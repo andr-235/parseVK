@@ -15,10 +15,10 @@ import { PageHeader } from '@/components/common'
 import { Activity, Eye, Pause, Play, RefreshCw } from 'lucide-react'
 
 const PAGE_CARDS = [
-  { icon: Activity,  title: 'Мониторинг',      subtitle: 'Отслеживание в реальном времени'  },
-  { icon: Search,    title: 'Ключевые слова',   subtitle: 'Автоматический поиск совпадений'  },
-  { icon: RefreshCw, title: 'Автообновление',   subtitle: 'Периодическая синхронизация'      },
-  { icon: Eye,       title: 'Live-просмотр',    subtitle: 'Актуальные данные'                },
+  { icon: Activity, title: 'Мониторинг', subtitle: 'Отслеживание в реальном времени' },
+  { icon: Search, title: 'Ключевые слова', subtitle: 'Автоматический поиск совпадений' },
+  { icon: RefreshCw, title: 'Автообновление', subtitle: 'Периодическая синхронизация' },
+  { icon: Eye, title: 'Live-просмотр', subtitle: 'Актуальные данные' },
 ]
 
 const MONITORING_SOURCES = {
@@ -94,79 +94,79 @@ function MonitoringPage() {
     <div className="flex flex-col gap-10 max-w-400 mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
       {/* Hero Section - fade in first */}
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <PageHeader
-          variant="grid"
-          title={
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
-                Мониторинг <span className="text-accent-primary">{activeSource.label}</span>
-              </h1>
-              <Badge
-                variant="outline"
-                className={cn(
-                  'uppercase text-[10px] tracking-wider font-semibold rounded-full font-mono-accent',
-                  isAutoRefreshActive
-                    ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
-                    : autoRefresh
-                      ? 'border border-amber-500/25 bg-amber-500/10 text-amber-400'
-                      : 'border border-border/60 bg-background/50 text-slate-400'
-                )}
-              >
-                <span
+        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+          <PageHeader
+            variant="grid"
+            title={
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
+                  Мониторинг <span className="text-accent-primary">{activeSource.label}</span>
+                </h1>
+                <Badge
+                  variant="outline"
                   className={cn(
-                    'inline-block w-1.5 h-1.5 rounded-full mr-1.5',
+                    'uppercase text-[10px] tracking-wider font-semibold rounded-full font-mono-accent',
                     isAutoRefreshActive
-                      ? 'bg-emerald-400 animate-pulse'
+                      ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
                       : autoRefresh
-                        ? 'bg-amber-400'
-                        : 'bg-slate-400'
+                        ? 'border border-amber-500/25 bg-amber-500/10 text-amber-400'
+                        : 'border border-border/60 bg-background/50 text-slate-400'
                   )}
-                />
-                {autoRefreshLabel}
-              </Badge>
-            </div>
-          }
-          description={`Автоматический поиск сообщений по ключевым словам в подключённой базе ${activeSource.label}. Мгновенное отслеживание новых совпадений с настраиваемым интервалом обновления.`}
-          actions={
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                onClick={refreshNow}
-                size="sm"
-                variant="outline"
-                className="h-10 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
-                disabled={isLoading || isRefreshing}
-              >
-                <RefreshCw className={cn('mr-2 w-4 h-4', isRefreshing && 'animate-spin')} />
-                Обновить
-              </Button>
-              <Button
-                onClick={toggleAutoRefresh}
-                size="sm"
-                className={cn(
-                  'h-10 transition-all duration-200',
-                  autoRefresh
-                    ? 'bg-linear-to-r from-emerald-500 to-primary text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/40'
-                    : 'border border-border/60 bg-background-secondary text-white hover:bg-white/5'
-                )}
-              >
-                {autoRefresh ? (
-                  <>
-                    <Pause className="mr-2 w-4 h-4" />
-                    Остановить
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 w-4 h-4" />
-                    Запустить
-                  </>
-                )}
-              </Button>
-            </div>
-          }
-          cards={PAGE_CARDS}
-        />
-      </div>
+                >
+                  <span
+                    className={cn(
+                      'inline-block w-1.5 h-1.5 rounded-full mr-1.5',
+                      isAutoRefreshActive
+                        ? 'bg-emerald-400 animate-pulse'
+                        : autoRefresh
+                          ? 'bg-amber-400'
+                          : 'bg-slate-400'
+                    )}
+                  />
+                  {autoRefreshLabel}
+                </Badge>
+              </div>
+            }
+            description={`Автоматический поиск сообщений по ключевым словам в подключённой базе ${activeSource.label}. Мгновенное отслеживание новых совпадений с настраиваемым интервалом обновления.`}
+            actions={
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  onClick={refreshNow}
+                  size="sm"
+                  variant="outline"
+                  className="h-10 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
+                  disabled={isLoading || isRefreshing}
+                >
+                  <RefreshCw className={cn('mr-2 w-4 h-4', isRefreshing && 'animate-spin')} />
+                  Обновить
+                </Button>
+                <Button
+                  onClick={toggleAutoRefresh}
+                  size="sm"
+                  className={cn(
+                    'h-10 transition-all duration-200',
+                    autoRefresh
+                      ? 'bg-linear-to-r from-emerald-500 to-primary text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/40'
+                      : 'border border-border/60 bg-background-secondary text-white hover:bg-white/5'
+                  )}
+                >
+                  {autoRefresh ? (
+                    <>
+                      <Pause className="mr-2 w-4 h-4" />
+                      Остановить
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 w-4 h-4" />
+                      Запустить
+                    </>
+                  )}
+                </Button>
+              </div>
+            }
+            cards={PAGE_CARDS}
+          />
+        </div>
       </div>
 
       {/* Search Section - staggered animation */}
@@ -290,9 +290,19 @@ function MonitoringPage() {
             const Icon = card.icon
             return (
               <div key={index} className={cn('relative', card.className)}>
-                <div className={cn('absolute -inset-0.5 rounded-xl opacity-50 blur-lg bg-linear-to-r', card.glowClass)} />
+                <div
+                  className={cn(
+                    'absolute -inset-0.5 rounded-xl opacity-50 blur-lg bg-linear-to-r',
+                    card.glowClass
+                  )}
+                />
                 <Card className="relative border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-5 overflow-hidden">
-                  <div className={cn('absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent to-transparent', card.borderClass)} />
+                  <div
+                    className={cn(
+                      'absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent to-transparent',
+                      card.borderClass
+                    )}
+                  />
                   <div className="flex items-start gap-3">
                     <div className={cn('p-2 rounded-lg', card.iconClass)}>
                       <Icon className="w-5 h-5" />
@@ -301,7 +311,12 @@ function MonitoringPage() {
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wide font-mono-accent">
                         {card.label}
                       </p>
-                      <p className={cn('font-monitoring-display text-white', card.valueClass || 'text-3xl font-bold')}>
+                      <p
+                        className={cn(
+                          'font-monitoring-display text-white',
+                          card.valueClass || 'text-3xl font-bold'
+                        )}
+                      >
                         {card.value}
                       </p>
                     </div>

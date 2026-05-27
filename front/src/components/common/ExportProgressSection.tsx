@@ -71,9 +71,7 @@ export const ExportProgressSection = ({
                 {jobLogs.map((log) => (
                   <div key={log.id} className="space-y-0.5">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
-                      <span
-                        className={`shrink-0 font-semibold ${LOG_LEVEL_CLASSES[log.level]}`}
-                      >
+                      <span className={`shrink-0 font-semibold ${LOG_LEVEL_CLASSES[log.level]}`}>
                         {LOG_LEVEL_LABELS[log.level]}
                       </span>
                       <span className="text-white">{log.message}</span>

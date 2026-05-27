@@ -1,9 +1,5 @@
 import { create } from 'zustand'
-import {
-  getComments,
-  getCommentsCursor,
-  updateReadStatus,
-} from '@/api/comments/comments.api'
+import { getComments, getCommentsCursor, updateReadStatus } from '@/api/comments/comments.api'
 import { commentsQueryKeys } from '@/api/comments/queryKeys'
 import type { CommentsFilters } from '@/api/comments/query/commentsQuery.types'
 import type { CommentsState } from '@/types/common'

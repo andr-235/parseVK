@@ -44,7 +44,11 @@ function GroupsPage() {
           actions={
             <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
               <GroupInput url={url} onUrlChange={handleUrlChange} onAdd={handleAddGroup} />
-              <FileUpload onFilesSelect={handleFilesSelect} buttonText="Импорт" className="shrink-0" />
+              <FileUpload
+                onFilesSelect={handleFilesSelect}
+                buttonText="Импорт"
+                className="shrink-0"
+              />
             </div>
           }
         />

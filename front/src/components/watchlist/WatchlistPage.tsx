@@ -171,7 +171,7 @@ function WatchlistPage() {
                 </Button>
               </div>
             ),
-          }
+          },
         ]}
       />
     )

@@ -56,20 +56,20 @@ function CommentsPage() {
               icon: MessageSquare,
               value: totalCount.toLocaleString('ru-RU'),
               label: 'всего',
-              className: 'border-accent-primary/20 bg-accent-primary/10 text-accent-primary'
+              className: 'border-accent-primary/20 bg-accent-primary/10 text-accent-primary',
             },
             {
               icon: Eye,
               value: unreadCount.toLocaleString('ru-RU'),
               label: 'непрочитано',
-              className: 'hover:border-accent-primary/50 hover:bg-background-secondary/85'
+              className: 'hover:border-accent-primary/50 hover:bg-background-secondary/85',
             },
             {
               icon: CheckCircle2,
               value: readCount.toLocaleString('ru-RU'),
               label: 'прочитано',
-              className: 'hover:border-accent-success/30 [&>svg]:text-accent-success/70'
-            }
+              className: 'hover:border-accent-success/30 [&>svg]:text-accent-success/70',
+            },
           ]}
         />
       </div>

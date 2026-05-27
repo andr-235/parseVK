@@ -15,7 +15,7 @@ interface TaskDetailsProps {
 function TaskDetails({ task, onClose }: TaskDetailsProps) {
   const { isResuming, isChecking, canResume, handleResume, handleCheck } = useTaskActions(task)
   const stats = useTaskStats(task)
-  
+
   const containerRef = useFocusTrap<HTMLDivElement>({
     isOpen: !!task && !!stats,
     onClose,

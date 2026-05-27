@@ -1,5 +1,5 @@
-import { refreshAccessToken } from '@/config/auth/lib/authSession';
-import { useAuthStore } from '@/store/auth/authStore';
+import { refreshAccessToken } from '@/config/auth/lib/authSession'
+import { useAuthStore } from '@/store/auth/authStore'
 
 type QueryParams = Record<string, string | number | boolean | undefined | null>
 interface ApiRequestOptions extends RequestInit {

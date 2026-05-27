@@ -9,7 +9,7 @@ vi.mock('@/api/common', () => {
     API_URL: '/api',
     GATEWAY_API_URL: '/api',
     createRequest: (url: string, options: RequestInit = {}) => fetch(url, options),
-    handleResponse: async <T,>(response: Response) => response.json() as Promise<T>,
+    handleResponse: async <T>(response: Response) => response.json() as Promise<T>,
   }
 })
 
@@ -46,10 +46,7 @@ describe('comments api migration routing', () => {
 
     await getCommentsCursor({ limit: 25 })
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/comments/cursor?limit=25',
-      expect.any(Object)
-    )
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/comments/cursor?limit=25', expect.any(Object))
   })
 
   it('keeps read status updates on gateway api', async () => {
@@ -72,6 +69,9 @@ describe('comments api migration routing', () => {
 
     await getComments({ limit: 10, search: 'urgent' })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/comments?limit=10&search=urgent', expect.any(Object))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/comments?limit=10&search=urgent',
+      expect.any(Object)
+    )
   })
 })

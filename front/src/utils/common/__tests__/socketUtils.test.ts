@@ -48,7 +48,9 @@ describe('socketUtils', () => {
     it('removes api, tasks, and tgmbase-search suffix', () => {
       expect(normalizeSocketBase('http://localhost:3000/api')).toBe('http://localhost:3000')
       expect(normalizeSocketBase('http://localhost:3000/tasks')).toBe('http://localhost:3000')
-      expect(normalizeSocketBase('http://localhost:3000/tgmbase-search')).toBe('http://localhost:3000')
+      expect(normalizeSocketBase('http://localhost:3000/tgmbase-search')).toBe(
+        'http://localhost:3000'
+      )
       expect(normalizeSocketBase('http://localhost:3000/api/tasks/')).toBe('http://localhost:3000')
     })
 

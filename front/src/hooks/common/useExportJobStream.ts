@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ExportJobStatus, JobLogLevel } from '@/types/common'
 import type { ExportStreamEvent } from '@/api/common/sse'
-import {
-  STATUS_LABELS,
-  STATUS_VARIANTS,
-} from '@/utils/common/exportUtils'
+import { STATUS_LABELS, STATUS_VARIANTS } from '@/utils/common/exportUtils'
 
 const MAX_LOGS = 50
 
@@ -35,10 +32,13 @@ export interface ExportServiceAdapter<TParams> {
       createdAt: string
     }>
   }>
-  streamJob: (jobId: string, handlers: {
-    onEvent: (event: ExportStreamEvent) => void
-    onError?: (error: Error) => void
-  }) => { close: () => void }
+  streamJob: (
+    jobId: string,
+    handlers: {
+      onEvent: (event: ExportStreamEvent) => void
+      onError?: (error: Error) => void
+    }
+  ) => { close: () => void }
   downloadJobFile: (jobId: string, type: 'xlsx') => Promise<void>
 }
 
@@ -175,19 +175,21 @@ export const useExportJobStream = <TParams>({
       }>
     ): JobLogEntry[] => {
       const sorted = [...logs].sort((a, b) => {
-      const timeA = new Date(a.createdAt).getTime()
-      const timeB = new Date(b.createdAt).getTime()
-      return timeA - timeB
-    })
+        const timeA = new Date(a.createdAt).getTime()
+        const timeB = new Date(b.createdAt).getTime()
+        return timeA - timeB
+      })
 
-    return sorted.slice(-MAX_LOGS).map((log) => ({
-      id: log.id,
-      level: log.level,
-      message: log.message,
-      meta: log.meta,
-      createdAt: log.createdAt,
-    }))
-  }, [])
+      return sorted.slice(-MAX_LOGS).map((log) => ({
+        id: log.id,
+        level: log.level,
+        message: log.message,
+        meta: log.meta,
+        createdAt: log.createdAt,
+      }))
+    },
+    []
+  )
 
   const loadJob = useCallback(
     async (id: string) => {

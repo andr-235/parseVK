@@ -1,12 +1,20 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { AuthorCard, AuthorSortField } from '@/types'
 import { resolveCityLabel } from '@/utils/authors/authorUtils'
-import { ArrowRight, Camera, Search, Trash2 } from 'lucide-react'
+import { ArrowRight, Camera, Trash2 } from 'lucide-react'
 import { formatDateTime, getAuthorInitials } from '@/utils/common'
+import { DataTableCard } from '@/components/common/DataTableCard'
 
 interface AuthorsTableCardProps {
   authors: AuthorCard[]
@@ -36,8 +44,6 @@ const formatMetricValue = (value: number | null | undefined): string => {
   }
   return numberFormatter.format(value)
 }
-
-// Вспомогательные функции даты и инициалов импортируются из @/utils/common
 
 const resolveProfileUrl = (author: AuthorCard): string => {
   if (author.profileUrl) {
@@ -76,7 +82,17 @@ export function AuthorsTableCard({
   const showEmptyState = !isLoading && authors.length === 0
 
   return (
-    <div className="rounded-xl border border-border/40 bg-card shadow-sm overflow-hidden">
+    <DataTableCard
+      title="Авторы"
+      hideHeader
+      isLoading={isLoading && authors.length === 0}
+      loadingMessage="Загружаем авторов…"
+      isEmpty={showEmptyState}
+      emptyIcon="👥"
+      emptyTitle={emptyTitle}
+      emptyDescription={emptyDescription}
+      contentClassName="p-0!"
+    >
       <div className="relative w-full overflow-auto">
         <Table>
           <TableHeader className="bg-muted/30">
@@ -161,16 +177,6 @@ export function AuthorsTableCard({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && authors.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10}>
-                  <div className="flex w-full justify-center py-12">
-                    <Spinner className="h-8 w-8 text-primary/60" />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : null}
-
             {authors.map((author) => {
               const profileUrl = resolveProfileUrl(author)
               const avatarUrl = author.photo200 ?? author.photo100 ?? author.photo50 ?? undefined
@@ -299,24 +305,6 @@ export function AuthorsTableCard({
                 </TableRow>
               )
             })}
-
-            {showEmptyState ? (
-              <TableRow>
-                <TableCell colSpan={10} className="h-[300px]">
-                  <div className="flex flex-col items-center justify-center gap-3 text-center">
-                    <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
-                      <Search className="h-6 w-6 text-muted-foreground/50" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-medium text-foreground">{emptyTitle}</p>
-                      <p className="max-w-xs text-sm text-muted-foreground mx-auto mt-1">
-                        {emptyDescription}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : null}
           </TableBody>
         </Table>
       </div>
@@ -340,6 +328,6 @@ export function AuthorsTableCard({
           </Button>
         </div>
       )}
-    </div>
+    </DataTableCard>
   )
 }

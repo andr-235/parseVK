@@ -25,7 +25,10 @@ export const TaskStatsGrid = ({
         <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-accent-primary mb-1">
           Название
         </p>
-        <p className="font-monitoring-body text-sm font-normal text-text-primary truncate" title={task.title || undefined}>
+        <p
+          className="font-monitoring-body text-sm font-normal text-text-primary truncate"
+          title={task.title || undefined}
+        >
           {task.title || 'Без названия'}
         </p>
       </div>
@@ -33,7 +36,9 @@ export const TaskStatsGrid = ({
         <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Статус
         </p>
-        <span className={`${STATUS_BADGE_BASE} ${taskStatusClasses[task.status]} font-monitoring-body text-xs font-semibold uppercase tracking-wider`}>
+        <span
+          className={`${STATUS_BADGE_BASE} ${taskStatusClasses[task.status]} font-monitoring-body text-xs font-semibold uppercase tracking-wider`}
+        >
           {getTaskStatusText(task.status)}
         </span>
       </div>
@@ -41,26 +46,34 @@ export const TaskStatsGrid = ({
         <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Охват
         </p>
-        <p className="font-monitoring-body text-sm font-normal text-text-primary truncate">{scopeLabel}</p>
+        <p className="font-monitoring-body text-sm font-normal text-text-primary truncate">
+          {scopeLabel}
+        </p>
       </div>
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
         <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Создана
         </p>
-        <p className="font-mono-accent text-xs font-medium text-text-primary">{formatDate(task.createdAt)}</p>
+        <p className="font-mono-accent text-xs font-medium text-text-primary">
+          {formatDate(task.createdAt)}
+        </p>
       </div>
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
         <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Режим
         </p>
-        <p className="font-monitoring-body text-sm font-normal text-text-primary">{modeLabel ?? 'Последние посты'}</p>
+        <p className="font-monitoring-body text-sm font-normal text-text-primary">
+          {modeLabel ?? 'Последние посты'}
+        </p>
       </div>
       {task.mode !== 'recheck_group' && (
         <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
           <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
             Лимит постов
           </p>
-          <p className="font-mono-accent text-xs font-medium text-text-primary">{task.postLimit ?? '—'}</p>
+          <p className="font-mono-accent text-xs font-medium text-text-primary">
+            {task.postLimit ?? '—'}
+          </p>
         </div>
       )}
       <div className="rounded-2xl border border-border/50 bg-background-secondary/70 p-4">
@@ -79,7 +92,9 @@ export const TaskStatsGrid = ({
         <p className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1">
           Комментариев
         </p>
-        <p className="font-mono-accent text-xs font-medium text-text-primary">{commentsCountTotal ?? 0}</p>
+        <p className="font-mono-accent text-xs font-medium text-text-primary">
+          {commentsCountTotal ?? 0}
+        </p>
       </div>
     </div>
   )

@@ -188,7 +188,7 @@ function LoginPage() {
             <p className="text-sm text-text-secondary animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
               {mustChangePassword
                 ? `Пользователь ${authUser?.username ?? ''} должен установить новый пароль`
-                 : 'Система аналитики и мониторинга VK'}
+                : 'Система аналитики и мониторинга VK'}
             </p>
 
             {/* Decorative Line */}
@@ -291,7 +291,10 @@ function LoginPage() {
                     aria-live="assertive"
                     className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-accent-danger/20 bg-accent-danger/10 px-4 py-3 text-sm text-accent-danger"
                   >
-                    <span className="font-mono-accent" aria-hidden="true">⚠</span> {error}
+                    <span className="font-mono-accent" aria-hidden="true">
+                      ⚠
+                    </span>{' '}
+                    {error}
                   </div>
                 )}
 
@@ -401,7 +404,10 @@ function LoginPage() {
                     aria-live="assertive"
                     className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-accent-danger/20 bg-accent-danger/10 px-4 py-3 text-sm text-accent-danger"
                   >
-                    <span className="font-mono-accent" aria-hidden="true">⚠</span> {error}
+                    <span className="font-mono-accent" aria-hidden="true">
+                      ⚠
+                    </span>{' '}
+                    {error}
                   </div>
                 )}
 
@@ -473,4 +479,3 @@ function LoginPage() {
 }
 
 export default LoginPage
-

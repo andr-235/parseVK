@@ -33,7 +33,9 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
             <CardTitle className="font-monitoring-body text-base font-semibold text-text-primary">
               Активные процессы парсинга
             </CardTitle>
-            <CardDescription className="font-monitoring-body text-sm font-normal text-text-secondary">{subtitle}</CardDescription>
+            <CardDescription className="font-monitoring-body text-sm font-normal text-text-secondary">
+              {subtitle}
+            </CardDescription>
           </div>
           {indicatorText && (
             <Badge

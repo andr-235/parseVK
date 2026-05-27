@@ -9,10 +9,13 @@ export const photoAnalysisService = {
     options?: AnalyzePhotosOptions
   ): Promise<PhotoAnalysisResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}/analyze`, {
-        method: 'POST',
-        body: JSON.stringify(options ?? {}),
-      })
+      const response = await createRequest(
+        `${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}/analyze`,
+        {
+          method: 'POST',
+          body: JSON.stringify(options ?? {}),
+        }
+      )
 
       const result = await handleResponse<PhotoAnalysisResponse>(
         response,
@@ -41,7 +44,9 @@ export const photoAnalysisService = {
 
   async getSuspicious(vkUserId: number): Promise<PhotoAnalysisResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}/suspicious`)
+      const response = await createRequest(
+        `${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}/suspicious`
+      )
       return await handleResponse<PhotoAnalysisResponse>(
         response,
         'Не удалось загрузить список подозрительных фотографий'
@@ -54,7 +59,9 @@ export const photoAnalysisService = {
 
   async getSummary(vkUserId: number): Promise<PhotoAnalysisSummary> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}/summary`)
+      const response = await createRequest(
+        `${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}/summary`
+      )
       return await handleResponse<PhotoAnalysisSummary>(
         response,
         'Не удалось загрузить сводку по анализу фотографий'

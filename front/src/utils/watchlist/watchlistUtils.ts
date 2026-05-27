@@ -13,7 +13,6 @@ export const formatDateTime = (value: string | null | undefined): string => {
   })
 }
 
-
 /**
  * Форматирует статус автора в читаемую строку.
  * @param status - Статус автора

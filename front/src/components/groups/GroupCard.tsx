@@ -56,7 +56,9 @@ export const GroupCard = memo(function GroupCard({ group, onDelete }: GroupCardP
                 {GROUP_TYPE_LABELS[group.type || ''] || group.type || 'Группа'}
               </span>
               <span className="text-border">•</span>
-              <span className="font-mono-accent text-text-secondary truncate">ID: {group.vkId}</span>
+              <span className="font-mono-accent text-text-secondary truncate">
+                ID: {group.vkId}
+              </span>
             </div>
           </div>
         </div>

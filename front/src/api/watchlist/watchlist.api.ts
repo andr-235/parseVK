@@ -30,7 +30,9 @@ export const watchlistService = {
         limit: params?.limit,
         excludeStopped: params?.excludeStopped,
       })
-      const url = query ? `${GATEWAY_API_URL}/v1/watchlist/authors?${query}` : `${GATEWAY_API_URL}/v1/watchlist/authors`
+      const url = query
+        ? `${GATEWAY_API_URL}/v1/watchlist/authors?${query}`
+        : `${GATEWAY_API_URL}/v1/watchlist/authors`
       const response = await createRequest(url)
 
       return await handleResponse<IWatchlistAuthorListResponse>(

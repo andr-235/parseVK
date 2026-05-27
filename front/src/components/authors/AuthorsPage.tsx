@@ -52,9 +52,9 @@ function AuthorsPage() {
         </div>
       ),
     },
-    { icon: Shield,     title: 'Проверка',   subtitle: 'Управление статусами верификации'   },
-    { icon: Microscope, title: 'Анализ фото', subtitle: 'AI-анализ изображений профилей'     },
-    { icon: Users,      title: 'Профили',     subtitle: 'Детальная информация и активность'  },
+    { icon: Shield, title: 'Проверка', subtitle: 'Управление статусами верификации' },
+    { icon: Microscope, title: 'Анализ фото', subtitle: 'AI-анализ изображений профилей' },
+    { icon: Users, title: 'Профили', subtitle: 'Детальная информация и активность' },
   ]
 
   return (

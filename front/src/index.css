@@ -85,7 +85,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  
+
   /* Переопределяем чистый белый цвет на мягкий Zinc, чтобы убрать слепящий белый */
   --color-white: #f4f4f5;
 }

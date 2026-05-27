@@ -4,10 +4,7 @@ import { cn } from '@/utils/common'
 
 export type StatusBadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
 
-const toneClasses: Record<
-  StatusBadgeTone,
-  { root: string; dot: string; ping: string }
-> = {
+const toneClasses: Record<StatusBadgeTone, { root: string; dot: string; ping: string }> = {
   success: {
     root: 'border-green-500/20 bg-green-500/10 text-green-400',
     dot: 'bg-green-500',

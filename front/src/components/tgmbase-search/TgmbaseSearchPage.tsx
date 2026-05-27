@@ -23,7 +23,10 @@ export default function TgmbaseSearchPage() {
           title="Telegram Intelligence Search"
           description="Массовый поиск по базе tgmbase по telegramId, username и номеру телефона. Результат показывает профиль, связанные чаты, активных контактов в общих peer'ах и последние сообщения пользователя."
           footer={
-            <Badge className="border-accent-primary/20 bg-accent-primary/10 text-accent-primary" variant="outline">
+            <Badge
+              className="border-accent-primary/20 bg-accent-primary/10 text-accent-primary"
+              variant="outline"
+            >
               TGMB Search
             </Badge>
           }

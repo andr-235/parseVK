@@ -107,8 +107,14 @@ function CreateParseTaskModal({
                   Выбрано групп
                 </span>
                 <span className="font-monitoring-body text-sm font-normal text-text-secondary">
-                  из <span className="font-mono-accent text-xs font-medium text-text-primary">{groups.length}</span> доступных •
-                  найдено <span className="font-mono-accent text-xs font-medium text-text-primary">{filteredGroups.length}</span>
+                  из{' '}
+                  <span className="font-mono-accent text-xs font-medium text-text-primary">
+                    {groups.length}
+                  </span>{' '}
+                  доступных • найдено{' '}
+                  <span className="font-mono-accent text-xs font-medium text-text-primary">
+                    {filteredGroups.length}
+                  </span>
                 </span>
               </div>
             </div>
@@ -183,7 +189,9 @@ function CreateParseTaskModal({
                       )}
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-monitoring-body text-sm font-normal text-white">{displayName}</span>
+                      <span className="font-monitoring-body text-sm font-normal text-white">
+                        {displayName}
+                      </span>
                       {group.vkId ? (
                         <span className="font-mono-accent text-xs font-medium text-text-secondary">
                           vk.com/club{group.vkId}

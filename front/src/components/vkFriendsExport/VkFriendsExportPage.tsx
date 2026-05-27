@@ -9,10 +9,10 @@ import { Download, Users, FileSpreadsheet, Activity } from 'lucide-react'
 import { ExportProgressSection } from '@/components/common/ExportProgressSection'
 
 const PAGE_CARDS = [
-  { icon: Download, title: 'Экспорт',       subtitle: 'Загрузка XLSX файла'     },
-  { icon: Users,    title: 'Friends API',   subtitle: 'Метод friends.get'        },
-  { icon: FileSpreadsheet, title: 'Формат', subtitle: 'Excel таблица'            },
-  { icon: Activity, title: 'Прогресс',      subtitle: 'Отслеживание и логи'     },
+  { icon: Download, title: 'Экспорт', subtitle: 'Загрузка XLSX файла' },
+  { icon: Users, title: 'Friends API', subtitle: 'Метод friends.get' },
+  { icon: FileSpreadsheet, title: 'Формат', subtitle: 'Excel таблица' },
+  { icon: Activity, title: 'Прогресс', subtitle: 'Отслеживание и логи' },
 ]
 
 function VkFriendsExportPage() {

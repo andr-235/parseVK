@@ -10,7 +10,9 @@ interface GroupsTableProps {
 export const GroupsTable = ({ groups }: GroupsTableProps) => {
   return (
     <div>
-      <h3 className="font-monitoring-body text-base font-semibold text-text-primary mb-4">Группы</h3>
+      <h3 className="font-monitoring-body text-base font-semibold text-text-primary mb-4">
+        Группы
+      </h3>
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-background-secondary/70">
         <table className="w-full text-left text-sm">
           <thead className="bg-muted/70 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary">
@@ -24,7 +26,10 @@ export const GroupsTable = ({ groups }: GroupsTableProps) => {
           <tbody className="divide-y divide-border/50">
             {groups.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center font-monitoring-body text-sm font-normal text-text-secondary">
+                <td
+                  colSpan={4}
+                  className="px-6 py-8 text-center font-monitoring-body text-sm font-normal text-text-secondary"
+                >
                   Нет данных по группам
                 </td>
               </tr>
@@ -34,7 +39,9 @@ export const GroupsTable = ({ groups }: GroupsTableProps) => {
                   key={`${group.groupId}-${index}`}
                   className="transition-colors hover:bg-muted/40"
                 >
-                  <td className="px-6 py-4 font-mono-accent text-xs font-medium text-text-secondary">{index + 1}</td>
+                  <td className="px-6 py-4 font-mono-accent text-xs font-medium text-text-secondary">
+                    {index + 1}
+                  </td>
                   <td
                     className="px-6 py-4 font-monitoring-body text-sm font-normal text-text-primary max-w-[300px] truncate"
                     title={group.groupName || undefined}

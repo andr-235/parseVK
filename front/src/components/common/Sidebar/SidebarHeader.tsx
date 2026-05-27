@@ -7,11 +7,7 @@ interface SidebarHeaderProps {
   onExpand?: () => void
 }
 
-export function SidebarHeader({
-  title,
-  isCollapsed,
-  onExpand,
-}: SidebarHeaderProps) {
+export function SidebarHeader({ title, isCollapsed, onExpand }: SidebarHeaderProps) {
   return (
     <div className="relative flex h-16 items-center px-4 border-b border-border bg-sidebar">
       <div

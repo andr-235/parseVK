@@ -5,10 +5,7 @@ interface UseFocusTrapOptions {
   onClose: () => void
 }
 
-export const useFocusTrap = <T extends HTMLElement>({
-  isOpen,
-  onClose,
-}: UseFocusTrapOptions) => {
+export const useFocusTrap = <T extends HTMLElement>({ isOpen, onClose }: UseFocusTrapOptions) => {
   const containerRef = useRef<T>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
@@ -40,7 +37,7 @@ export const useFocusTrap = <T extends HTMLElement>({
       if (!container) return []
       return Array.from(container.querySelectorAll<HTMLElement>(focusableSelector)).filter((el) => {
         if (el.tabIndex === -1) return false
-        
+
         // In jsdom, layout properties like offsetWidth/offsetHeight are always 0.
         // We use window.getComputedStyle to check visibility instead.
         const style = window.getComputedStyle(el)
@@ -55,7 +52,7 @@ export const useFocusTrap = <T extends HTMLElement>({
       const timeoutId = setTimeout(() => {
         focusableElements[0].focus()
       }, 50)
-      
+
       return () => {
         clearTimeout(timeoutId)
         // Clean up body scroll settings
@@ -97,7 +94,7 @@ export const useFocusTrap = <T extends HTMLElement>({
 
         const focusableSelector =
           'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"]), [contenteditable]'
-        
+
         const focusableElements = Array.from(
           container.querySelectorAll<HTMLElement>(focusableSelector)
         ).filter((el) => {
@@ -139,7 +136,7 @@ export const useFocusTrap = <T extends HTMLElement>({
       if (!container.contains(e.target as Node)) {
         const focusableSelector =
           'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"]), [contenteditable]'
-        
+
         const focusableElements = Array.from(
           container.querySelectorAll<HTMLElement>(focusableSelector)
         ).filter((el) => {

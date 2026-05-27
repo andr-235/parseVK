@@ -113,7 +113,9 @@ export const monitoringService = {
   async fetchGroups(params?: MonitorGroupsParams): Promise<IMonitorGroupsResponse> {
     try {
       const query = buildGroupsQuery(params)
-      const url = query ? `${GATEWAY_API_URL}/v1/monitoring/groups?${query}` : `${GATEWAY_API_URL}/v1/monitoring/groups`
+      const url = query
+        ? `${GATEWAY_API_URL}/v1/monitoring/groups?${query}`
+        : `${GATEWAY_API_URL}/v1/monitoring/groups`
       const response = await createRequest(url)
 
       return await handleResponse<IMonitorGroupsResponse>(

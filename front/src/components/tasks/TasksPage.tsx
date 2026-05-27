@@ -47,7 +47,9 @@ function TasksPage() {
   } = useTasksViewModel()
 
   const automationEnabled = automationSettings?.enabled ?? false
-  const nextRunText = automationEnabled ? formatDateTime(automationSettings?.nextRunAt ?? null) : '—'
+  const nextRunText = automationEnabled
+    ? formatDateTime(automationSettings?.nextRunAt ?? null)
+    : '—'
   const lastRunText = formatDateTime(automationSettings?.lastRunAt ?? null)
 
   return (
@@ -129,7 +131,9 @@ function TasksPage() {
                         <span className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70">
                           Следующий запуск
                         </span>
-                        <span className="font-mono-accent text-xs font-medium text-text-primary">{nextRunText}</span>
+                        <span className="font-mono-accent text-xs font-medium text-text-primary">
+                          {nextRunText}
+                        </span>
                       </div>
                     </div>
 
@@ -143,7 +147,9 @@ function TasksPage() {
                         <span className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70">
                           Последний запуск
                         </span>
-                        <span className="font-mono-accent text-xs font-medium text-text-primary">{lastRunText}</span>
+                        <span className="font-mono-accent text-xs font-medium text-text-primary">
+                          {lastRunText}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -160,7 +166,9 @@ function TasksPage() {
                     variant="outline"
                     className="h-10 w-full text-sm font-semibold border-accent-primary/20 bg-accent-primary/5 text-accent-primary hover:bg-accent-primary hover:text-text-light hover:border-accent-primary transition-all duration-200"
                     onClick={handleAutomationRun}
-                    disabled={isAutomationLoading || isAutomationTriggering || automationSettings?.isRunning}
+                    disabled={
+                      isAutomationLoading || isAutomationTriggering || automationSettings?.isRunning
+                    }
                     aria-label="Запустить автоматический сбор данных сейчас"
                   >
                     {isAutomationTriggering ? (
@@ -175,7 +183,7 @@ function TasksPage() {
                   </p>
                 </div>
               ),
-            }
+            },
           ]}
         />
       </div>
@@ -185,7 +193,11 @@ function TasksPage() {
       </div>
 
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
-        <TasksList emptyMessage={emptyMessage} onTaskSelect={handleTaskSelect} hasGroups={hasGroups} />
+        <TasksList
+          emptyMessage={emptyMessage}
+          onTaskSelect={handleTaskSelect}
+          hasGroups={hasGroups}
+        />
       </div>
 
       {selectedTaskId && (
@@ -204,4 +216,3 @@ function TasksPage() {
 }
 
 export default TasksPage
-

@@ -107,7 +107,9 @@ export const keywordsService = {
           page: String(page),
           limit: String(pageSize),
         })
-        const response = await createRequest(`${GATEWAY_API_URL}/v1/keywords?${searchParams.toString()}`)
+        const response = await createRequest(
+          `${GATEWAY_API_URL}/v1/keywords?${searchParams.toString()}`
+        )
         const result = await handleResponse<{
           keywords: IKeywordResponse[]
           total: number

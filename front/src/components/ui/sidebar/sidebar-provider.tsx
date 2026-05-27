@@ -2,7 +2,13 @@
 
 import * as React from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import {
   SIDEBAR_COOKIE_MAX_AGE,
   SIDEBAR_COOKIE_NAME,
@@ -11,7 +17,11 @@ import {
   SIDEBAR_WIDTH_ICON,
   SIDEBAR_WIDTH_MOBILE,
 } from '@/components/ui/sidebar-constants'
-import { SidebarContext, useSidebar, type SidebarContextProps } from '@/components/ui/sidebar-context'
+import {
+  SidebarContext,
+  useSidebar,
+  type SidebarContextProps,
+} from '@/components/ui/sidebar-context'
 import { useIsMobile } from '@/hooks/common'
 import { cn } from '@/utils/common'
 

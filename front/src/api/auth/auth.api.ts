@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { GATEWAY_API_URL } from '@/api/common'
 import { createRequest, handleResponse } from '@/api/common'
-import { buildCsrfHeaders } from '@/config/auth/lib/authSession';
+import { buildCsrfHeaders } from '@/config/auth/lib/authSession'
 import type { AuthResponse } from '@/types/auth'
 
 export const authService = {

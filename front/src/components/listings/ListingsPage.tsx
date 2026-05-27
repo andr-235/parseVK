@@ -13,9 +13,9 @@ import { useListingsViewModel } from '@/hooks/listings/useListingsViewModel'
 
 const PAGE_CARDS = [
   { icon: Database, title: 'База объявлений', subtitle: 'Централизованное хранение' },
-  { icon: Upload,   title: 'Импорт',           subtitle: 'Загрузка из источников'       },
-  { icon: Filter,   title: 'Фильтрация',      subtitle: 'Поиск и сортировка'            },
-  { icon: Archive,  title: 'Управление',       subtitle: 'Статусы и архивация'           },
+  { icon: Upload, title: 'Импорт', subtitle: 'Загрузка из источников' },
+  { icon: Filter, title: 'Фильтрация', subtitle: 'Поиск и сортировка' },
+  { icon: Archive, title: 'Управление', subtitle: 'Статусы и архивация' },
 ]
 
 function ListingsPage() {

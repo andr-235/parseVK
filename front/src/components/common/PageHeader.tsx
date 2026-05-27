@@ -105,7 +105,7 @@ export const PageHeader = ({
         <div className={cn('grid', colsClass)}>
           {cards.map((card, index) => {
             const Icon = card.icon
-            
+
             let bgGradient = card.bgGradientClass
             let borderGradient = card.borderGradientClass
             let iconBg = card.iconBgClass
@@ -140,13 +140,26 @@ export const PageHeader = ({
               <div key={index} className="relative h-full">
                 <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden h-full">
                   {bgGradient && (
-                    <div className={cn('absolute inset-0 bg-gradient-to-br opacity-5', bgGradient)} />
+                    <div
+                      className={cn('absolute inset-0 bg-gradient-to-br opacity-5', bgGradient)}
+                    />
                   )}
                   {borderGradient && (
-                    <div className={cn('absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent', borderGradient)} />
+                    <div
+                      className={cn(
+                        'absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent',
+                        borderGradient
+                      )}
+                    />
                   )}
                   <div className="relative flex items-start gap-3 h-full z-10">
-                    <div className={cn('p-2 rounded-lg shrink-0', finalIconBgClass, finalIconTextClass)}>
+                    <div
+                      className={cn(
+                        'p-2 rounded-lg shrink-0',
+                        finalIconBgClass,
+                        finalIconTextClass
+                      )}
+                    >
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="space-y-1 flex-1 min-w-0">
@@ -157,7 +170,9 @@ export const PageHeader = ({
                           <h3 className="font-monitoring-display text-sm font-semibold text-text-primary truncate">
                             {card.title}
                           </h3>
-                          <p className="text-xs text-text-secondary wrap-break-word">{card.subtitle}</p>
+                          <p className="text-xs text-text-secondary wrap-break-word">
+                            {card.subtitle}
+                          </p>
                         </>
                       )}
                     </div>

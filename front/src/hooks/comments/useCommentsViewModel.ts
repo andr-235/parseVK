@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useCommentsStore } from '@/store/comments'
-import { useKeywordsStore } from '@/store/keywords/keywordsStore';
-import { useWatchlistStore } from '@/store/watchlist/watchlistStore';
+import { useKeywordsStore } from '@/store/keywords/keywordsStore'
+import { useWatchlistStore } from '@/store/watchlist/watchlistStore'
 import { useCommentsSearchQuery } from '@/hooks/comments/useCommentsSearchQuery'
 import {
   buildCommentsSearchPayload,

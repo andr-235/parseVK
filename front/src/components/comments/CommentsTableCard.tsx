@@ -349,7 +349,8 @@ const CommentsTableCard = memo(function CommentsTableCard({
                 Показано: {renderedCount}
               </p>
               <p className="font-monitoring-body text-sm text-text-secondary">
-                Всего по фильтру: {totalCount} {declOfNumber(totalCount, ['комментарий', 'комментария', 'комментариев'])}
+                Всего по фильтру: {totalCount}{' '}
+                {declOfNumber(totalCount, ['комментарий', 'комментария', 'комментариев'])}
               </p>
 
               <div ref={observerTargetRef} className="flex w-full justify-center py-4">

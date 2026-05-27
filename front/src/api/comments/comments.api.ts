@@ -47,7 +47,9 @@ export const getCommentsCursor = async (
   params?: { cursor?: string; limit?: number } & CommentsFilters
 ): Promise<GetCommentsCursorResult> => {
   const query = buildCommentsQuery(params)
-  const url = query ? `${GATEWAY_API_URL}/v1/comments/cursor?${query}` : `${GATEWAY_API_URL}/v1/comments/cursor`
+  const url = query
+    ? `${GATEWAY_API_URL}/v1/comments/cursor?${query}`
+    : `${GATEWAY_API_URL}/v1/comments/cursor`
   const response = await createRequest(url)
   const data = await handleResponse<GetCommentsCursorDto>(
     response,
@@ -57,7 +59,7 @@ export const getCommentsCursor = async (
   return {
     items: mapComments(data.items),
     nextCursor: data.nextCursor ?? null,
-    hasMore: data.hasMore ?? (data.nextCursor !== null),
+    hasMore: data.hasMore ?? data.nextCursor !== null,
     total: data.total ?? data.items.length,
     readCount: data.readCount ?? 0,
     unreadCount: data.unreadCount ?? data.total ?? data.items.length,

@@ -55,14 +55,16 @@ export function SidebarFooter({ items, isCollapsed }: SidebarFooterProps) {
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm border border-primary/15">
               {getAvatarChar()}
             </div>
-            
+
             {/* Info */}
             <div className="flex flex-col min-w-0 flex-1">
               <span className="text-xs font-semibold text-text-light truncate">
                 {user?.username || 'Оператор'}
               </span>
               <span className="text-[10px] text-text-secondary/70 truncate">
-                {user?.username ? `${user.username.toLowerCase()}@parsevk.local` : 'operator@parsevk.local'}
+                {user?.username
+                  ? `${user.username.toLowerCase()}@parsevk.local`
+                  : 'operator@parsevk.local'}
               </span>
             </div>
 
@@ -88,4 +90,3 @@ export function SidebarFooter({ items, isCollapsed }: SidebarFooterProps) {
     </div>
   )
 }
-

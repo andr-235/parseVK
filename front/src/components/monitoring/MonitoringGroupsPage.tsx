@@ -6,7 +6,14 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import SearchInput from '@/components/common/SearchInput'
 import { EmptyState } from '@/components/common/EmptyState'
 import { cn } from '@/utils/common'
@@ -103,8 +110,8 @@ function MonitoringGroupsPage() {
         </div>
       ),
     },
-    { icon: Link, title: 'Chat ID',     subtitle: 'Уникальный идентификатор'   },
-    { icon: Tag,  title: 'Категории',  subtitle: 'Организация по темам'         },
+    { icon: Link, title: 'Chat ID', subtitle: 'Уникальный идентификатор' },
+    { icon: Tag, title: 'Категории', subtitle: 'Организация по темам' },
     { icon: List, title: 'Управление', subtitle: 'Добавление и редактирование' },
   ]
 

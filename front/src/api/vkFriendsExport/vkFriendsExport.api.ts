@@ -2,7 +2,12 @@ import toast from 'react-hot-toast'
 import { GATEWAY_API_URL } from '@/api/common'
 import { createRequest, handleResponse } from '@/api/common'
 import { saveReportBlob } from '@/utils/common'
-import type { ExportJobStatus, JobLogLevel, ExportStreamEvent, StreamHandlers } from '@/api/common/sse'
+import type {
+  ExportJobStatus,
+  JobLogLevel,
+  ExportStreamEvent,
+  StreamHandlers,
+} from '@/api/common/sse'
 import { extractFilename, readSseStream } from '@/api/common/sse'
 
 export type VkFriendsOrder = 'hints' | 'random' | 'name' | 'mobile' | 'smart'
@@ -49,7 +54,6 @@ export interface VkFriendsJobResponse {
 
 export type VkFriendsStreamEvent = ExportStreamEvent
 
-
 export const vkFriendsExportService = {
   async export(payload: { params: VkFriendsParams }): Promise<VkFriendsExportResponse> {
     try {
@@ -80,13 +84,16 @@ export const vkFriendsExportService = {
 
     const run = async () => {
       try {
-        const response = await createRequest(`${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}/stream`, {
-          headers: {
-            Accept: 'text/event-stream',
-          },
-          signal: controller.signal,
-          cache: 'no-store',
-        })
+        const response = await createRequest(
+          `${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}/stream`,
+          {
+            headers: {
+              Accept: 'text/event-stream',
+            },
+            signal: controller.signal,
+            cache: 'no-store',
+          }
+        )
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => '')
@@ -113,7 +120,9 @@ export const vkFriendsExportService = {
 
   async downloadJobFile(jobId: string, type: 'xlsx'): Promise<void> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}/download/${type}`)
+      const response = await createRequest(
+        `${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}/download/${type}`
+      )
 
       if (!response.ok) {
         const text = await response.text().catch(() => '')

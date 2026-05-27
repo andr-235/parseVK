@@ -7,7 +7,14 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { LoadingState } from '@/components/common/LoadingState'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { cn } from '@/utils/common'
 import { adminUsersService } from '@/api/adminUsers/adminUsers.api'
 import { useCurrentUser } from '@/hooks/adminUsers/useCurrentUser'
@@ -166,15 +173,13 @@ function AdminUsersPage() {
           <p className="text-xs text-text-secondary font-medium uppercase tracking-wide font-mono-accent">
             Пользователей
           </p>
-          <p className="font-monitoring-display text-3xl font-bold text-white">
-            {users.length}
-          </p>
+          <p className="font-monitoring-display text-3xl font-bold text-white">{users.length}</p>
         </div>
       ),
     },
-    { icon: Shield,   title: 'Роли',        subtitle: 'Администратор / Пользователь' },
-    { icon: UserPlus, title: 'Создание',    subtitle: 'Новые учетные записи'           },
-    { icon: Key,      title: 'Безопасность', subtitle: 'Пароли и доступ'                    },
+    { icon: Shield, title: 'Роли', subtitle: 'Администратор / Пользователь' },
+    { icon: UserPlus, title: 'Создание', subtitle: 'Новые учетные записи' },
+    { icon: Key, title: 'Безопасность', subtitle: 'Пароли и доступ' },
   ]
 
   return (

@@ -7,7 +7,9 @@ const { refreshAccessTokenMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('@/config/auth/lib/authSession', async () => {
-  const actual = await vi.importActual<typeof import('@/config/auth/lib/authSession')>('@/config/auth/lib/authSession')
+  const actual = await vi.importActual<typeof import('@/config/auth/lib/authSession')>(
+    '@/config/auth/lib/authSession'
+  )
   return {
     ...actual,
     refreshAccessToken: refreshAccessTokenMock,
