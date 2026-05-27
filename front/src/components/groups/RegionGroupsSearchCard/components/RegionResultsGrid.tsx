@@ -24,7 +24,7 @@ export const RegionResultsGrid = ({
         <div
           key={group.id}
           className="animate-in fade-in-0 slide-in-from-bottom-2 duration-500"
-          style={{ animationDelay: `${index * 40}ms` }}
+          style={{ animationDelay: index < 12 ? `${index * 40}ms` : '0ms' }}
         >
           <RegionGroupCard
             group={group}

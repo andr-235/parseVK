@@ -71,10 +71,7 @@ function RegionGroupsSearchCard({
     groupColumns.find((c) => c.key === sortState?.key)?.header || 'Сортировка'
 
   return (
-    <Card className="relative overflow-hidden rounded-xl border border-white/10 bg-slate-900/50 shadow-lg backdrop-blur-sm">
-      {/* Top border glow */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-
+    <Card className="relative overflow-hidden rounded-card border border-border bg-background-secondary shadow-soft-sm">
       {/* Header */}
       <RegionSearchHeader
         total={total}
@@ -88,7 +85,7 @@ function RegionGroupsSearchCard({
       {/* Content */}
       <CardContent className="p-0">
         {error && (
-          <div className="animate-in slide-in-from-top-2 fade-in-0 m-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="animate-in slide-in-from-top-2 fade-in-0 m-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             <span className="font-mono-accent">⚠</span> {error}
           </div>
         )}
@@ -96,20 +93,20 @@ function RegionGroupsSearchCard({
         {isLoading && !hasResults && (
           <div className="flex items-center justify-center py-12">
             <Spinner className="mr-2" />
-            <span className="font-mono-accent text-sm text-slate-400">
+            <span className="font-mono-accent text-sm text-text-secondary">
               Выполняется поиск групп...
             </span>
           </div>
         )}
 
         {!isLoading && !hasResults && total > 0 && !error && (
-          <div className="p-6 text-center text-sm text-slate-400">
+          <div className="p-6 text-center text-sm text-text-secondary">
             Все найденные группы уже добавлены в базу данных.
           </div>
         )}
 
         {!isLoading && !hasResults && total === 0 && !error && (
-          <div className="p-6 text-center text-sm text-slate-400">
+          <div className="p-6 text-center text-sm text-text-secondary">
             В регионе пока не найдено сообществ, отсутствующих в базе.
           </div>
         )}

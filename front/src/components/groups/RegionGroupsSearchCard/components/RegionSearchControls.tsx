@@ -45,7 +45,7 @@ export const RegionSearchControls = ({
   onAddGroups,
 }: RegionSearchControlsProps) => {
   return (
-    <div className="flex flex-col gap-3 border-b border-white/5 bg-slate-800/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 border-b border-border bg-background-sidebar/20 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
         <label className="flex cursor-pointer select-none items-center gap-2.5">
           <div className="relative">
@@ -55,10 +55,11 @@ export const RegionSearchControls = ({
               checked={isAllSelected}
               disabled={!hasResults || isLoading}
               onChange={(event) => onToggleSelectAll(event.target.checked)}
-              className="peer size-4 cursor-pointer appearance-none rounded border border-white/20 bg-slate-800/50 transition-all duration-200 checked:border-primary checked:bg-primary focus:ring-2 focus:ring-primary/20"
+              aria-label="Выбрать все найденные сообщества"
+              className="peer size-4 cursor-pointer appearance-none rounded border border-border bg-background-primary transition-all duration-200 checked:border-primary checked:bg-primary focus:ring-2 focus:ring-primary/20"
             />
             <svg
-              className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-white opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
+              className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-text-light opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -67,11 +68,11 @@ export const RegionSearchControls = ({
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <span className="font-monitoring-display text-sm font-medium text-white">
+          <span className="font-monitoring-display text-sm font-medium text-text-light">
             Выбрать все
           </span>
         </label>
-        <span className="hidden font-mono-accent text-xs text-slate-500 sm:inline">
+        <span className="hidden font-mono-accent text-xs text-text-secondary sm:inline">
           ({resultsLength})
         </span>
       </div>
@@ -82,7 +83,7 @@ export const RegionSearchControls = ({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-2 border-[#2a2a30] bg-[#1c1c21] text-slate-300 hover:border-primary/50 hover:bg-slate-800 hover:text-white"
+              className="h-8 gap-2 border-border bg-background-primary text-text-secondary hover:border-primary/50 hover:bg-background-sidebar hover:text-text-light"
             >
               <ArrowUpDown className="size-3.5" />
               <span className="max-w-[100px] truncate text-xs">{currentSortLabel}</span>
@@ -90,7 +91,7 @@ export const RegionSearchControls = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="border-white/10 bg-slate-900/95 backdrop-blur-xl"
+            className="border border-border bg-background-secondary shadow-soft-lg"
           >
             {columns
               .filter((c) => c.sortable)
@@ -98,7 +99,7 @@ export const RegionSearchControls = ({
                 <DropdownMenuItem
                   key={col.key}
                   onClick={() => onRequestSort(col.key)}
-                  className="text-slate-300 hover:bg-white/5 hover:text-white"
+                  className="text-text-secondary hover:bg-background-primary hover:text-text-light"
                 >
                   {col.header}
                   {sortState?.key === col.key && (
@@ -114,14 +115,13 @@ export const RegionSearchControls = ({
         <Button
           type="button"
           size="sm"
-          className="group relative h-8 overflow-hidden bg-gradient-to-r from-primary/80 to-orange-500/80 text-xs font-semibold text-white shadow-md shadow-primary/20 transition-all duration-300 hover:from-primary hover:to-orange-500 hover:shadow-lg hover:shadow-primary/30"
+          className="h-8 bg-primary text-xs font-semibold text-text-light hover:bg-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md"
           disabled={isLoading || isBulkAdding || !hasResults}
           onClick={onAddGroups}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-primary to-orange-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-          <span className="relative flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5">
             {isBulkAdding && <Spinner className="size-3" />}
-            {hasSelection ? `Добавить (${selectionSize})` : 'Добавить все'}
+            {hasSelection ? `Импортировать (${selectionSize})` : 'Импортировать все'}
           </span>
         </Button>
       </div>

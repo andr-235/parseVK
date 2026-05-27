@@ -23,21 +23,13 @@ export const RegionGroupCard = memo(function RegionGroupCard({
 }: RegionGroupCardProps) {
   return (
     <div className="group relative">
-      {/* Subtle glow on selection */}
-      {isSelected && (
-        <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-primary/20 via-orange-500/20 to-zinc-800/10 blur-lg" />
-      )}
-
       <div
         className={`relative flex flex-col gap-3 rounded-lg border p-4 transition-all duration-300 ${
           isSelected
-            ? 'border-primary/40 bg-primary/5 shadow-lg shadow-primary/10'
-            : 'border-white/10 bg-slate-900/50 hover:border-white/20 hover:bg-slate-800/50'
+            ? 'border-primary bg-primary/5 shadow-soft-sm'
+            : 'border-border bg-background-secondary hover:border-slate-700 hover:bg-background-sidebar/50'
         }`}
       >
-        {/* Top border glow */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
         <div className="flex items-start gap-3">
           {/* Custom checkbox */}
           <div className="relative mt-0.5">
@@ -45,10 +37,11 @@ export const RegionGroupCard = memo(function RegionGroupCard({
               type="checkbox"
               checked={isSelected}
               onChange={() => onToggleSelection(group.id)}
-              className="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-white/20 bg-slate-800/50 transition-all duration-200 checked:border-primary checked:bg-primary focus:ring-2 focus:ring-primary/20"
+              aria-label={`Выбрать группу ${group.name}`}
+              className="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-border bg-background-primary transition-all duration-200 checked:border-primary checked:bg-primary focus:ring-2 focus:ring-primary/20"
             />
             <svg
-              className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-white opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
+              className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-text-light opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -63,12 +56,12 @@ export const RegionGroupCard = memo(function RegionGroupCard({
               href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="block truncate font-monitoring-display text-sm font-medium leading-tight text-white transition-colors duration-200 hover:text-primary hover:underline"
+              className="block truncate font-monitoring-display text-sm font-medium leading-tight text-text-light transition-colors duration-200 hover:text-primary hover:underline"
               title={group.name}
             >
               {group.name}
             </a>
-            <div className="truncate font-mono-accent text-xs text-slate-500">
+            <div className="truncate font-mono-accent text-xs text-text-secondary">
               vk.com/{group.screen_name ?? `club${group.id}`}
             </div>
           </div>
@@ -76,9 +69,10 @@ export const RegionGroupCard = memo(function RegionGroupCard({
           <Button
             variant="ghost"
             size="icon"
-            className="-mr-2 -mt-2 size-6 text-slate-400 transition-colors duration-200 hover:bg-red-500/10 hover:text-red-400"
+            className="-mr-2 -mt-2 size-8 text-text-secondary transition-colors duration-200 hover:bg-destructive/10 hover:text-destructive"
             onClick={() => onRemoveGroup(group.id)}
             disabled={isBulkAdding}
+            aria-label="Удалить из списка результатов"
           >
             <X className="size-4" />
           </Button>
@@ -87,16 +81,16 @@ export const RegionGroupCard = memo(function RegionGroupCard({
         {/* Metrics */}
         <div className="flex items-center justify-between gap-3 text-sm">
           <div className="flex items-center gap-2" title="Участники">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <div className="flex size-6 items-center justify-center rounded-md bg-background-sidebar text-text-secondary">
               <UsersIcon className="size-3.5" />
             </div>
-            <span className="font-mono-accent text-xs font-medium text-slate-300">
+            <span className="font-mono-accent text-xs font-medium text-text-secondary">
               {renderMembersCount(group)}
             </span>
           </div>
           <div className="flex items-center gap-2 truncate" title="Город">
-            <MapPin className="size-3.5 shrink-0 text-slate-500" />
-            <span className="truncate font-mono-accent text-xs text-slate-400">
+            <MapPin className="size-3.5 shrink-0 text-text-secondary" />
+            <span className="truncate font-mono-accent text-xs text-text-secondary">
               {formatCityTitle(group)}
             </span>
           </div>
@@ -105,14 +99,13 @@ export const RegionGroupCard = memo(function RegionGroupCard({
         {/* Add button */}
         <Button
           size="sm"
-          className="group/btn relative h-8 overflow-hidden bg-gradient-to-r from-primary/80 to-orange-500/80 text-xs font-semibold text-white shadow-md shadow-primary/20 transition-all duration-300 hover:from-primary hover:to-orange-500 hover:shadow-lg hover:shadow-primary/30"
+          className="w-full h-8 bg-primary font-semibold text-text-light hover:bg-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md"
           onClick={() => {
             void onAddGroup(group)
           }}
           disabled={isBulkAdding}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-primary to-orange-400 opacity-0 transition-opacity duration-300 group-hover/btn:opacity-100" />
-          <span className="relative flex items-center justify-center gap-1.5">
+          <span className="flex items-center justify-center gap-1.5">
             <Plus className="size-3" />
             Добавить
           </span>

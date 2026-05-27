@@ -31,12 +31,12 @@ export const RegionSearchHeader = ({
   }
 
   return (
-    <div className="flex flex-col gap-4 border-b border-white/5 bg-slate-800/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
+    <div className="flex flex-col gap-4 border-b border-border bg-background-sidebar/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
       <div className="space-y-1.5">
-        <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-white">
+        <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-text-light">
           Поиск по региону
         </h2>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-text-secondary">
           Поиск групп в регионе{' '}
           <span className="font-mono-accent text-primary">«Еврейская автономная область»</span>
         </p>
@@ -47,10 +47,9 @@ export const RegionSearchHeader = ({
           onClick={handleSearchClick}
           disabled={!canSearch}
           size="sm"
-          className="group relative h-10 min-w-[140px] overflow-hidden bg-gradient-to-r from-primary to-orange-500 font-semibold text-white shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40 hover:scale-[1.02]"
+          className="h-10 min-w-[140px] bg-primary font-semibold text-text-light hover:bg-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-primary to-orange-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-          <span className="relative flex items-center justify-center gap-2">
+          <span className="flex items-center justify-center gap-2">
             {isLoading ? <Spinner className="size-4" /> : <Search className="size-4" />}
             Найти группы
           </span>
@@ -64,7 +63,7 @@ export const RegionSearchHeader = ({
             disabled={isLoading}
             onClick={handleResetClick}
             title="Очистить результаты"
-            className="h-10 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-white"
+            className="h-10 text-text-secondary transition-colors duration-200 hover:bg-background-primary hover:text-text-light"
           >
             <RotateCcw className="size-4" />
           </Button>
