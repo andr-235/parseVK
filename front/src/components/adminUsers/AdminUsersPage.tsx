@@ -196,12 +196,12 @@ function AdminUsersPage() {
           actions={
             <Button
               onClick={loadUsers}
-              size="lg"
+              size="sm"
               variant="outline"
-              className="h-11 shrink-0 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
+              className="h-10 shrink-0 border-border bg-background-secondary text-text-secondary hover:border-accent-primary/50 hover:text-text-light transition-all duration-200 cursor-pointer"
               disabled={isLoading}
             >
-              <RefreshCw className={cn('mr-2 w-5 h-5', isLoading && 'animate-spin')} />
+              <RefreshCw className={cn('mr-2 w-4 h-4', isLoading && 'animate-spin')} />
               Обновить
             </Button>
           }
@@ -210,24 +210,23 @@ function AdminUsersPage() {
       </div>
 
       {/* Main Content - staggered animation */}
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr] animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr] animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100 font-monitoring-body">
         {/* Create User Section */}
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <h2 className="font-monitoring-display text-2xl font-semibold text-white">
+            <h2 className="font-monitoring-display text-2xl font-semibold text-text-light">
               Новый пользователь
             </h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+            <div className="h-px flex-1 bg-border/40" />
           </div>
 
-          <Card className="border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-6 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <p className="text-sm text-slate-400 mb-6">Добавьте логин, пароль и назначьте роль.</p>
+          <Card className="border border-border bg-background-secondary rounded-card p-6 overflow-hidden relative">
+            <p className="text-sm text-text-secondary mb-6">Добавьте логин, пароль и назначьте роль.</p>
             <form className="space-y-5" onSubmit={handleCreateUser}>
               <div className="space-y-2">
                 <Label
                   htmlFor="new-username"
-                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                  className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-monitoring-body"
                 >
                   Логин
                 </Label>
@@ -238,13 +237,13 @@ function AdminUsersPage() {
                   placeholder="username"
                   disabled={isSubmitting}
                   required
-                  className="h-11 border-[#2a2a30] bg-[#1c1c21] text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                  className="h-10 border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                 />
               </div>
               <div className="space-y-2">
                 <Label
                   htmlFor="new-password"
-                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                  className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-monitoring-body"
                 >
                   Пароль
                 </Label>
@@ -256,16 +255,16 @@ function AdminUsersPage() {
                   placeholder="Минимум 8 символов"
                   disabled={isSubmitting}
                   required
-                  className="h-11 border-[#2a2a30] bg-[#1c1c21] text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                  className="h-10 border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-text-secondary font-mono-accent">
                   Минимум 8 символов, заглавные и строчные буквы, цифры.
                 </p>
               </div>
               <div className="space-y-2">
                 <Label
                   htmlFor="new-role"
-                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                  className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-monitoring-body"
                 >
                   Роль
                 </Label>
@@ -274,8 +273,8 @@ function AdminUsersPage() {
                   value={role}
                   onChange={(event) => setRole(event.target.value as UserRole)}
                   className={cn(
-                    'h-11 w-full rounded-lg border border-[#2a2a30] bg-[#1c1c21] px-3 py-2 text-sm text-white transition-all duration-200',
-                    'focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
+                    'h-10 w-full rounded-lg border border-border bg-background-primary px-3 py-2 text-sm text-text-light transition-all duration-200 outline-none',
+                    'focus:border-accent-primary/50 focus:ring-2 focus:ring-accent-primary/20'
                   )}
                   disabled={isSubmitting}
                 >
@@ -283,11 +282,12 @@ function AdminUsersPage() {
                   <option value="admin">Администратор</option>
                 </select>
               </div>
-              {formError && <div className="text-sm text-red-400">{formError}</div>}
+              {formError && <div className="text-sm text-accent-danger font-semibold">{formError}</div>}
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-11 bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300"
+                variant="primary"
+                className="w-full h-10 shadow-soft-sm font-semibold hover:shadow-soft-md transition-all duration-200 cursor-pointer"
               >
                 {isSubmitting ? 'Создаём...' : 'Создать пользователя'}
                 <UserPlus className="ml-2 h-4 w-4" />
@@ -299,15 +299,14 @@ function AdminUsersPage() {
         {/* Users List Section */}
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <h2 className="font-monitoring-display text-2xl font-semibold text-white">
+            <h2 className="font-monitoring-display text-2xl font-semibold text-text-light">
               Список пользователей
             </h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+            <div className="h-px flex-1 bg-border/40" />
           </div>
 
-          <Card className="border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-6 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <p className="text-sm text-slate-400 mb-6">Все зарегистрированные аккаунты.</p>
+          <Card className="border border-border bg-background-secondary rounded-card p-6 overflow-hidden relative">
+            <p className="text-sm text-text-secondary mb-6">Все зарегистрированные аккаунты.</p>
             {isLoading ? (
               <LoadingState message="Загрузка пользователей..." />
             ) : sortedUsers.length === 0 ? (
@@ -334,7 +333,7 @@ function AdminUsersPage() {
                     const isTemporarilyBlocked = Boolean(user.isTemporaryPassword)
                     return (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium text-text-primary">
+                        <TableCell className="font-semibold text-text-light">
                           {user.username}
                         </TableCell>
                         <TableCell>
@@ -344,12 +343,12 @@ function AdminUsersPage() {
                         </TableCell>
                         <TableCell>
                           {isTemporarilyBlocked ? (
-                            <Badge variant="outline">Нужна смена пароля</Badge>
+                            <Badge variant="outline" className="border-accent-warning text-accent-warning">Нужна смена пароля</Badge>
                           ) : (
-                            <span className="text-xs text-muted-foreground">Активен</span>
+                            <span className="text-xs text-text-secondary">Активен</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-text-secondary font-mono-accent">
                           {new Date(user.createdAt).toLocaleDateString('ru-RU')}
                         </TableCell>
                         <TableCell className="text-right">
@@ -360,6 +359,7 @@ function AdminUsersPage() {
                               disabled={passwordActionId === user.id}
                               onClick={() => handleTemporaryPassword(user, 'set')}
                               title="Выдать временный пароль"
+                              className="cursor-pointer"
                             >
                               <KeyRound className="h-4 w-4" />
                             </Button>
@@ -369,6 +369,7 @@ function AdminUsersPage() {
                               disabled={passwordActionId === user.id}
                               onClick={() => handleTemporaryPassword(user, 'reset')}
                               title="Сбросить пароль"
+                              className="cursor-pointer"
                             >
                               <RefreshCw className="h-4 w-4" />
                             </Button>
@@ -378,6 +379,7 @@ function AdminUsersPage() {
                               disabled={deletingId === user.id || isCurrent}
                               onClick={() => handleDeleteUser(user)}
                               title={isCurrent ? 'Нельзя удалить себя' : 'Удалить пользователя'}
+                              className="cursor-pointer"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -389,7 +391,7 @@ function AdminUsersPage() {
                 </TableBody>
               </Table>
             )}
-            {submitError && <div className="mt-4 text-sm text-red-400">{submitError}</div>}
+            {submitError && <div className="mt-4 text-sm text-accent-danger font-semibold">{submitError}</div>}
           </Card>
         </div>
       </div>

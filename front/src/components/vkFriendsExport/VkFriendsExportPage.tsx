@@ -49,22 +49,21 @@ function VkFriendsExportPage() {
         {/* Parameters Section */}
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <h2 className="font-monitoring-display text-2xl font-semibold text-white">
+            <h2 className="font-monitoring-display text-2xl font-semibold text-text-light">
               Параметры friends.get
             </h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+            <div className="h-px flex-1 bg-border/40" />
           </div>
 
-          <Card className="border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-6 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <p className="text-sm text-slate-400 mb-6">
+          <Card className="border border-border bg-background-secondary rounded-card p-6 overflow-hidden relative">
+            <p className="text-sm text-text-secondary mb-6">
               Введите user_id. count и fields задаются автоматически как «все».
             </p>
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label
                   htmlFor="vk-user-id"
-                  className="text-xs font-medium uppercase tracking-wider text-slate-400"
+                  className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-monitoring-body"
                 >
                   user_id
                 </Label>
@@ -75,17 +74,18 @@ function VkFriendsExportPage() {
                   onChange={(event) => updateField('userId', event.target.value)}
                   placeholder="123456"
                   min={0}
-                  className="h-11 border-[#2a2a30] bg-[#1c1c21] text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                  className="h-10 border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                 />
               </div>
               <Button
                 onClick={handleGenerateXlsx}
                 disabled={isExportLoading}
-                className="w-full h-11 bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300"
+                variant="primary"
+                className="w-full h-10 shadow-soft-sm font-semibold hover:shadow-soft-md transition-all duration-200 cursor-pointer"
               >
                 {isExportLoading ? (
                   <span className="inline-flex items-center gap-2">
-                    <Spinner className="size-4" />
+                    <Spinner className="size-4 animate-spin" />
                     Формируем XLSX...
                   </span>
                 ) : (
