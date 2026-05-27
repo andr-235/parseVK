@@ -1,6 +1,7 @@
 import KeywordsTableCard from '@/components/keywords/KeywordsTableCard'
 import { KeywordFormsSheet } from '@/components/keywords/KeywordFormsSheet'
-import { KeywordsHero } from '@/components/keywords/KeywordsHero'
+import { PageHeader } from '@/components/common'
+import { BookMarked, Tag, Hash } from 'lucide-react'
 import { KeywordsForm } from '@/components/keywords/KeywordsForm'
 import { useKeywordsViewModel } from '@/hooks/keywords/useKeywordsViewModel'
 
@@ -43,9 +44,51 @@ function KeywordsPage() {
 
   return (
     <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
-      {/* Hero Section - fade in first */}
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <KeywordsHero totalKeywords={keywords.length} />
+        <PageHeader
+          variant="grid"
+          title={
+            <>
+              Ключевые <span className="text-accent-primary">слова</span>
+            </>
+          }
+          description="Управляйте словарем для автоматического поиска совпадений в комментариях. Группируйте слова по категориям для более точной фильтрации."
+          colsClass="grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          actions={
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background-secondary px-4 py-2 text-sm shadow-soft-sm">
+                <Hash className="w-4 h-4 text-accent-primary" />
+                <span className="text-text-secondary">Всего слов:</span>
+                <span className="font-mono-accent font-semibold text-text-light">{keywords.length}</span>
+              </span>
+            </div>
+          }
+          cards={[
+            {
+              icon: BookMarked,
+              title: 'Автопоиск',
+              subtitle: 'Автоматическое выделение ключевых слов в комментариях',
+            },
+            {
+              icon: Tag,
+              title: 'Категории',
+              subtitle: 'Группируйте слова по темам для удобной навигации',
+              bgGradientClass: 'from-orange-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-orange-500/50',
+              iconBgClass: 'bg-orange-500/10',
+              iconTextClass: 'text-orange-400',
+            },
+            {
+              icon: Hash,
+              title: 'Импорт',
+              subtitle: 'Массовая загрузка ключевых слов из файла',
+              bgGradientClass: 'from-purple-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-purple-500/50',
+              iconBgClass: 'bg-purple-500/10',
+              iconTextClass: 'text-purple-400',
+            },
+          ]}
+        />
       </div>
 
       {/* Keywords Form - staggered animation */}

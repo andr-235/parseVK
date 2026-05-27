@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { useVkFriendsExport } from '@/hooks/vkFriendsExport/useVkFriendsExport'
-import { VkFriendsExportHero } from '@/components/vkFriendsExport/VkFriendsExportHero'
+import { PageHeader } from '@/components/common'
+import { Download, Users, FileSpreadsheet, Activity } from 'lucide-react'
 import { ExportProgressSection } from '@/components/common/ExportProgressSection'
 
 function VkFriendsExportPage() {
@@ -23,9 +24,50 @@ function VkFriendsExportPage() {
 
   return (
     <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
-      {/* Hero Section */}
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <VkFriendsExportHero />
+        <PageHeader
+          variant="grid"
+          title={
+            <>
+              Экспорт друзей <span className="text-accent-primary">ВКонтакте</span>
+            </>
+          }
+          description="Формируйте XLSX отчёт по методу friends.get с отслеживанием прогресса и детальными логами выполнения. Экспорт всех данных профилей друзей пользователя."
+          cards={[
+            {
+              icon: Download,
+              title: 'Экспорт',
+              subtitle: 'Загрузка XLSX файла',
+            },
+            {
+              icon: Users,
+              title: 'Friends API',
+              subtitle: 'Метод friends.get',
+              bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
+              borderGradientClass: 'via-accent-primary/50',
+              iconBgClass: 'bg-accent-primary/10',
+              iconTextClass: 'text-accent-primary',
+            },
+            {
+              icon: FileSpreadsheet,
+              title: 'Формат',
+              subtitle: 'Excel таблица',
+              bgGradientClass: 'from-accent-info/20 to-accent-primary/20',
+              borderGradientClass: 'via-accent-info/50',
+              iconBgClass: 'bg-accent-info/10',
+              iconTextClass: 'text-accent-info',
+            },
+            {
+              icon: Activity,
+              title: 'Прогресс',
+              subtitle: 'Отслеживание и логи',
+              bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
+              borderGradientClass: 'via-accent-primary/50',
+              iconBgClass: 'bg-accent-primary/10',
+              iconTextClass: 'text-accent-primary',
+            },
+          ]}
+        />
       </div>
 
       {/* Main Content */}

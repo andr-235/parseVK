@@ -1,5 +1,6 @@
 import { TgmbaseBatchToolbar } from './TgmbaseBatchToolbar'
-import { TgmbaseSearchHero } from './TgmbaseSearchHero'
+import { PageHeader } from '@/components/common'
+import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/common/EmptyState'
 import { useTgmbaseSearchState } from '@/hooks/tgmbase-search/useTgmbaseSearchState'
 import { useTgmbaseResultsViewModel } from '@/hooks/tgmbase-search/useTgmbaseResultsViewModel'
@@ -17,7 +18,16 @@ export default function TgmbaseSearchPage() {
   return (
     <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-8 px-4 py-6 font-monitoring-body md:px-8">
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <TgmbaseSearchHero />
+        <PageHeader
+          variant="hero"
+          title="Telegram Intelligence Search"
+          description="Массовый поиск по базе tgmbase по telegramId, username и номеру телефона. Результат показывает профиль, связанные чаты, активных контактов в общих peer'ах и последние сообщения пользователя."
+          footer={
+            <Badge className="border-accent-primary/20 bg-accent-primary/10 text-accent-primary" variant="outline">
+              TGMB Search
+            </Badge>
+          }
+        />
       </div>
 
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">

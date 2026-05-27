@@ -11,7 +11,8 @@ import {
   useMonitoringViewModel,
 } from '@/hooks/monitoring/useMonitoringViewModel'
 import { MonitoringMessagesCard } from '@/components/monitoring/MonitoringMessagesCard'
-import { MonitoringHero } from '@/components/monitoring/MonitoringHero'
+import { PageHeader } from '@/components/common'
+import { Activity, Eye, Pause, Play, RefreshCw } from 'lucide-react'
 
 const MONITORING_SOURCES = {
   whatsapp: {
@@ -86,16 +87,112 @@ function MonitoringPage() {
     <div className="flex flex-col gap-10 max-w-400 mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
       {/* Hero Section - fade in first */}
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <MonitoringHero
-          sourceName={activeSource.label}
-          autoRefresh={autoRefresh}
-          isAutoRefreshActive={isAutoRefreshActive}
-          autoRefreshLabel={autoRefreshLabel}
-          isRefreshing={isRefreshing}
-          isLoading={isLoading}
-          onRefresh={refreshNow}
-          onToggleAutoRefresh={toggleAutoRefresh}
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+        <PageHeader
+          variant="grid"
+          title={
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
+                Мониторинг <span className="text-accent-primary">{activeSource.label}</span>
+              </h1>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'uppercase text-[10px] tracking-wider font-semibold rounded-full font-mono-accent',
+                  isAutoRefreshActive
+                    ? 'border border-emerald-500/25 bg-emerald-500/10 text-emerald-400'
+                    : autoRefresh
+                      ? 'border border-amber-500/25 bg-amber-500/10 text-amber-400'
+                      : 'border border-border/60 bg-background/50 text-slate-400'
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-block w-1.5 h-1.5 rounded-full mr-1.5',
+                    isAutoRefreshActive
+                      ? 'bg-emerald-400 animate-pulse'
+                      : autoRefresh
+                        ? 'bg-amber-400'
+                        : 'bg-slate-400'
+                  )}
+                />
+                {autoRefreshLabel}
+              </Badge>
+            </div>
+          }
+          description={`Автоматический поиск сообщений по ключевым словам в подключённой базе ${activeSource.label}. Мгновенное отслеживание новых совпадений с настраиваемым интервалом обновления.`}
+          actions={
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                onClick={refreshNow}
+                size="sm"
+                variant="outline"
+                className="h-10 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
+                disabled={isLoading || isRefreshing}
+              >
+                <RefreshCw className={cn('mr-2 w-4 h-4', isRefreshing && 'animate-spin')} />
+                Обновить
+              </Button>
+              <Button
+                onClick={toggleAutoRefresh}
+                size="sm"
+                className={cn(
+                  'h-10 transition-all duration-200',
+                  autoRefresh
+                    ? 'bg-linear-to-r from-emerald-500 to-primary text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/40'
+                    : 'border border-border/60 bg-background-secondary text-white hover:bg-white/5'
+                )}
+              >
+                {autoRefresh ? (
+                  <>
+                    <Pause className="mr-2 w-4 h-4" />
+                    Остановить
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 w-4 h-4" />
+                    Запустить
+                  </>
+                )}
+              </Button>
+            </div>
+          }
+          cards={[
+            {
+              icon: Activity,
+              title: 'Мониторинг',
+              subtitle: 'Отслеживание в реальном времени',
+            },
+            {
+              icon: Search,
+              title: 'Ключевые слова',
+              subtitle: 'Автоматический поиск совпадений',
+              bgGradientClass: 'from-orange-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-orange-500/50',
+              iconBgClass: 'bg-orange-500/10',
+              iconTextClass: 'text-orange-400',
+            },
+            {
+              icon: RefreshCw,
+              title: 'Автообновление',
+              subtitle: 'Периодическая синхронизация',
+              bgGradientClass: 'from-purple-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-purple-500/50',
+              iconBgClass: 'bg-purple-500/10',
+              iconTextClass: 'text-purple-400',
+            },
+            {
+              icon: Eye,
+              title: 'Live-просмотр',
+              subtitle: 'Актуальные данные',
+              bgGradientClass: 'from-pink-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-pink-500/50',
+              iconBgClass: 'bg-pink-500/10',
+              iconTextClass: 'text-pink-400',
+            },
+          ]}
         />
+      </div>
       </div>
 
       {/* Search Section - staggered animation */}

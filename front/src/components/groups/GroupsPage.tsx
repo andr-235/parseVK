@@ -1,7 +1,9 @@
 import { getGroupTableColumns } from '@/config/groups/groupTableColumns'
 import GroupsTableCard from '@/components/groups/GroupsTableCard'
 import RegionGroupsSearchCard from '@/components/groups/RegionGroupsSearchCard'
-import { GroupsHero } from '@/components/groups/GroupsHero'
+import { PageHeader } from '@/components/common'
+import GroupInput from '@/components/groups/GroupInput'
+import FileUpload from '@/components/common/FileUpload'
 import { useGroupsViewModel } from '@/hooks/groups/useGroupsViewModel'
 
 function GroupsPage() {
@@ -29,14 +31,22 @@ function GroupsPage() {
   } = useGroupsViewModel()
 
   return (
-    <div className="flex flex-col gap-8 pb-10 pt-6 font-monitoring-body">
-      {/* Hero Section - fade in first */}
+    <div className="flex flex-col gap-8 pb-10 pt-6 font-monitoring-body max-w-[1600px] mx-auto w-full px-4 md:px-8">
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <GroupsHero
-          url={url}
-          onUrlChange={handleUrlChange}
-          onAdd={handleAddGroup}
-          onFilesSelect={handleFilesSelect}
+        <PageHeader
+          variant="simple"
+          title={
+            <>
+              VK <span className="text-accent-primary">Группы</span>
+            </>
+          }
+          description="Управляйте VK сообществами: добавляйте группы для парсинга, отслеживайте их метрики и аудиторию."
+          actions={
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+              <GroupInput url={url} onUrlChange={handleUrlChange} onAdd={handleAddGroup} />
+              <FileUpload onFilesSelect={handleFilesSelect} buttonText="Импорт" className="shrink-0" />
+            </div>
+          }
         />
       </div>
 

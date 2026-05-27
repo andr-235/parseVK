@@ -12,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/utils/common'
 import { adminUsersService } from '@/api/adminUsers/adminUsers.api'
 import { useCurrentUser } from '@/hooks/adminUsers/useCurrentUser'
-import { AdminUsersHero } from '@/components/adminUsers/AdminUsersHero'
+import { PageHeader } from '@/components/common'
+import { Shield, UserPlus, Users, Key } from 'lucide-react'
 import type { AdminUser, UserRole } from '@/types/auth'
 
 const roleLabelMap: Record<UserRole, string> = {
@@ -158,9 +159,72 @@ function AdminUsersPage() {
 
   return (
     <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
-      {/* Hero Section - fade in first */}
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <AdminUsersHero totalUsers={users.length} onRefresh={loadUsers} isLoading={isLoading} />
+        <PageHeader
+          variant="grid"
+          title={
+            <>
+              Управление <span className="text-accent-primary">пользователями</span>
+            </>
+          }
+          description="Создавайте учетные записи, назначайте роли и контролируйте доступ к системе. Управление временными паролями и безопасностью аккаунтов."
+          actions={
+            <Button
+              onClick={loadUsers}
+              size="lg"
+              variant="outline"
+              className="h-11 shrink-0 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
+              disabled={isLoading}
+            >
+              <RefreshCw className={cn('mr-2 w-5 h-5', isLoading && 'animate-spin')} />
+              Обновить
+            </Button>
+          }
+          cards={[
+            {
+              icon: Users,
+              title: 'Пользователей',
+              subtitle: '',
+              customContent: (
+                <div className="space-y-1">
+                  <p className="text-xs text-text-secondary font-medium uppercase tracking-wide font-mono-accent">
+                    Пользователей
+                  </p>
+                  <p className="font-monitoring-display text-3xl font-bold text-white">
+                    {users.length}
+                  </p>
+                </div>
+              )
+            },
+            {
+              icon: Shield,
+              title: 'Роли',
+              subtitle: 'Администратор / Пользователь',
+              bgGradientClass: 'from-orange-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-orange-500/50',
+              iconBgClass: 'bg-orange-500/10',
+              iconTextClass: 'text-orange-400',
+            },
+            {
+              icon: UserPlus,
+              title: 'Создание',
+              subtitle: 'Новые учетные записи',
+              bgGradientClass: 'from-purple-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-purple-500/50',
+              iconBgClass: 'bg-purple-500/10',
+              iconTextClass: 'text-purple-400',
+            },
+            {
+              icon: Key,
+              title: 'Безопасность',
+              subtitle: 'Пароли и доступ',
+              bgGradientClass: 'from-pink-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-pink-500/50',
+              iconBgClass: 'bg-pink-500/10',
+              iconTextClass: 'text-pink-400',
+            }
+          ]}
+        />
       </div>
 
       {/* Main Content - staggered animation */}

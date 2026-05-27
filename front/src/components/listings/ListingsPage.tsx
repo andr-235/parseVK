@@ -1,4 +1,7 @@
-import { ListingsHero } from '@/components/listings/ListingsHero'
+import { PageHeader } from '@/components/common'
+import { Plus, Upload, Download, RefreshCw, Database, Filter, Archive } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/utils/common'
 import { ListingsFilters } from '@/components/listings/ListingsFilters'
 import { ListingsInfinite } from '@/components/listings/ListingsInfinite'
 import ExportListingsModal from '@/components/listings/ExportListingsModal'
@@ -56,14 +59,85 @@ function ListingsPage() {
 
   return (
     <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
-      {/* Hero Section */}
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <ListingsHero
-          isListLoading={isListLoading}
-          onAdd={() => setIsCreateOpen(true)}
-          onImport={() => setIsImportOpen(true)}
-          onExport={() => setIsExportOpen(true)}
-          onRefresh={handleManualRefresh}
+        <PageHeader
+          variant="grid"
+          title="Недвижимость"
+          description="База объявлений из различных источников. Импорт, просмотр и управление статусами. Фильтрация по источникам и состоянию объявлений."
+          actions={
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => setIsCreateOpen(true)}
+                size="lg"
+                className="h-11 bg-primary/90 hover:bg-primary text-slate-900 font-semibold transition-all duration-200"
+              >
+                <Plus className="mr-2 w-5 h-5" />
+                Добавить
+              </Button>
+              <Button
+                onClick={() => setIsImportOpen(true)}
+                size="lg"
+                variant="outline"
+                className="h-11 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
+              >
+                <Upload className="mr-2 w-5 h-5" />
+                Импорт
+              </Button>
+              <Button
+                onClick={() => setIsExportOpen(true)}
+                size="lg"
+                variant="outline"
+                className="h-11 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
+              >
+                <Download className="mr-2 w-5 h-5" />
+                Экспорт
+              </Button>
+              <Button
+                onClick={handleManualRefresh}
+                size="lg"
+                variant="outline"
+                className="h-11 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
+                disabled={isListLoading}
+              >
+                <RefreshCw className={cn('mr-2 w-5 h-5', isListLoading && 'animate-spin')} />
+                Обновить
+              </Button>
+            </div>
+          }
+          cards={[
+            {
+              icon: Database,
+              title: 'База объявлений',
+              subtitle: 'Централизованное хранение',
+            },
+            {
+              icon: Upload,
+              title: 'Импорт',
+              subtitle: 'Загрузка из источников',
+              bgGradientClass: 'from-orange-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-orange-500/50',
+              iconBgClass: 'bg-orange-500/10',
+              iconTextClass: 'text-orange-400',
+            },
+            {
+              icon: Filter,
+              title: 'Фильтрация',
+              subtitle: 'Поиск и сортировка',
+              bgGradientClass: 'from-purple-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-purple-500/50',
+              iconBgClass: 'bg-purple-500/10',
+              iconTextClass: 'text-purple-400',
+            },
+            {
+              icon: Archive,
+              title: 'Управление',
+              subtitle: 'Статусы и архивация',
+              bgGradientClass: 'from-pink-500/20 to-accent-primary/20',
+              borderGradientClass: 'via-pink-500/50',
+              iconBgClass: 'bg-pink-500/10',
+              iconTextClass: 'text-pink-400',
+            },
+          ]}
         />
       </div>
 

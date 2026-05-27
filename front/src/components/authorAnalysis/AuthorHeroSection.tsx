@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
-import PageHeroCard from '@/components/common/PageHeroCard'
+import { PageHeader } from '@/components/common'
 import type { AuthorDetails, PhotoAnalysisSummary } from '@/types'
 import { formatDateTime } from '@/utils/authorAnalysis/authorAnalysisUtils'
 import { PHOTO_ANALYSIS_LABELS } from '@/config/authorAnalysis/photoAnalysisConstants'
@@ -65,7 +65,8 @@ export const AuthorHeroSection = ({
   }, [author?.lastSeenAt, author?.verifiedAt, summary])
 
   return (
-    <PageHeroCard
+    <PageHeader
+      variant="hero"
       title={author ? author.fullName : 'Анализ фотографий'}
       description={
         author
