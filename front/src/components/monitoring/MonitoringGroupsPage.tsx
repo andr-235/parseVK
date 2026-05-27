@@ -87,6 +87,27 @@ function MonitoringGroupsPage() {
     setCategoryFilter('')
   }
 
+  const pageCards = [
+    {
+      icon: Users,
+      title: 'Всего групп',
+      subtitle: '',
+      customContent: (
+        <div className="space-y-1">
+          <p className="text-xs text-text-secondary font-medium uppercase tracking-wide font-mono-accent">
+            Всего групп
+          </p>
+          <p className="font-monitoring-display text-2xl font-bold text-white sm:text-3xl">
+            {totalGroups}
+          </p>
+        </div>
+      ),
+    },
+    { icon: Link, title: 'Chat ID',     subtitle: 'Уникальный идентификатор'   },
+    { icon: Tag,  title: 'Категории',  subtitle: 'Организация по темам'         },
+    { icon: List, title: 'Управление', subtitle: 'Добавление и редактирование' },
+  ]
+
   return (
     <div className="mx-auto flex w-full max-w-400 flex-col gap-8 px-4 py-6 font-monitoring-body md:px-8">
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
@@ -100,78 +121,29 @@ function MonitoringGroupsPage() {
           description="Привяжите chat_id к названию группы и зафиксируйте категорию для быстрой навигации в потоке сообщений. Организуйте мониторинг по темам и источникам."
           actions={
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <NavLink
-                to={`/monitoring/${activeSourceKey}`}
-                className={({ isActive }) =>
-                  cn(
-                    'inline-flex h-9 items-center rounded-lg px-3 text-[11px] font-semibold uppercase tracking-wide transition-all duration-200 sm:h-10 sm:px-4 sm:text-xs',
-                    isActive
-                      ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
-                      : 'border border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50'
-                  )
-                }
-              >
-                Сообщения
-              </NavLink>
-              <NavLink
-                to={`/monitoring/${activeSourceKey}/groups`}
-                className={({ isActive }) =>
-                  cn(
-                    'inline-flex h-9 items-center rounded-lg px-3 text-[11px] font-semibold uppercase tracking-wide transition-all duration-200 sm:h-10 sm:px-4 sm:text-xs',
-                    isActive
-                      ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
-                      : 'border border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50'
-                  )
-                }
-              >
-                Группы
-              </NavLink>
+              {[
+                { to: `/monitoring/${activeSourceKey}`, label: 'Сообщения' },
+                { to: `/monitoring/${activeSourceKey}/groups`, label: 'Группы' },
+              ].map((tab) => (
+                <NavLink
+                  key={tab.to}
+                  to={tab.to}
+                  end
+                  className={({ isActive }) =>
+                    cn(
+                      'inline-flex h-9 items-center rounded-lg px-3 text-[11px] font-semibold uppercase tracking-wide transition-all duration-200 sm:h-10 sm:px-4 sm:text-xs',
+                      isActive
+                        ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
+                        : 'border border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50'
+                    )
+                  }
+                >
+                  {tab.label}
+                </NavLink>
+              ))}
             </div>
           }
-          cards={[
-            {
-              icon: Users,
-              title: 'Всего групп',
-              subtitle: '',
-              customContent: (
-                <div className="space-y-1">
-                  <p className="text-xs text-text-secondary font-medium uppercase tracking-wide font-mono-accent">
-                    Всего групп
-                  </p>
-                  <p className="font-monitoring-display text-2xl font-bold text-white sm:text-3xl">
-                    {totalGroups}
-                  </p>
-                </div>
-              ),
-            },
-            {
-              icon: Link,
-              title: 'Chat ID',
-              subtitle: 'Уникальный идентификатор',
-              bgGradientClass: 'from-orange-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-orange-500/50',
-              iconBgClass: 'bg-orange-500/10',
-              iconTextClass: 'text-orange-400',
-            },
-            {
-              icon: Tag,
-              title: 'Категории',
-              subtitle: 'Организация по темам',
-              bgGradientClass: 'from-purple-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-purple-500/50',
-              iconBgClass: 'bg-purple-500/10',
-              iconTextClass: 'text-purple-400',
-            },
-            {
-              icon: List,
-              title: 'Управление',
-              subtitle: 'Добавление и редактирование',
-              bgGradientClass: 'from-pink-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-pink-500/50',
-              iconBgClass: 'bg-pink-500/10',
-              iconTextClass: 'text-pink-400',
-            },
-          ]}
+          cards={pageCards}
         />
       </div>
 

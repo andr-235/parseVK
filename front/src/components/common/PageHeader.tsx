@@ -105,14 +105,48 @@ export const PageHeader = ({
         <div className={cn('grid', colsClass)}>
           {cards.map((card, index) => {
             const Icon = card.icon
-            const iconBgClass = card.iconBgClass || 'bg-accent-primary/10'
-            const iconTextClass = card.iconTextClass || 'text-accent-primary'
+            
+            let bgGradient = card.bgGradientClass
+            let borderGradient = card.borderGradientClass
+            let iconBg = card.iconBgClass
+            let iconText = card.iconTextClass
+
+            if (!bgGradient && !borderGradient && !iconBg && !iconText) {
+              const styles = [
+                {
+                  bgGradient: 'from-accent-primary/20 to-accent-info/20',
+                  borderGradient: 'via-accent-primary/50',
+                  iconBg: 'bg-accent-primary/10',
+                  iconText: 'text-accent-primary',
+                },
+                {
+                  bgGradient: 'from-accent-info/20 to-accent-primary/20',
+                  borderGradient: 'via-accent-info/50',
+                  iconBg: 'bg-accent-info/10',
+                  iconText: 'text-accent-info',
+                },
+              ]
+              const style = styles[index % styles.length]
+              bgGradient = style.bgGradient
+              borderGradient = style.borderGradient
+              iconBg = style.iconBg
+              iconText = style.iconText
+            }
+
+            const finalIconBgClass = iconBg || 'bg-accent-primary/10'
+            const finalIconTextClass = iconText || 'text-accent-primary'
 
             return (
               <div key={index} className="relative h-full">
                 <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden h-full">
-                  <div className="flex items-start gap-3 h-full">
-                    <div className={cn('p-2 rounded-lg shrink-0', iconBgClass, iconTextClass)}>
+                  {bgGradient && (
+                    <div className={cn('absolute inset-0 bg-gradient-to-br opacity-5', bgGradient)} />
+                  )}
+                  {borderGradient && (
+                    <div className={cn('absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent', borderGradient)} />
+                  )}
+                  <div className="relative flex items-start gap-3 h-full z-10">
+                    <div className={cn('p-2 rounded-lg shrink-0', finalIconBgClass, finalIconTextClass)}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="space-y-1 flex-1 min-w-0">

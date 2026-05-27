@@ -42,6 +42,24 @@ function KeywordsPage() {
     deleteKeyword,
   } = useKeywordsViewModel()
 
+  const pageCards = [
+    {
+      icon: BookMarked,
+      title: 'Автопоиск',
+      subtitle: 'Автоматическое выделение ключевых слов в комментариях',
+    },
+    {
+      icon: Tag,
+      title: 'Категории',
+      subtitle: 'Группируйте слова по темам для удобной навигации',
+    },
+    {
+      icon: Hash,
+      title: 'Импорт',
+      subtitle: 'Массовая загрузка ключевых слов из файла',
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
@@ -63,31 +81,7 @@ function KeywordsPage() {
               </span>
             </div>
           }
-          cards={[
-            {
-              icon: BookMarked,
-              title: 'Автопоиск',
-              subtitle: 'Автоматическое выделение ключевых слов в комментариях',
-            },
-            {
-              icon: Tag,
-              title: 'Категории',
-              subtitle: 'Группируйте слова по темам для удобной навигации',
-              bgGradientClass: 'from-orange-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-orange-500/50',
-              iconBgClass: 'bg-orange-500/10',
-              iconTextClass: 'text-orange-400',
-            },
-            {
-              icon: Hash,
-              title: 'Импорт',
-              subtitle: 'Массовая загрузка ключевых слов из файла',
-              bgGradientClass: 'from-purple-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-purple-500/50',
-              iconBgClass: 'bg-purple-500/10',
-              iconTextClass: 'text-purple-400',
-            },
-          ]}
+          cards={pageCards}
         />
       </div>
 

@@ -14,6 +14,13 @@ import { MonitoringMessagesCard } from '@/components/monitoring/MonitoringMessag
 import { PageHeader } from '@/components/common'
 import { Activity, Eye, Pause, Play, RefreshCw } from 'lucide-react'
 
+const PAGE_CARDS = [
+  { icon: Activity,  title: 'Мониторинг',      subtitle: 'Отслеживание в реальном времени'  },
+  { icon: Search,    title: 'Ключевые слова',   subtitle: 'Автоматический поиск совпадений'  },
+  { icon: RefreshCw, title: 'Автообновление',   subtitle: 'Периодическая синхронизация'      },
+  { icon: Eye,       title: 'Live-просмотр',    subtitle: 'Актуальные данные'                },
+]
+
 const MONITORING_SOURCES = {
   whatsapp: {
     label: 'WhatsApp',
@@ -157,40 +164,7 @@ function MonitoringPage() {
               </Button>
             </div>
           }
-          cards={[
-            {
-              icon: Activity,
-              title: 'Мониторинг',
-              subtitle: 'Отслеживание в реальном времени',
-            },
-            {
-              icon: Search,
-              title: 'Ключевые слова',
-              subtitle: 'Автоматический поиск совпадений',
-              bgGradientClass: 'from-orange-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-orange-500/50',
-              iconBgClass: 'bg-orange-500/10',
-              iconTextClass: 'text-orange-400',
-            },
-            {
-              icon: RefreshCw,
-              title: 'Автообновление',
-              subtitle: 'Периодическая синхронизация',
-              bgGradientClass: 'from-purple-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-purple-500/50',
-              iconBgClass: 'bg-purple-500/10',
-              iconTextClass: 'text-purple-400',
-            },
-            {
-              icon: Eye,
-              title: 'Live-просмотр',
-              subtitle: 'Актуальные данные',
-              bgGradientClass: 'from-pink-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-pink-500/50',
-              iconBgClass: 'bg-pink-500/10',
-              iconTextClass: 'text-pink-400',
-            },
-          ]}
+          cards={PAGE_CARDS}
         />
       </div>
       </div>
@@ -285,68 +259,57 @@ function MonitoringPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Messages Card */}
-          <div className="relative">
-            <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-primary/20 to-orange-500/20 opacity-50 blur-lg" />
-            <Card className="relative border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-5 overflow-hidden">
-              <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/50 to-transparent" />
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                  <MessageSquare className="w-5 h-5" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wide font-mono-accent">
-                    Сообщений
-                  </p>
-                  <p className="font-monitoring-display text-3xl font-bold text-white">
-                    {stats.total}
-                  </p>
-                </div>
+          {[
+            {
+              glowClass: 'from-primary/20 to-orange-500/20',
+              borderClass: 'via-primary/50',
+              icon: MessageSquare,
+              iconClass: 'bg-primary/10 text-primary',
+              label: 'Сообщений',
+              value: stats.total,
+            },
+            {
+              glowClass: 'from-orange-500/20 to-zinc-800/10',
+              borderClass: 'via-orange-400/50',
+              icon: Hash,
+              iconClass: 'bg-orange-500/10 text-orange-400',
+              label: 'Ключей',
+              value: stats.usedKeywordsCount,
+            },
+            {
+              className: 'sm:col-span-2 lg:col-span-1',
+              glowClass: 'from-zinc-800/10 to-primary/20',
+              borderClass: 'via-purple-400/50',
+              icon: Clock,
+              iconClass: 'bg-purple-500/10 text-purple-400',
+              label: 'Обновлено',
+              value: lastUpdatedLabel,
+              valueClass: 'text-lg font-semibold',
+            },
+          ].map((card, index) => {
+            const Icon = card.icon
+            return (
+              <div key={index} className={cn('relative', card.className)}>
+                <div className={cn('absolute -inset-0.5 rounded-xl opacity-50 blur-lg bg-linear-to-r', card.glowClass)} />
+                <Card className="relative border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-5 overflow-hidden">
+                  <div className={cn('absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent to-transparent', card.borderClass)} />
+                  <div className="flex items-start gap-3">
+                    <div className={cn('p-2 rounded-lg', card.iconClass)}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide font-mono-accent">
+                        {card.label}
+                      </p>
+                      <p className={cn('font-monitoring-display text-white', card.valueClass || 'text-3xl font-bold')}>
+                        {card.value}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
               </div>
-            </Card>
-          </div>
-
-          {/* Keywords Card */}
-          <div className="relative">
-            <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-orange-500/20 to-zinc-800/10 opacity-50 blur-lg" />
-            <Card className="relative border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-5 overflow-hidden">
-              <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-orange-400/50 to-transparent" />
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
-                  <Hash className="w-5 h-5" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wide font-mono-accent">
-                    Ключей
-                  </p>
-                  <p className="font-monitoring-display text-3xl font-bold text-white">
-                    {stats.usedKeywordsCount}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Last Updated Card */}
-          <div className="relative sm:col-span-2 lg:col-span-1">
-            <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-zinc-800/10 to-primary/20 opacity-50 blur-lg" />
-            <Card className="relative border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-5 overflow-hidden">
-              <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-400/50 to-transparent" />
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wide font-mono-accent">
-                    Обновлено
-                  </p>
-                  <p className="font-monitoring-display text-lg font-semibold text-white">
-                    {lastUpdatedLabel}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
+            )
+          })}
         </div>
       </div>
 

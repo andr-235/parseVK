@@ -8,6 +8,13 @@ import { PageHeader } from '@/components/common'
 import { Download, Users, FileSpreadsheet, Activity } from 'lucide-react'
 import { ExportProgressSection } from '@/components/common/ExportProgressSection'
 
+const PAGE_CARDS = [
+  { icon: Download,        title: 'Экспорт',  subtitle: 'Загрузка XLSX файла'  },
+  { icon: Users,           title: 'OK API',   subtitle: 'Метод friends.get'    },
+  { icon: FileSpreadsheet, title: 'Формат',   subtitle: 'Excel таблица'         },
+  { icon: Activity,        title: 'Прогресс', subtitle: 'Отслеживание и логи'  },
+]
+
 function OkFriendsExportPage() {
   const {
     formState,
@@ -33,40 +40,7 @@ function OkFriendsExportPage() {
             </>
           }
           description="Формируйте XLSX отчёт по методу friends.get с настраиваемыми параметрами offset и limit. Отслеживайте прогресс выполнения и детальные логи операций."
-          cards={[
-            {
-              icon: Download,
-              title: 'Экспорт',
-              subtitle: 'Загрузка XLSX файла',
-            },
-            {
-              icon: Users,
-              title: 'OK API',
-              subtitle: 'Метод friends.get',
-              bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
-              borderGradientClass: 'via-accent-primary/50',
-              iconBgClass: 'bg-accent-primary/10',
-              iconTextClass: 'text-accent-primary',
-            },
-            {
-              icon: FileSpreadsheet,
-              title: 'Формат',
-              subtitle: 'Excel таблица',
-              bgGradientClass: 'from-accent-info/20 to-accent-primary/20',
-              borderGradientClass: 'via-accent-info/50',
-              iconBgClass: 'bg-accent-info/10',
-              iconTextClass: 'text-accent-info',
-            },
-            {
-              icon: Activity,
-              title: 'Прогресс',
-              subtitle: 'Отслеживание и логи',
-              bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
-              borderGradientClass: 'via-accent-primary/50',
-              iconBgClass: 'bg-accent-primary/10',
-              iconTextClass: 'text-accent-primary',
-            },
-          ]}
+          cards={PAGE_CARDS}
         />
       </div>
 

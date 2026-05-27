@@ -11,6 +11,13 @@ import CreateListingModal from '@/components/listings/CreateListingModal'
 import { FullEditListingModal } from '@/components/listings/FullEditListingModal'
 import { useListingsViewModel } from '@/hooks/listings/useListingsViewModel'
 
+const PAGE_CARDS = [
+  { icon: Database, title: 'База объявлений', subtitle: 'Централизованное хранение' },
+  { icon: Upload,   title: 'Импорт',           subtitle: 'Загрузка из источников'       },
+  { icon: Filter,   title: 'Фильтрация',      subtitle: 'Поиск и сортировка'            },
+  { icon: Archive,  title: 'Управление',       subtitle: 'Статусы и архивация'           },
+]
+
 function ListingsPage() {
   const {
     pageSize,
@@ -104,40 +111,7 @@ function ListingsPage() {
               </Button>
             </div>
           }
-          cards={[
-            {
-              icon: Database,
-              title: 'База объявлений',
-              subtitle: 'Централизованное хранение',
-            },
-            {
-              icon: Upload,
-              title: 'Импорт',
-              subtitle: 'Загрузка из источников',
-              bgGradientClass: 'from-orange-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-orange-500/50',
-              iconBgClass: 'bg-orange-500/10',
-              iconTextClass: 'text-orange-400',
-            },
-            {
-              icon: Filter,
-              title: 'Фильтрация',
-              subtitle: 'Поиск и сортировка',
-              bgGradientClass: 'from-purple-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-purple-500/50',
-              iconBgClass: 'bg-purple-500/10',
-              iconTextClass: 'text-purple-400',
-            },
-            {
-              icon: Archive,
-              title: 'Управление',
-              subtitle: 'Статусы и архивация',
-              bgGradientClass: 'from-pink-500/20 to-accent-primary/20',
-              borderGradientClass: 'via-pink-500/50',
-              iconBgClass: 'bg-pink-500/10',
-              iconTextClass: 'text-pink-400',
-            },
-          ]}
+          cards={PAGE_CARDS}
         />
       </div>
 

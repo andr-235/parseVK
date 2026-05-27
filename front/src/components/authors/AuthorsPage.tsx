@@ -36,6 +36,27 @@ function AuthorsPage() {
     handleSortChange,
   } = useAuthorsViewModel()
 
+  const pageCards = [
+    {
+      icon: Users,
+      title: 'Всего авторов',
+      subtitle: '',
+      customContent: (
+        <div className="space-y-1">
+          <p className="text-xs text-text-secondary font-medium uppercase tracking-wide font-mono-accent">
+            Всего авторов
+          </p>
+          <p className="font-monitoring-display text-2xl font-bold text-text-light">
+            {authors.length.toLocaleString('ru-RU')}
+          </p>
+        </div>
+      ),
+    },
+    { icon: Shield,     title: 'Проверка',   subtitle: 'Управление статусами верификации'   },
+    { icon: Microscope, title: 'Анализ фото', subtitle: 'AI-анализ изображений профилей'     },
+    { icon: Users,      title: 'Профили',     subtitle: 'Детальная информация и активность'  },
+  ]
+
   return (
     <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
@@ -59,50 +80,7 @@ function AuthorsPage() {
               Обновить
             </Button>
           }
-          cards={[
-            {
-              icon: Users,
-              title: 'Всего авторов',
-              subtitle: '',
-              customContent: (
-                <div className="space-y-1">
-                  <p className="text-xs text-text-secondary font-medium uppercase tracking-wide font-mono-accent">
-                    Всего авторов
-                  </p>
-                  <p className="font-monitoring-display text-2xl font-bold text-text-light">
-                    {authors.length.toLocaleString('ru-RU')}
-                  </p>
-                </div>
-              ),
-            },
-            {
-              icon: Shield,
-              title: 'Проверка',
-              subtitle: 'Управление статусами верификации',
-              bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
-              borderGradientClass: 'via-accent-primary/50',
-              iconBgClass: 'bg-accent-primary/10',
-              iconTextClass: 'text-accent-primary',
-            },
-            {
-              icon: Microscope,
-              title: 'Анализ фото',
-              subtitle: 'AI-анализ изображений профилей',
-              bgGradientClass: 'from-accent-info/20 to-accent-primary/20',
-              borderGradientClass: 'via-accent-info/50',
-              iconBgClass: 'bg-accent-info/10',
-              iconTextClass: 'text-accent-info',
-            },
-            {
-              icon: Users,
-              title: 'Профили',
-              subtitle: 'Детальная информация и активность',
-              bgGradientClass: 'from-accent-primary/20 to-accent-info/20',
-              borderGradientClass: 'via-accent-primary/50',
-              iconBgClass: 'bg-accent-primary/10',
-              iconTextClass: 'text-accent-primary',
-            },
-          ]}
+          cards={pageCards}
         />
       </div>
 
