@@ -18,9 +18,6 @@ export function SidebarFooter({ items, isCollapsed }: SidebarFooterProps) {
     if (user?.username) {
       return user.username.charAt(0).toUpperCase()
     }
-    if (user?.email) {
-      return user.email.charAt(0).toUpperCase()
-    }
     return 'O'
   }
 
@@ -64,7 +61,7 @@ export function SidebarFooter({ items, isCollapsed }: SidebarFooterProps) {
                 {user?.username || 'Оператор'}
               </span>
               <span className="text-[10px] text-zinc-500 truncate">
-                {user?.email || 'operator@parsevk.local'}
+                {user?.username ? `${user.username.toLowerCase()}@parsevk.local` : 'operator@parsevk.local'}
               </span>
             </div>
 
