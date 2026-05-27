@@ -61,7 +61,7 @@ export function TgmbaseSummaryTable({ items, selectedQuery, onSelect }: TgmbaseS
               <TableCell>
                 <Badge
                   variant="outline"
-                  className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200"
+                  className="border-primary/30 bg-primary/10 text-orange-200"
                 >
                   {statusLabels[item.status]}
                 </Badge>

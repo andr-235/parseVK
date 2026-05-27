@@ -32,11 +32,11 @@ export const ExportProgressSection = ({
         <h2 className="font-monitoring-display text-2xl font-semibold text-white">
           Прогресс и логи
         </h2>
-        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
       </div>
 
-      <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+      <Card className="border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-6 overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         <p className="text-sm text-slate-400 mb-6">Состояние текущего экспорта и события.</p>
         <div className="space-y-5">
           <div className="space-y-3">

@@ -39,7 +39,7 @@ export default function TelegramDlTabs({ activeTab, onChange }: TelegramDlTabsPr
               className={[
                 'rounded-xl border px-4 py-3 text-left transition-colors',
                 isActive
-                  ? 'border-cyan-400/40 bg-cyan-400/12 text-white shadow-lg shadow-cyan-500/10'
+                  ? 'border-primary/40 bg-primary/12 text-white shadow-lg shadow-primary/10'
                   : 'border-transparent bg-white/[0.03] text-slate-300 hover:border-white/10 hover:bg-white/[0.05] hover:text-white',
               ].join(' ')}
             >

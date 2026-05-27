@@ -24,9 +24,9 @@ const toneClasses: Record<
     ping: 'bg-red-500',
   },
   info: {
-    root: 'border-cyan-500/20 bg-cyan-500/10 text-cyan-400',
-    dot: 'bg-cyan-500',
-    ping: 'bg-cyan-500',
+    root: 'border-primary/20 bg-primary/10 text-primary',
+    dot: 'bg-primary',
+    ping: 'bg-primary',
   },
   neutral: {
     root: 'border-slate-500/20 bg-slate-500/10 text-slate-400',

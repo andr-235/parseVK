@@ -32,7 +32,7 @@ export const MonitoringHero = ({
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
-              Мониторинг <span className="text-cyan-400">{sourceName}</span>
+              Мониторинг <span className="text-primary">{sourceName}</span>
             </h1>
             <Badge
               variant="outline"
@@ -69,7 +69,7 @@ export const MonitoringHero = ({
             onClick={onRefresh}
             size="sm"
             variant="outline"
-            className="h-10 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+            className="h-10 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
             disabled={isLoading || isRefreshing}
           >
             <RefreshCw className={cn('mr-2 w-4 h-4', isRefreshing && 'animate-spin')} />
@@ -81,7 +81,7 @@ export const MonitoringHero = ({
             className={cn(
               'h-10 transition-all duration-200',
               autoRefresh
-                ? 'bg-linear-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/40'
+                ? 'bg-linear-to-r from-emerald-500 to-primary text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/40'
                 : 'border border-border/60 bg-background/50 text-white hover:bg-white/5'
             )}
           >
@@ -105,7 +105,7 @@ export const MonitoringHero = ({
         <div className="relative">
           <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <Activity className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -122,7 +122,7 @@ export const MonitoringHero = ({
         <div className="relative">
           <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+              <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
                 <Search className="w-5 h-5" />
               </div>
               <div className="space-y-1">

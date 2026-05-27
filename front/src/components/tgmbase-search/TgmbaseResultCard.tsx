@@ -55,7 +55,7 @@ export function TgmbaseResultCard({
   return (
     <Card
       id={getResultId(item.query)}
-      className={`border-white/10 bg-slate-900/70 text-slate-100 ${selected ? 'ring-1 ring-cyan-400/60' : ''}`}
+      className={`border-white/10 bg-slate-900/70 text-slate-100 ${selected ? 'ring-1 ring-primary/60' : ''}`}
     >
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div className="space-y-1">
@@ -64,7 +64,7 @@ export function TgmbaseResultCard({
             {item.profile?.fullName ?? item.candidates[0]?.fullName ?? 'Совпадений нет'}
           </div>
         </div>
-        <Badge variant="outline" className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+        <Badge variant="outline" className="border-primary/30 bg-primary/10 text-orange-200">
           {item.status}
         </Badge>
       </CardHeader>

@@ -232,7 +232,7 @@ const columns: TableColumn<Task>[] = [
           {hasMeta && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-relaxed text-text-secondary">
               {scopeLabel && <span className="whitespace-nowrap">{scopeLabel}</span>}
-              {modeLabel && <span className="whitespace-nowrap text-cyan-300">{modeLabel}</span>}
+              {modeLabel && <span className="whitespace-nowrap text-primary">{modeLabel}</span>}
               {postLimitValue !== null && (
                 <span className="whitespace-nowrap">{`Лимит постов: ${postLimitValue}`}</span>
               )}

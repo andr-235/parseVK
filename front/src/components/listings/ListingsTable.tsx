@@ -111,8 +111,8 @@ interface ListingsTableProps {
 
 function SortIcon({ active, order }: { active: boolean; order: 'asc' | 'desc' | undefined }) {
   if (!active) return <ChevronsUpDown className="size-3 opacity-30" />
-  if (order === 'asc') return <ChevronUp className="size-3 text-cyan-400" />
-  return <ChevronDown className="size-3 text-cyan-400" />
+  if (order === 'asc') return <ChevronUp className="size-3 text-primary" />
+  return <ChevronDown className="size-3 text-primary" />
 }
 
 // ─── Author URL cell ──────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ function ListingRow({
               href={listing.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="line-clamp-2 text-sm font-medium text-slate-200 leading-snug transition-colors duration-200 hover:text-cyan-400 min-w-0 break-words"
+              className="line-clamp-2 text-sm font-medium text-slate-200 leading-snug transition-colors duration-200 hover:text-primary min-w-0 break-words"
               title={listing.title ?? listing.url}
             >
               {listing.title ?? listing.url}
@@ -239,7 +239,7 @@ function ListingRow({
 
       {visibleColumns.has('price') && (
         <td className="px-4 py-3 whitespace-nowrap">
-          <span className="font-mono-accent text-sm font-semibold text-cyan-400">
+          <span className="font-mono-accent text-sm font-semibold text-primary">
             {listing.price != null ? price : <span className="text-slate-600">—</span>}
           </span>
         </td>
@@ -365,7 +365,7 @@ function ColumnToggle({ hiddenColumns, onToggle }: ColumnToggleProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1.5 border border-white/10 bg-slate-800/50 font-mono-accent text-xs text-slate-400 hover:bg-white/5 hover:text-slate-200"
+          className="gap-1.5 border border-[#2a2a30] bg-[#1c1c21] font-mono-accent text-xs text-slate-400 hover:bg-white/5 hover:text-slate-200"
         >
           <Columns3 className="size-3.5" />
           Столбцы
@@ -447,7 +447,7 @@ export function ListingsTable({
       {/* Table */}
       <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm">
         {/* Top accent line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
         <div className="overflow-x-auto">
           <table className="w-full font-monitoring-body">
@@ -464,7 +464,7 @@ export function ListingsTable({
                         'px-4 py-3 text-left font-monitoring-display text-xs font-medium uppercase tracking-wider text-slate-400',
                         isSortable &&
                           'cursor-pointer select-none transition-colors duration-200 hover:text-slate-200',
-                        isActive && 'text-cyan-400'
+                        isActive && 'text-primary'
                       )}
                       onClick={
                         isSortable && col.sortField

@@ -171,11 +171,11 @@ function AdminUsersPage() {
             <h2 className="font-monitoring-display text-2xl font-semibold text-white">
               Новый пользователь
             </h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
           </div>
 
-          <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <Card className="border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-6 overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <p className="text-sm text-slate-400 mb-6">Добавьте логин, пароль и назначьте роль.</p>
             <form className="space-y-5" onSubmit={handleCreateUser}>
               <div className="space-y-2">
@@ -192,7 +192,7 @@ function AdminUsersPage() {
                   placeholder="username"
                   disabled={isSubmitting}
                   required
-                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                  className="h-11 border-[#2a2a30] bg-[#1c1c21] text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                 />
               </div>
               <div className="space-y-2">
@@ -210,7 +210,7 @@ function AdminUsersPage() {
                   placeholder="Минимум 8 символов"
                   disabled={isSubmitting}
                   required
-                  className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                  className="h-11 border-[#2a2a30] bg-[#1c1c21] text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                 />
                 <p className="text-xs text-slate-500">
                   Минимум 8 символов, заглавные и строчные буквы, цифры.
@@ -228,8 +228,8 @@ function AdminUsersPage() {
                   value={role}
                   onChange={(event) => setRole(event.target.value as UserRole)}
                   className={cn(
-                    'h-11 w-full rounded-lg border border-white/10 bg-slate-800/50 px-3 py-2 text-sm text-white transition-all duration-200',
-                    'focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20'
+                    'h-11 w-full rounded-lg border border-[#2a2a30] bg-[#1c1c21] px-3 py-2 text-sm text-white transition-all duration-200',
+                    'focus:border-primary/50 focus:ring-2 focus:ring-primary/20'
                   )}
                   disabled={isSubmitting}
                 >
@@ -241,7 +241,7 @@ function AdminUsersPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-11 bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40 transition-all duration-300"
+                className="w-full h-11 bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300"
               >
                 {isSubmitting ? 'Создаём...' : 'Создать пользователя'}
                 <UserPlus className="ml-2 h-4 w-4" />
@@ -256,11 +256,11 @@ function AdminUsersPage() {
             <h2 className="font-monitoring-display text-2xl font-semibold text-white">
               Список пользователей
             </h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
           </div>
 
-          <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <Card className="border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-6 overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <p className="text-sm text-slate-400 mb-6">Все зарегистрированные аккаунты.</p>
             {isLoading ? (
               <LoadingState message="Загрузка пользователей..." />

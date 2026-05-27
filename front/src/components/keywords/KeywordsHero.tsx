@@ -11,7 +11,7 @@ export const KeywordsHero = ({ totalKeywords }: KeywordsHeroProps) => {
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="space-y-3">
           <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
-            Ключевые <span className="text-cyan-400">слова</span>
+            Ключевые <span className="text-primary">слова</span>
           </h1>
           <p className="text-slate-300 max-w-2xl text-lg">
             Управляйте словарем для автоматического поиска совпадений в комментариях. Группируйте
@@ -22,7 +22,7 @@ export const KeywordsHero = ({ totalKeywords }: KeywordsHeroProps) => {
         {/* Stats Badge */}
         <div className="flex items-center gap-2 shrink-0">
           <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background-secondary px-4 py-2 text-sm shadow-soft-sm">
-            <Hash className="w-4 h-4 text-cyan-400" />
+            <Hash className="w-4 h-4 text-primary" />
             <span className="text-slate-400">Всего слов:</span>
             <span className="font-mono-accent font-semibold text-white">{totalKeywords}</span>
           </span>
@@ -34,7 +34,7 @@ export const KeywordsHero = ({ totalKeywords }: KeywordsHeroProps) => {
         <div className="relative">
           <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <BookMarked className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -53,7 +53,7 @@ export const KeywordsHero = ({ totalKeywords }: KeywordsHeroProps) => {
         <div className="relative">
           <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+              <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
                 <Tag className="w-5 h-5" />
               </div>
               <div className="space-y-1">

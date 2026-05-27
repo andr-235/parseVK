@@ -43,7 +43,7 @@ export function PostPreviewModal({
         onClick={(event) => event.stopPropagation()}
       >
         {/* Top border glow */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
 
         {/* Header */}
         <header className="flex items-start justify-between gap-4 border-b border-white/5 bg-slate-800/30 px-6 py-4">
@@ -52,7 +52,7 @@ export function PostPreviewModal({
               id="post-preview-modal-title"
               className="font-monitoring-display text-xl font-bold tracking-tight text-white"
             >
-              Превью <span className="text-cyan-400">Поста</span>
+              Превью <span className="text-primary">Поста</span>
             </h2>
             <p className="font-monitoring-body text-sm text-slate-400">
               Полный текст поста и вложения
@@ -120,7 +120,7 @@ export function PostPreviewModal({
               <div className="border-t border-white/5 pt-4">
                 <Button
                   variant="outline"
-                  className="group relative h-11 w-full overflow-hidden border-white/10 bg-slate-800/50 font-monitoring-body font-semibold text-white transition-all hover:border-cyan-400/50 hover:bg-slate-800"
+                  className="group relative h-11 w-full overflow-hidden border-[#2a2a30] bg-[#1c1c21] font-monitoring-body font-semibold text-white transition-all hover:border-primary/50 hover:bg-slate-800"
                   asChild
                 >
                   <a href={postUrl} target="_blank" rel="noopener noreferrer">
@@ -134,7 +134,7 @@ export function PostPreviewModal({
         </div>
 
         {/* Bottom accent line */}
-        <div className="h-0.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500" />
+        <div className="h-0.5 bg-gradient-to-r from-primary via-orange-500 to-purple-500" />
       </div>
     </div>
   )

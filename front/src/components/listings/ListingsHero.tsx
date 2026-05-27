@@ -35,7 +35,7 @@ export const ListingsHero = ({
           <Button
             onClick={onAdd}
             size="lg"
-            className="h-11 bg-cyan-500/90 hover:bg-cyan-500 text-slate-900 font-semibold transition-all duration-200"
+            className="h-11 bg-primary/90 hover:bg-primary text-slate-900 font-semibold transition-all duration-200"
           >
             <Plus className="mr-2 w-5 h-5" />
             Добавить
@@ -44,7 +44,7 @@ export const ListingsHero = ({
             onClick={onImport}
             size="lg"
             variant="outline"
-            className="h-11 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+            className="h-11 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
           >
             <Upload className="mr-2 w-5 h-5" />
             Импорт
@@ -53,7 +53,7 @@ export const ListingsHero = ({
             onClick={onExport}
             size="lg"
             variant="outline"
-            className="h-11 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+            className="h-11 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
           >
             <Download className="mr-2 w-5 h-5" />
             Экспорт
@@ -62,7 +62,7 @@ export const ListingsHero = ({
             onClick={onRefresh}
             size="lg"
             variant="outline"
-            className="h-11 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+            className="h-11 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
             disabled={isListLoading}
           >
             <RefreshCw className={cn('mr-2 w-5 h-5', isListLoading && 'animate-spin')} />
@@ -76,7 +76,7 @@ export const ListingsHero = ({
         <div className="relative">
           <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <Database className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -93,7 +93,7 @@ export const ListingsHero = ({
         <div className="relative">
           <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+              <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
                 <Upload className="w-5 h-5" />
               </div>
               <div className="space-y-1">

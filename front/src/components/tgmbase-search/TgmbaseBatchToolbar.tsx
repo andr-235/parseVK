@@ -68,7 +68,7 @@ export function TgmbaseBatchToolbar({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={'581341734\n@Andrei79ru\n+79991234567'}
-          className="min-h-40 w-full rounded-card border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400/60"
+          className="min-h-40 w-full rounded-card border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-primary/60"
         />
 
         <div className="rounded-card border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-300">
@@ -80,12 +80,12 @@ export function TgmbaseBatchToolbar({
 
         {progress ? (
           <div
-            className="rounded-card border border-cyan-400/20 bg-slate-900/80 p-4"
+            className="rounded-card border border-primary/20 bg-[#131316]/90 p-4"
             aria-live="polite"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-cyan-300/70">
+                <div className="text-xs uppercase tracking-[0.24em] text-primary/70">
                   Прогресс поиска
                 </div>
                 <div className="mt-1 text-base font-semibold text-white">
@@ -104,7 +104,7 @@ export function TgmbaseBatchToolbar({
               aria-valuemax={100}
             >
               <div
-                className="h-full rounded-full bg-cyan-400 transition-[width] duration-300"
+                className="h-full rounded-full bg-primary transition-[width] duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>

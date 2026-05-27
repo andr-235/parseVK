@@ -202,7 +202,7 @@ function TelegramDlMatchResultRow({
               <Badge className="bg-emerald-400/10 text-emerald-200">ID match</Badge>
             ) : null}
             {result.usernameMatch ? (
-              <Badge className="bg-cyan-400/10 text-cyan-200">Username match</Badge>
+              <Badge className="bg-primary/10 text-orange-200">Username match</Badge>
             ) : null}
             {result.phoneMatch ? (
               <Badge className="bg-amber-400/10 text-amber-200">Phone match</Badge>

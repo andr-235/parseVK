@@ -48,7 +48,7 @@ export default function TelegramDlUploadCard({
     <SectionCard
       title="Загрузка файлов"
       description="Выберите один или несколько XLSX файлов и проверьте список перед отправкой."
-      className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl"
+      className="relative border border-white/10 bg-[#131316]/90 backdrop-blur-2xl"
       headerClassName="border-white/10"
       contentClassName="space-y-6"
     >
@@ -107,7 +107,7 @@ export default function TelegramDlUploadCard({
 
         <Button
           type="button"
-          className="w-full h-11 bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25"
+          className="w-full h-11 bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25"
           disabled={selectedFiles.length === 0 || isUploading}
           onClick={() => void handleSubmit()}
         >
@@ -123,7 +123,7 @@ export default function TelegramDlUploadCard({
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="truncate text-white">{file.originalFileName}</span>
-                  <span className="shrink-0 text-cyan-300">{file.status}</span>
+                  <span className="shrink-0 text-primary">{file.status}</span>
                 </div>
                 <div className="mt-1 text-xs text-slate-400">
                   Строк: {file.rowsSuccess}/{file.rowsTotal}

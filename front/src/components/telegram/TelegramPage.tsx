@@ -21,7 +21,7 @@ function TelegramPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Управление подключением
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
@@ -36,7 +36,7 @@ function TelegramPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Результат синхронизации
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
         <TelegramMembersCard data={data} />

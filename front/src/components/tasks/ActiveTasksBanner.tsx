@@ -38,10 +38,10 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
           {indicatorText && (
             <Badge
               variant="outline"
-              className="gap-2 rounded-md border border-cyan-500/20 bg-cyan-950/20 text-cyan-400 font-monitoring-body text-xs font-semibold uppercase tracking-wider"
+              className="gap-2 rounded-md border border-primary/20 bg-orange-950/20 text-primary font-monitoring-body text-xs font-semibold uppercase tracking-wider"
             >
               <span className="relative flex h-2 w-2">
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary animate-pulse" />
               </span>
               {indicatorText}
             </Badge>

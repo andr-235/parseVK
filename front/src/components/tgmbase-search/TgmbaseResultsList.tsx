@@ -54,8 +54,8 @@ export function TgmbaseResultsList({
                   className={cn(
                     'w-full rounded-card border px-4 py-3 text-left transition',
                     selected
-                      ? 'border-cyan-400/60 bg-cyan-400/10'
-                      : 'border-white/10 bg-slate-950/60 hover:border-cyan-400/30 hover:bg-slate-950'
+                      ? 'border-primary/60 bg-primary/10'
+                      : 'border-white/10 bg-slate-950/60 hover:border-primary/30 hover:bg-slate-950'
                   )}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -67,7 +67,7 @@ export function TgmbaseResultsList({
                         </Badge>
                         <Badge
                           variant="outline"
-                          className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200"
+                          className="border-primary/30 bg-primary/10 text-orange-200"
                         >
                           {tgmbaseStatusLabels[item.status]}
                         </Badge>

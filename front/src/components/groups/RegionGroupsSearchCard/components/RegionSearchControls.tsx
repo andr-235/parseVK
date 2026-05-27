@@ -55,7 +55,7 @@ export const RegionSearchControls = ({
               checked={isAllSelected}
               disabled={!hasResults || isLoading}
               onChange={(event) => onToggleSelectAll(event.target.checked)}
-              className="peer size-4 cursor-pointer appearance-none rounded border border-white/20 bg-slate-800/50 transition-all duration-200 checked:border-cyan-500 checked:bg-cyan-500 focus:ring-2 focus:ring-cyan-400/20"
+              className="peer size-4 cursor-pointer appearance-none rounded border border-white/20 bg-slate-800/50 transition-all duration-200 checked:border-primary checked:bg-primary focus:ring-2 focus:ring-primary/20"
             />
             <svg
               className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-white opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
@@ -82,7 +82,7 @@ export const RegionSearchControls = ({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-2 border-white/10 bg-slate-800/50 text-slate-300 hover:border-cyan-400/50 hover:bg-slate-800 hover:text-white"
+              className="h-8 gap-2 border-[#2a2a30] bg-[#1c1c21] text-slate-300 hover:border-primary/50 hover:bg-slate-800 hover:text-white"
             >
               <ArrowUpDown className="size-3.5" />
               <span className="max-w-[100px] truncate text-xs">{currentSortLabel}</span>
@@ -102,7 +102,7 @@ export const RegionSearchControls = ({
                 >
                   {col.header}
                   {sortState?.key === col.key && (
-                    <span className="ml-auto font-mono-accent text-xs text-cyan-400">
+                    <span className="ml-auto font-mono-accent text-xs text-primary">
                       {sortState.direction === 'asc' ? ' ↑' : ' ↓'}
                     </span>
                   )}
@@ -114,11 +114,11 @@ export const RegionSearchControls = ({
         <Button
           type="button"
           size="sm"
-          className="group relative h-8 overflow-hidden bg-gradient-to-r from-cyan-500/80 to-blue-500/80 text-xs font-semibold text-white shadow-md shadow-cyan-500/20 transition-all duration-300 hover:from-cyan-500 hover:to-blue-500 hover:shadow-lg hover:shadow-cyan-500/30"
+          className="group relative h-8 overflow-hidden bg-gradient-to-r from-primary/80 to-orange-500/80 text-xs font-semibold text-white shadow-md shadow-primary/20 transition-all duration-300 hover:from-primary hover:to-orange-500 hover:shadow-lg hover:shadow-primary/30"
           disabled={isLoading || isBulkAdding || !hasResults}
           onClick={onAddGroups}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary to-orange-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           <span className="relative flex items-center gap-1.5">
             {isBulkAdding && <Spinner className="size-3" />}
             {hasSelection ? `Добавить (${selectionSize})` : 'Добавить все'}

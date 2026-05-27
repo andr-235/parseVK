@@ -54,7 +54,7 @@ function KeywordsPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Добавить ключевые слова
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
         <KeywordsForm
@@ -81,7 +81,7 @@ function KeywordsPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Словарь ключевых слов
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
         <KeywordsTableCard

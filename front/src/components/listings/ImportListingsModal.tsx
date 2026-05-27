@@ -52,13 +52,13 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top glow line */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-slate-800/50">
-              <Upload className="h-5 w-5 text-cyan-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#2a2a30] bg-[#1c1c21]">
+              <Upload className="h-5 w-5 text-primary" />
             </div>
             <div>
               <h2 className="font-monitoring-display text-xl font-semibold text-white">
@@ -84,7 +84,7 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
               Источник данных
             </label>
             <select
-              className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-slate-800/50 px-3 text-sm text-white outline-none transition-all duration-200 focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/20"
+              className="h-11 w-full appearance-none rounded-xl border border-[#2a2a30] bg-[#1c1c21] px-3 text-sm text-white outline-none transition-all duration-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
               value={uploadSourceMode}
               onChange={(e) => setUploadSourceMode(e.target.value as 'avito' | 'youla' | 'custom')}
             >
@@ -103,7 +103,7 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
                 value={customSource}
                 onChange={(e) => setCustomSource(e.target.value)}
                 placeholder="Например, Циан"
-                className="h-11 border-white/10 bg-slate-800/50 text-white placeholder:text-slate-500 transition-all duration-200 focus:border-cyan-400/50 focus:ring-cyan-400/20"
+                className="h-11 border-[#2a2a30] bg-[#1c1c21] text-white placeholder:text-slate-500 transition-all duration-200 focus:border-primary/50 focus:ring-primary/20"
               />
             </div>
           )}
@@ -112,7 +112,7 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
           <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-slate-800/30 p-3 transition-colors duration-200 hover:bg-white/5">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-white/20 bg-slate-800 text-cyan-500 focus:ring-cyan-400/20"
+              className="h-4 w-4 rounded border-white/20 bg-slate-800 text-primary focus:ring-primary/20"
               checked={updateExisting}
               onChange={(e) => setUpdateExisting(e.target.checked)}
             />
@@ -121,10 +121,10 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
 
           {/* Info block */}
           <div className="flex gap-3 rounded-xl border border-white/10 bg-slate-800/30 p-4">
-            <FileJson className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
+            <FileJson className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <p className="text-xs leading-relaxed text-slate-400">
               Поддерживаются JSON-файлы, содержащие массив объявлений или объект с полем{' '}
-              <code className="font-mono-accent font-bold text-cyan-400">listings</code>.
+              <code className="font-mono-accent font-bold text-primary">listings</code>.
             </p>
           </div>
 
@@ -151,14 +151,14 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
               disabled={isUploading}
               isLoading={isUploading}
               buttonText={isUploading ? 'Загрузка...' : 'Выбрать файл'}
-              buttonClassName="group relative h-11 overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              buttonClassName="group relative h-11 overflow-hidden bg-gradient-to-r from-primary to-orange-500 font-semibold text-white shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               uploadIcon={isUploading ? <Spinner className="size-4" /> : <></>}
             />
           </div>
         </div>
 
         {/* Bottom accent line */}
-        <div className="h-px bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500" />
+        <div className="h-px bg-gradient-to-r from-primary via-orange-500 to-purple-500" />
       </div>
     </div>
   )

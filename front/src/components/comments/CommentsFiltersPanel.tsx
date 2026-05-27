@@ -73,12 +73,12 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
       {/* Search input */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="group relative w-full sm:max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400 transition-colors duration-200 group-focus-within:text-cyan-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400 transition-colors duration-200 group-focus-within:text-primary" />
           <Input
             value={searchTerm}
             onChange={handleSearchChange}
             placeholder="Поиск по тексту, автору или ID..."
-            className="h-11 rounded-lg border-white/10 bg-slate-800/50 pl-10 font-monitoring-body text-white placeholder:text-slate-500 transition-all duration-200 hover:bg-slate-800/70 focus:border-cyan-400/50 focus:bg-slate-800/70 focus:ring-cyan-400/20"
+            className="h-11 rounded-lg border-[#2a2a30] bg-[#1c1c21] pl-10 font-monitoring-body text-white placeholder:text-slate-500 transition-all duration-200 hover:bg-slate-800/70 focus:border-primary/50 focus:bg-slate-800/70 focus:ring-primary/20"
           />
         </div>
       </div>
@@ -98,7 +98,7 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
             className={cn(
               'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
               viewMode === 'comments'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
                 : 'text-slate-400 hover:bg-white/5 hover:text-white'
             )}
           >
@@ -111,7 +111,7 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
             className={cn(
               'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
               viewMode === 'posts'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
                 : 'text-slate-400 hover:bg-white/5 hover:text-white'
             )}
           >
@@ -128,7 +128,7 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
             className={cn(
               'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
               readFilter === 'all'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
                 : 'text-slate-400 hover:bg-white/5 hover:text-white'
             )}
           >
@@ -141,7 +141,7 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
             className={cn(
               'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
               readFilter === 'unread'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
                 : 'text-slate-400 hover:bg-white/5 hover:text-white'
             )}
           >
@@ -154,7 +154,7 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
             className={cn(
               'h-8 rounded-md px-3 font-mono-accent text-xs font-medium transition-all duration-200',
               readFilter === 'read'
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
                 : 'text-slate-400 hover:bg-white/5 hover:text-white'
             )}
           >
@@ -174,7 +174,7 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
                 className={cn(
                   'h-9 rounded-full border px-4 font-mono-accent text-xs font-medium transition-all duration-200',
                   showKeywordComments
-                    ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-lg shadow-cyan-500/10 hover:bg-cyan-500/20'
+                    ? 'border-primary/30 bg-primary/10 text-primary shadow-lg shadow-primary/10 hover:bg-primary/20'
                     : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20 hover:text-white'
                 )}
               >
@@ -187,7 +187,7 @@ const CommentsFiltersPanel = memo(function CommentsFiltersPanel({
                 className={cn(
                   'h-9 rounded-full border px-4 font-mono-accent text-xs font-medium transition-all duration-200',
                   showKeywordPosts
-                    ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-lg shadow-cyan-500/10 hover:bg-cyan-500/20'
+                    ? 'border-primary/30 bg-primary/10 text-primary shadow-lg shadow-primary/10 hover:bg-primary/20'
                     : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20 hover:text-white'
                 )}
               >

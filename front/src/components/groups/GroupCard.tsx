@@ -20,11 +20,11 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
   return (
     <div className="group relative h-full">
       {/* Subtle glow on hover only */}
-      <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-cyan-500/0 via-blue-500/0 to-purple-500/0 opacity-0 blur-xl transition-all duration-500 group-hover:from-cyan-500/20 group-hover:via-blue-500/20 group-hover:to-purple-500/20 group-hover:opacity-100" />
+      <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-primary/0 via-orange-500/0 to-purple-500/0 opacity-0 blur-xl transition-all duration-500 group-hover:from-primary/20 group-hover:via-orange-500/20 group-hover:to-zinc-800/10 group-hover:opacity-100" />
 
       <Card className="relative flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm transition-all duration-300 group-hover:border-white/20 group-hover:shadow-lg">
         {/* Top border glow */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
         {/* Header with avatar - FIXED HEIGHT */}
         <div className="flex shrink-0 items-start gap-3 border-b border-white/5 bg-slate-800/30 p-4">
@@ -37,7 +37,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
               />
             ) : (
               <div className="flex size-12 items-center justify-center rounded-full border border-white/10 bg-slate-800 shadow-lg">
-                <span className="font-monitoring-display text-xl font-semibold text-cyan-400">
+                <span className="font-monitoring-display text-xl font-semibold text-primary">
                   {group.name?.[0]?.toUpperCase() ?? '?'}
                 </span>
               </div>
@@ -52,7 +52,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
           <div className="min-w-0 flex-1">
             {/* Title - max 2 lines with ellipsis */}
             <h3
-              className="font-monitoring-display line-clamp-2 text-base font-semibold leading-tight text-white transition-colors duration-200 group-hover:text-cyan-400"
+              className="font-monitoring-display line-clamp-2 text-base font-semibold leading-tight text-white transition-colors duration-200 group-hover:text-primary"
               title={group.name}
             >
               {group.name}
@@ -72,7 +72,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
         <CardContent className="flex flex-1 flex-col gap-4 overflow-hidden p-4 pt-5">
           {/* Status - optional, max 2 lines */}
           {group.status && (
-            <div className="shrink-0 rounded-md border border-cyan-500/20 bg-cyan-500/5 p-2.5">
+            <div className="shrink-0 rounded-md border border-primary/20 bg-primary/5 p-2.5">
               <p className="line-clamp-2 text-xs italic leading-snug text-slate-300">
                 "{group.status}"
               </p>
@@ -81,7 +81,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
 
           {/* Members count - fixed height */}
           <div className="flex shrink-0 items-center gap-2">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Users className="size-4" />
             </div>
             <span className="font-monitoring-display text-base font-semibold text-white">
@@ -108,7 +108,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 flex-1 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-cyan-400"
+            className="h-8 flex-1 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-primary"
             onClick={() => window.open(link, '_blank')}
           >
             <ExternalLink className="mr-1.5 size-3.5" />
@@ -127,7 +127,7 @@ export function GroupCard({ group, onDelete }: GroupCardProps) {
         </CardFooter>
 
         {/* Bottom accent line on hover */}
-        <div className="h-0.5 shrink-0 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="h-0.5 shrink-0 bg-gradient-to-r from-primary via-orange-500 to-purple-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       </Card>
     </div>
   )

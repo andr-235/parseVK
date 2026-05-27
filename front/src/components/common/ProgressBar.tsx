@@ -24,8 +24,8 @@ const clampPercentage = (value: number): number => {
 
 const TONE_STYLES = {
   primary: {
-    gradient: 'from-cyan-500 to-blue-500',
-    glow: 'shadow-cyan-500/25',
+    gradient: 'from-primary to-orange-500',
+    glow: 'shadow-primary/25',
   },
   success: {
     gradient: 'from-green-500 to-emerald-500',
@@ -40,7 +40,7 @@ const TONE_STYLES = {
     glow: 'shadow-red-500/25',
   },
   info: {
-    gradient: 'from-sky-500 to-blue-500',
+    gradient: 'from-sky-500 to-orange-500',
     glow: 'shadow-sky-500/25',
   },
 } as const

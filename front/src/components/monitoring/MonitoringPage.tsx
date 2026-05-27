@@ -104,11 +104,11 @@ function MonitoringPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Поиск по ключевым словам
           </h2>
-          <div className="h-px flex-1 bg-linear-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
-        <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-6 overflow-hidden">
-          <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-400/50 to-transparent" />
+        <Card className="border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-6 overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/50 to-transparent" />
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="space-y-2">
               <label className="text-xs font-medium uppercase tracking-wider text-slate-400">
@@ -125,7 +125,7 @@ function MonitoringPage() {
                     }
                   }}
                   placeholder="Ключевые слова через запятую или новую строку"
-                  className="h-11 border-white/10 bg-slate-800/50 pl-11 text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:ring-cyan-400/20 transition-all duration-200"
+                  className="h-11 border-[#2a2a30] bg-[#1c1c21] pl-11 text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                 />
               </div>
               <p className="text-xs text-slate-500">Подсказка: нажмите Enter для применения</p>
@@ -133,14 +133,14 @@ function MonitoringPage() {
             <div className="flex flex-wrap items-center gap-2 lg:justify-end">
               <Button
                 onClick={applyManualSearch}
-                className="h-11 bg-linear-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40 transition-all duration-300"
+                className="h-11 bg-linear-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300"
               >
                 Применить
               </Button>
               <Button
                 variant="outline"
                 onClick={clearManualSearch}
-                className="h-11 border-white/10 bg-slate-800/50 text-white hover:bg-white/5 transition-all duration-200"
+                className="h-11 border-[#2a2a30] bg-[#1c1c21] text-white hover:bg-white/5 transition-all duration-200"
               >
                 Сброс
               </Button>
@@ -153,7 +153,7 @@ function MonitoringPage() {
       <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">Период</h2>
-          <div className="h-px flex-1 bg-linear-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -169,8 +169,8 @@ function MonitoringPage() {
                 className={cn(
                   'h-10 px-4 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200',
                   isActive
-                    ? 'bg-linear-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
-                    : 'border-white/10 bg-slate-800/50 text-white hover:bg-white/5'
+                    ? 'bg-linear-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
+                    : 'border-[#2a2a30] bg-[#1c1c21] text-white hover:bg-white/5'
                 )}
               >
                 {option.label}
@@ -184,17 +184,17 @@ function MonitoringPage() {
       <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-300">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">Статистика</h2>
-          <div className="h-px flex-1 bg-linear-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Messages Card */}
           <div className="relative">
-            <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-cyan-500/20 to-blue-500/20 opacity-50 blur-lg" />
-            <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-              <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-400/50 to-transparent" />
+            <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-primary/20 to-orange-500/20 opacity-50 blur-lg" />
+            <Card className="relative border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-5 overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/50 to-transparent" />
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary">
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <div className="space-y-1">
@@ -211,11 +211,11 @@ function MonitoringPage() {
 
           {/* Keywords Card */}
           <div className="relative">
-            <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-blue-500/20 to-purple-500/20 opacity-50 blur-lg" />
-            <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
-              <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-blue-400/50 to-transparent" />
+            <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-orange-500/20 to-zinc-800/10 opacity-50 blur-lg" />
+            <Card className="relative border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-5 overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-orange-400/50 to-transparent" />
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
                   <Hash className="w-5 h-5" />
                 </div>
                 <div className="space-y-1">
@@ -232,8 +232,8 @@ function MonitoringPage() {
 
           {/* Last Updated Card */}
           <div className="relative sm:col-span-2 lg:col-span-1">
-            <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-purple-500/20 to-cyan-500/20 opacity-50 blur-lg" />
-            <Card className="relative border border-white/10 bg-slate-900/80 backdrop-blur-2xl p-5 overflow-hidden">
+            <div className="absolute -inset-0.5 rounded-xl bg-linear-to-r from-zinc-800/10 to-primary/20 opacity-50 blur-lg" />
+            <Card className="relative border border-white/10 bg-[#131316]/90 backdrop-blur-2xl p-5 overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-purple-400/50 to-transparent" />
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
@@ -261,7 +261,7 @@ function MonitoringPage() {
               <h2 className="font-monitoring-display text-2xl font-semibold text-white">
                 Активные ключи
               </h2>
-              <div className="h-px flex-1 bg-linear-to-r from-transparent via-cyan-400/50 to-transparent" />
+              <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
             </div>
             <Badge
               variant="outline"
@@ -277,7 +277,7 @@ function MonitoringPage() {
                 <Badge
                   key={keyword}
                   variant="outline"
-                  className="rounded-full border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300"
+                  className="rounded-full border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
                 >
                   {keyword}
                 </Badge>
@@ -302,7 +302,7 @@ function MonitoringPage() {
       <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-500">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">Сообщения</h2>
-          <div className="h-px flex-1 bg-linear-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
         <MonitoringMessagesCard

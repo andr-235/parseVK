@@ -42,7 +42,7 @@ export function TgmbaseResultDetails({
               {hasActiveFilters ? (
                 <button
                   type="button"
-                  className="text-cyan-300 underline underline-offset-4"
+                  className="text-primary underline underline-offset-4"
                   onClick={onResetFilters}
                 >
                   Сбросить фильтры
@@ -64,7 +64,7 @@ export function TgmbaseResultDetails({
       <CardHeader className="gap-3 border-b border-white/10">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-semibold">Детали результата</h2>
-          <Badge variant="outline" className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+          <Badge variant="outline" className="border-primary/30 bg-primary/10 text-orange-200">
             {tgmbaseStatusLabels[item.status]}
           </Badge>
         </div>

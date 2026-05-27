@@ -29,7 +29,7 @@ export const TelegramCard = () => {
     <Card className="flex h-full flex-col border-border/50 bg-background-secondary/40 shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <div className="rounded-lg bg-blue-500/10 p-2 text-blue-500">
+          <div className="rounded-lg bg-orange-500/10 p-2 text-orange-500">
             <Send className="h-5 w-5" />
           </div>
           <div>
@@ -39,7 +39,7 @@ export const TelegramCard = () => {
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-6">
-        <div className="flex items-start gap-3 rounded-md bg-blue-500/10 p-4 text-sm text-blue-600 dark:text-blue-400">
+        <div className="flex items-start gap-3 rounded-md bg-orange-500/10 p-4 text-sm text-orange-600 dark:text-orange-400">
           <Info className="mt-0.5 h-5 w-5 shrink-0" />
           <div className="space-y-1">
             <p>Для работы интеграции требуются API credentials.</p>

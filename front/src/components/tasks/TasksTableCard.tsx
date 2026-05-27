@@ -34,7 +34,7 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
             История запусков
           </CardTitle>
           {hasTasks && (
-            <Badge className="border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-cyan-400">
+            <Badge className="border border-primary/20 bg-primary/10 px-3 py-1 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-primary">
               {tasks.length} {declOfNumber(tasks.length, ['задача', 'задачи', 'задач'])}
             </Badge>
           )}

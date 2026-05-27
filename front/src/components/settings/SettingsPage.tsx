@@ -16,7 +16,7 @@ function SettingsPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Конфигурация модулей
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-2">

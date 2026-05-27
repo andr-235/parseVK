@@ -67,7 +67,7 @@ function EditListingModal({ listing, isOpen, onClose, onUpdated }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top glow line */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
@@ -97,7 +97,7 @@ function EditListingModal({ listing, isOpen, onClose, onUpdated }: Props) {
                 value={note}
                 onChange={handleChange}
                 rows={5}
-                className="w-full resize-y rounded-xl border border-white/10 bg-slate-800/50 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition-all duration-200 focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/20 [scrollbar-color:rgba(255,255,255,0.25)_transparent] [scrollbar-width:thin]"
+                className="w-full resize-y rounded-xl border border-[#2a2a30] bg-[#1c1c21] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition-all duration-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 [scrollbar-color:rgba(255,255,255,0.25)_transparent] [scrollbar-width:thin]"
                 placeholder="Например, уточнения по контакту, текущие договорённости и т.п."
               />
             </div>
@@ -115,9 +115,9 @@ function EditListingModal({ listing, isOpen, onClose, onUpdated }: Props) {
               <Button
                 type="submit"
                 disabled={saving}
-                className="group relative h-11 overflow-hidden bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="group relative h-11 overflow-hidden bg-gradient-to-r from-primary to-orange-500 font-semibold text-white shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute inset-0 bg-gradient-to-r from-primary to-orange-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 <span className="relative flex items-center gap-2">
                   {saving ? (
                     <>
@@ -134,7 +134,7 @@ function EditListingModal({ listing, isOpen, onClose, onUpdated }: Props) {
         </form>
 
         {/* Bottom accent line */}
-        <div className="h-px bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500" />
+        <div className="h-px bg-gradient-to-r from-primary via-orange-500 to-purple-500" />
       </div>
     </div>
   )

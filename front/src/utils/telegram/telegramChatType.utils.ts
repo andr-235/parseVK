@@ -13,7 +13,7 @@ export const TELEGRAM_CHAT_TYPE_INFO: Record<TelegramChatType, TelegramChatTypeI
     label: 'Канал',
     icon: Hash,
     description: 'Публичный или приватный канал',
-    color: 'text-blue-500',
+    color: 'text-orange-500',
   },
   SUPERGROUP: {
     label: 'Супергруппа',

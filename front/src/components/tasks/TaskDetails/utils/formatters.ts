@@ -37,16 +37,16 @@ export const STATUS_BADGE_BASE =
 
 export const taskStatusClasses: Record<TaskStatus, string> = {
   pending: 'bg-yellow-500/10 text-yellow-500',
-  processing: 'bg-blue-500/10 text-blue-500',
-  running: 'bg-blue-500/10 text-blue-500',
+  processing: 'bg-orange-500/10 text-orange-500',
+  running: 'bg-orange-500/10 text-orange-500',
   completed: 'bg-green-500/10 text-green-500',
   failed: 'bg-red-500/10 text-red-500',
 }
 
 export const groupStatusClasses: Record<GroupStatus, string> = {
   pending: 'text-yellow-500',
-  processing: 'text-blue-500',
-  running: 'text-blue-500',
+  processing: 'text-orange-500',
+  running: 'text-orange-500',
   success: 'text-green-500',
   failed: 'text-red-500',
 }

@@ -27,7 +27,7 @@ export function TgmbaseMessagesPanel({
           messagesPage.items.map((message) => (
             <div
               key={message.id}
-              className="rounded-card border border-white/10 bg-slate-900/80 p-3"
+              className="rounded-card border border-white/10 bg-[#131316]/90 p-3"
             >
               <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                 <span>{new Date(message.date).toLocaleString('ru-RU')}</span>

@@ -51,7 +51,7 @@ function WatchlistHeroComponent({
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="space-y-3">
           <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
-            Авторы <span className="text-cyan-400">на карандаше</span>
+            Авторы <span className="text-primary">на карандаше</span>
           </h1>
           <p className="text-slate-300 max-w-2xl text-lg">
             Отслеживайте активность выбранных авторов в комментариях. Система автоматически
@@ -63,7 +63,7 @@ function WatchlistHeroComponent({
           onClick={handleRefresh}
           size="lg"
           variant="outline"
-          className="h-11 shrink-0 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+          className="h-11 shrink-0 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
           disabled={isLoadingAuthors}
         >
           <RefreshCw className={cn('mr-2 w-5 h-5', isLoadingAuthors && 'animate-spin')} />
@@ -104,7 +104,7 @@ function WatchlistHeroComponent({
 
               <div className="flex flex-wrap items-center gap-6 pt-2">
                 <div className="flex items-center gap-2.5 text-sm">
-                  <div className="p-2 rounded-full bg-cyan-500/10 text-cyan-400">
+                  <div className="p-2 rounded-full bg-primary/10 text-primary">
                     <Clock className="w-4 h-4" />
                   </div>
                   <div className="flex flex-col">
@@ -152,8 +152,8 @@ function WatchlistHeroComponent({
               className={cn(
                 'h-12 w-full text-base font-medium transition-all duration-200',
                 trackingEnabled
-                  ? 'bg-cyan-500 text-white shadow-soft-sm hover:bg-cyan-600'
-                  : 'border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50'
+                  ? 'bg-primary text-white shadow-soft-sm hover:bg-orange-600'
+                  : 'border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-primary/50'
               )}
               onClick={handleToggleTrackAll}
               disabled={isUpdatingSettings}

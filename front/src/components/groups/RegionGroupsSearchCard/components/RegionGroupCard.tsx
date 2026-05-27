@@ -25,18 +25,18 @@ export const RegionGroupCard = memo(function RegionGroupCard({
     <div className="group relative">
       {/* Subtle glow on selection */}
       {isSelected && (
-        <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 blur-lg" />
+        <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-primary/20 via-orange-500/20 to-zinc-800/10 blur-lg" />
       )}
 
       <div
         className={`relative flex flex-col gap-3 rounded-lg border p-4 transition-all duration-300 ${
           isSelected
-            ? 'border-cyan-500/40 bg-cyan-500/5 shadow-lg shadow-cyan-500/10'
+            ? 'border-primary/40 bg-primary/5 shadow-lg shadow-primary/10'
             : 'border-white/10 bg-slate-900/50 hover:border-white/20 hover:bg-slate-800/50'
         }`}
       >
         {/* Top border glow */}
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
         <div className="flex items-start gap-3">
           {/* Custom checkbox */}
@@ -45,7 +45,7 @@ export const RegionGroupCard = memo(function RegionGroupCard({
               type="checkbox"
               checked={isSelected}
               onChange={() => onToggleSelection(group.id)}
-              className="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-white/20 bg-slate-800/50 transition-all duration-200 checked:border-cyan-500 checked:bg-cyan-500 focus:ring-2 focus:ring-cyan-400/20"
+              className="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-white/20 bg-slate-800/50 transition-all duration-200 checked:border-primary checked:bg-primary focus:ring-2 focus:ring-primary/20"
             />
             <svg
               className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-white opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
@@ -63,7 +63,7 @@ export const RegionGroupCard = memo(function RegionGroupCard({
               href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="block truncate font-monitoring-display text-sm font-medium leading-tight text-white transition-colors duration-200 hover:text-cyan-400 hover:underline"
+              className="block truncate font-monitoring-display text-sm font-medium leading-tight text-white transition-colors duration-200 hover:text-primary hover:underline"
               title={group.name}
             >
               {group.name}
@@ -87,7 +87,7 @@ export const RegionGroupCard = memo(function RegionGroupCard({
         {/* Metrics */}
         <div className="flex items-center justify-between gap-3 text-sm">
           <div className="flex items-center gap-2" title="Участники">
-            <div className="flex size-6 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-400">
+            <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
               <UsersIcon className="size-3.5" />
             </div>
             <span className="font-mono-accent text-xs font-medium text-slate-300">
@@ -105,13 +105,13 @@ export const RegionGroupCard = memo(function RegionGroupCard({
         {/* Add button */}
         <Button
           size="sm"
-          className="group/btn relative h-8 overflow-hidden bg-gradient-to-r from-cyan-500/80 to-blue-500/80 text-xs font-semibold text-white shadow-md shadow-cyan-500/20 transition-all duration-300 hover:from-cyan-500 hover:to-blue-500 hover:shadow-lg hover:shadow-cyan-500/30"
+          className="group/btn relative h-8 overflow-hidden bg-gradient-to-r from-primary/80 to-orange-500/80 text-xs font-semibold text-white shadow-md shadow-primary/20 transition-all duration-300 hover:from-primary hover:to-orange-500 hover:shadow-lg hover:shadow-primary/30"
           onClick={() => {
             void onAddGroup(group)
           }}
           disabled={isBulkAdding}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 transition-opacity duration-300 group-hover/btn:opacity-100" />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary to-orange-400 opacity-0 transition-opacity duration-300 group-hover/btn:opacity-100" />
           <span className="relative flex items-center justify-center gap-1.5">
             <Plus className="size-3" />
             Добавить

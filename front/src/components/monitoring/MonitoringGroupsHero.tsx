@@ -13,8 +13,8 @@ const getNavButtonClasses = (isActive: boolean) =>
   cn(
     'inline-flex h-9 items-center rounded-lg px-3 text-[11px] font-semibold uppercase tracking-wide transition-all duration-200 sm:h-10 sm:px-4 sm:text-xs',
     isActive
-      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
-      : 'border border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50'
+      ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
+      : 'border border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-primary/50'
   )
 
 export const MonitoringGroupsHero = ({
@@ -30,7 +30,7 @@ export const MonitoringGroupsHero = ({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-3">
           <h1 className="font-monitoring-display text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl">
-            Группы <span className="text-cyan-400">{sourceName}</span>
+            Группы <span className="text-primary">{sourceName}</span>
           </h1>
           <p className="max-w-[68ch] text-sm leading-6 text-slate-300 sm:text-base md:text-lg">
             Привяжите chat_id к названию группы и зафиксируйте категорию для быстрой навигации в
@@ -53,7 +53,7 @@ export const MonitoringGroupsHero = ({
         <div className="relative">
           <Card className="relative overflow-hidden border border-border/60 bg-background-secondary p-4 shadow-soft-sm">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <Users className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -72,7 +72,7 @@ export const MonitoringGroupsHero = ({
         <div className="relative">
           <Card className="relative overflow-hidden border border-border/60 bg-background-secondary p-4 shadow-soft-sm">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+              <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
                 <Link className="w-5 h-5" />
               </div>
               <div className="space-y-1">

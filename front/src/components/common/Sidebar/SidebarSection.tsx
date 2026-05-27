@@ -59,7 +59,7 @@ export function SidebarSection({
             <ChevronDown
               className={cn(
                 'h-4 w-4 transition-all duration-300 text-slate-400',
-                isExpanded && 'rotate-180 text-cyan-400'
+                isExpanded && 'rotate-180 text-primary'
               )}
             />
           </>
@@ -67,7 +67,7 @@ export function SidebarSection({
       </button>
 
       {!isCollapsed && isExpanded && (
-        <div className="ml-4 space-y-1 mt-2 border-l border-cyan-400/20 pl-3 animate-in fade-in-0 slide-in-from-top-2 duration-500">
+        <div className="ml-4 space-y-1 mt-2 border-l border-primary/20 pl-3 animate-in fade-in-0 slide-in-from-top-2 duration-500">
           {items.map((item, index) =>
             isNavGroup(item) ? (
               <div

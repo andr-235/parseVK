@@ -37,10 +37,10 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm text-slate-400">
         <span>Найдено: {result.total}</span>
-        <Badge className="border-white/10 bg-slate-800/50 text-slate-300">
+        <Badge className="border-[#2a2a30] bg-[#1c1c21] text-slate-300">
           {result.viewMode === 'posts' ? 'Посты' : 'Комментарии'}
         </Badge>
-        <Badge className="border-white/10 bg-slate-800/50 text-slate-300">{result.source}</Badge>
+        <Badge className="border-[#2a2a30] bg-[#1c1c21] text-slate-300">{result.source}</Badge>
       </div>
 
       {result.items.map((item) =>
@@ -95,7 +95,7 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
                   {item.highlight.map((chunk, index) => (
                     <Badge
                       key={`highlight-${item.commentId}-${index}`}
-                      className="border-cyan-500/30 bg-cyan-500/10 text-cyan-300"
+                      className="border-primary/30 bg-primary/10 text-primary"
                     >
                       {chunk.replace(/<[^>]+>/g, '')}
                     </Badge>

@@ -512,7 +512,7 @@ function MetricsPage() {
                   </div>
                   <div className="flex justify-between text-xs border-t border-slate-850 pt-2 font-semibold">
                     <span className="text-slate-300">Resident Set Size (RSS):</span>
-                    <span className="font-mono text-cyan-400">
+                    <span className="font-mono text-primary">
                       {metrics.system.memory.rss.toFixed(2)} МБ
                     </span>
                   </div>
@@ -539,7 +539,7 @@ function MetricsPage() {
                   </div>
                   <div className="flex justify-between text-xs border-t border-slate-850 pt-2 font-semibold">
                     <span className="text-slate-300">Суммарное время загрузки:</span>
-                    <span className="font-mono text-cyan-400">
+                    <span className="font-mono text-primary">
                       {(metrics.system.cpu.user + metrics.system.cpu.system).toFixed(3)}с
                     </span>
                   </div>

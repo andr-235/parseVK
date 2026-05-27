@@ -15,7 +15,7 @@ export const AdminUsersHero = ({ totalUsers, onRefresh, isLoading }: AdminUsersH
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="space-y-3">
           <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-white">
-            Управление <span className="text-cyan-400">пользователями</span>
+            Управление <span className="text-primary">пользователями</span>
           </h1>
           <p className="text-slate-300 max-w-2xl text-lg">
             Создавайте учетные записи, назначайте роли и контролируйте доступ к системе. Управление
@@ -27,7 +27,7 @@ export const AdminUsersHero = ({ totalUsers, onRefresh, isLoading }: AdminUsersH
           onClick={onRefresh}
           size="lg"
           variant="outline"
-          className="h-11 shrink-0 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-cyan-400/50 transition-all duration-200"
+          className="h-11 shrink-0 border-border/60 bg-background/50 text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
           disabled={isLoading}
         >
           <RefreshCw className={cn('mr-2 w-5 h-5', isLoading && 'animate-spin')} />
@@ -40,7 +40,7 @@ export const AdminUsersHero = ({ totalUsers, onRefresh, isLoading }: AdminUsersH
         <div className="relative">
           <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <Users className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -59,7 +59,7 @@ export const AdminUsersHero = ({ totalUsers, onRefresh, isLoading }: AdminUsersH
         <div className="relative">
           <Card className="relative border border-border/60 bg-background-secondary shadow-soft-sm p-5 overflow-hidden">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+              <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
                 <Shield className="w-5 h-5" />
               </div>
               <div className="space-y-1">

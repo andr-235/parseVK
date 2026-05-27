@@ -14,7 +14,7 @@ export default function TelegramDlUploadHistory({
     <SectionCard
       title="История загрузок"
       description="Последние импортированные файлы, пропущенные дубликаты и активные версии появятся здесь."
-      className="border border-white/10 bg-slate-900/80 backdrop-blur-2xl"
+      className="border border-white/10 bg-[#131316]/90 backdrop-blur-2xl"
       headerClassName="border-white/10"
       contentClassName="space-y-4"
     >

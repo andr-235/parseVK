@@ -319,7 +319,7 @@ export function MonitoringMessagesCard({
               <div
                 key={messageId}
                 className={cn(
-                  "group relative overflow-hidden rounded-xl border border-border/60 bg-slate-900/40 shadow-soft-sm transition duration-300 hover:border-cyan-500/35 hover:-translate-y-0.5 hover:shadow-soft-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4",
+                  "group relative overflow-hidden rounded-xl border border-border/60 bg-slate-900/40 shadow-soft-sm transition duration-300 hover:border-primary/35 hover:-translate-y-0.5 hover:shadow-soft-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4",
                   isCompact ? "p-3" : "p-5"
                 )}
                 style={{ animationDelay: `${delay}ms` }}

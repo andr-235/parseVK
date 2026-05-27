@@ -73,7 +73,7 @@ export default function TelegramDlMatchToolbar({
       }
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className="border-cyan-400/30 bg-cyan-400/10 text-cyan-100">
+        <Badge variant="outline" className="border-primary/30 bg-primary/10 text-orange-100">
           Режим: {statusLabel}
         </Badge>
         <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-100">
@@ -83,7 +83,7 @@ export default function TelegramDlMatchToolbar({
           Совпадения: {matchResultsCount}
         </Badge>
         {activeMatchRun ? (
-          <Badge variant="outline" className="border-cyan-400/30 bg-cyan-400/10 text-cyan-100">
+          <Badge variant="outline" className="border-primary/30 bg-primary/10 text-orange-100">
             Запуск: {activeMatchRun.status}
           </Badge>
         ) : (

@@ -40,7 +40,7 @@ export function TgmbaseSearchForm({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={'581341734\n@Andrei79ru\n+79991234567'}
-          className="min-h-48 w-full rounded-card border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400/60"
+          className="min-h-48 w-full rounded-card border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-primary/60"
         />
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
           <div>Подготовлено запросов: {queries.length}</div>
