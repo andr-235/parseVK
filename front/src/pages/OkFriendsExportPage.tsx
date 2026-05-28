@@ -1,5 +1,5 @@
-import { FriendsExportPage } from '@/components/common'
+import OkFriendsExportPage from '@/components/okFriendsExport/OkFriendsExportPage'
 
 export default function OkFriendsExportPageRoute() {
-  return <FriendsExportPage platform="ok" />
+  return <OkFriendsExportPage />
 }

@@ -1,5 +1,5 @@
-import { FriendsExportPage } from '@/components/common'
+import VkFriendsExportPage from '@/components/vkFriendsExport/VkFriendsExportPage'
 
 export default function VkFriendsExportPageRoute() {
-  return <FriendsExportPage platform="vk" />
+  return <VkFriendsExportPage />
 }

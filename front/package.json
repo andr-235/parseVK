@@ -16,8 +16,7 @@
     "test:watch": "vitest --project unit",
     "test:coverage": "vitest run --project unit --coverage",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
-    "audit:architecture": "node scripts/audit-architecture.js"
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
