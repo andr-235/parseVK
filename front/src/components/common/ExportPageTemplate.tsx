@@ -101,7 +101,7 @@ export const ExportPageTemplate = ({
   }, [jobProgress, isProgressIndeterminate])
 
   return (
-    <div className="flex flex-col gap-8 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body animate-in fade-in-0 duration-700">
+    <div className="flex flex-col gap-8 max-w-400 mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body animate-in fade-in-0 duration-700">
       {/* High-density Console Page Header */}
       <PageHeader
         title={title}
@@ -117,10 +117,10 @@ export const ExportPageTemplate = ({
         
         {/* Left Column: Control Panel */}
         <div className="space-y-6">
-          <PageHeader title="Параметры запуска" platformLabel={presets.length > 0 ? "TERMINAL" : undefined} platformColorClass="text-accent-primary" />
+          <PageHeader title="Параметры запуска" platformColorClass="text-accent-primary" />
 
           <Card className="border border-border bg-background-secondary/95 rounded-card p-6 overflow-hidden relative shadow-soft-sm">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-primary/5 via-transparent to-transparent opacity-30" />
+            <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-accent-primary/5 via-transparent to-transparent opacity-30" />
 
             <div className="relative space-y-6 z-10">
               {/* Parameter Presets if available */}
@@ -177,9 +177,9 @@ export const ExportPageTemplate = ({
 
         {/* Right Column: Live Stream Panel */}
         <div className="space-y-6">
-          <PageHeader title="Служба мониторинга" platformLabel="LIVE TRACK" platformColorClass="text-accent-primary" />
+          <PageHeader title="Служба мониторинга" platformColorClass="text-accent-primary" />
 
-          <Card className="border border-border bg-background-secondary/95 rounded-card p-6 overflow-hidden relative shadow-soft-sm flex flex-col justify-between h-full min-h-[460px]">
+          <Card className="border border-border bg-background-secondary/95 rounded-card p-6 overflow-hidden relative shadow-soft-sm flex flex-col justify-between h-full min-h-115">
             <div className="space-y-6">
               
               {/* Modern Linear Progress Section */}
@@ -280,7 +280,7 @@ export const ExportPageTemplate = ({
                             <span className={`shrink-0 font-semibold text-[10px] uppercase border px-1 rounded ${LOG_LEVEL_CLASSES[log.level]}`}>
                               {LOG_LEVEL_LABELS[log.level]}
                             </span>
-                            <span className="text-text-primary flex-1 break-words">{log.message}</span>
+                            <span className="text-text-primary flex-1 wrap-break-word">{log.message}</span>
                             {log.createdAt && (
                               <span className="text-[10px] text-text-secondary select-none font-medium">
                                 {formatLogTime(log.createdAt)}

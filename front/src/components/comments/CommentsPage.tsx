@@ -1,6 +1,8 @@
-import { PageHeader } from '@/components/common'
+import { PageHeader, FiltersPanel } from '@/components/common'
 import { MessageSquare, Eye, CheckCircle2 } from 'lucide-react'
-import CommentsFiltersPanel from '@/components/comments/CommentsFiltersPanel'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/utils/common'
 import CommentsSearchResults from '@/components/comments/CommentsSearchResults'
 import CommentsTableCard from '@/components/comments/CommentsTableCard'
 import useCommentsViewModel from '@/hooks/comments/useCommentsViewModel'
@@ -75,20 +77,97 @@ function CommentsPage() {
       </div>
 
       {/* Filters Panel - staggered animation */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
-        <CommentsFiltersPanel
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100 px-4 md:px-8">
+        <FiltersPanel
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
-          showKeywordComments={showKeywordComments}
-          onToggleKeywordComments={handleToggleKeywordComments}
-          showKeywordPosts={showKeywordPosts}
-          onToggleKeywordPosts={handleToggleKeywordPosts}
-          readFilter={readFilter}
-          onReadFilterChange={handleReadFilterChange}
-          keywordsCount={keywordsCount}
-        />
+          searchPlaceholder="Поиск по тексту, автору или ID..."
+        >
+          {/* View mode toggle */}
+          <div className="flex items-center rounded-lg bg-background-primary p-1 border border-border">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleViewModeChange('comments')}
+              className={cn(
+                'h-7 rounded-md px-3 text-xs font-medium transition-all',
+                viewMode === 'comments'
+                  ? 'bg-background-secondary shadow-sm text-text-light'
+                  : 'text-text-secondary hover:text-text-light'
+              )}
+            >
+              Комментарии
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleViewModeChange('posts')}
+              className={cn(
+                'h-7 rounded-md px-3 text-xs font-medium transition-all',
+                viewMode === 'posts'
+                  ? 'bg-background-secondary shadow-sm text-text-light'
+                  : 'text-text-secondary hover:text-text-light'
+              )}
+            >
+              Посты
+            </Button>
+          </div>
+
+          {/* Read status filter */}
+          <div className="flex items-center rounded-lg bg-background-primary p-1 border border-border">
+            {(['all', 'unread', 'read'] as const).map((filter) => (
+              <Button
+                key={filter}
+                variant="ghost"
+                size="sm"
+                onClick={() => handleReadFilterChange(filter)}
+                className={cn(
+                  'h-7 rounded-md px-3 text-xs font-medium transition-all',
+                  readFilter === filter
+                    ? 'bg-background-secondary shadow-sm text-text-light'
+                    : 'text-text-secondary hover:text-text-light'
+                )}
+              >
+                {filter === 'all' ? 'Все' : filter === 'unread' ? 'Непрочитанные' : 'Прочитанные'}
+              </Button>
+            ))}
+          </div>
+
+          {/* Keyword filters */}
+          {keywordsCount > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleToggleKeywordComments(!showKeywordComments)}
+                className={cn(
+                  'h-8 rounded-lg border px-3 text-xs font-medium transition-all',
+                  showKeywordComments
+                    ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                    : 'border-border bg-transparent text-text-secondary hover:text-text-light'
+                )}
+              >
+                В комментариях
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleToggleKeywordPosts(!showKeywordPosts)}
+                className={cn(
+                  'h-8 rounded-lg border px-3 text-xs font-medium transition-all',
+                  showKeywordPosts
+                    ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                    : 'border-border bg-transparent text-text-secondary hover:text-text-light'
+                )}
+              >
+                В постах
+              </Button>
+              <Badge className="border border-border bg-background-primary px-2 py-1 font-mono-accent text-[10px] text-text-secondary">
+                {keywordsCount} ключей
+              </Badge>
+            </div>
+          )}
+        </FiltersPanel>
       </div>
 
       {/* Comments Table - staggered animation */}

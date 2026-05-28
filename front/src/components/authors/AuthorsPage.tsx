@@ -1,9 +1,9 @@
-import { PageHeader } from '@/components/common'
+import { PageHeader, FiltersPanel } from '@/components/common'
 import { useAuthorsViewModel } from '@/hooks/authors/useAuthorsViewModel'
 import { Users, Shield, Microscope, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/utils/common'
-import { AuthorsFiltersPanel } from '@/components/authors/AuthorsFiltersPanel'
 import { AuthorsTableCard } from '@/components/authors/AuthorsTableCard'
 
 function AuthorsPage() {
@@ -91,17 +91,48 @@ function AuthorsPage() {
           <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         </div>
 
-        <AuthorsFiltersPanel
+        <FiltersPanel
           searchTerm={searchValue}
           onSearchChange={handleSearchChange}
-          statusFilter={statusFilter}
-          onStatusFilterChange={handleStatusFilterChange}
-          cityFilter={cityValue}
-          onCityFilterChange={handleCityFilterChange}
-          cityOptions={cityOptions}
+          searchPlaceholder="Поиск по имени, домену или ID..."
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing || isLoading}
-        />
+        >
+          <div className="flex items-center rounded-lg bg-background-primary p-1 border border-border">
+            {(['all', 'verified', 'unverified'] as const).map((filter) => (
+              <Button
+                key={filter}
+                variant="ghost"
+                size="sm"
+                onClick={() => handleStatusFilterChange(filter)}
+                className={cn(
+                  'h-7 rounded-md px-3 text-xs font-medium transition-all',
+                  statusFilter === filter
+                    ? 'bg-background-secondary shadow-sm text-text-light'
+                    : 'text-text-secondary hover:text-text-light'
+                )}
+              >
+                {filter === 'all' ? 'Все' : filter === 'verified' ? 'Проверенные' : 'Непроверенные'}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex min-w-[220px] flex-1 items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-mono-accent">Город</span>
+            <Input
+              value={cityValue}
+              onChange={(event) => handleCityFilterChange(event.target.value)}
+              placeholder="Любой"
+              list="authors-city-options"
+              className="h-9 rounded-lg border-border bg-background-primary text-sm focus-visible:ring-1 focus-visible:ring-accent-primary/30"
+            />
+            <datalist id="authors-city-options">
+              {cityOptions.map((city) => (
+                <option key={city} value={city} />
+              ))}
+            </datalist>
+          </div>
+        </FiltersPanel>
       </div>
 
       {/* Authors Table - staggered animation */}
