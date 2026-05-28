@@ -1,13 +1,399 @@
+import { memo, useMemo, useCallback, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useWatchlistViewModel } from '@/hooks/watchlist/useWatchlistViewModel'
-import { WatchlistTableCard } from '@/components/watchlist/WatchlistTableCard'
-import { WatchlistAuthorDetails } from '@/components/watchlist/WatchlistAuthorDetails'
-import { PageHeader } from '@/components/common'
+import { PageHeader, SectionCard } from '@/components/common'
+import { DataTableCard } from '@/components/common/DataTableCard'
+import { DataTable } from '@/components/common/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Eye, EyeOff, RefreshCw, Clock, Users } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
+import { Eye, EyeOff, RefreshCw, Clock, Users, Loader2 } from 'lucide-react'
 import { cn } from '@/utils/common'
 import { WATCHLIST_CONSTANTS } from '@/config/watchlist/watchlist'
-import { isValidWatchlistSettings } from '@/utils/watchlist/watchlistUtils'
+import {
+  isValidWatchlistSettings,
+  filterValidAuthors,
+  validateAuthorId,
+  formatDateTime,
+  formatStatus,
+} from '@/utils/watchlist/watchlistUtils'
+import { logger } from '@/utils/watchlist/logger'
+import { PHOTO_ANALYSIS_LABELS } from '@/config/authorAnalysis/photoAnalysisConstants'
+import type {
+  WatchlistAuthorCard,
+  WatchlistAuthorDetails as WatchlistAuthorDetailsType,
+  WatchlistComment,
+  PhotoAnalysisSummaryCategory,
+  TableColumn,
+} from '@/types'
+import toast from 'react-hot-toast'
+import { useTableSorting } from '@/hooks/common'
+
+interface AuthorCellProps {
+  item: WatchlistAuthorCard
+}
+
+export const AuthorCell = ({ item }: AuthorCellProps) => {
+  if (!item.author) {
+    return <span className="text-text-secondary">{WATCHLIST_CONSTANTS.AUTHOR_NOT_FOUND}</span>
+  }
+  return (
+    <div className="flex flex-col">
+      <span className="font-medium text-text-primary">{item.author.fullName}</span>
+      <a
+        href={item.author.profileUrl ?? undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-text-secondary hover:text-primary"
+      >
+        {WATCHLIST_CONSTANTS.VK_BASE_URL}
+        {item.author.vkUserId}
+      </a>
+    </div>
+  )
+}
+
+const getBadgeVariant = (count: number) => {
+  if (count > 5) return 'destructive'
+  if (count > 0) return 'secondary'
+  return 'outline'
+}
+
+const getBadgeClassName = (count: number) => {
+  if (count > 5) {
+    return 'border-destructive/40 bg-destructive/10 text-destructive text-xs font-medium'
+  }
+  if (count > 0) {
+    return 'border-yellow-500/40 bg-yellow-500/10 text-yellow-700 text-xs font-medium'
+  }
+  return 'border-border/60 text-xs text-text-secondary'
+}
+
+interface PhotoAnalysisCellProps {
+  item: WatchlistAuthorCard
+}
+
+export const PhotoAnalysisCell = ({ item }: PhotoAnalysisCellProps) => {
+  const summary = item.analysisSummary
+  if (!summary || !summary.categories) {
+    return <span className="text-text-secondary">{WATCHLIST_CONSTANTS.NO_DATA}</span>
+  }
+  const lastAnalyzed = summary.lastAnalyzedAt
+    ? formatDateTime(summary.lastAnalyzedAt)
+    : WATCHLIST_CONSTANTS.NO_DATA
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-1">
+        {summary.categories.map((category: PhotoAnalysisSummaryCategory) => (
+          <Badge
+            key={category.name}
+            variant={getBadgeVariant(category.count)}
+            className={getBadgeClassName(category.count)}
+          >
+            {category.name}: {category.count}
+          </Badge>
+        ))}
+      </div>
+      <span className="text-xs text-text-secondary">
+        {PHOTO_ANALYSIS_LABELS.SUSPICIOUS_LABEL}: {summary.suspicious} ·{' '}
+        {PHOTO_ANALYSIS_LABELS.LAST_ANALYSIS_LABEL}: {lastAnalyzed}
+      </span>
+    </div>
+  )
+}
+
+interface ActionsCellProps {
+  item: WatchlistAuthorCard
+  handleSelectAuthor: (id: number) => void
+  handleRemoveFromWatchlist: (id: number) => void
+  pendingRemoval: Record<number, boolean>
+}
+
+export const ActionsCell = ({
+  item,
+  handleSelectAuthor,
+  handleRemoveFromWatchlist,
+  pendingRemoval,
+}: ActionsCellProps) => {
+  const navigate = useNavigate()
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={(event) => {
+          event.stopPropagation()
+          handleSelectAuthor(item.id)
+        }}
+      >
+        Подробнее
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={(event) => {
+          event.stopPropagation()
+          if (item.author) {
+            navigate(`/authors/${item.author.vkUserId}/analysis`, {
+              state: {
+                author: item.author,
+                summary: item.analysisSummary,
+              },
+            })
+          }
+        }}
+      >
+        Анализ фото
+      </Button>
+      {item.status !== WATCHLIST_CONSTANTS.STOPPED_STATUS ? (
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          disabled={Boolean(pendingRemoval[item.id])}
+          onClick={(event) => {
+            event.stopPropagation()
+            handleRemoveFromWatchlist(item.id)
+          }}
+        >
+          {pendingRemoval[item.id] && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {pendingRemoval[item.id]
+            ? WATCHLIST_CONSTANTS.REMOVING_TEXT
+            : WATCHLIST_CONSTANTS.REMOVE_TEXT}
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
+interface WatchlistTableCardProps {
+  authors: WatchlistAuthorCard[]
+  totalAuthors: number
+  hasMoreAuthors: boolean
+  isLoadingAuthors: boolean
+  isLoadingMoreAuthors: boolean
+  authorColumns: TableColumn<WatchlistAuthorCard>[]
+  onSelectAuthor: (id: number) => void
+  onLoadMore: () => void
+  searchTerm: string
+  onSearchChange: (value: string) => void
+  onRefresh?: () => void
+}
+
+export const WatchlistTableCard = memo(
+  ({
+    authors,
+    totalAuthors,
+    hasMoreAuthors,
+    isLoadingAuthors,
+    isLoadingMoreAuthors,
+    authorColumns,
+    onSelectAuthor,
+    onLoadMore,
+    searchTerm,
+    onSearchChange,
+    onRefresh,
+  }: WatchlistTableCardProps) => {
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
+
+    const validAuthors = useMemo(() => filterValidAuthors(authors), [authors])
+
+    const {
+      sortedItems: sortedAuthors,
+      sortState: authorSortState,
+      requestSort: requestAuthorSort,
+    } = useTableSorting(validAuthors, authorColumns.length > 0 ? authorColumns : [], {
+      initialKey: authorColumns.length > 0 ? 'lastActivityAt' : '',
+      initialDirection: 'desc',
+    })
+
+    const handleSelectAuthor = useCallback(
+      (author: WatchlistAuthorCard) => {
+        try {
+          if (validateAuthorId(author.id)) {
+            onSelectAuthor(author.id)
+          } else {
+            logger.error(`Невалидный ID автора:`, author.id)
+            toast.error('Невалидный ID автора')
+          }
+        } catch (error) {
+          logger.error(`Ошибка при выборе автора с ID ${author.id}:`, error)
+          toast.error('Не удалось выбрать автора. Попробуйте ещё раз.')
+        }
+      },
+      [onSelectAuthor]
+    )
+
+    const handleLoadMore = useCallback(async () => {
+      if (isLoadingMore || !hasMoreAuthors || isLoadingAuthors || isLoadingMoreAuthors) {
+        return
+      }
+
+      setIsLoadingMore(true)
+      try {
+        await onLoadMore()
+      } finally {
+        setIsLoadingMore(false)
+      }
+    }, [isLoadingMore, hasMoreAuthors, isLoadingAuthors, isLoadingMoreAuthors, onLoadMore])
+
+    const isLoading = isLoadingAuthors && !authors.length
+    const isEmpty = !isLoadingAuthors && sortedAuthors.length === 0
+    const hasData = sortedAuthors.length > 0 && authorColumns.length > 0
+
+    const badgeText = useMemo(() => {
+      return searchTerm.trim() ? `${sortedAuthors.length} из ${totalAuthors}` : `${totalAuthors}`
+    }, [sortedAuthors.length, totalAuthors, searchTerm])
+
+    const headerActions = useMemo(() => {
+      if (!onRefresh) return null
+      return (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRefresh}
+          disabled={isLoadingAuthors}
+          className="h-10 text-muted-foreground hover:text-primary"
+          title="Обновить список"
+        >
+          <RefreshCw className={`mr-2 size-4 ${isLoadingAuthors ? 'animate-spin' : ''}`} />
+          Обновить
+        </Button>
+      )
+    }, [onRefresh, isLoadingAuthors])
+
+    return (
+      <DataTableCard
+        title="Авторы"
+        badgeText={badgeText}
+        searchTerm={searchTerm}
+        onSearchChange={onSearchChange}
+        searchPlaceholder="Поиск автора..."
+        headerActions={headerActions}
+        isLoading={isLoading}
+        loadingMessage="Загружаем список авторов…"
+        isEmpty={isEmpty}
+        emptyIcon="👥"
+        emptyTitle="Список наблюдения пуст"
+        emptyDescription={
+          WATCHLIST_CONSTANTS.EMPTY_AUTHORS_MESSAGE ||
+          'Добавьте авторов для отслеживания их активности.'
+        }
+        contentClassName="p-0!"
+      >
+        <div aria-live="polite" aria-atomic="true" className="sr-only" key="aria-live">
+          {isLoadingMoreAuthors && 'Загружаем дополнительные авторы...'}
+          {hasData && `Загружено ${sortedAuthors.length} авторов из ${totalAuthors}`}
+        </div>
+
+        {hasData && (
+          <div className="flex flex-col">
+            <DataTable
+              data={sortedAuthors}
+              columns={authorColumns}
+              isLoading={isLoadingAuthors}
+              sortState={authorSortState}
+              onRequestSort={requestAuthorSort}
+              onRowClick={(item) => handleSelectAuthor(item)}
+            />
+            <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">
+              {hasMoreAuthors ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingAuthors || isLoadingMoreAuthors || isLoadingMore}
+                >
+                  {isLoadingMoreAuthors || isLoadingMore ? 'Загружаем...' : 'Загрузить ещё'}
+                </Button>
+              ) : (
+                <span className="text-xs text-text-secondary font-monitoring-body">
+                  Показано {sortedAuthors.length} авторов
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </DataTableCard>
+    )
+  }
+)
+
+interface WatchlistAuthorDetailsProps {
+  currentAuthor: WatchlistAuthorDetailsType | null
+  isLoadingAuthorDetails: boolean
+  commentColumns: TableColumn<WatchlistComment>[]
+}
+
+export const WatchlistAuthorDetails = ({
+  currentAuthor,
+  isLoadingAuthorDetails,
+  commentColumns,
+}: WatchlistAuthorDetailsProps) => {
+  const commentItems = currentAuthor?.comments.items ?? []
+  const {
+    sortedItems: sortedComments,
+    sortState: commentSortState,
+    requestSort: requestCommentSort,
+  } = useTableSorting(commentItems, commentColumns, {
+    initialKey: 'publishedAt',
+    initialDirection: 'desc',
+  })
+
+  return (
+    <SectionCard
+      title="Активность автора"
+      description={
+        currentAuthor
+          ? currentAuthor.author.fullName
+          : 'Выберите автора, чтобы увидеть историю комментариев'
+      }
+    >
+      {isLoadingAuthorDetails && !currentAuthor ? (
+        <div key="loading-author-details" className="flex items-center justify-center py-10">
+          <Spinner className="h-6 w-6" />
+        </div>
+      ) : null}
+
+      {currentAuthor ? (
+        <div key="author-details-content" className="flex flex-col gap-6">
+          <div key="author-info" className="flex flex-wrap gap-4 text-sm text-text-secondary">
+            <span>Статус: {formatStatus(currentAuthor.status)}</span>
+            <span>Найдено комментариев: {currentAuthor.foundCommentsCount}</span>
+            <span>Всего сохранено: {currentAuthor.totalComments}</span>
+            <span>Последняя проверка: {formatDateTime(currentAuthor.lastCheckedAt)}</span>
+          </div>
+
+          {currentAuthor.comments.items.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              <DataTable
+                data={sortedComments}
+                columns={commentColumns}
+                sortState={commentSortState}
+                onRequestSort={requestCommentSort}
+              />
+              <div className="text-center text-xs text-text-secondary font-monitoring-body pb-2">
+                Показано {sortedComments.length} комментариев из {currentAuthor.comments.total}
+              </div>
+            </div>
+          ) : (
+            <div key="no-comments" className="py-6 text-sm text-text-secondary">
+              Пока нет комментариев, найденных мониторингом.
+            </div>
+          )}
+        </div>
+      ) : !isLoadingAuthorDetails ? (
+        <div key="select-author" className="py-6 text-sm text-text-secondary">
+          Выберите автора из списка, чтобы увидеть историю его комментариев.
+        </div>
+      ) : null}
+    </SectionCard>
+  )
+}
 
 function WatchlistPage() {
   const {
@@ -183,7 +569,6 @@ function WatchlistPage() {
         {renderHeader()}
       </div>
 
-      {/* Watchlist Table - staggered animation */}
       <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
@@ -207,7 +592,6 @@ function WatchlistPage() {
         />
       </div>
 
-      {/* Author Details - staggered animation */}
       {currentAuthor && (
         <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
           <WatchlistAuthorDetails
