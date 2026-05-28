@@ -2,7 +2,9 @@ import { memo, useMemo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWatchlistViewModel } from '@/hooks/watchlist/useWatchlistViewModel'
 import { PageHeader, SectionCard } from '@/components/common'
-import { DataTableCard } from '@/components/common/DataTableCard'
+import { Card, CardContent } from '@/components/ui/card'
+import { EmptyState } from '@/components/common/EmptyState'
+import SearchInput from '@/components/common/SearchInput'
 import { DataTable } from '@/components/common/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -267,58 +269,93 @@ export const WatchlistTableCard = memo(
     }, [onRefresh, isLoadingAuthors])
 
     return (
-      <DataTableCard
-        title="Авторы"
-        badgeText={badgeText}
-        searchTerm={searchTerm}
-        onSearchChange={onSearchChange}
-        searchPlaceholder="Поиск автора..."
-        headerActions={headerActions}
-        isLoading={isLoading}
-        loadingMessage="Загружаем список авторов…"
-        isEmpty={isEmpty}
-        emptyIcon="👥"
-        emptyTitle="Список наблюдения пуст"
-        emptyDescription={
-          WATCHLIST_CONSTANTS.EMPTY_AUTHORS_MESSAGE ||
-          'Добавьте авторов для отслеживания их активности.'
-        }
-        contentClassName="p-0!"
-      >
-        <div aria-live="polite" aria-atomic="true" className="sr-only" key="aria-live">
-          {isLoadingMoreAuthors && 'Загружаем дополнительные авторы...'}
-          {hasData && `Загружено ${sortedAuthors.length} авторов из ${totalAuthors}`}
+    return (
+      <Card className="relative overflow-hidden rounded-xl border border-border bg-background-secondary shadow-soft-sm">
+        {/* Header */}
+        <div className="flex flex-col gap-4 border-b border-border bg-background-sidebar/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
+          <div className="flex items-center gap-3">
+            <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-text-light">
+              Авторы
+            </h2>
+            {!isLoading && badgeText && (
+              <Badge className="border border-border bg-background-primary px-3 py-1 font-mono-accent text-xs text-text-secondary">
+                {badgeText}
+              </Badge>
+            )}
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <SearchInput
+              value={searchTerm}
+              onChange={onSearchChange}
+              placeholder="Поиск автора..."
+              className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
+            />
+            {headerActions}
+          </div>
         </div>
 
-        {hasData && (
-          <div className="flex flex-col">
-            <DataTable
-              data={sortedAuthors}
-              columns={authorColumns}
-              isLoading={isLoadingAuthors}
-              sortState={authorSortState}
-              onRequestSort={requestAuthorSort}
-              onRowClick={(item) => handleSelectAuthor(item)}
-            />
-            <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">
-              {hasMoreAuthors ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLoadMore}
-                  disabled={isLoadingAuthors || isLoadingMoreAuthors || isLoadingMore}
-                >
-                  {isLoadingMoreAuthors || isLoadingMore ? 'Загружаем...' : 'Загрузить ещё'}
-                </Button>
+        {/* Content */}
+        <CardContent className="p-0">
+          <div aria-live="polite" aria-atomic="true" className="sr-only" key="aria-live">
+            {isLoadingMoreAuthors && 'Загружаем дополнительные авторы...'}
+            {hasData && `Загружено ${sortedAuthors.length} авторов из ${totalAuthors}`}
+          </div>
+
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <Spinner className="h-6 w-6 text-accent-primary" />
+            </div>
+          )}
+
+          {!isLoading && isEmpty && (
+            <div className="py-6">
+              {authors.length === 0 ? (
+                <EmptyState
+                  icon="👥"
+                  title="Список наблюдения пуст"
+                  description={
+                    WATCHLIST_CONSTANTS.EMPTY_AUTHORS_MESSAGE ||
+                    'Добавьте авторов для отслеживания их активности.'
+                  }
+                />
               ) : (
-                <span className="text-xs text-text-secondary font-monitoring-body">
-                  Показано {sortedAuthors.length} авторов
-                </span>
+                <div className="flex flex-col items-center justify-center py-12 text-center text-sm text-text-secondary">
+                  По запросу «<span className="font-mono-accent text-primary">{searchTerm}</span>» ничего не найдено
+                </div>
               )}
             </div>
-          </div>
-        )}
-      </DataTableCard>
+          )}
+
+          {!isLoading && hasData && (
+            <div className="flex flex-col">
+              <DataTable
+                data={sortedAuthors}
+                columns={authorColumns}
+                isLoading={isLoadingAuthors}
+                sortState={authorSortState}
+                onRequestSort={requestAuthorSort}
+                onRowClick={(item) => handleSelectAuthor(item)}
+              />
+              <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">
+                {hasMoreAuthors ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLoadMore}
+                    disabled={isLoadingAuthors || isLoadingMoreAuthors || isLoadingMore}
+                  >
+                    {isLoadingMoreAuthors || isLoadingMore ? 'Загружаем...' : 'Загрузить ещё'}
+                  </Button>
+                ) : (
+                  <span className="text-xs text-text-secondary font-monitoring-body">
+                    Показано {sortedAuthors.length} авторов
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     )
   }
 )

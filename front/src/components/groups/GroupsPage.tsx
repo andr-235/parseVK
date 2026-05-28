@@ -10,7 +10,17 @@ import { Plus, Users, ExternalLink, Trash2, Lock } from 'lucide-react'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { useTableSorting } from '@/hooks/common'
 import type { Group, TableColumn } from '@/types'
-import { DataTableCard, type SortOption } from '@/components/common/DataTableCard'
+import { Badge } from '@/components/ui/badge'
+import { ArrowUpDown } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import SearchInput from '@/components/common/SearchInput'
+import { EmptyState } from '@/components/common/EmptyState'
+import { LoadingState } from '@/components/common/LoadingState'
 
 interface GroupInputProps {
   url: string
@@ -166,6 +176,12 @@ const GroupCard = memo(function GroupCard({ group, onDelete }: GroupCardProps) {
   )
 })
 
+interface SortOption {
+  key: string
+  label: string
+  directionLabel?: { asc: string; desc: string }
+}
+
 type ColumnsFactory = (deleteGroup: (id: number) => void) => TableColumn<Group>[]
 
 interface GroupsTableCardProps {
@@ -236,43 +252,110 @@ function GroupsTableCard({
   }, [hasGroups, onClear, clearDisabled])
 
   return (
-    <DataTableCard
-      title="Список групп"
-      badgeText={badgeText}
-      declensionWords={['группа', 'группы', 'групп']}
-      searchTerm={searchTerm}
-      onSearchChange={onSearchChange}
-      sortOptions={sortOptions}
-      sortState={sortState}
-      onRequestSort={requestSort}
-      currentSortLabel={currentSortLabel}
-      headerActions={headerActions}
-      isLoading={isLoading}
-      loadingMessage="Загружаем группы…"
-      isEmpty={!isLoading && !hasGroups}
-      emptyIcon="📁"
-      emptyTitle="Список пуст"
-      emptyDescription="Добавьте группы по ссылке или загрузите список из файла — после обработки данные появятся здесь и будут доступны для управления."
-      hasFilteredItems={hasFilteredGroups}
-    >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {sortedGroups.map((group, index) => (
-          <div
-            key={group.id}
-            className="h-full animate-in fade-in-0 slide-in-from-bottom-2 duration-500"
-            style={{ animationDelay: index < 12 ? `${index * 50}ms` : '0ms' }}
-          >
-            <GroupCard group={group} onDelete={onDelete} />
-          </div>
-        ))}
+    <Card className="relative overflow-hidden rounded-xl border border-border bg-background-secondary shadow-soft-sm">
+      {/* Header */}
+      <div className="flex flex-col gap-4 border-b border-border bg-background-sidebar/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="flex items-center gap-3">
+          <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-text-light">
+            Список групп
+          </h2>
+          {!isLoading && badgeText && (
+            <Badge className="border border-border bg-background-primary px-3 py-1 font-mono-accent text-xs text-text-secondary">
+              {badgeText}
+            </Badge>
+          )}
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <SearchInput
+            value={searchTerm}
+            onChange={onSearchChange}
+            placeholder="Поиск..."
+            className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
+          />
+
+          {sortOptions.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 gap-2 border-border bg-background-primary text-text-secondary hover:border-primary/50 hover:bg-background-sidebar hover:text-text-light"
+                >
+                  <ArrowUpDown className="size-4" />
+                  <span className="max-w-[100px] truncate">{currentSortLabel}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border border-border bg-background-secondary shadow-soft-lg animate-in fade-in-80 duration-100"
+              >
+                {sortOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.key}
+                    onClick={() => requestSort(option.key)}
+                    className="text-text-secondary hover:bg-background-primary hover:text-text-light cursor-pointer"
+                  >
+                    {option.label}
+                    {sortState?.key === option.key && (
+                      <span className="ml-auto font-mono-accent text-xs text-primary">
+                        {sortState.direction === 'asc' ? ' ↑' : ' ↓'}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {headerActions}
+        </div>
       </div>
 
-      {isLoadingMore && (
-        <div className="flex justify-center py-4">
-          <span className="font-mono-accent text-sm text-text-secondary">Загрузка...</span>
-        </div>
-      )}
-    </DataTableCard>
+      {/* Content */}
+      <CardContent className="p-4 md:p-6">
+        {isLoading && !hasGroups && (
+          <div className="py-8">
+            <LoadingState message="Загружаем группы…" />
+          </div>
+        )}
+
+        {!isLoading && !hasGroups && (
+          <EmptyState
+            icon="📁"
+            title="Список пуст"
+            description="Добавьте группы по ссылке или загрузите список из файла — после обработки данные появятся здесь и будут доступны для управления."
+          />
+        )}
+
+        {!isLoading && hasGroups && !hasFilteredGroups && (
+          <div className="flex flex-col items-center justify-center py-12 text-center text-sm text-text-secondary">
+            По запросу «<span className="font-mono-accent text-primary">{searchTerm}</span>» ничего не найдено
+          </div>
+        )}
+
+        {hasGroups && (hasFilteredGroups || isLoading) && (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {sortedGroups.map((group, index) => (
+                <div
+                  key={group.id}
+                  className="h-full animate-in fade-in-0 slide-in-from-bottom-2 duration-500"
+                  style={{ animationDelay: index < 12 ? `${index * 50}ms` : '0ms' }}
+                >
+                  <GroupCard group={group} onDelete={onDelete} />
+                </div>
+              ))}
+            </div>
+
+            {isLoadingMore && (
+              <div className="flex justify-center py-4">
+                <span className="font-mono-accent text-sm text-text-secondary">Загрузка...</span>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

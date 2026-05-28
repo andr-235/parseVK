@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { AuthorCard, AuthorSortField, TableColumn } from '@/types'
 import { resolveCityLabel } from '@/utils/authors/authorUtils'
 import { formatDateTime, getAuthorInitials } from '@/utils/common'
-import { DataTableCard } from '@/components/common/DataTableCard'
+import { Card, CardContent } from '@/components/ui/card'
+import { EmptyState } from '@/components/common/EmptyState'
 import { DataTable } from '@/components/common/DataTable'
 
 interface AuthorsTableCardProps {
@@ -256,45 +257,47 @@ function AuthorsTableCard({
   )
 
   return (
-    <DataTableCard
-      title="Авторы"
-      hideHeader
-      isLoading={isLoading && authors.length === 0}
-      loadingMessage="Загружаем авторов…"
-      isEmpty={showEmptyState}
-      emptyIcon="👥"
-      emptyTitle={emptyTitle}
-      emptyDescription={emptyDescription}
-      contentClassName="p-0!"
-    >
-      <DataTable
-        data={authors}
-        columns={columns}
-        isLoading={isLoading}
-        sortState={{ key: sortBy, direction: sortOrder }}
-        onRequestSort={(key) => onSortChange(key as AuthorSortField)}
-      />
+    <Card className="relative overflow-hidden rounded-xl border border-border bg-background-secondary shadow-soft-sm">
+      <CardContent className="p-0">
+        {showEmptyState ? (
+          <EmptyState
+            icon="👥"
+            title={emptyTitle}
+            description={emptyDescription}
+          />
+        ) : (
+          <>
+            <DataTable
+              data={authors}
+              columns={columns}
+              isLoading={isLoading}
+              sortState={{ key: sortBy, direction: sortOrder }}
+              onRequestSort={(key) => onSortChange(key as AuthorSortField)}
+            />
 
-      {hasMore && (
-        <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">
-          <Button
-            onClick={onLoadMore}
-            disabled={isLoadingMore}
-            variant="ghost"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            {isLoadingMore ? (
-              <span className="flex items-center gap-2">
-                <Spinner className="h-4 w-4" />
-                Загрузка...
-              </span>
-            ) : (
-              'Загрузить ещё'
+            {hasMore && (
+              <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">
+                <Button
+                  onClick={onLoadMore}
+                  disabled={isLoadingMore}
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {isLoadingMore ? (
+                    <span className="flex items-center gap-2">
+                      <Spinner className="h-4 w-4" />
+                      Загрузка...
+                    </span>
+                  ) : (
+                    'Загрузить ещё'
+                  )}
+                </Button>
+              </div>
             )}
-          </Button>
-        </div>
-      )}
-    </DataTableCard>
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

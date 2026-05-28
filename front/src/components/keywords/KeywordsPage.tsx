@@ -24,9 +24,18 @@ import { useTableSorting } from '@/hooks/common'
 import type { Keyword } from '@/types'
 import { getKeywordTableColumns } from '@/config/keywords/keywordTableColumns'
 import { groupKeywordsByCategory } from '@/utils/keywords/groupKeywordsByCategory'
-import { FormModal } from '@/components/common/FormModal'
 import type { IKeywordFormsResponse } from '@/api/keywords/keywords.api'
-import { DataTableCard, type SortOption } from '@/components/common/DataTableCard'
+import { FormModal } from '@/components/common/FormModal'
+import { ArrowUpDown } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import SearchInput from '@/components/common/SearchInput'
+import { EmptyState } from '@/components/common/EmptyState'
+import { LoadingState } from '@/components/common/LoadingState'
 
 interface KeywordsFormProps {
   keywordValue: string
@@ -332,6 +341,12 @@ export function KeywordCategorySection({
   )
 }
 
+interface SortOption {
+  key: string
+  label: string
+  directionLabel?: { asc: string; desc: string }
+}
+
 interface KeywordsTableCardProps {
   keywords: Keyword[]
   isLoading: boolean
@@ -386,39 +401,104 @@ export function KeywordsTableCard({
   }
 
   return (
-    <DataTableCard
-      title="Список слов"
-      totalCount={keywords.length}
-      searchTerm={searchTerm}
-      onSearchChange={onSearchChange}
-      sortOptions={sortOptions}
-      sortState={sortState}
-      onRequestSort={requestSort}
-      currentSortLabel={currentSortLabel}
-      isLoading={isLoading}
-      loadingMessage="Загружаем ключевые слова…"
-      isEmpty={!isLoading && !hasKeywords}
-      emptyIcon="🔑"
-      emptyTitle="Список пуст"
-      emptyDescription="Добавьте ключевые слова вручную или загрузите список из файла. Если не указать категорию, слово автоматически окажется в разделе «Без категории», и вы сможете распределить его позже."
-      hasFilteredItems={hasFilteredKeywords}
-    >
-      <div className="space-y-4">
-        {groupedKeywords.map((group) => (
-          <KeywordCategorySection
-            key={group.category}
-            category={group.category}
-            keywords={group.keywords}
-            isExpanded={expandedCategories[group.category] ?? true}
-            onToggle={() => toggleCategory(group.category)}
-            onDelete={onDelete}
-            onManageForms={onManageForms}
-            onUpdateCategory={onUpdateCategory}
-            categorySuggestions={categorySuggestions}
+    <Card className="relative overflow-hidden rounded-xl border border-border bg-background-secondary shadow-soft-sm">
+      {/* Header */}
+      <div className="flex flex-col gap-4 border-b border-border bg-background-sidebar/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="flex items-center gap-3">
+          <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-text-light">
+            Список слов
+          </h2>
+          {!isLoading && keywords.length > 0 && (
+            <Badge className="border border-border bg-background-primary px-3 py-1 font-mono-accent text-xs text-text-secondary">
+              {keywords.length}
+            </Badge>
+          )}
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <SearchInput
+            value={searchTerm}
+            onChange={onSearchChange}
+            placeholder="Поиск..."
+            className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
           />
-        ))}
+
+          {sortOptions.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 gap-2 border-border bg-background-primary text-text-secondary hover:border-primary/50 hover:bg-background-sidebar hover:text-text-light"
+                >
+                  <ArrowUpDown className="size-4" />
+                  <span className="max-w-[100px] truncate">{currentSortLabel}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border border-border bg-background-secondary shadow-soft-lg animate-in fade-in-80 duration-100"
+              >
+                {sortOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.key}
+                    onClick={() => requestSort(option.key)}
+                    className="text-text-secondary hover:bg-background-primary hover:text-text-light cursor-pointer"
+                  >
+                    {option.label}
+                    {sortState?.key === option.key && (
+                      <span className="ml-auto font-mono-accent text-xs text-primary">
+                        {sortState.direction === 'asc' ? ' (А-Я)' : ' (Я-А)'}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
-    </DataTableCard>
+
+      {/* Content */}
+      <CardContent className="p-4 md:p-6">
+        {isLoading && !hasKeywords && (
+          <div className="py-8">
+            <LoadingState message="Загружаем ключевые слова…" />
+          </div>
+        )}
+
+        {!isLoading && !hasKeywords && (
+          <EmptyState
+            icon="🔑"
+            title="Список пуст"
+            description="Добавьте ключевые слова вручную или загрузите список из файла. Если не указать категорию, слово автоматически окажется в разделе «Без категории», и вы сможете распределить его позже."
+          />
+        )}
+
+        {!isLoading && hasKeywords && !hasFilteredKeywords && (
+          <div className="flex flex-col items-center justify-center py-12 text-center text-sm text-text-secondary">
+            По запросу «<span className="font-mono-accent text-primary">{searchTerm}</span>» ничего не найдено
+          </div>
+        )}
+
+        {hasKeywords && (hasFilteredKeywords || isLoading) && (
+          <div className="space-y-4">
+            {groupedKeywords.map((group) => (
+              <KeywordCategorySection
+                key={group.category}
+                category={group.category}
+                keywords={group.keywords}
+                isExpanded={expandedCategories[group.category] ?? true}
+                onToggle={() => toggleCategory(group.category)}
+                onDelete={onDelete}
+                onManageForms={onManageForms}
+                onUpdateCategory={onUpdateCategory}
+                categorySuggestions={categorySuggestions}
+              />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
