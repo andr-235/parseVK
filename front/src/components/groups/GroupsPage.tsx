@@ -18,7 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import SearchInput from '@/components/common/SearchInput'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingState } from '@/components/common/LoadingState'
 
@@ -266,9 +265,10 @@ function GroupsTableCard({
           )}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <SearchInput
+          <Input
+            type="text"
             value={searchTerm}
-            onChange={onSearchChange}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Поиск..."
             className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
           />

@@ -14,7 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import SearchInput from '@/components/common/SearchInput'
 import { EmptyState } from '@/components/common/EmptyState'
 import { cn } from '@/utils/common'
 import { useMonitoringGroupsViewModel } from '@/hooks/monitoring/useMonitoringGroupsViewModel'
@@ -286,9 +285,10 @@ function MonitoringGroupsPage() {
                 </div>
 
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-                  <SearchInput
+                  <Input
+                    type="text"
                     value={searchTerm}
-                    onChange={setSearchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Поиск по названию, chat_id, категории"
                     className="h-10 w-full border-border/70 bg-background/60 text-text-primary lg:w-75"
                   />

@@ -2,7 +2,7 @@ import { type ReactNode, useState, useMemo, useRef, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { Progress } from '@/components/ui/progress'
+import ProgressBar from '@/components/common/ProgressBar'
 import type { JobLogEntry } from '@/hooks/common/useExportJobStream'
 import {
   LOG_LEVEL_CLASSES,
@@ -194,17 +194,14 @@ export const ExportPageTemplate = ({
                       `(${progressPercent}%)`}
                   </span>
                 </div>
-
-                {isProgressIndeterminate ? (
-                  <div className="h-2 w-full rounded bg-background-primary overflow-hidden relative border border-border/20">
-                    <div className="absolute inset-y-0 w-1/3 bg-accent-primary rounded animate-infinite-loading" />
-                  </div>
-                ) : (
-                  <Progress
-                    value={progressPercent}
-                    className="h-2 bg-background-primary border border-border/20"
-                  />
-                )}
+                <ProgressBar
+                  current={jobProgress.fetchedCount}
+                  total={jobProgress.totalCount}
+                  indeterminate={isProgressIndeterminate}
+                  showLabel={false}
+                  size="small"
+                  className="w-full"
+                />
 
                 <div className="flex justify-between items-center text-[11px] text-text-secondary font-mono-accent">
                   <span>Готовность экспорта</span>

@@ -4,7 +4,7 @@ import { useWatchlistViewModel } from '@/hooks/watchlist/useWatchlistViewModel'
 import { PageHeader, SectionCard, PageContainer } from '@/components/common'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/common/EmptyState'
-import SearchInput from '@/components/common/SearchInput'
+import { Input } from '@/components/ui/input'
 import { DataTable } from '@/components/common/DataTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -284,9 +284,10 @@ export const WatchlistTableCard = memo(
             )}
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <SearchInput
+            <Input
+              type="text"
               value={searchTerm}
-              onChange={onSearchChange}
+              onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Поиск автора..."
               className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
             />
