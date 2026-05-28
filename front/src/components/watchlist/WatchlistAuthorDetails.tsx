@@ -1,26 +1,13 @@
 import { SectionCard } from '@/components/common'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableCaption,
-} from '@/components/ui/table'
-import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Spinner } from '@/components/ui/spinner'
 import { useTableSorting } from '@/hooks/common'
+import { DataTable } from '@/components/common/DataTable'
 import type {
   WatchlistAuthorDetails as WatchlistAuthorDetailsType,
   WatchlistComment,
   TableColumn,
 } from '@/types'
-import {
-  formatDateTime,
-  formatStatus,
-  getPrimitiveColumnValue,
-} from '@/utils/watchlist/watchlistUtils'
+import { formatDateTime, formatStatus } from '@/utils/watchlist/watchlistUtils'
 
 interface WatchlistAuthorDetailsProps {
   currentAuthor: WatchlistAuthorDetailsType | null
@@ -68,46 +55,17 @@ export const WatchlistAuthorDetails = ({
           </div>
 
           {currentAuthor.comments.items.length > 0 ? (
-            <Table key="comments-table">
-              <TableHeader>
-                <TableRow>
-                  {commentColumns.map((column) => (
-                    <TableHead key={column.key} className={column.headerClassName}>
-                      {column.sortable ? (
-                        <TableSortButton
-                          direction={
-                            commentSortState?.key === column.key ? commentSortState.direction : null
-                          }
-                          onClick={() => requestCommentSort(column.key)}
-                        >
-                          {column.header}
-                        </TableSortButton>
-                      ) : (
-                        column.header
-                      )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedComments.map((comment, index) => (
-                  <TableRow key={comment.id ?? index}>
-                    {commentColumns.map((column) => (
-                      <TableCell key={column.key} className={column.cellClassName}>
-                        {column.render
-                          ? column.render(comment, index)
-                          : (getPrimitiveColumnValue(comment, column.key) ??
-                            column.emptyValue ??
-                            '—')}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableCaption>
-                Показано {sortedComments.length} комментариев из {currentAuthor.comments.total}.
-              </TableCaption>
-            </Table>
+            <div className="flex flex-col gap-4">
+              <DataTable
+                data={sortedComments}
+                columns={commentColumns}
+                sortState={commentSortState}
+                onRequestSort={requestCommentSort}
+              />
+              <div className="text-center text-xs text-text-secondary font-monitoring-body pb-2">
+                Показано {sortedComments.length} комментариев из {currentAuthor.comments.total}
+              </div>
+            </div>
           ) : (
             <div key="no-comments" className="py-6 text-sm text-text-secondary">
               Пока нет комментариев, найденных мониторингом.

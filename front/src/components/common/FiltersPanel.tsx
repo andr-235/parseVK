@@ -9,14 +9,14 @@ export interface FiltersPanelProps {
   searchTerm?: string
   onSearchChange?: (value: string) => void
   searchPlaceholder?: string
-  
+
   // Кнопка обновления
   onRefresh?: () => void
   isRefreshing?: boolean
-  
+
   // Дополнительные фильтры
   children?: ReactNode
-  
+
   // Кастомизация классов
   className?: string
 }
@@ -50,7 +50,7 @@ export function FiltersPanel({
               />
             </div>
           )}
-          
+
           {hasRefresh && (
             <Button
               variant="outline"
@@ -73,10 +73,8 @@ export function FiltersPanel({
             <SlidersHorizontal className="h-4 w-4 text-text-secondary" />
             Фильтры:
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3 flex-1">
-            {children}
-          </div>
+
+          <div className="flex flex-wrap items-center gap-3 flex-1">{children}</div>
         </div>
       )}
     </div>

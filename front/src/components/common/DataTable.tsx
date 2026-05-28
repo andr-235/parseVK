@@ -107,9 +107,13 @@ export function DataTable<T>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading && !hasData && (
+          {isLoading &&
+            !hasData &&
             Array.from({ length: loadingRowsCount }).map((_, rowIndex) => (
-              <TableRow key={`skeleton-row-${rowIndex}`} className="border-b border-border/40 hover:bg-transparent">
+              <TableRow
+                key={`skeleton-row-${rowIndex}`}
+                className="border-b border-border/40 hover:bg-transparent"
+              >
                 {columns.map((column) => (
                   <TableCell
                     key={`skeleton-cell-${column.key}`}
@@ -122,8 +126,7 @@ export function DataTable<T>({
                   </TableCell>
                 ))}
               </TableRow>
-            ))
-          )}
+            ))}
 
           {!isLoading && !hasData && (
             <TableRow>
@@ -133,10 +136,11 @@ export function DataTable<T>({
             </TableRow>
           )}
 
-          {(hasData || (isLoading && hasData)) && (
+          {(hasData || (isLoading && hasData)) &&
             data.map((item, index) => {
               const key = defaultRowKey(item, index)
-              const rowClass = typeof rowClassName === 'function' ? rowClassName(item, index) : rowClassName
+              const rowClass =
+                typeof rowClassName === 'function' ? rowClassName(item, index) : rowClassName
 
               return (
                 <TableRow
@@ -161,8 +165,7 @@ export function DataTable<T>({
                   ))}
                 </TableRow>
               )
-            })
-          )}
+            })}
         </TableBody>
       </Table>
     </div>

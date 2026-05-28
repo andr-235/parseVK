@@ -12,7 +12,15 @@ import {
   formatCellValue,
 } from '@/utils/common/exportUtils'
 import { toast } from 'react-hot-toast'
-import { Copy, Download, SlidersHorizontal, Terminal, Activity, AlertTriangle, XOctagon } from 'lucide-react'
+import {
+  Copy,
+  Download,
+  SlidersHorizontal,
+  Terminal,
+  Activity,
+  AlertTriangle,
+  XOctagon,
+} from 'lucide-react'
 import { PageHeader } from './PageHeader'
 
 interface ExportPageTemplateProps {
@@ -94,10 +102,7 @@ export const ExportPageTemplate = ({
   // Calculate percentage progress
   const progressPercent = useMemo(() => {
     if (isProgressIndeterminate || jobProgress.totalCount === 0) return 0
-    return Math.min(
-      Math.round((jobProgress.fetchedCount / jobProgress.totalCount) * 100),
-      100
-    )
+    return Math.min(Math.round((jobProgress.fetchedCount / jobProgress.totalCount) * 100), 100)
   }, [jobProgress, isProgressIndeterminate])
 
   return (
@@ -114,7 +119,6 @@ export const ExportPageTemplate = ({
 
       {/* Main Console Workspace */}
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        
         {/* Left Column: Control Panel */}
         <div className="space-y-6">
           <PageHeader title="Параметры запуска" platformColorClass="text-accent-primary" />
@@ -148,9 +152,7 @@ export const ExportPageTemplate = ({
               )}
 
               {/* Form Input fields */}
-              <div className="space-y-5">
-                {children}
-              </div>
+              <div className="space-y-5">{children}</div>
 
               {/* Console Trigger Button */}
               <Button
@@ -181,7 +183,6 @@ export const ExportPageTemplate = ({
 
           <Card className="border border-border bg-background-secondary/95 rounded-card p-6 overflow-hidden relative shadow-soft-sm flex flex-col justify-between h-full min-h-115">
             <div className="space-y-6">
-              
               {/* Modern Linear Progress Section */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider text-text-secondary">
@@ -190,7 +191,10 @@ export const ExportPageTemplate = ({
                     Прогресс обработки
                   </span>
                   <span className="font-mono-accent text-text-primary">
-                    {progressLabel} {!isProgressIndeterminate && jobProgress.totalCount > 0 && `(${progressPercent}%)`}
+                    {progressLabel}{' '}
+                    {!isProgressIndeterminate &&
+                      jobProgress.totalCount > 0 &&
+                      `(${progressPercent}%)`}
                   </span>
                 </div>
 
@@ -220,7 +224,7 @@ export const ExportPageTemplate = ({
                     <Terminal className="size-3.5" />
                     Терминал системных логов
                   </span>
-                  
+
                   {/* Copy logs and tools buttons */}
                   {jobLogs.length > 0 && (
                     <Button
@@ -275,12 +279,19 @@ export const ExportPageTemplate = ({
                       </div>
                     ) : (
                       filteredLogs.map((log) => (
-                        <div key={log.id} className="space-y-0.5 leading-relaxed animate-in fade-in-0 duration-200">
+                        <div
+                          key={log.id}
+                          className="space-y-0.5 leading-relaxed animate-in fade-in-0 duration-200"
+                        >
                           <div className="flex items-baseline gap-x-2">
-                            <span className={`shrink-0 font-semibold text-[10px] uppercase border px-1 rounded ${LOG_LEVEL_CLASSES[log.level]}`}>
+                            <span
+                              className={`shrink-0 font-semibold text-[10px] uppercase border px-1 rounded ${LOG_LEVEL_CLASSES[log.level]}`}
+                            >
                               {LOG_LEVEL_LABELS[log.level]}
                             </span>
-                            <span className="text-text-primary flex-1 wrap-break-word">{log.message}</span>
+                            <span className="text-text-primary flex-1 wrap-break-word">
+                              {log.message}
+                            </span>
                             {log.createdAt && (
                               <span className="text-[10px] text-text-secondary select-none font-medium">
                                 {formatLogTime(log.createdAt)}
@@ -308,7 +319,7 @@ export const ExportPageTemplate = ({
                   </div>
                 </div>
               )}
-              
+
               {jobError && (
                 <div className="rounded-lg border border-accent-danger/30 bg-accent-danger/5 px-4 py-3 text-sm text-accent-danger flex items-start gap-2.5 animate-in fade-in duration-300">
                   <XOctagon className="size-4.5 shrink-0 mt-0.5" />
@@ -322,14 +333,15 @@ export const ExportPageTemplate = ({
             {/* Bottom microstatus block */}
             <div className="mt-4 pt-4 border-t border-border/30 flex justify-between items-center text-[10px] text-text-secondary font-mono-accent">
               <span className="flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${isExportLoading ? 'bg-accent-primary animate-pulse' : 'bg-accent-success'}`} />
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${isExportLoading ? 'bg-accent-primary animate-pulse' : 'bg-accent-success'}`}
+                />
                 {isExportLoading ? 'Стриминг фазы экспорта' : 'Служба экспорта активна'}
               </span>
               <span>API POLLING CHANNEL</span>
             </div>
           </Card>
         </div>
-
       </div>
     </div>
   )

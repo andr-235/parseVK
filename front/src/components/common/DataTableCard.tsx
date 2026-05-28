@@ -23,26 +23,26 @@ export interface SortOption {
 export interface DataTableCardProps {
   // Заголовок
   title: string
-  
+
   // Бейдж количества элементов
   totalCount?: number
   badgeText?: string
   declensionWords?: [string, string, string] // Например: ['группа', 'группы', 'групп']
-  
+
   // Поиск
   searchTerm?: string
   onSearchChange?: (value: string) => void
   searchPlaceholder?: string
-  
+
   // Сортировка
   sortOptions?: SortOption[]
   sortState?: { key: string; direction: 'asc' | 'desc' } | null
   onRequestSort?: (key: string) => void
   currentSortLabel?: string
-  
+
   // Дополнительные кнопки и действия в шапке
   headerActions?: ReactNode
-  
+
   // Состояния загрузки и отсутствия данных
   isLoading?: boolean
   loadingMessage?: string
@@ -51,14 +51,14 @@ export interface DataTableCardProps {
   emptyTitle?: string
   emptyDescription?: string
   emptyVariant?: 'default' | 'custom'
-  
+
   // Поиск ничего не нашел
   hasFilteredItems?: boolean
   noResultsMessage?: ReactNode
-  
+
   // Дочерний контент (сама таблица, сетка или список)
   children: ReactNode
-  
+
   // Кастомизация стилей
   className?: string
   contentClassName?: string
@@ -94,7 +94,6 @@ export function DataTableCard({
   headerClassName,
   hideHeader = false,
 }: DataTableCardProps) {
-  
   const displayBadgeText = useMemo(() => {
     if (badgeText !== undefined) {
       return badgeText
@@ -102,25 +101,36 @@ export function DataTableCard({
     if (totalCount === undefined) {
       return null
     }
-    
-    const formattedCount = searchTerm && searchTerm.trim() 
-      ? `${totalCount}` // В некоторых компонентах пишут "X из Y", это передается через badgeText
-      : `${totalCount}`
-      
+
+    const formattedCount =
+      searchTerm && searchTerm.trim()
+        ? `${totalCount}` // В некоторых компонентах пишут "X из Y", это передается через badgeText
+        : `${totalCount}`
+
     if (declensionWords) {
       return `${formattedCount} ${declOfNumber(totalCount, declensionWords)}`
     }
-    
+
     return formattedCount
   }, [totalCount, badgeText, declensionWords, searchTerm])
 
   const hasSort = sortOptions.length > 0 && sortState !== undefined && onRequestSort !== undefined
 
   return (
-    <Card className={cn('relative overflow-hidden rounded-xl border border-border bg-background-secondary shadow-soft-sm', className)}>
+    <Card
+      className={cn(
+        'relative overflow-hidden rounded-xl border border-border bg-background-secondary shadow-soft-sm',
+        className
+      )}
+    >
       {/* Header */}
       {!hideHeader && (
-        <div className={cn('flex flex-col gap-4 border-b border-border bg-background-sidebar/30 p-4 md:flex-row md:items-center md:justify-between md:px-6', headerClassName)}>
+        <div
+          className={cn(
+            'flex flex-col gap-4 border-b border-border bg-background-sidebar/30 p-4 md:flex-row md:items-center md:justify-between md:px-6',
+            headerClassName
+          )}
+        >
           <div className="flex items-center gap-3">
             <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-text-light">
               {title}
@@ -131,55 +141,55 @@ export function DataTableCard({
               </Badge>
             )}
           </div>
-         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {onSearchChange !== undefined && searchTerm !== undefined && (
-            <SearchInput
-              value={searchTerm}
-              onChange={onSearchChange}
-              placeholder={searchPlaceholder}
-              className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
-            />
-          )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {onSearchChange !== undefined && searchTerm !== undefined && (
+              <SearchInput
+                value={searchTerm}
+                onChange={onSearchChange}
+                placeholder={searchPlaceholder}
+                className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
+              />
+            )}
 
-          {hasSort && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-10 gap-2 border-border bg-background-primary text-text-secondary hover:border-primary/50 hover:bg-background-sidebar hover:text-text-light"
-                >
-                  <ArrowUpDown className="size-4" />
-                  <span className="max-w-[100px] truncate">{currentSortLabel}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="border border-border bg-background-secondary shadow-soft-lg animate-in fade-in-80 duration-100"
-              >
-                {sortOptions.map((option) => (
-                  <DropdownMenuItem
-                    key={option.key}
-                    onClick={() => onRequestSort(option.key)}
-                    className="text-text-secondary hover:bg-background-primary hover:text-text-light cursor-pointer"
+            {hasSort && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 gap-2 border-border bg-background-primary text-text-secondary hover:border-primary/50 hover:bg-background-sidebar hover:text-text-light"
                   >
-                    {option.label}
-                    {sortState?.key === option.key && (
-                      <span className="ml-auto font-mono-accent text-xs text-primary">
-                        {sortState.direction === 'asc' 
-                          ? (option.directionLabel?.asc || ' ↑') 
-                          : (option.directionLabel?.desc || ' ↓')}
-                      </span>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                    <ArrowUpDown className="size-4" />
+                    <span className="max-w-[100px] truncate">{currentSortLabel}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="border border-border bg-background-secondary shadow-soft-lg animate-in fade-in-80 duration-100"
+                >
+                  {sortOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.key}
+                      onClick={() => onRequestSort(option.key)}
+                      className="text-text-secondary hover:bg-background-primary hover:text-text-light cursor-pointer"
+                    >
+                      {option.label}
+                      {sortState?.key === option.key && (
+                        <span className="ml-auto font-mono-accent text-xs text-primary">
+                          {sortState.direction === 'asc'
+                            ? option.directionLabel?.asc || ' ↑'
+                            : option.directionLabel?.desc || ' ↓'}
+                        </span>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
-          {headerActions}
+            {headerActions}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Content */}
@@ -205,7 +215,8 @@ export function DataTableCard({
               noResultsMessage
             ) : (
               <div className="text-sm text-text-secondary">
-                По запросу «<span className="font-mono-accent text-primary">{searchTerm}</span>» ничего не найдено
+                По запросу «<span className="font-mono-accent text-primary">{searchTerm}</span>»
+                ничего не найдено
               </div>
             )}
           </div>

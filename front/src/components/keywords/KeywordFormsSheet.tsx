@@ -80,7 +80,10 @@ export function KeywordFormsSheet({
         <div className="flex items-center gap-2">
           <span>{keyword?.word ?? 'Формы ключевого слова'}</span>
           {keyword ? (
-            <Badge variant={isPhrase ? 'outline' : 'secondary'} className="h-5 px-2 text-[10px] uppercase font-mono-accent">
+            <Badge
+              variant={isPhrase ? 'outline' : 'secondary'}
+              className="h-5 px-2 text-[10px] uppercase font-mono-accent"
+            >
               {isPhrase ? 'Фраза' : 'Слово'}
             </Badge>
           ) : null}
@@ -95,21 +98,27 @@ export function KeywordFormsSheet({
         <div className="flex flex-col gap-4 pt-2">
           <Card className="border-border bg-background-primary/20">
             <CardHeader className="pb-3 pt-4 px-4">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-text-light font-mono-accent">Автосгенерированные формы</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-text-light font-mono-accent">
+                Автосгенерированные формы
+              </CardTitle>
               <CardDescription className="text-xs text-text-secondary font-monitoring-body">
                 Эти формы собираются backend-ом и участвуют в матчинге автоматически.
               </CardDescription>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              {isLoading
-                ? <span className="text-xs text-text-secondary font-mono-accent">Загрузка…</span>
-                : renderFormBadges(forms?.generatedForms ?? [], 'Нет автосгенерированных форм')}
+              {isLoading ? (
+                <span className="text-xs text-text-secondary font-mono-accent">Загрузка…</span>
+              ) : (
+                renderFormBadges(forms?.generatedForms ?? [], 'Нет автосгенерированных форм')
+              )}
             </CardContent>
           </Card>
 
           <Card className="border-border bg-background-primary/20">
             <CardHeader className="pb-3 pt-4 px-4">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-text-light font-mono-accent">Ручные формы</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-text-light font-mono-accent">
+                Ручные формы
+              </CardTitle>
               <CardDescription className="text-xs text-text-secondary font-monitoring-body">
                 Добавляйте нестандартные варианты, которые не покрывает морфология.
               </CardDescription>
@@ -136,13 +145,15 @@ export function KeywordFormsSheet({
                       Добавить
                     </Button>
                   </div>
-                  {isLoading
-                    ? <span className="text-xs text-text-secondary font-mono-accent">Загрузка…</span>
-                    : renderFormBadges(
-                        forms?.manualForms ?? [],
-                        'Ручные формы пока не добавлены',
-                        onRemoveManualForm
-                      )}
+                  {isLoading ? (
+                    <span className="text-xs text-text-secondary font-mono-accent">Загрузка…</span>
+                  ) : (
+                    renderFormBadges(
+                      forms?.manualForms ?? [],
+                      'Ручные формы пока не добавлены',
+                      onRemoveManualForm
+                    )
+                  )}
                 </>
               )}
             </CardContent>
@@ -150,7 +161,9 @@ export function KeywordFormsSheet({
 
           <Card className="border-border bg-background-primary/20">
             <CardHeader className="pb-3 pt-4 px-4">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-text-light font-mono-accent">Исключения</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-text-light font-mono-accent">
+                Исключения
+              </CardTitle>
               <CardDescription className="text-xs text-text-secondary font-monitoring-body">
                 Исключённые формы не будут возвращаться после регенерации generated-форм.
               </CardDescription>
@@ -177,13 +190,15 @@ export function KeywordFormsSheet({
                       Исключить
                     </Button>
                   </div>
-                  {isLoading
-                    ? <span className="text-xs text-text-secondary font-mono-accent">Загрузка…</span>
-                    : renderFormBadges(
-                        forms?.exclusions ?? [],
-                        'Исключения пока не заданы',
-                        onRemoveExclusion
-                      )}
+                  {isLoading ? (
+                    <span className="text-xs text-text-secondary font-mono-accent">Загрузка…</span>
+                  ) : (
+                    renderFormBadges(
+                      forms?.exclusions ?? [],
+                      'Исключения пока не заданы',
+                      onRemoveExclusion
+                    )
+                  )}
                 </>
               )}
             </CardContent>

@@ -212,7 +212,7 @@ export function ListingsTable({
           ) : (
             <span className="font-mono-accent text-xs text-slate-600">—</span>
           )
-        }
+        },
       },
       {
         header: 'Заголовок',
@@ -241,7 +241,7 @@ export function ListingsTable({
               )}
             </div>
           )
-        }
+        },
       },
       {
         header: 'Цена',
@@ -254,7 +254,7 @@ export function ListingsTable({
               {listing.price != null ? price : <span className="text-slate-600">—</span>}
             </span>
           )
-        }
+        },
       },
       {
         header: 'Параметры',
@@ -262,7 +262,7 @@ export function ListingsTable({
         render: (listing) => {
           const params = buildParamsString(listing)
           return <span className="font-mono-accent text-xs text-slate-400">{params || '—'}</span>
-        }
+        },
       },
       {
         header: 'Адрес',
@@ -273,7 +273,7 @@ export function ListingsTable({
           const parts = [listing.city, listing.address].filter(Boolean)
           const location = parts.join(', ') || '—'
           return <span className="line-clamp-2 text-xs text-slate-400">{location}</span>
-        }
+        },
       },
       {
         header: 'Контакт',
@@ -283,7 +283,7 @@ export function ListingsTable({
         render: (listing) => {
           const contact = listing.sourceAuthorName ?? listing.contactName ?? '—'
           return <span className="line-clamp-2 text-xs text-slate-400">{contact}</span>
-        }
+        },
       },
       {
         header: 'Номер телефона',
@@ -292,7 +292,7 @@ export function ListingsTable({
         render: (listing) => {
           const phone = listing.sourceAuthorPhone ?? listing.contactPhone ?? '—'
           return <span className="font-mono-accent text-xs text-slate-400">{phone}</span>
-        }
+        },
       },
       {
         header: 'URL автора',
@@ -304,7 +304,7 @@ export function ListingsTable({
           ) : (
             <span className="font-mono-accent text-xs text-slate-600">—</span>
           )
-        }
+        },
       },
       {
         header: 'Дата',
@@ -313,7 +313,7 @@ export function ListingsTable({
         render: (listing) => {
           const date = formatDateShort(listing.publishedAt ?? listing.sourcePostedAt)
           return <span className="font-mono-accent text-xs text-slate-500">{date}</span>
-        }
+        },
       },
       {
         header: 'Дата парсинга',
@@ -322,7 +322,7 @@ export function ListingsTable({
         render: (listing) => {
           const parsedAt = formatDateShort(listing.sourceParsedAt ?? listing.createdAt)
           return <span className="font-mono-accent text-xs text-slate-500">{parsedAt}</span>
-        }
+        },
       },
       {
         header: '',
@@ -383,19 +383,12 @@ export function ListingsTable({
               </button>
             </div>
           )
-        }
-      }
+        },
+      },
     ]
 
     return colDefs.filter((col) => col.key === 'actions' || visibleColumns.has(col.key as ColumnId))
-  }, [
-    visibleColumns,
-    confirmDeleteId,
-    handleConfirmDeleteExecute,
-    onEdit,
-    onAddNote,
-    onArchive
-  ])
+  }, [visibleColumns, confirmDeleteId, handleConfirmDeleteExecute, onEdit, onAddNote, onArchive])
 
   return (
     <div className="flex flex-col gap-3">
@@ -420,10 +413,12 @@ export function ListingsTable({
               onSortChange(def.sortField)
             }
           }}
-          rowClassName={(listing) => cn(
-            confirmDeleteId === listing.id && 'bg-red-500/[0.06] border-red-500/20',
-            listing.archived && !isArchivedView && 'opacity-50'
-          )}
+          rowClassName={(listing) =>
+            cn(
+              confirmDeleteId === listing.id && 'bg-red-500/[0.06] border-red-500/20',
+              listing.archived && !isArchivedView && 'opacity-50'
+            )
+          }
         />
       </div>
     </div>

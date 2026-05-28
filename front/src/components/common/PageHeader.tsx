@@ -53,15 +53,18 @@ export const PageHeader = ({
   formatLabel,
 }: PageHeaderProps) => {
   return (
-    <div className={cn('flex flex-col gap-8 w-full font-monitoring-body animate-in fade-in-0 duration-700', className)}>
-      
+    <div
+      className={cn(
+        'flex flex-col gap-8 w-full font-monitoring-body animate-in fade-in-0 duration-700',
+        className
+      )}
+    >
       {/* Unified High-density Console Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 p-6 rounded-card border border-border/50 bg-background-secondary/90 shadow-soft-sm relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-primary/5 via-transparent to-transparent opacity-20" />
-        
+
         <div className="relative space-y-2 z-10">
-          <div className="flex flex-wrap items-center gap-2">
-          </div>
+          <div className="flex flex-wrap items-center gap-2"></div>
           <h1 className="font-monitoring-display text-3xl font-bold tracking-tight text-text-light">
             {title}
           </h1>
@@ -82,7 +85,7 @@ export const PageHeader = ({
               <span className={platformColorClass || 'text-accent-primary'}>{platformLabel}</span>
             </div>
           )}
-          
+
           {apiMethod && (
             <div className="flex items-center gap-2 border border-border/50 bg-background-primary px-3 py-2 rounded-lg font-mono-accent text-xs shadow-soft-sm">
               <Terminal className="size-4 text-text-secondary" />
@@ -90,7 +93,7 @@ export const PageHeader = ({
               <span className="text-text-primary">{apiMethod}</span>
             </div>
           )}
-          
+
           {formatLabel && (
             <div className="flex items-center gap-2 border border-border/50 bg-background-primary px-3 py-2 rounded-lg font-mono-accent text-xs shadow-soft-sm">
               <FileSpreadsheet className="size-4 text-text-secondary" />
@@ -110,7 +113,10 @@ export const PageHeader = ({
           {cards.map((card, index) => {
             const Icon = card.icon
             return (
-              <div key={index} className="relative h-full animate-in fade-in-0 slide-in-from-bottom-2 duration-500 delay-75">
+              <div
+                key={index}
+                className="relative h-full animate-in fade-in-0 slide-in-from-bottom-2 duration-500 delay-75"
+              >
                 <Card className="relative border border-border/50 bg-background-secondary/95 shadow-soft-sm p-5 overflow-hidden h-full">
                   <div className="relative flex items-start gap-3 h-full z-10">
                     <div className="p-2 rounded-lg shrink-0 bg-accent-primary/10 text-accent-primary">

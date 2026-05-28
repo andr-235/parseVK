@@ -118,7 +118,9 @@ function AuthorsPage() {
           </div>
 
           <div className="flex min-w-[220px] flex-1 items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-mono-accent">Город</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-mono-accent">
+              Город
+            </span>
             <Input
               value={cityValue}
               onChange={(event) => handleCityFilterChange(event.target.value)}

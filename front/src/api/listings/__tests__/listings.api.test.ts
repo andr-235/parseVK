@@ -53,21 +53,19 @@ describe('listingsService.fetchListings', () => {
   })
   it('uses gateway URL for listings fetches', async () => {
     const { listingsService } = await import('../listings.api')
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            items: [],
-            total: 0,
-            page: 1,
-            pageSize: 20,
-            hasMore: false,
-            sources: [],
-          }),
-          { status: 200 }
-        )
-      ) as typeof fetch
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          items: [],
+          total: 0,
+          page: 1,
+          pageSize: 20,
+          hasMore: false,
+          sources: [],
+        }),
+        { status: 200 }
+      )
+    ) as typeof fetch
 
     await listingsService.fetchListings({ page: 1, pageSize: 20 })
 
@@ -79,21 +77,19 @@ describe('listingsService.fetchListings', () => {
 
   it('uses gateway URL for create imports', async () => {
     const { listingsService } = await import('../listings.api')
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            processed: 1,
-            created: 1,
-            updated: 0,
-            skipped: 0,
-            failed: 0,
-            errors: [],
-          }),
-          { status: 200 }
-        )
-      ) as typeof fetch
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          processed: 1,
+          created: 1,
+          updated: 0,
+          skipped: 0,
+          failed: 0,
+          errors: [],
+        }),
+        { status: 200 }
+      )
+    ) as typeof fetch
 
     await listingsService.createListing({ url: 'https://example.test/flat' })
 

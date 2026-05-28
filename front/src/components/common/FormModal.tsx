@@ -65,7 +65,7 @@ export function FormModal({
     >
       <div
         className={cn(
-          "relative my-8 w-full overflow-hidden rounded-2xl border border-border bg-background-secondary/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200",
+          'relative my-8 w-full overflow-hidden rounded-2xl border border-border bg-background-secondary/95 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200',
           widthClass
         )}
         onClick={(e) => e.stopPropagation()}
@@ -103,9 +103,7 @@ export function FormModal({
         {/* Form Container */}
         {onSubmit ? (
           <form onSubmit={handleSubmit}>
-            <div className="px-6 pb-4 space-y-4 max-h-[70vh] overflow-y-auto">
-              {children}
-            </div>
+            <div className="px-6 pb-4 space-y-4 max-h-[70vh] overflow-y-auto">{children}</div>
 
             {error && (
               <div className="px-6 pb-2">
@@ -138,9 +136,7 @@ export function FormModal({
           </form>
         ) : (
           <div>
-            <div className="px-6 pb-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              {children}
-            </div>
+            <div className="px-6 pb-6 space-y-4 max-h-[75vh] overflow-y-auto">{children}</div>
 
             {error && (
               <div className="px-6 pb-4">

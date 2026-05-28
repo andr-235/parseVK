@@ -1,17 +1,13 @@
-import { memo, useMemo, useCallback, useState, useEffect } from 'react'
+import { memo, useMemo, useCallback, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Table, TableCaption } from '@/components/ui/table'
 import { useTableSorting } from '@/hooks/common'
-import { useKeyboardNavigation } from '@/hooks/common'
 import type { WatchlistAuthorCard, TableColumn } from '@/types'
 import { filterValidAuthors, validateAuthorId } from '@/utils/watchlist/watchlistUtils'
 import { logger } from '@/utils/watchlist/logger'
 import { WATCHLIST_CONSTANTS } from '@/config/watchlist/watchlist'
-import { WatchlistAuthorsTableHeader } from './WatchlistAuthorsTableHeader'
-import { WatchlistAuthorsTableBody } from './WatchlistAuthorsTableBody'
-import { VirtualizedTableBody } from './VirtualizedTableBody'
 import { DataTableCard } from '@/components/common/DataTableCard'
+import { DataTable } from '@/components/common/DataTable'
 import toast from 'react-hot-toast'
 
 interface WatchlistTableCardProps {
@@ -42,7 +38,6 @@ export const WatchlistTableCard = memo(
     onSearchChange,
     onRefresh,
   }: WatchlistTableCardProps) => {
-    const [focusedRowIndex, setFocusedRowIndex] = useState<number | null>(null)
     const [isLoadingMore, setIsLoadingMore] = useState(false)
 
     const validAuthors = useMemo(() => filterValidAuthors(authors), [authors])
@@ -73,12 +68,6 @@ export const WatchlistTableCard = memo(
       [onSelectAuthor]
     )
 
-    const { tableRef, handleKeyDown } = useKeyboardNavigation({
-      itemsLength: sortedAuthors.length,
-      onSelect: (index: number) => handleSelectAuthor(sortedAuthors[index]),
-      onFocusChange: setFocusedRowIndex,
-    })
-
     const handleLoadMore = useCallback(async () => {
       if (isLoadingMore || !hasMoreAuthors || isLoadingAuthors || isLoadingMoreAuthors) {
         return
@@ -92,16 +81,9 @@ export const WatchlistTableCard = memo(
       }
     }, [isLoadingMore, hasMoreAuthors, isLoadingAuthors, isLoadingMoreAuthors, onLoadMore])
 
-    useEffect(() => {
-      if (focusedRowIndex !== null && focusedRowIndex >= sortedAuthors.length) {
-        setFocusedRowIndex(null)
-      }
-    }, [sortedAuthors.length, focusedRowIndex])
-
     const isLoading = isLoadingAuthors && !authors.length
     const isEmpty = !isLoadingAuthors && sortedAuthors.length === 0
     const hasData = sortedAuthors.length > 0 && authorColumns.length > 0
-    const useVirtualization = sortedAuthors.length > 50 && authorColumns.length > 0
 
     const badgeText = useMemo(() => {
       return searchTerm.trim() ? `${sortedAuthors.length} из ${totalAuthors}` : `${totalAuthors}`
@@ -149,64 +131,32 @@ export const WatchlistTableCard = memo(
         </div>
 
         {hasData && (
-          <Table
-            ref={tableRef}
-            role="grid"
-            aria-label="Таблица авторов в списке наблюдения"
-            aria-rowcount={sortedAuthors.length}
-            aria-colcount={authorColumns.length}
-            aria-activedescendant={
-              focusedRowIndex !== null
-                ? `author-row-${sortedAuthors[focusedRowIndex]?.id}`
-                : undefined
-            }
-            key="authors-table"
-          >
-            <WatchlistAuthorsTableHeader
-              authorColumns={authorColumns}
-              authorSortState={authorSortState}
-              requestAuthorSort={requestAuthorSort}
+          <div className="flex flex-col">
+            <DataTable
+              data={sortedAuthors}
+              columns={authorColumns}
+              isLoading={isLoadingAuthors}
+              sortState={authorSortState}
+              onRequestSort={requestAuthorSort}
+              onRowClick={(item) => handleSelectAuthor(item)}
             />
-            {useVirtualization ? (
-              <tbody>
-                <tr>
-                  <td colSpan={authorColumns.length} style={{ padding: 0, border: 'none' }}>
-                    <VirtualizedTableBody
-                      sortedAuthors={sortedAuthors}
-                      authorColumns={authorColumns}
-                      focusedRowIndex={focusedRowIndex}
-                      onSelectAuthor={handleSelectAuthor}
-                      height={400}
-                      itemSize={48}
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            ) : (
-              <WatchlistAuthorsTableBody
-                sortedAuthors={sortedAuthors}
-                authorColumns={authorColumns}
-                focusedRowIndex={focusedRowIndex}
-                onSelectAuthor={handleSelectAuthor}
-                onKeyDown={handleKeyDown}
-              />
-            )}
-            <TableCaption className="pb-4">
+            <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">
               {hasMoreAuthors ? (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleLoadMore}
                   disabled={isLoadingAuthors || isLoadingMoreAuthors || isLoadingMore}
-                  className="mt-2"
                 >
                   {isLoadingMoreAuthors || isLoadingMore ? 'Загружаем...' : 'Загрузить ещё'}
                 </Button>
               ) : (
-                `Показано ${sortedAuthors.length} авторов`
+                <span className="text-xs text-text-secondary font-monitoring-body">
+                  Показано {sortedAuthors.length} авторов
+                </span>
               )}
-            </TableCaption>
-          </Table>
+            </div>
+          </div>
         )}
       </DataTableCard>
     )

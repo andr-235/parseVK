@@ -1,6 +1,18 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState, useMemo } from 'react'
 import { PageHeader, FiltersPanel } from '@/components/common'
-import { Plus, Upload, Download, RefreshCw, Database, Filter, Archive, PlusCircle, Info, Edit2, FileJson } from 'lucide-react'
+import {
+  Plus,
+  Upload,
+  Download,
+  RefreshCw,
+  Database,
+  Filter,
+  Archive,
+  PlusCircle,
+  Info,
+  Edit2,
+  FileJson,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -170,9 +182,7 @@ function ListingsPage() {
             </Button>
           )}
 
-          <div className="text-xs text-text-secondary ml-auto font-mono-accent">
-            {summaryText}
-          </div>
+          <div className="text-xs text-text-secondary ml-auto font-mono-accent">{summaryText}</div>
         </FiltersPanel>
       </div>
 
@@ -401,7 +411,9 @@ function ImportListingsModal({ isOpen, onClose, onImportComplete }: ImportListin
             checked={updateExisting}
             onChange={(e) => setUpdateExisting(e.target.checked)}
           />
-          <span className="text-sm text-text-primary font-monitoring-body">Обновлять существующие записи</span>
+          <span className="text-sm text-text-primary font-monitoring-body">
+            Обновлять существующие записи
+          </span>
         </label>
 
         <div className="flex gap-3 rounded-xl border border-border bg-background-secondary/30 p-4">
@@ -547,9 +559,10 @@ function ExportListingsModal({
     { title: 'Прочее', keys: ['description', 'manualNote'] },
   ]
 
-  const labelByKey = Object.fromEntries(
-    ALL_FIELDS.map((f) => [f.key, f.label])
-  ) as Record<FieldKey, string>
+  const labelByKey = Object.fromEntries(ALL_FIELDS.map((f) => [f.key, f.label])) as Record<
+    FieldKey,
+    string
+  >
 
   return (
     <FormModal
@@ -566,7 +579,9 @@ function ExportListingsModal({
       <div className="space-y-6 pt-2">
         <section className="space-y-3">
           <div className="flex items-center gap-2 pb-2 border-b border-border">
-            <h3 className="text-sm font-semibold text-text-light font-monitoring-body">Область выгрузки</h3>
+            <h3 className="text-sm font-semibold text-text-light font-monitoring-body">
+              Область выгрузки
+            </h3>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -642,7 +657,9 @@ function ExportListingsModal({
                 key={g.title}
                 className="rounded-xl border border-border bg-background-primary/40 p-4"
               >
-                <h4 className="text-text-light font-semibold text-xs uppercase tracking-wider mb-3 font-mono-accent">{g.title}</h4>
+                <h4 className="text-text-light font-semibold text-xs uppercase tracking-wider mb-3 font-mono-accent">
+                  {g.title}
+                </h4>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {g.keys.map((key) => {
                     const checked = selected.has(key)
@@ -661,7 +678,9 @@ function ExportListingsModal({
                           onChange={() => handleToggleField(key)}
                           className="h-4 w-4 rounded border-border text-accent-primary focus:ring-accent-primary/20"
                         />
-                        <span className="text-xs font-medium font-monitoring-body">{labelByKey[key]}</span>
+                        <span className="text-xs font-medium font-monitoring-body">
+                          {labelByKey[key]}
+                        </span>
                       </label>
                     )
                   })}
@@ -706,7 +725,9 @@ const EMPTY_FORM: CreateListingPayload = {
 function LocalLabeledField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <label className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono-accent">{label}</label>
+      <label className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono-accent">
+        {label}
+      </label>
       {children}
     </div>
   )
@@ -1084,7 +1105,9 @@ function LocalField({ label, children }: { label: string; children: React.ReactN
 function LocalSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3 bg-background-primary/20 p-4 rounded-xl border border-border">
-      <p className="text-xs font-semibold uppercase tracking-widest text-accent-primary font-mono-accent">{title}</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-accent-primary font-mono-accent">
+        {title}
+      </p>
       <div className="space-y-3">{children}</div>
     </div>
   )

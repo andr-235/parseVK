@@ -1,5 +1,4 @@
 import type { PhotoAnalysisSummary } from '@/types/common'
-import type { TableColumn } from '@/types/common'
 
 export type WatchlistStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED'
 
@@ -59,34 +58,3 @@ export interface WatchlistSettings {
 }
 
 // Типы специфичные для watchlist
-export interface WatchlistAuthorColumnsProps {
-  handleSelectAuthor: (id: number) => void
-  handleRemoveFromWatchlist: (id: number) => void
-  pendingRemoval: Record<number, boolean>
-}
-
-export interface WatchlistHeroProps {
-  settings: WatchlistSettings | null
-  totalAuthors: number
-  isLoadingAuthors: boolean
-  isUpdatingSettings: boolean
-  onRefresh: () => void
-  onToggleTrackAll: () => void
-}
-
-export interface WatchlistAuthorsTableProps {
-  authors: WatchlistAuthorCard[]
-  totalAuthors: number
-  hasMoreAuthors: boolean
-  isLoadingAuthors: boolean
-  isLoadingMoreAuthors: boolean
-  authorColumns: TableColumn<WatchlistAuthorCard>[]
-  onSelectAuthor: (id: number) => void
-  onLoadMore: () => void
-}
-
-export interface WatchlistAuthorDetailsProps {
-  currentAuthor: WatchlistAuthorDetails | null
-  isLoadingAuthorDetails: boolean
-  commentColumns: TableColumn<WatchlistComment>[]
-}
