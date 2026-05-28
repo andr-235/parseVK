@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { adminUsersService } from '@/api/adminUsers/adminUsers.api'
 import { useCurrentUser } from '@/hooks/adminUsers/useCurrentUser'
-import { PageHeader, PageContainer } from '@/components/common'
+import { PageContainer } from '@/components/common'
 import { Shield, UserPlus, Users, Key, KeyRound, RefreshCw, Trash2 } from 'lucide-react'
 import type { AdminUser, UserRole } from '@/types/auth'
 import type { TableColumn } from '@/types'
@@ -267,15 +267,16 @@ function AdminUsersPage() {
   return (
     <PageContainer maxWidth="1600px" animate={false}>
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
-        <PageHeader
-          variant="grid"
-          title={
-            <>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-6 rounded-lg border border-border bg-background-secondary">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight text-text-light">
               Управление <span className="text-accent-primary">пользователями</span>
-            </>
-          }
-          description="Создавайте учетные записи, назначайте роли и контролируйте доступ к системе. Управление временными паролями и безопасностью аккаунтов."
-          actions={
+            </h1>
+            <p className="text-sm text-text-secondary">
+              Создавайте учетные записи, назначайте роли и контролируйте доступ к системе. Управление временными паролями и безопасностью аккаунтов.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
             <Button
               onClick={loadUsers}
               size="sm"
@@ -286,9 +287,28 @@ function AdminUsersPage() {
               <RefreshCw className={cn('mr-2 w-4 h-4', isLoading && 'animate-spin')} />
               Обновить
             </Button>
-          }
-          cards={pageCards}
-        />
+          </div>
+        </div>
+
+        {/* Flat Cards Grid */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-6">
+          {pageCards.map((card, index) => {
+            const Icon = card.icon
+            return (
+              <div key={index} className="border border-border bg-background-secondary p-4 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-accent-primary/10 text-accent-primary">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-text-primary truncate">{card.title}</h3>
+                    <p className="text-xs text-text-secondary">{card.subtitle}</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* Main Content - staggered animation */}
