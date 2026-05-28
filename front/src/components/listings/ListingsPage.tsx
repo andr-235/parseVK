@@ -13,7 +13,6 @@ import { useListingsViewModel } from '@/hooks/listings/useListingsViewModel'
 import { formatSourceLabel } from '@/utils/listings/listingsUtils'
 import { listingsService, type CreateListingPayload } from '@/api/listings/listings.api'
 import type { IListing, ListingUpdatePayload } from '@/types/common'
-import type { ListingsSortField } from '@/types/listings/listingsTypes'
 import toast from 'react-hot-toast'
 
 const PAGE_CARDS = [

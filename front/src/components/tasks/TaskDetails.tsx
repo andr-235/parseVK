@@ -1,11 +1,12 @@
 import type { TaskDetails as TaskDetailsType } from '@/types'
 import { useTaskActions } from './TaskDetails/hooks/useTaskActions'
 import { useTaskStats } from './TaskDetails/hooks/useTaskStats'
-import { TaskDetailsHeader } from './TaskDetails/components/TaskDetailsHeader'
 import { TaskStatsGrid } from './TaskDetails/components/TaskStatsGrid'
 import { TaskProgressSection } from './TaskDetails/components/TaskProgressSection'
 import { GroupsTable } from './TaskDetails/components/GroupsTable/GroupsTable'
-import { useFocusTrap } from '@/hooks/common'
+import { FormModal } from '@/components/common/FormModal'
+import { Button } from '@/components/ui/button'
+import { Play } from 'lucide-react'
 
 interface TaskDetailsProps {
   task: TaskDetailsType | undefined
@@ -16,61 +17,66 @@ function TaskDetails({ task, onClose }: TaskDetailsProps) {
   const { isResuming, isChecking, canResume, handleResume, handleCheck } = useTaskActions(task)
   const stats = useTaskStats(task)
 
-  const containerRef = useFocusTrap<HTMLDivElement>({
-    isOpen: !!task && !!stats,
-    onClose,
-  })
-
   if (!task || !stats) {
     return null
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm transition-opacity"
-      onClick={onClose}
+    <FormModal
+      isOpen={!!task}
+      onClose={onClose}
+      title={
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <span>Детали задачи #{task.id}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={isResuming || !canResume}
+              onClick={handleResume}
+              className="h-8 text-xs cursor-pointer border border-border bg-background-secondary text-text-secondary hover:bg-background-primary hover:text-text-light"
+              title={canResume ? undefined : 'Завершённую задачу возобновлять не требуется'}
+            >
+              {isResuming ? 'Возобновление…' : 'Продолжить'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCheck}
+              disabled={isChecking}
+              className="h-8 text-xs cursor-pointer text-text-secondary hover:bg-background-primary hover:text-text-light"
+            >
+              {isChecking ? 'Проверяем…' : 'Проверить'}
+            </Button>
+          </div>
+        </div>
+      }
+      description="Статистика выполнения и прогресс парсинга по группам"
+      icon={<Play className="h-5 w-5" />}
+      widthClass="max-w-5xl"
     >
-      <div
-        ref={containerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="task-details-title"
-        className="flex w-full max-h-[90vh] max-w-5xl flex-col overflow-hidden rounded-3xl bg-background-secondary border border-border/60 shadow-xl text-foreground"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <TaskDetailsHeader
-          taskId={task.id}
-          isResuming={isResuming}
-          isChecking={isChecking}
-          canResume={canResume}
-          onResume={handleResume}
-          onCheck={handleCheck}
-          onClose={onClose}
+      <div className="space-y-6 pt-2">
+        <TaskStatsGrid
+          task={task}
+          scopeLabel={stats.scopeLabel}
+          modeLabel={stats.modeLabel}
+          totalGroups={stats.totalGroups}
+          postsCount={stats.postsCount}
+          commentsCountTotal={stats.commentsCountTotal}
         />
 
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
-          <TaskStatsGrid
-            task={task}
-            scopeLabel={stats.scopeLabel}
-            modeLabel={stats.modeLabel}
-            totalGroups={stats.totalGroups}
-            postsCount={stats.postsCount}
-            commentsCountTotal={stats.commentsCountTotal}
-          />
+        <TaskProgressSection
+          totalGroups={stats.totalGroups}
+          processedTotal={stats.processedTotal}
+          activeGroups={stats.activeGroups}
+          pendingGroups={stats.pendingGroups}
+          successCount={stats.successCount}
+          failedCount={stats.failedCount}
+        />
 
-          <TaskProgressSection
-            totalGroups={stats.totalGroups}
-            processedTotal={stats.processedTotal}
-            activeGroups={stats.activeGroups}
-            pendingGroups={stats.pendingGroups}
-            successCount={stats.successCount}
-            failedCount={stats.failedCount}
-          />
-
-          <GroupsTable groups={task.groups} />
-        </div>
+        <GroupsTable groups={task.groups} />
       </div>
-    </div>
+    </FormModal>
   )
 }
 
