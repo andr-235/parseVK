@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { PageHeader, FiltersPanel } from '@/components/common'
+import { PageHeader, FiltersPanel, PageContainer } from '@/components/common'
 import { useAuthorsViewModel } from '@/hooks/authors/useAuthorsViewModel'
 import { Users, Shield, Microscope, RefreshCw, ArrowRight, Camera, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -353,7 +353,7 @@ function AuthorsPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+    <PageContainer maxWidth="1600px" animate={false}>
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <PageHeader
           variant="grid"
@@ -459,7 +459,7 @@ function AuthorsPage() {
           emptyDescription={emptyDescription}
         />
       </div>
-    </div>
+    </PageContainer>
   )
 }
 

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, memo } from 'react'
 import { getGroupTableColumns } from '@/config/groups/groupTableColumns'
 import RegionGroupsSearchCard from '@/components/groups/RegionGroupsSearchCard'
-import { PageHeader } from '@/components/common'
+import { PageHeader, PageContainer } from '@/components/common'
 import FileUpload from '@/components/common/FileUpload'
 import { useGroupsViewModel } from '@/hooks/groups/useGroupsViewModel'
 import { Input } from '@/components/ui/input'
@@ -384,7 +384,7 @@ function GroupsPage() {
   } = useGroupsViewModel()
 
   return (
-    <div className="flex flex-col gap-8 pb-10 pt-6 font-monitoring-body max-w-[1600px] mx-auto w-full px-4 md:px-8">
+    <PageContainer maxWidth="1600px" animate={false}>
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <PageHeader
           variant="simple"
@@ -438,7 +438,7 @@ function GroupsPage() {
 
         {hasMore && <div ref={loadMoreRef} className="h-1 w-full" />}
       </div>
-    </div>
+    </PageContainer>
   )
 }
 

@@ -1,5 +1,5 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState, useMemo } from 'react'
-import { PageHeader, FiltersPanel } from '@/components/common'
+import { PageHeader, FiltersPanel, PageContainer } from '@/components/common'
 import {
   Plus,
   Upload,
@@ -80,7 +80,7 @@ function ListingsPage() {
   } = useListingsViewModel()
 
   return (
-    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+    <PageContainer maxWidth="1600px" animate={false}>
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <PageHeader
           variant="grid"
@@ -239,7 +239,7 @@ function ListingsPage() {
         onClose={() => setIsCreateOpen(false)}
         onCreated={handleManualRefresh}
       />
-    </div>
+    </PageContainer>
   )
 }
 

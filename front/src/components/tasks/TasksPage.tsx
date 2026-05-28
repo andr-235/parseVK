@@ -3,7 +3,7 @@ import TaskDetails from '@/components/tasks/TaskDetails'
 import CreateParseTaskModal from '@/components/tasks/CreateParseTaskModal'
 import ActiveTasksBanner from '@/components/tasks/ActiveTasksBanner'
 import TasksList from '@/components/tasks/TasksList'
-import { PageHeader } from '@/components/common'
+import { PageHeader, PageContainer } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Play, Settings, Calendar, Clock } from 'lucide-react'
@@ -53,7 +53,7 @@ function TasksPage() {
   const lastRunText = formatDateTime(automationSettings?.lastRunAt ?? null)
 
   return (
-    <div className="flex flex-col gap-10 max-w-400 mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+    <PageContainer maxWidth="400" animate={false}>
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <PageHeader
           variant="grid"
@@ -211,7 +211,7 @@ function TasksPage() {
         onClose={handleCloseCreateModal}
         onSubmit={handleCreateTask}
       />
-    </div>
+    </PageContainer>
   )
 }
 

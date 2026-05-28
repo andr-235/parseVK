@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { adminUsersService } from '@/api/adminUsers/adminUsers.api'
 import { useCurrentUser } from '@/hooks/adminUsers/useCurrentUser'
-import { PageHeader } from '@/components/common'
+import { PageHeader, PageContainer } from '@/components/common'
 import { Shield, UserPlus, Users, Key, KeyRound, RefreshCw, Trash2 } from 'lucide-react'
 import type { AdminUser, UserRole } from '@/types/auth'
 import type { TableColumn } from '@/types'
@@ -265,7 +265,7 @@ function AdminUsersPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+    <PageContainer maxWidth="1600px" animate={false}>
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <PageHeader
           variant="grid"
@@ -414,7 +414,7 @@ function AdminUsersPage() {
           </Card>
         </div>
       </div>
-    </div>
+    </PageContainer>
   )
 }
 

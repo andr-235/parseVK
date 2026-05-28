@@ -1,4 +1,4 @@
-import { PageHeader, FiltersPanel } from '@/components/common'
+import { PageHeader, FiltersPanel, PageContainer } from '@/components/common'
 import { MessageSquare, Eye, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -43,7 +43,7 @@ function CommentsPage() {
   } = useCommentsViewModel()
 
   return (
-    <div className="flex flex-col gap-8 pb-10 pt-6 font-monitoring-body max-w-[1600px] mx-auto w-full">
+    <PageContainer maxWidth="1600px" animate={false}>
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 px-4 md:px-8">
         <PageHeader
           variant="badges"
@@ -197,7 +197,7 @@ function CommentsPage() {
           />
         )}
       </div>
-    </div>
+    </PageContainer>
   )
 }
 

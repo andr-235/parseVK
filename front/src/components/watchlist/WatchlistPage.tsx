@@ -1,7 +1,7 @@
 import { memo, useMemo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWatchlistViewModel } from '@/hooks/watchlist/useWatchlistViewModel'
-import { PageHeader, SectionCard } from '@/components/common'
+import { PageHeader, SectionCard, PageContainer } from '@/components/common'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/common/EmptyState'
 import SearchInput from '@/components/common/SearchInput'
@@ -601,7 +601,7 @@ function WatchlistPage() {
   }
 
   return (
-    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+    <PageContainer maxWidth="1600px" animate={false}>
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         {renderHeader()}
       </div>
@@ -638,7 +638,7 @@ function WatchlistPage() {
           />
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }
 

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { PageHeader } from '@/components/common'
+import { PageHeader, PageContainer } from '@/components/common'
 import {
   BookMarked,
   Tag,
@@ -760,7 +760,7 @@ function KeywordsPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
+    <PageContainer maxWidth="1600px" animate={false}>
       <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <PageHeader
           variant="grid"
@@ -847,7 +847,7 @@ function KeywordsPage() {
         onAddExclusion={handleAddExclusion}
         onRemoveExclusion={handleRemoveExclusion}
       />
-    </div>
+    </PageContainer>
   )
 }
 
