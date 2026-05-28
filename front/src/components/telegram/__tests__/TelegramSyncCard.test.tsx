@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
-import TelegramSyncCard from '../TelegramSyncCard'
+import { TelegramSyncCard } from '../TelegramPage'
 
 const mockUseTelegramSync = vi.fn()
 
