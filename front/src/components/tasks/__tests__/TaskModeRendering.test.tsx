@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { getTaskTableColumns } from '@/config/tasks/taskTableColumns'
-import { TaskStatsGrid } from '@/components/tasks/TaskDetails/components/TaskStatsGrid'
+import { TaskStatsGrid } from '@/components/tasks/TaskDetails'
 import type { Task, TaskDetails } from '@/types'
 
 const baseTask: Task = {
