@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import KeywordsTableCard from '../KeywordsTableCard'
+import { KeywordsTableCard } from '../KeywordsPage'
 
 vi.mock('@/components/ui/dropdown-menu', () => ({
   DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,

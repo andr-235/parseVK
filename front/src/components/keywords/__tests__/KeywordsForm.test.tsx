@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { KeywordsForm } from '../KeywordsForm'
+import { KeywordsForm } from '../KeywordsPage'
 
 describe('KeywordsForm', () => {
   it('disables add buttons when trimmed values are empty', () => {

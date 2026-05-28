@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { KeywordCard } from '../KeywordCard'
+import { KeywordCard } from '../KeywordsPage'
 
 describe('KeywordCard', () => {
   it('switches to inline category edit mode and saves a new category', async () => {
