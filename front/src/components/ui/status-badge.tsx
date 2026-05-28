@@ -6,29 +6,29 @@ export type StatusBadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutr
 
 const toneClasses: Record<StatusBadgeTone, { root: string; dot: string; ping: string }> = {
   success: {
-    root: 'border-green-500/20 bg-green-500/10 text-green-400',
-    dot: 'bg-green-500',
-    ping: 'bg-green-500',
+    root: 'border-accent-success/20 bg-accent-success/10 text-accent-success',
+    dot: 'bg-accent-success',
+    ping: 'bg-accent-success',
   },
   warning: {
-    root: 'border-amber-500/20 bg-amber-500/10 text-amber-400',
-    dot: 'bg-amber-500',
-    ping: 'bg-amber-500',
+    root: 'border-accent-warning/20 bg-accent-warning/10 text-accent-warning',
+    dot: 'bg-accent-warning',
+    ping: 'bg-accent-warning',
   },
   danger: {
-    root: 'border-red-500/20 bg-red-500/10 text-red-400',
-    dot: 'bg-red-500',
-    ping: 'bg-red-500',
+    root: 'border-accent-danger/20 bg-accent-danger/10 text-accent-danger',
+    dot: 'bg-accent-danger',
+    ping: 'bg-accent-danger',
   },
   info: {
-    root: 'border-primary/20 bg-primary/10 text-primary',
-    dot: 'bg-primary',
-    ping: 'bg-primary',
+    root: 'border-accent-info/20 bg-accent-info/10 text-accent-info',
+    dot: 'bg-accent-info',
+    ping: 'bg-accent-info',
   },
   neutral: {
-    root: 'border-slate-500/20 bg-slate-500/10 text-slate-400',
-    dot: 'bg-slate-500',
-    ping: 'bg-slate-500',
+    root: 'border-border/60 bg-background-secondary text-text-secondary',
+    dot: 'bg-text-secondary',
+    ping: 'bg-text-secondary',
   },
 }
 

@@ -46,6 +46,7 @@ export function FiltersPanel({
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
                 className="pl-10 h-11 rounded-xl border-border bg-background-primary text-text-light placeholder:text-text-secondary focus-visible:ring-1 focus-visible:ring-accent-primary/30 transition-all hover:bg-background-sidebar"
               />
             </div>
@@ -59,6 +60,7 @@ export function FiltersPanel({
               disabled={isRefreshing}
               className="h-11 w-11 shrink-0 rounded-xl border-border bg-background-secondary hover:bg-background-sidebar text-text-secondary hover:text-text-light transition-all"
               title="Обновить"
+              aria-label="Обновить"
             >
               <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
             </Button>

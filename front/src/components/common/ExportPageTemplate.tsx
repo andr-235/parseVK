@@ -66,10 +66,7 @@ export const ExportPageTemplate = ({
   // Auto-scroll logs to bottom on new log arrival
   useEffect(() => {
     if (logTerminalRef.current) {
-      logTerminalRef.current.scrollTo({
-        top: logTerminalRef.current.scrollHeight,
-        behavior: 'smooth',
-      })
+      logTerminalRef.current.scrollTop = logTerminalRef.current.scrollHeight
     }
   }, [jobLogs])
 
@@ -106,7 +103,7 @@ export const ExportPageTemplate = ({
   }, [jobProgress, isProgressIndeterminate])
 
   return (
-    <div className="flex flex-col gap-8 max-w-400 mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body animate-in fade-in-0 duration-700">
+    <div className="flex flex-col gap-8 max-w-7xl mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body animate-in fade-in-0 duration-700">
       {/* High-density Console Page Header */}
       <PageHeader
         title={title}

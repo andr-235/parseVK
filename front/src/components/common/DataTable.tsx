@@ -141,16 +141,25 @@ export function DataTable<T>({
               const key = defaultRowKey(item, index)
               const rowClass =
                 typeof rowClassName === 'function' ? rowClassName(item, index) : rowClassName
+              const isClickable = !!onRowClick
 
               return (
                 <TableRow
                   key={key}
+                  tabIndex={isClickable ? 0 : undefined}
+                  role={isClickable ? 'button' : undefined}
                   className={cn(
-                    'group border-b border-border/40 transition-colors hover:bg-muted/30',
-                    onRowClick && 'cursor-pointer',
+                    'group border-b border-border/40 transition-colors hover:bg-muted/30 focus-visible:bg-muted/40 focus-visible:outline-hidden',
+                    isClickable && 'cursor-pointer',
                     rowClass
                   )}
-                  onClick={() => onRowClick && onRowClick(item, index)}
+                  onClick={() => isClickable && onRowClick(item, index)}
+                  onKeyDown={(e) => {
+                    if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      onRowClick(item, index)
+                    }
+                  }}
                 >
                   {columns.map((column) => (
                     <TableCell
