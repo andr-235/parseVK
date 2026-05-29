@@ -16,7 +16,6 @@ import { TgmbaseSearchModule } from './tgmbase-search/tgmbase-search.module.js';
 import { VkModule } from './vk/vk.module.js';
 import { VkFriendsModule } from './vk-friends/vk-friends.module.js';
 import { OkFriendsModule } from './ok-friends/ok-friends.module.js';
-import { KeywordsModule } from './keywords/keywords.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
 import { CommentsModule } from './comments/comments.module.js';
 import { WatchlistModule } from './watchlist/watchlist.module.js';
@@ -57,7 +56,6 @@ import type { AppConfig } from './config/app.config.js';
     VkModule,
     VkFriendsModule,
     OkFriendsModule,
-    KeywordsModule,
     TasksModule,
     CommentsModule,
     MonitoringModule,

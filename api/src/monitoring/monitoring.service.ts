@@ -1,5 +1,5 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { KeywordsService } from '../keywords/keywords.service.js';
+import { PrismaService } from '../prisma.service.js';
 import { MonitorDatabaseService } from './monitor-database.service.js';
 import type { MonitorMessagesDto } from './dto/monitor-messages.dto.js';
 import type { MonitorMessageDto } from './dto/monitor-message.dto.js';
@@ -108,7 +108,7 @@ const extractMetadata = (
 export class MonitoringService {
   constructor(
     private readonly monitorDb: MonitorDatabaseService,
-    private readonly keywordsService: KeywordsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async getMessages(options: {
@@ -192,6 +192,12 @@ export class MonitoringService {
       return normalizeKeywords(monitorKeywords);
     }
 
-    return this.keywordsService.getKeywordWords();
+    const keywords = await this.prisma.keyword.findMany({
+      select: { word: true },
+    });
+    const normalized = keywords
+      .map((keyword) => keyword.word.trim())
+      .filter((value) => value.length > 0);
+    return Array.from(new Set(normalized));
   }
 }
