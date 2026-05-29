@@ -1,5 +1,5 @@
-import { GATEWAY_API_URL } from '@/api/common'
-import { createRequest } from '@/api/common'
+import { GATEWAY_API_URL } from '@/shared/api'
+import { createRequest } from '@/shared/api'
 
 export interface PrometheusMetric {
   name: string

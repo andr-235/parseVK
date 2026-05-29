@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 // Использование services для одноразовых операций (загрузка/сохранение настроек Telegram)
 // Это допустимо согласно правилам архитектуры для операций, не требующих глобального состояния
 import { telegramService } from '@/pages/telegram/api/telegram.api'
-import type { TelegramSettingsRequest } from '@/types'
+import type { TelegramSettingsRequest } from '@/shared/types'
 
 interface TelegramFormState {
   phoneNumber: string

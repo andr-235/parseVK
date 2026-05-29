@@ -1,5 +1,5 @@
-import type { Keyword } from '@/types'
-import { normalizeForKeywordMatch } from '@/utils/common/keywordMatching'
+import type { Keyword } from '@/shared/types'
+import { normalizeForKeywordMatch } from '@/shared/utils/keywordMatching'
 
 export function getMatchedKeywordLabel(keyword: Keyword, text?: string | null): string {
   const baseWord = keyword.word.trim()

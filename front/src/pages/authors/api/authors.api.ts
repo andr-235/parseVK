@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
-import { API_URL, GATEWAY_API_URL } from '@/api/common'
-import { buildQueryString, createRequest, handleResponse } from '@/api/common'
-import { createEmptyPhotoAnalysisSummary } from '@/types'
+import { API_URL, GATEWAY_API_URL } from '@/shared/api'
+import { buildQueryString, createRequest, handleResponse } from '@/shared/api'
+import { createEmptyPhotoAnalysisSummary } from '@/shared/types'
 import type {
   AuthorCard,
   AuthorDetails,
@@ -9,13 +9,13 @@ import type {
   AuthorSortField,
   AuthorSortOrder,
   PhotoAnalysisSummary,
-} from '@/types'
+} from '@/shared/types'
 import type {
   AuthorCardResponse,
   AuthorDetailsResponse,
   AuthorsListResponse,
   RefreshAuthorsResponse,
-} from '@/types/common'
+} from '@/shared/types'
 
 const normalizeSummary = (summary?: PhotoAnalysisSummary | null): PhotoAnalysisSummary => {
   const fallback = createEmptyPhotoAnalysisSummary()

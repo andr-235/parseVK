@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { getPrimaryNavItemClasses } from './utils'
-import { useAuthSession } from '@/hooks/auth/useAuthSession'
+import { useAuthSession } from '@/shared/auth/hooks/useAuthSession'
 import type { SidebarItem } from './types'
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '0.0.0'

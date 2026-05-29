@@ -19,16 +19,16 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/utils/common'
-import { useIntersectionObserver } from '@/hooks/common/useIntersectionObserver'
-import { highlightKeywords } from '@/utils/common/highlightKeywords'
+import { cn } from '@/shared/utils'
+import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver'
+import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import {
   MONITORING_TIME_RANGES,
   useMonitoringViewModel,
 } from '@/pages/monitoring/hooks/useMonitoringViewModel'
 import { PageHeader } from '@/components/common'
-import type { Keyword } from '@/types'
-import type { IMonitorMessageResponse } from '@/types/common'
+import type { Keyword } from '@/shared/types'
+import type { IMonitorMessageResponse } from '@/shared/types'
 
 const PAGE_CARDS = [
   { icon: Activity, title: 'Мониторинг', subtitle: 'Отслеживание в реальном времени' },

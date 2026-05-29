@@ -1,4 +1,4 @@
-import type { PhotoAnalysisSummary } from '@/types/common'
+import type { PhotoAnalysisSummary } from '@/shared/types'
 
 export type WatchlistStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED'
 

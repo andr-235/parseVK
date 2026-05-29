@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 interface SidebarCollapseButtonProps {
   isCollapsed: boolean

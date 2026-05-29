@@ -1,4 +1,4 @@
-import type { Comment, Keyword } from '@/types'
+import type { Comment, Keyword } from '@/shared/types'
 
 export interface CategorizedComment {
   comment: Comment

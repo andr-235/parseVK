@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { getSectionButtonClasses } from './utils'
 import { SidebarNavItem } from './SidebarNavItem'
 import type { SidebarNavEntry, SidebarNavGroup } from './types'

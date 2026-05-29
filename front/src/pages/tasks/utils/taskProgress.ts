@@ -1,4 +1,4 @@
-import type { Task } from '@/types'
+import type { Task } from '@/shared/types'
 
 export interface TaskProgressInfo {
   total: number

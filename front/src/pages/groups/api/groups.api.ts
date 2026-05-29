@@ -1,13 +1,13 @@
 import toast from 'react-hot-toast'
-import { API_URL, GATEWAY_API_URL } from '@/api/common'
-import { buildQueryString, createRequest, handleResponse } from '@/api/common'
+import { API_URL, GATEWAY_API_URL } from '@/shared/api'
+import { buildQueryString, createRequest, handleResponse } from '@/shared/api'
 import type {
   IGroupResponse,
   IDeleteResponse,
   IGroupsListResponse,
   IRegionGroupSearchResponse,
-} from '@/types/common'
-import type { SaveGroupDto } from '@/types/common'
+} from '@/shared/types'
+import type { SaveGroupDto } from '@/shared/types'
 
 const CONTENT_GROUPS_API_URL = `${GATEWAY_API_URL}/v1/content/groups`
 

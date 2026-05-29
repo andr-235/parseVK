@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { settingsQueryKeys } from '@/pages/settings/api/queryKeys'
-import { queryClient } from '@/api/common'
-import type { TaskAutomationSettings } from '@/types'
+import { queryClient } from '@/shared/api'
+import type { TaskAutomationSettings } from '@/shared/types'
 import { taskAutomationService } from '@/pages/settings/api/taskAutomation.api'
 import type { UpdateTaskAutomationSettingsRequest } from '@/pages/settings/api/taskAutomation.api'
 

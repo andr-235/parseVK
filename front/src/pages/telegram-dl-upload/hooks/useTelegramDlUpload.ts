@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useDeferredValue, useState } from 'react'
-import { queryClient } from '@/api/common'
+import { queryClient } from '@/shared/api'
 import { telegramDlUploadQueryKeys } from '@/pages/telegram-dl-upload/api/queryKeys'
 import {
   telegramDlUploadService,

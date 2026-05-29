@@ -3,7 +3,7 @@ import { Slot } from '@radix-ui/react-slot'
 import { type VariantProps } from 'class-variance-authority'
 
 import { buttonGroupVariants } from './button-group-variants'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { Separator } from '@/components/ui/separator'
 
 type ButtonGroupProps = React.ComponentPropsWithoutRef<'div'> &

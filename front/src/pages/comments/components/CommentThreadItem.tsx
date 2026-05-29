@@ -1,12 +1,12 @@
 import { memo, useCallback, useState } from 'react'
 import { ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/utils/common'
-import type { ThreadItem } from '@/types'
-import { formatDateTime } from '@/utils/common'
-import { highlightKeywords } from '@/utils/common/highlightKeywords'
+import { cn } from '@/shared/utils'
+import type { ThreadItem } from '@/shared/types'
+import { formatDateTime } from '@/shared/utils'
+import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
-import type { Keyword } from '@/types'
+import type { Keyword } from '@/shared/types'
 
 interface CommentThreadItemProps {
   item: ThreadItem

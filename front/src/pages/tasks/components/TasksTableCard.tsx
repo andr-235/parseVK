@@ -1,11 +1,11 @@
-import { useTableSorting } from '@/hooks/common'
-import type { Task } from '@/types'
+import { useTableSorting } from '@/shared/hooks'
+import type { Task } from '@/shared/types'
 import { getTaskTableColumns } from '@/pages/tasks/config/taskTableColumns'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/common/EmptyState'
 import { DataTable } from '@/components/common/DataTable'
-import { declOfNumber } from '@/utils/common'
+import { declOfNumber } from '@/shared/utils'
 
 interface TasksTableCardProps {
   tasks: Task[]

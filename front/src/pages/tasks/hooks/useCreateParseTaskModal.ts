@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Group } from '@/types'
+import type { Group } from '@/shared/types'
 
 const getDisplayName = (group: Group): string => {
   if (group.name && group.name.trim() !== '') {

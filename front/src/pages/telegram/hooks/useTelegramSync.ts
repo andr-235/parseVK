@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { telegramService } from '@/pages/telegram/api/telegram.api'
-import type { TelegramSyncResult } from '@/types/common'
+import type { TelegramSyncResult } from '@/shared/types'
 import toast from 'react-hot-toast'
 
 export const useTelegramSync = (onDataLoaded: (data: TelegramSyncResult) => void) => {

@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/api/common'
-import { createRequest, handleResponse } from '@/api/common'
-import type { AnalyzePhotosOptions, PhotoAnalysisResponse, PhotoAnalysisSummary } from '@/types'
+import { GATEWAY_API_URL } from '@/shared/api'
+import { createRequest, handleResponse } from '@/shared/api'
+import type { AnalyzePhotosOptions, PhotoAnalysisResponse, PhotoAnalysisSummary } from '@/shared/types'
 
 export const photoAnalysisService = {
   async analyzeAuthor(

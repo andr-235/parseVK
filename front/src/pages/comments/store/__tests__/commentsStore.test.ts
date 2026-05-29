@@ -9,8 +9,8 @@ const { getCommentsCursorMock, updateReadStatusMock } = vi.hoisted(() => ({
   updateReadStatusMock: vi.fn(),
 }))
 
-vi.mock('@/api/common', async () => {
-  const actual = await vi.importActual<typeof import('@/api/common')>('@/api/common')
+vi.mock('@/shared/api', async () => {
+  const actual = await vi.importActual<typeof import('@/shared/api')>('@/shared/api')
   return {
     ...actual,
     queryClient: {

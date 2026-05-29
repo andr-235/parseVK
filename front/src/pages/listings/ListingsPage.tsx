@@ -19,12 +19,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Spinner } from '@/components/ui/spinner'
 import FileUpload from '@/components/common/FileUpload'
 import { FormModal } from '@/components/common/FormModal'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { ListingsInfinite } from '@/pages/listings/components/ListingsInfinite'
 import { useListingsViewModel } from '@/pages/listings/hooks/useListingsViewModel'
 import { formatSourceLabel } from '@/pages/listings/utils/listingsUtils'
 import { listingsService, type CreateListingPayload } from '@/pages/listings/api/listings.api'
-import type { IListing, ListingUpdatePayload } from '@/types/common'
+import type { IListing, ListingUpdatePayload } from '@/shared/types'
 import toast from 'react-hot-toast'
 
 const PAGE_CARDS = [

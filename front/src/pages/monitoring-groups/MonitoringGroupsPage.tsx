@@ -15,14 +15,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { EmptyState } from '@/components/common/EmptyState'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { useMonitoringGroupsViewModel } from '@/pages/monitoring/hooks/useMonitoringGroupsViewModel'
 import { getMonitoringGroupsCountLabel } from '@/pages/monitoring/hooks/monitoringGroupsViewModel.utils'
 import { PageHeader } from '@/components/common'
 import { Link, List, Tag, Users } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import type { MonitoringGroupStatusTone } from '@/pages/monitoring/hooks/monitoringGroupsViewModel.utils'
-import type { MonitoringMessenger } from '@/types/common'
+import type { MonitoringMessenger } from '@/shared/types'
 
 const MONITORING_SOURCES = {
   whatsapp: {

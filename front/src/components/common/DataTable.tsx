@@ -9,8 +9,8 @@ import {
 } from '@/components/ui/table'
 import { TableSortButton } from '@/components/ui/table-sort-button'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { TableColumn, TableSortState } from '@/types'
-import { cn } from '@/utils/common'
+import type { TableColumn, TableSortState } from '@/shared/types'
+import { cn } from '@/shared/utils'
 
 export interface DataTableProps<T> {
   data: T[]

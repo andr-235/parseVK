@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 interface ProgressBarProps {
   current: number

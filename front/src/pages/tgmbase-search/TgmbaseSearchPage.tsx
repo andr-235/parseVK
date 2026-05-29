@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Empty } from '@/components/ui/empty'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { useTgmbaseSearchState } from '@/pages/tgmbase-search/hooks/useTgmbaseSearchState'
 import { useTgmbaseResultsViewModel } from '@/pages/tgmbase-search/hooks/useTgmbaseResultsViewModel'
 import type { TgmbaseProgressState } from '@/pages/tgmbase-search/hooks/useTgmbaseSearchState'
@@ -19,7 +19,7 @@ import type {
   TgmbaseSearchItem,
   TgmbaseSearchStatus,
   TgmbaseMessagesPage,
-} from '@/types/common'
+} from '@/shared/types'
 
 const tgmbaseStatusLabels: Record<TgmbaseSearchStatus, string> = {
   found: 'Найдено',

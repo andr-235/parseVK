@@ -1,5 +1,5 @@
 import type { CategorizedComment, CategorizedGroup } from '@/pages/comments/types/commentsTable'
-import type { Comment } from '@/types'
+import type { Comment } from '@/shared/types'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import CommentsTableCard from '../components/CommentsTableCard'

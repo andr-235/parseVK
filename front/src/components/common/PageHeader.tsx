@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { Globe, Terminal, FileSpreadsheet } from 'lucide-react'
 
 export interface PageHeaderCardConfig {

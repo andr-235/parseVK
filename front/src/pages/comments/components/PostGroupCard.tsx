@@ -2,13 +2,13 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { Comment, Keyword } from '@/types'
-import { highlightKeywords } from '@/utils/common/highlightKeywords'
+import type { Comment, Keyword } from '@/shared/types'
+import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
 import CommentCard from './CommentCard'
-import { normalizeForKeywordMatch } from '@/utils/common/keywordMatching'
+import { normalizeForKeywordMatch } from '@/shared/utils/keywordMatching'
 import { getMatchedKeywordLabel } from '@/pages/comments/utils/getMatchedKeywordLabel'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 interface PostGroupCardProps {
   postText?: string | null

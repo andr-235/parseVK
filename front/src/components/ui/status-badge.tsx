@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 export type StatusBadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
 

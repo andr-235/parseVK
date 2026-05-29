@@ -8,9 +8,9 @@ import {
   buildCommentsSearchPayload,
   shouldUseCommentsSearch,
 } from '@/pages/comments/api/query/buildCommentsSearchQuery'
-import type { Comment, Keyword } from '@/types'
+import type { Comment, Keyword } from '@/shared/types'
 import { getCommentCategories } from '@/pages/comments/utils/getCommentCategories'
-import { useDebounce } from '@/hooks/common'
+import { useDebounce } from '@/shared/hooks'
 
 type ReadFilter = 'all' | 'unread' | 'read'
 type CommentWithKeywords = { comment: Comment; matchedKeywords: Keyword[] }

@@ -1,4 +1,4 @@
-import type { ThreadItem } from '@/types'
+import type { ThreadItem } from '@/shared/types'
 
 /**
  * Нормализует threadItems из JSON в структурированный формат

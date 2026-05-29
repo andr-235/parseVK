@@ -1,4 +1,4 @@
-import { mergeListsById } from '@/utils/common'
+import { mergeListsById } from '@/shared/utils'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 

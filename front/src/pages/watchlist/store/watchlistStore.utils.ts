@@ -3,15 +3,15 @@ import type {
   IWatchlistAuthorResponse,
   IWatchlistCommentResponse,
   IWatchlistSettingsResponse,
-} from '@/types/common'
+} from '@/shared/types'
 import type {
   PhotoAnalysisSummary,
   WatchlistAuthorCard,
   WatchlistAuthorDetails,
   WatchlistComment,
   WatchlistSettings,
-} from '@/types'
-import { createEmptyPhotoAnalysisSummary } from '@/types'
+} from '@/shared/types'
+import { createEmptyPhotoAnalysisSummary } from '@/shared/types'
 
 export const WATCHLIST_PAGE_SIZE = 20
 

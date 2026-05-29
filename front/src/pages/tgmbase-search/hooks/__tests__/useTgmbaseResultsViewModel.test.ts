@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { TgmbaseSearchItem, TgmbaseSearchStatus } from '@/types/common'
+import type { TgmbaseSearchItem, TgmbaseSearchStatus } from '@/shared/types'
 import { useTgmbaseResultsViewModel } from '../useTgmbaseResultsViewModel'
 
 const createItem = (

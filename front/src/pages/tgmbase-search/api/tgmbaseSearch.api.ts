@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/api/common'
-import { createRequest, handleResponse } from '@/api/common'
-import type { TgmbaseSearchRequest, TgmbaseSearchResponse } from '@/types/common'
+import { API_URL } from '@/shared/api'
+import { createRequest, handleResponse } from '@/shared/api'
+import type { TgmbaseSearchRequest, TgmbaseSearchResponse } from '@/shared/types'
 
 export const tgmbaseSearchService = {
   async search(payload: TgmbaseSearchRequest): Promise<TgmbaseSearchResponse> {

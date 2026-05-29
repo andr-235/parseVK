@@ -3,8 +3,8 @@ import {
   okFriendsExportService,
   type OkFriendsParams,
 } from '@/pages/ok-friends-export/api/okFriendsExport.api'
-import { toOptionalNumber, toOptionalString } from '@/utils/common/exportUtils'
-import { useExportJobStream } from '@/hooks/common/useExportJobStream'
+import { toOptionalNumber, toOptionalString } from '@/shared/utils/exportUtils'
+import { useExportJobStream } from '@/shared/hooks/useExportJobStream'
 
 type FormState = {
   fid: string

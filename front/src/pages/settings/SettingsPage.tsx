@@ -26,7 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { useAutomationSettings } from '@/pages/settings/hooks/useAutomationSettings'
 import { useTelegramSettings } from '@/pages/settings/hooks/useTelegramSettings'
 import { formatAutomationDate } from '@/pages/settings/utils/automationFormatting'

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/api/common', async () => {
+vi.mock('@/shared/api', async () => {
   const actual =
-    await vi.importActual<typeof import('@/api/common/apiUtils')>('@/api/common/apiUtils')
+    await vi.importActual<typeof import('@/shared/api/apiUtils')>('@/shared/api/apiUtils')
   return {
     API_URL: '/api',
     GATEWAY_API_URL: '/api',

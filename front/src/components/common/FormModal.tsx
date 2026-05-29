@@ -1,7 +1,7 @@
 import { type ReactNode, type FormEvent, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 export interface FormModalProps {
   isOpen: boolean

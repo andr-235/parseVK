@@ -1,8 +1,8 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/api/common'
-import { createRequest, handleResponse } from '@/api/common'
-import type { CreateParsingTaskDto } from '@/types/common'
-import type { IParsingTaskResult, IParsingTaskSummary } from '@/types/common'
+import { GATEWAY_API_URL } from '@/shared/api'
+import { createRequest, handleResponse } from '@/shared/api'
+import type { CreateParsingTaskDto } from '@/shared/types'
+import type { IParsingTaskResult, IParsingTaskSummary } from '@/shared/types'
 
 const TASKS_API_URL = `${GATEWAY_API_URL}/v1/tasks`
 

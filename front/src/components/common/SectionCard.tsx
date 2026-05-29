@@ -1,6 +1,6 @@
 import { forwardRef, type ReactNode } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 interface SectionCardProps {
   title?: string

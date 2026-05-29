@@ -5,7 +5,7 @@ import type {
   WatchlistAuthorDetails,
   WatchlistSettings,
   WatchlistStatus,
-} from '@/types'
+} from '@/shared/types'
 import {
   WATCHLIST_PAGE_SIZE,
   mapWatchlistAuthor,
@@ -13,8 +13,8 @@ import {
   mapWatchlistSettings,
 } from './watchlistStore.utils'
 import { watchlistQueryKeys } from '@/pages/watchlist/api/queryKeys'
-import { queryClient } from '@/api/common'
-import { mergeListsById } from '@/utils/common'
+import { queryClient } from '@/shared/api'
+import { mergeListsById } from '@/shared/utils'
 
 type WatchlistAuthorsQueryData = {
   items: WatchlistAuthorCard[]

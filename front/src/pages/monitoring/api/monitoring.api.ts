@@ -1,13 +1,13 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/api/common'
-import { createRequest, handleResponse } from '@/api/common'
+import { GATEWAY_API_URL } from '@/shared/api'
+import { createRequest, handleResponse } from '@/shared/api'
 import type {
   IMonitorGroupDeleteResponse,
   IMonitorGroupResponse,
   IMonitorGroupsResponse,
   IMonitorMessagesResponse,
   MonitoringMessenger,
-} from '@/types/common'
+} from '@/shared/types'
 
 type MonitorMessagesParams = {
   keywords?: string[]

@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/api/common'
-import { createRequest, handleResponse } from '@/api/common'
-import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '@/types/common'
+import { GATEWAY_API_URL } from '@/shared/api'
+import { createRequest, handleResponse } from '@/shared/api'
+import type { IKeywordResponse, IBulkAddResponse, IDeleteResponse } from '@/shared/types'
 
 export interface IKeywordFormsResponse {
   keywordId: number

@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react'
 import type { RefObject } from 'react'
 import { Search, RotateCcw, ArrowUpDown, X, Plus, MapPin, Users as UsersIcon } from 'lucide-react'
-import type { IRegionGroupSearchItem } from '@/types/common'
-import type { TableColumn, TableSortState } from '@/types'
+import type { IRegionGroupSearchItem } from '@/shared/types'
+import type { TableColumn, TableSortState } from '@/shared/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
-import { useTableSorting } from '@/hooks/common'
+import { useTableSorting } from '@/shared/hooks'
 import {
   DropdownMenu,
   DropdownMenuContent,

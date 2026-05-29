@@ -4,7 +4,7 @@ import { useKeywordsStore } from '@/pages/keywords/store'
 // Использование services для одноразовой операции (пересчет совпадений)
 // Это допустимо согласно правилам архитектуры для операций, не требующих состояния
 import { keywordsService, type IKeywordFormsResponse } from '@/pages/keywords/api/keywords.api'
-import type { Keyword } from '@/types'
+import type { Keyword } from '@/shared/types'
 
 export const useKeywordsViewModel = () => {
   const keywords = useKeywordsStore((state) => state.keywords)

@@ -4,8 +4,8 @@ import {
   getRefreshDelayMs,
   isTokenExpired,
   refreshAccessToken,
-} from '@/config/auth/lib/authSession'
-import { useAuthStore } from '@/store/auth'
+} from '@/shared/auth/config/lib/authSession'
+import { useAuthStore } from '@/shared/auth/store'
 
 interface AuthProviderProps {
   children: ReactNode

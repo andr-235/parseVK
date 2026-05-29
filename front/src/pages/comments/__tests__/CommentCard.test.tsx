@@ -1,4 +1,4 @@
-import type { Comment } from '@/types'
+import type { Comment } from '@/shared/types'
 import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

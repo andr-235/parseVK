@@ -7,7 +7,7 @@ import { watchlistService } from '@/pages/watchlist/api/watchlist.api'
 import { watchlistQueryKeys } from '@/pages/watchlist/api/queryKeys'
 import { useWatchlistStore } from '@/pages/watchlist/store'
 import { WATCHLIST_PAGE_SIZE, mapWatchlistAuthor, mapWatchlistSettings } from '@/pages/watchlist/store'
-import { mergeListsById } from '@/utils/common'
+import { mergeListsById } from '@/shared/utils'
 
 const fetchWatchlistAuthors = async () => {
   const response = await watchlistService.getAuthors(

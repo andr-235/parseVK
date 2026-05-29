@@ -1,4 +1,4 @@
-import type { IParsingTaskSummary } from '@/types/common'
+import type { IParsingTaskSummary } from '@/shared/types'
 import type { Task } from '../../tasksStore.types'
 import {
   parseJsonObject,

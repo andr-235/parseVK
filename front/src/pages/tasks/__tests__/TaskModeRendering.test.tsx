@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { getTaskTableColumns } from '@/pages/tasks/config/taskTableColumns'
 import { TaskStatsGrid } from '@/pages/tasks/components/TaskDetails'
-import type { Task, TaskDetails } from '@/types'
+import type { Task, TaskDetails } from '@/shared/types'
 
 const baseTask: Task = {
   id: 1,

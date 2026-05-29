@@ -7,7 +7,7 @@ import { PageHeader, PageContainer } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Play, Settings, Calendar, Clock } from 'lucide-react'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 function formatDateTime(value: string | null): string {
   if (!value) return '—'

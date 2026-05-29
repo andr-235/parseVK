@@ -1,4 +1,4 @@
-import type { IMonitorGroupResponse, MonitoringMessenger } from '@/types/common'
+import type { IMonitorGroupResponse, MonitoringMessenger } from '@/shared/types'
 
 export type MonitoringGroupStatusTone = 'success' | 'info' | 'warning'
 

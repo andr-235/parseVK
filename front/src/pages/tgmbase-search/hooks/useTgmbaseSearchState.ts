@@ -6,8 +6,8 @@ import type {
   TgmbaseSearchItem,
   TgmbaseSearchProgressEvent,
   TgmbaseSearchResponse,
-} from '@/types/common'
-import { mergeListsById, createNamespaceSocket } from '@/utils/common'
+} from '@/shared/types'
+import { mergeListsById, createNamespaceSocket } from '@/shared/utils'
 
 const DEFAULT_PAGE_SIZE = 20
 const SEARCH_BATCH_SIZE = 200

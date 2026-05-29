@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import toast from 'react-hot-toast'
-import type { GroupsState } from '@/types/common'
-import type { IRegionGroupSearchItem } from '@/types/common'
-import type { Group } from '@/types'
+import type { GroupsState } from '@/shared/types'
+import type { IRegionGroupSearchItem } from '@/shared/types'
+import type { Group } from '@/shared/types'
 import { groupsService } from '@/pages/groups/api/groups.api'
 
 export const GROUPS_PAGE_LIMIT = 50

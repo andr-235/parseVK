@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Eye, EyeOff, RefreshCw, Clock, Users, Loader2 } from 'lucide-react'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { WATCHLIST_CONSTANTS } from '@/pages/watchlist/config/watchlist'
 import {
   isValidWatchlistSettings,
@@ -27,9 +27,9 @@ import type {
   WatchlistComment,
   PhotoAnalysisSummaryCategory,
   TableColumn,
-} from '@/types'
+} from '@/shared/types'
 import toast from 'react-hot-toast'
-import { useTableSorting } from '@/hooks/common'
+import { useTableSorting } from '@/shared/hooks'
 
 interface AuthorCellProps {
   item: WatchlistAuthorCard

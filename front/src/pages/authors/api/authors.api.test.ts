@@ -4,7 +4,7 @@ const fetchMock = vi.fn()
 
 vi.stubGlobal('fetch', fetchMock)
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn(), success: vi.fn() } }))
-vi.mock('@/api/common', () => {
+vi.mock('@/shared/api', () => {
   return {
     API_URL: '/api',
     GATEWAY_API_URL: '/api',
@@ -21,7 +21,7 @@ vi.mock('@/api/common', () => {
     handleResponse: async <T>(response: Response) => response.json() as Promise<T>,
   }
 })
-vi.mock('@/types', () => {
+vi.mock('@/shared/types', () => {
   return {
     createEmptyPhotoAnalysisSummary: () => ({
       total: 0,

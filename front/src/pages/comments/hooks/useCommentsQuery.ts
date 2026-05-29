@@ -10,7 +10,7 @@ import { commentsQueryKeys } from '@/pages/comments/api/queryKeys'
 import { useCommentsStore } from '@/pages/comments/store'
 import { COMMENTS_PAGE_SIZE } from '@/pages/comments/store'
 import type { CommentsQueryData } from '@/pages/comments/types/commentsCache.types'
-import { mergeListsById } from '@/utils/common'
+import { mergeListsById } from '@/shared/utils'
 
 const buildFetchParams = (filters: CommentsFilters) => ({
   limit: COMMENTS_PAGE_SIZE,

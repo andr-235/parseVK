@@ -3,7 +3,7 @@ import { type Socket } from 'socket.io-client'
 import { useTasksStore } from '@/pages/tasks/store'
 import type { TaskStatsInfo, TaskStatus } from '@/pages/tasks/store'
 import { normalizeId, rebuildTaskList, toTaskKey } from '@/pages/tasks/store'
-import { createNamespaceSocket } from '@/utils/common'
+import { createNamespaceSocket } from '@/shared/utils'
 
 export type GatewayTaskStatus = 'pending' | 'running' | 'done' | 'failed'
 

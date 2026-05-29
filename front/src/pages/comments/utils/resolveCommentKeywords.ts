@@ -1,4 +1,4 @@
-import type { Keyword } from '@/types'
+import type { Keyword } from '@/shared/types'
 import { normalizeForKeywordMatch } from './keywordMatching'
 
 type ResolveKeywordsParams = {

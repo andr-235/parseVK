@@ -3,7 +3,7 @@ import {
   buildMonitoringGroupRows,
   getMonitoringGroupsCountLabel,
 } from '@/pages/monitoring/hooks/monitoringGroupsViewModel.utils'
-import type { IMonitorGroupResponse } from '@/types/common'
+import type { IMonitorGroupResponse } from '@/shared/types'
 
 const groups: IMonitorGroupResponse[] = [
   {

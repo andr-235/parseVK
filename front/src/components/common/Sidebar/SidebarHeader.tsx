@@ -1,4 +1,4 @@
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { BrandLogo } from '@/components/common/BrandLogo'
 
 interface SidebarHeaderProps {

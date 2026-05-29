@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import type { IListing, TableColumn } from '@/types/common'
+import type { IListing, TableColumn } from '@/shared/types'
 import type { ListingsSortField } from '@/pages/listings/types/listingsTypes'
 import {
   formatSourceLabel,
@@ -25,7 +25,7 @@ import {
   ArchiveRestore,
   Pencil,
 } from 'lucide-react'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 import { DataTable } from '@/components/common/DataTable'
 
 // ─── Column definitions ───────────────────────────────────────────────────────

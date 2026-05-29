@@ -2,7 +2,7 @@ import { type ReactNode } from 'react'
 import { Search, SlidersHorizontal, RefreshCw } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 export interface FiltersPanelProps {
   // Поиск

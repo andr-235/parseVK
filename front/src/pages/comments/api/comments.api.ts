@@ -1,4 +1,4 @@
-import { GATEWAY_API_URL, createRequest, handleResponse } from '@/api/common'
+import { GATEWAY_API_URL, createRequest, handleResponse } from '@/shared/api'
 import type { CommentsFilters } from './query/commentsQuery.types'
 import type { CommentResponseDto, GetCommentsCursorDto, GetCommentsDto } from './dto/comments.dto'
 import type { CommentsSearchRequestDto, CommentsSearchResponseDto } from './dto/commentsSearch.dto'

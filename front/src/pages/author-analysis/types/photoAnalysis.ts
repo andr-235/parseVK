@@ -3,9 +3,9 @@ export type {
   PhotoAnalysisSummary,
   PhotoAnalysisSummaryCategory,
   PhotoAnalysisSummaryLevel,
-} from '@/types/common/photoAnalysis'
+} from '@/shared/types/photoAnalysis'
 
-import type { SuspicionLevel, PhotoAnalysisSummary } from '@/types/common/photoAnalysis'
+import type { SuspicionLevel, PhotoAnalysisSummary } from '@/shared/types/photoAnalysis'
 
 export interface PhotoAnalysis {
   id: number

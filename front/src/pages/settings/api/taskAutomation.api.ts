@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/api/common'
-import { createRequest, handleResponse } from '@/api/common'
-import type { ITaskAutomationRunResponse, ITaskAutomationSettings } from '@/types/common'
+import { GATEWAY_API_URL } from '@/shared/api'
+import { createRequest, handleResponse } from '@/shared/api'
+import type { ITaskAutomationRunResponse, ITaskAutomationSettings } from '@/shared/types'
 
 const TASK_AUTOMATION_API_URL = `${GATEWAY_API_URL}/v1/tasks/automation`
 

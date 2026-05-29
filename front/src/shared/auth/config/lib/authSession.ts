@@ -1,0 +1,110 @@
+import { GATEWAY_API_URL } from '@/shared/api'
+import { useAuthStore } from '@/shared/auth/store'
+import type { AuthResponse } from '@/shared/auth/types'
+
+const CSRF_COOKIE_NAMES = ['csrf_token', '__Host-csrf_token'] as const
+const CSRF_HEADER_NAME = 'X-CSRF-Token'
+
+const parseJwtPayload = (token: string): Record<string, unknown> | null => {
+  const segments = token.split('.')
+  if (segments.length < 2) {
+    return null
+  }
+
+  const base64 = segments[1].replace(/-/g, '+').replace(/_/g, '/')
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+
+  try {
+    const decoded = atob(padded)
+    return JSON.parse(decoded) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+export const isTokenExpired = (token: string, leewaySeconds = 30): boolean => {
+  const payload = parseJwtPayload(token)
+  const exp = typeof payload?.exp === 'number' ? payload.exp : null
+  if (!exp) {
+    return true
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  return exp <= now + leewaySeconds
+}
+
+let refreshPromise: Promise<string | null> | null = null
+
+const isFatalRefreshStatus = (status: number): boolean => status === 401 || status === 403
+
+export const readCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') {
+    return null
+  }
+
+  const prefix = `${name}=`
+  const cookie = document.cookie
+    .split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith(prefix))
+
+  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null
+}
+
+export const buildCsrfHeaders = (): HeadersInit => {
+  const csrfToken = CSRF_COOKIE_NAMES.map((name) => readCookie(name)).find(Boolean)
+  return csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}
+}
+
+export const getRefreshDelayMs = (token: string, leewaySeconds = 60): number => {
+  const payload = parseJwtPayload(token)
+  const exp = typeof payload?.exp === 'number' ? payload.exp : null
+
+  if (!exp) {
+    return 0
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  return Math.max(0, (exp - now - leewaySeconds) * 1000)
+}
+
+export const refreshAccessToken = async (): Promise<string | null> => {
+  if (refreshPromise) {
+    return refreshPromise
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const { setAuth, clearAuth } = useAuthStore.getState()
+
+      const response = await fetch(`${GATEWAY_API_URL}/v1/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildCsrfHeaders(),
+        },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (isFatalRefreshStatus(response.status)) {
+          clearAuth()
+        }
+        return null
+      }
+
+      const data = (await response.json()) as AuthResponse
+      setAuth({
+        accessToken: data.accessToken,
+        user: data.user,
+      })
+      return data.accessToken
+    } catch {
+      return null
+    } finally {
+      refreshPromise = null
+    }
+  })()
+
+  return refreshPromise
+}

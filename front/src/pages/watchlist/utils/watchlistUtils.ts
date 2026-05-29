@@ -1,5 +1,5 @@
-import type { WatchlistAuthorCard, WatchlistComment, WatchlistSettings } from '@/types'
-import { formatDateTime as sharedFormatDateTime } from '@/utils/common'
+import type { WatchlistAuthorCard, WatchlistComment, WatchlistSettings } from '@/shared/types'
+import { formatDateTime as sharedFormatDateTime } from '@/shared/utils'
 
 /**
  * Форматирует дату и время в строку в формате ru-RU.

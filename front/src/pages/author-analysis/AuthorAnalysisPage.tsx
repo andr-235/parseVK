@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { PageHeader, SectionCard } from '@/components/common'
-import type { AuthorDetails, PhotoAnalysis, PhotoAnalysisSummary, SuspicionLevel } from '@/types'
+import type { AuthorDetails, PhotoAnalysis, PhotoAnalysisSummary, SuspicionLevel } from '@/shared/types'
 import { categoryLabels, formatDateTime } from '@/pages/author-analysis/utils/authorAnalysisUtils'
 import { PHOTO_ANALYSIS_LABELS } from '@/pages/author-analysis/config/photoAnalysisConstants'
 

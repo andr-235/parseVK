@@ -1,13 +1,13 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/api/common'
-import { buildQueryString, createRequest, handleResponse } from '@/api/common'
+import { GATEWAY_API_URL } from '@/shared/api'
+import { buildQueryString, createRequest, handleResponse } from '@/shared/api'
 import type {
   IListing,
   IListingsResponse,
   ListingImportRequest,
   ListingImportReport,
   ListingUpdatePayload,
-} from '@/types/common'
+} from '@/shared/types'
 
 export interface CreateListingPayload {
   url: string

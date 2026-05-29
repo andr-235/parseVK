@@ -11,7 +11,7 @@ vi.mock('@/pages/watchlist/api/watchlist.api', () => ({
   },
 }))
 
-vi.mock('@/api/common', () => ({
+vi.mock('@/shared/api', () => ({
   queryClient: {
     setQueryData: setQueryDataMock,
   },

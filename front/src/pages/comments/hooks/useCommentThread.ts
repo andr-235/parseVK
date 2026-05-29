@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import type { Comment } from '@/types'
+import type { Comment } from '@/shared/types'
 import {
   normalizeThreadItems,
   countThreadItems,

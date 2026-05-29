@@ -1,4 +1,4 @@
-import type { Keyword, KeywordCategoryGroup } from '@/types'
+import type { Keyword, KeywordCategoryGroup } from '@/shared/types'
 
 export const UNCATEGORIZED_KEYWORD_LABEL = 'Без категории'
 

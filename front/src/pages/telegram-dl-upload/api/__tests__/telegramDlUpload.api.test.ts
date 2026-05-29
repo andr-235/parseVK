@@ -14,7 +14,7 @@ vi.mock('react-hot-toast', () => ({
   },
 }))
 
-vi.mock('@/utils/common', () => ({
+vi.mock('@/shared/utils', () => ({
   saveReportBlob: saveReportBlobMock,
 }))
 

@@ -1,11 +1,11 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { useIntersectionObserver } from '@/hooks/common/useIntersectionObserver'
+import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver'
 import {
   useInfiniteScroll as useInfiniteListings,
   type UseInfiniteFetcher,
-} from '@/hooks/common/useInfiniteScroll'
-import type { IListing } from '@/types/common'
+} from '@/shared/hooks/useInfiniteScroll'
+import type { IListing } from '@/shared/types'
 import { ListingsTable } from './ListingsTable'
 import type {
   ListingsMeta,

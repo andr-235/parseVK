@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { monitoringService } from '@/pages/monitoring/api/monitoring.api'
-import type { IMonitorGroupResponse, MonitoringMessenger } from '@/types/common'
+import type { IMonitorGroupResponse, MonitoringMessenger } from '@/shared/types'
 import { buildMonitoringGroupRows } from '@/pages/monitoring/hooks/monitoringGroupsViewModel.utils'
 
 const DEFAULT_CATEGORY_SUGGESTIONS = [

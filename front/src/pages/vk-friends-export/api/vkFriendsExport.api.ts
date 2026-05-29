@@ -1,14 +1,14 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/api/common'
-import { createRequest, handleResponse } from '@/api/common'
-import { saveReportBlob } from '@/utils/common'
+import { GATEWAY_API_URL } from '@/shared/api'
+import { createRequest, handleResponse } from '@/shared/api'
+import { saveReportBlob } from '@/shared/utils'
 import type {
   ExportJobStatus,
   JobLogLevel,
   ExportStreamEvent,
   StreamHandlers,
-} from '@/api/common/sse'
-import { extractFilename, readSseStream } from '@/api/common/sse'
+} from '@/shared/api/sse'
+import { extractFilename, readSseStream } from '@/shared/api/sse'
 
 export type VkFriendsOrder = 'hints' | 'random' | 'name' | 'mobile' | 'smart'
 export type VkFriendsNameCase = 'nom' | 'gen' | 'dat' | 'acc' | 'ins' | 'abl'

@@ -1,5 +1,5 @@
-import type { Task, TaskDetails, TaskStatus, TaskStatsInfo } from '@/types'
-import type { TasksState } from '@/types/common'
+import type { Task, TaskDetails, TaskStatus, TaskStatsInfo } from '@/shared/types'
+import type { TasksState } from '@/shared/types'
 
 export type TaskIdentifier = number | string
 

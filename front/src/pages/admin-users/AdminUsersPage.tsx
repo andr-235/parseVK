@@ -10,10 +10,10 @@ import { adminUsersService } from '@/pages/admin-users/api/adminUsers.api'
 import { useCurrentUser } from '@/pages/admin-users/hooks/useCurrentUser'
 import { PageContainer } from '@/components/common'
 import { Shield, UserPlus, Users, Key, KeyRound, RefreshCw, Trash2 } from 'lucide-react'
-import type { AdminUser, UserRole } from '@/types/auth'
-import type { TableColumn } from '@/types'
+import type { AdminUser, UserRole } from '@/shared/auth/types'
+import type { TableColumn } from '@/shared/types'
 import { DataTable } from '@/components/common/DataTable'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 const roleLabelMap: Record<UserRole, string> = {
   admin: 'Администратор',

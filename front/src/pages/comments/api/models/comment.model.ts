@@ -1,5 +1,5 @@
-import type { PostGroup } from '@/types/common/common'
-import type { Keyword } from '@/types/common/common'
+import type { PostGroup } from '@/shared/types/common'
+import type { Keyword } from '@/shared/types/common'
 
 export interface Comment {
   id: number

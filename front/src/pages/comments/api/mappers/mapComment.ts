@@ -1,6 +1,6 @@
 import type { CommentResponseDto } from '../dto/comments.dto'
 import type { Comment } from '../models/comment.model'
-import type { PostGroup } from '@/types/common/common'
+import type { PostGroup } from '@/shared/types/common'
 import { buildCommentUrl, normalizeCreatedAt, resolveAuthorInfo } from './commentMapping.utils'
 
 const isValidPostGroup = (value: unknown): value is PostGroup => {

@@ -1,4 +1,4 @@
-import type { AuthorCard } from '@/types'
+import type { AuthorCard } from '@/shared/types'
 
 export const isValidAuthorId = (vkUserId: number): boolean => {
   return Number.isInteger(vkUserId) && vkUserId > 0

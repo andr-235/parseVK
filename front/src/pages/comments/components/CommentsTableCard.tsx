@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef } from 'react'
-import { useIntersectionObserver } from '@/hooks/common/useIntersectionObserver'
+import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -12,7 +12,7 @@ import { PostGroupCard } from './PostGroupCard'
 import { CommentCategoryFilters } from './CommentCategoryFilters'
 import useCommentsTableCardController from '@/pages/comments/hooks/useCommentsTableCardController'
 import type { CategorizedComment, CategorizedGroup } from '@/pages/comments/types/commentsTable'
-import { declOfNumber } from '@/utils/common'
+import { declOfNumber } from '@/shared/utils'
 
 interface CommentsTableCardProps {
   groupedComments: CategorizedGroup[]

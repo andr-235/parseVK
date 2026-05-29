@@ -4,7 +4,7 @@ const fetchMock = vi.fn()
 
 vi.stubGlobal('fetch', fetchMock)
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn(), success: vi.fn() } }))
-vi.mock('@/api/common', () => {
+vi.mock('@/shared/api', () => {
   return {
     API_URL: '/api',
     GATEWAY_API_URL: '/api',

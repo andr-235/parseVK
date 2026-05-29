@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { TgmbaseQueryType, TgmbaseSearchItem, TgmbaseSearchStatus } from '@/types/common'
+import type { TgmbaseQueryType, TgmbaseSearchItem, TgmbaseSearchStatus } from '@/shared/types'
 
 export type TgmbaseSortMode =
   | 'priority'

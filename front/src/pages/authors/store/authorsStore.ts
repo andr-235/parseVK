@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { authorsService } from '@/pages/authors/api/authors.api'
 import { authorsQueryKeys, type AuthorsQueryParams } from '@/pages/authors/api/queryKeys'
-import type { AuthorListResponse, AuthorSortField } from '@/types'
-import type { AuthorsState } from '@/types/common'
-import { queryClient } from '@/api/common'
+import type { AuthorListResponse, AuthorSortField } from '@/shared/types'
+import type { AuthorsState } from '@/shared/types'
+import { queryClient } from '@/shared/api'
 
 const DEFAULT_PAGE_SIZE = 24
 

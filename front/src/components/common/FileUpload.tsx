@@ -10,9 +10,9 @@ import {
 import { Upload } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/utils/common'
-import type { FileUploadProps, FileUploadRef } from '@/types/common'
-import { validateFiles } from '@/utils/common'
+import { cn } from '@/shared/utils'
+import type { FileUploadProps, FileUploadRef } from '@/shared/types'
+import { validateFiles } from '@/shared/utils'
 
 const FileUpload = forwardRef<FileUploadRef, FileUploadProps>(function FileUpload(
   {

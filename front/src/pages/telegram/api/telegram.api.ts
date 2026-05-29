@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/api/common'
-import { createRequest, handleResponse } from '@/api/common'
+import { API_URL } from '@/shared/api'
+import { createRequest, handleResponse } from '@/shared/api'
 import type {
   TelegramSessionConfirmRequest,
   TelegramSessionConfirmResponse,
@@ -12,7 +12,7 @@ import type {
   TelegramSettingsRequest,
   TelegramSyncRequest,
   TelegramSyncResponse,
-} from '@/types/common'
+} from '@/shared/types'
 
 export const telegramService = {
   async syncChat(payload: TelegramSyncRequest): Promise<TelegramSyncResponse> {

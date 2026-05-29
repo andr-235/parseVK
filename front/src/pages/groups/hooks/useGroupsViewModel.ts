@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
-import { useIntersectionObserver } from '@/hooks/common/useIntersectionObserver'
+import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver'
 import { useGroupsStore } from '@/pages/groups/store'
-import type { IRegionGroupSearchItem } from '@/types/common'
+import type { IRegionGroupSearchItem } from '@/shared/types'
 
 export const useGroupsViewModel = () => {
   const groups = useGroupsStore((state) => state.groups)

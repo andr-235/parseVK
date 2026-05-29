@@ -6,7 +6,7 @@ import { immer } from 'zustand/middleware/immer'
 
 import { tasksService } from '@/pages/tasks/api/tasks.api'
 import { tasksQueryKeys } from '@/pages/tasks/api/queryKeys'
-import { queryClient } from '@/api/common'
+import { queryClient } from '@/shared/api'
 import { mapResultToTaskDetails } from './tasksStore.mappers'
 import {
   ensureGroupsLoaded,

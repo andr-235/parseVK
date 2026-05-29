@@ -1,12 +1,12 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/api/common'
-import { buildQueryString, createRequest, handleResponse } from '@/api/common'
+import { GATEWAY_API_URL } from '@/shared/api'
+import { buildQueryString, createRequest, handleResponse } from '@/shared/api'
 import type {
   IWatchlistAuthorDetailsResponse,
   IWatchlistAuthorListResponse,
   IWatchlistAuthorResponse,
   IWatchlistSettingsResponse,
-} from '@/types/common'
+} from '@/shared/types'
 import type { WatchlistStatus } from '@/pages/watchlist/types'
 
 interface ListParams {

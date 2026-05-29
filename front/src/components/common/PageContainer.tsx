@@ -1,5 +1,5 @@
 import { type ReactNode, forwardRef } from 'react'
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 interface PageContainerProps extends React.ComponentPropsWithoutRef<'div'> {
   children: ReactNode

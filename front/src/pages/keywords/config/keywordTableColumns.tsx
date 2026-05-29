@@ -1,4 +1,4 @@
-import type { Keyword, TableColumn } from '@/types'
+import type { Keyword, TableColumn } from '@/shared/types'
 
 export const getKeywordTableColumns = (): TableColumn<Keyword>[] => [
   {

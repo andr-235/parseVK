@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mergeWatchlistAuthors, reconcileSelectedWatchlistAuthor } from '../useWatchlistQueries'
 import type { WatchlistAuthorCard } from '@/pages/watchlist/types'
-import { createEmptyPhotoAnalysisSummary } from '@/types'
+import { createEmptyPhotoAnalysisSummary } from '@/shared/types'
 
 const buildAuthor = (
   id: number,

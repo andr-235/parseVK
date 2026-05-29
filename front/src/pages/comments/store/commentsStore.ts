@@ -2,9 +2,9 @@ import { create } from 'zustand'
 import { getComments, getCommentsCursor, updateReadStatus } from '@/pages/comments/api/comments.api'
 import { commentsQueryKeys } from '@/pages/comments/api/queryKeys'
 import type { CommentsFilters } from '@/pages/comments/api/query/commentsQuery.types'
-import type { CommentsState } from '@/types/common'
+import type { CommentsState } from '@/shared/types'
 export const COMMENTS_PAGE_SIZE = 100
-import { queryClient } from '@/api/common'
+import { queryClient } from '@/shared/api'
 import type { CommentsQueryData } from '@/pages/comments/types/commentsCache.types'
 
 // Синхронный флаг для предотвращения race condition

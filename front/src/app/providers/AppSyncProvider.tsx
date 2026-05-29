@@ -13,7 +13,7 @@ import {
   useWatchlistSettingsQuery,
 } from '@/pages/watchlist/hooks/useWatchlistQueries'
 import { useTasksSocket } from '@/pages/tasks/hooks/useTasksSocket'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@/shared/auth/store'
 import { useKeywordsStore } from '@/pages/keywords/store'
 
 const shouldSyncKeywords = (pathname: string): boolean => {

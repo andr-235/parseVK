@@ -1,4 +1,4 @@
-import { formatDateTime as sharedFormatDateTime } from '@/utils/common'
+import { formatDateTime as sharedFormatDateTime } from '@/shared/utils'
 
 /**
  * Утилиты для компонента AuthorAnalysis

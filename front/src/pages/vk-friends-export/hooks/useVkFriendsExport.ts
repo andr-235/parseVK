@@ -3,8 +3,8 @@ import {
   vkFriendsExportService,
   type VkFriendsParams,
 } from '@/pages/vk-friends-export/api/vkFriendsExport.api'
-import { toOptionalNumber } from '@/utils/common/exportUtils'
-import { useExportJobStream } from '@/hooks/common/useExportJobStream'
+import { toOptionalNumber } from '@/shared/utils/exportUtils'
+import { useExportJobStream } from '@/shared/hooks/useExportJobStream'
 
 type FormState = {
   userId: string

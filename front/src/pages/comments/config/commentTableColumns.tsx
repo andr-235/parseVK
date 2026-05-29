@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
-import { highlightKeywords } from '@/utils/common/highlightKeywords'
-import { formatDateTime, getAuthorInitials } from '@/utils/common'
-import type { TableColumn, Comment, Keyword } from '@/types'
+import { highlightKeywords } from '@/shared/utils/highlightKeywords'
+import { formatDateTime, getAuthorInitials } from '@/shared/utils'
+import type { TableColumn, Comment, Keyword } from '@/shared/types'
 
 export const getCommentTableColumns = (
   keywords: Keyword[],

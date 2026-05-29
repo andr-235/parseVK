@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import type { TelegramSyncResult, TelegramMember } from '@/types/common'
+import type { TelegramSyncResult, TelegramMember } from '@/shared/types'
 import { PageHeader } from '@/components/common'
 import {
   Send,

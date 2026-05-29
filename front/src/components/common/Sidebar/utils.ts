@@ -1,4 +1,4 @@
-import { cn } from '@/utils/common'
+import { cn } from '@/shared/utils'
 
 export const getNavItemClasses = (isActive: boolean, isCollapsed: boolean = false) => {
   return cn(
