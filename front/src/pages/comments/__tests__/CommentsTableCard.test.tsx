@@ -1,4 +1,4 @@
-import type { CategorizedComment, CategorizedGroup } from '@/types/comments/commentsTable'
+import type { CategorizedComment, CategorizedGroup } from '@/pages/comments/types/commentsTable'
 import type { Comment } from '@/types'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { vi } from 'vitest'

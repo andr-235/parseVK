@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/utils/common'
 import CommentsSearchResults from '@/pages/comments/components/CommentsSearchResults'
 import CommentsTableCard from '@/pages/comments/components/CommentsTableCard'
-import useCommentsViewModel from '@/hooks/comments/useCommentsViewModel'
+import useCommentsViewModel from '@/pages/comments/hooks/useCommentsViewModel'
 
 function CommentsPage() {
   const {

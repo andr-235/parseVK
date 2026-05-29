@@ -1,4 +1,4 @@
-import useTasksViewModel from '@/hooks/tasks/useTasksViewModel'
+import useTasksViewModel from '@/pages/tasks/hooks/useTasksViewModel'
 import TaskDetails from '@/pages/tasks/components/TaskDetails'
 import CreateParseTaskModal from '@/pages/tasks/components/CreateParseTaskModal'
 import ActiveTasksBanner from '@/pages/tasks/components/ActiveTasksBanner'

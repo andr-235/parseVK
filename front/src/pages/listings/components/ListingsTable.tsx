@@ -9,13 +9,13 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import type { IListing, TableColumn } from '@/types/common'
-import type { ListingsSortField } from '@/types/listings/listingsTypes'
+import type { ListingsSortField } from '@/pages/listings/types/listingsTypes'
 import {
   formatSourceLabel,
   formatPriceValue,
   formatDateShort,
   buildParamsString,
-} from '@/utils/listings/listingsUtils'
+} from '@/pages/listings/utils/listingsUtils'
 import {
   ExternalLink,
   StickyNote,

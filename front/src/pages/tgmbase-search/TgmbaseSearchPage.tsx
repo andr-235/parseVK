@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Empty } from '@/components/ui/empty'
 import { cn } from '@/utils/common'
-import { useTgmbaseSearchState } from '@/hooks/tgmbase-search/useTgmbaseSearchState'
-import { useTgmbaseResultsViewModel } from '@/hooks/tgmbase-search/useTgmbaseResultsViewModel'
-import type { TgmbaseProgressState } from '@/hooks/tgmbase-search/useTgmbaseSearchState'
+import { useTgmbaseSearchState } from '@/pages/tgmbase-search/hooks/useTgmbaseSearchState'
+import { useTgmbaseResultsViewModel } from '@/pages/tgmbase-search/hooks/useTgmbaseResultsViewModel'
+import type { TgmbaseProgressState } from '@/pages/tgmbase-search/hooks/useTgmbaseSearchState'
 import type {
   TgmbasePresenceFilters,
   TgmbaseSortMode,
-} from '@/hooks/tgmbase-search/useTgmbaseResultsViewModel'
+} from '@/pages/tgmbase-search/hooks/useTgmbaseResultsViewModel'
 import type {
   TgmbaseQueryType,
   TgmbaseSearchItem,

@@ -2,13 +2,13 @@ import { useState, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { Play } from 'lucide-react'
 import type { TaskDetails as TaskDetailsType } from '@/types'
-import { useTaskDetails } from '@/hooks/tasks/useTaskDetails'
+import { useTaskDetails } from '@/pages/tasks/hooks/useTaskDetails'
 import { FormModal } from '@/components/common/FormModal'
 import { Button } from '@/components/ui/button'
 import ProgressBar from '@/components/common/ProgressBar'
 import { formatDateTime } from '@/utils/common'
-import { getTaskStatusText, getGroupStatusText } from '@/utils/tasks/statusHelpers'
-import { calculateTaskProgress } from '@/utils/tasks/taskProgress'
+import { getTaskStatusText, getGroupStatusText } from '@/pages/tasks/utils/statusHelpers'
+import { calculateTaskProgress } from '@/pages/tasks/utils/taskProgress'
 
 // --- Formatters & Helper Utilities ---
 const formatDate = (value: string): string => formatDateTime(value)

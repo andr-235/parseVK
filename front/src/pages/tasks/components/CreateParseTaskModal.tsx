@@ -1,7 +1,7 @@
 import { Search, Check, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Group } from '@/types'
-import { useCreateParseTaskModal } from '@/hooks/tasks/useCreateParseTaskModal'
+import { useCreateParseTaskModal } from '@/pages/tasks/hooks/useCreateParseTaskModal'
 import { FormModal } from '@/components/common/FormModal'
 
 interface CreateParseTaskModalProps {

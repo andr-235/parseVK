@@ -31,9 +31,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useTelegramSession } from '@/hooks/telegram/useTelegramSession'
-import { useTelegramSync } from '@/hooks/telegram/useTelegramSync'
-import { getChatTypeInfo } from '@/utils/telegram/telegramChatType.utils'
+import { useTelegramSession } from '@/pages/telegram/hooks/useTelegramSession'
+import { useTelegramSync } from '@/pages/telegram/hooks/useTelegramSync'
+import { getChatTypeInfo } from '@/pages/telegram/utils/telegramChatType.utils'
 
 export function TelegramSessionCard() {
   const {

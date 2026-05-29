@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { Comment, Keyword } from '@/types'
-import { normalizeThreadItems, countThreadItems } from '@/utils/comments/threadUtils'
+import { normalizeThreadItems, countThreadItems } from '@/pages/comments/utils/threadUtils'
 import { CommentThreadItem } from './CommentThreadItem'
 
 interface CommentThreadProps {

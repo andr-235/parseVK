@@ -1,6 +1,6 @@
 import ProgressBar from '@/components/common/ProgressBar'
 import type { Task } from '@/types'
-import { useActiveTasksBanner } from '@/hooks/tasks/useActiveTasksBanner'
+import { useActiveTasksBanner } from '@/pages/tasks/hooks/useActiveTasksBanner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 

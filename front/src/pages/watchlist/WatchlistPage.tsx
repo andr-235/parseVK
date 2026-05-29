@@ -1,6 +1,6 @@
 import { memo, useMemo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useWatchlistViewModel } from '@/hooks/watchlist/useWatchlistViewModel'
+import { useWatchlistViewModel } from '@/pages/watchlist/hooks/useWatchlistViewModel'
 import { PageHeader, SectionCard, PageContainer } from '@/components/common'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -11,16 +11,16 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Eye, EyeOff, RefreshCw, Clock, Users, Loader2 } from 'lucide-react'
 import { cn } from '@/utils/common'
-import { WATCHLIST_CONSTANTS } from '@/config/watchlist/watchlist'
+import { WATCHLIST_CONSTANTS } from '@/pages/watchlist/config/watchlist'
 import {
   isValidWatchlistSettings,
   filterValidAuthors,
   validateAuthorId,
   formatDateTime,
   formatStatus,
-} from '@/utils/watchlist/watchlistUtils'
-import { logger } from '@/utils/watchlist/logger'
-import { PHOTO_ANALYSIS_LABELS } from '@/config/authorAnalysis/photoAnalysisConstants'
+} from '@/pages/watchlist/utils/watchlistUtils'
+import { logger } from '@/pages/watchlist/utils/logger'
+import { PHOTO_ANALYSIS_LABELS } from '@/pages/author-analysis/config/photoAnalysisConstants'
 import type {
   WatchlistAuthorCard,
   WatchlistAuthorDetails as WatchlistAuthorDetailsType,
@@ -268,7 +268,6 @@ export const WatchlistTableCard = memo(
       )
     }, [onRefresh, isLoadingAuthors])
 
-    return (
     return (
       <Card className="relative overflow-hidden rounded-xl border border-border bg-background-secondary shadow-soft-sm">
         {/* Header */}

@@ -3,7 +3,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TgmbaseSearchPage from '../'
-import { tgmbaseSearchService } from '@/api/tgmbase-search/tgmbaseSearch.api'
+import { tgmbaseSearchService } from '@/pages/tgmbase-search/api/tgmbaseSearch.api'
 import { io } from 'socket.io-client'
 
 type MockSocketHandler = (payload?: unknown) => void
@@ -19,7 +19,7 @@ const mockSocket = {
   disconnect: vi.fn(),
 }
 
-vi.mock('@/api/tgmbase-search/tgmbaseSearch.api', () => ({
+vi.mock('@/pages/tgmbase-search/api/tgmbaseSearch.api', () => ({
   tgmbaseSearchService: {
     search: vi.fn(),
   },

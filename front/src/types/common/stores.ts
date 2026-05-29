@@ -1,5 +1,5 @@
-import type { AuthorCard, AuthorSortField, AuthorSortOrder } from '@/types/authors/authors'
-import type { CommentsFilters } from '@/api/comments/query/commentsQuery.types'
+import type { AuthorCard, AuthorSortField, AuthorSortOrder } from '@/pages/authors/types/authors'
+import type { CommentsFilters } from '@/pages/comments/api/query/commentsQuery.types'
 import type { Group, Keyword, Task, TaskDetails, Comment } from './common'
 import type { IBulkAddResponse, IRegionGroupSearchItem } from './api'
 // Navigation Store Types

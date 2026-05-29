@@ -11,7 +11,7 @@ import type {
   ListingsMeta,
   ListingsFetcherParams,
   ListingsSortField,
-} from '@/types/listings/listingsTypes'
+} from '@/pages/listings/types/listingsTypes'
 
 interface ListingsInfiniteProps {
   fetcher: UseInfiniteFetcher<IListing, ListingsMeta, ListingsFetcherParams>

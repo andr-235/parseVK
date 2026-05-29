@@ -2,7 +2,7 @@ import { ExternalLink, Link as LinkIcon, Video } from 'lucide-react'
 import {
   extractCommentAttachments,
   type CommentAttachment,
-} from '@/utils/comments/extractCommentAttachments'
+} from '@/pages/comments/utils/extractCommentAttachments'
 
 interface CommentAttachmentsProps {
   attachments: unknown[]

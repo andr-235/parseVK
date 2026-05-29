@@ -1,5 +1,5 @@
 import type { PhotoAnalysisSummary } from '@/types/common/photoAnalysis'
-import type { WatchlistStatus } from '@/types/watchlist/watchlist'
+import type { WatchlistStatus } from '@/pages/watchlist/types/watchlist'
 import type { TaskStatus } from './common'
 
 export interface IGroupResponse {

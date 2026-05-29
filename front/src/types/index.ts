@@ -12,18 +12,18 @@ export type {
   AuthorListResponse,
   AuthorSortField,
   AuthorSortOrder,
-} from '@/types/authors/authors'
+} from '@/pages/authors/types/authors'
 export type {
   PhotoAnalysis,
   PhotoAnalysisResponse,
   AnalyzePhotosOptions,
-} from '@/types/authorAnalysis/photoAnalysis'
-export { createEmptyPhotoAnalysisSummary } from '@/types/authorAnalysis/photoAnalysis'
+} from '@/pages/author-analysis/types/photoAnalysis'
+export { createEmptyPhotoAnalysisSummary } from '@/pages/author-analysis/types/photoAnalysis'
 export type {
   WatchlistStatus,
   WatchlistAuthorProfile,
   WatchlistAuthorCard,
   WatchlistComment,
   WatchlistSettings,
-} from '@/types/watchlist/watchlist'
-export type { WatchlistAuthorDetails } from '@/types/watchlist/watchlist'
+} from '@/pages/watchlist/types/watchlist'
+export type { WatchlistAuthorDetails } from '@/pages/watchlist/types/watchlist'

@@ -4,7 +4,7 @@ import { TelegramSyncCard } from '../'
 
 const mockUseTelegramSync = vi.fn()
 
-vi.mock('@/hooks/telegram/useTelegramSync', () => ({
+vi.mock('@/pages/telegram/hooks/useTelegramSync', () => ({
   useTelegramSync: (...args: unknown[]) => mockUseTelegramSync(...args),
 }))
 

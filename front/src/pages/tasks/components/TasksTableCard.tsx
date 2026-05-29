@@ -1,6 +1,6 @@
 import { useTableSorting } from '@/hooks/common'
 import type { Task } from '@/types'
-import { getTaskTableColumns } from '@/config/tasks/taskTableColumns'
+import { getTaskTableColumns } from '@/pages/tasks/config/taskTableColumns'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/common/EmptyState'

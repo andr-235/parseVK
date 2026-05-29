@@ -1,5 +1,5 @@
 import TasksTableCard from './TasksTableCard'
-import { useTasksList } from '@/hooks/tasks/useTasksList'
+import { useTasksList } from '@/pages/tasks/hooks/useTasksList'
 import { Card, CardContent } from '@/components/ui/card'
 import { Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'

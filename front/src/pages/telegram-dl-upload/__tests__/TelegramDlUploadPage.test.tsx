@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import TelegramDlUploadPage from '../'
-import { telegramDlUploadService } from '@/api/telegram-dl-upload/telegramDlUpload.api'
+import { telegramDlUploadService } from '@/pages/telegram-dl-upload/api/telegramDlUpload.api'
 
 const { defaultMatchResults } = vi.hoisted(() => ({
   defaultMatchResults: [
@@ -144,7 +144,7 @@ const { defaultMatchResults } = vi.hoisted(() => ({
   ],
 }))
 
-vi.mock('@/api/telegram-dl-upload/telegramDlUpload.api', () => ({
+vi.mock('@/pages/telegram-dl-upload/api/telegramDlUpload.api', () => ({
   telegramDlUploadService: {
     getFiles: vi.fn().mockResolvedValue([]),
     getContacts: vi.fn().mockResolvedValue({

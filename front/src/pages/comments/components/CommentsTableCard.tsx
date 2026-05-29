@@ -10,8 +10,8 @@ import { EmptyState } from '@/components/common/EmptyState'
 import CommentCard from './CommentCard'
 import { PostGroupCard } from './PostGroupCard'
 import { CommentCategoryFilters } from './CommentCategoryFilters'
-import useCommentsTableCardController from '@/hooks/comments/useCommentsTableCardController'
-import type { CategorizedComment, CategorizedGroup } from '@/types/comments/commentsTable'
+import useCommentsTableCardController from '@/pages/comments/hooks/useCommentsTableCardController'
+import type { CategorizedComment, CategorizedGroup } from '@/pages/comments/types/commentsTable'
 import { declOfNumber } from '@/utils/common'
 
 interface CommentsTableCardProps {

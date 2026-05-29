@@ -25,7 +25,7 @@ import { highlightKeywords } from '@/utils/common/highlightKeywords'
 import {
   MONITORING_TIME_RANGES,
   useMonitoringViewModel,
-} from '@/hooks/monitoring/useMonitoringViewModel'
+} from '@/pages/monitoring/hooks/useMonitoringViewModel'
 import { PageHeader } from '@/components/common'
 import type { Keyword } from '@/types'
 import type { IMonitorMessageResponse } from '@/types/common'

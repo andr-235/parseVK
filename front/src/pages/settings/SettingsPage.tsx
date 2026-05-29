@@ -27,9 +27,9 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { cn } from '@/utils/common'
-import { useAutomationSettings } from '@/hooks/settings/useAutomationSettings'
-import { useTelegramSettings } from '@/hooks/settings/useTelegramSettings'
-import { formatAutomationDate } from '@/utils/settings/automationFormatting'
+import { useAutomationSettings } from '@/pages/settings/hooks/useAutomationSettings'
+import { useTelegramSettings } from '@/pages/settings/hooks/useTelegramSettings'
+import { formatAutomationDate } from '@/pages/settings/utils/automationFormatting'
 
 function AutomationCard() {
   const {

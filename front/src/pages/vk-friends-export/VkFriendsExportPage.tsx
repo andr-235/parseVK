@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useVkFriendsExport } from '@/hooks/vkFriendsExport/useVkFriendsExport'
+import { useVkFriendsExport } from '@/pages/vk-friends-export/hooks/useVkFriendsExport'
 import { ExportPageTemplate } from '@/components/common/ExportPageTemplate'
 
 export const VkFriendsExportPage = () => {

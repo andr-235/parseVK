@@ -1,4 +1,4 @@
-import type { CommentsSearchResult } from '@/api/comments/models/commentsSearch.model'
+import type { CommentsSearchResult } from '@/pages/comments/api/models/commentsSearch.model'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/common/EmptyState'

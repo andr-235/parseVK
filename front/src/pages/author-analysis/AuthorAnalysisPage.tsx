@@ -1,14 +1,14 @@
 import { memo, useMemo } from 'react'
-import { useAuthorData } from '@/hooks/authors/useAuthorData'
-import { usePhotoAnalysis } from '@/hooks/authorAnalysis/usePhotoAnalysis'
+import { useAuthorData } from '@/pages/authors/hooks/useAuthorData'
+import { usePhotoAnalysis } from '@/pages/author-analysis/hooks/usePhotoAnalysis'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { PageHeader, SectionCard } from '@/components/common'
 import type { AuthorDetails, PhotoAnalysis, PhotoAnalysisSummary, SuspicionLevel } from '@/types'
-import { categoryLabels, formatDateTime } from '@/utils/authorAnalysis/authorAnalysisUtils'
-import { PHOTO_ANALYSIS_LABELS } from '@/config/authorAnalysis/photoAnalysisConstants'
+import { categoryLabels, formatDateTime } from '@/pages/author-analysis/utils/authorAnalysisUtils'
+import { PHOTO_ANALYSIS_LABELS } from '@/pages/author-analysis/config/photoAnalysisConstants'
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'highlight'
 

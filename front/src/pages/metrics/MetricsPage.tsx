@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { metricsService, type ParsedMetrics } from '@/api/metrics/metrics.api'
+import { metricsService, type ParsedMetrics } from '@/pages/metrics/api/metrics.api'
 import { Card } from '@/components/ui/card'
 import { StatusBadge, type StatusBadgeTone } from '@/components/ui/status-badge'
 import {

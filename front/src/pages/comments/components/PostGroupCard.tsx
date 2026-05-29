@@ -7,7 +7,7 @@ import { highlightKeywords } from '@/utils/common/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
 import CommentCard from './CommentCard'
 import { normalizeForKeywordMatch } from '@/utils/common/keywordMatching'
-import { getMatchedKeywordLabel } from '@/utils/comments/getMatchedKeywordLabel'
+import { getMatchedKeywordLabel } from '@/pages/comments/utils/getMatchedKeywordLabel'
 import { cn } from '@/utils/common'
 
 interface PostGroupCardProps {

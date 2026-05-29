@@ -25,16 +25,16 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingState } from '@/components/common/LoadingState'
 import FileUpload from '@/components/common/FileUpload'
 
-import { useTelegramDlUpload } from '@/hooks/telegram-dl-upload/useTelegramDlUpload'
-import { telegramDlUploadQueryKeys } from '@/api/telegram-dl-upload/queryKeys'
+import { useTelegramDlUpload } from '@/pages/telegram-dl-upload/hooks/useTelegramDlUpload'
+import { telegramDlUploadQueryKeys } from '@/pages/telegram-dl-upload/api/queryKeys'
 import {
   telegramDlUploadService,
   type TelegramDlImportFile,
   type TelegramDlImportContact,
   type TelegramDlMatchResult,
   type TelegramDlMatchRun,
-} from '@/api/telegram-dl-upload/telegramDlUpload.api'
-import type { UseTelegramDlUploadResult } from '@/hooks/telegram-dl-upload/useTelegramDlUpload.types'
+} from '@/pages/telegram-dl-upload/api/telegramDlUpload.api'
+import type { UseTelegramDlUploadResult } from '@/pages/telegram-dl-upload/hooks/useTelegramDlUpload.types'
 
 const XLSX_ACCEPT = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
