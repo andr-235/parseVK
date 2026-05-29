@@ -3,15 +3,23 @@ from datetime import datetime, timezone
 
 class FakeVkApiClient:
     async def get_groups(self, group_ids: list[int]) -> list[dict]:
-        return [
-            {
-                "id": group_id,
-                "screen_name": f"group{group_id}",
-                "name": f"VK Group {group_id}",
-                "is_closed": 0,
-            }
-            for group_id in group_ids
-        ]
+        res = []
+        for group_id in group_ids:
+            if group_id == 40023088:
+                res.append({
+                    "id": group_id,
+                    "screen_name": "livebir",
+                    "name": "Биробиджан | livebir",
+                    "is_closed": 0,
+                })
+            else:
+                res.append({
+                    "id": group_id,
+                    "screen_name": f"group{group_id}",
+                    "name": f"VK Group {group_id}",
+                    "is_closed": 0,
+                })
+        return res
 
     async def get_posts(self, group_id: int, *, mode: str, post_limit: int | None) -> list[dict]:
         limit = post_limit or 1

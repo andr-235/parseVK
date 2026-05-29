@@ -13,6 +13,16 @@ class OutboxService:
             payload={"vkGroupId": vk_group_id, "group": group},
         )
 
+    async def emit_group_deleted(self, vk_group_id: int, *, correlation_id: str | None = None) -> None:
+        await self.repository.add_event(
+            event_type="vk.group_deleted",
+            aggregate_type="vk_group",
+            aggregate_id=str(vk_group_id),
+            correlation_id=correlation_id,
+            dedupe_key=f"vk.group_deleted:{vk_group_id}",
+            payload={"vkGroupId": vk_group_id},
+        )
+
     async def emit_author_collected(self, author: dict, *, correlation_id: str | None = None) -> None:
         vk_author_id = int(author["vk_author_id"])
         await self.repository.add_event(

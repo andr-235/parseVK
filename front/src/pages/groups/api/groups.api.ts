@@ -71,7 +71,7 @@ export const groupsService = {
 
   async deleteGroup(id: number): Promise<void> {
     try {
-      const response = await createRequest(`${API_URL}/groups/${id}`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/content/groups/${id}`, {
         method: 'DELETE',
       })
 
@@ -85,7 +85,7 @@ export const groupsService = {
 
   async deleteAllGroups(): Promise<number> {
     try {
-      const response = await createRequest(`${API_URL}/groups/all`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/content/groups/all`, {
         method: 'DELETE',
       })
 
@@ -149,7 +149,7 @@ export const groupsService = {
 
   async searchRegionGroups(): Promise<IRegionGroupSearchResponse> {
     try {
-      const response = await createRequest(`${API_URL}/groups/search/region`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/content/groups/search/region`)
       return await handleResponse<IRegionGroupSearchResponse>(
         response,
         'Failed to search region groups'

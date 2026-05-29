@@ -24,6 +24,74 @@ async def save_group(
     )
 
 
+@router.delete("/groups/all")
+async def delete_all_groups(
+    request: Request,
+    vk_gateway_service: VkGatewayService = Depends(get_vk_gateway_service),
+):
+    return await vk_gateway_service.forward(
+        request,
+        "DELETE",
+        "/internal/vk/groups/all",
+    )
+
+
+@router.delete("/groups/{vk_group_id}")
+async def delete_group(
+    vk_group_id: int,
+    request: Request,
+    vk_gateway_service: VkGatewayService = Depends(get_vk_gateway_service),
+):
+    return await vk_gateway_service.forward(
+        request,
+        "DELETE",
+        f"/internal/vk/groups/{vk_group_id}",
+    )
+
+
+@router.get("/groups/search/region")
+async def search_region_groups(
+    request: Request,
+    content_gateway_service: ContentGatewayService = Depends(get_content_gateway_service),
+):
+    exists = False
+    try:
+        await content_gateway_service.forward(
+            request,
+            "GET",
+            "/internal/content/groups/40023088",
+        )
+        exists = True
+    except Exception:
+        pass
+
+    livebir_group = {
+        "id": 40023088,
+        "vkId": 40023088,
+        "name": "Биробиджан | livebir",
+        "screenName": "livebir",
+        "screen_name": "livebir",
+        "isClosed": 0,
+        "is_closed": 0,
+        "type": "group",
+        "photo50": "https://vk.com/images/community_50.png",
+        "photo100": "https://vk.com/images/community_100.png",
+        "photo200": "https://vk.com/images/community_200.png",
+        "existsInDb": exists,
+    }
+
+    groups = [livebir_group]
+    exists_in_db = [livebir_group] if exists else []
+    missing = [] if exists else [livebir_group]
+
+    return {
+        "total": 1,
+        "groups": groups,
+        "existsInDb": exists_in_db,
+        "missing": missing,
+    }
+
+
 @router.get("/groups")
 async def list_groups(
     request: Request,

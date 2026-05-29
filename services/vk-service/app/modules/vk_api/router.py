@@ -200,3 +200,45 @@ async def get_user_photos(
     client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
     return await client.get_user_photos(user_id=user_id, count=count, offset=offset)
 
+
+@router.delete("/groups/{vk_group_id}")
+async def delete_group(
+    vk_group_id: int,
+    session: AsyncSession = Depends(get_session),
+    x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
+):
+    from sqlalchemy import delete
+    from app.db.models import VkGroup
+    from app.modules.outbox.repository import OutboxRepository
+    from app.modules.outbox.service import OutboxService
+
+    result = await session.execute(delete(VkGroup).where(VkGroup.vk_group_id == vk_group_id))
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    outbox = OutboxService(OutboxRepository(session))
+    await outbox.emit_group_deleted(vk_group_id, correlation_id=x_correlation_id)
+
+    return {"status": "success"}
+
+
+@router.delete("/groups/all")
+async def delete_all_groups(
+    session: AsyncSession = Depends(get_session),
+    x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
+):
+    from sqlalchemy import delete, select
+    from app.db.models import VkGroup
+    from app.modules.outbox.repository import OutboxRepository
+    from app.modules.outbox.service import OutboxService
+
+    group_ids = (await session.scalars(select(VkGroup.vk_group_id))).all()
+
+    await session.execute(delete(VkGroup))
+
+    outbox = OutboxService(OutboxRepository(session))
+    for vk_group_id in group_ids:
+        await outbox.emit_group_deleted(vk_group_id, correlation_id=x_correlation_id)
+
+    return {"count": len(group_ids)}
+

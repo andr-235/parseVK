@@ -71,6 +71,12 @@ class ProjectionRepository:
         )
         await self.session.execute(stmt)
 
+    async def delete_group(self, vk_group_id: int) -> None:
+        from sqlalchemy import delete
+        await self.session.execute(delete(ContentComment).where(ContentComment.vk_owner_id == -vk_group_id))
+        await self.session.execute(delete(ContentPost).where(ContentPost.vk_owner_id == -vk_group_id))
+        await self.session.execute(delete(ContentGroup).where(ContentGroup.vk_group_id == vk_group_id))
+
     async def upsert_author(self, author: dict) -> None:
         now = utcnow()
         stmt = insert(ContentAuthor).values(
@@ -163,6 +169,8 @@ class ProjectionService:
             return False
         if event.event_type == "vk.group_collected":
             await self.repository.upsert_group(event.payload["group"])
+        elif event.event_type == "vk.group_deleted":
+            await self.repository.delete_group(event.payload["vkGroupId"])
         elif event.event_type == "vk.author_collected":
             await self.repository.upsert_author(event.payload["author"])
         elif event.event_type == "vk.post_collected":
