@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.4
 # Build stage
 FROM oven/bun:1 AS build
 
