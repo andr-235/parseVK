@@ -10,6 +10,7 @@ from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.vk_api.client import VkApiClient
 from app.modules.vk_api.fake_client import FakeVkApiClient
+from app.modules.vk_api.service import VkApiService
 
 router = APIRouter(
     prefix="/internal/vk",
@@ -130,15 +131,8 @@ async def save_single_group(
         }
 
     # 3. Сохраняем группу и отправляем событие через Outbox
-    from app.modules.ingestion.repository import IngestionRepository
-    from app.modules.outbox.repository import OutboxRepository
-    from app.modules.outbox.service import OutboxService
-
-    repo = IngestionRepository(session)
-    await repo.upsert_group(group_data)
-
-    outbox = OutboxService(OutboxRepository(session))
-    await outbox.emit_group_collected(group_data, correlation_id=x_correlation_id)
+    svc = VkApiService(session)
+    await svc.save_group(group_data, correlation_id=x_correlation_id)
 
     # 4. Формируем IGroupResponse
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -219,18 +213,10 @@ async def delete_group(
     session: AsyncSession = Depends(get_session),
     x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
 ):
-    from sqlalchemy import delete
-    from app.db.models import VkGroup
-    from app.modules.outbox.repository import OutboxRepository
-    from app.modules.outbox.service import OutboxService
-
-    result = await session.execute(delete(VkGroup).where(VkGroup.vk_group_id == vk_group_id))
-    if result.rowcount == 0:
+    svc = VkApiService(session)
+    ok = await svc.delete_group(vk_group_id, correlation_id=x_correlation_id)
+    if not ok:
         raise HTTPException(status_code=404, detail="Group not found")
-
-    outbox = OutboxService(OutboxRepository(session))
-    await outbox.emit_group_deleted(vk_group_id, correlation_id=x_correlation_id)
-
     return {"status": "success"}
 
 
@@ -239,19 +225,8 @@ async def delete_all_groups(
     session: AsyncSession = Depends(get_session),
     x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
 ):
-    from sqlalchemy import delete, select
-    from app.db.models import VkGroup
-    from app.modules.outbox.repository import OutboxRepository
-    from app.modules.outbox.service import OutboxService
-
-    group_ids = (await session.scalars(select(VkGroup.vk_group_id))).all()
-
-    await session.execute(delete(VkGroup))
-
-    outbox = OutboxService(OutboxRepository(session))
-    for vk_group_id in group_ids:
-        await outbox.emit_group_deleted(vk_group_id, correlation_id=x_correlation_id)
-
+    svc = VkApiService(session)
+    group_ids = await svc.delete_all_groups(correlation_id=x_correlation_id)
     return {"count": len(group_ids)}
 
 

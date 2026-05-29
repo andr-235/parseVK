@@ -65,6 +65,13 @@ async def get_jwks(force_refresh: bool = False) -> dict[str, Any]:
     return _jwks_cache
 
 
+async def require_internal_token(
+    x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
+) -> None:
+    if not x_internal_service_token or x_internal_service_token != settings.internal_service_token:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+
 async def require_auth(authorization: str | None = Header(default=None)) -> dict[str, Any]:
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(

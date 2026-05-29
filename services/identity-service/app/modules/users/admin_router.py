@@ -1,86 +1,54 @@
-import random
-import string
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
-from app.db.models import User
+from app.core.security import require_internal_token
 from app.db.session import get_session
-from app.modules.auth.router import require_internal_token
 from app.modules.users.repository import UsersRepository
 from app.modules.users.schemas import CreateUserRequest, TemporaryPasswordResponse, UserResponse
+from app.modules.users.service import UsersService
 
 router = APIRouter(prefix="/internal/admin/users", tags=["admin-users"])
 
 
-async def get_users_repository(session: AsyncSession = Depends(get_session)) -> UsersRepository:
-    return UsersRepository(session)
+async def get_users_service(session: AsyncSession = Depends(get_session)) -> UsersService:
+    return UsersService(UsersRepository(session))
 
 
-def to_response(user: User) -> UserResponse:
+def to_response(user) -> UserResponse:
     return UserResponse(
         id=user.id,
         username=user.username,
         role=user.role,
         created_at=user.created_at,
-        is_temporary_password=False,  # This field isn't in models.py, hardcoding False
+        is_temporary_password=False,
     )
 
 
-def generate_temp_password(length: int = 12) -> str:
-    chars = string.ascii_letters + string.digits
-    return "".join(random.choice(chars) for _ in range(length))
-
-
-@router.post(
-    "",
-    response_model=UserResponse,
-    dependencies=[Depends(require_internal_token)],
-)
+@router.post("", response_model=UserResponse, dependencies=[Depends(require_internal_token)])
 async def create_user(
     payload: CreateUserRequest,
-    repo: UsersRepository = Depends(get_users_repository),
+    service: UsersService = Depends(get_users_service),
 ):
-    existing = await repo.find_by_username(payload.username)
-    if existing:
-        raise HTTPException(status_code=409, detail="Username already exists")
-
-    user = User(
-        username=payload.username,
-        password_hash=hash_password(payload.password),
-        role=payload.role or "user",
-    )
-    await repo.save_user(user)
+    user = await service.create_user(payload.username, payload.password, payload.role)
     return to_response(user)
 
 
-@router.get(
-    "",
-    response_model=list[UserResponse],
-    dependencies=[Depends(require_internal_token)],
-)
+@router.get("", response_model=list[UserResponse], dependencies=[Depends(require_internal_token)])
 async def list_users(
-    repo: UsersRepository = Depends(get_users_repository),
+    service: UsersService = Depends(get_users_service),
 ):
-    users = await repo.list_users()
+    users = await service.list_users()
     return [to_response(u) for u in users]
 
 
-@router.delete(
-    "/{user_id}",
-    status_code=204,
-    dependencies=[Depends(require_internal_token)],
-)
+@router.delete("/{user_id}", status_code=204, dependencies=[Depends(require_internal_token)])
 async def delete_user(
     user_id: UUID,
-    repo: UsersRepository = Depends(get_users_repository),
+    service: UsersService = Depends(get_users_service),
 ):
-    user = await repo.find_by_id(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    await repo.delete_user(user)
+    await service.delete_user(user_id)
 
 
 @router.post(
@@ -90,17 +58,9 @@ async def delete_user(
 )
 async def set_temporary_password(
     user_id: UUID,
-    repo: UsersRepository = Depends(get_users_repository),
+    service: UsersService = Depends(get_users_service),
 ):
-    user = await repo.find_by_id(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    temp_password = generate_temp_password()
-    user.password_hash = hash_password(temp_password)
-    await repo.save_user(user)
-    await repo.revoke_all_refresh_tokens(user.id)
-
+    temp_password = await service.set_temporary_password(user_id)
     return TemporaryPasswordResponse(temporaryPassword=temp_password)
 
 
@@ -111,15 +71,7 @@ async def set_temporary_password(
 )
 async def reset_password(
     user_id: UUID,
-    repo: UsersRepository = Depends(get_users_repository),
+    service: UsersService = Depends(get_users_service),
 ):
-    user = await repo.find_by_id(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    temp_password = generate_temp_password()
-    user.password_hash = hash_password(temp_password)
-    await repo.save_user(user)
-    await repo.revoke_all_refresh_tokens(user.id)
-
+    temp_password = await service.reset_password(user_id)
     return TemporaryPasswordResponse(temporaryPassword=temp_password)

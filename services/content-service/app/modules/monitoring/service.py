@@ -2,6 +2,8 @@ import logging
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
+from app.db.session import monitor_engine
 from app.modules.monitoring.repository import MonitoringRepository
 from app.modules.monitoring.schemas import (
     MonitoringGroupCreate,
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class MonitoringService:
     def __init__(self, session: AsyncSession):
-        self.repo = MonitoringRepository(session)
+        self.repo = MonitoringRepository(session, cfg=settings, mon_engine=monitor_engine)
 
     async def get_messages(
         self,

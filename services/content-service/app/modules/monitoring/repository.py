@@ -1,19 +1,20 @@
 import json
 import logging
 from datetime import datetime
+from typing import Any
 from sqlalchemy import delete, select, text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from app.core.config import settings
 from app.db.models import MonitoringGroup
-from app.db.session import monitor_engine
 
 logger = logging.getLogger(__name__)
 
 
 class MonitoringRepository:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, *, cfg: Any, mon_engine: AsyncEngine | None):
         self.session = session
+        self._cfg = cfg
+        self._mon_engine = mon_engine
 
     async def get_groups(
         self,
@@ -92,7 +93,7 @@ class MonitoringRepository:
         from_date: datetime | None = None,
         sources: list[str] | None = None,
     ) -> list[dict]:
-        if not monitor_engine:
+        if not self._mon_engine:
             logger.warning("External monitor database is not configured.")
             return []
 
@@ -112,31 +113,31 @@ class MonitoringRepository:
         for idx, keyword in enumerate(keywords):
             param_key = f"keyword_{idx}"
             params[param_key] = f"%{keyword}%"
-            conditions.append(f'"{settings.monitor_message_text_column}" ILIKE :{param_key}')
+            conditions.append(f'"{self._cfg.monitor_message_text_column}" ILIKE :{param_key}')
 
-        where_clause = f'"{settings.monitor_message_text_column}" IS NOT NULL AND ({ " OR ".join(conditions) })'
+        where_clause = f'"{self._cfg.monitor_message_text_column}" IS NOT NULL AND ({ " OR ".join(conditions) })'
 
         if from_date:
             params["from_date"] = from_date
-            where_clause += f' AND "{settings.monitor_message_created_at_column}" >= :from_date'
+            where_clause += f' AND "{self._cfg.monitor_message_created_at_column}" >= :from_date'
 
         select_cols = [
-            f'"{settings.monitor_message_id_column}" as id',
-            f'"{settings.monitor_message_text_column}" as text',
-            f'"{settings.monitor_message_created_at_column}" as "createdAt"',
+            f'"{self._cfg.monitor_message_id_column}" as id',
+            f'"{self._cfg.monitor_message_text_column}" as text',
+            f'"{self._cfg.monitor_message_created_at_column}" as "createdAt"',
         ]
-        if settings.monitor_message_author_column:
-            select_cols.append(f'"{settings.monitor_message_author_column}" as author')
+        if self._cfg.monitor_message_author_column:
+            select_cols.append(f'"{self._cfg.monitor_message_author_column}" as author')
         else:
             select_cols.append("NULL as author")
 
-        if settings.monitor_message_chat_column:
-            select_cols.append(f'"{settings.monitor_message_chat_column}" as chat')
+        if self._cfg.monitor_message_chat_column:
+            select_cols.append(f'"{self._cfg.monitor_message_chat_column}" as chat')
         else:
             select_cols.append("NULL as chat")
 
-        if settings.monitor_message_metadata_column:
-            select_cols.append(f'"{settings.monitor_message_metadata_column}" as metadata')
+        if self._cfg.monitor_message_metadata_column:
+            select_cols.append(f'"{self._cfg.monitor_message_metadata_column}" as metadata')
         else:
             select_cols.append("NULL as metadata")
 
@@ -152,12 +153,12 @@ class MonitoringRepository:
         params["offset"] = offset
 
         if len(subqueries) == 1:
-            sql = f"{subqueries[0]} ORDER BY \"{settings.monitor_message_created_at_column}\" DESC LIMIT :limit OFFSET :offset"
+            sql = f"{subqueries[0]} ORDER BY \"{self._cfg.monitor_message_created_at_column}\" DESC LIMIT :limit OFFSET :offset"
         else:
             sql = f"SELECT * FROM ({' UNION ALL '.join(subqueries)}) AS combined ORDER BY \"createdAt\" DESC LIMIT :limit OFFSET :offset"
 
         rows = []
-        async with monitor_engine.connect() as conn:
+        async with self._mon_engine.connect() as conn:
             result = await conn.execute(text(sql), params)
             for r in result:
                 # Извлекаем метаданные
@@ -192,14 +193,14 @@ class MonitoringRepository:
         return rows
 
     async def find_external_groups(self, sources: list[str] | None = None) -> list[dict]:
-        if not monitor_engine:
+        if not self._mon_engine:
             logger.warning("External monitor database is not configured.")
             return []
 
         # Если задана отдельная таблица групп
-        if settings.monitor_groups_table:
-            sql = f'SELECT DISTINCT "{settings.monitor_group_chat_id_column}"::text as "chatId", "{settings.monitor_group_name_column}"::text as "name" FROM "{settings.monitor_groups_table}" WHERE "{settings.monitor_group_chat_id_column}" IS NOT NULL AND "{settings.monitor_group_name_column}" IS NOT NULL'
-            async with monitor_engine.connect() as conn:
+        if self._cfg.monitor_groups_table:
+            sql = f'SELECT DISTINCT "{self._cfg.monitor_group_chat_id_column}"::text as "chatId", "{self._cfg.monitor_group_name_column}"::text as "name" FROM "{self._cfg.monitor_groups_table}" WHERE "{self._cfg.monitor_group_chat_id_column}" IS NOT NULL AND "{self._cfg.monitor_group_name_column}" IS NOT NULL'
+            async with self._mon_engine.connect() as conn:
                 result = await conn.execute(text(sql))
                 return [{"chatId": r.chatId, "name": r.name} for r in result]
 
@@ -211,11 +212,11 @@ class MonitoringRepository:
         subqueries = []
         for table in table_names:
             # Пытаемся вытащить chat_id и name из колонок или из JSONB метаданных
-            chat_id_expr = f'"{settings.monitor_group_chat_id_column}"::text' if settings.monitor_message_chat_column else 'NULL::text'
-            name_expr = f'"{settings.monitor_message_chat_column}"::text' if settings.monitor_message_chat_column else 'NULL::text'
+            chat_id_expr = f'"{self._cfg.monitor_group_chat_id_column}"::text' if self._cfg.monitor_message_chat_column else 'NULL::text'
+            name_expr = f'"{self._cfg.monitor_message_chat_column}"::text' if self._cfg.monitor_message_chat_column else 'NULL::text'
             
-            if settings.monitor_message_metadata_column:
-                meta = f'"{settings.monitor_message_metadata_column}"::jsonb'
+            if self._cfg.monitor_message_metadata_column:
+                meta = f'"{self._cfg.monitor_message_metadata_column}"::jsonb'
                 chat_id_expr = f"COALESCE({chat_id_expr}, {meta}->>'chat_id', {meta}->>'chatId', {meta}->'raw'->>'chat_id', {meta}->'raw'->>'chatId')"
                 name_expr = f"COALESCE({name_expr}, {meta}->>'chat_name', {meta}->>'chatName', {meta}->>'title', {meta}->'raw'->>'chat_name', {meta}->'raw'->>'chatName', {meta}->'raw'->>'title')"
 
@@ -225,21 +226,21 @@ class MonitoringRepository:
 
         sql = f'SELECT DISTINCT "chatId", "name" FROM ({ " UNION ALL ".join(subqueries) }) AS combined WHERE "chatId" IS NOT NULL AND "name" IS NOT NULL'
         
-        async with monitor_engine.connect() as conn:
+        async with self._mon_engine.connect() as conn:
             result = await conn.execute(text(sql))
             return [{"chatId": r.chatId, "name": r.name} for r in result]
 
     async def find_external_keywords(self) -> list[str] | None:
-        if not monitor_engine or not settings.monitor_keywords_table:
+        if not self._mon_engine or not self._cfg.monitor_keywords_table:
             return None
 
-        sql = f'SELECT "{settings.monitor_keyword_word_column}"::text as word FROM "{settings.monitor_keywords_table}" WHERE "{settings.monitor_keyword_word_column}" IS NOT NULL'
-        async with monitor_engine.connect() as conn:
+        sql = f'SELECT "{self._cfg.monitor_keyword_word_column}"::text as word FROM "{self._cfg.monitor_keywords_table}" WHERE "{self._cfg.monitor_keyword_word_column}" IS NOT NULL'
+        async with self._mon_engine.connect() as conn:
             result = await conn.execute(text(sql))
             return list(set(r.word.strip() for r in result if r.word.strip()))
 
     def _resolve_source_tables(self, sources: list[str] | None) -> list[str]:
-        default_tables = [t.strip() for t in settings.monitor_messages_table.split(",") if t.strip()]
+        default_tables = [t.strip() for t in self._cfg.monitor_messages_table.split(",") if t.strip()]
         if not sources:
             return default_tables
 
