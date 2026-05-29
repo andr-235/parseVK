@@ -5,7 +5,7 @@ from app.modules.content.service import (
     VkGatewayService,
     get_vk_gateway_service,
 )
-from fastapi import APIRouter, Depends, Request, Body
+from fastapi import APIRouter, Depends, Request, Body, UploadFile, File
 
 router = APIRouter(prefix="/api/v1/content", tags=["content"])
 
@@ -21,6 +21,22 @@ async def save_group(
         "POST",
         "/internal/vk/groups/save",
         json=payload,
+    )
+
+
+@router.post("/groups/upload")
+async def upload_groups(
+    request: Request,
+    file: UploadFile = File(...),
+    vk_gateway_service: VkGatewayService = Depends(get_vk_gateway_service),
+):
+    content = await file.read()
+    files = {"file": (file.filename, content, file.content_type)}
+    return await vk_gateway_service.forward(
+        request,
+        "POST",
+        "/internal/vk/groups/upload",
+        files=files,
     )
 
 

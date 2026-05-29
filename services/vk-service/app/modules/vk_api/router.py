@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import re
 import httpx
-from fastapi import APIRouter, Depends, Query, Header, HTTPException
+from fastapi import APIRouter, Depends, Query, Header, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,13 +67,12 @@ async def fetch_vk_id_from_public_html(screen_name: str) -> int | None:
     return None
 
 
-@router.post("/groups/save")
-async def save_group(
-    payload: SaveGroupRequest,
-    session: AsyncSession = Depends(get_session),
-    x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
-):
-    parsed_identifier = normalize_identifier(payload.identifier)
+async def save_single_group(
+    identifier: str,
+    session: AsyncSession,
+    x_correlation_id: str | None = None,
+) -> dict:
+    parsed_identifier = normalize_identifier(identifier)
     
     client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
     group_data = None
@@ -169,6 +168,19 @@ async def save_group(
     }
 
 
+@router.post("/groups/save")
+async def save_group(
+    payload: SaveGroupRequest,
+    session: AsyncSession = Depends(get_session),
+    x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
+):
+    return await save_single_group(
+        identifier=payload.identifier,
+        session=session,
+        x_correlation_id=x_correlation_id,
+    )
+
+
 @router.get("/posts/{owner_id}/{post_id}/author-comments")
 async def get_author_comments_for_post(
     owner_id: int,
@@ -254,4 +266,54 @@ async def search_region_groups(
         if str(exc) == "REGION_NOT_FOUND":
             raise HTTPException(status_code=404, detail="Region not found")
         raise
+
+
+@router.post("/groups/upload")
+async def upload_groups(
+    file: UploadFile = File(...),
+    session: AsyncSession = Depends(get_session),
+    x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
+):
+    content = await file.read()
+    text = content.decode("utf-8", errors="ignore")
+    identifiers = [
+        line.strip()
+        for line in text.splitlines()
+        if line.strip()
+    ]
+    
+    success = []
+    failed = []
+    
+    seen = set()
+    for identifier in identifiers:
+        normalized = normalize_identifier(identifier).lower()
+        if normalized in seen:
+            failed.append({
+                "identifier": identifier,
+                "errorMessage": "Дубликат в списке идентификаторов"
+            })
+            continue
+        seen.add(normalized)
+        
+        try:
+            group = await save_single_group(
+                identifier=identifier,
+                session=session,
+                x_correlation_id=x_correlation_id,
+            )
+            success.append(group)
+        except Exception as exc:
+            failed.append({
+                "identifier": identifier,
+                "errorMessage": str(exc)
+            })
+            
+    return {
+        "success": success,
+        "failed": failed,
+        "total": len(identifiers),
+        "successCount": len(success),
+        "failedCount": len(failed),
+    }
 

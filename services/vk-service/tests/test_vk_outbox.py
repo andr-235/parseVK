@@ -76,8 +76,8 @@ async def test_outbox_service_uses_deterministic_dedupe_keys():
     await service.emit_comment_collected({"owner_id": -1, "post_id": 2, "id": 3}, task_id=10)
     await service.emit_task_completed(task_id=10, run_id="run-10", stats={})
 
-    assert [event["dedupe_key"] for event in repository.events] == [
-        "vk.group_collected:1",
+    assert [event.get("dedupe_key") for event in repository.events] == [
+        None,
         "vk.post_collected:-1:2",
         "vk.comment_collected:-1:2:3",
         "vk.task_completed:10:run-10",

@@ -57,6 +57,7 @@ class VkGatewayService:
         *,
         params: dict | None = None,
         json: Any | None = None,
+        files: Any | None = None,
     ):
         authorization = request.headers.get("Authorization")
         try:
@@ -74,6 +75,7 @@ class VkGatewayService:
                 correlation_id=correlation_id,
                 params=params,
                 json=json,
+                files=files,
             )
         except VkServiceClientHTTPError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc

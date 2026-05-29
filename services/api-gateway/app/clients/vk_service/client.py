@@ -68,6 +68,7 @@ class VkServiceClient:
         correlation_id: str | None = None,
         params: dict | None = None,
         json: Any | None = None,
+        files: Any | None = None,
     ) -> Any:
         try:
             response = await self._client.request(
@@ -80,6 +81,7 @@ class VkServiceClient:
                 ),
                 params=params,
                 json=json,
+                files=files,
             )
             response.raise_for_status()
             if not response.content:
