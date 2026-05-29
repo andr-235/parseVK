@@ -1,5 +1,5 @@
 import ProgressBar from '@/components/common/ProgressBar'
-import TaskActionsCell from '@/components/tasks/TaskActionsCell'
+import TaskActionsCell from '@/pages/tasks/components/TaskActionsCell'
 import { cn } from '@/utils/common'
 import { getTaskStatusText } from '@/utils/tasks/statusHelpers'
 import { calculateTaskProgress } from '@/utils/tasks/taskProgress'
