@@ -227,7 +227,7 @@ export function ListingsTable({
                   href={listing.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="line-clamp-2 text-sm font-medium text-slate-200 leading-snug transition-colors duration-200 hover:text-primary min-w-0 break-words"
+                  className="line-clamp-2 text-sm font-medium text-slate-200 leading-snug transition-colors duration-200 hover:text-accent-primary min-w-0 break-words"
                   title={listing.title ?? listing.url}
                 >
                   {listing.title ?? listing.url}
@@ -399,7 +399,7 @@ export function ListingsTable({
 
       <div className="overflow-hidden rounded-xl border border-border/10 bg-background-secondary/50 ">
         {/* Top accent line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+        <div className="h-px bg-border/30" />
 
         <DataTable
           data={items}

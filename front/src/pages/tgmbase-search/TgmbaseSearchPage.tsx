@@ -96,7 +96,7 @@ function TgmbaseBatchToolbar({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <label htmlFor="tgmbase-search-input" className="text-sm font-medium text-slate-200">
+        <label htmlFor="tgmbase-search-input" className="text-sm font-medium text-text-light">
           Список запросов
         </label>
         <textarea
@@ -105,7 +105,7 @@ function TgmbaseBatchToolbar({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={'581341734\n@Andrei79ru\n+79991234567'}
-          className="min-h-40 w-full rounded-card border border-border/10 bg-background-secondary/80 px-4 py-3 text-sm text-text-primary outline-none transition focus:border-primary/60"
+          className="min-h-40 w-full rounded-card border border-border/10 bg-background-secondary/80 px-4 py-3 text-sm text-text-primary outline-none transition focus:border-accent-primary/60"
         />
 
         <div className="rounded-card border border-border/10 bg-background-secondary/70 p-3 text-sm text-text-secondary">
@@ -117,15 +117,15 @@ function TgmbaseBatchToolbar({
 
         {progress ? (
           <div
-            className="rounded-card border border-primary/20 bg-[#131316]/90 p-4"
+            className="rounded-card border border-accent-primary/20 bg-background-primary/90 p-4"
             aria-live="polite"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-primary/70">
+                <div className="text-xs uppercase tracking-[0.24em] text-accent-primary/70">
                   Прогресс поиска
                 </div>
-                <div className="mt-1 text-base font-semibold text-white">
+                <div className="mt-1 text-base font-semibold text-text-light">
                   {progressTitleMap[progress.status]}
                 </div>
               </div>
@@ -134,7 +134,7 @@ function TgmbaseBatchToolbar({
               </div>
             </div>
             <div
-              className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800"
+              className="mt-4 h-2 overflow-hidden rounded-full bg-background-secondary"
               role="progressbar"
               aria-valuenow={progressPercent}
               aria-valuemin={0}
@@ -155,7 +155,7 @@ function TgmbaseBatchToolbar({
               <span>Прогресс {progressPercent}%</span>
             </div>
             {progress.error ? (
-              <div className="mt-2 text-sm text-rose-300">{progress.error}</div>
+              <div className="mt-2 text-sm text-accent-danger">{progress.error}</div>
             ) : null}
           </div>
         ) : null}
@@ -202,14 +202,14 @@ function TgmbaseMessagesPanel({
           messagesPage.items.map((message) => (
             <div
               key={message.id}
-              className="rounded-card border border-border/10 bg-[#131316]/90 p-3"
+              className="rounded-card border border-border/10 bg-background-primary/90 p-3"
             >
               <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
                 <span>{new Date(message.date).toLocaleString('ru-RU')}</span>
                 <span>peer: {message.peerTitle ?? message.peerId}</span>
                 <span>{message.peerType}</span>
               </div>
-              <div className="whitespace-pre-wrap text-sm leading-6 text-slate-200">
+              <div className="whitespace-pre-wrap text-sm leading-6 text-text-light">
                 {message.text ?? 'Сообщение без текста'}
               </div>
             </div>
@@ -423,20 +423,20 @@ function TgmbaseResultsList({
                   className={cn(
                     'w-full rounded-card border px-4 py-3 text-left transition',
                     selected
-                      ? 'border-primary/60 bg-primary/10'
-                      : 'border-border/10 bg-background-secondary/60 hover:border-primary/30 hover:bg-background-secondary'
+                      ? 'border-accent-primary/60 bg-accent-primary/10'
+                      : 'border-border/10 bg-background-secondary/60 hover:border-accent-primary/30 hover:bg-background-secondary'
                   )}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-text-primary">{item.query}</span>
-                        <Badge variant="outline" className="text-slate-200">
+                        <Badge variant="outline" className="text-text-light">
                           {tgmbaseQueryTypeLabels[item.queryType]}
                         </Badge>
                         <Badge
                           variant="outline"
-                          className="border-primary/30 bg-primary/10 text-orange-200"
+                          className="border-accent-primary/30 bg-accent-primary/10 text-accent-warning"
                         >
                           {tgmbaseStatusLabels[item.status]}
                         </Badge>
@@ -518,7 +518,7 @@ function TgmbaseResultDetails({
       <CardHeader className="gap-3 border-b border-border/10">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-semibold">Детали результата</h2>
-          <Badge variant="outline" className="border-primary/30 bg-primary/10 text-orange-200">
+          <Badge variant="outline" className="border-accent-primary/30 bg-accent-primary/10 text-accent-warning">
             {tgmbaseStatusLabels[item.status]}
           </Badge>
         </div>
@@ -535,7 +535,7 @@ function TgmbaseResultDetails({
         ) : null}
 
         {item.status === 'error' ? (
-          <div className="rounded-card border border-rose-400/20 bg-rose-500/10 p-4 text-rose-100">
+          <div className="rounded-card border border-accent-danger/20 bg-accent-danger/10 p-4 text-accent-danger/90">
             <div className="font-semibold">Ошибка поиска</div>
             <div className="mt-1 text-sm">{item.error ?? 'Не удалось обработать этот запрос.'}</div>
           </div>

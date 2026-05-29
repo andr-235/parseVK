@@ -128,8 +128,8 @@ function TelegramDlTabs({ activeTab, onChange }: TelegramDlTabsProps) {
               className={[
                 'rounded-xl border px-4 py-3 text-left transition-colors',
                 isActive
-                  ? 'border-primary/40 bg-primary/12 text-white shadow-lg shadow-primary/10'
-                  : 'border-transparent bg-white/[0.03] text-text-secondary hover:border-border/10 hover:bg-white/[0.05] hover:text-white',
+                  ? 'border-accent-primary/40 bg-accent-primary/12 text-text-light shadow-lg shadow-accent-primary/10'
+                  : 'border-transparent bg-background/50 text-text-secondary hover:border-border/10 hover:bg-background/60 hover:text-text-light',
               ].join(' ')}
             >
               <div className="text-sm font-semibold">{tab.label}</div>
@@ -209,7 +209,7 @@ function TelegramDlUploadCard({
             size="sm"
             onClick={handleClear}
             disabled={selectedFiles.length === 0}
-            className="h-8 text-text-secondary hover:text-white"
+            className="h-8 text-text-secondary hover:text-text-light"
           >
             Очистить
           </Button>
@@ -223,7 +223,7 @@ function TelegramDlUploadCard({
         </div>
 
         {selectedFiles.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border/10 bg-slate-800/30 px-4 py-6 text-sm text-text-secondary">
+          <div className="rounded-lg border border-dashed border-border/10 bg-background-secondary/30 px-4 py-6 text-sm text-text-secondary">
             Пока файлы не выбраны.
           </div>
         ) : (
@@ -231,9 +231,9 @@ function TelegramDlUploadCard({
             {selectedFiles.map((file) => (
               <div
                 key={`${file.name}-${file.size}-${file.lastModified}`}
-                className="flex items-center justify-between gap-4 rounded-lg border border-border/10 bg-slate-800/30 px-4 py-3 text-sm"
+                className="flex items-center justify-between gap-4 rounded-lg border border-border/10 bg-background-secondary/30 px-4 py-3 text-sm"
               >
-                <span className="truncate text-white">{file.name}</span>
+                <span className="truncate text-text-light">{file.name}</span>
                 <span className="shrink-0 text-text-secondary">{(file.size / 1024).toFixed(1)} KB</span>
               </div>
             ))}
@@ -242,7 +242,7 @@ function TelegramDlUploadCard({
 
         <Button
           type="button"
-          className="w-full h-11 bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25"
+          className="w-full h-11 bg-gradient-to-r from-accent-primary to-accent-primary text-text-light shadow-lg shadow-accent-primary/25"
           disabled={selectedFiles.length === 0 || isUploading}
           onClick={() => void handleSubmit()}
         >
@@ -254,17 +254,17 @@ function TelegramDlUploadCard({
             {uploadStatuses.map((file) => (
               <div
                 key={file.id}
-                className="rounded-lg border border-border/10 bg-slate-800/30 px-4 py-3 text-sm"
+                className="rounded-lg border border-border/10 bg-background-secondary/30 px-4 py-3 text-sm"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="truncate text-white">{file.originalFileName}</span>
+                  <span className="truncate text-text-light">{file.originalFileName}</span>
                   <span className="shrink-0 text-primary">{file.status}</span>
                 </div>
                 <div className="mt-1 text-xs text-text-secondary">
                   Строк: {file.rowsSuccess}/{file.rowsTotal}
                   {file.status === 'SKIPPED' ? ' • дубликат пропущен' : ''}
                 </div>
-                {file.error ? <div className="mt-1 text-xs text-rose-300">{file.error}</div> : null}
+                {file.error ? <div className="mt-1 text-xs text-accent-danger">{file.error}</div> : null}
               </div>
             ))}
           </div>
@@ -293,13 +293,13 @@ function TelegramDlUploadHistory({ files, isLoading }: TelegramDlUploadHistoryPr
       contentClassName="space-y-4"
     >
       {isLoading ? (
-        <div className="rounded-lg border border-dashed border-border/10 bg-slate-800/30 px-4 py-10 text-center">
-          <div className="text-base font-medium text-white">Загружаю историю</div>
+        <div className="rounded-lg border border-dashed border-border/10 bg-background-secondary/30 px-4 py-10 text-center">
+          <div className="text-base font-medium text-text-light">Загружаю историю</div>
           <div className="mt-2 text-sm text-text-secondary">Получаю историю файлов из tgmbase.</div>
         </div>
       ) : files.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border/10 bg-slate-800/30 px-4 py-10 text-center">
-          <div className="text-base font-medium text-white">Пока нет загруженных файлов</div>
+        <div className="rounded-lg border border-dashed border-border/10 bg-background-secondary/30 px-4 py-10 text-center">
+          <div className="text-base font-medium text-text-light">Пока нет загруженных файлов</div>
           <div className="mt-2 text-sm text-text-secondary">
             После первой выгрузки здесь появится список файлов, дата загрузки и статус обработки.
           </div>
@@ -309,18 +309,18 @@ function TelegramDlUploadHistory({ files, isLoading }: TelegramDlUploadHistoryPr
           {files.map((file) => (
             <div
               key={file.id}
-              className="rounded-lg border border-border/10 bg-slate-800/30 px-4 py-3 text-sm"
+              className="rounded-lg border border-border/10 bg-background-secondary/30 px-4 py-3 text-sm"
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="truncate text-white">{file.originalFileName}</span>
+                <span className="truncate text-text-light">{file.originalFileName}</span>
                 <span
                   className={
                     file.status === 'FAILED'
-                      ? 'text-rose-300'
+                      ? 'text-accent-danger'
                       : file.status === 'SKIPPED'
-                        ? 'text-amber-300'
+                        ? 'text-accent-warning'
                         : file.isActive
-                          ? 'text-emerald-300'
+                          ? 'text-accent-success'
                           : 'text-text-secondary'
                   }
                 >
@@ -336,7 +336,7 @@ function TelegramDlUploadHistory({ files, isLoading }: TelegramDlUploadHistoryPr
               <div className="mt-1 text-xs text-text-secondary">
                 Статус: {file.status} • Строк: {file.rowsSuccess}/{file.rowsTotal}
               </div>
-              {file.error ? <div className="mt-1 text-xs text-rose-300">{file.error}</div> : null}
+              {file.error ? <div className="mt-1 text-xs text-accent-danger">{file.error}</div> : null}
             </div>
           ))}
         </div>
@@ -441,21 +441,21 @@ function TelegramDlMatchToolbar({
       }
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className="border-primary/30 bg-primary/10 text-orange-100">
+        <Badge variant="outline" className="border-accent-primary/30 bg-accent-primary/10 text-accent-primary">
           Режим: {statusLabel}
         </Badge>
-        <Badge variant="outline" className="border-white/15 bg-white/5 text-text-primary">
+        <Badge variant="outline" className="border-border/60 bg-background/60 text-text-primary">
           DL: {contactsCount}
         </Badge>
-        <Badge variant="outline" className="border-white/15 bg-white/5 text-text-primary">
+        <Badge variant="outline" className="border-border/60 bg-background/60 text-text-primary">
           Совпадения: {matchResultsCount}
         </Badge>
         {activeMatchRun ? (
-          <Badge variant="outline" className="border-primary/30 bg-primary/10 text-orange-100">
+          <Badge variant="outline" className="border-accent-primary/30 bg-accent-primary/10 text-accent-primary">
             Запуск: {activeMatchRun.status}
           </Badge>
         ) : (
-          <Badge variant="outline" className="border-white/15 bg-white/5 text-text-secondary">
+          <Badge variant="outline" className="border-border/60 bg-background/60 text-text-secondary">
             Запуск не выбран
           </Badge>
         )}
@@ -463,33 +463,33 @@ function TelegramDlMatchToolbar({
 
       {activeMatchRun ? (
         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-xl border border-border/10 bg-white/[0.04] px-4 py-3">
+          <div className="rounded-xl border border-border/10 bg-background/60 px-4 py-3">
             <div className="text-[11px] uppercase tracking-[0.24em] text-text-secondary">Проверено</div>
-            <div className="mt-1 text-lg font-semibold text-white">
+            <div className="mt-1 text-lg font-semibold text-text-light">
               {activeMatchRun.contactsTotal}
             </div>
           </div>
-          <div className="rounded-xl border border-border/10 bg-white/[0.04] px-4 py-3">
+          <div className="rounded-xl border border-border/10 bg-background/60 px-4 py-3">
             <div className="text-[11px] uppercase tracking-[0.24em] text-text-secondary">Совпадений</div>
-            <div className="mt-1 text-lg font-semibold text-white">
+            <div className="mt-1 text-lg font-semibold text-text-light">
               {activeMatchRun.matchesTotal}
             </div>
           </div>
-          <div className="rounded-xl border border-border/10 bg-white/[0.04] px-4 py-3">
+          <div className="rounded-xl border border-border/10 bg-background/60 px-4 py-3">
             <div className="text-[11px] uppercase tracking-[0.24em] text-text-secondary">ID</div>
-            <div className="mt-1 text-lg font-semibold text-white">
+            <div className="mt-1 text-lg font-semibold text-text-light">
               {activeMatchRun.strictMatchesTotal}
             </div>
           </div>
-          <div className="rounded-xl border border-border/10 bg-white/[0.04] px-4 py-3">
+          <div className="rounded-xl border border-border/10 bg-background/60 px-4 py-3">
             <div className="text-[11px] uppercase tracking-[0.24em] text-text-secondary">Username</div>
-            <div className="mt-1 text-lg font-semibold text-white">
+            <div className="mt-1 text-lg font-semibold text-text-light">
               {activeMatchRun.usernameMatchesTotal}
             </div>
           </div>
-          <div className="rounded-xl border border-border/10 bg-white/[0.04] px-4 py-3">
+          <div className="rounded-xl border border-border/10 bg-background/60 px-4 py-3">
             <div className="text-[11px] uppercase tracking-[0.24em] text-text-secondary">Phone</div>
-            <div className="mt-1 text-lg font-semibold text-white">
+            <div className="mt-1 text-lg font-semibold text-text-light">
               {activeMatchRun.phoneMatchesTotal}
             </div>
           </div>
@@ -577,16 +577,16 @@ function TelegramDlContactsTable({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+          <Badge variant="outline" className="border-border/60 bg-background/60 text-text-light">
             Показано: {contacts.length}
           </Badge>
-          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+          <Badge variant="outline" className="border-border/60 bg-background/60 text-text-light">
             Всего: {total}
           </Badge>
-          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+          <Badge variant="outline" className="border-border/60 bg-background/60 text-text-light">
             Страница: {pageIndex} / {pageCount}
           </Badge>
-          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+          <Badge variant="outline" className="border-border/60 bg-background/60 text-text-light">
             Лимит: {pageSize}
           </Badge>
         </div>
@@ -641,14 +641,14 @@ function TelegramDlContactsTable({
                 <TableCell className="max-w-[280px] truncate text-text-primary">
                   {contact.originalFileName}
                 </TableCell>
-                <TableCell className="text-slate-200">
-                  <div className="font-medium text-white">
+                <TableCell className="text-text-light">
+                  <div className="font-medium text-text-light">
                     {contact.fullName ??
                       [contact.firstName, contact.lastName].filter(Boolean).join(' ')}
                   </div>
                   <div className="text-xs text-text-secondary">{contact.region ?? '—'}</div>
                 </TableCell>
-                <TableCell className="text-slate-200">
+                <TableCell className="text-text-light">
                   <div className="space-y-1">
                     <div>telegramId: {contact.telegramId ?? '—'}</div>
                     <div>username: {contact.username ?? '—'}</div>
@@ -737,8 +737,8 @@ function TelegramDlMatchResultRow({
   return (
     <>
       <TableRow className="border-border/10">
-        <TableCell className="text-slate-200">
-          <div className="font-medium text-white">
+        <TableCell className="text-text-light">
+          <div className="font-medium text-text-light">
             {result.dlContact.fullName ??
               [result.dlContact.firstName, result.dlContact.lastName].filter(Boolean).join(' ')}
           </div>
@@ -747,21 +747,21 @@ function TelegramDlMatchResultRow({
           </div>
           <div className="text-xs text-text-secondary">{result.dlContact.originalFileName}</div>
         </TableCell>
-        <TableCell className="text-slate-200">
-          <div className="font-medium text-white">
+        <TableCell className="text-text-light">
+          <div className="font-medium text-text-light">
             {result.user?.first_name ?? '—'} {result.user?.last_name ?? ''}
           </div>
           <div className="text-xs text-text-secondary">username: {result.user?.username ?? '—'}</div>
           <div className="text-xs text-text-secondary">phone: {result.user?.phone ?? '—'}</div>
         </TableCell>
-        <TableCell className="text-slate-200">
+        <TableCell className="text-text-light">
           {result.user?.relatedChats?.length ? (
             <div className="space-y-2">
               <div className="max-h-24 space-y-1 overflow-y-auto pr-2 text-xs text-text-secondary">
                 {result.user.relatedChats.map((chat) => (
                   <div
                     key={`${chat.type}:${chat.peer_id}`}
-                    className="flex items-start justify-between gap-2 rounded-md border border-border/10 bg-white/[0.03] px-2 py-1"
+                    className="flex items-start justify-between gap-2 rounded-md border border-border/10 bg-background/50 px-2 py-1"
                   >
                     <span>
                       {chat.type}: {chat.title} ({chat.peer_id})
@@ -796,23 +796,23 @@ function TelegramDlMatchResultRow({
         <TableCell className="space-y-2">
           <div className="flex flex-wrap gap-2">
             {result.strictTelegramIdMatch ? (
-              <Badge className="bg-emerald-400/10 text-emerald-200">ID match</Badge>
+              <Badge className="bg-accent-success/10 text-accent-success">ID match</Badge>
             ) : null}
             {result.usernameMatch ? (
-              <Badge className="bg-primary/10 text-orange-200">Username match</Badge>
+              <Badge className="bg-accent-primary/10 text-accent-primary">Username match</Badge>
             ) : null}
             {result.phoneMatch ? (
-              <Badge className="bg-amber-400/10 text-amber-200">Phone match</Badge>
+              <Badge className="bg-accent-warning/10 text-accent-warning">Phone match</Badge>
             ) : null}
             {result.chatActivityMatch ? (
-              <Badge className="bg-fuchsia-400/10 text-fuchsia-200">Chat activity match</Badge>
+              <Badge className="bg-accent-info/10 text-accent-info">Chat activity match</Badge>
             ) : null}
           </div>
         </TableCell>
       </TableRow>
 
       {isExpanded ? (
-        <TableRow className="border-border/10 bg-white/[0.02]">
+        <TableRow className="border-border/10 bg-background/40">
           <TableCell colSpan={4} className="space-y-3 px-4 py-4">
             {messagesQuery.isLoading ? (
               <LoadingState message="Загружаю комментарии tgmbase" />
@@ -824,11 +824,11 @@ function TelegramDlMatchResultRow({
                     className="rounded-xl border border-border/10 bg-background-secondary/70 p-3"
                   >
                     <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-medium text-text-light">
                         {group.chatType}: {group.title} ({group.peerId})
                       </div>
                       {group.isExcluded ? (
-                        <Badge variant="outline" className="border-amber-400/30 text-amber-200">
+                        <Badge variant="outline" className="border-accent-warning/30 text-accent-warning">
                           Исключён
                         </Badge>
                       ) : null}
@@ -838,7 +838,7 @@ function TelegramDlMatchResultRow({
                         {group.messages.map((message) => (
                           <div
                             key={message.messageId}
-                            className="rounded-lg border border-border/10 bg-white/[0.03] px-3 py-2 text-xs text-text-secondary"
+                            className="rounded-lg border border-border/10 bg-background/50 px-3 py-2 text-xs text-text-secondary"
                           >
                             <div className="mb-1 text-[11px] text-text-secondary/70">
                               {message.messageDate ?? 'Без даты'}
@@ -936,10 +936,10 @@ function TelegramDlMatchResultsTable({
 
       {activeMatchRun ? (
         <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+          <Badge variant="outline" className="border-border/60 bg-background/60 text-text-light">
             Проверено: {activeMatchRun.contactsTotal}
           </Badge>
-          <Badge variant="outline" className="border-white/15 bg-white/5 text-slate-200">
+          <Badge variant="outline" className="border-border/60 bg-background/60 text-text-light">
             Совпадений: {activeMatchRun.matchesTotal}
           </Badge>
         </div>

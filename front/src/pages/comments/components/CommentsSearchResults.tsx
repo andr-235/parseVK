@@ -95,7 +95,7 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
                   {item.highlight.map((chunk, index) => (
                     <Badge
                       key={`highlight-${item.commentId}-${index}`}
-                      className="border-primary/30 bg-primary/10 text-primary"
+                      className="border-accent-primary/30 bg-accent-primary/10 text-accent-primary"
                     >
                       {chunk.replace(/<[^>]+>/g, '')}
                     </Badge>

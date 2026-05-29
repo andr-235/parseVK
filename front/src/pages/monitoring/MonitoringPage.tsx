@@ -364,7 +364,7 @@ function MonitoringMessagesCard({
               <div
                 key={messageId}
                 className={cn(
-                  'group relative overflow-hidden rounded-xl border border-border/60 bg-background-secondary/40 shadow-soft-sm transition duration-200 hover:border-primary/35 hover:-translate-y-0.5 hover:shadow-soft-md animate-in fade-in-0 slide-in-from-bottom-4',
+                  'group relative overflow-hidden rounded-xl border border-border/60 bg-background-secondary/40 shadow-soft-sm transition duration-200 hover:border-accent-primary/35 hover:-translate-y-0.5 hover:shadow-soft-md animate-in fade-in-0 slide-in-from-bottom-4',
                   isCompact ? 'p-3' : 'p-5'
                 )}
                 style={{ animationDelay: `${delay}ms` }}
@@ -636,7 +636,7 @@ function MonitoringPage() {
                   onClick={refreshNow}
                   size="sm"
                   variant="outline"
-                  className="h-10 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
+                  className="h-10 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-accent-primary/50 transition-all duration-200"
                   disabled={isLoading || isRefreshing}
                 >
                   <RefreshCw className={cn('mr-2 w-4 h-4', isRefreshing && 'animate-spin')} />
@@ -672,12 +672,12 @@ function MonitoringPage() {
       </div>
 
       {/* Search Section - staggered animation */}
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-0">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Поиск по ключевым словам
           </h2>
-          <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <Card className="border border-border/20 bg-background-secondary p-6 overflow-hidden border-t border-border">
@@ -697,7 +697,7 @@ function MonitoringPage() {
                     }
                   }}
                   placeholder="Ключевые слова через запятую или новую строку"
-                  className="h-11 border-border bg-background-primary pl-11 text-white placeholder:text-text-secondary/70 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                  className="h-11 border-border bg-background-primary pl-11 text-white placeholder:text-text-secondary/70 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                 />
               </div>
               <p className="text-xs text-text-secondary/70">Подсказка: нажмите Enter для применения</p>
@@ -722,10 +722,10 @@ function MonitoringPage() {
       </div>
 
       {/* Filters Section - staggered animation */}
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-75">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">Период</h2>
-          <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -753,17 +753,17 @@ function MonitoringPage() {
       </div>
 
       {/* Statistics Section - staggered animation */}
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-300">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-150">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">Статистика</h2>
-          <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
             {
               icon: MessageSquare,
-              iconClass: 'bg-primary/10 text-primary',
+              iconClass: 'bg-accent-primary/10 text-accent-primary',
               label: 'Сообщений',
               value: stats.total,
             },
@@ -813,13 +813,13 @@ function MonitoringPage() {
 
       {/* Active Keywords Section - staggered animation */}
       {usedKeywords.length > 0 && (
-        <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-400">
+        <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1">
               <h2 className="font-monitoring-display text-2xl font-semibold text-white">
                 Активные ключи
               </h2>
-              <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
+              <div className="h-px flex-1 bg-border/30" />
             </div>
             <Badge
               variant="outline"
@@ -835,7 +835,7 @@ function MonitoringPage() {
                 <Badge
                   key={keyword}
                   variant="outline"
-                  className="rounded-full border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+                  className="rounded-full border-accent-primary/20 bg-accent-primary/10 px-3 py-1 text-xs font-semibold text-accent-primary"
                 >
                   {keyword}
                 </Badge>
@@ -857,10 +857,10 @@ function MonitoringPage() {
       )}
 
       {/* Messages Section - staggered animation */}
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-500">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">Сообщения</h2>
-          <div className="h-px flex-1 bg-linear-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <MonitoringMessagesCard

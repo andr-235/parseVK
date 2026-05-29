@@ -54,7 +54,7 @@ export const CommentThread = memo(function CommentThread({
           Ответы в треде
           <Badge
             variant="secondary"
-            className="ml-2 h-5 border-0 bg-primary/10 px-1.5 font-mono-accent text-[10px] font-normal text-primary"
+            className="ml-2 h-5 border-0 bg-accent-primary/10 px-1.5 font-mono-accent text-[10px] font-normal text-primary"
           >
             {threadCount}
           </Badge>

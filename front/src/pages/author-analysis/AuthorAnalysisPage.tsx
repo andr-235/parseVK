@@ -335,7 +335,6 @@ function AuthorHeroSection({
 
   return (
     <PageHeader
-      variant="hero"
       title={author ? author.fullName : 'Анализ фотографий'}
       description={
         author

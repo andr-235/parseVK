@@ -1,7 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
 import { metricsService, type ParsedMetrics } from '@/pages/metrics/api/metrics.api'
+import { Button } from '@/shared/components/ui/button'
 import { Card } from '@/shared/components/ui/card'
 import { StatusBadge, type StatusBadgeTone } from '@/shared/components/ui/status-badge'
+import { PageHeader, PageContainer } from '@/shared/components/common'
 import {
   Activity,
   Cpu,
@@ -143,7 +145,7 @@ function MetricsPage() {
 
   const renderStatusDistribution = (byStatus: Record<string, number>, total: number) => {
     if (Object.keys(byStatus).length === 0) {
-      return <div className="text-slate-500/70 italic text-sm">нет данных по статусам</div>
+      return <div className="text-text-secondary/70 italic text-sm">нет данных по статусам</div>
     }
 
     return (
@@ -153,8 +155,8 @@ function MetricsPage() {
           .map(([status, count]) => {
             const percentage = total > 0 ? (count / total) * 100 : 0
 
-            let barColor = 'bg-slate-600'
-            let textColor = 'text-slate-400'
+            let barColor = 'bg-background-secondary'
+            let textColor = 'text-text-secondary'
             if (status.startsWith('2')) {
               barColor = 'bg-green-500/80'
               textColor = 'text-green-400'
@@ -177,7 +179,7 @@ function MetricsPage() {
               <div key={status} className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className={`${textColor} font-semibold`}>{status}</span>
-                  <span className="text-slate-400">
+                  <span className="text-text-secondary">
                     {count} ({percentage.toFixed(1)}%)
                   </span>
                 </div>
@@ -199,19 +201,19 @@ function MetricsPage() {
       <div className="space-y-6 p-6 animate-pulse">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <div className="h-8 w-48 bg-slate-800 rounded" />
-            <div className="h-4 w-80 bg-slate-800 rounded" />
+            <div className="h-8 w-48 bg-background-secondary rounded-lg" />
+            <div className="h-4 w-80 bg-background-secondary rounded-lg" />
           </div>
-          <div className="h-10 w-24 bg-slate-800 rounded" />
+          <div className="h-10 w-24 bg-background-secondary rounded-lg" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="h-24 bg-slate-850 border border-border rounded-xl" />
+            <div key={idx} className="h-24 bg-background-primary border border-border rounded-card" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="h-80 bg-slate-850 border border-border rounded-xl" />
+            <div key={idx} className="h-80 bg-background-primary border border-border rounded-card" />
           ))}
         </div>
       </div>
@@ -224,20 +226,20 @@ function MetricsPage() {
         <div className="mb-4 rounded-full bg-red-500/10 p-3 text-red-500 border border-red-500/20">
           <AlertTriangle className="h-8 w-8" />
         </div>
-        <h3 className="mb-2 text-lg font-semibold text-slate-200">
+        <h3 className="mb-2 text-lg font-semibold text-text-primary">
           Не удалось загрузить метрики системы
         </h3>
-        <p className="mb-6 max-w-md text-sm text-slate-400">
+        <p className="mb-6 max-w-md text-sm text-text-secondary">
           Произошла техническая ошибка при обращении к серверному шлюзу Prometheus. Убедитесь, что
           сервис работает стабильно.
         </p>
-        <button
+        <Button
           onClick={() => void fetchMetrics(false)}
-          className="flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 transition-colors"
+          variant="destructive"
         >
           <RefreshCw className="h-4 w-4" />
           Повторить попытку
-        </button>
+        </Button>
       </div>
     )
   }
@@ -245,35 +247,35 @@ function MetricsPage() {
   if (!metrics) return null
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100 font-display">
-            Здоровье системы
-          </h1>
-          <p className="text-sm text-slate-400">
-            Оперативный пульт мониторинга шлюзов, очередей задач и аппаратных ресурсов
-            аналитического центра.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {lastUpdated && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
-              <Clock className="h-3.5 w-3.5" />
-              <span>Обновлено: {lastUpdated.toLocaleTimeString()}</span>
-            </div>
-          )}
-          <button
-            onClick={() => void fetchMetrics(true)}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 rounded-lg bg-slate-800 border border-slate-700/60 px-3.5 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white disabled:opacity-50 transition-all duration-200"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>Обновить</span>
-          </button>
-        </div>
-      </div>
+    <PageContainer maxWidth="1600px" animate={false}>
+      <PageHeader
+        variant="grid"
+        title={
+          <>
+            Здоровье <span className="text-accent-primary">системы</span>
+          </>
+        }
+        description="Оперативный пульт мониторинга шлюзов, очередей задач и аппаратных ресурсов аналитического центра."
+        actions={
+          <div className="flex items-center gap-3">
+            {lastUpdated && (
+              <div className="flex items-center gap-1.5 text-xs text-text-secondary font-mono">
+                <Clock className="h-3.5 w-3.5" />
+                <span>Обновлено: {lastUpdated.toLocaleTimeString()}</span>
+              </div>
+            )}
+            <Button
+              onClick={() => void fetchMetrics(true)}
+              disabled={isRefreshing}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>Обновить</span>
+            </Button>
+          </div>
+        }
+      />
 
       {/* Service Health Matrix */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -281,22 +283,22 @@ function MetricsPage() {
         <Card className="relative overflow-hidden bg-background-secondary/50 border border-border p-4 transition-all duration-200 hover:border-border/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+              <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                 Сетевой Шлюз
               </span>
-              <h3 className="text-sm font-semibold text-slate-200">API Gateway</h3>
+              <h3 className="text-sm font-semibold text-text-primary">API Gateway</h3>
             </div>
             <StatusBadge tone={getStatusTone(gatewayInfo.status)} pulse>
               {gatewayInfo.label}
             </StatusBadge>
           </div>
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-xs text-slate-400">P95 задержка:</span>
-            <span className="text-xs font-mono font-bold text-slate-300">
+            <span className="text-xs text-text-secondary">P95 задержка:</span>
+            <span className="text-xs font-mono font-bold text-text-primary">
               {metrics.httpRequests.total > 0 ? (
                 `${(metrics.httpRequests.duration.p95 * 1000).toFixed(0)}мс`
               ) : (
-                <span className="text-slate-600/70 italic">нет данных</span>
+                <span className="text-text-secondary italic">нет данных</span>
               )}
             </span>
           </div>
@@ -306,22 +308,22 @@ function MetricsPage() {
         <Card className="relative overflow-hidden bg-background-secondary/50 border border-border p-4 transition-all duration-200 hover:border-border/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+              <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                 Контроллер VK
               </span>
-              <h3 className="text-sm font-semibold text-slate-200">VK API Service</h3>
+              <h3 className="text-sm font-semibold text-text-primary">VK API Service</h3>
             </div>
             <StatusBadge tone={getStatusTone(vkInfo.status)} pulse>
               {vkInfo.label}
             </StatusBadge>
           </div>
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-xs text-slate-400">P95 задержка:</span>
-            <span className="text-xs font-mono font-bold text-slate-300">
+            <span className="text-xs text-text-secondary">P95 задержка:</span>
+            <span className="text-xs font-mono font-bold text-text-primary">
               {metrics.vkApi.total > 0 ? (
                 `${(metrics.vkApi.duration.p95 * 1000).toFixed(0)}мс`
               ) : (
-                <span className="text-slate-600/70 italic">нет данных</span>
+                <span className="text-text-secondary italic">нет данных</span>
               )}
             </span>
           </div>
@@ -331,18 +333,18 @@ function MetricsPage() {
         <Card className="relative overflow-hidden bg-background-secondary/50 border border-border p-4 transition-all duration-200 hover:border-border/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+              <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                 Фоновый Воркер
               </span>
-              <h3 className="text-sm font-semibold text-slate-200">Tasks Queue</h3>
+              <h3 className="text-sm font-semibold text-text-primary">Tasks Queue</h3>
             </div>
             <StatusBadge tone={getStatusTone(tasksInfo.status)} pulse>
               {tasksInfo.label}
             </StatusBadge>
           </div>
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-xs text-slate-400">Активные задачи:</span>
-            <span className="text-xs font-mono font-bold text-slate-300">
+            <span className="text-xs text-text-secondary">Активные задачи:</span>
+            <span className="text-xs font-mono font-bold text-text-primary">
               {metrics.tasks.active}
             </span>
           </div>
@@ -352,18 +354,18 @@ function MetricsPage() {
         <Card className="relative overflow-hidden bg-background-secondary/50 border border-border p-4 transition-all duration-200 hover:border-border/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+              <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                 Системная Среда
               </span>
-              <h3 className="text-sm font-semibold text-slate-200">Node.js Runtime</h3>
+              <h3 className="text-sm font-semibold text-text-primary">Node.js Runtime</h3>
             </div>
             <StatusBadge tone={getStatusTone(systemInfo.status)} pulse>
               {systemInfo.label}
             </StatusBadge>
           </div>
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-xs text-slate-400">Потребление RAM (RSS):</span>
-            <span className="text-xs font-mono font-bold text-slate-300">
+            <span className="text-xs text-text-secondary">Потребление RAM (RSS):</span>
+            <span className="text-xs font-mono font-bold text-text-primary">
               {metrics.system.memory.rss.toFixed(0)} МБ
             </span>
           </div>
@@ -377,18 +379,18 @@ function MetricsPage() {
           <div>
             <div className="flex items-center justify-between border-b border-border/80 pb-3">
               <div className="flex items-center gap-2">
-                <Server className="h-4 w-4 text-slate-400" />
-                <h3 className="text-sm font-semibold text-slate-200">Сетевые запросы шлюза</h3>
+                <Server className="h-4 w-4 text-text-secondary" />
+                <h3 className="text-sm font-semibold text-text-primary">Сетевые запросы шлюза</h3>
               </div>
-              <ArrowUpRight className="h-4 w-4 text-slate-600" />
+              <ArrowUpRight className="h-4 w-4 text-text-secondary" />
             </div>
 
             <div className="mt-5 space-y-4">
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                   Всего обработано
                 </span>
-                <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">
+                <div className="text-3xl font-bold font-mono tracking-tight text-text-light">
                   {metrics.httpRequests.total}
                 </div>
               </div>
@@ -396,26 +398,26 @@ function MetricsPage() {
               {/* Latency subgrid */}
               <div className="grid grid-cols-3 gap-2 border-y border-border/60 py-3 text-center">
                 <div className="space-y-1">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                  <span className="text-[9px] uppercase tracking-wider text-text-secondary font-mono">
                     P50
                   </span>
-                  <div className="text-xs font-mono font-semibold text-slate-300">
+                  <div className="text-xs font-mono font-semibold text-text-primary">
                     {(metrics.httpRequests.duration.p50 * 1000).toFixed(0)}мс
                   </div>
                 </div>
                 <div className="space-y-1 border-x border-border/60">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                  <span className="text-[9px] uppercase tracking-wider text-text-secondary font-mono">
                     P95
                   </span>
-                  <div className="text-xs font-mono font-semibold text-slate-300">
+                  <div className="text-xs font-mono font-semibold text-text-primary">
                     {(metrics.httpRequests.duration.p95 * 1000).toFixed(0)}мс
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                  <span className="text-[9px] uppercase tracking-wider text-text-secondary font-mono">
                     P99
                   </span>
-                  <div className="text-xs font-mono font-semibold text-slate-300">
+                  <div className="text-xs font-mono font-semibold text-text-primary">
                     {(metrics.httpRequests.duration.p99 * 1000).toFixed(0)}мс
                   </div>
                 </div>
@@ -423,7 +425,7 @@ function MetricsPage() {
 
               {/* Status Code Distribution */}
               <div className="space-y-2">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">
+                <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono block">
                   Распределение статусов
                 </span>
                 {renderStatusDistribution(
@@ -440,18 +442,18 @@ function MetricsPage() {
           <div>
             <div className="flex items-center justify-between border-b border-border/80 pb-3">
               <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-slate-400" />
-                <h3 className="text-sm font-semibold text-slate-200">Вызовы VK API</h3>
+                <Activity className="h-4 w-4 text-text-secondary" />
+                <h3 className="text-sm font-semibold text-text-primary">Вызовы VK API</h3>
               </div>
-              <ArrowUpRight className="h-4 w-4 text-slate-600" />
+              <ArrowUpRight className="h-4 w-4 text-text-secondary" />
             </div>
 
             <div className="mt-5 space-y-4">
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                   Запросы к ВКонтакте
                 </span>
-                <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">
+                <div className="text-3xl font-bold font-mono tracking-tight text-text-light">
                   {metrics.vkApi.total}
                 </div>
               </div>
@@ -459,18 +461,18 @@ function MetricsPage() {
               {/* Latency subgrid */}
               <div className="grid grid-cols-2 gap-2 border-y border-border/60 py-3 text-center">
                 <div className="space-y-1 border-r border-border/60">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                  <span className="text-[9px] uppercase tracking-wider text-text-secondary font-mono">
                     P50 задержка
                   </span>
-                  <div className="text-xs font-mono font-semibold text-slate-300">
+                  <div className="text-xs font-mono font-semibold text-text-primary">
                     {(metrics.vkApi.duration.p50 * 1000).toFixed(0)}мс
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
+                  <span className="text-[9px] uppercase tracking-wider text-text-secondary font-mono">
                     P95 задержка
                   </span>
-                  <div className="text-xs font-mono font-semibold text-slate-300">
+                  <div className="text-xs font-mono font-semibold text-text-primary">
                     {(metrics.vkApi.duration.p95 * 1000).toFixed(0)}мс
                   </div>
                 </div>
@@ -478,7 +480,7 @@ function MetricsPage() {
 
               {/* VK API Status Breakdown */}
               <div className="space-y-2">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">
+                <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono block">
                   Статусы вызовов API
                 </span>
                 {renderStatusDistribution(metrics.vkApi.byStatus, metrics.vkApi.total)}
@@ -492,34 +494,34 @@ function MetricsPage() {
           <div>
             <div className="flex items-center justify-between border-b border-border/80 pb-3">
               <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-slate-400" />
-                <h3 className="text-sm font-semibold text-slate-200">Очередь задач иwatchlist</h3>
+                <Layers className="h-4 w-4 text-text-secondary" />
+                <h3 className="text-sm font-semibold text-text-primary">Очередь задач иwatchlist</h3>
               </div>
-              <ArrowUpRight className="h-4 w-4 text-slate-600" />
+              <ArrowUpRight className="h-4 w-4 text-text-secondary" />
             </div>
 
             <div className="mt-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                  <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                     Всего задач
                   </span>
-                  <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">
+                  <div className="text-3xl font-bold font-mono tracking-tight text-text-light">
                     {metrics.tasks.total}
                   </div>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                  <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                     Активные авторы
                   </span>
-                  <div className="text-3xl font-bold font-mono tracking-tight text-slate-100">
+                  <div className="text-3xl font-bold font-mono tracking-tight text-text-light">
                     {metrics.watchlist.activeAuthors}
                   </div>
                 </div>
               </div>
 
               <div className="border-t border-border/60 pt-4 space-y-3">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">
+                <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono block">
                   Распределение состояний задач
                 </span>
                 {renderStatusDistribution(metrics.tasks.byStatus, metrics.tasks.total)}
@@ -531,22 +533,23 @@ function MetricsPage() {
 
       {/* Collapsible Details: Technical Resources */}
       <Card className="border border-border/80 bg-background-secondary/20 overflow-hidden transition-all duration-200">
-        <button
+        <Button
           onClick={() => setSystemOpen(!systemOpen)}
-          className="flex w-full items-center justify-between px-5 py-4 hover:bg-background-secondary/30 transition-colors"
+          variant="ghost"
+          className="flex w-full justify-between px-5 py-4 hover:bg-background-secondary/30"
         >
           <div className="flex items-center gap-2">
-            <Cpu className="h-4 w-4 text-slate-500" />
-            <span className="text-sm font-semibold text-slate-300">
+            <Cpu className="h-4 w-4 text-text-secondary" />
+            <span className="text-sm font-semibold text-text-primary">
               Системные ресурсы & Аппаратная среда
             </span>
           </div>
           {systemOpen ? (
-            <ChevronUp className="h-4 w-4 text-slate-500" />
+            <ChevronUp className="h-4 w-4 text-text-secondary" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-slate-500" />
+            <ChevronDown className="h-4 w-4 text-text-secondary" />
           )}
-        </button>
+        </Button>
 
         {systemOpen && (
           <div className="border-t border-border/60 bg-background-secondary/20 p-5 space-y-4 animate-in slide-in-from-top-1 duration-200">
@@ -554,25 +557,25 @@ function MetricsPage() {
               {/* Memory panel */}
               <div className="space-y-3">
                 <div className="flex items-center gap-1.5 border-b border-border/60 pb-2">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                  <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                     Выделение оперативной памяти
                   </span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Heap Used (занято в куче):</span>
-                    <span className="font-mono text-slate-200 font-medium">
+                    <span className="text-text-secondary">Heap Used (занято в куче):</span>
+                    <span className="font-mono text-text-primary font-medium">
                       {metrics.system.memory.heapUsed.toFixed(2)} МБ
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Heap Total (всего в куче):</span>
-                    <span className="font-mono text-slate-200 font-medium">
+                    <span className="text-text-secondary">Heap Total (всего в куче):</span>
+                    <span className="font-mono text-text-primary font-medium">
                       {metrics.system.memory.heapTotal.toFixed(2)} МБ
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs border-t border-slate-850 pt-2 font-semibold">
-                    <span className="text-slate-300">Resident Set Size (RSS):</span>
+                  <div className="flex justify-between text-xs border-t border-border pt-2 font-semibold">
+                    <span className="text-text-primary">Resident Set Size (RSS):</span>
                     <span className="font-mono text-primary">
                       {metrics.system.memory.rss.toFixed(2)} МБ
                     </span>
@@ -583,25 +586,25 @@ function MetricsPage() {
               {/* CPU panel */}
               <div className="space-y-3">
                 <div className="flex items-center gap-1.5 border-b border-border/60 pb-2">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
+                  <span className="text-[10px] uppercase tracking-wider text-text-secondary font-mono">
                     Процессорное время CPU
                   </span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">User Time (пользовательский режим):</span>
-                    <span className="font-mono text-slate-200 font-medium">
+                    <span className="text-text-secondary">User Time (пользовательский режим):</span>
+                    <span className="font-mono text-text-primary font-medium">
                       {metrics.system.cpu.user.toFixed(3)}с
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">System Time (системный режим):</span>
-                    <span className="font-mono text-slate-200 font-medium">
+                    <span className="text-text-secondary">System Time (системный режим):</span>
+                    <span className="font-mono text-text-primary font-medium">
                       {metrics.system.cpu.system.toFixed(3)}с
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs border-t border-slate-850 pt-2 font-semibold">
-                    <span className="text-slate-300">Суммарное время загрузки:</span>
+                  <div className="flex justify-between text-xs border-t border-border pt-2 font-semibold">
+                    <span className="text-text-primary">Суммарное время загрузки:</span>
                     <span className="font-mono text-primary">
                       {(metrics.system.cpu.user + metrics.system.cpu.system).toFixed(3)}с
                     </span>
@@ -612,7 +615,7 @@ function MetricsPage() {
           </div>
         )}
       </Card>
-    </div>
+    </PageContainer>
   )
 }
 

@@ -289,7 +289,7 @@ const RegionSearchHeader = ({
           onClick={handleSearchClick}
           disabled={!canSearch}
           size="sm"
-          className="h-10 min-w-[140px] bg-primary font-semibold text-text-light hover:bg-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md"
+          className="h-10 min-w-[140px] bg-accent-primary font-semibold text-text-light hover:bg-accent-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md"
         >
           <span className="flex items-center justify-center gap-2">
             {isLoading ? <Spinner className="size-4" /> : <Search className="size-4" />}
@@ -361,7 +361,7 @@ const RegionSearchControls = ({
               disabled={!hasResults || isLoading}
               onChange={(event) => onToggleSelectAll(event.target.checked)}
               aria-label="Выбрать все найденные сообщества"
-              className="peer size-4 cursor-pointer appearance-none rounded border border-border bg-background-primary transition-all duration-200 checked:border-primary checked:bg-primary focus:ring-2 focus:ring-primary/20"
+              className="peer size-4 cursor-pointer appearance-none rounded border border-border bg-background-primary transition-all duration-200 checked:border-accent-primary checked:bg-accent-primary focus:ring-2 focus:ring-accent-primary/20"
             />
             <svg
               className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-text-light opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
@@ -388,7 +388,7 @@ const RegionSearchControls = ({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-2 border-border bg-background-primary text-text-secondary hover:border-primary/50 hover:bg-background-sidebar hover:text-text-light"
+              className="h-8 gap-2 border-border bg-background-primary text-text-secondary hover:border-accent-primary/50 hover:bg-background-sidebar hover:text-text-light"
             >
               <ArrowUpDown className="size-3.5" />
               <span className="max-w-[100px] truncate text-xs">{currentSortLabel}</span>
@@ -420,7 +420,7 @@ const RegionSearchControls = ({
         <Button
           type="button"
           size="sm"
-          className="h-8 bg-primary text-xs font-semibold text-text-light hover:bg-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md"
+          className="h-8 bg-accent-primary text-xs font-semibold text-text-light hover:bg-accent-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md"
           disabled={isLoading || isBulkAdding || !hasResults}
           onClick={onAddGroups}
         >
@@ -457,7 +457,7 @@ const RegionGroupCard = memo(function RegionGroupCard({
       <div
         className={`relative flex flex-col gap-3 rounded-lg border p-4 transition-all duration-300 ${
           isSelected
-            ? 'border-primary bg-primary/5 shadow-soft-sm'
+            ? 'border-accent-primary bg-accent-primary/5 shadow-soft-sm'
             : 'border-border bg-background-secondary hover:border-slate-700 hover:bg-background-sidebar/50'
         }`}
       >
@@ -469,7 +469,7 @@ const RegionGroupCard = memo(function RegionGroupCard({
               checked={isSelected}
               onChange={() => onToggleSelection(group.id)}
               aria-label={`Выбрать группу ${group.name}`}
-              className="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-border bg-background-primary transition-all duration-200 checked:border-primary checked:bg-primary focus:ring-2 focus:ring-primary/20"
+              className="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-border bg-background-primary transition-all duration-200 checked:border-accent-primary checked:bg-accent-primary focus:ring-2 focus:ring-accent-primary/20"
             />
             <svg
               className="pointer-events-none absolute left-0.5 top-0.5 size-3 text-text-light opacity-0 transition-opacity duration-200 peer-checked:opacity-100"
@@ -487,7 +487,7 @@ const RegionGroupCard = memo(function RegionGroupCard({
               href={`https://vk.com/${group.screen_name ?? `club${group.id}`}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="block truncate font-monitoring-display text-sm font-medium leading-tight text-text-light transition-colors duration-200 hover:text-primary hover:underline"
+              className="block truncate font-monitoring-display text-sm font-medium leading-tight text-text-light transition-colors duration-200 hover:text-accent-primary hover:underline"
               title={group.name}
             >
               {group.name}
@@ -530,7 +530,7 @@ const RegionGroupCard = memo(function RegionGroupCard({
         {/* Add button */}
         <Button
           size="sm"
-          className="w-full h-8 bg-primary font-semibold text-text-light hover:bg-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md"
+          className="w-full h-8 bg-accent-primary font-semibold text-text-light hover:bg-accent-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md"
           onClick={() => {
             void onAddGroup(group)
           }}

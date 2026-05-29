@@ -46,7 +46,7 @@ export const AuthorCell = ({ item }: AuthorCellProps) => {
         href={item.author.profileUrl ?? undefined}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-text-secondary hover:text-primary"
+        className="text-xs text-text-secondary hover:text-accent-primary"
       >
         {WATCHLIST_CONSTANTS.VK_BASE_URL}
         {item.author.vkUserId}
@@ -259,7 +259,7 @@ export const WatchlistTableCard = memo(
           size="sm"
           onClick={onRefresh}
           disabled={isLoadingAuthors}
-          className="h-10 text-text-secondary hover:text-primary"
+          className="h-10 text-text-secondary hover:text-accent-primary"
           title="Обновить список"
         >
           <RefreshCw className={`mr-2 size-4 ${isLoadingAuthors ? 'animate-spin' : ''}`} />
@@ -288,7 +288,7 @@ export const WatchlistTableCard = memo(
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Поиск автора..."
-              className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
+              className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 sm:w-[250px]"
             />
             {headerActions}
           </div>
@@ -479,7 +479,7 @@ function WatchlistPage() {
             onClick={handleRefresh}
             size="lg"
             variant="outline"
-            className="h-11 shrink-0 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50 transition-all duration-200"
+            className="h-11 shrink-0 border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-accent-primary/50 transition-all duration-200"
             disabled={isLoadingAuthors}
           >
             <RefreshCw className={cn('mr-2 w-5 h-5', isLoadingAuthors && 'animate-spin')} />
@@ -522,7 +522,7 @@ function WatchlistPage() {
 
                 <div className="flex flex-wrap items-center gap-6 pt-2">
                   <div className="flex items-center gap-2.5 text-sm">
-                    <div className="p-2 rounded-full bg-primary/10 text-primary">
+                    <div className="p-2 rounded-full bg-accent-primary/10 text-accent-primary">
                       <Clock className="w-4 h-4" />
                     </div>
                     <div className="flex flex-col">
@@ -573,7 +573,7 @@ function WatchlistPage() {
                     'h-12 w-full text-base font-medium transition-all duration-200',
                     trackingEnabled
                       ? 'bg-primary text-white shadow-soft-sm hover:bg-orange-600'
-                      : 'border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50'
+                      : 'border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-accent-primary/50'
                   )}
                   onClick={handleToggleTrackAll}
                   disabled={isUpdatingSettings}
@@ -611,7 +611,7 @@ function WatchlistPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Список авторов
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <WatchlistTableCard

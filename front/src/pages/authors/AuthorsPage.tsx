@@ -111,7 +111,7 @@ function AuthorsTableCard({
                     href={profileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] text-primary/80 hover:text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="text-[10px] text-accent-primary/80 hover:text-accent-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation()
                       onVerifyAuthor(author)
@@ -235,7 +235,7 @@ function AuthorsTableCard({
             <Button
               size="sm"
               variant="ghost"
-              className="h-10 w-10 p-0 rounded-full hover:bg-primary/10 hover:text-primary"
+              className="h-10 w-10 p-0 rounded-full hover:bg-accent-primary/10 hover:text-accent-primary"
               onClick={() => onOpenDetails(author)}
               title="Открыть детали"
             >
@@ -382,7 +382,7 @@ function AuthorsPage() {
       <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">Фильтры</h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <FiltersPanel
@@ -436,7 +436,7 @@ function AuthorsPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             База авторов
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <AuthorsTableCard

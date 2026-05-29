@@ -45,11 +45,11 @@ function GroupInput({ url, onUrlChange, onAdd }: GroupInputProps) {
         onChange={onUrlChange}
         onKeyDown={handleKeyDown}
         placeholder="https://vk.com/группа"
-        className="h-11 border-border bg-background-secondary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 sm:min-w-[280px] sm:flex-1"
+        className="h-11 border-border bg-background-secondary text-text-light placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200 sm:min-w-[280px] sm:flex-1"
       />
       <Button
         onClick={onAdd}
-        className="h-11 bg-accent-primary px-5 font-semibold text-text-light hover:bg-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md w-full sm:w-auto"
+        className="h-11 bg-accent-primary px-5 font-semibold text-text-light hover:bg-accent-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md w-full sm:w-auto"
       >
         <span className="flex items-center justify-center gap-2">
           <Plus className="size-4" />
@@ -101,7 +101,7 @@ const GroupCard = memo(function GroupCard({ group, onDelete }: GroupCardProps) {
 
           <div className="min-w-0 flex-1">
             <h3
-              className="font-monitoring-display line-clamp-2 text-base font-semibold leading-tight text-text-light transition-colors duration-200 group-hover:text-primary"
+              className="font-monitoring-display line-clamp-2 text-base font-semibold leading-tight text-text-light transition-colors duration-200 group-hover:text-accent-primary"
               title={group.name}
             >
               {group.name}
@@ -153,7 +153,7 @@ const GroupCard = memo(function GroupCard({ group, onDelete }: GroupCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-10 flex-1 text-text-secondary transition-colors duration-200 hover:bg-background-primary hover:text-primary"
+            className="h-10 flex-1 text-text-secondary transition-colors duration-200 hover:bg-background-primary hover:text-accent-primary"
             onClick={() => window.open(link, '_blank')}
           >
             <ExternalLink className="mr-1.5 size-3.5" />
@@ -270,7 +270,7 @@ function GroupsTableCard({
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Поиск..."
-            className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
+            className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 sm:w-[250px]"
           />
 
           {sortOptions.length > 0 && (
@@ -279,7 +279,7 @@ function GroupsTableCard({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 gap-2 border-border bg-background-primary text-text-secondary hover:border-primary/50 hover:bg-background-sidebar hover:text-text-light"
+                  className="h-10 gap-2 border-border bg-background-primary text-text-secondary hover:border-accent-primary/50 hover:bg-background-sidebar hover:text-text-light"
                 >
                   <ArrowUpDown className="size-4" />
                   <span className="max-w-[100px] truncate">{currentSortLabel}</span>

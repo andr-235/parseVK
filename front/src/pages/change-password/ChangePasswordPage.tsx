@@ -60,16 +60,16 @@ function ChangePasswordPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background px-4 py-8 font-monitoring-body">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background-primary px-4 py-8 font-monitoring-body">
       {/* Animated Mesh Gradient Background */}
       <div className="absolute inset-0 opacity-60">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#24130d] via-[#101012] to-[#1a110e]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background-secondary via-background-primary to-background-secondary" />
         <div
-          className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px] animate-pulse"
+          className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full bg-accent-primary/10 blur-[120px] animate-pulse"
           style={{ animationDuration: '8s' }}
         />
         <div
-          className="absolute right-0 bottom-0 h-[600px] w-[600px] rounded-full bg-orange-500/5 blur-[120px] animate-pulse"
+          className="absolute right-0 bottom-0 h-[600px] w-[600px] rounded-full bg-accent-primary/5 blur-[120px] animate-pulse"
           style={{ animationDuration: '12s', animationDelay: '2s' }}
         />
       </div>
@@ -84,35 +84,21 @@ function ChangePasswordPage() {
         }}
       />
 
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute h-1 w-1 rounded-full bg-primary/30 animate-float"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 10}s`,
-              animationDuration: `${15 + Math.random() * 10}s`,
-            }}
-          />
-        ))}
-      </div>
+
 
       {/* Main Card Container */}
       <div className="relative z-10 w-full max-w-md">
         {/* Card */}
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-background-secondary/90 shadow-soft-lg">
+        <div className="relative overflow-hidden rounded-card border border-border bg-background-secondary/90 shadow-soft-lg">
           {/* Top Border Glow */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent-primary/30 to-transparent" />
 
           {/* Header */}
           <div className="relative px-8 pt-10 pb-6 text-center">
             {/* Logo with Glow */}
             <div className="mb-6 inline-block animate-in fade-in-0 zoom-in-95 duration-200">
               <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl" />
+                <div className="absolute inset-0 rounded-full bg-accent-primary/10 blur-xl" />
                 <BrandLogo
                   size="lg"
                   className="relative drop-shadow-[0_0_30px_rgba(242,100,61,0.2)] transition-transform duration-300 hover:scale-105"
@@ -121,8 +107,8 @@ function ChangePasswordPage() {
             </div>
 
             {/* Title */}
-            <h1 className="mb-2 font-monitoring-display text-3xl font-bold tracking-tight text-white animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
-              Смена <span className="text-primary">пароля</span>
+            <h1 className="mb-2 font-monitoring-display text-3xl font-bold tracking-tight text-text-light animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
+              Смена <span className="text-accent-primary">пароля</span>
             </h1>
 
             {/* Subtitle */}
@@ -131,7 +117,7 @@ function ChangePasswordPage() {
             </p>
 
             {/* Decorative Line */}
-            <div className="mx-auto mt-4 h-px w-16 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+            <div className="mx-auto mt-4 h-px w-16 bg-gradient-to-r from-transparent via-accent-primary/30 to-transparent" />
           </div>
 
           {/* Form Container */}
@@ -140,7 +126,7 @@ function ChangePasswordPage() {
               <div className="space-y-2">
                 <Label
                   htmlFor="old-password"
-                  className="text-xs font-medium uppercase tracking-wider text-text-secondary"
+                  className="text-xs font-semibold uppercase tracking-wider text-text-secondary"
                 >
                   Текущий пароль
                 </Label>
@@ -152,7 +138,7 @@ function ChangePasswordPage() {
                   onChange={(event) => setOldPassword(event.target.value)}
                   placeholder="••••••••"
                   disabled={isSubmitting}
-                  className="h-11 border-[#2a2a30] bg-[#1c1c21] text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                  className="h-11 border-border bg-background-primary/50 text-text-light placeholder:text-text-secondary/60 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                   required
                 />
               </div>
@@ -160,7 +146,7 @@ function ChangePasswordPage() {
               <div className="space-y-2">
                 <Label
                   htmlFor="new-password"
-                  className="text-xs font-medium uppercase tracking-wider text-text-secondary"
+                  className="text-xs font-semibold uppercase tracking-wider text-text-secondary"
                 >
                   Новый пароль
                 </Label>
@@ -172,10 +158,10 @@ function ChangePasswordPage() {
                   onChange={(event) => setNewPassword(event.target.value)}
                   placeholder="Минимум 8 символов"
                   disabled={isSubmitting}
-                  className="h-11 border-[#2a2a30] bg-[#1c1c21] text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                  className="h-11 border-border bg-background-primary/50 text-text-light placeholder:text-text-secondary/60 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                   required
                 />
-                <p className="text-xs text-zinc-500 font-mono-accent">
+                <p className="text-xs text-text-secondary font-mono-accent">
                   Min 8 chars · A-Z · a-z · 0-9
                 </p>
               </div>
@@ -183,7 +169,7 @@ function ChangePasswordPage() {
               <div className="space-y-2">
                 <Label
                   htmlFor="confirm-password"
-                  className="text-xs font-medium uppercase tracking-wider text-text-secondary"
+                  className="text-xs font-semibold uppercase tracking-wider text-text-secondary"
                 >
                   Повторите пароль
                 </Label>
@@ -195,24 +181,28 @@ function ChangePasswordPage() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="••••••••"
                   disabled={isSubmitting}
-                  className="h-11 border-[#2a2a30] bg-[#1c1c21] text-zinc-100 placeholder:text-zinc-600 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                  className="h-11 border-border bg-background-primary/50 text-text-light placeholder:text-text-secondary/60 focus:border-accent-primary/50 focus:ring-accent-primary/20 transition-all duration-200"
                   required
                 />
               </div>
 
               {error && (
-                <div className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-accent-danger/20 bg-accent-danger/10 px-4 py-3 text-sm text-accent-danger">
-                  <span className="font-mono-accent">⚠</span> {error}
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="animate-in slide-in-from-top-2 fade-in-0 rounded-lg border border-accent-danger/20 bg-accent-danger/10 px-4 py-3 text-sm text-accent-danger"
+                >
+                  <span className="font-mono-accent" aria-hidden="true">⚠</span> {error}
                 </div>
               )}
 
               <div className="flex flex-col gap-3 pt-2">
                 <Button
-                  className="group relative h-11 overflow-hidden bg-accent-primary font-semibold text-white shadow-soft-sm transition-all duration-200 hover:shadow-xl hover:shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative h-11 overflow-hidden bg-accent-primary font-semibold text-text-light shadow-soft-sm transition-all duration-300 hover:bg-accent-primary/90 hover:shadow-soft-md disabled:opacity-50 disabled:cursor-not-allowed"
                   type="submit"
                   disabled={isSubmitting}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-orange-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
                   <span className="relative flex items-center justify-center gap-2">
                     {isSubmitting ? (
                       <>
@@ -226,6 +216,8 @@ function ChangePasswordPage() {
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
+                          aria-hidden="true"
+                          focusable="false"
                         >
                           <path
                             strokeLinecap="round"
@@ -244,7 +236,7 @@ function ChangePasswordPage() {
                   type="button"
                   variant="ghost"
                   onClick={() => navigate(-1)}
-                  className="h-11 text-text-secondary hover:text-white hover:bg-zinc-800/40 transition-colors"
+                  className="h-11 text-text-secondary hover:text-text-light hover:bg-background-sidebar-hover/40 transition-colors"
                 >
                   ← Назад
                 </Button>
@@ -253,7 +245,7 @@ function ChangePasswordPage() {
           </div>
 
           {/* Bottom Accent Line */}
-          <div className="h-1 bg-gradient-to-r from-primary via-orange-500 to-primary" />
+          <div className="h-1 bg-gradient-to-r from-accent-primary via-orange-500 to-accent-primary" />
         </div>
 
         {/* Security Badge */}
@@ -272,26 +264,7 @@ function ChangePasswordPage() {
         </div>
       </div>
 
-      <style>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0) translateX(0);
-            opacity: 0;
-          }
-          10% {
-            opacity: 1;
-          }
-          90% {
-            opacity: 1;
-          }
-          50% {
-            transform: translateY(-100vh) translateX(50px);
-          }
-        }
-        .animate-float {
-          animation: float linear infinite;
-        }
-      `}</style>
+
     </div>
   )
 }

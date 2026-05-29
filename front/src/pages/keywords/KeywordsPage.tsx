@@ -419,7 +419,7 @@ export function KeywordsTableCard({
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Поиск..."
-            className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-primary/50 focus:ring-primary/20 sm:w-[250px]"
+            className="h-10 w-full border-border bg-background-primary text-text-light placeholder:text-text-secondary focus:border-accent-primary/50 focus:ring-accent-primary/20 sm:w-[250px]"
           />
 
           {sortOptions.length > 0 && (
@@ -428,7 +428,7 @@ export function KeywordsTableCard({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-10 gap-2 border-border bg-background-primary text-text-secondary hover:border-primary/50 hover:bg-background-sidebar hover:text-text-light"
+                  className="h-10 gap-2 border-border bg-background-primary text-text-secondary hover:border-accent-primary/50 hover:bg-background-sidebar hover:text-text-light"
                 >
                   <ArrowUpDown className="size-4" />
                   <span className="max-w-[100px] truncate">{currentSortLabel}</span>
@@ -791,7 +791,7 @@ function KeywordsPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Добавить ключевые слова
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <KeywordsForm
@@ -817,7 +817,7 @@ function KeywordsPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Словарь ключевых слов
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <KeywordsTableCard

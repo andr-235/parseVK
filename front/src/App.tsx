@@ -27,6 +27,7 @@ const AdminUsers = lazy(() => import('@/pages/admin-users'))
 const ChangePassword = lazy(() => import('@/pages/change-password'))
 const VkFriendsExportPage = lazy(() => import('@/pages/vk-friends-export'))
 const OkFriendsExportPage = lazy(() => import('@/pages/ok-friends-export'))
+import { useGlobalShortcuts } from '@/shared/hooks'
 import { ErrorBoundary } from '@/shared/components/common/ErrorBoundary'
 import { Spinner } from '@/shared/components/ui/spinner'
 
@@ -56,6 +57,7 @@ const RequirePasswordChange = ({ children }: { children: ReactNode }) => {
 }
 
 const AppLayout = () => {
+  useGlobalShortcuts()
   return (
     <>
       <AppSyncProvider />

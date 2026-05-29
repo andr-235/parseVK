@@ -139,8 +139,8 @@ function MonitoringGroupsPage() {
                     cn(
                       'inline-flex h-9 items-center rounded-lg px-3 text-[11px] font-semibold uppercase tracking-wide transition-all duration-200 sm:h-10 sm:px-4 sm:text-xs',
                       isActive
-                        ? 'bg-gradient-to-r from-primary to-orange-500 text-white shadow-lg shadow-primary/25'
-                        : 'border border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-primary/50'
+                        ? 'bg-gradient-to-r from-accent-primary to-orange-500 text-white shadow-lg shadow-accent-primary/25'
+                        : 'border border-border/60 bg-background-secondary text-white hover:bg-white/5 hover:border-accent-primary/50'
                     )
                   }
                 >

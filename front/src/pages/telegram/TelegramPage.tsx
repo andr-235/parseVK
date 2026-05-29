@@ -115,7 +115,7 @@ export function TelegramSessionCard() {
             <div className="flex flex-col gap-3 rounded-lg border bg-background-secondary/50 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-primary/10 text-accent-primary">
                     <User className="h-4 w-4" />
                   </div>
                   <div>
@@ -667,7 +667,7 @@ function TelegramPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Управление подключением
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
@@ -681,7 +681,7 @@ function TelegramPage() {
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Результат синхронизации
           </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="h-px flex-1 bg-border/30" />
         </div>
 
         <TelegramMembersCard data={data} />

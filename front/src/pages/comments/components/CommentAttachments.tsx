@@ -21,7 +21,7 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
           href={attachment.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block rounded-xl overflow-hidden border border-border/40 hover:border-primary/50 transition-all hover:shadow-sm group/media"
+          className="block rounded-xl overflow-hidden border border-border/40 hover:border-accent-primary/50 transition-all hover:shadow-sm group/media"
         >
           <img
             src={attachment.url}
@@ -80,7 +80,7 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
         href={attachment.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-start gap-3 rounded-xl border border-border/40 p-3 bg-background-primary/20 hover:bg-background-primary/30 hover:border-primary/30 transition-all"
+        className="flex items-start gap-3 rounded-xl border border-border/40 p-3 bg-background-primary/20 hover:bg-background-primary/30 hover:border-accent-primary/30 transition-all"
       >
         {attachment.photoUrl ? (
           <img
@@ -90,7 +90,7 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
             loading="lazy"
           />
         ) : (
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-accent-primary/10 flex items-center justify-center shrink-0">
             <LinkIcon className="h-5 w-5 text-primary" />
           </div>
         )}
