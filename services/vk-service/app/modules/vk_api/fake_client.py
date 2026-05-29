@@ -108,7 +108,7 @@ class FakeVkApiClient:
         }
 
     async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:
-        return [
+        all_groups = [
             {
                 "id": 40023088,
                 "screen_name": "livebir",
@@ -118,7 +118,81 @@ class FakeVkApiClient:
                 "photo_50": "https://vk.com/images/community_50.png",
                 "photo_100": "https://vk.com/images/community_100.png",
                 "photo_200": "https://vk.com/images/community_200.png",
+                "description": "Главное сообщество города Биробиджан и Еврейской автономной области. Новости, события, обсуждения.",
+                "members_count": 48500,
+                "activity": "Новости и СМИ",
+                "status": "Биробиджан в эфире",
+                "verified": 1,
+            },
+            {
+                "id": 77700001,
+                "screen_name": "overhear_bir",
+                "name": "Подслушано Биробиджан",
+                "is_closed": 0,
+                "type": "group",
+                "photo_50": "https://vk.com/images/community_50.png",
+                "photo_100": "https://vk.com/images/community_100.png",
+                "photo_200": "https://vk.com/images/community_200.png",
+                "description": "Откровения, секреты и истории жителей Биробиджана. Анонимно.",
+                "members_count": 32100,
+                "activity": "Юмор",
+                "status": "Твой анонимный Биробиджан",
+                "verified": 0,
+            },
+            {
+                "id": 77700002,
+                "screen_name": "eao_news",
+                "name": "Новости ЕАО",
+                "is_closed": 0,
+                "type": "page",
+                "photo_50": "https://vk.com/images/community_50.png",
+                "photo_100": "https://vk.com/images/community_100.png",
+                "photo_200": "https://vk.com/images/community_200.png",
+                "description": "Официальные и актуальные новости Еврейской автономной области в реальном времени.",
+                "members_count": 15400,
+                "activity": "Городской портал",
+                "status": "В курсе всех событий региона",
+                "verified": 1,
+            },
+            {
+                "id": 77700003,
+                "screen_name": "obluchye_city",
+                "name": "Облучье Сити",
+                "is_closed": 0,
+                "type": "group",
+                "photo_50": "https://vk.com/images/community_50.png",
+                "photo_100": "https://vk.com/images/community_100.png",
+                "photo_200": "https://vk.com/images/community_200.png",
+                "description": "Сообщество жителей города Облучье и Облученского района ЕАО. Общение и новости.",
+                "members_count": 8900,
+                "activity": "Открытая группа",
+                "status": "Любимый город Облучье",
+                "verified": 0,
+            },
+            {
+                "id": 77700004,
+                "screen_name": "leninskoe_eao",
+                "name": "Ленинское ЕАО",
+                "is_closed": 0,
+                "type": "group",
+                "photo_50": "https://vk.com/images/community_50.png",
+                "photo_100": "https://vk.com/images/community_100.png",
+                "photo_200": "https://vk.com/images/community_200.png",
+                "description": "Информационный ресурс села Ленинское и Ленинского района Еврейской автономной области.",
+                "members_count": 6200,
+                "activity": "Сообщество",
+                "status": "Жизнь Ленинского района",
+                "verified": 0,
             }
+        ]
+        
+        if not query:
+            return all_groups
+            
+        q = query.lower().strip()
+        return [
+            g for g in all_groups
+            if q in g["name"].lower() or q in g["screen_name"].lower() or (g.get("description") and q in g["description"].lower())
         ]
 
 
