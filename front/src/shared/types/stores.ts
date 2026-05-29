@@ -77,6 +77,7 @@ export interface GroupsState {
   isLoading: boolean
   isProcessing: boolean
   isLoadingMore: boolean
+  error: string | null
   fetchGroups: (options?: { reset?: boolean }) => Promise<void>
   loadMoreGroups: () => Promise<void>
   fetchAllGroups: () => Promise<void>

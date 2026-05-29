@@ -10,6 +10,7 @@ export const useGroupsViewModel = () => {
   const isLoading = useGroupsStore((state) => state.isLoading)
   const isLoadingMore = useGroupsStore((state) => state.isLoadingMore)
   const hasMore = useGroupsStore((state) => state.hasMore)
+  const error = useGroupsStore((state) => state.error)
   const fetchGroups = useGroupsStore((state) => state.fetchGroups)
   const addGroup = useGroupsStore((state) => state.addGroup)
   const deleteGroup = useGroupsStore((state) => state.deleteGroup)
@@ -25,7 +26,6 @@ export const useGroupsViewModel = () => {
 
   const [url, setUrl] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   const groupsCount = total
@@ -47,13 +47,12 @@ export const useGroupsViewModel = () => {
   }, [groups, searchTerm])
 
   useEffect(() => {
-    if (page > 0 || isLoading || hasAttemptedFetch) {
+    if (page > 0 || isLoading || error) {
       return
     }
 
-    setHasAttemptedFetch(true)
     void fetchGroups({ reset: true })
-  }, [fetchGroups, isLoading, page, hasAttemptedFetch])
+  }, [fetchGroups, isLoading, page, error])
 
   useIntersectionObserver(
     loadMoreRef,
@@ -145,6 +144,7 @@ export const useGroupsViewModel = () => {
     isLoading,
     isLoadingMore,
     hasMore,
+    error,
     searchTerm,
     url,
     loadMoreRef,

@@ -36,6 +36,7 @@ export const useGroupsQuery = (options?: UseGroupsQueryOptions) => {
       page: query.data.page,
       limit: query.data.limit,
       hasMore: query.data.hasMore,
+      error: null,
     })
   }, [enabled, query.data])
 
@@ -48,8 +49,9 @@ export const useGroupsQuery = (options?: UseGroupsQueryOptions) => {
     useGroupsStore.setState({
       isLoading: query.isFetching || isProcessing,
       isLoadingMore: query.isFetching ? useGroupsStore.getState().isLoadingMore : false,
+      error: query.error ? (query.error.message || 'Ошибка загрузки') : null,
     })
-  }, [enabled, query.isFetching])
+  }, [enabled, query.isFetching, query.error])
 
   return query
 }

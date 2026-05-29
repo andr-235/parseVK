@@ -42,6 +42,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
   isLoading: false,
   isProcessing: false,
   isLoadingMore: false,
+  error: null,
   regionSearch: {
     total: 0,
     items: [],
@@ -57,7 +58,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
       return
     }
 
-    set({ isLoading: true })
+    set({ isLoading: true, error: null })
     try {
       const response = await groupsService.fetchGroups({ page: 1, limit: state.limit })
       if (!Array.isArray(response.items)) {
@@ -71,8 +72,11 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         page: response.page,
         limit: response.limit,
         hasMore: response.hasMore,
+        error: null,
       })
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Не удалось загрузить группы'
+      set({ error: errorMessage })
       if (import.meta.env.DEV) {
         console.error('[groupsStore] fetchGroups error', error)
       }
@@ -88,7 +92,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     }
 
     const nextPage = state.page + 1
-    set({ isLoadingMore: true })
+    set({ isLoadingMore: true, error: null })
     try {
       const response = await groupsService.fetchGroups({ page: nextPage, limit: state.limit })
       if (!Array.isArray(response.items)) {
@@ -110,16 +114,18 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
           limit: response.limit,
           hasMore: response.hasMore,
           isLoadingMore: false,
+          error: null,
         }
       })
     } catch (error) {
-      set({ isLoadingMore: false })
+      const errorMessage = error instanceof Error ? error.message : 'Не удалось загрузить группы'
+      set({ error: errorMessage, isLoadingMore: false })
       throw error
     }
   },
 
   fetchAllGroups: async () => {
-    set({ isLoading: true })
+    set({ isLoading: true, error: null })
     try {
       const allGroups: Group[] = []
       let page = 1
@@ -144,8 +150,11 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
         page: 1,
         limit,
         hasMore: false,
+        error: null,
       })
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Не удалось загрузить группы'
+      set({ error: errorMessage })
       if (import.meta.env.DEV) {
         console.error('[groupsStore] fetchAllGroups error', error)
       }
