@@ -142,6 +142,26 @@ async def verify_author(
     return {"status": "success"}
 
 
+@router.post("/authors/refresh")
+async def refresh_authors(
+    service: ContentService = Depends(get_content_service),
+):
+    updated = await service.refresh_authors()
+    return {"updated": updated}
+
+
+@router.delete("/authors/{vk_author_id}")
+async def delete_author(
+    vk_author_id: int,
+    service: ContentService = Depends(get_content_service),
+):
+    success = await service.delete_author(vk_author_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found")
+    return {"deleted": True}
+
+
+
 @router.post("/posts/bulk")
 async def list_posts_bulk(
     external_keys: list[str],

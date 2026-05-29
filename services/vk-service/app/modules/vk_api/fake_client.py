@@ -85,6 +85,25 @@ class FakeVkApiClient:
             for index in range(min(count, 5))
         ]
 
+    async def get_users(self, user_ids: list[int], fields: list[str]) -> list[dict]:
+        return [
+            {
+                "id": uid,
+                "first_name": f"User_{uid}",
+                "last_name": f"Last_{uid}",
+                "deactivated": None,
+                "domain": f"id{uid}",
+                "screen_name": f"user{uid}",
+                "photo_50": "https://vk.com/images/camera_50.png",
+                "photo_100": "https://vk.com/images/camera_100.png",
+                "photo_200": "https://vk.com/images/camera_200.png",
+                "city": {"id": 1, "title": "Yakutsk"},
+                "country": {"id": 1, "title": "Russia"},
+                "verified": 1 if uid % 2 == 0 else 0,
+            }
+            for uid in user_ids
+        ]
+
     async def friends_get(self, **params) -> dict:
         count = params.get("count", 1000)
         offset = params.get("offset", 0)

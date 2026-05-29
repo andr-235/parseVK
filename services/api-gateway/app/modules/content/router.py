@@ -246,3 +246,30 @@ async def get_author(
     service: ContentGatewayService = Depends(get_content_gateway_service),
 ):
     return await service.forward(request, "GET", f"/internal/content/authors/{vk_author_id}")
+
+
+@router.post("/authors/refresh")
+async def refresh_authors(
+    request: Request,
+    service: ContentGatewayService = Depends(get_content_gateway_service),
+):
+    return await service.forward(request, "POST", "/internal/content/authors/refresh")
+
+
+@router.delete("/authors/{vk_author_id}")
+async def delete_author(
+    vk_author_id: int,
+    request: Request,
+    service: ContentGatewayService = Depends(get_content_gateway_service),
+):
+    return await service.forward(request, "DELETE", f"/internal/content/authors/{vk_author_id}")
+
+
+@router.patch("/authors/{vk_author_id}/verify")
+async def verify_author(
+    vk_author_id: int,
+    request: Request,
+    service: ContentGatewayService = Depends(get_content_gateway_service),
+):
+    return await service.forward(request, "PATCH", f"/internal/content/authors/{vk_author_id}/verify")
+

@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL, GATEWAY_API_URL } from '@/shared/api'
+import { GATEWAY_API_URL } from '@/shared/api'
 import { buildQueryString, createRequest, handleResponse } from '@/shared/api'
 import { createEmptyPhotoAnalysisSummary } from '@/shared/types'
 import type {
@@ -79,16 +79,6 @@ const mapAuthorDetails = (author: AuthorDetailsResponse): AuthorDetails => ({
 })
 
 const CONTENT_AUTHORS_API_URL = `${GATEWAY_API_URL}/v1/content/authors`
-const FASTAPI_AUTHOR_SORT_FIELDS = new Set<AuthorSortField>(['fullName', 'updatedAt'])
-
-const canUseContentAuthorsApi = (params: {
-  city?: string
-  verified?: boolean
-  sortBy?: AuthorSortField
-}): boolean =>
-  !params.city?.trim() &&
-  params.verified === undefined &&
-  (!params.sortBy || FASTAPI_AUTHOR_SORT_FIELDS.has(params.sortBy))
 
 export const authorsService = {
   async fetchAuthors(
@@ -112,9 +102,7 @@ export const authorsService = {
         sortBy: params.sortBy,
         sortOrder: params.sortOrder,
       })
-      const baseUrl = canUseContentAuthorsApi(params)
-        ? CONTENT_AUTHORS_API_URL
-        : `${API_URL}/authors`
+      const baseUrl = CONTENT_AUTHORS_API_URL
       const url = query ? `${baseUrl}?${query}` : baseUrl
       const response = await createRequest(url)
 
@@ -149,7 +137,7 @@ export const authorsService = {
 
   async refreshAuthors(): Promise<number> {
     try {
-      const response = await createRequest(`${API_URL}/authors/refresh`, {
+      const response = await createRequest(`${CONTENT_AUTHORS_API_URL}/refresh`, {
         method: 'POST',
       })
 
@@ -166,7 +154,7 @@ export const authorsService = {
   },
   async deleteAuthor(vkUserId: number): Promise<void> {
     try {
-      const response = await createRequest(`${API_URL}/authors/${vkUserId}`, {
+      const response = await createRequest(`${CONTENT_AUTHORS_API_URL}/${vkUserId}`, {
         method: 'DELETE',
       })
 
@@ -178,7 +166,7 @@ export const authorsService = {
   },
   async verifyAuthor(vkUserId: number): Promise<string> {
     try {
-      const response = await createRequest(`${API_URL}/authors/${vkUserId}/verify`, {
+      const response = await createRequest(`${CONTENT_AUTHORS_API_URL}/${vkUserId}/verify`, {
         method: 'PATCH',
         keepalive: true,
       })
@@ -194,3 +182,4 @@ export const authorsService = {
     }
   },
 }
+

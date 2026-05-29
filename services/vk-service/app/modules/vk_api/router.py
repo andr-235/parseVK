@@ -292,3 +292,17 @@ async def upload_groups(
         "failedCount": len(failed),
     }
 
+
+class UsersRequest(BaseModel):
+    user_ids: list[int]
+    fields: list[str]
+
+
+@router.post("/users/bulk")
+async def get_users(
+    payload: UsersRequest,
+):
+    client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+    return await client.get_users(user_ids=payload.user_ids, fields=payload.fields)
+
+

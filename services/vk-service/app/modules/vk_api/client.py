@@ -221,6 +221,18 @@ class VkApiClient:
         )
         return list(response.get("items") or [])
 
+    async def get_users(self, user_ids: list[int], fields: list[str]) -> list[dict]:
+        if not user_ids:
+            return []
+        response = await self._call(
+            "users.get",
+            user_ids=",".join(str(item) for item in user_ids),
+            fields=",".join(fields),
+        )
+        if isinstance(response, dict) and "response" in response:
+            return list(response["response"])
+        return list(response)
+
     async def friends_get(self, **params) -> dict:
         return await self._call("friends.get", **params)
 

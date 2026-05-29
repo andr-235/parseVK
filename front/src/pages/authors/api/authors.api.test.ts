@@ -80,7 +80,7 @@ describe('authors api migration routing', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/content/authors/100', expect.any(Object))
   })
 
-  it('keeps author refresh on legacy authors api', async () => {
+  it('calls author refresh on content authors api', async () => {
     const { authorsService } = await import('./authors.api')
 
     fetchMock.mockResolvedValueOnce(
@@ -92,38 +92,39 @@ describe('authors api migration routing', () => {
 
     await authorsService.refreshAuthors()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/authors/refresh', expect.any(Object))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/content/authors/refresh', expect.any(Object))
   })
 
-  it('keeps filtered authors on legacy authors api', async () => {
+  it('loads filtered authors from content authors api', async () => {
     const { authorsService } = await import('./authors.api')
 
     await authorsService.fetchAuthors({ limit: 10, city: 'Yakutsk' })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/authors?limit=10&city=Yakutsk', expect.any(Object))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/content/authors?limit=10&city=Yakutsk', expect.any(Object))
   })
 
-  it('keeps verified filter on legacy authors api', async () => {
+  it('loads verified authors from content authors api', async () => {
     const { authorsService } = await import('./authors.api')
 
     await authorsService.fetchAuthors({ limit: 10, verified: false })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/authors?limit=10&verified=false',
+      '/api/v1/content/authors?limit=10&verified=false',
       expect.any(Object)
     )
   })
 
-  it('keeps unsupported author sort fields on legacy authors api', async () => {
+  it('loads authors with sort fields from content authors api', async () => {
     const { authorsService } = await import('./authors.api')
 
-    await authorsService.fetchAuthors({ limit: 10, sortBy: 'photosCount', sortOrder: 'desc' })
+    await authorsService.fetchAuthors({ limit: 10, sortBy: 'fullName', sortOrder: 'desc' })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/authors?limit=10&sortBy=photosCount&sortOrder=desc',
+      '/api/v1/content/authors?limit=10&sortBy=fullName&sortOrder=desc',
       expect.any(Object)
     )
   })
+
 
   it('uses content gateway for projection-supported author search and sort', async () => {
     const { authorsService } = await import('./authors.api')

@@ -20,7 +20,6 @@ import { TasksModule } from './tasks/tasks.module.js';
 import { CommentsModule } from './comments/comments.module.js';
 import { WatchlistModule } from './watchlist/watchlist.module.js';
 import { PhotoAnalysisModule } from './photo-analysis/photo-analysis.module.js';
-import { AuthorsModule } from './authors/authors.module.js';
 import { DataImportModule } from './data-import/data-import.module.js';
 import { ListingsModule } from './listings/listings.module.js';
 import { TelegramModule } from './telegram/telegram.module.js';
@@ -59,7 +58,6 @@ import type { AppConfig } from './config/app.config.js';
     CommentsModule,
     WatchlistModule,
     PhotoAnalysisModule,
-    AuthorsModule,
     DataImportModule,
     ListingsModule,
     TelegramModule,
