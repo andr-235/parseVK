@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'rea
 import { Toaster } from 'react-hot-toast'
 import { Sidebar } from '@/components/common/Sidebar'
 import MainContent from '@/components/common/MainContent'
-import AppSyncProvider from '@/app/providers/AppSyncProvider'
+import AppSyncProvider from '@/shared/providers/AppSyncProvider'
 import { useAuthStore } from '@/shared/auth/store'
 
 // Lazy load pages
