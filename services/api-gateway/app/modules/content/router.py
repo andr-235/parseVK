@@ -1,10 +1,27 @@
+from typing import Annotated, Any
 from app.modules.content.service import (
     ContentGatewayService,
     get_content_gateway_service,
+    VkGatewayService,
+    get_vk_gateway_service,
 )
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Body
 
 router = APIRouter(prefix="/api/v1/content", tags=["content"])
+
+
+@router.post("/groups/save")
+async def save_group(
+    request: Request,
+    payload: Annotated[dict[str, Any], Body()],
+    vk_gateway_service: VkGatewayService = Depends(get_vk_gateway_service),
+):
+    return await vk_gateway_service.forward(
+        request,
+        "POST",
+        "/internal/vk/groups/save",
+        json=payload,
+    )
 
 
 @router.get("/groups")

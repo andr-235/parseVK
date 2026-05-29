@@ -51,7 +51,7 @@ export const groupsService = {
 
     try {
       const dto: SaveGroupDto = { identifier: name.trim() }
-      const response = await createRequest(`${API_URL}/groups/save`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/content/groups/save`, {
         method: 'POST',
         body: JSON.stringify(dto),
       })
