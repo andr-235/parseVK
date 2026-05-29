@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { PageHeader, PageContainer } from '@/components/common'
+import { PageHeader, PageContainer } from '@/shared/components/common'
 import {
   BookMarked,
   Tag,
@@ -14,27 +14,27 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import FileUpload from '@/components/common/FileUpload'
+import { Button } from '@/shared/components/ui/button'
+import { Input } from '@/shared/components/ui/input'
+import { Badge } from '@/shared/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import FileUpload from '@/shared/components/common/FileUpload'
 import { useKeywordsViewModel } from '@/pages/keywords/hooks/useKeywordsViewModel'
 import { useTableSorting } from '@/shared/hooks'
 import type { Keyword } from '@/shared/types'
 import { getKeywordTableColumns } from '@/pages/keywords/config/keywordTableColumns'
 import { groupKeywordsByCategory } from '@/pages/keywords/utils/groupKeywordsByCategory'
 import type { IKeywordFormsResponse } from '@/pages/keywords/api/keywords.api'
-import { FormModal } from '@/components/common/FormModal'
+import { FormModal } from '@/shared/components/common/FormModal'
 import { ArrowUpDown } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { EmptyState } from '@/components/common/EmptyState'
-import { LoadingState } from '@/components/common/LoadingState'
+} from '@/shared/components/ui/dropdown-menu'
+import { EmptyState } from '@/shared/components/common/EmptyState'
+import { LoadingState } from '@/shared/components/common/LoadingState'
 
 interface KeywordsFormProps {
   keywordValue: string

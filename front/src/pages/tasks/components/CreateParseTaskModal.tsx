@@ -1,8 +1,8 @@
 import { Search, Check, Play } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/components/ui/button'
 import type { Group } from '@/shared/types'
 import { useCreateParseTaskModal } from '@/pages/tasks/hooks/useCreateParseTaskModal'
-import { FormModal } from '@/components/common/FormModal'
+import { FormModal } from '@/shared/components/common/FormModal'
 
 interface CreateParseTaskModalProps {
   isOpen: boolean

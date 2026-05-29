@@ -1,10 +1,10 @@
 import { ExternalLink } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/components/ui/button'
 import type { PostGroup } from '@/shared/types'
 import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
 import type { Keyword } from '@/shared/types'
-import { FormModal } from '@/components/common/FormModal'
+import { FormModal } from '@/shared/components/common/FormModal'
 
 interface PostPreviewModalProps {
   isOpen: boolean

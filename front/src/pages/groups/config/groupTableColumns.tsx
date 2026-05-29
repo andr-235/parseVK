@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button'
-import { ExpandableText } from '@/components/common/ExpandableText'
+import { Button } from '@/shared/components/ui/button'
+import { ExpandableText } from '@/shared/components/common/ExpandableText'
 import type { TableColumn, Group } from '@/shared/types'
 
 const GROUP_TYPE_LABELS: Record<string, string> = {

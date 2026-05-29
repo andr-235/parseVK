@@ -3,16 +3,16 @@ import type { RefObject } from 'react'
 import { Search, RotateCcw, ArrowUpDown, X, Plus, MapPin, Users as UsersIcon } from 'lucide-react'
 import type { IRegionGroupSearchItem } from '@/shared/types'
 import type { TableColumn, TableSortState } from '@/shared/types'
-import { Card, CardContent } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/shared/components/ui/card'
+import { Spinner } from '@/shared/components/ui/spinner'
+import { Button } from '@/shared/components/ui/button'
 import { useTableSorting } from '@/shared/hooks'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@/shared/components/ui/dropdown-menu'
 
 // --- Formatters & Utilities ---
 const formatCityTitle = (group: IRegionGroupSearchItem): string => {

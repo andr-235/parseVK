@@ -1,7 +1,7 @@
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Input } from '@/shared/components/ui/input'
+import { Label } from '@/shared/components/ui/label'
 import { useOkFriendsExport } from '@/pages/ok-friends-export/hooks/useOkFriendsExport'
-import { ExportPageTemplate } from '@/components/common/ExportPageTemplate'
+import { ExportPageTemplate } from '@/shared/components/common/ExportPageTemplate'
 
 export const OkFriendsExportPage = () => {
   const {

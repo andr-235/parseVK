@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { KeywordsTableCard } from '../'
 
-vi.mock('@/components/ui/dropdown-menu', () => ({
+vi.mock('@/shared/components/ui/dropdown-menu', () => ({
   DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,

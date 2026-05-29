@@ -1,8 +1,8 @@
 import { type ReactNode, useState, useMemo, useRef, useEffect } from 'react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
-import ProgressBar from '@/components/common/ProgressBar'
+import { Card } from '@/shared/components/ui/card'
+import { Button } from '@/shared/components/ui/button'
+import { Spinner } from '@/shared/components/ui/spinner'
+import ProgressBar from '@/shared/components/common/ProgressBar'
 import type { JobLogEntry } from '@/shared/hooks/useExportJobStream'
 import {
   LOG_LEVEL_CLASSES,

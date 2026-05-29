@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { KeywordFormsSheet } from '../'
 
-vi.mock('@/components/ui/sheet', () => ({
+vi.mock('@/shared/components/ui/sheet', () => ({
   Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

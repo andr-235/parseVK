@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/components/ui/button'
 import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { formatDateTime, getAuthorInitials } from '@/shared/utils'
 import type { TableColumn, Comment, Keyword } from '@/shared/types'

@@ -1,5 +1,5 @@
 import { type ChangeEvent, type FormEvent, useEffect, useState, useMemo } from 'react'
-import { PageHeader, FiltersPanel, PageContainer } from '@/components/common'
+import { PageHeader, FiltersPanel, PageContainer } from '@/shared/components/common'
 import {
   Plus,
   Upload,
@@ -13,12 +13,12 @@ import {
   Edit2,
   FileJson,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Spinner } from '@/components/ui/spinner'
-import FileUpload from '@/components/common/FileUpload'
-import { FormModal } from '@/components/common/FormModal'
+import { Button } from '@/shared/components/ui/button'
+import { Input } from '@/shared/components/ui/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
+import { Spinner } from '@/shared/components/ui/spinner'
+import FileUpload from '@/shared/components/common/FileUpload'
+import { FormModal } from '@/shared/components/common/FormModal'
 import { cn } from '@/shared/utils'
 import { ListingsInfinite } from '@/pages/listings/components/ListingsInfinite'
 import { useListingsViewModel } from '@/pages/listings/hooks/useListingsViewModel'

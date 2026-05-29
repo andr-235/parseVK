@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { TelegramSyncResult, TelegramMember } from '@/shared/types'
-import { PageHeader } from '@/components/common'
+import { PageHeader } from '@/shared/components/common'
 import {
   Send,
   Users,
@@ -19,10 +19,10 @@ import {
   Ban,
   Star,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/shared/components/ui/button'
+import { Input } from '@/shared/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Badge } from '@/shared/components/ui/badge'
 import {
   Table,
   TableBody,
@@ -30,7 +30,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@/shared/components/ui/table'
 import { useTelegramSession } from '@/pages/telegram/hooks/useTelegramSession'
 import { useTelegramSync } from '@/pages/telegram/hooks/useTelegramSync'
 import { getChatTypeInfo } from '@/pages/telegram/utils/telegramChatType.utils'

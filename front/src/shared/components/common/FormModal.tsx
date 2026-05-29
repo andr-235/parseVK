@@ -1,6 +1,6 @@
 import { type ReactNode, type FormEvent, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
+import { Button } from '@/shared/components/ui/button'
+import { Spinner } from '@/shared/components/ui/spinner'
 import { cn } from '@/shared/utils'
 
 export interface FormModalProps {

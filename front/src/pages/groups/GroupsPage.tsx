@@ -1,25 +1,25 @@
 import { useCallback, useMemo, memo } from 'react'
 import { getGroupTableColumns } from '@/pages/groups/config/groupTableColumns'
 import RegionGroupsSearchCard from '@/pages/groups/components/RegionGroupsSearchCard'
-import { PageHeader, PageContainer } from '@/components/common'
-import FileUpload from '@/components/common/FileUpload'
+import { PageHeader, PageContainer } from '@/shared/components/common'
+import FileUpload from '@/shared/components/common/FileUpload'
 import { useGroupsViewModel } from '@/pages/groups/hooks/useGroupsViewModel'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Input } from '@/shared/components/ui/input'
+import { Button } from '@/shared/components/ui/button'
 import { Plus, Users, ExternalLink, Trash2, Lock } from 'lucide-react'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { Card, CardContent, CardFooter } from '@/shared/components/ui/card'
 import { useTableSorting } from '@/shared/hooks'
 import type { Group, TableColumn } from '@/shared/types'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/shared/components/ui/badge'
 import { ArrowUpDown } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { EmptyState } from '@/components/common/EmptyState'
-import { LoadingState } from '@/components/common/LoadingState'
+} from '@/shared/components/ui/dropdown-menu'
+import { EmptyState } from '@/shared/components/common/EmptyState'
+import { LoadingState } from '@/shared/components/common/LoadingState'
 
 interface GroupInputProps {
   url: string

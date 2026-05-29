@@ -8,9 +8,9 @@ import {
   ChevronRight,
   Upload,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
+import { Button } from '@/shared/components/ui/button'
+import { Badge } from '@/shared/components/ui/badge'
+import { Input } from '@/shared/components/ui/input'
 import {
   Table,
   TableBody,
@@ -18,12 +18,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { PageHeader } from '@/components/common'
-import SectionCard from '@/components/common/SectionCard'
-import { EmptyState } from '@/components/common/EmptyState'
-import { LoadingState } from '@/components/common/LoadingState'
-import FileUpload from '@/components/common/FileUpload'
+} from '@/shared/components/ui/table'
+import { PageHeader } from '@/shared/components/common'
+import SectionCard from '@/shared/components/common/SectionCard'
+import { EmptyState } from '@/shared/components/common/EmptyState'
+import { LoadingState } from '@/shared/components/common/LoadingState'
+import FileUpload from '@/shared/components/common/FileUpload'
 
 import { useTelegramDlUpload } from '@/pages/telegram-dl-upload/hooks/useTelegramDlUpload'
 import { telegramDlUploadQueryKeys } from '@/pages/telegram-dl-upload/api/queryKeys'

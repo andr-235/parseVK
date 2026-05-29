@@ -1,5 +1,5 @@
 import { cn } from '@/shared/utils'
-import { BrandLogo } from '@/components/common/BrandLogo'
+import { BrandLogo } from '@/shared/components/common/BrandLogo'
 
 interface SidebarHeaderProps {
   title: string

@@ -1,8 +1,8 @@
 import TasksTableCard from './TasksTableCard'
 import { useTasksList } from '@/pages/tasks/hooks/useTasksList'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/shared/components/ui/card'
 import { Info } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/components/ui/button'
 
 interface TasksListProps {
   onTaskSelect: (taskId: number | string) => void

@@ -15,10 +15,10 @@ import {
   LayoutList,
   LayoutGrid,
 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { Badge } from '@/shared/components/ui/badge'
+import { Button } from '@/shared/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Input } from '@/shared/components/ui/input'
 import { cn } from '@/shared/utils'
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver'
 import { highlightKeywords } from '@/shared/utils/highlightKeywords'
@@ -26,7 +26,7 @@ import {
   MONITORING_TIME_RANGES,
   useMonitoringViewModel,
 } from '@/pages/monitoring/hooks/useMonitoringViewModel'
-import { PageHeader } from '@/components/common'
+import { PageHeader } from '@/shared/components/common'
 import type { Keyword } from '@/shared/types'
 import type { IMonitorMessageResponse } from '@/shared/types'
 

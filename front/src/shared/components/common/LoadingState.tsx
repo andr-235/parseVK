@@ -1,5 +1,5 @@
-import { Card } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
+import { Card } from '@/shared/components/ui/card'
+import { Spinner } from '@/shared/components/ui/spinner'
 import { cn } from '@/shared/utils'
 
 interface LoadingStateProps {

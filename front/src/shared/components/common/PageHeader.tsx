@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card } from '@/shared/components/ui/card'
+import { Badge } from '@/shared/components/ui/badge'
 import { cn } from '@/shared/utils'
 import { Globe, Terminal, FileSpreadsheet } from 'lucide-react'
 

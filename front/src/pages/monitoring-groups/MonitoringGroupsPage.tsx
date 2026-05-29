@@ -1,11 +1,11 @@
 import { useParams } from 'react-router-dom'
 import { DatabaseZap, Pencil, RefreshCw, SlidersHorizontal, Trash2 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/shared/components/ui/badge'
+import { Button } from '@/shared/components/ui/button'
+import { Card } from '@/shared/components/ui/card'
+import { Input } from '@/shared/components/ui/input'
+import { Label } from '@/shared/components/ui/label'
+import { Skeleton } from '@/shared/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -13,12 +13,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { EmptyState } from '@/components/common/EmptyState'
+} from '@/shared/components/ui/table'
+import { EmptyState } from '@/shared/components/common/EmptyState'
 import { cn } from '@/shared/utils'
 import { useMonitoringGroupsViewModel } from '@/pages/monitoring/hooks/useMonitoringGroupsViewModel'
 import { getMonitoringGroupsCountLabel } from '@/pages/monitoring/hooks/monitoringGroupsViewModel.utils'
-import { PageHeader } from '@/components/common'
+import { PageHeader } from '@/shared/components/common'
 import { Link, List, Tag, Users } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import type { MonitoringGroupStatusTone } from '@/pages/monitoring/hooks/monitoringGroupsViewModel.utils'

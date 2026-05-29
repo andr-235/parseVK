@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/components/ui/button'
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver'
 import {
   useInfiniteScroll as useInfiniteListings,

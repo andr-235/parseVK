@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from 'react'
 import { ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/components/ui/button'
 import { cn } from '@/shared/utils'
 import type { ThreadItem } from '@/shared/types'
 import { formatDateTime } from '@/shared/utils'

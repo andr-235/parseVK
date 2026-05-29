@@ -3,7 +3,7 @@ import {
   createPrimaryItems,
   createTelegramSubItems,
   PRIMARY_ITEMS_CONFIG,
-} from '@/components/common/Sidebar/constants'
+} from '@/shared/components/common/Sidebar/constants'
 
 describe('Sidebar constants', () => {
   it('builds telegram section items with renamed entries', () => {

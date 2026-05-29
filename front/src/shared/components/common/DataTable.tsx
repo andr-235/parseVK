@@ -6,9 +6,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { TableSortButton } from '@/components/ui/table-sort-button'
-import { Skeleton } from '@/components/ui/skeleton'
+} from '@/shared/components/ui/table'
+import { TableSortButton } from '@/shared/components/ui/table-sort-button'
+import { Skeleton } from '@/shared/components/ui/skeleton'
 import type { TableColumn, TableSortState } from '@/shared/types'
 import { cn } from '@/shared/utils'
 

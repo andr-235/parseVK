@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { metricsService, type ParsedMetrics } from '@/pages/metrics/api/metrics.api'
-import { Card } from '@/components/ui/card'
-import { StatusBadge, type StatusBadgeTone } from '@/components/ui/status-badge'
+import { Card } from '@/shared/components/ui/card'
+import { StatusBadge, type StatusBadgeTone } from '@/shared/components/ui/status-badge'
 import {
   Activity,
   Cpu,

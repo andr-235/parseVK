@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Spinner } from '@/components/ui/spinner'
+import { Spinner } from '@/shared/components/ui/spinner'
 import {
   getRefreshDelayMs,
   isTokenExpired,

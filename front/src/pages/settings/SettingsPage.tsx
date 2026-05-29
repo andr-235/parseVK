@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { PageHeader } from '@/components/common'
+import { PageHeader } from '@/shared/components/common'
 import {
   Play,
   Settings as SettingsIcon,
@@ -14,10 +14,10 @@ import {
   Hash,
   Info,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/shared/components/ui/button'
+import { Badge } from '@/shared/components/ui/badge'
+import { Input } from '@/shared/components/ui/input'
+import { Label } from '@/shared/components/ui/label'
 import {
   Card,
   CardContent,
@@ -25,7 +25,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@/shared/components/ui/card'
 import { cn } from '@/shared/utils'
 import { useAutomationSettings } from '@/pages/settings/hooks/useAutomationSettings'
 import { useTelegramSettings } from '@/pages/settings/hooks/useTelegramSettings'

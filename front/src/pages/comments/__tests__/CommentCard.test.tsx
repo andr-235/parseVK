@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import CommentCard from '../components/CommentCard'
 
-vi.mock('@/components/ui/avatar', () => ({
+vi.mock('@/shared/components/ui/avatar', () => ({
   Avatar: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   AvatarImage: () => null,
   AvatarFallback: ({ children }: { children: ReactNode }) => <div>{children}</div>,

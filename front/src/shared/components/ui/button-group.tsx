@@ -4,7 +4,7 @@ import { type VariantProps } from 'class-variance-authority'
 
 import { buttonGroupVariants } from './button-group-variants'
 import { cn } from '@/shared/utils'
-import { Separator } from '@/components/ui/separator'
+import { Separator } from '@/shared/components/ui/separator'
 
 type ButtonGroupProps = React.ComponentPropsWithoutRef<'div'> &
   VariantProps<typeof buttonGroupVariants>

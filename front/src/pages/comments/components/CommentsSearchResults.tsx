@@ -1,7 +1,7 @@
 import type { CommentsSearchResult } from '@/pages/comments/api/models/commentsSearch.model'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { EmptyState } from '@/components/common/EmptyState'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Badge } from '@/shared/components/ui/badge'
+import { EmptyState } from '@/shared/components/common/EmptyState'
 
 interface CommentsSearchResultsProps {
   result: CommentsSearchResult | undefined

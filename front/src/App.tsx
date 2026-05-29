@@ -1,8 +1,8 @@
 import { useEffect, Suspense, lazy, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { Sidebar } from '@/components/common/Sidebar'
-import MainContent from '@/components/common/MainContent'
+import { Sidebar } from '@/shared/components/common/Sidebar'
+import MainContent from '@/shared/components/common/MainContent'
 import AppSyncProvider from '@/shared/providers/AppSyncProvider'
 import { useAuthStore } from '@/shared/auth/store'
 
@@ -27,8 +27,8 @@ const AdminUsers = lazy(() => import('@/pages/admin-users'))
 const ChangePassword = lazy(() => import('@/pages/change-password'))
 const VkFriendsExportPage = lazy(() => import('@/pages/vk-friends-export'))
 const OkFriendsExportPage = lazy(() => import('@/pages/ok-friends-export'))
-import { ErrorBoundary } from '@/components/common/ErrorBoundary'
-import { Spinner } from '@/components/ui/spinner'
+import { ErrorBoundary } from '@/shared/components/common/ErrorBoundary'
+import { Spinner } from '@/shared/components/ui/spinner'
 
 const RequireAuth = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))

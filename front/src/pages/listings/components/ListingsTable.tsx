@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/shared/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -7,7 +7,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
+} from '@/shared/components/ui/dropdown-menu'
 import type { IListing, TableColumn } from '@/shared/types'
 import type { ListingsSortField } from '@/pages/listings/types/listingsTypes'
 import {
@@ -26,7 +26,7 @@ import {
   Pencil,
 } from 'lucide-react'
 import { cn } from '@/shared/utils'
-import { DataTable } from '@/components/common/DataTable'
+import { DataTable } from '@/shared/components/common/DataTable'
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
