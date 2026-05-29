@@ -1,12 +1,16 @@
 from datetime import datetime
+from typing import Literal
 from pydantic import BaseModel, Field, ConfigDict
 
 
 class MonitoringGroupBase(BaseModel):
-    messenger: str = Field(..., description="whatsapp or max")
-    chat_id: str = Field(..., description="ID чата во внешней системе")
+    messenger: Literal["whatsapp", "max"] = Field(..., description="whatsapp or max")
+    chat_id: str = Field(..., alias="chatId", description="ID чата во внешней системе")
     name: str = Field(..., description="Название чата/группы")
     category: str | None = Field(default=None, description="Категория группы")
+
+    model_config = ConfigDict(populate_by_name=True)
+
 
 
 class MonitoringGroupCreate(MonitoringGroupBase):
@@ -14,18 +18,20 @@ class MonitoringGroupCreate(MonitoringGroupBase):
 
 
 class MonitoringGroupUpdate(BaseModel):
-    messenger: str | None = None
-    chat_id: str | None = None
+    messenger: Literal["whatsapp", "max"] | None = None
+    chat_id: str | None = Field(default=None, alias="chatId", description="ID чата во внешней системе")
     name: str | None = None
     category: str | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class MonitoringGroupResponse(MonitoringGroupBase):
     id: int
-    created_at: datetime | None = Field(default=None)
-    updated_at: datetime | None = Field(default=None)
+    created_at: datetime | None = Field(default=None, alias="createdAt")
+    updated_at: datetime | None = Field(default=None, alias="updatedAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class MonitoringGroupsResponse(BaseModel):
@@ -52,3 +58,4 @@ class MonitorMessagesResponse(BaseModel):
     page: int
     limit: int
     hasMore: bool
+

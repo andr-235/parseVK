@@ -27,7 +27,6 @@ import { TelegramModule } from './telegram/telegram.module.js';
 import { TelegramDlImportModule } from './telegram-dl-import/telegram-dl-import.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { AuthModule } from './auth/auth.module.js';
-import { MonitoringModule } from './monitoring/monitoring.module.js';
 import { TelegramDlMatchModule } from './telegram-dl-match/telegram-dl-match.module.js';
 import type { AppConfig } from './config/app.config.js';
 
@@ -58,7 +57,6 @@ import type { AppConfig } from './config/app.config.js';
     OkFriendsModule,
     TasksModule,
     CommentsModule,
-    MonitoringModule,
     WatchlistModule,
     PhotoAnalysisModule,
     AuthorsModule,
@@ -76,3 +74,4 @@ export class AppModule implements NestModule {
     consumer.apply(CorrelationIdMiddleware).forRoutes('*');
   }
 }
+

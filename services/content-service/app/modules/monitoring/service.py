@@ -98,6 +98,10 @@ class MonitoringService:
         return MonitoringGroupResponse.from_attributes(group)
 
     async def update_group(self, id: int, dto: MonitoringGroupUpdate) -> MonitoringGroupResponse:
+        update_data = dto.model_dump(exclude_unset=True)
+        if not update_data:
+            raise ValueError("Нет данных для обновления группы")
+
         group = await self.repo.get_group_by_id(id)
         if not group:
             raise ValueError(f"Группа с ID {id} не найдена")
@@ -113,6 +117,7 @@ class MonitoringService:
 
         await self.repo.session.flush()
         return MonitoringGroupResponse.from_attributes(group)
+
 
     async def delete_group(self, id: int) -> dict:
         success = await self.repo.delete_group(id)
