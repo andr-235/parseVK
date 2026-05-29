@@ -237,13 +237,21 @@ else
 fi
 
 echo "Запуск приложения..."
+echo "DEBUG: checking for main.js..."
+ls -la ./dist/src/main.js 2>&1
+echo "DEBUG: running bun..."
+set +e
 if [ -f ./dist/src/main.js ]; then
-  exec bun dist/src/main.js
+  bun dist/src/main.js > /tmp/bun_stdout.log 2> /tmp/bun_stderr.log
+  exit_code=$?
 elif [ -f ./dist/main.js ]; then
-  exec bun dist/main.js
-else
-  echo "Ошибка: не найден точка входа (dist/src/main.js или dist/main.js)"
-  ls -la ./dist 2>/dev/null || true
-  ls -la ./dist/src 2>/dev/null || true
-  exit 1
+  bun dist/main.js > /tmp/bun_stdout.log 2> /tmp/bun_stderr.log
+  exit_code=$?
 fi
+set -e
+echo "DEBUG: bun exited with code $exit_code"
+echo "DEBUG: stdout:"
+cat /tmp/bun_stdout.log 2>/dev/null || echo "(empty)"
+echo "DEBUG: stderr:"
+cat /tmp/bun_stderr.log 2>/dev/null || echo "(empty)"
+exit ${exit_code:-1}
