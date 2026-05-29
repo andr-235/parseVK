@@ -9,7 +9,7 @@ COPY libs/py/common ./libs/py/common
 COPY services/vk-service ./services/vk-service
 
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir ./libs/py/common ./services/vk-service
+    && pip install --no-cache-dir ./libs/py/common -e ./services/vk-service
 
 WORKDIR /app/services/vk-service
 

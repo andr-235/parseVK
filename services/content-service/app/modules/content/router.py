@@ -167,6 +167,14 @@ async def list_posts_bulk(
     return await repository.list_posts_bulk(external_keys)
 
 
+@router.post("/groups/bulk")
+async def list_groups_bulk(
+    vk_group_ids: list[int],
+    repository: ContentRepository = Depends(get_content_repository),
+):
+    return await repository.list_groups_bulk(vk_group_ids)
+
+
 def normalize_text(value: str | None) -> str | None:
     if value is None:
         return None

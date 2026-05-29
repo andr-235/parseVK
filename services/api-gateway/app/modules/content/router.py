@@ -52,41 +52,89 @@ async def delete_group(
 @router.get("/groups/search/region")
 async def search_region_groups(
     request: Request,
+    query: str | None = None,
+    vk_gateway_service: VkGatewayService = Depends(get_vk_gateway_service),
     content_gateway_service: ContentGatewayService = Depends(get_content_gateway_service),
 ):
-    exists = False
+    params = {}
+    if query:
+        params["query"] = query
+
     try:
-        await content_gateway_service.forward(
+        vk_groups = await vk_gateway_service.forward(
             request,
             "GET",
-            "/internal/content/groups/40023088",
+            "/internal/vk/groups/search/region",
+            params=params,
         )
-        exists = True
     except Exception:
-        pass
+        vk_groups = []
 
-    livebir_group = {
-        "id": 40023088,
-        "vkId": 40023088,
-        "name": "Биробиджан | livebir",
-        "screenName": "livebir",
-        "screen_name": "livebir",
-        "isClosed": 0,
-        "is_closed": 0,
-        "type": "group",
-        "photo50": "https://vk.com/images/community_50.png",
-        "photo100": "https://vk.com/images/community_100.png",
-        "photo200": "https://vk.com/images/community_200.png",
-        "existsInDb": exists,
-    }
+    if not vk_groups:
+        return {
+            "total": 0,
+            "groups": [],
+            "existsInDb": [],
+            "missing": [],
+        }
 
-    groups = [livebir_group]
-    exists_in_db = [livebir_group] if exists else []
-    missing = [] if exists else [livebir_group]
+    vk_ids = [group["id"] for group in vk_groups]
+    try:
+        existing = await content_gateway_service.forward(
+            request,
+            "POST",
+            "/internal/content/groups/bulk",
+            json=vk_ids,
+        )
+    except Exception:
+        existing = []
+
+    existing_ids = {group["vkId"] for group in existing}
+
+    items = []
+    for g in vk_groups:
+        g_id = g.get("id")
+        exists = g_id in existing_ids
+
+        item = {
+            "id": g_id,
+            "vkId": g_id,
+            "vkGroupId": g_id,
+            "name": g.get("name"),
+            "screenName": g.get("screen_name"),
+            "screen_name": g.get("screen_name"),
+            "isClosed": g.get("is_closed"),
+            "is_closed": g.get("is_closed"),
+            "deactivated": g.get("deactivated"),
+            "type": g.get("type"),
+            "photo50": g.get("photo_50"),
+            "photo_50": g.get("photo_50"),
+            "photo100": g.get("photo_100"),
+            "photo_100": g.get("photo_100"),
+            "photo200": g.get("photo_200"),
+            "photo_200": g.get("photo_200"),
+            "activity": g.get("activity"),
+            "ageLimits": g.get("age_limits"),
+            "age_limits": g.get("age_limits"),
+            "description": g.get("description"),
+            "membersCount": g.get("members_count"),
+            "members_count": g.get("members_count"),
+            "status": g.get("status"),
+            "verified": g.get("verified"),
+            "wall": g.get("wall"),
+            "addresses": g.get("addresses"),
+            "city": g.get("city"),
+            "counters": g.get("counters"),
+            "existsInDb": exists,
+        }
+        items.append(item)
+
+    exists_in_db = [item for item in items if item["existsInDb"]]
+    missing = [item for item in items if not item["existsInDb"]]
 
     return {
-        "total": 1,
-        "groups": groups,
+        "total": len(items),
+        "groups": items,
         "existsInDb": exists_in_db,
         "missing": missing,
     }

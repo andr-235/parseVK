@@ -23,6 +23,9 @@ class VkApiAdapter(Protocol):
     async def get_comments(self, owner_id: int, post_id: int) -> list[dict]:
         raise NotImplementedError
 
+    async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:
+        raise NotImplementedError
+
     async def get_author_comments_for_post(
         self,
         owner_id: int,
@@ -220,5 +223,105 @@ class VkApiClient:
 
     async def friends_get(self, **params) -> dict:
         return await self._call("friends.get", **params)
+
+    async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:
+        region_title = "Еврейская автономная область"
+        normalized_query = (query or "").strip()
+        search_query = normalized_query if normalized_query else " "
+
+        regions_response = await self._call(
+            "database.getRegions",
+            country_id=1,
+            q=region_title,
+            need_all=1,
+            count=1000,
+        )
+        items = regions_response.get("items") or []
+        region = next((item for item in items if item.get("title") == region_title), None)
+        if not region:
+            raise ValueError("REGION_NOT_FOUND")
+
+        region_id = region["id"]
+
+        city_ids = []
+        page_size = 1000
+        offset = 0
+        while True:
+            cities_response = await self._call(
+                "database.getCities",
+                country_id=1,
+                region_id=region_id,
+                need_all=1,
+                count=page_size,
+                offset=offset,
+            )
+            city_items = cities_response.get("items") or []
+            if not city_items:
+                break
+            for c in city_items:
+                if isinstance(c.get("id"), int):
+                    city_ids.append(c["id"])
+            offset += len(city_items)
+            if offset >= cities_response.get("count", 0) or len(city_items) < page_size:
+                break
+
+        if not city_ids:
+            return []
+
+        unique_groups = {}
+        page_size = 200
+        for city_id in city_ids:
+            offset = 0
+            while True:
+                search_response = await self._call(
+                    "groups.search",
+                    q=search_query,
+                    country_id=1,
+                    city_id=city_id,
+                    count=page_size,
+                    offset=offset,
+                )
+                search_items = search_response.get("items") or []
+                if not search_items:
+                    break
+                for item in search_items:
+                    unique_groups[item["id"]] = item
+                offset += len(search_items)
+                if offset >= search_response.get("count", 0) or len(search_items) < page_size:
+                    break
+
+        if not unique_groups:
+            return []
+
+        ids = list(unique_groups.keys())
+        chunk_size = 400
+        enriched = {}
+        fields = [
+            "members_count",
+            "city",
+            "activity",
+            "status",
+            "verified",
+            "description",
+            "addresses",
+            "contacts",
+            "site",
+        ]
+        for i in range(0, len(ids), chunk_size):
+            chunk = ids[i : i + chunk_size]
+            try:
+                response = await self._call(
+                    "groups.getById",
+                    group_ids=",".join(str(item) for item in chunk),
+                    fields=",".join(fields),
+                )
+                details = response.get("groups") if isinstance(response, dict) and "groups" in response else response
+                for d in details or []:
+                    base = unique_groups.get(d["id"]) or {}
+                    enriched[d["id"]] = {**base, **d}
+            except Exception:
+                pass
+
+        return list(enriched.values())
 
 

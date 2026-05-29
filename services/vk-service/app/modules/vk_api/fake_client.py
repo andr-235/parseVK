@@ -107,4 +107,18 @@ class FakeVkApiClient:
             "items": items
         }
 
+    async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:
+        return [
+            {
+                "id": 40023088,
+                "screen_name": "livebir",
+                "name": "Биробиджан | livebir",
+                "is_closed": 0,
+                "type": "group",
+                "photo_50": "https://vk.com/images/community_50.png",
+                "photo_100": "https://vk.com/images/community_100.png",
+                "photo_200": "https://vk.com/images/community_200.png",
+            }
+        ]
+
 

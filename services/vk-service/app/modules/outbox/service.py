@@ -9,7 +9,6 @@ class OutboxService:
             aggregate_type="vk_group",
             aggregate_id=str(vk_group_id),
             correlation_id=correlation_id,
-            dedupe_key=f"vk.group_collected:{vk_group_id}",
             payload={"vkGroupId": vk_group_id, "group": group},
         )
 
@@ -19,7 +18,6 @@ class OutboxService:
             aggregate_type="vk_group",
             aggregate_id=str(vk_group_id),
             correlation_id=correlation_id,
-            dedupe_key=f"vk.group_deleted:{vk_group_id}",
             payload={"vkGroupId": vk_group_id},
         )
 

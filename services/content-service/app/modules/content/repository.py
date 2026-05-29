@@ -136,6 +136,12 @@ class ContentRepository:
         )
         return [self.post_to_dict(row) for row in rows]
 
+    async def list_groups_bulk(self, vk_group_ids: list[int]) -> list[dict]:
+        rows = await self.session.scalars(
+            select(ContentGroup).where(ContentGroup.vk_group_id.in_(vk_group_ids))
+        )
+        return [self.group_to_dict(row) for row in rows]
+
     async def _paginate(self, stmt: Select, page: int, limit: int, *order_by) -> tuple[list, int]:
         offset = (page - 1) * limit
         return await self._offset_paginate(stmt, offset, limit, *order_by)

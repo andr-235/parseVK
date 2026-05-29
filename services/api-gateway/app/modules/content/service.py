@@ -12,7 +12,15 @@ class ContentGatewayService:
         self.content_client = content_client
         self.auth_service = auth_service
 
-    async def forward(self, request: Request, method: str, path: str, *, params: dict | None = None):
+    async def forward(
+        self,
+        request: Request,
+        method: str,
+        path: str,
+        *,
+        params: dict | None = None,
+        json: Any | None = None,
+    ):
         authorization = request.headers.get("Authorization")
         try:
             claims = await self.auth_service.validate_token(bearer_token(authorization))
@@ -28,6 +36,7 @@ class ContentGatewayService:
                 request_id=request_id,
                 correlation_id=correlation_id,
                 params=params,
+                json=json,
             )
         except ContentClientHTTPError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc

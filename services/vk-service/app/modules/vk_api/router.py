@@ -242,3 +242,16 @@ async def delete_all_groups(
 
     return {"count": len(group_ids)}
 
+
+@router.get("/groups/search/region")
+async def search_region_groups(
+    query: str | None = Query(default=None),
+):
+    client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+    try:
+        return await client.search_groups_by_region(query=query)
+    except ValueError as exc:
+        if str(exc) == "REGION_NOT_FOUND":
+            raise HTTPException(status_code=404, detail="Region not found")
+        raise
+
