@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, File, UploadFile, Query, Request
+from fastapi import APIRouter, Depends, File, UploadFile, Query, Request, Response
 from app.core.security import require_auth
 from app.modules.telegram_tgmbase.schemas import TelegramTgmbaseCapabilitiesResponse
 from app.modules.telegram_tgmbase.service import TelegramTgmbaseGatewayService, get_telegram_tgmbase_gateway_service
@@ -29,12 +29,11 @@ async def get_capabilities() -> TelegramTgmbaseCapabilitiesResponse:
     return TelegramTgmbaseCapabilitiesResponse(
         domain="telegram-tgmbase",
         migrationStage="inventory",
-        gatewayManaged=["capabilities", "telegram-dl-import"],
+        gatewayManaged=["capabilities", "telegram-dl-import", "telegram-dl-match"],
         fallbackManaged=[
             "telegram-auth-session",
             "telegram-sync",
             "telegram-export",
-            "telegram-dl-match",
             "tgmbase-search",
             "tgmbase-search-progress",
         ],
@@ -115,3 +114,150 @@ async def get_contacts(
         "/telegram/dl-import/contacts",
         params=params,
     )
+
+
+# РАЗДЕЛ СОПОСТАВЛЕНИЙ (DL MATCH)
+
+@router.post("/telegram/dl-match/runs")
+async def create_run(
+    request: Request,
+    service: TelegramTgmbaseGatewayService = Depends(get_telegram_tgmbase_gateway_service),
+):
+    return await service.forward(
+        request,
+        "POST",
+        "/telegram/dl-match/runs",
+    )
+
+
+@router.get("/telegram/dl-match/runs")
+async def get_runs(
+    request: Request,
+    service: TelegramTgmbaseGatewayService = Depends(get_telegram_tgmbase_gateway_service),
+):
+    return await service.forward(
+        request,
+        "GET",
+        "/telegram/dl-match/runs",
+    )
+
+
+@router.get("/telegram/dl-match/runs/{runId}")
+async def get_run_by_id(
+    request: Request,
+    runId: int,
+    service: TelegramTgmbaseGatewayService = Depends(get_telegram_tgmbase_gateway_service),
+):
+    return await service.forward(
+        request,
+        "GET",
+        f"/telegram/dl-match/runs/{runId}",
+    )
+
+
+@router.get("/telegram/dl-match/runs/{runId}/results")
+async def get_results(
+    request: Request,
+    runId: int,
+    strictOnly: str | None = Query(None, alias="strictOnly"),
+    usernameOnly: str | None = Query(None, alias="usernameOnly"),
+    phoneOnly: str | None = Query(None, alias="phoneOnly"),
+    service: TelegramTgmbaseGatewayService = Depends(get_telegram_tgmbase_gateway_service),
+):
+    params = {}
+    if strictOnly:
+        params["strictOnly"] = strictOnly
+    if usernameOnly:
+        params["usernameOnly"] = usernameOnly
+    if phoneOnly:
+        params["phoneOnly"] = phoneOnly
+
+    return await service.forward(
+        request,
+        "GET",
+        f"/telegram/dl-match/runs/{runId}/results",
+        params=params,
+    )
+
+
+@router.get("/telegram/dl-match/runs/{runId}/results/{resultId}/messages")
+async def get_result_messages(
+    request: Request,
+    runId: int,
+    resultId: int,
+    service: TelegramTgmbaseGatewayService = Depends(get_telegram_tgmbase_gateway_service),
+):
+    return await service.forward(
+        request,
+        "GET",
+        f"/telegram/dl-match/runs/{runId}/results/{resultId}/messages",
+    )
+
+
+@router.post("/telegram/dl-match/runs/{runId}/excluded-chats")
+async def exclude_chat(
+    request: Request,
+    runId: int,
+    payload: dict,
+    service: TelegramTgmbaseGatewayService = Depends(get_telegram_tgmbase_gateway_service),
+):
+    return await service.forward(
+        request,
+        "POST",
+        f"/telegram/dl-match/runs/{runId}/excluded-chats",
+        json=payload,
+    )
+
+
+@router.delete("/telegram/dl-match/runs/{runId}/excluded-chats/{peerId}")
+async def restore_chat(
+    request: Request,
+    runId: int,
+    peerId: str,
+    service: TelegramTgmbaseGatewayService = Depends(get_telegram_tgmbase_gateway_service),
+):
+    return await service.forward(
+        request,
+        "DELETE",
+        f"/telegram/dl-match/runs/{runId}/excluded-chats/{peerId}",
+    )
+
+
+@router.get("/telegram/dl-match/runs/{runId}/export")
+async def export_run(
+    request: Request,
+    runId: int,
+    strictOnly: str | None = Query(None, alias="strictOnly"),
+    usernameOnly: str | None = Query(None, alias="usernameOnly"),
+    phoneOnly: str | None = Query(None, alias="phoneOnly"),
+    service: TelegramTgmbaseGatewayService = Depends(get_telegram_tgmbase_gateway_service),
+):
+    params = {}
+    if strictOnly:
+        params["strictOnly"] = strictOnly
+    if usernameOnly:
+        params["usernameOnly"] = usernameOnly
+    if phoneOnly:
+        params["phoneOnly"] = phoneOnly
+
+    res_raw = await service.forward_raw(
+        request,
+        "GET",
+        f"/telegram/dl-match/runs/{runId}/export",
+        params=params,
+    )
+
+    # Пересылаем заголовки и контент ответа
+    headers = {}
+    for key, val in res_raw.headers.items():
+        # Не пересылаем служебные заголовки вроде content-length (FastAPI сам их посчитает)
+        if key.lower() not in ["content-length", "content-encoding", "transfer-encoding"]:
+            headers[key] = val
+
+    return Response(
+        content=res_raw.content,
+        status_code=res_raw.status_code,
+        headers=headers,
+        media_type=res_raw.headers.get("content-type"),
+    )
+

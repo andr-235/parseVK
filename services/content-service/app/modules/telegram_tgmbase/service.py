@@ -1,11 +1,17 @@
 import logging
+import asyncio
 from datetime import datetime, timezone
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.telegram_tgmbase.models import DlImportBatch, DlImportFile, DlContact
+from app.modules.telegram_tgmbase.models import (
+    DlImportBatch, DlImportFile, DlContact,
+    DlMatchRun, DlMatchResult, DlMatchResultChat, DlMatchResultMessage,
+    User, Message, Group, Supergroup, Channel
+)
 from app.modules.telegram_tgmbase.parser import TelegramDlImportParser
+from app.modules.telegram_tgmbase.exporter import TelegramDlMatchExporter
 
 logger = logging.getLogger("content-service.telegram-tgmbase.service")
 
@@ -14,10 +20,30 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class TelegramDlImportService:
+def normalize_telegram_id(value: str | None) -> int | None:
+    if not value:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    # Если это число, или число с минусом
+    if s.isdigit():
+        return int(s)
+    if s.startswith("-") and s[1:].isdigit():
+        return int(s)
+    # Если это ссылка или username, мы не можем получить числовой ID напрямую без API клиента,
+    # поэтому числовым ID он не является и возвращаем None для strict ID matching.
+    return None
+
+
+class TelegramTgmbaseService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.parser = TelegramDlImportParser()
+        self.exporter = TelegramDlMatchExporter()
+        self.batch_size = 1000
+
+    # Раздел DL IMPORT
 
     async def upload_files(self, file_entries: list[tuple[bytes, str]]) -> dict:
         logger.info(f"Starting batch Telegram DL upload: {len(file_entries)} files")
@@ -122,6 +148,223 @@ class TelegramDlImportService:
             "limit": limit,
             "offset": offset
         }
+
+    # Раздел DL MATCH (СОПОСТАВЛЕНИЯ)
+
+    async def create_run(self) -> dict:
+        run = DlMatchRun(
+            status="RUNNING",
+            contacts_total=0,
+            matches_total=0,
+            strict_matches_total=0,
+            username_matches_total=0,
+            phone_matches_total=0,
+            created_at=utcnow(),
+        )
+        self.session.add(run)
+        await self.session.commit()
+        await self.session.refresh(run)
+        return self._map_run(run)
+
+    async def get_runs(self) -> list[dict]:
+        stmt = select(DlMatchRun).order_by(DlMatchRun.created_at.desc())
+        res = await self.session.execute(stmt)
+        runs = res.scalars().all()
+        return [self._map_run(r) for r in runs]
+
+    async def get_run_by_id(self, id: int) -> dict:
+        stmt = select(DlMatchRun).where(DlMatchRun.id == id)
+        res = await self.session.execute(stmt)
+        run = res.scalars().first()
+        if not run:
+            raise ValueError(f"Run {id} not found")
+        return self._map_run(run)
+
+    async def get_results(
+        self,
+        run_id: int,
+        strict_only: bool = False,
+        username_only: bool = False,
+        phone_only: bool = False
+    ) -> list[dict]:
+        stmt = select(DlMatchResult).where(DlMatchResult.run_id == run_id)
+        
+        # Сигналы активности
+        stmt = stmt.where(or_(
+            DlMatchResult.strict_telegram_id_match == True,
+            DlMatchResult.username_match == True,
+            DlMatchResult.phone_match == True,
+            DlMatchResult.chat_activity_match == True
+        ))
+
+        if strict_only:
+            stmt = stmt.where(DlMatchResult.strict_telegram_id_match == True)
+        if username_only:
+            stmt = stmt.where(DlMatchResult.username_match == True)
+        if phone_only:
+            stmt = stmt.where(DlMatchResult.phone_match == True)
+
+        stmt = stmt.options(selectinload(DlMatchResult.chats)).order_by(DlMatchResult.created_at.desc())
+        res = await self.session.execute(stmt)
+        items = res.scalars().all()
+
+        # Фильтруем результаты, у которых есть чаты, но все они исключены
+        filtered = []
+        for item in items:
+            total_chats = len(item.chats)
+            active_chats = sum(1 for c in item.chats if not c.is_excluded)
+            if total_chats == 0 or active_chats > 0:
+                filtered.append(self._map_result(item))
+                
+        return filtered
+
+    async def get_result_messages(self, run_id: int, result_id: int) -> list[dict]:
+        stmt = select(DlMatchResult).where(
+            and_(DlMatchResult.id == result_id, DlMatchResult.run_id == run_id)
+        ).options(
+            selectinload(DlMatchResult.chats),
+            selectinload(DlMatchResult.messages)
+        )
+        res = await self.session.execute(stmt)
+        result = res.scalars().first()
+        if not result:
+            raise ValueError(f"Result {result_id} not found in run {run_id}")
+
+        messages_by_peer = {}
+        for msg in result.messages:
+            messages_by_peer.setdefault(msg.peer_id, []).append(msg)
+
+        sorted_chats = sorted(result.chats, key=lambda c: c.peer_id)
+        
+        return [
+            {
+                "peerId": chat.peer_id,
+                "chatType": chat.chat_type,
+                "title": chat.title,
+                "isExcluded": chat.is_excluded,
+                "messages": [
+                    {
+                        "messageId": m.message_id,
+                        "messageDate": m.message_date.isoformat() if m.message_date else None,
+                        "text": m.text
+                    }
+                    for m in sorted(messages_by_peer.get(chat.peer_id, []), key=lambda m: (m.message_date or datetime.min, m.message_id), reverse=True)
+                ]
+            }
+            for chat in sorted_chats
+        ]
+
+    async def exclude_chat(self, run_id: int, peer_id: str) -> dict:
+        await self._update_excluded_chat_state(run_id, peer_id, True)
+        return await self.get_run_by_id(run_id)
+
+    async def restore_chat(self, run_id: int, peer_id: str) -> dict:
+        await self._update_excluded_chat_state(run_id, peer_id, False)
+        return await self.get_run_by_id(run_id)
+
+    async def export_run(self, run_id: int, strict_only: bool = False, username_only: bool = False, phone_only: bool = False) -> tuple[bytes, str, dict]:
+        run = await self.get_run_by_id(run_id)
+        if run["status"] != "DONE":
+            raise ValueError("Run is not completed yet")
+            
+        results = await self.get_results(run_id, strict_only, username_only, phone_only)
+        
+        # Загружаем сообщения для результатов
+        result_ids = [int(r["id"]) for r in results]
+        messages_by_result_id = {}
+        for r_id in result_ids:
+            messages_by_result_id[str(r_id)] = await self.get_result_messages(run_id, r_id)
+
+        buffer = await self.exporter.export_run(str(run_id), results, messages_by_result_id)
+        return buffer, f"dl-match-run-{run_id}.xlsx", run
+
+    # ФОНОВЫЙ ПРОЦЕССОР МЭТЧИНГА
+
+    async def process_run(self, run_id: int):
+        logger.info(f"Starting background Telegram match processor: run_id={run_id}")
+        
+        try:
+            # Считаем число контактов
+            count_stmt = select(func.count(DlContact.id))
+            res_count = await self.session.execute(count_stmt)
+            contacts_total = res_count.scalar() or 0
+
+            processed_contacts = 0
+            matches_total = 0
+            strict_matches_total = 0
+            username_matches_total = 0
+            phone_matches_total = 0
+            last_contact_id = None
+            run_started_at = utcnow()
+
+            while True:
+                stmt = select(DlContact).options(selectinload(DlContact.import_file))
+                if last_contact_id is not None:
+                    stmt = stmt.where(DlContact.id > last_contact_id)
+                stmt = stmt.order_by(DlContact.id.asc()).limit(self.batch_size)
+                
+                res = await self.session.execute(stmt)
+                contacts = res.scalars().all()
+
+                if not contacts:
+                    break
+
+                results = await self._build_results(run_id, contacts)
+                if results:
+                    await self._persist_results(results)
+
+                processed_contacts += len(contacts)
+                matches_total += len(results)
+                strict_matches_total += sum(1 for r in results if r["strict_telegram_id_match"])
+                username_matches_total += sum(1 for r in results if r["username_match"])
+                phone_matches_total += sum(1 for r in results if r["phone_match"])
+                last_contact_id = contacts[-1].id
+
+                # Обновляем прогресс в БД
+                update_stmt = update(DlMatchRun).where(DlMatchRun.id == run_id).values(
+                    contacts_total=processed_contacts,
+                    matches_total=matches_total,
+                    strict_matches_total=strict_matches_total,
+                    username_matches_total=username_matches_total,
+                    phone_matches_total=phone_matches_total,
+                    updated_at=utcnow()
+                )
+                await self.session.execute(update_stmt)
+                await self.session.commit()
+
+                logger.info(
+                    f"Match run {run_id} batch: processed {processed_contacts}/{contacts_total}, matches {len(results)}"
+                )
+
+            # Завершаем
+            final_stmt = update(DlMatchRun).where(DlMatchRun.id == run_id).values(
+                status="DONE",
+                contacts_total=contacts_total,
+                matches_total=matches_total,
+                strict_matches_total=strict_matches_total,
+                username_matches_total=username_matches_total,
+                phone_matches_total=phone_matches_total,
+                finished_at=utcnow(),
+                error=None
+            )
+            await self.session.execute(final_stmt)
+            await self.session.commit()
+            
+            logger.info(f"Match run {run_id} finished successfully in {(utcnow() - run_started_at).total_seconds()}s")
+
+        except Exception as e:
+            logger.error(f"Match run {run_id} failed: {str(e)}", exc_info=True)
+            await self.session.rollback()
+            
+            fail_stmt = update(DlMatchRun).where(DlMatchRun.id == run_id).values(
+                status="FAILED",
+                finished_at=utcnow(),
+                error=str(e)
+            )
+            await self.session.execute(fail_stmt)
+            await self.session.commit()
+
+    # ВНУТРЕННИЕ МЕТОДЫ И ХЕЛПЕРЫ
 
     async def _process_file(self, batch_id: int, file_content: bytes, file_name: str) -> dict:
         normalized_file_name = file_name.strip()
@@ -257,6 +500,321 @@ class TelegramDlImportService:
                 "succeeded": False
             }
 
+    async def _build_results(self, run_id: int, contacts: list[DlContact]) -> list[dict]:
+        strict_ids = list(set(
+            normalize_telegram_id(c.telegram_id)
+            for c in contacts
+            if normalize_telegram_id(c.telegram_id) is not None
+        ))
+        usernames = list(set(
+            c.username.strip()
+            for c in contacts
+            if c.username and c.username.strip()
+        ))
+        phones = list(set(
+            c.phone.strip()
+            for c in contacts
+            if c.phone and c.phone.strip()
+        ))
+
+        # Загружаем пользователей tgmbase
+        strict_users = []
+        username_users = []
+        phone_users = []
+
+        if strict_ids:
+            res = await self.session.execute(select(User).where(User.user_id.in_(strict_ids)))
+            strict_users = res.scalars().all()
+        if usernames:
+            res = await self.session.execute(select(User).where(User.username.in_(usernames)))
+            username_users = res.scalars().all()
+        if phones:
+            res = await self.session.execute(select(User).where(User.phone.in_(phones)))
+            phone_users = res.scalars().all()
+
+        strict_by_id = {u.user_id: u for u in strict_users}
+        username_by_val = {u.username: u for u in username_users if u.username}
+        phone_by_val = {u.phone: u for u in phone_users if u.phone}
+
+        all_matched_user_ids = list(set(
+            u.user_id
+            for u in list(strict_users) + list(username_users) + list(phone_users)
+        ))
+
+        # Загружаем сообщения
+        activity_by_user = await self._load_chat_activity(all_matched_user_ids)
+
+        rows = []
+        for contact in contacts:
+            matches = self._find_matches_for_contact(contact, strict_by_id, username_by_val, phone_by_val)
+            for match in matches:
+                user_id = match["user_id"]
+                activity = activity_by_user.get(user_id, {"chats": [], "messages": []})
+                
+                rows.append({
+                    "run_id": run_id,
+                    "dl_contact_id": contact.id,
+                    "tgmbase_user_id": user_id,
+                    "strict_telegram_id_match": match["strict_telegram_id_match"],
+                    "username_match": match["username_match"],
+                    "phone_match": match["phone_match"],
+                    "chat_activity_match": len(activity["chats"]) > 0,
+                    "dl_contact_snapshot": self._build_dl_contact_snapshot(contact),
+                    "tgmbase_user_snapshot": self._build_user_snapshot(match["snapshot"], activity["chats"]),
+                    "chats": activity["chats"],
+                    "messages": activity["messages"]
+                })
+        return rows
+
+    def _find_matches_for_contact(self, contact: DlContact, strict_by_id: dict, username_by_val: dict, phone_by_val: dict) -> list[dict]:
+        c_tg_id = normalize_telegram_id(contact.telegram_id)
+        c_username = contact.username.strip() if contact.username else None
+        c_phone = contact.phone.strip() if contact.phone else None
+
+        merged = {}
+        
+        if c_tg_id in strict_by_id:
+            u = strict_by_id[c_tg_id]
+            merged[u.user_id] = {
+                "user_id": u.user_id,
+                "strict_telegram_id_match": True,
+                "username_match": False,
+                "phone_match": False,
+                "snapshot": u
+            }
+        if c_username in username_by_val:
+            u = username_by_val[c_username]
+            entry = merged.setdefault(u.user_id, {
+                "user_id": u.user_id,
+                "strict_telegram_id_match": False,
+                "username_match": True,
+                "phone_match": False,
+                "snapshot": u
+            })
+            entry["username_match"] = True
+        if c_phone in phone_by_val:
+            u = phone_by_val[c_phone]
+            entry = merged.setdefault(u.user_id, {
+                "user_id": u.user_id,
+                "strict_telegram_id_match": False,
+                "username_match": False,
+                "phone_match": True,
+                "snapshot": u
+            })
+            entry["phone_match"] = True
+
+        return list(merged.values())
+
+    async def _load_chat_activity(self, user_ids: list[int]) -> dict:
+        lookup = {}
+        if not user_ids:
+            return lookup
+
+        # Выбираем сообщения
+        stmt = select(Message).where(Message.from_id.in_(user_ids)).order_by(Message.date.desc())
+        res = await self.session.execute(stmt)
+        messages = res.scalars().all()
+
+        peer_ids = list(set(msg.peer_id for msg in messages))
+        if not peer_ids:
+            return lookup
+
+        # Загружаем группы, супергруппы, каналы
+        groups_stmt = select(Group).where(Group.group_id.in_(peer_ids))
+        res = await self.session.execute(groups_stmt)
+        groups = {g.group_id: g for g in res.scalars().all()}
+
+        supergroups_stmt = select(Supergroup).where(Supergroup.supergroup_id.in_(peer_ids))
+        res = await self.session.execute(supergroups_stmt)
+        supergroups = {sg.supergroup_id: sg for sg in res.scalars().all()}
+
+        channels_stmt = select(Channel).where(Channel.channel_id.in_(peer_ids))
+        res = await self.session.execute(channels_stmt)
+        channels = {c.channel_id: c for c in res.scalars().all()}
+
+        chats_by_peer = {}
+        for peer in peer_ids:
+            if peer in groups:
+                chats_by_peer[peer] = {"type": "group", "peer_id": str(peer), "title": groups[peer].title}
+            elif peer in supergroups:
+                chats_by_peer[peer] = {"type": "supergroup", "peer_id": str(peer), "title": supergroups[peer].title}
+            elif peer in channels:
+                chats_by_peer[peer] = {"type": "channel", "peer_id": str(peer), "title": channels[peer].title}
+
+        for msg in messages:
+            u_id = msg.from_id
+            if not u_id or msg.peer_id not in chats_by_peer:
+                continue
+                
+            chat = chats_by_peer[msg.peer_id]
+            entry = lookup.setdefault(u_id, {"chats": [], "messages": []})
+            
+            if chat not in entry["chats"]:
+                entry["chats"].append(chat)
+                
+            entry["messages"].append({
+                "peer_id": chat["peer_id"],
+                "message_id": str(msg.message_id),
+                "message_date": msg.date.isoformat() if msg.date else None,
+                "text": msg.message
+            })
+            
+        return lookup
+
+    async def _persist_results(self, results: list[dict]):
+        for res in results:
+            async with self.session.begin_nested():
+                # Создаем результат
+                match_res = DlMatchResult(
+                    run_id=res["run_id"],
+                    dl_contact_id=res["dl_contact_id"],
+                    tgmbase_user_id=res["tgmbase_user_id"],
+                    strict_telegram_id_match=res["strict_telegram_id_match"],
+                    username_match=res["username_match"],
+                    phone_match=res["phone_match"],
+                    chat_activity_match=res["chat_activity_match"],
+                    dl_contact_snapshot=res["dl_contact_snapshot"],
+                    tgmbase_user_snapshot=res["tgmbase_user_snapshot"],
+                    created_at=utcnow()
+                )
+                self.session.add(match_res)
+                await self.session.flush()
+
+                # Создаем чаты
+                chat_models = []
+                for chat in res["chats"]:
+                    c_model = DlMatchResultChat(
+                        result_id=match_res.id,
+                        peer_id=chat["peer_id"],
+                        chat_type=chat["type"],
+                        title=chat["title"],
+                        is_excluded=False,
+                        created_at=utcnow()
+                    )
+                    chat_models.append(c_model)
+                if chat_models:
+                    self.session.add_all(chat_models)
+
+                # Создаем сообщения
+                msg_models = []
+                for msg in res["messages"]:
+                    date_dt = None
+                    if msg["message_date"]:
+                        try:
+                            date_dt = datetime.fromisoformat(msg["message_date"])
+                        except Exception:
+                            pass
+                    
+                    m_model = DlMatchResultMessage(
+                        result_id=match_res.id,
+                        peer_id=msg["peer_id"],
+                        message_id=msg["message_id"],
+                        message_date=date_dt,
+                        text=msg["text"],
+                        created_at=utcnow()
+                    )
+                    msg_models.append(m_model)
+                if msg_models:
+                    self.session.add_all(msg_models)
+                    
+            await self.session.commit()
+
+    async def _update_excluded_chat_state(self, run_id: int, peer_id: str, is_excluded: bool):
+        # Загружаем связанные чаты
+        stmt = select(DlMatchResultChat).join(DlMatchResult).where(
+            and_(DlMatchResultChat.peer_id == peer_id, DlMatchResult.run_id == run_id)
+        )
+        res = await self.session.execute(stmt)
+        affected_chats = res.scalars().all()
+
+        if not affected_chats:
+            return
+
+        affected_result_ids = list(set(c.result_id for c in affected_chats))
+
+        # Обновляем статус исключения в транзакции
+        async with self.session.begin_nested():
+            for chat in affected_chats:
+                chat.is_excluded = is_excluded
+            await self.session.flush()
+
+            # Обновляем признак chat_activity_match в DlMatchResult
+            for r_id in affected_result_ids:
+                # Проверяем, есть ли оставшиеся не исключенные чаты
+                c_stmt = select(func.count(DlMatchResultChat.id)).where(
+                    and_(
+                        DlMatchResultChat.result_id == r_id,
+                        DlMatchResultChat.is_excluded == False
+                    )
+                )
+                c_res = await self.session.execute(c_stmt)
+                active_count = c_res.scalar() or 0
+
+                res_stmt = select(DlMatchResult).where(DlMatchResult.id == r_id)
+                res_obj = (await self.session.execute(res_stmt)).scalar()
+                if res_obj:
+                    res_obj.chat_activity_match = active_count > 0
+
+            await self.session.flush()
+
+            # Обновляем статистику в DlMatchRun
+            results_stmt = select(DlMatchResult).where(
+                and_(
+                    DlMatchResult.run_id == run_id,
+                    or_(
+                        DlMatchResult.strict_telegram_id_match == True,
+                        DlMatchResult.username_match == True,
+                        DlMatchResult.phone_match == True,
+                        DlMatchResult.chat_activity_match == True
+                    )
+                )
+            )
+            res_results = await self.session.execute(results_stmt)
+            active_results = res_results.scalars().all()
+
+            matches_total = len(active_results)
+            strict_total = sum(1 for r in active_results if r.strict_telegram_id_match)
+            username_total = sum(1 for r in active_results if r.username_match)
+            phone_total = sum(1 for r in active_results if r.phone_match)
+
+            run_stmt = select(DlMatchRun).where(DlMatchRun.id == run_id)
+            run = (await self.session.execute(run_stmt)).scalar()
+            if run:
+                run.matches_total = matches_total
+                run.strict_matches_total = strict_total
+                run.username_matches_total = username_total
+                run.phone_matches_total = phone_total
+                
+        await self.session.commit()
+
+    def _build_dl_contact_snapshot(self, contact: DlContact) -> dict:
+        return {
+            "importFileId": str(contact.import_file_id) if contact.import_file_id else None,
+            "sourceRowIndex": contact.source_row_index,
+            "telegramId": contact.telegram_id,
+            "username": contact.username,
+            "phone": contact.phone,
+            "firstName": contact.first_name,
+            "lastName": contact.last_name,
+            "fullName": contact.full_name,
+            "region": contact.region,
+            "originalFileName": contact.import_file.original_file_name,
+        }
+
+    def _build_user_snapshot(self, matched_user: User, related_chats: list) -> dict:
+        return {
+            "user_id": str(matched_user.user_id),
+            "username": matched_user.username,
+            "phone": matched_user.phone,
+            "first_name": matched_user.first_name,
+            "last_name": matched_user.last_name,
+            "premium": matched_user.premium,
+            "scam": matched_user.scam,
+            "bot": matched_user.bot,
+            "upd_date": matched_user.upd_date.isoformat() if matched_user.upd_date else None,
+            "relatedChats": related_chats,
+        }
+
     def _map_batch(self, batch: DlImportBatch) -> dict:
         return {
             "id": str(batch.id),
@@ -319,5 +877,63 @@ class TelegramDlImportService:
             "usernameExtra": item.username_extra,
             "geo": item.geo,
             "sourceRowIndex": item.source_row_index,
+            "createdAt": item.created_at.isoformat()
+        }
+
+    def _map_run(self, run: DlMatchRun) -> dict:
+        return {
+            "id": str(run.id),
+            "status": run.status,
+            "contactsTotal": run.contacts_total,
+            "matchesTotal": run.matches_total,
+            "strictMatchesTotal": run.strict_matches_total,
+            "usernameMatchesTotal": run.username_matches_total,
+            "phoneMatchesTotal": run.phone_matches_total,
+            "createdAt": run.created_at.isoformat(),
+            "finishedAt": run.finished_at.isoformat() if run.finished_at else None,
+            "error": run.error
+        }
+
+    def _map_result(self, item: DlMatchResult) -> dict:
+        dl_snapshot = item.dl_contact_snapshot or {}
+        user_snapshot = item.tgmbase_user_snapshot or {}
+        
+        # Подготавливаем активные чаты
+        active_chats = []
+        for chat in item.chats:
+            if not chat.is_excluded:
+                active_chats.append({
+                    "type": chat.chat_type,
+                    "peer_id": chat.peer_id,
+                    "title": chat.title
+                })
+
+        return {
+            "id": str(item.id),
+            "runId": str(item.run_id),
+            "dlContactId": str(item.dl_contact_id),
+            "tgmbaseUserId": str(item.tgmbase_user_id) if item.tgmbase_user_id else None,
+            "strictTelegramIdMatch": item.strict_telegram_id_match,
+            "usernameMatch": item.username_match,
+            "phoneMatch": item.phone_match,
+            "chatActivityMatch": item.chat_activity_match,
+            "dlContact": {
+                "id": str(item.dl_contact_id),
+                "importFileId": dl_snapshot.get("importFileId"),
+                "originalFileName": dl_snapshot.get("originalFileName"),
+                "telegramId": dl_snapshot.get("telegramId"),
+                "username": dl_snapshot.get("username"),
+                "phone": dl_snapshot.get("phone"),
+                "firstName": dl_snapshot.get("firstName"),
+                "lastName": dl_snapshot.get("lastName"),
+                "fullName": dl_snapshot.get("fullName"),
+                "region": dl_snapshot.get("region"),
+                "sourceRowIndex": dl_snapshot.get("sourceRowIndex"),
+            },
+            "user": None if not item.tgmbase_user_id else {
+                "id": str(item.tgmbase_user_id),
+                "relatedChats": active_chats,
+                **user_snapshot
+            },
             "createdAt": item.created_at.isoformat()
         }

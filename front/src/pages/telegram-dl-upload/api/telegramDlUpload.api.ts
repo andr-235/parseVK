@@ -297,7 +297,7 @@ export const telegramDlUploadService = {
 
   async getMatchRuns(): Promise<TelegramDlMatchRun[]> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/dl-match/runs`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs`)
       return await handleResponse<TelegramDlMatchRun[]>(
         response,
         'Не удалось загрузить запуски матчинга'
@@ -310,7 +310,7 @@ export const telegramDlUploadService = {
 
   async getMatchRun(runId: string): Promise<TelegramDlMatchRun> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/dl-match/runs/${runId}`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}`)
       return await handleResponse<TelegramDlMatchRun>(
         response,
         'Не удалось загрузить запуск матчинга'
@@ -323,7 +323,7 @@ export const telegramDlUploadService = {
 
   async getMatchResults(runId: string): Promise<TelegramDlMatchResult[]> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/dl-match/runs/${runId}/results`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/results`)
       return await handleResponse<TelegramDlMatchResult[]>(
         response,
         'Не удалось загрузить результаты матчинга'
@@ -340,7 +340,7 @@ export const telegramDlUploadService = {
   ): Promise<TelegramDlMatchResultMessagesGroup[]> {
     try {
       const response = await createRequest(
-        `${API_URL}/telegram/dl-match/runs/${runId}/results/${resultId}/messages`
+        `${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/results/${resultId}/messages`
       )
       return await handleResponse<TelegramDlMatchResultMessagesGroup[]>(
         response,
@@ -355,7 +355,7 @@ export const telegramDlUploadService = {
   async excludeChat(runId: string, peerId: string): Promise<TelegramDlMatchRun> {
     try {
       const response = await createRequest(
-        `${API_URL}/telegram/dl-match/runs/${runId}/excluded-chats`,
+        `${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/excluded-chats`,
         {
           method: 'POST',
           headers: {
@@ -379,7 +379,7 @@ export const telegramDlUploadService = {
   async restoreChat(runId: string, peerId: string): Promise<TelegramDlMatchRun> {
     try {
       const response = await createRequest(
-        `${API_URL}/telegram/dl-match/runs/${runId}/excluded-chats/${peerId}`,
+        `${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/excluded-chats/${peerId}`,
         {
           method: 'DELETE',
         }
@@ -398,7 +398,7 @@ export const telegramDlUploadService = {
 
   async createMatchRun(): Promise<TelegramDlMatchRun> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/dl-match/runs`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs`, {
         method: 'POST',
       })
       const run = await handleResponse<TelegramDlMatchRun>(
@@ -415,7 +415,7 @@ export const telegramDlUploadService = {
 
   async exportMatchRun(runId: string): Promise<void> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/dl-match/runs/${runId}/export`)
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/export`)
 
       if (!response.ok) {
         const text = await response.text().catch(() => '')

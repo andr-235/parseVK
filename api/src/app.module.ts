@@ -24,7 +24,6 @@ import { TelegramModule } from './telegram/telegram.module.js';
 
 import { MetricsModule } from './metrics/metrics.module.js';
 import { AuthModule } from './auth/auth.module.js';
-import { TelegramDlMatchModule } from './telegram-dl-match/telegram-dl-match.module.js';
 import type { AppConfig } from './config/app.config.js';
 
 @Module({
@@ -57,7 +56,6 @@ import type { AppConfig } from './config/app.config.js';
     DataImportModule,
     ListingsModule,
     TelegramModule,
-    TelegramDlMatchModule,
   ],
   controllers: [AppController],
   providers: [AppService, LoggingInterceptor, HttpExceptionFilter],

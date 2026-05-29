@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
 use_service_path()
 
-from app.modules.telegram_tgmbase.service import TelegramDlImportService
+from app.modules.telegram_tgmbase.service import TelegramTgmbaseService
 from app.modules.telegram_tgmbase.parser import TelegramDlImportParseResult, TelegramDlImportRow
 
 
@@ -56,7 +56,7 @@ async def test_get_files_returns_empty_list():
     mock_result.scalars.return_value.all.return_value = []
     mock_session.execute = AsyncMock(return_value=mock_result)
 
-    service = TelegramDlImportService(mock_session)
+    service = TelegramTgmbaseService(mock_session)
     files = await service.get_files()
 
     assert files == []
@@ -70,7 +70,7 @@ async def test_get_contacts_returns_paginated_result():
     mock_result.scalars.return_value.all.return_value = []
     mock_session.execute = AsyncMock(return_value=mock_result)
 
-    service = TelegramDlImportService(mock_session)
+    service = TelegramTgmbaseService(mock_session)
     res = await service.get_contacts(limit=10, offset=0)
 
     assert res["total"] == 0
@@ -112,7 +112,7 @@ async def test_upload_files_success(mock_parse_result):
     mock_nested.__aexit__ = AsyncMock()
     mock_session.begin_nested.return_value = mock_nested
 
-    service = TelegramDlImportService(mock_session)
+    service = TelegramTgmbaseService(mock_session)
     
     with patch.object(service.parser, "parse", return_value=mock_parse_result):
         def side_effect_refresh(obj):

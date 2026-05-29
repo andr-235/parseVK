@@ -1,6 +1,7 @@
-from datetime import datetime
 from pydantic import BaseModel, Field
 
+
+# Схемы импорта (уже созданные)
 
 class DlImportBatchSchema(BaseModel):
     id: str
@@ -73,3 +74,85 @@ class TelegramDlImportContactsPageSchema(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+# Новые схемы для Telegram-сопоставлений (мэтчинга)
+
+class TelegramDlMatchRunSchema(BaseModel):
+    id: str
+    status: str
+    contactsTotal: int = Field(..., alias="contactsTotal")
+    matchesTotal: int = Field(..., alias="matchesTotal")
+    strictMatchesTotal: int = Field(..., alias="strictMatchesTotal")
+    usernameMatchesTotal: int = Field(..., alias="usernameMatchesTotal")
+    phoneMatchesTotal: int = Field(..., alias="phoneMatchesTotal")
+    createdAt: str = Field(..., alias="createdAt")
+    finishedAt: str | None = Field(None, alias="finishedAt")
+    error: str | None = None
+
+    class Config:
+        populate_by_name = True
+        from_attributes = True
+
+
+class TelegramDlMatchResultContactSchema(BaseModel):
+    id: str
+    importFileId: str | None = Field(None, alias="importFileId")
+    originalFileName: str | None = Field(None, alias="originalFileName")
+    telegramId: str | None = Field(None, alias="telegramId")
+    username: str | None = None
+    phone: str | None = None
+    firstName: str | None = Field(None, alias="firstName")
+    lastName: str | None = Field(None, alias="lastName")
+    fullName: str | None = Field(None, alias="fullName")
+    region: str | None = None
+    sourceRowIndex: int | None = Field(None, alias="sourceRowIndex")
+
+    class Config:
+        populate_by_name = True
+
+
+class TelegramDlMatchResultSchema(BaseModel):
+    id: str
+    runId: str = Field(..., alias="runId")
+    dlContactId: str = Field(..., alias="dlContactId")
+    tgmbaseUserId: str | None = Field(None, alias="tgmbaseUserId")
+    strictTelegramIdMatch: bool = Field(..., alias="strictTelegramIdMatch")
+    usernameMatch: bool = Field(..., alias="usernameMatch")
+    phoneMatch: bool = Field(..., alias="phoneMatch")
+    chatActivityMatch: bool = Field(..., alias="chatActivityMatch")
+    dlContact: TelegramDlMatchResultContactSchema = Field(..., alias="dlContact")
+    user: dict | None = None
+    createdAt: str = Field(..., alias="createdAt")
+
+    class Config:
+        populate_by_name = True
+        from_attributes = True
+
+
+class TelegramDlMatchMessageSchema(BaseModel):
+    messageId: str = Field(..., alias="messageId")
+    messageDate: str | None = Field(None, alias="messageDate")
+    text: str | None = None
+
+    class Config:
+        populate_by_name = True
+
+
+class TelegramDlMatchResultMessagesGroupSchema(BaseModel):
+    peerId: str = Field(..., alias="peerId")
+    chatType: str = Field(..., alias="chatType")
+    title: str
+    isExcluded: bool = Field(..., alias="isExcluded")
+    messages: list[TelegramDlMatchMessageSchema]
+
+    class Config:
+        populate_by_name = True
+
+
+class TelegramDlMatchExcludeChatSchema(BaseModel):
+    peerId: str = Field(..., alias="peerId")
+
+    class Config:
+        populate_by_name = True
+
