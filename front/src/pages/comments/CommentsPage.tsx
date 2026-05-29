@@ -44,7 +44,7 @@ function CommentsPage() {
 
   return (
     <PageContainer maxWidth="1600px" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 px-4 md:px-8">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 px-4 md:px-8">
         <PageHeader
           variant="badges"
           title={
@@ -77,7 +77,7 @@ function CommentsPage() {
       </div>
 
       {/* Filters Panel - staggered animation */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100 px-4 md:px-8">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100 px-4 md:px-8">
         <FiltersPanel
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
@@ -171,7 +171,7 @@ function CommentsPage() {
       </div>
 
       {/* Comments Table - staggered animation */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
         {useSearchResults ? (
           <CommentsSearchResults result={searchResults} isLoading={isLoading} />
         ) : (

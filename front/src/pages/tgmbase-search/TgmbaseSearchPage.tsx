@@ -79,7 +79,7 @@ function TgmbaseBatchToolbar({
       : 0
 
   return (
-    <Card className="sticky top-4 z-20 border-white/10 bg-slate-950/90 text-slate-100 backdrop-blur">
+    <Card className="sticky top-4 z-20 border-border/10 bg-background-secondary/90 text-text-primary">
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
@@ -105,13 +105,13 @@ function TgmbaseBatchToolbar({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={'581341734\n@Andrei79ru\n+79991234567'}
-          className="min-h-40 w-full rounded-card border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-primary/60"
+          className="min-h-40 w-full rounded-card border border-border/10 bg-background-secondary/80 px-4 py-3 text-sm text-text-primary outline-none transition focus:border-primary/60"
         />
 
-        <div className="rounded-card border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-300">
+        <div className="rounded-card border border-border/10 bg-background-secondary/70 p-3 text-sm text-text-secondary">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span>Подготовлено запросов: {queries.length}</span>
-            <span className="text-slate-400">По одному идентификатору на строку</span>
+            <span className="text-text-secondary">По одному идентификатору на строку</span>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ function TgmbaseBatchToolbar({
                   {progressTitleMap[progress.status]}
                 </div>
               </div>
-              <div className="text-sm text-slate-300">
+              <div className="text-sm text-text-secondary">
                 {progress.connected ? 'WebSocket подключен' : 'WebSocket подключается'}
               </div>
             </div>
@@ -145,7 +145,7 @@ function TgmbaseBatchToolbar({
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-300">
+            <div className="mt-3 flex flex-wrap gap-4 text-sm text-text-secondary">
               <span>
                 Обработано {progress.processedQueries} из {progress.totalQueries}
               </span>
@@ -189,7 +189,7 @@ function TgmbaseMessagesPanel({
   onLoadMore,
 }: TgmbaseMessagesPanelProps) {
   return (
-    <Card className="border-white/10 bg-slate-950/50 text-slate-100">
+    <Card className="border-border/10 bg-background-secondary/50 text-text-primary">
       <CardHeader>
         <CardTitle>
           Последние сообщения ({messagesPage.items.length} из {messagesPage.total})
@@ -197,14 +197,14 @@ function TgmbaseMessagesPanel({
       </CardHeader>
       <CardContent className="space-y-3">
         {messagesPage.items.length === 0 ? (
-          <div className="text-sm text-slate-400">Сообщения не найдены.</div>
+          <div className="text-sm text-text-secondary">Сообщения не найдены.</div>
         ) : (
           messagesPage.items.map((message) => (
             <div
               key={message.id}
-              className="rounded-card border border-white/10 bg-[#131316]/90 p-3"
+              className="rounded-card border border-border/10 bg-[#131316]/90 p-3"
             >
-              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
                 <span>{new Date(message.date).toLocaleString('ru-RU')}</span>
                 <span>peer: {message.peerTitle ?? message.peerId}</span>
                 <span>{message.peerType}</span>
@@ -243,7 +243,7 @@ function TgmbaseResultsSummary({
   const statusOrder: TgmbaseSearchStatus[] = ['found', 'not_found', 'ambiguous', 'invalid', 'error']
 
   return (
-    <Card className="border-white/10 bg-slate-900/70 text-slate-100">
+    <Card className="border-border/10 bg-background-secondary/70 text-text-primary">
       <CardHeader className="pb-3">
         <CardTitle className="text-xl">Результаты батча</CardTitle>
       </CardHeader>
@@ -296,7 +296,7 @@ function TgmbaseResultsFilters({
   const queryTypes: TgmbaseQueryType[] = ['telegramId', 'username', 'phoneNumber']
 
   return (
-    <Card className="border-white/10 bg-slate-900/60 text-slate-100">
+    <Card className="border-border/10 bg-background-secondary/60 text-text-primary">
       <CardContent className="space-y-4 p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <Input
@@ -304,13 +304,13 @@ function TgmbaseResultsFilters({
             onChange={(event) => onSearchTermChange(event.target.value)}
             placeholder="Поиск по query, имени, username, телефону, чатам"
             aria-label="Поиск по результатам tgmbase"
-            className="border-white/10 bg-slate-950/80 text-slate-100"
+            className="border-border/10 bg-background-secondary/80 text-text-primary"
           />
           <select
             aria-label="Сортировка результатов tgmbase"
             value={sortBy}
             onChange={(event) => onSortChange(event.target.value as TgmbaseSortMode)}
-            className="h-10 rounded-lg border border-white/10 bg-slate-950/80 px-3 text-sm text-slate-100"
+            className="h-10 rounded-lg border border-border/10 bg-background-secondary/80 px-3 text-sm text-text-primary"
           >
             <option value="priority">Сначала проблемные</option>
             <option value="input">По порядку ввода</option>
@@ -337,7 +337,7 @@ function TgmbaseResultsFilters({
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-4 text-sm text-slate-300">
+        <div className="flex flex-wrap gap-4 text-sm text-text-secondary">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -390,7 +390,7 @@ function TgmbaseResultsList({
   onMoveSelection,
 }: TgmbaseResultsListProps) {
   return (
-    <Card className="border-white/10 bg-slate-900/60 text-slate-100">
+    <Card className="border-border/10 bg-background-secondary/60 text-text-primary">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg">Список результатов</CardTitle>
       </CardHeader>
@@ -424,13 +424,13 @@ function TgmbaseResultsList({
                     'w-full rounded-card border px-4 py-3 text-left transition',
                     selected
                       ? 'border-primary/60 bg-primary/10'
-                      : 'border-white/10 bg-slate-950/60 hover:border-primary/30 hover:bg-slate-950'
+                      : 'border-border/10 bg-background-secondary/60 hover:border-primary/30 hover:bg-background-secondary'
                   )}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-slate-100">{item.query}</span>
+                        <span className="font-semibold text-text-primary">{item.query}</span>
                         <Badge variant="outline" className="text-slate-200">
                           {tgmbaseQueryTypeLabels[item.queryType]}
                         </Badge>
@@ -441,9 +441,9 @@ function TgmbaseResultsList({
                           {tgmbaseStatusLabels[item.status]}
                         </Badge>
                       </div>
-                      <div className="text-sm text-slate-300">{getPrimaryLabel(item)}</div>
+                      <div className="text-sm text-text-secondary">{getPrimaryLabel(item)}</div>
                     </div>
-                    <div className="flex gap-3 text-xs text-slate-400">
+                    <div className="flex gap-3 text-xs text-text-secondary">
                       <span>Чаты {item.stats.groups}</span>
                       <span>Контакты {item.stats.contacts}</span>
                       <span>Сообщения {item.stats.messages}</span>
@@ -477,7 +477,7 @@ function TgmbaseResultDetails({
   if (!item) {
     return (
       <Card
-        className="border-white/10 bg-slate-900/60 text-slate-100"
+        className="border-border/10 bg-background-secondary/60 text-text-primary"
         role="region"
         aria-label="Панель деталей tgmbase"
       >
@@ -485,10 +485,10 @@ function TgmbaseResultDetails({
           <h2 className="text-xl font-semibold">Детали результата</h2>
         </CardHeader>
         <CardContent>
-          <Empty className="border-white/10 bg-slate-950/60 text-slate-200">
+          <Empty className="border-border/10 bg-background-secondary/60 text-text-primary/90">
             <div className="space-y-3">
               <div className="text-lg font-semibold">Нет видимых результатов</div>
-              <div className="text-sm text-slate-400">
+              <div className="text-sm text-text-secondary">
                 {hasActiveFilters
                   ? 'Снимите часть фильтров, чтобы снова увидеть записи.'
                   : 'Запустите поиск, чтобы открыть детали результата.'}
@@ -511,25 +511,25 @@ function TgmbaseResultDetails({
 
   return (
     <Card
-      className="border-white/10 bg-slate-900/60 text-slate-100"
+      className="border-border/10 bg-background-secondary/60 text-text-primary"
       role="region"
       aria-label="Панель деталей tgmbase"
     >
-      <CardHeader className="gap-3 border-b border-white/10">
+      <CardHeader className="gap-3 border-b border-border/10">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-semibold">Детали результата</h2>
           <Badge variant="outline" className="border-primary/30 bg-primary/10 text-orange-200">
             {tgmbaseStatusLabels[item.status]}
           </Badge>
         </div>
-        <div className="text-sm text-slate-400">
+        <div className="text-sm text-text-secondary">
           Исходный запрос: {item.query} · Нормализованное значение: {item.normalizedQuery}
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {item.status === 'not_found' ? (
-          <div className="rounded-card border border-white/10 bg-slate-950/60 p-4 text-slate-300">
-            <div className="font-semibold text-slate-100">Совпадения не найдены</div>
+          <div className="rounded-card border border-border/10 bg-background-secondary/60 p-4 text-text-secondary">
+            <div className="font-semibold text-text-primary">Совпадения не найдены</div>
             <div className="mt-1 text-sm">В tgmbase нет пользователя с таким идентификатором.</div>
           </div>
         ) : null}
@@ -543,13 +543,13 @@ function TgmbaseResultDetails({
 
         {item.profile ? (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-text-secondary">
               Профиль
             </h3>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-card border border-white/10 bg-slate-950/60 p-4">
-                <div className="text-lg font-semibold text-slate-100">{item.profile.fullName}</div>
-                <div className="mt-2 space-y-1 text-sm text-slate-300">
+              <div className="rounded-card border border-border/10 bg-background-secondary/60 p-4">
+                <div className="text-lg font-semibold text-text-primary">{item.profile.fullName}</div>
+                <div className="mt-2 space-y-1 text-sm text-text-secondary">
                   <div>telegramId: {item.profile.telegramId}</div>
                   <div>username: {item.profile.username ?? '—'}</div>
                   <div>phone: {item.profile.phoneNumber ?? '—'}</div>
@@ -562,17 +562,17 @@ function TgmbaseResultDetails({
 
         {item.candidates.length > 0 ? (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-text-secondary">
               Кандидаты
             </h3>
             <div className="grid gap-3 md:grid-cols-2">
               {item.candidates.map((candidate) => (
                 <div
                   key={candidate.telegramId}
-                  className="rounded-card border border-white/10 bg-slate-950/60 p-4"
+                  className="rounded-card border border-border/10 bg-background-secondary/60 p-4"
                 >
-                  <div className="font-semibold text-slate-100">{candidate.fullName}</div>
-                  <div className="mt-2 text-sm text-slate-300">
+                  <div className="font-semibold text-text-primary">{candidate.fullName}</div>
+                  <div className="mt-2 text-sm text-text-secondary">
                     {candidate.username ? `@${candidate.username}` : candidate.telegramId}
                   </div>
                 </div>
@@ -583,17 +583,17 @@ function TgmbaseResultDetails({
 
         {item.groups.length > 0 ? (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-text-secondary">
               Чаты и каналы
             </h3>
             <div className="grid gap-3 md:grid-cols-2">
               {item.groups.map((group) => (
                 <div
                   key={group.peerId}
-                  className="rounded-card border border-white/10 bg-slate-950/60 p-4"
+                  className="rounded-card border border-border/10 bg-background-secondary/60 p-4"
                 >
-                  <div className="font-semibold text-slate-100">{group.title}</div>
-                  <div className="mt-2 text-sm text-slate-400">
+                  <div className="font-semibold text-text-primary">{group.title}</div>
+                  <div className="mt-2 text-sm text-text-secondary">
                     {group.type} · {group.peerId}
                   </div>
                 </div>
@@ -604,20 +604,20 @@ function TgmbaseResultDetails({
 
         {item.contacts.length > 0 ? (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-text-secondary">
               Активные контакты
             </h3>
             <div className="grid gap-3 md:grid-cols-2">
               {item.contacts.map((contact) => (
                 <div
                   key={contact.telegramId}
-                  className="rounded-card border border-white/10 bg-slate-950/60 p-4"
+                  className="rounded-card border border-border/10 bg-background-secondary/60 p-4"
                 >
-                  <div className="font-semibold text-slate-100">{contact.fullName}</div>
-                  <div className="mt-2 text-sm text-slate-300">
+                  <div className="font-semibold text-text-primary">{contact.fullName}</div>
+                  <div className="mt-2 text-sm text-text-secondary">
                     {contact.username ? `@${contact.username}` : contact.telegramId}
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">
+                  <div className="mt-1 text-xs text-text-secondary/70">
                     Общих чатов: {contact.commonPeersCount} · Сообщений: {contact.messageCount}
                   </div>
                 </div>
@@ -716,7 +716,7 @@ export default function TgmbaseSearchPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-8 px-4 py-6 font-monitoring-body md:px-8">
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <PageHeader
           variant="hero"
           title="Telegram Intelligence Search"
@@ -732,7 +732,7 @@ export default function TgmbaseSearchPage() {
         />
       </div>
 
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
         <TgmbaseBatchToolbar
           value={vm.input}
           onChange={vm.setInput}
@@ -745,7 +745,7 @@ export default function TgmbaseSearchPage() {
       </div>
 
       {response ? (
-        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-150">
+        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-150">
           <TgmbaseResultsWorkspace
             total={response.summary.total}
             summary={resultsVm.summary}

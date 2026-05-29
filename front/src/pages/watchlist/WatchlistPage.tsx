@@ -259,7 +259,7 @@ export const WatchlistTableCard = memo(
           size="sm"
           onClick={onRefresh}
           disabled={isLoadingAuthors}
-          className="h-10 text-muted-foreground hover:text-primary"
+          className="h-10 text-text-secondary hover:text-primary"
           title="Обновить список"
         >
           <RefreshCw className={`mr-2 size-4 ${isLoadingAuthors ? 'animate-spin' : ''}`} />
@@ -311,7 +311,7 @@ export const WatchlistTableCard = memo(
             <div className="py-6">
               {authors.length === 0 ? (
                 <EmptyState
-                  icon="👥"
+                  icon={<Users className="w-8 h-8" />}
                   title="Список наблюдения пуст"
                   description={
                     WATCHLIST_CONSTANTS.EMPTY_AUTHORS_MESSAGE ||
@@ -336,7 +336,7 @@ export const WatchlistTableCard = memo(
                 onRequestSort={requestAuthorSort}
                 onRowClick={(item) => handleSelectAuthor(item)}
               />
-              <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">
+              <div className="flex justify-center py-4 border-t border-border/40 bg-background-primary/10">
                 {hasMoreAuthors ? (
                   <Button
                     variant="ghost"
@@ -602,11 +602,11 @@ function WatchlistPage() {
 
   return (
     <PageContainer maxWidth="1600px" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         {renderHeader()}
       </div>
 
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Список авторов
@@ -630,7 +630,7 @@ function WatchlistPage() {
       </div>
 
       {currentAuthor && (
-        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
           <WatchlistAuthorDetails
             currentAuthor={currentAuthor}
             isLoadingAuthorDetails={isLoadingAuthorDetails}

@@ -51,7 +51,7 @@ export const CommentThreadItem = memo(function CommentThreadItem({
 
       <div
         className={cn(
-          'group relative rounded-lg border border-white/10 bg-slate-900/30 p-3 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-slate-900/40',
+          'group relative rounded-lg border border-border/10 bg-background-secondary/30 p-3 transition-all hover:border-border/20 hover:bg-background-secondary/40',
           depth > 0 && 'ml-2'
         )}
       >
@@ -78,7 +78,7 @@ export const CommentThreadItem = memo(function CommentThreadItem({
                 <img
                   src={item.author.logo}
                   alt={authorName}
-                  className="size-6 rounded-full border border-white/10"
+                  className="size-6 rounded-full border border-border/10"
                   loading="lazy"
                 />
               )}

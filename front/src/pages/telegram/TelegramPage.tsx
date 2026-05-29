@@ -74,7 +74,7 @@ export function TelegramSessionCard() {
                 placeholder="Введите код"
                 disabled={authLoading}
               />
-              <p className="text-xs text-muted-foreground">{authHint}</p>
+              <p className="text-xs text-text-secondary">{authHint}</p>
             </div>
 
             <div className="space-y-2">
@@ -112,7 +112,7 @@ export function TelegramSessionCard() {
 
         {authStep === 'success' && authResult && (
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
+            <div className="flex flex-col gap-3 rounded-lg border bg-background-secondary/50 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -120,7 +120,7 @@ export function TelegramSessionCard() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">{authResult.username || 'Без имени'}</p>
-                    <p className="text-xs text-muted-foreground">{authResult.phoneNumber}</p>
+                    <p className="text-xs text-text-secondary">{authResult.phoneNumber}</p>
                   </div>
                 </div>
                 <Badge
@@ -145,7 +145,7 @@ export function TelegramSessionCard() {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-start text-muted-foreground hover:text-foreground"
+                className="w-full justify-start text-text-secondary hover:text-text-primary"
                 onClick={handleStartNewSession}
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -157,12 +157,12 @@ export function TelegramSessionCard() {
 
         {authStep === 'success' && !authResult && (
           <div className="flex flex-col items-center justify-center gap-4 py-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <LogOut className="h-6 w-6 text-muted-foreground" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background-primary">
+              <LogOut className="h-6 w-6 text-text-secondary" />
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium">Нет активной сессии</p>
-              <p className="text-xs text-muted-foreground max-w-[200px]">
+              <p className="text-xs text-text-secondary max-w-[200px]">
                 Создайте новую сессию для работы с Telegram API
               </p>
             </div>
@@ -247,7 +247,7 @@ export function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps) {
               Идентификатор (username или ID)
             </label>
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-text-secondary" />
               <Input
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
@@ -256,7 +256,7 @@ export function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps) {
                 disabled={loading}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-text-secondary">
               {syncMode === 'members'
                 ? 'Для первого импорта используйте @username, публичную или invite-ссылку. Внутренние ID и t.me/c/... работают для уже известных чатов.'
                 : 'Для одного треда можно вставить t.me/c/... ссылку на сообщение. Если чат известен системе, можно использовать и внутренний ID.'}
@@ -376,13 +376,13 @@ export function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps) {
           <div className="mt-6 pt-6 border-t space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground text-xs uppercase">Чат</p>
+                <p className="text-text-secondary text-xs uppercase">Чат</p>
                 <p className="font-medium truncate" title={lastSyncData.title || ''}>
                   {lastSyncData.title || 'Без названия'}
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs uppercase mb-1.5">Тип источника</p>
+                <p className="text-text-secondary text-xs uppercase mb-1.5">Тип источника</p>
                 {(() => {
                   const typeInfo = getChatTypeInfo(lastSyncData.type)
                   const Icon = typeInfo.icon
@@ -395,16 +395,16 @@ export function TelegramSyncCard({ onDataLoaded }: TelegramSyncCardProps) {
                 })()}
               </div>
               <div>
-                <p className="text-muted-foreground text-xs uppercase">Всего</p>
+                <p className="text-text-secondary text-xs uppercase">Всего</p>
                 <p className="font-medium">{lastSyncData.totalMembers ?? '—'}</p>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs uppercase">Загружено</p>
+                <p className="text-text-secondary text-xs uppercase">Загружено</p>
                 <p className="font-medium text-primary">{lastSyncData.syncedMembers}</p>
               </div>
               {'source' in lastSyncData && (
                 <div>
-                  <p className="text-muted-foreground text-xs uppercase">Сообщений просмотрено</p>
+                  <p className="text-text-secondary text-xs uppercase">Сообщений просмотрено</p>
                   <p className="font-medium">{lastSyncData.fetchedMessages}</p>
                 </div>
               )}
@@ -482,9 +482,9 @@ export function TelegramMembersCard({ data }: TelegramMembersCardProps) {
     return (
       <Card className="h-full border-dashed">
         <CardContent className="flex flex-col items-center justify-center h-[300px] text-center">
-          <Users className="h-12 w-12 text-muted-foreground/20 mb-4" />
-          <h3 className="font-medium text-lg text-muted-foreground">Нет данных</h3>
-          <p className="text-sm text-muted-foreground/60 max-w-xs">
+          <Users className="h-12 w-12 text-text-secondary/20 mb-4" />
+          <h3 className="font-medium text-lg text-text-secondary">Нет данных</h3>
+          <p className="text-sm text-text-secondary/60 max-w-xs">
             Выполните синхронизацию, чтобы увидеть участников или авторов комментариев
           </p>
         </CardContent>
@@ -576,7 +576,7 @@ export function TelegramMembersCard({ data }: TelegramMembersCardProps) {
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium">{formatMemberName(member)}</span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-text-secondary">
                             ID: {member.telegramId}
                           </span>
                         </div>
@@ -595,10 +595,10 @@ export function TelegramMembersCard({ data }: TelegramMembersCardProps) {
                               @{member.username}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-text-secondary">—</span>
                           )}
                           {member.phoneNumber && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-text-secondary">
                               {member.phoneNumber}
                             </span>
                           )}
@@ -617,12 +617,12 @@ export function TelegramMembersCard({ data }: TelegramMembersCardProps) {
                             </Badge>
                           ))}
                           {flags.length === 0 && (
-                            <span className="text-muted-foreground text-xs">—</span>
+                            <span className="text-text-secondary text-xs">—</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col text-xs text-muted-foreground">
+                        <div className="flex flex-col text-xs text-text-secondary">
                           <span>Вход: {formatDate(member.joinedAt)}</span>
                           {member.leftAt && <span>Выход: {formatDate(member.leftAt)}</span>}
                         </div>
@@ -644,7 +644,7 @@ function TelegramPage() {
 
   return (
     <div className="flex flex-col gap-10 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 font-monitoring-body">
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <PageHeader
           variant="grid"
           title={
@@ -662,7 +662,7 @@ function TelegramPage() {
         />
       </div>
 
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Управление подключением
@@ -676,7 +676,7 @@ function TelegramPage() {
         </div>
       </div>
 
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Результат синхронизации

@@ -118,7 +118,7 @@ export function ListingsInfinite({
 
       {!initialLoading && items.length === 0 && !loading && !error ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-border/50 bg-background-secondary p-12 text-center">
-          <div className="mb-4 rounded-full bg-muted p-4">
+          <div className="mb-4 rounded-full bg-background-primary p-4">
             <span className="text-4xl">🔍</span>
           </div>
           <h3 className="text-lg font-semibold text-text-primary">Ничего не найдено</h3>

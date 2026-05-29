@@ -136,7 +136,7 @@ function ColumnToggle({ hiddenColumns, onToggle }: ColumnToggleProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-44 border-white/10 bg-slate-900/95 backdrop-blur-2xl"
+        className="w-44 border-border/10 bg-background-secondary/95 "
       >
         <DropdownMenuLabel className="font-mono-accent text-xs uppercase tracking-wider text-slate-400">
           Показать столбцы
@@ -206,7 +206,7 @@ export function ListingsTable({
         render: (listing) => {
           const source = formatSourceLabel(listing.source)
           return listing.source ? (
-            <span className="inline-flex items-center rounded-full border border-white/10 bg-slate-800/60 px-2 py-0.5 font-mono-accent text-xs text-slate-400">
+            <span className="inline-flex items-center rounded-full border border-border/10 bg-slate-800/60 px-2 py-0.5 font-mono-accent text-xs text-slate-400">
               {source}
             </span>
           ) : (
@@ -341,7 +341,7 @@ export function ListingsTable({
                 Да
               </button>
               <button
-                className="h-6 rounded-md border border-white/10 px-2 font-mono-accent text-xs text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                className="h-6 rounded-md border border-border/10 px-2 font-mono-accent text-xs text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
                 onClick={() => setConfirmDeleteId(null)}
               >
                 Нет
@@ -397,7 +397,7 @@ export function ListingsTable({
         <ColumnToggle hiddenColumns={hiddenColumns} onToggle={handleToggleColumn} />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm">
+      <div className="overflow-hidden rounded-xl border border-border/10 bg-background-secondary/50 ">
         {/* Top accent line */}
         <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 

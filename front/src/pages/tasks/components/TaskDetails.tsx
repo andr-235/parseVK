@@ -601,7 +601,7 @@ const GroupProgressBar = ({
         className="h-1.5"
       />
       <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-foreground">{labelText}</span>
+        <span className="font-medium text-text-primary">{labelText}</span>
         {detail}
       </div>
     </div>
@@ -639,7 +639,7 @@ const GroupResultCell = ({ group }: GroupResultCellProps) => {
         currentValue={1}
         totalValue={1}
         labelText="100%"
-        detail={<span className="text-muted-foreground">{detail}</span>}
+        detail={<span className="text-text-secondary">{detail}</span>}
       />
     )
   }
@@ -659,7 +659,7 @@ const GroupResultCell = ({ group }: GroupResultCellProps) => {
   }
 
   if (group.status === 'pending') {
-    return <span className="text-sm text-muted-foreground">В очереди</span>
+    return <span className="text-sm text-text-secondary">В очереди</span>
   }
 
   if (group.status === 'processing' || group.status === 'running') {
@@ -672,7 +672,7 @@ const GroupResultCell = ({ group }: GroupResultCellProps) => {
           currentValue={0}
           totalValue={1}
           labelText="Обработка..."
-          detail={<span className="text-muted-foreground">...</span>}
+          detail={<span className="text-text-secondary">...</span>}
           indeterminate
         />
       )
@@ -709,13 +709,13 @@ const GroupResultCell = ({ group }: GroupResultCellProps) => {
         currentValue={hasConcreteProgress ? barCurrent : 0}
         totalValue={hasConcreteProgress ? barTotal : 1}
         labelText={percentText}
-        detail={<span className="text-muted-foreground">Парсинг...</span>}
+        detail={<span className="text-text-secondary">Парсинг...</span>}
         indeterminate={!hasConcreteProgress}
       />
     )
   }
 
-  return <span className="text-muted-foreground">—</span>
+  return <span className="text-text-secondary">—</span>
 }
 
 interface GroupsTableProps {
@@ -730,7 +730,7 @@ const GroupsTable = ({ groups }: GroupsTableProps) => {
       </h3>
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-background-secondary/70">
         <table className="w-full text-left text-sm">
-          <thead className="bg-muted/70 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <thead className="bg-background-primary/70 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary">
             <tr>
               <th className="px-6 py-4 w-16">№</th>
               <th className="px-6 py-4">Название группы</th>
@@ -752,7 +752,7 @@ const GroupsTable = ({ groups }: GroupsTableProps) => {
               groups.map((group, index) => (
                 <tr
                   key={`${group.groupId}-${index}`}
-                  className="transition-colors hover:bg-muted/40"
+                  className="transition-colors hover:bg-background-primary/40"
                 >
                   <td className="px-6 py-4 font-mono-accent text-xs font-medium text-text-secondary">
                     {index + 1}

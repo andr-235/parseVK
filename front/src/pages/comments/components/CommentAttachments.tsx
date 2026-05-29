@@ -26,7 +26,7 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
           <img
             src={attachment.url}
             alt="Фото из поста"
-            className="w-full h-auto max-h-96 object-contain bg-muted/10"
+            className="w-full h-auto max-h-96 object-contain bg-background-primary/10"
             loading="lazy"
           />
         </a>
@@ -37,7 +37,7 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
       return (
         <div
           key={`video-${attachment.id ?? 'item'}-${index}`}
-          className="flex items-center gap-3 rounded-xl border border-border/40 p-3 bg-muted/20 hover:bg-muted/30 transition-colors"
+          className="flex items-center gap-3 rounded-xl border border-border/40 p-3 bg-background-primary/20 hover:bg-background-primary/30 transition-colors"
         >
           {attachment.thumb && (
             <div className="relative group/video shrink-0">
@@ -53,7 +53,7 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
               <span className="truncate">{attachment.title}</span>
             </div>
             {attachment.ownerId && attachment.id && (
@@ -63,7 +63,7 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
                 }`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1 mt-1.5 transition-colors"
+                className="text-xs text-text-secondary hover:text-accent-primary inline-flex items-center gap-1 mt-1.5 transition-colors"
               >
                 Смотреть видео
                 <ExternalLink className="h-3 w-3" />
@@ -80,7 +80,7 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
         href={attachment.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-start gap-3 rounded-xl border border-border/40 p-3 bg-muted/20 hover:bg-muted/30 hover:border-primary/30 transition-all"
+        className="flex items-start gap-3 rounded-xl border border-border/40 p-3 bg-background-primary/20 hover:bg-background-primary/30 hover:border-primary/30 transition-all"
       >
         {attachment.photoUrl ? (
           <img
@@ -95,15 +95,15 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
             <span className="truncate">{attachment.title}</span>
           </div>
           {attachment.description && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            <p className="text-xs text-text-secondary mt-1 line-clamp-2">
               {attachment.description}
             </p>
           )}
-          <span className="text-[10px] text-muted-foreground/60 mt-1.5 block truncate">
+          <span className="text-[10px] text-text-secondary/60 mt-1.5 block truncate">
             {attachment.url}
           </span>
         </div>

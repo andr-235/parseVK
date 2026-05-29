@@ -93,18 +93,18 @@ function AuthorsTableCard({
                 {avatarUrl ? (
                   <AvatarImage src={avatarUrl} alt={author.fullName} />
                 ) : (
-                  <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                  <AvatarFallback className="bg-muted text-text-secondary text-xs">
                     {getAuthorInitials(author.fullName)}
                   </AvatarFallback>
                 )}
               </Avatar>
 
               <div className="flex flex-col gap-0.5">
-                <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
+                <span className="font-medium text-sm text-text-primary group-hover:text-accent-primary transition-colors">
                   {author.fullName}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-text-secondary">
                     {author.screenName ? `@${author.screenName}` : `id${author.vkUserId}`}
                   </span>
                   <a
@@ -136,7 +136,7 @@ function AuthorsTableCard({
         header: 'Город',
         key: 'city',
         sortable: true,
-        cellClassName: 'w-[200px] text-sm text-muted-foreground',
+        cellClassName: 'w-[200px] text-sm text-text-secondary',
         render: (author) => resolveCityLabel(author.city) ?? '—',
       },
       {
@@ -158,56 +158,56 @@ function AuthorsTableCard({
         header: 'Аудио',
         key: 'audiosCount',
         sortable: true,
-        cellClassName: 'text-sm text-muted-foreground',
+        cellClassName: 'text-sm text-text-secondary',
         render: (author) => formatMetricValue(author.audiosCount),
       },
       {
         header: 'Видео',
         key: 'videosCount',
         sortable: true,
-        cellClassName: 'text-sm text-muted-foreground',
+        cellClassName: 'text-sm text-text-secondary',
         render: (author) => formatMetricValue(author.videosCount),
       },
       {
         header: 'Друзья',
         key: 'friendsCount',
         sortable: true,
-        cellClassName: 'text-sm text-muted-foreground',
+        cellClassName: 'text-sm text-text-secondary',
         render: (author) => formatMetricValue(author.friendsCount),
       },
       {
         header: 'Подписчики',
         key: 'followersCount',
         sortable: true,
-        cellClassName: 'text-sm text-muted-foreground',
+        cellClassName: 'text-sm text-text-secondary',
         render: (author) => formatMetricValue(author.followersCount),
       },
       {
         header: 'Дата входа',
         key: 'lastSeenAt',
         sortable: true,
-        cellClassName: 'text-sm text-muted-foreground',
+        cellClassName: 'text-sm text-text-secondary',
         render: (author) => formatDateTime(author.lastSeenAt),
       },
       {
         header: 'Дата проверки',
         key: 'verifiedAt',
         sortable: true,
-        cellClassName: 'text-sm text-muted-foreground',
+        cellClassName: 'text-sm text-text-secondary',
         render: (author) => formatDateTime(author.verifiedAt),
       },
       {
         header: 'Действия',
         key: 'actions',
-        headerClassName: 'text-right sticky right-0 bg-muted/30 backdrop-blur-sm z-10',
+        headerClassName: 'text-right sticky right-0 bg-background-primary/30 backdrop-blur-sm z-10',
         cellClassName:
-          'text-right sticky right-0 bg-card z-10 group-hover:bg-muted/50 transition-colors',
+          'text-right sticky right-0 bg-background-secondary z-10 group-hover:bg-background-primary/50 transition-colors',
         render: (author) => (
           <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
               variant="outline"
-              className="h-8 w-8 p-0 rounded-full"
+              className="h-10 w-10 p-0 rounded-full"
               onClick={() => onAnalyzePhotos(author)}
               disabled={isAnalyzing && analyzingVkUserId === author.vkUserId}
               title="Анализ фотографий"
@@ -215,13 +215,13 @@ function AuthorsTableCard({
               {isAnalyzing && analyzingVkUserId === author.vkUserId ? (
                 <Spinner className="h-3.5 w-3.5" />
               ) : (
-                <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+                <Camera className="h-3.5 w-3.5 text-text-secondary" />
               )}
             </Button>
             <Button
               size="sm"
               variant="destructive"
-              className="h-8 w-8 p-0 rounded-full"
+              className="h-10 w-10 p-0 rounded-full"
               onClick={() => onDeleteAuthor(author)}
               disabled={deletingVkUserId === author.vkUserId}
               title="Удалить автора и его комментарии"
@@ -235,7 +235,7 @@ function AuthorsTableCard({
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0 rounded-full hover:bg-primary/10 hover:text-primary"
+              className="h-10 w-10 p-0 rounded-full hover:bg-primary/10 hover:text-primary"
               onClick={() => onOpenDetails(author)}
               title="Открыть детали"
             >
@@ -261,7 +261,7 @@ function AuthorsTableCard({
       <CardContent className="p-0">
         {showEmptyState ? (
           <EmptyState
-            icon="👥"
+            icon={<Users className="w-8 h-8" />}
             title={emptyTitle}
             description={emptyDescription}
           />
@@ -276,12 +276,12 @@ function AuthorsTableCard({
             />
 
             {hasMore && (
-              <div className="flex justify-center py-4 border-t border-border/40 bg-muted/10">
+              <div className="flex justify-center py-4 border-t border-border/40 bg-background-primary/10">
                 <Button
                   onClick={onLoadMore}
                   disabled={isLoadingMore}
                   variant="ghost"
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-text-secondary hover:text-text-primary"
                 >
                   {isLoadingMore ? (
                     <span className="flex items-center gap-2">
@@ -354,7 +354,7 @@ function AuthorsPage() {
 
   return (
     <PageContainer maxWidth="1600px" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <PageHeader
           variant="grid"
           title={
@@ -379,7 +379,7 @@ function AuthorsPage() {
         />
       </div>
 
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">Фильтры</h2>
           <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
@@ -431,7 +431,7 @@ function AuthorsPage() {
         </FiltersPanel>
       </div>
 
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             База авторов

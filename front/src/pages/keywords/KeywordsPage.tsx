@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, memo } from 'react'
 import { PageHeader, PageContainer } from '@/shared/components/common'
 import {
   BookMarked,
@@ -158,7 +158,7 @@ interface KeywordCardProps {
   onUpdateCategory: (id: number, category?: string | null) => void | Promise<void>
 }
 
-export function KeywordCard({
+export const KeywordCard = memo(function KeywordCard({
   keyword,
   categorySuggestions,
   onDelete,
@@ -197,7 +197,7 @@ export function KeywordCard({
 
       <CardContent className="flex-1 p-3 pt-4 flex flex-col">
         <h3
-          className="font-bold text-lg text-foreground truncate pr-8 mb-3 tracking-tight"
+          className="font-bold text-lg text-text-primary truncate pr-8 mb-3 tracking-tight"
           title={keyword.word}
         >
           {keyword.word}
@@ -240,14 +240,14 @@ export function KeywordCard({
           ) : keyword.category ? (
             <Badge
               variant="secondary"
-              className="w-fit text-xs font-normal px-2.5 py-0.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/10"
+              className="w-fit text-xs font-normal px-2.5 py-0.5 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 border border-accent-primary/10"
             >
               {keyword.category}
             </Badge>
           ) : (
             <Badge
               variant="outline"
-              className="w-fit text-xs font-normal text-muted-foreground border-muted-foreground/20 bg-transparent"
+              className="w-fit text-xs font-normal text-text-secondary border-text-secondary/20 bg-transparent"
             >
               Без категории
             </Badge>
@@ -280,7 +280,7 @@ export function KeywordCard({
       </CardContent>
     </Card>
   )
-}
+})
 
 interface KeywordCategorySectionProps {
   category: string
@@ -310,7 +310,7 @@ export function KeywordCategorySection({
           <h3 className="text-base font-semibold tracking-tight">{category}</h3>
           <Badge
             variant="secondary"
-            className="bg-background/60 px-2 py-0.5 text-xs font-normal text-muted-foreground"
+            className="bg-background-primary/60 px-2 py-0.5 text-xs font-normal text-text-secondary"
           >
             {keywords.length}
           </Badge>
@@ -446,7 +446,7 @@ export function KeywordsTableCard({
                   >
                     {option.label}
                     {sortState?.key === option.key && (
-                      <span className="ml-auto font-mono-accent text-xs text-primary">
+                      <span className="ml-auto font-mono-accent text-xs text-accent-primary">
                         {sortState.direction === 'asc' ? ' (А-Я)' : ' (Я-А)'}
                       </span>
                     )}
@@ -468,7 +468,7 @@ export function KeywordsTableCard({
 
         {!isLoading && !hasKeywords && (
           <EmptyState
-            icon="🔑"
+            icon={<Hash className="w-8 h-8" />}
             title="Список пуст"
             description="Добавьте ключевые слова вручную или загрузите список из файла. Если не указать категорию, слово автоматически окажется в разделе «Без категории», и вы сможете распределить его позже."
           />
@@ -476,7 +476,7 @@ export function KeywordsTableCard({
 
         {!isLoading && hasKeywords && !hasFilteredKeywords && (
           <div className="flex flex-col items-center justify-center py-12 text-center text-sm text-text-secondary">
-            По запросу «<span className="font-mono-accent text-primary">{searchTerm}</span>» ничего не найдено
+            По запросу «<span className="font-mono-accent text-accent-primary">{searchTerm}</span>» ничего не найдено
           </div>
         )}
 
@@ -761,7 +761,7 @@ function KeywordsPage() {
 
   return (
     <PageContainer maxWidth="1600px" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <PageHeader
           variant="grid"
           title={
@@ -786,7 +786,7 @@ function KeywordsPage() {
         />
       </div>
 
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Добавить ключевые слова
@@ -812,7 +812,7 @@ function KeywordsPage() {
         />
       </div>
 
-      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+      <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
         <div className="flex items-center gap-4">
           <h2 className="font-monitoring-display text-2xl font-semibold text-white">
             Словарь ключевых слов

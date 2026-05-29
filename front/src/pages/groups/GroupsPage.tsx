@@ -49,7 +49,7 @@ function GroupInput({ url, onUrlChange, onAdd }: GroupInputProps) {
       />
       <Button
         onClick={onAdd}
-        className="h-11 bg-primary px-5 font-semibold text-text-light hover:bg-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md w-full sm:w-auto"
+        className="h-11 bg-accent-primary px-5 font-semibold text-text-light hover:bg-primary/90 transition-all duration-200 active:translate-y-px shadow-soft-sm hover:shadow-soft-md w-full sm:w-auto"
       >
         <span className="flex items-center justify-center gap-2">
           <Plus className="size-4" />
@@ -153,7 +153,7 @@ const GroupCard = memo(function GroupCard({ group, onDelete }: GroupCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 flex-1 text-text-secondary transition-colors duration-200 hover:bg-background-primary hover:text-primary"
+            className="h-10 flex-1 text-text-secondary transition-colors duration-200 hover:bg-background-primary hover:text-primary"
             onClick={() => window.open(link, '_blank')}
           >
             <ExternalLink className="mr-1.5 size-3.5" />
@@ -163,7 +163,7 @@ const GroupCard = memo(function GroupCard({ group, onDelete }: GroupCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 flex-1 text-text-secondary transition-colors duration-200 hover:bg-destructive/10 hover:text-destructive"
+            className="h-10 flex-1 text-text-secondary transition-colors duration-200 hover:bg-destructive/10 hover:text-accent-danger"
             onClick={() => onDelete(group.id)}
           >
             <Trash2 className="mr-1.5 size-3.5" />
@@ -241,7 +241,7 @@ function GroupsTableCard({
         size="sm"
         onClick={onClear}
         disabled={clearDisabled}
-        className="h-10 text-text-secondary transition-colors duration-200 hover:bg-destructive/10 hover:text-destructive"
+        className="h-10 text-text-secondary transition-colors duration-200 hover:bg-destructive/10 hover:text-accent-danger"
         title="Очистить список"
       >
         <Trash2 className="mr-2 size-4" />
@@ -321,7 +321,7 @@ function GroupsTableCard({
 
         {!isLoading && !hasGroups && (
           <EmptyState
-            icon="📁"
+            icon={<Users className="w-8 h-8" />}
             title="Список пуст"
             description="Добавьте группы по ссылке или загрузите список из файла — после обработки данные появятся здесь и будут доступны для управления."
           />
@@ -339,7 +339,7 @@ function GroupsTableCard({
               {sortedGroups.map((group, index) => (
                 <div
                   key={group.id}
-                  className="h-full animate-in fade-in-0 slide-in-from-bottom-2 duration-500"
+                  className="h-full animate-in fade-in-0 slide-in-from-bottom-2 duration-200"
                   style={{ animationDelay: index < 12 ? `${index * 50}ms` : '0ms' }}
                 >
                   <GroupCard group={group} onDelete={onDelete} />
@@ -385,7 +385,7 @@ function GroupsPage() {
 
   return (
     <PageContainer maxWidth="1600px" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <PageHeader
           variant="simple"
           title={
@@ -408,7 +408,7 @@ function GroupsPage() {
       </div>
 
       <div className="space-y-6">
-        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
           <RegionGroupsSearchCard
             total={regionSearch.total}
             results={regionSearch.missing}
@@ -422,7 +422,7 @@ function GroupsPage() {
           />
         </div>
 
-        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+        <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
           <GroupsTableCard
             groups={groups}
             totalCount={groupsCount}

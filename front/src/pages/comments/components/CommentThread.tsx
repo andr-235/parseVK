@@ -37,7 +37,7 @@ export const CommentThread = memo(function CommentThread({
   }
 
   return (
-    <div className="mt-3 border-t border-white/10 pt-3">
+    <div className="mt-3 border-t border-border/10 pt-3">
       <div className="mb-2 flex items-center justify-between">
         <Button
           variant="ghost"

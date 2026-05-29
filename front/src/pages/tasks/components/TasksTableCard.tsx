@@ -6,6 +6,7 @@ import { Badge } from '@/shared/components/ui/badge'
 import { EmptyState } from '@/shared/components/common/EmptyState'
 import { DataTable } from '@/shared/components/common/DataTable'
 import { declOfNumber } from '@/shared/utils'
+import { FileText } from 'lucide-react'
 
 interface TasksTableCardProps {
   tasks: Task[]
@@ -51,7 +52,7 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
           />
         ) : (
           <EmptyState
-            icon="📋"
+            icon={<FileText className="w-8 h-8" />}
             title="Список пуст"
             description={emptyMessage}
           />

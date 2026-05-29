@@ -42,12 +42,12 @@ export function PostPreviewModal({
       <div className="space-y-5 pt-2">
         {/* Post group */}
         {postGroup && (
-          <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-slate-800/30 p-3">
+          <div className="flex items-center gap-3 rounded-lg border border-border/10 bg-background-primary/30 p-3">
             {postGroup.photo && (
               <img
                 src={postGroup.photo}
                 alt={postGroup.name}
-                className="size-10 rounded-full border border-white/10"
+                className="size-10 rounded-full border border-border/10"
                 loading="lazy"
               />
             )}
@@ -76,7 +76,7 @@ export function PostPreviewModal({
 
         {/* Attachments */}
         {attachments.length > 0 && (
-          <div className="space-y-3 rounded-lg border border-white/10 bg-slate-800/20 p-4">
+          <div className="space-y-3 rounded-lg border border-border/10 bg-background-primary/20 p-4">
             <div className="font-mono-accent text-xs font-semibold uppercase tracking-wider text-slate-400">
               Вложения ({attachments.length})
             </div>

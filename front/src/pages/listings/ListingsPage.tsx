@@ -81,7 +81,7 @@ function ListingsPage() {
 
   return (
     <PageContainer maxWidth="1600px" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <PageHeader
           variant="grid"
           title="Недвижимость"
@@ -131,7 +131,7 @@ function ListingsPage() {
       </div>
 
       {/* Filters Section */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
         <FiltersPanel
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -187,7 +187,7 @@ function ListingsPage() {
       </div>
 
       {/* Listings Section */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
         <ListingsInfinite
           fetcher={fetchListingsBatch}
           limit={pageSize}

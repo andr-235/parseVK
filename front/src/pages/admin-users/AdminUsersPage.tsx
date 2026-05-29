@@ -266,7 +266,7 @@ function AdminUsersPage() {
 
   return (
     <PageContainer maxWidth="1600px" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-6 rounded-lg border border-border bg-background-secondary">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight text-text-light">
@@ -312,7 +312,7 @@ function AdminUsersPage() {
       </div>
 
       {/* Main Content - staggered animation */}
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr] animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100 font-monitoring-body">
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_1.4fr] animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100 font-monitoring-body">
         {/* Create User Section */}
         <div className="space-y-6">
           <div className="flex items-center gap-4">

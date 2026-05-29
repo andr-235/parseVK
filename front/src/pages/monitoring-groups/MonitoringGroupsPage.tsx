@@ -116,7 +116,7 @@ function MonitoringGroupsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-400 flex-col gap-8 px-4 py-6 font-monitoring-body md:px-8">
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <PageHeader
           variant="grid"
           title={

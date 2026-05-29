@@ -181,7 +181,7 @@ function MetricsPage() {
                     {count} ({percentage.toFixed(1)}%)
                   </span>
                 </div>
-                <div className="h-1.5 w-full bg-slate-900 rounded overflow-hidden">
+                <div className="h-1.5 w-full bg-background-primary rounded overflow-hidden">
                   <div
                     className={`h-full ${barColor} transition-all duration-500`}
                     style={{ width: `${percentage}%` }}
@@ -206,12 +206,12 @@ function MetricsPage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="h-24 bg-slate-850 border border-slate-800 rounded-xl" />
+            <div key={idx} className="h-24 bg-slate-850 border border-border rounded-xl" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="h-80 bg-slate-850 border border-slate-800 rounded-xl" />
+            <div key={idx} className="h-80 bg-slate-850 border border-border rounded-xl" />
           ))}
         </div>
       </div>
@@ -247,7 +247,7 @@ function MetricsPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/60 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-100 font-display">
             Здоровье системы
@@ -278,7 +278,7 @@ function MetricsPage() {
       {/* Service Health Matrix */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Component 1: API Gateway */}
-        <Card className="relative overflow-hidden bg-slate-900/50 border border-slate-800 p-4 transition-all duration-300 hover:border-slate-700/80">
+        <Card className="relative overflow-hidden bg-background-secondary/50 border border-border p-4 transition-all duration-200 hover:border-border/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
@@ -303,7 +303,7 @@ function MetricsPage() {
         </Card>
 
         {/* Component 2: VK API Integration */}
-        <Card className="relative overflow-hidden bg-slate-900/50 border border-slate-800 p-4 transition-all duration-300 hover:border-slate-700/80">
+        <Card className="relative overflow-hidden bg-background-secondary/50 border border-border p-4 transition-all duration-200 hover:border-border/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
@@ -328,7 +328,7 @@ function MetricsPage() {
         </Card>
 
         {/* Component 3: Tasks Executor */}
-        <Card className="relative overflow-hidden bg-slate-900/50 border border-slate-800 p-4 transition-all duration-300 hover:border-slate-700/80">
+        <Card className="relative overflow-hidden bg-background-secondary/50 border border-border p-4 transition-all duration-200 hover:border-border/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
@@ -349,7 +349,7 @@ function MetricsPage() {
         </Card>
 
         {/* Component 4: System CPU/RAM */}
-        <Card className="relative overflow-hidden bg-slate-900/50 border border-slate-800 p-4 transition-all duration-300 hover:border-slate-700/80">
+        <Card className="relative overflow-hidden bg-background-secondary/50 border border-border p-4 transition-all duration-200 hover:border-border/80">
           <div className="flex items-start justify-between">
             <div className="space-y-1.5">
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
@@ -373,9 +373,9 @@ function MetricsPage() {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* KPI Card 1: HTTP Requests */}
-        <Card className="bg-slate-900/40 border border-slate-800 p-5 flex flex-col justify-between">
+        <Card className="bg-background-secondary/40 border border-border p-5 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div className="flex items-center justify-between border-b border-border/80 pb-3">
               <div className="flex items-center gap-2">
                 <Server className="h-4 w-4 text-slate-400" />
                 <h3 className="text-sm font-semibold text-slate-200">Сетевые запросы шлюза</h3>
@@ -394,7 +394,7 @@ function MetricsPage() {
               </div>
 
               {/* Latency subgrid */}
-              <div className="grid grid-cols-3 gap-2 border-y border-slate-800/60 py-3 text-center">
+              <div className="grid grid-cols-3 gap-2 border-y border-border/60 py-3 text-center">
                 <div className="space-y-1">
                   <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
                     P50
@@ -403,7 +403,7 @@ function MetricsPage() {
                     {(metrics.httpRequests.duration.p50 * 1000).toFixed(0)}мс
                   </div>
                 </div>
-                <div className="space-y-1 border-x border-slate-800/60">
+                <div className="space-y-1 border-x border-border/60">
                   <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
                     P95
                   </span>
@@ -436,9 +436,9 @@ function MetricsPage() {
         </Card>
 
         {/* KPI Card 2: VK API Integration */}
-        <Card className="bg-slate-900/40 border border-slate-800 p-5 flex flex-col justify-between">
+        <Card className="bg-background-secondary/40 border border-border p-5 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div className="flex items-center justify-between border-b border-border/80 pb-3">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-slate-400" />
                 <h3 className="text-sm font-semibold text-slate-200">Вызовы VK API</h3>
@@ -457,8 +457,8 @@ function MetricsPage() {
               </div>
 
               {/* Latency subgrid */}
-              <div className="grid grid-cols-2 gap-2 border-y border-slate-800/60 py-3 text-center">
-                <div className="space-y-1 border-r border-slate-800/60">
+              <div className="grid grid-cols-2 gap-2 border-y border-border/60 py-3 text-center">
+                <div className="space-y-1 border-r border-border/60">
                   <span className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">
                     P50 задержка
                   </span>
@@ -488,9 +488,9 @@ function MetricsPage() {
         </Card>
 
         {/* KPI Card 3: Tasks and Watchlist */}
-        <Card className="bg-slate-900/40 border border-slate-800 p-5 flex flex-col justify-between">
+        <Card className="bg-background-secondary/40 border border-border p-5 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div className="flex items-center justify-between border-b border-border/80 pb-3">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-slate-400" />
                 <h3 className="text-sm font-semibold text-slate-200">Очередь задач иwatchlist</h3>
@@ -518,7 +518,7 @@ function MetricsPage() {
                 </div>
               </div>
 
-              <div className="border-t border-slate-800/60 pt-4 space-y-3">
+              <div className="border-t border-border/60 pt-4 space-y-3">
                 <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono block">
                   Распределение состояний задач
                 </span>
@@ -530,10 +530,10 @@ function MetricsPage() {
       </div>
 
       {/* Collapsible Details: Technical Resources */}
-      <Card className="border border-slate-800/80 bg-slate-950/20 overflow-hidden transition-all duration-300">
+      <Card className="border border-border/80 bg-background-secondary/20 overflow-hidden transition-all duration-200">
         <button
           onClick={() => setSystemOpen(!systemOpen)}
-          className="flex w-full items-center justify-between px-5 py-4 hover:bg-slate-900/30 transition-colors"
+          className="flex w-full items-center justify-between px-5 py-4 hover:bg-background-secondary/30 transition-colors"
         >
           <div className="flex items-center gap-2">
             <Cpu className="h-4 w-4 text-slate-500" />
@@ -549,11 +549,11 @@ function MetricsPage() {
         </button>
 
         {systemOpen && (
-          <div className="border-t border-slate-800/60 bg-slate-900/20 p-5 space-y-4 animate-in slide-in-from-top-1 duration-200">
+          <div className="border-t border-border/60 bg-background-secondary/20 p-5 space-y-4 animate-in slide-in-from-top-1 duration-200">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Memory panel */}
               <div className="space-y-3">
-                <div className="flex items-center gap-1.5 border-b border-slate-800/60 pb-2">
+                <div className="flex items-center gap-1.5 border-b border-border/60 pb-2">
                   <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
                     Выделение оперативной памяти
                   </span>
@@ -582,7 +582,7 @@ function MetricsPage() {
 
               {/* CPU panel */}
               <div className="space-y-3">
-                <div className="flex items-center gap-1.5 border-b border-slate-800/60 pb-2">
+                <div className="flex items-center gap-1.5 border-b border-border/60 pb-2">
                   <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
                     Процессорное время CPU
                   </span>

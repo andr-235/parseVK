@@ -154,14 +154,14 @@ function LoginPage() {
       {/* Main Card Container */}
       <div className="relative z-10 w-full max-w-md">
         {/* Card using semantic border variables */}
-        <div className="relative overflow-hidden rounded-card border border-border bg-background-secondary/90 shadow-soft-lg backdrop-blur-2xl">
+        <div className="relative overflow-hidden rounded-card border border-border bg-background-secondary/90 shadow-soft-lg">
           {/* Top Border Glow */}
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent-primary/30 to-transparent" />
 
           {/* Header */}
           <div className="relative px-8 pt-10 pb-6 text-center">
             {/* Logo with Glow */}
-            <div className="mb-6 inline-block animate-in fade-in-0 zoom-in-95 duration-700">
+            <div className="mb-6 inline-block animate-in fade-in-0 zoom-in-95 duration-200">
               <div className="relative">
                 <div className="absolute inset-0 rounded-full bg-accent-primary/10 blur-xl" />
                 <BrandLogo
@@ -172,7 +172,7 @@ function LoginPage() {
             </div>
 
             {/* Title */}
-            <h1 className="mb-2 font-monitoring-display text-3xl font-bold tracking-tight text-text-light animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+            <h1 className="mb-2 font-monitoring-display text-3xl font-bold tracking-tight text-text-light animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
               {mustChangePassword ? (
                 <>
                   Смена <span className="text-accent-primary">пароля</span>
@@ -185,7 +185,7 @@ function LoginPage() {
             </h1>
 
             {/* Subtitle */}
-            <p className="text-sm text-text-secondary animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+            <p className="text-sm text-text-secondary animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
               {mustChangePassword
                 ? `Пользователь ${authUser?.username ?? ''} должен установить новый пароль`
                 : 'Система аналитики и мониторинга VK'}
@@ -196,7 +196,7 @@ function LoginPage() {
           </div>
 
           {/* Form Container */}
-          <div className="px-8 pb-8 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-300">
+          <div className="px-8 pb-8 animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-300">
             {mustChangePassword || isManualChangePassword ? (
               <form className="space-y-5" onSubmit={handleChangePassword}>
                 {isManualChangePassword && (
@@ -300,7 +300,7 @@ function LoginPage() {
 
                 <div className="flex flex-col gap-3 pt-2">
                   <Button
-                    className="group relative h-11 overflow-hidden bg-primary font-semibold text-text-light shadow-soft-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-soft-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group relative h-11 overflow-hidden bg-accent-primary font-semibold text-text-light shadow-soft-sm transition-all duration-300 hover:bg-accent-primary/90 hover:shadow-soft-md disabled:opacity-50 disabled:cursor-not-allowed"
                     type="submit"
                     disabled={isChanging}
                   >
@@ -413,7 +413,7 @@ function LoginPage() {
 
                 <div className="flex flex-col gap-3 pt-2">
                   <Button
-                    className="group relative h-11 overflow-hidden bg-primary font-semibold text-text-light shadow-soft-sm transition-all duration-300 hover:bg-primary/90 hover:shadow-soft-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group relative h-11 overflow-hidden bg-accent-primary font-semibold text-text-light shadow-soft-sm transition-all duration-300 hover:bg-accent-primary/90 hover:shadow-soft-md disabled:opacity-50 disabled:cursor-not-allowed"
                     type="submit"
                     disabled={isSubmitting}
                   >

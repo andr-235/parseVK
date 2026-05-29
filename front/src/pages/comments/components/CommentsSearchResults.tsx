@@ -11,7 +11,7 @@ interface CommentsSearchResultsProps {
 export default function CommentsSearchResults({ result, isLoading }: CommentsSearchResultsProps) {
   if (isLoading) {
     return (
-      <Card className="border-white/10 bg-slate-900/30">
+      <Card className="border-border/10 bg-background-secondary/30">
         <CardHeader>
           <CardTitle className="font-monitoring-display text-xl text-white">
             Поисковая выдача
@@ -45,7 +45,7 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
 
       {result.items.map((item) =>
         item.type === 'post' ? (
-          <Card key={`search-post-${item.postId}`} className="border-white/10 bg-slate-900/30">
+          <Card key={`search-post-${item.postId}`} className="border-border/10 bg-background-secondary/30">
             <CardHeader>
               <CardTitle className="font-monitoring-display text-lg text-white">
                 Пост #{item.postId}
@@ -58,7 +58,7 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
               {item.comments.map((comment) => (
                 <div
                   key={`search-post-comment-${comment.commentId}`}
-                  className="rounded-lg border border-white/10 bg-slate-950/40 p-3"
+                  className="rounded-lg border border-border/10 bg-background-secondary/40 p-3"
                 >
                   <div className="mb-2 text-xs text-slate-500">
                     Комментарий #{comment.commentId}
@@ -73,7 +73,7 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
         ) : (
           <Card
             key={`search-comment-${item.commentId}`}
-            className="border-white/10 bg-slate-900/30"
+            className="border-border/10 bg-background-secondary/30"
           >
             <CardHeader>
               <CardTitle className="font-monitoring-display text-lg text-white">
@@ -86,7 +86,7 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
             <CardContent className="space-y-3">
               <div className="whitespace-pre-wrap text-sm text-slate-200">{item.commentText}</div>
               {item.postText ? (
-                <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3 text-sm text-slate-400">
+                <div className="rounded-lg border border-border/10 bg-background-secondary/40 p-3 text-sm text-text-secondary">
                   {item.postText}
                 </div>
               ) : null}

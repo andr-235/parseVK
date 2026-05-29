@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Spinner } from '@/shared/components/ui/spinner'
 import { Badge } from '@/shared/components/ui/badge'
@@ -268,7 +268,7 @@ const CommentsTableCard = memo(function CommentsTableCard({
         {isLoading && !hasComments && <LoadingState message="Загружаем комментарии…" useCard />}
 
         {!isLoading && !hasComments && (
-          <EmptyState icon="💬" title="Нет данных" description={emptyMessage} />
+          <EmptyState icon={<MessageSquare className="w-8 h-8" />} title="Нет данных" description={emptyMessage} />
         )}
 
         {hasComments && (

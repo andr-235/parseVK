@@ -54,7 +54,7 @@ function TasksPage() {
 
   return (
     <PageContainer maxWidth="400" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
         <PageHeader
           variant="grid"
           colsClass="grid-cols-1 gap-4 md:grid-cols-3"
@@ -64,7 +64,7 @@ function TasksPage() {
             <Button
               onClick={handleOpenCreateModal}
               size="lg"
-              className="h-10 shrink-0 bg-accent-primary px-6 text-sm font-semibold tracking-wide text-text-light shadow-soft-sm transition-all duration-200 hover:bg-accent-primary/90 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-10 shrink-0 bg-accent-primary px-6 text-sm font-semibold tracking-wide text-text-light shadow-soft-sm transition-all duration-200 hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isCreating || areGroupsLoading}
               aria-label="Создать новую задачу парсинга"
             >
@@ -188,11 +188,11 @@ function TasksPage() {
         />
       </div>
 
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-100">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
         <ActiveTasksBanner tasks={activeTasks} isCreating={isCreating} />
       </div>
 
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
         <TasksList
           emptyMessage={emptyMessage}
           onTaskSelect={handleTaskSelect}
