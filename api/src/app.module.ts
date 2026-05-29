@@ -18,7 +18,6 @@ import { VkFriendsModule } from './vk-friends/vk-friends.module.js';
 import { OkFriendsModule } from './ok-friends/ok-friends.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
 import { CommentsModule } from './comments/comments.module.js';
-import { WatchlistModule } from './watchlist/watchlist.module.js';
 import { PhotoAnalysisModule } from './photo-analysis/photo-analysis.module.js';
 import { DataImportModule } from './data-import/data-import.module.js';
 import { ListingsModule } from './listings/listings.module.js';
@@ -56,7 +55,6 @@ import type { AppConfig } from './config/app.config.js';
     OkFriendsModule,
     TasksModule,
     CommentsModule,
-    WatchlistModule,
     PhotoAnalysisModule,
     DataImportModule,
     ListingsModule,
