@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.modules.content.router import router as content_router
 from app.modules.listings.router import router as listings_router
+from app.modules.telegram_tgmbase.router import router as telegram_tgmbase_router
 from app.modules.projections.consumer import ProjectionConsumer
 
 
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
 
     app.include_router(content_router)
     app.include_router(listings_router)
+    app.include_router(telegram_tgmbase_router)
     app.include_router(monitoring_router)
 
     return app

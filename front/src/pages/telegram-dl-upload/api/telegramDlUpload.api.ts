@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL, createRequest, handleResponse } from '@/shared/api'
+import { API_URL, GATEWAY_API_URL, createRequest, handleResponse } from '@/shared/api'
 import { saveReportBlob } from '@/shared/utils'
 
 const UPLOAD_CHUNK_SIZE = 20
@@ -226,7 +226,7 @@ export const telegramDlUploadService = {
       chunk.forEach((file) => formData.append('files', file))
 
       try {
-        const response = await createRequest(`${API_URL}/telegram/dl-import/upload`, {
+        const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-import/upload`, {
           method: 'POST',
           body: formData,
         })
@@ -271,7 +271,7 @@ export const telegramDlUploadService = {
   },
 
   async getFiles(): Promise<TelegramDlImportFile[]> {
-    const filesResponse = await createRequest(`${API_URL}/telegram/dl-import/files`)
+    const filesResponse = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-import/files`)
     return handleResponse<TelegramDlImportFile[]>(
       filesResponse,
       'Не удалось загрузить историю выгрузок'
@@ -283,7 +283,7 @@ export const telegramDlUploadService = {
   ): Promise<TelegramDlImportContactsPage> {
     try {
       const response = await createRequest(
-        `${API_URL}/telegram/dl-import/contacts${buildContactsQueryString(params)}`
+        `${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-import/contacts${buildContactsQueryString(params)}`
       )
       return await handleResponse<TelegramDlImportContactsPage>(
         response,

@@ -21,7 +21,7 @@ import { CommentsModule } from './comments/comments.module.js';
 import { DataImportModule } from './data-import/data-import.module.js';
 import { ListingsModule } from './listings/listings.module.js';
 import { TelegramModule } from './telegram/telegram.module.js';
-import { TelegramDlImportModule } from './telegram-dl-import/telegram-dl-import.module.js';
+
 import { MetricsModule } from './metrics/metrics.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { TelegramDlMatchModule } from './telegram-dl-match/telegram-dl-match.module.js';
@@ -57,7 +57,6 @@ import type { AppConfig } from './config/app.config.js';
     DataImportModule,
     ListingsModule,
     TelegramModule,
-    TelegramDlImportModule,
     TelegramDlMatchModule,
   ],
   controllers: [AppController],
