@@ -25,6 +25,7 @@ export const useGroupsViewModel = () => {
 
   const [url, setUrl] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   const groupsCount = total
@@ -46,12 +47,13 @@ export const useGroupsViewModel = () => {
   }, [groups, searchTerm])
 
   useEffect(() => {
-    if (page > 0 || isLoading) {
+    if (page > 0 || isLoading || hasAttemptedFetch) {
       return
     }
 
+    setHasAttemptedFetch(true)
     void fetchGroups({ reset: true })
-  }, [fetchGroups, isLoading, page])
+  }, [fetchGroups, isLoading, page, hasAttemptedFetch])
 
   useIntersectionObserver(
     loadMoreRef,
