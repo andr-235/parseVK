@@ -229,7 +229,7 @@ class ContentRepository:
             "updatedAt": dt(row.updated_at),
         }
 
-    async def verify_author(self, vk_author_id: int) -> bool:
+    async def _update_author_verified_at(self, vk_author_id: int) -> bool:
         from datetime import datetime, timezone
         now = datetime.now(timezone.utc)
         row = await self.session.scalar(
@@ -239,7 +239,7 @@ class ContentRepository:
             return False
         row.verified_at = now
         row.updated_at = now
-        await self.session.commit()
+        await self.session.flush()
         return True
 
 

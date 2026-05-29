@@ -92,48 +92,48 @@ class FakeMonitoringService:
 
 
 @pytest.fixture
-def service():
+def monitor_service():
     return FakeMonitoringService()
 
 
 @pytest.fixture
-def app(service):
+def monitor_app(monitor_service):
     app = create_app()
 
     async def service_override():
-        return service
+        return monitor_service
 
     app.dependency_overrides[get_monitoring_service] = service_override
     return app
 
 
 @pytest.mark.anyio
-async def test_get_messages(app, service):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_get_messages(monitor_app, monitor_service):
+    async with AsyncClient(transport=ASGITransport(app=monitor_app), base_url="http://test") as client:
         response = await client.get("/monitoring/messages?keywords=test&limit=10&page=1")
 
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
     assert data["items"][0]["text"] == "test message"
-    assert service.calls[0][0] == "get_messages"
+    assert monitor_service.calls[0][0] == "get_messages"
 
 
 @pytest.mark.anyio
-async def test_get_groups(app, service):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_get_groups(monitor_app, monitor_service):
+    async with AsyncClient(transport=ASGITransport(app=monitor_app), base_url="http://test") as client:
         response = await client.get("/monitoring/groups?messenger=whatsapp&category=work")
 
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
     assert data["items"][0]["name"] == "Group 1"
-    assert service.calls[0][0] == "get_groups"
+    assert monitor_service.calls[0][0] == "get_groups"
 
 
 @pytest.mark.anyio
-async def test_create_group(app, service):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_create_group(monitor_app, monitor_service):
+    async with AsyncClient(transport=ASGITransport(app=monitor_app), base_url="http://test") as client:
         response = await client.post(
             "/monitoring/groups",
             json={"messenger": "max", "chat_id": "456", "name": "New Group", "category": "news"}
@@ -143,12 +143,12 @@ async def test_create_group(app, service):
     data = response.json()
     assert data["id"] == 1
     assert data["messenger"] == "max"
-    assert service.calls[0][0] == "create_group"
+    assert monitor_service.calls[0][0] == "create_group"
 
 
 @pytest.mark.anyio
-async def test_update_group(app, service):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_update_group(monitor_app, monitor_service):
+    async with AsyncClient(transport=ASGITransport(app=monitor_app), base_url="http://test") as client:
         response = await client.patch(
             "/monitoring/groups/5",
             json={"name": "Updated Group"}
@@ -158,15 +158,15 @@ async def test_update_group(app, service):
     data = response.json()
     assert data["id"] == 5
     assert data["name"] == "Updated Group"
-    assert service.calls[0][0] == "update_group"
+    assert monitor_service.calls[0][0] == "update_group"
 
 
 @pytest.mark.anyio
-async def test_delete_group(app, service):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_delete_group(monitor_app, monitor_service):
+    async with AsyncClient(transport=ASGITransport(app=monitor_app), base_url="http://test") as client:
         response = await client.delete("/monitoring/groups/5")
 
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert service.calls[0] == ("delete_group", 5)
+    assert monitor_service.calls[0] == ("delete_group", 5)
