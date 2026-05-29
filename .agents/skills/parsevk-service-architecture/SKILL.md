@@ -43,13 +43,19 @@ python .agents/skills/parsevk-service-architecture/scripts/scaffold-service.py {
 
 ### 2. Валидация существующего сервиса
 
+Для сервисов с БД:
 ```powershell
 python .agents/skills/parsevk-service-architecture/scripts/validate-service.py services/{service-name}
 ```
 
+Для прокси-сервисов без БД (например, api-gateway):
+```powershell
+python .agents/skills/parsevk-service-architecture/scripts/validate-service.py --no-db services/{service-name}
+```
+
 Скрипт проверит:
 - Структуру директорий
-- Наличие обязательных файлов
+- Наличие обязательных файлов (с опцией `--no-db` пропускает DB-связанные)
 - Паттерны импортов
 - Разделение Router → Service → Repository
 - Конфигурацию через pydantic-settings

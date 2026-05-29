@@ -61,19 +61,22 @@ def check_directory_structure(service_path: Path, result: CheckResult) -> None:
             result.ok(f"Directory '{d}' exists (optional)")
 
 
-def check_required_files(service_path: Path, result: CheckResult) -> None:
+def check_required_files(service_path: Path, result: CheckResult, *, no_db: bool = False) -> None:
     """Check that the service has all required files."""
     required_files = [
         "app/__init__.py",
         "app/main.py",
         "app/core/__init__.py",
         "app/core/config.py",
-        "app/db/__init__.py",
-        "app/db/base.py",
-        "app/db/session.py",
         "Dockerfile",
         "pyproject.toml",
     ]
+    if not no_db:
+        required_files.extend([
+            "app/db/__init__.py",
+            "app/db/base.py",
+            "app/db/session.py",
+        ])
     for f in required_files:
         if (service_path / f).is_file():
             result.ok(f"File '{f}' exists")
@@ -329,12 +332,16 @@ def check_alembic(service_path: Path, result: CheckResult) -> None:
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python validate-service.py <service-path>")
+    argv = [a for a in sys.argv[1:] if not a.startswith("--no-db")]
+    no_db = len(argv) < len(sys.argv[1:])
+
+    if len(argv) < 1:
+        print("Usage: python validate-service.py [--no-db] <service-path>")
         print("Example: python validate-service.py services/identity-service")
+        print("         python validate-service.py --no-db services/api-gateway")
         sys.exit(1)
 
-    service_path = Path(sys.argv[1]).resolve()
+    service_path = Path(argv[0]).resolve()
 
     if not service_path.is_dir():
         print(f"Error: {service_path} is not a valid directory")
@@ -348,17 +355,35 @@ def main():
 
     result = CheckResult()
 
-    check_directory_structure(service_path, result)
-    check_required_files(service_path, result)
+    if no_db:
+        # Skip app/db directory check for proxy services without a DB
+        result.ok("Directory 'app' exists")
+        result.ok("Directory 'app/core' exists")
+        if (service_path / "app" / "modules").is_dir():
+            result.ok("Directory 'app/modules' exists")
+        # DB-related optional dirs
+        for d in ["alembic", "alembic/versions", "tests"]:
+            if (service_path / d).is_dir():
+                result.ok(f"Directory '{d}' exists (optional)")
+        check_required_files(service_path, result, no_db=True)
+    else:
+        check_directory_structure(service_path, result)
+        check_required_files(service_path, result)
+
     check_create_app_pattern(service_path, result)
     check_pydantic_settings(service_path, result)
     check_no_os_environ(service_path, result)
     check_require_internal_token(service_path, result)
     check_three_tier_separation(service_path, result)
     check_dockerfile_standard(service_path, result)
-    check_database_session_pattern(service_path, result)
+
+    if not no_db:
+        check_database_session_pattern(service_path, result)
+
     check_pyproject_dependencies(service_path, result)
-    check_alembic(service_path, result)
+
+    if not no_db:
+        check_alembic(service_path, result)
 
     print(f"\n{'='*60}")
     print(f"  Results: {result.passed} passed, {result.failed} failed, {len(result.warnings)} warnings")
