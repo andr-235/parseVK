@@ -256,7 +256,7 @@ services:
       VK_SERVICE_OUTBOX_PUBLISH_ENABLED: ${VK_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
       VK_SERVICE_USE_FAKE_VK_ADAPTER: ${VK_SERVICE_USE_FAKE_VK_ADAPTER:-true}
       VK_SERVICE_DEFAULT_GROUP_IDS: '${VK_SERVICE_DEFAULT_GROUP_IDS:-[1]}'
-      VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-}
+      VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-}}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s
@@ -421,8 +421,8 @@ services:
 
   db_backup:
     build:
-      context: .
-      dockerfile: docker/db-backup/Dockerfile
+      context: ./docker/db-backup
+      dockerfile: Dockerfile
     depends_on:
       db:
         condition: service_healthy
@@ -460,7 +460,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-vk_api}?schema=public
       VK_TOKEN: ${VK_TOKEN}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       MONITOR_DATABASE_URL: ${MONITOR_DATABASE_URL:-}
