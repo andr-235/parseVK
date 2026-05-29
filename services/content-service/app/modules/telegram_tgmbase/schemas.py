@@ -156,3 +156,138 @@ class TelegramDlMatchExcludeChatSchema(BaseModel):
     class Config:
         populate_by_name = True
 
+
+# Раздел поиска по базе tgmbase (tgmbase-search)
+
+class TgmbaseSearchRequestSchema(BaseModel):
+    queries: list[str]
+    searchId: str | None = Field(None, alias="searchId")
+    page: int | None = 1
+    pageSize: int | None = Field(20, alias="pageSize")
+
+    class Config:
+        populate_by_name = True
+
+
+class TgmbaseProfileSchema(BaseModel):
+    id: str
+    telegramId: str = Field(..., alias="telegramId")
+    username: str | None = None
+    phoneNumber: str | None = Field(None, alias="phoneNumber")
+    firstName: str | None = Field(None, alias="firstName")
+    lastName: str | None = Field(None, alias="lastName")
+    fullName: str = Field(..., alias="fullName")
+    bot: bool
+    scam: bool
+    premium: bool
+    updatedAt: str | None = Field(None, alias="updatedAt")
+
+    class Config:
+        populate_by_name = True
+        from_attributes = True
+
+
+class TgmbaseCandidateSchema(BaseModel):
+    telegramId: str = Field(..., alias="telegramId")
+    username: str | None = None
+    phoneNumber: str | None = Field(None, alias="phoneNumber")
+    fullName: str = Field(..., alias="fullName")
+
+    class Config:
+        populate_by_name = True
+        from_attributes = True
+
+
+class TgmbasePeerSchema(BaseModel):
+    peerId: str = Field(..., alias="peerId")
+    title: str
+    username: str | None = None
+    type: str
+    participantsCount: int | None = Field(None, alias="participantsCount")
+    region: int | None = None
+
+    class Config:
+        populate_by_name = True
+        from_attributes = True
+
+
+class TgmbaseContactSchema(BaseModel):
+    telegramId: str = Field(..., alias="telegramId")
+    username: str | None = None
+    phoneNumber: str | None = Field(None, alias="phoneNumber")
+    fullName: str = Field(..., alias="fullName")
+    commonPeersCount: int = Field(..., alias="commonPeersCount")
+    messageCount: int = Field(..., alias="messageCount")
+
+    class Config:
+        populate_by_name = True
+
+
+class TgmbaseMessageSchema(BaseModel):
+    id: str
+    messageId: str = Field(..., alias="messageId")
+    peerId: str = Field(..., alias="peerId")
+    peerTitle: str | None = Field(None, alias="peerTitle")
+    peerType: str = Field(..., alias="peerType")
+    date: str
+    text: str | None = None
+    fromId: str | None = Field(None, alias="fromId")
+    replyTo: str | None = Field(None, alias="replyTo")
+    hasMedia: bool = Field(..., alias="hasMedia")
+    hasKeywords: bool = Field(..., alias="hasKeywords")
+
+    class Config:
+        populate_by_name = True
+
+
+class TgmbaseMessagesPageSchema(BaseModel):
+    items: list[TgmbaseMessageSchema]
+    page: int
+    pageSize: int = Field(..., alias="pageSize")
+    total: int
+    hasMore: bool = Field(..., alias="hasMore")
+
+    class Config:
+        populate_by_name = True
+
+
+class TgmbaseSearchItemStatsSchema(BaseModel):
+    groups: int
+    contacts: int
+    messages: int
+
+
+class TgmbaseSearchItemSchema(BaseModel):
+    query: str
+    normalizedQuery: str = Field(..., alias="normalizedQuery")
+    queryType: str = Field(..., alias="queryType")
+    status: str
+    profile: TgmbaseProfileSchema | None = None
+    candidates: list[TgmbaseCandidateSchema] = []
+    groups: list[TgmbasePeerSchema] = []
+    contacts: list[TgmbaseContactSchema] = []
+    messagesPage: TgmbaseMessagesPageSchema = Field(..., alias="messagesPage")
+    stats: TgmbaseSearchItemStatsSchema
+    error: str | None = None
+
+    class Config:
+        populate_by_name = True
+
+
+class TgmbaseSearchSummarySchema(BaseModel):
+    total: int
+    found: int
+    notFound: int = Field(..., alias="notFound")
+    ambiguous: int
+    invalid: int
+    error: int
+
+    class Config:
+        populate_by_name = True
+
+
+class TgmbaseSearchResponseSchema(BaseModel):
+    summary: TgmbaseSearchSummarySchema
+    items: list[TgmbaseSearchItemSchema]
+
+

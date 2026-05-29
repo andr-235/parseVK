@@ -10,7 +10,9 @@ from app.modules.telegram_tgmbase.schemas import (
     TelegramDlMatchRunSchema,
     TelegramDlMatchResultSchema,
     TelegramDlMatchResultMessagesGroupSchema,
-    TelegramDlMatchExcludeChatSchema
+    TelegramDlMatchExcludeChatSchema,
+    TgmbaseSearchRequestSchema,
+    TgmbaseSearchResponseSchema
 )
 
 router = APIRouter(
@@ -174,3 +176,15 @@ async def export_run(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers=headers
     )
+
+
+# РАЗДЕЛ ПОИСКА ПО БАЗЕ TGMBASE
+
+@router.post("/tgmbase/search", response_model=TgmbaseSearchResponseSchema)
+async def search_tgmbase(
+    payload: TgmbaseSearchRequestSchema,
+    service: TelegramTgmbaseService = Depends(get_tgmbase_service)
+) -> TgmbaseSearchResponseSchema:
+    res = await service.search_tgmbase(payload.model_dump())
+    return TgmbaseSearchResponseSchema(**res)
+

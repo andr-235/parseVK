@@ -1,12 +1,12 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/shared/api'
+import { GATEWAY_API_URL } from '@/shared/api'
 import { createRequest, handleResponse } from '@/shared/api'
 import type { TgmbaseSearchRequest, TgmbaseSearchResponse } from '@/shared/types'
 
 export const tgmbaseSearchService = {
   async search(payload: TgmbaseSearchRequest): Promise<TgmbaseSearchResponse> {
     try {
-      const response = await createRequest(`${API_URL}/tgmbase/search`, {
+      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/tgmbase/search`, {
         method: 'POST',
         body: JSON.stringify(payload),
       })

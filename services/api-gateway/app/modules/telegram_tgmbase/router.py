@@ -29,13 +29,17 @@ async def get_capabilities() -> TelegramTgmbaseCapabilitiesResponse:
     return TelegramTgmbaseCapabilitiesResponse(
         domain="telegram-tgmbase",
         migrationStage="inventory",
-        gatewayManaged=["capabilities", "telegram-dl-import", "telegram-dl-match"],
+        gatewayManaged=[
+            "capabilities",
+            "telegram-dl-import",
+            "telegram-dl-match",
+            "tgmbase-search",
+            "tgmbase-search-progress"
+        ],
         fallbackManaged=[
             "telegram-auth-session",
             "telegram-sync",
             "telegram-export",
-            "tgmbase-search",
-            "tgmbase-search-progress",
         ],
         redaction={
             "enabled": True,
@@ -260,4 +264,21 @@ async def export_run(
         headers=headers,
         media_type=res_raw.headers.get("content-type"),
     )
+
+
+# РАЗДЕЛ ПОИСКА ПО БАЗЕ TGMBASE
+
+@router.post("/tgmbase/search")
+async def search_tgmbase(
+    request: Request,
+    payload: dict,
+    service: TelegramTgmbaseGatewayService = Depends(get_telegram_tgmbase_gateway_service),
+):
+    return await service.forward(
+        request,
+        "POST",
+        "/tgmbase/search",
+        json=payload,
+    )
+
 

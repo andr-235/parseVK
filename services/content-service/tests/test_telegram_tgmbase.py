@@ -132,3 +132,47 @@ async def test_upload_files_success(mock_parse_result):
         assert len(res["files"]) == 1
         assert res["files"][0]["originalFileName"] == "test_contacts.xlsx"
         assert res["files"][0]["status"] == "DONE"
+
+
+def test_normalize_tgmbase_query():
+    from app.modules.telegram_tgmbase.service import normalize_tgmbase_query
+
+    # Telegram ID
+    res = normalize_tgmbase_query("123456789")
+    assert res["queryType"] == "telegramId"
+    assert res["normalizedValue"] == "123456789"
+
+    # Username
+    res = normalize_tgmbase_query("@my_username")
+    assert res["queryType"] == "username"
+    assert res["normalizedValue"] == "my_username"
+
+    # Phone number
+    res = normalize_tgmbase_query("+7 999 123-45-67")
+    assert res["queryType"] == "phoneNumber"
+    assert res["normalizedValue"] == "+79991234567"
+
+    # Invalid
+    res = normalize_tgmbase_query("some random text")
+    assert res["queryType"] == "invalid"
+
+
+@pytest.mark.asyncio
+async def test_search_tgmbase_returns_empty_when_no_match():
+    mock_session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_session.execute = AsyncMock(return_value=mock_result)
+
+    service = TelegramTgmbaseService(mock_session)
+    res = await service.search_tgmbase({
+        "queries": ["123456"],
+        "page": 1,
+        "pageSize": 20
+    })
+
+    assert res["summary"]["total"] == 1
+    assert res["summary"]["notFound"] == 1
+    assert len(res["items"]) == 1
+    assert res["items"][0]["status"] == "not_found"
+
