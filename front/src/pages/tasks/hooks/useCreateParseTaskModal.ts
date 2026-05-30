@@ -56,7 +56,7 @@ export function useCreateParseTaskModal(groups: Group[], isOpen: boolean) {
   }
 
   const handleSelectAll = () => {
-    setSelectedIds(new Set(filteredGroups.map((group) => group.id)))
+    setSelectedIds(new Set(filteredGroups.map((group) => group.vkId)))
   }
 
   const handleDeselectAll = () => {

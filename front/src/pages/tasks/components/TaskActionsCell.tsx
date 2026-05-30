@@ -88,7 +88,8 @@ function TaskActionsCell({ task }: TaskActionsCellProps) {
     setIsDeleting(true)
     try {
       await deleteTask(task.id)
-      toast.success('Задача удалена')
+    } catch {
+      // toast об ошибке уже показывается в tasks.api.ts
     } finally {
       setIsDeleting(false)
     }

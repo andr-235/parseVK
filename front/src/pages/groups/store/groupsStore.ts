@@ -194,7 +194,7 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     try {
       await groupsService.deleteGroup(id)
       set((state) => ({
-        groups: state.groups.filter((group) => group.id !== id),
+        groups: state.groups.filter((group) => group.vkId !== id),
         total: Math.max(0, state.total - 1),
       }))
     } catch {

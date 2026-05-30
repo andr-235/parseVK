@@ -22,7 +22,7 @@ export const GroupCard = memo(function GroupCard({ group, onDelete }: GroupCardP
 
   const handleDeleteClick = useCallback(() => {
     if (confirmingDelete) {
-      onDelete(group.id)
+      onDelete(group.vkId)
       setConfirmingDelete(false)
       if (confirmTimer.current) clearTimeout(confirmTimer.current)
     } else {

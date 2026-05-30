@@ -125,15 +125,15 @@ function CreateParseTaskModal({
           ) : (
             filteredGroups.map((group) => {
               const displayName = getDisplayName(group)
-              const isChecked = selectedIds.has(group.id)
+              const isChecked = selectedIds.has(group.vkId)
 
               return (
                 <div
-                  key={group.id}
+                  key={group.vkId}
                   role="button"
                   tabIndex={0}
-                  onClick={() => handleToggle(group.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(group.id) } }}
+                  onClick={() => handleToggle(group.vkId)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(group.vkId) } }}
                   className={`group flex cursor-pointer items-center gap-4 rounded-xl border p-3.5 transition-colors duration-200 hover:border-accent-primary/30 hover:bg-background-primary/40 ${
                     isChecked
                       ? 'border-accent-primary/45 bg-accent-primary/5 text-text-light'

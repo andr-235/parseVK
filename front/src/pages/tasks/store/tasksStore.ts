@@ -114,7 +114,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
       // Параллельная загрузка групп и создание задачи (async-parallel optimization)
       const [, result] = await Promise.all([
         ensureGroupsLoaded(),
-        tasksService.createParsingTask({ groupIds: payloadGroupIds, mode }),
+        tasksService.createParsingTask({ groupIds: payloadGroupIds, mode, scope: 'selected' }),
       ])
 
       const { task, details } = mapResultToTaskDetails(result)
@@ -230,7 +230,7 @@ const createTasksStore: TasksStoreCreator = (set, get) => ({
       if (import.meta.env.DEV) {
         console.error('[TasksStore] deleteTask error:', error)
       }
-      return false
+      throw error
     }
   },
 
