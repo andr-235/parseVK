@@ -79,56 +79,40 @@ async def save_single_group(
     group_data = None
     
     # 1. Пробуем получить через VK API
+    fields = [
+        "members_count",
+        "city",
+        "activity",
+        "status",
+        "verified",
+        "description",
+        "addresses",
+        "counters",
+    ]
     try:
         is_numeric = parsed_identifier.isdigit()
         if is_numeric:
             vk_id = int(parsed_identifier)
-            groups = await client.get_groups([vk_id])
+            groups = await client.get_groups([vk_id], fields=fields)
             if groups:
                 group_data = groups[0]
         else:
             vk_id = await fetch_vk_id_from_public_html(parsed_identifier)
             if vk_id:
-                groups = await client.get_groups([vk_id])
+                groups = await client.get_groups([vk_id], fields=fields)
                 if groups:
                     group_data = groups[0]
-    except Exception:
-        pass
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ошибка VK API: {str(exc)}"
+        )
 
-    # 2. Фолбек-заглушка при ошибках API / токена
     if not group_data:
-        screen_name = parsed_identifier
-        is_numeric = screen_name.isdigit()
-        if is_numeric:
-            vk_id = int(screen_name)
-        else:
-            vk_id = await fetch_vk_id_from_public_html(screen_name)
-            
-        if not vk_id:
-            if screen_name == "livebir":
-                vk_id = 40023088
-            else:
-                # сгенерируем псевдослучайный хэш
-                vk_id = abs(hash(screen_name)) % 100000000
-                
-        if screen_name == "40023088" or str(vk_id) == screen_name:
-            screen_name = "livebir"
-            
-        group_data = {
-            "id": vk_id,
-            "name": "Биробиджан | livebir" if screen_name == "livebir" else screen_name,
-            "screen_name": screen_name,
-            "is_closed": 0,
-            "type": "group",
-            "description": f"Группа {screen_name} (Заглушка из-за ошибки авторизации VK)",
-            "members_count": 50000,
-            "status": screen_name,
-            "verified": 0,
-            "wall": 1,
-            "photo_50": "https://vk.com/images/community_50.png",
-            "photo_100": "https://vk.com/images/community_100.png",
-            "photo_200": "https://vk.com/images/community_200.png",
-        }
+        raise HTTPException(
+            status_code=404,
+            detail=f"Группа '{identifier}' не найдена в VK"
+        )
 
     # 3. Сохраняем группу и отправляем событие через Outbox
     svc = VkApiService(session)

@@ -14,7 +14,7 @@ VK_API_VERSION = "5.199"
 
 
 class VkApiAdapter(Protocol):
-    async def get_groups(self, group_ids: list[int]) -> list[dict]:
+    async def get_groups(self, group_ids: list[int], fields: list[str] | None = None) -> list[dict]:
         raise NotImplementedError
 
     async def get_posts(self, group_id: int, *, mode: str, post_limit: int | None) -> list[dict]:
@@ -86,10 +86,13 @@ class VkApiClient:
         message = str(exc) or "VK API error"
         return redact_secrets(message)
 
-    async def get_groups(self, group_ids: list[int]) -> list[dict]:
+    async def get_groups(self, group_ids: list[int], fields: list[str] | None = None) -> list[dict]:
         if not group_ids:
             return []
-        response = await self._call("groups.getById", group_ids=",".join(str(item) for item in group_ids))
+        params = {"group_ids": ",".join(str(item) for item in group_ids)}
+        if fields:
+            params["fields"] = ",".join(fields)
+        response = await self._call("groups.getById", **params)
         if isinstance(response, dict) and "groups" in response:
             return list(response["groups"])
         return list(response)
@@ -237,10 +240,12 @@ class VkApiClient:
         return await self._call("friends.get", **params)
 
     async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:
+        import sys
+        print("!!! Starting search_groups_by_region !!!", file=sys.stderr, flush=True)
         region_title = "Еврейская автономная область"
         normalized_query = (query or "").strip()
-        search_query = normalized_query if normalized_query else " "
 
+        print(f"!!! Calling database.getRegions for '{region_title}' !!!", file=sys.stderr, flush=True)
         regions_response = await self._call(
             "database.getRegions",
             country_id=1,
@@ -251,14 +256,17 @@ class VkApiClient:
         items = regions_response.get("items") or []
         region = next((item for item in items if item.get("title") == region_title), None)
         if not region:
+            print("!!! REGION_NOT_FOUND !!!", file=sys.stderr, flush=True)
             raise ValueError("REGION_NOT_FOUND")
 
         region_id = region["id"]
+        print(f"!!! Found region ID: {region_id} !!!", file=sys.stderr, flush=True)
 
-        city_ids = []
+        cities = []
         page_size = 1000
         offset = 0
         while True:
+            print(f"!!! Calling database.getCities (offset={offset}) !!!", file=sys.stderr, flush=True)
             cities_response = await self._call(
                 "database.getCities",
                 country_id=1,
@@ -268,40 +276,56 @@ class VkApiClient:
                 offset=offset,
             )
             city_items = cities_response.get("items") or []
+            print(f"!!! Retrieved {len(city_items)} cities from database.getCities !!!", file=sys.stderr, flush=True)
             if not city_items:
                 break
             for c in city_items:
-                if isinstance(c.get("id"), int):
-                    city_ids.append(c["id"])
+                if isinstance(c.get("id"), int) and c.get("title"):
+                    cities.append({"id": c["id"], "title": c["title"]})
             offset += len(city_items)
             if offset >= cities_response.get("count", 0) or len(city_items) < page_size:
                 break
 
-        if not city_ids:
+        print(f"!!! Total cities found: {len(cities)} !!!", file=sys.stderr, flush=True)
+        if not cities:
             return []
+
+        # Ограничиваемся первыми 15 наиболее крупными городами/селами региона,
+        # чтобы избежать таймаутов и превышения лимитов VK API на мелких деревнях
+        cities_to_search = cities[:15]
+        print(f"!!! Limiting search to {len(cities_to_search)} cities !!!", file=sys.stderr, flush=True)
 
         unique_groups = {}
         page_size = 200
-        for city_id in city_ids:
-            offset = 0
-            while True:
+        for index, city in enumerate(cities_to_search):
+            city_id = city["id"]
+            city_title = city["title"]
+            
+            # Делаем паузу между запросами к VK API, чтобы не превысить лимит 3 запроса/сек
+            if index > 0:
+                await asyncio.sleep(0.35)
+                
+            # Если query не передан, ищем по названию города
+            search_query = normalized_query if normalized_query else city_title
+            
+            print(f"!!! [{index+1}/{len(cities_to_search)}] Searching groups in city '{city_title}' (id={city_id}) with q='{search_query}' !!!", file=sys.stderr, flush=True)
+            try:
                 search_response = await self._call(
                     "groups.search",
                     q=search_query,
                     country_id=1,
                     city_id=city_id,
                     count=page_size,
-                    offset=offset,
                 )
                 search_items = search_response.get("items") or []
-                if not search_items:
-                    break
+                print(f"!!! [{index+1}/{len(cities_to_search)}] Found {len(search_items)} groups in '{city_title}' !!!", file=sys.stderr, flush=True)
                 for item in search_items:
                     unique_groups[item["id"]] = item
-                offset += len(search_items)
-                if offset >= search_response.get("count", 0) or len(search_items) < page_size:
-                    break
+            except Exception as exc:
+                import sys
+                print(f"!!! Error searching groups for city {city_title} ({city_id}): {exc} !!!", file=sys.stderr, flush=True)
 
+        print(f"!!! Total unique groups found across region: {len(unique_groups)} !!!", file=sys.stderr, flush=True)
         if not unique_groups:
             return []
 
@@ -319,8 +343,12 @@ class VkApiClient:
             "contacts",
             "site",
         ]
-        for i in range(0, len(ids), chunk_size):
+        city_ids_set = {c["id"] for c in cities}
+        for index, i in enumerate(range(0, len(ids), chunk_size)):
+            if index > 0:
+                await asyncio.sleep(0.35)
             chunk = ids[i : i + chunk_size]
+            print(f"!!! Enriching chunk {index+1} ({len(chunk)} groups) using groups.getById !!!", file=sys.stderr, flush=True)
             try:
                 response = await self._call(
                     "groups.getById",
@@ -330,10 +358,21 @@ class VkApiClient:
                 details = response.get("groups") if isinstance(response, dict) and "groups" in response else response
                 for d in details or []:
                     base = unique_groups.get(d["id"]) or {}
-                    enriched[d["id"]] = {**base, **d}
-            except Exception:
-                pass
+                    merged = {**base, **d}
+                    
+                    # Проверяем принадлежность к нашему региону по ID населенного пункта
+                    group_city = merged.get("city")
+                    if group_city and isinstance(group_city, dict):
+                        g_city_id = group_city.get("id")
+                        if g_city_id and g_city_id not in city_ids_set:
+                            # Пропускаем группу из другого региона
+                            continue
+                            
+                    enriched[d["id"]] = merged
+            except Exception as exc:
+                print(f"!!! Error enriching chunk {index+1}: {exc} !!!", file=sys.stderr, flush=True)
 
+        print(f"!!! Enrichment complete. Returning {len(enriched)} groups !!!", file=sys.stderr, flush=True)
         return list(enriched.values())
 
 

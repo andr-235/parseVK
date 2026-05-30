@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 
 class FakeVkApiClient:
-    async def get_groups(self, group_ids: list[int]) -> list[dict]:
+    async def get_groups(self, group_ids: list[int], fields: list[str] | None = None) -> list[dict]:
         res = []
         for group_id in group_ids:
             if group_id == 40023088:
@@ -11,6 +11,7 @@ class FakeVkApiClient:
                     "screen_name": "livebir",
                     "name": "Биробиджан | livebir",
                     "is_closed": 0,
+                    "members_count": 48500,
                 })
             else:
                 res.append({
@@ -18,6 +19,7 @@ class FakeVkApiClient:
                     "screen_name": f"group{group_id}",
                     "name": f"VK Group {group_id}",
                     "is_closed": 0,
+                    "members_count": 5000,
                 })
         return res
 

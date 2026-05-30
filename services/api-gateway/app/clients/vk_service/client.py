@@ -96,6 +96,8 @@ class VkServiceClient:
                 status_code=exc.response.status_code, detail=detail
             ) from exc
         except httpx.RequestError as exc:
+            import sys
+            print(f"!!! VK_SERVICE REQUEST_ERROR: {type(exc).__name__}: {exc} !!!", file=sys.stderr, flush=True)
             raise VkServiceClientUnavailableError("VK service is unavailable") from exc
 
     async def get_xlsx_bytes(

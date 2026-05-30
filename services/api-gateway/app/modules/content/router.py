@@ -76,15 +76,12 @@ async def search_region_groups(
     if query:
         params["query"] = query
 
-    try:
-        vk_groups = await vk_gateway_service.forward(
-            request,
-            "GET",
-            "/internal/vk/groups/search/region",
-            params=params,
-        )
-    except Exception:
-        vk_groups = []
+    vk_groups = await vk_gateway_service.forward(
+        request,
+        "GET",
+        "/internal/vk/groups/search/region",
+        params=params,
+    )
 
     if not vk_groups:
         return {
