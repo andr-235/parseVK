@@ -1,4 +1,4 @@
-import type { WatchlistAuthorCard, WatchlistComment, WatchlistSettings } from '@/shared/types'
+import type { WatchlistAuthorCard, WatchlistComment, WatchlistSettings } from '@/pages/watchlist/types/watchlist'
 import { formatDateTime as sharedFormatDateTime } from '@/shared/utils'
 
 /**

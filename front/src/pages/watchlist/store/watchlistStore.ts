@@ -5,7 +5,7 @@ import type {
   WatchlistAuthorDetails,
   WatchlistSettings,
   WatchlistStatus,
-} from '@/shared/types'
+} from '@/pages/watchlist/types/watchlist'
 import {
   WATCHLIST_PAGE_SIZE,
   mapWatchlistAuthor,

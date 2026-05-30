@@ -25,6 +25,8 @@ import type {
   WatchlistAuthorCard,
   WatchlistAuthorDetails as WatchlistAuthorDetailsType,
   WatchlistComment,
+} from '@/pages/watchlist/types/watchlist'
+import type {
   PhotoAnalysisSummaryCategory,
   TableColumn,
 } from '@/shared/types'

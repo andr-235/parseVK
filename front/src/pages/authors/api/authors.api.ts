@@ -1,15 +1,15 @@
 import toast from 'react-hot-toast'
 import { apiClient } from '@/shared/api'
-import { createEmptyPhotoAnalysisSummary } from '@/shared/types'
+import { createEmptyPhotoAnalysisSummary } from '@/pages/author-analysis/types/photoAnalysis'
 import type {
   AuthorCard,
   AuthorDetails,
   AuthorListResponse,
   AuthorSortField,
   AuthorSortOrder,
-  PhotoAnalysisSummary,
-} from '@/shared/types'
+} from '@/pages/authors/types/authors'
 import type {
+  PhotoAnalysisSummary,
   AuthorCardResponse,
   AuthorDetailsResponse,
   AuthorsListResponse,

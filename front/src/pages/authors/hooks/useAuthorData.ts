@@ -5,7 +5,8 @@ import toast from 'react-hot-toast'
 // Это допустимо согласно правилам архитектуры для операций, не требующих глобального состояния
 import { authorsService } from '@/pages/authors/api/authors.api'
 import { useAuthorsStore } from '@/pages/authors/store'
-import { createEmptyPhotoAnalysisSummary, type AuthorDetails } from '@/shared/types'
+import { createEmptyPhotoAnalysisSummary } from '@/pages/author-analysis/types/photoAnalysis'
+import type { AuthorDetails } from '@/pages/authors/types/authors'
 import type { AuthorAnalysisLocationState } from '@/pages/author-analysis/types/authorAnalysis'
 import { isValidAuthorId } from '@/pages/authors/utils/authorUtils'
 export const useAuthorData = () => {

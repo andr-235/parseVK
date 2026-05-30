@@ -32,7 +32,7 @@ vi.mock('@/shared/api', () => {
     },
   }
 })
-vi.mock('@/shared/types', () => {
+vi.mock('@/pages/author-analysis/types/photoAnalysis', () => {
   return {
     createEmptyPhotoAnalysisSummary: () => ({
       total: 0,

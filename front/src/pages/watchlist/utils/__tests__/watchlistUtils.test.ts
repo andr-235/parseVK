@@ -1,6 +1,6 @@
 import { filterValidAuthors, validateAuthorId } from '@/pages/watchlist/utils/watchlistUtils'
-import type { WatchlistAuthorCard } from '@/shared/types'
-import { createEmptyPhotoAnalysisSummary } from '@/shared/types'
+import type { WatchlistAuthorCard } from '@/pages/watchlist/types/watchlist'
+import { createEmptyPhotoAnalysisSummary } from '@/pages/author-analysis/types/photoAnalysis'
 
 describe('watchlistUtils', () => {
   describe('validateAuthorId', () => {

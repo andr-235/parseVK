@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuthorsStore } from '@/pages/authors/store'
 import { usePhotoAnalysisStore } from '@/pages/author-analysis/store'
-import type { AuthorCard, AuthorSortField, PhotoAnalysisSummary } from '@/shared/types'
+import type { AuthorCard, AuthorSortField } from '@/pages/authors/types/authors'
+import type { PhotoAnalysisSummary } from '@/shared/types'
 import { resolveCityLabel, resolveProfileUrl } from '@/pages/authors/utils/authorUtils'
 
 export const useAuthorsViewModel = () => {

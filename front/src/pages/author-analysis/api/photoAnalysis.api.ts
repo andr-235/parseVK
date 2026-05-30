@@ -1,6 +1,7 @@
 import toast from 'react-hot-toast'
 import { apiClient } from '@/shared/api'
-import type { AnalyzePhotosOptions, PhotoAnalysisResponse, PhotoAnalysisSummary } from '@/shared/types'
+import type { AnalyzePhotosOptions, PhotoAnalysisResponse } from '@/pages/author-analysis/types/photoAnalysis'
+import type { PhotoAnalysisSummary } from '@/shared/types'
 
 export const photoAnalysisService = {
   async analyzeAuthor(
