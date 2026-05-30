@@ -8,21 +8,7 @@ const normalize = (value: string): string => {
     return fallbackBase
   }
 
-  let withoutTrailingSlash = value.replace(/\/+$/, '')
-
-  // Safeguard against compiled/fallback port-less http://localhost (port 80)
-  // when the application is actually loaded on a specific port (e.g. 8080 or 5173).
-  if (typeof window !== 'undefined') {
-    const origin = window.location.origin
-    if (
-      withoutTrailingSlash === 'http://localhost' ||
-      withoutTrailingSlash === 'http://127.0.0.1' ||
-      withoutTrailingSlash === 'https://localhost' ||
-      withoutTrailingSlash === 'https://127.0.0.1'
-    ) {
-      withoutTrailingSlash = origin
-    }
-  }
+  const withoutTrailingSlash = value.replace(/\/+$/, '')
 
   if (
     withoutTrailingSlash === '/api' ||
