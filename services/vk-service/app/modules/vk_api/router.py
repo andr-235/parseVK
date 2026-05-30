@@ -87,6 +87,9 @@ async def save_single_group(
         "description",
         "addresses",
         "counters",
+        "photo_50",
+        "photo_100",
+        "photo_200",
     ]
     try:
         is_numeric = parsed_identifier.isdigit()

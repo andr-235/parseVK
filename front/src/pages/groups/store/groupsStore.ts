@@ -3,7 +3,9 @@ import toast from 'react-hot-toast'
 import type { GroupsState } from '@/shared/types'
 import type { IRegionGroupSearchItem } from '@/shared/types'
 import type { Group } from '@/shared/types'
+import { queryClient } from '@/shared/api'
 import { groupsService } from '@/pages/groups/api/groups.api'
+import { groupsQueryKeys } from '@/pages/groups/api/queryKeys'
 
 export const GROUPS_PAGE_LIMIT = 50
 
@@ -326,14 +328,14 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
     }
 
     if (successfulGroups.length > 0) {
+      queryClient.invalidateQueries({ queryKey: groupsQueryKeys.list() })
       set((state) => ({
         regionSearch: successfulGroups.reduce(
           (acc, group) => updateRegionSearchAfterGroupAdded(acc, group),
           state.regionSearch
         ),
-        total: state.total + successfulGroups.length,
       }))
-      void get().fetchGroups({ reset: true })
+      await get().fetchGroups({ reset: true })
       toast.success(`Добавлено групп: ${successfulGroups.length}`)
     }
 
