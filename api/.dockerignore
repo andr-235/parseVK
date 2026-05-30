@@ -1,6 +1,0 @@
-.env
-dist
-coverage
-node_modules
-*.tsbuildinfo
-.claude
