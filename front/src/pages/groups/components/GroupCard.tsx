@@ -81,14 +81,14 @@ export const GroupCard = memo(function GroupCard({ group, onDelete }: GroupCardP
 
       {group.description && (
         <p
-          className="line-clamp-2 px-4 pb-3 text-xs leading-relaxed text-text-secondary"
+          className="line-clamp-2 min-h-0 px-4 pb-2 text-xs leading-relaxed text-text-secondary break-words"
           title={group.description}
         >
           {group.description}
         </p>
       )}
 
-      <div className="mt-auto flex items-center gap-2 border-t border-border/40 p-3">
+      <div className="mt-auto flex items-center gap-2 border-t border-border/40 px-3 py-2.5">
         <Button
           variant="ghost"
           size="sm"
