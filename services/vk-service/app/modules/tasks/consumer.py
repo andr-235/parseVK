@@ -13,7 +13,6 @@ from app.modules.outbox.service import OutboxService
 from app.modules.tasks.events import TaskEvent
 from app.modules.tasks.service import TaskEventsHandler, TaskEventsRepository
 from app.modules.vk_api.client import VkApiClient
-from app.modules.vk_api.fake_client import FakeVkApiClient
 
 
 class TaskEventsConsumer:
@@ -55,7 +54,7 @@ class TaskEventsConsumer:
                 handler = TaskEventsHandler(repository, self.tasks_client)
                 task_run = await handler.handle(event)
                 if task_run is not None and event.event_type in {"task.created", "task.resumed"}:
-                    adapter = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+                    adapter = VkApiClient()
                     ingestion = IngestionService(
                         adapter=adapter,
                         repository=IngestionRepository(session),

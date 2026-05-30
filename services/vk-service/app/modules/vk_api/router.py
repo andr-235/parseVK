@@ -9,7 +9,6 @@ from app.core.config import settings
 from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.vk_api.client import VkApiClient
-from app.modules.vk_api.fake_client import FakeVkApiClient
 from app.modules.vk_api.service import VkApiService
 
 router = APIRouter(
@@ -75,7 +74,7 @@ async def save_single_group(
 ) -> dict:
     parsed_identifier = normalize_identifier(identifier)
     
-    client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+    client = VkApiClient()
     group_data = None
     
     # 1. Пробуем получить через VK API
@@ -169,7 +168,7 @@ async def get_author_comments_for_post(
     max_pages: int = Query(default=10, ge=1, le=100),
     thread_items_count: int = Query(default=10, ge=0, le=100),
 ) -> list[dict]:
-    client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+    client = VkApiClient()
     return await client.get_author_comments_for_post(
         owner_id=owner_id,
         post_id=post_id,
@@ -187,7 +186,7 @@ async def get_user_photos(
     count: int = Query(default=100, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[dict]:
-    client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+    client = VkApiClient()
     return await client.get_user_photos(user_id=user_id, count=count, offset=offset)
 
 
@@ -218,7 +217,7 @@ async def delete_all_groups(
 async def search_region_groups(
     query: str | None = Query(default=None),
 ):
-    client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+    client = VkApiClient()
     try:
         return await client.search_groups_by_region(query=query)
     except ValueError as exc:
@@ -286,7 +285,7 @@ class UsersRequest(BaseModel):
 async def get_users(
     payload: UsersRequest,
 ):
-    client = FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+    client = VkApiClient()
     return await client.get_users(user_ids=payload.user_ids, fields=payload.fields)
 
 

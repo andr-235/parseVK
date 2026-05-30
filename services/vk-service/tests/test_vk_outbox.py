@@ -12,7 +12,21 @@ use_service_path()
 from app.modules.ingestion.service import IngestionService
 from app.modules.outbox.publisher import kafka_key_for_event
 from app.modules.outbox.service import OutboxService
-from app.modules.vk_api.fake_client import FakeVkApiClient
+
+
+class StubVkApiClient:
+    """Minimal in-test stub replacing the deleted FakeVkApiClient."""
+
+    token = ""
+
+    async def get_groups(self, group_ids: list) -> list:
+        return [{"id": gid, "name": f"Group {gid}"} for gid in group_ids]
+
+    async def get_posts(self, group_id: int, *, mode: str, post_limit: int) -> list:
+        return [{"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}]
+
+    async def get_comments(self, owner_id: int, post_id: int) -> list:
+        return [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]
 
 
 @pytest.fixture
@@ -93,7 +107,7 @@ def test_kafka_key_for_task_events_uses_task_id():
 async def test_ingestion_emits_collected_events_through_outbox():
     outbox_repository = FakeOutboxRepository()
     service = IngestionService(
-        adapter=FakeVkApiClient(),
+        adapter=StubVkApiClient(),
         repository=FakeIngestionRepository(),
         tasks_client=FakeTasksClient(),
         outbox_service=OutboxService(outbox_repository),

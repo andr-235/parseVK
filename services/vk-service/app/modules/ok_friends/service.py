@@ -13,7 +13,6 @@ from app.modules.ok_friends.exporter import (
     flatten_user_info,
 )
 from app.modules.ok_api.client import OkApiClient
-from app.modules.ok_api.fake_client import FakeOkApiClient
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +163,7 @@ class OkFriendsExportService:
         self.session_factory = session_factory or SessionLocal
 
     def _get_ok_client(self) -> Any:
-        return FakeOkApiClient() if settings.use_fake_ok_adapter else OkApiClient()
+        return OkApiClient()
 
     async def create_job(self, params: dict, ok_user_id: int | None = None) -> OkFriendsExportJob:
         async with self.session_factory() as session:

@@ -13,7 +13,6 @@ from app.modules.vk_friends.exporter import (
     map_vk_user_to_flat_dto,
 )
 from app.modules.vk_api.client import VkApiClient
-from app.modules.vk_api.fake_client import FakeVkApiClient
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ class VkFriendsExportService:
         self.session_factory = session_factory or SessionLocal
 
     def _get_vk_client(self) -> Any:
-        return FakeVkApiClient() if settings.use_fake_vk_adapter else VkApiClient()
+        return VkApiClient()
 
     async def create_job(self, params: dict, vk_user_id: int | None = None) -> VkFriendsExportJob:
         async with self.session_factory() as session:
