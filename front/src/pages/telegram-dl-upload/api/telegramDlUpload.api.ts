@@ -255,7 +255,7 @@ export const telegramDlUploadService = {
     try {
       return await apiClient.get<TelegramDlImportContactsPage>(
         '/v1/telegram-tgmbase/telegram/dl-import/contacts',
-        params
+        params as Record<string, string | number | boolean | undefined | null>
       )
     } catch (error) {
       toast.error('Не удалось загрузить контакты DL')
