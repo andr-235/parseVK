@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast'
 import { apiClient, ApiError } from '@/shared/api'
-import { buildCsrfHeaders } from '@/shared/auth/config/lib/authSession'
-import type { AuthResponse } from '@/shared/auth/types'
+import { buildCsrfHeaders } from '@/auth/config/lib/authSession'
+import type { AuthResponse } from '@/auth/types'
 
 async function handleAuthResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {

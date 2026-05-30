@@ -1,6 +1,6 @@
 import { GATEWAY_API_URL } from '@/shared/api'
-import { useAuthStore } from '@/shared/auth/store'
-import type { AuthResponse } from '@/shared/auth/types'
+import { useAuthStore } from '@/auth/store'
+import type { AuthResponse } from '@/auth/types'
 
 const CSRF_COOKIE_NAMES = ['csrf_token', '__Host-csrf_token'] as const
 const CSRF_HEADER_NAME = 'X-CSRF-Token'

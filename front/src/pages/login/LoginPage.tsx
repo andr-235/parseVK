@@ -5,8 +5,8 @@ import { Label } from '@/shared/components/ui/label'
 import { Button } from '@/shared/components/ui/button'
 import { Spinner } from '@/shared/components/ui/spinner'
 import { BrandLogo } from '@/shared/components/common/BrandLogo'
-import { authService } from '@/shared/auth/api/auth.api'
-import { useAuthSession } from '@/shared/auth/hooks/useAuthSession'
+import { authService } from '@/auth/api/auth.api'
+import { useAuthSession } from '@/auth/hooks/useAuthSession'
 
 const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
 

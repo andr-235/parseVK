@@ -1,5 +1,5 @@
-import { refreshAccessToken } from '@/shared/auth/config/lib/authSession'
-import { useAuthStore } from '@/shared/auth/store/authStore'
+import { refreshAccessToken } from '@/auth/config/lib/authSession'
+import { useAuthStore } from '@/auth/store/authStore'
 
 export interface AuthProvider {
   getAccessToken: () => string | null

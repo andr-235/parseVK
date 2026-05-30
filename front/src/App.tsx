@@ -4,7 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { Sidebar } from '@/shared/components/common/Sidebar'
 import MainContent from '@/shared/components/common/MainContent'
 import AppSyncProvider from '@/shared/providers/AppSyncProvider'
-import { useAuthStore } from '@/shared/auth/store'
+import { useAuthStore } from '@/auth/store'
 
 // Lazy load pages
 const Tasks = lazy(() => import('@/pages/tasks'))

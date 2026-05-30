@@ -11,7 +11,7 @@ export type {
   UserRole,
   CreateUserPayload,
   TemporaryPasswordResponse,
-} from '@/shared/auth/types/auth'
+} from '@/auth/types/auth'
 export type {
   AuthorCard,
   AuthorDetails,

@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { Send, Settings, UserCog, Cpu } from 'lucide-react'
 import { useSidebarState } from '@/shared/hooks'
 import { useSidebarData } from '@/shared/hooks'
-import { useAuthSession } from '@/shared/auth/hooks/useAuthSession'
+import { useAuthSession } from '@/auth/hooks/useAuthSession'
 import {
   createPrimaryItems,
   createMonitoringSubItems,

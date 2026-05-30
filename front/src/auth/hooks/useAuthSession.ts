@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/shared/auth/store'
+import { useAuthStore } from '@/auth/store'
 
 export const useAuthSession = () => {
   const setAuth = useAuthStore((state) => state.setAuth)

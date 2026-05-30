@@ -9,7 +9,7 @@ const defaultUser = {
 
 const loadAuthModules = async () => {
   const [{ useAuthStore }, { refreshAccessToken }] = await Promise.all([
-    import('@/shared/auth/store'),
+    import('@/auth/store'),
     import('../authSession'),
   ])
 

@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast'
 import { apiClient } from '@/shared/api'
-import type { AdminUser, CreateUserPayload, TemporaryPasswordResponse } from '@/shared/auth/types'
+import type { AdminUser, CreateUserPayload, TemporaryPasswordResponse } from '@/auth/types'
 
 export const adminUsersService = {
   async listUsers(): Promise<AdminUser[]> {

@@ -12,7 +12,7 @@ vi.mock('@/shared/api', () => ({
   },
 }))
 
-vi.mock('@/shared/auth/config/lib/authSession', () => ({
+vi.mock('@/auth/config/lib/authSession', () => ({
   buildCsrfHeaders: buildCsrfHeadersMock,
 }))
 
