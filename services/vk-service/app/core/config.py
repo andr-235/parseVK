@@ -19,11 +19,12 @@ class Settings(BaseSettings):
     ok_application_key: str = Field(default="", repr=False)
     ok_application_secret_key: str = Field(default="", repr=False)
     default_group_ids: list[int] = [1]
+    use_fake_vk_adapter: bool = True
 
     @model_validator(mode="after")
     def validate_vk_token(self) -> "Settings":
         import sys
-        if "pytest" not in sys.modules and not self.vk_token:
+        if "pytest" not in sys.modules and not self.use_fake_vk_adapter and not self.vk_token:
             raise ValueError("VK_SERVICE_VK_TOKEN is required")
         return self
 
