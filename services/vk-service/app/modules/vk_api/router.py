@@ -190,6 +190,16 @@ async def get_user_photos(
     return await client.get_user_photos(user_id=user_id, count=count, offset=offset)
 
 
+@router.delete("/groups/all")
+async def delete_all_groups(
+    session: AsyncSession = Depends(get_session),
+    x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
+):
+    svc = VkApiService(session)
+    group_ids = await svc.delete_all_groups(correlation_id=x_correlation_id)
+    return {"count": len(group_ids)}
+
+
 @router.delete("/groups/{vk_group_id}")
 async def delete_group(
     vk_group_id: int,
@@ -201,16 +211,6 @@ async def delete_group(
     if not ok:
         raise HTTPException(status_code=404, detail="Group not found")
     return {"status": "success"}
-
-
-@router.delete("/groups/all")
-async def delete_all_groups(
-    session: AsyncSession = Depends(get_session),
-    x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
-):
-    svc = VkApiService(session)
-    group_ids = await svc.delete_all_groups(correlation_id=x_correlation_id)
-    return {"count": len(group_ids)}
 
 
 @router.get("/groups/search/region")
