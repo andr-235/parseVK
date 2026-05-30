@@ -3,7 +3,7 @@ set -e
 
 # Подстановка переменной API_URL в nginx конфиг
 # Если API_URL не указан, используем значение по умолчанию
-API_URL="${API_URL:-http://api:3000}"
+API_URL="${API_URL:-http://api-gateway:8000}"
 GATEWAY_API_URL="${GATEWAY_API_URL:-http://api-gateway:8000}"
 
 # Заменяем ${API_URL} в nginx конфиге на реальное значение
