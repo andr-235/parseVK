@@ -231,6 +231,7 @@ services:
         condition: service_healthy
     environment:
       VK_SERVICE_DATABASE_URL: ${VK_SERVICE_DATABASE_URL:-postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk}
+      VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-dev-vk-token}}
     command: ["alembic", "upgrade", "head"]
     networks:
       - backend
@@ -254,7 +255,6 @@ services:
       VK_SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       VK_SERVICE_KAFKA_CONSUMER_ENABLED: ${VK_SERVICE_KAFKA_CONSUMER_ENABLED:-true}
       VK_SERVICE_OUTBOX_PUBLISH_ENABLED: ${VK_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
-      VK_SERVICE_USE_FAKE_VK_ADAPTER: ${VK_SERVICE_USE_FAKE_VK_ADAPTER:-true}
       VK_SERVICE_DEFAULT_GROUP_IDS: '${VK_SERVICE_DEFAULT_GROUP_IDS:-[1]}'
       VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-}}
     healthcheck:
