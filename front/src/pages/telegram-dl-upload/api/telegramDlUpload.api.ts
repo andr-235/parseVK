@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL, GATEWAY_API_URL, createRequest, handleResponse } from '@/shared/api'
+import { GATEWAY_API_URL, createRequest, handleResponse } from '@/shared/api'
 import { saveReportBlob } from '@/shared/utils'
 
 const UPLOAD_CHUNK_SIZE = 20
