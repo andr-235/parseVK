@@ -23,7 +23,7 @@
 ## Типографика
 
 | Класс | Font | Size | Weight | Tracking | Назначение |
-|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | `font-monitoring-display text-3xl font-semibold tracking-tight` | Inter | 30px/36px | 600 | -0.025em | Заголовок страницы |
 | `font-monitoring-display text-xl font-semibold tracking-tight` | Inter | 20px/28px | 600 | -0.025em | Заголовок секции |
 | `font-monitoring-body text-base font-semibold` | Inter | 16px/24px | 600 | normal | Заголовок карточки |
@@ -32,13 +32,14 @@
 | `font-mono-accent text-xs font-medium` | JetBrains Mono | 12px/16px | 500 | normal | ID, даты, счётчики |
 | `font-mono-accent text-xs font-medium text-text-secondary` | JetBrains Mono | 12px/16px | 500 | normal | Мета |
 
-## Тени
+## Тени и скругления
 
-| Класс | Значение |
-|---|---|
-| `shadow-soft-sm` | 0 1px 2px rgba(0,0,0,0.3) |
-| `shadow-soft-md` | 0 4px 6px rgba(0,0,0,0.3) |
-| `shadow-soft-lg` | 0 10px 15px rgba(0,0,0,0.3) |
+| Класс | Значение | Назначение |
+|---|---|---|
+| `rounded-card` | `var(--radius-card)` | Скругление карточек и панелей |
+| `shadow-soft-sm` | 0 1px 2px rgba(0,0,0,0.3) | Лёгкая тень для карточек |
+| `shadow-soft-md` | 0 4px 6px rgba(0,0,0,0.3) | Средняя тень (hover карточек) |
+| `shadow-soft-lg` | 0 10px 15px rgba(0,0,0,0.3) | Глубокая тень (модалки) |
 
 ## Статус-маппинг
 
@@ -46,3 +47,11 @@
 |---|---|---|
 | Task | pending → processing → running → completed / failed | warning → info → primary → success / danger |
 | Group | pending → processing → running → success / failed | warning → info → primary → success / danger |
+
+## Каркас карточки
+
+```tsx
+<div className="overflow-hidden rounded-card border border-border/60 bg-background-secondary shadow-soft-sm transition-colors duration-200 hover:border-border hover:shadow-soft-md">
+  {/* content */}
+</div>
+```
