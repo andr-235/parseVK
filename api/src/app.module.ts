@@ -1,58 +1,18 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
-import { ConfigService } from '@nestjs/config';
+import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ConfigModule } from './config/config.module.js';
-import { CacheModule } from './common/cache/cache.module.js';
-import { CommonModule } from './common/common.module.js';
-import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware.js';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { PrismaModule } from './prisma.module.js';
-import { TgmbasePrismaModule } from './tgmbase-prisma/tgmbase-prisma.module.js';
-import { VkModule } from './vk/vk.module.js';
-import { VkFriendsModule } from './vk-friends/vk-friends.module.js';
-import { OkFriendsModule } from './ok-friends/ok-friends.module.js';
-import { TasksModule } from './tasks/tasks.module.js';
-import { TelegramModule } from './telegram/telegram.module.js';
-
-import { MetricsModule } from './metrics/metrics.module.js';
-import type { AppConfig } from './config/app.config.js';
 
 @Module({
   imports: [
     ConfigModule,
     PrismaModule,
-    TgmbasePrismaModule,
     ScheduleModule.forRoot(),
-    // BullMQ глобальная конфигурация
-    BullModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<AppConfig>) => ({
-        connection: {
-          host: configService.get('bullMqHost', { infer: true }) ?? 'redis',
-          port: configService.get('bullMqPort', { infer: true }) ?? 6379,
-        },
-        prefix: configService.get('bullMqPrefix', { infer: true }) ?? undefined,
-      }),
-    }),
-    CacheModule,
-    CommonModule,
-    MetricsModule,
-    VkModule,
-    VkFriendsModule,
-    OkFriendsModule,
-    TasksModule,
-    TelegramModule,
   ],
   controllers: [AppController],
-  providers: [AppService, LoggingInterceptor, HttpExceptionFilter],
+  providers: [AppService],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}
 

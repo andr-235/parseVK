@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model TelegramChat
@@ -231,7 +231,7 @@ export type TelegramChatGroupByOutputType = {
   _max: TelegramChatMaxAggregateOutputType | null
 }
 
-type GetTelegramChatGroupByPayload<T extends TelegramChatGroupByArgs> = Prisma.PrismaPromise<
+export type GetTelegramChatGroupByPayload<T extends TelegramChatGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<TelegramChatGroupByOutputType, T['by']> &
       {
@@ -1305,6 +1305,11 @@ export type TelegramChatFindManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * Skip the first `n` TelegramChats.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of TelegramChats.
+   */
   distinct?: Prisma.TelegramChatScalarFieldEnum | Prisma.TelegramChatScalarFieldEnum[]
 }
 

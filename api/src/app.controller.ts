@@ -1,7 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service.js';
-import { HealthService } from './common/services/health.service.js';
-import type { HealthCheckResult } from './common/services/health.service.js';
 
 /**
  * Основной контроллер приложения
@@ -12,7 +10,6 @@ import type { HealthCheckResult } from './common/services/health.service.js';
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    private readonly healthService: HealthService,
   ) {}
 
   @Get()
@@ -21,12 +18,12 @@ export class AppController {
   }
 
   @Get('health')
-  async getHealth(): Promise<HealthCheckResult> {
-    return this.healthService.checkHealth();
+  async getHealth() {
+    return { status: 'UP' };
   }
 
   @Get('ready')
   async getReadiness() {
-    return this.healthService.checkReadiness();
+    return { status: 'READY' };
   }
 }

@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model WatchlistAuthor
@@ -257,7 +257,7 @@ export type WatchlistAuthorGroupByOutputType = {
   _max: WatchlistAuthorMaxAggregateOutputType | null
 }
 
-type GetWatchlistAuthorGroupByPayload<T extends WatchlistAuthorGroupByArgs> = Prisma.PrismaPromise<
+export type GetWatchlistAuthorGroupByPayload<T extends WatchlistAuthorGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<WatchlistAuthorGroupByOutputType, T['by']> &
       {
@@ -1861,6 +1861,11 @@ export type WatchlistAuthorFindManyArgs<ExtArgs extends runtime.Types.Extensions
    * Skip the first `n` WatchlistAuthors.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of WatchlistAuthors.
+   */
   distinct?: Prisma.WatchlistAuthorScalarFieldEnum | Prisma.WatchlistAuthorScalarFieldEnum[]
 }
 

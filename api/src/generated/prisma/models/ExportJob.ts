@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model ExportJob
@@ -249,7 +249,7 @@ export type ExportJobGroupByOutputType = {
   _max: ExportJobMaxAggregateOutputType | null
 }
 
-type GetExportJobGroupByPayload<T extends ExportJobGroupByArgs> = Prisma.PrismaPromise<
+export type GetExportJobGroupByPayload<T extends ExportJobGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<ExportJobGroupByOutputType, T['by']> &
       {
@@ -1506,6 +1506,11 @@ export type ExportJobFindManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Skip the first `n` ExportJobs.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of ExportJobs.
+   */
   distinct?: Prisma.ExportJobScalarFieldEnum | Prisma.ExportJobScalarFieldEnum[]
 }
 

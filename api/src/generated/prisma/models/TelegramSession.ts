@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model TelegramSession
@@ -210,7 +210,7 @@ export type TelegramSessionGroupByOutputType = {
   _max: TelegramSessionMaxAggregateOutputType | null
 }
 
-type GetTelegramSessionGroupByPayload<T extends TelegramSessionGroupByArgs> = Prisma.PrismaPromise<
+export type GetTelegramSessionGroupByPayload<T extends TelegramSessionGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<TelegramSessionGroupByOutputType, T['by']> &
       {
@@ -1057,6 +1057,11 @@ export type TelegramSessionFindManyArgs<ExtArgs extends runtime.Types.Extensions
    * Skip the first `n` TelegramSessions.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of TelegramSessions.
+   */
   distinct?: Prisma.TelegramSessionScalarFieldEnum | Prisma.TelegramSessionScalarFieldEnum[]
 }
 

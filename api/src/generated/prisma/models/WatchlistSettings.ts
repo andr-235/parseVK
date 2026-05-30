@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model WatchlistSettings
@@ -207,7 +207,7 @@ export type WatchlistSettingsGroupByOutputType = {
   _max: WatchlistSettingsMaxAggregateOutputType | null
 }
 
-type GetWatchlistSettingsGroupByPayload<T extends WatchlistSettingsGroupByArgs> = Prisma.PrismaPromise<
+export type GetWatchlistSettingsGroupByPayload<T extends WatchlistSettingsGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<WatchlistSettingsGroupByOutputType, T['by']> &
       {
@@ -1171,6 +1171,11 @@ export type WatchlistSettingsFindManyArgs<ExtArgs extends runtime.Types.Extensio
    * Skip the first `n` WatchlistSettings.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of WatchlistSettings.
+   */
   distinct?: Prisma.WatchlistSettingsScalarFieldEnum | Prisma.WatchlistSettingsScalarFieldEnum[]
 }
 

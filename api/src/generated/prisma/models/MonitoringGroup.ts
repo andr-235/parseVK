@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model MonitoringGroup
@@ -206,7 +206,7 @@ export type MonitoringGroupGroupByOutputType = {
   _max: MonitoringGroupMaxAggregateOutputType | null
 }
 
-type GetMonitoringGroupGroupByPayload<T extends MonitoringGroupGroupByArgs> = Prisma.PrismaPromise<
+export type GetMonitoringGroupGroupByPayload<T extends MonitoringGroupGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<MonitoringGroupGroupByOutputType, T['by']> &
       {
@@ -1061,6 +1061,11 @@ export type MonitoringGroupFindManyArgs<ExtArgs extends runtime.Types.Extensions
    * Skip the first `n` MonitoringGroups.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of MonitoringGroups.
+   */
   distinct?: Prisma.MonitoringGroupScalarFieldEnum | Prisma.MonitoringGroupScalarFieldEnum[]
 }
 

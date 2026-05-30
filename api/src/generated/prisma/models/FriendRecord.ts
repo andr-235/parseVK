@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model FriendRecord
@@ -199,7 +199,7 @@ export type FriendRecordGroupByOutputType = {
   _max: FriendRecordMaxAggregateOutputType | null
 }
 
-type GetFriendRecordGroupByPayload<T extends FriendRecordGroupByArgs> = Prisma.PrismaPromise<
+export type GetFriendRecordGroupByPayload<T extends FriendRecordGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<FriendRecordGroupByOutputType, T['by']> &
       {
@@ -1201,6 +1201,11 @@ export type FriendRecordFindManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * Skip the first `n` FriendRecords.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of FriendRecords.
+   */
   distinct?: Prisma.FriendRecordScalarFieldEnum | Prisma.FriendRecordScalarFieldEnum[]
 }
 

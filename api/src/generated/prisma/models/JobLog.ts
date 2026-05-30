@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model JobLog
@@ -161,7 +161,7 @@ export type JobLogGroupByOutputType = {
   _max: JobLogMaxAggregateOutputType | null
 }
 
-type GetJobLogGroupByPayload<T extends JobLogGroupByArgs> = Prisma.PrismaPromise<
+export type GetJobLogGroupByPayload<T extends JobLogGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<JobLogGroupByOutputType, T['by']> &
       {
@@ -1155,6 +1155,11 @@ export type JobLogFindManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Skip the first `n` JobLogs.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of JobLogs.
+   */
   distinct?: Prisma.JobLogScalarFieldEnum | Prisma.JobLogScalarFieldEnum[]
 }
 

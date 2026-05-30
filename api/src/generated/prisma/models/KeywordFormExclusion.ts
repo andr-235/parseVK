@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model KeywordFormExclusion
@@ -189,7 +189,7 @@ export type KeywordFormExclusionGroupByOutputType = {
   _max: KeywordFormExclusionMaxAggregateOutputType | null
 }
 
-type GetKeywordFormExclusionGroupByPayload<T extends KeywordFormExclusionGroupByArgs> = Prisma.PrismaPromise<
+export type GetKeywordFormExclusionGroupByPayload<T extends KeywordFormExclusionGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<KeywordFormExclusionGroupByOutputType, T['by']> &
       {
@@ -1138,6 +1138,11 @@ export type KeywordFormExclusionFindManyArgs<ExtArgs extends runtime.Types.Exten
    * Skip the first `n` KeywordFormExclusions.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of KeywordFormExclusions.
+   */
   distinct?: Prisma.KeywordFormExclusionScalarFieldEnum | Prisma.KeywordFormExclusionScalarFieldEnum[]
 }
 

@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model TaskAuditLog
@@ -192,7 +192,7 @@ export type TaskAuditLogGroupByOutputType = {
   _max: TaskAuditLogMaxAggregateOutputType | null
 }
 
-type GetTaskAuditLogGroupByPayload<T extends TaskAuditLogGroupByArgs> = Prisma.PrismaPromise<
+export type GetTaskAuditLogGroupByPayload<T extends TaskAuditLogGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<TaskAuditLogGroupByOutputType, T['by']> &
       {
@@ -1161,6 +1161,11 @@ export type TaskAuditLogFindManyArgs<ExtArgs extends runtime.Types.Extensions.In
    * Skip the first `n` TaskAuditLogs.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of TaskAuditLogs.
+   */
   distinct?: Prisma.TaskAuditLogScalarFieldEnum | Prisma.TaskAuditLogScalarFieldEnum[]
 }
 

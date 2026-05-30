@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model CommentKeywordMatch
@@ -189,7 +189,7 @@ export type CommentKeywordMatchGroupByOutputType = {
   _max: CommentKeywordMatchMaxAggregateOutputType | null
 }
 
-type GetCommentKeywordMatchGroupByPayload<T extends CommentKeywordMatchGroupByArgs> = Prisma.PrismaPromise<
+export type GetCommentKeywordMatchGroupByPayload<T extends CommentKeywordMatchGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<CommentKeywordMatchGroupByOutputType, T['by']> &
       {
@@ -1262,6 +1262,11 @@ export type CommentKeywordMatchFindManyArgs<ExtArgs extends runtime.Types.Extens
    * Skip the first `n` CommentKeywordMatches.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of CommentKeywordMatches.
+   */
   distinct?: Prisma.CommentKeywordMatchScalarFieldEnum | Prisma.CommentKeywordMatchScalarFieldEnum[]
 }
 

@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model PhotoAnalysis
@@ -252,7 +252,7 @@ export type PhotoAnalysisGroupByOutputType = {
   _max: PhotoAnalysisMaxAggregateOutputType | null
 }
 
-type GetPhotoAnalysisGroupByPayload<T extends PhotoAnalysisGroupByArgs> = Prisma.PrismaPromise<
+export type GetPhotoAnalysisGroupByPayload<T extends PhotoAnalysisGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<PhotoAnalysisGroupByOutputType, T['by']> &
       {
@@ -1466,6 +1466,11 @@ export type PhotoAnalysisFindManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * Skip the first `n` PhotoAnalyses.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of PhotoAnalyses.
+   */
   distinct?: Prisma.PhotoAnalysisScalarFieldEnum | Prisma.PhotoAnalysisScalarFieldEnum[]
 }
 

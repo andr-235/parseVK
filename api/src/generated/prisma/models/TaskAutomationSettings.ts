@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model TaskAutomationSettings
@@ -236,7 +236,7 @@ export type TaskAutomationSettingsGroupByOutputType = {
   _max: TaskAutomationSettingsMaxAggregateOutputType | null
 }
 
-type GetTaskAutomationSettingsGroupByPayload<T extends TaskAutomationSettingsGroupByArgs> = Prisma.PrismaPromise<
+export type GetTaskAutomationSettingsGroupByPayload<T extends TaskAutomationSettingsGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<TaskAutomationSettingsGroupByOutputType, T['by']> &
       {
@@ -1135,6 +1135,11 @@ export type TaskAutomationSettingsFindManyArgs<ExtArgs extends runtime.Types.Ext
    * Skip the first `n` TaskAutomationSettings.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of TaskAutomationSettings.
+   */
   distinct?: Prisma.TaskAutomationSettingsScalarFieldEnum | Prisma.TaskAutomationSettingsScalarFieldEnum[]
 }
 
