@@ -17,10 +17,10 @@ class VkApiAdapter(Protocol):
     async def get_groups(self, group_ids: list[int], fields: list[str] | None = None) -> list[dict]:
         raise NotImplementedError
 
-    async def get_posts(self, group_id: int, *, mode: str, post_limit: int | None) -> list[dict]:
+    async def get_posts(self, group_id: int, *, mode: str, post_limit: int | None) -> dict:
         raise NotImplementedError
 
-    async def get_comments(self, owner_id: int, post_id: int) -> list[dict]:
+    async def get_comments(self, owner_id: int, post_id: int) -> dict:
         raise NotImplementedError
 
     async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:
@@ -97,15 +97,23 @@ class VkApiClient:
             return list(response["groups"])
         return list(response)
 
-    async def get_posts(self, group_id: int, *, mode: str, post_limit: int | None) -> list[dict]:
+    async def get_posts(self, group_id: int, *, mode: str, post_limit: int | None) -> dict:
         count = post_limit or 10
         owner_id = -abs(group_id)
-        response = await self._call("wall.get", owner_id=owner_id, count=count)
-        return list(response.get("items") or [])
+        response = await self._call("wall.get", owner_id=owner_id, count=count, extended=1)
+        return {
+            "items": list(response.get("items") or []),
+            "profiles": list(response.get("profiles") or []),
+            "groups": list(response.get("groups") or []),
+        }
 
-    async def get_comments(self, owner_id: int, post_id: int) -> list[dict]:
-        response = await self._call("wall.getComments", owner_id=owner_id, post_id=post_id, count=100)
-        return list(response.get("items") or [])
+    async def get_comments(self, owner_id: int, post_id: int) -> dict:
+        response = await self._call("wall.getComments", owner_id=owner_id, post_id=post_id, count=100, extended=1)
+        return {
+            "items": list(response.get("items") or []),
+            "profiles": list(response.get("profiles") or []),
+            "groups": list(response.get("groups") or []),
+        }
 
     async def get_author_comments_for_post(
         self,

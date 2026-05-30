@@ -9,7 +9,7 @@ export function resolveCommentVisibility({
   showKeywordComments,
   showKeywordPosts,
 }: VisibilityParams) {
-  const isFilterActive = showKeywordComments !== undefined || showKeywordPosts !== undefined
+  const isFilterActive = showKeywordComments === true || showKeywordPosts === true
 
   const shouldShowPost = !hidePostContext && (!isFilterActive || showKeywordPosts === true)
   const shouldShowComment = !isFilterActive || showKeywordComments === true

@@ -171,18 +171,37 @@ class IngestionService:
                 await self.outbox.emit_group_collected(group, correlation_id=correlation_id)
             result.groups += 1
 
-            posts = await self.adapter.get_posts(group_id, mode=task_run.mode, post_limit=task_run.post_limit)
+            posts_response = await self.adapter.get_posts(group_id, mode=task_run.mode, post_limit=task_run.post_limit)
+            posts = posts_response["items"]
+
+            author_profiles: dict[int, dict] = {}
+            for p in posts_response.get("profiles", []):
+                author_profiles[p["id"]] = p
+            for g in posts_response.get("groups", []):
+                author_profiles[g["id"]] = g
+
+            post_comments: list[list[dict]] = []
             for post in posts:
-                if await self._upsert_post_author(post):
+                comments_response = await self.adapter.get_comments(int(post["owner_id"]), int(post["id"]))
+                comments = comments_response["items"]
+                post_comments.append(comments)
+                for p in comments_response.get("profiles", []):
+                    author_profiles.setdefault(p["id"], p)
+                for g in comments_response.get("groups", []):
+                    author_profiles.setdefault(g["id"], g)
+
+            await self._enrich_user_profiles(author_profiles)
+
+            for idx, post in enumerate(posts):
+                if await self._upsert_post_author(post, author_profiles):
                     result.authors += 1
                 await self.repository.upsert_post(post, task_id=task_run.task_id, group_id=group_id)
                 if self.outbox:
                     await self.outbox.emit_post_collected(post, task_id=task_run.task_id, correlation_id=correlation_id)
                 result.posts += 1
 
-                comments = await self.adapter.get_comments(int(post["owner_id"]), int(post["id"]))
-                for comment in comments:
-                    if await self._upsert_comment_author(comment):
+                for comment in post_comments[idx]:
+                    if await self._upsert_comment_author(comment, author_profiles):
                         result.authors += 1
                     await self.repository.upsert_comment(comment, task_id=task_run.task_id)
                     if self.outbox:
@@ -213,32 +232,67 @@ class IngestionService:
                     )
         return result
 
-    async def _upsert_post_author(self, post: dict) -> bool:
+    async def _enrich_user_profiles(
+        self, profiles: dict[int, dict]
+    ) -> None:
+        user_ids = [uid for uid in profiles if uid > 0 and not profiles[uid].get("photo_50")]
+        if not user_ids:
+            return
+        try:
+            enriched = await self.adapter.get_users(
+                user_ids,
+                fields=["photo_50", "photo_100", "photo_200", "domain", "screen_name"],
+            )
+        except Exception:
+            return
+        for user in enriched:
+            uid = user.get("id")
+            if uid and uid in profiles:
+                profiles[uid].update(user)
+
+    async def _upsert_post_author(self, post: dict, profiles: dict[int, dict]) -> bool:
         from_id = post.get("from_id")
         if from_id is None:
             return False
-        await self.repository.upsert_author(
-            self._author_payload(from_id)
-        )
+        payload = self._author_payload(from_id, profiles)
+        await self.repository.upsert_author(payload)
         if self.outbox:
-            await self.outbox.emit_author_collected(self._author_payload(from_id))
+            await self.outbox.emit_author_collected(payload)
         return True
 
-    async def _upsert_comment_author(self, comment: dict) -> bool:
+    async def _upsert_comment_author(self, comment: dict, profiles: dict[int, dict]) -> bool:
         from_id = comment.get("from_id")
         if from_id is None:
             return False
-        await self.repository.upsert_author(
-            self._author_payload(from_id)
-        )
+        payload = self._author_payload(from_id, profiles)
+        await self.repository.upsert_author(payload)
         if self.outbox:
-            await self.outbox.emit_author_collected(self._author_payload(from_id))
+            await self.outbox.emit_author_collected(payload)
         return True
 
-    def _author_payload(self, from_id) -> dict:
+    def _author_payload(self, from_id: int, profiles: dict[int, dict] | None = None) -> dict:
+        vk_id = int(from_id)
+        profile = profiles.get(vk_id) if profiles else None
+        if profile is None and vk_id < 0:
+            profile = profiles.get(abs(vk_id)) if profiles else None
+        if profile:
+            name = profile.get("name") or f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip() or str(vk_id)
+            return {
+                "vk_author_id": vk_id,
+                "type": "group" if vk_id < 0 else "user",
+                "display_name": name,
+                "first_name": profile.get("first_name", ""),
+                "last_name": profile.get("last_name", ""),
+                "photo_50": profile.get("photo_50") or profile.get("photo"),
+                "photo_100": profile.get("photo_100") or profile.get("photo"),
+                "photo_200": profile.get("photo_200") or profile.get("photo"),
+                "domain": profile.get("domain", ""),
+                "screen_name": profile.get("screen_name", ""),
+                "raw": {"from_id": from_id},
+            }
         return {
-            "vk_author_id": int(from_id),
-            "type": "group" if int(from_id) < 0 else "user",
-            "display_name": str(from_id),
+            "vk_author_id": vk_id,
+            "type": "group" if vk_id < 0 else "user",
+            "display_name": str(vk_id),
             "raw": {"from_id": from_id},
         }

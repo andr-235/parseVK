@@ -115,11 +115,29 @@ class ProjectionRepository:
             vk_author_id=int(author["vk_author_id"]),
             type=author["type"],
             display_name=author.get("display_name"),
+            first_name=author.get("first_name"),
+            last_name=author.get("last_name"),
+            photo_50=author.get("photo_50"),
+            photo_100=author.get("photo_100"),
+            photo_200=author.get("photo_200"),
+            domain=author.get("domain"),
+            screen_name=author.get("screen_name"),
             updated_at=now,
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=[ContentAuthor.vk_author_id],
-            set_={"type": stmt.excluded.type, "display_name": stmt.excluded.display_name, "updated_at": now},
+            set_={
+                "type": stmt.excluded.type,
+                "display_name": stmt.excluded.display_name,
+                "first_name": stmt.excluded.first_name,
+                "last_name": stmt.excluded.last_name,
+                "photo_50": stmt.excluded.photo_50,
+                "photo_100": stmt.excluded.photo_100,
+                "photo_200": stmt.excluded.photo_200,
+                "domain": stmt.excluded.domain,
+                "screen_name": stmt.excluded.screen_name,
+                "updated_at": now,
+            },
         )
         await self.session.execute(stmt)
 
