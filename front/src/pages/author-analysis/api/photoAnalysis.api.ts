@@ -1,6 +1,5 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/shared/api'
-import { createRequest, handleResponse } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 import type { AnalyzePhotosOptions, PhotoAnalysisResponse, PhotoAnalysisSummary } from '@/shared/types'
 
 export const photoAnalysisService = {
@@ -9,17 +8,9 @@ export const photoAnalysisService = {
     options?: AnalyzePhotosOptions
   ): Promise<PhotoAnalysisResponse> {
     try {
-      const response = await createRequest(
-        `${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}/analyze`,
-        {
-          method: 'POST',
-          body: JSON.stringify(options ?? {}),
-        }
-      )
-
-      const result = await handleResponse<PhotoAnalysisResponse>(
-        response,
-        'Не удалось выполнить анализ фотографий автора'
+      const result = await apiClient.post<PhotoAnalysisResponse>(
+        `/v1/photo-analysis/vk/${vkUserId}/analyze`,
+        options ?? {}
       )
       toast.success('Анализ фотографий запущен')
       return result
@@ -31,11 +22,7 @@ export const photoAnalysisService = {
 
   async getResults(vkUserId: number): Promise<PhotoAnalysisResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}`)
-      return await handleResponse<PhotoAnalysisResponse>(
-        response,
-        'Не удалось загрузить результаты анализа фотографий'
-      )
+      return await apiClient.get<PhotoAnalysisResponse>(`/v1/photo-analysis/vk/${vkUserId}`)
     } catch (error) {
       toast.error('Не удалось загрузить результаты анализа фотографий')
       throw error
@@ -44,13 +31,7 @@ export const photoAnalysisService = {
 
   async getSuspicious(vkUserId: number): Promise<PhotoAnalysisResponse> {
     try {
-      const response = await createRequest(
-        `${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}/suspicious`
-      )
-      return await handleResponse<PhotoAnalysisResponse>(
-        response,
-        'Не удалось загрузить список подозрительных фотографий'
-      )
+      return await apiClient.get<PhotoAnalysisResponse>(`/v1/photo-analysis/vk/${vkUserId}/suspicious`)
     } catch (error) {
       toast.error('Не удалось загрузить список подозрительных фотографий')
       throw error
@@ -59,13 +40,7 @@ export const photoAnalysisService = {
 
   async getSummary(vkUserId: number): Promise<PhotoAnalysisSummary> {
     try {
-      const response = await createRequest(
-        `${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}/summary`
-      )
-      return await handleResponse<PhotoAnalysisSummary>(
-        response,
-        'Не удалось загрузить сводку по анализу фотографий'
-      )
+      return await apiClient.get<PhotoAnalysisSummary>(`/v1/photo-analysis/vk/${vkUserId}/summary`)
     } catch (error) {
       toast.error('Не удалось загрузить сводку по анализу фотографий')
       throw error
@@ -74,14 +49,7 @@ export const photoAnalysisService = {
 
   async deleteResults(vkUserId: number): Promise<{ message: string }> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/photo-analysis/vk/${vkUserId}`, {
-        method: 'DELETE',
-      })
-
-      const result = await handleResponse<{ message: string }>(
-        response,
-        'Не удалось удалить результаты анализа'
-      )
+      const result = await apiClient.delete<{ message: string }>(`/v1/photo-analysis/vk/${vkUserId}`)
       toast.success('Результаты анализа удалены')
       return result
     } catch (error) {

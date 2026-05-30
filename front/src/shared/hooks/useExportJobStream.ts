@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ExportJobStatus, JobLogLevel } from '@/shared/types'
-import type { ExportStreamEvent } from '@/shared/api/sse'
+import type { ExportStreamEvent } from '@/shared/utils/sse'
 import { STATUS_LABELS, STATUS_VARIANTS } from '@/shared/utils/exportUtils'
 
 const MAX_LOGS = 50

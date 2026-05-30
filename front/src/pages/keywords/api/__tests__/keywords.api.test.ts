@@ -1,13 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/shared/api', async () => {
-  const actual =
-    await vi.importActual<typeof import('@/shared/api/apiUtils')>('@/shared/api/apiUtils')
+vi.mock('@/shared/api', () => {
+  const BASE = '/api'
+  const toQs = (p?: Record<string, unknown>) => {
+    if (!p) return ''
+    const s = new URLSearchParams()
+    for (const [k, v] of Object.entries(p)) {
+      if (v !== undefined && v !== null) s.set(k, String(v))
+    }
+    return '?' + s.toString()
+  }
   return {
     API_URL: '/api',
     GATEWAY_API_URL: '/api',
-    createRequest: (url: string, options?: RequestInit) => fetch(url, options),
-    handleResponse: actual.handleResponse,
+    apiClient: {
+      get: async (url: string, params?: Record<string, unknown>) => {
+        const r = await fetch(BASE + url + toQs(params), { method: 'GET' }); return r.json()
+      },
+      post: async (url: string, body?: unknown) => {
+        const r = await fetch(BASE + url, { method: 'POST', body: JSON.stringify(body) }); return r.json()
+      },
+      patch: async (url: string, body?: unknown) => {
+        const r = await fetch(BASE + url, { method: 'PATCH', body: JSON.stringify(body) }); return r.json()
+      },
+      delete: async (url: string) => { const r = await fetch(BASE + url, { method: 'DELETE' }); return r.json() },
+      raw: (url: string, options?: RequestInit) => fetch(BASE + url, options),
+    },
   }
 })
 

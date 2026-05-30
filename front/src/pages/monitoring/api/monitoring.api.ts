@@ -1,6 +1,5 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/shared/api'
-import { createRequest, handleResponse } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 import type {
   IMonitorGroupDeleteResponse,
   IMonitorGroupResponse,
@@ -93,14 +92,8 @@ export const monitoringService = {
   async fetchMessages(params?: MonitorMessagesParams): Promise<IMonitorMessagesResponse> {
     try {
       const query = buildQuery(params)
-      const url = query
-        ? `${GATEWAY_API_URL}/v1/monitoring/messages?${query}`
-        : `${GATEWAY_API_URL}/v1/monitoring/messages`
-      const response = await createRequest(url)
-
-      return await handleResponse<IMonitorMessagesResponse>(
-        response,
-        'Failed to fetch monitoring messages'
+      return await apiClient.get<IMonitorMessagesResponse>(
+        query ? `/v1/monitoring/messages?${query}` : '/v1/monitoring/messages'
       )
     } catch (error) {
       toast.error('Не удалось загрузить мониторинг', {
@@ -113,14 +106,8 @@ export const monitoringService = {
   async fetchGroups(params?: MonitorGroupsParams): Promise<IMonitorGroupsResponse> {
     try {
       const query = buildGroupsQuery(params)
-      const url = query
-        ? `${GATEWAY_API_URL}/v1/monitoring/groups?${query}`
-        : `${GATEWAY_API_URL}/v1/monitoring/groups`
-      const response = await createRequest(url)
-
-      return await handleResponse<IMonitorGroupsResponse>(
-        response,
-        'Failed to fetch monitoring groups'
+      return await apiClient.get<IMonitorGroupsResponse>(
+        query ? `/v1/monitoring/groups?${query}` : '/v1/monitoring/groups'
       )
     } catch (error) {
       toast.error('Не удалось загрузить группы мониторинга', {
@@ -137,15 +124,7 @@ export const monitoringService = {
     category?: string | null
   }): Promise<IMonitorGroupResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/monitoring/groups`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-
-      const result = await handleResponse<IMonitorGroupResponse>(
-        response,
-        'Failed to create monitoring group'
-      )
+      const result = await apiClient.post<IMonitorGroupResponse>('/v1/monitoring/groups', payload)
       toast.success('Группа сохранена')
       return result
     } catch (error) {
@@ -164,14 +143,9 @@ export const monitoringService = {
     }
   ): Promise<IMonitorGroupResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/monitoring/groups/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      })
-
-      const result = await handleResponse<IMonitorGroupResponse>(
-        response,
-        'Failed to update monitoring group'
+      const result = await apiClient.patch<IMonitorGroupResponse>(
+        `/v1/monitoring/groups/${id}`,
+        payload
       )
       toast.success('Группа обновлена')
       return result
@@ -183,13 +157,8 @@ export const monitoringService = {
 
   async deleteGroup(id: number): Promise<IMonitorGroupDeleteResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/monitoring/groups/${id}`, {
-        method: 'DELETE',
-      })
-
-      const result = await handleResponse<IMonitorGroupDeleteResponse>(
-        response,
-        'Failed to delete monitoring group'
+      const result = await apiClient.delete<IMonitorGroupDeleteResponse>(
+        `/v1/monitoring/groups/${id}`
       )
       toast.success('Группа удалена')
       return result

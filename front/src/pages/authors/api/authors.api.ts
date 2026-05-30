@@ -1,6 +1,5 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/shared/api'
-import { buildQueryString, createRequest, handleResponse } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 import { createEmptyPhotoAnalysisSummary } from '@/shared/types'
 import type {
   AuthorCard,
@@ -78,8 +77,6 @@ const mapAuthorDetails = (author: AuthorDetailsResponse): AuthorDetails => ({
   updatedAt: author.updatedAt,
 })
 
-const CONTENT_AUTHORS_API_URL = `${GATEWAY_API_URL}/v1/content/authors`
-
 export const authorsService = {
   async fetchAuthors(
     params: {
@@ -93,7 +90,7 @@ export const authorsService = {
     } = {}
   ): Promise<AuthorListResponse> {
     try {
-      const query = buildQueryString({
+      const data = await apiClient.get<AuthorsListResponse>('/v1/content/authors', {
         offset: params.offset,
         limit: params.limit,
         search: params.search,
@@ -102,14 +99,6 @@ export const authorsService = {
         sortBy: params.sortBy,
         sortOrder: params.sortOrder,
       })
-      const baseUrl = CONTENT_AUTHORS_API_URL
-      const url = query ? `${baseUrl}?${query}` : baseUrl
-      const response = await createRequest(url)
-
-      const data = await handleResponse<AuthorsListResponse>(
-        response,
-        'Не удалось загрузить список авторов'
-      )
       return {
         items: data.items.map(mapAuthorCard),
         total: data.total,
@@ -123,11 +112,7 @@ export const authorsService = {
 
   async getAuthorDetails(vkUserId: number): Promise<AuthorDetails> {
     try {
-      const response = await createRequest(`${CONTENT_AUTHORS_API_URL}/${vkUserId}`)
-      const data = await handleResponse<AuthorDetailsResponse>(
-        response,
-        'Не удалось загрузить данные пользователя'
-      )
+      const data = await apiClient.get<AuthorDetailsResponse>(`/v1/content/authors/${vkUserId}`)
       return mapAuthorDetails(data)
     } catch (error) {
       toast.error('Не удалось загрузить данные пользователя')
@@ -137,14 +122,7 @@ export const authorsService = {
 
   async refreshAuthors(): Promise<number> {
     try {
-      const response = await createRequest(`${CONTENT_AUTHORS_API_URL}/refresh`, {
-        method: 'POST',
-      })
-
-      const result = await handleResponse<RefreshAuthorsResponse>(
-        response,
-        'Не удалось обновить карточки авторов'
-      )
+      const result = await apiClient.post<RefreshAuthorsResponse>('/v1/content/authors/refresh')
       toast.success('Карточки авторов обновлены')
       return result.updated
     } catch (error) {
@@ -154,11 +132,7 @@ export const authorsService = {
   },
   async deleteAuthor(vkUserId: number): Promise<void> {
     try {
-      const response = await createRequest(`${CONTENT_AUTHORS_API_URL}/${vkUserId}`, {
-        method: 'DELETE',
-      })
-
-      await handleResponse<{ deleted: boolean }>(response, 'Не удалось удалить автора')
+      await apiClient.delete<{ deleted: boolean }>(`/v1/content/authors/${vkUserId}`)
     } catch (error) {
       toast.error('Не удалось удалить автора')
       throw error
@@ -166,15 +140,16 @@ export const authorsService = {
   },
   async verifyAuthor(vkUserId: number): Promise<string> {
     try {
-      const response = await createRequest(`${CONTENT_AUTHORS_API_URL}/${vkUserId}/verify`, {
+      const response = await apiClient.raw(`/v1/content/authors/${vkUserId}/verify`, {
         method: 'PATCH',
         keepalive: true,
       })
 
-      const data = await handleResponse<{ verifiedAt: string }>(
-        response,
-        'Не удалось отметить автора как проверенного'
-      )
+      if (!response.ok) {
+        throw new Error('Не удалось отметить автора как проверенного')
+      }
+
+      const data: { verifiedAt: string } = await response.json()
       return data.verifiedAt
     } catch (error) {
       toast.error('Не удалось отметить автора как проверенного')

@@ -1,6 +1,6 @@
-import { queryKeys } from '@/shared/api'
+const authKeys = ['auth'] as const
 
 export const authQueryKeys = {
-  all: queryKeys.auth,
-  currentUser: queryKeys.currentUser,
+  all: authKeys,
+  currentUser: () => [...authKeys, 'currentUser'] as const,
 } as const

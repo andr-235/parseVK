@@ -5,20 +5,31 @@ const fetchMock = vi.fn()
 vi.stubGlobal('fetch', fetchMock)
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn(), success: vi.fn() } }))
 vi.mock('@/shared/api', () => {
+  const BASE = '/api'
+  const toQs = (p?: Record<string, unknown>) => {
+    if (!p) return ''
+    const s = new URLSearchParams()
+    for (const [k, v] of Object.entries(p)) {
+      if (v !== undefined && v !== null) s.set(k, String(v))
+    }
+    return '?' + s.toString()
+  }
   return {
     API_URL: '/api',
     GATEWAY_API_URL: '/api',
-    buildQueryString: (params: Record<string, string | number | boolean | undefined | null>) => {
-      const searchParams = new URLSearchParams()
-      for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined && value !== null) {
-          searchParams.set(key, String(value))
-        }
-      }
-      return searchParams.toString()
+    apiClient: {
+      get: async (url: string, params?: Record<string, unknown>) => {
+        const r = await fetch(BASE + url + toQs(params), { method: 'GET' }); return r.json()
+      },
+      post: async (url: string, body?: unknown) => {
+        const r = await fetch(BASE + url, { method: 'POST', body: JSON.stringify(body) }); return r.json()
+      },
+      patch: async (url: string, body?: unknown) => {
+        const r = await fetch(BASE + url, { method: 'PATCH', body: JSON.stringify(body) }); return r.json()
+      },
+      delete: async (url: string) => { const r = await fetch(BASE + url, { method: 'DELETE' }); return r.json() },
+      raw: (url: string, options?: RequestInit) => fetch(BASE + url, options),
     },
-    createRequest: (url: string, options: RequestInit = {}) => fetch(url, options),
-    handleResponse: async <T>(response: Response) => response.json() as Promise<T>,
   }
 })
 vi.mock('@/shared/types', () => {

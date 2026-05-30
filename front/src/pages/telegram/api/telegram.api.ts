@@ -1,6 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL } from '@/shared/api'
-import { createRequest, handleResponse } from '@/shared/api'
+import { apiClient, ApiError } from '@/shared/api'
 import type {
   TelegramSessionConfirmRequest,
   TelegramSessionConfirmResponse,
@@ -16,15 +15,7 @@ import type {
 
 export const telegramService = {
   async syncChat(payload: TelegramSyncRequest): Promise<TelegramSyncResponse> {
-    const response = await createRequest(`${API_URL}/telegram/sync`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
-
-    const result = await handleResponse<TelegramSyncResponse>(
-      response,
-      'Не удалось синхронизировать чат Telegram'
-    )
+    const result = await apiClient.post<TelegramSyncResponse>('/telegram/sync', payload)
     toast.success('Синхронизация Telegram завершена')
     return result
   },
@@ -32,30 +23,14 @@ export const telegramService = {
   async syncDiscussionAuthors(
     payload: TelegramDiscussionSyncRequest
   ): Promise<TelegramDiscussionSyncResponse> {
-    const response = await createRequest(`${API_URL}/telegram/discussion-authors/sync`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
-
-    const result = await handleResponse<TelegramDiscussionSyncResponse>(
-      response,
-      'Не удалось синхронизировать авторов комментариев Telegram'
-    )
+    const result = await apiClient.post<TelegramDiscussionSyncResponse>('/telegram/discussion-authors/sync', payload)
     toast.success('Авторы комментариев Telegram загружены')
     return result
   },
 
   async startSession(payload: TelegramSessionStartRequest): Promise<TelegramSessionStartResponse> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/session/start`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-
-      const result = await handleResponse<TelegramSessionStartResponse>(
-        response,
-        'Не удалось отправить код Telegram'
-      )
+      const result = await apiClient.post<TelegramSessionStartResponse>('/telegram/session/start', payload)
       toast.success('Код отправлен в Telegram')
       return result
     } catch (error) {
@@ -68,15 +43,7 @@ export const telegramService = {
     payload: TelegramSessionConfirmRequest
   ): Promise<TelegramSessionConfirmResponse> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/session/confirm`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-
-      const result = await handleResponse<TelegramSessionConfirmResponse>(
-        response,
-        'Не удалось подтвердить код Telegram'
-      )
+      const result = await apiClient.post<TelegramSessionConfirmResponse>('/telegram/session/confirm', payload)
       toast.success('Сессия Telegram подтверждена')
       return result
     } catch (error) {
@@ -87,19 +54,11 @@ export const telegramService = {
 
   async getCurrentSession(): Promise<TelegramSessionConfirmResponse | null> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/session`, {
-        method: 'GET',
-      })
-
-      if (response.status === 404) {
+      return await apiClient.get<TelegramSessionConfirmResponse>('/telegram/session')
+    } catch (error) {
+      if (error instanceof ApiError && error.isNotFound) {
         return null
       }
-
-      return await handleResponse<TelegramSessionConfirmResponse>(
-        response,
-        'Не удалось получить текущую сессию'
-      )
-    } catch (error) {
       toast.error('Не удалось получить текущую сессию')
       throw error
     }
@@ -107,19 +66,11 @@ export const telegramService = {
 
   async getSettings(): Promise<TelegramSettings | null> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/settings`, {
-        method: 'GET',
-      })
-
-      if (response.status === 404) {
+      return await apiClient.get<TelegramSettings>('/telegram/settings')
+    } catch (error) {
+      if (error instanceof ApiError && error.isNotFound) {
         return null
       }
-
-      return await handleResponse<TelegramSettings>(
-        response,
-        'Не удалось получить настройки Telegram'
-      )
-    } catch (error) {
       toast.error('Не удалось получить настройки Telegram')
       throw error
     }
@@ -127,15 +78,7 @@ export const telegramService = {
 
   async updateSettings(payload: TelegramSettingsRequest): Promise<TelegramSettings> {
     try {
-      const response = await createRequest(`${API_URL}/telegram/settings`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      })
-
-      const result = await handleResponse<TelegramSettings>(
-        response,
-        'Не удалось сохранить настройки Telegram'
-      )
+      const result = await apiClient.patch<TelegramSettings>('/telegram/settings', payload)
       toast.success('Настройки Telegram сохранены')
       return result
     } catch (error) {

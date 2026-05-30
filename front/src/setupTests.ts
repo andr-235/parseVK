@@ -7,6 +7,7 @@ Object.defineProperty(globalThis, 'import', {
       env: {
         DEV: process.env.NODE_ENV !== 'production',
         VITE_API_URL: process.env.VITE_API_URL || '/api',
+        VITE_GATEWAY_API_URL: process.env.VITE_GATEWAY_API_URL || undefined,
         VITE_API_WS_URL: process.env.VITE_API_WS_URL || undefined,
       },
     },
@@ -22,6 +23,7 @@ vi.mock('@/shared/api', async (importOriginal) => {
   return {
     ...actual,
     API_URL: '/api',
+    apiClient: actual.createApiClient('/api'),
     queryClient: new QueryClient({
       defaultOptions: {
         queries: {

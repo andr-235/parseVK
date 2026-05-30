@@ -1,28 +1,24 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/shared/api'
-import { createRequest, handleResponse } from '@/shared/api'
+import { apiClient, ApiError } from '@/shared/api'
 import type { CreateParsingTaskDto } from '@/shared/types'
 import type { IParsingTaskResult, IParsingTaskSummary } from '@/shared/types'
 
-const TASKS_API_URL = `${GATEWAY_API_URL}/v1/tasks`
+const TASKS_API_PATH = '/v1/tasks'
 
 export const tasksService = {
   async fetchTasks(): Promise<IParsingTaskSummary[]> {
     try {
-      const response = await createRequest(TASKS_API_URL)
-
-      if (response.status === 404) {
-        return []
-      }
-
-      const data = await handleResponse<{
+      const data = await apiClient.get<{
         tasks: IParsingTaskSummary[]
         total: number
         page: number
         limit: number
-      }>(response, 'Failed to fetch tasks')
+      }>(TASKS_API_PATH)
       return data.tasks
     } catch (error) {
+      if (error instanceof ApiError && error.isNotFound) {
+        return []
+      }
       toast.error('Не удалось загрузить задачи')
       throw error
     }
@@ -30,8 +26,7 @@ export const tasksService = {
 
   async fetchTaskDetails(taskId: number | string): Promise<IParsingTaskResult> {
     try {
-      const response = await createRequest(`${TASKS_API_URL}/${taskId}`)
-      return await handleResponse<IParsingTaskResult>(response, 'Failed to fetch task details')
+      return await apiClient.get<IParsingTaskResult>(`${TASKS_API_PATH}/${taskId}`)
     } catch (error) {
       toast.error('Не удалось загрузить детали задачи')
       throw error
@@ -40,15 +35,7 @@ export const tasksService = {
 
   async createParsingTask(dto: CreateParsingTaskDto): Promise<IParsingTaskResult> {
     try {
-      const response = await createRequest(`${TASKS_API_URL}/parse`, {
-        method: 'POST',
-        body: JSON.stringify(dto),
-      })
-
-      const result = await handleResponse<IParsingTaskResult>(
-        response,
-        'Failed to create parsing task'
-      )
+      const result = await apiClient.post<IParsingTaskResult>(`${TASKS_API_PATH}/parse`, dto)
       toast.success('Задача на парсинг создана')
       return result
     } catch (error) {
@@ -60,11 +47,7 @@ export const tasksService = {
   async resumeTask(taskId: number | string): Promise<IParsingTaskResult> {
     try {
       const id = encodeURIComponent(String(taskId))
-      const response = await createRequest(`${TASKS_API_URL}/${id}/resume`, {
-        method: 'POST',
-      })
-
-      const result = await handleResponse<IParsingTaskResult>(response, 'Failed to resume task')
+      const result = await apiClient.post<IParsingTaskResult>(`${TASKS_API_PATH}/${id}/resume`)
       toast.success('Задача возобновлена')
       return result
     } catch (error) {
@@ -76,11 +59,7 @@ export const tasksService = {
   async checkTask(taskId: number | string): Promise<IParsingTaskResult> {
     try {
       const id = encodeURIComponent(String(taskId))
-      const response = await createRequest(`${TASKS_API_URL}/${id}/check`, {
-        method: 'POST',
-      })
-
-      const result = await handleResponse<IParsingTaskResult>(response, 'Failed to check task')
+      const result = await apiClient.post<IParsingTaskResult>(`${TASKS_API_PATH}/${id}/check`)
       if (result.status === 'done' || result.completed) {
         toast.success('Задача отмечена как завершённая')
       } else {
@@ -96,7 +75,7 @@ export const tasksService = {
   async deleteTask(taskId: number | string): Promise<void> {
     try {
       const id = encodeURIComponent(String(taskId))
-      const response = await createRequest(`${TASKS_API_URL}/${id}`, {
+      const response = await apiClient.raw(`${TASKS_API_PATH}/${id}`, {
         method: 'DELETE',
       })
 

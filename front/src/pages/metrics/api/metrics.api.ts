@@ -1,5 +1,4 @@
-import { GATEWAY_API_URL } from '@/shared/api'
-import { createRequest } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 
 export interface PrometheusMetric {
   name: string
@@ -52,7 +51,7 @@ export interface ParsedMetrics {
 
 export const metricsService = {
   async fetchMetrics(): Promise<string> {
-    const response = await createRequest(`${GATEWAY_API_URL}/v1/metrics`)
+    const response = await apiClient.raw('/v1/metrics')
     if (!response.ok) {
       throw new Error('Failed to fetch metrics')
     }

@@ -1,6 +1,5 @@
 import toast from 'react-hot-toast'
-import { API_URL, GATEWAY_API_URL } from '@/shared/api'
-import { buildQueryString, createRequest, handleResponse } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 import type {
   IGroupResponse,
   IDeleteResponse,
@@ -9,19 +8,13 @@ import type {
 } from '@/shared/types'
 import type { SaveGroupDto } from '@/shared/types'
 
-const CONTENT_GROUPS_API_URL = `${GATEWAY_API_URL}/v1/content/groups`
-
 export const groupsService = {
   async fetchGroups(params?: { page?: number; limit?: number }): Promise<IGroupsListResponse> {
     try {
-      const query = buildQueryString({
+      const data = await apiClient.get<IGroupsListResponse>('/v1/content/groups', {
         page: params?.page,
         limit: params?.limit,
       })
-      const url = `${CONTENT_GROUPS_API_URL}${query ? `?${query}` : ''}`
-      const response = await createRequest(url)
-
-      const data = await handleResponse<IGroupsListResponse>(response, 'Failed to fetch groups')
       if (!Array.isArray(data.items)) {
         throw new Error(
           `Invalid API response: expected 'items' to be an array, got ${typeof data.items}. Response: ${JSON.stringify(data)}`
@@ -51,12 +44,7 @@ export const groupsService = {
 
     try {
       const dto: SaveGroupDto = { identifier: name.trim() }
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/content/groups/save`, {
-        method: 'POST',
-        body: JSON.stringify(dto),
-      })
-
-      const data = await handleResponse<IGroupResponse>(response, 'Failed to save group')
+      const data = await apiClient.post<IGroupResponse>('/v1/content/groups/save', dto)
       if (!options?.silent) {
         toast.success('Группа добавлена')
       }
@@ -71,11 +59,7 @@ export const groupsService = {
 
   async deleteGroup(id: number): Promise<void> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/content/groups/${id}`, {
-        method: 'DELETE',
-      })
-
-      await handleResponse<IGroupResponse>(response, 'Failed to delete group')
+      await apiClient.delete<IGroupResponse>(`/v1/content/groups/${id}`)
       toast.success('Группа удалена')
     } catch (error) {
       toast.error('Ошибка при удалении группы')
@@ -85,11 +69,7 @@ export const groupsService = {
 
   async deleteAllGroups(): Promise<number> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/content/groups/all`, {
-        method: 'DELETE',
-      })
-
-      const data = await handleResponse<IDeleteResponse>(response, 'Failed to delete all groups')
+      const data = await apiClient.delete<IDeleteResponse>('/v1/content/groups/all')
       const deletedCount = typeof data?.count === 'number' ? data.count : 0
 
       toast.success(deletedCount > 0 ? `Удалено групп: ${deletedCount}` : 'Список групп уже пуст')
@@ -106,7 +86,7 @@ export const groupsService = {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await createRequest(`${API_URL}/groups/upload`, {
+      const response = await apiClient.raw('/groups/upload', {
         method: 'POST',
         body: formData,
       })
@@ -149,11 +129,7 @@ export const groupsService = {
 
   async searchRegionGroups(): Promise<IRegionGroupSearchResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/content/groups/search/region`)
-      return await handleResponse<IRegionGroupSearchResponse>(
-        response,
-        'Failed to search region groups'
-      )
+      return await apiClient.get<IRegionGroupSearchResponse>('/v1/content/groups/search/region')
     } catch (error) {
       toast.error('Ошибка поиска групп по региону')
       throw error

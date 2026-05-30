@@ -1,14 +1,13 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/shared/api'
-import { createRequest, handleResponse } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 import { saveReportBlob } from '@/shared/utils'
 import type {
   ExportJobStatus,
   JobLogLevel,
   ExportStreamEvent,
   StreamHandlers,
-} from '@/shared/api/sse'
-import { extractFilename, readSseStream } from '@/shared/api/sse'
+} from '@/shared/utils/sse'
+import { extractFilename, readSseStream } from '@/shared/utils/sse'
 
 export interface OkFriendsParams {
   fid?: string
@@ -49,12 +48,7 @@ export type OkFriendsStreamEvent = ExportStreamEvent
 export const okFriendsExportService = {
   async export(payload: { params: OkFriendsParams }): Promise<OkFriendsExportResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/ok/friends/export`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-
-      return await handleResponse<OkFriendsExportResponse>(response, 'Failed to start export')
+      return await apiClient.post<OkFriendsExportResponse>('/v1/ok/friends/export', payload)
     } catch (error) {
       toast.error('Не удалось запустить экспорт друзей')
       throw error
@@ -63,8 +57,7 @@ export const okFriendsExportService = {
 
   async getJob(jobId: string): Promise<OkFriendsJobResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/ok/friends/jobs/${jobId}`)
-      return await handleResponse<OkFriendsJobResponse>(response, 'Failed to fetch job')
+      return await apiClient.get<OkFriendsJobResponse>(`/v1/ok/friends/jobs/${jobId}`)
     } catch (error) {
       toast.error('Не удалось загрузить статус экспорта')
       throw error
@@ -76,8 +69,8 @@ export const okFriendsExportService = {
 
     const run = async () => {
       try {
-        const response = await createRequest(
-          `${GATEWAY_API_URL}/v1/ok/friends/jobs/${jobId}/stream`,
+        const response = await apiClient.raw(
+          `/v1/ok/friends/jobs/${jobId}/stream`,
           {
             headers: {
               Accept: 'text/event-stream',
@@ -112,8 +105,8 @@ export const okFriendsExportService = {
 
   async downloadJobFile(jobId: string, type: 'xlsx'): Promise<void> {
     try {
-      const response = await createRequest(
-        `${GATEWAY_API_URL}/v1/ok/friends/jobs/${jobId}/download/${type}`
+      const response = await apiClient.raw(
+        `/v1/ok/friends/jobs/${jobId}/download/${type}`
       )
 
       if (!response.ok) {

@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL, createRequest, handleResponse } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 import { saveReportBlob } from '@/shared/utils'
 
 const UPLOAD_CHUNK_SIZE = 20
@@ -189,32 +189,6 @@ const createFailedFileResult = (file: File, error: string): TelegramDlImportFile
   error,
 })
 
-const buildContactsQueryString = (params: TelegramDlImportContactsQuery = {}) => {
-  const search = new URLSearchParams()
-
-  if (params.fileName?.trim()) {
-    search.set('fileName', params.fileName.trim())
-  }
-  if (params.telegramId?.trim()) {
-    search.set('telegramId', params.telegramId.trim())
-  }
-  if (params.username?.trim()) {
-    search.set('username', params.username.trim())
-  }
-  if (params.phone?.trim()) {
-    search.set('phone', params.phone.trim())
-  }
-  if (typeof params.limit === 'number') {
-    search.set('limit', String(params.limit))
-  }
-  if (typeof params.offset === 'number') {
-    search.set('offset', String(params.offset))
-  }
-
-  const query = search.toString()
-  return query ? `?${query}` : ''
-}
-
 export const telegramDlUploadService = {
   async upload(files: File[]): Promise<TelegramDlImportUploadResponse> {
     const chunks = chunkFiles(files, UPLOAD_CHUNK_SIZE)
@@ -226,15 +200,16 @@ export const telegramDlUploadService = {
       chunk.forEach((file) => formData.append('files', file))
 
       try {
-        const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-import/upload`, {
+        const response = await apiClient.raw('/v1/telegram-tgmbase/telegram/dl-import/upload', {
           method: 'POST',
           body: formData,
         })
 
-        const result = await handleResponse<TelegramDlImportUploadResponse>(
-          response,
-          'Не удалось загрузить выгрузку с ДЛ'
-        )
+        if (!response.ok) {
+          throw new Error('Не удалось загрузить выгрузку с ДЛ')
+        }
+
+        const result: TelegramDlImportUploadResponse = await response.json()
 
         batchIds.push(result.batch.id)
         uploadedFiles.push(...result.files)
@@ -271,23 +246,16 @@ export const telegramDlUploadService = {
   },
 
   async getFiles(): Promise<TelegramDlImportFile[]> {
-    const filesResponse = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-import/files`)
-    return handleResponse<TelegramDlImportFile[]>(
-      filesResponse,
-      'Не удалось загрузить историю выгрузок'
-    )
+    return apiClient.get<TelegramDlImportFile[]>('/v1/telegram-tgmbase/telegram/dl-import/files')
   },
 
   async getContacts(
     params: TelegramDlImportContactsQuery = {}
   ): Promise<TelegramDlImportContactsPage> {
     try {
-      const response = await createRequest(
-        `${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-import/contacts${buildContactsQueryString(params)}`
-      )
-      return await handleResponse<TelegramDlImportContactsPage>(
-        response,
-        'Не удалось загрузить контакты DL'
+      return await apiClient.get<TelegramDlImportContactsPage>(
+        '/v1/telegram-tgmbase/telegram/dl-import/contacts',
+        params
       )
     } catch (error) {
       toast.error('Не удалось загрузить контакты DL')
@@ -297,11 +265,7 @@ export const telegramDlUploadService = {
 
   async getMatchRuns(): Promise<TelegramDlMatchRun[]> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs`)
-      return await handleResponse<TelegramDlMatchRun[]>(
-        response,
-        'Не удалось загрузить запуски матчинга'
-      )
+      return await apiClient.get<TelegramDlMatchRun[]>('/v1/telegram-tgmbase/telegram/dl-match/runs')
     } catch (error) {
       toast.error('Не удалось загрузить запуски матчинга')
       throw error
@@ -310,11 +274,7 @@ export const telegramDlUploadService = {
 
   async getMatchRun(runId: string): Promise<TelegramDlMatchRun> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}`)
-      return await handleResponse<TelegramDlMatchRun>(
-        response,
-        'Не удалось загрузить запуск матчинга'
-      )
+      return await apiClient.get<TelegramDlMatchRun>(`/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}`)
     } catch (error) {
       toast.error('Не удалось загрузить запуск матчинга')
       throw error
@@ -323,11 +283,7 @@ export const telegramDlUploadService = {
 
   async getMatchResults(runId: string): Promise<TelegramDlMatchResult[]> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/results`)
-      return await handleResponse<TelegramDlMatchResult[]>(
-        response,
-        'Не удалось загрузить результаты матчинга'
-      )
+      return await apiClient.get<TelegramDlMatchResult[]>(`/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/results`)
     } catch (error) {
       toast.error('Не удалось загрузить результаты матчинга')
       throw error
@@ -339,12 +295,8 @@ export const telegramDlUploadService = {
     resultId: string
   ): Promise<TelegramDlMatchResultMessagesGroup[]> {
     try {
-      const response = await createRequest(
-        `${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/results/${resultId}/messages`
-      )
-      return await handleResponse<TelegramDlMatchResultMessagesGroup[]>(
-        response,
-        'Не удалось загрузить комментарии матчинга'
+      return await apiClient.get<TelegramDlMatchResultMessagesGroup[]>(
+        `/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/results/${resultId}/messages`
       )
     } catch (error) {
       toast.error('Не удалось загрузить комментарии матчинга')
@@ -354,19 +306,9 @@ export const telegramDlUploadService = {
 
   async excludeChat(runId: string, peerId: string): Promise<TelegramDlMatchRun> {
     try {
-      const response = await createRequest(
-        `${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/excluded-chats`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ peerId }),
-        }
-      )
-      const run = await handleResponse<TelegramDlMatchRun>(
-        response,
-        'Не удалось исключить чат из матчинга'
+      const run = await apiClient.post<TelegramDlMatchRun>(
+        `/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/excluded-chats`,
+        { peerId }
       )
       toast.success('Чат исключён из результатов матчинга')
       return run
@@ -378,15 +320,8 @@ export const telegramDlUploadService = {
 
   async restoreChat(runId: string, peerId: string): Promise<TelegramDlMatchRun> {
     try {
-      const response = await createRequest(
-        `${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/excluded-chats/${peerId}`,
-        {
-          method: 'DELETE',
-        }
-      )
-      const run = await handleResponse<TelegramDlMatchRun>(
-        response,
-        'Не удалось вернуть чат в матчинг'
+      const run = await apiClient.delete<TelegramDlMatchRun>(
+        `/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/excluded-chats/${peerId}`
       )
       toast.success('Чат возвращён в результаты матчинга')
       return run
@@ -398,13 +333,7 @@ export const telegramDlUploadService = {
 
   async createMatchRun(): Promise<TelegramDlMatchRun> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs`, {
-        method: 'POST',
-      })
-      const run = await handleResponse<TelegramDlMatchRun>(
-        response,
-        'Не удалось запустить матчинг DL'
-      )
+      const run = await apiClient.post<TelegramDlMatchRun>('/v1/telegram-tgmbase/telegram/dl-match/runs')
       toast.success('Матчинг DL завершен')
       return run
     } catch (error) {
@@ -415,7 +344,7 @@ export const telegramDlUploadService = {
 
   async exportMatchRun(runId: string): Promise<void> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/export`)
+      const response = await apiClient.raw(`/v1/telegram-tgmbase/telegram/dl-match/runs/${runId}/export`)
 
       if (!response.ok) {
         const text = await response.text().catch(() => '')

@@ -1,4 +1,4 @@
-import { GATEWAY_API_URL, createRequest, handleResponse } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 import type { CommentsFilters } from './query/commentsQuery.types'
 import type { CommentResponseDto, GetCommentsCursorDto, GetCommentsDto } from './dto/comments.dto'
 import type { CommentsSearchRequestDto, CommentsSearchResponseDto } from './dto/commentsSearch.dto'
@@ -30,9 +30,7 @@ export const getComments = async (
   params?: { offset?: number; limit?: number } & CommentsFilters
 ): Promise<GetCommentsResult> => {
   const query = buildCommentsQuery(params)
-  const url = query ? `${GATEWAY_API_URL}/v1/comments?${query}` : `${GATEWAY_API_URL}/v1/comments`
-  const response = await createRequest(url)
-  const data = await handleResponse<GetCommentsDto>(response, 'Failed to fetch comments')
+  const data = await apiClient.get<GetCommentsDto>(query ? `/v1/comments?${query}` : '/v1/comments')
 
   return {
     items: mapComments(data.items),
@@ -47,13 +45,8 @@ export const getCommentsCursor = async (
   params?: { cursor?: string; limit?: number } & CommentsFilters
 ): Promise<GetCommentsCursorResult> => {
   const query = buildCommentsQuery(params)
-  const url = query
-    ? `${GATEWAY_API_URL}/v1/comments/cursor?${query}`
-    : `${GATEWAY_API_URL}/v1/comments/cursor`
-  const response = await createRequest(url)
-  const data = await handleResponse<GetCommentsCursorDto>(
-    response,
-    'Failed to fetch comments with cursor'
+  const data = await apiClient.get<GetCommentsCursorDto>(
+    query ? `/v1/comments/cursor?${query}` : '/v1/comments/cursor'
   )
 
   return {
@@ -67,15 +60,7 @@ export const getCommentsCursor = async (
 }
 
 export const updateReadStatus = async (id: number, isRead: boolean): Promise<Comment> => {
-  const response = await createRequest(`${GATEWAY_API_URL}/v1/comments/${id}/read`, {
-    method: 'PATCH',
-    body: JSON.stringify({ isRead }),
-  })
-
-  const data = await handleResponse<CommentResponseDto>(
-    response,
-    'Failed to update comment read status'
-  )
+  const data = await apiClient.patch<CommentResponseDto>(`/v1/comments/${id}/read`, { isRead })
 
   return mapComment(data)
 }
@@ -83,14 +68,9 @@ export const updateReadStatus = async (id: number, isRead: boolean): Promise<Com
 export const searchComments = async (
   params: CommentsSearchRequestDto
 ): Promise<CommentsSearchResult> => {
-  const response = await createRequest(`${GATEWAY_API_URL}/v1/comments/search`, {
-    method: 'POST',
-    body: JSON.stringify(buildCommentsSearchPayload(params)),
-  })
-
-  const data = await handleResponse<CommentsSearchResponseDto>(
-    response,
-    'Failed to search comments'
+  const data = await apiClient.post<CommentsSearchResponseDto>(
+    '/v1/comments/search',
+    buildCommentsSearchPayload(params)
   )
 
   return mapCommentsSearchResult(data)

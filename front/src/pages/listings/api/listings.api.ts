@@ -1,6 +1,5 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/shared/api'
-import { buildQueryString, createRequest, handleResponse } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 import type {
   IListing,
   IListingsResponse,
@@ -88,11 +87,9 @@ export const listingsService = {
     requestOptions?: ListingsRequestOptions
   ): Promise<IListingsResponse> {
     try {
-      const { signal, ...rest } = options
-      const query = buildQueryString(rest)
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings?${query}`, { signal })
-
-      return await handleResponse<IListingsResponse>(response, 'Failed to load listings')
+      const { signal: _signal, ...rest } = options
+      const data = await apiClient.get<IListingsResponse>('/v1/listings', rest)
+      return data
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('[listingsService] fetchListings error', error)
@@ -127,15 +124,10 @@ export const listingsService = {
         }
       })
 
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/data/import`, {
-        method: 'POST',
-        body: JSON.stringify({ listings: normalizedListings, updateExisting }),
+      const report = await apiClient.post<ListingImportReport>('/v1/data/import', {
+        listings: normalizedListings,
+        updateExisting,
       })
-
-      const report = await handleResponse<ListingImportReport>(
-        response,
-        'Failed to import listings'
-      )
 
       const summary: string[] = []
       if (report.created > 0) {
@@ -193,9 +185,8 @@ export const listingsService = {
         queryParams.fields = params.fields.join(',')
       }
 
-      const query = buildQueryString(queryParams)
-      const url = `${GATEWAY_API_URL}/v1/listings/export${query ? `?${query}` : ''}`
-      const response = await createRequest(url)
+      const query = new URLSearchParams(queryParams).toString()
+      const response = await apiClient.raw(`/v1/listings/export${query ? `?${query}` : ''}`)
 
       if (!response.ok) {
         const text = await response.text().catch(() => '')
@@ -240,12 +231,7 @@ export const listingsService = {
 
   async updateListing(id: number, payload: ListingUpdatePayload): Promise<IListing> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      })
-
-      const result = await handleResponse<IListing>(response, 'Failed to update listing')
+      const result = await apiClient.patch<IListing>(`/v1/listings/${id}`, payload)
       toast.success('Объявление обновлено')
       return result
     } catch (error) {
@@ -260,11 +246,7 @@ export const listingsService = {
 
   async archiveListing(id: number): Promise<IListing> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ archived: true }),
-      })
-      const result = await handleResponse<IListing>(response, 'Failed to archive listing')
+      const result = await apiClient.patch<IListing>(`/v1/listings/${id}`, { archived: true })
       toast.success('Объявление отправлено в архив')
       return result
     } catch (error) {
@@ -279,11 +261,7 @@ export const listingsService = {
 
   async restoreListing(id: number): Promise<IListing> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ archived: false }),
-      })
-      const result = await handleResponse<IListing>(response, 'Failed to restore listing')
+      const result = await apiClient.patch<IListing>(`/v1/listings/${id}`, { archived: false })
       toast.success('Объявление восстановлено из архива')
       return result
     } catch (error) {
@@ -318,12 +296,10 @@ export const listingsService = {
         sourceParsedAt: new Date().toISOString(),
       }
 
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/data/import`, {
-        method: 'POST',
-        body: JSON.stringify({ listings: [item], updateExisting: false }),
+      await apiClient.post<ListingImportReport>('/v1/data/import', {
+        listings: [item],
+        updateExisting: false,
       })
-
-      await handleResponse<ListingImportReport>(response, 'Failed to create listing')
       toast.success('Объявление добавлено')
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -337,7 +313,7 @@ export const listingsService = {
 
   async deleteListing(id: number): Promise<void> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/listings/${id}`, {
+      const response = await apiClient.raw(`/v1/listings/${id}`, {
         method: 'DELETE',
       })
 

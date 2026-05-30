@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { createRequestMock, handleResponseMock, buildCsrfHeadersMock } = vi.hoisted(() => ({
+const { createRequestMock, buildCsrfHeadersMock } = vi.hoisted(() => ({
   createRequestMock: vi.fn(),
-  handleResponseMock: vi.fn(),
   buildCsrfHeadersMock: vi.fn(() => ({ 'X-CSRF-Token': 'csrf-token' })),
 }))
 
 vi.mock('@/shared/api', () => ({
   GATEWAY_API_URL: '/api',
-  createRequest: createRequestMock,
-  handleResponse: handleResponseMock,
+  apiClient: {
+    raw: (url: string, options?: RequestInit) => createRequestMock('/api' + url, options),
+  },
 }))
 
 vi.mock('@/shared/auth/config/lib/authSession', () => ({
@@ -27,17 +27,18 @@ import { authService } from '../auth.api'
 describe('authService gateway contract', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    createRequestMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
-    handleResponseMock.mockResolvedValue({
-      accessToken: 'access-token',
-      user: {
-        id: 'user-1',
-        username: 'admin',
-        role: 'admin',
-        isActive: true,
-        isSuperuser: true,
-      },
-    })
+    createRequestMock.mockResolvedValue(
+      new Response(JSON.stringify({
+        accessToken: 'access-token',
+        user: {
+          id: 'user-1',
+          username: 'admin',
+          role: 'admin',
+          isActive: true,
+          isSuperuser: true,
+        },
+      }), { status: 200 })
+    )
   })
 
   it('logs in through gateway with cookie credentials and no refresh token body contract', async () => {
@@ -49,8 +50,6 @@ describe('authService gateway contract', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ username: 'admin', password: 'password' }),
-        skipAuth: true,
-        skipRefresh: true,
         credentials: 'include',
       })
     )

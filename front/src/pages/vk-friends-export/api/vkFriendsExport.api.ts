@@ -1,14 +1,13 @@
 import toast from 'react-hot-toast'
-import { GATEWAY_API_URL } from '@/shared/api'
-import { createRequest, handleResponse } from '@/shared/api'
+import { apiClient } from '@/shared/api'
 import { saveReportBlob } from '@/shared/utils'
 import type {
   ExportJobStatus,
   JobLogLevel,
   ExportStreamEvent,
   StreamHandlers,
-} from '@/shared/api/sse'
-import { extractFilename, readSseStream } from '@/shared/api/sse'
+} from '@/shared/utils/sse'
+import { extractFilename, readSseStream } from '@/shared/utils/sse'
 
 export type VkFriendsOrder = 'hints' | 'random' | 'name' | 'mobile' | 'smart'
 export type VkFriendsNameCase = 'nom' | 'gen' | 'dat' | 'acc' | 'ins' | 'abl'
@@ -57,12 +56,7 @@ export type VkFriendsStreamEvent = ExportStreamEvent
 export const vkFriendsExportService = {
   async export(payload: { params: VkFriendsParams }): Promise<VkFriendsExportResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/vk/friends/export`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-
-      return await handleResponse<VkFriendsExportResponse>(response, 'Failed to start export')
+      return await apiClient.post<VkFriendsExportResponse>('/v1/vk/friends/export', payload)
     } catch (error) {
       toast.error('Не удалось запустить экспорт друзей')
       throw error
@@ -71,8 +65,7 @@ export const vkFriendsExportService = {
 
   async getJob(jobId: string): Promise<VkFriendsJobResponse> {
     try {
-      const response = await createRequest(`${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}`)
-      return await handleResponse<VkFriendsJobResponse>(response, 'Failed to fetch job')
+      return await apiClient.get<VkFriendsJobResponse>(`/v1/vk/friends/jobs/${jobId}`)
     } catch (error) {
       toast.error('Не удалось загрузить статус экспорта')
       throw error
@@ -84,8 +77,8 @@ export const vkFriendsExportService = {
 
     const run = async () => {
       try {
-        const response = await createRequest(
-          `${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}/stream`,
+        const response = await apiClient.raw(
+          `/v1/vk/friends/jobs/${jobId}/stream`,
           {
             headers: {
               Accept: 'text/event-stream',
@@ -120,8 +113,8 @@ export const vkFriendsExportService = {
 
   async downloadJobFile(jobId: string, type: 'xlsx'): Promise<void> {
     try {
-      const response = await createRequest(
-        `${GATEWAY_API_URL}/v1/vk/friends/jobs/${jobId}/download/${type}`
+      const response = await apiClient.raw(
+        `/v1/vk/friends/jobs/${jobId}/download/${type}`
       )
 
       if (!response.ok) {
@@ -132,7 +125,6 @@ export const vkFriendsExportService = {
 
       const blob = await response.blob()
 
-      // Проверка, что blob не пустой
       if (blob.size === 0) {
         throw new Error('Downloaded file is empty')
       }
