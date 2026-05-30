@@ -155,9 +155,9 @@ describe('CommentsTableCard', () => {
       />
     )
 
-    expect(screen.getByText('Всего по фильтру: 12')).toBeInTheDocument()
-    expect(screen.getByText('Загружено: 4')).toBeInTheDocument()
-    expect(screen.getByText('Показано: 2')).toBeInTheDocument()
+    expect(screen.getByText(/Всего 12/)).toBeInTheDocument()
+    expect(screen.getByText(/Загружено 4/)).toBeInTheDocument()
+    expect(screen.getByText(/Показано 2/)).toBeInTheDocument()
   })
 
   it('does not chain automatic load more without a fresh trigger', async () => {

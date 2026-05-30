@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CategorizedComment, CategorizedGroup } from '@/pages/comments/types/commentsTable'
-import { filterCommentsByCategories } from '@/pages/comments/utils/filterCommentsByCategories'
 
 const syncExpandedCategories = (previous: Record<string, boolean>, groups: CategorizedGroup[]) => {
   const next = groups.reduce<Record<string, boolean>>((acc, group) => {
@@ -22,7 +21,7 @@ const buildSubtitle = ({
   hasCommentsWithoutKeywords,
   hasDefinedKeywords,
   hasAnyKeywordFilter,
-  hasCategoryFilter,
+  activeCategory,
 }: {
   isLoading: boolean
   hasComments: boolean
@@ -30,15 +29,15 @@ const buildSubtitle = ({
   hasCommentsWithoutKeywords: boolean
   hasDefinedKeywords: boolean
   hasAnyKeywordFilter: boolean
-  hasCategoryFilter: boolean
+  activeCategory: string | null
 }) => {
   if (isLoading && !hasComments) {
     return 'Мы подготавливаем данные и проверяем их перед отображением.'
   }
   if (hasKeywordGroups) {
-    return hasCategoryFilter
-      ? 'Показаны комментарии выбранных категорий. Можно комбинировать несколько тегов одновременно.'
-      : 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте фильтры, чтобы сосредоточиться на нужных темах.'
+    return activeCategory
+      ? `Показаны комментарии категории «${activeCategory}».`
+      : 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте вкладки, чтобы переключаться между темами.'
   }
   if (hasCommentsWithoutKeywords && !hasDefinedKeywords) {
     return 'Ключевые слова пока не заданы — все найденные комментарии находятся в разделе «Без ключевых слов».'
@@ -66,13 +65,11 @@ export default function useCommentsTableCardController({
   showKeywordPosts,
   hasDefinedKeywords,
 }: UseCommentsTableCardControllerParams) {
-  // Memoized filtered groups (rerender optimization)
   const keywordGroups = useMemo(
     () => groupedComments.filter((group) => group.comments.length > 0),
     [groupedComments]
   )
 
-  // Memoized computed values (rerender optimization)
   const totalCategories = useMemo(() => keywordGroups.length, [keywordGroups.length])
   const hasAnyKeywordFilter = useMemo(
     () => showKeywordComments || showKeywordPosts,
@@ -82,22 +79,43 @@ export default function useCommentsTableCardController({
     () => keywordGroups.map((group) => group.category),
     [keywordGroups]
   )
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const activeCategoryIndex = activeCategory !== null ? availableCategories.indexOf(activeCategory) : -1
+  const activeCategoryValid = activeCategory === null || activeCategoryIndex >= 0
+  const safeActiveCategory = activeCategoryValid ? activeCategory : null
+
+  useEffect(() => {
+    if (!activeCategoryValid) {
+      setActiveCategory(null)
+    }
+  }, [activeCategoryValid])
+
   const filteredKeywordGroups = useMemo(
     () =>
-      keywordGroups
-        .map((group) => ({
-          ...group,
-          comments: filterCommentsByCategories(group.comments, selectedCategories),
-        }))
-        .filter((group) => group.comments.length > 0),
-    [keywordGroups, selectedCategories]
+      safeActiveCategory === null
+        ? keywordGroups
+        : keywordGroups
+            .map((group) => ({
+              ...group,
+              comments:
+                group.category === safeActiveCategory
+                  ? group.comments
+                  : [],
+            }))
+            .filter((group) => group.comments.length > 0),
+    [keywordGroups, safeActiveCategory]
   )
+
   const filteredCommentsWithoutKeywords = useMemo(
-    () => filterCommentsByCategories(commentsWithoutKeywords, selectedCategories),
-    [commentsWithoutKeywords, selectedCategories]
+    () =>
+      safeActiveCategory === null
+        ? commentsWithoutKeywords
+        : [],
+    [commentsWithoutKeywords, safeActiveCategory]
   )
-  const hasCategoryFilter = selectedCategories.length > 0
+
+  const hasCategoryFilter = safeActiveCategory !== null
   const hasComments = useMemo(
     () =>
       filteredKeywordGroups.some((group) => group.comments.length > 0) ||
@@ -111,13 +129,6 @@ export default function useCommentsTableCardController({
     setExpandedCategories((previous) => syncExpandedCategories(previous, filteredKeywordGroups))
   }, [filteredKeywordGroups])
 
-  useEffect(() => {
-    setSelectedCategories((current) =>
-      current.filter((category) => availableCategories.includes(category))
-    )
-  }, [availableCategories])
-
-  // Memoized handler (rerender optimization)
   const toggleCategory = useCallback(
     (category: string) =>
       setExpandedCategories((previous) => ({
@@ -126,18 +137,11 @@ export default function useCommentsTableCardController({
       })),
     []
   )
-  const toggleFilterCategory = useCallback(
-    (category: string) =>
-      setSelectedCategories((current) =>
-        current.includes(category)
-          ? current.filter((item) => item !== category)
-          : [...current, category]
-      ),
-    []
-  )
-  const clearCategoryFilters = useCallback(() => {
-    setSelectedCategories([])
+
+  const selectCategory = useCallback((category: string | null) => {
+    setActiveCategory(category)
   }, [])
+
   const subtitle = useMemo(
     () =>
       buildSubtitle({
@@ -147,7 +151,7 @@ export default function useCommentsTableCardController({
         hasCommentsWithoutKeywords: filteredCommentsWithoutKeywords.length > 0,
         hasDefinedKeywords,
         hasAnyKeywordFilter,
-        hasCategoryFilter,
+        activeCategory: safeActiveCategory,
       }),
     [
       hasComments,
@@ -157,8 +161,10 @@ export default function useCommentsTableCardController({
       hasCategoryFilter,
       isLoading,
       hasAnyKeywordFilter,
+      safeActiveCategory,
     ]
   )
+
   return {
     keywordGroups: filteredKeywordGroups,
     hasComments,
@@ -166,10 +172,9 @@ export default function useCommentsTableCardController({
     hasCommentsWithoutKeywords: filteredCommentsWithoutKeywords.length > 0,
     expandedCategories,
     toggleCategory,
-    selectedCategories,
+    activeCategory: safeActiveCategory,
     availableCategories,
-    toggleFilterCategory,
-    clearCategoryFilters,
+    selectCategory,
     filteredCommentsWithoutKeywords,
     subtitle,
     totalCategories,

@@ -398,6 +398,7 @@ const useCommentsViewModel = () => {
         markWatchlisted(commentId, author.id)
       } catch (error) {
         console.error('Не удалось добавить автора в список "На карандаше"', error)
+        toast.error('Не удалось добавить автора в список наблюдения')
       } finally {
         setWatchlistPending((prev) => {
           const next = { ...prev }

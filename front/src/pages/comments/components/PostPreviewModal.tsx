@@ -1,5 +1,7 @@
+import { memo } from 'react'
 import { ExternalLink } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
+import { ensureArray } from '@/shared/utils'
 import type { PostGroup } from '@/shared/types'
 import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
@@ -16,7 +18,7 @@ interface PostPreviewModalProps {
   onClose: () => void
 }
 
-export function PostPreviewModal({
+const PostPreviewModal = memo(function PostPreviewModal({
   isOpen,
   postText,
   postAttachments,
@@ -25,7 +27,7 @@ export function PostPreviewModal({
   keywords = [],
   onClose,
 }: PostPreviewModalProps) {
-  const attachments = Array.isArray(postAttachments) ? postAttachments : []
+  const attachments = ensureArray(postAttachments)
 
   return (
     <FormModal
@@ -56,7 +58,7 @@ export function PostPreviewModal({
                 {postGroup.name}
               </div>
               {postGroup.screenName && (
-                <div className="font-mono-accent text-xs text-slate-500">
+                <div className="font-mono-accent text-xs text-text-secondary/70">
                   @{postGroup.screenName}
                 </div>
               )}
@@ -65,11 +67,11 @@ export function PostPreviewModal({
         )}
 
         {/* Decorative separator */}
-        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
         {/* Post text */}
         {postText && (
-          <div className="whitespace-pre-wrap break-words font-monitoring-body text-base leading-relaxed text-slate-200">
+          <div className="whitespace-pre-wrap break-words font-monitoring-body text-base leading-relaxed text-text-primary">
             {highlightKeywords(postText, keywords)}
           </div>
         )}
@@ -77,7 +79,7 @@ export function PostPreviewModal({
         {/* Attachments */}
         {attachments.length > 0 && (
           <div className="space-y-3 rounded-lg border border-border/10 bg-background-primary/20 p-4">
-            <div className="font-mono-accent text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <div className="font-mono-accent text-xs font-semibold uppercase tracking-wider text-text-secondary">
               Вложения ({attachments.length})
             </div>
             <CommentAttachments attachments={attachments} />
@@ -86,10 +88,10 @@ export function PostPreviewModal({
 
         {/* Open in VK button */}
         {postUrl && (
-          <div className="border-t border-white/5 pt-4">
+          <div className="border-t border-border/10 pt-4">
             <Button
               variant="outline"
-              className="group relative h-11 w-full overflow-hidden border-[#2a2a30] bg-[#1c1c21] font-monitoring-body font-semibold text-white transition-all hover:border-accent-primary/50 hover:bg-slate-800"
+              className="group relative h-11 w-full overflow-hidden border-border bg-background-secondary font-monitoring-body font-semibold text-text-light transition-all hover:border-accent-primary/50 hover:bg-background-primary/40"
               asChild
             >
               <a href={postUrl} target="_blank" rel="noopener noreferrer">
@@ -102,6 +104,6 @@ export function PostPreviewModal({
       </div>
     </FormModal>
   )
-}
+})
 
 export default PostPreviewModal

@@ -42,7 +42,7 @@ export const CommentThread = memo(function CommentThread({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 font-mono-accent text-xs font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+          className="h-8 font-mono-accent text-xs font-medium text-text-secondary transition-colors hover:bg-background-primary/40 hover:text-text-light"
           onClick={handleToggleExpand}
         >
           {isExpanded ? (
@@ -54,7 +54,7 @@ export const CommentThread = memo(function CommentThread({
           Ответы в треде
           <Badge
             variant="secondary"
-            className="ml-2 h-5 border-0 bg-accent-primary/10 px-1.5 font-mono-accent text-[10px] font-normal text-primary"
+            className="ml-2 h-5 border-0 bg-accent-primary/10 px-1.5 font-mono-accent text-[10px] font-normal text-accent-primary"
           >
             {threadCount}
           </Badge>

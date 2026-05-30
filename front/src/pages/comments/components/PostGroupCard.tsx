@@ -3,12 +3,12 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import type { Comment, Keyword } from '@/shared/types'
-import { highlightKeywords } from '@/shared/utils/highlightKeywords'
+import { ensureArray } from '@/shared/utils'
 import { CommentAttachments } from './CommentAttachments'
+import { KeywordBadge } from './KeywordBadge'
+import { ClampExpandText } from './ClampExpandText'
 import CommentCard from './CommentCard'
 import { normalizeForKeywordMatch } from '@/shared/utils/keywordMatching'
-import { getMatchedKeywordLabel } from '@/pages/comments/utils/getMatchedKeywordLabel'
-import { cn } from '@/shared/utils'
 
 interface PostGroupCardProps {
   postText?: string | null
@@ -73,10 +73,7 @@ export const PostGroupCard = memo(function PostGroupCard({
     })
   }, [comments, postText])
 
-  const attachmentsList = useMemo(() => {
-    if (!postAttachments || !Array.isArray(postAttachments)) return []
-    return postAttachments
-  }, [postAttachments])
+  const attachmentsList = useMemo(() => ensureArray(postAttachments), [postAttachments])
 
   return (
     <div className="mb-4 overflow-hidden rounded-xl border border-border/60 bg-background-secondary/30">
@@ -104,13 +101,7 @@ export const PostGroupCard = memo(function PostGroupCard({
             {postKeywords.length > 0 && (
               <div className="ml-2 flex flex-wrap gap-1">
                 {postKeywords.map((kw) => (
-                  <Badge
-                    key={kw.id}
-                    variant="secondary"
-                    className="h-5 border-0 bg-accent-warning/10 px-1.5 font-mono-accent text-[9px] text-accent-warning"
-                  >
-                    {getMatchedKeywordLabel(kw, postText)}
-                  </Badge>
+                  <KeywordBadge key={kw.id} keyword={kw} text={postText} />
                 ))}
               </div>
             )}
@@ -119,6 +110,7 @@ export const PostGroupCard = memo(function PostGroupCard({
           <Button
             variant="ghost"
             size="sm"
+            aria-label={isExpanded ? 'Свернуть группу' : 'Развернуть группу'}
             onClick={handleToggleExpand}
             className="size-8 p-0 text-text-secondary transition-colors hover:bg-background-primary/40 hover:text-white"
           >
@@ -127,15 +119,15 @@ export const PostGroupCard = memo(function PostGroupCard({
         </div>
 
         {postText && (
-          <div
-            className={cn(
-              'cursor-pointer whitespace-pre-wrap break-words font-monitoring-body text-sm leading-relaxed text-text-primary transition-colors hover:text-white',
-              !isPostTextExpanded && 'line-clamp-3'
-            )}
-            onClick={handleTogglePostText}
-          >
-            {highlightKeywords(postText, postKeywords)}
-          </div>
+          <ClampExpandText
+            text={postText}
+            keywords={postKeywords}
+            isExpanded={isPostTextExpanded}
+            onToggle={handleTogglePostText}
+            labelExpanded="Свернуть текст поста"
+            labelCollapsed="Развернуть текст поста"
+            lineClamp={3}
+          />
         )}
 
         {attachmentsList.length > 0 && (

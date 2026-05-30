@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { PageHeader, FiltersPanel, PageContainer } from '@/shared/components/common'
 import { MessageSquare, Eye, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
@@ -6,6 +7,7 @@ import { cn } from '@/shared/utils'
 import CommentsSearchResults from '@/pages/comments/components/CommentsSearchResults'
 import CommentsTableCard from '@/pages/comments/components/CommentsTableCard'
 import useCommentsViewModel from '@/pages/comments/hooks/useCommentsViewModel'
+import { useCommentsKeyboardNav } from '@/pages/comments/hooks/useCommentsKeyboardNav'
 
 function CommentsPage() {
   const {
@@ -42,43 +44,51 @@ function CommentsPage() {
     searchResults,
   } = useCommentsViewModel()
 
+  const allCommentIds = useMemo(() => {
+    const ids: number[] = []
+    groupedComments.forEach((g) => g.comments.forEach((c) => ids.push(c.comment.id)))
+    commentsWithoutKeywords.forEach((c) => ids.push(c.comment.id))
+    return ids
+  }, [groupedComments, commentsWithoutKeywords])
+
+  useCommentsKeyboardNav({
+    commentIds: useSearchResults ? [] : allCommentIds,
+    onMarkRead: toggleReadStatus,
+    onAddToWatchlist: handleAddToWatchlist,
+  })
+
   return (
     <PageContainer maxWidth="1600px" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 px-4 md:px-8">
-        <PageHeader
-          variant="badges"
-          title={
-            <>
-              VK <span className="text-accent-primary">Комментарии</span>
-            </>
-          }
-          description="Управляйте обратной связью из сообществ и отслеживайте важные сообщения в реальном времени."
+      <PageHeader
+        title={
+          <>
+            VK <span className="text-accent-primary">Комментарии</span>
+          </>
+        }
+        description="Управляйте обратной связью из сообществ и отслеживайте важные сообщения в реальном времени."
           badges={[
             {
               icon: MessageSquare,
               value: totalCount.toLocaleString('ru-RU'),
               label: 'всего',
-              className: 'border-accent-primary/20 bg-accent-primary/10 text-accent-primary',
+              className: 'border-border/40 bg-background-secondary/50 text-text-secondary',
             },
             {
               icon: Eye,
               value: unreadCount.toLocaleString('ru-RU'),
               label: 'непрочитано',
-              className: 'hover:border-accent-primary/50 hover:bg-background-secondary/85',
+              className: 'border-border/40 bg-background-secondary/50 text-text-secondary',
             },
             {
               icon: CheckCircle2,
               value: readCount.toLocaleString('ru-RU'),
               label: 'прочитано',
-              className: 'hover:border-accent-success/30 [&>svg]:text-accent-success/70',
+              className: 'border-border/40 bg-background-secondary/50 text-text-secondary',
             },
           ]}
-        />
-      </div>
+      />
 
-      {/* Filters Panel - staggered animation */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100 px-4 md:px-8">
-        <FiltersPanel
+      <FiltersPanel
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
           searchPlaceholder="Поиск по тексту, автору или ID..."
@@ -142,8 +152,8 @@ function CommentsPage() {
                 onClick={() => handleToggleKeywordComments(!showKeywordComments)}
                 className={cn(
                   'h-8 rounded-lg border px-3 text-xs font-medium transition-all',
-                  showKeywordComments
-                    ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                   showKeywordComments
+                    ? 'border-accent-primary/40 bg-accent-primary/10 text-accent-primary'
                     : 'border-border bg-transparent text-text-secondary hover:text-text-light'
                 )}
               >
@@ -155,8 +165,8 @@ function CommentsPage() {
                 onClick={() => handleToggleKeywordPosts(!showKeywordPosts)}
                 className={cn(
                   'h-8 rounded-lg border px-3 text-xs font-medium transition-all',
-                  showKeywordPosts
-                    ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                   showKeywordPosts
+                    ? 'border-accent-primary/40 bg-accent-primary/10 text-accent-primary'
                     : 'border-border bg-transparent text-text-secondary hover:text-text-light'
                 )}
               >
@@ -168,35 +178,31 @@ function CommentsPage() {
             </div>
           )}
         </FiltersPanel>
-      </div>
 
-      {/* Comments Table - staggered animation */}
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
-        {useSearchResults ? (
-          <CommentsSearchResults result={searchResults} isLoading={isLoading} />
-        ) : (
-          <CommentsTableCard
-            groupedComments={groupedComments}
-            commentsWithoutKeywords={commentsWithoutKeywords}
-            commentIndexMap={commentIndexMap}
-            isLoading={isLoading}
-            emptyMessage={emptyMessage}
-            toggleReadStatus={toggleReadStatus}
-            onLoadMore={handleLoadMore}
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            totalCount={totalCount}
-            loadedCount={loadedCount}
-            renderedCount={renderedCount}
-            showKeywordComments={showKeywordComments}
-            showKeywordPosts={showKeywordPosts}
-            hasDefinedKeywords={hasDefinedKeywords}
-            onAddToWatchlist={handleAddToWatchlist}
-            watchlistPending={watchlistPending}
-            keywordCommentsTotal={keywordCommentsTotal}
-          />
-        )}
-      </div>
+      {useSearchResults ? (
+        <CommentsSearchResults result={searchResults} isLoading={isLoading} />
+      ) : (
+        <CommentsTableCard
+          groupedComments={groupedComments}
+          commentsWithoutKeywords={commentsWithoutKeywords}
+          commentIndexMap={commentIndexMap}
+          isLoading={isLoading}
+          emptyMessage={emptyMessage}
+          toggleReadStatus={toggleReadStatus}
+          onLoadMore={handleLoadMore}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          totalCount={totalCount}
+          loadedCount={loadedCount}
+          renderedCount={renderedCount}
+          showKeywordComments={showKeywordComments}
+          showKeywordPosts={showKeywordPosts}
+          hasDefinedKeywords={hasDefinedKeywords}
+          onAddToWatchlist={handleAddToWatchlist}
+          watchlistPending={watchlistPending}
+          keywordCommentsTotal={keywordCommentsTotal}
+        />
+      )}
     </PageContainer>
   )
 }

@@ -5,14 +5,14 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Spinner } from '@/shared/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip'
-import { cn } from '@/shared/utils'
+import { cn, ensureArray } from '@/shared/utils'
 import type { Comment, Keyword } from '@/shared/types'
 import { formatDateTime, getAuthorInitials } from '@/shared/utils'
-import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { resolveCommentKeywords } from '@/pages/comments/utils/resolveCommentKeywords'
 import { resolveCommentVisibility } from '@/pages/comments/utils/resolveCommentVisibility'
 import { getCommentCategories } from '@/pages/comments/utils/getCommentCategories'
-import { getMatchedKeywordLabel } from '@/pages/comments/utils/getMatchedKeywordLabel'
+import { KeywordBadge } from './KeywordBadge'
+import { ClampExpandText } from './ClampExpandText'
 import { CommentAttachments } from './CommentAttachments'
 import { CommentThread } from './CommentThread'
 
@@ -86,12 +86,13 @@ const CommentCard = memo(function CommentCard({
     showKeywordPosts,
   })
 
-  const postAttachments = Array.isArray(comment.postAttachments) ? comment.postAttachments : []
+  const postAttachments = ensureArray(comment.postAttachments)
   const hasPostContent = comment.postText || comment.postGroup || postAttachments.length > 0
   const commentCategories = getCommentCategories(matchedKeywords)
 
   return (
     <div
+      data-comment-id={comment.id}
       className={cn(
         'group relative flex gap-4 rounded-lg border border-border/40 bg-background-secondary/30 p-5 transition-all duration-300',
         'hover:border-border/60 hover:bg-background-secondary/70 hover:shadow-soft-sm',
@@ -182,7 +183,7 @@ const CommentCard = memo(function CommentCard({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <div className="flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
             {comment.commentUrl && (
               <TooltipProvider>
                 <Tooltip>
@@ -190,6 +191,7 @@ const CommentCard = memo(function CommentCard({
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label="Открыть комментарий в VK"
                       className="size-8 text-text-secondary transition-colors hover:bg-background-primary/40 hover:text-accent-info"
                       asChild
                     >
@@ -207,9 +209,9 @@ const CommentCard = memo(function CommentCard({
           </div>
         </div>
 
-        {/* Post context */}
+          {/* Post context */}
         {shouldShowPost && hasPostContent && (
-          <div className="relative space-y-3 rounded-lg border-l-2 border-accent-info/30 bg-background-primary/30 py-3 pl-4 pr-3">
+          <div className="relative space-y-3 rounded-lg border border-accent-info/20 bg-accent-info/[0.03] py-3 pl-4 pr-3">
             {/* Context label */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -219,12 +221,7 @@ const CommentCard = memo(function CommentCard({
                 {fromPost.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {fromPost.map((kw) => (
-                      <Badge
-                        key={kw.id}
-                        className="h-5 border-0 bg-accent-warning/10 px-1.5 font-mono-accent text-[9px] text-accent-warning"
-                      >
-                        {getMatchedKeywordLabel(kw, comment.postText)}
-                      </Badge>
+                      <KeywordBadge key={kw.id} keyword={kw} text={comment.postText} />
                     ))}
                   </div>
                 )}
@@ -232,9 +229,9 @@ const CommentCard = memo(function CommentCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-6 text-text-secondary transition-colors hover:text-white"
+                className="size-6 text-text-secondary transition-colors hover:text-text-light"
                 onClick={handleOpenModal}
-                title="Открыть полный текст поста"
+                aria-label="Открыть полный текст поста"
               >
                 <Maximize2 className="size-3.5" />
               </Button>
@@ -259,15 +256,15 @@ const CommentCard = memo(function CommentCard({
 
             {/* Post text */}
             {comment.postText && (
-              <div
-                className={cn(
-                  'cursor-pointer whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary transition-colors hover:text-white',
-                  !isPostExpanded && 'line-clamp-4'
-                )}
-                onClick={handleTogglePostExpand}
-              >
-                {highlightKeywords(comment.postText, fromPost.length > 0 ? fromPost : all)}
-              </div>
+              <ClampExpandText
+                text={comment.postText}
+                keywords={fromPost.length > 0 ? fromPost : all}
+                isExpanded={isPostExpanded}
+                onToggle={handleTogglePostExpand}
+                labelExpanded="Свернуть текст поста"
+                labelCollapsed="Развернуть текст поста"
+                className="text-text-secondary hover:text-text-light"
+              />
             )}
 
             {/* Post attachments */}
@@ -281,24 +278,19 @@ const CommentCard = memo(function CommentCard({
             {fromComment.length > 0 && (
               <div className="flex flex-wrap items-center gap-1">
                 {fromComment.map((kw) => (
-                  <Badge
-                    key={kw.id}
-                    className="h-5 border-0 bg-accent-warning/10 px-1.5 font-mono-accent text-[9px] text-accent-warning"
-                  >
-                    {getMatchedKeywordLabel(kw, comment.text)}
-                  </Badge>
+                  <KeywordBadge key={kw.id} keyword={kw} text={comment.text} />
                 ))}
               </div>
             )}
-            <div
-              className={cn(
-                'cursor-pointer whitespace-pre-wrap break-words font-monitoring-body text-[15px] leading-relaxed text-white transition-colors hover:text-slate-100',
-                !isCommentExpanded && 'line-clamp-4'
-              )}
-              onClick={handleToggleCommentExpand}
-            >
-              {highlightKeywords(comment.text, fromComment.length > 0 ? fromComment : all)}
-            </div>
+            <ClampExpandText
+              text={comment.text}
+              keywords={fromComment.length > 0 ? fromComment : all}
+              isExpanded={isCommentExpanded}
+              onToggle={handleToggleCommentExpand}
+              labelExpanded="Свернуть текст комментария"
+              labelCollapsed="Развернуть текст комментария"
+              className="text-[15px] text-text-light hover:text-white"
+            />
           </div>
         )}
 

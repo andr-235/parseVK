@@ -1,23 +1,29 @@
+import { memo } from 'react'
 import type { CommentsSearchResult } from '@/pages/comments/api/models/commentsSearch.model'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { EmptyState } from '@/shared/components/common/EmptyState'
+import { Spinner } from '@/shared/components/ui/spinner'
+import { Search } from 'lucide-react'
 
 interface CommentsSearchResultsProps {
   result: CommentsSearchResult | undefined
   isLoading: boolean
 }
 
-export default function CommentsSearchResults({ result, isLoading }: CommentsSearchResultsProps) {
+const CommentsSearchResults = memo(function CommentsSearchResults({ result, isLoading }: CommentsSearchResultsProps) {
   if (isLoading) {
     return (
-      <Card className="border-border/10 bg-background-secondary/30">
+      <Card className="border-border/40 bg-background-secondary/30">
         <CardHeader>
-          <CardTitle className="font-monitoring-display text-xl text-white">
+          <CardTitle className="font-monitoring-display text-xl text-text-light">
             Поисковая выдача
           </CardTitle>
-          <CardDescription className="text-slate-400">
-            Выполняю поиск по комментариям и постам...
+          <CardDescription className="text-text-secondary">
+            <span className="inline-flex items-center gap-2">
+              <Spinner className="size-3.5" />
+              Выполняю поиск по комментариям и постам...
+            </span>
           </CardDescription>
         </CardHeader>
       </Card>
@@ -27,30 +33,35 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
   if (!result || result.items.length === 0) {
     return (
       <EmptyState
+        icon={<Search className="w-8 h-8" />}
         title="Ничего не найдено"
-        description="Попробуй изменить запрос или переключить режим выдачи."
+        description="Попробуйте изменить запрос или переключить режим выдачи."
       />
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm text-slate-400">
-        <span>Найдено: {result.total}</span>
-        <Badge className="border-[#2a2a30] bg-[#1c1c21] text-slate-300">
+      <div className="flex items-center gap-2">
+        <span className="font-mono-accent text-xs text-text-secondary">
+          Найдено: {result.total}
+        </span>
+        <Badge className="border-border/60 bg-background-secondary font-mono-accent text-[10px] text-text-secondary">
           {result.viewMode === 'posts' ? 'Посты' : 'Комментарии'}
         </Badge>
-        <Badge className="border-[#2a2a30] bg-[#1c1c21] text-slate-300">{result.source}</Badge>
+        <Badge className="border-border/60 bg-background-secondary font-mono-accent text-[10px] text-text-secondary">
+          {result.source}
+        </Badge>
       </div>
 
       {result.items.map((item) =>
         item.type === 'post' ? (
-          <Card key={`search-post-${item.postId}`} className="border-border/10 bg-background-secondary/30">
+          <Card key={`search-post-${item.postId}`} className="border-border/40 bg-background-secondary/30">
             <CardHeader>
-              <CardTitle className="font-monitoring-display text-lg text-white">
+              <CardTitle className="font-monitoring-display text-lg text-text-light">
                 Пост #{item.postId}
               </CardTitle>
-              <CardDescription className="whitespace-pre-wrap text-slate-300">
+              <CardDescription className="whitespace-pre-wrap text-text-primary">
                 {item.postText || 'Текст поста отсутствует'}
               </CardDescription>
             </CardHeader>
@@ -58,12 +69,12 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
               {item.comments.map((comment) => (
                 <div
                   key={`search-post-comment-${comment.commentId}`}
-                  className="rounded-lg border border-border/10 bg-background-secondary/40 p-3"
+                  className="rounded-lg border border-border/40 bg-background-primary/40 p-3"
                 >
-                  <div className="mb-2 text-xs text-slate-500">
+                  <div className="mb-2 font-mono-accent text-[10px] text-text-secondary/70">
                     Комментарий #{comment.commentId}
                   </div>
-                  <div className="whitespace-pre-wrap text-sm text-slate-200">
+                  <div className="whitespace-pre-wrap font-monitoring-body text-sm text-text-primary">
                     {comment.commentText}
                   </div>
                 </div>
@@ -73,20 +84,22 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
         ) : (
           <Card
             key={`search-comment-${item.commentId}`}
-            className="border-border/10 bg-background-secondary/30"
+            className="border-border/40 bg-background-secondary/30"
           >
             <CardHeader>
-              <CardTitle className="font-monitoring-display text-lg text-white">
+              <CardTitle className="font-monitoring-display text-lg text-text-light">
                 Комментарий #{item.commentId}
               </CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardDescription className="text-text-secondary">
                 Пост #{item.postId ?? 'unknown'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="whitespace-pre-wrap text-sm text-slate-200">{item.commentText}</div>
+              <div className="whitespace-pre-wrap font-monitoring-body text-sm text-text-primary">
+                {item.commentText}
+              </div>
               {item.postText ? (
-                <div className="rounded-lg border border-border/10 bg-background-secondary/40 p-3 text-sm text-text-secondary">
+                <div className="rounded-lg border border-border/40 bg-background-primary/40 p-3 font-monitoring-body text-sm text-text-secondary">
                   {item.postText}
                 </div>
               ) : null}
@@ -95,7 +108,7 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
                   {item.highlight.map((chunk, index) => (
                     <Badge
                       key={`highlight-${item.commentId}-${index}`}
-                      className="border-accent-primary/30 bg-accent-primary/10 text-accent-primary"
+                      className="border-accent-primary/30 bg-accent-primary/10 text-accent-primary font-mono-accent text-[10px]"
                     >
                       {chunk.replace(/<[^>]+>/g, '')}
                     </Badge>
@@ -108,4 +121,6 @@ export default function CommentsSearchResults({ result, isLoading }: CommentsSea
       )}
     </div>
   )
-}
+})
+
+export default CommentsSearchResults

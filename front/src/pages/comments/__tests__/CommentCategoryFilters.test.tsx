@@ -4,21 +4,37 @@ import { vi } from 'vitest'
 import { CommentCategoryFilters } from '../components/CommentCategoryFilters'
 
 describe('CommentCategoryFilters', () => {
-  it('toggles selected categories', async () => {
+  it('selects a category tab', async () => {
     const user = userEvent.setup()
-    const onToggle = vi.fn()
+    const onSelect = vi.fn()
 
     render(
       <CommentCategoryFilters
         categories={['Услуги', 'Акции']}
-        selectedCategories={['Услуги']}
-        onToggleCategory={onToggle}
-        onClear={() => {}}
+        activeCategory={null}
+        onSelectCategory={onSelect}
       />
     )
 
-    await user.click(screen.getByRole('button', { name: 'Акции' }))
+    await user.click(screen.getByRole('tab', { name: 'Акции' }))
 
-    expect(onToggle).toHaveBeenCalledWith('Акции')
+    expect(onSelect).toHaveBeenCalledWith('Акции')
+  })
+
+  it('switches back to All tab', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+
+    const { rerender } = render(
+      <CommentCategoryFilters
+        categories={['Услуги', 'Акции']}
+        activeCategory="Акции"
+        onSelectCategory={onSelect}
+      />
+    )
+
+    await user.click(screen.getByRole('tab', { name: /^Все/ }))
+
+    expect(onSelect).toHaveBeenCalledWith(null)
   })
 })

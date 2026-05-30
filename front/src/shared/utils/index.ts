@@ -1,3 +1,4 @@
+export * from './arrayUtils'
 export * from './configUtils'
 export * from './utils'
 

@@ -1,9 +1,8 @@
 import { memo, useCallback, useState } from 'react'
-import { ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
+import { ChevronDown, ChevronRight, Heart, MessageSquare } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
-import { cn } from '@/shared/utils'
+import { cn, ensureArray, formatDateTime } from '@/shared/utils'
 import type { ThreadItem } from '@/shared/types'
-import { formatDateTime } from '@/shared/utils'
 import { highlightKeywords } from '@/shared/utils/highlightKeywords'
 import { CommentAttachments } from './CommentAttachments'
 import type { Keyword } from '@/shared/types'
@@ -40,18 +39,18 @@ export const CommentThreadItem = memo(function CommentThreadItem({
     ? `${item.author.firstName} ${item.author.lastName}`.trim()
     : `ID${item.fromId}`
 
-  const attachments = Array.isArray(item.attachments) ? item.attachments : []
+  const attachments = ensureArray(item.attachments)
 
   return (
     <div className={cn('relative', depth > 0 && 'ml-6')}>
       {/* Connection line for nested items */}
       {depth > 0 && (
-        <div className={cn('absolute bottom-0 left-0 top-0 w-px bg-white/10', '-translate-x-6')} />
+        <div className={cn('absolute bottom-0 left-0 top-0 w-px bg-border/30', '-translate-x-6')} />
       )}
 
       <div
         className={cn(
-          'group relative rounded-lg border border-border/10 bg-background-secondary/30 p-3 transition-all hover:border-border/20 hover:bg-background-secondary/40',
+          'group relative rounded-lg border border-border/20 bg-background-secondary/40 p-3 transition-all hover:border-border/40 hover:bg-background-secondary/60',
           depth > 0 && 'ml-2'
         )}
       >
@@ -62,7 +61,8 @@ export const CommentThreadItem = memo(function CommentThreadItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-6 shrink-0 text-slate-400 hover:bg-white/5 hover:text-white"
+                aria-label={isExpanded ? 'Свернуть ответы' : 'Развернуть ответы'}
+                className="size-8 shrink-0 text-text-secondary hover:bg-background-primary/40 hover:text-text-light"
                 onClick={handleToggleExpand}
               >
                 {isExpanded ? (
@@ -78,15 +78,15 @@ export const CommentThreadItem = memo(function CommentThreadItem({
                 <img
                   src={item.author.logo}
                   alt={authorName}
-                  className="size-6 rounded-full border border-border/10"
+                  className="size-6 rounded-full border border-border/20"
                   loading="lazy"
                 />
               )}
-              <span className="truncate font-monitoring-display text-sm font-semibold text-white">
+              <span className="truncate font-monitoring-display text-sm font-semibold text-text-light">
                 {authorName}
               </span>
               {item.replyToUser && item.replyToUser !== item.fromId && (
-                <span className="font-mono-accent text-xs text-slate-500">
+                <span className="font-mono-accent text-[10px] text-text-secondary/70">
                   → ответ на ID{item.replyToUser}
                 </span>
               )}
@@ -95,16 +95,19 @@ export const CommentThreadItem = memo(function CommentThreadItem({
 
           <div className="flex shrink-0 items-center gap-2">
             {item.likesCount != null && item.likesCount > 0 && (
-              <span className="font-mono-accent text-xs text-slate-500">❤️ {item.likesCount}</span>
+              <span className="inline-flex items-center gap-1 font-mono-accent text-[10px] text-text-secondary/70" aria-label={`Нравится: ${item.likesCount}`}>
+                <Heart className="size-3" aria-hidden="true" />
+                {item.likesCount}
+              </span>
             )}
-            <time dateTime={item.publishedAt} className="font-mono-accent text-xs text-slate-400">
+            <time dateTime={item.publishedAt} className="font-mono-accent text-[10px] text-text-secondary">
               {formatDateTime(item.publishedAt)}
             </time>
           </div>
         </div>
 
         {/* Comment text */}
-        <div className="mb-2 whitespace-pre-wrap break-words font-monitoring-body text-sm leading-relaxed text-slate-200">
+        <div className="mb-2 whitespace-pre-wrap break-words font-monitoring-body text-sm leading-relaxed text-text-primary">
           {highlightKeywords(item.text, keywords)}
         </div>
 
@@ -120,7 +123,7 @@ export const CommentThreadItem = memo(function CommentThreadItem({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 font-mono-accent text-xs text-slate-400 hover:bg-white/5 hover:text-white"
+            className="h-7 font-mono-accent text-xs text-text-secondary hover:bg-background-primary/40 hover:text-text-light"
             onClick={handleExpandNested}
           >
             <MessageSquare className="mr-1.5 size-3.5" />

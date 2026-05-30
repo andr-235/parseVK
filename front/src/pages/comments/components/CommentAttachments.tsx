@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { ExternalLink, Link as LinkIcon, Video } from 'lucide-react'
 import {
   extractCommentAttachments,
@@ -8,7 +9,7 @@ interface CommentAttachmentsProps {
   attachments: unknown[]
 }
 
-export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
+export const CommentAttachments = memo(function CommentAttachments({ attachments }: CommentAttachmentsProps) {
   if (!attachments || !Array.isArray(attachments) || attachments.length === 0) {
     return null
   }
@@ -70,9 +71,9 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
               </a>
             )}
           </div>
-        </div>
-      )
-    }
+      </div>
+    )
+  }
 
     return (
       <a
@@ -91,7 +92,7 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
           />
         ) : (
           <div className="w-10 h-10 rounded-lg bg-accent-primary/10 flex items-center justify-center shrink-0">
-            <LinkIcon className="h-5 w-5 text-primary" />
+            <LinkIcon className="h-5 w-5 text-accent-info" />
           </div>
         )}
         <div className="flex-1 min-w-0">
@@ -120,4 +121,4 @@ export function CommentAttachments({ attachments }: CommentAttachmentsProps) {
       </div>
     </div>
   )
-}
+})
