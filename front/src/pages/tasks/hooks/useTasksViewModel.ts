@@ -62,7 +62,7 @@ export const useTasksViewModel = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   useTasksQuery()
-  useTasksSocket()
+  useTasksSocket({ enabled: false })
 
   const activeTasks = useMemo(() => tasks.filter(isTaskActive), [tasks])
   const hasGroups = Array.isArray(groups) && groups.length > 0

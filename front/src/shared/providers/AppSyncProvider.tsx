@@ -48,7 +48,7 @@ function AppSyncProvider(): null {
   useWatchlistAuthorsQuery(isAuthenticated && syncWatchlist)
   useWatchlistSettingsQuery(isAuthenticated && syncWatchlist)
 
-  useTasksSocket({ enabled: isAuthenticated })
+  useTasksSocket({ enabled: false })
 
   return null
 }
