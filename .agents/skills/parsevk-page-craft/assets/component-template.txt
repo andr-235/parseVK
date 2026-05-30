@@ -1,0 +1,29 @@
+import { cn } from '@/shared/utils'
+import type { ReactNode } from 'react'
+
+interface EntityCellProps {
+  label: string
+  children: ReactNode
+  className?: string
+  labelColor?: 'primary' | 'secondary'
+}
+
+export const EntityCell = ({
+  label,
+  children,
+  className,
+  labelColor = 'secondary',
+}: EntityCellProps) => (
+  <div className={cn(
+    'rounded-xl border border-border/50 bg-background-primary/50 p-3.5',
+    className,
+  )}>
+    <p className={cn(
+      'font-monitoring-body text-xs font-semibold uppercase tracking-wider mb-0.5',
+      labelColor === 'primary' ? 'text-accent-primary' : 'text-text-secondary',
+    )}>
+      {label}
+    </p>
+    {children}
+  </div>
+)

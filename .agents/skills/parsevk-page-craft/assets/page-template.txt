@@ -1,0 +1,38 @@
+import { PageContainer, PageHeader, PageSection } from '@/shared/ui/common'
+import { useEntity } from './hooks/useEntity'
+import { EntityTable } from './components/EntityTable'
+import { EntitySheet } from './components/EntitySheet'
+
+export interface EntitiesPageProps {
+  className?: string
+}
+
+export const EntitiesPage = ({ className }: EntitiesPageProps) => {
+  const { entities, isLoading, error } = useEntity()
+
+  return (
+    <PageContainer maxWidth="1600px" animate={false}>
+      <PageHeader
+        title="Сущности"
+        description="Управление и мониторинг сущностей."
+        actions={
+          <>
+            <button type="button" className="...">Создать</button>
+          </>
+        }
+      />
+
+      <div className="flex flex-col gap-8">
+        <PageSection title="Список" count={entities?.length}>
+          {isLoading && <p>Загрузка...</p>}
+          {error && <p className="text-accent-danger">{error}</p>}
+          {!isLoading && !error && (
+            <EntityTable entities={entities} />
+          )}
+        </PageSection>
+      </div>
+
+      <EntitySheet />
+    </PageContainer>
+  )
+}
