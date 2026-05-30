@@ -1,7 +1,6 @@
 import { useTableSorting } from '@/shared/hooks'
 import type { Task } from '@/shared/types'
 import { getTaskTableColumns } from '@/pages/tasks/config/taskTableColumns'
-import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { EmptyState } from '@/shared/components/common/EmptyState'
 import { DataTable } from '@/shared/components/common/DataTable'
@@ -28,20 +27,21 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
   })
 
   return (
-    <Card className="relative overflow-hidden rounded-xl border border-border bg-background-secondary shadow-soft-sm">
-      <div className="flex flex-col gap-4 border-b border-border bg-background-sidebar/30 p-4 md:flex-row md:items-center md:justify-between md:px-6">
-        <div className="flex items-center gap-3">
-          <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-text-light">
-            История запусков
-          </h2>
-          {hasTasks && (
-            <Badge className="border border-border bg-background-primary px-3 py-1 font-mono-accent text-xs text-text-secondary">
-              {tasks.length} {declOfNumber(tasks.length, ['задача', 'задачи', 'задач'])}
-            </Badge>
-          )}
-        </div>
+    <section>
+      <div className="flex items-center gap-3 border-b border-border/50 px-4 md:px-8 py-3">
+        <h2 className="font-monitoring-display text-xl font-semibold tracking-tight text-text-light">
+          История запусков
+        </h2>
+        {hasTasks && (
+          <Badge
+            variant="outline"
+            className="border-border/60 bg-background-secondary px-2.5 py-0.5 font-mono-accent text-xs text-text-secondary"
+          >
+            {tasks.length} {declOfNumber(tasks.length, ['задача', 'задачи', 'задач'])}
+          </Badge>
+        )}
       </div>
-      <CardContent className="p-0">
+      <div className="px-4 md:px-8">
         {hasTasks ? (
           <DataTable
             data={sortedTasks}
@@ -51,14 +51,16 @@ function TasksTableCard({ tasks, emptyMessage, onTaskSelect }: TasksTableCardPro
             onRowClick={(task) => onTaskSelect(task.id)}
           />
         ) : (
-          <EmptyState
-            icon={<FileText className="w-8 h-8" />}
-            title="Список пуст"
-            description={emptyMessage}
-          />
+          <div className="py-12">
+            <EmptyState
+              icon={<FileText className="w-8 h-8" aria-hidden="true" />}
+              title="Список пуст"
+              description={emptyMessage}
+            />
+          </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }
 

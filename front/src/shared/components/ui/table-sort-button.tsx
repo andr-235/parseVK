@@ -34,7 +34,7 @@ export function TableSortButton({
     <button
       type="button"
       className={cn(
-        'group inline-flex w-full items-center justify-between gap-1 rounded-sm px-2 py-1 text-left text-sm font-medium transition-colors hover:bg-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'group inline-flex w-full items-center justify-between gap-1 rounded-sm px-2 py-1 text-left text-sm font-medium transition-colors hover:bg-background-secondary/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/30 focus-visible:ring-offset-2',
         className
       )}
       aria-pressed={direction !== null}
@@ -43,8 +43,8 @@ export function TableSortButton({
       <span className="whitespace-nowrap">{children}</span>
       <Icon
         className={cn(
-          'size-3.5 text-muted-foreground transition-colors group-hover:text-foreground',
-          direction && 'text-foreground'
+          'size-3.5 text-text-secondary transition-colors group-hover:text-text-light',
+          direction && 'text-text-primary'
         )}
         aria-hidden="true"
       />

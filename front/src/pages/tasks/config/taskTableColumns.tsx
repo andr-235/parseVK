@@ -1,7 +1,7 @@
 import ProgressBar from '@/shared/components/common/ProgressBar'
 import TaskActionsCell from '@/pages/tasks/components/TaskActionsCell'
 import { cn } from '@/shared/utils'
-import { getTaskStatusText } from '@/pages/tasks/utils/statusHelpers'
+import { getTaskStatusText, TASK_STATUS_COLORS, getStatusWeight } from '@/pages/tasks/utils/statusHelpers'
 import { calculateTaskProgress } from '@/pages/tasks/utils/taskProgress'
 import { formatDate, formatPair, resolveNumber, toNumber } from '@/pages/tasks/config/utils'
 import type { TableColumn, Task } from '@/shared/types'
@@ -48,22 +48,6 @@ const formatResult = (item: Task): string => {
   return getResultFromProgress(item)
 }
 
-const STATUS_WEIGHTS: Record<Task['status'], number> = {
-  pending: 0,
-  processing: 1,
-  running: 2,
-  completed: 3,
-  failed: 4,
-}
-
-const STATUS_BADGE_STYLES: Record<Task['status'], string> = {
-  pending: 'bg-amber-500/20 text-amber-500 ring-1 ring-inset ring-amber-500/30',
-  processing: 'bg-indigo-500/20 text-indigo-500 ring-1 ring-inset ring-indigo-500/30',
-  running: 'bg-sky-500/20 text-sky-500 ring-1 ring-inset ring-sky-500/30',
-  completed: 'bg-emerald-500/20 text-emerald-500 ring-1 ring-inset ring-emerald-500/30',
-  failed: 'bg-rose-500/20 text-rose-400 ring-1 ring-inset ring-rose-500/30',
-}
-
 interface TaskProgressCounts {
   total: number
   processedCount: number
@@ -107,45 +91,6 @@ const calculateTaskCounts = (
   }
 }
 
-const getScopeLabel = (item: Task, totalNormalized: number | null): string | null => {
-  if (!item.scope) {
-    return null
-  }
-
-  const normalizedScope = typeof item.scope === 'string' ? item.scope.toUpperCase() : item.scope
-  if (normalizedScope === 'ALL') {
-    return 'Все группы'
-  }
-  if (normalizedScope === 'SELECTED') {
-    const count = Array.isArray(item.groupIds)
-      ? item.groupIds.length
-      : (totalNormalized ?? undefined)
-    return `Выбранные${count ? ` (${count})` : ''}`
-  }
-  return item.scope
-}
-
-const getModeLabel = (item: Task): string | null => {
-  if (!item.mode) {
-    return null
-  }
-
-  return item.mode === 'recheck_group' ? 'Режим: перепроверка группы' : 'Режим: последние посты'
-}
-
-const getSkippedLabel = (item: Task): { label: string | null; raw: string } => {
-  const skippedPreviewRaw =
-    typeof item.skippedGroupsMessage === 'string' ? item.skippedGroupsMessage.trim() : ''
-  const hasSkipped = skippedPreviewRaw.length > 0
-  const skippedLabel = hasSkipped
-    ? skippedPreviewRaw.length > 80
-      ? `${skippedPreviewRaw.slice(0, 80).trim()}…`
-      : skippedPreviewRaw
-    : null
-
-  return { label: skippedLabel, raw: skippedPreviewRaw }
-}
-
 const getProgressTone = (
   failedCount: number,
   processedCount: number,
@@ -180,31 +125,8 @@ const columns: TableColumn<Task>[] = [
     render: (item: Task) => {
       const progress = calculateTaskProgress(item)
       const counts = calculateTaskCounts(item, progress)
-      const { total, processedCount, failedCount, successCount, processingCount, pendingCount } =
-        counts
-      const totalNormalized = total > 0 ? total : null
-
-      const scopeLabel = getScopeLabel(item, totalNormalized)
-      const modeLabel = getModeLabel(item)
-      const postLimitValue =
-        item.mode !== 'recheck_group' &&
-        typeof item.postLimit === 'number' &&
-        Number.isFinite(item.postLimit)
-          ? item.postLimit
-          : null
-      const { label: skippedLabel, raw: skippedPreviewRaw } = getSkippedLabel(item)
-      const hasSkipped = skippedPreviewRaw.length > 0
-
-      const hasMeta =
-        total > 0 ||
-        successCount > 0 ||
-        failedCount > 0 ||
-        processingCount > 0 ||
-        pendingCount > 0 ||
-        scopeLabel !== null ||
-        modeLabel !== null ||
-        postLimitValue !== null ||
-        hasSkipped
+      const { total, processedCount, failedCount, successCount } = counts
+      const hasMeta = successCount > 0 || failedCount > 0
 
       const progressTone = getProgressTone(failedCount, processedCount, total)
 
@@ -212,8 +134,8 @@ const columns: TableColumn<Task>[] = [
         <div className="flex w-full flex-col gap-3 text-sm text-text-secondary">
           <span
             className={cn(
-              'inline-flex items-center self-start rounded-full px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.08em]',
-              STATUS_BADGE_STYLES[item.status] ??
+              'inline-flex items-center self-start rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em]',
+              TASK_STATUS_COLORS[item.status] ??
                 'bg-muted text-text-secondary ring-1 ring-inset ring-border/60'
             )}
           >
@@ -231,35 +153,16 @@ const columns: TableColumn<Task>[] = [
           )}
           {hasMeta && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-relaxed text-text-secondary">
-              {scopeLabel && <span className="whitespace-nowrap">{scopeLabel}</span>}
-              {modeLabel && <span className="whitespace-nowrap text-primary">{modeLabel}</span>}
-              {postLimitValue !== null && (
-                <span className="whitespace-nowrap">{`Лимит постов: ${postLimitValue}`}</span>
-              )}
-              {total > 0 && (
-                <span className="whitespace-nowrap">{`Обработано: ${processedCount}/${total}`}</span>
-              )}
-              {processingCount > 0 && (
-                <span className="whitespace-nowrap">{`В работе: ${processingCount}`}</span>
-              )}
-              {pendingCount > 0 && (
-                <span className="whitespace-nowrap">{`В очереди: ${pendingCount}`}</span>
-              )}
               <span
                 className={cn(
                   'whitespace-nowrap font-medium',
-                  successCount > 0 && 'text-emerald-500'
+                  successCount > 0 && 'text-accent-success'
                 )}
               >
                 {`Успешно: ${successCount}`}
               </span>
               {failedCount > 0 && (
-                <span className="whitespace-nowrap font-medium text-rose-500">{`Ошибок: ${failedCount}`}</span>
-              )}
-              {hasSkipped && skippedLabel && (
-                <span className="max-w-full text-amber-500" title={skippedPreviewRaw}>
-                  {`Пропущены: ${skippedLabel}`}
-                </span>
+                <span className="whitespace-nowrap font-medium text-accent-danger">{`Ошибок: ${failedCount}`}</span>
               )}
             </div>
           )}
@@ -267,7 +170,7 @@ const columns: TableColumn<Task>[] = [
       )
     },
     sortable: true,
-    sortValue: (item: Task) => STATUS_WEIGHTS[item.status] ?? Number.POSITIVE_INFINITY,
+    sortValue: (item: Task) => getStatusWeight(item.status),
   },
   {
     header: 'Дата создания',

@@ -1,8 +1,7 @@
 import ProgressBar from '@/shared/components/common/ProgressBar'
 import type { Task } from '@/shared/types'
 import { useActiveTasksBanner } from '@/pages/tasks/hooks/useActiveTasksBanner'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Badge } from '@/shared/components/ui/badge'
+import { StatusBadge } from '@/shared/components/ui/status-badge'
 
 interface ActiveTasksBannerProps {
   tasks: Task[]
@@ -21,37 +20,37 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
     indeterminate,
   } = useActiveTasksBanner(tasks, isCreating)
 
-  if (!shouldRender) {
-    return null
+  if (!shouldRender) return null
+
+  const toneToBadge: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
+    primary: 'info',
+    success: 'success',
+    danger: 'danger',
   }
 
   return (
-    <Card className="border border-border bg-card shadow-sm">
-      <CardHeader className="pb-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="font-monitoring-body text-base font-semibold text-text-primary">
-              Активные процессы парсинга
-            </CardTitle>
-            <CardDescription className="font-monitoring-body text-sm font-normal text-text-secondary">
-              {subtitle}
-            </CardDescription>
+    <div className="border-b border-border/50 bg-background-secondary/50">
+      <div className="flex flex-col gap-3 px-4 md:px-8 py-3">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="font-monitoring-body text-sm font-semibold text-text-primary">
+              Активные процессы
+            </span>
+            {indicatorText && (
+              <StatusBadge
+                tone={toneToBadge[aggregatedTone] ?? 'info'}
+                pulse
+                className="text-xs leading-none"
+              >
+                {indicatorText}
+              </StatusBadge>
+            )}
           </div>
-          {indicatorText && (
-            <Badge
-              variant="outline"
-              className="gap-2 rounded-md border border-accent-primary/20 bg-orange-950/20 text-accent-primary font-monitoring-body text-xs font-semibold uppercase tracking-wider"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary animate-pulse" />
-              </span>
-              {indicatorText}
-            </Badge>
-          )}
+          <span className="font-monitoring-body text-xs text-text-secondary leading-relaxed">
+            {subtitle}
+          </span>
         </div>
-      </CardHeader>
 
-      <CardContent className="space-y-4 pt-0">
         <ProgressBar
           current={processed}
           total={progressTotal}
@@ -60,8 +59,8 @@ function ActiveTasksBanner({ tasks, isCreating }: ActiveTasksBannerProps) {
           tone={aggregatedTone}
           indeterminate={indeterminate}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 

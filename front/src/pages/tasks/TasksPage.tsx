@@ -6,7 +6,8 @@ import TasksList from '@/pages/tasks/components/TasksList'
 import { PageHeader, PageContainer } from '@/shared/components/common'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
-import { Plus, Play, Settings, Calendar, Clock } from 'lucide-react'
+import { Fragment } from 'react'
+import { Plus, Play, Clock, Calendar } from 'lucide-react'
 import { cn } from '@/shared/utils'
 
 function formatDateTime(value: string | null): string {
@@ -53,18 +54,30 @@ function TasksPage() {
   const lastRunText = formatDateTime(automationSettings?.lastRunAt ?? null)
 
   return (
-    <PageContainer maxWidth="400" animate={false}>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200">
-        <PageHeader
-          variant="grid"
-          colsClass="grid-cols-1 gap-4 md:grid-cols-3"
-          title="Задачи парсинга"
-          description="Управляйте сбором данных из ВКонтакте. Создавайте новые задачи или настройте автоматический парсинг по расписанию."
-          actions={
+    <PageContainer maxWidth="1600px" animate={false}>
+      <PageHeader
+        title="Задачи парсинга"
+        description="Создавайте задачи на сбор данных из ВКонтакте и отслеживайте прогресс выполнения."
+        actions={
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              className="h-10 border-accent-primary/20 bg-accent-primary/5 text-accent-primary hover:bg-accent-primary hover:text-text-light hover:border-accent-primary transition-colors duration-200"
+              onClick={handleAutomationRun}
+              disabled={isAutomationLoading || isAutomationTriggering || automationSettings?.isRunning}
+              aria-label="Запустить автоматический сбор данных сейчас"
+            >
+              {isAutomationTriggering ? (
+                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+              ) : (
+                <Play className="w-4 h-4 mr-2 fill-current" />
+              )}
+              Запустить сейчас
+            </Button>
             <Button
               onClick={handleOpenCreateModal}
               size="lg"
-              className="h-10 shrink-0 bg-accent-primary px-6 text-sm font-semibold tracking-wide text-text-light shadow-soft-sm transition-all duration-200 hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-10 bg-accent-primary px-6 text-sm font-semibold tracking-wide text-text-light shadow-soft-sm transition-all duration-200 hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isCreating || areGroupsLoading}
               aria-label="Создать новую задачу парсинга"
             >
@@ -80,119 +93,49 @@ function TasksPage() {
                 </>
               )}
             </Button>
-          }
-          cards={[
-            {
-              icon: Settings,
-              title: 'Автоматизация',
-              subtitle: '',
-              bgGradientClass: 'from-accent-primary/5 to-background-secondary',
-              customContent: (
-                <div className="flex flex-col justify-between gap-5 h-full w-full">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-monitoring-body text-base font-semibold text-text-primary">
-                          Автоматизация
-                        </h3>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'uppercase text-[10px] tracking-wider font-semibold rounded-full font-mono-accent',
-                            automationEnabled
-                              ? 'border border-accent-success/25 bg-accent-success/10 text-accent-success'
-                              : 'border border-border/60 bg-background-primary/50 text-text-secondary'
-                          )}
-                        >
-                          {automationEnabled ? 'Включено' : 'Выключено'}
-                        </Badge>
-                      </div>
-                      <p className="font-monitoring-body text-sm font-normal text-text-secondary">
-                        Настройте регулярный сбор данных без вашего участия
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleOpenAutomationSettings}
-                      className="hover:bg-background-primary/40 transition-colors"
-                      aria-label="Открыть настройки автоматизации"
-                    >
-                      <Settings className="w-5 h-5 text-text-secondary hover:text-text-primary transition-colors" />
-                    </Button>
-                  </div>
+          </div>
+        }
+      />
 
-                  <div className="flex flex-wrap items-center gap-6 pt-2">
-                    <div className="flex items-center gap-2.5 text-sm">
-                      <div className="p-2 rounded-full bg-accent-info/10 text-accent-info">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70">
-                          Следующий запуск
-                        </span>
-                        <span className="font-mono-accent text-xs font-medium text-text-primary">
-                          {nextRunText}
-                        </span>
-                      </div>
-                    </div>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 md:px-8 pb-3">
+        <Badge
+          variant="outline"
+          className={cn(
+            'text-xs tracking-wider font-semibold rounded-full font-mono-accent uppercase',
+            automationEnabled
+              ? 'border border-accent-success/20 bg-accent-success/10 text-accent-success'
+              : 'border border-border/60 bg-background-primary/50 text-text-secondary'
+          )}
+        >
+          {automationEnabled ? 'Автоматизация включена' : 'Автоматизация выключена'}
+        </Badge>
 
-                    <div className="w-px h-8 bg-border/60" />
+        {[
+          { icon: Clock, label: 'Следующий запуск:', value: nextRunText },
+          { icon: Calendar, label: 'Последний запуск:', value: lastRunText },
+        ].map((item, i) => (
+          <Fragment key={item.label}>
+            {i > 0 && <div className="w-px h-3 bg-border/40" />}
+            <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+              <item.icon className="w-3 h-3" />
+              <span className="text-text-secondary/70">{item.label}</span>
+              <span className="font-mono-accent text-xs font-medium text-text-primary">{item.value}</span>
+            </div>
+          </Fragment>
+        ))}
 
-                    <div className="flex items-center gap-2.5 text-sm">
-                      <div className="p-2 rounded-full bg-accent-primary/10 text-accent-primary">
-                        <Calendar className="w-4 h-4" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70">
-                          Последний запуск
-                        </span>
-                        <span className="font-mono-accent text-xs font-medium text-text-primary">
-                          {lastRunText}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ),
-            },
-            {
-              icon: Play,
-              title: 'Запустить сейчас',
-              subtitle: '',
-              customContent: (
-                <div className="flex flex-col items-center justify-center gap-4 text-center h-full w-full min-h-[140px]">
-                  <Button
-                    variant="outline"
-                    className="h-10 w-full text-sm font-semibold border-accent-primary/20 bg-accent-primary/5 text-accent-primary hover:bg-accent-primary hover:text-text-light hover:border-accent-primary transition-all duration-200"
-                    onClick={handleAutomationRun}
-                    disabled={
-                      isAutomationLoading || isAutomationTriggering || automationSettings?.isRunning
-                    }
-                    aria-label="Запустить автоматический сбор данных сейчас"
-                  >
-                    {isAutomationTriggering ? (
-                      <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                    ) : (
-                      <Play className="w-4 h-4 mr-2 fill-current" />
-                    )}
-                    Запустить сейчас
-                  </Button>
-                  <p className="font-monitoring-body text-xs font-normal text-text-secondary/70 px-4 leading-relaxed">
-                    Принудительный запуск парсинга всех активных групп
-                  </p>
-                </div>
-              ),
-            },
-          ]}
-        />
+        <button
+          type="button"
+          onClick={handleOpenAutomationSettings}
+          className="text-xs font-semibold text-accent-primary hover:text-accent-primary/80 transition-colors"
+        >
+          Настроить
+        </button>
       </div>
 
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-100">
+      <div className="flex flex-col gap-8">
         <ActiveTasksBanner tasks={activeTasks} isCreating={isCreating} />
-      </div>
 
-      <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-200 delay-200">
         <TasksList
           emptyMessage={emptyMessage}
           onTaskSelect={handleTaskSelect}
@@ -200,9 +143,7 @@ function TasksPage() {
         />
       </div>
 
-      {selectedTaskId && (
-        <TaskDetails task={getTaskDetails(selectedTaskId)} onClose={handleCloseTaskDetails} />
-      )}
+      <TaskDetails task={selectedTaskId != null ? getTaskDetails(selectedTaskId) : undefined} onClose={handleCloseTaskDetails} />
 
       <CreateParseTaskModal
         isOpen={isCreateModalOpen}

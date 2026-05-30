@@ -33,13 +33,17 @@ function CreateParseTaskModal({
     getDisplayName,
   } = useCreateParseTaskModal(groups, isOpen)
 
-  const handleSubmit = (mode: 'recent_posts' | 'recheck_group') => {
+  const handleSubmit = async (mode: 'recent_posts' | 'recheck_group') => {
     if (isLoading) {
       return
     }
     const ids = Array.from(selectedIds)
-    onSubmit({ groupIds: ids, mode })
-    onClose()
+    try {
+      await onSubmit({ groupIds: ids, mode })
+      onClose()
+    } catch {
+      // Error handling is done by parent
+    }
   }
 
   return (
@@ -79,14 +83,14 @@ function CreateParseTaskModal({
             <button
               onClick={handleSelectAll}
               type="button"
-              className="rounded-lg border border-border bg-background-secondary/50 px-3 py-1.5 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary transition-all hover:bg-background-primary hover:text-text-light hover:border-accent-primary/50"
+              className="rounded-lg border border-border bg-background-secondary/50 px-3 py-1.5 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary transition-colors hover:bg-background-primary hover:text-text-light hover:border-accent-primary/50"
             >
               Выбрать все
             </button>
             <button
               onClick={handleDeselectAll}
               type="button"
-              className="rounded-lg border border-transparent px-3 py-1.5 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70 transition-all hover:bg-background-primary hover:text-text-light"
+              className="rounded-lg border border-transparent px-3 py-1.5 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary/70 transition-colors hover:bg-background-primary hover:text-text-light"
             >
               Снять выделение
             </button>
@@ -95,9 +99,10 @@ function CreateParseTaskModal({
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-secondary" />
+          <Search aria-hidden="true" className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-secondary" />
           <input
             type="text"
+            aria-label="Поиск групп"
             className="w-full rounded-xl border border-border bg-background-primary py-3 pl-12 pr-4 font-monitoring-body text-sm font-normal text-text-light placeholder:text-text-secondary focus:border-accent-primary/50 focus:outline-none focus:ring-2 focus:ring-accent-primary/10"
             placeholder="Поиск по названию, ссылке или ID"
             value={search}
@@ -109,7 +114,7 @@ function CreateParseTaskModal({
         <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-1">
           {filteredGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-background-primary/30 py-10 text-center">
-              <Search className="mb-2 h-6 w-6 text-text-secondary" />
+              <Search aria-hidden="true" className="mb-2 h-6 w-6 text-text-secondary" />
               <h3 className="font-monitoring-body text-sm font-semibold text-text-light">
                 Не нашли подходящих групп
               </h3>
@@ -125,15 +130,20 @@ function CreateParseTaskModal({
               return (
                 <div
                   key={group.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleToggle(group.id)}
-                  className={`group flex cursor-pointer items-center gap-4 rounded-xl border p-3.5 transition-all duration-200 hover:border-accent-primary/30 hover:bg-background-primary/40 ${
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(group.id) } }}
+                  className={`group flex cursor-pointer items-center gap-4 rounded-xl border p-3.5 transition-colors duration-200 hover:border-accent-primary/30 hover:bg-background-primary/40 ${
                     isChecked
                       ? 'border-accent-primary/45 bg-accent-primary/5 text-text-light'
                       : 'border-border bg-background-primary/30'
                   }`}
                 >
                   <div
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-all ${
+                    role="checkbox"
+                    aria-checked={isChecked}
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
                       isChecked
                         ? 'border-accent-primary bg-accent-primary'
                         : 'border-border bg-transparent group-hover:border-accent-primary'

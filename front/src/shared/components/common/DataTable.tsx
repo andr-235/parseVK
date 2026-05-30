@@ -72,7 +72,7 @@ export function DataTable<T>({
   return (
     <div className="w-full overflow-x-auto">
       <Table>
-        <TableHeader className="bg-muted/10">
+        <TableHeader className="bg-background-secondary/20">
           <TableRow className="border-b border-border/60 hover:bg-transparent">
             {columns.map((column) => {
               const resolveSortDirection = () => {
@@ -82,9 +82,13 @@ export function DataTable<T>({
                 return null
               }
 
+              const sortDirection = resolveSortDirection()
+              const ariaSort = sortDirection === 'asc' ? 'ascending' : sortDirection === 'desc' ? 'descending' : undefined
+
               return (
                 <TableHead
                   key={column.key}
+                  aria-sort={ariaSort}
                   className={cn(
                     column.headerClassName ||
                       'h-10 px-4 py-2 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary'
@@ -92,7 +96,7 @@ export function DataTable<T>({
                 >
                   {column.sortable && onRequestSort ? (
                     <TableSortButton
-                      direction={resolveSortDirection()}
+                      direction={sortDirection}
                       onClick={() => handleSort(column.key)}
                       className="h-8 hover:bg-muted/40 font-monitoring-body text-xs font-semibold uppercase tracking-wider text-text-secondary"
                     >
@@ -122,7 +126,7 @@ export function DataTable<T>({
                         'px-4 py-3 align-middle font-monitoring-body text-sm font-normal text-text-primary'
                     )}
                   >
-                    <Skeleton className="h-4 w-3/4 max-w-[150px] bg-white/5" />
+                    <Skeleton className="h-4 w-3/4 max-w-[150px] bg-background-secondary/30" />
                   </TableCell>
                 ))}
               </TableRow>
@@ -149,7 +153,7 @@ export function DataTable<T>({
                   tabIndex={isClickable ? 0 : undefined}
                   role={isClickable ? 'button' : undefined}
                   className={cn(
-                    'group border-b border-border/40 transition-colors hover:bg-muted/30 focus-visible:bg-muted/40 focus-visible:outline-hidden',
+                    'group border-b border-border/40 transition-colors hover:bg-background-primary/40 focus-visible:bg-background-primary/50 focus-visible:outline-hidden',
                     isClickable && 'cursor-pointer',
                     rowClass
                   )}
