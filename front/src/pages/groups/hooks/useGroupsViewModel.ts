@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import toast from 'react-hot-toast'
 import { useIntersectionObserver } from '@/shared/hooks/useIntersectionObserver'
 import { useGroupsStore } from '@/pages/groups/store'
 import type { IRegionGroupSearchItem } from '@/shared/types'
@@ -70,8 +71,12 @@ export const useGroupsViewModel = () => {
   )
 
   const handleAddGroup = useCallback(async () => {
-    if (await addGroup(url)) {
+    const success = await addGroup(url)
+    if (success) {
       setUrl('')
+      toast.success('Группа добавлена')
+    } else {
+      toast.error('Не удалось добавить группу')
     }
   }, [url, addGroup])
 
