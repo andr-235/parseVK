@@ -17,48 +17,43 @@ export const CommentCategoryFilters = memo(function CommentCategoryFilters({
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1.5 border-b border-border/40 pb-2" role="tablist" aria-label="Категории комментариев">
+    <div className="flex items-center gap-1.5 border-b border-border/40 pb-2" role="tablist" aria-label="Категории комментариев">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeCategory === null}
+        onClick={() => onSelectCategory(null)}
+        className={cn(
+          'rounded-md px-3 py-1.5 font-mono-accent text-xs font-medium transition-all duration-200',
+          activeCategory === null
+            ? 'bg-accent-primary/10 text-accent-primary shadow-sm'
+            : 'text-text-secondary hover:bg-background-primary/30 hover:text-text-light'
+        )}
+      >
+        Все
+        {activeCategory === null && categories.length > 0 && (
+          <span className="ml-1.5 font-mono-accent text-[10px] text-accent-primary/70">
+            ({categories.length})
+          </span>
+        )}
+      </button>
+      {categories.map((category) => (
         <button
+          key={category}
           type="button"
           role="tab"
-          aria-selected={activeCategory === null}
-          onClick={() => onSelectCategory(null)}
+          aria-selected={activeCategory === category}
+          onClick={() => onSelectCategory(category)}
           className={cn(
             'rounded-md px-3 py-1.5 font-mono-accent text-xs font-medium transition-all duration-200',
-            activeCategory === null
-              ? 'bg-accent-primary/10 text-accent-primary shadow-sm'
+            activeCategory === category
+              ? 'bg-accent-info/10 text-accent-info shadow-sm'
               : 'text-text-secondary hover:bg-background-primary/30 hover:text-text-light'
           )}
         >
-          Все
-          {activeCategory === null && categories.length > 0 && (
-            <span className="ml-1.5 font-mono-accent text-[10px] text-accent-primary/70">
-              ({categories.length})
-            </span>
-          )}
+          {category}
         </button>
-        {categories.map((category) => (
-          <button
-            key={category}
-            type="button"
-            role="tab"
-            aria-selected={activeCategory === category}
-            onClick={() => onSelectCategory(category)}
-            className={cn(
-              'rounded-md px-3 py-1.5 font-mono-accent text-xs font-medium transition-all duration-200',
-              activeCategory === category
-                ? 'bg-accent-info/10 text-accent-info shadow-sm'
-                : 'text-text-secondary hover:bg-background-primary/30 hover:text-text-light'
-            )}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
-      <p className="font-mono-accent text-[10px] text-text-secondary/60 leading-relaxed">
-        Категории определяются по совпадениям ключевых слов из групп. Выберите вкладку, чтобы увидеть комментарии только одной категории.
-      </p>
+      ))}
     </div>
   )
 })

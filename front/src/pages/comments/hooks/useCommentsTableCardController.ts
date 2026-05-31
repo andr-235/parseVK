@@ -14,67 +14,20 @@ const syncExpandedCategories = (previous: Record<string, boolean>, groups: Categ
   return previous
 }
 
-const buildSubtitle = ({
-  isLoading,
-  hasComments,
-  hasKeywordGroups,
-  hasCommentsWithoutKeywords,
-  hasDefinedKeywords,
-  hasAnyKeywordFilter,
-  activeCategory,
-}: {
-  isLoading: boolean
-  hasComments: boolean
-  hasKeywordGroups: boolean
-  hasCommentsWithoutKeywords: boolean
-  hasDefinedKeywords: boolean
-  hasAnyKeywordFilter: boolean
-  activeCategory: string | null
-}) => {
-  if (isLoading && !hasComments) {
-    return 'Мы подготавливаем данные и проверяем их перед отображением.'
-  }
-  if (hasKeywordGroups) {
-    return activeCategory
-      ? `Показаны комментарии категории «${activeCategory}».`
-      : 'Комментарии с ключевыми словами сгруппированы по категориям. Используйте вкладки, чтобы переключаться между темами.'
-  }
-  if (hasCommentsWithoutKeywords && !hasDefinedKeywords) {
-    return 'Ключевые слова пока не заданы — все найденные комментарии находятся в разделе «Без ключевых слов».'
-  }
-  if (hasComments && !hasAnyKeywordFilter && hasCommentsWithoutKeywords) {
-    return 'Комментарии без совпадений с ключевыми словами отображаются в отдельном блоке.'
-  }
-  return 'После добавления групп и запуска парсинга комментарии появятся в списке.'
-}
-
 interface UseCommentsTableCardControllerParams {
   groupedComments: CategorizedGroup[]
   commentsWithoutKeywords: CategorizedComment[]
-  isLoading: boolean
-  showKeywordComments: boolean
-  showKeywordPosts: boolean
-  hasDefinedKeywords: boolean
 }
 
 export default function useCommentsTableCardController({
   groupedComments,
   commentsWithoutKeywords,
-  isLoading,
-  showKeywordComments,
-  showKeywordPosts,
-  hasDefinedKeywords,
 }: UseCommentsTableCardControllerParams) {
   const keywordGroups = useMemo(
     () => groupedComments.filter((group) => group.comments.length > 0),
     [groupedComments]
   )
 
-  const totalCategories = useMemo(() => keywordGroups.length, [keywordGroups.length])
-  const hasAnyKeywordFilter = useMemo(
-    () => showKeywordComments || showKeywordPosts,
-    [showKeywordComments, showKeywordPosts]
-  )
   const availableCategories = useMemo(
     () => keywordGroups.map((group) => group.category),
     [keywordGroups]
@@ -115,7 +68,6 @@ export default function useCommentsTableCardController({
     [commentsWithoutKeywords, safeActiveCategory]
   )
 
-  const hasCategoryFilter = safeActiveCategory !== null
   const hasComments = useMemo(
     () =>
       filteredKeywordGroups.some((group) => group.comments.length > 0) ||
@@ -142,29 +94,6 @@ export default function useCommentsTableCardController({
     setActiveCategory(category)
   }, [])
 
-  const subtitle = useMemo(
-    () =>
-      buildSubtitle({
-        isLoading,
-        hasComments,
-        hasKeywordGroups: filteredKeywordGroups.length > 0,
-        hasCommentsWithoutKeywords: filteredCommentsWithoutKeywords.length > 0,
-        hasDefinedKeywords,
-        hasAnyKeywordFilter,
-        activeCategory: safeActiveCategory,
-      }),
-    [
-      hasComments,
-      filteredCommentsWithoutKeywords.length,
-      filteredKeywordGroups.length,
-      hasDefinedKeywords,
-      hasCategoryFilter,
-      isLoading,
-      hasAnyKeywordFilter,
-      safeActiveCategory,
-    ]
-  )
-
   return {
     keywordGroups: filteredKeywordGroups,
     hasComments,
@@ -176,7 +105,5 @@ export default function useCommentsTableCardController({
     availableCategories,
     selectCategory,
     filteredCommentsWithoutKeywords,
-    subtitle,
-    totalCategories,
   }
 }

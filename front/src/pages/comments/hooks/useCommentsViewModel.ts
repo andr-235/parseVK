@@ -4,18 +4,16 @@ import { useCommentsStore } from '@/pages/comments/store'
 import { useKeywordsStore } from '@/pages/keywords/store/keywordsStore'
 import { useWatchlistStore } from '@/pages/watchlist/store/watchlistStore'
 import { useCommentsSearchQuery } from '@/pages/comments/hooks/useCommentsSearchQuery'
-import {
-  buildCommentsSearchPayload,
-  shouldUseCommentsSearch,
-} from '@/pages/comments/api/query/buildCommentsSearchQuery'
+import { buildCommentsSearchPayload } from '@/pages/comments/api/query/buildCommentsSearchQuery'
 import type { Comment, Keyword } from '@/shared/types'
 import { getCommentCategories } from '@/pages/comments/utils/getCommentCategories'
 import { useDebounce } from '@/shared/hooks'
 
-type ReadFilter = 'all' | 'unread' | 'read'
+type TabMode = 'review' | 'watchlist' | 'all'
+type FilterMode = 'all' | 'comments' | 'posts'
 type CommentWithKeywords = { comment: Comment; matchedKeywords: Keyword[] }
-type KeywordSource = 'COMMENT' | 'POST'
-type ViewMode = 'comments' | 'posts'
+
+export type { TabMode, FilterMode }
 
 const DEFAULT_CATEGORY = 'Без категории'
 
@@ -23,6 +21,9 @@ const getMatchedKeywords = (comment: Comment): Keyword[] => {
   const value = (comment as Partial<Comment> & { matchedKeywords?: Keyword[] }).matchedKeywords
   return Array.isArray(value) ? value : []
 }
+
+const hasKeywordSource = (keywords: Keyword[], source: 'COMMENT' | 'POST') =>
+  keywords.some((kw) => kw.source === source)
 
 const buildCategoryMap = (matched: Keyword[]) =>
   matched.reduce((acc, keyword) => {
@@ -92,12 +93,6 @@ const groupComments = (comments: Comment[], indexMap: Map<number, number>) => {
   }
 }
 
-const shouldIncludeByRead = (comment: Comment, filter: ReadFilter) => {
-  if (filter === 'read') return comment.isRead
-  if (filter === 'unread') return !comment.isRead
-  return true
-}
-
 const matchesSearch = (comment: Comment, searchLower: string) => {
   if (!searchLower) return true
   const matched = getMatchedKeywords(comment)
@@ -119,113 +114,33 @@ const matchesSearch = (comment: Comment, searchLower: string) => {
   )
 }
 
-const shouldIncludeByKeywords = (
-  matched: Keyword[],
-  filterByCommentKeywords: boolean,
-  filterByPostKeywords: boolean
-) => {
-  if (!filterByCommentKeywords && !filterByPostKeywords) return true
-  if (matched.length === 0) return false
-
-  if (filterByCommentKeywords && !filterByPostKeywords) {
-    return matched.some((kw) => kw.source !== 'POST')
-  }
-
-  if (filterByPostKeywords && !filterByCommentKeywords) {
-    return matched.some((kw) => kw.source === 'POST')
-  }
-
+const shouldIncludeByKeywordSource = (matched: Keyword[], filter: FilterMode) => {
+  if (filter === 'all') return true
+  if (filter === 'comments') return hasKeywordSource(matched, 'COMMENT')
+  if (filter === 'posts') return hasKeywordSource(matched, 'POST')
   return true
-}
-
-const shouldIncludeComment = (
-  comment: Comment,
-  readFilter: ReadFilter,
-  searchLower: string,
-  filterByCommentKeywords: boolean,
-  filterByPostKeywords: boolean
-) => {
-  if (!shouldIncludeByRead(comment, readFilter)) return false
-  if (!matchesSearch(comment, searchLower)) return false
-
-  const matched = getMatchedKeywords(comment)
-  return shouldIncludeByKeywords(matched, filterByCommentKeywords, filterByPostKeywords)
-}
-
-const buildKeywordFilters = ({
-  keywords,
-  searchTerm,
-  shouldFilterByKeywordComments,
-  shouldFilterByKeywordPosts,
-}: {
-  keywords: Keyword[] | undefined // Разрешаем undefined для защиты от race condition
-  searchTerm: string
-  shouldFilterByKeywordComments: boolean
-  shouldFilterByKeywordPosts: boolean
-}): {
-  keywordFilterValues?: string[]
-  keywordSource?: KeywordSource
-  trimmedSearch: string
-  searchLower: string
-} => {
-  const trimmed = searchTerm.trim()
-  if (!shouldFilterByKeywordComments && !shouldFilterByKeywordPosts) {
-    return {
-      keywordFilterValues: undefined,
-      keywordSource: undefined,
-      trimmedSearch: trimmed,
-      searchLower: trimmed.toLowerCase(),
-    }
-  }
-
-  // Защита от undefined keywords
-  const normalized = (keywords ?? []).map((item) => item.word.trim()).filter(Boolean)
-  const values = normalized.length > 0 ? Array.from(new Set(normalized)) : undefined
-
-  let source: KeywordSource | undefined
-  if (shouldFilterByKeywordComments && shouldFilterByKeywordPosts) {
-    source = undefined
-  } else if (shouldFilterByKeywordComments) {
-    source = 'COMMENT'
-  } else if (shouldFilterByKeywordPosts) {
-    source = 'POST'
-  }
-
-  return {
-    keywordFilterValues: values,
-    keywordSource: source,
-    trimmedSearch: trimmed,
-    searchLower: trimmed.toLowerCase(),
-  }
 }
 
 const buildEmptyMessage = ({
   isLoading,
-  readFilter,
-  showKeywordComments,
-  showKeywordPosts,
+  tabMode,
+  filterMode,
   trimmedSearch,
 }: {
   isLoading: boolean
-  readFilter: ReadFilter
-  showKeywordComments: boolean
-  showKeywordPosts: boolean
+  tabMode: TabMode
+  filterMode: FilterMode
   trimmedSearch: string
 }) => {
   if (isLoading) return 'Загрузка...'
-  const hasAnyKeywordFilter = showKeywordComments || showKeywordPosts
-  if (readFilter === 'read') {
-    return hasAnyKeywordFilter
-      ? 'Нет прочитанных комментариев с ключевыми словами'
-      : 'Нет прочитанных комментариев'
-  }
-  if (readFilter === 'unread') {
-    return hasAnyKeywordFilter
-      ? 'Все комментарии с ключевыми словами прочитаны'
-      : 'Все комментарии прочитаны'
-  }
-  if (hasAnyKeywordFilter) return 'Нет комментариев с ключевыми словами'
-  return trimmedSearch ? 'Ничего не найдено по вашему запросу' : 'Нет комментариев'
+
+  const prefix = tabMode === 'review' ? 'Непрочитанных' : tabMode === 'watchlist' ? 'Отслеживаемых' : ''
+  const suffix = filterMode !== 'all'
+    ? ` с совпадениями в ${filterMode === 'comments' ? 'комментариях' : 'постах'}`
+    : ''
+
+  if (trimmedSearch) return 'Ничего не найдено по вашему запросу'
+  return `${prefix} комментариев нет${suffix}`.replace(/^(\s*,\s*)/, '')
 }
 
 const useCommentsViewModel = () => {
@@ -243,76 +158,62 @@ const useCommentsViewModel = () => {
   const markWatchlisted = useCommentsStore((state) => state.markWatchlisted)
   const { keywords } = useKeywordsStore()
   const { addAuthorFromComment } = useWatchlistStore()
-  const [showKeywordComments, setShowKeywordComments] = useState(false)
-  const [showKeywordPosts, setShowKeywordPosts] = useState(false)
-  const [readFilter, setReadFilter] = useState<ReadFilter>('unread')
+  const [tabMode, setTabMode] = useState<TabMode>('review')
+  const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [viewMode, setViewMode] = useState<ViewMode>('comments')
   const [watchlistPending, setWatchlistPending] = useState<Record<number, boolean>>({})
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
-  const hasKeywords = keywords.length > 0
-  const shouldFilterByKeywordComments = showKeywordComments && hasKeywords
-  const shouldFilterByKeywordPosts = showKeywordPosts && hasKeywords
+  const trimmedSearch = debouncedSearchTerm.trim()
+  const searchLower = trimmedSearch.toLowerCase()
 
-  const { keywordFilterValues, keywordSource, trimmedSearch, searchLower } = useMemo(
-    () =>
-      buildKeywordFilters({
-        keywords,
-        searchTerm: debouncedSearchTerm,
-        shouldFilterByKeywordComments,
-        shouldFilterByKeywordPosts,
-      }),
-    [keywords, debouncedSearchTerm, shouldFilterByKeywordComments, shouldFilterByKeywordPosts]
-  )
+  const readFilterForStore: 'unread' | 'all' = tabMode === 'review' ? 'unread' : 'all'
 
   const fetchFilters = useMemo(
     () => ({
-      keywords: keywordFilterValues,
-      keywordSource,
-      readStatus: readFilter,
+      readStatus: readFilterForStore,
       search: trimmedSearch,
     }),
-    [keywordFilterValues, keywordSource, readFilter, trimmedSearch]
+    [readFilterForStore, trimmedSearch]
   )
 
   const searchPayload = useMemo(
     () =>
       buildCommentsSearchPayload({
         query: trimmedSearch,
-        viewMode,
+        viewMode: 'comments',
         page: 1,
         pageSize: 20,
-        keywords: keywordFilterValues,
-        keywordSource,
-        readStatus: readFilter,
+        keywords: undefined,
+        keywordSource: undefined,
+        readStatus: readFilterForStore,
       }),
-    [keywordFilterValues, keywordSource, readFilter, trimmedSearch, viewMode]
+    [readFilterForStore, trimmedSearch]
   )
 
-  const useSearchResults = useMemo(
-    () => shouldUseCommentsSearch({ query: trimmedSearch, viewMode }),
-    [trimmedSearch, viewMode]
-  )
+  const useSearchResults = trimmedSearch.length > 0
 
   const searchQuery = useCommentsSearchQuery(searchPayload, {
     enabled: useSearchResults,
   })
 
-  const filteredComments = useMemo(
-    () =>
-      comments.filter((comment) =>
-        shouldIncludeComment(
-          comment,
-          readFilter,
-          searchLower,
-          shouldFilterByKeywordComments,
-          shouldFilterByKeywordPosts
-        )
-      ),
-    [comments, readFilter, searchLower, shouldFilterByKeywordComments, shouldFilterByKeywordPosts]
-  )
+  const filteredByTab = useMemo(() => {
+    return comments.filter((comment) => {
+      if (tabMode === 'review') return !comment.isRead
+      if (tabMode === 'watchlist') return comment.isWatchlisted
+      return true
+    })
+  }, [comments, tabMode])
+
+  const filteredComments = useMemo(() => {
+    return filteredByTab.filter((comment) => {
+      if (!matchesSearch(comment, searchLower)) return false
+      const matched = getMatchedKeywords(comment)
+      if (!shouldIncludeByKeywordSource(matched, filterMode)) return false
+      return true
+    })
+  }, [filteredByTab, searchLower, filterMode])
 
   const commentIndexMap = useMemo(
     () =>
@@ -328,23 +229,17 @@ const useCommentsViewModel = () => {
     [commentIndexMap, filteredComments]
   )
 
-  const keywordCommentsTotal = useMemo(
-    () => comments.filter((comment) => getMatchedKeywords(comment).length > 0).length,
-    [comments]
-  )
-
   const visibleCount = useMemo(() => filteredComments.length, [filteredComments])
 
   const emptyMessage = useMemo(
     () =>
       buildEmptyMessage({
         isLoading,
-        readFilter,
-        showKeywordComments,
-        showKeywordPosts,
+        tabMode,
+        filterMode,
         trimmedSearch,
       }),
-    [isLoading, readFilter, showKeywordComments, showKeywordPosts, trimmedSearch]
+    [isLoading, tabMode, filterMode, trimmedSearch]
   )
 
   useEffect(() => {
@@ -360,17 +255,8 @@ const useCommentsViewModel = () => {
     }
   }, [fetchFilters, setCommentsFilters, setCommentsQueryEnabled, useSearchResults])
 
-  useEffect(() => {
-    if (readFilter === 'all') {
-      setShowKeywordComments(false)
-      setShowKeywordPosts(false)
-    }
-  }, [readFilter])
-
   const handleLoadMore = useCallback(() => {
-    if (useSearchResults) {
-      return
-    }
+    if (useSearchResults) return
 
     fetchCommentsCursor({ reset: false }).catch((error) => {
       console.error('Failed to load more comments', error)
@@ -411,13 +297,8 @@ const useCommentsViewModel = () => {
   )
 
   const handleSearchChange = useCallback((value: string) => setSearchTerm(value), [])
-  const handleToggleKeywordComments = useCallback(
-    (value: boolean) => setShowKeywordComments(value),
-    []
-  )
-  const handleToggleKeywordPosts = useCallback((value: boolean) => setShowKeywordPosts(value), [])
-  const handleReadFilterChange = useCallback((value: ReadFilter) => setReadFilter(value), [])
-  const handleViewModeChange = useCallback((value: ViewMode) => setViewMode(value), [])
+  const handleTabChange = useCallback((mode: TabMode) => setTabMode(mode), [])
+  const handleFilterChange = useCallback((mode: FilterMode) => setFilterMode(mode), [])
 
   return {
     totalCount: useSearchResults ? (searchQuery.data?.total ?? 0) : totalCount,
@@ -425,14 +306,10 @@ const useCommentsViewModel = () => {
     unreadCount,
     searchTerm,
     handleSearchChange,
-    viewMode,
-    handleViewModeChange,
-    showKeywordComments,
-    handleToggleKeywordComments,
-    showKeywordPosts,
-    handleToggleKeywordPosts,
-    readFilter,
-    handleReadFilterChange,
+    tabMode,
+    handleTabChange,
+    filterMode,
+    handleFilterChange,
     keywordsCount: keywords.length,
     groupedComments,
     commentsWithoutKeywords,
@@ -445,12 +322,11 @@ const useCommentsViewModel = () => {
     isLoadingMore: useSearchResults ? false : isLoadingMore,
     loadedCount: useSearchResults ? (searchQuery.data?.items.length ?? 0) : comments.length,
     renderedCount: useSearchResults ? (searchQuery.data?.items.length ?? 0) : visibleCount,
-    hasDefinedKeywords: hasKeywords,
     handleAddToWatchlist,
     watchlistPending,
-    keywordCommentsTotal,
     useSearchResults,
     searchResults: searchQuery.data,
+    watchlistCount: comments.filter((c) => c.isWatchlisted).length,
   }
 }
 

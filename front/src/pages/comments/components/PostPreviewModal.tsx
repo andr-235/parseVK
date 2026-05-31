@@ -54,7 +54,7 @@ const PostPreviewModal = memo(function PostPreviewModal({
               />
             )}
             <div className="min-w-0 flex-1">
-              <div className="font-monitoring-display text-sm font-semibold text-white">
+              <div className="font-monitoring-display text-sm font-semibold text-text-light">
                 {postGroup.name}
               </div>
               {postGroup.screenName && (
@@ -66,8 +66,8 @@ const PostPreviewModal = memo(function PostPreviewModal({
           </div>
         )}
 
-        {/* Decorative separator */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        {/* Separator */}
+        <div className="h-px bg-border/30" />
 
         {/* Post text */}
         {postText && (

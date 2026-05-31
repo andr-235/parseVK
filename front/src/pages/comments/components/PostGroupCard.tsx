@@ -1,13 +1,6 @@
-import { memo, useCallback, useMemo, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
-import { Badge } from '@/shared/components/ui/badge'
-import { Button } from '@/shared/components/ui/button'
+import { memo, useMemo } from 'react'
 import type { Comment, Keyword } from '@/shared/types'
-import { ensureArray } from '@/shared/utils'
-import { CommentAttachments } from './CommentAttachments'
 import { KeywordBadge } from './KeywordBadge'
-import { ClampExpandText } from './ClampExpandText'
-import CommentCard from './CommentCard'
 import { normalizeForKeywordMatch } from '@/shared/utils/keywordMatching'
 
 interface PostGroupCardProps {
@@ -22,50 +15,29 @@ interface PostGroupCardProps {
     matchedKeywords: Keyword[]
     index: number
   }>
-  toggleReadStatus: (id: number) => Promise<void>
-  onAddToWatchlist?: (commentId: number) => void
-  watchlistPending?: Record<number, boolean>
-  showKeywordComments?: boolean
-  showKeywordPosts?: boolean
-  onCategoryClick?: (category: string) => void
 }
 
 export const PostGroupCard = memo(function PostGroupCard({
   postText,
-  postAttachments,
   postGroup,
   comments,
-  toggleReadStatus,
-  onAddToWatchlist,
-  watchlistPending,
-  showKeywordComments,
-  showKeywordPosts,
-  onCategoryClick,
 }: PostGroupCardProps) {
-  const [isExpanded, setIsExpanded] = useState(true)
-  const [isPostTextExpanded, setIsPostTextExpanded] = useState(false)
-
-  // Memoized handlers (rerender optimization)
-  const handleToggleExpand = useCallback(() => {
-    setIsExpanded((prev) => !prev)
-  }, [])
-
-  const handleTogglePostText = useCallback(() => {
-    setIsPostTextExpanded((prev) => !prev)
-  }, [])
-
   const postKeywords = useMemo(() => {
     if (!postText) return []
-    const allKeywords = comments.flatMap((c) => c.matchedKeywords)
-    const uniqueKeywords = allKeywords.filter(
-      (kw, index, array) => array.findIndex((item) => item.id === kw.id) === index
-    )
 
-    return uniqueKeywords.filter((kw) => {
+    const seen = new Map<number, Keyword>()
+    for (const c of comments) {
+      for (const kw of c.matchedKeywords) {
+        if (!seen.has(kw.id)) {
+          seen.set(kw.id, kw)
+        }
+      }
+    }
+
+    return Array.from(seen.values()).filter((kw) => {
       if (kw.source !== 'POST') return false
       const normalizedText = normalizeForKeywordMatch(postText)
       const candidateForms = Array.isArray(kw.forms) && kw.forms.length > 0 ? kw.forms : [kw.word]
-
       return candidateForms.some((form) => {
         const normalizedKeyword = normalizeForKeywordMatch(form)
         return normalizedKeyword.length > 0 && normalizedText.includes(normalizedKeyword)
@@ -73,98 +45,39 @@ export const PostGroupCard = memo(function PostGroupCard({
     })
   }, [comments, postText])
 
-  const attachmentsList = useMemo(() => ensureArray(postAttachments), [postAttachments])
+  if (!postText && !postGroup) return null
 
   return (
-    <div className="mb-4 overflow-hidden rounded-xl border border-border/60 bg-background-secondary/30">
-      {/* Post Header/Content */}
-      <div className="border-b border-border/40 bg-background-primary/30 p-4">
-        <div className="mb-3 flex items-start justify-between gap-4">
-          <div className="flex items-center gap-2">
-            {postGroup?.photo && (
-              <img
-                src={postGroup.photo}
-                alt=""
-                className="size-6 rounded-full border border-border/60"
-                loading="lazy"
-              />
-            )}
-            <span className="font-monitoring-display text-sm font-semibold text-white">
-              {postGroup?.name || 'Группа'}
-            </span>
-            <Badge
-              variant="outline"
-              className="h-5 border-border/60 bg-background-primary/50 font-mono-accent text-[10px] text-text-secondary"
-            >
-              Контекст поста
-            </Badge>
-            {postKeywords.length > 0 && (
-              <div className="ml-2 flex flex-wrap gap-1">
-                {postKeywords.map((kw) => (
-                  <KeywordBadge key={kw.id} keyword={kw} text={postText} />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={isExpanded ? 'Свернуть группу' : 'Развернуть группу'}
-            onClick={handleToggleExpand}
-            className="size-8 p-0 text-text-secondary transition-colors hover:bg-background-primary/40 hover:text-white"
-          >
-            {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-          </Button>
-        </div>
-
+    <div className="flex items-center gap-2 border-b border-border/40 bg-accent-info/[0.02] px-4 py-1.5">
+      {postGroup?.photo && (
+        <img
+          src={postGroup.photo}
+          alt=""
+          className="size-4 shrink-0 rounded-full"
+          loading="lazy"
+        />
+      )}
+      <span className="truncate text-xs text-text-secondary/70">
+        {postGroup?.name && (
+          <span className="font-medium text-text-secondary/80">{postGroup.name}</span>
+        )}
         {postText && (
-          <ClampExpandText
-            text={postText}
-            keywords={postKeywords}
-            isExpanded={isPostTextExpanded}
-            onToggle={handleTogglePostText}
-            labelExpanded="Свернуть текст поста"
-            labelCollapsed="Развернуть текст поста"
-            lineClamp={3}
-          />
+          <>
+            {postGroup?.name && <span className="mx-1.5 text-text-secondary/30">·</span>}
+            <span>{postText.slice(0, 80)}{postText.length > 80 ? '…' : ''}</span>
+          </>
         )}
-
-        {attachmentsList.length > 0 && (
-          <div className="mt-3">
-            <CommentAttachments attachments={attachmentsList} />
-          </div>
-        )}
-      </div>
-
-      {/* Comments List */}
-      {/* Show comments if:
-          - showKeywordComments is true (enabled), OR
-          - both filters are false (no filter mode - show all comments) */}
-      {isExpanded &&
-        (showKeywordComments === true ||
-          (showKeywordComments === false && showKeywordPosts === false)) && (
-          <div className="divide-y divide-border/40">
-            <div className="bg-background-secondary/50 px-4 py-2 font-mono-accent text-xs font-medium uppercase tracking-wider text-text-secondary">
-              Найденные комментарии ({comments.length})
-            </div>
-            {comments.map(({ comment, matchedKeywords, index }) => (
-              <CommentCard
-                key={`post-group-${comment.id}-${index}`}
-                comment={comment}
-                index={index}
-                matchedKeywords={matchedKeywords}
-                toggleReadStatus={toggleReadStatus}
-                onAddToWatchlist={onAddToWatchlist}
-                isWatchlistLoading={Boolean(watchlistPending?.[comment.id])}
-                showKeywordComments={showKeywordComments}
-                showKeywordPosts={showKeywordPosts}
-                hidePostContext={true}
-                onCategoryClick={onCategoryClick}
-              />
+      </span>
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        {postKeywords.length > 0 && (
+          <div className="flex gap-1.5">
+            {postKeywords.map((kw) => (
+              <KeywordBadge key={kw.id} keyword={kw} text={postText} />
             ))}
           </div>
         )}
+        <span className="font-mono-accent text-[10px] text-text-secondary/40">{comments.length}</span>
+      </div>
     </div>
   )
 })

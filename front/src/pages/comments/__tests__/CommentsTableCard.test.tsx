@@ -7,12 +7,10 @@ import CommentsTableCard from '../components/CommentsTableCard'
 vi.mock('../CommentCard', () => ({
   default: ({
     comment,
-    onCategoryClick,
     matchedKeywords,
   }: {
     comment: Comment
     matchedKeywords: Array<{ category?: string | null }>
-    onCategoryClick?: (category: string) => void
   }) => (
     <div>
       <span>{comment.text}</span>
@@ -20,9 +18,7 @@ vi.mock('../CommentCard', () => ({
         .map((keyword) => keyword.category)
         .filter(Boolean)
         .map((category) => (
-          <button key={category} onClick={() => onCategoryClick?.(category!)}>
-            {category}
-          </button>
+          <button key={category}>{category}</button>
         ))}
     </div>
   ),
@@ -115,10 +111,6 @@ describe('CommentsTableCard', () => {
         totalCount={2}
         loadedCount={2}
         renderedCount={2}
-        showKeywordComments={true}
-        showKeywordPosts={false}
-        hasDefinedKeywords={true}
-        keywordCommentsTotal={2}
       />
     )
 
@@ -148,10 +140,6 @@ describe('CommentsTableCard', () => {
         totalCount={12}
         loadedCount={4}
         renderedCount={2}
-        showKeywordComments={true}
-        showKeywordPosts={false}
-        hasDefinedKeywords={true}
-        keywordCommentsTotal={2}
       />
     )
 
@@ -183,10 +171,6 @@ describe('CommentsTableCard', () => {
         totalCount={12}
         loadedCount={4}
         renderedCount={2}
-        showKeywordComments={true}
-        showKeywordPosts={false}
-        hasDefinedKeywords={true}
-        keywordCommentsTotal={2}
       />
     )
 
@@ -212,10 +196,6 @@ describe('CommentsTableCard', () => {
         totalCount={12}
         loadedCount={6}
         renderedCount={2}
-        showKeywordComments={true}
-        showKeywordPosts={false}
-        hasDefinedKeywords={true}
-        keywordCommentsTotal={2}
       />
     )
 

@@ -1,7 +1,6 @@
 import type { Comment } from '@/shared/types'
 import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import CommentCard from '../components/CommentCard'
 
@@ -30,29 +29,6 @@ const createComment = (): Comment => ({
 })
 
 describe('CommentCard', () => {
-  it('renders category tags and notifies about category click', async () => {
-    const user = userEvent.setup()
-    const onCategoryClick = vi.fn()
-
-    render(
-      <CommentCard
-        comment={createComment()}
-        index={1}
-        toggleReadStatus={async () => {}}
-        matchedKeywords={[
-          { id: 1, word: 'ремонт', category: 'Услуги' },
-          { id: 2, word: 'скидка', category: 'Акции' },
-        ]}
-        onCategoryClick={onCategoryClick}
-      />
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Услуги' }))
-
-    expect(screen.getByRole('button', { name: 'Акции' })).toBeInTheDocument()
-    expect(onCategoryClick).toHaveBeenCalledWith('Услуги')
-  })
-
   it('shows matched keyword form label when form differs from base word', () => {
     render(
       <CommentCard
