@@ -1,6 +1,6 @@
 ---
 name: "parseVK"
-description: "A dense operator console for social intelligence monitoring, parsing, exports and diagnostics."
+description: "A cinematic dark analytical studio for social intelligence — data lives on deep blacks, metrics glow, and every surface serves insight."
 colors:
   command-blue: "#f2643d"
   signal-sky: "#38bdf8"
@@ -102,20 +102,20 @@ components:
 
 ## 1. Overview
 
-**Creative North Star: "The Watchfloor Console"**
+**Creative North Star: "The Mission Control Room"**
 
-parseVK is a working console for operators who move through monitoring, authors, comments, groups, parsing tasks, exports, statuses and logs for long sessions. The visual system must feel calm, technical and trustworthy: dense enough to scan many records, ordered enough to keep failures and status changes obvious, and restrained enough that semantic signals stay dominant.
+parseVK is an analytical studio where analysts spend hours inspecting social data. The visual system must feel **cinematic, calm and confident**: deep blacks as a canvas, data that glows with purpose, and surfaces that reward attention without demanding it.
 
-The current interface is a dark product UI built from cool slate surfaces, blue command actions, semantic status color and compact controls. It is not a landing page, a dashboard poster or a decorative analytics scene. It is a place to inspect live and historical social intelligence data with confidence.
+This is not an operator console. It is a beautiful workplace. Every metric panel, every chart, every comment row should feel considered. Light is a material — use it to guide the eye. Glow follows importance. Motion follows meaning.
 
-The system explicitly rejects marketing composition, oversized hero treatment, decorative card grids, playful failure states and color used without operational meaning. Strong color appears for action, selection, severity, progress and important deltas.
+The system explicitly rejects flat SaaS utilitarian darkness. It embraces **data-heavy visual storytelling**: glowing metrics, intentional negative space, surfaces with depth. But it never decorates for decoration's sake — every visual choice originates from the data it presents.
 
 **Key Characteristics:**
-- Dense operator surfaces with compact rows, tables, filters and status panels.
-- Dark mode as the primary inspected environment, not a decorative mood.
-- Blue is the command language; green, amber and red are reserved for state.
-- Typography is practical sans with mono accents for IDs, counters, logs and timestamps.
-- Elevation is quiet and structural; depth supports layering, never spectacle.
+- Deep blacks as the foundation; metric cards, charts and data panels emerge from the dark.
+- The terracotta command accent (#f2643d) is the signature color — used boldly on metrics, active states and focal points.
+- Semantic colors (green, amber, red) are pure and reserved for state changes, alerts and comparisons.
+- Typography is clean and confident: Outfit for body, JetBrains Mono for data.
+- Motion is purposeful: metrics pulse on update, panels ease in, transitions follow the eye.
 
 ## 2. Colors
 
