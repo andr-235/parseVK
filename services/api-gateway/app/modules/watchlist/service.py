@@ -1,51 +1,92 @@
-import httpx
-from fastapi import HTTPException
+from typing import Any
 
-from app.core.config import settings
+from app.clients.content.client import (
+    ContentClient,
+    ContentClientHTTPError,
+    ContentClientUnavailableError,
+)
+from app.clients.moderation.client import (
+    ModerationClient,
+    ModerationClientHTTPError,
+    ModerationClientUnavailableError,
+)
+from fastapi import HTTPException, status
 
 
 class WatchlistGatewayService:
-    def __init__(self):
-        self.moderation_url = settings.moderation_base_url
-        self.content_url = settings.content_base_url
-        self.headers = {"X-Internal-Service-Token": settings.internal_service_token}
+    def __init__(
+        self,
+        moderation_client: ModerationClient | None = None,
+        content_client: ContentClient | None = None,
+    ):
+        self.moderation_client = moderation_client or ModerationClient()
+        self.content_client = content_client or ContentClient()
+        self.moderation_url = self.moderation_client.base_url
+        self.content_url = self.content_client.base_url
 
-    async def get_authors(self, offset: int, limit: int, exclude_stopped: bool) -> dict:
+    async def get_authors(
+        self,
+        offset: int,
+        limit: int,
+        exclude_stopped: bool,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
         params = {
             "offset": offset,
             "limit": limit,
             "excludeStopped": exclude_stopped,
         }
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.moderation_url}/internal/watchlist/authors",
-                params=params,
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        data = await self._moderation_request(
+            "GET",
+            "/internal/watchlist/authors",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            params=params,
+        )
 
-        items = await self._enrich_authors(data["items"])
+        items = await self._enrich_authors(
+            data["items"],
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
         return {
             "items": items,
             "total": data["total"],
             "hasMore": data["hasMore"],
         }
 
-    async def get_author_details(self, id: int, offset: int, limit: int) -> dict:
+    async def get_author_details(
+        self,
+        id: int,
+        offset: int,
+        limit: int,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
         params = {"offset": offset, "limit": limit}
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.moderation_url}/internal/watchlist/authors/{id}",
-                params=params,
-                headers=self.headers,
-            )
-            if resp.status_code == 404:
-                raise HTTPException(status_code=404, detail="Watchlist author not found")
-            resp.raise_for_status()
-            data = resp.json()
+        data = await self._moderation_request(
+            "GET",
+            f"/internal/watchlist/authors/{id}",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            params=params,
+            status_details={404: "Watchlist author not found"},
+        )
 
-        enriched_list = await self._enrich_authors([data])
+        enriched_list = await self._enrich_authors(
+            [data],
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
         enriched_author = enriched_list[0] if enriched_list else data
 
         return {
@@ -53,52 +94,82 @@ class WatchlistGatewayService:
             "comments": data["comments"],
         }
 
-    async def create_author(self, payload: dict) -> dict:
+    async def create_author(
+        self,
+        payload: dict,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
         backend_payload = {}
         if "authorVkId" in payload:
             backend_payload["author_vk_id"] = payload["authorVkId"]
         if "commentId" in payload:
             backend_payload["comment_id"] = payload["commentId"]
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.moderation_url}/internal/watchlist/authors",
-                json=backend_payload,
-                headers=self.headers,
-            )
-            if resp.status_code == 404:
-                raise HTTPException(status_code=404, detail="Source comment not found")
-            if resp.status_code == 409:
-                raise HTTPException(status_code=409, detail="Author already in watchlist")
-            resp.raise_for_status()
-            data = resp.json()
+        data = await self._moderation_request(
+            "POST",
+            "/internal/watchlist/authors",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            json=backend_payload,
+            status_details={
+                404: "Source comment not found",
+                409: "Author already in watchlist",
+            },
+        )
 
-        enriched = await self._enrich_authors([data])
+        enriched = await self._enrich_authors(
+            [data],
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
         return enriched[0] if enriched else data
 
-    async def update_author(self, id: int, payload: dict) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.patch(
-                f"{self.moderation_url}/internal/watchlist/authors/{id}",
-                json=payload,
-                headers=self.headers,
-            )
-            if resp.status_code == 404:
-                raise HTTPException(status_code=404, detail="Watchlist author not found")
-            resp.raise_for_status()
-            data = resp.json()
+    async def update_author(
+        self,
+        id: int,
+        payload: dict,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
+        data = await self._moderation_request(
+            "PATCH",
+            f"/internal/watchlist/authors/{id}",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            json=payload,
+            status_details={404: "Watchlist author not found"},
+        )
 
-        enriched = await self._enrich_authors([data])
+        enriched = await self._enrich_authors(
+            [data],
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
         return enriched[0] if enriched else data
 
-    async def get_settings(self) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.moderation_url}/internal/watchlist/settings",
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+    async def get_settings(
+        self,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
+        data = await self._moderation_request(
+            "GET",
+            "/internal/watchlist/settings",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
 
         # Map settings to camelCase
         return {
@@ -108,7 +179,14 @@ class WatchlistGatewayService:
             "maxAuthors": data["max_authors"],
         }
 
-    async def update_settings(self, payload: dict) -> dict:
+    async def update_settings(
+        self,
+        payload: dict,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
         # Adapt frontend camelCase to backend snake_case
         backend_payload = {}
         if "trackAllComments" in payload:
@@ -118,14 +196,14 @@ class WatchlistGatewayService:
         if "maxAuthors" in payload:
             backend_payload["max_authors"] = payload["maxAuthors"]
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.patch(
-                f"{self.moderation_url}/internal/watchlist/settings",
-                json=backend_payload,
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        data = await self._moderation_request(
+            "PATCH",
+            "/internal/watchlist/settings",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            json=backend_payload,
+        )
 
         return {
             "id": data["id"],
@@ -134,20 +212,64 @@ class WatchlistGatewayService:
             "maxAuthors": data["max_authors"],
         }
 
-    async def manual_refresh(self) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{self.moderation_url}/internal/watchlist/refresh",
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            return resp.json()
+    async def manual_refresh(
+        self,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
+        return await self._moderation_request(
+            "POST",
+            "/internal/watchlist/refresh",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
 
     # ------------------------------------------------------------------ #
     #  Private helpers                                                     #
     # ------------------------------------------------------------------ #
 
-    async def _enrich_authors(self, records: list[dict]) -> list[dict]:
+    async def _moderation_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+        params: dict | None = None,
+        json: Any | None = None,
+        status_details: dict[int, str] | None = None,
+    ) -> dict:
+        try:
+            return await self.moderation_client.request(
+                method,
+                path,
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                params=params,
+                json=json,
+            )
+        except ModerationClientHTTPError as exc:
+            detail = (status_details or {}).get(exc.status_code, exc.detail)
+            raise HTTPException(status_code=exc.status_code, detail=detail) from exc
+        except ModerationClientUnavailableError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Moderation service unavailable",
+            ) from exc
+
+    async def _enrich_authors(
+        self,
+        records: list[dict],
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> list[dict]:
         if not records:
             return []
 
@@ -156,15 +278,16 @@ class WatchlistGatewayService:
 
         if author_vk_ids:
             try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.post(
-                        f"{self.content_url}/internal/content/authors/bulk",
-                        json=author_vk_ids,
-                        headers=self.headers,
-                    )
-                    if resp.status_code == 200:
-                        authors_dict = {a["vkAuthorId"]: a for a in resp.json() if "vkAuthorId" in a}
-            except Exception:
+                authors = await self.content_client.request(
+                    "POST",
+                    "/internal/content/authors/bulk",
+                    user_id=user_id,
+                    request_id=request_id,
+                    correlation_id=correlation_id,
+                    json=author_vk_ids,
+                )
+                authors_dict = {a["vkAuthorId"]: a for a in authors if "vkAuthorId" in a}
+            except (ContentClientHTTPError, ContentClientUnavailableError):
                 # Fallback if content-service is down
                 pass
 
