@@ -1,21 +1,21 @@
+import { useEffect, useState } from 'react'
 import { Play } from 'lucide-react'
 import type { Group } from '@/shared/types'
 import { useCreateParseTaskModal } from '@/pages/tasks/hooks/useCreateParseTaskModal'
-import { FormModal } from '@/shared/components/common/FormModal'
 import CreateParseTaskModalFooter from './CreateParseTaskModalFooter'
 import CreateParseTaskModalGroupList from './CreateParseTaskModalGroupList'
 import CreateParseTaskModalSearch from './CreateParseTaskModalSearch'
 import CreateParseTaskModalSummary from './CreateParseTaskModalSummary'
+import TaskModalShell from './TaskModalShell'
+
+type CreateParseTaskMode = 'recent_posts' | 'recheck_group'
 
 interface CreateParseTaskModalProps {
   isOpen: boolean
   groups: Group[]
   isLoading: boolean
   onClose: () => void
-  onSubmit: (payload: {
-    groupIds: Array<number | string>
-    mode: 'recent_posts' | 'recheck_group'
-  }) => void
+  onSubmit: (payload: { groupIds: Array<number | string>; mode: CreateParseTaskMode }) => void
 }
 
 function CreateParseTaskModal({
@@ -25,6 +25,7 @@ function CreateParseTaskModal({
   onClose,
   onSubmit,
 }: CreateParseTaskModalProps) {
+  const [mode, setMode] = useState<CreateParseTaskMode>('recent_posts')
   const {
     selectedIds,
     search,
@@ -36,13 +37,20 @@ function CreateParseTaskModal({
     getDisplayName,
   } = useCreateParseTaskModal(groups, isOpen)
 
-  const handleSubmit = async (mode: 'recent_posts' | 'recheck_group') => {
-    if (isLoading) {
+  useEffect(() => {
+    if (!isOpen) {
+      setMode('recent_posts')
+    }
+  }, [isOpen])
+
+  const handleSubmit = async (submitMode: CreateParseTaskMode) => {
+    if (isLoading || selectedIds.size === 0) {
       return
     }
+
     const ids = Array.from(selectedIds)
     try {
-      await onSubmit({ groupIds: ids, mode })
+      await onSubmit({ groupIds: ids, mode: submitMode })
       onClose()
     } catch {
       // Error handling is done by parent
@@ -50,41 +58,47 @@ function CreateParseTaskModal({
   }
 
   return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="РЎРѕР·РґР°РЅРёРµ Р·Р°РґР°С‡Рё РЅР° РїР°СЂСЃРёРЅРі РіСЂСѓРїРї"
-      description="РЎС„РѕСЂРјРёСЂСѓР№С‚Рµ СЃРїРёСЃРѕРє РіСЂСѓРїРї РґР»СЏ СЃР±РѕСЂР° РґР°РЅРЅС‹С…"
+    <TaskModalShell
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      title="Создание задачи парсинга"
+      description="Выберите группы, режим обработки и запустите задачу."
       icon={<Play className="h-5 w-5" />}
-      isSaving={isLoading}
-      widthClass="max-w-4xl"
+      widthClass="max-w-6xl"
+      footer={
+        <CreateParseTaskModalFooter
+          isLoading={isLoading}
+          selectedCount={selectedIds.size}
+          mode={mode}
+          onClose={onClose}
+          onSubmit={handleSubmit}
+        />
+      }
     >
-      <div className="space-y-4 pt-2">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <section className="min-w-0 space-y-4">
+          <CreateParseTaskModalSearch value={search} onChange={setSearch} />
+          <CreateParseTaskModalGroupList
+            groups={filteredGroups}
+            selectedIds={selectedIds}
+            getDisplayName={getDisplayName}
+            onToggle={handleToggle}
+          />
+        </section>
+
         <CreateParseTaskModalSummary
           selectedCount={selectedIds.size}
           groupsCount={groups.length}
           filteredCount={filteredGroups.length}
+          mode={mode}
+          onModeChange={setMode}
           onSelectAll={handleSelectAll}
           onDeselectAll={handleDeselectAll}
         />
-
-        <CreateParseTaskModalSearch value={search} onChange={setSearch} />
-
-        <CreateParseTaskModalGroupList
-          groups={filteredGroups}
-          selectedIds={selectedIds}
-          getDisplayName={getDisplayName}
-          onToggle={handleToggle}
-        />
-
-        <CreateParseTaskModalFooter
-          isLoading={isLoading}
-          selectedCount={selectedIds.size}
-          onClose={onClose}
-          onSubmit={handleSubmit}
-        />
       </div>
-    </FormModal>
+    </TaskModalShell>
   )
 }
 

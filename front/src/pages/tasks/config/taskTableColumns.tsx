@@ -1,7 +1,11 @@
 import ProgressBar from '@/shared/components/common/ProgressBar'
 import TaskActionsCell from '@/pages/tasks/components/TaskActionsCell'
 import { cn } from '@/shared/utils'
-import { getTaskStatusText, TASK_STATUS_COLORS, getStatusWeight } from '@/pages/tasks/utils/statusHelpers'
+import {
+  getTaskStatusText,
+  TASK_STATUS_COLORS,
+  getStatusWeight,
+} from '@/pages/tasks/utils/statusHelpers'
 import { calculateTaskProgress } from '@/pages/tasks/utils/taskProgress'
 import { formatDate, formatPair, resolveNumber, toNumber } from '@/pages/tasks/config/utils'
 import type { TableColumn, Task } from '@/shared/types'
@@ -46,6 +50,12 @@ const formatResult = (item: Task): string => {
     return statsResult
   }
   return getResultFromProgress(item)
+}
+
+const getTaskModeLabel = (mode: Task['mode']): string | null => {
+  if (mode === 'recheck_group') return 'перепроверка'
+  if (mode === 'recent_posts') return 'последние посты'
+  return null
 }
 
 interface TaskProgressCounts {
@@ -127,6 +137,7 @@ const columns: TableColumn<Task>[] = [
       const counts = calculateTaskCounts(item, progress)
       const { total, processedCount, failedCount, successCount } = counts
       const hasMeta = successCount > 0 || failedCount > 0
+      const modeLabel = getTaskModeLabel(item.mode)
 
       const progressTone = getProgressTone(failedCount, processedCount, total)
 
@@ -164,6 +175,14 @@ const columns: TableColumn<Task>[] = [
               {failedCount > 0 && (
                 <span className="whitespace-nowrap font-medium text-accent-danger">{`Ошибок: ${failedCount}`}</span>
               )}
+            </div>
+          )}
+          {(modeLabel || (item.mode !== 'recheck_group' && item.postLimit != null)) && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-relaxed text-text-secondary">
+              {modeLabel ? <span>{`Режим: ${modeLabel}`}</span> : null}
+              {item.mode !== 'recheck_group' && item.postLimit != null ? (
+                <span>{`Лимит постов: ${item.postLimit}`}</span>
+              ) : null}
             </div>
           )}
         </div>

@@ -11,7 +11,12 @@ interface TaskProgressSectionProps {
 }
 
 export const TaskProgressSection = ({
-  totalGroups, processedTotal, activeGroups, pendingGroups, successCount, failedCount,
+  totalGroups,
+  processedTotal,
+  activeGroups,
+  pendingGroups,
+  successCount,
+  failedCount,
 }: TaskProgressSectionProps) => {
   if (totalGroups === 0) return null
 
@@ -25,11 +30,18 @@ export const TaskProgressSection = ({
   ]
 
   return (
-    <div className="rounded-xl border border-border/50 bg-background-primary/50 p-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-monitoring-body text-sm font-semibold text-text-primary">Прогресс</span>
-        <span className="font-mono-accent text-xs font-medium text-text-secondary">
-          {processedTotal} / {totalGroups}
+    <div className="rounded-card border border-border/70 bg-background-primary/45 p-4">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-monitoring-body text-sm font-semibold text-text-primary">
+            Прогресс выполнения
+          </h3>
+          <p className="mt-1 font-monitoring-body text-sm text-text-secondary">
+            Обработано {processedTotal} из {totalGroups} групп
+          </p>
+        </div>
+        <span className="font-mono-accent text-sm font-semibold text-text-light">
+          {progressPercent}%
         </span>
       </div>
       <ProgressBar
@@ -37,13 +49,12 @@ export const TaskProgressSection = ({
         total={totalGroups}
         showLabel={false}
         tone={processedTotal >= totalGroups && totalGroups > 0 ? 'success' : 'primary'}
-        className="h-2 mb-3"
+        className="mb-4 h-2"
       />
-      <div className="font-mono-accent text-xs font-medium text-text-secondary mb-4">{progressPercent}%</div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-border/40">
-        {metrics.map((m) => (
-          <MetricItem key={m.label} label={m.label} value={m.value} />
+      <div className="grid grid-cols-2 gap-3 border-t border-border/50 pt-4 sm:grid-cols-4">
+        {metrics.map((metric) => (
+          <MetricItem key={metric.label} label={metric.label} value={metric.value} />
         ))}
       </div>
     </div>

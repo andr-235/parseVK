@@ -2,27 +2,40 @@ import type { Task } from '@/shared/types'
 
 export const getTaskStatusText = (status: string): string => {
   switch (status) {
-    case 'pending': return 'Ожидание'
-    case 'processing': return 'В обработке'
-    case 'running': return 'Выполняется'
-    case 'completed': return 'Завершена'
-    case 'failed': return 'Ошибка'
-    default: return status
+    case 'pending':
+      return 'Ожидание'
+    case 'processing':
+      return 'В обработке'
+    case 'running':
+      return 'Выполняется'
+    case 'completed':
+      return 'Завершена'
+    case 'failed':
+      return 'Ошибка'
+    default:
+      return status
   }
 }
 
 export const getGroupStatusText = (status: string): string => {
   switch (status) {
-    case 'pending': return 'Ожидание'
-    case 'processing': return 'В обработке'
-    case 'running': return 'Выполняется'
-    case 'success': return 'Успешно'
-    case 'failed': return 'Ошибка'
-    default: return status
+    case 'pending':
+      return 'Ожидание'
+    case 'processing':
+      return 'В обработке'
+    case 'running':
+      return 'Выполняется'
+    case 'success':
+      return 'Успешно'
+    case 'failed':
+      return 'Ошибка'
+    default:
+      return status
   }
 }
 
-export const STATUS_BADGE_BASE = 'inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide'
+export const STATUS_BADGE_BASE =
+  'inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide'
 
 export const TASK_STATUS_COLORS: Record<Task['status'], string> = {
   pending: 'bg-accent-warning/20 text-accent-warning ring-1 ring-inset ring-accent-warning/30',
