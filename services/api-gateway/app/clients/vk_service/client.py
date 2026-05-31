@@ -1,15 +1,12 @@
 from typing import Any
-import httpx
 
-from common.headers import (
-    CALLER_SERVICE_HEADER,
-    CORRELATION_ID_HEADER,
-    INTERNAL_SERVICE_TOKEN_HEADER,
-    REQUEST_ID_HEADER,
+import httpx
+from app.clients.internal import (
+    InternalClientHTTPError,
+    InternalClientUnavailableError,
+    InternalServiceClient,
 )
 from app.core.config import settings
-
-USER_ID_HEADER = "X-User-ID"
 
 
 class VkServiceClientError(Exception):
@@ -28,17 +25,24 @@ class VkServiceClientUnavailableError(VkServiceClientError):
 
 
 class VkServiceClient:
-    def __init__(self, base_url: str | None = None, client: httpx.AsyncClient | None = None) -> None:
-        self.base_url = (base_url or settings.vk_service_base_url).rstrip("/")
-        self._client = client or httpx.AsyncClient(
-            base_url=self.base_url,
+    def __init__(
+        self,
+        base_url: str | None = None,
+        client: httpx.AsyncClient | None = None,
+    ) -> None:
+        self._internal = InternalServiceClient(
+            service_name="VK",
+            base_url=base_url or settings.vk_service_base_url,
+            internal_token=settings.internal_service_token,
             timeout=httpx.Timeout(timeout=30.0, connect=2.0, read=30.0, write=10.0),
+            client=client,
         )
-        self._owns_client = client is None
+        self.base_url = self._internal.base_url
+        self._client = self._internal._client
+        self._owns_client = self._internal._owns_client
 
     async def close(self) -> None:
-        if self._owns_client:
-            await self._client.aclose()
+        await self._internal.close()
 
     def _headers(
         self,
@@ -47,16 +51,11 @@ class VkServiceClient:
         request_id: str | None,
         correlation_id: str | None,
     ) -> dict[str, str]:
-        headers = {
-            INTERNAL_SERVICE_TOKEN_HEADER: settings.internal_service_token,
-            CALLER_SERVICE_HEADER: "api-gateway",
-            USER_ID_HEADER: user_id,
-        }
-        if request_id:
-            headers[REQUEST_ID_HEADER] = request_id
-        if correlation_id:
-            headers[CORRELATION_ID_HEADER] = correlation_id
-        return headers
+        return self._internal.headers(
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
 
     async def request(
         self,
@@ -71,31 +70,21 @@ class VkServiceClient:
         files: Any | None = None,
     ) -> Any:
         try:
-            response = await self._client.request(
+            return await self._internal.request(
                 method,
                 path,
-                headers=self._headers(
-                    user_id=user_id,
-                    request_id=request_id,
-                    correlation_id=correlation_id,
-                ),
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
                 params=params,
                 json=json,
                 files=files,
             )
-            response.raise_for_status()
-            if not response.content:
-                return None
-            return response.json()
-        except httpx.HTTPStatusError as exc:
-            try:
-                detail: Any = exc.response.json()
-            except ValueError:
-                detail = exc.response.text
+        except InternalClientHTTPError as exc:
             raise VkServiceClientHTTPError(
-                status_code=exc.response.status_code, detail=detail
+                status_code=exc.status_code, detail=exc.detail
             ) from exc
-        except httpx.RequestError as exc:
+        except InternalClientUnavailableError as exc:
             raise VkServiceClientUnavailableError("VK service is unavailable") from exc
 
     async def get_xlsx_bytes(
@@ -108,23 +97,15 @@ class VkServiceClient:
         correlation_id: str | None = None,
     ) -> bytes:
         try:
-            response = await self._client.get(
+            return await self._internal.get_bytes(
                 f"/internal/{provider}/friends/jobs/{job_id}/download/xlsx",
-                headers=self._headers(
-                    user_id=user_id,
-                    request_id=request_id,
-                    correlation_id=correlation_id,
-                ),
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
             )
-            response.raise_for_status()
-            return response.content
-        except httpx.HTTPStatusError as exc:
-            try:
-                detail: Any = exc.response.json()
-            except ValueError:
-                detail = exc.response.text
+        except InternalClientHTTPError as exc:
             raise VkServiceClientHTTPError(
-                status_code=exc.response.status_code, detail=detail
+                status_code=exc.status_code, detail=exc.detail
             ) from exc
-        except httpx.RequestError as exc:
+        except InternalClientUnavailableError as exc:
             raise VkServiceClientUnavailableError("VK service is unavailable") from exc
