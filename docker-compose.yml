@@ -451,14 +451,7 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
       args:
-        VITE_APP_TITLE: ${VITE_APP_TITLE:-Центр аналитики}
-        VITE_API_URL: ${VITE_API_URL:-/api}
-        VITE_GATEWAY_API_URL: ${VITE_GATEWAY_API_URL:-/api}
-        VITE_API_WS_URL: ${VITE_API_WS_URL:-auto}
-        VITE_DEV_MODE: ${VITE_DEV_MODE:-false}
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-0.13.0}
-        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
-        NPM_REGISTRY_FALLBACK: ${NPM_REGISTRY_FALLBACK:-https://registry.npmjs.org/}
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     depends_on:
       api-gateway:
         condition: service_healthy
