@@ -1,12 +1,12 @@
 from typing import Any
 
 import httpx
-
-from common.headers import CALLER_SERVICE_HEADER, CORRELATION_ID_HEADER, INTERNAL_SERVICE_TOKEN_HEADER, REQUEST_ID_HEADER
-
+from app.clients.internal import (
+    InternalClientHTTPError,
+    InternalClientUnavailableError,
+    InternalServiceClient,
+)
 from app.core.config import settings
-
-USER_ID_HEADER = "X-User-ID"
 
 
 class ContentClientError(Exception):
@@ -26,28 +26,32 @@ class ContentClientUnavailableError(ContentClientError):
 
 class ContentClient:
     def __init__(self, base_url: str | None = None, client: httpx.AsyncClient | None = None):
-        self.base_url = (base_url or settings.content_base_url).rstrip("/")
-        self._client = client or httpx.AsyncClient(
-            base_url=self.base_url,
+        self._internal = InternalServiceClient(
+            service_name="Content",
+            base_url=base_url or settings.content_base_url,
+            internal_token=settings.internal_service_token,
             timeout=httpx.Timeout(timeout=10.0, connect=2.0, read=10.0, write=5.0),
+            client=client,
         )
-        self._owns_client = client is None
+        self.base_url = self._internal.base_url
+        self._client = self._internal._client
+        self._owns_client = self._internal._owns_client
 
     async def close(self) -> None:
-        if self._owns_client:
-            await self._client.aclose()
+        await self._internal.close()
 
-    def _headers(self, *, user_id: str, request_id: str | None, correlation_id: str | None) -> dict[str, str]:
-        headers = {
-            INTERNAL_SERVICE_TOKEN_HEADER: settings.internal_service_token,
-            CALLER_SERVICE_HEADER: "api-gateway",
-            USER_ID_HEADER: user_id,
-        }
-        if request_id:
-            headers[REQUEST_ID_HEADER] = request_id
-        if correlation_id:
-            headers[CORRELATION_ID_HEADER] = correlation_id
-        return headers
+    def _headers(
+        self,
+        *,
+        user_id: str,
+        request_id: str | None,
+        correlation_id: str | None,
+    ) -> dict[str, str]:
+        return self._internal.headers(
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
 
     async def request(
         self,
@@ -61,24 +65,18 @@ class ContentClient:
         json: Any | None = None,
     ) -> Any:
         try:
-            response = await self._client.request(
+            return await self._internal.request(
                 method,
                 path,
-                headers=self._headers(user_id=user_id, request_id=request_id, correlation_id=correlation_id),
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
                 params=params,
                 json=json,
             )
-            response.raise_for_status()
-            if not response.content:
-                return None
-            return response.json()
-        except httpx.HTTPStatusError as exc:
-            try:
-                detail: Any = exc.response.json()
-            except ValueError:
-                detail = exc.response.text
-            raise ContentClientHTTPError(status_code=exc.response.status_code, detail=detail) from exc
-        except httpx.RequestError as exc:
+        except InternalClientHTTPError as exc:
+            raise ContentClientHTTPError(status_code=exc.status_code, detail=exc.detail) from exc
+        except InternalClientUnavailableError as exc:
             raise ContentClientUnavailableError("Content service is unavailable") from exc
 
     async def raw_request(
@@ -92,19 +90,15 @@ class ContentClient:
         params: dict | None = None,
     ) -> httpx.Response:
         try:
-            response = await self._client.request(
+            return await self._internal.raw_request(
                 method,
                 path,
-                headers=self._headers(user_id=user_id, request_id=request_id, correlation_id=correlation_id),
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
                 params=params,
             )
-            response.raise_for_status()
-            return response
-        except httpx.HTTPStatusError as exc:
-            try:
-                detail: Any = exc.response.json()
-            except ValueError:
-                detail = exc.response.text
-            raise ContentClientHTTPError(status_code=exc.response.status_code, detail=detail) from exc
-        except httpx.RequestError as exc:
+        except InternalClientHTTPError as exc:
+            raise ContentClientHTTPError(status_code=exc.status_code, detail=exc.detail) from exc
+        except InternalClientUnavailableError as exc:
             raise ContentClientUnavailableError("Content service is unavailable") from exc
