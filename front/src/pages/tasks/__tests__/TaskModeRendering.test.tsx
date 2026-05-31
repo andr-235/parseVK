@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { getTaskTableColumns } from '@/pages/tasks/config/taskTableColumns'
 import { TaskStatsGrid } from '@/pages/tasks/components/TaskDetails'
+import { getTaskTableColumns } from '@/pages/tasks/config/taskTableColumns'
 import type { Task, TaskDetails } from '@/shared/types'
 
 const baseTask: Task = {
@@ -46,6 +46,7 @@ describe('Task mode rendering', () => {
       <TaskStatsGrid
         task={task}
         scopeLabel="Выбранные группы (1)"
+        modeLabel="Перепроверка группы"
         totalGroups={1}
         postsCount={2}
         commentsCountTotal={5}
@@ -53,7 +54,7 @@ describe('Task mode rendering', () => {
     )
 
     expect(screen.getByText('Режим')).toBeInTheDocument()
-    expect(screen.getByText(/перепроверка группы/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/перепроверка группы/i).length).toBeGreaterThan(0)
     expect(screen.queryByText('Лимит постов')).not.toBeInTheDocument()
   })
 })

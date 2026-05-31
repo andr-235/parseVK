@@ -26,11 +26,6 @@ export const useTaskStats = (task: TaskDetailsType | undefined) => {
       return task.scope
     })()
 
-    const successCount = overallProgress.success
-    const failedCount = overallProgress.failed
-    const processingCountStat = overallProgress.processing
-    const pendingCountStat = overallProgress.pending
-
     const postsCount = typeof task.stats?.posts === 'number' ? task.stats.posts : null
     const commentsCountTotal = typeof task.stats?.comments === 'number' ? task.stats.comments : null
 
@@ -43,6 +38,11 @@ export const useTaskStats = (task: TaskDetailsType | undefined) => {
       },
       { pending: 0, processing: 0, running: 0, success: 0, failed: 0 }
     )
+
+    const successCount = Math.max(overallProgress.success, groupStatusDistribution.success)
+    const failedCount = Math.max(overallProgress.failed, groupStatusDistribution.failed)
+    const processingCountStat = overallProgress.processing
+    const pendingCountStat = overallProgress.pending
 
     const fallbackGroupTotal = Math.max(
       typeof task.groupsCount === 'number' ? task.groupsCount : 0,
@@ -58,7 +58,8 @@ export const useTaskStats = (task: TaskDetailsType | undefined) => {
       totalGroups
     )
 
-    const inProgressFromGroups = groupStatusDistribution.processing + groupStatusDistribution.running
+    const inProgressFromGroups =
+      groupStatusDistribution.processing + groupStatusDistribution.running
     const activeGroups =
       inProgressFromGroups > 0
         ? inProgressFromGroups
@@ -67,16 +68,28 @@ export const useTaskStats = (task: TaskDetailsType | undefined) => {
           : 0
 
     const pendingGroups = (() => {
-      const calculated = pendingCountStat > 0
-        ? Math.min(pendingCountStat, totalGroups)
-        : Math.max(totalGroups - processedTotal - activeGroups, 0)
+      const calculated =
+        pendingCountStat > 0
+          ? Math.min(pendingCountStat, totalGroups)
+          : Math.max(totalGroups - processedTotal - activeGroups, 0)
       return groupStatusDistribution.pending > 0 ? groupStatusDistribution.pending : calculated
     })()
 
     return {
-      overallProgress, scopeLabel, modeLabel, successCount, failedCount,
-      processingCountStat, pendingCountStat, postsCount, commentsCountTotal,
-      groupStatusDistribution, totalGroups, processedTotal, activeGroups, pendingGroups,
+      overallProgress,
+      scopeLabel,
+      modeLabel,
+      successCount,
+      failedCount,
+      processingCountStat,
+      pendingCountStat,
+      postsCount,
+      commentsCountTotal,
+      groupStatusDistribution,
+      totalGroups,
+      processedTotal,
+      activeGroups,
+      pendingGroups,
     }
   }, [task])
 }

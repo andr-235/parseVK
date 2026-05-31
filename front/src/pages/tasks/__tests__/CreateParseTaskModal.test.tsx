@@ -31,11 +31,10 @@ describe('CreateParseTaskModal', () => {
     )
 
     expect(screen.getByText('0')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /парсить последние посты \(0\)/i })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /перепроверить группу/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /создать парсинг постов \(0\)/i })).toBeDisabled()
   })
 
-  it('отправляет recheck_group для действия перепроверки', async () => {
+  it('отправляет recheck_group для режима перепроверки', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
     const onClose = vi.fn()
@@ -58,11 +57,12 @@ describe('CreateParseTaskModal', () => {
       />
     )
 
-    await user.click(screen.getByText('Test group'))
-    await user.click(screen.getByRole('button', { name: /перепроверить группу/i }))
+    await user.click(screen.getByRole('button', { name: /перепроверка/i }))
+    await user.click(screen.getByRole('checkbox', { name: /test group/i }))
+    await user.click(screen.getByRole('button', { name: /создать перепроверку/i }))
 
     expect(onSubmit).toHaveBeenCalledWith({
-      groupIds: [1],
+      groupIds: [123],
       mode: 'recheck_group',
     })
   })

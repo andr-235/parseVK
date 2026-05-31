@@ -17,7 +17,7 @@ export const useTaskDetailsActions = (task: TaskDetailsType | undefined) => {
       const success = await resumeTask(task.id)
       if (success) {
         void fetchTaskDetails(task.id)
-        toast.success('Р—Р°РґР°С‡Р° РІРѕР·РѕР±РЅРѕРІР»РµРЅР°')
+        toast.success('Задача возобновлена')
       }
     } finally {
       setIsResuming(false)
@@ -31,7 +31,7 @@ export const useTaskDetailsActions = (task: TaskDetailsType | undefined) => {
       const success = await checkTask(task.id)
       if (success) {
         void fetchTaskDetails(task.id)
-        toast.success('Р—Р°РґР°С‡Р° РїСЂРѕРІРµСЂРµРЅР°')
+        toast.success('Задача проверена')
       }
     } finally {
       setIsChecking(false)
