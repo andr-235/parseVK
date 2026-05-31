@@ -1,3 +1,4 @@
+﻿# ruff: noqa: E402
 import sys
 from pathlib import Path
 
@@ -15,7 +16,6 @@ import app.core.security as _security
 from app.main import create_app
 from app.modules.comments.service import get_comments_gateway_service
 from test_jwt_validation import make_token
-
 
 # ------------------------------------------------------------------ #
 #  Fake service                                                       #
@@ -58,11 +58,11 @@ class FakeCommentsGatewayService:
             "unreadCount": 1,
         }
 
-    async def patch_read_status(self, id: int, payload: dict):
+    async def patch_read_status(self, id: int, payload: dict, **kwargs):
         is_read = payload.get("isRead", payload.get("is_read", True))
         return {**COMMENT_STUB, "id": id, "isRead": is_read}
 
-    async def search_comments(self, payload: dict):
+    async def search_comments(self, payload: dict, **kwargs):
         return {
             "source": "fallback",
             "viewMode": payload.get("viewMode", "comments"),
