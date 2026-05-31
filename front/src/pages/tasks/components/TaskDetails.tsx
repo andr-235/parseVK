@@ -1,12 +1,20 @@
 import { Play } from 'lucide-react'
 import type { TaskDetails as TaskDetailsType } from '@/shared/types'
 import { Button } from '@/shared/components/ui/button'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/shared/components/ui/sheet'
-import { useTaskActions } from '@/pages/tasks/hooks/useTaskDetailsActions'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/shared/components/ui/sheet'
+import { useTaskDetailsActions } from '@/pages/tasks/hooks/useTaskDetailsActions'
 import { useTaskStats } from '@/pages/tasks/hooks/useTaskStats'
 import { TaskStatsGrid } from './TaskStatsGrid'
 import { TaskProgressSection } from './TaskProgressSection'
 import { GroupsTable } from './GroupsTable'
+
+export { TaskStatsGrid } from './TaskStatsGrid'
 
 interface TaskDetailsProps {
   task: TaskDetailsType | undefined
@@ -14,13 +22,19 @@ interface TaskDetailsProps {
 }
 
 function TaskDetails({ task, onClose }: TaskDetailsProps) {
-  const { isResuming, isChecking, canResume, handleResume, handleCheck } = useTaskActions(task)
+  const { isResuming, isChecking, canResume, handleResume, handleCheck } =
+    useTaskDetailsActions(task)
   const stats = useTaskStats(task)
 
   if (!task || !stats) return null
 
   return (
-    <Sheet open={!!task} onOpenChange={(open) => { if (!open) onClose() }}>
+    <Sheet
+      open={!!task}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 overflow-y-auto">
         <SheetHeader className="border-b border-border/50 px-5 py-4 space-y-0">
           <div className="flex items-start justify-between gap-3">
