@@ -1,7 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-
-# Схемы импорта (уже созданные)
+# Схемы импорта.
 
 class DlImportBatchSchema(BaseModel):
     id: str
@@ -76,7 +75,7 @@ class TelegramDlImportContactsPageSchema(BaseModel):
     offset: int
 
 
-# Новые схемы для Telegram-сопоставлений (мэтчинга)
+# Схемы Telegram-сопоставлений.
 
 class TelegramDlMatchRunSchema(BaseModel):
     id: str
@@ -112,6 +111,33 @@ class TelegramDlMatchResultContactSchema(BaseModel):
         populate_by_name = True
 
 
+class TelegramDlMatchResultRelatedChatSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: str
+    peer_id: str
+    title: str | None = None
+
+
+class TelegramDlMatchResultUserSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str
+    user_id: str | None = None
+    username: str | None = None
+    phone: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    premium: bool | None = None
+    scam: bool | None = None
+    bot: bool | None = None
+    upd_date: str | None = None
+    relatedChats: list[TelegramDlMatchResultRelatedChatSchema] = Field(
+        default_factory=list,
+        alias="relatedChats",
+    )
+
+
 class TelegramDlMatchResultSchema(BaseModel):
     id: str
     runId: str = Field(..., alias="runId")
@@ -122,7 +148,7 @@ class TelegramDlMatchResultSchema(BaseModel):
     phoneMatch: bool = Field(..., alias="phoneMatch")
     chatActivityMatch: bool = Field(..., alias="chatActivityMatch")
     dlContact: TelegramDlMatchResultContactSchema = Field(..., alias="dlContact")
-    user: dict | None = None
+    user: TelegramDlMatchResultUserSchema | None = None
     createdAt: str = Field(..., alias="createdAt")
 
     class Config:
@@ -157,7 +183,7 @@ class TelegramDlMatchExcludeChatSchema(BaseModel):
         populate_by_name = True
 
 
-# Раздел поиска по базе tgmbase (tgmbase-search)
+# Раздел поиска по базе tgmbase (tgmbase-search).
 
 class TgmbaseSearchRequestSchema(BaseModel):
     queries: list[str]

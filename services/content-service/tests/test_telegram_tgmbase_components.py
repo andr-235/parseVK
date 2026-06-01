@@ -1,5 +1,6 @@
 import io
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -46,6 +47,66 @@ def test_mapper_builds_search_profile_and_candidate():
         "phoneNumber": "+79991234567",
         "fullName": "Case User",
     }
+
+
+def test_mapper_builds_dl_match_result_with_typed_user_schema():
+    mapper = TelegramTgmbaseMapper()
+    created_at = datetime(2026, 5, 31, 12, 0, tzinfo=UTC)
+    result = SimpleNamespace(
+        id=11,
+        run_id=7,
+        dl_contact_id=22,
+        tgmbase_user_id=123,
+        strict_telegram_id_match=True,
+        username_match=False,
+        phone_match=True,
+        chat_activity_match=True,
+        created_at=created_at,
+        dl_contact_snapshot={
+            "importFileId": "3",
+            "originalFileName": "contacts.csv",
+            "telegramId": "123",
+            "username": "dl_user",
+            "phone": "+79990000000",
+            "firstName": "DL",
+            "lastName": "User",
+            "fullName": "DL User",
+            "region": "RU",
+            "sourceRowIndex": 5,
+        },
+        tgmbase_user_snapshot={
+            "user_id": "123",
+            "username": "base_user",
+            "phone": "+79990000000",
+            "first_name": "Base",
+            "last_name": "User",
+            "premium": True,
+            "scam": False,
+            "bot": False,
+            "upd_date": "2026-05-30T10:00:00+00:00",
+            "relatedChats": [
+                {"type": "channel", "peer_id": "99", "title": "Persisted stale chat"}
+            ],
+        },
+        chats=[
+            SimpleNamespace(chat_type="group", peer_id="42", title="Cases", is_excluded=False),
+            SimpleNamespace(chat_type="channel", peer_id="99", title="Excluded", is_excluded=True),
+        ],
+    )
+
+    mapped = mapper.map_result(result)
+
+    assert mapped["id"] == "11"
+    assert mapped["runId"] == "7"
+    assert mapped["dlContact"]["username"] == "dl_user"
+    assert mapped["dlContact"]["phone"] == "+79990000000"
+    assert mapped["user"]["user_id"] == "123"
+    assert mapped["user"]["username"] == "base_user"
+    assert mapped["user"]["phone"] == "+79990000000"
+    assert mapped["user"]["relatedChats"] == [
+        {"type": "group", "peer_id": "42", "title": "Cases"}
+    ]
+    assert mapped["createdAt"] == created_at.isoformat()
 
 
 def test_search_component_keeps_query_and_summary_contracts():
