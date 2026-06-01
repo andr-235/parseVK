@@ -96,6 +96,7 @@ async def list_authors(
     search: str | None = Query(default=None),
     city: str | None = Query(default=None),
     verified: str | None = Query(default=None),
+    type: str | None = Query(default=None),
     sort_by: str | None = Query(default=None, alias="sortBy"),
     sort_order: str = Query(default="desc", alias="sortOrder"),
     service: ContentService = Depends(get_content_service),
@@ -107,6 +108,7 @@ async def list_authors(
         search=search,
         city=city,
         verified=verified,
+        author_type=type,
         sort_by=sort_by,
         sort_order=sort_order,
     )

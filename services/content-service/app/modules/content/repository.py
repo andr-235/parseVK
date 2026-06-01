@@ -86,11 +86,14 @@ class ContentRepository:
         search: str | None = None,
         city: str | None = None,
         verified: bool | None = None,
+        author_type: str | None = None,
         sort_by: str | None = None,
         sort_order: str = "desc",
     ) -> dict:
         stmt = select(ContentAuthor)
         conditions = []
+        if author_type:
+            conditions.append(ContentAuthor.type == author_type)
         if search:
             pattern = f"%{search.lower()}%"
             or_conds = [

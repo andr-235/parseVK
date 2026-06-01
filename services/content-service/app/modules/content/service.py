@@ -71,6 +71,7 @@ class ContentService:
         search: str | None = None,
         city: str | None = None,
         verified: str | None = None,
+        author_type: str | None = None,
         sort_by: str | None = None,
         sort_order: str = "desc",
     ) -> dict:
@@ -82,6 +83,7 @@ class ContentService:
             search=self._normalize_text(search),
             city=self._normalize_text(city),
             verified=self._parse_optional_bool(verified),
+            author_type=author_type,
             sort_by=sort_by,
             sort_order=self._normalize_sort_order(sort_order),
         )
