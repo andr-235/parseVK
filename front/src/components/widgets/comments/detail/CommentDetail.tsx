@@ -52,13 +52,27 @@ export function CommentDetail({ comment, onClose }: Props) {
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-1">
               Группа
             </p>
-            <p className="text-sm text-text-secondary">{comment.group}</p>
+            {comment.groupUrl ? (
+              <a href={comment.groupUrl} target="_blank" rel="noopener noreferrer"
+                className="text-sm text-accent underline decoration-transparent hover:decoration-accent transition-colors duration-150">
+                {comment.group}
+              </a>
+            ) : (
+              <p className="text-sm text-text-secondary">{comment.group}</p>
+            )}
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-1">
               Автор
             </p>
-            <p className="text-sm text-text-secondary">{comment.author}</p>
+            {comment.authorUrl ? (
+              <a href={comment.authorUrl} target="_blank" rel="noopener noreferrer"
+                className="text-sm text-accent underline decoration-transparent hover:decoration-accent transition-colors duration-150">
+                {comment.author}
+              </a>
+            ) : (
+              <p className="text-sm text-text-secondary">{comment.author}</p>
+            )}
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-1">

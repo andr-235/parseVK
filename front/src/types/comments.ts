@@ -14,6 +14,8 @@ export type Comment = {
   text: string
   group: string
   author: string
+  authorUrl?: string
+  groupUrl?: string
   date: string
   status: Status
 }

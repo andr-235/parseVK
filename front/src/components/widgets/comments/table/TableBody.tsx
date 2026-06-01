@@ -29,9 +29,27 @@ export function TableBody({ rows, selectedId, focusedIndex, selectedRows, onSele
               onClick={(e) => e.stopPropagation()} aria-label={`Выбрать комментарий ${c.id}`}
             />
           </td>
-          <td className="truncate px-3 py-2 text-text-primary">{c.text}</td>
-          <td className="hidden px-3 py-2 text-text-secondary sm:table-cell truncate">{c.group}</td>
-          <td className="hidden px-3 py-2 text-text-secondary sm:table-cell truncate">{c.author}</td>
+          <td className="break-words whitespace-normal px-3 py-2 text-text-primary">{c.text}</td>
+          <td className="hidden px-3 py-2 sm:table-cell truncate">
+            {c.groupUrl ? (
+              <a href={c.groupUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                className="text-text-secondary underline decoration-transparent hover:decoration-text-secondary transition-colors duration-150">
+                {c.group}
+              </a>
+            ) : (
+              <span className="text-text-secondary">{c.group}</span>
+            )}
+          </td>
+          <td className="hidden px-3 py-2 sm:table-cell truncate">
+            {c.authorUrl ? (
+              <a href={c.authorUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                className="text-text-secondary underline decoration-transparent hover:decoration-text-secondary transition-colors duration-150">
+                {c.author}
+              </a>
+            ) : (
+              <span className="text-text-secondary">{c.author}</span>
+            )}
+          </td>
           <td className="hidden px-3 py-2 text-text-secondary md:table-cell">{c.date}</td>
           <td className="px-3 py-2">
             <StatusCell status={c.status} onChange={(s) => onStatusChange(c.id, s)} />

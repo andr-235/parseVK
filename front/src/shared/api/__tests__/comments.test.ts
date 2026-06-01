@@ -20,6 +20,7 @@ describe('fetchComments', () => {
           ownerId: -123,
           createdAt: '2026-06-01T10:00:00Z',
           author: { displayName: 'Group Name', fullName: 'Full' },
+          group: { name: 'Group Name', screenName: 'group_screen' },
           isRead: true,
         },
         {
@@ -42,8 +43,10 @@ describe('fetchComments', () => {
     expect(result.comments[0]).toEqual({
       id: 1,
       text: 'Test comment',
-      group: 'Группа #123',
+      group: 'Group Name',
       author: 'Group Name',
+      authorUrl: undefined,
+      groupUrl: 'https://vk.com/group_screen',
       date: '01.06.2026',
       status: 'Проверка',
     })
@@ -53,6 +56,8 @@ describe('fetchComments', () => {
       text: 'Another comment',
       group: 'Пользователь #456',
       author: 'vk456',
+      authorUrl: undefined,
+      groupUrl: undefined,
       date: '15.05.2026',
       status: 'Новый',
     })
@@ -92,6 +97,15 @@ describe('fetchComments', () => {
     })
     const result = await fetchComments({ page: 1, pageSize: 10 })
     expect(result.comments[0].author).toBe('Full Name')
+  })
+
+  it('maps profileUrl from backend author', async () => {
+    mockApiGet.mockResolvedValueOnce({
+      items: [{ id: 1, text: 'x', ownerId: 1, createdAt: '2026-01-01T00:00:00Z', author: { displayName: 'User', profileUrl: 'https://vk.com/id123' }, isRead: false }],
+      total: 1, hasMore: false,
+    })
+    const result = await fetchComments({ page: 1, pageSize: 10 })
+    expect(result.comments[0].authorUrl).toBe('https://vk.com/id123')
   })
 
   it('falls back to vk+ownerId when no author', async () => {

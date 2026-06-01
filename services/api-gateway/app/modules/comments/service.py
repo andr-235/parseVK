@@ -211,8 +211,20 @@ class CommentsGatewayService:
         author_vk_ids = list({item["author_vk_id"] for item in items if item.get("author_vk_id")})
         post_external_keys = list({item["post_external_key"] for item in items if item.get("post_external_key")})
 
+        group_vk_ids: set[int] = set()
+        for item in items:
+            parts = (item.get("external_key") or "").split(":")
+            if len(parts) > 0 and parts[0]:
+                try:
+                    owner_id = int(parts[0])
+                    if owner_id < 0:
+                        group_vk_ids.add(abs(owner_id))
+                except ValueError:
+                    pass
+
         authors_dict: dict = {}
         posts_dict: dict = {}
+        groups_dict: dict = {}
 
         async with httpx.AsyncClient() as client:
             if author_vk_ids:
@@ -233,6 +245,15 @@ class CommentsGatewayService:
                 if post_resp.status_code == 200:
                     posts_dict = {p["externalKey"]: p for p in post_resp.json()}
 
+            if group_vk_ids:
+                group_resp = await client.post(
+                    f"{self.content_url}/internal/content/groups/bulk",
+                    json=list(group_vk_ids),
+                    headers=self.headers,
+                )
+                if group_resp.status_code == 200:
+                    groups_dict = {g["vkGroupId"]: g for g in group_resp.json()}
+
         enriched_items = []
         for item in items:
             author_vk_id = item.get("author_vk_id")
@@ -246,6 +267,8 @@ class CommentsGatewayService:
             post_id = int(parts[1]) if len(parts) > 1 and parts[1] else None
             comment_id = int(parts[2]) if len(parts) > 2 and parts[2] else None
 
+            group = groups_dict.get(abs(owner_id)) if owner_id and owner_id < 0 else None
+
             enriched = {
                 "id": item["id"],
                 "ownerId": owner_id,
@@ -258,6 +281,7 @@ class CommentsGatewayService:
                 "authorVkId": author_vk_id,
                 "fromId": author_vk_id,
                 "author": author,
+                "group": group,
                 "matchedKeywords": [
                     {"id": 0, "word": w, "category": "auto"}
                     for w in item.get("matched_keywords", [])

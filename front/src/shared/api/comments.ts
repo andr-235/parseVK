@@ -4,6 +4,14 @@ import { type Comment, type Status } from '../../types/comments'
 type BackendAuthor = {
   displayName?: string
   fullName?: string
+  profileUrl?: string
+  screenName?: string
+}
+
+type BackendGroup = {
+  name: string
+  screenName?: string
+  vkGroupId?: number
 }
 
 type BackendComment = {
@@ -12,6 +20,7 @@ type BackendComment = {
   ownerId: number
   createdAt: string
   author?: BackendAuthor
+  group?: BackendGroup
   isRead: boolean
 }
 
@@ -33,8 +42,10 @@ function mapComment(bc: BackendComment): Comment {
   return {
     id: bc.id,
     text: bc.text,
-    group: bc.ownerId < 0 ? `Группа #${Math.abs(bc.ownerId)}` : `Пользователь #${bc.ownerId}`,
+    group: bc.group?.name ?? (bc.ownerId < 0 ? `Группа #${Math.abs(bc.ownerId)}` : `Пользователь #${bc.ownerId}`),
     author: bc.author?.displayName ?? bc.author?.fullName ?? `vk${bc.ownerId}`,
+    authorUrl: bc.author?.profileUrl,
+    groupUrl: bc.group?.screenName ? `https://vk.com/${bc.group.screenName}` : (bc.ownerId < 0 ? `https://vk.com/club${Math.abs(bc.ownerId)}` : undefined),
     date: formatDate(bc.createdAt),
     status: (bc.isRead ? 'Проверка' : 'Новый') as Status,
   }
