@@ -10,7 +10,9 @@ from app.modules.telegram_tgmbase.schemas import (
     DlImportBatchSchema,
     DlImportFileSchema,
     TelegramDlImportContactSchema,
+    TelegramDlMatchResultContactSchema,
     TelegramDlMatchResultSchema,
+    TelegramDlMatchResultUserSchema,
     TelegramDlMatchRunSchema,
     TgmbaseCandidateSchema,
     TgmbaseProfileSchema,
@@ -141,11 +143,11 @@ class TelegramTgmbaseMapper:
         ]
         user = None
         if item.tgmbase_user_id:
-            user = {
-                "id": str(item.tgmbase_user_id),
-                "relatedChats": active_chats,
+            user = TelegramDlMatchResultUserSchema(
+                id=str(item.tgmbase_user_id),
+                relatedChats=active_chats,
                 **user_snapshot,
-            }
+            )
 
         return _dump_schema(
             TelegramDlMatchResultSchema(
@@ -157,19 +159,19 @@ class TelegramTgmbaseMapper:
                 usernameMatch=item.username_match,
                 phoneMatch=item.phone_match,
                 chatActivityMatch=item.chat_activity_match,
-                dlContact={
-                    "id": str(item.dl_contact_id),
-                    "importFileId": dl_snapshot.get("importFileId"),
-                    "originalFileName": dl_snapshot.get("originalFileName"),
-                    "telegramId": dl_snapshot.get("telegramId"),
-                    "username": dl_snapshot.get("username"),
-                    "phone": dl_snapshot.get("phone"),
-                    "firstName": dl_snapshot.get("firstName"),
-                    "lastName": dl_snapshot.get("lastName"),
-                    "fullName": dl_snapshot.get("fullName"),
-                    "region": dl_snapshot.get("region"),
-                    "sourceRowIndex": dl_snapshot.get("sourceRowIndex"),
-                },
+                dlContact=TelegramDlMatchResultContactSchema(
+                    id=str(item.dl_contact_id),
+                    importFileId=dl_snapshot.get("importFileId"),
+                    originalFileName=dl_snapshot.get("originalFileName"),
+                    telegramId=dl_snapshot.get("telegramId"),
+                    username=dl_snapshot.get("username"),
+                    phone=dl_snapshot.get("phone"),
+                    firstName=dl_snapshot.get("firstName"),
+                    lastName=dl_snapshot.get("lastName"),
+                    fullName=dl_snapshot.get("fullName"),
+                    region=dl_snapshot.get("region"),
+                    sourceRowIndex=dl_snapshot.get("sourceRowIndex"),
+                ),
                 user=user,
                 createdAt=item.created_at.isoformat(),
             )
