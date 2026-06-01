@@ -143,10 +143,12 @@ class TelegramTgmbaseMapper:
         ]
         user = None
         if item.tgmbase_user_id:
+            user_data = {**user_snapshot}
+            user_data.pop("relatedChats", None)
             user = TelegramDlMatchResultUserSchema(
                 id=str(item.tgmbase_user_id),
                 relatedChats=active_chats,
-                **user_snapshot,
+                **user_data,
             )
 
         return _dump_schema(
