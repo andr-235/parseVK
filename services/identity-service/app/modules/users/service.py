@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from app.core.security import hash_password
 from app.db.models import User
 from app.modules.users.repository import UsersRepository
-from app.modules.users.schemas import UserDto
+from app.modules.users.schemas import UpdateUserRequest, UserDto
 
 
 class UsersService:
@@ -35,6 +35,13 @@ class UsersService:
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         return user
+
+    async def update_user(self, user_id: UUID, data: UpdateUserRequest) -> User:
+        user = await self.get_user(user_id)
+        updates = data.model_dump(exclude_none=True)
+        if not updates:
+            return user
+        return await self._repo.update_user(user, updates)
 
     async def delete_user(self, user_id: UUID) -> None:
         user = await self.get_user(user_id)

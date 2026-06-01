@@ -24,6 +24,12 @@ class UsersRepository:
         result = await self.session.scalars(select(User).order_by(User.created_at.desc()))
         return list(result)
 
+    async def update_user(self, user: User, updates: dict) -> User:
+        for key, value in updates.items():
+            setattr(user, key, value)
+        await self.session.flush()
+        return user
+
     async def delete_user(self, user: User) -> None:
         await self.session.delete(user)
         await self.session.flush()

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.users.repository import UsersRepository
-from app.modules.users.schemas import CreateUserRequest, TemporaryPasswordResponse, UserResponse
+from app.modules.users.schemas import CreateUserRequest, TemporaryPasswordResponse, UpdateUserRequest, UserResponse
 from app.modules.users.service import UsersService
 
 router = APIRouter(prefix="/internal/admin/users", tags=["admin-users"])
@@ -21,6 +21,7 @@ def to_response(user) -> UserResponse:
         id=user.id,
         username=user.username,
         role=user.role,
+        is_active=user.is_active,
         created_at=user.created_at,
         is_temporary_password=False,
     )
@@ -41,6 +42,20 @@ async def list_users(
 ):
     users = await service.list_users()
     return [to_response(u) for u in users]
+
+
+@router.patch(
+    "/{user_id}",
+    response_model=UserResponse,
+    dependencies=[Depends(require_internal_token)],
+)
+async def update_user(
+    user_id: UUID,
+    payload: UpdateUserRequest,
+    service: UsersService = Depends(get_users_service),
+):
+    user = await service.update_user(user_id, payload)
+    return to_response(user)
 
 
 @router.delete("/{user_id}", status_code=204, dependencies=[Depends(require_internal_token)])
