@@ -8,6 +8,21 @@ export class ApiError extends Error {
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1'
 
+let accessToken: string | null = null
+
+export function setAccessToken(token: string | null) {
+  accessToken = token
+}
+
+function headers(extra?: Record<string, string>): Record<string, string> {
+  const h: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...extra,
+  }
+  if (accessToken) h['Authorization'] = `Bearer ${accessToken}`
+  return h
+}
+
 export async function apiGet<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
   const url = new URL(`${BASE_URL}${path}`, window.location.origin)
   if (params) {
@@ -15,7 +30,18 @@ export async function apiGet<T>(path: string, params?: Record<string, string | n
       if (v !== undefined) url.searchParams.set(k, String(v))
     }
   }
-  const res = await fetch(url.toString())
+  const res = await fetch(url.toString(), { headers: headers() })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: headers(),
+    credentials: 'include',
+    body: body ? JSON.stringify(body) : undefined,
+  })
   if (!res.ok) throw new ApiError(res.status, await res.text())
   return res.json()
 }
