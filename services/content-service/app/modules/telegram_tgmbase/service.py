@@ -1,8 +1,7 @@
 import logging
 import asyncio
-import re
 from datetime import datetime, timezone
-from sqlalchemy import select, and_, func, update, delete, text
+from sqlalchemy import select, and_, func, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -11,8 +10,10 @@ from app.modules.telegram_tgmbase.models import (
     DlMatchRun, DlMatchResult, DlMatchResultChat, DlMatchResultMessage,
     User, Message, Group, Supergroup, Channel
 )
-from app.modules.telegram_tgmbase.parser import TelegramDlImportParser
 from app.modules.telegram_tgmbase.exporter import TelegramDlMatchExporter
+from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
+from app.modules.telegram_tgmbase.parser import TelegramDlImportParser
+from app.modules.telegram_tgmbase.search import TelegramTgmbaseSearchService, normalize_tgmbase_query
 
 logger = logging.getLogger("content-service.telegram-tgmbase.service")
 
@@ -32,60 +33,17 @@ def normalize_telegram_id(value: str | None) -> int | None:
         return int(s)
     if s.startswith("-") and s[1:].isdigit():
         return int(s)
-    # Если это ссылка или username, мы не можем получить числовой ID напрямую без API клиента,
-    # поэтому числовым ID он не является и возвращаем None для strict ID matching.
     return None
-
-
-def normalize_phone_number(value: str) -> str:
-    return re.sub(r'[^\d+]', '', value)
-
-
-def normalize_tgmbase_query(raw_value: str) -> dict:
-    trimmed = raw_value.strip()
-    if not trimmed:
-        return {
-            "rawValue": raw_value,
-            "normalizedValue": "",
-            "queryType": "invalid",
-        }
-
-    if trimmed.isdigit():
-        return {
-            "rawValue": raw_value,
-            "normalizedValue": trimmed,
-            "queryType": "telegramId",
-        }
-
-    phone_candidate = normalize_phone_number(trimmed)
-    if re.match(r'^\+?\d{10,15}$', phone_candidate):
-        return {
-            "rawValue": raw_value,
-            "normalizedValue": phone_candidate,
-            "queryType": "phoneNumber",
-        }
-
-    if re.match(r'^@?[a-zA-Z0-9_]{3,32}$', trimmed):
-        normalized = re.sub(r'^@', '', trimmed).lower()
-        return {
-            "rawValue": raw_value,
-            "normalizedValue": normalized,
-            "queryType": "username",
-        }
-
-    return {
-        "rawValue": raw_value,
-        "normalizedValue": trimmed,
-        "queryType": "invalid",
-    }
 
 
 
 class TelegramTgmbaseService:
     def __init__(self, session: AsyncSession):
         self.session = session
+        self.mapper = TelegramTgmbaseMapper()
         self.parser = TelegramDlImportParser()
         self.exporter = TelegramDlMatchExporter()
+        self.search_service = TelegramTgmbaseSearchService(session, self.mapper)
         self.batch_size = 1000
 
     # Раздел DL IMPORT
@@ -126,8 +84,8 @@ class TelegramTgmbaseService:
         await self.session.refresh(batch)
 
         return {
-            "batch": self._map_batch(batch),
-            "files": [self._map_processed_file(f) for f in processed_files]
+            "batch": self.mapper.map_batch(batch),
+            "files": [self.mapper.map_processed_file(f) for f in processed_files]
         }
 
     async def get_files(self, file_name: str | None = None, active_only: bool | None = None) -> list[dict]:
@@ -143,7 +101,7 @@ class TelegramTgmbaseService:
         stmt = stmt.order_by(DlImportFile.created_at.desc())
         res = await self.session.execute(stmt)
         files = res.scalars().all()
-        return [self._map_file(f) for f in files]
+        return [self.mapper.map_file(f) for f in files]
 
     async def get_contacts(
         self,
@@ -188,7 +146,7 @@ class TelegramTgmbaseService:
         items = res.scalars().all()
 
         return {
-            "items": [self._map_contact(i) for i in items],
+            "items": [self.mapper.map_contact(i) for i in items],
             "total": total,
             "limit": limit,
             "offset": offset
@@ -209,13 +167,13 @@ class TelegramTgmbaseService:
         self.session.add(run)
         await self.session.commit()
         await self.session.refresh(run)
-        return self._map_run(run)
+        return self.mapper.map_run(run)
 
     async def get_runs(self) -> list[dict]:
         stmt = select(DlMatchRun).order_by(DlMatchRun.created_at.desc())
         res = await self.session.execute(stmt)
         runs = res.scalars().all()
-        return [self._map_run(r) for r in runs]
+        return [self.mapper.map_run(r) for r in runs]
 
     async def get_run_by_id(self, id: int) -> dict:
         stmt = select(DlMatchRun).where(DlMatchRun.id == id)
@@ -223,7 +181,7 @@ class TelegramTgmbaseService:
         run = res.scalars().first()
         if not run:
             raise ValueError(f"Run {id} not found")
-        return self._map_run(run)
+        return self.mapper.map_run(run)
 
     async def get_results(
         self,
@@ -259,7 +217,7 @@ class TelegramTgmbaseService:
             total_chats = len(item.chats)
             active_chats = sum(1 for c in item.chats if not c.is_excluded)
             if total_chats == 0 or active_chats > 0:
-                filtered.append(self._map_result(item))
+                filtered.append(self.mapper.map_result(item))
                 
         return filtered
 
@@ -445,7 +403,7 @@ class TelegramTgmbaseService:
                 await self.session.commit()
                 await self.session.refresh(import_file)
                 return {
-                    **self._map_file(import_file),
+                    **self.mapper.map_file(import_file),
                     "succeeded": True
                 }
 
@@ -514,7 +472,7 @@ class TelegramTgmbaseService:
             await self.session.refresh(import_file)
 
             return {
-                **self._map_file(import_file),
+                **self.mapper.map_file(import_file),
                 "succeeded": True
             }
 
@@ -541,7 +499,7 @@ class TelegramTgmbaseService:
             await self.session.refresh(failed_file)
 
             return {
-                **self._map_file(failed_file),
+                **self.mapper.map_file(failed_file),
                 "succeeded": False
             }
 
@@ -604,8 +562,8 @@ class TelegramTgmbaseService:
                     "username_match": match["username_match"],
                     "phone_match": match["phone_match"],
                     "chat_activity_match": len(activity["chats"]) > 0,
-                    "dl_contact_snapshot": self._build_dl_contact_snapshot(contact),
-                    "tgmbase_user_snapshot": self._build_user_snapshot(match["snapshot"], activity["chats"]),
+                    "dl_contact_snapshot": self.mapper.build_dl_contact_snapshot(contact),
+                    "tgmbase_user_snapshot": self.mapper.build_user_snapshot(match["snapshot"], activity["chats"]),
                     "chats": activity["chats"],
                     "messages": activity["messages"]
                 })
@@ -832,489 +790,7 @@ class TelegramTgmbaseService:
                 
         await self.session.commit()
 
-    def _build_dl_contact_snapshot(self, contact: DlContact) -> dict:
-        return {
-            "importFileId": str(contact.import_file_id) if contact.import_file_id else None,
-            "sourceRowIndex": contact.source_row_index,
-            "telegramId": contact.telegram_id,
-            "username": contact.username,
-            "phone": contact.phone,
-            "firstName": contact.first_name,
-            "lastName": contact.last_name,
-            "fullName": contact.full_name,
-            "region": contact.region,
-            "originalFileName": contact.import_file.original_file_name,
-        }
-
-    def _build_user_snapshot(self, matched_user: User, related_chats: list) -> dict:
-        return {
-            "user_id": str(matched_user.user_id),
-            "username": matched_user.username,
-            "phone": matched_user.phone,
-            "first_name": matched_user.first_name,
-            "last_name": matched_user.last_name,
-            "premium": matched_user.premium,
-            "scam": matched_user.scam,
-            "bot": matched_user.bot,
-            "upd_date": matched_user.upd_date.isoformat() if matched_user.upd_date else None,
-            "relatedChats": related_chats,
-        }
-
-    def _map_batch(self, batch: DlImportBatch) -> dict:
-        return {
-            "id": str(batch.id),
-            "status": batch.status,
-            "filesTotal": batch.files_total,
-            "filesSuccess": batch.files_success,
-            "filesFailed": batch.files_failed,
-        }
-
-    def _map_file(self, file: DlImportFile) -> dict:
-        return {
-            "id": str(file.id),
-            "originalFileName": file.original_file_name,
-            "status": file.status,
-            "rowsTotal": file.rows_total,
-            "rowsSuccess": file.rows_success,
-            "rowsFailed": file.rows_failed,
-            "isActive": file.is_active,
-            "replacedFileId": str(file.replaced_file_id) if file.replaced_file_id else None,
-            "error": file.error
-        }
-
-    def _map_processed_file(self, file: dict) -> dict:
-        return {
-            "id": file["id"],
-            "originalFileName": file["originalFileName"],
-            "status": file["status"],
-            "rowsTotal": file["rowsTotal"],
-            "rowsSuccess": file["rowsSuccess"],
-            "rowsFailed": file["rowsFailed"],
-            "isActive": file["isActive"],
-            "replacedFileId": file["replacedFileId"],
-            "error": file["error"]
-        }
-
-    def _map_contact(self, item: DlContact) -> dict:
-        return {
-            "id": str(item.id),
-            "importFileId": str(item.import_file_id) if item.import_file_id else None,
-            "originalFileName": item.import_file.original_file_name,
-            "isActive": item.import_file.is_active,
-            "telegramId": item.telegram_id,
-            "username": item.username,
-            "phone": item.phone,
-            "firstName": item.first_name,
-            "lastName": item.last_name,
-            "description": item.description,
-            "region": item.region,
-            "joinedAt": item.joined_at.isoformat() if item.joined_at else None,
-            "channelsRaw": item.channels_raw,
-            "fullName": item.full_name,
-            "address": item.address,
-            "vkUrl": item.vk_url,
-            "email": item.email,
-            "telegramContact": item.telegram_contact,
-            "instagram": item.instagram,
-            "viber": item.viber,
-            "odnoklassniki": item.odnoklassniki,
-            "birthDateText": item.birth_date_text,
-            "usernameExtra": item.username_extra,
-            "geo": item.geo,
-            "sourceRowIndex": item.source_row_index,
-            "createdAt": item.created_at.isoformat()
-        }
-
-    def _map_run(self, run: DlMatchRun) -> dict:
-        return {
-            "id": str(run.id),
-            "status": run.status,
-            "contactsTotal": run.contacts_total,
-            "matchesTotal": run.matches_total,
-            "strictMatchesTotal": run.strict_matches_total,
-            "usernameMatchesTotal": run.username_matches_total,
-            "phoneMatchesTotal": run.phone_matches_total,
-            "createdAt": run.created_at.isoformat(),
-            "finishedAt": run.finished_at.isoformat() if run.finished_at else None,
-            "error": run.error
-        }
-
-    def _map_result(self, item: DlMatchResult) -> dict:
-        dl_snapshot = item.dl_contact_snapshot or {}
-        user_snapshot = item.tgmbase_user_snapshot or {}
-        
-        # Подготавливаем активные чаты
-        active_chats = []
-        for chat in item.chats:
-            if not chat.is_excluded:
-                active_chats.append({
-                    "type": chat.chat_type,
-                    "peer_id": chat.peer_id,
-                    "title": chat.title
-                })
-
-        return {
-            "id": str(item.id),
-            "runId": str(item.run_id),
-            "dlContactId": str(item.dl_contact_id),
-            "tgmbaseUserId": str(item.tgmbase_user_id) if item.tgmbase_user_id else None,
-            "strictTelegramIdMatch": item.strict_telegram_id_match,
-            "usernameMatch": item.username_match,
-            "phoneMatch": item.phone_match,
-            "chatActivityMatch": item.chat_activity_match,
-            "dlContact": {
-                "id": str(item.dl_contact_id),
-                "importFileId": dl_snapshot.get("importFileId"),
-                "originalFileName": dl_snapshot.get("originalFileName"),
-                "telegramId": dl_snapshot.get("telegramId"),
-                "username": dl_snapshot.get("username"),
-                "phone": dl_snapshot.get("phone"),
-                "firstName": dl_snapshot.get("firstName"),
-                "lastName": dl_snapshot.get("lastName"),
-                "fullName": dl_snapshot.get("fullName"),
-                "region": dl_snapshot.get("region"),
-                "sourceRowIndex": dl_snapshot.get("sourceRowIndex"),
-            },
-            "user": None if not item.tgmbase_user_id else {
-                "id": str(item.tgmbase_user_id),
-                "relatedChats": active_chats,
-                **user_snapshot
-            },
-            "createdAt": item.created_at.isoformat()
-        }
 
     # РАЗДЕЛ ПОИСКА ПО БАЗЕ TGMBASE
-
     async def search_tgmbase(self, payload: dict) -> dict:
-        queries = payload.get("queries", [])
-        page = payload.get("page", 1) or 1
-        page_size = payload.get("pageSize", 20) or 20
-        
-        items = []
-        for raw_query in queries:
-            item = await self._search_single(raw_query, page, page_size)
-            items.append(item)
-            
-        summary = self._build_search_summary(items)
-        return {
-            "summary": summary,
-            "items": items
-        }
-
-    async def _search_single(self, raw_query: str, page: int, page_size: int) -> dict:
-        normalized = normalize_tgmbase_query(raw_query)
-        if normalized["queryType"] == "invalid":
-            return self._create_base_search_item(normalized, "invalid", page, page_size)
-            
-        try:
-            matches = await self._find_matching_users(normalized)
-            
-            if not matches:
-                return self._create_base_search_item(normalized, "not_found", page, page_size)
-                
-            if len(matches) > 1:
-                item = self._create_base_search_item(normalized, "ambiguous", page, page_size)
-                item["candidates"] = [self._map_candidate(u) for u in matches[:10]]
-                return item
-                
-            profile = matches[0]
-            peers = await self._find_peers_for_user(profile.user_id)
-            
-            # Строим мапу для peers
-            peer_map = {peer["peerId"]: peer for peer in peers}
-            
-            contacts, messages_page = await asyncio.gather(
-                self._find_contacts(profile.user_id, peers),
-                self._find_messages(profile.user_id, page, page_size, peer_map)
-            )
-            
-            return {
-                "query": raw_query,
-                "normalizedQuery": normalized["normalizedValue"],
-                "queryType": normalized["queryType"],
-                "status": "found",
-                "profile": self._map_profile(profile),
-                "candidates": [],
-                "groups": peers,
-                "contacts": contacts,
-                "messagesPage": messages_page,
-                "stats": {
-                    "groups": len(peers),
-                    "contacts": len(contacts),
-                    "messages": messages_page["total"],
-                },
-                "error": None
-            }
-        except Exception as exc:
-            logger.exception(f"tgmbase search failed for {raw_query}")
-            item = self._create_base_search_item(normalized, "error", page, page_size)
-            item["error"] = str(exc)
-            return item
-
-    async def _find_matching_users(self, normalized: dict) -> list:
-        q_type = normalized["queryType"]
-        val = normalized["normalizedValue"]
-        
-        stmt = select(User)
-        if q_type == "telegramId":
-            stmt = stmt.where(User.user_id == int(val))
-        elif q_type == "username":
-            stmt = stmt.where(func.lower(User.username) == val.lower())
-        elif q_type == "phoneNumber":
-            variants = self._build_phone_variants(val)
-            stmt = stmt.where(User.phone.in_(variants))
-        else:
-            return []
-            
-        stmt = stmt.order_by(User.upd_date.desc()).limit(10)
-        res = await self.session.execute(stmt)
-        return list(res.scalars().all())
-
-    def _build_phone_variants(self, value: str) -> list[str]:
-        digits_only = re.sub(r'[^\d+]', '', value).replace("+", "")
-        variants = {value, digits_only, f"+{digits_only}"}
-        
-        if digits_only.startswith("8") and len(digits_only) == 11:
-            variants.add(f"+7{digits_only[1:]}")
-        if digits_only.startswith("7") and len(digits_only) == 11:
-            variants.add(f"8{digits_only[1:]}")
-            
-        return list(variants)
-
-    async def _find_peers_for_user(self, user_id: int) -> list[dict]:
-        stmt = select(Message.peer_id, func.count(Message.id)).where(
-            Message.from_id == user_id
-        ).group_by(Message.peer_id).order_by(func.count(Message.id).desc()).limit(50)
-        
-        res = await self.session.execute(stmt)
-        rows = res.all()
-        if not rows:
-            return []
-            
-        peer_ids = [r[0] for r in rows]
-        
-        g_stmt = select(Group).where(Group.group_id.in_(peer_ids))
-        sg_stmt = select(Supergroup).where(Supergroup.supergroup_id.in_(peer_ids))
-        ch_stmt = select(Channel).where(Channel.channel_id.in_(peer_ids))
-        
-        g_res, sg_res, ch_res = await asyncio.gather(
-            self.session.execute(g_stmt),
-            self.session.execute(sg_stmt),
-            self.session.execute(ch_stmt)
-        )
-        
-        groups = {g.group_id: g for g in g_res.scalars().all()}
-        supergroups = {sg.supergroup_id: sg for sg in sg_res.scalars().all()}
-        channels = {ch.channel_id: ch for ch in ch_res.scalars().all()}
-        
-        peers = []
-        for peer_id in peer_ids:
-            p_id_str = str(peer_id)
-            if peer_id in supergroups:
-                sg = supergroups[peer_id]
-                peers.append({
-                    "peerId": p_id_str,
-                    "title": sg.title or p_id_str,
-                    "username": sg.username,
-                    "type": "supergroup",
-                    "participantsCount": sg.participants_count,
-                    "region": None
-                })
-            elif peer_id in channels:
-                ch = channels[peer_id]
-                peers.append({
-                    "peerId": p_id_str,
-                    "title": ch.title or p_id_str,
-                    "username": ch.username,
-                    "type": "channel",
-                    "participantsCount": ch.participants_count,
-                    "region": None
-                })
-            elif peer_id in groups:
-                g = groups[peer_id]
-                peers.append({
-                    "peerId": p_id_str,
-                    "title": g.title or p_id_str,
-                    "username": None,
-                    "type": "group",
-                    "participantsCount": g.participants_count,
-                    "region": g.region
-                })
-            else:
-                peers.append({
-                    "peerId": p_id_str,
-                    "title": p_id_str,
-                    "username": None,
-                    "type": "unknown",
-                    "participantsCount": None,
-                    "region": None
-                })
-                
-        return peers
-
-    async def _find_contacts(self, user_id: int, peers: list[dict]) -> list[dict]:
-        peer_ids = [int(p["peerId"]) for p in peers]
-        if not peer_ids:
-            return []
-            
-        query_str = """
-            SELECT
-                m.from_id AS user_id,
-                COUNT(DISTINCT m.peer_id) AS common_peers_count,
-                COUNT(*)::bigint AS message_count
-            FROM message m
-            WHERE m.peer_id IN :peer_ids
-              AND m.from_id IS NOT NULL
-              AND m.from_id <> :user_id
-            GROUP BY m.from_id
-            ORDER BY COUNT(DISTINCT m.peer_id) DESC, COUNT(*) DESC
-            LIMIT 20
-        """
-        res = await self.session.execute(text(query_str), {"peer_ids": tuple(peer_ids), "user_id": user_id})
-        rows = res.all()
-        if not rows:
-            return []
-            
-        contact_user_ids = [r[0] for r in rows]
-        
-        u_stmt = select(User).where(User.user_id.in_(contact_user_ids))
-        u_res = await self.session.execute(u_stmt)
-        users = {u.user_id: u for u in u_res.scalars().all()}
-        
-        contacts = []
-        for row in rows:
-            c_uid = row[0]
-            common_peers = int(row[1])
-            msg_count = int(row[2])
-            
-            user_obj = users.get(c_uid)
-            if user_obj:
-                profile = self._map_profile(user_obj)
-                contacts.append({
-                    "telegramId": str(c_uid),
-                    "username": profile["username"],
-                    "phoneNumber": profile["phoneNumber"],
-                    "fullName": profile["fullName"],
-                    "commonPeersCount": common_peers,
-                    "messageCount": msg_count
-                })
-            else:
-                contacts.append({
-                    "telegramId": str(c_uid),
-                    "username": None,
-                    "phoneNumber": None,
-                    "fullName": str(c_uid),
-                    "commonPeersCount": common_peers,
-                    "messageCount": msg_count
-                })
-                
-        return contacts
-
-    async def _find_messages(self, user_id: int, page: int, page_size: int, peer_map: dict) -> dict:
-        skip = (page - 1) * page_size
-        
-        count_stmt = select(func.count(Message.id)).where(Message.from_id == user_id)
-        count_res = await self.session.execute(count_stmt)
-        total = count_res.scalar() or 0
-        
-        msg_stmt = select(Message).where(Message.from_id == user_id).order_by(Message.date.desc()).offset(skip).limit(page_size)
-        msg_res = await self.session.execute(msg_stmt)
-        messages = msg_res.scalars().all()
-        
-        items = []
-        for m in messages:
-            peer = peer_map.get(str(m.peer_id))
-            items.append({
-                "id": str(m.id),
-                "messageId": str(m.message_id),
-                "peerId": str(m.peer_id),
-                "peerTitle": peer["title"] if peer else None,
-                "peerType": peer["type"] if peer else "unknown",
-                "date": m.date.isoformat() if m.date else None,
-                "text": m.message,
-                "fromId": str(m.from_id) if m.from_id else None,
-                "replyTo": str(m.reply_to) if m.reply_to else None,
-                "hasMedia": bool(m.media),
-                "hasKeywords": bool(m.keywords)
-            })
-            
-        return {
-            "items": items,
-            "page": page,
-            "pageSize": page_size,
-            "total": total,
-            "hasMore": skip + len(items) < total
-        }
-
-    def _create_base_search_item(self, normalized: dict, status: str, page: int, page_size: int) -> dict:
-        return {
-            "query": normalized["rawValue"],
-            "normalizedQuery": normalized["normalizedValue"],
-            "queryType": normalized["queryType"],
-            "status": status,
-            "profile": None,
-            "candidates": [],
-            "groups": [],
-            "contacts": [],
-            "messagesPage": {
-                "items": [],
-                "page": page,
-                "pageSize": page_size,
-                "total": 0,
-                "hasMore": False
-            },
-            "stats": {
-                "groups": 0,
-                "contacts": 0,
-                "messages": 0
-            },
-            "error": None
-        }
-
-    def _build_search_summary(self, items: list) -> dict:
-        return {
-            "total": len(items),
-            "found": sum(1 for item in items if item["status"] == "found"),
-            "notFound": sum(1 for item in items if item["status"] == "not_found"),
-            "ambiguous": sum(1 for item in items if item["status"] == "ambiguous"),
-            "invalid": sum(1 for item in items if item["status"] == "invalid"),
-            "error": sum(1 for item in items if item["status"] == "error")
-        }
-
-    def _map_candidate(self, u: User) -> dict:
-        profile = self._map_profile(u)
-        return {
-            "telegramId": profile["telegramId"],
-            "username": profile["username"],
-            "phoneNumber": profile["phoneNumber"],
-            "fullName": profile["fullName"]
-        }
-
-    def _map_profile(self, u: User) -> dict:
-        first_name = (u.first_name or "").strip() or None
-        last_name = (u.last_name or "").strip() or None
-        
-        full_name_parts = []
-        if first_name:
-            full_name_parts.append(first_name)
-        if last_name:
-            full_name_parts.append(last_name)
-            
-        full_name = " ".join(full_name_parts).strip()
-        if not full_name:
-            full_name = u.username or str(u.user_id)
-            
-        return {
-            "id": str(u.id),
-            "telegramId": str(u.user_id),
-            "username": u.username,
-            "phoneNumber": u.phone,
-            "firstName": first_name,
-            "lastName": last_name,
-            "fullName": full_name,
-            "bot": bool(u.bot),
-            "scam": bool(u.scam),
-            "premium": bool(u.premium),
-            "updatedAt": u.upd_date.isoformat() if u.upd_date else None
-        }
-
+        return await self.search_service.search(payload)
