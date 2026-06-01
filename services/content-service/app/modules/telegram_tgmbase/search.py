@@ -1,10 +1,10 @@
-﻿import asyncio
+import asyncio
 import logging
 import re
 
 from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
 from app.modules.telegram_tgmbase.models import Channel, Group, Message, Supergroup, User
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("content-service.telegram-tgmbase.search")
@@ -230,22 +230,23 @@ class TelegramTgmbaseSearchService:
         if not peer_ids:
             return []
 
-        query_str = """
-            SELECT
-                m.from_id AS user_id,
-                COUNT(DISTINCT m.peer_id) AS common_peers_count,
-                COUNT(*)::bigint AS message_count
-            FROM message m
-            WHERE m.peer_id IN :peer_ids
-              AND m.from_id IS NOT NULL
-              AND m.from_id <> :user_id
-            GROUP BY m.from_id
-            ORDER BY COUNT(DISTINCT m.peer_id) DESC, COUNT(*) DESC
-            LIMIT 20
-        """
+        common_peers_count = func.count(func.distinct(Message.peer_id)).label(
+            "common_peers_count"
+        )
+        message_count = func.count(Message.id).label("message_count")
+        stmt = (
+            select(Message.from_id, common_peers_count, message_count)
+            .where(
+                Message.peer_id.in_(peer_ids),
+                Message.from_id.is_not(None),
+                Message.from_id != user_id,
+            )
+            .group_by(Message.from_id)
+            .order_by(common_peers_count.desc(), message_count.desc())
+            .limit(20)
+        )
         res = await self.session.execute(
-            text(query_str),
-            {"peer_ids": tuple(peer_ids), "user_id": user_id},
+            stmt,
         )
         rows = res.all()
         if not rows:

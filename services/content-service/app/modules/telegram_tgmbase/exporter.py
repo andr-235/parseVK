@@ -36,7 +36,7 @@ class TelegramDlMatchExporter:
 
         for result in results:
             dl_contact = result.get("dlContact") or {}
-            user = result.get("tgmbaseUser") or {}
+            user = result.get("user") or result.get("tgmbaseUser") or {}
             chats = result.get("chats") or []
             messages = messages_by_result_id.get(str(result.get("id")), [])
             summary.append(
@@ -48,7 +48,7 @@ class TelegramDlMatchExporter:
                     dl_contact.get("telegramId"),
                     dl_contact.get("username"),
                     dl_contact.get("phone"),
-                    user.get("userId") or result.get("tgmbaseUserId"),
+                    user.get("user_id") or user.get("userId") or result.get("tgmbaseUserId"),
                     user.get("username"),
                     user.get("phone"),
                     self._format_chats(chats),
@@ -69,8 +69,8 @@ class TelegramDlMatchExporter:
                             result_id,
                             group.get("peerId"),
                             group.get("title"),
-                            message.get("id"),
-                            message.get("date"),
+                            message.get("messageId") or message.get("id"),
+                            message.get("messageDate") or message.get("date"),
                             message.get("text"),
                         ]
                     )

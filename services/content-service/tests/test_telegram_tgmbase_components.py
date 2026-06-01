@@ -98,8 +98,8 @@ async def test_exporter_writes_match_and_message_sheets():
                     "phone": "+79990000000",
                 },
                 "tgmbaseUserId": "123",
-                "tgmbaseUser": {
-                    "userId": "123",
+                "user": {
+                    "user_id": "123",
                     "username": "base_user",
                     "phone": "+79990000000",
                 },
@@ -111,7 +111,13 @@ async def test_exporter_writes_match_and_message_sheets():
                 {
                     "peerId": "42",
                     "title": "Cases",
-                    "messages": [{"id": "1", "date": "2026-05-31", "text": "hello"}],
+                    "messages": [
+                        {
+                            "messageId": "1",
+                            "messageDate": "2026-05-31",
+                            "text": "hello",
+                        }
+                    ],
                 }
             ]
         },
@@ -122,4 +128,8 @@ async def test_exporter_writes_match_and_message_sheets():
     assert workbook.sheetnames == ["matches", "messages"]
     assert workbook["matches"]["A2"].value == "7"
     assert workbook["matches"]["D2"].value == "telegram_id, phone"
+    assert workbook["matches"]["I2"].value == "base_user"
+    assert workbook["matches"]["J2"].value == "+79990000000"
+    assert workbook["messages"]["D2"].value == "1"
+    assert workbook["messages"]["E2"].value == "2026-05-31"
     assert workbook["messages"]["F2"].value == "hello"
