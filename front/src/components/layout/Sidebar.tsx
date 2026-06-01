@@ -17,65 +17,71 @@ import {
   Shield,
   MessageCircle,
 } from 'lucide-react'
+import { useAuth } from '../../store/auth'
 
 type NavGroup = {
   label: string
   items: { label: string; path: string; icon: React.ReactNode }[]
 }
 
-const groups: NavGroup[] = [
-  {
-    label: 'Контент',
-    items: [
-      { label: 'Комментарии', path: '/comments', icon: <MessageSquareText size={18} /> },
-      { label: 'Группы', path: '/groups', icon: <Building2 size={18} /> },
-      { label: 'Авторы', path: '/authors', icon: <Users size={18} /> },
-      { label: 'На карандаше', path: '/watchlist', icon: <Bookmark size={18} /> },
-    ],
-  },
-  {
-    label: 'Парсинг',
-    items: [
-      { label: 'Задачи', path: '/tasks', icon: <ListTodo size={18} /> },
-      { label: 'Ключевые слова', path: '/keywords', icon: <Tags size={18} /> },
-    ],
-  },
-  {
-    label: 'Telegram',
-    items: [
-      { label: 'Выгрузка пользователей', path: '/telegram', icon: <Send size={18} /> },
-      { label: 'Выгрузка с ДЛ', path: '/telegram/dl-upload', icon: <Upload size={18} /> },
-      { label: 'Поиск по каналам', path: '/tgmbase-search', icon: <Search size={18} /> },
-    ],
-  },
-  {
-    label: 'Мониторинг',
-    items: [
-      { label: 'WhatsApp', path: '/monitoring/whatsapp', icon: <MessageCircle size={18} /> },
-      { label: 'Max', path: '/monitoring/max', icon: <Bell size={18} /> },
-    ],
-  },
-  {
-    label: 'Экспорт',
-    items: [
-      { label: 'Друзья VK', path: '/vk/friends-export', icon: <UserPlus size={18} /> },
-      { label: 'Друзья OK', path: '/ok/friends-export', icon: <UserMinus size={18} /> },
-    ],
-  },
-  {
-    label: 'Прочее',
-    items: [
-      { label: 'Объявления', path: '/listings', icon: <Building2 size={18} /> },
-      { label: 'Метрики', path: '/metrics', icon: <BarChart3 size={18} /> },
-      { label: 'Настройки', path: '/settings', icon: <Settings size={18} /> },
-      { label: 'Админ-панель', path: '/admin/users', icon: <Shield size={18} /> },
-    ],
-  },
-]
+function getGroups(isAdmin: boolean): NavGroup[] {
+  const groups: NavGroup[] = [
+    {
+      label: 'Контент',
+      items: [
+        { label: 'Комментарии', path: '/comments', icon: <MessageSquareText size={18} /> },
+        { label: 'Группы', path: '/groups', icon: <Building2 size={18} /> },
+        { label: 'Авторы', path: '/authors', icon: <Users size={18} /> },
+        { label: 'На карандаше', path: '/watchlist', icon: <Bookmark size={18} /> },
+      ],
+    },
+    {
+      label: 'Парсинг',
+      items: [
+        { label: 'Задачи', path: '/tasks', icon: <ListTodo size={18} /> },
+        { label: 'Ключевые слова', path: '/keywords', icon: <Tags size={18} /> },
+      ],
+    },
+    {
+      label: 'Telegram',
+      items: [
+        { label: 'Выгрузка пользователей', path: '/telegram', icon: <Send size={18} /> },
+        { label: 'Выгрузка с ДЛ', path: '/telegram/dl-upload', icon: <Upload size={18} /> },
+        { label: 'Поиск по каналам', path: '/tgmbase-search', icon: <Search size={18} /> },
+      ],
+    },
+    {
+      label: 'Мониторинг',
+      items: [
+        { label: 'WhatsApp', path: '/monitoring/whatsapp', icon: <MessageCircle size={18} /> },
+        { label: 'Max', path: '/monitoring/max', icon: <Bell size={18} /> },
+      ],
+    },
+    {
+      label: 'Экспорт',
+      items: [
+        { label: 'Друзья VK', path: '/vk/friends-export', icon: <UserPlus size={18} /> },
+        { label: 'Друзья OK', path: '/ok/friends-export', icon: <UserMinus size={18} /> },
+      ],
+    },
+    {
+      label: 'Прочее',
+      items: [
+        { label: 'Объявления', path: '/listings', icon: <Building2 size={18} /> },
+        { label: 'Метрики', path: '/metrics', icon: <BarChart3 size={18} /> },
+        { label: 'Настройки', path: '/settings', icon: <Settings size={18} /> },
+        ...(isAdmin ? [{ label: 'Админ-панель', path: '/admin/users', icon: <Shield size={18} /> }] : []),
+      ],
+    },
+  ]
+  return groups
+}
 
 export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
+  const user = useAuth((s) => s.user)
+  const groups = getGroups(user?.role === 'admin')
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-bg-sidebar py-4">

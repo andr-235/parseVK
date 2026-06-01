@@ -45,3 +45,25 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
   if (!res.ok) throw new ApiError(res.status, await res.text())
   return res.json()
 }
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PATCH',
+    headers: headers(),
+    credentials: 'include',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'DELETE',
+    headers: headers(),
+    credentials: 'include',
+  })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (res.status === 204) return undefined as T
+  return res.json()
+}

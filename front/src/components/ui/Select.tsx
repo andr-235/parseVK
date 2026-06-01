@@ -6,15 +6,17 @@ export type SelectProps<T extends string> = {
   options: readonly T[]
   onChange: (v: T) => void
   label: string
+  id?: string
 }
 
-export function Select<T extends string>({ value, options, onChange, label }: SelectProps<T>) {
+export function Select<T extends string>({ value, options, onChange, label, id }: SelectProps<T>) {
   const [open, setOpen] = useState(false)
   const ref = useClickOutside(() => setOpen(false))
 
   return (
     <div className="relative" ref={ref}>
       <button
+        id={id}
         onClick={() => setOpen(!open)}
         aria-label={label}
         aria-expanded={open}
