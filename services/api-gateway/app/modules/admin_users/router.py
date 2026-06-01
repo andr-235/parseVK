@@ -22,6 +22,16 @@ async def list_users(
     return await service.forward(request, "GET", "/internal/admin/users")
 
 
+@router.patch("/{user_id}")
+async def update_user(
+    user_id: str,
+    payload: dict,
+    request: Request,
+    service: AdminUsersGatewayService = Depends(get_admin_users_gateway_service),
+):
+    return await service.forward(request, "PATCH", f"/internal/admin/users/{user_id}", json=payload)
+
+
 @router.delete("/{user_id}", status_code=204)
 async def delete_user(
     user_id: str,

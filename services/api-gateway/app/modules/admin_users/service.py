@@ -26,7 +26,8 @@ class AdminUsersGatewayService:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized") from exc
 
         # Check for admin role
-        if claims.get("role") != "admin":
+        roles: list[str] = claims.get("roles") or []
+        if "admin" not in roles:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
         request_id, correlation_id = request_ids(request)
