@@ -363,13 +363,15 @@ class CommentsGatewayService:
             posts_dict = {p["externalKey"]: p for p in posts}
 
             if group_vk_ids:
-                group_resp = await client.post(
-                    f"{self.content_url}/internal/content/groups/bulk",
+                groups = await self._content_request(
+                    "POST",
+                    "/internal/content/groups/bulk",
+                    user_id=user_id,
+                    request_id=request_id,
+                    correlation_id=correlation_id,
                     json=list(group_vk_ids),
-                    headers=self.headers,
                 )
-                if group_resp.status_code == 200:
-                    groups_dict = {g["vkGroupId"]: g for g in group_resp.json()}
+                groups_dict = {g["vkGroupId"]: g for g in groups}
 
         enriched_items = []
         for item in items:

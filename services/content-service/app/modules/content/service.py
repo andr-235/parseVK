@@ -6,7 +6,16 @@ from datetime import datetime, timezone
 from app.modules.content.photo_analysis import PhotoAnalysisClient
 
 logger = logging.getLogger(__name__)
-SUPPORTED_AUTHOR_SORT_FIELDS = {"fullName", "firstName", "lastName", "followersCount", "verifiedAt", "updatedAt"}
+SUPPORTED_AUTHOR_SORT_FIELDS = {
+    "fullName",
+    "firstName",
+    "lastName",
+    "followersCount",
+    "verifiedAt",
+    "createdAt",
+    "created_at",
+    "updatedAt",
+}
 
 
 class ContentRepo(Protocol):

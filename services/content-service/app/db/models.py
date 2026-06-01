@@ -57,6 +57,7 @@ class ContentAuthor(Base):
     country: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     followers_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column("verifiedAt", DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 

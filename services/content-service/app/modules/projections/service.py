@@ -122,6 +122,7 @@ class ProjectionRepository:
             photo_200=author.get("photo_200"),
             domain=author.get("domain"),
             screen_name=author.get("screen_name"),
+            created_at=now,
             updated_at=now,
         )
         stmt = stmt.on_conflict_do_update(

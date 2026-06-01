@@ -242,7 +242,7 @@ class ContentRepository:
             "lastSeenAt": None,
             "verifiedAt": dt(row.verified_at),
             "isVerified": bool(row.verified_at),
-            "createdAt": dt(row.updated_at),
+            "createdAt": dt(row.created_at),
             "updatedAt": dt(row.updated_at),
         }
 
@@ -328,6 +328,8 @@ class ContentRepository:
             "lastName": ContentAuthor.last_name,
             "followersCount": ContentAuthor.followers_count,
             "verifiedAt": ContentAuthor.verified_at,
+            "createdAt": ContentAuthor.created_at,
+            "created_at": ContentAuthor.created_at,
             "updatedAt": ContentAuthor.updated_at,
         }
         if sort_by and sort_by not in fields:

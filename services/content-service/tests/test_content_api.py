@@ -93,6 +93,7 @@ class FakeRepository:
         search=None,
         city=None,
         verified=None,
+        author_type=None,
         sort_by=None,
         sort_order="desc",
     ):
@@ -228,14 +229,25 @@ class FakeService:
                 item["summary"] = summary
                 item["photosCount"] = summary.get("total", item.get("photosCount"))
 
-    async def list_authors(self, limit=20, page=None, offset=None, search=None, city=None, verified=None, sort_by=None, sort_order="desc"):
+    async def list_authors(
+        self,
+        limit=20,
+        page=None,
+        offset=None,
+        search=None,
+        city=None,
+        verified=None,
+        author_type=None,
+        sort_by=None,
+        sort_order="desc",
+    ):
         if city is not None:
             from fastapi import HTTPException, status
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Author city filter is not supported by the content projection")
         if verified not in {None, "", "all"}:
             from fastapi import HTTPException, status
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Author verified filter is not supported by the content projection")
-        if sort_by and sort_by not in {"fullName", "updatedAt"}:
+        if sort_by and sort_by not in {"fullName", "created_at", "updatedAt"}:
             from fastapi import HTTPException, status
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported author sort field: {sort_by}")
         resolved_offset = offset if offset is not None else ((page or 1) - 1) * limit
@@ -394,6 +406,45 @@ async def test_authors_accept_updated_at_sort(app, service_instance):
         None,
         None,
         "updatedAt",
+        "desc",
+    )
+
+
+@pytest.mark.anyio
+async def test_authors_accept_created_at_sort(app, service_instance):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/internal/content/authors?sortBy=created_at&sortOrder=desc",
+            headers=headers(),
+        )
+
+    assert response.status_code == 200
+    assert service_instance._repo.calls[0] == (
+        "list_authors",
+        0,
+        20,
+        None,
+        None,
+        None,
+        "created_at",
+        "desc",
+    )
+
+
+@pytest.mark.anyio
+async def test_content_service_accepts_created_at_sort(repository, photo_analysis_client):
+    service = ContentService(repo=repository, photo_analysis=photo_analysis_client)
+
+    await service.list_authors(sort_by="created_at", sort_order="desc")
+
+    assert repository.calls[0] == (
+        "list_authors",
+        0,
+        20,
+        None,
+        None,
+        None,
+        "created_at",
         "desc",
     )
 
