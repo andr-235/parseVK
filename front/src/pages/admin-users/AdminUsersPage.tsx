@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useRef, memo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Trash2, KeyRound, RefreshCw, Plus, Check, X, Edit3 } from 'lucide-react'
 import { Button, Input, Select, Checkbox, ConfirmAction } from '../../components/ui'
+import { PageShell } from '../../components/layout/PageShell'
 import { TableHead } from '../../components/widgets/table/TableHead'
 import type { Column } from '../../components/widgets/table/constants'
 import { useDebounce } from '../../shared/hooks/useDebounce'
@@ -483,8 +484,7 @@ export function AdminUsersPage() {
   }, [])
 
   return (
-    <div className="flex flex-1 flex-col p-4">
-      <h1 className="mb-4 text-lg font-semibold text-text-primary">Админ-панель</h1>
+    <PageShell title="Админ-панель">
 
       {tempPassword && (
         <TempPasswordBanner password={tempPassword} onClose={() => setTempPassword(null)} />
@@ -573,6 +573,6 @@ export function AdminUsersPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageShell>
   )
 }

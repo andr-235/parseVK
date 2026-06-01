@@ -6,7 +6,7 @@ import { CommentsPage } from '../CommentsPage'
 let mockTableError: string | null = null
 let mockTableRetryVersion = 0
 
-vi.mock('../../../components/widgets/comments/table/CommentsTable', () => ({
+vi.mock('../../../components/widgets/table/CommentsTable', () => ({
   CommentsTable: vi.fn(({ onSelect, onError }: { onSelect: (c: unknown) => void; onError: (e: string | null) => void }) => {
     setTimeout(() => onError(mockTableError), 0)
     mockTableRetryVersion++

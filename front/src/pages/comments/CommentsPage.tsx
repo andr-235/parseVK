@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '../../components/ui'
-import { CommentsTable } from '../../components/widgets/comments/table/CommentsTable'
+import { PageShell } from '../../components/layout/PageShell'
+import { CommentsTable } from '../../components/widgets/table/CommentsTable'
 import { CommentDetail } from '../../components/widgets/comments/detail/CommentDetail'
 import type { Comment } from '../../types/comments'
 
@@ -39,18 +40,15 @@ export function CommentsPage() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0">
-      <div className="flex flex-1 flex-col min-w-0 p-6">
-        <h1 className="mb-6 text-lg font-semibold text-text-primary">Комментарии</h1>
-        <CommentsTable
-          onSelect={handleSelect}
-          selectedId={selectedId}
-          onError={setQueryError}
-        />
-      </div>
-      {selectedComment && (
-        <CommentDetail comment={selectedComment} onClose={handleClose} />
-      )}
-    </div>
+    <PageShell
+      title="Комментарии"
+      sidebar={selectedComment && <CommentDetail comment={selectedComment} onClose={handleClose} />}
+    >
+      <CommentsTable
+        onSelect={handleSelect}
+        selectedId={selectedId}
+        onError={setQueryError}
+      />
+    </PageShell>
   )
 }
