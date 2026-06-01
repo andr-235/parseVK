@@ -84,6 +84,9 @@ def test_mapper_builds_dl_match_result_with_typed_user_schema():
             "scam": False,
             "bot": False,
             "upd_date": "2026-05-30T10:00:00+00:00",
+            "relatedChats": [
+                {"type": "channel", "peer_id": "99", "title": "Persisted stale chat"}
+            ],
         },
         chats=[
             SimpleNamespace(chat_type="group", peer_id="42", title="Cases", is_excluded=False),
