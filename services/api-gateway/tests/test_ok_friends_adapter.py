@@ -1,21 +1,21 @@
+﻿# ruff: noqa: E402, S108
 import sys
-import pytest
-import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
+
+import pytest
 from httpx import ASGITransport, AsyncClient
-from fastapi import FastAPI, Depends
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
+
 use_service_path()
 
-from app.main import create_app
-from app.core.config import settings
-from app.core.security import require_auth
 from app.clients.vk_service.client import VkServiceClient
-from app.modules.ok_friends.adapters import OkFriendsAdapter
+from app.core.security import require_auth
+from app.main import create_app
 from app.modules.friends_export.models import JobStatus
+from app.modules.ok_friends.adapters import OkFriendsAdapter
 
 
 @pytest.fixture
@@ -144,6 +144,30 @@ async def test_adapter_stream_job():
 
     done_event = [e for e in events if e.type == "done"][0]
     assert done_event.data.xlsxPath == "/tmp/test_ok.xlsx"
+
+
+@pytest.mark.anyio
+async def test_adapter_get_xlsx_bytes_uses_ok_provider():
+    client_mock = AsyncMock()
+    client_mock.get_xlsx_bytes.return_value = b"xlsx"
+
+    adapter = OkFriendsAdapter(
+        client=client_mock,
+        user_id="user-777",
+        request_id="req-111",
+        correlation_id="corr-222",
+    )
+
+    result = await adapter.get_xlsx_bytes("job-123")
+
+    assert result == b"xlsx"
+    client_mock.get_xlsx_bytes.assert_called_once_with(
+        "job-123",
+        provider="ok",
+        user_id="user-777",
+        request_id="req-111",
+        correlation_id="corr-222",
+    )
 
 
 @pytest.mark.anyio

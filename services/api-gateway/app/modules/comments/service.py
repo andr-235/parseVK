@@ -1,14 +1,26 @@
-import httpx
-from fastapi import HTTPException
+from typing import Any
 
-from app.core.config import settings
+from app.clients.content.client import (
+    ContentClient,
+    ContentClientHTTPError,
+    ContentClientUnavailableError,
+)
+from app.clients.moderation.client import (
+    ModerationClient,
+    ModerationClientHTTPError,
+    ModerationClientUnavailableError,
+)
+from fastapi import HTTPException, status
 
 
 class CommentsGatewayService:
-    def __init__(self):
-        self.moderation_url = settings.moderation_base_url
-        self.content_url = settings.content_base_url
-        self.headers = {"X-Internal-Service-Token": settings.internal_service_token}
+    def __init__(
+        self,
+        moderation_client: ModerationClient | None = None,
+        content_client: ContentClient | None = None,
+    ):
+        self.moderation_client = moderation_client or ModerationClient()
+        self.content_client = content_client or ContentClient()
 
     # ------------------------------------------------------------------ #
     #  Public methods                                                      #
@@ -22,6 +34,9 @@ class CommentsGatewayService:
         keyword_source: str | None = None,
         read_status: str | None = None,
         search: str | None = None,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         params: dict = {"page": page, "limit": limit}
         if read_status:
@@ -34,16 +49,21 @@ class CommentsGatewayService:
             # httpx accepts list values for multi-value params
             params["keywords"] = keywords
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.moderation_url}/internal/moderation/comments",
-                params=params,
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
+        raw = await self._moderation_request(
+            "GET",
+            "/internal/moderation/comments",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            params=params,
+        )
 
-        items = await self._enrich_comments(raw["items"])
+        items = await self._enrich_comments(
+            raw["items"],
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
         return {
             "items": items,
             "total": raw["total"],
@@ -60,6 +80,9 @@ class CommentsGatewayService:
         keyword_source: str | None = None,
         read_status: str | None = None,
         search: str | None = None,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         params: dict = {"limit": limit}
         if cursor:
@@ -72,16 +95,21 @@ class CommentsGatewayService:
         if keywords:
             params["keywords"] = keywords
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.moderation_url}/internal/moderation/comments/cursor",
-                params=params,
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
+        raw = await self._moderation_request(
+            "GET",
+            "/internal/moderation/comments/cursor",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            params=params,
+        )
 
-        items = await self._enrich_comments(raw["items"])
+        items = await self._enrich_comments(
+            raw["items"],
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
         return {
             "items": items,
             "nextCursor": raw["next_cursor"],
@@ -91,7 +119,15 @@ class CommentsGatewayService:
             "unreadCount": raw["unread_count"],
         }
 
-    async def patch_read_status(self, id: int, payload: dict) -> dict:
+    async def patch_read_status(
+        self,
+        id: int,
+        payload: dict,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
         # Adapt camelCase frontend payload to snake_case internal payload
         is_read = payload.get("isRead")
         if is_read is None:
@@ -101,19 +137,31 @@ class CommentsGatewayService:
         if not isinstance(is_read, bool):
             raise HTTPException(status_code=422, detail="isRead field must be a boolean")
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.patch(
-                f"{self.moderation_url}/internal/moderation/comments/{id}/read",
-                json={"is_read": is_read},
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            item = resp.json()
+        item = await self._moderation_request(
+            "PATCH",
+            f"/internal/moderation/comments/{id}/read",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            json={"is_read": is_read},
+        )
 
-        enriched = await self._enrich_comments([item])
+        enriched = await self._enrich_comments(
+            [item],
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
         return enriched[0] if enriched else item
 
-    async def search_comments(self, payload: dict) -> dict:
+    async def search_comments(
+        self,
+        payload: dict,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict:
         """Fallback search via moderation-service.
 
         Maps frontend CommentsSearchRequestDto to moderation-service query params.
@@ -137,14 +185,14 @@ class CommentsGatewayService:
         if read_status and read_status != "all":
             params["readStatus"] = read_status
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.moderation_url}/internal/moderation/comments",
-                params=params,
-                headers=self.headers,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
+        raw = await self._moderation_request(
+            "GET",
+            "/internal/moderation/comments",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            params=params,
+        )
 
         raw_items = raw.get("items", [])
         total = raw.get("total", len(raw_items))
@@ -168,9 +216,10 @@ class CommentsGatewayService:
     # ------------------------------------------------------------------ #
 
     def _format_comment_search_item(self, item: dict, query: str) -> dict:
-        highlight: list[str] = [query] if query and item.get("text") and query.lower() in item["text"].lower() else []
+        highlight: list[str] = []
+        if query and item.get("text") and query.lower() in item["text"].lower():
+            highlight = [query]
         parts = (item.get("external_key") or "").split(":")
-        comment_id = int(parts[2]) if len(parts) > 2 else None
         post_id = int(parts[1]) if len(parts) > 1 else None
         return {
             "type": "comment",
@@ -204,12 +253,77 @@ class CommentsGatewayService:
 
         return [posts[k] for k in order]
 
-    async def _enrich_comments(self, items: list[dict]) -> list[dict]:
+    async def _moderation_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+        params: dict | None = None,
+        json: Any | None = None,
+    ) -> dict:
+        try:
+            return await self.moderation_client.request(
+                method,
+                path,
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                params=params,
+                json=json,
+            )
+        except ModerationClientHTTPError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        except ModerationClientUnavailableError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Moderation service unavailable",
+            ) from exc
+
+    async def _content_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+        json: Any | None = None,
+    ) -> Any:
+        try:
+            return await self.content_client.request(
+                method,
+                path,
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                json=json,
+            )
+        except ContentClientHTTPError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        except ContentClientUnavailableError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Content service unavailable",
+            ) from exc
+
+    async def _enrich_comments(
+        self,
+        items: list[dict],
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> list[dict]:
         if not items:
             return items
 
         author_vk_ids = list({item["author_vk_id"] for item in items if item.get("author_vk_id")})
-        post_external_keys = list({item["post_external_key"] for item in items if item.get("post_external_key")})
+        post_external_keys = list(
+            {item["post_external_key"] for item in items if item.get("post_external_key")}
+        )
 
         group_vk_ids: set[int] = set()
         for item in items:
@@ -226,24 +340,27 @@ class CommentsGatewayService:
         posts_dict: dict = {}
         groups_dict: dict = {}
 
-        async with httpx.AsyncClient() as client:
-            if author_vk_ids:
-                author_resp = await client.post(
-                    f"{self.content_url}/internal/content/authors/bulk",
-                    json=author_vk_ids,
-                    headers=self.headers,
-                )
-                if author_resp.status_code == 200:
-                    authors_dict = {a["vkAuthorId"]: a for a in author_resp.json()}
+        if author_vk_ids:
+            authors = await self._content_request(
+                "POST",
+                "/internal/content/authors/bulk",
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                json=author_vk_ids,
+            )
+            authors_dict = {a["vkAuthorId"]: a for a in authors}
 
-            if post_external_keys:
-                post_resp = await client.post(
-                    f"{self.content_url}/internal/content/posts/bulk",
-                    json=post_external_keys,
-                    headers=self.headers,
-                )
-                if post_resp.status_code == 200:
-                    posts_dict = {p["externalKey"]: p for p in post_resp.json()}
+        if post_external_keys:
+            posts = await self._content_request(
+                "POST",
+                "/internal/content/posts/bulk",
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                json=post_external_keys,
+            )
+            posts_dict = {p["externalKey"]: p for p in posts}
 
             if group_vk_ids:
                 group_resp = await client.post(

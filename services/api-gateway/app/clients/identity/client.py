@@ -1,14 +1,6 @@
 from typing import Any
 
 import httpx
-
-from common.headers import (
-    CALLER_SERVICE_HEADER,
-    CORRELATION_ID_HEADER,
-    INTERNAL_SERVICE_TOKEN_HEADER,
-    REQUEST_ID_HEADER,
-)
-
 from app.clients.identity.schemas import (
     IdentityAuthResponse,
     IdentityChangePasswordRequest,
@@ -16,6 +8,11 @@ from app.clients.identity.schemas import (
     IdentityLogoutRequest,
     IdentityRefreshRequest,
     IdentityUser,
+)
+from app.clients.internal import (
+    InternalClientHTTPError,
+    InternalClientUnavailableError,
+    InternalServiceClient,
 )
 from app.core.config import settings
 
@@ -41,39 +38,31 @@ class IdentityClient:
         base_url: str | None = None,
         client: httpx.AsyncClient | None = None,
     ):
-        self.base_url = (base_url or settings.identity_base_url).rstrip("/")
-        self._client = client or httpx.AsyncClient(
-            base_url=self.base_url,
+        self._internal = InternalServiceClient(
+            service_name="Identity",
+            base_url=base_url or settings.identity_base_url,
+            internal_token=settings.internal_service_token,
             timeout=httpx.Timeout(
                 timeout=5.0,
                 connect=2.0,
                 read=5.0,
                 write=5.0,
             ),
+            client=client,
         )
-        self._owns_client = client is None
+        self.base_url = self._internal.base_url
+        self._client = self._internal._client
+        self._owns_client = self._internal._owns_client
 
     async def close(self) -> None:
-        if self._owns_client:
-            await self._client.aclose()
+        await self._internal.close()
 
     def _headers(
         self,
         request_id: str | None,
         correlation_id: str | None,
     ) -> dict[str, str]:
-        headers = {
-            INTERNAL_SERVICE_TOKEN_HEADER: settings.internal_service_token,
-            CALLER_SERVICE_HEADER: "api-gateway",
-        }
-
-        if request_id:
-            headers[REQUEST_ID_HEADER] = request_id
-
-        if correlation_id:
-            headers[CORRELATION_ID_HEADER] = correlation_id
-
-        return headers
+        return self._internal.headers(request_id=request_id, correlation_id=correlation_id)
 
     async def _request(
         self,
@@ -88,7 +77,23 @@ class IdentityClient:
         headers = kwargs.pop("headers", {})
 
         if internal:
-            headers.update(self._headers(request_id, correlation_id))
+            try:
+                return await self._internal.raw_request(
+                    method,
+                    url,
+                    request_id=request_id,
+                    correlation_id=correlation_id,
+                    **kwargs,
+                )
+            except InternalClientHTTPError as exc:
+                raise IdentityClientHTTPError(
+                    status_code=exc.status_code,
+                    detail=exc.detail,
+                ) from exc
+            except InternalClientUnavailableError as exc:
+                raise IdentityClientUnavailableError(
+                    "Identity service is unavailable"
+                ) from exc
 
         try:
             response = await self._client.request(
