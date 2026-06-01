@@ -93,7 +93,7 @@ class TelegramTgmbaseSearchService:
             profile = matches[0]
             peers = await self._find_peers_for_user(profile.user_id)
 
-            # РЎС‚СЂРѕРёРј РјР°РїСѓ РґР»СЏ peers
+            # Строим мапу для peers.
             peer_map = {peer["peerId"]: peer for peer in peers}
 
             contacts, messages_page = await asyncio.gather(
@@ -369,3 +369,4 @@ class TelegramTgmbaseSearchService:
             "invalid": sum(1 for item in items if item["status"] == "invalid"),
             "error": sum(1 for item in items if item["status"] == "error")
         }
+
