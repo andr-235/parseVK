@@ -1,7 +1,7 @@
 import { CheckCircle, Flag, ExternalLink } from 'lucide-react'
-import { Button, Checkbox } from '../../../ui'
+import { Button, Checkbox } from '../../ui'
 import { StatusCell } from './StatusCell'
-import type { Comment, Status } from '../../../../types/comments'
+import type { Comment, Status } from '../../../types/comments'
 
 export type TableBodyProps = {
   rows: Comment[]

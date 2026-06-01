@@ -1,6 +1,6 @@
 import { RotateCcw } from 'lucide-react'
-import { Button } from '../../../ui'
-import type { UndoEntry } from '../../../../types/comments'
+import { Button } from '../../ui'
+import type { UndoEntry } from '../../../types/comments'
 
 export type UndoBarProps = {
   undo: UndoEntry

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CheckCircle, Flag, HelpCircle, Circle } from 'lucide-react'
-import { useClickOutside } from '../../../../shared/hooks/useClickOutside'
-import { ALL_STATUSES, statusColors, type Status } from '../../../../types/comments'
+import { useClickOutside } from '../../../shared/hooks/useClickOutside'
+import { ALL_STATUSES, statusColors, type Status } from '../../../types/comments'
 
 const statusIcons: Record<Status, typeof CheckCircle> = {
   Чисто: CheckCircle,

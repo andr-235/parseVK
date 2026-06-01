@@ -1,5 +1,5 @@
 import { CheckCircle, Flag, HelpCircle, Circle } from 'lucide-react'
-import type { Status } from '../../../../types/comments'
+import type { Status } from '../../../types/comments'
 
 const LEGEND: { label: Status; Icon: typeof CheckCircle }[] = [
   { label: 'Чисто', Icon: CheckCircle },

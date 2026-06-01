@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Button, Select } from '../../../ui'
+import { Button, Select } from '../../ui'
 import { PAGE_SIZE_OPTIONS } from './constants'
 
 export type PaginationBarProps = {

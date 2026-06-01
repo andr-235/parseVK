@@ -1,5 +1,5 @@
 import { CheckCircle, Flag, HelpCircle, X } from 'lucide-react'
-import { Button } from '../../../ui'
+import { Button } from '../../ui'
 import { STATUS_ACTIONS } from './constants'
 
 const ICONS: Record<string, React.ReactNode> = {

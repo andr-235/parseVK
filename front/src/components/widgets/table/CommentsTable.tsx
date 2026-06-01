@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { useDebounce } from '../../../../shared/hooks/useDebounce'
-import { useSelection } from '../../../../shared/hooks/useSelection'
-import { useComments } from '../../../../shared/hooks/useComments'
+import { useDebounce } from '../../../shared/hooks/useDebounce'
+import { useSelection } from '../../../shared/hooks/useSelection'
+import { useComments } from '../../../shared/hooks/useComments'
 import { FilterToolbar } from './FilterToolbar'
 import { TableShell } from './TableShell'
 import { TableHead } from './TableHead'
@@ -12,11 +12,20 @@ import { BatchActionBar } from './BatchActionBar'
 import { StatusLegend } from './StatusLegend'
 import { EmptyState } from './EmptyState'
 import { TableSkeleton } from './TableSkeleton'
-import { type Status, type Comment, type UndoEntry } from '../../../../types/comments'
+import { type Status, type Comment, type UndoEntry } from '../../../types/comments'
+import type { Column } from './constants'
 
 export type SortKey = 'text' | 'group' | 'author' | 'date' | 'status'
 export type SortDir = 'asc' | 'desc'
 export type SortConfig = { key: SortKey; dir: SortDir }
+
+const commentColumns: Column[] = [
+  { key: 'text', label: 'Текст', sortable: true },
+  { key: 'group', label: 'Группа', sortable: true, hide: 'hidden sm:table-cell' },
+  { key: 'author', label: 'Автор', sortable: true, hide: 'hidden sm:table-cell' },
+  { key: 'date', label: 'Дата', sortable: true, hide: 'hidden md:table-cell' },
+  { key: 'status', label: 'Статус', sortable: true },
+]
 
 type CommentsTableProps = {
   onSelect: (c: Comment) => void
@@ -51,8 +60,8 @@ export function CommentsTable({ onSelect, selectedId, onError }: CommentsTablePr
   const total = query.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  const handleSort = useCallback((key: SortKey) => {
-    setSort((prev) => prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' })
+  const handleSort = useCallback((key: string) => {
+    setSort((prev) => prev.key === key ? { key: key as SortKey, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key: key as SortKey, dir: 'asc' })
   }, [])
 
   const paged = useMemo(() => {
@@ -159,8 +168,8 @@ export function CommentsTable({ onSelect, selectedId, onError }: CommentsTablePr
         <EmptyState onReset={resetFilters} />
       ) : (
         <>
-          <TableShell tableRef={tableRef} onKeyDown={handleKeyDown}>
-            <TableHead allChecked={count === paged.length} onToggleAll={handleToggleAll} sort={sort} onSort={handleSort} />
+          <TableShell tableRef={tableRef} onKeyDown={handleKeyDown} ariaLabel="Таблица комментариев. Используйте стрелки для навигации, C/V/R для статусов.">
+            <TableHead columns={commentColumns} allChecked={count === paged.length} onToggleAll={handleToggleAll} sort={sort} onSort={handleSort} />
             <TableBody
               rows={paged} selectedId={selectedId} focusedIndex={focusedIndex}
               selectedRows={selected} onSelect={onSelect}

@@ -8,7 +8,7 @@ export function TableSkeleton() {
         <div className="ml-auto h-8 w-24 animate-pulse rounded-md bg-bg-hover" />
       </div>
       <div className="min-w-0 overflow-x-auto rounded-lg border border-border bg-bg-main">
-        <table className="w-full text-sm" role="table">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-bg-sidebar">
               {Array.from({ length: 7 }).map((_, i) => (

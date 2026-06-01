@@ -1,5 +1,5 @@
 import { Download, X } from 'lucide-react'
-import { Button, Input, Select } from '../../../ui'
+import { Button, Input, Select } from '../../ui'
 import { GROUP_OPTIONS, STATUS_FILTER_OPTIONS } from './constants'
 
 export type FilterToolbarProps = {

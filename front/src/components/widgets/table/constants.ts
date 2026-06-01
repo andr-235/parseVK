@@ -1,3 +1,11 @@
+export type Column = {
+  key: string
+  label: string
+  className?: string
+  sortable?: boolean
+  hide?: string
+}
+
 export const GROUP_OPTIONS = ['Все группы', 'Группа А', 'Группа Б', 'Группа В'] as const
 
 export const STATUS_FILTER_OPTIONS = ['Все статусы', 'Новый', 'Проверка', 'Чисто', 'Нарушение'] as const
