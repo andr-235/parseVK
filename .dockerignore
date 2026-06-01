@@ -6,6 +6,8 @@ front/dist
 api/node_modules
 front/node_modules
 node_modules
+.venv
+**/.venv
 
 # Git and env
 .git
