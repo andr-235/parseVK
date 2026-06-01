@@ -56,7 +56,7 @@ describe('AdminUsersPage', () => {
     expect(await screen.findByText('user2')).toBeInTheDocument()
     expect(await screen.findByText('Админ')).toBeInTheDocument()
     expect(await screen.findByText('Пользователь')).toBeInTheDocument()
-    expect(await screen.findByText('ОК')).toBeInTheDocument()
+    expect(await screen.findByText('Постоянный')).toBeInTheDocument()
     const tempPwElements = await screen.findAllByText('Врем. пароль')
     expect(tempPwElements.length).toBeGreaterThanOrEqual(1)
   })

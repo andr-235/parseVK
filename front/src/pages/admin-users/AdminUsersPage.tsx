@@ -1,8 +1,10 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useRef, memo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Trash2, KeyRound, RefreshCw, Plus, Check, X, AlertTriangle, ShieldAlert, Edit3 } from 'lucide-react'
-import { Button, Input, Select, Checkbox, TableSkeleton } from '../../components/ui'
-import { ApiError } from '../../shared/api/client'
+import { Trash2, KeyRound, RefreshCw, Plus, Check, X, Edit3 } from 'lucide-react'
+import { Button, Input, Select, Checkbox, ConfirmAction } from '../../components/ui'
+import { TableHead } from '../../components/widgets/table/TableHead'
+import type { Column } from '../../components/widgets/table/constants'
+import { useDebounce } from '../../shared/hooks/useDebounce'
 import {
   fetchAdminUsers,
   createAdminUser,
@@ -14,6 +16,16 @@ import {
 } from '../../shared/api/admin-users'
 
 const ROLE_OPTIONS = ['user', 'admin'] as const
+const ROLE_FILTER_OPTIONS = ['Все', 'admin', 'user'] as const
+
+const columns: Column[] = [
+  { key: 'username', label: 'Логин', sortable: true },
+  { key: 'role', label: 'Роль', className: 'w-28', sortable: true, hide: 'hidden sm:table-cell' },
+  { key: 'isActive', label: 'Статус', className: 'w-28', sortable: true },
+  { key: 'isTemporaryPassword', label: 'Пароль', className: 'w-28', sortable: true, hide: 'hidden sm:table-cell' },
+  { key: 'createdAt', label: 'Создан', className: 'w-28', sortable: true, hide: 'hidden md:table-cell' },
+  { key: 'actions', label: 'Действия', sortable: false },
+]
 
 type CreateState = {
   username: string
@@ -23,17 +35,7 @@ type CreateState = {
 
 const initialCreate: CreateState = { username: '', password: '', role: 'user' }
 
-function formatError(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.status === 403) return 'Доступ запрещён. Только администраторы могут управлять пользователями.'
-    if (err.status === 401) return 'Сессия истекла. Войдите заново.'
-    return err.message
-  }
-  if (err instanceof Error) return err.message
-  return 'Ошибка загрузки'
-}
-
-function CreateRow({
+const CreateRow = memo(function CreateRow({
   expanded,
   onToggle,
   onCreated,
@@ -78,7 +80,7 @@ function CreateRow({
     return (
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-text-muted hover:bg-bg-hover transition-colors duration-150 border-b border-border"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-muted hover:bg-bg-hover transition-colors duration-150 border-b border-border"
       >
         <Plus size={14} />
         Создать пользователя...
@@ -88,7 +90,7 @@ function CreateRow({
 
   return (
     <div className="border-b border-border bg-bg-hover/30">
-      <div className="flex items-end gap-3 px-3 py-2.5">
+      <div className="flex items-end gap-3 px-3 py-2">
         <div className="flex-1">
           <label htmlFor="create-username" className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
             Логин
@@ -137,30 +139,32 @@ function CreateRow({
       )}
     </div>
   )
-}
+})
 
-function UserRow({
+const UserRow = memo(function UserRow({
   user,
   onPasswordSet,
   isEditing,
   canEdit,
   onEditToggle,
+  onEditSaved,
 }: {
   user: AdminUser
   onPasswordSet: (pw: string) => void
   isEditing: boolean
   canEdit: boolean
   onEditToggle: () => void
+  onEditSaved?: () => void
 }) {
   const queryClient = useQueryClient()
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [confirmingAction, setConfirmingAction] = useState<'delete' | 'tempPw' | 'reset' | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteAdminUser(user.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
-      setConfirmingDelete(false)
+      setConfirmingAction(null)
     },
     onError: (err: Error) => setActionError(err.message),
   })
@@ -169,17 +173,19 @@ function UserRow({
     mutationFn: () => setTemporaryPassword(user.id),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      setConfirmingAction(null)
       onPasswordSet(data.temporaryPassword)
     },
-    onError: (err: Error) => setActionError(err.message),
+    onError: (err: Error) => { setActionError(err.message); setConfirmingAction(null) },
   })
 
   const resetPwMutation = useMutation({
     mutationFn: () => resetPassword(user.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      setConfirmingAction(null)
     },
-    onError: (err: Error) => setActionError(err.message),
+    onError: (err: Error) => { setActionError(err.message); setConfirmingAction(null) },
   })
 
   const handleEditToggle = useCallback(() => {
@@ -187,14 +193,20 @@ function UserRow({
     onEditToggle()
   }, [onEditToggle])
 
+  const handleEditSaved = useCallback(() => {
+    setActionError(null)
+    onEditToggle()
+    onEditSaved?.()
+  }, [onEditToggle, onEditSaved])
+
   if (isEditing) {
-    return <EditRow user={user} onSaved={handleEditToggle} onCancel={handleEditToggle} />
+    return <EditRow user={user} onSaved={handleEditSaved} onCancel={handleEditToggle} />
   }
 
   return (
     <tr className="border-b border-border last:border-0 hover:bg-bg-hover transition-colors duration-150">
-      <td className="px-3 py-2.5 text-sm text-text-primary">{user.username}</td>
-      <td className="px-3 py-2.5">
+      <td className="px-3 py-2 text-sm text-text-primary">{user.username}</td>
+      <td className="px-3 py-2">
         <span className={`inline-block rounded-sm px-1.5 py-0.5 text-xs font-medium uppercase tracking-wider ${
           user.role === 'admin'
             ? 'bg-accent-soft text-accent'
@@ -203,7 +215,7 @@ function UserRow({
           {user.role === 'admin' ? 'Админ' : 'Пользователь'}
         </span>
       </td>
-      <td className="px-3 py-2.5">
+      <td className="px-3 py-2">
         <span className={`inline-flex items-center gap-1 text-xs font-medium ${
           user.isActive ? 'text-success' : 'text-danger'
         }`}>
@@ -211,27 +223,44 @@ function UserRow({
           {user.isActive ? 'Активен' : 'Неактивен'}
         </span>
       </td>
-      <td className="px-3 py-2.5">
+      <td className="px-3 py-2">
         <span className={`inline-flex items-center gap-1 text-xs font-medium ${
           user.isTemporaryPassword ? 'text-warning' : 'text-success'
         }`}>
           <span className={`inline-block h-1.5 w-1.5 rounded-full ${user.isTemporaryPassword ? 'bg-warning' : 'bg-success'}`} />
-          {user.isTemporaryPassword ? 'Врем. пароль' : 'ОК'}
+          {user.isTemporaryPassword ? 'Врем. пароль' : 'Постоянный'}
         </span>
       </td>
-      <td className="px-3 py-2.5 text-sm text-text-secondary">{user.createdAt ? new Date(user.createdAt).toLocaleDateString('ru-RU') : '—'}</td>
-      <td className="px-3 py-2.5">
-        {confirmingDelete ? (
-          <div className="flex items-center gap-2 text-xs">
-            <AlertTriangle size={12} className="text-danger" />
-            <span className="text-text-secondary">Удалить?</span>
-            <Button variant="primary" size="xs" semantic="danger" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending ? 'Удаление...' : 'Да'}
-            </Button>
-            <Button variant="secondary" size="xs" onClick={() => { setConfirmingDelete(false); setActionError(null) }} disabled={deleteMutation.isPending}>
-              Отмена
-            </Button>
-          </div>
+      <td className="px-3 py-2 text-sm text-text-secondary">{user.createdAt ? new Date(user.createdAt).toLocaleDateString('ru-RU') : '—'}</td>
+      <td className="px-3 py-2">
+        {confirmingAction === 'delete' ? (
+          <ConfirmAction
+            onConfirm={() => deleteMutation.mutate()}
+            onCancel={() => { setConfirmingAction(null); setActionError(null) }}
+            isLoading={deleteMutation.isPending}
+            showIcon
+            loadingLabel="Удаление..."
+          />
+        ) : confirmingAction === 'tempPw' ? (
+          <ConfirmAction
+            onConfirm={() => tempPwMutation.mutate()}
+            onCancel={() => { setConfirmingAction(null); setActionError(null) }}
+            isLoading={tempPwMutation.isPending}
+            message="Показать временный пароль?"
+            confirmLabel="Показать"
+            loadingLabel="Генерация..."
+            showIcon
+          />
+        ) : confirmingAction === 'reset' ? (
+          <ConfirmAction
+            onConfirm={() => resetPwMutation.mutate()}
+            onCancel={() => { setConfirmingAction(null); setActionError(null) }}
+            isLoading={resetPwMutation.isPending}
+            message="Пароль будет сброшен. Пользователь не сможет войти."
+            confirmLabel="Сбросить"
+            loadingLabel="Сброс..."
+            showIcon
+          />
         ) : (
           <div className="flex items-center gap-1">
             <Button
@@ -240,30 +269,36 @@ function UserRow({
               disabled={!canEdit}
               aria-label={`Редактировать ${user.username}`}
               icon={<Edit3 size={13} />}
-            />
+              className="max-sm:min-h-[44px] max-sm:min-w-[44px]"
+            >
+              Ред.
+            </Button>
             <Button
               variant="ghost" size="xs" semantic="default"
-              onClick={() => tempPwMutation.mutate()}
+              onClick={() => setConfirmingAction('tempPw')}
               disabled={tempPwMutation.isPending}
               aria-label={`Установить временный пароль для ${user.username}`}
               icon={<KeyRound size={13} />}
+              className="max-sm:min-h-[44px] max-sm:min-w-[44px]"
             >
               {tempPwMutation.isPending ? '...' : 'Врем. пароль'}
             </Button>
             <Button
               variant="ghost" size="xs" semantic="default"
-              onClick={() => resetPwMutation.mutate()}
+              onClick={() => setConfirmingAction('reset')}
               disabled={resetPwMutation.isPending}
               aria-label={`Сбросить пароль для ${user.username}`}
               icon={<RefreshCw size={13} />}
+              className="max-sm:min-h-[44px] max-sm:min-w-[44px]"
             >
               {resetPwMutation.isPending ? '...' : 'Сброс'}
             </Button>
             <Button
               variant="ghost" size="xs" semantic="danger"
-              onClick={() => setConfirmingDelete(true)}
+              onClick={() => setConfirmingAction('delete')}
               aria-label={`Удалить ${user.username}`}
               icon={<Trash2 size={13} />}
+              className="max-sm:min-h-[44px] max-sm:min-w-[44px]"
             >
               Удалить
             </Button>
@@ -275,9 +310,9 @@ function UserRow({
       </td>
     </tr>
   )
-}
+})
 
-function EditRow({
+const EditRow = memo(function EditRow({
   user,
   onSaved,
   onCancel,
@@ -302,7 +337,7 @@ function EditRow({
 
   return (
     <tr className="border-b border-border bg-bg-hover/30">
-      <td colSpan={6} className="px-3 py-2.5">
+      <td colSpan={6} className="px-3 py-2">
         <div className="flex items-end gap-3">
           <div>
             <label htmlFor={`edit-active-${user.id}`} className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
@@ -346,95 +381,192 @@ function EditRow({
       </td>
     </tr>
   )
-}
+})
 
 function TempPasswordBanner({ password, onClose }: { password: string; onClose: () => void }) {
+  const [confirmingDismiss, setConfirmingDismiss] = useState(false)
+
+  if (confirmingDismiss) {
+    return (
+      <div className="mb-4 flex items-center gap-3 rounded-md border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning" role="alert">
+        <KeyRound size={16} />
+        <span>Пароль скопирован? После закрытия показать его снова будет нельзя.</span>
+        <Button variant="secondary" size="xs" semantic="warning" onClick={onClose}>Закрыть</Button>
+        <Button variant="secondary" size="xs" onClick={() => setConfirmingDismiss(false)}>Отмена</Button>
+      </div>
+    )
+  }
+
   return (
-    <div className="mb-4 flex items-center gap-3 rounded-md border border-success/30 bg-success-soft px-4 py-3 text-sm text-success" role="status">
+    <div className="mb-4 flex items-center gap-3 rounded-md border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning" role="status">
       <KeyRound size={16} />
       <span>Временный пароль: <strong className="font-mono">{password}</strong></span>
-      <button onClick={onClose} className="ml-auto rounded-sm p-1 hover:opacity-80 transition-opacity duration-150" aria-label="Закрыть">
+      <button onClick={() => setConfirmingDismiss(true)} className="ml-auto rounded-sm p-1 hover:opacity-80 transition-opacity duration-150" aria-label="Скрыть">
         <X size={14} />
       </button>
     </div>
   )
 }
 
+type SortKey = 'username' | 'role' | 'isActive' | 'isTemporaryPassword' | 'createdAt'
+type SortDir = 'asc' | 'desc'
+type SortConfig = { key: SortKey; dir: SortDir }
+
 export function AdminUsersPage() {
-  const queryClient = useQueryClient()
   const [createExpanded, setCreateExpanded] = useState(false)
   const [tempPassword, setTempPassword] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('Все')
+  const [sort, setSort] = useState<SortConfig>({ key: 'createdAt', dir: 'desc' })
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const tableRef = useRef<HTMLDivElement>(null)
 
-  const { data: users, isLoading, isError, error } = useQuery({
-    queryKey: ['admin-users'],
-    queryFn: fetchAdminUsers,
+  const debouncedSearch = useDebounce(search, 300)
+
+  const { data: users, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['admin-users', { search: debouncedSearch }],
+    queryFn: () => fetchAdminUsers(),
   })
 
+  const filtered = useMemo(() => {
+    if (!users) return []
+    let items = [...users]
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase()
+      items = items.filter((u) => u.username.toLowerCase().includes(q))
+    }
+    if (roleFilter !== 'Все') items = items.filter((u) => u.role === roleFilter)
+    return [...items].sort((a, b) => {
+      const av = String(a[sort.key] ?? '')
+      const bv = String(b[sort.key] ?? '')
+      const cmp = av.localeCompare(bv, 'ru')
+      return sort.dir === 'asc' ? cmp : -cmp
+    })
+  }, [users, debouncedSearch, roleFilter, sort])
+
+  const handleSort = useCallback((key: string) => {
+    setSort((prev) => prev.key === key ? { key: key as SortKey, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key: key as SortKey, dir: 'asc' })
+  }, [])
+
+  const resetFilters = useCallback(() => { setSearch(''); setRoleFilter('Все') }, [])
+
+  const handleToggleCreate = useCallback(() => {
+    setCreateExpanded((prev) => !prev)
+    setEditingId(null)
+  }, [])
+
+  const handleCreated = useCallback(() => {
+    setCreateExpanded(false)
+    setSuccessMsg('Пользователь создан')
+    tableRef.current?.focus()
+    setTimeout(() => setSuccessMsg(null), 3000)
+  }, [])
+
+  const handlePasswordSet = useCallback((pw: string) => {
+    setTempPassword(pw)
+  }, [])
+
+  const handleEditToggleFor = useCallback((userId: string) => {
+    setEditingId((prev) => prev === userId ? null : userId)
+    setCreateExpanded(false)
+  }, [])
+
+  const handleEditSaved = useCallback(() => {
+    setSuccessMsg('Изменения сохранены')
+    tableRef.current?.focus()
+    setTimeout(() => setSuccessMsg(null), 3000)
+  }, [])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') e.preventDefault()
+  }, [])
+
   return (
-    <div className="flex flex-1 flex-col p-6">
-      <h1 className="mb-6 text-lg font-semibold text-text-primary">Админ-панель</h1>
+    <div className="flex flex-1 flex-col p-4">
+      <h1 className="mb-4 text-lg font-semibold text-text-primary">Админ-панель</h1>
 
       {tempPassword && (
         <TempPasswordBanner password={tempPassword} onClose={() => setTempPassword(null)} />
       )}
 
-      <div className="min-w-0 overflow-x-auto rounded-lg border border-border bg-bg-main">
+      {successMsg && (
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success" role="status">
+          {successMsg}
+        </div>
+      )}
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Поиск пользователей..."
+          aria-label="Поиск пользователей"
+        />
+        <Select value={roleFilter} options={ROLE_FILTER_OPTIONS} onChange={(v) => setRoleFilter(v)} label="Фильтр по роли" />
+        <Button variant="secondary" size="xs" onClick={resetFilters} aria-label="Сбросить все фильтры" icon={<X size={12} />}>
+          Сбросить
+        </Button>
+      </div>
+
+      <div
+        ref={tableRef}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        className="min-w-0 overflow-x-auto rounded-lg border border-border bg-bg-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        role="table"
+        aria-label="Таблица пользователей"
+      >
         <CreateRow
           expanded={createExpanded}
-          onToggle={() => {
-            setCreateExpanded((prev) => !prev)
-            setEditingId(null)
-          }}
-          onCreated={() => setCreateExpanded(false)}
+          onToggle={handleToggleCreate}
+          onCreated={handleCreated}
         />
-
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-bg-sidebar text-left text-xs font-medium uppercase tracking-wider text-text-muted">
-              <th className="px-3 py-2">Логин</th>
-              <th className="px-3 py-2 w-28">Роль</th>
-              <th className="px-3 py-2 w-28">Статус</th>
-              <th className="px-3 py-2 w-28">Пароль</th>
-              <th className="px-3 py-2 w-28">Создан</th>
-              <th className="px-3 py-2">Действия</th>
-            </tr>
-          </thead>
+          <TableHead columns={columns} sort={sort} onSort={handleSort} />
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-3 py-4">
-                  <TableSkeleton rows={4} cols={6} />
+                <td colSpan={columns.length} className="px-3 py-4">
+                  <div className="animate-pulse space-y-2">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex gap-3">
+                        {Array.from({ length: columns.length }).map((__, j) => (
+                          <div key={j} className="h-4 flex-1 rounded bg-bg-hover" />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </td>
               </tr>
             ) : isError ? (
               <tr>
-                <td colSpan={6} className="px-3 py-12 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <ShieldAlert size={24} className="text-danger" />
-                    <p className="text-sm text-danger">{formatError(error)}</p>
-                    <Button variant="secondary" size="sm" onClick={() => queryClient.refetchQueries({ queryKey: ['admin-users'] })}>
-                      Попробовать снова
+                <td colSpan={columns.length} className="px-3 py-12 text-center">
+                  <div className="flex flex-col items-center gap-2 text-sm text-danger">
+                    <p>{error instanceof Error ? error.message : 'Произошла ошибка'}</p>
+                    <Button variant="secondary" size="xs" onClick={() => refetch()}>
+                      Повторить
                     </Button>
                   </div>
                 </td>
               </tr>
-            ) : users && users.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-sm text-text-muted">Нет пользователей</td>
+                <td colSpan={columns.length} className="px-3 py-12 text-center text-sm text-text-muted">
+                  {search || roleFilter !== 'Все' ? 'Ничего не найдено' : 'Нет пользователей'}
+                </td>
               </tr>
             ) : (
-              users?.map((user) => (
+              filtered.map((user) => (
                 <UserRow
                   key={user.id}
                   user={user}
-                  onPasswordSet={(pw) => setTempPassword(pw)}
+                  onPasswordSet={handlePasswordSet}
                   isEditing={editingId === user.id}
                   canEdit={!editingId || editingId === user.id}
-                  onEditToggle={() => {
-                    setEditingId((prev) => prev === user.id ? null : user.id)
-                    setCreateExpanded(false)
-                  }}
+                  onEditToggle={() => handleEditToggleFor(user.id)}
+                  onEditSaved={handleEditSaved}
                 />
               ))
             )}
