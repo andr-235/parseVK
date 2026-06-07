@@ -56,16 +56,19 @@ async def test_telegram_tgmbase_capabilities_describe_gateway_boundary(request):
     assert data == {
         "domain": "telegram-tgmbase",
         "migrationStage": "inventory",
-        "gatewayManaged": ["capabilities"],
+        "gatewayManaged": [
+            "capabilities",
+            "telegram-dl-import",
+            "telegram-dl-match",
+            "tgmbase-search",
+            "tgmbase-search-progress"
+        ],
         "fallbackManaged": [
             "telegram-auth-session",
             "telegram-sync",
             "telegram-export",
-            "telegram-dl-import",
-            "telegram-dl-match",
-            "tgmbase-search",
-            "tgmbase-search-progress",
         ],
+
         "redaction": {
             "enabled": True,
             "sensitiveFields": [

@@ -67,3 +67,13 @@ export async function apiDelete<T>(path: string): Promise<T> {
   if (res.status === 204) return undefined as T
   return res.json()
 }
+
+export async function apiGetBlob(path: string): Promise<Blob> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: headers(),
+    credentials: 'include',
+  })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.blob()
+}
+
