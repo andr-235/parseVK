@@ -1,28 +1,28 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
-import { CommentsPage } from './pages/comments/CommentsPage'
-import { TasksPage } from './pages/tasks/TasksPage'
-import { GroupsPage } from './pages/groups/GroupsPage'
-import { AuthorsPage } from './pages/authors/AuthorsPage'
-import { AuthorAnalysisPage } from './pages/author-analysis/AuthorAnalysisPage'
-import { WatchlistPage } from './pages/watchlist/WatchlistPage'
-import { KeywordsPage } from './pages/keywords/KeywordsPage'
-import { TelegramPage } from './pages/telegram/TelegramPage'
-import { TelegramDlUploadPage } from './pages/telegram-dl-upload/TelegramDlUploadPage'
-import { TgmbaseSearchPage } from './pages/tgmbase-search/TgmbaseSearchPage'
-import { MonitoringPage } from './pages/monitoring/MonitoringPage'
-import { MonitoringGroupsPage } from './pages/monitoring-groups/MonitoringGroupsPage'
-import { ListingsPage } from './pages/listings/ListingsPage'
-import { VkFriendsExportPage } from './pages/vk-friends-export/VkFriendsExportPage'
-import { OkFriendsExportPage } from './pages/ok-friends-export/OkFriendsExportPage'
-import { MetricsPage } from './pages/metrics/MetricsPage'
-import { SettingsPage } from './pages/settings/SettingsPage'
-import { AdminUsersPage } from './pages/admin-users/AdminUsersPage'
-import { LoginPage } from './pages/login/LoginPage'
-import { ChangePasswordPage } from './pages/change-password/ChangePasswordPage'
-import { useAuth } from './store/auth'
 import { Skeleton } from './components/ui'
+
+const CommentsPage = lazy(() => import('./pages/comments/CommentsPage').then(m => ({ default: m.CommentsPage })))
+const TasksPage = lazy(() => import('./pages/tasks/TasksPage').then(m => ({ default: m.TasksPage })))
+const GroupsPage = lazy(() => import('./pages/groups/GroupsPage').then(m => ({ default: m.GroupsPage })))
+const AuthorsPage = lazy(() => import('./pages/authors/AuthorsPage').then(m => ({ default: m.AuthorsPage })))
+const AuthorAnalysisPage = lazy(() => import('./pages/author-analysis/AuthorAnalysisPage').then(m => ({ default: m.AuthorAnalysisPage })))
+const WatchlistPage = lazy(() => import('./pages/watchlist/WatchlistPage').then(m => ({ default: m.WatchlistPage })))
+const KeywordsPage = lazy(() => import('./pages/keywords/KeywordsPage').then(m => ({ default: m.KeywordsPage })))
+const TelegramDlUploadPage = lazy(() => import('./pages/telegram-dl-upload/TelegramDlUploadPage').then(m => ({ default: m.TelegramDlUploadPage })))
+const TgmbaseSearchPage = lazy(() => import('./pages/tgmbase-search/TgmbaseSearchPage').then(m => ({ default: m.TgmbaseSearchPage })))
+const MonitoringPage = lazy(() => import('./pages/monitoring/MonitoringPage').then(m => ({ default: m.MonitoringPage })))
+const MonitoringGroupsPage = lazy(() => import('./pages/monitoring-groups/MonitoringGroupsPage').then(m => ({ default: m.MonitoringGroupsPage })))
+const ListingsPage = lazy(() => import('./pages/listings/ListingsPage').then(m => ({ default: m.ListingsPage })))
+const VkFriendsExportPage = lazy(() => import('./pages/vk-friends-export/VkFriendsExportPage').then(m => ({ default: m.VkFriendsExportPage })))
+const OkFriendsExportPage = lazy(() => import('./pages/ok-friends-export/OkFriendsExportPage').then(m => ({ default: m.OkFriendsExportPage })))
+const MetricsPage = lazy(() => import('./pages/metrics/MetricsPage').then(m => ({ default: m.MetricsPage })))
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const AdminUsersPage = lazy(() => import('./pages/admin-users/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })))
+const LoginPage = lazy(() => import('./pages/login/LoginPage').then(m => ({ default: m.LoginPage })))
+const ChangePasswordPage = lazy(() => import('./pages/change-password/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
+import { useAuth } from './store/auth'
 
 function AuthOutlet() {
   const { user, isInitialized, init } = useAuth()
@@ -62,6 +62,7 @@ function AuthOutlet() {
 function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<div className="flex h-screen items-center justify-center bg-bg-main"><Skeleton className="h-6 w-48" /></div>}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<AuthOutlet />}>
@@ -75,7 +76,7 @@ function App() {
             <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysisPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
             <Route path="/keywords" element={<KeywordsPage />} />
-            <Route path="/telegram" element={<TelegramPage />} />
+            <Route path="/telegram" element={<Navigate to="/telegram/dl-upload" replace />} />
             <Route path="/telegram/dl-upload" element={<TelegramDlUploadPage />} />
             <Route path="/tgmbase-search" element={<TgmbaseSearchPage />} />
             <Route path="/monitoring/whatsapp" element={<MonitoringPage messenger="WhatsApp" />} />
@@ -91,6 +92,7 @@ function App() {
           </Route>
         </Route>
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
