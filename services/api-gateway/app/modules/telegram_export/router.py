@@ -22,7 +22,44 @@ AUTH_DEPENDENCY = Depends(require_auth)
 SERVICE_DEPENDENCY = Depends(get_telegram_export_gateway_service)
 
 
+@router.get("/dialogs", response_model=list[dict])
+async def get_dialogs(
+    request: Request,
+    auth_claims: dict = AUTH_DEPENDENCY,
+    service: TelegramExportGatewayService = SERVICE_DEPENDENCY,
+) -> list[dict]:
+    request_id, correlation_id = request_ids(request)
+    return await service.get_dialogs(
+        user_id=str(auth_claims["sub"]),
+        request_id=request_id,
+        correlation_id=correlation_id,
+    )
+
+
+@router.post("/live-parse", response_model=TelegramExportStartResponse, status_code=status.HTTP_201_CREATED)
+async def start_live_parse(
+    request: Request,
+    payload: TelegramExportStartRequest,
+    auth_claims: dict = AUTH_DEPENDENCY,
+    service: TelegramExportGatewayService = SERVICE_DEPENDENCY,
+) -> TelegramExportStartResponse:
+    request_id, correlation_id = request_ids(request)
+    params = {
+        "target": payload.target,
+        "limit": payload.limit,
+        "activeOnly": payload.activeOnly,
+        "verifyPhones": payload.verifyPhones,
+    }
+    return await service.start_live_parse(
+        params,
+        user_id=str(auth_claims["sub"]),
+        request_id=request_id,
+        correlation_id=correlation_id,
+    )
+
+
 @router.post("/export", response_model=TelegramExportStartResponse, status_code=status.HTTP_201_CREATED)
+
 async def start_export(
     request: Request,
     payload: TelegramExportStartRequest,

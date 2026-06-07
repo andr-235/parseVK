@@ -9,7 +9,7 @@ logger = logging.getLogger("telegram-service.client")
 
 # Attempt to import Telethon and its exception types
 try:
-    from telethon import TelegramClient
+    from telethon import TelegramClient, events
     from telethon.sessions import StringSession
     from telethon.errors import ChatAdminRequiredError
     TELETHON_AVAILABLE = True
@@ -165,6 +165,52 @@ class TelegramApiClient:
         if self.client and self.client.is_connected():
             logger.info("Disconnecting Telethon client...")
             await self.client.disconnect()
+
+    async def get_user_dialogs(self) -> list[dict]:
+        """
+        Retrieves the list of all dialogs (groups, channels, chats) for the logged-in user.
+        """
+        if self.is_mock:
+            # Simulated list of dialogs for simulation fallback
+            return [
+                {"id": -100188888888, "title": "Чат команды разработки", "username": "@dev_chat", "type": "supergroup"},
+                {"id": -100199999999, "title": "Новостной канал IT", "username": "@it_news", "type": "channel"},
+                {"id": -100177777777, "title": "Обсуждение проектов", "username": "@project_discuss", "type": "supergroup"},
+                {"id": -100166666666, "title": "Криминальная хроника (Регион)", "username": "—", "type": "channel"},
+                {"id": -100155555555, "title": "Городская флудилка", "username": "@city_chat", "type": "supergroup"},
+            ]
+
+        await self.ensure_connected()
+        dialogs = []
+        try:
+            from telethon.tl.types import Channel, Chat, User
+            # iter_dialogs yields Dialog instances
+            async for dialog in self.client.iter_dialogs():
+                entity = dialog.entity
+                
+                # We are interested in groups, supergroups, and channels (not individual users)
+                if isinstance(entity, User):
+                    continue
+                    
+                chat_type = "unknown"
+                username = getattr(entity, 'username', None) or ""
+                
+                if isinstance(entity, Channel):
+                    chat_type = "supergroup" if entity.megagroup else "channel"
+                elif isinstance(entity, Chat):
+                    chat_type = "group"
+                    
+                dialogs.append({
+                    "id": entity.id,
+                    "title": dialog.name,
+                    "username": f"@{username}" if username else "—",
+                    "type": chat_type
+                })
+        except Exception as exc:
+            logger.error(f"Failed to fetch user dialogs: {exc}")
+            raise RuntimeError(f"Не удалось получить список чатов: {exc}")
+            
+        return dialogs
 
     async def get_chat_info(self, target: str) -> dict:
         """

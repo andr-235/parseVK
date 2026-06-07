@@ -2,6 +2,8 @@ import logging
 import asyncio
 import uuid
 import io
+import random
+from datetime import datetime, timezone
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
@@ -16,7 +18,7 @@ from app.modules.telegram_service.schemas import (
 
 logger = logging.getLogger("telegram-service.service")
 
-# Хранилище сгенерированных XLSX файлов в памяти
+# Memory storage for generated XLSX files
 _xlsx_storage: dict[uuid.UUID, bytes] = {}
 
 class TelegramServiceService:
@@ -24,21 +26,152 @@ class TelegramServiceService:
         self.repo = repo
         self.client = TelegramApiClient()
 
+    async def get_user_dialogs(self) -> list[dict]:
+        """
+        Retrieves the list of groups, supergroups, and channels for the current user.
+        """
+        return await self.client.get_user_dialogs()
+
     async def start_export(self, params: dict) -> TelegramExportStartResponse:
         target = params.get("target", "")
         limit = params.get("limit", 500)
         
-        # Определяем размер выгрузки
+        # Determine total size
         mock_total = 500 if limit == 1000000 else limit
 
-        # Создаем задачу в репозитории
+        # Create task in repository
         job = await self.repo.create_job(params, mock_total)
         job_uuid = uuid.UUID(job["id"])
 
-        # Запускаем экспорт в фоновом режиме
+        # Start background export job
         asyncio.create_task(self.run_export_job(job_uuid, params, mock_total))
 
         return TelegramExportStartResponse(jobId=str(job_uuid), status="pending")
+
+    async def start_live_parse(self, params: dict) -> TelegramExportStartResponse:
+        """
+        Launches a live parsing task for message events.
+        """
+        # Create task in repository with pending status
+        job = await self.repo.create_job(params, 1000000) # Limit does not apply to live streams
+        job_uuid = uuid.UUID(job["id"])
+
+        # Launch live parsing loop in the background
+        asyncio.create_task(self.run_live_parse_job(job_uuid, params))
+
+        return TelegramExportStartResponse(jobId=str(job_uuid), status="pending")
+
+    async def run_live_parse_job(self, job_id: uuid.UUID, params: dict) -> None:
+        target = params.get("target", "ALL")
+        logger.info(f"Starting Telegram live parse job {job_id} for target: {target}")
+
+        try:
+            await self.repo.update_job(job_id, {"status": "running"})
+            await self.repo.add_log(job_id, "info", "Инициализация live-сессии парсинга Telegram...")
+            await asyncio.sleep(1.0)
+            
+            await self.repo.add_log(job_id, "info", "Подключение к клиенту Telegram API...")
+            await asyncio.sleep(0.5)
+
+            if self.client.is_mock:
+                await self.repo.add_log(job_id, "info", "Запущена имитация прямого эфира парсинга (Mock Mode).")
+                chats = ["Чат разработки", "Городской канал", "Флудилка", "IT Обсуждения", "Криминальная хроника"]
+                users = ["Иван Иванов", "Мария Петрова", "Дмитрий Сидоров", "Анна Смирнова", "Сергей Васильев"]
+                messages = [
+                    "Привет! Как дела?",
+                    "Кто-нибудь знает, когда митинг?",
+                    "Нашел интересную статью по FastAPI",
+                    "Погода сегодня отличная!",
+                    "Посмотрите на новые требования по деплою",
+                    "На улице шумно, кто знает что случилось?",
+                    "Где можно почитать про деанонимизацию?",
+                    "Внимание, завтра технические работы на сервере."
+                ]
+                
+                fetched = 0
+                while True:
+                    # Check if job was cancelled
+                    current_job = await self.repo.get_job(job_id)
+                    if not current_job or current_job["status"] == "cancelled":
+                        logger.info(f"Live parse job {job_id} was cancelled.")
+                        return
+
+                    chat = random.choice(chats)
+                    user = random.choice(users)
+                    text = random.choice(messages)
+                    
+                    log_msg = f"[{chat}] {user}: {text}"
+                    await self.repo.add_log(job_id, "info", log_msg)
+                    
+                    fetched += 1
+                    await self.repo.update_job(job_id, {
+                        "fetchedCount": fetched,
+                        "progress": 100
+                    })
+                    
+                    await asyncio.sleep(random.uniform(1.0, 3.5))
+            else:
+                await self.client.ensure_connected()
+                await self.repo.add_log(job_id, "success", "Успешное подключение. Запущено прослушивание новых сообщений в реальном времени.")
+
+                from telethon import events
+                from app.modules.telegram_service.client import resolve_target
+
+                resolved_target = None
+                if target != "ALL":
+                    resolved_target = resolve_target(target)
+
+                fetched_count = 0
+
+                async def handler(event):
+                    nonlocal fetched_count
+                    # Check if task is still running
+                    current_job = await self.repo.get_job(job_id)
+                    if not current_job or current_job["status"] == "cancelled":
+                        self.client.client.remove_event_handler(handler, events.NewMessage)
+                        return
+
+                    # Filter by chat if specified
+                    if resolved_target is not None:
+                        if event.chat_id != resolved_target:
+                            return
+
+                    chat_title = getattr(event.chat, 'title', 'Чат') or 'Чат'
+                    sender = await event.get_sender()
+                    sender_name = "Аноним"
+                    if sender:
+                        first_name = getattr(sender, 'first_name', '') or ''
+                        last_name = getattr(sender, 'last_name', '') or ''
+                        sender_name = f"{first_name} {last_name}".strip() or getattr(sender, 'username', 'Аноним')
+
+                    text = event.message.text or "[Вложение / Медиа]"
+                    log_msg = f"[{chat_title}] {sender_name}: {text}"
+
+                    await self.repo.add_log(job_id, "info", log_msg)
+                    fetched_count += 1
+                    await self.repo.update_job(job_id, {
+                        "fetchedCount": fetched_count,
+                        "progress": 100
+                    })
+
+                self.client.client.add_event_handler(handler, events.NewMessage)
+
+                # Wait loop until cancellation
+                while True:
+                    await asyncio.sleep(2.0)
+                    current_job = await self.repo.get_job(job_id)
+                    if not current_job or current_job["status"] == "cancelled":
+                        logger.info(f"Live parse job {job_id} was cancelled. Removing handler.")
+                        self.client.client.remove_event_handler(handler, events.NewMessage)
+                        break
+
+        except Exception as exc:
+            logger.exception(f"Error running Telegram live parse job {job_id}")
+            await self.repo.update_job(job_id, {
+                "status": "failed",
+                "error": str(exc)
+            })
+            await self.repo.add_log(job_id, "error", f"Ошибка: {exc}")
 
     async def run_export_job(self, job_id: uuid.UUID, params: dict, total_count: int) -> None:
         target = params.get("target", "")
@@ -67,11 +200,11 @@ class TelegramServiceService:
             if verify_phones:
                 await self.repo.add_log(job_id, "info", "Включена верификация телефонных номеров с использованием VPN прокси.")
             
-            # Поэтапная выгрузка участников
+            # Fetch members in batches
             fetched = 0
             all_members = []
             while fetched < total_count:
-                # Проверяем не была ли задача отменена
+                # Check if job was cancelled
                 current_job = await self.repo.get_job(job_id)
                 if not current_job or current_job["status"] == "cancelled":
                     logger.info(f"Job {job_id} was cancelled.")
@@ -81,7 +214,7 @@ class TelegramServiceService:
                 batch_members = await self.client.fetch_members(target, batch_size, offset=fetched)
                 all_members.extend(batch_members)
                 fetched += len(batch_members)
-
+                
                 progress = Math_round_custom(fetched, total_count)
                 
                 await self.repo.update_job(job_id, {
@@ -91,7 +224,7 @@ class TelegramServiceService:
                 await self.repo.add_log(job_id, "info", f"Выгружено участников: {fetched} из {total_count}...")
                 await asyncio.sleep(1.0)
 
-            # Генерация XLSX
+            # Generate XLSX
             await self.repo.add_log(job_id, "info", "Формирование и экспорт таблицы XLSX...")
             xlsx_bytes = self._generate_xlsx(target, all_members)
             _xlsx_storage[job_id] = xlsx_bytes

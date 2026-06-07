@@ -32,8 +32,23 @@ export type TelegramExportStartRequest = {
   verifyPhones: boolean
 }
 
+export type TelegramDialog = {
+  id: number
+  title: string
+  username: string
+  type: string
+}
+
 export async function startTelegramExport(params: TelegramExportStartRequest): Promise<{ jobId: string; status: string }> {
   return apiPost<{ jobId: string; status: string }>('/telegram/export', params)
+}
+
+export async function startTelegramLiveParse(params: TelegramExportStartRequest): Promise<{ jobId: string; status: string }> {
+  return apiPost<{ jobId: string; status: string }>('/telegram/live-parse', params)
+}
+
+export async function fetchTelegramDialogs(): Promise<TelegramDialog[]> {
+  return apiGet<TelegramDialog[]>('/telegram/dialogs')
 }
 
 export async function fetchTelegramJob(jobId: string): Promise<TelegramJobDetail> {
@@ -47,3 +62,4 @@ export async function cancelTelegramJob(jobId: string): Promise<{ status: string
 export async function downloadTelegramXlsx(jobId: string): Promise<Blob> {
   return apiGetBlob(`/telegram/jobs/${jobId}/download/xlsx`)
 }
+

@@ -12,7 +12,50 @@ class TelegramExportGatewayService:
     def __init__(self, client: TelegramServiceClient):
         self.client = client
 
+    async def get_dialogs(
+        self,
+        *,
+        user_id: str,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> Any:
+        try:
+            return await self.client.request(
+                "GET",
+                "/internal/telegram/dialogs",
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+            )
+        except TelegramServiceClientHTTPError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        except TelegramServiceClientUnavailableError as exc:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Telegram service is unavailable") from exc
+
+    async def start_live_parse(
+        self,
+        payload: dict,
+        *,
+        user_id: str,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> Any:
+        try:
+            return await self.client.request(
+                "POST",
+                "/internal/telegram/live-parse",
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                json=payload,
+            )
+        except TelegramServiceClientHTTPError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        except TelegramServiceClientUnavailableError as exc:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Telegram service is unavailable") from exc
+
     async def start_export(
+
         self,
         payload: dict,
         *,

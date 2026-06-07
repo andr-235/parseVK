@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react'
 import type { TelegramExportTask, TaskStatus } from '../types'
 import {
   startTelegramExport,
+  startTelegramLiveParse,
+  fetchTelegramDialogs,
   fetchTelegramJob,
   cancelTelegramJob,
   downloadTelegramXlsx
 } from '../../../shared/api/telegram'
+import type { TelegramDialog } from '../../../shared/api/telegram'
 
 export function useTelegramTasks() {
   const [tasks, setTasks] = useState<TelegramExportTask[]>(() => {
@@ -13,14 +16,28 @@ export function useTelegramTasks() {
     return saved ? JSON.parse(saved) : []
   })
   
+  const [dialogs, setDialogs] = useState<TelegramDialog[]>([])
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
-  // Сохранение задач в localStorage
+  // Load user dialogs/chats on mount
+  useEffect(() => {
+    const loadDialogs = async () => {
+      try {
+        const list = await fetchTelegramDialogs()
+        setDialogs(list)
+      } catch (err) {
+        console.error('Failed to load telegram dialogs:', err)
+      }
+    }
+    loadDialogs()
+  }, [])
+
+  // Save tasks to localStorage
   useEffect(() => {
     localStorage.setItem('tg_export_tasks', JSON.stringify(tasks))
   }, [tasks])
 
-  // Периодический опрос (polling) статусов активных задач
+  // Periodically poll active tasks
   useEffect(() => {
     const activeTasks = tasks.filter(t => t.status === 'pending' || t.status === 'running')
     if (activeTasks.length === 0) return
@@ -29,7 +46,6 @@ export function useTelegramTasks() {
       try {
         const updatedTasks = await Promise.all(
           tasks.map(async (task) => {
-            // Опрашиваем только реально созданные на бэкенде задачи
             if ((task.status === 'pending' || task.status === 'running') && !task.id.startsWith('temp_')) {
               try {
                 const detail = await fetchTelegramJob(task.id)
@@ -48,13 +64,12 @@ export function useTelegramTasks() {
                   status: job.status as TaskStatus,
                   fetchedCount: job.fetchedCount,
                   totalCount: job.totalCount,
-                  progress,
+                  progress: task.taskType === 'live_parse' ? 100 : progress, // live parse always shows 100% progress
                   logs: formattedLogs,
                   error: job.error || undefined
                 }
               } catch (err) {
                 console.error(`Error polling task ${task.id}:`, err)
-                // Если задача не найдена на сервере, помечаем ошибку в логах
                 return {
                   ...task,
                   status: 'failed' as TaskStatus,
@@ -69,7 +84,6 @@ export function useTelegramTasks() {
           })
         )
         
-        // Сравниваем, чтобы избежать бесконечного цикла ререндера
         const hasChanges = JSON.stringify(updatedTasks) !== JSON.stringify(tasks)
         if (hasChanges) {
           setTasks(updatedTasks)
@@ -80,7 +94,7 @@ export function useTelegramTasks() {
     }
 
     const timer = setInterval(poll, 2000)
-    poll() // Вызываем первый раз сразу
+    poll()
 
     return () => clearInterval(timer)
   }, [tasks])
@@ -88,7 +102,6 @@ export function useTelegramTasks() {
   const createTask = async (target: string, limit: number, activeOnly: boolean, verifyPhones: boolean) => {
     const tempId = `temp_${Date.now()}`
     
-    // Временная задача для быстрого отклика интерфейса
     const tempTask: TelegramExportTask = {
       id: tempId,
       target: target.trim(),
@@ -97,10 +110,11 @@ export function useTelegramTasks() {
       fetchedCount: 0,
       progress: 0,
       logs: [
-        `[${new Date().toLocaleTimeString()}] [INFO] Инициализация задачи на сервере...`,
+        `[${new Date().toLocaleTimeString()}] [INFO] Инициализация задачи выгрузки участников на сервере...`,
         `[${new Date().toLocaleTimeString()}] [INFO] Цель: ${target.trim()}`
       ],
       createdAt: new Date().toISOString(),
+      taskType: 'export',
       settings: {
         limit,
         activeOnly,
@@ -119,7 +133,6 @@ export function useTelegramTasks() {
         verifyPhones
       })
       
-      // Обновляем временную задачу реальным ID с бэкенда
       setTasks(prev =>
         prev.map(t => {
           if (t.id === tempId) {
@@ -157,6 +170,78 @@ export function useTelegramTasks() {
     }
   }
 
+  const startLiveParse = async (target: string) => {
+    const tempId = `temp_${Date.now()}`
+    const targetLabel = target === 'ALL' ? 'Все диалоги пользователя' : target.trim()
+    
+    const tempTask: TelegramExportTask = {
+      id: tempId,
+      target: targetLabel,
+      status: 'pending',
+      totalCount: 1000000,
+      fetchedCount: 0,
+      progress: 100,
+      logs: [
+        `[${new Date().toLocaleTimeString()}] [INFO] Инициализация прямого эфира парсинга на сервере...`,
+        `[${new Date().toLocaleTimeString()}] [INFO] Цель: ${targetLabel}`
+      ],
+      createdAt: new Date().toISOString(),
+      taskType: 'live_parse',
+      settings: {
+        limit: 1000000,
+        activeOnly: false,
+        verifyPhones: false
+      }
+    }
+    
+    setTasks(prev => [tempTask, ...prev])
+    setSelectedTaskId(tempId)
+    
+    try {
+      const res = await startTelegramLiveParse({
+        target: target.trim(),
+        limit: 1000000,
+        activeOnly: false,
+        verifyPhones: false
+      })
+      
+      setTasks(prev =>
+        prev.map(t => {
+          if (t.id === tempId) {
+            return {
+              ...t,
+              id: res.jobId,
+              logs: [
+                ...t.logs,
+                `[${new Date().toLocaleTimeString()}] [SUCCESS] Прямой эфир успешно запущен на сервере под ID #${res.jobId}`
+              ]
+            }
+          }
+          return t
+        })
+      )
+      setSelectedTaskId(res.jobId)
+    } catch (err) {
+      console.error('Failed to start live parse:', err)
+      setTasks(prev =>
+        prev.map(t => {
+          if (t.id === tempId) {
+            return {
+              ...t,
+              status: 'failed',
+              logs: [
+                ...t.logs,
+                `[${new Date().toLocaleTimeString()}] [ERROR] Не удалось запустить прямой эфир на сервере: ${err instanceof Error ? err.message : String(err)}`
+              ],
+              error: err instanceof Error ? err.message : String(err)
+            }
+          }
+          return t
+        })
+      )
+    }
+  }
+
   const deleteTask = (id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id))
     if (selectedTaskId === id) {
@@ -180,7 +265,7 @@ export function useTelegramTasks() {
             return {
               ...t,
               status: 'cancelled',
-              logs: [...t.logs, `[${new Date().toLocaleTimeString()}] [WARNING] Отправлен запрос на отмену задачи.`]
+              logs: [...t.logs, `[${new Date().toLocaleTimeString()}] [WARNING] Отправлен запрос на остановку.`]
             }
           }
           return t
@@ -188,7 +273,7 @@ export function useTelegramTasks() {
       )
     } catch (err) {
       console.error('Failed to cancel task:', err)
-      alert('Не удалось отменить задачу: ' + (err instanceof Error ? err.message : String(err)))
+      alert('Не удалось остановить задачу: ' + (err instanceof Error ? err.message : String(err)))
     }
   }
 
@@ -197,12 +282,22 @@ export function useTelegramTasks() {
     if (!task) return
     
     try {
-      const res = await startTelegramExport({
-        target: task.target,
-        limit: task.settings.limit,
-        activeOnly: task.settings.activeOnly,
-        verifyPhones: task.settings.verifyPhones
-      })
+      let res
+      if (task.taskType === 'live_parse') {
+        res = await startTelegramLiveParse({
+          target: task.target === 'Все диалоги пользователя' ? 'ALL' : task.target,
+          limit: 1000000,
+          activeOnly: false,
+          verifyPhones: false
+        })
+      } else {
+        res = await startTelegramExport({
+          target: task.target,
+          limit: task.settings.limit,
+          activeOnly: task.settings.activeOnly,
+          verifyPhones: task.settings.verifyPhones
+        })
+      }
       
       setTasks(prev =>
         prev.map(t => {
@@ -212,7 +307,7 @@ export function useTelegramTasks() {
               id: res.jobId,
               status: 'pending',
               fetchedCount: 0,
-              progress: 0,
+              progress: t.taskType === 'live_parse' ? 100 : 0,
               logs: [
                 `[${new Date().toLocaleTimeString()}] [INFO] Перезапуск задачи на сервере, новый ID: #${res.jobId}`,
                 `[${new Date().toLocaleTimeString()}] [INFO] Цель: ${t.target}`
@@ -251,9 +346,11 @@ export function useTelegramTasks() {
 
   return {
     tasks,
+    dialogs,
     selectedTaskId,
     setSelectedTaskId,
     createTask,
+    startLiveParse,
     deleteTask,
     cancelTask,
     retryTask,
