@@ -10,6 +10,7 @@ const AuthorsPage = lazy(() => import('./pages/authors/AuthorsPage').then(m => (
 const AuthorAnalysisPage = lazy(() => import('./pages/author-analysis/AuthorAnalysisPage').then(m => ({ default: m.AuthorAnalysisPage })))
 const WatchlistPage = lazy(() => import('./pages/watchlist/WatchlistPage').then(m => ({ default: m.WatchlistPage })))
 const KeywordsPage = lazy(() => import('./pages/keywords/KeywordsPage').then(m => ({ default: m.KeywordsPage })))
+const TelegramPage = lazy(() => import('./pages/telegram/TelegramPage').then(m => ({ default: m.TelegramPage })))
 const TelegramDlUploadPage = lazy(() => import('./pages/telegram-dl-upload/TelegramDlUploadPage').then(m => ({ default: m.TelegramDlUploadPage })))
 const TgmbaseSearchPage = lazy(() => import('./pages/tgmbase-search/TgmbaseSearchPage').then(m => ({ default: m.TgmbaseSearchPage })))
 const MonitoringPage = lazy(() => import('./pages/monitoring/MonitoringPage').then(m => ({ default: m.MonitoringPage })))
@@ -76,7 +77,7 @@ function App() {
             <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysisPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
             <Route path="/keywords" element={<KeywordsPage />} />
-            <Route path="/telegram" element={<Navigate to="/telegram/dl-upload" replace />} />
+            <Route path="/telegram" element={<TelegramPage />} />
             <Route path="/telegram/dl-upload" element={<TelegramDlUploadPage />} />
             <Route path="/tgmbase-search" element={<TgmbaseSearchPage />} />
             <Route path="/monitoring/whatsapp" element={<MonitoringPage messenger="WhatsApp" />} />

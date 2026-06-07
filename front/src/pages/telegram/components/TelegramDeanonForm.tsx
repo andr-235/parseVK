@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Send, Settings, Users } from 'lucide-react'
 import { Button, Input } from '../../../components/ui'
-import type { LimitOption } from '../../telegram/types'
+import type { LimitOption } from '../types'
 
 interface TelegramDeanonFormProps {
   onSubmit: (target: string, limit: number, activeOnly: boolean, verifyPhones: boolean) => void
@@ -34,7 +34,7 @@ export function TelegramDeanonForm({ onSubmit }: TelegramDeanonFormProps) {
       <div className="flex gap-4 border-b border-border pb-3">
         <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent">
           <Users size={14} />
-          Параметры деанонимизации (Telegram DL)
+          Параметры выгрузки участников Telegram
         </h3>
       </div>
 

@@ -5,6 +5,7 @@ import {
   Users,
   Bookmark,
   Tags,
+  Send,
   Upload,
   Search,
   Bell,
@@ -45,8 +46,9 @@ function getGroups(isAdmin: boolean): NavGroup[] {
     {
       label: 'Telegram',
       items: [
-        { label: 'Деанонимизация (DL)', path: '/telegram/dl-upload', icon: <Upload size={18} /> },
-        { label: 'Прямой эфир (tgmbase)', path: '/tgmbase-search', icon: <Search size={18} /> },
+        { label: 'Выгрузка пользователей', path: '/telegram', icon: <Send size={18} /> },
+        { label: 'Выгрузка с ДЛ', path: '/telegram/dl-upload', icon: <Upload size={18} />, soon: true },
+        { label: 'Поиск по каналам', path: '/tgmbase-search', icon: <Search size={18} /> },
       ],
     },
     {
