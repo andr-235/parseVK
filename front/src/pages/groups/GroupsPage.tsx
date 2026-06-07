@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Trash2, RefreshCw, Download, X, Check } from 'lucide-react'
+import { Trash2, RefreshCw, Download, X } from 'lucide-react'
 import { Button, Input } from '../../components/ui'
 import { PageShell } from '../../components/layout/PageShell'
 import { TableShell } from '../../components/widgets/table/TableShell'
@@ -8,9 +8,13 @@ import { TableHead } from '../../components/widgets/table/TableHead'
 import { TableSkeleton } from '../../components/widgets/table/TableSkeleton'
 import { EmptyState } from '../../components/widgets/table/EmptyState'
 import { PaginationBar } from '../../components/widgets/table/PaginationBar'
+import { FeedbackToast } from '../../components/widgets/table/FeedbackToast'
+import { TableError } from '../../components/widgets/table/TableError'
 import type { Column } from '../../components/widgets/table/constants'
 import { useDebounce } from '../../shared/hooks/useDebounce'
 import { useSelection } from '../../shared/hooks/useSelection'
+import { useFeedback } from '../../shared/hooks/useFeedback'
+import { useTableKeyboardNavigation } from '../../shared/hooks/useTableKeyboardNavigation'
 import { GroupRow } from './components/GroupRow'
 import type { ActionState } from './components/GroupRow'
 import { RegionSearchWidget } from './components/RegionSearchWidget'
@@ -40,11 +44,6 @@ const columns: Column[] = [
   { key: 'updatedAt', label: 'Обновлено', className: 'w-24', sortable: true },
   { key: 'actions', label: 'Действия', sortable: false },
 ]
-
-type Feedback = {
-  type: 'success' | 'error'
-  text: string
-} | null
 
 function exportToCsv(items: Group[]) {
   const header = 'ID;Название;Screen Name;Тип;Участники;Город;Верифицирован;Обновлено'
@@ -80,9 +79,7 @@ export function GroupsPage() {
     deleting: null,
     confirmDelete: null,
   })
-  const [feedback, setFeedback] = useState<Feedback>(null)
   const [undoData, setUndoData] = useState<{ group: Group } | null>(null)
-  const [focusedRow, setFocusedRow] = useState(-1)
   const undoRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const { selected, toggle, toggleAll, clear, count } = useSelection<number>()
 
@@ -101,9 +98,10 @@ export function GroupsPage() {
     }),
   })
 
-  const showFeedback = useCallback((type: 'success' | 'error', text: string) => {
-    setFeedback({ type, text })
-  }, [])
+  const filtered = data?.items ?? []
+
+  const { feedback, showFeedback, dismissFeedback } = useFeedback()
+  const { focusedRow } = useTableKeyboardNavigation(filtered.length)
 
   const invalidateGroups = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['groups'] })
@@ -145,8 +143,6 @@ export function GroupsPage() {
 
   const allIds = useMemo(() => data?.items.map((g) => g.vkGroupId) ?? [], [data])
 
-  const filtered = data?.items ?? []
-
   const handleSort = useCallback((key: string) => {
     setSort((prev) => prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' })
     setPage(1)
@@ -176,31 +172,9 @@ export function GroupsPage() {
   }, [])
 
   useEffect(() => {
-    if (!feedback) return
-    const t = setTimeout(() => setFeedback(null), 3000)
-    return () => clearTimeout(t)
-  }, [feedback])
-
-  useEffect(() => {
-    setFocusedRow(-1)
-  }, [debouncedSearch])
-
-  useEffect(() => {
-    if (focusedRow >= filtered.length) {
-      setFocusedRow(Math.max(0, filtered.length - 1))
-    }
-  }, [filtered.length, focusedRow])
-
-  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!filtered.length) return
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setFocusedRow((prev) => Math.min(prev + 1, filtered.length - 1))
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setFocusedRow((prev) => Math.max(prev - 1, 0))
-      } else if (e.key === 'Delete' && focusedRow >= 0) {
+      if (e.key === 'Delete' && focusedRow >= 0) {
         const group = filtered[focusedRow]
         if (group && actionState.confirmDelete !== group.vkGroupId) {
           e.preventDefault()
@@ -272,19 +246,7 @@ export function GroupsPage() {
 
       <RegionSearchWidget onGroupSaved={handleGroupSaved} />
 
-      {feedback && (
-        <div
-          role="alert"
-          className={`mb-4 flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${
-            feedback.type === 'success'
-              ? 'border-success bg-success-soft text-success'
-              : 'border-danger bg-danger-soft text-danger'
-          }`}
-        >
-          {feedback.type === 'success' ? <Check size={12} /> : <X size={12} />}
-          {feedback.text}
-        </div>
-      )}
+      <FeedbackToast feedback={feedback} onDismiss={dismissFeedback} />
 
       {undoData && (
         <div className="mb-4 flex items-center gap-2 rounded-md border border-border bg-bg-panel px-3 py-2 text-xs" role="status">
@@ -314,21 +276,11 @@ export function GroupsPage() {
       {isLoading ? (
         <TableSkeleton />
       ) : isError ? (
-        <TableShell>
-          <TableHead columns={columns} sort={sort} onSort={handleSort} />
-          <tbody>
-            <tr>
-              <td colSpan={columns.length + 1} className="px-3 py-12 text-center">
-                <div className="flex flex-col items-center gap-2 text-sm text-danger">
-                  <p>{error instanceof Error ? error.message : 'Произошла ошибка'}</p>
-                  <Button variant="secondary" size="xs" onClick={() => refetch()}>
-                    Повторить
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </TableShell>
+        <TableError
+          columns={columns}
+          message={error instanceof Error ? error.message : 'Произошла ошибка'}
+          onRetry={() => refetch()}
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
           message={

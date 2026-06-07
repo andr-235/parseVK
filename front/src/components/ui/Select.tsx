@@ -17,6 +17,7 @@ export function Select<T extends string>({ value, options, onChange, label, id }
     <div className="relative" ref={ref}>
       <button
         id={id}
+        type="button"
         onClick={() => setOpen(!open)}
         aria-label={label}
         aria-expanded={open}
@@ -37,6 +38,7 @@ export function Select<T extends string>({ value, options, onChange, label, id }
           {options.map((o) => (
             <button
               key={o}
+              type="button"
               role="option"
               aria-selected={o === value}
               onClick={() => { onChange(o); setOpen(false) }}

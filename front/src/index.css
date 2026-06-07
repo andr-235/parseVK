@@ -106,6 +106,15 @@ body {
   }
 }
 
+.dark input[type="number"] {
+  color-scheme: dark;
+}
+
+.dark input[type="checkbox"] {
+  color-scheme: dark;
+  accent-color: var(--color-accent);
+}
+
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {

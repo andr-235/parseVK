@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Trash2, RefreshCw, BadgeCheck, Download, X, Check } from 'lucide-react'
+import { Trash2, RefreshCw, BadgeCheck, Download, X } from 'lucide-react'
 import { Button, Input, Select } from '../../components/ui'
 import { PageShell } from '../../components/layout/PageShell'
 import { TableShell } from '../../components/widgets/table/TableShell'
@@ -8,9 +8,12 @@ import { TableHead } from '../../components/widgets/table/TableHead'
 import { TableSkeleton } from '../../components/widgets/table/TableSkeleton'
 import { EmptyState } from '../../components/widgets/table/EmptyState'
 import { PaginationBar } from '../../components/widgets/table/PaginationBar'
+import { FeedbackToast } from '../../components/widgets/table/FeedbackToast'
+import { TableError } from '../../components/widgets/table/TableError'
 import type { Column } from '../../components/widgets/table/constants'
 import { useDebounce } from '../../shared/hooks/useDebounce'
 import { useSelection } from '../../shared/hooks/useSelection'
+import { useFeedback } from '../../shared/hooks/useFeedback'
 import { AuthorRow } from './components/AuthorRow'
 import type { ActionState } from './components/AuthorRow'
 import {
@@ -48,11 +51,6 @@ const columns: Column[] = [
   { key: 'isVerified', label: 'Вериф.', className: 'w-20', sortable: true },
   { key: 'actions', label: 'Действия', sortable: false },
 ]
-
-type Feedback = {
-  type: 'success' | 'error'
-  text: string
-} | null
 
 function exportToCsv(items: Author[]) {
   const header = 'ID;Имя;Screen Name;Город;Фото;Друзья;Подписчики;Верифицирован;Создан;Активность'
@@ -93,7 +91,6 @@ export function AuthorsPage() {
     deleting: null,
     confirmDelete: null,
   })
-  const [feedback, setFeedback] = useState<Feedback>(null)
   const { selected, toggle, toggleAll, clear, count } = useSelection<number>()
 
   const debouncedSearch = useDebounce(search, 300)
@@ -112,15 +109,7 @@ export function AuthorsPage() {
     }),
   })
 
-  useEffect(() => {
-    if (!feedback) return
-    const t = setTimeout(() => setFeedback(null), 3000)
-    return () => clearTimeout(t)
-  }, [feedback])
-
-  const showFeedback = useCallback((type: 'success' | 'error', text: string) => {
-    setFeedback({ type, text })
-  }, [])
+  const { feedback, showFeedback, dismissFeedback } = useFeedback()
 
   const invalidateAuthors = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['authors'] })
@@ -284,19 +273,7 @@ export function AuthorsPage() {
         </div>
       </div>
 
-      {feedback && (
-        <div
-          role="alert"
-          className={`mb-4 flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${
-            feedback.type === 'success'
-              ? 'border-success bg-success-soft text-success'
-              : 'border-danger bg-danger-soft text-danger'
-          }`}
-        >
-          <Check size={12} />
-          {feedback.text}
-        </div>
-      )}
+      <FeedbackToast feedback={feedback} onDismiss={dismissFeedback} />
 
       {count > 0 && (
         <div className="mb-3 flex items-center gap-2 rounded-md border border-border bg-bg-panel px-3 py-2 text-xs" role="toolbar" aria-label="Действия с выбранными">
@@ -316,21 +293,11 @@ export function AuthorsPage() {
       {isLoading ? (
         <TableSkeleton />
       ) : isError ? (
-        <TableShell>
-          <TableHead columns={columns} sort={sort} onSort={handleSort} />
-          <tbody>
-            <tr>
-              <td colSpan={columns.length + 1} className="px-3 py-12 text-center">
-                <div className="flex flex-col items-center gap-2 text-sm text-danger">
-                  <p>{error instanceof Error ? error.message : 'Произошла ошибка'}</p>
-                  <Button variant="secondary" size="xs" onClick={() => refetch()}>
-                    Повторить
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </TableShell>
+        <TableError
+          columns={columns}
+          message={error instanceof Error ? error.message : 'Произошла ошибка'}
+          onRetry={() => refetch()}
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
           message={

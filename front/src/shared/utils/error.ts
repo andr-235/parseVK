@@ -7,5 +7,9 @@ export function formatError(err: unknown): string {
     return err.message
   }
   if (err instanceof Error) return err.message
-  return 'Ошибка загрузки'
+  return 'Произошла ошибка'
+}
+
+export function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback
 }
