@@ -340,7 +340,31 @@ services:
     networks:
       - default
 
+  telegram-service:
+    image: parsevk-telegram-service:local
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: services/telegram-service/Dockerfile
+    restart: always
+    environment:
+      TELEGRAM_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
+      VPN_SERVICE_TELEGRAM_URL: ${VPN_SERVICE_TELEGRAM_URL:-}
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:-}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_SESSION_STRING: ${TELEGRAM_SESSION_STRING:-}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - default
+
   api-gateway:
+
     image: parsevk-api-gateway:local
     pull_policy: never
     build:
@@ -356,11 +380,15 @@ services:
         condition: service_healthy
       content-service:
         condition: service_healthy
+      telegram-service:
+        condition: service_healthy
     environment:
       GATEWAY_IDENTITY_BASE_URL: http://identity-service:8000
       GATEWAY_TASKS_BASE_URL: http://tasks-service:8000
       GATEWAY_CONTENT_BASE_URL: http://content-service:8000
+      GATEWAY_TELEGRAM_SERVICE_BASE_URL: http://telegram-service:8000
       GATEWAY_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
+
       GATEWAY_REFRESH_COOKIE_NAME: ${GATEWAY_REFRESH_COOKIE_NAME:-refresh_token}
       GATEWAY_CSRF_COOKIE_NAME: ${GATEWAY_CSRF_COOKIE_NAME:-csrf_token}
       GATEWAY_REFRESH_COOKIE_SECURE: ${GATEWAY_REFRESH_COOKIE_SECURE:-false}
