@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated, Any
 from app.modules.content.service import (
     ContentGatewayService,
@@ -7,6 +8,8 @@ from app.modules.content.service import (
 )
 from fastapi import APIRouter, Depends, Request, Body, UploadFile, File
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/v1/content", tags=["content"])
 
 
@@ -15,13 +18,24 @@ async def save_group(
     request: Request,
     payload: Annotated[dict[str, Any], Body()],
     vk_gateway_service: VkGatewayService = Depends(get_vk_gateway_service),
+    content_gateway_service: ContentGatewayService = Depends(get_content_gateway_service),
 ):
-    return await vk_gateway_service.forward(
+    result = await vk_gateway_service.forward(
         request,
         "POST",
         "/internal/vk/groups/save",
         json=payload,
     )
+    try:
+        await content_gateway_service.forward(
+            request,
+            "POST",
+            "/internal/content/groups/save",
+            json=result,
+        )
+    except Exception:
+        logger.exception("Failed to save group to content-service")
+    return result
 
 
 @router.post("/groups/upload")
@@ -57,12 +71,14 @@ async def delete_group(
     vk_group_id: int,
     request: Request,
     vk_gateway_service: VkGatewayService = Depends(get_vk_gateway_service),
+    content_gateway_service: ContentGatewayService = Depends(get_content_gateway_service),
 ):
-    return await vk_gateway_service.forward(
-        request,
-        "DELETE",
-        f"/internal/vk/groups/{vk_group_id}",
-    )
+    await vk_gateway_service.forward(request, "DELETE", f"/internal/vk/groups/{vk_group_id}")
+    try:
+        await content_gateway_service.forward(request, "DELETE", f"/internal/content/groups/{vk_group_id}")
+    except Exception:
+        pass
+    return {"status": "success"}
 
 
 @router.get("/groups/search/region")
