@@ -7,10 +7,11 @@ from app.core.config import settings
 
 logger = logging.getLogger("telegram-service.client")
 
-# Attempt to import Telethon
+# Attempt to import Telethon and its exception types
 try:
     from telethon import TelegramClient
     from telethon.sessions import StringSession
+    from telethon.errors import ChatAdminRequiredError
     TELETHON_AVAILABLE = True
 except ImportError:
     TELETHON_AVAILABLE = False
@@ -23,6 +24,33 @@ try:
 except ImportError:
     SOCKS_AVAILABLE = False
     logger.warning("python-socks package is not available in the current environment. Proxy support for Telethon may be limited.")
+
+
+def resolve_target(target: str) -> str | int:
+    """
+    Cleans up input target (e.g. stripping spaces, @ symbol, resolving t.me links)
+    and attempts to convert numeric IDs to int.
+    """
+    target = target.strip()
+    if not target:
+        return target
+        
+    # Remove link wrappers
+    if "t.me/" in target:
+        target = target.split("t.me/")[-1]
+    elif "telegram.me/" in target:
+        target = target.split("telegram.me/")[-1]
+        
+    # Remove @ sign if present
+    if target.startswith("@"):
+        target = target[1:]
+        
+    # Check if target is a pure numeric ID (could be negative)
+    # E.g. -100123456789 or 123456789
+    if target.isdigit() or (target.startswith("-") and target[1:].isdigit()):
+        return int(target)
+        
+    return target
 
 
 def parse_proxy_url(proxy_url: str | None) -> dict | None:
@@ -143,7 +171,7 @@ class TelegramApiClient:
         Retrieves channel/group metadata.
         """
         if self.is_mock:
-            clean_target = target.replace("https://t.me/", "").replace("@", "").strip()
+            clean_target = str(resolve_target(target))
             return {
                 "id": random.randint(10000000, 99999999),
                 "title": f"Telegram Chat: {clean_target}",
@@ -153,11 +181,12 @@ class TelegramApiClient:
             
         await self.ensure_connected()
         
+        resolved_target = resolve_target(target)
         try:
-            entity = await self.client.get_entity(target)
+            entity = await self.client.get_entity(resolved_target)
         except Exception as exc:
-            logger.error(f"Failed to get Telegram entity for '{target}': {exc}")
-            raise RuntimeError(f"Не удалось найти чат/канал '{target}': {exc}")
+            logger.error(f"Failed to get Telegram entity for '{resolved_target}' (original: '{target}'): {exc}")
+            raise RuntimeError(f"Не удалось найти чат/канал/пользователя '{target}': {exc}")
             
         from telethon.tl.types import Channel, Chat, User
         
@@ -193,7 +222,7 @@ class TelegramApiClient:
         """
         if self.is_mock:
             await asyncio.sleep(0.1)  # Simulate network latency
-            clean_target = target.replace("https://t.me/", "").replace("@", "").strip()
+            clean_target = str(resolve_target(target))
             
             first_names = ["Александр", "Дмитрий", "Сергей", "Андрей", "Алексей", "Елена", "Ольга", "Татьяна", "Ирина", "Мария", "Павел", "Максим", "Артем", "Анна", "Наталья"]
             last_names = ["Иванов", "Петров", "Сидоров", "Смирнов", "Кузнецов", "Попов", "Васильев", "Соколов", "Михайлов", "Новиков", "Федоров", "Морозов", "Волков", "Соловьев", "Лебедев"]
@@ -224,10 +253,11 @@ class TelegramApiClient:
 
         await self.ensure_connected()
         
+        resolved_target = resolve_target(target)
         try:
-            entity = await self.client.get_entity(target)
+            entity = await self.client.get_entity(resolved_target)
         except Exception as exc:
-            logger.error(f"Failed to resolve target '{target}' for members: {exc}")
+            logger.error(f"Failed to resolve target '{resolved_target}' (original: '{target}') for members: {exc}")
             raise RuntimeError(f"Не удалось найти чат/канал '{target}': {exc}")
             
         from telethon.tl.types import Channel, Chat
@@ -246,32 +276,40 @@ class TelegramApiClient:
                 logger.warning(f"Could not fetch admins list for role resolution: {exc}")
                 
         members = []
-        # iter_participants handles pagination under the hood via limit and offset
-        async for user in self.client.iter_participants(entity, limit=limit, offset=offset):
-            user_id = user.id
-            username = f"@{user.username}" if user.username else "—"
-            first_name = user.first_name or "—"
-            last_name = user.last_name or "—"
-            phone = f"+{user.phone}" if user.phone else "Скрыт"
-            is_bot = "Да" if user.bot else "Нет"
-            
-            role = admins.get(user_id, "Member")
-            
-            join_date = None
-            if hasattr(user, 'participant') and getattr(user.participant, 'date', None):
-                join_date = user.participant.date.isoformat()
-            else:
-                join_date = datetime.now(timezone.utc).isoformat()
+        try:
+            # iter_participants handles pagination under the hood via limit and offset
+            async for user in self.client.iter_participants(entity, limit=limit, offset=offset):
+                user_id = user.id
+                username = f"@{user.username}" if user.username else "—"
+                first_name = user.first_name or "—"
+                last_name = user.last_name or "—"
+                phone = f"+{user.phone}" if user.phone else "Скрыт"
+                is_bot = "Да" if user.bot else "Нет"
                 
-            members.append({
-                "userId": user_id,
-                "username": username,
-                "firstName": first_name,
-                "lastName": last_name,
-                "phone": phone,
-                "isBot": is_bot,
-                "role": role,
-                "joinDate": join_date,
-            })
+                role = admins.get(user_id, "Member")
+                
+                join_date = None
+                if hasattr(user, 'participant') and getattr(user.participant, 'date', None):
+                    join_date = user.participant.date.isoformat()
+                else:
+                    join_date = datetime.now(timezone.utc).isoformat()
+                    
+                members.append({
+                    "userId": user_id,
+                    "username": username,
+                    "firstName": first_name,
+                    "lastName": last_name,
+                    "phone": phone,
+                    "isBot": is_bot,
+                    "role": role,
+                    "joinDate": join_date,
+                })
+        except Exception as exc:
+            logger.exception(f"Error iterating participants for target '{resolved_target}': {exc}")
+            # Handle specific hidden members list exception
+            if TELETHON_AVAILABLE:
+                if isinstance(exc, ChatAdminRequiredError) or exc.__class__.__name__ == 'ChatAdminRequiredError':
+                    raise RuntimeError("Список участников скрыт администраторами группы. Требуются права администратора.")
+            raise RuntimeError(f"Не удалось выгрузить список участников: {exc}")
             
         return members
