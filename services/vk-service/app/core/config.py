@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     ok_access_token: str = Field(default="", repr=False)
     ok_application_key: str = Field(default="", repr=False)
     ok_application_secret_key: str = Field(default="", repr=False)
-    default_group_ids: list[int] = [1]
 
     @model_validator(mode="after")
     def validate_vk_token(self) -> "Settings":

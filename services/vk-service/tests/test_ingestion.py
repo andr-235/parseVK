@@ -39,9 +39,14 @@ class FakeRepository:
         self.authors = []
         self.posts = []
         self.comments = []
+        self._deleted_group_ids: set[int] = set()
 
-    async def upsert_group(self, group):
+    async def upsert_group(self, group, *, revive_if_deleted=False):
         self.groups.append(group)
+        self._deleted_group_ids.discard(group["id"])
+
+    async def get_active_group_ids(self):
+        return [g["id"] for g in self.groups if g["id"] not in self._deleted_group_ids]
 
     async def upsert_author(self, author):
         self.authors.append(author)
@@ -135,8 +140,9 @@ async def test_selected_task_collects_only_requested_groups():
 
 
 @pytest.mark.anyio
-async def test_scope_all_uses_default_group_source():
+async def test_scope_all_collects_active_groups():
     repository = FakeRepository()
+    repository.groups.append({"id": 1, "name": "Group 1"})
     tasks_client = FakeTasksClient()
     service = IngestionService(adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client)
 
@@ -147,14 +153,13 @@ async def test_scope_all_uses_default_group_source():
 
 
 @pytest.mark.anyio
-async def test_scope_all_without_configured_group_source_fails_task():
+async def test_scope_all_without_active_groups_fails_task():
     repository = FakeRepository()
     tasks_client = FakeTasksClient()
     service = IngestionService(
         adapter=StubVkApiClient(),
         repository=repository,
         tasks_client=tasks_client,
-        default_group_ids=[],
     )
 
     run = task_run(scope="all", group_ids=[])
@@ -166,8 +171,8 @@ async def test_scope_all_without_configured_group_source_fails_task():
 
     assert run.status == "failed"
     assert run.finished_at is not None
-    assert "No group source configured for scope=all" in run.last_error
-    assert tasks_client.calls == [("fail", 10, "run-10", "No group source configured for scope=all", 0, 0, {})]
+    assert "No active groups configured for scope=all" in run.last_error
+    assert tasks_client.calls == [("fail", 10, "run-10", "No active groups configured for scope=all", 0, 0, {})]
 
 
 @pytest.mark.anyio
@@ -233,7 +238,6 @@ async def test_ingestion_updates_task_run_fields_on_failure():
         adapter=StubVkApiClient(),
         repository=repository,
         tasks_client=tasks_client,
-        default_group_ids=[],
     )
 
     run = task_run(scope="all", group_ids=[])
@@ -245,7 +249,7 @@ async def test_ingestion_updates_task_run_fields_on_failure():
 
     assert run.status == "failed"
     assert run.finished_at is not None
-    assert "No group source configured for scope=all" in run.last_error
+    assert "No active groups configured for scope=all" in run.last_error
     assert run.processed_items == 0
 
 

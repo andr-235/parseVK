@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.clients.tasks.client import TasksClient
-from app.core.config import settings
 from app.modules.vk_api.client import VkApiAdapter
 
 
@@ -12,6 +11,7 @@ class IngestionResult:
     posts: int = 0
     comments: int = 0
     authors: int = 0
+    errors: list[dict] | None = None
 
     def stats(self) -> dict[str, int]:
         return {
@@ -19,6 +19,7 @@ class IngestionResult:
             "posts": self.posts,
             "comments": self.comments,
             "authors": self.authors,
+            "errors": len(self.errors),
         }
 
     @property
@@ -34,13 +35,11 @@ class IngestionService:
         repository,
         tasks_client: TasksClient,
         outbox_service=None,
-        default_group_ids: list[int] | None = None,
     ):
         self.adapter = adapter
         self.repository = repository
         self.tasks_client = tasks_client
         self.outbox = outbox_service
-        self.default_group_ids = settings.default_group_ids if default_group_ids is None else default_group_ids
 
     def _sanitize_error(self, error: str) -> str:
         token = None
@@ -63,7 +62,7 @@ class IngestionService:
         import asyncio
 
         try:
-            group_ids = self._group_ids(task_run)
+            group_ids = await self._group_ids(task_run)
             result = await self._collect(task_run, group_ids, correlation_id=correlation_id)
             
             task_run.status = "done"
@@ -90,6 +89,9 @@ class IngestionService:
                 )
             return result
         except Exception as exc:
+            import logging
+            logger = logging.getLogger("vk-service.ingestion")
+            logger.exception("Task execution failed for task_run.task_id=%s", task_run.task_id)
             sanitized_error = self._sanitize_error(str(exc))
             
             task_run.status = "failed"
@@ -151,18 +153,19 @@ class IngestionService:
             
             return IngestionResult()
 
-    def _group_ids(self, task_run: Any) -> list[int]:
+    async def _group_ids(self, task_run: Any) -> list[int]:
         if task_run.scope == "selected":
             return [int(item) for item in task_run.group_ids]
-        group_ids = [int(item) for item in self.default_group_ids]
+        group_ids = await self.repository.get_active_group_ids()
         if not group_ids:
-            raise RuntimeError("No group source configured for scope=all")
+            raise RuntimeError("No active groups configured for scope=all")
         return group_ids
 
     async def _collect(
         self, task_run: Any, group_ids: list[int], *, correlation_id: str | None = None
     ) -> IngestionResult:
         result = IngestionResult()
+        result.errors = []
         groups = await self.adapter.get_groups(group_ids)
         for group in groups:
             group_id = int(group["id"])
@@ -171,7 +174,13 @@ class IngestionService:
                 await self.outbox.emit_group_collected(group, correlation_id=correlation_id)
             result.groups += 1
 
-            posts_response = await self.adapter.get_posts(group_id, mode=task_run.mode, post_limit=task_run.post_limit)
+            try:
+                posts_response = await self.adapter.get_posts(group_id, mode=task_run.mode, post_limit=task_run.post_limit)
+            except Exception as exc:
+                sanitized = self._sanitize_error(str(exc))
+                result.errors.append({"group_id": group_id, "error": sanitized})
+                continue
+
             posts = posts_response["items"]
 
             author_profiles: dict[int, dict] = {}
@@ -181,14 +190,25 @@ class IngestionService:
                 author_profiles[g["id"]] = g
 
             post_comments: list[list[dict]] = []
+            valid_posts: list[dict] = []
             for post in posts:
-                comments_response = await self.adapter.get_comments(int(post["owner_id"]), int(post["id"]))
+                owner_id = post.get("owner_id")
+                post_id = post.get("id")
+                if owner_id is None or post_id is None:
+                    import logging
+                    logger = logging.getLogger("vk-service.ingestion")
+                    logger.warning("Skipping post without owner_id or id: %s", post.get("id"))
+                    continue
+                post_comments.append([])
+                valid_posts.append(post)
+                comments_response = await self.adapter.get_comments(int(owner_id), int(post_id))
                 comments = comments_response["items"]
-                post_comments.append(comments)
+                post_comments[-1] = comments
                 for p in comments_response.get("profiles", []):
                     author_profiles.setdefault(p["id"], p)
                 for g in comments_response.get("groups", []):
                     author_profiles.setdefault(g["id"], g)
+            posts = valid_posts
 
             await self._enrich_user_profiles(author_profiles)
 
