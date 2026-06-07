@@ -1,6 +1,8 @@
+from datetime import datetime, timezone
 from math import ceil
 
 from sqlalchemy import Select, String, and_, cast, false, func, or_, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ContentAuthor, ContentComment, ContentGroup, ContentPost
@@ -154,6 +156,43 @@ class ContentRepository:
         )
         return [self.post_to_dict(row) for row in rows]
 
+    @staticmethod
+    def _normalize_group_fields(group: dict) -> dict:
+        def val(k_snake: str, k_camel: str):
+            return group.get(k_snake) if group.get(k_snake) is not None else group.get(k_camel)
+
+        return {
+            "vk_group_id": int(group["id"]),
+            "screen_name": val("screen_name", "screenName"),
+            "name": group.get("name"),
+            "is_closed": val("is_closed", "isClosed"),
+            "deactivated": group.get("deactivated"),
+            "type": group.get("type"),
+            "photo_50": val("photo_50", "photo50"),
+            "photo_100": val("photo_100", "photo100"),
+            "photo_200": val("photo_200", "photo200"),
+            "activity": group.get("activity"),
+            "age_limits": val("age_limits", "ageLimits"),
+            "description": group.get("description"),
+            "members_count": val("members_count", "membersCount"),
+            "status": group.get("status"),
+            "verified": group.get("verified"),
+            "wall": group.get("wall"),
+            "addresses": group.get("addresses"),
+            "city": group.get("city"),
+            "counters": group.get("counters"),
+            "updated_at": datetime.now(timezone.utc),
+        }
+
+    async def upsert_group(self, group: dict) -> None:
+        data = self._normalize_group_fields(group)
+        stmt = insert(ContentGroup).values(**data)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[ContentGroup.vk_group_id],
+            set_={k: getattr(stmt.excluded, k) for k in data if k != "vk_group_id"},
+        )
+        await self.session.execute(stmt)
+
     async def list_groups_bulk(self, vk_group_ids: list[int]) -> list[dict]:
         rows = await self.session.scalars(
             select(ContentGroup).where(ContentGroup.vk_group_id.in_(vk_group_ids))
@@ -292,6 +331,32 @@ class ContentRepository:
                 count += 1
         await self.session.flush()
         return count
+
+    async def delete_group_and_related(self, vk_group_id: int) -> None:
+        from sqlalchemy import delete, select, func
+        await self.session.execute(
+            delete(ContentComment).where(ContentComment.vk_owner_id == -vk_group_id)
+        )
+        await self.session.execute(
+            delete(ContentPost).where(ContentPost.vk_owner_id == -vk_group_id)
+        )
+        remaining = await self.session.scalar(
+            select(func.count()).select_from(
+                select(ContentPost.vk_post_id).where(ContentPost.author_vk_id == -vk_group_id)
+                .union(
+                    select(ContentComment.vk_comment_id).where(ContentComment.author_vk_id == -vk_group_id)
+                )
+                .subquery()
+            )
+        )
+        if (remaining or 0) == 0:
+            await self.session.execute(
+                delete(ContentAuthor).where(ContentAuthor.vk_author_id == -vk_group_id)
+            )
+        await self.session.execute(
+            delete(ContentGroup).where(ContentGroup.vk_group_id == vk_group_id)
+        )
+        await self.session.flush()
 
     async def delete_author_and_comments(self, vk_author_id: int) -> None:
         from sqlalchemy import delete

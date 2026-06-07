@@ -144,8 +144,8 @@ class ProjectionRepository:
 
     async def upsert_post(self, post: dict, *, task_id: int | None = None) -> None:
         now = utcnow()
-        owner_id = int(post["owner_id"])
-        post_id = int(post["id"])
+        owner_id = int(post.get("owner_id", 0))
+        post_id = int(post.get("id", 0))
         stmt = insert(ContentPost).values(
             external_key=f"{owner_id}:{post_id}",
             vk_owner_id=owner_id,
@@ -171,9 +171,9 @@ class ProjectionRepository:
 
     async def upsert_comment(self, comment: dict, *, task_id: int | None = None) -> None:
         now = utcnow()
-        owner_id = int(comment["owner_id"])
-        post_id = int(comment["post_id"])
-        comment_id = int(comment["id"])
+        owner_id = int(comment.get("owner_id", 0))
+        post_id = int(comment.get("post_id", 0))
+        comment_id = int(comment.get("id", 0))
         stmt = insert(ContentComment).values(
             external_key=f"{owner_id}:{post_id}:{comment_id}",
             post_external_key=f"{owner_id}:{post_id}",
@@ -229,7 +229,9 @@ class ProjectionService:
         elif event.event_type == "vk.comment_collected":
             comment = event.payload["comment"]
             await self.repository.upsert_comment(comment, task_id=event.payload.get("taskId"))
-            await self.repository.increment_post_comments_count(f"{comment['owner_id']}:{comment['post_id']}")
+            owner_id = comment.get("owner_id", 0)
+            post_id = comment.get("post_id", 0)
+            await self.repository.increment_post_comments_count(f"{owner_id}:{post_id}")
         await self.repository.mark_processed(self.consumer_name, event.event_id, event.event_type)
         await self.repository.save()
         return True

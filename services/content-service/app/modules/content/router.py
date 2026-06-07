@@ -48,6 +48,14 @@ async def search_groups(
     return await service.search_groups(q, limit)
 
 
+@router.post("/groups/save")
+async def save_group(
+    payload: dict,
+    service: ContentService = Depends(get_content_service),
+):
+    return await service.save_group(payload)
+
+
 @router.get("/groups/{vk_group_id}")
 async def get_group(
     vk_group_id: int,
@@ -170,6 +178,17 @@ async def list_posts_bulk(
     service: ContentService = Depends(get_content_service),
 ):
     return await service.list_posts_bulk(external_keys)
+
+
+@router.delete("/groups/{vk_group_id}")
+async def delete_group(
+    vk_group_id: int,
+    service: ContentService = Depends(get_content_service),
+):
+    success = await service.delete_group(vk_group_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+    return {"deleted": True}
 
 
 @router.post("/groups/bulk")

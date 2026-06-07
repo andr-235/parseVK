@@ -33,6 +33,8 @@ class ContentRepo(Protocol):
     async def _update_author_verified_at(self, vk_author_id: int) -> bool: ...
     async def get_all_author_ids(self) -> list[int]: ...
     async def bulk_update_author_profiles(self, profiles: list[dict]) -> int: ...
+    async def upsert_group(self, group: dict) -> None: ...
+    async def delete_group_and_related(self, vk_group_id: int) -> None: ...
     async def delete_author_and_comments(self, vk_author_id: int) -> None: ...
 
 
@@ -113,6 +115,13 @@ class ContentService:
     async def verify_author(self, vk_author_id: int) -> bool:
         return await self._repo._update_author_verified_at(vk_author_id)
 
+    async def delete_group(self, vk_group_id: int) -> bool:
+        row = await self._repo.get_group(vk_group_id)
+        if row is None:
+            return False
+        await self._repo.delete_group_and_related(vk_group_id)
+        return True
+
     async def delete_author(self, vk_author_id: int) -> bool:
         row = await self._repo.get_author(vk_author_id)
         if row is None:
@@ -171,6 +180,11 @@ class ContentService:
 
     async def list_groups_bulk(self, vk_group_ids: list[int]) -> list[dict]:
         return await self._repo.list_groups_bulk(vk_group_ids)
+
+    async def save_group(self, group: dict) -> dict:
+        await self._repo.upsert_group(group)
+        row = await self._repo.get_group(int(group["id"]))
+        return row or group
 
     async def _enrich_author_summaries(self, items: list[dict]) -> None:
         if not self._photo_analysis:

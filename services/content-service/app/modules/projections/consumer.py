@@ -1,4 +1,5 @@
 import json
+import logging
 from contextlib import suppress
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -6,6 +7,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.modules.projections.service import ProjectionRepository, ProjectionService, VkEvent
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectionConsumer:
@@ -23,10 +26,14 @@ class ProjectionConsumer:
             enable_auto_commit=False,
         )
         await self._consumer.start()
+        logger.info("Kafka consumer started, group=content-service, topic=%s", settings.kafka_topic_vk)
         try:
             async for message in self._consumer:
-                await self.handle_message(message.value)
-                await self._consumer.commit()
+                try:
+                    await self.handle_message(message.value)
+                    await self._consumer.commit()
+                except Exception as exc:
+                    logger.exception("Failed to process message at offset %s", message.offset)
         finally:
             await self.stop()
 
