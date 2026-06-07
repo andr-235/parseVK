@@ -33,8 +33,8 @@ class OutboxService:
         )
 
     async def emit_post_collected(self, post: dict, *, task_id: int, correlation_id: str | None = None) -> None:
-        owner_id = int(post["owner_id"])
-        post_id = int(post["id"])
+        owner_id = int(post.get("owner_id", 0))
+        post_id = int(post.get("id", 0))
         await self.repository.add_event(
             event_type="vk.post_collected",
             aggregate_type="vk_post",
@@ -45,9 +45,9 @@ class OutboxService:
         )
 
     async def emit_comment_collected(self, comment: dict, *, task_id: int, correlation_id: str | None = None) -> None:
-        owner_id = int(comment["owner_id"])
-        post_id = int(comment["post_id"])
-        comment_id = int(comment["id"])
+        owner_id = int(comment.get("owner_id", 0))
+        post_id = int(comment.get("post_id", 0))
+        comment_id = int(comment.get("id", 0))
         await self.repository.add_event(
             event_type="vk.comment_collected",
             aggregate_type="vk_comment",

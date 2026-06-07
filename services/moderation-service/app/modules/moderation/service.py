@@ -215,9 +215,9 @@ class ModerationService:
 
     async def upsert_comment(self, comment: dict) -> None:
         now = utcnow()
-        owner_id = int(comment["owner_id"])
-        post_id = int(comment["post_id"])
-        comment_id = int(comment["id"])
+        owner_id = int(comment.get("owner_id", 0))
+        post_id = int(comment.get("post_id", 0))
+        comment_id = int(comment.get("id", 0))
         
         stmt = insert(ModerationComment).values(
             external_key=f"{owner_id}:{post_id}:{comment_id}",
