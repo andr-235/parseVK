@@ -226,6 +226,17 @@ class WatchlistService:
 
         return author
 
+    async def delete_author(self, id: int) -> None:
+        stmt = select(WatchlistAuthor).where(WatchlistAuthor.id == id)
+        res = await self.session.execute(stmt)
+        author = res.scalar_one_or_none()
+
+        if not author:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Автор списка 'На карандаше' не найден")
+
+        await self.session.delete(author)
+        await self.session.commit()
+
     async def update_settings(self, payload: WatchlistSettingsUpdateSchema):
         settings_rec = await self.get_or_create_settings()
 

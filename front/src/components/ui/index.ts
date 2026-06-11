@@ -11,3 +11,7 @@ export { Select } from './Select'
 export type { SelectProps } from './Select'
 export { Skeleton, TableSkeleton } from './Skeleton'
 export { Spinner } from './Spinner'
+export { PlaceholderPage } from './PlaceholderPage'
+export { FeedbackToast } from './FeedbackToast'
+export type { FeedbackToastProps } from './FeedbackToast'
+

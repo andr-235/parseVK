@@ -13,6 +13,7 @@ dependencies = [
   "python-multipart>=0.0.29",
   "sqlalchemy[asyncio]>=2.0",
   "uvicorn[standard]>=0.30",
+  "prometheus-fastapi-instrumentator>=6.0",
 ]
 
 [project.optional-dependencies]

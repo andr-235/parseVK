@@ -75,7 +75,7 @@ export function LoginPage() {
               onBlur={() => handleBlur('username')}
               aria-invalid={!!usernameError}
               aria-describedby={usernameError ? 'login-username-error' : undefined}
-              className="h-11 w-full focus-visible:ring-0"
+              className="h-11 w-full"
               autoFocus
             />
             {usernameError && (
@@ -93,7 +93,7 @@ export function LoginPage() {
               onBlur={() => handleBlur('password')}
               aria-invalid={!!passwordError}
               aria-describedby={passwordError ? 'login-password-error' : undefined}
-              className="h-11 focus-visible:ring-0"
+              className="h-11"
             />
             {passwordError && (
               <p id="login-password-error" className="text-xs text-danger" role="alert">{passwordError}</p>

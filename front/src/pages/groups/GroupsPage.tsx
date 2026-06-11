@@ -1,14 +1,13 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Trash2, RefreshCw, Download, X } from 'lucide-react'
-import { Button, Input } from '../../components/ui'
+import { Button, Input, FeedbackToast } from '../../components/ui'
 import { PageShell } from '../../components/layout/PageShell'
 import { TableShell } from '../../components/widgets/table/TableShell'
 import { TableHead } from '../../components/widgets/table/TableHead'
 import { TableSkeleton } from '../../components/widgets/table/TableSkeleton'
 import { EmptyState } from '../../components/widgets/table/EmptyState'
 import { PaginationBar } from '../../components/widgets/table/PaginationBar'
-import { FeedbackToast } from '../../components/widgets/table/FeedbackToast'
 import { TableError } from '../../components/widgets/table/TableError'
 import type { Column } from '../../components/widgets/table/constants'
 import { useDebounce } from '../../shared/hooks/useDebounce'
@@ -98,7 +97,7 @@ export function GroupsPage() {
     }),
   })
 
-  const filtered = data?.items ?? []
+  const filtered = useMemo(() => data?.items ?? [], [data])
 
   const { feedback, showFeedback, dismissFeedback } = useFeedback()
   const { focusedRow } = useTableKeyboardNavigation(filtered.length)
@@ -161,7 +160,7 @@ export function GroupsPage() {
     undoRef.current = setTimeout(() => {
       deleteMutation.mutate(id)
     }, 5000)
-  }, [filtered])
+  }, [filtered, deleteMutation])
 
   const handleConfirmDelete = useCallback((id: number) => {
     setActionState((prev) => ({ ...prev, confirmDelete: id }))
@@ -193,7 +192,7 @@ export function GroupsPage() {
     setUndoData(null)
     setActionState((prev) => ({ ...prev, deleting: null, confirmDelete: null }))
     showFeedback('success', 'Удаление отменено')
-  }, [])
+  }, [showFeedback])
 
   const handleBatch = useCallback((fn: (ids: number[]) => void) => {
     const ids = Array.from(selected)

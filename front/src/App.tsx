@@ -14,7 +14,7 @@ const TelegramPage = lazy(() => import('./pages/telegram/TelegramPage').then(m =
 const TelegramDlUploadPage = lazy(() => import('./pages/telegram-dl-upload/TelegramDlUploadPage').then(m => ({ default: m.TelegramDlUploadPage })))
 const TgmbaseSearchPage = lazy(() => import('./pages/tgmbase-search/TgmbaseSearchPage').then(m => ({ default: m.TgmbaseSearchPage })))
 const MonitoringPage = lazy(() => import('./pages/monitoring/MonitoringPage').then(m => ({ default: m.MonitoringPage })))
-const MonitoringGroupsPage = lazy(() => import('./pages/monitoring-groups/MonitoringGroupsPage').then(m => ({ default: m.MonitoringGroupsPage })))
+
 const ListingsPage = lazy(() => import('./pages/listings/ListingsPage').then(m => ({ default: m.ListingsPage })))
 const VkFriendsExportPage = lazy(() => import('./pages/vk-friends-export/VkFriendsExportPage').then(m => ({ default: m.VkFriendsExportPage })))
 const OkFriendsExportPage = lazy(() => import('./pages/ok-friends-export/OkFriendsExportPage').then(m => ({ default: m.OkFriendsExportPage })))
@@ -80,10 +80,7 @@ function App() {
             <Route path="/telegram" element={<TelegramPage />} />
             <Route path="/telegram/dl-upload" element={<TelegramDlUploadPage />} />
             <Route path="/tgmbase-search" element={<TgmbaseSearchPage />} />
-            <Route path="/monitoring/whatsapp" element={<MonitoringPage messenger="WhatsApp" />} />
-            <Route path="/monitoring/whatsapp/groups" element={<MonitoringGroupsPage messenger="WhatsApp" />} />
-            <Route path="/monitoring/max" element={<MonitoringPage messenger="Max" />} />
-            <Route path="/monitoring/max/groups" element={<MonitoringGroupsPage messenger="Max" />} />
+            <Route path="/monitoring" element={<MonitoringPage />} />
             <Route path="/listings" element={<ListingsPage />} />
             <Route path="/vk/friends-export" element={<VkFriendsExportPage />} />
             <Route path="/ok/friends-export" element={<OkFriendsExportPage />} />

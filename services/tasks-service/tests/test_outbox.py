@@ -106,9 +106,9 @@ async def test_tasks_service_outbox_events_contract():
     task_mock.post_limit = 10
     task_mock.source = "manual"
     
-    service.repository.create_task = AsyncMock(return_value=task_mock)
-    service.repository.add_audit = AsyncMock()
-    service.outbox.add_event = AsyncMock()
+    service.crud.repository.create_task = AsyncMock(return_value=task_mock)
+    service.crud.repository.add_audit = AsyncMock()
+    service.crud.outbox.add_event = AsyncMock()
     
     payload = CreateParseTaskRequest(
         scope="selected",
@@ -119,7 +119,7 @@ async def test_tasks_service_outbox_events_contract():
     
     await service.create_parse_task("user-1", payload)
     
-    service.outbox.add_event.assert_called_with(
+    service.crud.outbox.add_event.assert_called_with(
         event_type="task.created",
         aggregate_type="task",
         aggregate_id="42",
@@ -144,7 +144,7 @@ async def test_tasks_service_outbox_events_contract():
         mode="recent_posts"
     )
     await service.create_parse_task("user-1", payload_all)
-    service.outbox.add_event.assert_called_with(
+    service.crud.outbox.add_event.assert_called_with(
         event_type="task.created",
         aggregate_type="task",
         aggregate_id="42",
@@ -160,11 +160,11 @@ async def test_tasks_service_outbox_events_contract():
         }
     )
 
-    service.repository.get_task = AsyncMock(return_value=task_mock)
-    service.repository.touch_task = AsyncMock(return_value=task_mock)
+    service.crud.repository.get_task = AsyncMock(return_value=task_mock)
+    service.crud.repository.touch_task = AsyncMock(return_value=task_mock)
     
     await service.resume_task("user-1", 42)
-    service.outbox.add_event.assert_called_with(
+    service.crud.outbox.add_event.assert_called_with(
         event_type="task.resumed",
         aggregate_type="task",
         aggregate_id="42",

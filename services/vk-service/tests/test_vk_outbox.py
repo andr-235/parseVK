@@ -22,11 +22,11 @@ class StubVkApiClient:
     async def get_groups(self, group_ids: list) -> list:
         return [{"id": gid, "name": f"Group {gid}"} for gid in group_ids]
 
-    async def get_posts(self, group_id: int, *, mode: str, post_limit: int) -> list:
-        return [{"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}]
+    async def get_posts(self, group_id: int, *, mode: str, post_limit: int) -> dict:
+        return {"items": [{"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}]}
 
-    async def get_comments(self, owner_id: int, post_id: int) -> list:
-        return [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]
+    async def get_comments(self, owner_id: int, post_id: int) -> dict:
+        return {"items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]}
 
 
 @pytest.fixture

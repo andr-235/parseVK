@@ -91,6 +91,23 @@ async def update_author(
     )
 
 
+@router.delete("/authors/{id}", status_code=204)
+async def delete_author(
+    request: Request,
+    id: int,
+    auth_claims: dict = AUTH_DEPENDENCY,
+    service: WatchlistGatewayService = SERVICE_DEPENDENCY,
+):
+    request_id, correlation_id = request_ids(request)
+    await service.delete_author(
+        id=id,
+        user_id=str(auth_claims["sub"]),
+        request_id=request_id,
+        correlation_id=correlation_id,
+    )
+    return
+
+
 @router.get("/settings")
 async def get_settings(
     request: Request,

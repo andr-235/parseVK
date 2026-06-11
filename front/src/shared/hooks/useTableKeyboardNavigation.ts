@@ -6,6 +6,9 @@ export function useTableKeyboardNavigation(length: number) {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable
+      if (isInput) return
       if (!length) return
       if (e.key === 'ArrowDown') {
         e.preventDefault()

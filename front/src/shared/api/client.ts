@@ -46,6 +46,19 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
   return res.json()
 }
 
+export async function apiPostMultipart<T>(path: string, formData: FormData): Promise<T> {
+  const h = headers()
+  delete h['Content-Type'] // Let the browser set Content-Type with boundary
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: h,
+    credentials: 'include',
+    body: formData,
+  })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.json()
+}
+
 export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'PATCH',

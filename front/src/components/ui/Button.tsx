@@ -17,7 +17,7 @@ const transition = 'transition-colors duration-150'
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    'font-medium text-white',
+    'font-medium text-text-on-accent',
   secondary:
     'border border-border',
   ghost:

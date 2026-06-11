@@ -11,7 +11,7 @@ export function Checkbox({ className = '', ...rest }: CheckboxProps) {
         {...rest}
       />
       <svg
-        className="pointer-events-none absolute hidden peer-checked:block h-3 w-3 text-white"
+        className="pointer-events-none absolute hidden peer-checked:block h-3 w-3 text-text-on-accent"
         viewBox="0 0 12 12"
         fill="none"
         stroke="currentColor"

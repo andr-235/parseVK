@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     internal_service_token: str = "dev-internal-token"
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_vk: str = "parsevk.vk.events"
+    kafka_topic_im: str = "parsevk.im.events"
     kafka_consumer_enabled: bool = False
     photo_analysis_base_url: str | None = None
     photo_analysis_timeout_seconds: float = 1.5

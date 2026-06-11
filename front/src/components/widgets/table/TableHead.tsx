@@ -15,7 +15,7 @@ export function TableHead({ columns, sort, onSort, allChecked, onToggleAll }: Ta
     <thead>
       <tr className="border-b border-border bg-bg-sidebar text-left text-xs font-medium uppercase tracking-wider text-text-muted">
         {allChecked !== undefined && onToggleAll && (
-          <th className="w-10 px-3 py-2">
+          <th scope="col" className="w-10 px-3 py-2">
             <Checkbox checked={allChecked} onChange={onToggleAll} aria-label="Выбрать все" />
           </th>
         )}
@@ -26,6 +26,7 @@ export function TableHead({ columns, sort, onSort, allChecked, onToggleAll }: Ta
           return (
             <th
               key={col.key}
+              scope="col"
               className={`${col.hide ?? ''} px-3 py-2 ${col.className ?? ''}`}
               aria-sort={col.sortable ? ariaSort : undefined}
             >
@@ -43,7 +44,7 @@ export function TableHead({ columns, sort, onSort, allChecked, onToggleAll }: Ta
             </th>
           )
         })}
-        <th className="px-3 py-2 w-28" />
+        <th scope="col" className="px-3 py-2 w-28" />
       </tr>
     </thead>
   )

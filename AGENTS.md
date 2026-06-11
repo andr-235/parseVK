@@ -108,35 +108,45 @@ go run ./cmd/parsevkctl task merge ISSUE_NUMBER
 
 После старта задачи Codex должен:
 
-1. Работать только в task/feature ветке, не в default branch.
+1. Работать только в task/feature ветке, не в default branch (`fastapi-microservices-rewrite`).
 2. Вносить минимально необходимый для полноценной production-ready фичи набор изменений: без MVP-заглушек, но и без лишнего overengineering вне Scope.
 3. Не смешивать несколько несвязанных задач в один PR.
 4. Не трогать пользовательские staged/unstaged изменения, если они не относятся к задаче.
-5. Перед commit выполнить релевантные проверки.
+5. **Файлы > 100-150 строк — запрещены.** Если новый файл превышает лимит или рефакторинг укладывается в лимит — декомпозируй. Исключения: конфиги, миграции alembic, автогенерация.
+6. Перед commit выполнить релевантные проверки.
 
 Ищи команды проверок в:
 
-* `package.json`
-* `front/package.json`
-* `backend/package.json`
-* `libs/`
-* `services/`
-* `pyproject.toml`
-* `requirements.txt`
-* `Makefile`
+* `front/package.json` — фронтенд (Bun, Vitest, ESLint)
+* `services/<name>/pyproject.toml` — Python-микросервис (uv, pytest)
+* `tools/parsevkctl-go/` — Go CLI (go test)
+* `pyproject.toml` — корневой конфиг pytest/ruff
 * `docker-compose.yml`
 
 Предпочтительные проверки:
 
 ```powershell
-npm test
-npm run lint
-npm run typecheck
-npm run build
+# Фронтенд
+cd front
+bun run build          # tsc -b && vite build
+bun run test           # Vitest
+bun run lint           # ESLint flat config
+
+# Python-микросервисы
+cd services/<name>
+uv run pytest tests/ -v
+ruff check .
+
+# Go CLI
+cd tools/parsevkctl-go
+go test ./...
+
+# Все Python-тесты из корня
 pytest
 ruff check .
-mypy .
 ```
+
+**Внимание:** Старый CI (`.github/workflows/ci.yml`) устарел — ссылается на Node.js-бэкенд (`api/`, Prisma). Не полагайся на него для проверки FastAPI-сервисов. Запускай проверки локально перед commit.
 
 Если подходящих проверок нет, явно сообщи, что автоматические проверки не найдены, и опиши ручную валидацию.
 
@@ -186,6 +196,8 @@ feat/127-moderation-service
 test/145-gateway-integration-checks
 ```
 
+Для AI-веток через parsevkctl — формат `ai/mbp-<issue-number>-<slug>` (генерируется автоматически).
+
 ### Создание Pull Request
 
 После реализации, проверок и commit вызвать:
@@ -201,7 +213,7 @@ go run ./cmd/parsevkctl task pr ISSUE_NUMBER
 * добавить `Closes #ISSUE_NUMBER` в body;
 * перевести карточку в `Review`.
 
-Codex не должен создавать PR из default branch.
+Codex не должен создавать PR из default branch (`fastapi-microservices-rewrite`).
 
 PR title должен использовать тот же Conventional Commit format:
 
@@ -376,9 +388,10 @@ Codex должен делать не максимальное количеств
 ### Инструменты и команды
 
 * Для поиска используй `rg` или `grep`: быстро, точно, эффективно.
-* Для запуска команд используй формат: `["bash", "-lc", "<command>"]` с явным `workdir`.
+* Для запуска команд используй `["bash", ...]` с явным `workdir`.
 * Избегай разрушительных git-команд (`reset --hard`, `rebase`, `push --force`) без прямого запроса.
-* По умолчанию предполагай ASCII-кодировку, если не указано иное.
+* По умолчанию предполагай UTF-8, если не указано иное.
+* **Стек проекта:** Python 3.12+ (FastAPI, SQLAlchemy 2.0 async), фронтенд React 19 + Vite 8 + Tailwind CSS 4. Подробнее — `INSTRUCTIONS.md`.
 
 ### Окружение
 
@@ -386,6 +399,7 @@ Codex должен делать не максимальное количеств
 * Адаптируйся, если политика безопасности изменилась.
 * Не сохраняй временные данные дольше текущей сессии.
 * Избегай сторонних API без необходимости.
+* **Платформа:** Windows (PowerShell). Команды в инструкциях используют PowerShell-синтаксис.
 
 ---
 
@@ -483,6 +497,7 @@ cache = {}
 * Детерминированность: одинаковый input → одинаковый output.
 * Тестируемость: функции должны быть легко тестируемы.
 * Производительность: оптимизируй узкие места, документируй сложность.
+* **Размер файла:** не более 100-150 строк. Если превышает — декомпозируй. Исключения: конфиги, миграции alembic, автогенерация.
 
 ---
 

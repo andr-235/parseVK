@@ -7,11 +7,6 @@ from app.core.config import settings
 engine = create_async_engine(settings.database_url, pool_pre_ping=True)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
-# Инициализация внешнего движка мониторинга
-monitor_engine = None
-if settings.monitor_database_url:
-    monitor_engine = create_async_engine(settings.monitor_database_url, pool_pre_ping=True)
-
 # Инициализация движка tgmbase
 tgmbase_engine = None
 TgmbaseSessionLocal = None

@@ -3,6 +3,7 @@ import logging
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -59,6 +60,9 @@ def create_app() -> FastAPI:
 
     app.include_router(automation_router)
     app.include_router(tasks_router)
+
+    Instrumentator().instrument(app).expose(app)
+
     return app
 
 

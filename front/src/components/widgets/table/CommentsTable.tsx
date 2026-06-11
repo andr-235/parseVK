@@ -31,9 +31,10 @@ type CommentsTableProps = {
   onSelect: (c: Comment) => void
   selectedId: number | null
   onError?: (msg: string | null) => void
+  onAddToWatchlist?: (commentId: number) => void
 }
 
-export function CommentsTable({ onSelect, selectedId, onError }: CommentsTableProps) {
+export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist }: CommentsTableProps) {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [page, setPage] = useState(1)
@@ -43,19 +44,25 @@ export function CommentsTable({ onSelect, selectedId, onError }: CommentsTablePr
   const [statusFilter, setStatusFilter] = useState('Все статусы')
   const [sort, setSort] = useState<SortConfig>({ key: 'date', dir: 'desc' })
   const [undo, setUndo] = useState<UndoEntry | null>(null)
-  const [localComments, setLocalComments] = useState<Comment[]>([])
+  const [statusOverrides, setStatusOverrides] = useState<Record<number, Status>>({})
   const tableRef = useRef<HTMLDivElement>(null)
 
   const query = useComments({ page, pageSize, search: debouncedSearch })
   const { selected, toggle, toggleAll, clear, deselect, count } = useSelection<number>()
 
   useEffect(() => {
-    if (query.data) setLocalComments(query.data.comments)
-  }, [query.data])
-
-  useEffect(() => {
     onError?.(query.isError ? (query.error instanceof Error ? query.error.message : 'Ошибка загрузки') : null)
   }, [query.isError, query.error, onError])
+
+  const serverComments = useMemo(() => query.data?.comments ?? [], [query.data])
+
+  const localComments = useMemo(() => {
+    if (Object.keys(statusOverrides).length === 0) return serverComments
+    return serverComments.map((c) => ({
+      ...c,
+      status: statusOverrides[c.id] ?? c.status,
+    }))
+  }, [serverComments, statusOverrides])
 
   const total = query.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -77,34 +84,43 @@ export function CommentsTable({ onSelect, selectedId, onError }: CommentsTablePr
   }, [localComments, groupFilter, statusFilter, sort])
 
   const pagedRef = useRef(paged)
-  pagedRef.current = paged
+  useEffect(() => { pagedRef.current = paged }, [paged])
 
   useEffect(() => { if (!undo) return; const t = setTimeout(() => setUndo(null), 4000); return () => clearTimeout(t) }, [undo])
 
   const applyUndo = useCallback(() => {
     if (!undo) return
-    setLocalComments((prev) => prev.map((c) => (undo.ids.includes(c.id) ? { ...c, status: undo.from } : c)))
+    setStatusOverrides((prev) => {
+      const next = { ...prev }
+      undo.ids.forEach((id) => { next[id] = undo.from })
+      return next
+    })
     setUndo(null)
   }, [undo])
 
   const updateStatus = useCallback((ids: number[], newStatus: Status, recordUndo = false) => {
-    setLocalComments((prev) => {
-      const affected = prev.filter((c) => ids.includes(c.id))
-      if (affected.every((c) => c.status === newStatus)) return prev
-      if (recordUndo && affected.length > 0) {
-        const froms = new Set(affected.map((c) => c.status))
-        if (froms.size === 1) setUndo({ ids, from: [...froms][0], to: newStatus })
+    if (recordUndo) {
+      const froms = new Set<Status>()
+      ids.forEach((id) => {
+        const cur = statusOverrides[id] ?? serverComments.find((c) => c.id === id)?.status
+        if (cur) froms.add(cur)
+      })
+      if (froms.size === 1) {
+        setUndo({ ids, from: [...froms][0], to: newStatus })
       }
-      return prev.map((c) => (ids.includes(c.id) ? { ...c, status: newStatus } : c))
+    }
+    setStatusOverrides((prev) => {
+      const next = { ...prev }
+      ids.forEach((id) => { next[id] = newStatus })
+      return next
     })
     deselect(ids)
-  }, [deselect])
+  }, [deselect, statusOverrides, serverComments])
 
   const updateSingleStatus = useCallback((id: number, newStatus: Status) => {
-    setLocalComments((prev) => {
-      const c = prev.find((x) => x.id === id)
-      if (!c || c.status === newStatus) return prev
-      return prev.map((x) => (x.id === id ? { ...x, status: newStatus } : x))
+    setStatusOverrides((prev) => {
+      if (prev[id] === newStatus) return prev
+      return { ...prev, [id]: newStatus }
     })
   }, [])
 
@@ -174,6 +190,7 @@ export function CommentsTable({ onSelect, selectedId, onError }: CommentsTablePr
               rows={paged} selectedId={selectedId} focusedIndex={focusedIndex}
               selectedRows={selected} onSelect={onSelect}
               onToggleRow={toggle} onStatusChange={updateSingleStatus}
+              onAddToWatchlist={onAddToWatchlist}
             />
           </TableShell>
           <StatusLegend />

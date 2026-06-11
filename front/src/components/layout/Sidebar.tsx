@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   MessageSquareText,
+  Building2,
   ListTodo,
   Users,
   Bookmark,
@@ -8,8 +9,6 @@ import {
   Send,
   Upload,
   Search,
-  Bell,
-  Building2,
   Megaphone,
   UserPlus,
   UserMinus,
@@ -47,15 +46,14 @@ function getGroups(isAdmin: boolean): NavGroup[] {
       label: 'Telegram',
       items: [
         { label: 'Выгрузка пользователей', path: '/telegram', icon: <Send size={18} /> },
-        { label: 'Выгрузка с ДЛ', path: '/telegram/dl-upload', icon: <Upload size={18} />, soon: true },
+        { label: 'Выгрузка с ДЛ', path: '/telegram/dl-upload', icon: <Upload size={18} /> },
         { label: 'Поиск по каналам', path: '/tgmbase-search', icon: <Search size={18} /> },
       ],
     },
     {
       label: 'Мониторинг',
       items: [
-        { label: 'WhatsApp', path: '/monitoring/whatsapp', icon: <MessageCircle size={18} />, soon: true },
-        { label: 'Max', path: '/monitoring/max', icon: <Bell size={18} />, soon: true },
+        { label: 'Мониторинг', path: '/monitoring', icon: <MessageCircle size={18} /> },
       ],
     },
     {
@@ -87,7 +85,8 @@ export function Sidebar({ onClose }: SidebarProps) {
   const groups = getGroups(user?.role === 'admin')
 
   const handleNavigate = (path: string) => {
-    navigate(path)
+    const [p, q] = path.split('?')
+    navigate(q ? { pathname: p, search: `?${q}` } : p)
     onClose?.()
   }
 
@@ -104,7 +103,10 @@ export function Sidebar({ onClose }: SidebarProps) {
               {group.label}
             </p>
             {group.items.map((item) => {
-              const active = location.pathname.startsWith(item.path)
+              const [itemBase, itemQuery] = item.path.split('?')
+              const active = itemQuery
+                ? location.pathname === itemBase && location.search === `?${itemQuery}`
+                : location.pathname.startsWith(item.path)
               return (
                 <button
                   key={item.path}

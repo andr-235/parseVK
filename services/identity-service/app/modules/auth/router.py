@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.core.jwt import build_jwks
 from app.core.security import require_internal_token
 from app.db.session import get_session
+from app.modules.auth.jwt_service import JwtService
 from app.modules.auth.repository import OutboxRepository, RefreshTokensRepository
 from app.modules.auth.schemas import (
     AuthResponse,
@@ -22,11 +23,14 @@ router = APIRouter()
 
 
 async def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthService:
+    jwt_service = JwtService(
+        refresh_token_ttl_days=settings.refresh_token_ttl_days
+    )
     return AuthService(
         users=UsersRepository(session),
         refresh_tokens=RefreshTokensRepository(session),
         outbox=OutboxRepository(session),
-        refresh_token_ttl_days=settings.refresh_token_ttl_days,
+        jwt_service=jwt_service,
     )
 
 

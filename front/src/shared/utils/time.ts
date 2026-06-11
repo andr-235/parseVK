@@ -25,3 +25,13 @@ export function relativeTime(date: string | Date): string {
   }
   return new Date(date).toLocaleDateString('ru-RU')
 }
+
+export function formatDateTime(date: string | Date | null): string {
+  if (!date) return '—'
+  return new Date(date).toLocaleString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}

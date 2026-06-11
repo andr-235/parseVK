@@ -56,7 +56,7 @@ export function CreateTaskForm({ onSubmit, onCancel, isPending }: Props) {
                 onClick={() => setScope(s)}
                 className={`rounded px-2.5 py-1 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                   scope === s
-                    ? 'bg-accent text-white'
+                    ? 'bg-accent text-text-on-accent'
                     : 'text-text-secondary hover:text-text-primary'
                 }`}
               >

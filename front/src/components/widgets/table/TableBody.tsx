@@ -1,4 +1,5 @@
-import { CheckCircle, Flag, ExternalLink } from 'lucide-react'
+import { memo } from 'react'
+import { CheckCircle, Flag, ExternalLink, Pencil } from 'lucide-react'
 import { Button, Checkbox } from '../../ui'
 import { StatusCell } from './StatusCell'
 import type { Comment, Status } from '../../../types/comments'
@@ -11,17 +12,17 @@ export type TableBodyProps = {
   onSelect: (c: Comment) => void
   onToggleRow: (id: number) => void
   onStatusChange: (id: number, s: Status) => void
+  onAddToWatchlist?: (commentId: number) => void
 }
 
-export function TableBody({ rows, selectedId, focusedIndex, selectedRows, onSelect, onToggleRow, onStatusChange }: TableBodyProps) {
+export const TableBody = memo(function TableBody({ rows, selectedId, focusedIndex, selectedRows, onSelect, onToggleRow, onStatusChange, onAddToWatchlist }: TableBodyProps) {
   return (
     <tbody>
       {rows.map((c, i) => (
         <tr
-          key={c.id} onClick={() => onSelect(c)}
+          key={c.id} onClick={() => onSelect(c)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(c) } }}
           className={`cursor-pointer border-b border-border transition-colors duration-150 last:border-0 hover:bg-bg-hover ${selectedId === c.id ? 'bg-accent-soft' : ''} ${focusedIndex === i ? 'ring-2 ring-accent ring-inset' : ''}`}
           aria-selected={selectedId === c.id}
-          tabIndex={-1}
         >
           <td className="px-3 py-2">
             <Checkbox
@@ -62,7 +63,20 @@ export function TableBody({ rows, selectedId, focusedIndex, selectedRows, onSele
               <Button variant="icon" semantic="danger" onClick={(e) => { e.stopPropagation(); onStatusChange(c.id, 'Нарушение') }} aria-label="Отметить как нарушение">
                 <Flag size={14} />
               </Button>
-              <Button variant="icon" onClick={(e) => e.stopPropagation()} aria-label="Открыть пост в источнике">
+              {onAddToWatchlist && (
+                <Button
+                  variant="icon"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAddToWatchlist(c.id)
+                  }}
+                  aria-label="Взять автора на карандаш"
+                  title="Взять автора на карандаш"
+                >
+                  <Pencil size={14} />
+                </Button>
+              )}
+              <Button variant="icon" onClick={(e) => e.stopPropagation()} aria-label="Открыть post в источнике">
                 <ExternalLink size={14} />
               </Button>
             </div>
@@ -71,4 +85,4 @@ export function TableBody({ rows, selectedId, focusedIndex, selectedRows, onSele
       ))}
     </tbody>
   )
-}
+})

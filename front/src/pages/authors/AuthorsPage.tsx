@@ -1,14 +1,13 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Trash2, RefreshCw, BadgeCheck, Download, X } from 'lucide-react'
-import { Button, Input, Select } from '../../components/ui'
+import { Button, Input, Select, FeedbackToast } from '../../components/ui'
 import { PageShell } from '../../components/layout/PageShell'
 import { TableShell } from '../../components/widgets/table/TableShell'
 import { TableHead } from '../../components/widgets/table/TableHead'
 import { TableSkeleton } from '../../components/widgets/table/TableSkeleton'
 import { EmptyState } from '../../components/widgets/table/EmptyState'
 import { PaginationBar } from '../../components/widgets/table/PaginationBar'
-import { FeedbackToast } from '../../components/widgets/table/FeedbackToast'
 import { TableError } from '../../components/widgets/table/TableError'
 import type { Column } from '../../components/widgets/table/constants'
 import { useDebounce } from '../../shared/hooks/useDebounce'
@@ -143,7 +142,7 @@ export function AuthorsPage() {
   })
 
   const runBatch = useCallback(async (ids: number[], fn: (id: number) => Promise<void>) => {
-    for (const id of ids) await fn(id)
+    await Promise.all(ids.map(fn))
   }, [])
 
   const batchVerifyMutation = useMutation({
@@ -216,12 +215,12 @@ export function AuthorsPage() {
   const handleVerify = useCallback((id: number) => {
     setActionState((prev) => ({ ...prev, verifying: id }))
     verifyMutation.mutate(id)
-  }, [])
+  }, [verifyMutation])
 
   const handleDelete = useCallback((id: number) => {
     setActionState((prev) => ({ ...prev, deleting: id }))
     deleteMutation.mutate(id)
-  }, [])
+  }, [deleteMutation])
 
   const handleConfirmDelete = useCallback((id: number) => {
     setActionState((prev) => ({ ...prev, confirmDelete: id }))

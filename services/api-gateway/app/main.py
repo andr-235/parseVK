@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.core.middleware import RequestIdMiddleware
@@ -59,6 +60,8 @@ def create_app() -> FastAPI:
     app.include_router(ok_friends_router)
     app.include_router(monitoring_router)
     app.include_router(metrics_router)
+
+    Instrumentator().instrument(app).expose(app)
 
     return app
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthorsPage } from '../AuthorsPage'
@@ -46,19 +46,6 @@ const mockAuthor = {
   verifiedAt: '2026-05-30T00:00:00Z',
   createdAt: '2026-05-01T00:00:00Z',
   lastSeenAt: '2026-05-30T00:00:00Z',
-}
-
-const mockAuthorUnverified = {
-  ...mockAuthor,
-  vkAuthorId: 67890,
-  fullName: 'Петр Петров',
-  displayName: 'Петр Петров',
-  photo50: null,
-  city: null,
-  photosCount: null,
-  followersCount: null,
-  isVerified: false,
-  verifiedAt: null,
 }
 
 const mockResponse = (items: typeof mockAuthor[]) => ({

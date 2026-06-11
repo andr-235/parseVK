@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, X, Loader2, BookOpen } from 'lucide-react'
 import { Button, Input } from '../../../components/ui'
@@ -18,7 +18,7 @@ export function FormsExpand({ keywordId }: Props) {
   const [newForm, setNewForm] = useState('')
   const [newExclusion, setNewExclusion] = useState('')
 
-  const queryKey = ['keywordForms', keywordId]
+  const queryKey = useMemo(() => ['keywordForms', keywordId] as const, [keywordId])
 
   const { data, isLoading } = useQuery({
     queryKey,

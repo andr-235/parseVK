@@ -54,15 +54,15 @@ export const KeywordRow = memo(function KeywordRow({
           <button
             type="button"
             onClick={toggleExpand}
-            className="flex h-6 w-6 items-center justify-center rounded text-text-muted hover:bg-bg-hover transition-colors duration-150"
+            className="flex min-h-7 min-w-7 items-center justify-center rounded text-text-muted hover:bg-bg-hover transition-colors duration-150 sm:min-h-6 sm:min-w-6"
             aria-label={expanded ? 'Скрыть формы' : 'Показать формы'}
             aria-expanded={expanded}
           >
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
         </td>
-        <td className="px-3 py-2">
-          <span className="text-sm font-medium text-text-primary">{keyword.word}</span>
+        <td className="max-w-xs truncate px-3 py-2">
+          <span className="text-sm font-medium text-text-primary" title={keyword.word}>{keyword.word}</span>
         </td>
         <td className="px-3 py-2 text-sm text-text-secondary">
           {keyword.category || '\u2014'}

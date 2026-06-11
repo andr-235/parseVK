@@ -2,6 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.modules.moderation.router import router as moderation_router
@@ -74,6 +75,8 @@ def create_app() -> FastAPI:
     app.include_router(keywords_router)
     app.include_router(watchlist_router)
     app.include_router(photo_analysis_router)
+
+    Instrumentator().instrument(app).expose(app)
 
     return app
 

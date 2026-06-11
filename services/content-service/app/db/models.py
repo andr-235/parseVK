@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from uuid import UUID as PyUUID
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Float, Index, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSON, JSONB
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -151,6 +152,26 @@ class ProcessedEvent(Base):
     event_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     event_type: Mapped[str] = mapped_column(Text, nullable=False)
     processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class ImMessage(Base):
+    __tablename__ = "im_messages"
+    __table_args__ = (
+        Index("ix_im_messages_messenger_created", "messenger", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    messenger: Mapped[str] = mapped_column(String(32), nullable=False)
+    external_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    chat_external_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    chat_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    author: Mapped[str | None] = mapped_column(Text, nullable=True)
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    metadata_raw: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
 class MonitoringGroup(Base):

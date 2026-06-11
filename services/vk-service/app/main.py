@@ -2,6 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.modules.outbox.publisher import publish_outbox_forever
@@ -57,6 +58,9 @@ def create_app() -> FastAPI:
     app.include_router(vk_router)
     app.include_router(vk_friends_router)
     app.include_router(ok_friends_router)
+
+    Instrumentator().instrument(app).expose(app)
+
     return app
 
 

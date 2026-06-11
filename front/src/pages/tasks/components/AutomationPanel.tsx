@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Play, ToggleLeft, ToggleRight } from 'lucide-react'
 import { Button, Input, Spinner } from '../../../components/ui'
 import type { AutomationSettings, AutomationSettingsUpdate } from '../../../shared/api/tasks'
@@ -14,31 +14,17 @@ type Props = {
   isRunning: boolean
 }
 
-export function AutomationPanel({ settings, isLoading, onSave, onRun, isSaving, isRunning }: Props) {
-  const [enabled, setEnabled] = useState(false)
-  const [hour, setHour] = useState(8)
-  const [minute, setMinute] = useState(0)
-  const [postLimit, setPostLimit] = useState(10)
-
-  useEffect(() => {
-    if (settings) {
-      setEnabled(settings.enabled)
-      setHour(settings.runHour)
-      setMinute(settings.runMinute)
-      setPostLimit(settings.postLimit)
-    }
-  }, [settings])
-
-  if (isLoading) {
-    return (
-      <div className="mb-4 rounded-md border border-border bg-bg-panel p-4">
-        <div className="flex items-center gap-2 py-2 text-xs text-text-muted">
-          <Spinner size={14} />
-          Загрузка настроек...
-        </div>
-      </div>
-    )
-  }
+function AutomationForm({ settings, onSave, onRun, isSaving, isRunning }: {
+  settings: AutomationSettings
+  onSave: (settings: AutomationSettingsUpdate) => void
+  onRun: () => void
+  isSaving: boolean
+  isRunning: boolean
+}) {
+  const [enabled, setEnabled] = useState(settings.enabled)
+  const [hour, setHour] = useState(settings.runHour)
+  const [minute, setMinute] = useState(settings.runMinute)
+  const [postLimit, setPostLimit] = useState(settings.postLimit)
 
   return (
     <div className="mb-4 rounded-md border border-border bg-bg-panel p-4">
@@ -49,7 +35,7 @@ export function AutomationPanel({ settings, isLoading, onSave, onRun, isSaving, 
             onClick={() => setEnabled((v) => !v)}
             className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               enabled
-                ? 'bg-accent text-white'
+                ? 'bg-accent text-text-on-accent'
                 : 'border border-border text-text-secondary hover:bg-bg-hover'
             }`}
             aria-pressed={enabled}
@@ -115,21 +101,45 @@ export function AutomationPanel({ settings, isLoading, onSave, onRun, isSaving, 
             {isRunning ? 'Запуск...' : 'Запустить сейчас'}
           </Button>
         </div>
-        {settings && (
-          <div className="w-full text-xs text-text-muted">
-            {settings.lastRunAt && (
-              <span>Последний запуск: {new Date(settings.lastRunAt).toLocaleString('ru-RU')}</span>
-            )}
-            {settings.lastRunAt && settings.nextRunAt && <span className="mx-2">·</span>}
-            {settings.nextRunAt && (
-              <span>Следующий: {new Date(settings.nextRunAt).toLocaleString('ru-RU')}</span>
-            )}
-            {settings.isRunning && (
-              <span className="ml-2 text-accent">Выполняется...</span>
-            )}
-          </div>
-        )}
+        <div className="w-full text-xs text-text-muted">
+          {settings.lastRunAt && (
+            <span>Последний запуск: {new Date(settings.lastRunAt).toLocaleString('ru-RU')}</span>
+          )}
+          {settings.lastRunAt && settings.nextRunAt && <span className="mx-2">·</span>}
+          {settings.nextRunAt && (
+            <span>Следующий: {new Date(settings.nextRunAt).toLocaleString('ru-RU')}</span>
+          )}
+          {settings.isRunning && (
+            <span className="ml-2 text-accent">Выполняется...</span>
+          )}
+        </div>
       </div>
     </div>
+  )
+}
+
+export function AutomationPanel({ settings, isLoading, onSave, onRun, isSaving, isRunning }: Props) {
+  if (isLoading) {
+    return (
+      <div className="mb-4 rounded-md border border-border bg-bg-panel p-4">
+        <div className="flex items-center gap-2 py-2 text-xs text-text-muted">
+          <Spinner size={14} />
+          Загрузка настроек...
+        </div>
+      </div>
+    )
+  }
+
+  if (!settings) return null
+
+  return (
+    <AutomationForm
+      key={`${settings.runHour}-${settings.runMinute}-${settings.postLimit}`}
+      settings={settings}
+      onSave={onSave}
+      onRun={onRun}
+      isSaving={isSaving}
+      isRunning={isRunning}
+    />
   )
 }

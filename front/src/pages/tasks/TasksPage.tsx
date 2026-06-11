@@ -1,14 +1,13 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, X, RefreshCw, Settings2, Trash2 } from 'lucide-react'
-import { Button } from '../../components/ui'
+import { Button, FeedbackToast } from '../../components/ui'
 import { PageShell } from '../../components/layout/PageShell'
 import { TableShell } from '../../components/widgets/table/TableShell'
 import { TableHead } from '../../components/widgets/table/TableHead'
 import { TableSkeleton } from '../../components/widgets/table/TableSkeleton'
 import { EmptyState } from '../../components/widgets/table/EmptyState'
 import { PaginationBar } from '../../components/widgets/table/PaginationBar'
-import { FeedbackToast } from '../../components/widgets/table/FeedbackToast'
 import { TableError } from '../../components/widgets/table/TableError'
 import type { Column } from '../../components/widgets/table/constants'
 import type { TaskStatus } from '../../shared/api/tasks'
@@ -84,7 +83,7 @@ export function TasksPage() {
     },
   })
 
-  const rawTasks = data?.tasks ?? []
+  const rawTasks = useMemo(() => data?.tasks ?? [], [data])
   const hasActive = rawTasks.some((t) => t.status === 'pending' || t.status === 'running')
 
   const tasks = useMemo(
@@ -300,7 +299,7 @@ export function TasksPage() {
                 type="button"
                 onClick={() => { setStatusFilter(null); setSelected(new Set()) }}
                 className={`rounded px-2 py-0.5 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                  statusFilter === null ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'
+                  statusFilter === null ? 'bg-accent text-text-on-accent' : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 Все
@@ -314,7 +313,7 @@ export function TasksPage() {
                     type="button"
                     onClick={() => { setStatusFilter(s); setSelected(new Set()) }}
                     className={`rounded px-2 py-0.5 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                      statusFilter === s ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'
+                      statusFilter === s ? 'bg-accent text-text-on-accent' : 'text-text-secondary hover:text-text-primary'
                     }`}
                   >
                     {STATUS_FILTER_LABELS[s]} ({count})

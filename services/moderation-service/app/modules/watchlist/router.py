@@ -72,6 +72,15 @@ async def update_author(
     return WatchlistAuthorSchema.model_validate(author)
 
 
+@router.delete("/authors/{id}", status_code=204)
+async def delete_author(
+    id: int,
+    service: WatchlistService = Depends(get_watchlist_service),
+):
+    await service.delete_author(id=id)
+    return
+
+
 @router.get("/settings", response_model=WatchlistSettingsSchema)
 async def get_settings(
     service: WatchlistService = Depends(get_watchlist_service),

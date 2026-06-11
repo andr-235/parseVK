@@ -23,7 +23,7 @@ export function ConfirmAction({
   showIcon = false,
 }: ConfirmActionProps) {
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div className="flex items-center gap-2 text-xs" role="alertdialog" aria-label={message}>
       {showIcon && <AlertTriangle size={12} className="text-danger" />}
       <span className={showIcon ? 'text-text-secondary' : 'text-danger font-medium'}>
         {message}

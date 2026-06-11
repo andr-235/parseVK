@@ -10,7 +10,8 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.db.models import ContentAuthor, ContentComment, ContentGroup, ContentPost, ProcessedEvent
-from app.modules.projections.service import ProjectionService, VkEvent
+from app.modules.projections.processor import VkEvent
+from app.modules.projections.service import ProjectionService
 
 
 @pytest.fixture

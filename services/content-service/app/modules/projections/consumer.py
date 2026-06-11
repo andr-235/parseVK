@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
 from app.db.session import SessionLocal
-from app.modules.projections.service import ProjectionRepository, ProjectionService, VkEvent
+from app.modules.projections.processor import ProjectionRepository, VkEvent
+from app.modules.projections.service import ProjectionService
 
 logger = logging.getLogger(__name__)
 

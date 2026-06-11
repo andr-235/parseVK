@@ -21,11 +21,11 @@ class StubVkApiClient:
     async def get_groups(self, group_ids: list) -> list:
         return [{"id": gid, "name": f"Group {gid}"} for gid in group_ids]
 
-    async def get_posts(self, group_id: int, *, mode: str, post_limit: int) -> list:
-        return [{"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}]
+    async def get_posts(self, group_id: int, *, mode: str, post_limit: int) -> dict:
+        return {"items": [{"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}]}
 
-    async def get_comments(self, owner_id: int, post_id: int) -> list:
-        return [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]
+    async def get_comments(self, owner_id: int, post_id: int) -> dict:
+        return {"items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]}
 
 
 @pytest.fixture
@@ -35,14 +35,16 @@ def anyio_backend():
 
 class FakeRepository:
     def __init__(self):
-        self.groups = []
+        self.groups: list[dict] = []
         self.authors = []
         self.posts = []
         self.comments = []
         self._deleted_group_ids: set[int] = set()
 
     async def upsert_group(self, group, *, revive_if_deleted=False):
-        self.groups.append(group)
+        existing_ids = [g["id"] for g in self.groups]
+        if group["id"] not in existing_ids:
+            self.groups.append(group)
         self._deleted_group_ids.discard(group["id"])
 
     async def get_active_group_ids(self):
@@ -132,7 +134,7 @@ async def test_selected_task_collects_only_requested_groups():
 
     result = await service.execute(task_run(group_ids=[1, 2]), correlation_id="corr-1")
 
-    assert result.stats() == {"groups": 2, "posts": 2, "comments": 2, "authors": 4}
+    assert result.stats() == {"groups": 2, "posts": 2, "comments": 2, "authors": 4, "errors": 0}
     assert [group["id"] for group in repository.groups] == [1, 2]
     assert len(repository.posts) == 2
     assert len(repository.comments) == 2
@@ -193,13 +195,13 @@ async def test_real_vk_adapter_uses_vk_api_library_session():
     comments = await client.get_comments(-1, 10)
 
     assert groups == [{"id": 1, "name": "Group 1"}]
-    assert posts == [{"id": 10, "owner_id": -1, "from_id": -1, "text": "post"}]
-    assert comments == [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}]
+    assert posts == {"items": [{"id": 10, "owner_id": -1, "from_id": -1, "text": "post"}], "profiles": [], "groups": []}
+    assert comments == {"items": [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}], "profiles": [], "groups": []}
     assert calls == [
         ("VkApi", {"token": "vk-token", "api_version": "5.199"}),
         ("groups.getById", {"group_ids": "1"}),
-        ("wall.get", {"owner_id": -1, "count": 1}),
-        ("wall.getComments", {"owner_id": -1, "post_id": 10, "count": 100}),
+        ("wall.get", {"owner_id": -1, "count": 1, "extended": 1}),
+        ("wall.getComments", {"owner_id": -1, "post_id": 10, "count": 100, "extended": 1}),
     ]
 
 

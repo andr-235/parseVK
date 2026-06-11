@@ -24,6 +24,7 @@ export function StatusCell({ status, onChange }: StatusCellProps) {
     <div className="relative" ref={ref}>
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) } }}
         aria-label={`Статус: ${status}. Нажмите для смены`}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -49,6 +50,7 @@ export function StatusCell({ status, onChange }: StatusCellProps) {
                 role="option"
                 aria-selected={s === status}
                 onClick={(e) => { e.stopPropagation(); onChange(s); setOpen(false) }}
+                onKeyDown={(e) => { if (e.key === 'Tab' || e.key === 'Escape') { e.stopPropagation(); setOpen(false) } }}
                 className={`flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left hover:bg-bg-hover transition-colors duration-150 ${s === status ? 'bg-accent-soft' : ''} ${statusColors[s]}`}
               >
                 <ItemIcon size={10} />

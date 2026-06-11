@@ -1,16 +1,15 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Search, Plus, Upload, RefreshCw, RotateCcw, X, Trash2, ChevronUp,
+  Search, Plus, Upload, RefreshCw, RotateCcw, X, Trash2, ChevronUp, Clock, AlertTriangle,
 } from 'lucide-react'
-import { Button, Input } from '../../components/ui'
+import { Button, Input, FeedbackToast } from '../../components/ui'
 import { PageShell } from '../../components/layout/PageShell'
 import { TableShell } from '../../components/widgets/table/TableShell'
 import { TableHead } from '../../components/widgets/table/TableHead'
 import { TableSkeleton } from '../../components/widgets/table/TableSkeleton'
 import { EmptyState } from '../../components/widgets/table/EmptyState'
 import { PaginationBar } from '../../components/widgets/table/PaginationBar'
-import { FeedbackToast } from '../../components/widgets/table/FeedbackToast'
 import { TableError } from '../../components/widgets/table/TableError'
 import type { Column } from '../../components/widgets/table/constants'
 import { useDebounce } from '../../shared/hooks/useDebounce'
@@ -31,19 +30,27 @@ import {
 } from '../../shared/api/keywords'
 
 const PAGE_SIZE = 50
+const UNDO_TIMEOUT_MS = 5000
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  return 'Произошла неизвестная ошибка'
+}
 
 const columns: Column[] = [
   { key: 'checkbox', label: '', className: 'w-10', sortable: false },
   { key: 'expand', label: '', className: 'w-8', sortable: false },
   { key: 'word', label: 'Слово', sortable: false },
-  { key: 'category', label: 'Категория', className: 'w-36', sortable: false },
-  { key: 'isPhrase', label: 'Тип', className: 'w-20', sortable: false },
-  { key: 'createdAt', label: 'Создано', className: 'w-24', sortable: false },
+  { key: 'category', label: 'Категория', className: 'w-36 lg:w-auto', sortable: false },
+  { key: 'isPhrase', label: 'Тип', className: 'w-20 lg:w-auto', sortable: false },
+  { key: 'createdAt', label: 'Создано', className: 'w-24 lg:w-auto', sortable: false },
   { key: 'actions', label: '', className: 'w-20', sortable: false },
 ]
 
 export function KeywordsPage() {
   const queryClient = useQueryClient()
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const keywordsRef = useRef<Keyword[]>([])
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
@@ -53,6 +60,8 @@ export function KeywordsPage() {
   })
   const [undoData, setUndoData] = useState<{ keyword: Keyword } | null>(null)
   const undoRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const [undoTick, setUndoTick] = useState(0)
+  const undoIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
   const [addPanelOpen, setAddPanelOpen] = useState(false)
   const [addMode, setAddMode] = useState<'single' | 'bulk' | 'upload'>('single')
@@ -60,6 +69,13 @@ export function KeywordsPage() {
   const [singleCategory, setSingleCategory] = useState('')
   const [bulkText, setBulkText] = useState('')
   const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [wordError, setWordError] = useState('')
+
+  const [confirmAction, setConfirmAction] = useState<{
+    message: string
+    onConfirm: () => void
+    loading?: boolean
+  } | null>(null)
 
   const { selected, toggle, toggleAll, clear, count } = useSelection<number>()
 
@@ -72,7 +88,11 @@ export function KeywordsPage() {
     queryFn: () => fetchKeywords({ search: debouncedSearch || undefined, page, limit: pageSize }),
   })
 
-  const keywords = data?.keywords ?? []
+  const keywords = useMemo(() => data?.keywords ?? [], [data?.keywords])
+
+  useEffect(() => {
+    keywordsRef.current = keywords
+  }, [keywords])
 
   const { feedback, showFeedback, dismissFeedback } = useFeedback()
   const { focusedRow } = useTableKeyboardNavigation(keywords.length)
@@ -92,7 +112,7 @@ export function KeywordsPage() {
     },
     onError: (err) => {
       setActionState((prev) => ({ ...prev, deleting: null, confirmDelete: null }))
-      showFeedback('error', err instanceof Error ? err.message : 'Ошибка удаления')
+      showFeedback('error', getErrorMessage(err))
       setUndoData(null)
     },
   })
@@ -102,11 +122,12 @@ export function KeywordsPage() {
     onSuccess: () => {
       setSingleWord('')
       setSingleCategory('')
+      setWordError('')
       invalidateKeywords()
       showFeedback('success', 'Ключевое слово добавлено')
     },
     onError: (err) => {
-      showFeedback('error', err instanceof Error ? err.message : 'Ошибка добавления')
+      showFeedback('error', getErrorMessage(err))
     },
   })
 
@@ -121,7 +142,7 @@ export function KeywordsPage() {
       showFeedback('success', `Добавлено: ${result.createdCount}, обновлено: ${result.updatedCount}, ошибок: ${result.failedCount}`)
     },
     onError: (err) => {
-      showFeedback('error', err instanceof Error ? err.message : 'Ошибка массового добавления')
+      showFeedback('error', getErrorMessage(err))
     },
   })
 
@@ -133,7 +154,7 @@ export function KeywordsPage() {
       showFeedback('success', 'Файл загружен')
     },
     onError: (err) => {
-      showFeedback('error', err instanceof Error ? err.message : 'Ошибка загрузки файла')
+      showFeedback('error', getErrorMessage(err))
     },
   })
 
@@ -143,7 +164,7 @@ export function KeywordsPage() {
       showFeedback('success', 'Пересчёт запущен')
     },
     onError: (err) => {
-      showFeedback('error', err instanceof Error ? err.message : 'Ошибка пересчёта')
+      showFeedback('error', getErrorMessage(err))
     },
   })
 
@@ -154,12 +175,12 @@ export function KeywordsPage() {
       showFeedback('success', 'Формы перестроены')
     },
     onError: (err) => {
-      showFeedback('error', err instanceof Error ? err.message : 'Ошибка перестроения форм')
+      showFeedback('error', getErrorMessage(err))
     },
   })
 
   const runBatch = useCallback(async (ids: number[], fn: (id: number) => Promise<void>) => {
-    for (const id of ids) await fn(id)
+    await Promise.all(ids.map(fn))
   }, [])
 
   const batchDeleteMutation = useMutation({
@@ -176,6 +197,10 @@ export function KeywordsPage() {
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0
   const allIds = useMemo(() => data?.keywords.map((k) => k.id) ?? [], [data])
+  const bulkWordCount = useMemo(
+    () => bulkText.split('\n').filter(Boolean).length,
+    [bulkText],
+  )
 
   const resetFilters = useCallback(() => {
     setSearch('')
@@ -183,14 +208,19 @@ export function KeywordsPage() {
   }, [])
 
   const handleDelete = useCallback((id: number) => {
-    const kw = keywords.find((k) => k.id === id)
+    const kw = keywordsRef.current.find((k) => k.id === id)
     if (!kw) return
     setActionState((prev) => ({ ...prev, deleting: id }))
     setUndoData({ keyword: kw })
+    setUndoTick(0)
     undoRef.current = setTimeout(() => {
       deleteMutation.mutate(id)
-    }, 5000)
-  }, [keywords, deleteMutation])
+      if (undoIntervalRef.current) clearInterval(undoIntervalRef.current)
+    }, UNDO_TIMEOUT_MS)
+    undoIntervalRef.current = setInterval(() => {
+      setUndoTick((prev) => prev + 1)
+    }, 1000)
+  }, [deleteMutation])
 
   const handleConfirmDelete = useCallback((id: number) => {
     setActionState((prev) => ({ ...prev, confirmDelete: id }))
@@ -202,32 +232,61 @@ export function KeywordsPage() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!keywords.length) return
+      const kws = keywordsRef.current
+      if (!kws.length) return
       if (e.key === 'Delete' && focusedRow >= 0) {
-        const kw = keywords[focusedRow]
+        const kw = kws[focusedRow]
         if (kw && actionState.confirmDelete !== kw.id) {
           e.preventDefault()
           handleConfirmDelete(kw.id)
         }
       } else if (e.key === 'Escape') {
         handleCancelDelete()
+      } else if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        e.preventDefault()
+        searchInputRef.current?.focus()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [keywords, focusedRow, actionState.confirmDelete, handleConfirmDelete, handleCancelDelete])
+  }, [focusedRow, actionState.confirmDelete, handleConfirmDelete, handleCancelDelete])
+
+  useEffect(() => {
+    return () => {
+      if (undoRef.current) clearTimeout(undoRef.current)
+      if (undoIntervalRef.current) clearInterval(undoIntervalRef.current)
+    }
+  }, [])
 
   const handleUndo = useCallback(() => {
     if (undoRef.current) clearTimeout(undoRef.current)
+    if (undoIntervalRef.current) clearInterval(undoIntervalRef.current)
     setUndoData(null)
     setActionState((prev) => ({ ...prev, deleting: null, confirmDelete: null }))
     showFeedback('success', 'Удаление отменено')
-  }, [])
+  }, [showFeedback])
+
+  const handleExtendUndo = useCallback(() => {
+    if (undoRef.current) clearTimeout(undoRef.current)
+    if (undoIntervalRef.current) clearInterval(undoIntervalRef.current)
+    setUndoTick(0)
+    undoRef.current = setTimeout(() => {
+      if (undoData) {
+        deleteMutation.mutate(undoData.keyword.id)
+      }
+    }, UNDO_TIMEOUT_MS)
+    undoIntervalRef.current = setInterval(() => {
+      setUndoTick((prev) => prev + 1)
+    }, 1000)
+  }, [undoData, deleteMutation])
 
   const handleBatch = useCallback((fn: (ids: number[]) => void) => {
     const ids = Array.from(selected)
     if (ids.length === 0) return
-    fn(ids)
+    setConfirmAction({
+      message: `Удалить ${ids.length} выбранных ключевых слов? Это действие нельзя отменить.`,
+      onConfirm: () => fn(ids),
+    })
   }, [selected])
 
   const toggleAddPanel = () => {
@@ -245,6 +304,7 @@ export function KeywordsPage() {
         <div className="relative flex-1 max-w-xs">
           <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
           <Input
+            ref={searchInputRef}
             type="search"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
@@ -254,7 +314,7 @@ export function KeywordsPage() {
                 resetFilters()
               }
             }}
-            placeholder="Поиск слов..."
+            placeholder="Поиск слов... (/)"
             className="pl-8"
             aria-label="Поиск ключевых слов"
           />
@@ -275,17 +335,19 @@ export function KeywordsPage() {
         <div className="ml-auto flex items-center gap-2">
           <Button
             variant="secondary" size="xs"
-            onClick={() => recalcMutation.mutate()}
+            onClick={() => setConfirmAction({ message: 'Запустить пересчёт соответствий для всех ключевых слов? Это может занять некоторое время.', onConfirm: () => recalcMutation.mutate() })}
             disabled={recalcMutation.isPending}
             icon={<RefreshCw size={14} />}
+            title="Пересчитать соответствия для всех ключевых слов на основе текущих правил"
           >
             Пересчёт
           </Button>
           <Button
             variant="secondary" size="xs"
-            onClick={() => rebuildMutation.mutate()}
+            onClick={() => setConfirmAction({ message: 'Перестроить формы словоизменения для всех ключевых слов? Это может занять некоторое время.', onConfirm: () => rebuildMutation.mutate() })}
             disabled={rebuildMutation.isPending}
             icon={<RotateCcw size={14} />}
+            title="Перестроить автоматические формы словоизменения для всех ключевых слов"
           >
             Формы
           </Button>
@@ -293,9 +355,10 @@ export function KeywordsPage() {
             variant="secondary" size="xs"
             onClick={() => refetch()}
             disabled={isLoading}
-            icon={<RefreshCw size={14} />}
+            icon={<RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />}
+            title="Обновить список ключевых слов"
           >
-            Обновить
+            {isLoading ? 'Загрузка...' : 'Обновить'}
           </Button>
         </div>
       </div>
@@ -303,59 +366,61 @@ export function KeywordsPage() {
       {addPanelOpen && (
         <div className="mb-4 rounded-md border border-border bg-bg-panel p-4">
           <div className="mb-3 flex items-center gap-2 border-b border-border pb-2" role="tablist" aria-label="Способ добавления">
-            <button
-              type="button"
+            <Button
+              id="add-tab-single"
               role="tab"
               aria-selected={addMode === 'single'}
+              aria-controls="add-panel-single"
+              variant={addMode === 'single' ? 'primary' : 'secondary'}
+              size="xs"
               onClick={() => setAddMode('single')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 ${
-                addMode === 'single'
-                  ? 'bg-accent text-white'
-                  : 'text-text-secondary hover:bg-bg-hover'
-              }`}
             >
               Одно слово
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              id="add-tab-bulk"
               role="tab"
               aria-selected={addMode === 'bulk'}
+              aria-controls="add-panel-bulk"
+              variant={addMode === 'bulk' ? 'primary' : 'secondary'}
+              size="xs"
               onClick={() => setAddMode('bulk')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 ${
-                addMode === 'bulk'
-                  ? 'bg-accent text-white'
-                  : 'text-text-secondary hover:bg-bg-hover'
-              }`}
             >
               Список
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              id="add-tab-upload"
               role="tab"
               aria-selected={addMode === 'upload'}
+              aria-controls="add-panel-upload"
+              variant={addMode === 'upload' ? 'primary' : 'secondary'}
+              size="xs"
               onClick={() => setAddMode('upload')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 ${
-                addMode === 'upload'
-                  ? 'bg-accent text-white'
-                  : 'text-text-secondary hover:bg-bg-hover'
-              }`}
             >
               Файл
-            </button>
+            </Button>
           </div>
 
           {addMode === 'single' && (
-            <div className="flex items-end gap-2">
+            <div id="add-panel-single" role="tabpanel" aria-labelledby="add-tab-single" className="flex items-end gap-2">
               <div className="flex-1">
                 <label className="mb-1 block text-xs text-text-muted" htmlFor="kw-word">Слово</label>
-                <Input
-                  id="kw-word"
-                  type="text"
-                  value={singleWord}
-                  onChange={(e) => setSingleWord(e.target.value)}
-                  placeholder="Введите ключевое слово..."
-                  className="h-8"
-                />
+                  <Input
+                    id="kw-word"
+                    type="text"
+                    value={singleWord}
+                    onChange={(e) => { setSingleWord(e.target.value); setWordError('') }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && singleWord.trim() && !addMutation.isPending) {
+                        addMutation.mutate()
+                      }
+                    }}
+                    placeholder="Введите ключевое слово..."
+                    className="h-8"
+                    aria-invalid={!!wordError}
+                    aria-describedby={wordError ? 'kw-word-error' : undefined}
+                  />
+                  {wordError && <p id="kw-word-error" className="mt-1 text-xs text-danger">{wordError}</p>}
               </div>
               <div className="w-40">
                 <label className="mb-1 block text-xs text-text-muted" htmlFor="kw-category">Категория</label>
@@ -370,7 +435,17 @@ export function KeywordsPage() {
               </div>
               <Button
                 variant="primary" size="md"
-                onClick={() => addMutation.mutate()}
+                onClick={() => {
+                  if (!singleWord.trim()) {
+                    setWordError('Введите ключевое слово')
+                    return
+                  }
+                  if (singleWord.trim().length > 200) {
+                    setWordError('Слово не может быть длиннее 200 символов')
+                    return
+                  }
+                  addMutation.mutate()
+                }}
                 disabled={!singleWord.trim() || addMutation.isPending}
               >
                 {addMutation.isPending ? 'Добавление...' : 'Добавить'}
@@ -379,28 +454,40 @@ export function KeywordsPage() {
           )}
 
           {addMode === 'bulk' && (
-            <div>
+            <div id="add-panel-bulk" role="tabpanel" aria-labelledby="add-tab-bulk">
               <label className="mb-1 block text-xs text-text-muted" htmlFor="kw-bulk">
                 Слова через Enter (каждая строка — отдельное слово)
               </label>
               <textarea
                 id="kw-bulk"
                 value={bulkText}
-                onChange={(e) => setBulkText(e.target.value)}
+                onChange={(e) => {
+                  if (e.target.value.split('\n').length > 10000) {
+                    showFeedback('error', 'Максимум 10000 строк за раз')
+                    return
+                  }
+                  setBulkText(e.target.value)
+                }}
                 placeholder={"слово1\nслово2\nслово3"}
-                className="mb-2 h-24 w-full resize-y rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text-primary outline-none transition-colors duration-150 focus:border-accent"
+                className="mb-2 h-24 w-full resize-y rounded-md border border-border bg-bg-main px-3 py-2 text-sm text-text-primary outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent"
               />
               <div className="flex items-center gap-2">
                 <Button
                   variant="primary" size="md"
-                  onClick={() => bulkAddMutation.mutate()}
+                  onClick={() => {
+                    if (bulkWordCount > 10000) {
+                      showFeedback('error', 'Максимум 10000 слов за раз')
+                      return
+                    }
+                    bulkAddMutation.mutate()
+                  }}
                   disabled={!bulkText.trim() || bulkAddMutation.isPending}
                 >
-                  {bulkAddMutation.isPending ? 'Добавление...' : `Добавить (${bulkText.split('\n').filter(Boolean).length} слов)`}
+                  {bulkAddMutation.isPending ? 'Добавление...' : `Добавить (${bulkWordCount} слов)`}
                 </Button>
                 {bulkText && (
                   <span className="text-xs text-text-muted">
-                    Будет добавлено/обновлено ~{bulkText.split('\n').filter(Boolean).length} слов
+                    Будет добавлено/обновлено ~{bulkWordCount} слов
                   </span>
                 )}
               </div>
@@ -408,8 +495,8 @@ export function KeywordsPage() {
           )}
 
           {addMode === 'upload' && (
-            <div className="flex items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover transition-colors duration-150">
+            <div id="add-panel-upload" role="tabpanel" aria-labelledby="add-tab-upload" className="flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border bg-bg-main px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover transition-colors duration-150">
                 <Upload size={14} />
                 {uploadFile ? uploadFile.name : 'Выбрать файл (.txt, .csv)'}
                 <input
@@ -439,11 +526,31 @@ export function KeywordsPage() {
 
       <FeedbackToast feedback={feedback} onDismiss={dismissFeedback} />
 
+      {confirmAction && (
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-border bg-bg-panel px-3 py-2 text-xs" role="alertdialog" aria-label="Подтверждение">
+          <AlertTriangle size={14} className="shrink-0 text-warning" />
+          <span className="text-text-secondary">{confirmAction.message}</span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="primary" size="xs" semantic="danger" disabled={confirmAction.loading} onClick={() => { confirmAction.onConfirm(); setConfirmAction(null) }}>
+              {confirmAction.loading ? '...' : 'Подтвердить'}
+            </Button>
+            <Button variant="secondary" size="xs" onClick={() => setConfirmAction(null)}>
+              Отмена
+            </Button>
+          </div>
+        </div>
+      )}
+
       {undoData && (
-        <div className="mb-4 flex items-center gap-2 rounded-md border border-border bg-bg-panel px-3 py-2 text-xs" role="status">
-          <span className="text-text-secondary">{undoData.keyword.word} будет удалено через 5с</span>
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-border bg-bg-panel px-3 py-2 text-xs" role="status" aria-live="polite">
+          <span className="text-text-secondary">
+            {undoData.keyword.word} будет удалено через {Math.max(0, UNDO_TIMEOUT_MS - undoTick * 1000) / 1000}с
+          </span>
           <Button variant="soft" size="xs" semantic="default" onClick={handleUndo} icon={<X size={12} />}>
             Отменить
+          </Button>
+          <Button variant="ghost" size="xs" semantic="default" onClick={handleExtendUndo} icon={<Clock size={12} />}>
+            +5с
           </Button>
         </div>
       )}
@@ -486,8 +593,6 @@ export function KeywordsPage() {
           <TableShell>
             <TableHead
               columns={columns}
-              sort={undefined}
-              onSort={() => {}}
               allChecked={count === keywords.length && keywords.length > 0}
               onToggleAll={() => toggleAll(allIds)}
             />

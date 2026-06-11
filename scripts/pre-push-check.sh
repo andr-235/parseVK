@@ -10,7 +10,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 DRY_RUN="${PRE_PUSH_DRY_RUN:-0}"
-backend_changed=false
 frontend_changed=false
 non_docs_changed=false
 
@@ -43,23 +42,17 @@ while IFS= read -r file; do
   [ -z "$file" ] && continue
 
   case "$file" in
-    api/*|create-session.js)
-      backend_changed=true
-      non_docs_changed=true
-      ;;
     front/*)
       frontend_changed=true
       non_docs_changed=true
       ;;
-    .github/workflows/ci.yml|.husky/*|.lintstagedrc.js|package.json|bun.lock|api/bun.lock|front/bun.lock|scripts/*)
-      backend_changed=true
+    .github/workflows/ci.yml|.husky/*|.lintstagedrc.js|package.json|bun.lock|front/bun.lock|scripts/*)
       frontend_changed=true
       non_docs_changed=true
       ;;
     docs/*|*.md)
       ;;
     *)
-      backend_changed=true
       frontend_changed=true
       non_docs_changed=true
       ;;
@@ -70,19 +63,6 @@ if [ "$non_docs_changed" = false ]; then
   echo "Docs-only change, skipping"
   exit 0
 fi
-
-run_backend() {
-  if [ "$DRY_RUN" = "1" ]; then
-    echo "Would run backend checks"
-    return
-  fi
-
-  echo "Running backend pre-push checks"
-  (
-    cd api
-    bun run check:push
-  )
-}
 
 run_frontend() {
   if [ "$DRY_RUN" = "1" ]; then
@@ -96,10 +76,6 @@ run_frontend() {
     bun run check:push
   )
 }
-
-if [ "$backend_changed" = true ]; then
-  run_backend
-fi
 
 if [ "$frontend_changed" = true ]; then
   run_frontend

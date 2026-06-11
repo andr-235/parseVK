@@ -114,7 +114,7 @@ async def test_upload_files_success(mock_parse_result):
 
     service = TelegramTgmbaseService(mock_session)
     
-    with patch.object(service.parser, "parse", return_value=mock_parse_result):
+    with patch.object(service.import_service.parser, "parse", return_value=mock_parse_result):
         def side_effect_refresh(obj):
             if isinstance(obj, MagicMock):
                 return

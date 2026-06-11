@@ -50,8 +50,6 @@ export const useAuth = create<AuthState>((set) => ({
       const storage = rememberMe ? localStorage : sessionStorage
       storage.setItem('accessToken', res.accessToken)
       set({ user: res.user })
-    } catch (err) {
-      throw err
     } finally {
       set({ isLoggingIn: false })
     }

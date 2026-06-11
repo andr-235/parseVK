@@ -15,6 +15,7 @@ dependencies = [
   "vk_api>=11.9",
   "openpyxl>=3.1.5",
   "python-multipart>=0.0.18",
+  "prometheus-fastapi-instrumentator>=6.0",
 ]
 
 [project.optional-dependencies]
