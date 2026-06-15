@@ -1,6 +1,6 @@
-import uuid
 import threading
-from datetime import datetime, timezone
+import uuid
+from datetime import UTC, datetime
 
 
 class TelegramServiceRepository:
@@ -11,7 +11,7 @@ class TelegramServiceRepository:
 
     async def create_job(self, params: dict, total_count: int) -> dict:
         job_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         with self._lock:
             self._jobs[job_id] = {
                 "id": job_id,
@@ -45,7 +45,7 @@ class TelegramServiceRepository:
             "id": str(uuid.uuid4()),
             "level": level,
             "message": message,
-            "createdAt": datetime.now(timezone.utc),
+            "createdAt": datetime.now(UTC),
         }
         with self._lock:
             if str(job_id) in self._logs:

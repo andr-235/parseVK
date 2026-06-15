@@ -1,14 +1,15 @@
+# ruff: noqa: B008
+
 import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 
+from app.modules.telegram_service.repository import TelegramServiceRepository
 from app.modules.telegram_service.schemas import (
     TelegramExportStartRequest,
-    TelegramExportStartResponse,
-    TelegramJobDetailResponse,
 )
 from app.modules.telegram_service.service import TelegramServiceService
-from app.modules.telegram_service.repository import TelegramServiceRepository
 
 
 def get_repo() -> TelegramServiceRepository:
