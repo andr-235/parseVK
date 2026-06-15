@@ -1,0 +1,32 @@
+import { OnModuleInit } from '@nestjs/common';
+export declare class MetricsService implements OnModuleInit {
+    private readonly register;
+    private readonly httpRequestDuration;
+    private readonly httpRequestTotal;
+    private readonly tasksTotal;
+    private readonly tasksActive;
+    private readonly watchlistAuthorsActive;
+    private readonly vkApiRequests;
+    private readonly vkApiDuration;
+    private readonly vkApiTimeouts;
+    private readonly vkApiRetries;
+    private readonly redisKeysTotal;
+    private readonly redisAvgTtlSeconds;
+    private readonly redisMemoryBytes;
+    private readonly redisKeyspaceHitRate;
+    constructor();
+    onModuleInit(): void;
+    recordHttpRequest(method: string, route: string, status: number, duration: number): void;
+    recordTask(status: 'pending' | 'running' | 'done' | 'failed'): void;
+    setActiveTasks(count: number): void;
+    setActiveWatchlistAuthors(count: number): void;
+    recordVkApiRequest(method: string, status: 'success' | 'error', duration: number): void;
+    recordVkApiTimeout(method: string, attempt: number): void;
+    recordVkApiRetry(method: string, reason: string): void;
+    setRedisKeysTotal(count: number): void;
+    setRedisAverageTtlSeconds(ttlSeconds: number): void;
+    setRedisMemoryBytes(bytes: number): void;
+    setRedisKeyspaceHitRate(rate: number): void;
+    getMetrics(): Promise<string>;
+    private normalizeRoute;
+}

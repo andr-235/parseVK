@@ -5,28 +5,39 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common.sh"
 
-API_IMAGE_TAG="${API_IMAGE_TAG:-parsevk-api:local}"
+MIGRATION_SERVICES="identity tasks vk content"
 
-ensure_api_image() {
-  if docker image inspect "$API_IMAGE_TAG" >/dev/null 2>&1; then
+ensure_migration_images() {
+  for svc in $MIGRATION_SERVICES; do
+    if ! docker image inspect "parsevk-${svc}-service:local" >/dev/null 2>&1; then
+      log_info "Building ${svc}-migrate image"
+      compose build "${svc}-migrate"
+    fi
+  done
+}
+
+run_single_migration() {
+  local svc="$1"
+  log_info "Running ${svc} migrations..."
+
+  if compose run --rm --no-deps "${svc}-migrate"; then
+    log_info "${svc} migrations completed"
     return 0
   fi
 
-  log_info "API image is missing, building it before migrations"
-  "$SCRIPT_DIR/images.sh" build api
+  log_error "${svc} migrations failed"
+  print_compose_logs 100 "${svc}-migrate" "${svc}-db"
+  return 1
 }
 
 run_migrations() {
-  ensure_api_image
+  ensure_migration_images
 
-  if compose run --rm --no-deps api-migrate; then
-    log_info "Migrations completed"
-    return 0
-  fi
+  for svc in $MIGRATION_SERVICES; do
+    run_single_migration "$svc" || return 1
+  done
 
-  log_error "Database migrations failed"
-  print_compose_logs 100 api-migrate api db
-  return 1
+  log_info "All database migrations completed successfully"
 }
 
 run_migrations "$@"
