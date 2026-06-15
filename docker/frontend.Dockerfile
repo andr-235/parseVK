@@ -31,11 +31,17 @@ RUN --mount=type=cache,target=/app/node_modules/.vite \
 # Production stage
 FROM nginx:alpine
 
+RUN addgroup -g 1001 -S appuser && \
+    adduser -S -u 1001 -G appuser appuser && \
+    chown -R appuser:appuser /var/cache/nginx /var/run /usr/share/nginx/html
+
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY docker/frontend.nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/frontend-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 80
+
+USER appuser
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

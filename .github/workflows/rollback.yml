@@ -27,7 +27,7 @@ jobs:
     env:
       DOCKER_BUILDKIT: 1
       COMPOSE_DOCKER_CLI_BUILD: 1
-      COMPOSE_FILE: docker-compose.deploy.yml
+      COMPOSE_FILE: docker-compose.yml
       PROJECT_ROOT: /opt/parseVK
       PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
 

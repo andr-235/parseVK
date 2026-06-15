@@ -1,9 +1,8 @@
 # Build artifacts (we build inside the container)
-api/dist
 front/dist
+front/build
 
 # Dependencies (installed in container)
-api/node_modules
 front/node_modules
 node_modules
 .venv
@@ -19,6 +18,7 @@ node_modules
 .github
 docs
 *.md
+AGENTS.md
 
 # Cache and temp
 .cache
@@ -26,22 +26,36 @@ docs
 .temp
 .tmp
 *.tsbuildinfo
-api/tsconfig.build.tsbuildinfo
 coverage
 coverage/**
-api/coverage
-api/coverage/**
 front/coverage
 front/coverage/**
 front/coverage-watchlist
 front/coverage-watchlist/**
 .claude
 .claude/**
-api/.claude
-api/.claude/**
 front/.claude
 front/.claude/**
 front/.ai-factory
 front/.ai-factory/**
+.opencode
+.opencode/**
+.agents
+.agents/**
+.ai-factory
+.ai-factory/**
 .storybook-cache
 .storybook-cache/**
+
+# Python cache
+__pycache__
+*.pyc
+.mypy_cache
+.ruff_cache
+
+# Monitoring configs (not needed in image)
+monitoring
+
+# Docker files
+docker-compose*.yml
+Dockerfile*

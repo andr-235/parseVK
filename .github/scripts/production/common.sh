@@ -8,7 +8,7 @@ if [ -f "$SCRIPT_DIR/../log-helper.sh" ]; then
 fi
 
 PROJECT_ROOT="${PROJECT_ROOT:-/opt/parseVK}"
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.deploy.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 
 project_root() {
   printf '%s\n' "$PROJECT_ROOT"

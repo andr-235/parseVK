@@ -5,10 +5,14 @@ on:
     branches: [main, fastapi-microservices-rewrite]
   push:
     branches: [main, fastapi-microservices-rewrite]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   changes:
@@ -81,6 +85,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/ruff-action@v3
+        with:
+          args: format --check
+      - uses: astral-sh/ruff-action@v3
 
   python-test:
     name: Python test (${{ matrix.service }})
@@ -133,4 +140,5 @@ jobs:
         with:
           go-version-file: tools/parsevkctl-go/go.mod
       - run: go vet ./...
+      - run: go build ./...
       - run: go test ./...

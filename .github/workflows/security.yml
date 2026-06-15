@@ -10,6 +10,9 @@ on:
   schedule:
     - cron: "0 0 * * 1" # Weekly on Monday
 
+permissions:
+  contents: read
+
 jobs:
   dependency-scan:
     name: Scan Dependencies
@@ -56,6 +59,32 @@ jobs:
           echo "Frontend vulnerabilities: ${steps.scan-frontend.outputs.vulnerabilities:-0}"
           echo "Please review and fix critical vulnerabilities before merging."
           exit 1
+
+  python-dependency-scan:
+    name: Scan Python Dependencies
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - identity-service
+          - tasks-service
+          - vk-service
+          - content-service
+          - moderation-service
+          - telegram-service
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Audit Python dependencies (${{ matrix.service }})
+        working-directory: services/${{ matrix.service }}
+        continue-on-error: true
+        run: |
+          uv sync
+          uv audit || echo "uv audit completed with findings"
 
   docker-scan:
     name: Scan Docker Images
@@ -117,7 +146,7 @@ jobs:
 
       - name: Run Trivy vulnerability scanner on Frontend image
         if: steps.build-frontend.outcome == 'success'
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: parsevk-frontend:scan
           format: "sarif"
