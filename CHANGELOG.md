@@ -1,3 +1,10 @@
+## [0.32.2](https://github.com/andr-235/parseVK/compare/v0.32.1...v0.32.2) (2026-06-15)
+
+
+### Bug Fixes
+
+* **deploy:** comment out unimplemented im-service from compose ([bacfa5b](https://github.com/andr-235/parseVK/commit/bacfa5b8ad19650f83f0fff97499563fa4aca33d))
+
 ## [0.32.1](https://github.com/andr-235/parseVK/compare/v0.32.0...v0.32.1) (2026-06-15)
 
 
