@@ -29,7 +29,7 @@ jobs:
     env:
       DOCKER_BUILDKIT: 1
       COMPOSE_DOCKER_CLI_BUILD: 1
-      COMPOSE_FILE: docker-compose.deploy.yml
+      COMPOSE_FILE: docker-compose.yml
       PROJECT_ROOT: /opt/parseVK
       PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
 
@@ -156,54 +156,7 @@ jobs:
         working-directory: /opt/parseVK
         timeout-minutes: 30
         run: |
-          set -euo pipefail
-          SERVICES_TO_BUILD=""
-
-          if [ "${{ steps.changed_services.outputs.build_frontend }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD frontend"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_db_backup }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD db_backup"
-          fi
-
-          if [ -n "$SERVICES_TO_BUILD" ]; then
-            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare $SERVICES_TO_BUILD
-            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build $SERVICES_TO_BUILD
-            UP_ARGS="-d"
-          else
-            LOCALS="parsevk-identity-service:local parsevk-tasks-service:local parsevk-vk-service:local parsevk-content-service:local parsevk-telegram-service:local parsevk-api-gateway:local parsevk-frontend:local parsevk-db-backup:local"
-            SERVICES_TO_BUILD=""
-            for IMG in $LOCALS; do
-              if ! docker image inspect "$IMG" >/dev/null 2>&1; then
-                case "$IMG" in
-                  parsevk-frontend:local)    SERVICE="frontend" ;;
-                  parsevk-db-backup:local)   SERVICE="db_backup" ;;
-                  *)                         SERVICE="${IMG#parsevk-}"; SERVICE="${SERVICE%:local}" ;;
-                esac
-                echo "Missing image: $IMG → $SERVICE"
-                SERVICES_TO_BUILD="$SERVICES_TO_BUILD $SERVICE"
-              fi
-            done
-            if [ -n "$SERVICES_TO_BUILD" ]; then
-              echo "Building missing services: $SERVICES_TO_BUILD"
-              for SERVICE in $SERVICES_TO_BUILD; do
-                echo "Building $SERVICE..."
-                if docker compose -f "$COMPOSE_FILE" build "$SERVICE"; then
-                  echo "Successfully built $SERVICE"
-                else
-                  echo "WARNING: Failed to build $SERVICE, skipping"
-                fi
-              done
-              UP_ARGS="-d --no-build"
-            else
-              UP_ARGS="-d --no-build"
-            fi
-          fi
-
-          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" UP_ARGS="$UP_ARGS" \
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
             bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
 
       - name: Update deployment metadata
