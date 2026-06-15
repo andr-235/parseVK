@@ -80,7 +80,7 @@ export function TelegramDlUploadPage() {
       queryClient.invalidateQueries({ queryKey: ['telegramDlFiles'] })
       queryClient.invalidateQueries({ queryKey: ['telegramDlContacts'] })
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       const errMsg = err?.message || 'Не удалось загрузить файлы'
       showFeedback('error', errMsg)
     },

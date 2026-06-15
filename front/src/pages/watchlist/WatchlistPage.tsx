@@ -46,7 +46,6 @@ export function WatchlistPage() {
     if (selectedParam) {
       const id = parseInt(selectedParam, 10)
       if (!isNaN(id)) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedAuthorId(id)
       }
     }
@@ -86,7 +85,6 @@ export function WatchlistPage() {
   // Синхронизация формы настроек с бэкендом
   useEffect(() => {
     if (settingsData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormTrackAllComments(settingsData.trackAllComments)
       setFormPollInterval(settingsData.pollIntervalMinutes)
       setFormMaxAuthors(settingsData.maxAuthors)
