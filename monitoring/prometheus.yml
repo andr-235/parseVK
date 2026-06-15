@@ -37,9 +37,10 @@ scrape_configs:
     static_configs:
       - targets: ["telegram-service:8000"]
 
-  - job_name: "im-service"
-    static_configs:
-      - targets: ["im-service:8000"]
+  # TODO: uncomment when im-service is implemented
+  # - job_name: "im-service"
+  #   static_configs:
+  #     - targets: ["im-service:8000"]
 
   - job_name: "prometheus"
     static_configs:

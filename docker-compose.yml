@@ -554,72 +554,74 @@ services:
       prometheus:
         condition: service_started
 
-  im-db:
-    image: postgres:16.14
-    platform: linux/amd64
-    restart: always
-    ports:
-      - "127.0.0.1:5441:5432"
-    environment:
-      POSTGRES_USER: ${IM_POSTGRES_USER:-im}
-      POSTGRES_PASSWORD: ${IM_POSTGRES_PASSWORD:-im_dev_password_change_me}
-      POSTGRES_DB: ${IM_POSTGRES_DB:-im}
-    volumes:
-      - im_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - backend
+  # TODO: implement im-service (WhatsApp Integration Manager)
+  # Uncomment when services/im-service/ is created
+  # im-db:
+  #   image: postgres:16.14
+  #   platform: linux/amd64
+  #   restart: always
+  #   ports:
+  #     - "127.0.0.1:5441:5432"
+  #   environment:
+  #     POSTGRES_USER: ${IM_POSTGRES_USER:-im}
+  #     POSTGRES_PASSWORD: ${IM_POSTGRES_PASSWORD:-im_dev_password_change_me}
+  #     POSTGRES_DB: ${IM_POSTGRES_DB:-im}
+  #   volumes:
+  #     - im_postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - backend
 
-  im-migrate:
-    build:
-      context: .
-      dockerfile: services/im-service/Dockerfile
-    restart: "no"
-    depends_on:
-      im-db:
-        condition: service_healthy
-    environment:
-      IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
-    command: ["alembic", "upgrade", "head"]
-    networks:
-      - backend
+  # im-migrate:
+  #   build:
+  #     context: .
+  #     dockerfile: services/im-service/Dockerfile
+  #   restart: "no"
+  #   depends_on:
+  #     im-db:
+  #       condition: service_healthy
+  #   environment:
+  #     IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
+  #   command: ["alembic", "upgrade", "head"]
+  #   networks:
+  #     - backend
 
-  im-service:
-    build:
-      context: .
-      dockerfile: services/im-service/Dockerfile
-    restart: always
-    depends_on:
-      im-migrate:
-        condition: service_completed_successfully
-      kafka-init:
-        condition: service_completed_successfully
-    environment:
-      IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
-      IM_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
-      IM_SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      IM_SERVICE_KAFKA_CONSUMER_ENABLED: ${IM_SERVICE_KAFKA_CONSUMER_ENABLED:-true}
-      IM_SERVICE_OUTBOX_PUBLISH_ENABLED: ${IM_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
-      IM_SERVICE_WAPPI_API_URL: ${WAPPI_API_URL:-https://wappi.pro}
-      IM_SERVICE_WAPPI_API_TOKEN: ${WAPPI_API_TOKEN}
-      IM_SERVICE_WAPPI_PROFILE_ID: ${WAPPI_PROFILE_ID}
-      IM_SERVICE_WAPPI_POLL_INTERVAL: ${WAPPI_POLL_INTERVAL:-600}
-      IM_SERVICE_WAPPI_REQUEST_TIMEOUT: ${WAPPI_REQUEST_TIMEOUT:-30}
-      IM_SERVICE_WAPPI_PAGE_SIZE: ${WAPPI_PAGE_SIZE:-100}
-      IM_SERVICE_WAPPI_INCLUDE_SYSTEM_MESSAGES: ${WAPPI_INCLUDE_SYSTEM_MESSAGES:-true}
-      IM_SERVICE_MAX_PROFILE_ID: ${MAX_PROFILE_ID}
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - backend
+  # im-service:
+  #   build:
+  #     context: .
+  #     dockerfile: services/im-service/Dockerfile
+  #   restart: always
+  #   depends_on:
+  #     im-migrate:
+  #       condition: service_completed_successfully
+  #     kafka-init:
+  #       condition: service_completed_successfully
+  #   environment:
+  #     IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
+  #     IM_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
+  #     IM_SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  #     IM_SERVICE_KAFKA_CONSUMER_ENABLED: ${IM_SERVICE_KAFKA_CONSUMER_ENABLED:-true}
+  #     IM_SERVICE_OUTBOX_PUBLISH_ENABLED: ${IM_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
+  #     IM_SERVICE_WAPPI_API_URL: ${WAPPI_API_URL:-https://wappi.pro}
+  #     IM_SERVICE_WAPPI_API_TOKEN: ${WAPPI_API_TOKEN}
+  #     IM_SERVICE_WAPPI_PROFILE_ID: ${WAPPI_PROFILE_ID}
+  #     IM_SERVICE_WAPPI_POLL_INTERVAL: ${WAPPI_POLL_INTERVAL:-600}
+  #     IM_SERVICE_WAPPI_REQUEST_TIMEOUT: ${WAPPI_REQUEST_TIMEOUT:-30}
+  #     IM_SERVICE_WAPPI_PAGE_SIZE: ${WAPPI_PAGE_SIZE:-100}
+  #     IM_SERVICE_WAPPI_INCLUDE_SYSTEM_MESSAGES: ${WAPPI_INCLUDE_SYSTEM_MESSAGES:-true}
+  #     IM_SERVICE_MAX_PROFILE_ID: ${MAX_PROFILE_ID}
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   networks:
+  #     - backend
 
 networks:
   backend:
