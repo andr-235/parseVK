@@ -174,17 +174,30 @@ jobs:
               bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build $SERVICES_TO_BUILD
             UP_ARGS="-d"
           else
-            LOCALS="parsevk-identity-service:local parsevk-tasks-service:local parsevk-vk-service:local parsevk-content-service:local parsevk-moderation-service:local parsevk-telegram-service:local parsevk-api-gateway:local parsevk-frontend:local parsevk-db-backup:local"
-            MISSING=""
+            LOCALS="parsevk-identity-service:local parsevk-tasks-service:local parsevk-vk-service:local parsevk-content-service:local parsevk-telegram-service:local parsevk-api-gateway:local parsevk-frontend:local parsevk-db-backup:local"
+            SERVICES_TO_BUILD=""
             for IMG in $LOCALS; do
               if ! docker image inspect "$IMG" >/dev/null 2>&1; then
-                echo "Missing image: $IMG"
-                MISSING="$MISSING $IMG"
+                case "$IMG" in
+                  parsevk-frontend:local)    SERVICE="frontend" ;;
+                  parsevk-db-backup:local)   SERVICE="db_backup" ;;
+                  *)                         SERVICE="${IMG#parsevk-}"; SERVICE="${SERVICE%:local}" ;;
+                esac
+                echo "Missing image: $IMG → $SERVICE"
+                SERVICES_TO_BUILD="$SERVICES_TO_BUILD $SERVICE"
               fi
             done
-            if [ -n "$MISSING" ]; then
-              echo "Some local images missing, building all services"
-              UP_ARGS="-d"
+            if [ -n "$SERVICES_TO_BUILD" ]; then
+              echo "Building missing services: $SERVICES_TO_BUILD"
+              for SERVICE in $SERVICES_TO_BUILD; do
+                echo "Building $SERVICE..."
+                if docker compose -f "$COMPOSE_FILE" build "$SERVICE"; then
+                  echo "Successfully built $SERVICE"
+                else
+                  echo "WARNING: Failed to build $SERVICE, skipping"
+                fi
+              done
+              UP_ARGS="-d --no-build"
             else
               UP_ARGS="-d --no-build"
             fi
