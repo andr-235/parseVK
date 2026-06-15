@@ -1,12 +1,13 @@
-import logging
 import re
-from datetime import UTC, datetime, timedelta
-
-from app.db.models import Keyword, KeywordRecalculationJob, ModerationComment
-from app.modules.keywords.morphology import normalize_for_keyword_match
-from sqlalchemy import and_, select
-from sqlalchemy.ext.asyncio import async_sessionmaker
+import asyncio
+import logging
+from datetime import datetime, timezone, timedelta
+from sqlalchemy import select, update, and_
 from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from app.db.models import ModerationComment, Keyword, KeywordForm, KeywordRecalculationJob
+from app.modules.keywords.morphology import normalize_for_keyword_match
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ WORD_CHAR_RE = re.compile(WORD_CHARS_PATTERN)
 
 
 def utcnow() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 def build_match_pattern(escaped_keyword: str, normalized_word: str, is_phrase: bool) -> str:

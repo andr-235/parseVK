@@ -1,65 +1,7 @@
-name: parsevk
-
-x-logging: &default-logging
-  driver: "json-file"
-  options:
-    max-size: "20m"
-    max-file: "5"
-
-x-resources-app: &resources-app
-  resources:
-    limits:
-      cpus: "1.0"
-      memory: 512M
-      pids: 100
-    reservations:
-      cpus: "0.25"
-      memory: 128M
-
-x-resources-db: &resources-db
-  resources:
-    limits:
-      cpus: "2.0"
-      memory: 1G
-      pids: 200
-    reservations:
-      cpus: "0.5"
-      memory: 256M
-
-x-resources-redis: &resources-redis
-  resources:
-    limits:
-      cpus: "0.5"
-      memory: 256M
-      pids: 50
-    reservations:
-      cpus: "0.25"
-      memory: 64M
-
-x-resources-kafka: &resources-kafka
-  resources:
-    limits:
-      cpus: "1.0"
-      memory: 1G
-      pids: 200
-    reservations:
-      cpus: "0.5"
-      memory: 512M
-
-x-resources-mon: &resources-mon
-  resources:
-    limits:
-      cpus: "0.5"
-      memory: 256M
-      pids: 100
-    reservations:
-      cpus: "0.25"
-      memory: 128M
-
 services:
   db:
     image: postgres:16.14
-    restart: unless-stopped
+    restart: always
     # Порт закрыт наружу, доступ только внутри сети Docker
     # ports:
     #   - "127.0.0.1:5433:5432"  # Раскомментируй только для локальной отладки
@@ -74,14 +16,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging: *default-logging
-    <<: *resources-db
     networks:
       - backend
 
   redis:
     image: redis:7.4.9-alpine
-    restart: unless-stopped
+    restart: always
     # Порт закрыт наружу
     # ports:
     #   - "127.0.0.1:6379:6379"  # Раскомментируй только для локальной отладки
@@ -91,15 +31,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging: *default-logging
-    <<: *resources-redis
     networks:
       - backend
 
   identity-db:
     image: postgres:16.14
     platform: linux/amd64
-    restart: unless-stopped
+    restart: always
     ports:
       - "127.0.0.1:5434:5432"
     environment:
@@ -113,14 +51,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging: *default-logging
-    <<: *resources-db
     networks:
       - backend
 
   kafka:
     image: apache/kafka:4.1.0
-    restart: unless-stopped
+    restart: always
     ports:
       - "127.0.0.1:9092:9092"
     environment:
@@ -135,8 +71,6 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-    logging: *default-logging
-    <<: *resources-kafka
     networks:
       - backend
 
@@ -153,7 +87,6 @@ services:
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.vk.events --partitions 1 --replication-factor 1;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.im.events --partitions 1 --replication-factor 1
       "
-    logging: *default-logging
     networks:
       - backend
 
@@ -168,7 +101,6 @@ services:
     environment:
       IDENTITY_DATABASE_URL: postgresql+asyncpg://${IDENTITY_POSTGRES_USER:-identity}:${IDENTITY_POSTGRES_PASSWORD:-identity}@identity-db:5432/${IDENTITY_POSTGRES_DB:-identity}
     command: ["alembic", "upgrade", "head"]
-    logging: *default-logging
     networks:
       - backend
 
@@ -186,7 +118,6 @@ services:
       IDENTITY_ADMIN_PASSWORD: ${IDENTITY_ADMIN_PASSWORD:-admin-change-me}
       IDENTITY_ADMIN_EMAIL: ${IDENTITY_ADMIN_EMAIL:-}
     command: ["python", "-m", "app.cli"]
-    logging: *default-logging
     networks:
       - backend
 
@@ -194,7 +125,7 @@ services:
     build:
       context: .
       dockerfile: services/identity-service/Dockerfile
-    restart: unless-stopped
+    restart: always
     depends_on:
       identity-seed-admin:
         condition: service_completed_successfully
@@ -210,15 +141,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging: *default-logging
-    <<: *resources-app
     networks:
       - backend
 
   tasks-db:
     image: postgres:16.14
     platform: linux/amd64
-    restart: unless-stopped
+    restart: always
     ports:
       - "127.0.0.1:5435:5432"
     environment:
@@ -232,8 +161,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging: *default-logging
-    <<: *resources-db
     networks:
       - backend
 
@@ -248,7 +175,6 @@ services:
     environment:
       TASKS_DATABASE_URL: postgresql+asyncpg://${TASKS_POSTGRES_USER:-tasks}:${TASKS_POSTGRES_PASSWORD:-tasks}@tasks-db:5432/${TASKS_POSTGRES_DB:-tasks}
     command: ["alembic", "upgrade", "head"]
-    logging: *default-logging
     networks:
       - backend
 
@@ -256,7 +182,7 @@ services:
     build:
       context: .
       dockerfile: services/tasks-service/Dockerfile
-    restart: unless-stopped
+    restart: always
     depends_on:
       tasks-migrate:
         condition: service_completed_successfully
@@ -273,15 +199,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging: *default-logging
-    <<: *resources-app
     networks:
       - backend
 
   vk-db:
     image: postgres:16.14
     platform: linux/amd64
-    restart: unless-stopped
+    restart: always
     ports:
       - "127.0.0.1:5436:5432"
     environment:
@@ -295,8 +219,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging: *default-logging
-    <<: *resources-db
     networks:
       - backend
 
@@ -312,7 +234,6 @@ services:
       VK_SERVICE_DATABASE_URL: ${VK_SERVICE_DATABASE_URL:-postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk}
       VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-dev-vk-token}}
     command: ["alembic", "upgrade", "head"]
-    logging: *default-logging
     networks:
       - backend
 
@@ -320,7 +241,7 @@ services:
     build:
       context: .
       dockerfile: services/vk-service/Dockerfile
-    restart: unless-stopped
+    restart: always
     depends_on:
       vk-migrate:
         condition: service_completed_successfully
@@ -343,15 +264,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging: *default-logging
-    <<: *resources-app
     networks:
       - backend
 
   content-db:
     image: postgres:16.14
     platform: linux/amd64
-    restart: unless-stopped
+    restart: always
     ports:
       - "127.0.0.1:5437:5432"
     environment:
@@ -365,8 +284,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging: *default-logging
-    <<: *resources-db
     networks:
       - backend
 
@@ -381,7 +298,6 @@ services:
     environment:
       CONTENT_DATABASE_URL: ${CONTENT_DATABASE_URL:-postgresql+asyncpg://content:content_dev_password_change_me@content-db:5432/content}
     command: ["alembic", "upgrade", "head"]
-    logging: *default-logging
     networks:
       - backend
 
@@ -389,7 +305,7 @@ services:
     build:
       context: .
       dockerfile: services/content-service/Dockerfile
-    restart: unless-stopped
+    restart: always
     depends_on:
       content-migrate:
         condition: service_completed_successfully
@@ -407,15 +323,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging: *default-logging
-    <<: *resources-app
     networks:
       - backend
 
   moderation-db:
     image: postgres:16.14
     platform: linux/amd64
-    restart: unless-stopped
+    restart: always
     ports:
       - "127.0.0.1:5438:5432"
     environment:
@@ -429,8 +343,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging: *default-logging
-    <<: *resources-db
     networks:
       - backend
 
@@ -445,7 +357,6 @@ services:
     environment:
       MODERATION_DATABASE_URL: ${MODERATION_DATABASE_URL:-postgresql+asyncpg://moderation:moderation_dev_password_change_me@moderation-db:5432/moderation}
     command: ["alembic", "upgrade", "head"]
-    logging: *default-logging
     networks:
       - backend
 
@@ -453,7 +364,7 @@ services:
     build:
       context: .
       dockerfile: services/moderation-service/Dockerfile
-    restart: unless-stopped
+    restart: always
     depends_on:
       moderation-migrate:
         condition: service_completed_successfully
@@ -470,8 +381,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging: *default-logging
-    <<: *resources-app
     networks:
       - backend
 
@@ -479,7 +388,7 @@ services:
     build:
       context: .
       dockerfile: services/telegram-service/Dockerfile
-    restart: unless-stopped
+    restart: always
     environment:
       TELEGRAM_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       VPN_SERVICE_TELEGRAM_URL: ${VPN_SERVICE_TELEGRAM_URL:-}
@@ -493,8 +402,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging: *default-logging
-    <<: *resources-app
     networks:
       - backend
 
@@ -503,7 +410,7 @@ services:
     build:
       context: .
       dockerfile: services/api-gateway/Dockerfile
-    restart: unless-stopped
+    restart: always
     ports:
       - "127.0.0.1:3002:8000"
     depends_on:
@@ -536,8 +443,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging: *default-logging
-    <<: *resources-app
     networks:
       - backend
       - frontend
@@ -546,7 +451,6 @@ services:
     build:
       context: ./docker/db-backup
       dockerfile: Dockerfile
-    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -567,8 +471,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    logging: *default-logging
-    <<: *resources-app
     networks:
       - backend
 
@@ -578,7 +480,6 @@ services:
       dockerfile: docker/frontend.Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-/api/v1}
-    restart: unless-stopped
     depends_on:
       api-gateway:
         condition: service_healthy
@@ -597,14 +498,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    logging: *default-logging
-    <<: *resources-app
     networks:
       - frontend
 
   prometheus:
     image: prom/prometheus:v3.11.3
-    restart: unless-stopped
     ports:
       - "127.0.0.1:9090:9090"  # Доступ только локально
     volumes:
@@ -617,15 +515,12 @@ services:
       - "--web.console.templates=/etc/prometheus/consoles"
       - "--storage.tsdb.retention.time=200h"
       - "--web.enable-lifecycle"
-    logging: *default-logging
-    <<: *resources-mon
     networks:
       - backend
       - monitoring
 
   node-exporter:
     image: prom/node-exporter:v1.11.1
-    restart: unless-stopped
     # Порт закрыт наружу
     # ports:
     #   - "9100:9100"
@@ -636,14 +531,11 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-    logging: *default-logging
-    <<: *resources-mon
     networks:
       - monitoring
 
   grafana:
     image: grafana/grafana:13.0.1-security-01
-    restart: unless-stopped
     ports:
       - "127.0.0.1:3001:3000"  # Доступ только локально
     volumes:
@@ -656,82 +548,78 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SECURITY_DISABLE_GRAVATAR=true
       - GF_SECURITY_ANGULAR_SUPPORT_DISABLED=true
-    logging: *default-logging
-    <<: *resources-mon
     networks:
       - monitoring
     depends_on:
       prometheus:
         condition: service_started
 
-  # TODO: implement im-service (WhatsApp Integration Manager)
-  # Uncomment when services/im-service/ is created
-  # im-db:
-  #   image: postgres:16.14
-  #   platform: linux/amd64
-  #   restart: unless-stopped
-  #   ports:
-  #     - "127.0.0.1:5441:5432"
-  #   environment:
-  #     POSTGRES_USER: ${IM_POSTGRES_USER:-im}
-  #     POSTGRES_PASSWORD: ${IM_POSTGRES_PASSWORD:-im_dev_password_change_me}
-  #     POSTGRES_DB: ${IM_POSTGRES_DB:-im}
-  #   volumes:
-  #     - im_postgres_data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - backend
+  im-db:
+    image: postgres:16.14
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "127.0.0.1:5441:5432"
+    environment:
+      POSTGRES_USER: ${IM_POSTGRES_USER:-im}
+      POSTGRES_PASSWORD: ${IM_POSTGRES_PASSWORD:-im_dev_password_change_me}
+      POSTGRES_DB: ${IM_POSTGRES_DB:-im}
+    volumes:
+      - im_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
 
-  # im-migrate:
-  #   build:
-  #     context: .
-  #     dockerfile: services/im-service/Dockerfile
-  #   restart: "no"
-  #   depends_on:
-  #     im-db:
-  #       condition: service_healthy
-  #   environment:
-  #     IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
-  #   command: ["alembic", "upgrade", "head"]
-  #   networks:
-  #     - backend
+  im-migrate:
+    build:
+      context: .
+      dockerfile: services/im-service/Dockerfile
+    restart: "no"
+    depends_on:
+      im-db:
+        condition: service_healthy
+    environment:
+      IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - backend
 
-  # im-service:
-  #   build:
-  #     context: .
-  #     dockerfile: services/im-service/Dockerfile
-  #   restart: unless-stopped
-  #   depends_on:
-  #     im-migrate:
-  #       condition: service_completed_successfully
-  #     kafka-init:
-  #       condition: service_completed_successfully
-  #   environment:
-  #     IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
-  #     IM_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
-  #     IM_SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-  #     IM_SERVICE_KAFKA_CONSUMER_ENABLED: ${IM_SERVICE_KAFKA_CONSUMER_ENABLED:-true}
-  #     IM_SERVICE_OUTBOX_PUBLISH_ENABLED: ${IM_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
-  #     IM_SERVICE_WAPPI_API_URL: ${WAPPI_API_URL:-https://wappi.pro}
-  #     IM_SERVICE_WAPPI_API_TOKEN: ${WAPPI_API_TOKEN}
-  #     IM_SERVICE_WAPPI_PROFILE_ID: ${WAPPI_PROFILE_ID}
-  #     IM_SERVICE_WAPPI_POLL_INTERVAL: ${WAPPI_POLL_INTERVAL:-600}
-  #     IM_SERVICE_WAPPI_REQUEST_TIMEOUT: ${WAPPI_REQUEST_TIMEOUT:-30}
-  #     IM_SERVICE_WAPPI_PAGE_SIZE: ${WAPPI_PAGE_SIZE:-100}
-  #     IM_SERVICE_WAPPI_INCLUDE_SYSTEM_MESSAGES: ${WAPPI_INCLUDE_SYSTEM_MESSAGES:-true}
-  #     IM_SERVICE_MAX_PROFILE_ID: ${MAX_PROFILE_ID}
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 10s
-  #   networks:
-  #     - backend
+  im-service:
+    build:
+      context: .
+      dockerfile: services/im-service/Dockerfile
+    restart: always
+    depends_on:
+      im-migrate:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
+      IM_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
+      IM_SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      IM_SERVICE_KAFKA_CONSUMER_ENABLED: ${IM_SERVICE_KAFKA_CONSUMER_ENABLED:-true}
+      IM_SERVICE_OUTBOX_PUBLISH_ENABLED: ${IM_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
+      IM_SERVICE_WAPPI_API_URL: ${WAPPI_API_URL:-https://wappi.pro}
+      IM_SERVICE_WAPPI_API_TOKEN: ${WAPPI_API_TOKEN}
+      IM_SERVICE_WAPPI_PROFILE_ID: ${WAPPI_PROFILE_ID}
+      IM_SERVICE_WAPPI_POLL_INTERVAL: ${WAPPI_POLL_INTERVAL:-600}
+      IM_SERVICE_WAPPI_REQUEST_TIMEOUT: ${WAPPI_REQUEST_TIMEOUT:-30}
+      IM_SERVICE_WAPPI_PAGE_SIZE: ${WAPPI_PAGE_SIZE:-100}
+      IM_SERVICE_WAPPI_INCLUDE_SYSTEM_MESSAGES: ${WAPPI_INCLUDE_SYSTEM_MESSAGES:-true}
+      IM_SERVICE_MAX_PROFILE_ID: ${MAX_PROFILE_ID}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
 
 networks:
   backend:

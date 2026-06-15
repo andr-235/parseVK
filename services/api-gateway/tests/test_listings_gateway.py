@@ -146,7 +146,9 @@ async def test_gateway_multipart_import_success(app, fake_service):
         )
 
     assert response.status_code == 200
-    assert fake_service.calls == [("import_multipart", [{"url": "https://example.test/flat"}], "avito", False)]
+    assert fake_service.calls == [
+        ("import_multipart", [{"url": "https://example.test/flat"}], "avito", False)
+    ]
 
 
 @pytest.mark.asyncio
@@ -232,7 +234,7 @@ async def test_gateway_multipart_closes_upload_on_parser_failure():
     service = ListingsGatewayService(FakeContentClient(), FakeAuthService())
     file = ClosableFile(content=b"{")
 
-    with pytest.raises(Exception):  # noqa: B017
+    with pytest.raises(Exception):
         await service.import_multipart(FakeRequest(), file, None, None)
 
     assert file.closed is True

@@ -1,13 +1,12 @@
 import logging
 from typing import Annotated, Any
-
 from app.modules.content.service import (
     ContentGatewayService,
-    VkGatewayService,
     get_content_gateway_service,
+    VkGatewayService,
     get_vk_gateway_service,
 )
-from fastapi import APIRouter, Body, Depends, File, Request, UploadFile
+from fastapi import APIRouter, Depends, Request, Body, UploadFile, File
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +76,7 @@ async def delete_group(
     await vk_gateway_service.forward(request, "DELETE", f"/internal/vk/groups/{vk_group_id}")
     try:
         await content_gateway_service.forward(request, "DELETE", f"/internal/content/groups/{vk_group_id}")
-    except Exception:  # noqa: S110
+    except Exception:
         pass
     return {"status": "success"}
 
@@ -286,3 +285,4 @@ async def verify_author(
     service: ContentGatewayService = Depends(get_content_gateway_service),
 ):
     return await service.forward(request, "PATCH", f"/internal/content/authors/{vk_author_id}/verify")
+

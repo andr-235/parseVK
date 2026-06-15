@@ -1,8 +1,9 @@
 import httpx
 from app.clients.identity.methods import (
-    IdentityClientHTTPError,  # noqa: F401 — re-export
     IdentityClientMethods,
-    IdentityClientUnavailableError,  # noqa: F401 — re-export
+    IdentityClientError,
+    IdentityClientHTTPError,
+    IdentityClientUnavailableError,
 )
 from app.clients.internal import InternalServiceClient
 from app.core.config import settings

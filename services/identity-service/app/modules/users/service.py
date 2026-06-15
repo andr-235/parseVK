@@ -1,12 +1,13 @@
-import secrets
+import random
 import string
 from uuid import UUID
+
+from fastapi import HTTPException, status
 
 from app.core.security import hash_password
 from app.db.models import User
 from app.modules.users.repository import UsersRepository
 from app.modules.users.schemas import UpdateUserRequest, UserDto
-from fastapi import HTTPException, status
 
 
 class UsersService:
@@ -60,7 +61,7 @@ class UsersService:
     @staticmethod
     def _generate_temp_password(length: int = 12) -> str:
         chars = string.ascii_letters + string.digits
-        return "".join(secrets.choice(chars) for _ in range(length))
+        return "".join(random.choice(chars) for _ in range(length))
 
     @staticmethod
     def to_dto(user: User) -> UserDto:

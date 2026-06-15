@@ -1,6 +1,6 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,13 +8,13 @@ from app.db.models import VkAuthor, VkComment, VkGroup, VkPost
 
 
 def utcnow() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 def vk_timestamp(value: int | None) -> datetime | None:
     if value is None:
         return None
-    return datetime.fromtimestamp(int(value), UTC)
+    return datetime.fromtimestamp(int(value), timezone.utc)
 
 
 class IngestionRepository:

@@ -1,17 +1,7 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from uuid import UUID as PyUUID
 
-from sqlalchemy import (
-    BigInteger,
-    Boolean,
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-)
+from sqlalchemy import BigInteger, Boolean, DateTime, Index, String, Text, UniqueConstraint, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,7 +9,7 @@ from app.db.base import Base
 
 
 def utcnow() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 class ModerationComment(Base):
@@ -39,9 +29,7 @@ class ModerationComment(Base):
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     source: Mapped[str] = mapped_column(String(32), nullable=False, default="TASK")
     matched_keywords: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
-    watchlist_author_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("watchlist_authors.id", ondelete="SET NULL"), nullable=True
-    )
+    watchlist_author_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("watchlist_authors.id", ondelete="SET NULL"), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     watchlist_author = relationship("WatchlistAuthor", back_populates="comments")
@@ -61,8 +49,8 @@ class ProcessedEvent(Base):
     processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
-from sqlalchemy import ForeignKey  # noqa: E402
-from sqlalchemy.orm import relationship  # noqa: E402
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 
 
 class Keyword(Base):
@@ -73,9 +61,7 @@ class Keyword(Base):
     category: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_phrase: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
 
     keyword_forms = relationship(
         "KeywordForm",
@@ -128,9 +114,7 @@ class KeywordRecalculationJob(Base):
     __tablename__ = "keyword_recalculation_jobs"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="pending"
-    )  # "pending" | "running" | "succeeded" | "failed"
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")  # "pending" | "running" | "succeeded" | "failed"
     single_keyword_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     processed: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     updated: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
@@ -151,9 +135,7 @@ class WatchlistSettings(Base):
     poll_interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     max_authors: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
 
     authors = relationship("WatchlistAuthor", back_populates="settings", cascade="all, delete-orphan")
 
@@ -175,13 +157,9 @@ class WatchlistAuthor(Base):
     found_comments_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     monitoring_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     monitoring_stopped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    settings_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("watchlist_settings.id", ondelete="CASCADE"), nullable=False
-    )
+    settings_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("watchlist_settings.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
 
     settings = relationship("WatchlistSettings", back_populates="authors")
     comments = relationship("ModerationComment", back_populates="watchlist_author")
@@ -208,6 +186,6 @@ class PhotoAnalysis(Base):
     explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
     analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
