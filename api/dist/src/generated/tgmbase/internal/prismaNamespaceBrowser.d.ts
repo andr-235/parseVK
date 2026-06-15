@@ -1,0 +1,253 @@
+import * as runtime from "@prisma/client/runtime/index-browser";
+export type * from '../models.js';
+export type * from './prismaNamespace.js';
+export declare const Decimal: typeof runtime.Decimal;
+export declare const NullTypes: {
+    DbNull: (new (secret: never) => typeof runtime.DbNull);
+    JsonNull: (new (secret: never) => typeof runtime.JsonNull);
+    AnyNull: (new (secret: never) => typeof runtime.AnyNull);
+};
+export declare const DbNull: import("@prisma/client-runtime-utils").DbNullClass;
+export declare const JsonNull: import("@prisma/client-runtime-utils").JsonNullClass;
+export declare const AnyNull: import("@prisma/client-runtime-utils").AnyNullClass;
+export declare const ModelName: {
+    readonly channel: "channel";
+    readonly group: "group";
+    readonly keyword: "keyword";
+    readonly message: "message";
+    readonly snitch_admin: "snitch_admin";
+    readonly supergroup: "supergroup";
+    readonly telegramnotify: "telegramnotify";
+    readonly user: "user";
+    readonly DlImportBatch: "DlImportBatch";
+    readonly DlImportFile: "DlImportFile";
+    readonly DlContact: "DlContact";
+    readonly DlMatchRun: "DlMatchRun";
+    readonly DlMatchResult: "DlMatchResult";
+    readonly DlMatchResultChat: "DlMatchResultChat";
+    readonly DlMatchResultMessage: "DlMatchResultMessage";
+};
+export type ModelName = (typeof ModelName)[keyof typeof ModelName];
+export declare const TransactionIsolationLevel: {
+    readonly ReadUncommitted: "ReadUncommitted";
+    readonly ReadCommitted: "ReadCommitted";
+    readonly RepeatableRead: "RepeatableRead";
+    readonly Serializable: "Serializable";
+};
+export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel];
+export declare const ChannelScalarFieldEnum: {
+    readonly id: "id";
+    readonly channel_id: "channel_id";
+    readonly title: "title";
+    readonly date: "date";
+    readonly scam: "scam";
+    readonly username: "username";
+    readonly participants_count: "participants_count";
+    readonly region: "region";
+    readonly description: "description";
+    readonly upd_date: "upd_date";
+};
+export type ChannelScalarFieldEnum = (typeof ChannelScalarFieldEnum)[keyof typeof ChannelScalarFieldEnum];
+export declare const GroupScalarFieldEnum: {
+    readonly id: "id";
+    readonly group_id: "group_id";
+    readonly title: "title";
+    readonly participants_count: "participants_count";
+    readonly date: "date";
+    readonly region: "region";
+    readonly description: "description";
+    readonly upd_date: "upd_date";
+};
+export type GroupScalarFieldEnum = (typeof GroupScalarFieldEnum)[keyof typeof GroupScalarFieldEnum];
+export declare const KeywordScalarFieldEnum: {
+    readonly id: "id";
+    readonly word: "word";
+    readonly declension: "declension";
+    readonly region: "region";
+};
+export type KeywordScalarFieldEnum = (typeof KeywordScalarFieldEnum)[keyof typeof KeywordScalarFieldEnum];
+export declare const MessageScalarFieldEnum: {
+    readonly id: "id";
+    readonly message_id: "message_id";
+    readonly peer_id: "peer_id";
+    readonly date: "date";
+    readonly message: "message";
+    readonly from_id: "from_id";
+    readonly forwarded: "forwarded";
+    readonly reply_to: "reply_to";
+    readonly media: "media";
+    readonly keywords: "keywords";
+};
+export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum];
+export declare const Snitch_adminScalarFieldEnum: {
+    readonly id: "id";
+    readonly login: "login";
+    readonly password: "password";
+    readonly last_login: "last_login";
+};
+export type Snitch_adminScalarFieldEnum = (typeof Snitch_adminScalarFieldEnum)[keyof typeof Snitch_adminScalarFieldEnum];
+export declare const SupergroupScalarFieldEnum: {
+    readonly id: "id";
+    readonly supergroup_id: "supergroup_id";
+    readonly title: "title";
+    readonly username: "username";
+    readonly participants_count: "participants_count";
+    readonly scam: "scam";
+    readonly date: "date";
+    readonly region: "region";
+    readonly description: "description";
+    readonly upd_date: "upd_date";
+};
+export type SupergroupScalarFieldEnum = (typeof SupergroupScalarFieldEnum)[keyof typeof SupergroupScalarFieldEnum];
+export declare const TelegramnotifyScalarFieldEnum: {
+    readonly id: "id";
+    readonly telegram_id: "telegram_id";
+    readonly username: "username";
+    readonly timestamp: "timestamp";
+};
+export type TelegramnotifyScalarFieldEnum = (typeof TelegramnotifyScalarFieldEnum)[keyof typeof TelegramnotifyScalarFieldEnum];
+export declare const UserScalarFieldEnum: {
+    readonly id: "id";
+    readonly user_id: "user_id";
+    readonly bot: "bot";
+    readonly scam: "scam";
+    readonly premium: "premium";
+    readonly first_name: "first_name";
+    readonly last_name: "last_name";
+    readonly username: "username";
+    readonly phone: "phone";
+    readonly upd_date: "upd_date";
+};
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum];
+export declare const DlImportBatchScalarFieldEnum: {
+    readonly id: "id";
+    readonly status: "status";
+    readonly filesTotal: "filesTotal";
+    readonly filesSuccess: "filesSuccess";
+    readonly filesFailed: "filesFailed";
+    readonly createdAt: "createdAt";
+    readonly updatedAt: "updatedAt";
+};
+export type DlImportBatchScalarFieldEnum = (typeof DlImportBatchScalarFieldEnum)[keyof typeof DlImportBatchScalarFieldEnum];
+export declare const DlImportFileScalarFieldEnum: {
+    readonly id: "id";
+    readonly batchId: "batchId";
+    readonly originalFileName: "originalFileName";
+    readonly fileHash: "fileHash";
+    readonly status: "status";
+    readonly rowsTotal: "rowsTotal";
+    readonly rowsSuccess: "rowsSuccess";
+    readonly rowsFailed: "rowsFailed";
+    readonly error: "error";
+    readonly isActive: "isActive";
+    readonly replacedFileId: "replacedFileId";
+    readonly createdAt: "createdAt";
+    readonly finishedAt: "finishedAt";
+    readonly updatedAt: "updatedAt";
+};
+export type DlImportFileScalarFieldEnum = (typeof DlImportFileScalarFieldEnum)[keyof typeof DlImportFileScalarFieldEnum];
+export declare const DlContactScalarFieldEnum: {
+    readonly id: "id";
+    readonly importFileId: "importFileId";
+    readonly telegramId: "telegramId";
+    readonly username: "username";
+    readonly phone: "phone";
+    readonly firstName: "firstName";
+    readonly lastName: "lastName";
+    readonly description: "description";
+    readonly region: "region";
+    readonly joinedAt: "joinedAt";
+    readonly channelsRaw: "channelsRaw";
+    readonly fullName: "fullName";
+    readonly address: "address";
+    readonly vkUrl: "vkUrl";
+    readonly email: "email";
+    readonly telegramContact: "telegramContact";
+    readonly instagram: "instagram";
+    readonly viber: "viber";
+    readonly odnoklassniki: "odnoklassniki";
+    readonly birthDateText: "birthDateText";
+    readonly usernameExtra: "usernameExtra";
+    readonly geo: "geo";
+    readonly sourceRowIndex: "sourceRowIndex";
+    readonly createdAt: "createdAt";
+};
+export type DlContactScalarFieldEnum = (typeof DlContactScalarFieldEnum)[keyof typeof DlContactScalarFieldEnum];
+export declare const DlMatchRunScalarFieldEnum: {
+    readonly id: "id";
+    readonly status: "status";
+    readonly contactsTotal: "contactsTotal";
+    readonly matchesTotal: "matchesTotal";
+    readonly strictMatchesTotal: "strictMatchesTotal";
+    readonly usernameMatchesTotal: "usernameMatchesTotal";
+    readonly phoneMatchesTotal: "phoneMatchesTotal";
+    readonly createdAt: "createdAt";
+    readonly finishedAt: "finishedAt";
+    readonly error: "error";
+};
+export type DlMatchRunScalarFieldEnum = (typeof DlMatchRunScalarFieldEnum)[keyof typeof DlMatchRunScalarFieldEnum];
+export declare const DlMatchResultScalarFieldEnum: {
+    readonly id: "id";
+    readonly runId: "runId";
+    readonly dlContactId: "dlContactId";
+    readonly tgmbaseUserId: "tgmbaseUserId";
+    readonly strictTelegramIdMatch: "strictTelegramIdMatch";
+    readonly usernameMatch: "usernameMatch";
+    readonly phoneMatch: "phoneMatch";
+    readonly chatActivityMatch: "chatActivityMatch";
+    readonly dlContactSnapshot: "dlContactSnapshot";
+    readonly tgmbaseUserSnapshot: "tgmbaseUserSnapshot";
+    readonly createdAt: "createdAt";
+};
+export type DlMatchResultScalarFieldEnum = (typeof DlMatchResultScalarFieldEnum)[keyof typeof DlMatchResultScalarFieldEnum];
+export declare const DlMatchResultChatScalarFieldEnum: {
+    readonly id: "id";
+    readonly resultId: "resultId";
+    readonly peerId: "peerId";
+    readonly chatType: "chatType";
+    readonly title: "title";
+    readonly isExcluded: "isExcluded";
+    readonly createdAt: "createdAt";
+    readonly updatedAt: "updatedAt";
+};
+export type DlMatchResultChatScalarFieldEnum = (typeof DlMatchResultChatScalarFieldEnum)[keyof typeof DlMatchResultChatScalarFieldEnum];
+export declare const DlMatchResultMessageScalarFieldEnum: {
+    readonly id: "id";
+    readonly resultId: "resultId";
+    readonly peerId: "peerId";
+    readonly messageId: "messageId";
+    readonly messageDate: "messageDate";
+    readonly text: "text";
+    readonly createdAt: "createdAt";
+};
+export type DlMatchResultMessageScalarFieldEnum = (typeof DlMatchResultMessageScalarFieldEnum)[keyof typeof DlMatchResultMessageScalarFieldEnum];
+export declare const SortOrder: {
+    readonly asc: "asc";
+    readonly desc: "desc";
+};
+export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder];
+export declare const JsonNullValueInput: {
+    readonly JsonNull: import("@prisma/client-runtime-utils").JsonNullClass;
+};
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput];
+export declare const NullableJsonNullValueInput: {
+    readonly DbNull: import("@prisma/client-runtime-utils").DbNullClass;
+    readonly JsonNull: import("@prisma/client-runtime-utils").JsonNullClass;
+};
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput];
+export declare const QueryMode: {
+    readonly default: "default";
+    readonly insensitive: "insensitive";
+};
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode];
+export declare const NullsOrder: {
+    readonly first: "first";
+    readonly last: "last";
+};
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder];
+export declare const JsonNullValueFilter: {
+    readonly DbNull: import("@prisma/client-runtime-utils").DbNullClass;
+    readonly JsonNull: import("@prisma/client-runtime-utils").JsonNullClass;
+    readonly AnyNull: import("@prisma/client-runtime-utils").AnyNullClass;
+};
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter];

@@ -1,167 +1,97 @@
-import { useEffect, Suspense, lazy, type ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
-import { Sidebar } from '@/shared/components/Sidebar'
-import MainContent from '@/shared/components/MainContent'
-import AppSyncProvider from '@/app/providers/AppSyncProvider'
-import { useAuthStore } from '@/modules/auth/store'
+import { useEffect, lazy, Suspense } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { AppLayout } from './components/layout/AppLayout'
+import { Skeleton } from './components/ui'
 
-// Lazy load pages
-const Tasks = lazy(() => import('@/pages/Tasks'))
-const Groups = lazy(() => import('@/pages/Groups'))
-const Comments = lazy(() => import('@/pages/Comments'))
-const Keywords = lazy(() => import('@/pages/Keywords'))
-const Watchlist = lazy(() => import('@/pages/Watchlist'))
-const AuthorAnalysis = lazy(() => import('@/pages/AuthorAnalysis'))
-const Authors = lazy(() => import('@/pages/Authors'))
-const Settings = lazy(() => import('@/pages/Settings'))
-const Listings = lazy(() => import('@/pages/Listings'))
-const Telegram = lazy(() => import('@/pages/Telegram'))
-const TgmbaseSearch = lazy(() => import('@/pages/TgmbaseSearch'))
-const TelegramDlUpload = lazy(() => import('@/pages/TelegramDlUpload'))
-const Metrics = lazy(() => import('@/pages/Metrics'))
-const Monitoring = lazy(() => import('@/pages/Monitoring'))
-const MonitoringGroups = lazy(() => import('@/pages/MonitoringGroups'))
-const Login = lazy(() => import('@/pages/Login'))
-const AdminUsers = lazy(() => import('@/pages/AdminUsers'))
-const ChangePassword = lazy(() => import('@/pages/ChangePassword'))
-const VkFriendsExportPage = lazy(() => import('@/pages/VkFriendsExportPage'))
-const OkFriendsExportPage = lazy(() => import('@/pages/OkFriendsExportPage'))
-import { ErrorBoundary } from '@/shared/components/ErrorBoundary'
+const CommentsPage = lazy(() => import('./pages/comments/CommentsPage').then(m => ({ default: m.CommentsPage })))
+const TasksPage = lazy(() => import('./pages/tasks/TasksPage').then(m => ({ default: m.TasksPage })))
+const GroupsPage = lazy(() => import('./pages/groups/GroupsPage').then(m => ({ default: m.GroupsPage })))
+const AuthorsPage = lazy(() => import('./pages/authors/AuthorsPage').then(m => ({ default: m.AuthorsPage })))
+const AuthorAnalysisPage = lazy(() => import('./pages/author-analysis/AuthorAnalysisPage').then(m => ({ default: m.AuthorAnalysisPage })))
+const WatchlistPage = lazy(() => import('./pages/watchlist/WatchlistPage').then(m => ({ default: m.WatchlistPage })))
+const KeywordsPage = lazy(() => import('./pages/keywords/KeywordsPage').then(m => ({ default: m.KeywordsPage })))
+const TelegramPage = lazy(() => import('./pages/telegram/TelegramPage').then(m => ({ default: m.TelegramPage })))
+const TelegramDlUploadPage = lazy(() => import('./pages/telegram-dl-upload/TelegramDlUploadPage').then(m => ({ default: m.TelegramDlUploadPage })))
+const TgmbaseSearchPage = lazy(() => import('./pages/tgmbase-search/TgmbaseSearchPage').then(m => ({ default: m.TgmbaseSearchPage })))
+const MonitoringPage = lazy(() => import('./pages/monitoring/MonitoringPage').then(m => ({ default: m.MonitoringPage })))
 
-const RequireAuth = ({ children }: { children: ReactNode }) => {
-  const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
-  const location = useLocation()
+const ListingsPage = lazy(() => import('./pages/listings/ListingsPage').then(m => ({ default: m.ListingsPage })))
+const VkFriendsExportPage = lazy(() => import('./pages/vk-friends-export/VkFriendsExportPage').then(m => ({ default: m.VkFriendsExportPage })))
+const OkFriendsExportPage = lazy(() => import('./pages/ok-friends-export/OkFriendsExportPage').then(m => ({ default: m.OkFriendsExportPage })))
+const MetricsPage = lazy(() => import('./pages/metrics/MetricsPage').then(m => ({ default: m.MetricsPage })))
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const AdminUsersPage = lazy(() => import('./pages/admin-users/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })))
+const LoginPage = lazy(() => import('./pages/login/LoginPage').then(m => ({ default: m.LoginPage })))
+const ChangePasswordPage = lazy(() => import('./pages/change-password/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
+import { useAuth } from './store/auth'
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+function AuthOutlet() {
+  const { user, isInitialized, init } = useAuth()
+
+  useEffect(() => {
+    init()
+  }, [init])
+
+  if (!isInitialized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-bg-main">
+        <div className="w-full max-w-sm space-y-4">
+          <Skeleton className="mx-auto h-7 w-32" />
+          <div className="space-y-4 rounded-lg border border-border bg-bg-panel p-6">
+            <div className="space-y-1.5">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-11 w-full" />
+            </div>
+            <div className="space-y-1.5">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-11 w-full" />
+            </div>
+            <Skeleton className="h-11 w-full" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  return <>{children}</>
-}
-
-const RequireAdmin = ({ children }: { children: ReactNode }) => {
-  const user = useAuthStore((state) => state.user)
-
-  if (!user || user.role !== 'admin') {
-    return <Navigate to="/tasks" replace />
-  }
-
-  return <>{children}</>
-}
-
-const RequirePasswordChange = ({ children }: { children: ReactNode }) => {
-  const user = useAuthStore((state) => state.user)
-  const location = useLocation()
-
-  if (user?.isTemporaryPassword && location.pathname !== '/login') {
+  if (!user) {
     return <Navigate to="/login" replace />
   }
 
-  return <>{children}</>
-}
-
-const AppLayout = () => {
-  return (
-    <>
-      <AppSyncProvider />
-      <Sidebar />
-      <MainContent>
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center">
-              <div className="text-muted-foreground">Загрузка...</div>
-            </div>
-          }
-        >
-          <Outlet />
-        </Suspense>
-      </MainContent>
-    </>
-  )
+  return <Outlet />
 }
 
 function App() {
-  const isAuthenticated = useAuthStore((state) => Boolean(state.accessToken && state.user))
-
-  // Зафиксируем темную тему
-  useEffect(() => {
-    document.documentElement.classList.add('dark')
-  }, [])
-
   return (
-    <ErrorBoundary>
-      <BrowserRouter>
-        <Routes>
-          <Route
-            element={
-              <RequireAuth>
-                <RequirePasswordChange>
-                  <AppLayout />
-                </RequirePasswordChange>
-              </RequireAuth>
-            }
-          >
-            <Route index element={<Navigate to="/tasks" replace />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/groups" element={<Groups />} />
-            <Route path="/listings" element={<Listings />} />
-            <Route path="/comments" element={<Comments />} />
-            <Route path="/watchlist" element={<Watchlist />} />
-            <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysis />} />
-            <Route path="/keywords" element={<Keywords />} />
-            <Route path="/authors" element={<Authors />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/telegram" element={<Telegram />} />
-            <Route path="/tgmbase-search" element={<TgmbaseSearch />} />
-            <Route path="/telegram/dl-upload" element={<TelegramDlUpload />} />
-            <Route path="/metrics" element={<Metrics />} />
-            <Route path="/monitoring" element={<Navigate to="/monitoring/whatsapp" replace />} />
-            <Route path="/monitoring/:sourceKey" element={<Monitoring />} />
-            <Route path="/monitoring/:sourceKey/groups" element={<MonitoringGroups />} />
+    <BrowserRouter>
+      <Suspense fallback={<div className="flex h-screen items-center justify-center bg-bg-main"><Skeleton className="h-6 w-48" /></div>}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<AuthOutlet />}>
+          <Route path="/change-password" element={<ChangePasswordPage />} />
+          <Route element={<AppLayout />}>
+            <Route index element={<Navigate to="/comments" replace />} />
+            <Route path="/comments" element={<CommentsPage />} />
+            <Route path="/tasks" element={<TasksPage />} />
+            <Route path="/groups" element={<GroupsPage />} />
+            <Route path="/authors" element={<AuthorsPage />} />
+            <Route path="/authors/:vkUserId/analysis" element={<AuthorAnalysisPage />} />
+            <Route path="/watchlist" element={<WatchlistPage />} />
+            <Route path="/keywords" element={<KeywordsPage />} />
+            <Route path="/telegram" element={<TelegramPage />} />
+            <Route path="/telegram/dl-upload" element={<TelegramDlUploadPage />} />
+            <Route path="/tgmbase-search" element={<TgmbaseSearchPage />} />
+            <Route path="/monitoring" element={<MonitoringPage />} />
+            <Route path="/listings" element={<ListingsPage />} />
             <Route path="/vk/friends-export" element={<VkFriendsExportPage />} />
             <Route path="/ok/friends-export" element={<OkFriendsExportPage />} />
-            <Route path="/change-password" element={<ChangePassword />} />
-            <Route
-              path="/admin/users"
-              element={
-                <RequireAdmin>
-                  <AdminUsers />
-                </RequireAdmin>
-              }
-            />
+            <Route path="/metrics" element={<MetricsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
           </Route>
-          <Route
-            path="/login"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-                    Загрузка...
-                  </div>
-                }
-              >
-                <Login />
-              </Suspense>
-            }
-          />
-          <Route
-            path="*"
-            element={<Navigate to={isAuthenticated ? '/tasks' : '/login'} replace />}
-          />
-        </Routes>
-        <Toaster
-          position="top-right"
-          containerStyle={{
-            pointerEvents: 'none',
-          }}
-          toastOptions={{
-            duration: 3000,
-            className: 'bg-foreground text-background pointer-events-auto shadow-soft-sm',
-          }}
-        />
-      </BrowserRouter>
-    </ErrorBoundary>
+        </Route>
+      </Routes>
+      </Suspense>
+    </BrowserRouter>
   )
 }
 

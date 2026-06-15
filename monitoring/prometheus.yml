@@ -6,13 +6,40 @@ rule_files:
   - "alert_rules.yml"
 
 scrape_configs:
-  - job_name: "parsevk-api"
+  - job_name: "api-gateway"
     static_configs:
-      - targets: ["api:3000"]
-    # API metrics endpoint is /api/metrics in this project; adjust if needed.
-    metrics_path: "/api/metrics"
+      - targets: ["api-gateway:8000"]
+    metrics_path: "/metrics"
     scrape_interval: 15s
     scrape_timeout: 10s
+
+  - job_name: "identity-service"
+    static_configs:
+      - targets: ["identity-service:8000"]
+
+  - job_name: "tasks-service"
+    static_configs:
+      - targets: ["tasks-service:8000"]
+
+  - job_name: "vk-service"
+    static_configs:
+      - targets: ["vk-service:8000"]
+
+  - job_name: "content-service"
+    static_configs:
+      - targets: ["content-service:8000"]
+
+  - job_name: "moderation-service"
+    static_configs:
+      - targets: ["moderation-service:8000"]
+
+  - job_name: "telegram-service"
+    static_configs:
+      - targets: ["telegram-service:8000"]
+
+  - job_name: "im-service"
+    static_configs:
+      - targets: ["im-service:8000"]
 
   - job_name: "prometheus"
     static_configs:
@@ -21,21 +48,3 @@ scrape_configs:
   - job_name: "node-exporter"
     static_configs:
       - targets: ["node-exporter:9100"]
-
-  # === МЕСТО ДЛЯ ВАШИХ НАСТРОЕК ===
-  # Для добавления метрик деплоя раскомментируйте следующую секцию:
-  # - job_name: "deployment-metrics"
-  #   file_sd_configs:
-  #     - files:
-  #         - /opt/parseVK/.deployment-metrics.prom
-  #   scrape_interval: 30s
-  #   scrape_timeout: 10s
-  # Добавьте здесь дополнительные targets для мониторинга
-  # Пример:
-  # - job_name: 'my_custom_service'
-  #   static_configs:
-  #     - targets: ['service:port']
-  #   basic_auth:
-  #     username: 'your_username'
-  #     password: 'your_password'
-  # === КОНЕЦ ПОЛЬЗОВАТЕЛЬСКИХ НАСТРОЕК ===

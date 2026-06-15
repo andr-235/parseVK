@@ -25,22 +25,6 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Scan API dependencies
-        id: scan-api
-        continue-on-error: true
-        working-directory: api
-        run: |
-          bun install --frozen-lockfile
-          bun audit --json > audit-api.json || true
-          if [ -f audit-api.json ]; then
-            VULN_COUNT=$(cat audit-api.json | jq -r '.metadata.vulnerabilities.total // 0')
-            echo "vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT
-            if [ "$VULN_COUNT" -gt 0 ]; then
-              echo "Found $VULN_COUNT vulnerabilities in API dependencies"
-              cat audit-api.json | jq -r '.vulnerabilities | to_entries[] | "\(.key): \(.value.severity)"' || true
-            fi
-          fi
-
       - name: Scan Frontend dependencies
         id: scan-frontend
         continue-on-error: true
@@ -57,14 +41,6 @@ jobs:
             fi
           fi
 
-      - name: Upload API audit results
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: api-audit-results
-          path: api/audit-api.json
-          if-no-files-found: ignore
-
       - name: Upload Frontend audit results
         if: always()
         uses: actions/upload-artifact@v7
@@ -74,10 +50,9 @@ jobs:
           if-no-files-found: ignore
 
       - name: Fail on critical vulnerabilities
-        if: steps.scan-api.outputs.vulnerabilities > 0 || steps.scan-frontend.outputs.vulnerabilities > 0
+        if: steps.scan-frontend.outputs.vulnerabilities > 0
         run: |
           echo "⚠️ Security vulnerabilities detected!"
-          echo "API vulnerabilities: ${steps.scan-api.outputs.vulnerabilities:-0}"
           echo "Frontend vulnerabilities: ${steps.scan-frontend.outputs.vulnerabilities:-0}"
           echo "Please review and fix critical vulnerabilities before merging."
           exit 1
@@ -105,43 +80,22 @@ jobs:
             HEAD_SHA="${{ github.sha }}"
           fi
 
-          API_CHANGED=false
           FRONTEND_CHANGED=false
 
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
-            API_CHANGED=true
             FRONTEND_CHANGED=true
           else
             CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
             
-            if echo "$CHANGED_FILES" | grep -qE '^api/|^docker/backend\.Dockerfile|^docker/backend-entrypoint\.sh'; then
-              API_CHANGED=true
-            fi
             if echo "$CHANGED_FILES" | grep -qE '^front/|^docker/frontend\.Dockerfile|^docker/frontend-entrypoint\.sh|^docker/frontend\.nginx\.conf'; then
               FRONTEND_CHANGED=true
             fi
           fi
 
-          echo "api_changed=$API_CHANGED" >> $GITHUB_OUTPUT
           echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
-
-      - name: Build API image for scanning
-        id: build-api
-        if: steps.detect-changes.outputs.api_changed == 'true'
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: docker/backend.Dockerfile
-          push: false
-          load: true
-          tags: parsevk-api:scan
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            DATABASE_URL=postgresql://postgres:postgres@db:5432/vk_api?schema=public
 
       - name: Build Frontend image for scanning
         id: build-frontend
@@ -161,15 +115,6 @@ jobs:
             VITE_API_WS_URL=auto
             VITE_DEV_MODE=false
 
-      - name: Run Trivy vulnerability scanner on API image
-        if: steps.build-api.outcome == 'success'
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: parsevk-api:scan
-          format: "sarif"
-          output: "trivy-api-results.sarif"
-          severity: "CRITICAL,HIGH"
-
       - name: Run Trivy vulnerability scanner on Frontend image
         if: steps.build-frontend.outcome == 'success'
         uses: aquasecurity/trivy-action@master
@@ -178,14 +123,6 @@ jobs:
           format: "sarif"
           output: "trivy-frontend-results.sarif"
           severity: "CRITICAL,HIGH"
-
-      - name: Upload Trivy results to GitHub Security (API)
-        if: always() && steps.build-api.outcome == 'success'
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: "trivy-api-results.sarif"
-          wait-for-processing: false
-        continue-on-error: true
 
       - name: Upload Trivy results to GitHub Security (Frontend)
         if: always() && steps.build-frontend.outcome == 'success'

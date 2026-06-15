@@ -1,78 +1,43 @@
 ---
 name: parsevk-github-task-planning
-description: Use when planning or drafting parseVK GitHub Issues for AI-assisted development; create one small AI-safe task with clear scope, labels, risk, validation, and handoff. Do not use for implementation, PR review, merge decisions, or broad roadmap planning.
+description: Use when planning or drafting a parseVK GitHub Issue for AI-assisted development. Helps decompose features into small, AI-safe tasks with clear boundaries. Do not use for implementing tasks, PR review, or merge gates.
 ---
 
-# parseVK GitHub Task Planning
+# parseVK GitHub Task Planning Skill
+
+## Purpose
+Навык предназначен для декомпозиции требований на изолированные, безопасные для выполнения ИИ-агентом задачи (GitHub Issues).
 
 ## When to use
-
-Use this skill when creating or refining a GitHub Issue that will be implemented by Codex or another AI agent in the parseVK repository.
-
-The issue must be the unit of AI work: one issue, one bounded task, one expected PR.
+- При планировании новой фичи или исправлении бага.
+- При создании/описании задачи на GitHub для последующего выполнения ИИ.
+- Для выявления рисков, бюджета сессии и критериев приемки перед началом разработки.
 
 ## When not to use
-
-Do not use this skill to implement code, review a PR, decide whether to merge, or plan a multi-issue roadmap without splitting it into small tasks.
-
-Do not use it for tasks that require production access, secrets, protected branch changes, or undefined ownership.
+- Во время написания кода (реализации задачи).
+- Для ревью Pull Request.
+- Для проверки мерджа.
 
 ## Inputs
-
-- User request or project need
-- Relevant service area
-- Known constraints and out-of-scope boundaries
-- Expected validation commands
-- Risk level
+- Исходное описание фичи, багрепорта или идеи от пользователя.
+- Локальное состояние репозитория (структура файлов, существующие микросервисы).
 
 ## Procedure
-
-1. Define a narrow goal that can be completed in one focused AI session.
-2. Write the issue title in a concise task format.
-3. Fill the issue body with:
-   - Goal
-   - Background
-   - Scope
-   - Out of Scope
-   - Acceptance Criteria
-   - Validation
-   - Risk
-   - AI Session Budget
-   - Required Handoff
-4. Add labels for type, service area, risk, and AI readiness.
-5. Keep `parsevkctl` as the deterministic lifecycle helper. Do not move complex reasoning into new CLI behavior.
-6. Ensure the task can be reviewed from the issue and PR without private context.
+1. **Анализ области действия**: Определите, какие сервисы и библиотеки затрагивает фича.
+2. **Декомпозиция (Изоляция)**: Разбейте большую фичу так, чтобы одна задача ИИ затрагивала только одну область (например, только backend-сервис или только CLI-инструмент). Придерживайтесь правила: "одна задача = одна ИИ-безопасная задача".
+3. **Определение Scope & Out of Scope**: Четко зафиксируйте, какие файлы и логика должны измениться (Scope), а какие файлы трогать категорически запрещено (Out of Scope).
+4. **Спецификация критериев приемки (AC)**: Напишите конкретные проверяемые чекбоксы результатов работы.
+5. **Валидация**: Укажите точные команды (тесты, линтеры), которые должны пройти успешно.
+6. **Оценка рисков**: Выявите возможные сайд-эффекты и установите бюджет ИИ-сессий.
+7. **Формирование Issue**: Используя шаблон из `assets/ai-task-issue-template.md`, подготовьте и опубликуйте Issue на GitHub с правильными ярлыками (`type:infra`, `type:feature`, `service:parsevkctl` и т.д.).
 
 ## Output format
-
-Return:
-
-```md
-## Title
-
-...
-
-## Labels
-
-- type:...
-- service:...
-- risk:...
-- ai:ready
-
-## Body
-
-...
-```
+Отчет планирования в чате с ссылкой на созданный GitHub Issue и предложенным шаблоном.
 
 ## Safety rules
-
-- One issue equals one AI-safe task.
-- Scope must be explicit and small.
-- Out-of-scope work must be named clearly.
-- Do not include secrets, credentials, tokens, cookies, or private config.
-- Do not ask AI agents to modify unrelated services.
-- Do not create tasks that require force push, destructive git commands, or protected-branch changes.
+- Не планируйте задачи, объединяющие изменения инфраструктуры (CI/CD, Docker) и бизнес-логики.
+- Не включайте секреты в тело задачи.
 
 ## Validation expectations
-
-Every issue must name concrete validation steps. If no automated validation is available, state the manual validation and why automated checks do not apply.
+- Наличие созданного GitHub Issue с ярлыком `ai:ready`.
+- Четкие чекбоксы Acceptance Criteria.

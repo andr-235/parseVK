@@ -1,76 +1,44 @@
 ---
 name: parsevk-pr-review
-description: Use when reviewing a parseVK Pull Request in chat before any GitHub review; inspect PR metadata, linked issue, changed files, validation evidence, and scope fit. Do not use to implement fixes, merge PRs, or submit an official GitHub review unless explicitly requested.
+description: Use when reviewing a parseVK GitHub Pull Request. Performs local chat-only review of changed files, metadata, scope, validations, and security issues. Do not use to submit approved status on GitHub or for merge gates.
 ---
 
-# parseVK PR Review
+# parseVK PR Review Skill
+
+## Purpose
+Навык описывает процесс рецензирования кода (Code Review) в чате перед слиянием Pull Request.
 
 ## When to use
-
-Use this skill when the user asks Codex or ChatGPT to review a parseVK PR, inspect PR readiness, or provide merge guidance.
-
-Review findings in chat first. Do not write a GitHub PR review unless the user explicitly asks for it.
-
-For detailed workflow guidance, read `references/PR_REVIEW_WORKFLOW.md`.
+- При поступлении запроса на проверку кода (ревью) от пользователя или другого агента.
+- Перед слиянием задачи, чтобы убедиться в качестве кода и отсутствии регрессий.
 
 ## When not to use
-
-Do not use this skill to implement requested fixes, merge the PR, create an official GitHub approval, or review unrelated branches without a PR.
-
-Do not treat an approval from the same GitHub user as required for merge readiness.
+- При написании кода.
+- Для выполнения официального аппрува на GitHub (approve) от имени того же пользователя.
+- При планировании задач.
 
 ## Inputs
-
-- PR number or URL
-- Linked GitHub Issue
-- PR title and body
-- Changed files and diff
-- Validation evidence from the PR body, comments, checks, or local commands
+- Ссылка на Pull Request или номер PR.
+- Данные изменений (git diff).
+- Связанная задача (Issue).
 
 ## Procedure
-
-1. Inspect PR metadata: state, draft status, base branch, head branch, title, body, and linked issue.
-2. Inspect the linked issue and compare scope, out-of-scope rules, acceptance criteria, and labels.
-3. Inspect changed files and diff.
-4. Verify that changes match the issue scope.
-5. Check validation evidence. Distinguish checks that ran from checks merely listed.
-6. Look for secrets, risky config changes, CI/CD changes, auth/security changes, migrations, and broad refactors.
-7. Separate blocking findings from non-blocking notes.
-8. Give one final verdict:
-   - Можно мержить
-   - Пока не мержить
-   - Нужны правки
-   - Нужно больше проверки
+1. **Проверка метаданных**: Соберите факты о PR с помощью read-only скрипта `scripts/pr-summary.sh`. Убедитесь, что PR не находится в режиме черновика (draft), правильно указана целевая ветка (обычно `main` или `master`) и присутствует ссылка `Closes #ISSUE`.
+2. **Анализ границ Scope**: Сверьте измененные файлы с исходной задачей. Если изменены файлы вне рамок Scope, это блокирующее нарушение.
+3. **Безопасность и проверка секретов**: Запустите read-only скрипт `scripts/secret-scan.sh`. Убедитесь, что в коммиты не попали конфиги `.env`, API-ключи, токены или пароли.
+4. **Анализ кода**:
+   - Оцените читаемость, архитектурный стиль, соответствие принципам DRY/KISS.
+   - Проверьте наличие блокирующих архитектурных проблем.
+5. **Анализ валидации**: Проверьте, приложены ли доказательства успешного запуска тестов (validation evidence). Если тесты не запускались, это повод отложить мердж.
+6. **Формирование вердикта**: Сформируйте отчет в чате по шаблону `assets/chat-review-template.md`. Разделите замечания на Блокирующие (Blockers) и Рекомендации (Notes). Установите один из четырех вердиктов:
+   - **Можно мержить** (все проверки пройдены, блокирующих замечаний нет)
+   - **Пока не мержить** (нужно дождаться результатов CI/CD или внешних факторов)
+   - **Нужны правки** (есть блокирующие замечания или вышли за рамки Scope)
+   - **Нужно больше проверки** (критичные инфраструктурные или платежные изменения)
 
 ## Output format
-
-```md
-## Verdict
-...
-
-## Blockers
-- ...
-
-## Notes
-- ...
-
-## Validation
-- ...
-
-## Scope check
-- ...
-```
-
-If there are no blockers, say that clearly.
+Отчет ревью в чате по шаблону `assets/chat-review-template.md`.
 
 ## Safety rules
-
-- Chat-first review is mandatory.
-- Do not submit a GitHub review without explicit user request.
-- Do not require GitHub approve from the same user.
-- Do not ignore out-of-scope file changes.
-- Do not approve PRs with obvious secrets or unexplained failing checks.
-
-## Validation expectations
-
-Prefer direct evidence from PR checks, local validation output, and changed files. If evidence is missing, mark it as missing instead of assuming checks passed.
+- Все скрипты проверки ревью должны быть строго read-only.
+- **Категорически запрещено** выполнять команду `gh pr review --approve` от имени того же пользователя, так как это нарушает принцип независимого контроля кода.

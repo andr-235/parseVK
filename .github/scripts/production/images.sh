@@ -30,11 +30,6 @@ should_include_service() {
 }
 
 pull_runtime_images_for_services() {
-  if should_include_service api "$@"; then
-    pull_image "postgres:15-alpine"
-    pull_image "redis:7-alpine"
-  fi
-
   if should_include_service frontend "$@"; then
     pull_image "nginx:alpine"
   fi
@@ -54,13 +49,29 @@ pull_runtime_images_for_services() {
   if should_include_service grafana "$@"; then
     pull_image "grafana/grafana:latest"
   fi
+
+  if should_include_service identity-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service tasks-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service vk-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service content-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service api-gateway "$@"; then
+    pull_image "python:3.12-slim"
+  fi
 }
 
 pull_build_base_images_for_services() {
-  if should_include_service api "$@"; then
-    pull_image "oven/bun:1"
-  fi
-
   if should_include_service frontend "$@"; then
     pull_image "oven/bun:1-alpine"
     pull_image "nginx:alpine"
@@ -68,6 +79,26 @@ pull_build_base_images_for_services() {
 
   if should_include_service db_backup "$@"; then
     pull_image "postgres:15-alpine"
+  fi
+
+  if should_include_service identity-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service tasks-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service vk-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service content-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service api-gateway "$@"; then
+    pull_image "python:3.12-slim"
   fi
 }
 

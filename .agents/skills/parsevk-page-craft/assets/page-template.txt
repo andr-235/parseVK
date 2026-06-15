@@ -1,0 +1,81 @@
+import { PageContainer, PageHeader, PageSection } from '@/shared/ui/common'
+import { useEntity } from './hooks/useEntity'
+import { EntityCard } from './components/EntityCard'
+import { EntitySheet } from './components/EntitySheet'
+import { Skeleton } from '@/shared/components/ui/skeleton'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/shared/components/ui/empty'
+import type { Entity } from '@/shared/types'
+
+export interface EntitiesPageProps {
+  className?: string
+}
+
+function SkeletonGrid() {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy="true" aria-label="Загрузка...">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="overflow-hidden rounded-card border border-border/60 bg-background-secondary shadow-soft-sm">
+          <div className="flex items-start gap-3 p-4 pb-3">
+            <Skeleton className="size-11 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          </div>
+          <div className="flex gap-2 border-t border-border/40 p-3">
+            <Skeleton className="h-8 flex-1 rounded-lg" />
+            <Skeleton className="h-8 flex-1 rounded-lg" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export const EntitiesPage = ({ className }: EntitiesPageProps) => {
+  const { entities, isLoading, error } = useEntity()
+
+  return (
+    <PageContainer maxWidth="1600px" animate={false}>
+      <PageHeader
+        title="Сущности"
+        description="Управление и мониторинг сущностей."
+        actions={
+          <>
+            <button type="button" className="...">Создать</button>
+          </>
+        }
+      />
+
+      <div className="flex flex-col gap-8">
+        <PageSection title="Список" count={entities?.length}>
+          {isLoading && <SkeletonGrid />}
+
+          {error && (
+            <div className="rounded-lg border border-accent-danger/20 bg-accent-danger/10 px-3.5 py-2.5 text-xs text-accent-danger">
+              {error}
+            </div>
+          )}
+
+          {!isLoading && !error && entities?.length === 0 && (
+            <Empty className="min-h-[240px]" role="region" aria-label="Нет сущностей">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">{/* icon */}</EmptyMedia>
+                <EmptyTitle>Нет добавленных сущностей</EmptyTitle>
+                <EmptyDescription>Описание действия.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )}
+
+          {!isLoading && !error && entities && entities.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {entities.map(entity => <EntityCard key={entity.id} entity={entity} />)}
+            </div>
+          )}
+        </PageSection>
+      </div>
+
+      <EntitySheet />
+    </PageContainer>
+  )
+}

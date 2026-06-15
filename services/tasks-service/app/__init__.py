@@ -1,0 +1,1 @@
+"""parseVK tasks service."""

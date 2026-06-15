@@ -1,0 +1,52 @@
+import { TgmbasePrismaService } from '../tgmbase-prisma/tgmbase-prisma.service.js';
+import { TelegramDlImportParser } from './telegram-dl-import.parser.js';
+import type { TelegramDlImportFileDto, TelegramDlImportUploadResponseDto } from './dto/telegram-dl-import-response.dto.js';
+import type { TelegramDlImportFilesQueryDto } from './dto/telegram-dl-import-files-query.dto.js';
+import type { TelegramDlImportContactsQueryDto } from './dto/telegram-dl-import-contacts-query.dto.js';
+export declare class TelegramDlImportService {
+    private readonly prisma;
+    private readonly parser;
+    private readonly logger;
+    constructor(prisma: TgmbasePrismaService, parser: TelegramDlImportParser);
+    uploadFiles(files: Express.Multer.File[]): Promise<TelegramDlImportUploadResponseDto>;
+    getFiles(query: TelegramDlImportFilesQueryDto): Promise<TelegramDlImportFileDto[]>;
+    getContacts(query: TelegramDlImportContactsQueryDto): Promise<{
+        items: {
+            id: string;
+            importFileId: string;
+            originalFileName: string;
+            isActive: boolean;
+            telegramId: string | null;
+            username: string | null;
+            phone: string | null;
+            firstName: string | null;
+            lastName: string | null;
+            description: string | null;
+            region: string | null;
+            joinedAt: string | null;
+            channelsRaw: string | null;
+            fullName: string | null;
+            address: string | null;
+            vkUrl: string | null;
+            email: string | null;
+            telegramContact: string | null;
+            instagram: string | null;
+            viber: string | null;
+            odnoklassniki: string | null;
+            birthDateText: string | null;
+            usernameExtra: string | null;
+            geo: string | null;
+            sourceRowIndex: number;
+            createdAt: string;
+        }[];
+        total: number;
+        limit: number;
+        offset: number;
+    }>;
+    private processFile;
+    private parseDate;
+    private logContactFieldLengths;
+    private mapBatch;
+    private mapFile;
+    private mapProcessedFile;
+}

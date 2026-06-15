@@ -117,30 +117,6 @@ jobs:
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
             bash "$PRODUCTION_SCRIPTS_DIR/preflight.sh"
 
-      - name: Check for migrations
-        id: check_migrations
-        if: steps.deployment_context.outputs.skip_deploy != 'true'
-        working-directory: /opt/parseVK
-        run: |
-          set -euo pipefail
-
-          PREV_COMMIT="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
-          CURRENT_COMMIT=$(git rev-parse HEAD)
-
-          if [ -z "$PREV_COMMIT" ] || ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
-            echo "needs_migrations=true" >> $GITHUB_OUTPUT
-            echo "No previous deployed commit found, will run migrations"
-          else
-            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$CURRENT_COMMIT" || true)
-            if echo "$CHANGED_FILES" | grep -qE '^api/|^prisma/'; then
-              echo "needs_migrations=true" >> $GITHUB_OUTPUT
-              echo "API or Prisma files changed, migrations needed"
-            else
-              echo "needs_migrations=false" >> $GITHUB_OUTPUT
-              echo "No API or Prisma changes, skipping migrations"
-            fi
-          fi
-
       - name: Detect changed services
         id: changed_services
         if: steps.deployment_context.outputs.skip_deploy != 'true'
@@ -151,12 +127,10 @@ jobs:
           PREV_COMMIT="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
           CURRENT_COMMIT=$(git rev-parse HEAD)
 
-          BUILD_API=false
           BUILD_FRONTEND=false
           BUILD_DB_BACKUP=false
 
           if [ -z "$PREV_COMMIT" ] || ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
-            BUILD_API=true
             BUILD_FRONTEND=true
             BUILD_DB_BACKUP=true
             echo "No previous deployed commit found, building all local images"
@@ -164,10 +138,6 @@ jobs:
             CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$CURRENT_COMMIT" || true)
             echo "Changed files since last successful deploy:"
             printf '%s\n' "$CHANGED_FILES"
-
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(api/|docker/backend\.Dockerfile|docker/backend-entrypoint\.sh|docker/backend-healthcheck\.mjs|docker-compose\.deploy\.yml|\.dockerignore)'; then
-              BUILD_API=true
-            fi
 
             if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(front/|docker/frontend\.Dockerfile|docker/frontend\.nginx\.conf|docker/frontend-entrypoint\.sh|docker-compose\.deploy\.yml|\.dockerignore)'; then
               BUILD_FRONTEND=true
@@ -178,72 +148,8 @@ jobs:
             fi
           fi
 
-          echo "build_api=$BUILD_API" >> "$GITHUB_OUTPUT"
           echo "build_frontend=$BUILD_FRONTEND" >> "$GITHUB_OUTPUT"
           echo "build_db_backup=$BUILD_DB_BACKUP" >> "$GITHUB_OUTPUT"
-
-      - name: Start database and dependencies
-        working-directory: /opt/parseVK
-        timeout-minutes: 5
-        if: steps.deployment_context.outputs.skip_deploy != 'true' && steps.check_migrations.outputs.needs_migrations == 'true'
-        run: |
-          set -euo pipefail
-
-          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" UP_ARGS="-d --no-build" \
-            bash "$PRODUCTION_SCRIPTS_DIR/release.sh" db redis
-
-          echo "=== Waiting for database to be ready ==="
-          MAX_WAIT=60
-          WAIT_COUNT=0
-          while [ $WAIT_COUNT -lt $MAX_WAIT ]; do
-            if docker compose -f "$COMPOSE_FILE" exec -T db pg_isready -U postgres -d vk_api > /dev/null 2>&1; then
-              echo "Database is ready"
-              break
-            fi
-            echo "Waiting for database... ($WAIT_COUNT/$MAX_WAIT)"
-            sleep 1
-            WAIT_COUNT=$((WAIT_COUNT + 1))
-          done
-
-          if [ $WAIT_COUNT -eq $MAX_WAIT ]; then
-            echo "Error: Database did not become ready in time"
-            docker compose -f "$COMPOSE_FILE" logs db
-            exit 1
-          fi
-
-      - name: Prepare API image for migrations
-        id: prepare_api_image
-        working-directory: /opt/parseVK
-        timeout-minutes: 20
-        if: steps.deployment_context.outputs.skip_deploy != 'true' && steps.check_migrations.outputs.needs_migrations == 'true'
-        run: |
-          set -euo pipefail
-
-          API_IMAGE_TAG="parsevk-api:local"
-          IMAGE_EXISTS=false
-
-          if docker image inspect "$API_IMAGE_TAG" > /dev/null 2>&1; then
-            IMAGE_EXISTS=true
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_api }}" = "true" ] || [ "$IMAGE_EXISTS" != "true" ]; then
-            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare api
-            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build api
-            echo "api_prebuilt_for_migrations=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "api_prebuilt_for_migrations=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Run database migrations
-        working-directory: /opt/parseVK
-        timeout-minutes: 5
-        if: steps.deployment_context.outputs.skip_deploy != 'true' && steps.check_migrations.outputs.needs_migrations == 'true'
-        run: |
-          set -euo pipefail
-          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-            bash "$PRODUCTION_SCRIPTS_DIR/migrations.sh"
 
       - name: Build and start containers
         if: steps.deployment_context.outputs.skip_deploy != 'true'
@@ -252,10 +158,6 @@ jobs:
         run: |
           set -euo pipefail
           SERVICES_TO_BUILD=""
-
-          if [ "${{ steps.changed_services.outputs.build_api }}" = "true" ] && [ "${{ steps.prepare_api_image.outputs.api_prebuilt_for_migrations }}" != "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD api"
-          fi
 
           if [ "${{ steps.changed_services.outputs.build_frontend }}" = "true" ]; then
             SERVICES_TO_BUILD="$SERVICES_TO_BUILD frontend"

@@ -1,0 +1,30 @@
+import type { TelegramDiscussionResultDto } from './dto/telegram-discussion-result.dto.js';
+import type { TelegramSyncResultDto } from './dto/telegram-sync-result.dto.js';
+import type { SyncChatParams, SyncDiscussionAuthorsParams } from './types/telegram-sync.types.js';
+import { TelegramClientManagerService } from './services/telegram-client-manager.service.js';
+import { TelegramChatMapper } from './mappers/telegram-chat.mapper.js';
+import { TelegramParticipantCollectorService } from './services/telegram-participant-collector.service.js';
+import { TelegramChatSyncService } from './services/telegram-chat-sync.service.js';
+import { TelegramExcelExporterService } from './services/telegram-excel-exporter.service.js';
+import { TelegramChatRepository } from './repositories/telegram-chat.repository.js';
+import { TelegramIdentifierResolverService } from './services/telegram-identifier-resolver.service.js';
+import { TelegramDiscussionResolverService } from './services/telegram-discussion-resolver.service.js';
+import { TelegramCommentAuthorCollectorService } from './services/telegram-comment-author-collector.service.js';
+export declare class TelegramService {
+    private readonly clientManager;
+    private readonly identifierResolver;
+    private readonly discussionResolver;
+    private readonly chatMapper;
+    private readonly participantCollector;
+    private readonly commentAuthorCollector;
+    private readonly chatSync;
+    private readonly excelExporter;
+    private readonly chatRepository;
+    private readonly logger;
+    private readonly defaultLimit;
+    constructor(clientManager: TelegramClientManagerService, identifierResolver: TelegramIdentifierResolverService, discussionResolver: TelegramDiscussionResolverService, chatMapper: TelegramChatMapper, participantCollector: TelegramParticipantCollectorService, commentAuthorCollector: TelegramCommentAuthorCollectorService, chatSync: TelegramChatSyncService, excelExporter: TelegramExcelExporterService, chatRepository: TelegramChatRepository);
+    syncChat(params: SyncChatParams): Promise<TelegramSyncResultDto>;
+    exportChatToExcel(chatId: number): Promise<Buffer>;
+    syncDiscussionAuthors(params: SyncDiscussionAuthorsParams): Promise<TelegramDiscussionResultDto>;
+    getChatInfo(chatId: number): Promise<unknown>;
+}

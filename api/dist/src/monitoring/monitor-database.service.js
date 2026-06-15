@@ -1,0 +1,360 @@
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var MonitorDatabaseService_1;
+import { Injectable, Logger, } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../generated/prisma/client.js';
+const IDENTIFIER_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/;
+let MonitorDatabaseService = MonitorDatabaseService_1 = class MonitorDatabaseService {
+    configService;
+    client = null;
+    logger = new Logger(MonitorDatabaseService_1.name);
+    databaseUrl;
+    tableNames;
+    idColumn;
+    textColumn;
+    createdAtColumn;
+    authorColumn;
+    chatColumn;
+    metadataColumn;
+    groupsTableName;
+    groupChatIdColumn;
+    groupNameColumn;
+    keywordsTableName;
+    keywordWordColumn;
+    constructor(configService) {
+        this.configService = configService;
+        this.databaseUrl = configService.get('monitorDatabaseUrl', { infer: true });
+        const rawTables = configService.get('monitorMessagesTable', { infer: true }) ?? 'messages';
+        this.tableNames = this.normalizeIdentifierList(rawTables, 'MONITOR_MESSAGES_TABLE');
+        this.idColumn = this.normalizeIdentifier(configService.get('monitorMessageIdColumn', { infer: true }) ?? 'id', 'MONITOR_MESSAGE_ID_COLUMN');
+        this.textColumn = this.normalizeIdentifier(configService.get('monitorMessageTextColumn', { infer: true }) ?? 'text', 'MONITOR_MESSAGE_TEXT_COLUMN');
+        this.createdAtColumn = this.normalizeIdentifier(configService.get('monitorMessageCreatedAtColumn', { infer: true }) ??
+            'created_at', 'MONITOR_MESSAGE_CREATED_AT_COLUMN');
+        const authorColumn = configService.get('monitorMessageAuthorColumn', {
+            infer: true,
+        });
+        this.authorColumn = authorColumn
+            ? this.normalizeIdentifier(authorColumn, 'MONITOR_MESSAGE_AUTHOR_COLUMN')
+            : undefined;
+        const chatColumn = configService.get('monitorMessageChatColumn', {
+            infer: true,
+        });
+        this.chatColumn = chatColumn
+            ? this.normalizeIdentifier(chatColumn, 'MONITOR_MESSAGE_CHAT_COLUMN')
+            : undefined;
+        const metadataColumn = configService.get('monitorMessageMetadataColumn', {
+            infer: true,
+        });
+        this.metadataColumn = metadataColumn
+            ? this.normalizeIdentifier(metadataColumn, 'MONITOR_MESSAGE_METADATA_COLUMN')
+            : undefined;
+        const groupsTable = configService.get('monitorGroupsTable', {
+            infer: true,
+        });
+        const groupChatIdColumn = configService.get('monitorGroupChatIdColumn', {
+            infer: true,
+        });
+        const groupNameColumn = configService.get('monitorGroupNameColumn', {
+            infer: true,
+        });
+        if (groupsTable) {
+            this.groupsTableName = this.normalizeIdentifier(groupsTable, 'MONITOR_GROUPS_TABLE');
+            const chatIdColumn = groupChatIdColumn ?? 'chat_id';
+            this.groupChatIdColumn = this.normalizeIdentifier(chatIdColumn, 'MONITOR_GROUP_CHAT_ID_COLUMN');
+            const nameColumn = groupNameColumn ?? 'name';
+            this.groupNameColumn = this.normalizeIdentifier(nameColumn, 'MONITOR_GROUP_NAME_COLUMN');
+        }
+        else {
+            if (groupChatIdColumn) {
+                this.groupChatIdColumn = this.normalizeIdentifier(groupChatIdColumn, 'MONITOR_GROUP_CHAT_ID_COLUMN');
+            }
+            if (groupNameColumn) {
+                this.groupNameColumn = this.normalizeIdentifier(groupNameColumn, 'MONITOR_GROUP_NAME_COLUMN');
+            }
+        }
+        const keywordsTable = configService.get('monitorKeywordsTable', {
+            infer: true,
+        });
+        if (keywordsTable) {
+            this.keywordsTableName = this.normalizeIdentifier(keywordsTable, 'MONITOR_KEYWORDS_TABLE');
+            const keywordWordColumn = configService.get('monitorKeywordWordColumn', { infer: true }) ??
+                'word';
+            this.keywordWordColumn = this.normalizeIdentifier(keywordWordColumn, 'MONITOR_KEYWORD_WORD_COLUMN');
+        }
+    }
+    get isReady() {
+        return Boolean(this.client);
+    }
+    async onModuleInit() {
+        if (!this.databaseUrl) {
+            this.logger.warn('MONITOR_DATABASE_URL не задан — мониторинг сообщений отключен');
+            return;
+        }
+        const adapter = new PrismaPg({
+            connectionString: this.databaseUrl,
+        });
+        this.client = new PrismaClient({ adapter });
+        try {
+            await this.client.$connect();
+            this.logger.log('MONITOR_DATABASE_URL настроен');
+        }
+        catch (error) {
+            this.logger.error('Не удалось подключиться к базе мониторинга. Проверьте MONITOR_DATABASE_URL.', error instanceof Error ? error.stack : undefined);
+            this.client = null;
+        }
+    }
+    async onModuleDestroy() {
+        if (!this.client) {
+            return;
+        }
+        await this.client.$disconnect();
+    }
+    async findMessages(params) {
+        if (!this.client) {
+            throw new Error('Monitoring database is not configured.');
+        }
+        if (params.keywords.length === 0) {
+            return [];
+        }
+        const values = [];
+        const conditions = [];
+        const rawTableNames = this.resolveSourceTables(params.sources);
+        if (rawTableNames.length === 0) {
+            return [];
+        }
+        const tableNames = rawTableNames.map((table) => this.formatIdentifier(table));
+        const idColumn = this.formatIdentifier(this.idColumn);
+        const textColumn = this.formatIdentifier(this.textColumn);
+        const createdAtColumn = this.formatIdentifier(this.createdAtColumn);
+        const authorColumn = this.authorColumn
+            ? this.formatIdentifier(this.authorColumn)
+            : undefined;
+        const chatColumn = this.chatColumn
+            ? this.formatIdentifier(this.chatColumn)
+            : undefined;
+        const metadataColumn = this.metadataColumn
+            ? this.formatIdentifier(this.metadataColumn)
+            : undefined;
+        params.keywords.forEach((keyword) => {
+            values.push(`%${keyword}%`);
+            conditions.push(`${textColumn} ILIKE $${values.length}`);
+        });
+        const offsetIndex = values.length + 1;
+        values.push(Math.max(params.offset ?? 0, 0));
+        const limitIndex = values.length + 1;
+        values.push(params.limit);
+        const selectColumns = [
+            `${idColumn} as id`,
+            `${textColumn} as text`,
+            `${createdAtColumn} as "createdAt"`,
+        ];
+        if (authorColumn) {
+            selectColumns.push(`${authorColumn} as author`);
+        }
+        if (chatColumn) {
+            selectColumns.push(`${chatColumn} as chat`);
+        }
+        if (metadataColumn) {
+            selectColumns.push(`${metadataColumn} as metadata`);
+        }
+        const whereParts = [`${textColumn} IS NOT NULL`];
+        if (conditions.length > 0) {
+            whereParts.push(`(${conditions.join(' OR ')})`);
+        }
+        if (params.from) {
+            values.push(params.from);
+            whereParts.push(`${createdAtColumn} >= $${values.length}`);
+        }
+        const baseSelect = (tableName, sourceName) => {
+            const safeSource = sourceName.replace(/'/g, "''");
+            return `SELECT ${selectColumns.join(', ')}, '${safeSource}' as source FROM ${tableName} WHERE ${whereParts.join(' AND ')}`;
+        };
+        const query = tableNames.length === 1
+            ? `${baseSelect(tableNames[0], this.getSourceName(rawTableNames[0]))} ORDER BY ${createdAtColumn} DESC LIMIT $${limitIndex} OFFSET $${offsetIndex}`
+            : `SELECT * FROM (${tableNames
+                .map((tableName, index) => baseSelect(tableName, this.getSourceName(rawTableNames[index])))
+                .join(' UNION ALL ')}) AS combined ORDER BY "createdAt" DESC LIMIT $${limitIndex} OFFSET $${offsetIndex}`;
+        return this.client.$queryRawUnsafe(query, ...values);
+    }
+    async findGroups(params) {
+        if (!this.client) {
+            throw new Error('Monitoring database is not configured.');
+        }
+        if (this.groupsTableName &&
+            this.groupChatIdColumn &&
+            this.groupNameColumn) {
+            this.logger.log(`Синхронизация групп: таблица=${this.groupsTableName}, chatId=${this.groupChatIdColumn}, name=${this.groupNameColumn}`);
+            const tableName = this.formatIdentifier(this.groupsTableName);
+            const chatIdColumn = this.formatIdentifier(this.groupChatIdColumn);
+            const nameColumn = this.formatIdentifier(this.groupNameColumn);
+            const query = `SELECT DISTINCT ${chatIdColumn}::text as "chatId", ${nameColumn}::text as "name" FROM ${tableName} WHERE ${chatIdColumn} IS NOT NULL AND ${nameColumn} IS NOT NULL`;
+            const rows = await this.client.$queryRawUnsafe(query);
+            const normalized = this.normalizeGroups(rows);
+            this.logger.log(`Синхронизация групп: получено ${normalized.length} записей из ${this.groupsTableName}`);
+            return normalized;
+        }
+        return this.findGroupsFromMessages({ sources: params?.sources });
+    }
+    async findGroupsFromMessages(params) {
+        if (!this.client) {
+            throw new Error('Monitoring database is not configured.');
+        }
+        const rawTableNames = this.resolveSourceTables(params?.sources);
+        if (rawTableNames.length === 0) {
+            this.logger.warn('Синхронизация групп: таблицы сообщений не определены.');
+            return null;
+        }
+        if (!this.groupChatIdColumn && !this.metadataColumn) {
+            this.logger.warn('Синхронизация групп: отсутствуют источники chat_id (колонка/metadata).');
+            return null;
+        }
+        this.logger.log(`Синхронизация групп: таблицы сообщений=${rawTableNames.join(',')}, chatId=${this.groupChatIdColumn ?? 'metadata'}, metadata=${this.metadataColumn ?? 'нет'}`);
+        const tableNames = rawTableNames.map((table) => this.formatIdentifier(table));
+        const chatIdColumn = this.groupChatIdColumn
+            ? this.formatIdentifier(this.groupChatIdColumn)
+            : null;
+        const nameColumn = this.groupNameColumn
+            ? this.formatIdentifier(this.groupNameColumn)
+            : null;
+        const metadataColumn = this.metadataColumn
+            ? this.formatIdentifier(this.metadataColumn)
+            : null;
+        const chatIdExpressions = [];
+        if (chatIdColumn) {
+            chatIdExpressions.push(`${chatIdColumn}::text`);
+        }
+        if (metadataColumn) {
+            chatIdExpressions.push(`${metadataColumn}::jsonb->>'chat_id'`);
+            chatIdExpressions.push(`${metadataColumn}::jsonb->>'chatId'`);
+            chatIdExpressions.push(`${metadataColumn}::jsonb->'raw'->>'chat_id'`);
+            chatIdExpressions.push(`${metadataColumn}::jsonb->'raw'->>'chatId'`);
+        }
+        const nameExpressions = [];
+        if (nameColumn) {
+            nameExpressions.push(`${nameColumn}::text`);
+        }
+        if (metadataColumn) {
+            nameExpressions.push(`${metadataColumn}::jsonb->>'chat_name'`);
+            nameExpressions.push(`${metadataColumn}::jsonb->>'chatName'`);
+            nameExpressions.push(`${metadataColumn}::jsonb->>'title'`);
+            nameExpressions.push(`${metadataColumn}::jsonb->'raw'->>'chat_name'`);
+            nameExpressions.push(`${metadataColumn}::jsonb->'raw'->>'chatName'`);
+            nameExpressions.push(`${metadataColumn}::jsonb->'raw'->>'title'`);
+        }
+        const chatIdExpr = this.buildCoalescedExpression(chatIdExpressions);
+        const nameExpr = this.buildCoalescedExpression(nameExpressions);
+        if (!chatIdExpr || !nameExpr) {
+            return null;
+        }
+        const baseSelect = (tableName) => `SELECT ${chatIdExpr} as "chatId", ${nameExpr} as "name" FROM ${tableName}`;
+        const query = tableNames.length === 1
+            ? `SELECT DISTINCT "chatId", "name" FROM (${baseSelect(tableNames[0])}) AS source WHERE "chatId" IS NOT NULL AND "name" IS NOT NULL`
+            : `SELECT DISTINCT "chatId", "name" FROM (${tableNames
+                .map((tableName) => baseSelect(tableName))
+                .join(' UNION ALL ')}) AS source WHERE "chatId" IS NOT NULL AND "name" IS NOT NULL`;
+        const rows = await this.client.$queryRawUnsafe(query);
+        const normalized = this.normalizeGroups(rows);
+        this.logger.log(`Синхронизация групп: получено ${normalized.length} записей из сообщений`);
+        return normalized;
+    }
+    normalizeGroups(rows) {
+        const normalized = new Map();
+        rows.forEach((row) => {
+            const chatId = (row.chatId ?? '').trim();
+            const name = (row.name ?? '').trim();
+            if (chatId.length > 0 && name.length > 0) {
+                normalized.set(chatId, name);
+            }
+        });
+        return Array.from(normalized.entries()).map(([chatId, name]) => ({
+            chatId,
+            name,
+        }));
+    }
+    buildCoalescedExpression(expressions) {
+        const unique = expressions.filter(Boolean);
+        if (unique.length === 0) {
+            return null;
+        }
+        if (unique.length === 1) {
+            return `NULLIF(BTRIM(${unique[0]}), '')`;
+        }
+        return `NULLIF(BTRIM(COALESCE(${unique.join(', ')})), '')`;
+    }
+    async findKeywords() {
+        if (!this.client) {
+            throw new Error('Monitoring database is not configured.');
+        }
+        if (!this.keywordsTableName || !this.keywordWordColumn) {
+            return null;
+        }
+        const tableName = this.formatIdentifier(this.keywordsTableName);
+        const wordColumn = this.formatIdentifier(this.keywordWordColumn);
+        const query = `SELECT ${wordColumn}::text as word FROM ${tableName} WHERE ${wordColumn} IS NOT NULL`;
+        const rows = await this.client.$queryRawUnsafe(query);
+        const normalized = rows
+            .map((row) => (row.word ?? '').trim())
+            .filter((value) => value.length > 0);
+        return Array.from(new Set(normalized));
+    }
+    normalizeIdentifier(value, label) {
+        const trimmed = value.trim();
+        if (!IDENTIFIER_PATTERN.test(trimmed)) {
+            throw new Error(`Некорректное значение ${label}.`);
+        }
+        return trimmed;
+    }
+    resolveSourceTables(sources) {
+        if (!sources || sources.length === 0) {
+            return this.tableNames;
+        }
+        const normalizedSources = sources
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0)
+            .map((value) => value.toLowerCase());
+        if (normalizedSources.length === 0) {
+            return this.tableNames;
+        }
+        const sourcesSet = new Set(normalizedSources);
+        return this.tableNames.filter((tableName) => {
+            const normalizedTable = tableName.toLowerCase();
+            const normalizedSource = this.getSourceName(tableName).toLowerCase();
+            return (sourcesSet.has(normalizedTable) || sourcesSet.has(normalizedSource));
+        });
+    }
+    normalizeIdentifierList(value, label) {
+        const items = value
+            .split(',')
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0);
+        if (items.length === 0) {
+            throw new Error(`Некорректное значение ${label}.`);
+        }
+        return items.map((item) => this.normalizeIdentifier(item, label));
+    }
+    formatIdentifier(identifier) {
+        return identifier
+            .split('.')
+            .map((part) => `"${part}"`)
+            .join('.');
+    }
+    getSourceName(tableName) {
+        const parts = tableName.split('.');
+        return parts[parts.length - 1] ?? tableName;
+    }
+};
+MonitorDatabaseService = MonitorDatabaseService_1 = __decorate([
+    Injectable(),
+    __metadata("design:paramtypes", [ConfigService])
+], MonitorDatabaseService);
+export { MonitorDatabaseService };
+//# sourceMappingURL=monitor-database.service.js.map

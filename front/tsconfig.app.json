@@ -1,32 +1,14 @@
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "ES2022",
-    "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "types": ["vite/client", "node"],
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"],
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/shared/components/*": ["./src/shared/components/*"],
-      "@/shared/components": ["./src/shared/components"],
-      "@/shared/ui/*": ["./src/shared/ui/*"],
-      "@/shared/ui": ["./src/shared/ui"],
-      "@/hooks/*": ["./src/hooks/*", "./src/shared/hooks/*"],
-      "@/hooks": ["./src/hooks", "./src/shared/hooks"],
-      "@/lib/*": ["./src/lib/*", "./src/shared/lib/*"],
-      "@/lib": ["./src/lib", "./src/shared/lib"],
-      "@/utils/*": ["./src/utils/*", "./src/shared/utils/*"],
-      "@/utils": ["./src/utils", "./src/shared/utils"],
-      "@/types/*": ["./src/types/*", "./src/shared/types/*"],
-      "@/types": ["./src/types", "./src/shared/types"],
-      "@/*": ["./src/*"]
-    },
 
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
@@ -34,13 +16,11 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.*", "src/**/*.spec.*", "src/**/__tests__/**", "src/setupTests.ts"]
+  "exclude": ["src/**/__tests__"]
 }

@@ -1,2 +1,0 @@
-ALTER TABLE "Author"
-ADD COLUMN "verifiedAt" TIMESTAMP(3);

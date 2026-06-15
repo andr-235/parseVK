@@ -1,0 +1,41 @@
+name: Refactor
+description: Improve structure without changing expected behavior
+title: "[refactor] "
+labels: ["refactor"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      placeholder: What design or maintainability problem exists?
+    validations:
+      required: true
+
+  - type: textarea
+    id: target
+    attributes:
+      label: Refactor target
+      placeholder: Which modules/files/workflows are affected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      value: |
+        - No unrelated behavior changes.
+        - No broad rewrites outside the stated scope.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ] Existing behavior remains compatible.
+        - [ ] Code is simpler or better separated.
+        - [ ] Tests/checks/manual verification are documented.
+    validations:
+      required: true

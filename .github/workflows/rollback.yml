@@ -7,11 +7,6 @@ on:
         description: "Commit hash to rollback to (leave empty for last successful deployment)"
         required: false
         type: string
-      allow_schema_mismatch:
-        description: "Allow rollback even if target commit is missing current Prisma migrations"
-        required: false
-        type: boolean
-        default: false
       skip_health_check:
         description: "Skip health checks after rollback"
         required: false
@@ -119,46 +114,6 @@ jobs:
 
           echo "Checked out commit: $TARGET_COMMIT"
 
-      - name: Check schema compatibility
-        working-directory: /opt/parseVK
-        run: |
-          set -euo pipefail
-
-          CURRENT_COMMIT="${{ steps.save_state.outputs.current_commit }}"
-          TARGET_COMMIT="${{ steps.determine_commit.outputs.target_commit }}"
-          ALLOW_SCHEMA_MISMATCH="${{ github.event.inputs.allow_schema_mismatch }}"
-
-          current_file=$(mktemp)
-          target_file=$(mktemp)
-          only_current=$(mktemp)
-          only_target=$(mktemp)
-          trap 'rm -f "$current_file" "$target_file" "$only_current" "$only_target"' EXIT
-
-          git ls-tree -r --name-only "$CURRENT_COMMIT" -- api/prisma/migrations | sort > "$current_file"
-          git ls-tree -r --name-only "$TARGET_COMMIT" -- api/prisma/migrations | sort > "$target_file"
-
-          comm -23 "$current_file" "$target_file" > "$only_current" || true
-          comm -13 "$current_file" "$target_file" > "$only_target" || true
-
-          if [ -s "$only_current" ]; then
-            echo "Rollback target is missing migrations that exist in the current deployed commit:"
-            cat "$only_current"
-            echo "This rollback can leave older code running against a newer schema."
-
-            if [ "$ALLOW_SCHEMA_MISMATCH" = "true" ]; then
-              echo "allow_schema_mismatch=true, continuing despite migration mismatch"
-            else
-              echo "Aborting rollback. Re-run with allow_schema_mismatch=true only if you have verified DB compatibility."
-              exit 1
-            fi
-          fi
-
-          if [ -s "$only_target" ]; then
-            echo "Target commit contains additional migrations not present in current deployment:"
-            cat "$only_target"
-            echo "Rollback may still require schema validation before use."
-          fi
-
       - name: Validate docker-compose
         working-directory: /opt/parseVK
         timeout-minutes: 1
@@ -174,9 +129,9 @@ jobs:
           set -euo pipefail
 
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare api frontend db_backup
+            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare frontend db_backup
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build api frontend db_backup
+            bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build frontend db_backup
 
       - name: Stop current containers
         working-directory: /opt/parseVK

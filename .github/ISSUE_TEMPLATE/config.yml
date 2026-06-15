@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: parseVK internal notes
+    url: https://github.com/
+    about: Keep raw ideas in the private notes vault first. Convert only ready items to issues.

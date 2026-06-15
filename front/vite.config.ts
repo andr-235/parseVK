@@ -1,108 +1,16 @@
 import { defineConfig } from 'vite'
-import type { TestProjectConfiguration } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import fs from 'node:fs'
-import path from 'path'
-
-// https://vite.dev/config/
-import { fileURLToPath } from 'node:url'
-import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
-import { playwright } from '@vitest/browser-playwright'
-const dirname =
-  typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url))
-
-// More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
-const storybookConfigDir = path.join(dirname, '.storybook')
-const hasStorybookConfig = fs.existsSync(storybookConfigDir)
-
-const unitProject: TestProjectConfiguration = {
-  extends: true,
-  test: {
-    name: 'unit',
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['src/setupTests.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}', 'src/**/__tests__/**/*.{test,spec}.{ts,tsx}'],
-  },
-}
-
-const storybookProjects: TestProjectConfiguration[] = hasStorybookConfig
-  ? [
-      {
-        extends: true,
-        plugins: [
-          storybookTest({
-            configDir: storybookConfigDir,
-          }),
-        ],
-        test: {
-          name: 'storybook',
-          browser: {
-            enabled: true,
-            headless: true,
-            provider: playwright({}),
-            instances: [
-              {
-                browser: 'chromium' as const,
-              },
-            ],
-          },
-          setupFiles: ['.storybook/vitest.setup.ts'],
-        },
-      },
-    ]
-  : []
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: [
-      {
-        find: '@/shared/ui',
-        replacement: path.resolve(__dirname, './src/shared/ui'),
-      },
-      {
-        find: '@/shared/components',
-        replacement: path.resolve(__dirname, './src/shared/components'),
-      },
-      {
-        find: '@/hooks',
-        replacement: path.resolve(__dirname, './src/hooks'),
-      },
-      {
-        find: '@/lib',
-        replacement: path.resolve(__dirname, './src/lib'),
-      },
-      {
-        find: '@/utils',
-        replacement: path.resolve(__dirname, './src/utils'),
-      },
-      {
-        find: '@/types',
-        replacement: path.resolve(__dirname, './src/types'),
-      },
-      {
-        find: '@',
-        replacement: path.resolve(__dirname, './src'),
-      },
-    ],
-  },
+  plugins: [tailwindcss(), react()],
   server: {
+    host: '127.0.0.1',
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-      '/tasks': {
-        target: 'http://localhost:3000',
-        ws: true,
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },
-  },
-  test: {
-    projects: [unitProject, ...storybookProjects],
   },
 })

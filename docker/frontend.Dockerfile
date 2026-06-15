@@ -1,24 +1,15 @@
-# syntax=docker/dockerfile:1.4
 # Build stage
 FROM oven/bun:1-alpine AS build
 
 WORKDIR /app
 
-ARG VITE_APP_TITLE
 ARG VITE_API_URL
-ARG VITE_DEV_MODE
-ARG VITE_API_WS_URL
-ARG VITE_APP_VERSION
 ARG BUILDKIT_INLINE_CACHE=1
 
-ENV VITE_APP_TITLE=${VITE_APP_TITLE}
 ENV VITE_API_URL=${VITE_API_URL}
-ENV VITE_DEV_MODE=${VITE_DEV_MODE}
-ENV VITE_API_WS_URL=${VITE_API_WS_URL}
-ENV VITE_APP_VERSION=${VITE_APP_VERSION}
 
 # Copy package files first for better layer caching
-COPY front/package*.json ./
+COPY front/package.json ./
 COPY front/bun.lock ./
 
 # Install dependencies with BuildKit cache mount
@@ -29,14 +20,8 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 COPY front/ ./
 
 # Формируем production-конфиг, чтобы фронтенд использовал проксируемый API.
-# Это устраняет обращения к домену "http://api" из браузера, которые
-# заканчиваются ошибкой DNS (ERR_NAME_NOT_RESOLVED) вне docker-сети.
 RUN cat <<EOF > .env.production
-VITE_APP_TITLE=${VITE_APP_TITLE}
 VITE_API_URL=${VITE_API_URL}
-VITE_DEV_MODE=${VITE_DEV_MODE}
-VITE_API_WS_URL=${VITE_API_WS_URL}
-VITE_APP_VERSION=${VITE_APP_VERSION}
 EOF
 
 # Build with cache mount for Vite cache

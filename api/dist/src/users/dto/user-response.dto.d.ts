@@ -1,0 +1,9 @@
+import type { UserRole } from '../types/user-role.enum.js';
+export declare class UserResponseDto {
+    id: number;
+    username: string;
+    role: UserRole;
+    isTemporaryPassword: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+}
