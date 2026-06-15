@@ -2,29 +2,29 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main, fastapi-microservices-rewrite]
   push:
-    branches:
-      - main
+    branches: [main, fastapi-microservices-rewrite]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[skip ci]') }}
     outputs:
-      frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
+      frontend: ${{ steps.detect.outputs.frontend }}
+      python: ${{ steps.detect.outputs.python }}
+      go_cli: ${{ steps.detect.outputs.go_cli }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Detect changed paths
-        id: filter
-        shell: bash
+      - id: detect
         run: |
           set -euo pipefail
-
           EVENT_NAME="${{ github.event_name }}"
           if [ "$EVENT_NAME" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
@@ -34,71 +34,103 @@ jobs:
             HEAD_SHA="${{ github.sha }}"
           fi
 
-          FRONTEND_CHANGED=false
+          frontend=false
+          python=false
+          go_cli=false
 
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
-            echo "Base commit not found; treating as full change set"
-            FRONTEND_CHANGED=true
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            frontend=true
+            python=true
+            go_cli=true
+          elif git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+            echo "$CHANGED" | grep -qE '^front/' && frontend=true
+            echo "$CHANGED" | grep -qE '^(services/|libs/py/|pyproject\.toml|uv\.lock)' && python=true
+            echo "$CHANGED" | grep -qE '^tools/parsevkctl-go/' && go_cli=true
           else
-            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
-            if [ -z "$CHANGED_FILES" ]; then
-              echo "No changed files detected"
-            else
-              echo "Changed files:"
-              echo "$CHANGED_FILES"
-            fi
-
-            if echo "$CHANGED_FILES" | grep -qE '^front/'; then
-              FRONTEND_CHANGED=true
-            fi
+            frontend=true
+            python=true
+            go_cli=true
           fi
 
-          echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "python=$python" >> "$GITHUB_OUTPUT"
+          echo "go_cli=$go_cli" >> "$GITHUB_OUTPUT"
 
-  lint:
-    name: Lint Frontend
-    runs-on: ubuntu-latest
+  frontend:
+    name: Frontend
     needs: changes
-    if: needs.changes.outputs.frontend_changed == 'true'
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front
     steps:
       - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        working-directory: front
-        run: bun install --frozen-lockfile
-      - name: Run linter
-        working-directory: front
-        run: bun run lint
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run build
+      - run: bun run test
 
-  typecheck:
-    name: Typecheck Frontend
-    runs-on: ubuntu-latest
+  python-lint:
+    name: Python lint
     needs: changes
-    if: needs.changes.outputs.frontend_changed == 'true'
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        working-directory: front
-        run: bun install --frozen-lockfile
-      - name: Run typecheck
-        working-directory: front
-        run: bun run build
+      - uses: astral-sh/ruff-action@v3
 
-  test-frontend:
-    name: Test Frontend
-    runs-on: ubuntu-latest
+  python-test:
+    name: Python test (${{ matrix.service }})
     needs: changes
-    if: needs.changes.outputs.frontend_changed == 'true'
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - common
+          - api-gateway
+          - identity-service
+          - tasks-service
+          - vk-service
+          - content-service
+          - moderation-service
     steps:
       - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        working-directory: front
-        run: bun install --frozen-lockfile
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       - name: Run tests
-        working-directory: front
-        run: bun run test
+        run: |
+          set -euo pipefail
+          case "${{ matrix.service }}" in
+            common)
+              DIR="libs/py/common"
+              uv sync --directory "$DIR"
+              uv run --directory "$DIR" --with pytest --with pytest-asyncio pytest tests/ -v
+              ;;
+            *)
+              DIR="services/${{ matrix.service }}"
+              uv sync --directory "$DIR" --extra test
+              uv run --directory "$DIR" pytest tests/ -v
+              ;;
+          esac
+
+  go:
+    name: Go CLI
+    needs: changes
+    if: needs.changes.outputs.go_cli == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/parsevkctl-go
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/parsevkctl-go/go.mod
+      - run: go vet ./...
+      - run: go test ./...

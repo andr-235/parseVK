@@ -174,7 +174,20 @@ jobs:
               bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build $SERVICES_TO_BUILD
             UP_ARGS="-d"
           else
-            UP_ARGS="-d --no-build"
+            LOCALS="parsevk-identity-service:local parsevk-tasks-service:local parsevk-vk-service:local parsevk-content-service:local parsevk-moderation-service:local parsevk-telegram-service:local parsevk-api-gateway:local parsevk-frontend:local parsevk-db-backup:local"
+            MISSING=""
+            for IMG in $LOCALS; do
+              if ! docker image inspect "$IMG" >/dev/null 2>&1; then
+                echo "Missing image: $IMG"
+                MISSING="$MISSING $IMG"
+              fi
+            done
+            if [ -n "$MISSING" ]; then
+              echo "Some local images missing, building all services"
+              UP_ARGS="-d"
+            else
+              UP_ARGS="-d --no-build"
+            fi
           fi
 
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" UP_ARGS="$UP_ARGS" \
