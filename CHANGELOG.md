@@ -1,3 +1,11 @@
+## [0.32.1](https://github.com/andr-235/parseVK/compare/v0.32.0...v0.32.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* **deploy:** handle missing local images gracefully ([bc325d2](https://github.com/andr-235/parseVK/commit/bc325d241878024d2d39f7c63ccc55a7c4a39e64))
+* **deploy:** switch to docker-compose.yml ([c7eade4](https://github.com/andr-235/parseVK/commit/c7eade48f648d400b528e19ff17d422c44363b29))
+
 # [0.32.0](https://github.com/andr-235/parseVK/compare/v0.31.4...v0.32.0) (2026-06-15)
 
 
