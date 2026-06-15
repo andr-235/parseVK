@@ -1,10 +1,9 @@
 import logging
 from datetime import datetime
 
+from app.db.models import ImMessage, MonitoringGroup
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db.models import ImMessage, MonitoringGroup
 
 logger = logging.getLogger(__name__)
 

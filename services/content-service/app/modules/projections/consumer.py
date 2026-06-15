@@ -33,7 +33,7 @@ class ProjectionConsumer:
                 try:
                     await self.handle_message(message.value)
                     await self._consumer.commit()
-                except Exception as exc:
+                except Exception:
                     logger.exception("Failed to process message at offset %s", message.offset)
         finally:
             await self.stop()

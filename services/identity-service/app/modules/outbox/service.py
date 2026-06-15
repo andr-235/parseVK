@@ -1,7 +1,6 @@
+from app.modules.outbox.repository import add_event
 from common.events import EventEnvelope
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.modules.outbox.repository import add_event
 
 
 async def add_identity_event(

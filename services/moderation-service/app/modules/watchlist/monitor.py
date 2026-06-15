@@ -1,8 +1,8 @@
 import asyncio
 import logging
-from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.modules.watchlist.service import WatchlistService
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 logger = logging.getLogger("moderation-service.watchlist-monitor")
 

@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Body, Depends, Request
-
+from app.clients.vk_service.client import VkServiceClient
 from app.core.security import require_auth
 from app.modules.auth.router import request_ids
-from app.clients.vk_service.client import VkServiceClient
-from app.modules.ok_friends.adapters import OkFriendsAdapter
-from app.modules.friends_export.service import FriendsExportService
 from app.modules.friends_export.models import (
     FriendsExportStartResponse,
     FriendsJobDetailResponse,
 )
+from app.modules.friends_export.service import FriendsExportService
+from app.modules.ok_friends.adapters import OkFriendsAdapter
+from fastapi import APIRouter, Body, Depends, Request
 
 router = APIRouter(
     prefix="/api/v1/ok/friends",

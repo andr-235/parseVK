@@ -1,17 +1,18 @@
-import os
 import uuid
+
+import anyio
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.core.security import require_internal_token
-from app.modules.ok_friends.service import OkFriendsExportService
 from app.modules.ok_friends.schemas import (
     OkFriendsExportStartRequest,
     OkFriendsExportStartResponse,
     OkFriendsJobDetailResponse,
-    OkFriendsJobState,
     OkFriendsJobLogEntry,
+    OkFriendsJobState,
 )
+from app.modules.ok_friends.service import OkFriendsExportService
 
 router = APIRouter(
     prefix="/internal/ok/friends",
@@ -36,8 +37,10 @@ async def start_export(
     if fid_raw:
         try:
             ok_user_id = int(fid_raw)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid OK user ID (fid) format, must be numeric string")
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400, detail="Invalid OK user ID (fid) format, must be numeric string"
+            ) from exc
 
     # Create job in database
     job = await service.create_job(params, ok_user_id=ok_user_id)
@@ -55,8 +58,8 @@ async def get_job(
 ) -> OkFriendsJobDetailResponse:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from exc
 
     job = await service.get_job_by_id(job_uuid)
     if not job:
@@ -96,14 +99,14 @@ async def download_xlsx(
 ) -> FileResponse:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from exc
 
     job = await service.get_job_by_id(job_uuid)
     if not job or not job.xlsx_path:
         raise HTTPException(status_code=404, detail="XLSX file not found")
 
-    if not os.path.exists(job.xlsx_path):
+    if not await anyio.path.exists(job.xlsx_path):
         raise HTTPException(status_code=404, detail="XLSX file not found on disk")
 
     filename = f"ok_friends_export_{job_id}.xlsx"
@@ -121,17 +124,17 @@ async def get_raw_logs(
 ) -> dict:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from exc
 
     job = await service.get_job_by_id(job_uuid)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     logs = await service.get_job_logs(job_uuid, limit=500)
-    
+
     # Sort chronologically for gateway SSE event stream
-    logs_sorted = sorted(logs, key=lambda l: l.created_at)
+    logs_sorted = sorted(logs, key=lambda log_entry: log_entry.created_at)
 
     return {
         "job": {

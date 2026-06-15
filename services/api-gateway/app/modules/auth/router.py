@@ -1,13 +1,11 @@
 import secrets
 
-from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response
-
-from common.headers import CORRELATION_ID_HEADER, REQUEST_ID_HEADER
-
 from app.clients.identity.client import IdentityClient
 from app.core.config import settings
 from app.modules.auth.schemas import AuthResponse, AuthUser, ChangePasswordRequest, LoginRequest
 from app.modules.auth.service import GatewayAuthService
+from common.headers import CORRELATION_ID_HEADER, REQUEST_ID_HEADER
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 

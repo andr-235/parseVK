@@ -14,10 +14,32 @@ pythonpath = [
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py312"
-exclude = [".agents/", ".claude/", ".opencode/", ".codex/"]
+extend-exclude = [".agents/", ".claude/", ".opencode/", ".codex/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
-ignore = ["S101"]
+ignore = ["S101", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = ["E402", "S105", "S106", "S108", "S110", "E501"]
+"**/alembic/**" = ["E501"]
+"**/db/models.py" = ["E501"]
+"**/config.py" = ["S105", "E501"]
+"libs/py/common/common/headers.py" = ["S105"]
+"services/api-gateway/app/modules/keywords/service.py" = ["E501"]
+"services/api-gateway/app/modules/telegram_export/service.py" = ["E501"]
+"services/api-gateway/app/modules/listings/service.py" = ["E501"]
+"services/api-gateway/app/modules/photo_analysis/service.py" = ["E501"]
+"services/content-service/app/modules/telegram_tgmbase/models.py" = ["E501"]
+"services/content-service/app/modules/telegram_tgmbase/router.py" = ["E501"]
+"services/content-service/app/modules/telegram_tgmbase/parser.py" = ["E501"]
+"services/moderation-service/app/modules/photo_analysis/service.py" = ["E501"]
+"services/moderation-service/app/modules/keywords/recalculation.py" = ["E501"]
+"services/moderation-service/app/modules/watchlist/service.py" = ["E501"]
+"services/identity-service/app/modules/auth/service.py" = ["E501"]
+"services/tasks-service/app/modules/tasks/service.py" = ["E501"]
+"services/vk-service/app/modules/vk_api/router.py" = ["E501"]
+"services/vk-service/app/modules/tasks/service.py" = ["E501"]
+"scripts/backfill_watchlist.py" = ["E501"]

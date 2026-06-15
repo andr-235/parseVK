@@ -1,8 +1,10 @@
-from typing import Annotated
-from fastapi import APIRouter, Depends, File, UploadFile, Query, Request, Response
 from app.core.security import require_auth
 from app.modules.telegram_tgmbase.schemas import TelegramTgmbaseCapabilitiesResponse
-from app.modules.telegram_tgmbase.service import TelegramTgmbaseGatewayService, get_telegram_tgmbase_gateway_service
+from app.modules.telegram_tgmbase.service import (
+    TelegramTgmbaseGatewayService,
+    get_telegram_tgmbase_gateway_service,
+)
+from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile
 
 router = APIRouter(
     prefix="/api/v1/telegram-tgmbase",

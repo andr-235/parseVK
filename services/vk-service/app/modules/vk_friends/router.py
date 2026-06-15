@@ -1,17 +1,18 @@
-import os
 import uuid
+
+import anyio
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.core.security import require_internal_token
-from app.modules.vk_friends.service import VkFriendsExportService
 from app.modules.vk_friends.schemas import (
     VkFriendsExportStartRequest,
     VkFriendsExportStartResponse,
     VkFriendsJobDetailResponse,
-    VkFriendsJobState,
     VkFriendsJobLogEntry,
+    VkFriendsJobState,
 )
+from app.modules.vk_friends.service import VkFriendsExportService
 
 router = APIRouter(
     prefix="/internal/vk/friends",
@@ -49,8 +50,8 @@ async def get_job(
 ) -> VkFriendsJobDetailResponse:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from exc
 
     job = await service.get_job_by_id(job_uuid)
     if not job:
@@ -90,14 +91,14 @@ async def download_xlsx(
 ) -> FileResponse:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from exc
 
     job = await service.get_job_by_id(job_uuid)
     if not job or not job.xlsx_path:
         raise HTTPException(status_code=404, detail="XLSX file not found")
 
-    if not os.path.exists(job.xlsx_path):
+    if not await anyio.path.exists(job.xlsx_path):
         raise HTTPException(status_code=404, detail="XLSX file not found on disk")
 
     filename = f"vk_friends_export_{job_id}.xlsx"
@@ -115,17 +116,17 @@ async def get_raw_logs(
 ) -> dict:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from exc
 
     job = await service.get_job_by_id(job_uuid)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     logs = await service.get_job_logs(job_uuid, limit=500)
-    
+
     # Sort chronologically for gateway SSE event stream
-    logs_sorted = sorted(logs, key=lambda l: l.created_at)
+    logs_sorted = sorted(logs, key=lambda log_entry: log_entry.created_at)
 
     return {
         "job": {

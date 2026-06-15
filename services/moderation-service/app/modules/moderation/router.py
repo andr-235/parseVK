@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.security import require_internal_token
 from app.db.session import get_session
-from app.modules.moderation.schemas import CommentModerationState, UpdateCommentReadStatus, CommentModerationList, CommentModerationCursorList
+from app.modules.moderation.schemas import (
+    CommentModerationCursorList,
+    CommentModerationList,
+    CommentModerationState,
+    UpdateCommentReadStatus,
+)
 from app.modules.moderation.service import ModerationService
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(
     prefix="/internal/moderation",

@@ -1,13 +1,17 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.users.repository import UsersRepository
-from app.modules.users.schemas import CreateUserRequest, TemporaryPasswordResponse, UpdateUserRequest, UserResponse
+from app.modules.users.schemas import (
+    CreateUserRequest,
+    TemporaryPasswordResponse,
+    UpdateUserRequest,
+    UserResponse,
+)
 from app.modules.users.service import UsersService
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/internal/admin/users", tags=["admin-users"])
 

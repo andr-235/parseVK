@@ -1,9 +1,6 @@
 import httpx
 from app.clients.identity.methods import (
     IdentityClientMethods,
-    IdentityClientError,
-    IdentityClientHTTPError,
-    IdentityClientUnavailableError,
 )
 from app.clients.internal import InternalServiceClient
 from app.core.config import settings

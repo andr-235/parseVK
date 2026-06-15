@@ -1,8 +1,11 @@
 from typing import Annotated
-from fastapi import APIRouter, Body, Depends, Query, Request
 
 from app.core.security import require_auth
-from app.modules.photo_analysis.service import PhotoAnalysisGatewayService, get_photo_analysis_gateway_service
+from app.modules.photo_analysis.service import (
+    PhotoAnalysisGatewayService,
+    get_photo_analysis_gateway_service,
+)
+from fastapi import APIRouter, Body, Depends, Request
 
 router = APIRouter(
     prefix="/api/v1/photo-analysis",

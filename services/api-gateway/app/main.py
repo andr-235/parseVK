@@ -10,14 +10,12 @@ from app.modules.comments.router import router as comments_router
 from app.modules.content.router import router as content_router
 from app.modules.keywords.router import router as keywords_router
 from app.modules.listings.router import router as listings_router
-from app.modules.tasks.router import router as tasks_router
-from app.modules.telegram_tgmbase.router import router as telegram_tgmbase_router
-from app.modules.telegram_export.router import router as telegram_export_router
-from app.modules.photo_analysis.router import router as photo_analysis_router
-from app.modules.vk_friends.router import router as vk_friends_router
 from app.modules.ok_friends.router import router as ok_friends_router
-
-
+from app.modules.photo_analysis.router import router as photo_analysis_router
+from app.modules.tasks.router import router as tasks_router
+from app.modules.telegram_export.router import router as telegram_export_router
+from app.modules.telegram_tgmbase.router import router as telegram_tgmbase_router
+from app.modules.vk_friends.router import router as vk_friends_router
 
 
 def create_app() -> FastAPI:
@@ -40,9 +38,9 @@ def create_app() -> FastAPI:
     async def ready() -> dict[str, str]:
         return {"status": "READY"}
 
-    from app.modules.watchlist.router import router as watchlist_router
-    from app.modules.monitoring.router import router as monitoring_router
     from app.modules.metrics.router import router as metrics_router
+    from app.modules.monitoring.router import router as monitoring_router
+    from app.modules.watchlist.router import router as watchlist_router
 
     app.include_router(auth_router)
     app.include_router(content_router)

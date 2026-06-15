@@ -1,16 +1,25 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID as PyUUID
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Float, Index, Integer, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSON, JSONB
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import ARRAY, JSON, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class ContentGroup(Base):

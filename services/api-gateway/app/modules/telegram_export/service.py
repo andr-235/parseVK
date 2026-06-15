@@ -1,11 +1,11 @@
 from typing import Any
-from fastapi import HTTPException, status
 
 from app.clients.telegram import (
     TelegramServiceClient,
     TelegramServiceClientHTTPError,
     TelegramServiceClientUnavailableError,
 )
+from fastapi import HTTPException, status
 
 
 class TelegramExportGatewayService:

@@ -1,20 +1,21 @@
 import sys
-import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi import HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
+
 use_service_path()
 
+from app.clients.vk_service.client import VkServiceClientHTTPError
 from app.core.config import settings
 from app.core.redaction import redact_secrets
-from app.clients.vk_service.client import VkServiceClientHTTPError
-from app.modules.vk_friends.adapters import VkFriendsAdapter
-from app.modules.ok_friends.adapters import OkFriendsAdapter
 from app.modules.friends_export.service import FriendsExportService
-from app.modules.friends_export.models import JobStatus
+from app.modules.ok_friends.adapters import OkFriendsAdapter
+from app.modules.vk_friends.adapters import VkFriendsAdapter
 
 
 @pytest.fixture

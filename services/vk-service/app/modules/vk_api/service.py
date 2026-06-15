@@ -1,14 +1,12 @@
 import logging
-from uuid import UUID
 
-from sqlalchemy import delete, or_, select, func, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import VkAuthor, VkComment, VkGroup, VkPost
+from app.db.models import VkAuthor, VkComment, VkGroup, VkPost, utcnow
 from app.modules.ingestion.repository import IngestionRepository
 from app.modules.outbox.repository import OutboxRepository
 from app.modules.outbox.service import OutboxService
-from app.db.models import utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +35,7 @@ class VkApiService:
         if group_exists is None:
             return True
 
-        await self.session.execute(
-            update(VkGroup).where(VkGroup.vk_group_id == vk_group_id).values(deleted_at=now)
-        )
+        await self.session.execute(update(VkGroup).where(VkGroup.vk_group_id == vk_group_id).values(deleted_at=now))
 
         post_ids = (
             await self.session.scalars(
@@ -54,15 +50,14 @@ class VkApiService:
 
         if post_ids:
             await self.session.execute(delete(VkComment).where(VkComment.vk_post_id.in_(post_ids)))
-            await self.session.execute(
-                delete(VkPost).where(VkPost.vk_post_id.in_(post_ids))
-            )
+            await self.session.execute(delete(VkPost).where(VkPost.vk_post_id.in_(post_ids)))
 
         author_has_content = await self.session.scalar(
             select(func.count()).select_from(
-                select(VkPost.vk_post_id).where(VkPost.author_vk_id == owner_id).union(
-                    select(VkComment.vk_comment_id).where(VkComment.author_vk_id == owner_id)
-                ).subquery()
+                select(VkPost.vk_post_id)
+                .where(VkPost.author_vk_id == owner_id)
+                .union(select(VkComment.vk_comment_id).where(VkComment.author_vk_id == owner_id))
+                .subquery()
             )
         )
         if (author_has_content or 0) == 0:
@@ -72,10 +67,7 @@ class VkApiService:
         return True
 
     async def delete_all_groups(self, correlation_id: str | None = None) -> list[int]:
-        now = utcnow()
-        group_ids = (await self.session.scalars(
-            select(VkGroup.vk_group_id).where(VkGroup.deleted_at.is_(None))
-        )).all()
+        group_ids = (await self.session.scalars(select(VkGroup.vk_group_id).where(VkGroup.deleted_at.is_(None)))).all()
         for vk_group_id in group_ids:
             await self.delete_group(vk_group_id, correlation_id=correlation_id)
         return list(group_ids)

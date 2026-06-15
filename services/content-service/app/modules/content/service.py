@@ -1,4 +1,4 @@
-from .crud_service import ContentRepo, ContentCrudService
+from .crud_service import ContentCrudService, ContentRepo
 
 
 class ContentService:

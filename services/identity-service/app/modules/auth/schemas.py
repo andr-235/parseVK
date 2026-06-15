@@ -1,8 +1,7 @@
 from uuid import UUID
 
-from pydantic import BaseModel, Field
-
 from app.modules.users.schemas import UserDto
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):

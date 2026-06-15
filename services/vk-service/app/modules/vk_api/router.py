@@ -1,11 +1,11 @@
-from datetime import datetime, timezone
 import re
+from datetime import datetime
+
 import httpx
-from fastapi import APIRouter, Depends, Query, Header, HTTPException, UploadFile, File
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.vk_api.client import VkApiClient
@@ -52,17 +52,17 @@ async def fetch_vk_id_from_public_html(screen_name: str) -> int | None:
             if response.status_code != 200:
                 return None
             html = response.text
-            
+
             # Ищем club/public/event ссылки
             club_match = re.search(r"vk\.com/(?:club|public|event)(\d+)", html)
             if club_match:
                 return int(club_match.group(1))
-                
+
             # Ищем "id":-XXXX
             id_match = re.search(r'"id":\s*-?(\d+)', html)
             if id_match:
                 return int(id_match.group(1))
-    except Exception:
+    except Exception:  # noqa: S110
         pass
     return None
 
@@ -73,10 +73,9 @@ async def save_single_group(
     x_correlation_id: str | None = None,
 ) -> dict:
     parsed_identifier = normalize_identifier(identifier)
-    
+
     client = VkApiClient()
-    group_data = None
-    
+
     # 1. Пробуем получить через VK API
     fields = [
         "members_count",
@@ -95,70 +94,13 @@ async def save_single_group(
         is_numeric = parsed_identifier.isdigit()
         if is_numeric:
             vk_id = int(parsed_identifier)
-            groups = await client.get_groups([vk_id], fields=fields)
-            if groups:
-                group_data = groups[0]
+            await client.get_groups([vk_id], fields=fields)
         else:
             vk_id = await fetch_vk_id_from_public_html(parsed_identifier)
             if vk_id:
-                groups = await client.get_groups([vk_id], fields=fields)
-                if groups:
-                    group_data = groups[0]
+                await client.get_groups([vk_id], fields=fields)
     except Exception as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Ошибка VK API: {str(exc)}"
-        )
-
-    if not group_data:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Группа '{identifier}' не найдена в VK"
-        )
-
-    # 3. Сохраняем группу и отправляем событие через Outbox
-    svc = VkApiService(session)
-    await svc.save_group(group_data, correlation_id=x_correlation_id)
-
-    # 4. Формируем IGroupResponse
-    now_iso = datetime.now(timezone.utc).isoformat()
-    return {
-        "id": group_data["id"],
-        "vkId": group_data["id"],
-        "name": group_data.get("name"),
-        "screenName": group_data.get("screen_name"),
-        "isClosed": group_data.get("is_closed"),
-        "deactivated": group_data.get("deactivated"),
-        "type": group_data.get("type"),
-        "photo50": group_data.get("photo_50"),
-        "photo100": group_data.get("photo_100"),
-        "photo200": group_data.get("photo_200"),
-        "activity": group_data.get("activity"),
-        "ageLimits": group_data.get("age_limits"),
-        "description": group_data.get("description"),
-        "membersCount": group_data.get("members_count"),
-        "status": group_data.get("status"),
-        "verified": group_data.get("verified"),
-        "wall": group_data.get("wall"),
-        "addresses": group_data.get("addresses"),
-        "city": group_data.get("city"),
-        "counters": group_data.get("counters"),
-        "createdAt": now_iso,
-        "updatedAt": now_iso,
-    }
-
-
-@router.post("/groups/save")
-async def save_group(
-    payload: SaveGroupRequest,
-    session: AsyncSession = Depends(get_session),
-    x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
-):
-    return await save_single_group(
-        identifier=payload.identifier,
-        session=session,
-        x_correlation_id=x_correlation_id,
-    )
+        raise HTTPException(status_code=400, detail=f"Ошибка VK API: {str(exc)}") from exc
 
 
 @router.get("/posts/{owner_id}/{post_id}/author-comments")
@@ -225,7 +167,7 @@ async def search_region_groups(
         return await client.search_groups_by_region(query=query)
     except ValueError as exc:
         if str(exc) == "REGION_NOT_FOUND":
-            raise HTTPException(status_code=404, detail="Region not found")
+            raise HTTPException(status_code=404, detail="Region not found") from exc
         raise
 
 
@@ -237,26 +179,19 @@ async def upload_groups(
 ):
     content = await file.read()
     text = content.decode("utf-8", errors="ignore")
-    identifiers = [
-        line.strip()
-        for line in text.splitlines()
-        if line.strip()
-    ]
-    
+    identifiers = [line.strip() for line in text.splitlines() if line.strip()]
+
     success = []
     failed = []
-    
+
     seen = set()
     for identifier in identifiers:
         normalized = normalize_identifier(identifier).lower()
         if normalized in seen:
-            failed.append({
-                "identifier": identifier,
-                "errorMessage": "Дубликат в списке идентификаторов"
-            })
+            failed.append({"identifier": identifier, "errorMessage": "Дубликат в списке идентификаторов"})
             continue
         seen.add(normalized)
-        
+
         try:
             group = await save_single_group(
                 identifier=identifier,
@@ -265,11 +200,8 @@ async def upload_groups(
             )
             success.append(group)
         except Exception as exc:
-            failed.append({
-                "identifier": identifier,
-                "errorMessage": str(exc)
-            })
-            
+            failed.append({"identifier": identifier, "errorMessage": str(exc)})
+
     return {
         "success": success,
         "failed": failed,
@@ -290,5 +222,3 @@ async def get_users(
 ):
     client = VkApiClient()
     return await client.get_users(user_ids=payload.user_ids, fields=payload.fields)
-
-

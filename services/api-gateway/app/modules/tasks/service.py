@@ -1,8 +1,7 @@
-from fastapi import HTTPException, Request, status
-
 from app.clients.tasks.client import TasksClient, TasksClientHTTPError, TasksClientUnavailableError
 from app.modules.auth.router import bearer_token, get_auth_service, request_ids
 from app.modules.auth.service import GatewayAuthService
+from fastapi import HTTPException, Request, status
 
 
 class TasksGatewayService:
