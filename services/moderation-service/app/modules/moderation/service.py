@@ -1,4 +1,4 @@
-from app.modules.moderation.crud_service import ModerationCrudService
+from app.modules.moderation.crud_service import CONSUMER_NAME, ModerationCrudService  # noqa: F401
 from app.modules.moderation.schemas import VkEvent
 from sqlalchemy.ext.asyncio import AsyncSession
 
