@@ -1,7 +1,0 @@
-interface:
-  display_name: "parseVK Merge Gate"
-  short_description: "Validate if a parseVK Pull Request is ready to merge"
-  default_prompt: "Check if this parseVK PR is ready to merge using the merge gate workflow."
-
-policy:
-  allow_implicit_invocation: false

@@ -1,7 +1,0 @@
-interface:
-  display_name: "parseVK PR Review"
-  short_description: "Review parseVK Pull Requests without writing GitHub reviews"
-  default_prompt: "Review this parseVK PR using the parseVK PR review workflow."
-
-policy:
-  allow_implicit_invocation: true
