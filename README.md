@@ -6,7 +6,6 @@
 
 ```bash
 cp .env.example .env
-docker volume create parsevk_postgres_data
 docker compose up -d
 ```
 

@@ -48,7 +48,6 @@ The workflow detects which services need rebuilding by comparing against the las
 2. Common causes:
    - **PyPI unreachable** → verify `curl https://pypi.org/simple/uv/` on server
    - **Docker Hub rate limit** → wait and retry
-   - **Volume missing** → `docker volume create parsevk_postgres_data`
    - **Build timeout** → increase `timeout-minutes` in deploy.yml
 3. Manual rebuild: SSH to server, `cd /opt/parseVK && docker compose build <service>`
 
