@@ -1,3 +1,15 @@
+# [0.35.0](https://github.com/andr-235/parseVK/compare/v0.34.0...v0.35.0) (2026-06-17)
+
+
+### Bug Fixes
+
+* **patch-cursor:** update timestamp for last processed patch ([74b1b89](https://github.com/andr-235/parseVK/commit/74b1b8938896ba2cd90d8a3c90d0e171e5dc9dc3))
+
+
+### Features
+
+* **plans:** add detailed plans for extracting useTasksMutations hook, cleaning up old monolith legacy, fixing deployment container build failures, and refactoring content service ([9ddd6b7](https://github.com/andr-235/parseVK/commit/9ddd6b7bb14b2573e805690d1c0c4ba68cc6e218))
+
 # [0.34.0](https://github.com/andr-235/parseVK/compare/v0.33.12...v0.34.0) (2026-06-17)
 
 
