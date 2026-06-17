@@ -1,3 +1,10 @@
+## [0.33.5](https://github.com/andr-235/parseVK/compare/v0.33.4...v0.33.5) (2026-06-17)
+
+
+### Bug Fixes
+
+* **deploy:** resolve container startup failures from volume, migration, and config issues ([febdd21](https://github.com/andr-235/parseVK/commit/febdd218807d5172e0800d309ded3fde2a40738b))
+
 ## [0.33.4](https://github.com/andr-235/parseVK/compare/v0.33.3...v0.33.4) (2026-06-17)
 
 
