@@ -1,3 +1,11 @@
+## [0.33.1](https://github.com/andr-235/parseVK/compare/v0.33.0...v0.33.1) (2026-06-17)
+
+
+### Bug Fixes
+
+* **deploy:** wrap resources in deploy key in docker-compose.yml ([9df1b5a](https://github.com/andr-235/parseVK/commit/9df1b5ad2eb6abf404af703f022f58e8be7292ab))
+* **docs:** update default branch reference from 'fastapi-microservices-rewrite' to 'main' in AGENTS.md ([3e4b4c2](https://github.com/andr-235/parseVK/commit/3e4b4c28b2637ed2ac8d3353b8b3d16abe3c2dcd))
+
 # [0.33.0](https://github.com/andr-235/parseVK/compare/v0.32.2...v0.33.0) (2026-06-17)
 
 
