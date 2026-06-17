@@ -34,10 +34,6 @@ pull_runtime_images_for_services() {
     pull_image "nginx:alpine"
   fi
 
-  if should_include_service db_backup "$@"; then
-    pull_image "postgres:15-alpine"
-  fi
-
   if should_include_service prometheus "$@"; then
     pull_image "prom/prometheus:latest"
   fi
@@ -51,35 +47,35 @@ pull_runtime_images_for_services() {
   fi
 
   if should_include_service identity-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service tasks-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service vk-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service content-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service api-gateway "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service moderation-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service telegram-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service im-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 }
 
@@ -89,40 +85,36 @@ pull_build_base_images_for_services() {
     pull_image "nginx:alpine"
   fi
 
-  if should_include_service db_backup "$@"; then
-    pull_image "postgres:15-alpine"
-  fi
-
   if should_include_service identity-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service tasks-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service vk-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service content-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service api-gateway "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service moderation-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service telegram-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 
   if should_include_service im-service "$@"; then
-    pull_image "python:3.12-slim"
+    pull_image "python:3.12.13-slim"
   fi
 }
 

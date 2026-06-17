@@ -128,7 +128,6 @@ jobs:
           CURRENT_COMMIT=$(git rev-parse HEAD)
 
             BUILD_FRONTEND=false
-            BUILD_DB_BACKUP=false
             BUILD_IDENTITY_SERVICE=false
             BUILD_TASKS_SERVICE=false
             BUILD_VK_SERVICE=false
@@ -140,7 +139,6 @@ jobs:
 
           if [ -z "$PREV_COMMIT" ] || ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
             BUILD_FRONTEND=true
-            BUILD_DB_BACKUP=true
             BUILD_IDENTITY_SERVICE=true
             BUILD_TASKS_SERVICE=true
             BUILD_VK_SERVICE=true
@@ -157,10 +155,6 @@ jobs:
 
             if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(front/|docker/frontend\.Dockerfile|docker/frontend\.nginx\.conf|docker/frontend-entrypoint\.sh|docker-compose\.deploy\.yml|\.dockerignore)'; then
               BUILD_FRONTEND=true
-            fi
-
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(docker/db-backup/|docker-compose\.deploy\.yml|\.dockerignore)'; then
-              BUILD_DB_BACKUP=true
             fi
 
             if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/api-gateway/'; then
@@ -197,7 +191,6 @@ jobs:
           fi
 
           echo "build_frontend=$BUILD_FRONTEND" >> "$GITHUB_OUTPUT"
-          echo "build_db_backup=$BUILD_DB_BACKUP" >> "$GITHUB_OUTPUT"
           echo "build_identity_service=$BUILD_IDENTITY_SERVICE" >> "$GITHUB_OUTPUT"
           echo "build_tasks_service=$BUILD_TASKS_SERVICE" >> "$GITHUB_OUTPUT"
           echo "build_vk_service=$BUILD_VK_SERVICE" >> "$GITHUB_OUTPUT"
@@ -217,10 +210,6 @@ jobs:
 
           if [ "${{ steps.changed_services.outputs.build_frontend }}" = "true" ]; then
             SERVICES_TO_BUILD="$SERVICES_TO_BUILD frontend"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_db_backup }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD db_backup"
           fi
 
           if [ "${{ steps.changed_services.outputs.build_api_gateway }}" = "true" ]; then
