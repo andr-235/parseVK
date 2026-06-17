@@ -1,3 +1,10 @@
+## [0.33.7](https://github.com/andr-235/parseVK/compare/v0.33.6...v0.33.7) (2026-06-17)
+
+
+### Bug Fixes
+
+* **deploy:** add --remove-orphans to compose up to prevent port conflicts ([d7203b7](https://github.com/andr-235/parseVK/commit/d7203b736f4b0c8de68a93fb41329dd875f4e6fc))
+
 ## [0.33.6](https://github.com/andr-235/parseVK/compare/v0.33.5...v0.33.6) (2026-06-17)
 
 
