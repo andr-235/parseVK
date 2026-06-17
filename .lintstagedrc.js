@@ -11,16 +11,6 @@ const toProjectRelativePaths = (prefix, filenames) =>
   });
 
 module.exports = {
-  'api/**/*.ts': (filenames) => {
-    const relativePaths = toProjectRelativePaths('api', filenames)
-      .map(quoteForShell)
-      .join(' ');
-
-    return [
-      `bash -c "cd api && npx prettier --write ${relativePaths}"`,
-      `bash -c "cd api && npx eslint --fix --max-warnings=0 ${relativePaths}"`,
-    ];
-  },
   'front/**/*.{ts,tsx}': (filenames) => {
     const nonTestFiles = filenames.filter(
       (file) => !file.includes('__tests__') && !file.includes('.test.'),
