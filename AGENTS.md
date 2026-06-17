@@ -108,7 +108,7 @@ go run ./cmd/parsevkctl task merge ISSUE_NUMBER
 
 После старта задачи Codex должен:
 
-1. Работать только в task/feature ветке, не в default branch (`fastapi-microservices-rewrite`).
+1. Работать только в task/feature ветке, не в default branch (`main`).
 2. Вносить минимально необходимый для полноценной production-ready фичи набор изменений: без MVP-заглушек, но и без лишнего overengineering вне Scope.
 3. Не смешивать несколько несвязанных задач в один PR.
 4. Не трогать пользовательские staged/unstaged изменения, если они не относятся к задаче.
@@ -213,7 +213,7 @@ go run ./cmd/parsevkctl task pr ISSUE_NUMBER
 * добавить `Closes #ISSUE_NUMBER` в body;
 * перевести карточку в `Review`.
 
-Codex не должен создавать PR из default branch (`fastapi-microservices-rewrite`).
+Codex не должен создавать PR из default branch (`main`).
 
 PR title должен использовать тот же Conventional Commit format:
 
