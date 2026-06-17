@@ -1,0 +1,209 @@
+from datetime import UTC, datetime
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import ContentAuthor, ContentComment, ContentGroup, ContentPost, ProcessedEvent
+
+CONSUMER_NAME = "content-service.vk"
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+def vk_timestamp(value: int | None) -> datetime | None:
+    if value is None:
+        return None
+    return datetime.fromtimestamp(int(value), UTC)
+
+
+class VkEvent(BaseModel):
+    event_id: UUID
+    event_type: str
+    event_version: int
+    aggregate_id: str
+    correlation_id: str | None = None
+    payload: dict[str, Any]
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+
+class ProjectionRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def is_processed(self, consumer_name: str, event_id: UUID) -> bool:
+        return (
+            await self.session.scalar(
+                select(ProcessedEvent.id).where(
+                    ProcessedEvent.consumer_name == consumer_name,
+                    ProcessedEvent.event_id == event_id,
+                )
+            )
+            is not None
+        )
+
+    async def mark_processed(self, consumer_name: str, event_id: UUID, event_type: str) -> None:
+        self.session.add(ProcessedEvent(consumer_name=consumer_name, event_id=event_id, event_type=event_type))
+
+    async def upsert_group(self, group: dict) -> None:
+        now = utcnow()
+        stmt = insert(ContentGroup).values(
+            vk_group_id=int(group["id"]),
+            screen_name=group.get("screen_name"),
+            name=group.get("name"),
+            is_closed=bool(group["is_closed"]) if group.get("is_closed") is not None else None,
+            deactivated=group.get("deactivated"),
+            type=group.get("type"),
+            photo_50=group.get("photo_50"),
+            photo_100=group.get("photo_100"),
+            photo_200=group.get("photo_200"),
+            activity=group.get("activity"),
+            age_limits=group.get("age_limits"),
+            description=group.get("description"),
+            members_count=group.get("members_count"),
+            status=group.get("status"),
+            verified=group.get("verified"),
+            wall=group.get("wall"),
+            addresses=group.get("addresses"),
+            city=group.get("city"),
+            counters=group.get("counters"),
+            last_collected_at=now,
+            updated_at=now,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[ContentGroup.vk_group_id],
+            set_={
+                "screen_name": stmt.excluded.screen_name,
+                "name": stmt.excluded.name,
+                "is_closed": stmt.excluded.is_closed,
+                "deactivated": stmt.excluded.deactivated,
+                "type": stmt.excluded.type,
+                "photo_50": stmt.excluded.photo_50,
+                "photo_100": stmt.excluded.photo_100,
+                "photo_200": stmt.excluded.photo_200,
+                "activity": stmt.excluded.activity,
+                "age_limits": stmt.excluded.age_limits,
+                "description": stmt.excluded.description,
+                "members_count": stmt.excluded.members_count,
+                "status": stmt.excluded.status,
+                "verified": stmt.excluded.verified,
+                "wall": stmt.excluded.wall,
+                "addresses": stmt.excluded.addresses,
+                "city": stmt.excluded.city,
+                "counters": stmt.excluded.counters,
+                "last_collected_at": now,
+                "updated_at": now,
+            },
+        )
+        await self.session.execute(stmt)
+
+    async def delete_group(self, vk_group_id: int) -> None:
+        from sqlalchemy import delete
+        await self.session.execute(delete(ContentComment).where(ContentComment.vk_owner_id == -vk_group_id))
+        await self.session.execute(delete(ContentPost).where(ContentPost.vk_owner_id == -vk_group_id))
+        await self.session.execute(delete(ContentGroup).where(ContentGroup.vk_group_id == vk_group_id))
+
+    async def upsert_author(self, author: dict) -> None:
+        now = utcnow()
+        stmt = insert(ContentAuthor).values(
+            vk_author_id=int(author["vk_author_id"]),
+            type=author["type"],
+            display_name=author.get("display_name"),
+            first_name=author.get("first_name"),
+            last_name=author.get("last_name"),
+            photo_50=author.get("photo_50"),
+            photo_100=author.get("photo_100"),
+            photo_200=author.get("photo_200"),
+            domain=author.get("domain"),
+            screen_name=author.get("screen_name"),
+            created_at=now,
+            updated_at=now,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[ContentAuthor.vk_author_id],
+            set_={
+                "type": stmt.excluded.type,
+                "display_name": stmt.excluded.display_name,
+                "first_name": stmt.excluded.first_name,
+                "last_name": stmt.excluded.last_name,
+                "photo_50": stmt.excluded.photo_50,
+                "photo_100": stmt.excluded.photo_100,
+                "photo_200": stmt.excluded.photo_200,
+                "domain": stmt.excluded.domain,
+                "screen_name": stmt.excluded.screen_name,
+                "updated_at": now,
+            },
+        )
+        await self.session.execute(stmt)
+
+    async def upsert_post(self, post: dict, *, task_id: int | None = None) -> None:
+        now = utcnow()
+        owner_id = int(post.get("owner_id", 0))
+        post_id = int(post.get("id", 0))
+        stmt = insert(ContentPost).values(
+            external_key=f"{owner_id}:{post_id}",
+            vk_owner_id=owner_id,
+            vk_post_id=post_id,
+            vk_group_id=abs(owner_id) if owner_id < 0 else None,
+            author_vk_id=post.get("from_id"),
+            date=vk_timestamp(post.get("date")),
+            text=post.get("text"),
+            last_collected_task_id=task_id,
+            updated_at=now,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[ContentPost.external_key],
+            set_={
+                "author_vk_id": stmt.excluded.author_vk_id,
+                "date": stmt.excluded.date,
+                "text": stmt.excluded.text,
+                "last_collected_task_id": task_id,
+                "updated_at": now,
+            },
+        )
+        await self.session.execute(stmt)
+
+    async def upsert_comment(self, comment: dict, *, task_id: int | None = None) -> None:
+        now = utcnow()
+        owner_id = int(comment.get("owner_id", 0))
+        post_id = int(comment.get("post_id", 0))
+        comment_id = int(comment.get("id", 0))
+        stmt = insert(ContentComment).values(
+            external_key=f"{owner_id}:{post_id}:{comment_id}",
+            post_external_key=f"{owner_id}:{post_id}",
+            vk_owner_id=owner_id,
+            vk_post_id=post_id,
+            vk_comment_id=comment_id,
+            author_vk_id=comment.get("from_id"),
+            date=vk_timestamp(comment.get("date")),
+            text=comment.get("text"),
+            last_collected_task_id=task_id,
+            updated_at=now,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[ContentComment.external_key],
+            set_={
+                "author_vk_id": stmt.excluded.author_vk_id,
+                "date": stmt.excluded.date,
+                "text": stmt.excluded.text,
+                "last_collected_task_id": task_id,
+                "updated_at": now,
+            },
+        )
+        await self.session.execute(stmt)
+
+    async def increment_post_comments_count(self, post_external_key: str) -> None:
+        await self.session.execute(
+            ContentPost.__table__.update()
+            .where(ContentPost.external_key == post_external_key)
+            .values(comments_count=ContentPost.comments_count + 1, updated_at=utcnow())
+        )
+
+    async def save(self) -> None:
+        await self.session.flush()

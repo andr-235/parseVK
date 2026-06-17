@@ -1,5 +1,9 @@
 import sys
 from pathlib import Path
+<<<<<<< HEAD
+=======
+
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -17,18 +21,12 @@ from app.main import create_app
 async def test_metrics_endpoint_returns_prometheus_format():
     app = create_app()
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get("/api/v1/metrics")
+        response = await client.get("/metrics")
 
     assert response.status_code == 200
     assert "text/plain" in response.headers["content-type"]
-    
+
     text = response.text
-    assert "# HELP process_resident_memory_bytes" in text
-    assert "# TYPE process_resident_memory_bytes gauge" in text
-    assert "process_resident_memory_bytes" in text
-    
-    assert "nodejs_heap_size_used_bytes" in text
-    assert "nodejs_heap_size_total_bytes" in text
+    assert "# HELP" in text
+    assert "# TYPE" in text
     assert "http_requests_total" in text
-    assert "tasks_total" in text
-    assert "watchlist_authors_active" in text

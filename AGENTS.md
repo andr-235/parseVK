@@ -13,6 +13,7 @@
 * **Запрет самоаппрува**: Категорически запрещено создавать GitHub-аппрувы (approve) пулл-реквестов от имени того же пользователя, который ведет переписку. Это нарушает правила взаимного контроля.
 * **Использование специализированных навыков (Skills)**: Для всех типовых процедур (планирование задач, реализация, ревью, мердж, хэндофф) используйте строго репозиторные навыки из каталога `.agents/skills/`.
 * **Тонкий CLI**: Инструмент `parsevkctl` должен оставаться тонким детерминированным CLI для автоматизации рутины (создание веток, смена статусов, слияние). Сложная ИИ-логика принятия решений должна находиться в слоях Customization (Skills, Rules).
+
 * **Соблюдение границ Scope**: Всегда строго следуйте разделам `Scope` и `Out of Scope` в описании задачи. Не производите непредусмотренный рефакторинг или изменения в других микросервисах.
 * **Честная валидация**: Никогда не утверждайте, что тесты пройдены, если вы их физически не запускали.
 * **Обязательный Handoff**: Всегда предоставляйте финальный отчет (handoff) по установленной форме после реализации или ревью.
@@ -108,7 +109,7 @@ go run ./cmd/parsevkctl task merge ISSUE_NUMBER
 
 После старта задачи Codex должен:
 
-1. Работать только в task/feature ветке, не в default branch (`fastapi-microservices-rewrite`).
+1. Работать только в task/feature ветке, не в default branch (`main`).
 2. Вносить минимально необходимый для полноценной production-ready фичи набор изменений: без MVP-заглушек, но и без лишнего overengineering вне Scope.
 3. Не смешивать несколько несвязанных задач в один PR.
 4. Не трогать пользовательские staged/unstaged изменения, если они не относятся к задаче.
@@ -213,7 +214,7 @@ go run ./cmd/parsevkctl task pr ISSUE_NUMBER
 * добавить `Closes #ISSUE_NUMBER` в body;
 * перевести карточку в `Review`.
 
-Codex не должен создавать PR из default branch (`fastapi-microservices-rewrite`).
+Codex не должен создавать PR из default branch (`main`).
 
 PR title должен использовать тот же Conventional Commit format:
 
@@ -543,5 +544,58 @@ cache = {}
 * Не создавай PR из default branch.
 * Не делай self-approve.
 * Не пиши официальные GitHub review comments без прямого запроса пользователя.
+
+## Project Structure & Microservices
+
+Проект ParseVK построен на микросервисной архитектуре и содержит следующие основные директории:
+
+* `front/` — React SPA (фронтенд)
+* `services/` — Python-микросервисы на FastAPI:
+  * `api-gateway/` — единая точка входа, проксирование HTTP-запросов
+  * `identity-service/` — аутентификация (JWT), управление пользователями и ролями
+  * `tasks-service/` — оркестрация задач на парсинг
+  * `vk-service/` — интеграция с API ВКонтакте
+  * `content-service/` — хранилище авторов и групп (упрощенная версия)
+  * `telegram-service/` — клиент Telegram (Telethon), импорт и матчинг tgmbase
+  * `listings-service/` — сервис хранения объявлений (Avito и др.) и выгрузки CSV
+  * `moderation-service/` — пайплайн автоматической модерации контента
+  * `im-service/` — интеграция с мессенджерами (WhatsApp через Wappi.pro)
+* `libs/py/common/` — общая библиотека вспомогательного кода для Python
+* `tools/parsevkctl-go/` — Go CLI для автоматизации GitHub Kanban
+* `docker-compose.yml` — оркестрация локального окружения и баз данных (8 баз PostgreSQL)
+
+---
+
+## Documentation
+
+| Document | Path | Description |
+|----------|------|-------------|
+| README | README.md | Project landing page |
+| Instructions | INSTRUCTIONS.md | Full development guide (stack, setup, architecture) |
+| API Reference | docs/api.md | API Gateway endpoints |
+| Configuration | docs/configuration.md | Environment variables and secrets |
+| Architecture | .ai-factory/ARCHITECTURE.md | Microservices + Three-Tier pattern |
+| Testing | docs/testing.md | Test setup (pytest, vitest, go test) |
+| Deploy Runbook | docs/deploy-runbook.md | Production deployment guide |
+| Design System | DESIGN.md | Design tokens, theme, components |
+| Product | PRODUCT.md | Product requirements and user stories |
+
+## AI Context Files
+
+| File | Purpose |
+|------|---------|
+| AGENTS.md | AI agent rules and workflow for this repository |
+| .ai-factory/DESCRIPTION.md | Project description, tech stack, and features |
+| .ai-factory/ARCHITECTURE.md | Architecture guidelines (Microservices + Three-Tier) |
+| .ai-factory/ROADMAP.md | Project roadmap and milestones |
+| .ai-factory/rules/base.md | Auto-detected codebase conventions and rules |
+| INSTRUCTIONS.md | Detailed development setup and runbook |
+| docs/api.md | API Gateway endpoints |
+| docs/configuration.md | Environment variables and secrets |
+| docs/testing.md | Test setup (pytest, vitest, go test) |
+| docs/deploy-runbook.md | Production deployment guide |
+| DESIGN.md | Design system tokens and component guidelines |
+| PRODUCT.md | Product requirements and user stories |
+| GEMINI.md | Legacy Gemini agent playbook |
 
 ---

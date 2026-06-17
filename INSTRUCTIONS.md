@@ -8,17 +8,17 @@
 
 ## Архитектура
 
-Микросервисная архитектура (8 FastAPI-сервисов) + React-фронтенд. Асинхронная коммуникация — Kafka (event-driven), синхронная — HTTP через API Gateway.
+Микросервисная архитектура (9 FastAPI-сервисов) + React-фронтенд. Асинхронная коммуникация — Kafka (event-driven), синхронная — HTTP через API Gateway.
 
 ```
-Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderation / Telegram / IM / VK Services
+Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderation / Telegram / IM / VK / Listings Services
                                                                                                ↕
                                                                                              Kafka
 ```
 
 **Kafka-топики:** `parsevk.tasks.events`, `parsevk.vk.events`, `parsevk.im.events`
 
-**PostgreSQL:** 6 отдельных баз (`vk_api`, `identity`, `tasks`, `vk`, `content`, `moderation`, `im`)
+**PostgreSQL:** 8 отдельных баз (`identity`, `tasks`, `vk`, `content`, `moderation`, `im`, `telegram`, `listings`)
 
 ---
 
@@ -40,10 +40,7 @@ Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderatio
 # 1. Скопировать .env и заполнить
 cp .env.example .env
 
-# 2. Создать внешний том для основной БД (один раз)
-docker volume create parsevk_postgres_data
-
-# 3. Запустить полный стек
+# 2. Запустить полный стек
 docker compose up -d
 ```
 

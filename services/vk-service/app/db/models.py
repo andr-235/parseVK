@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from datetime import datetime, timezone
+=======
+from datetime import UTC, datetime
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from uuid import UUID as PyUUID
 from uuid import uuid4
 
@@ -21,7 +25,11 @@ from app.db.base import Base
 
 
 def utcnow() -> datetime:
+<<<<<<< HEAD
     return datetime.now(timezone.utc)
+=======
+    return datetime.now(UTC)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class VkGroup(Base):

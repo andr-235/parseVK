@@ -1,13 +1,22 @@
 import secrets
 
+<<<<<<< HEAD
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response
 
 from common.headers import CORRELATION_ID_HEADER, REQUEST_ID_HEADER
 
+=======
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.clients.identity.client import IdentityClient
 from app.core.config import settings
+from app.core.security import bearer_token, validate_csrf
+from app.core.utils import request_ids
 from app.modules.auth.schemas import AuthResponse, AuthUser, ChangePasswordRequest, LoginRequest
 from app.modules.auth.service import GatewayAuthService
+<<<<<<< HEAD
+=======
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -41,26 +50,6 @@ def set_csrf_cookie(response: Response, csrf_token: str) -> None:
 def delete_auth_cookies(response: Response) -> None:
     response.delete_cookie(settings.refresh_cookie_name, path="/")
     response.delete_cookie(settings.csrf_cookie_name, path="/")
-
-
-def request_ids(request: Request) -> tuple[str | None, str | None]:
-    return request.headers.get(REQUEST_ID_HEADER), request.headers.get(CORRELATION_ID_HEADER)
-
-
-def validate_csrf(request: Request, csrf_header: str | None) -> None:
-    origin = request.headers.get("origin")
-    if origin and origin not in settings.allowed_origins:
-        raise HTTPException(status_code=403, detail="Invalid origin")
-
-    csrf_cookie = request.cookies.get(settings.csrf_cookie_name)
-    if csrf_cookie and (not csrf_header or not secrets.compare_digest(csrf_cookie, csrf_header)):
-        raise HTTPException(status_code=403, detail="Invalid CSRF token")
-
-
-def bearer_token(authorization: str | None) -> str:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return authorization.split(" ", 1)[1]
 
 
 @router.post("/login", response_model=AuthResponse)

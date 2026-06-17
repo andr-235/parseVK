@@ -16,11 +16,41 @@ Enter explore mode. Think deeply. Visualize freely. Follow the conversation wher
 
 **FIRST:** Read `.ai-factory/config.yaml` if it exists to resolve:
 - **Paths:** `paths.description`, `paths.architecture`, `paths.rules_file`, `paths.roadmap`, `paths.research`, `paths.plan`, `paths.plans`, and `paths.rules`
-- **Language:** `language.ui` for communication
+- **Language:**
+  - `language.ui` for all user-facing responses: prompts, progress updates, explanations, exploration summaries, and next-step guidance
+  - `language.artifacts` for generated or persisted exploration artifacts, including the resolved `paths.research`
+  - `language.technical_terms` for human-readable technical terminology style in artifacts and summaries
+  - If `language.artifacts` is missing, use `language.ui`
+  - If both are missing, use `en`
+- **Workflow:** `workflow.plan_id_format` (default: `slug`) — used by the optional active-plan-context lookup when explore mode references an existing plan for the current branch.
+  Active values: `slug` and `sequential`. When `sequential`, glob
+  `<paths.plans>/[0-9]{4}_<branch_stem>.md` first and fall back to
+  `<paths.plans>/<branch_stem>.md` only if no numbered match is found.
+  `timestamp` and `uuid` are **reserved values** and currently behave like `slug`.
+  Treat any unknown value as `slug`.
 
 If config.yaml doesn't exist, use defaults:
 - Paths: `.ai-factory/` for all artifacts
-- Language: `en` (English)
+- `ui_language`: `en`
+- `artifact_language`: `en`
+- `technical_terms_policy`: `keep`
+- `workflow.plan_id_format`: `slug`
+
+Store:
+- `ui_language = language.ui || "en"`
+- `artifact_language = language.artifacts || language.ui || "en"`
+- `technical_terms_policy = language.technical_terms || "keep"`
+
+If `technical_terms_policy` is not one of `keep`, `translate`, or `mixed`, treat it as `keep`. Legacy values such as `english` also behave like `keep`.
+
+All user-facing responses from `/aif-explore` MUST be written in `ui_language`.
+
+Persisted exploration artifacts under `paths.research` MUST be written in `artifact_language`.
+
+Apply `technical_terms_policy` while writing summaries and persisted artifacts:
+- `keep` - keep commands, paths, identifiers, config keys, API names, package names, branch names, code terms, and raw error messages unchanged
+- `translate` - translate human-readable technical terms where a natural target-language term exists
+- `mixed` - translate ordinary prose terms while keeping code, infrastructure, and ecosystem terms unchanged
 
 **This is a stance, not a workflow.** There are no fixed steps, no required sequence, no mandatory outputs. You're a thinking partner helping the user explore.
 
@@ -125,7 +155,13 @@ At the start, read these files if present:
 - the resolved RULES.md path – project conventions and rules
 - the resolved RESEARCH.md path – persisted exploration notes (so you can `/clear` and still keep context)
 - the resolved fast plan path – active fast plan (if any)
-- `<configured plans dir>/<branch>.md` – active full plans (if any)
+- `<configured plans dir>/<branch_stem>.md` – active full plans (if any).
+  Compute `branch_stem` as `git branch --show-current` with every `/` replaced by `-`
+  (for example `feature/user-auth` → `feature-user-auth`).
+  When `workflow.plan_id_format = sequential`, glob first
+  `<configured plans dir>/[0-9][0-9][0-9][0-9]_<branch_stem>.md` and pick the
+  highest-numbered match; fall back to `<configured plans dir>/<branch_stem>.md`
+  when no numbered match exists.
 - the resolved ROADMAP.md path – strategic milestones (if any)
 
 This tells you:
@@ -156,7 +192,12 @@ If the user mentions a plan or you detect one is relevant:
 
 1. **Read existing plan for context**
    - the resolved fast plan path (fast mode)
-   - `<configured plans dir>/<branch>.md` (full mode)
+   - `<configured plans dir>/<branch_stem>.md` (full mode, default).
+     `branch_stem` = `git branch --show-current` with every `/` replaced by `-`
+     (so `feature/user-auth` resolves to `feature-user-auth`).
+     When `workflow.plan_id_format = sequential`, the filename is
+     `<configured plans dir>/<NNNN>_<branch_stem>.md`; pick the highest-numbered
+     match if more than one exists.
 
 2. **Reference it naturally in conversation**
    - "Your plan mentions adding Redis, but we just realized SQLite fits better..."
@@ -175,7 +216,7 @@ If the user mentions a plan or you detect one is relevant:
    | Strategic direction | `paths.research` | `paths.roadmap` |
    | Assumption invalidated | `paths.research` | Relevant file |
    | Exploration context (persisted) | `paths.research` | (keep in research) |
-   | New task/feature | Run `/aif-plan` | `paths.plan` or `paths.plans/<branch-or-slug>.md` |
+   | New task/feature | Run `/aif-plan` | `paths.plan` or `paths.plans/<branch_stem-or-slug>.md` (or `paths.plans/<NNNN>_<branch_stem-or-slug>.md` under `plan_id_format: sequential`; `branch_stem` = current branch with `/` replaced by `-`) |
 
    Example offers:
    - "Want me to save this to the resolved research path so you can `/clear` and come back later?"
@@ -188,6 +229,8 @@ If the user mentions a plan or you detect one is relevant:
 If the conversation is crystallizing (you're about to plan, you want to `/clear`, or you want to continue later), offer to save a compact, durable research snapshot.
 
 **Hard rule in explore mode:** If the user chooses to save, you may write/edit **only** the resolved research path (and create its parent directory if missing). Do not write or modify any other project files.
+
+Write the saved research content in `artifact_language`. The skeleton below defines structure, not fixed English output. If `artifact_language` is not `en`, translate human-readable headings, labels, notes, and prose before saving. Preserve markdown markers, paths, commands, config keys, issue URLs, branch names, code identifiers, package names, and raw error messages unchanged.
 
 Ask:
 
@@ -202,7 +245,7 @@ Options:
 
 If user selects (1) or (2):
 - Ensure the parent directory of the resolved research path exists (`mkdir -p "$(dirname "<resolved research path>")"`)
-- If the resolved research path does not exist, create it with this skeleton:
+- If the resolved research path does not exist, create it with this skeleton, localized to `artifact_language` before saving:
 
 ```markdown
 # Research
@@ -227,7 +270,7 @@ Next step:
 ```
 
 - Update the `Updated:` timestamp
-- Replace only the content inside `aif:active-summary:start/end`
+- Replace only the content inside `aif:active-summary:start/end`, written in `artifact_language`
 - If user selected option (1), append a new session entry just before `<!-- aif:sessions:end -->`:
 
 ```markdown

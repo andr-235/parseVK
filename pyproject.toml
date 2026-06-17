@@ -8,6 +8,8 @@ testpaths = [
   "services/tasks-service/tests",
   "services/vk-service/tests",
   "services/content-service/tests",
+  "services/telegram-service/tests",
+  "services/listings-service/tests",
 ]
 pythonpath = [
   "libs/py/common",
@@ -16,7 +18,13 @@ pythonpath = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = [".agents", ".codex", ".opencode"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
+<<<<<<< HEAD
 ignore = ["S101"]
+=======
+ignore = ["S101", "B008", "B017", "E402", "S105", "S106", "S107", "S110", "S310", "S608", "E501"]
+per-file-ignores = {"tests/*" = ["S105", "S106"]}
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da

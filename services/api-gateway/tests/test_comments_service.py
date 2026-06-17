@@ -11,9 +11,9 @@ from _service_path import use_service_path  # noqa: E402
 
 use_service_path()
 
-from app.clients.moderation.client import (  # noqa: E402
-    ModerationClientHTTPError,
-    ModerationClientUnavailableError,
+from app.clients.base import (  # noqa: E402
+    ServiceClientHTTPError,
+    ServiceClientUnavailableError,
 )
 from app.modules.comments.service import CommentsGatewayService  # noqa: E402
 
@@ -72,7 +72,7 @@ async def test_patch_read_status_uses_typed_client_payload_and_context():
         correlation_id="corr-1",
     )
 
-    assert result["isRead"] is False
+    assert result["is_read"] is False
     assert moderation_client.calls == [
         {
             "method": "PATCH",
@@ -90,7 +90,7 @@ async def test_patch_read_status_uses_typed_client_payload_and_context():
 async def test_get_comments_preserves_upstream_http_status():
     class FailingModerationClient:
         async def request(self, method: str, path: str, **kwargs):
-            raise ModerationClientHTTPError(status_code=409, detail={"detail": "conflict"})
+            raise ServiceClientHTTPError(service_name="Moderation", status_code=409, detail={"detail": "conflict"})
 
     service = CommentsGatewayService(
         moderation_client=FailingModerationClient(),
@@ -101,14 +101,14 @@ async def test_get_comments_preserves_upstream_http_status():
         await service.get_comments(page=1, limit=20)
 
     assert exc_info.value.status_code == 409
-    assert exc_info.value.detail == {"detail": "conflict"}
+    assert exc_info.value.detail == "conflict"
 
 
 @pytest.mark.asyncio
 async def test_get_comments_maps_unavailable_upstream_to_503():
     class UnavailableModerationClient:
         async def request(self, method: str, path: str, **kwargs):
-            raise ModerationClientUnavailableError("Moderation service is unavailable")
+            raise ServiceClientUnavailableError(service_name="Moderation")
 
     service = CommentsGatewayService(
         moderation_client=UnavailableModerationClient(),

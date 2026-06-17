@@ -1,7 +1,16 @@
+<<<<<<< HEAD
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.modules.admin_users.service import AdminUsersGatewayService, get_admin_users_gateway_service
 
+=======
+from app.modules.admin_users.service import (
+    AdminUsersGatewayService,
+    get_admin_users_gateway_service,
+)
+from fastapi import APIRouter, Depends, Request, Response
+
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 router = APIRouter(prefix="/api/v1/admin/users", tags=["admin-users"])
 
 

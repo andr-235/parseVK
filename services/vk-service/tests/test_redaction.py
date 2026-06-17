@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import os
 import sys
 import pytest
@@ -6,12 +7,28 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
+=======
+import sys
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _service_path import use_service_path
+
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 use_service_path()
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
+<<<<<<< HEAD
 from app.modules.vk_friends.service import VkFriendsExportService
 from app.modules.ok_friends.service import OkFriendsExportService
+=======
+from app.modules.ok_friends.service import OkFriendsExportService
+from app.modules.vk_friends.service import VkFriendsExportService
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 @pytest.fixture

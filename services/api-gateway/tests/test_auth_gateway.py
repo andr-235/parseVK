@@ -12,7 +12,11 @@ from _service_path import use_service_path
 
 use_service_path()
 
+<<<<<<< HEAD
 from app.clients.identity.schemas import IdentityAuthResponse, IdentityUser
+=======
+from app.clients.identity.schemas import IdentityUser
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.config import settings
 from app.main import create_app
 from app.modules.auth.router import get_auth_service

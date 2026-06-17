@@ -49,7 +49,7 @@ check_port() {
 
 echo "=== Checking port availability ==="
 
-check_port 3000 "API" true
+check_port 3002 "Gateway" true
 check_port 8080 "Frontend" true
 
 if [ $PORT_ERROR -eq 1 ]; then

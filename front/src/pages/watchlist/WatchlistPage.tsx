@@ -46,6 +46,10 @@ export function WatchlistPage() {
     if (selectedParam) {
       const id = parseInt(selectedParam, 10)
       if (!isNaN(id)) {
+<<<<<<< HEAD
+=======
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
         setSelectedAuthorId(id)
       }
     }
@@ -85,6 +89,10 @@ export function WatchlistPage() {
   // Синхронизация формы настроек с бэкендом
   useEffect(() => {
     if (settingsData) {
+<<<<<<< HEAD
+=======
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
       setFormTrackAllComments(settingsData.trackAllComments)
       setFormPollInterval(settingsData.pollIntervalMinutes)
       setFormMaxAuthors(settingsData.maxAuthors)

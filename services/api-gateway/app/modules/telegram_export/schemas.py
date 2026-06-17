@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 from pydantic import BaseModel, Field, ConfigDict
+=======
+from pydantic import BaseModel, ConfigDict, Field
+
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 class TelegramExportStartRequest(BaseModel):
     target: str = Field(..., description="Link, username or numeric ID of Telegram group/channel")

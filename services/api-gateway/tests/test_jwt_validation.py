@@ -1,5 +1,9 @@
 import sys
+<<<<<<< HEAD
 from datetime import datetime, timedelta, timezone
+=======
+from datetime import UTC, datetime, timedelta
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from pathlib import Path
 from uuid import uuid4
 
@@ -47,7 +51,11 @@ def key_pair():
 
 def make_token(**overrides):
     private_pem, jwks = key_pair()
+<<<<<<< HEAD
     now = datetime.now(timezone.utc)
+=======
+    now = datetime.now(UTC)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     claims = {
         "iss": "identity-service",
         "aud": "api-gateway",
@@ -88,7 +96,11 @@ def test_validate_access_token_rejects_invalid_claims(claim, value):
 
 
 def test_validate_access_token_rejects_expired_token():
+<<<<<<< HEAD
     token, jwks = make_token(exp=datetime.now(timezone.utc) - timedelta(minutes=1))
+=======
+    token, jwks = make_token(exp=datetime.now(UTC) - timedelta(minutes=1))
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
     with pytest.raises(ValueError):
         validate_access_token(token, jwks)

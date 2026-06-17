@@ -1,7 +1,12 @@
 from datetime import datetime
 from enum import Enum
 from typing import Any
+<<<<<<< HEAD
 from pydantic import BaseModel, ConfigDict, Field
+=======
+
+from pydantic import BaseModel, ConfigDict
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from pydantic.alias_generators import to_camel
 
 

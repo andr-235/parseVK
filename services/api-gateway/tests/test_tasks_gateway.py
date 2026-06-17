@@ -93,7 +93,7 @@ class FakeTasksClient:
     def __init__(self):
         self.last_user_id = None
 
-    async def request(self, method, path, *, user_id, request_id=None, correlation_id=None, json=None, params=None):
+    async def request(self, method, path, *, user_id, request_id=None, correlation_id=None, json=None, params=None, files=None):
         self.last_user_id = user_id
         return {"ok": True}
 

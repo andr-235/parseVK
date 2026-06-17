@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     app_name: str = "parseVK Identity Service"
     database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5434/parsevk_identity"
+        default="postgresql+asyncpg://postgres:postgres@localhost:54325/parsevk_identity"
     )
     admin_username: str = Field(default="admin")
     admin_password: str = Field(default="admin-change-me")

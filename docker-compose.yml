@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 services:
   db:
     image: postgres:16.14
@@ -19,6 +20,72 @@ services:
     networks:
       - backend
 
+=======
+name: parsevk
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+x-resources-app: &resources-app
+  deploy:
+    resources:
+      limits:
+        cpus: "1.0"
+        memory: 512M
+        pids: 100
+      reservations:
+        cpus: "0.25"
+        memory: 128M
+
+x-resources-db: &resources-db
+  deploy:
+    resources:
+      limits:
+        cpus: "2.0"
+        memory: 1G
+        pids: 200
+      reservations:
+        cpus: "0.5"
+        memory: 256M
+
+x-resources-redis: &resources-redis
+  deploy:
+    resources:
+      limits:
+        cpus: "0.5"
+        memory: 256M
+        pids: 50
+      reservations:
+        cpus: "0.25"
+        memory: 64M
+
+x-resources-kafka: &resources-kafka
+  deploy:
+    resources:
+      limits:
+        cpus: "1.0"
+        memory: 1G
+        pids: 200
+      reservations:
+        cpus: "0.5"
+        memory: 512M
+
+x-resources-mon: &resources-mon
+  deploy:
+    resources:
+      limits:
+        cpus: "0.5"
+        memory: 256M
+        pids: 100
+      reservations:
+        cpus: "0.25"
+        memory: 128M
+
+services:
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
   redis:
     image: redis:7.4.9-alpine
     restart: always
@@ -39,7 +106,7 @@ services:
     platform: linux/amd64
     restart: always
     ports:
-      - "127.0.0.1:5434:5432"
+      - "127.0.0.1:54325:5432"
     environment:
       POSTGRES_USER: ${IDENTITY_POSTGRES_USER:-identity}
       POSTGRES_PASSWORD: ${IDENTITY_POSTGRES_PASSWORD:-identity}
@@ -323,6 +390,63 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+<<<<<<< HEAD
+=======
+    networks:
+      - backend
+
+  listings-db:
+    image: postgres:16.14
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "127.0.0.1:54327:5432"
+    environment:
+      POSTGRES_USER: ${LISTINGS_POSTGRES_USER:-listings}
+      POSTGRES_PASSWORD: ${LISTINGS_POSTGRES_PASSWORD:-listings_dev_password_change_me}
+      POSTGRES_DB: ${LISTINGS_POSTGRES_DB:-listings}
+    volumes:
+      - listings_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  listings-migrate:
+    build:
+      context: .
+      dockerfile: services/listings-service/Dockerfile
+    restart: "no"
+    depends_on:
+      listings-db:
+        condition: service_healthy
+    environment:
+      LISTINGS_DATABASE_URL: ${LISTINGS_DATABASE_URL:-postgresql+asyncpg://listings:listings_dev_password_change_me@listings-db:5432/listings}
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - backend
+
+  listings-service:
+    build:
+      context: .
+      dockerfile: services/listings-service/Dockerfile
+    restart: always
+    depends_on:
+      listings-migrate:
+        condition: service_completed_successfully
+    environment:
+      LISTINGS_DATABASE_URL: ${LISTINGS_DATABASE_URL:-postgresql+asyncpg://listings:listings_dev_password_change_me@listings-db:5432/listings}
+      LISTINGS_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     networks:
       - backend
 
@@ -381,6 +505,43 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+<<<<<<< HEAD
+=======
+    networks:
+      - backend
+
+  telegram-db:
+    image: postgres:16.14
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "127.0.0.1:54328:5432"
+    environment:
+      POSTGRES_USER: ${TELEGRAM_POSTGRES_USER:-telegram_service}
+      POSTGRES_PASSWORD: ${TELEGRAM_POSTGRES_PASSWORD:-telegram_dev_password_change_me}
+      POSTGRES_DB: ${TELEGRAM_POSTGRES_DB:-telegram_service}
+    volumes:
+      - telegram_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  telegram-migrate:
+    build:
+      context: .
+      dockerfile: services/telegram-service/Dockerfile
+    restart: "no"
+    depends_on:
+      telegram-db:
+        condition: service_healthy
+    environment:
+      TELEGRAM_SERVICE_DATABASE_URL: ${TELEGRAM_SERVICE_DATABASE_URL:-postgresql+asyncpg://telegram_service:telegram_dev_password_change_me@telegram-db:5432/telegram_service}
+    command: ["alembic", "upgrade", "head"]
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     networks:
       - backend
 
@@ -389,7 +550,14 @@ services:
       context: .
       dockerfile: services/telegram-service/Dockerfile
     restart: always
+<<<<<<< HEAD
+=======
+    depends_on:
+      telegram-migrate:
+        condition: service_completed_successfully
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     environment:
+      TELEGRAM_SERVICE_DATABASE_URL: ${TELEGRAM_SERVICE_DATABASE_URL:-postgresql+asyncpg://telegram_service:telegram_dev_password_change_me@telegram-db:5432/telegram_service}
       TELEGRAM_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       VPN_SERVICE_TELEGRAM_URL: ${VPN_SERVICE_TELEGRAM_URL:-}
       TELEGRAM_API_ID: ${TELEGRAM_API_ID:-}
@@ -420,6 +588,8 @@ services:
         condition: service_healthy
       content-service:
         condition: service_healthy
+      listings-service:
+        condition: service_healthy
       moderation-service:
         condition: service_healthy
       telegram-service:
@@ -428,6 +598,7 @@ services:
       GATEWAY_IDENTITY_BASE_URL: http://identity-service:8000
       GATEWAY_TASKS_BASE_URL: http://tasks-service:8000
       GATEWAY_CONTENT_BASE_URL: http://content-service:8000
+      GATEWAY_LISTINGS_BASE_URL: http://listings-service:8000
       GATEWAY_MODERATION_BASE_URL: http://moderation-service:8000
       GATEWAY_TELEGRAM_SERVICE_BASE_URL: http://telegram-service:8000
       GATEWAY_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
@@ -447,6 +618,7 @@ services:
       - backend
       - frontend
 
+<<<<<<< HEAD
   db_backup:
     build:
       context: ./docker/db-backup
@@ -474,6 +646,8 @@ services:
     networks:
       - backend
 
+=======
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
   frontend:
     build:
       context: .
@@ -630,9 +804,6 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
-    external: true
-    name: parsevk_postgres_data
   postgres_backups:
     name: parsevk_postgres_backups
   identity_postgres_data:
@@ -647,6 +818,10 @@ volumes:
     name: parsevk_moderation_postgres_data
   im_postgres_data:
     name: parsevk_im_postgres_data
+  listings_postgres_data:
+    name: parsevk_listings_postgres_data
+  telegram_postgres_data:
+    name: parsevk_telegram_postgres_data
   prometheus_data:
     name: parsevk_prometheus_data
   grafana_data:

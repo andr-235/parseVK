@@ -1,4 +1,5 @@
 import logging
+<<<<<<< HEAD
 import httpx
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
@@ -15,6 +16,22 @@ from app.modules.watchlist.schemas import (
     UpdateWatchlistAuthorSchema,
 )
 
+=======
+from datetime import UTC, datetime
+
+import httpx
+from app.core.config import settings
+from app.db.models import ModerationComment, WatchlistAuthor, WatchlistSettings
+from app.modules.watchlist.schemas import (
+    UpdateWatchlistAuthorSchema,
+    WatchlistSettingsUpdateSchema,
+)
+from fastapi import HTTPException, status
+from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 logger = logging.getLogger("moderation-service.watchlist")
 DEFAULT_SETTINGS_ID = 1
 
@@ -197,7 +214,11 @@ class WatchlistService:
             update_stmt = (
                 update(ModerationComment)
                 .where(ModerationComment.id == source_comment_id)
+<<<<<<< HEAD
                 .values(watchlist_author_id=author.id, source="WATCHLIST", updated_at=datetime.now(timezone.utc))
+=======
+                .values(watchlist_author_id=author.id, source="WATCHLIST", updated_at=datetime.now(UTC))
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
             )
             await self.session.execute(update_stmt)
             await self.session.commit()
@@ -219,7 +240,11 @@ class WatchlistService:
             if new_status == "ACTIVE":
                 author.monitoring_stopped_at = None
             elif new_status == "STOPPED":
+<<<<<<< HEAD
                 author.monitoring_stopped_at = datetime.now(timezone.utc)
+=======
+                author.monitoring_stopped_at = datetime.now(UTC)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
             await self.session.commit()
             await self.session.refresh(author)
@@ -281,7 +306,11 @@ class WatchlistService:
             return 0
 
         # Mark last checked
+<<<<<<< HEAD
         now_time = datetime.now(timezone.utc)
+=======
+        now_time = datetime.now(UTC)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
         for author in active_authors:
             author.last_checked_at = now_time
 
@@ -345,7 +374,11 @@ class WatchlistService:
                     continue
 
                 for comment in comments:
+<<<<<<< HEAD
                     comment_date = datetime.fromtimestamp(comment["date"], timezone.utc)
+=======
+                    comment_date = datetime.fromtimestamp(comment["date"], UTC)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
                     if not latest_activity or comment_date > latest_activity:
                         latest_activity = comment_date
 
@@ -353,7 +386,11 @@ class WatchlistService:
                     external_key = f"{owner_id}:{post_id}:{vk_comment_id}"
 
                     # Upsert comment into moderation_comments with source="WATCHLIST" and watchlist_author_id
+<<<<<<< HEAD
                     now = datetime.now(timezone.utc)
+=======
+                    now = datetime.now(UTC)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
                     stmt = insert(ModerationComment).values(
                         external_key=external_key,
                         post_external_key=post_key,
@@ -393,7 +430,11 @@ class WatchlistService:
             )
         finally:
             # Update database status fields
+<<<<<<< HEAD
             author.last_checked_at = datetime.now(timezone.utc)
+=======
+            author.last_checked_at = datetime.now(UTC)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
             if new_comments_count > 0:
                 author.found_comments_count = (author.found_comments_count or 0) + new_comments_count
             if latest_activity and (not author.last_activity_at or latest_activity > author.last_activity_at):

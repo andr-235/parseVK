@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import logging
 import asyncio
 import uuid
@@ -14,6 +15,24 @@ from app.modules.telegram_service.schemas import (
     TelegramJobDetailResponse,
     TelegramJobState,
     TelegramJobLogEntry
+=======
+import asyncio
+import io
+import logging
+import random
+import uuid
+
+from openpyxl import Workbook
+from openpyxl.styles import Font
+
+from app.modules.telegram_service.client import TelegramApiClient
+from app.modules.telegram_service.repository import TelegramServiceRepository
+from app.modules.telegram_service.schemas import (
+    TelegramExportStartResponse,
+    TelegramJobDetailResponse,
+    TelegramJobLogEntry,
+    TelegramJobState,
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 )
 
 logger = logging.getLogger("telegram-service.service")
@@ -115,6 +134,10 @@ class TelegramServiceService:
                 await self.repo.add_log(job_id, "success", "Успешное подключение. Запущено прослушивание новых сообщений в реальном времени.")
 
                 from telethon import events
+<<<<<<< HEAD
+=======
+
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
                 from app.modules.telegram_service.client import resolve_target
 
                 resolved_target = None

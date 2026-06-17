@@ -6,7 +6,22 @@ from _service_path import use_service_path
 
 use_service_path()
 
+<<<<<<< HEAD
 from app.db.models import OutboxEvent, ProcessedEvent, VkAuthor, VkComment, VkGroup, VkPost, VkTaskRun, VkFriendsExportJob, VkFriendsJobLog, VkFriendsRecord
+=======
+from app.db.models import (
+    OutboxEvent,
+    ProcessedEvent,
+    VkAuthor,
+    VkComment,
+    VkFriendsExportJob,
+    VkFriendsJobLog,
+    VkFriendsRecord,
+    VkGroup,
+    VkPost,
+    VkTaskRun,
+)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 def constraint_names(model) -> set[str]:

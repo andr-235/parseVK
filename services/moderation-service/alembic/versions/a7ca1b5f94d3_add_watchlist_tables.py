@@ -5,6 +5,7 @@ Revises: 8c89edf76b23
 Create Date: 2026-05-24 16:26:47.698445
 
 """
+<<<<<<< HEAD
 from typing import Sequence, Union
 
 from alembic import op
@@ -16,6 +17,18 @@ revision: str = 'a7ca1b5f94d3'
 down_revision: Union[str, None] = '8c89edf76b23'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
+=======
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision: str = 'a7ca1b5f94d3'
+down_revision: str | None = '8c89edf76b23'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 def upgrade() -> None:

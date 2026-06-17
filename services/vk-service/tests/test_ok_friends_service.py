@@ -1,13 +1,22 @@
+<<<<<<< HEAD
 import os
 import sys
 import uuid
 import pytest
 from unittest.mock import AsyncMock, patch
 from pathlib import Path
+=======
+import sys
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+import pytest
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from httpx import ASGITransport, AsyncClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
+<<<<<<< HEAD
 use_service_path()
 
 from app.main import create_app
@@ -16,6 +25,15 @@ from app.db.session import SessionLocal, engine
 from app.db.models import OkFriendsExportJob, OkFriendsJobLog, OkFriendsRecord
 from app.modules.ok_friends.service import OkFriendsExportService
 from app.modules.ok_friends.schemas import JobStatus
+=======
+
+use_service_path()
+
+from app.core.config import settings
+from app.main import create_app
+from app.modules.ok_friends.schemas import JobStatus
+from app.modules.ok_friends.service import OkFriendsExportService
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 @pytest.fixture

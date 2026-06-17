@@ -14,7 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[skip ci]') }}
     outputs:
+<<<<<<< HEAD
       frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
+=======
+      frontend_changed: ${{ steps.detect.outputs.frontend_changed }}
+      python_changed: ${{ steps.detect.outputs.python_changed }}
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     steps:
       - uses: actions/checkout@v6
         with:
@@ -35,10 +40,12 @@ jobs:
           fi
 
           FRONTEND_CHANGED=false
+          PYTHON_CHANGED=false
 
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
             echo "Base commit not found; treating as full change set"
             FRONTEND_CHANGED=true
+            PYTHON_CHANGED=true
           else
             CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
             if [ -z "$CHANGED_FILES" ]; then
@@ -51,9 +58,14 @@ jobs:
             if echo "$CHANGED_FILES" | grep -qE '^front/'; then
               FRONTEND_CHANGED=true
             fi
+
+            if echo "$CHANGED_FILES" | grep -qE '^(services/|libs/py/common/|pyproject\.toml)'; then
+              PYTHON_CHANGED=true
+            fi
           fi
 
           echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
+          echo "python_changed=$PYTHON_CHANGED" >> $GITHUB_OUTPUT
 
   lint:
     name: Lint Frontend
@@ -87,6 +99,7 @@ jobs:
         working-directory: front
         run: bun run build
 
+<<<<<<< HEAD
   test-frontend:
     name: Test Frontend
     runs-on: ubuntu-latest
@@ -102,3 +115,36 @@ jobs:
       - name: Run tests
         working-directory: front
         run: bun run test
+=======
+  ruff:
+    name: Ruff lint
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.python_changed == 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Run ruff check
+        run: uvx ruff check --output-format=github services/api-gateway/ libs/
+
+  pytest-libs:
+    name: Test common lib
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.python_changed == 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        working-directory: libs/py/common
+        run: uv sync --group dev
+      - name: Run tests
+        working-directory: libs/py/common
+        run: uv run pytest -v
+
+
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da

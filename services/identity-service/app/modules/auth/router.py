@@ -1,8 +1,11 @@
 from uuid import UUID
 
+<<<<<<< HEAD
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+=======
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.config import settings
 from app.core.jwt import build_jwks
 from app.core.security import require_internal_token
@@ -18,6 +21,11 @@ from app.modules.auth.schemas import (
 )
 from app.modules.auth.service import AuthError, AuthResult, AuthService, BadAuthRequest
 from app.modules.users.repository import UsersRepository
+<<<<<<< HEAD
+=======
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 router = APIRouter()
 

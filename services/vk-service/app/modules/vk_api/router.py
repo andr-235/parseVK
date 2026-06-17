@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from datetime import datetime, timezone
 import re
 import httpx
@@ -6,6 +7,16 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+=======
+import re
+from datetime import UTC, datetime
+
+import httpx
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.vk_api.client import VkApiClient
@@ -121,7 +132,7 @@ async def save_single_group(
     await svc.save_group(group_data, correlation_id=x_correlation_id)
 
     # 4. Формируем IGroupResponse
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     return {
         "id": group_data["id"],
         "vkId": group_data["id"],

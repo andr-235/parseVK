@@ -5,10 +5,16 @@ from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
+<<<<<<< HEAD
 from app.modules.moderation.router import router as moderation_router
 from app.modules.photo_analysis.router import router as photo_analysis_router
 from app.modules.moderation.consumer import ProjectionConsumer
 
+=======
+from app.modules.moderation.consumer import ProjectionConsumer
+from app.modules.moderation.router import router as moderation_router
+from app.modules.photo_analysis.router import router as photo_analysis_router
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 @asynccontextmanager
@@ -58,9 +64,16 @@ def create_app() -> FastAPI:
 
     @app.get("/ready")
     async def ready() -> dict[str, str]:
+<<<<<<< HEAD
         from app.db.session import engine
         from sqlalchemy import text
         from fastapi import HTTPException
+=======
+        from fastapi import HTTPException
+        from sqlalchemy import text
+
+        from app.db.session import engine
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))

@@ -63,6 +63,7 @@ main() {
 
   check_registry_reachability "https://registry-1.docker.io/v2/" "Docker Hub"
   check_registry_reachability "https://ghcr.io/v2/" "GHCR"
+  check_registry_reachability "https://pypi.org/simple/uv/" "PyPI"
 
   log_info "Production preflight completed successfully"
 }

@@ -1,7 +1,13 @@
+<<<<<<< HEAD
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.moderation.crud_service import CONSUMER_NAME, ModerationCrudService
 from app.modules.moderation.schemas import VkEvent
+=======
+from app.modules.moderation.crud_service import ModerationCrudService
+from app.modules.moderation.schemas import VkEvent
+from sqlalchemy.ext.asyncio import AsyncSession
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class ModerationService:

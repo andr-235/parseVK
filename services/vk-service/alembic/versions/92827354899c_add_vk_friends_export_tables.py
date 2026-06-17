@@ -5,17 +5,30 @@ Revises: 20260508_0001
 Create Date: 2026-05-25 09:58:05.156891
 
 """
+<<<<<<< HEAD
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+=======
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+from alembic import op
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '92827354899c'
+<<<<<<< HEAD
 down_revision: Union[str, None] = '20260508_0001'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
+=======
+down_revision: str | None = '20260508_0001'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 def upgrade() -> None:

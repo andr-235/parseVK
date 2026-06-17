@@ -21,7 +21,12 @@ Ref: FASTAPI-MIG-010B / docs/FASTAPI_MIG_010_FRIENDS_EXPORT_INVENTORY.md
 
 from __future__ import annotations
 
+<<<<<<< HEAD
 from typing import Any, AsyncIterator, Protocol, runtime_checkable
+=======
+from collections.abc import AsyncIterator
+from typing import Any, Protocol, runtime_checkable
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 from app.modules.friends_export.models import (
     FriendsExportStartResponse,

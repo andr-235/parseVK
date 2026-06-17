@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from datetime import datetime, timezone
+=======
+from datetime import UTC, datetime
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
@@ -16,7 +20,11 @@ ROLE_USER = "user"
 
 
 def utc_now() -> datetime:
+<<<<<<< HEAD
     return datetime.now(timezone.utc)
+=======
+    return datetime.now(UTC)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class User(Base):

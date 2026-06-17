@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import logging
 from typing import Annotated, Any
 from app.modules.content.service import (
@@ -286,3 +287,13 @@ async def verify_author(
 ):
     return await service.forward(request, "PATCH", f"/internal/content/authors/{vk_author_id}/verify")
 
+=======
+from app.modules.content.groups_router import groups_router
+from app.modules.content.items_router import items_router
+from app.modules.content.service import get_content_gateway_service  # noqa: F401
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/api/v1/content", tags=["content"])
+router.include_router(groups_router)
+router.include_router(items_router)
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da

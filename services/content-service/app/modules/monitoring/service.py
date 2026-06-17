@@ -1,7 +1,11 @@
 import logging
+<<<<<<< HEAD
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
+=======
+from datetime import UTC, datetime
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 from app.modules.monitoring.repository import MonitoringRepository
 from app.modules.monitoring.schemas import (
@@ -9,6 +13,10 @@ from app.modules.monitoring.schemas import (
     MonitoringGroupResponse,
     MonitoringGroupUpdate,
 )
+<<<<<<< HEAD
+=======
+from sqlalchemy.ext.asyncio import AsyncSession
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +54,11 @@ class MonitoringService:
             "items": items,
             "total": len(items),
             "usedKeywords": active_keywords,
+<<<<<<< HEAD
             "lastSyncAt": datetime.now(timezone.utc).isoformat(),
+=======
+            "lastSyncAt": datetime.now(UTC).isoformat(),
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
             "page": page,
             "limit": limit,
             "hasMore": has_more,

@@ -1,11 +1,19 @@
 import sys
+<<<<<<< HEAD
 import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+=======
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+import pytest
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from fastapi import HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
+<<<<<<< HEAD
 use_service_path()
 
 from app.core.config import settings
@@ -15,6 +23,17 @@ from app.modules.vk_friends.adapters import VkFriendsAdapter
 from app.modules.ok_friends.adapters import OkFriendsAdapter
 from app.modules.friends_export.service import FriendsExportService
 from app.modules.friends_export.models import JobStatus
+=======
+
+use_service_path()
+
+from app.clients.base import ServiceClientHTTPError
+from app.core.config import settings
+from app.core.redaction import redact_secrets
+from app.modules.friends_export.service import FriendsExportService
+from app.modules.ok_friends.adapters import OkFriendsAdapter
+from app.modules.vk_friends.adapters import VkFriendsAdapter
+>>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 @pytest.fixture
@@ -44,7 +63,8 @@ async def test_vk_adapter_redacts_errors_and_logs():
     client_mock = AsyncMock()
     
     # Setup HTTP error containing secrets
-    client_mock.request.side_effect = VkServiceClientHTTPError(
+    client_mock.request.side_effect = ServiceClientHTTPError(
+        service_name="VkService",
         status_code=400,
         detail="Invalid access_token=secret_vk_token_here in request"
     )
@@ -116,7 +136,8 @@ async def test_ok_adapter_redacts_errors_and_logs():
     client_mock = AsyncMock()
     
     # Setup HTTP error containing secrets
-    client_mock.request.side_effect = VkServiceClientHTTPError(
+    client_mock.request.side_effect = ServiceClientHTTPError(
+        service_name="VkService",
         status_code=400,
         detail="Invalid access_token=secret_ok_token_here in request"
     )
