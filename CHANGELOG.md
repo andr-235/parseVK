@@ -1,3 +1,10 @@
+## [0.33.9](https://github.com/andr-235/parseVK/compare/v0.33.8...v0.33.9) (2026-06-17)
+
+
+### Bug Fixes
+
+* **deploy:** stop all containers before deploy to release ports ([d5b7ab0](https://github.com/andr-235/parseVK/commit/d5b7ab0413a8639185d84b6bc420a98d7236513b))
+
 ## [0.33.8](https://github.com/andr-235/parseVK/compare/v0.33.7...v0.33.8) (2026-06-17)
 
 
