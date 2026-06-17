@@ -708,7 +708,6 @@ networks:
 
 volumes:
   postgres_data:
-    external: true
     name: parsevk_postgres_data
   postgres_backups:
     name: parsevk_postgres_backups
