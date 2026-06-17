@@ -1,3 +1,10 @@
+## [0.33.2](https://github.com/andr-235/parseVK/compare/v0.33.1...v0.33.2) (2026-06-17)
+
+
+### Bug Fixes
+
+* **deploy:** add im-service files and build pipeline ([ca7269f](https://github.com/andr-235/parseVK/commit/ca7269fb0ddb4cab8b9400f57b3b0d743e9eb172))
+
 ## [0.33.1](https://github.com/andr-235/parseVK/compare/v0.33.0...v0.33.1) (2026-06-17)
 
 
