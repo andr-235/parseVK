@@ -1,3 +1,10 @@
+## [0.33.10](https://github.com/andr-235/parseVK/compare/v0.33.9...v0.33.10) (2026-06-17)
+
+
+### Bug Fixes
+
+* **identity-db:** change host port from 5434 to 5436 ([68db1d2](https://github.com/andr-235/parseVK/commit/68db1d288bada15c268130b94d3e89c9ba256fd8))
+
 ## [0.33.9](https://github.com/andr-235/parseVK/compare/v0.33.8...v0.33.9) (2026-06-17)
 
 
