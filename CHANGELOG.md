@@ -1,3 +1,10 @@
+## [0.33.12](https://github.com/andr-235/parseVK/compare/v0.33.11...v0.33.12) (2026-06-17)
+
+
+### Bug Fixes
+
+* **api-gateway:** remove unused IdentityClientError import ([74bd3a0](https://github.com/andr-235/parseVK/commit/74bd3a09033de72c3285b53f11a58403574cce53))
+
 ## [0.33.11](https://github.com/andr-235/parseVK/compare/v0.33.10...v0.33.11) (2026-06-17)
 
 
