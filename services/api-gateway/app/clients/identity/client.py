@@ -1,7 +1,6 @@
 import httpx
 from app.clients.identity.methods import (
     IdentityClientMethods,
-    IdentityClientError,
     IdentityClientHTTPError,
     IdentityClientUnavailableError,
 )
