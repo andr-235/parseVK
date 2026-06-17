@@ -14,7 +14,6 @@ from app.modules.outbox.service import OutboxService
 from app.modules.tasks.events import TaskEvent
 from app.modules.tasks.service import TaskEventsHandler, TaskEventsRepository
 
-
 logger = logging.getLogger(__name__)
 
 

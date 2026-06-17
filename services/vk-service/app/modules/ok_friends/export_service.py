@@ -2,12 +2,10 @@ import logging
 import uuid
 from typing import Any
 
-from app.modules.ok_friends.schemas import JobStatus
 from app.modules.ok_friends.exporter import (
     EXPORT_BATCH_SIZE,
     flatten_user_info,
 )
-from app.modules.ok_api.client import OkApiClient
 
 logger = logging.getLogger(__name__)
 

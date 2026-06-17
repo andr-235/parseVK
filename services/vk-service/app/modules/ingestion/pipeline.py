@@ -1,7 +1,8 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
-from typing import Any, Callable
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 import sqlalchemy.exc
@@ -11,7 +12,7 @@ from app.modules.ingestion.collector import IngestionResult
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class IngestionPipeline:

@@ -1,8 +1,16 @@
-from datetime import datetime, timezone
-from uuid import UUID as PyUUID, uuid4
+from datetime import UTC, datetime
+from uuid import UUID as PyUUID
+from uuid import uuid4
 
 from sqlalchemy import (
-    BigInteger, CheckConstraint, DateTime, Index, Integer, String, Text, UniqueConstraint, text,
+    BigInteger,
+    DateTime,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -11,7 +19,7 @@ from app.db.base import Base
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class ImMessage(Base):

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -69,7 +69,7 @@ async def process_chat_messages(
             "text": msg_text,
             "content_url": None,
             "content_type": None,
-            "created_at": datetime.fromtimestamp(ts, tz=timezone.utc) if ts else None,
+            "created_at": datetime.fromtimestamp(ts, tz=UTC) if ts else None,
             "raw": msg,
         })
         if emit_message_collected_fn:

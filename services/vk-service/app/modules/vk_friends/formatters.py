@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 FRIEND_FIELDS = [
@@ -117,7 +117,7 @@ def _to_iso_string(val: Any) -> str | None:
     if ts is None:
         return None
     try:
-        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        dt = datetime.fromtimestamp(ts, tz=UTC)
         return dt.isoformat().replace("+00:00", "Z")
     except (ValueError, OSError, OverflowError):
         return None

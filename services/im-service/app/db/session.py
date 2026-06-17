@@ -1,5 +1,5 @@
-from collections.abc import AsyncGenerator
 import sys
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool

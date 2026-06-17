@@ -9,8 +9,8 @@ from app.modules.whappi.models import (
     MAX_MESSAGES_ENDPOINT,
     WAPPI_CHATS_ENDPOINT,
     WAPPI_MESSAGES_ENDPOINT,
-    WappiMessage,
     WappiChat,
+    WappiMessage,
 )
 
 

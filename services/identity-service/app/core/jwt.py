@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta, timezone
+from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
-from typing import Sequence
 from uuid import uuid4
 
 import jwt
@@ -50,7 +50,7 @@ def _normalize_pem(value: str) -> str:
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def get_private_key_pem(current_settings: Settings = settings) -> str:
@@ -77,7 +77,7 @@ def issue_access_token(
     issued_at = now or _utc_now()
 
     if issued_at.tzinfo is None:
-        issued_at = issued_at.replace(tzinfo=timezone.utc)
+        issued_at = issued_at.replace(tzinfo=UTC)
 
     expires_at = issued_at + timedelta(minutes=current_settings.jwt_access_ttl_minutes)
 

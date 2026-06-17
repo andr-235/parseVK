@@ -1,10 +1,11 @@
 import os
 from typing import Any
+
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from app.modules.ok_friends.formatters import to_russian_header, format_cell_value
+from app.modules.ok_friends.formatters import format_cell_value, to_russian_header
 
 EXPORT_BATCH_SIZE = 1000
 EXPORT_DIR = os.path.abspath(os.path.join(os.getcwd(), ".temp", "ok-friends"))

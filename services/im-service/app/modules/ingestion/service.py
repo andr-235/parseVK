@@ -1,12 +1,12 @@
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from app.core.config import settings
 from app.clients.tasks.client import TasksClient
-from app.modules.whappi.client import WappiClient, MaxApiClient
+from app.core.config import settings
 from app.modules.ingestion.processor import process_chat_messages
+from app.modules.whappi.client import MaxApiClient, WappiClient
 
 logger = logging.getLogger(__name__)
 
@@ -82,10 +82,10 @@ class IngestionService:
                     logger.error("Error processing chat %s for %s: %s", chat_id, messenger, sanitized)
 
             task_run.status = "done"
-            task_run.finished_at = datetime.now(timezone.utc)
+            task_run.finished_at = datetime.now(UTC)
             task_run.processed_items = result.processed_items
             task_run.total_items = result.processed_items
-            task_run.updated_at = datetime.now(timezone.utc)
+            task_run.updated_at = datetime.now(UTC)
 
             await self.tasks_client.complete_execution(
                 task_run.task_id, task_run.run_id,
@@ -103,9 +103,9 @@ class IngestionService:
             sanitized = str(exc)
             logger.exception("Task execution failed for task_id=%s", task_run.task_id)
             task_run.status = "failed"
-            task_run.finished_at = datetime.now(timezone.utc)
+            task_run.finished_at = datetime.now(UTC)
             task_run.last_error = sanitized
-            task_run.updated_at = datetime.now(timezone.utc)
+            task_run.updated_at = datetime.now(UTC)
 
             if self.outbox:
                 await self.outbox.emit_task_failed(

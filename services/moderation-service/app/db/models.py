@@ -1,7 +1,17 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID as PyUUID
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Index, String, Text, UniqueConstraint, ForeignKey, Integer
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -9,7 +19,7 @@ from app.db.base import Base
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class ModerationComment(Base):

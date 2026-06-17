@@ -1,11 +1,10 @@
 import uuid
 from typing import Any
 
-from app.db.session import SessionLocal
 from app.db.models import OkFriendsExportJob, OkFriendsJobLog
+from app.modules.ok_api.client import OkApiClient
 from app.modules.ok_friends.crud_service import OkFriendsCrudService
 from app.modules.ok_friends.export_service import OkFriendsExportJobRunner
-from app.modules.ok_api.client import OkApiClient
 
 
 class OkFriendsExportService:

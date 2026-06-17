@@ -1,8 +1,9 @@
 import hashlib
 import logging
-import httpx
 from typing import Any
 from urllib.parse import urlencode
+
+import httpx
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets

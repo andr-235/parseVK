@@ -1,6 +1,7 @@
 import logging
 import uuid
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from app.modules.vk_friends.exporter import EXPORT_BATCH_SIZE, map_vk_user_to_flat_dto
 

@@ -1,15 +1,14 @@
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.photo_analysis.schemas import (
     AnalyzePhotosSchema,
+    BulkSummariesRequestSchema,
     PhotoAnalysisListSchema,
     PhotoAnalysisSummarySchema,
-    BulkSummariesRequestSchema,
 )
 from app.modules.photo_analysis.service import PhotoAnalysisService
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(
     prefix="/internal/photo-analysis",

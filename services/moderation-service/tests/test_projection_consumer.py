@@ -1,8 +1,7 @@
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4, UUID
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 
@@ -13,7 +12,7 @@ use_service_path()
 
 from app.db.models import ModerationComment, ProcessedEvent
 from app.modules.moderation.schemas import VkEvent
-from app.modules.moderation.service import ModerationService, CONSUMER_NAME
+from app.modules.moderation.service import CONSUMER_NAME, ModerationService
 
 
 @pytest.fixture

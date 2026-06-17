@@ -14,9 +14,10 @@ def create_app() -> FastAPI:
 
     @app.get("/ready")
     async def ready() -> dict[str, str]:
-        from app.db.session import engine
-        from sqlalchemy import text
         from fastapi import HTTPException
+        from sqlalchemy import text
+
+        from app.db.session import engine
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))

@@ -1,5 +1,6 @@
 import os
 from typing import Any
+
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter

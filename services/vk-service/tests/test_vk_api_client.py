@@ -1,10 +1,12 @@
 import sys
 from pathlib import Path
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
+
 use_service_path()
 
 from app.modules.vk_api.client import VkApiClient

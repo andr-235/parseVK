@@ -1,23 +1,22 @@
 import logging
 
-from sqlalchemy import select, delete, and_
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.ext.asyncio import AsyncSession
-
 import httpx
 from app.core.config import settings
 from app.db.models import PhotoAnalysis
+from app.modules.photo_analysis.api_client import PhotoAnalysisClient
+from app.modules.photo_analysis.mappers import (
+    build_summary_dto,
+    map_item_to_schema,
+    utcnow,
+)
 from app.modules.photo_analysis.schemas import (
     AnalyzePhotosSchema,
     PhotoAnalysisListSchema,
     PhotoAnalysisSummarySchema,
 )
-from app.modules.photo_analysis.api_client import PhotoAnalysisClient
-from app.modules.photo_analysis.mappers import (
-    utcnow,
-    map_item_to_schema,
-    build_summary_dto,
-)
+from sqlalchemy import and_, delete, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("moderation-service.photo-analysis.service")
 

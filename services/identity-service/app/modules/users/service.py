@@ -2,12 +2,11 @@ import random
 import string
 from uuid import UUID
 
-from fastapi import HTTPException, status
-
 from app.core.security import hash_password
 from app.db.models import User
 from app.modules.users.repository import UsersRepository
 from app.modules.users.schemas import UpdateUserRequest, UserDto
+from fastapi import HTTPException, status
 
 
 class UsersService:

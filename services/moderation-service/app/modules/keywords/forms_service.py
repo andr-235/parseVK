@@ -1,12 +1,12 @@
 import logging
 from collections.abc import Callable, Coroutine
-from fastapi import BackgroundTasks, HTTPException, status
-from sqlalchemy import select, delete
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.db.models import Keyword, KeywordForm, KeywordFormExclusion
 from app.modules.keywords.morphology import KeywordMorphologyService, normalize_for_keyword_match
+from fastapi import BackgroundTasks, HTTPException, status
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 logger = logging.getLogger(__name__)
 

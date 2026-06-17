@@ -31,9 +31,9 @@ async def lifespan(app: FastAPI):
         await consumer.stop()
 
 
+from app.modules.ok_friends.router import router as ok_friends_router
 from app.modules.vk_api.router import router as vk_router
 from app.modules.vk_friends.router import router as vk_friends_router
-from app.modules.ok_friends.router import router as ok_friends_router
 
 
 def create_app() -> FastAPI:
@@ -45,9 +45,10 @@ def create_app() -> FastAPI:
 
     @app.get("/ready")
     async def ready() -> dict[str, str]:
-        from app.db.session import engine
-        from sqlalchemy import text
         from fastapi import HTTPException
+        from sqlalchemy import text
+
+        from app.db.session import engine
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))

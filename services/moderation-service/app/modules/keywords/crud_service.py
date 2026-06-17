@@ -1,12 +1,11 @@
 import logging
 from collections.abc import Callable, Coroutine
-from fastapi import BackgroundTasks, HTTPException, status
-from sqlalchemy import select, delete, update
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import or_, func
 
 from app.db.models import Keyword, ModerationComment
 from app.modules.keywords.morphology import normalize_for_keyword_match
+from fastapi import BackgroundTasks, HTTPException, status
+from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 

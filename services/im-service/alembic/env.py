@@ -3,10 +3,9 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy.ext.asyncio import create_async_engine
-
 from app.db.base import Base
 from app.db.models import *  # noqa: F403
+from sqlalchemy.ext.asyncio import create_async_engine
 
 config = context.config
 db_url = os.environ.get("IM_SERVICE_DATABASE_URL", config.get_main_option("sqlalchemy.url"))

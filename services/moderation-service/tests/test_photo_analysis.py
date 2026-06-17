@@ -1,10 +1,12 @@
-import pytest
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
+
 use_service_path()
 
 import app.modules.photo_analysis.service as photo_analysis_service

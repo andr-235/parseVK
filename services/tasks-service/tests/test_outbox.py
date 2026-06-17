@@ -1,5 +1,5 @@
-import sys
 import asyncio
+import sys
 from pathlib import Path
 
 import pytest
@@ -91,8 +91,9 @@ async def test_outbox_loop_continues_after_publish_error(monkeypatch):
 @pytest.mark.anyio
 async def test_tasks_service_outbox_events_contract():
     from unittest.mock import AsyncMock, MagicMock
-    from app.modules.tasks.service import TasksService
+
     from app.modules.tasks.schemas import CreateParseTaskRequest
+    from app.modules.tasks.service import TasksService
     
     session = AsyncMock()
     service = TasksService(session)
