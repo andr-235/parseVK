@@ -1,18 +1,7 @@
-<<<<<<< HEAD
-import httpx
-from app.clients.identity.methods import (
-    IdentityClientMethods,
-    IdentityClientError,
-    IdentityClientHTTPError,
-    IdentityClientUnavailableError,
-)
-from app.clients.internal import InternalServiceClient
-=======
 import logging
 from typing import Any
 
 from app.clients.base import ServiceClient
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.config import settings
 
 logger = logging.getLogger("api-gateway.identity.client")
@@ -29,7 +18,7 @@ class IdentityClient(ServiceClient):
         )
 
     async def jwks(self) -> dict[str, Any]:
-        return await self.request("GET", "/.well-known/jwks.json")
+        return await self.request("GET", "/.well-known/jwks.json", user_id="")
 
     async def login(self, payload: Any, *, request_id: str | None = None, correlation_id: str | None = None) -> Any:
         from app.clients.identity.schemas import IdentityAuthResponse
