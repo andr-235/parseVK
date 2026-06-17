@@ -38,7 +38,6 @@ def create_app() -> FastAPI:
     async def ready() -> dict[str, str]:
         return {"status": "READY"}
 
-    from app.modules.metrics.router import router as metrics_router
     from app.modules.monitoring.router import router as monitoring_router
     from app.modules.watchlist.router import router as watchlist_router
 
@@ -57,7 +56,6 @@ def create_app() -> FastAPI:
     app.include_router(vk_friends_router)
     app.include_router(ok_friends_router)
     app.include_router(monitoring_router)
-    app.include_router(metrics_router)
 
     Instrumentator().instrument(app).expose(app)
 
