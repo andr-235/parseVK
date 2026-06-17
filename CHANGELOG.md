@@ -1,3 +1,10 @@
+## [0.33.3](https://github.com/andr-235/parseVK/compare/v0.33.2...v0.33.3) (2026-06-17)
+
+
+### Bug Fixes
+
+* **docker:** replace ghcr.io uv copy with pip install ([7dda8fe](https://github.com/andr-235/parseVK/commit/7dda8fe207ee08be3749bb5735ae737e1124c0a4))
+
 ## [0.33.2](https://github.com/andr-235/parseVK/compare/v0.33.1...v0.33.2) (2026-06-17)
 
 
