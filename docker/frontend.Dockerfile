@@ -33,7 +33,7 @@ FROM nginx:alpine
 
 RUN addgroup -g 1001 -S appuser && \
     adduser -S -u 1001 -G appuser appuser && \
-    chown -R appuser:appuser /var/cache/nginx /var/run /usr/share/nginx/html
+    chown -R appuser:appuser /var/cache/nginx /var/run /run /usr/share/nginx/html /etc/nginx/conf.d
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY docker/frontend.nginx.conf /etc/nginx/conf.d/default.conf
