@@ -9,7 +9,6 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 revision: str = "20260506_0001"
 down_revision: str | None = None
@@ -18,70 +17,69 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE EXTENSION IF NOT EXISTS citext")
+    op.execute(sa.text("CREATE EXTENSION IF NOT EXISTS citext"))
 
-    op.create_table(
-        "users",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("username", postgresql.CITEXT(), nullable=False),
-        sa.Column("email", postgresql.CITEXT(), nullable=True),
-        sa.Column("password_hash", sa.Text(), nullable=False),
-        sa.Column("role", sa.String(length=64), nullable=False),
-        sa.Column("is_active", sa.Boolean(), nullable=False),
-        sa.Column("is_superuser", sa.Boolean(), nullable=False),
-        sa.Column("password_changed_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("username", name="uq_users_username"),
-        sa.UniqueConstraint("email", name="uq_users_email"),
-    )
+    op.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS users (
+            id UUID NOT NULL,
+            username CITEXT NOT NULL,
+            email CITEXT,
+            password_hash TEXT NOT NULL,
+            role VARCHAR(64) NOT NULL,
+            is_active BOOLEAN NOT NULL,
+            is_superuser BOOLEAN NOT NULL,
+            password_changed_at TIMESTAMPTZ NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL,
+            updated_at TIMESTAMPTZ NOT NULL,
+            PRIMARY KEY (id),
+            CONSTRAINT uq_users_username UNIQUE (username),
+            CONSTRAINT uq_users_email UNIQUE (email)
+        )
+    """))
 
-    op.create_table(
-        "refresh_tokens",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("token_hash", sa.Text(), nullable=False),
-        sa.Column("token_family_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("replaced_by_token_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("user_agent_hash", sa.Text(), nullable=True),
-        sa.Column("ip_hash", sa.Text(), nullable=True),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.UniqueConstraint("token_hash", name="uq_refresh_tokens_token_hash"),
-    )
-    op.create_index("ix_refresh_tokens_user_id", "refresh_tokens", ["user_id"])
-    op.create_index("ix_refresh_tokens_family", "refresh_tokens", ["token_family_id"])
+    op.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS refresh_tokens (
+            id UUID NOT NULL,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token_hash TEXT NOT NULL,
+            token_family_id UUID NOT NULL,
+            replaced_by_token_id UUID,
+            revoked_at TIMESTAMPTZ,
+            expires_at TIMESTAMPTZ NOT NULL,
+            last_used_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL,
+            user_agent_hash TEXT,
+            ip_hash TEXT,
+            PRIMARY KEY (id),
+            CONSTRAINT uq_refresh_tokens_token_hash UNIQUE (token_hash)
+        )
+    """))
+    op.execute("CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id ON refresh_tokens (user_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_refresh_tokens_family ON refresh_tokens (token_family_id)")
 
-    op.create_table(
-        "outbox_events",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column("event_type", sa.String(length=255), nullable=False),
-        sa.Column("event_version", sa.Integer(), nullable=False),
-        sa.Column("aggregate_type", sa.String(length=255), nullable=False),
-        sa.Column("aggregate_id", sa.Text(), nullable=False),
-        sa.Column("correlation_id", sa.Text(), nullable=True),
-        sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("status", sa.String(length=32), nullable=False),
-        sa.Column("attempts", sa.Integer(), nullable=False),
-        sa.Column("next_attempt_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("locked_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("last_error", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-    )
-    op.create_index(
-        "ix_outbox_events_status_next_attempt",
-        "outbox_events",
-        ["status", "next_attempt_at"],
-    )
-    op.create_index(
-        "ix_outbox_events_aggregate",
-        "outbox_events",
-        ["aggregate_type", "aggregate_id"],
-    )
+    op.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS outbox_events (
+            id UUID NOT NULL,
+            event_type VARCHAR(255) NOT NULL,
+            event_version INTEGER NOT NULL,
+            aggregate_type VARCHAR(255) NOT NULL,
+            aggregate_id TEXT NOT NULL,
+            correlation_id TEXT,
+            payload JSONB NOT NULL,
+            status VARCHAR(32) NOT NULL,
+            attempts INTEGER NOT NULL,
+            next_attempt_at TIMESTAMPTZ NOT NULL,
+            locked_at TIMESTAMPTZ,
+            published_at TIMESTAMPTZ,
+            last_error TEXT,
+            created_at TIMESTAMPTZ NOT NULL,
+            PRIMARY KEY (id)
+        )
+    """))
+    op.execute("CREATE INDEX IF NOT EXISTS ix_outbox_events_status_next_attempt "
+               "ON outbox_events (status, next_attempt_at)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_outbox_events_aggregate "
+               "ON outbox_events (aggregate_type, aggregate_id)")
 
 
 def downgrade() -> None:
