@@ -9,6 +9,8 @@ UP_ARGS="${UP_ARGS:--d}"
 SERVICES=("$@")
 
 start_services() {
+  compose down --remove-orphans 2>/dev/null || true
+
   if [ "${#SERVICES[@]}" -gt 0 ]; then
     if compose up --remove-orphans ${UP_ARGS} "${SERVICES[@]}"; then
       log_info "Containers started successfully"
