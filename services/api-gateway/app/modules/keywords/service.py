@@ -53,7 +53,7 @@ class KeywordsGatewayService:
         try:
             text = content.decode("utf-8")
         except UnicodeDecodeError:
-            raise HTTPException(status_code=400, detail="File encoding must be UTF-8")
+            raise HTTPException(status_code=400, detail="File encoding must be UTF-8") from None
         return await self._request("POST", "/internal/moderation/keywords/upload-content", user_id=user_id, request_id=request_id, correlation_id=correlation_id, json={"content": text})
 
     async def update_keyword_category(self, id: int, payload: dict, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:

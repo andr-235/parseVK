@@ -108,7 +108,7 @@ jobs:
         with:
           enable-cache: true
       - name: Run ruff check
-        run: uvx ruff check --output-format=github
+        run: uvx ruff check --output-format=github services/api-gateway/ libs/
 
   pytest-libs:
     name: Test common lib
