@@ -2,19 +2,20 @@ import json
 from pathlib import PurePath
 from typing import Any
 
+from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
+from app.core.config import settings
+from app.core.security import bearer_token
+from app.core.utils import request_ids
+from app.modules.auth.router import get_auth_service
+from app.modules.auth.service import GatewayAuthService
 from fastapi import HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
 
-from app.clients.content.client import ContentClient, ContentClientHTTPError, ContentClientUnavailableError
-from app.core.config import settings
-from app.modules.auth.router import bearer_token, get_auth_service, request_ids
-from app.modules.auth.service import GatewayAuthService
-
 
 class ListingsGatewayService:
-    def __init__(self, content_client: ContentClient, auth_service: GatewayAuthService):
-        self.content_client = content_client
-        self.auth_service = auth_service
+    def __init__(self, client: ServiceClient | None = None, auth_service: GatewayAuthService | None = None):
+        self.client = client or ServiceClient(service_name="Content", base_url=settings.content_base_url, internal_token=settings.internal_service_token)
+        self.auth_service = auth_service or get_auth_service()
 
     async def list_listings(self, request: Request):
         return await self.forward_json(request, "GET", "/internal/content/listings", params=dict(request.query_params))
@@ -23,18 +24,11 @@ class ListingsGatewayService:
         claims = await self.claims(request)
         request_id, correlation_id = request_ids(request)
         try:
-            upstream = await self.content_client.raw_request(
-                "GET",
-                "/internal/content/listings/export",
-                user_id=str(claims["sub"]),
-                request_id=request_id,
-                correlation_id=correlation_id,
-                params=dict(request.query_params),
-            )
-        except ContentClientHTTPError as exc:
+            upstream = await self.client._internal.raw_request("GET", "/internal/content/listings/export", user_id=str(claims["sub"]), request_id=request_id, correlation_id=correlation_id, params=dict(request.query_params))
+        except ServiceClientHTTPError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        except ContentClientUnavailableError as exc:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Content service error") from exc
+        except ServiceClientUnavailableError:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Content service error") from None
 
         headers = {}
         for name in ("content-type", "content-disposition"):
@@ -44,12 +38,7 @@ class ListingsGatewayService:
         return Response(content=upstream.content, status_code=upstream.status_code, headers=headers)
 
     async def update_listing(self, listing_id: int, payload: dict[str, Any], request: Request):
-        return await self.forward_json(
-            request,
-            "PATCH",
-            f"/internal/content/listings/{listing_id}",
-            json=payload,
-        )
+        return await self.forward_json(request, "PATCH", f"/internal/content/listings/{listing_id}", json=payload)
 
     async def delete_listing(self, listing_id: int, request: Request) -> Response:
         await self.forward_json(request, "DELETE", f"/internal/content/listings/{listing_id}")
@@ -58,21 +47,12 @@ class ListingsGatewayService:
     async def import_json(self, payload: Any, request: Request):
         return await self.forward_json(request, "POST", "/internal/content/data/import", json=payload)
 
-    async def import_multipart(
-        self,
-        request: Request,
-        file: UploadFile,
-        source: str | None,
-        update_existing: bool | None,
-    ):
+    async def import_multipart(self, request: Request, file: UploadFile, source: str | None, update_existing: bool | None):
         try:
             payload = await self.parse_upload(file)
             normalized = self.normalize_payload(payload)
             if source is not None and source.strip():
-                normalized["listings"] = [
-                    {**item, "source": source.strip()} if isinstance(item, dict) else item
-                    for item in normalized["listings"]
-                ]
+                normalized["listings"] = [{**item, "source": source.strip()} if isinstance(item, dict) else item for item in normalized["listings"]]
             if update_existing is not None:
                 normalized["updateExisting"] = update_existing
             return await self.import_json(normalized, request)
@@ -88,12 +68,7 @@ class ListingsGatewayService:
         source = form.get("source")
         update_existing_raw = form.get("updateExisting")
         update_existing = parse_optional_bool(update_existing_raw)
-        return await self.import_multipart(
-            request,
-            file,
-            source if isinstance(source, str) else None,
-            update_existing,
-        )
+        return await self.import_multipart(request, file, source if isinstance(source, str) else None, update_existing)
 
     async def parse_upload(self, file: UploadFile):
         self.validate_filename(file.filename)
@@ -139,33 +114,16 @@ class ListingsGatewayService:
             return
         raise_bad_request("Поддерживаются только JSON-файлы", ["Invalid content type"])
 
-    async def forward_json(
-        self,
-        request: Request,
-        method: str,
-        path: str,
-        *,
-        params: dict | None = None,
-        json: Any | None = None,
-    ):
+    async def forward_json(self, request: Request, method: str, path: str, *, params: dict | None = None, json: Any | None = None):
         claims = await self.claims(request)
         request_id, correlation_id = request_ids(request)
         try:
-            return await self.content_client.request(
-                method,
-                path,
-                user_id=str(claims["sub"]),
-                request_id=request_id,
-                correlation_id=correlation_id,
-                params=params,
-                json=json,
-            )
-        except ContentClientHTTPError as exc:
-            if isinstance(exc.detail, dict) and "message" in exc.detail:
-                raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        except ContentClientUnavailableError as exc:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Content service error") from exc
+            return await self.client.request(method, path, user_id=str(claims["sub"]), request_id=request_id, correlation_id=correlation_id, params=params, json=json)
+        except ServiceClientHTTPError as exc:
+            detail = exc.detail.get("message", exc.detail) if isinstance(exc.detail, dict) and "message" in exc.detail else exc.detail
+            raise HTTPException(status_code=exc.status_code, detail=detail) from exc
+        except ServiceClientUnavailableError:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Content service error") from None
 
     async def claims(self, request: Request) -> dict[str, Any]:
         authorization = request.headers.get("Authorization")
@@ -180,7 +138,7 @@ def raise_bad_request(message: str, errors: list[str]):
 
 
 def get_listings_gateway_service() -> ListingsGatewayService:
-    return ListingsGatewayService(ContentClient(), get_auth_service())
+    return ListingsGatewayService()
 
 
 def parse_optional_bool(value) -> bool | None:

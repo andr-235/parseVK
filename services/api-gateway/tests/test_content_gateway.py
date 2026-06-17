@@ -119,6 +119,7 @@ class FakeContentClient:
         correlation_id=None,
         params=None,
         json=None,
+        files=None,
     ):
         self.last_user_id = user_id
         return {"ok": True}

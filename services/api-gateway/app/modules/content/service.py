@@ -1,91 +1,62 @@
-from typing import Any
-from fastapi import HTTPException, Request, status
 
-from app.clients.content.client import ContentClient, ContentClientHTTPError, ContentClientUnavailableError
-from app.clients.vk_service.client import VkServiceClient, VkServiceClientHTTPError, VkServiceClientUnavailableError
-from app.modules.auth.router import bearer_token, get_auth_service, request_ids
+from app.clients.base import ServiceClient
+from app.clients.vk_service.client import VkServiceClient
+from app.core.config import settings
+from app.core.utils import request_ids
+from app.modules._base import BaseGatewayService
 from app.modules.auth.service import GatewayAuthService
+from fastapi import Request
 
 
-class ContentGatewayService:
-    def __init__(self, content_client: ContentClient, auth_service: GatewayAuthService):
-        self.content_client = content_client
-        self.auth_service = auth_service
+class ContentGatewayService(BaseGatewayService):
+    def __init__(self, client: ServiceClient | None = None, auth_service: GatewayAuthService | None = None):
+        super().__init__(
+            client or ServiceClient(service_name="Content", base_url=settings.content_base_url, internal_token=settings.internal_service_token),
+            auth_service,
+        )
 
-    async def forward(
-        self,
-        request: Request,
-        method: str,
-        path: str,
-        *,
-        params: dict | None = None,
-        json: Any | None = None,
-    ):
-        authorization = request.headers.get("Authorization")
-        try:
-            claims = await self.auth_service.validate_token(bearer_token(authorization))
-        except Exception as exc:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized") from exc
-
+    async def merge_groups(self, request: Request, vk_groups: list[dict]) -> dict:
         request_id, correlation_id = request_ids(request)
+        vk_ids = [group["id"] for group in vk_groups]
         try:
-            return await self.content_client.request(
-                method,
-                path,
-                user_id=str(claims["sub"]),
-                request_id=request_id,
-                correlation_id=correlation_id,
-                params=params,
-                json=json,
-            )
-        except ContentClientHTTPError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        except ContentClientUnavailableError as exc:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Content service error") from exc
+            existing = await self.client.request("POST", "/internal/content/groups/bulk", json=vk_ids, user_id="", request_id=request_id, correlation_id=correlation_id)
+        except Exception:
+            existing = []
+
+        existing_ids = {group["vkId"] for group in existing}
+        items = []
+        for g in vk_groups:
+            g_id = g.get("id")
+            exists = g_id in existing_ids
+            items.append({
+                "id": g_id, "vkId": g_id, "vkGroupId": g_id,
+                "name": g.get("name"), "screenName": g.get("screen_name"), "screen_name": g.get("screen_name"),
+                "isClosed": g.get("is_closed"), "is_closed": g.get("is_closed"),
+                "deactivated": g.get("deactivated"), "type": g.get("type"),
+                "photo50": g.get("photo_50"), "photo_50": g.get("photo_50"),
+                "photo100": g.get("photo_100"), "photo_100": g.get("photo_100"),
+                "photo200": g.get("photo_200"), "photo_200": g.get("photo_200"),
+                "activity": g.get("activity"), "ageLimits": g.get("age_limits"), "age_limits": g.get("age_limits"),
+                "description": g.get("description"), "membersCount": g.get("members_count"), "members_count": g.get("members_count"),
+                "status": g.get("status"), "verified": g.get("verified"),
+                "wall": g.get("wall"), "addresses": g.get("addresses"),
+                "city": g.get("city"), "counters": g.get("counters"),
+                "existsInDb": exists,
+            })
+
+        exists_in_db = [item for item in items if item["existsInDb"]]
+        missing = [item for item in items if not item["existsInDb"]]
+        return {"total": len(items), "groups": items, "existsInDb": exists_in_db, "missing": missing}
 
 
-class VkGatewayService:
-    def __init__(self, vk_client: VkServiceClient, auth_service: GatewayAuthService):
-        self.vk_client = vk_client
-        self.auth_service = auth_service
-
-    async def forward(
-        self,
-        request: Request,
-        method: str,
-        path: str,
-        *,
-        params: dict | None = None,
-        json: Any | None = None,
-        files: Any | None = None,
-    ):
-        authorization = request.headers.get("Authorization")
-        try:
-            claims = await self.auth_service.validate_token(bearer_token(authorization))
-        except Exception as exc:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized") from exc
-
-        request_id, correlation_id = request_ids(request)
-        try:
-            return await self.vk_client.request(
-                method,
-                path,
-                user_id=str(claims["sub"]),
-                request_id=request_id,
-                correlation_id=correlation_id,
-                params=params,
-                json=json,
-                files=files,
-            )
-        except VkServiceClientHTTPError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        except VkServiceClientUnavailableError as exc:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="VK service error") from exc
+class VkGatewayService(BaseGatewayService):
+    def __init__(self, client: VkServiceClient | None = None, auth_service: GatewayAuthService | None = None):
+        super().__init__(client or VkServiceClient(), auth_service)
 
 
 def get_content_gateway_service() -> ContentGatewayService:
-    return ContentGatewayService(ContentClient(), get_auth_service())
+    return ContentGatewayService()
 
 
 def get_vk_gateway_service() -> VkGatewayService:
-    return VkGatewayService(VkServiceClient(), get_auth_service())
+    return VkGatewayService()

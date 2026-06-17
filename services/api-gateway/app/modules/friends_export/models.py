@@ -15,7 +15,6 @@ from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Job status enum
 # ---------------------------------------------------------------------------
@@ -120,7 +119,7 @@ class ErrorEventData(BaseModel):
 # ---------------------------------------------------------------------------
 
 SseEventData = Annotated[
-    Union[ProgressEventData, LogEventData, DoneEventData, ErrorEventData],
+    ProgressEventData | LogEventData | DoneEventData | ErrorEventData,
     Field(discriminator=None),  # not discriminated at the model level — type is the tag
 ]
 

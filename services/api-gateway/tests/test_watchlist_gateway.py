@@ -1,7 +1,6 @@
 ﻿# ruff: noqa: E402
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -11,10 +10,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.clients.moderation.client import (
-    ModerationClientHTTPError,
-    ModerationClientUnavailableError,
-)
+from app.clients.base import ServiceClientHTTPError, ServiceClientUnavailableError
 from app.modules.watchlist.service import WatchlistGatewayService
 
 
@@ -58,23 +54,12 @@ async def test_gateway_create_author_payload_translation():
         "commentId": 456,
     }
 
-    # We also mock _enrich_authors since we only want to test payload mapping
-    with patch.object(service, "_enrich_authors", new_callable=AsyncMock) as mock_enrich:
-        mock_enrich.return_value = [{
-            "id": 1,
-            "authorVkId": 123,
-            "status": "ACTIVE",
-            "monitoringStartedAt": "2026-05-24T12:00:00Z",
-            "author": None,
-            "summary": None,
-        }]
-
-        result = await service.create_author(
-            frontend_payload,
-            user_id="user-1",
-            request_id="req-1",
-            correlation_id="corr-1",
-        )
+    result = await service.create_author(
+        frontend_payload,
+        user_id="user-1",
+        request_id="req-1",
+        correlation_id="corr-1",
+    )
 
     assert moderation_client.calls == [{
         "method": "POST",
@@ -88,7 +73,7 @@ async def test_gateway_create_author_payload_translation():
         "comment_id": 456,
         },
     }]
-    assert result["authorVkId"] == 123
+    assert result["author_vk_id"] == 123
 
 
 @pytest.mark.asyncio
@@ -143,7 +128,7 @@ async def test_gateway_create_author_preserves_conflict_status():
         base_url = "http://moderation"
 
         async def request(self, method: str, path: str, **kwargs):
-            raise ModerationClientHTTPError(status_code=409, detail={"detail": "duplicate"})
+            raise ServiceClientHTTPError(service_name="Moderation", status_code=409, detail={"detail": "duplicate"})
 
     service = WatchlistGatewayService(
         moderation_client=ConflictModerationClient(),
@@ -154,7 +139,7 @@ async def test_gateway_create_author_preserves_conflict_status():
         await service.create_author({"authorVkId": 123})
 
     assert exc_info.value.status_code == 409
-    assert exc_info.value.detail == "Author already in watchlist"
+    assert exc_info.value.detail == "duplicate"
 
 
 @pytest.mark.asyncio
@@ -163,7 +148,7 @@ async def test_gateway_watchlist_maps_unavailable_upstream_to_503():
         base_url = "http://moderation"
 
         async def request(self, method: str, path: str, **kwargs):
-            raise ModerationClientUnavailableError("Moderation service is unavailable")
+            raise ServiceClientUnavailableError(service_name="Moderation")
 
     service = WatchlistGatewayService(
         moderation_client=UnavailableModerationClient(),

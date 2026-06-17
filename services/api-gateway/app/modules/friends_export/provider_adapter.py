@@ -2,11 +2,8 @@ import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
-from app.clients.vk_service.client import (
-    VkServiceClient,
-    VkServiceClientHTTPError,
-    VkServiceClientUnavailableError,
-)
+from app.clients.base import ServiceClientHTTPError, ServiceClientUnavailableError
+from app.clients.vk_service.client import VkServiceClient
 from app.core.redaction import redact_secrets
 from app.modules.friends_export.models import (
     DoneEventData,
@@ -65,12 +62,12 @@ class ProviderFriendsAdapter:
                 jobId=res["jobId"],
                 status=JobStatus(res["status"]),
             )
-        except VkServiceClientHTTPError as exc:
+        except ServiceClientHTTPError as exc:
             raise HTTPException(
                 status_code=exc.status_code,
                 detail=redact_secrets(exc.detail),
             ) from exc
-        except VkServiceClientUnavailableError as exc:
+        except ServiceClientUnavailableError as exc:
             raise HTTPException(status_code=502, detail=self.unavailable_detail) from exc
 
     async def get_job(self, job_id: str) -> FriendsJobDetailResponse:
@@ -86,12 +83,12 @@ class ProviderFriendsAdapter:
                 job=self._job_state(res["job"]),
                 logs=[self._log_entry(log) for log in res["logs"]],
             )
-        except VkServiceClientHTTPError as exc:
+        except ServiceClientHTTPError as exc:
             raise HTTPException(
                 status_code=exc.status_code,
                 detail=redact_secrets(exc.detail),
             ) from exc
-        except VkServiceClientUnavailableError as exc:
+        except ServiceClientUnavailableError as exc:
             raise HTTPException(status_code=502, detail=self.unavailable_detail) from exc
 
     async def stream_job(self, job_id: str) -> AsyncIterator[SseEvent]:
@@ -182,12 +179,12 @@ class ProviderFriendsAdapter:
                 request_id=self.request_id,
                 correlation_id=self.correlation_id,
             )
-        except VkServiceClientHTTPError as exc:
+        except ServiceClientHTTPError as exc:
             raise HTTPException(
                 status_code=exc.status_code,
                 detail=redact_secrets(exc.detail),
             ) from exc
-        except VkServiceClientUnavailableError as exc:
+        except ServiceClientUnavailableError as exc:
             raise HTTPException(status_code=502, detail=self.unavailable_detail) from exc
 
     @staticmethod

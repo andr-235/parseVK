@@ -10,10 +10,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.clients.moderation.client import (
-    ModerationClientHTTPError,
-    ModerationClientUnavailableError,
-)
+from app.clients.base import ServiceClientHTTPError, ServiceClientUnavailableError
 from app.modules.keywords.service import KeywordsGatewayService
 
 
@@ -131,7 +128,7 @@ async def test_add_keyword_uses_typed_client_payload_and_context():
             "updated_at": "2026-05-24T12:00:00Z",
         }
     )
-    service = KeywordsGatewayService(moderation_client=moderation_client)
+    service = KeywordsGatewayService(client=moderation_client)
 
     result = await service.add_keyword(
         {"word": "cat", "category": "animals", "isPhrase": False},
@@ -162,9 +159,9 @@ async def test_keywords_preserves_upstream_http_status_detail():
         base_url = "http://moderation"
 
         async def request(self, method: str, path: str, **kwargs):
-            raise ModerationClientHTTPError(status_code=404, detail={"detail": "missing"})
+            raise ServiceClientHTTPError(service_name="Moderation", status_code=404, detail={"detail": "missing"})
 
-    service = KeywordsGatewayService(moderation_client=FailingModerationClient())
+    service = KeywordsGatewayService(client=FailingModerationClient())
 
     with pytest.raises(HTTPException) as exc_info:
         await service.delete_keyword(99)
@@ -179,9 +176,9 @@ async def test_keywords_maps_unavailable_upstream_to_503():
         base_url = "http://moderation"
 
         async def request(self, method: str, path: str, **kwargs):
-            raise ModerationClientUnavailableError("Moderation service is unavailable")
+            raise ServiceClientUnavailableError(service_name="Moderation")
 
-    service = KeywordsGatewayService(moderation_client=UnavailableModerationClient())
+    service = KeywordsGatewayService(client=UnavailableModerationClient())
 
     with pytest.raises(HTTPException) as exc_info:
         await service.get_all_keywords(page=1, limit=50)

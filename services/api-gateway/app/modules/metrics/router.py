@@ -1,5 +1,5 @@
 import os
-import time
+
 from fastapi import APIRouter, Response
 
 router = APIRouter(prefix="/api/v1/metrics", tags=["metrics"])

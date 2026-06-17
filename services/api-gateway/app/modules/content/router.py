@@ -1,12 +1,13 @@
 import logging
 from typing import Annotated, Any
+
 from app.modules.content.service import (
     ContentGatewayService,
-    get_content_gateway_service,
     VkGatewayService,
+    get_content_gateway_service,
     get_vk_gateway_service,
 )
-from fastapi import APIRouter, Depends, Request, Body, UploadFile, File
+from fastapi import APIRouter, Body, Depends, File, Request, UploadFile
 
 logger = logging.getLogger(__name__)
 

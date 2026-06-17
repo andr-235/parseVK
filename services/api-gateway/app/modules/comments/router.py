@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from app.core.security import require_auth
-from app.modules.auth.router import request_ids
+from app.core.utils import request_ids
 from app.modules.comments.service import CommentsGatewayService, get_comments_gateway_service
 from fastapi import APIRouter, Body, Depends, Query, Request
 

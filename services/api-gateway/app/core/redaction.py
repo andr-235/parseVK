@@ -1,6 +1,8 @@
 import re
 from typing import Any
+
 from app.core.config import settings
+
 
 def redact_secrets(text: Any) -> str:
     """
