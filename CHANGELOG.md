@@ -1,3 +1,17 @@
+# [0.34.0](https://github.com/andr-235/parseVK/compare/v0.33.12...v0.34.0) (2026-06-17)
+
+
+### Bug Fixes
+
+* **ci:** exclude .agents from ruff check ([7fb7035](https://github.com/andr-235/parseVK/commit/7fb7035a4657321086b8afcb3f7c7c401eee88a5))
+* **ci:** install pytest as dev dependency for libs/py/common tests ([e7bbd7a](https://github.com/andr-235/parseVK/commit/e7bbd7a8da94552da75d57144782ee3bfdffdbf2))
+* **ci:** ruff pass on api-gateway + libs, fix 3 pre-existing issues ([6cd9352](https://github.com/andr-235/parseVK/commit/6cd9352d585f4bf6c2d8f035a1262a3836a40893))
+
+
+### Features
+
+* **docker:** add non-root user and HEALTHCHECK to all python service images ([c08cc89](https://github.com/andr-235/parseVK/commit/c08cc89ed934c97ce027214785eeb03d1594793c))
+
 ## [0.33.12](https://github.com/andr-235/parseVK/compare/v0.33.11...v0.33.12) (2026-06-17)
 
 
