@@ -17,7 +17,7 @@ docker compose up -d
 |------|-----------|
 | Бэкенд | Python 3.12+, FastAPI, SQLAlchemy 2.0 async, Kafka |
 | Фронтенд | React 19, Vite 8, Tailwind CSS 4, TypeScript 6 |
-| Базы | PostgreSQL 16.14 (6×), Redis 7.4 |
+| Базы | PostgreSQL 16.14 (8×), Redis 7.4 |
 | Инфра | Docker Compose, Prometheus, Grafana |
 
 ## Документация

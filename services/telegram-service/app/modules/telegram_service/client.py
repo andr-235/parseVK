@@ -1,8 +1,9 @@
-import logging
 import asyncio
+import logging
 import random
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlparse
+
 from app.core.config import settings
 
 logger = logging.getLogger("telegram-service.client")
@@ -10,8 +11,8 @@ logger = logging.getLogger("telegram-service.client")
 # Attempt to import Telethon and its exception types
 try:
     from telethon import TelegramClient, events
-    from telethon.sessions import StringSession
     from telethon.errors import ChatAdminRequiredError
+    from telethon.sessions import StringSession
     TELETHON_AVAILABLE = True
 except ImportError:
     TELETHON_AVAILABLE = False
@@ -283,7 +284,7 @@ class TelegramApiClient:
                 phone = f"+79{random.randint(100000000, 999999999)}" if random.random() > 0.85 else "Скрыт"
                 is_bot = "Да" if random.random() > 0.97 else "Нет"
                 role = "Creator" if (offset + i) == 0 else (random.choice(["Administrator", "Member"]) if (offset + i) < 3 else random.choice(roles))
-                join_date = datetime.now(timezone.utc).isoformat()
+                join_date = datetime.now(UTC).isoformat()
                 
                 members.append({
                     "userId": user_id,
@@ -312,7 +313,7 @@ class TelegramApiClient:
         admins = {}
         if isinstance(entity, (Channel, Chat)):
             try:
-                from telethon.tl.types import ChannelParticipantsAdmins, ChannelParticipantCreator
+                from telethon.tl.types import ChannelParticipantCreator, ChannelParticipantsAdmins
                 async for user in self.client.iter_participants(entity, filter=ChannelParticipantsAdmins):
                     role = "Administrator"
                     if hasattr(user, 'participant') and isinstance(user.participant, ChannelParticipantCreator):
@@ -338,7 +339,7 @@ class TelegramApiClient:
                 if hasattr(user, 'participant') and getattr(user.participant, 'date', None):
                     join_date = user.participant.date.isoformat()
                 else:
-                    join_date = datetime.now(timezone.utc).isoformat()
+                    join_date = datetime.now(UTC).isoformat()
                     
                 members.append({
                     "userId": user_id,

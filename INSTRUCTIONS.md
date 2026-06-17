@@ -8,17 +8,17 @@
 
 ## Архитектура
 
-Микросервисная архитектура (8 FastAPI-сервисов) + React-фронтенд. Асинхронная коммуникация — Kafka (event-driven), синхронная — HTTP через API Gateway.
+Микросервисная архитектура (9 FastAPI-сервисов) + React-фронтенд. Асинхронная коммуникация — Kafka (event-driven), синхронная — HTTP через API Gateway.
 
 ```
-Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderation / Telegram / IM / VK Services
+Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderation / Telegram / IM / VK / Listings Services
                                                                                                ↕
                                                                                              Kafka
 ```
 
 **Kafka-топики:** `parsevk.tasks.events`, `parsevk.vk.events`, `parsevk.im.events`
 
-**PostgreSQL:** 6 отдельных баз (`identity`, `tasks`, `vk`, `content`, `moderation`, `im`)
+**PostgreSQL:** 8 отдельных баз (`identity`, `tasks`, `vk`, `content`, `moderation`, `im`, `telegram`, `listings`)
 
 ---
 

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     identity_base_url: str = "http://identity-service:8000"
     tasks_base_url: str = "http://tasks-service:8000"
     content_base_url: str = "http://content-service:8000"
+    listings_base_url: str = "http://listings-service:8000"
     moderation_base_url: str = "http://moderation-service:8000"
     vk_service_base_url: str = "http://vk-service:8000"
     telegram_service_base_url: str = "http://telegram-service:8000"

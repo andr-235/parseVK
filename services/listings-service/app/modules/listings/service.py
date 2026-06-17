@@ -1,7 +1,5 @@
 from typing import Any
 
-from fastapi import HTTPException, status
-
 from app.modules.listings.constants import FIELD_TO_COLUMN, MANUAL_FIELDS
 from app.modules.listings.csv_export import (
     build_csv_filename,
@@ -18,6 +16,7 @@ from app.modules.listings.helpers import (
     string_value,
 )
 from app.modules.listings.import_service import ListingsImportService
+from fastapi import HTTPException, status
 
 
 class ListingsService:

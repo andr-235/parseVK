@@ -12,7 +12,7 @@ from fastapi import HTTPException, Request, status
 
 class TelegramTgmbaseGatewayService:
     def __init__(self, client: ServiceClient | None = None, auth_service: GatewayAuthService | None = None):
-        self.client = client or ServiceClient(service_name="Content", base_url=settings.content_base_url, internal_token=settings.internal_service_token)
+        self.client = client or ServiceClient(service_name="Telegram", base_url=settings.telegram_service_base_url, internal_token=settings.internal_service_token)
         self.auth_service = auth_service or get_auth_service()
 
     async def forward(self, request: Request, method: str, path: str, *, params: dict | None = None, json: Any | None = None, files: Any | None = None):
@@ -28,7 +28,7 @@ class TelegramTgmbaseGatewayService:
         except ServiceClientHTTPError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
         except ServiceClientUnavailableError:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Content service error") from None
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Telegram service error") from None
 
     async def forward_raw(self, request: Request, method: str, path: str, *, params: dict | None = None) -> httpx.Response:
         authorization = request.headers.get("Authorization")
@@ -43,7 +43,7 @@ class TelegramTgmbaseGatewayService:
         except ServiceClientHTTPError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
         except ServiceClientUnavailableError:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Content service error") from None
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Telegram service error") from None
 
 
 def get_telegram_tgmbase_gateway_service() -> TelegramTgmbaseGatewayService:

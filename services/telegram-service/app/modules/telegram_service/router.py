@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 
 from app.modules.telegram_service.repository import TelegramServiceRepository
@@ -11,9 +11,11 @@ from app.modules.telegram_service.schemas import (
 )
 from app.modules.telegram_service.service import TelegramServiceService
 
+_repo = TelegramServiceRepository()
+
 
 def get_repo() -> TelegramServiceRepository:
-    return TelegramServiceRepository()
+    return _repo
 
 
 def get_service(repo: TelegramServiceRepository = Depends(get_repo)) -> TelegramServiceService:
@@ -38,7 +40,7 @@ async def start_live_parse(
     return await service.start_live_parse(params.model_dump())
 
 
-@router.post("/export")
+@router.post("/export", status_code=status.HTTP_201_CREATED)
 async def start_export(
     params: TelegramExportStartRequest,
     service: TelegramServiceService = Depends(get_service),

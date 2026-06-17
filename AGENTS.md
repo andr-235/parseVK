@@ -545,6 +545,25 @@ cache = {}
 * Не делай self-approve.
 * Не пиши официальные GitHub review comments без прямого запроса пользователя.
 
+## Project Structure & Microservices
+
+Проект ParseVK построен на микросервисной архитектуре и содержит следующие основные директории:
+
+* `front/` — React SPA (фронтенд)
+* `services/` — Python-микросервисы на FastAPI:
+  * `api-gateway/` — единая точка входа, проксирование HTTP-запросов
+  * `identity-service/` — аутентификация (JWT), управление пользователями и ролями
+  * `tasks-service/` — оркестрация задач на парсинг
+  * `vk-service/` — интеграция с API ВКонтакте
+  * `content-service/` — хранилище авторов и групп (упрощенная версия)
+  * `telegram-service/` — клиент Telegram (Telethon), импорт и матчинг tgmbase
+  * `listings-service/` — сервис хранения объявлений (Avito и др.) и выгрузки CSV
+  * `moderation-service/` — пайплайн автоматической модерации контента
+  * `im-service/` — интеграция с мессенджерами (WhatsApp через Wappi.pro)
+* `libs/py/common/` — общая библиотека вспомогательного кода для Python
+* `tools/parsevkctl-go/` — Go CLI для автоматизации GitHub Kanban
+* `docker-compose.yml` — оркестрация локального окружения и баз данных (8 баз PostgreSQL)
+
 ---
 
 ## Documentation

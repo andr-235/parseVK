@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     photo_analysis_enrichment_budget_seconds: float = 2.0
 
     # Настройки внешней БД мониторинга (WhatsApp / Max)
-    tgmbase_database_url: str | None = Field(default=None, validation_alias="TGMBASE_DATABASE_URL")
     monitor_database_url: str | None = Field(default=None, validation_alias="MONITOR_DATABASE_URL")
     monitor_messages_table: str = Field(default="messages", validation_alias="MONITOR_MESSAGES_TABLE")
     monitor_message_id_column: str = Field(default="id", validation_alias="MONITOR_MESSAGE_ID_COLUMN")

@@ -8,6 +8,8 @@ testpaths = [
   "services/tasks-service/tests",
   "services/vk-service/tests",
   "services/content-service/tests",
+  "services/telegram-service/tests",
+  "services/listings-service/tests",
 ]
 pythonpath = [
   "libs/py/common",

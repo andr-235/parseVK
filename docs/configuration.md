@@ -16,6 +16,8 @@
 |----------|-------------|
 | `POSTGRES_*` | Основная БД (общие данные) |
 | `{SERVICE}_POSTGRES_*` | БД конкретного сервиса |
+| `LISTINGS_DATABASE_URL` | БД сервиса объявлений (listings) |
+| `TELEGRAM_SERVICE_DATABASE_URL` | БД сервиса Telegram |
 | `FASTAPI_INTERNAL_SERVICE_TOKEN` | Токен для межсервисного HTTP |
 | `VK_TOKEN` | VK API токен (права: wall, groups, users, offline) |
 | `TELEGRAM_API_ID/HASH` | Telegram API credentials (Telethon) |
@@ -29,6 +31,8 @@
 # Database
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your-password
+LISTINGS_POSTGRES_PASSWORD=listings_dev_password_change_me
+TELEGRAM_POSTGRES_PASSWORD=telegram_dev_password_change_me
 
 # Service-specific
 VK_SERVICE_VK_TOKEN=vk123...

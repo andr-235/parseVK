@@ -1,11 +1,10 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from fastapi.responses import JSONResponse, PlainTextResponse
-
 from app.core.security import require_internal_token
 from app.modules.listings.dependencies import get_listings_service
 from app.modules.listings.service import ListingsService
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 router = APIRouter(
     prefix="/internal/content",

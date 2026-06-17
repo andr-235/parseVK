@@ -14,7 +14,7 @@ from fastapi.responses import Response
 
 class ListingsGatewayService:
     def __init__(self, client: ServiceClient | None = None, auth_service: GatewayAuthService | None = None):
-        self.client = client or ServiceClient(service_name="Content", base_url=settings.content_base_url, internal_token=settings.internal_service_token)
+        self.client = client or ServiceClient(service_name="Listings", base_url=settings.listings_base_url, internal_token=settings.internal_service_token)
         self.auth_service = auth_service or get_auth_service()
 
     async def list_listings(self, request: Request):
@@ -28,7 +28,7 @@ class ListingsGatewayService:
         except ServiceClientHTTPError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
         except ServiceClientUnavailableError:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Content service error") from None
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Listings service error") from None
 
         headers = {}
         for name in ("content-type", "content-disposition"):
@@ -123,7 +123,7 @@ class ListingsGatewayService:
             detail = exc.detail.get("message", exc.detail) if isinstance(exc.detail, dict) and "message" in exc.detail else exc.detail
             raise HTTPException(status_code=exc.status_code, detail=detail) from exc
         except ServiceClientUnavailableError:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Content service error") from None
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Listings service error") from None
 
     async def claims(self, request: Request) -> dict[str, Any]:
         authorization = request.headers.get("Authorization")

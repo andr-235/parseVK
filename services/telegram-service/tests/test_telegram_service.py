@@ -1,13 +1,34 @@
-import pytest
 import asyncio
-from httpx import ASGITransport, AsyncClient
 
-from app.main import create_app
+import pytest
+from app.main import app as telegram_app
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture
 def app():
-    return create_app()
+    return telegram_app
+
+
+@pytest.fixture(autouse=True)
+def mock_db_connection(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+
+    import app.db.session
+
+    # Mock connection
+    mock_conn = AsyncMock()
+    mock_conn.execute.return_value = MagicMock()
+
+    # Mock context manager connect()
+    mock_connect = MagicMock()
+    mock_connect.__aenter__.return_value = mock_conn
+
+    # Mock engine
+    mock_engine = MagicMock()
+    mock_engine.connect.return_value = mock_connect
+
+    monkeypatch.setattr(app.db.session, "engine", mock_engine)
 
 
 @pytest.fixture
