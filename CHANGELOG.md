@@ -1,3 +1,11 @@
+## [0.33.4](https://github.com/andr-235/parseVK/compare/v0.33.3...v0.33.4) (2026-06-17)
+
+
+### Bug Fixes
+
+* **deploy:** add missing services to change detection, fix volume and dockerignore ([28a28b1](https://github.com/andr-235/parseVK/commit/28a28b12dd5503ad36b59e85392da3140611a2ac))
+* **deploy:** add PyPI preflight check and unify base image tag ([801e2e5](https://github.com/andr-235/parseVK/commit/801e2e5b4beb0187e9ae236e2d45efdce158de22))
+
 ## [0.33.3](https://github.com/andr-235/parseVK/compare/v0.33.2...v0.33.3) (2026-06-17)
 
 
