@@ -1,6 +1,6 @@
 FROM python:3.12.13-slim
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.6 /uv /uvx /bin/
+RUN pip install uv==0.11.6
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
