@@ -1,3 +1,10 @@
+## [0.33.6](https://github.com/andr-235/parseVK/compare/v0.33.5...v0.33.6) (2026-06-17)
+
+
+### Bug Fixes
+
+* **deploy:** remove db_backup legacy references from deploy scripts ([8c84723](https://github.com/andr-235/parseVK/commit/8c84723ffd575ef0a5b2675053cc51bb3944cebf)), closes [#271](https://github.com/andr-235/parseVK/issues/271)
+
 ## [0.33.5](https://github.com/andr-235/parseVK/compare/v0.33.4...v0.33.5) (2026-06-17)
 
 
