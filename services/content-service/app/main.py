@@ -6,10 +6,10 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.modules.content.router import router as content_router
-from app.modules.listings.router import router as listings_router
-from app.modules.telegram_tgmbase.router import router as telegram_tgmbase_router
-from app.modules.projections.consumer import ProjectionConsumer
 from app.modules.im_events.consumer import ImEventConsumer
+from app.modules.listings.router import router as listings_router
+from app.modules.projections.consumer import ProjectionConsumer
+from app.modules.telegram_tgmbase.router import router as telegram_tgmbase_router
 
 
 @asynccontextmanager
@@ -44,15 +44,16 @@ def create_app() -> FastAPI:
 
     @app.get("/ready")
     async def ready() -> dict[str, str]:
-        from app.db.session import engine
-        from sqlalchemy import text
         from fastapi import HTTPException
+        from sqlalchemy import text
+
+        from app.db.session import engine
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
             return {"status": "READY"}
         except Exception as e:
-            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}")
+            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}") from e
 
     from app.modules.monitoring.router import router as monitoring_router
 

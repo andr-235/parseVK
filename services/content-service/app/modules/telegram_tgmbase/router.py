@@ -1,28 +1,23 @@
-from fastapi import APIRouter, Depends, File, UploadFile, Query, BackgroundTasks, Response
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db.session import get_tgmbase_session
-from app.modules.telegram_tgmbase.service import TelegramTgmbaseService
+from app.modules.telegram_tgmbase.dependencies import get_tgmbase_service
 from app.modules.telegram_tgmbase.schemas import (
-    TelegramDlImportUploadResponseSchema,
     DlImportFileSchema,
     TelegramDlImportContactsPageSchema,
-    TelegramDlMatchRunSchema,
-    TelegramDlMatchResultSchema,
-    TelegramDlMatchResultMessagesGroupSchema,
+    TelegramDlImportUploadResponseSchema,
     TelegramDlMatchExcludeChatSchema,
+    TelegramDlMatchResultMessagesGroupSchema,
+    TelegramDlMatchResultSchema,
+    TelegramDlMatchRunSchema,
     TgmbaseSearchRequestSchema,
-    TgmbaseSearchResponseSchema
+    TgmbaseSearchResponseSchema,
 )
+from app.modules.telegram_tgmbase.service import TelegramTgmbaseService
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, Response, UploadFile
 
 router = APIRouter(
     prefix="",
     tags=["telegram-tgmbase"]
 )
 
-
-async def get_tgmbase_service(session: AsyncSession = Depends(get_tgmbase_session)) -> TelegramTgmbaseService:
-    return TelegramTgmbaseService(session)
 
 
 # РАЗДЕЛ ИМПОРТА

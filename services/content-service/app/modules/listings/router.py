@@ -2,11 +2,9 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse, PlainTextResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_internal_token
-from app.db.session import get_session
-from app.modules.listings.repository import ListingsRepository
+from app.modules.listings.dependencies import get_listings_service
 from app.modules.listings.service import ListingsService
 
 router = APIRouter(
@@ -15,9 +13,6 @@ router = APIRouter(
     dependencies=[Depends(require_internal_token)],
 )
 
-
-async def get_listings_service(session: AsyncSession = Depends(get_session)) -> ListingsService:
-    return ListingsService(ListingsRepository(session))
 
 
 @router.get("/listings")
