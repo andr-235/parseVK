@@ -12,12 +12,12 @@ Exit codes:
   3 - Usage error
 """
 
-import sys
+import base64
+import fnmatch
+import json
 import os
 import re
-import base64
-import json
-import fnmatch
+import sys
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 
@@ -297,7 +297,7 @@ def is_in_code_block(line_num: int, code_ranges: list) -> bool:
 
 def scan_file(filepath: str, strict: bool = False) -> dict:
     """Scan a single file for security threats."""
-    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+    with open(filepath, encoding='utf-8', errors='ignore') as f:
         content = f.read()
 
     findings = []
@@ -380,7 +380,7 @@ def _allowlist_matches(rel_path: str, finding: dict, entry: dict) -> bool:
 def load_allowlist(filepath: str) -> list:
     """Load allowlist entries from JSON file."""
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, encoding='utf-8') as f:
             data = json.load(f)
     except FileNotFoundError:
         print(f"{RED}ERROR:{NC} Allowlist file not found: {filepath}", file=sys.stderr)

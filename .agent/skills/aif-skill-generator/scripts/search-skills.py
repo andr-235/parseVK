@@ -5,11 +5,10 @@ Usage: python search-skills.py <query>
 """
 
 import sys
-import urllib.request
 import urllib.parse
-import json
-import re
+import urllib.request
 from html.parser import HTMLParser
+
 
 class SkillsParser(HTMLParser):
     def __init__(self):
