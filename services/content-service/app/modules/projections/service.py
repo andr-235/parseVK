@@ -1,4 +1,4 @@
-from app.modules.projections.processor import CONSUMER_NAME, ProjectionRepository, VkEvent
+from app.modules.projections.processor import CONSUMER_NAME, VkEvent
 
 
 class ProjectionService:

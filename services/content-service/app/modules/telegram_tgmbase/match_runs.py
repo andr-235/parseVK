@@ -1,12 +1,16 @@
 import logging
-from datetime import datetime, timezone
-from sqlalchemy import select, and_, func, or_
+from datetime import UTC, datetime
+
+from app.modules.telegram_tgmbase.exporter import TelegramDlMatchExporter
+from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
+from app.modules.telegram_tgmbase.models import (
+    DlMatchResult,
+    DlMatchResultChat,
+    DlMatchRun,
+)
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
-from app.modules.telegram_tgmbase.models import DlMatchRun, DlMatchResult, DlMatchResultChat, DlMatchResultMessage
-from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
-from app.modules.telegram_tgmbase.exporter import TelegramDlMatchExporter
 
 logger = logging.getLogger("content-service.telegram-tgmbase.match-runs")
 
@@ -25,7 +29,7 @@ class DlMatchRuns:
             strict_matches_total=0,
             username_matches_total=0,
             phone_matches_total=0,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         self.session.add(run)
         await self.session.commit()
@@ -53,19 +57,19 @@ class DlMatchRuns:
 
         stmt = stmt.where(
             or_(
-                DlMatchResult.strict_telegram_id_match == True,
-                DlMatchResult.username_match == True,
-                DlMatchResult.phone_match == True,
-                DlMatchResult.chat_activity_match == True,
+                DlMatchResult.strict_telegram_id_match,
+                DlMatchResult.username_match,
+                DlMatchResult.phone_match,
+                DlMatchResult.chat_activity_match,
             )
         )
 
         if strict_only:
-            stmt = stmt.where(DlMatchResult.strict_telegram_id_match == True)
+            stmt = stmt.where(DlMatchResult.strict_telegram_id_match)
         if username_only:
-            stmt = stmt.where(DlMatchResult.username_match == True)
+            stmt = stmt.where(DlMatchResult.username_match)
         if phone_only:
-            stmt = stmt.where(DlMatchResult.phone_match == True)
+            stmt = stmt.where(DlMatchResult.phone_match)
 
         stmt = stmt.options(
             selectinload(DlMatchResult.chats)
@@ -185,7 +189,7 @@ class DlMatchRuns:
                 c_stmt = select(func.count(DlMatchResultChat.id)).where(
                     and_(
                         DlMatchResultChat.result_id == r_id,
-                        DlMatchResultChat.is_excluded == False,
+                        not DlMatchResultChat.is_excluded,
                     )
                 )
                 c_res = await self.session.execute(c_stmt)
@@ -202,10 +206,10 @@ class DlMatchRuns:
                 and_(
                     DlMatchResult.run_id == run_id,
                     or_(
-                        DlMatchResult.strict_telegram_id_match == True,
-                        DlMatchResult.username_match == True,
-                        DlMatchResult.phone_match == True,
-                        DlMatchResult.chat_activity_match == True,
+                        DlMatchResult.strict_telegram_id_match,
+                        DlMatchResult.username_match,
+                        DlMatchResult.phone_match,
+                        DlMatchResult.chat_activity_match,
                     ),
                 )
             )

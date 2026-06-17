@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -13,13 +13,13 @@ CONSUMER_NAME = "content-service.vk"
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def vk_timestamp(value: int | None) -> datetime | None:
     if value is None:
         return None
-    return datetime.fromtimestamp(int(value), timezone.utc)
+    return datetime.fromtimestamp(int(value), UTC)
 
 
 class VkEvent(BaseModel):

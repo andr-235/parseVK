@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,8 +11,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.modules.listings.service import ListingsService
 from app.modules.listings.csv_export import format_csv_header, format_csv_row
+from app.modules.listings.service import ListingsService
 
 
 class FakeRepository:
@@ -68,8 +68,8 @@ class FakeRepository:
             "manual_overrides": [],
             "manual_note": None,
             "archived": False,
-            "created_at": datetime(2026, 5, 24, tzinfo=timezone.utc),
-            "updated_at": datetime(2026, 5, 24, tzinfo=timezone.utc),
+            "created_at": datetime(2026, 5, 24, tzinfo=UTC),
+            "updated_at": datetime(2026, 5, 24, tzinfo=UTC),
         }
         defaults.update(data)
         return SimpleNamespace(**defaults)

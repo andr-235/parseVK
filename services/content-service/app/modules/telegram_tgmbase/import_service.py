@@ -1,18 +1,18 @@
 import logging
-from datetime import datetime, timezone
-from sqlalchemy import select, and_, func
+from datetime import UTC, datetime
+
+from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
+from app.modules.telegram_tgmbase.models import DlContact, DlImportBatch, DlImportFile
+from app.modules.telegram_tgmbase.parser import TelegramDlImportParser
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
-from app.modules.telegram_tgmbase.models import DlImportBatch, DlImportFile, DlContact
-from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
-from app.modules.telegram_tgmbase.parser import TelegramDlImportParser
 
 logger = logging.getLogger("content-service.telegram-tgmbase.import-service")
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def normalize_telegram_id(value: str | None) -> int | None:
@@ -152,7 +152,7 @@ class DlImportService:
                 .where(
                     and_(
                         DlImportFile.original_file_name == normalized_file_name,
-                        DlImportFile.is_active == True,
+                        DlImportFile.is_active,
                         DlImportFile.status == "DONE",
                     )
                 )

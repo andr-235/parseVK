@@ -1,22 +1,22 @@
 import logging
-from datetime import datetime, timezone
-from sqlalchemy import select, func, update
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from datetime import UTC, datetime
 
+from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
 from app.modules.telegram_tgmbase.models import (
+    Channel,
     DlContact,
     DlMatchResult,
     DlMatchResultChat,
     DlMatchResultMessage,
     DlMatchRun,
-    User,
-    Message,
     Group,
+    Message,
     Supergroup,
-    Channel,
+    User,
 )
-from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 logger = logging.getLogger("content-service.telegram-tgmbase.match-processor")
 
@@ -41,7 +41,7 @@ class DlMatchProcessor:
             username_matches_total = 0
             phone_matches_total = 0
             last_contact_id = None
-            run_started_at = datetime.now(timezone.utc)
+            run_started_at = datetime.now(UTC)
 
             while True:
                 stmt = select(DlContact).options(selectinload(DlContact.import_file))
@@ -79,7 +79,7 @@ class DlMatchProcessor:
                         strict_matches_total=strict_matches_total,
                         username_matches_total=username_matches_total,
                         phone_matches_total=phone_matches_total,
-                        updated_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(UTC),
                     )
                 )
                 await self.session.execute(update_stmt)
@@ -99,14 +99,14 @@ class DlMatchProcessor:
                     strict_matches_total=strict_matches_total,
                     username_matches_total=username_matches_total,
                     phone_matches_total=phone_matches_total,
-                    finished_at=datetime.now(timezone.utc),
+                    finished_at=datetime.now(UTC),
                     error=None,
                 )
             )
             await self.session.execute(final_stmt)
             await self.session.commit()
 
-            elapsed = (datetime.now(timezone.utc) - run_started_at).total_seconds()
+            elapsed = (datetime.now(UTC) - run_started_at).total_seconds()
             logger.info(f"Match run {run_id} finished successfully in {elapsed}s")
 
         except Exception as e:
@@ -118,7 +118,7 @@ class DlMatchProcessor:
                 .where(DlMatchRun.id == run_id)
                 .values(
                     status="FAILED",
-                    finished_at=datetime.now(timezone.utc),
+                    finished_at=datetime.now(UTC),
                     error=str(e),
                 )
             )
@@ -353,7 +353,7 @@ class DlMatchProcessor:
                     chat_activity_match=res["chat_activity_match"],
                     dl_contact_snapshot=res["dl_contact_snapshot"],
                     tgmbase_user_snapshot=res["tgmbase_user_snapshot"],
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                 )
                 self.session.add(match_res)
                 await self.session.flush()
@@ -366,7 +366,7 @@ class DlMatchProcessor:
                         chat_type=chat["type"],
                         title=chat["title"],
                         is_excluded=False,
-                        created_at=datetime.now(timezone.utc),
+                        created_at=datetime.now(UTC),
                     )
                     chat_models.append(c_model)
                 if chat_models:
@@ -387,7 +387,7 @@ class DlMatchProcessor:
                         message_id=msg["message_id"],
                         message_date=date_dt,
                         text=msg["text"],
-                        created_at=datetime.now(timezone.utc),
+                        created_at=datetime.now(UTC),
                     )
                     msg_models.append(m_model)
                 if msg_models:

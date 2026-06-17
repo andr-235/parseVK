@@ -11,7 +11,7 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.main import create_app
-from app.modules.content.router import get_content_service
+from app.modules.content.dependencies import get_content_service
 from app.modules.content.service import ContentService
 
 
@@ -433,7 +433,12 @@ async def test_authors_accept_created_at_sort(app, service_instance):
 
 @pytest.mark.anyio
 async def test_content_service_accepts_created_at_sort(repository, photo_analysis_client):
-    service = ContentService(repo=repository, photo_analysis=photo_analysis_client)
+    service = ContentService(
+        group_repo=repository,
+        post_repo=repository,
+        author_repo=repository,
+        photo_analysis=photo_analysis_client,
+    )
 
     await service.list_authors(sort_by="created_at", sort_order="desc")
 

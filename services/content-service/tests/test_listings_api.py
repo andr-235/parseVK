@@ -10,7 +10,7 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.main import create_app
-from app.modules.listings.router import get_listings_service
+from app.modules.listings.dependencies import get_listings_service
 
 
 @pytest.fixture
