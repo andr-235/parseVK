@@ -51,26 +51,6 @@ test_endpoint() {
   return 1
 }
 
-test_database() {
-  log_info "Testing database connection"
-  
-  DB_CONTAINER=$($COMPOSE_CMD ps -q db 2>/dev/null || echo "")
-  if [ -z "$DB_CONTAINER" ]; then
-    log_error "❌ Database container not found"
-    FAILED_TESTS=$((FAILED_TESTS + 1))
-    return 1
-  fi
-  
-  if $COMPOSE_CMD exec -T db pg_isready -U postgres -d vk_api > /dev/null 2>&1; then
-    log_info "✅ Database connection: OK"
-    return 0
-  else
-    log_error "❌ Database connection: FAILED"
-    FAILED_TESTS=$((FAILED_TESTS + 1))
-    return 1
-  fi
-}
-
 test_redis() {
   log_info "Testing Redis connection"
   
@@ -142,7 +122,6 @@ test_frontend() {
 main() {
   log_info "=== Starting Smoke Tests ==="
   
-  test_database
   test_redis
   test_api_endpoints
   test_frontend

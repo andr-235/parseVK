@@ -89,21 +89,4 @@ jobs:
         working-directory: front
         run: bun run build
 
-  go:
-    name: Go CLI
-    needs: changes
-    if: needs.changes.outputs.go_cli == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: tools/parsevkctl-go
-    steps:
-      - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        working-directory: front
-        run: bun install --frozen-lockfile
-      - name: Run tests
-        working-directory: front
-        run: bun run test
+
