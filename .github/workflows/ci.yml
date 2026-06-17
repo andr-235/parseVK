@@ -14,12 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[skip ci]') }}
     outputs:
-<<<<<<< HEAD
-      frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
-=======
       frontend_changed: ${{ steps.detect.outputs.frontend_changed }}
       python_changed: ${{ steps.detect.outputs.python_changed }}
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     steps:
       - uses: actions/checkout@v6
         with:
@@ -99,23 +95,6 @@ jobs:
         working-directory: front
         run: bun run build
 
-<<<<<<< HEAD
-  test-frontend:
-    name: Test Frontend
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.frontend_changed == 'true'
-    steps:
-      - uses: actions/checkout@v6
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        working-directory: front
-        run: bun install --frozen-lockfile
-      - name: Run tests
-        working-directory: front
-        run: bun run test
-=======
   ruff:
     name: Ruff lint
     runs-on: ubuntu-latest
@@ -145,6 +124,3 @@ jobs:
       - name: Run tests
         working-directory: libs/py/common
         run: uv run pytest -v
-
-
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
