@@ -153,39 +153,45 @@ jobs:
             echo "Changed files since last successful deploy:"
             printf '%s\n' "$CHANGED_FILES"
 
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(front/|docker/frontend\.Dockerfile|docker/frontend\.nginx\.conf|docker/frontend-entrypoint\.sh|docker-compose\.deploy\.yml|\.dockerignore)'; then
+            # Shared libs change triggers all services
+            LIBS_CHANGED=false
+            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^libs/py/common/'; then
+              LIBS_CHANGED=true
+            fi
+
+            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(front/|docker/frontend\.Dockerfile|docker/frontend\.nginx\.conf|docker/frontend-entrypoint\.sh|\.dockerignore)'; then
               BUILD_FRONTEND=true
             fi
 
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/api-gateway/'; then
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/api-gateway/'; then
               BUILD_API_GATEWAY=true
             fi
 
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/identity-service/'; then
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/identity-service/'; then
               BUILD_IDENTITY_SERVICE=true
             fi
 
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/tasks-service/'; then
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/tasks-service/'; then
               BUILD_TASKS_SERVICE=true
             fi
 
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/vk-service/'; then
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/vk-service/'; then
               BUILD_VK_SERVICE=true
             fi
 
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/content-service/'; then
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/content-service/'; then
               BUILD_CONTENT_SERVICE=true
             fi
 
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/moderation-service/'; then
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/moderation-service/'; then
               BUILD_MODERATION_SERVICE=true
             fi
 
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/telegram-service/'; then
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/telegram-service/'; then
               BUILD_TELEGRAM_SERVICE=true
             fi
 
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/im-service/'; then
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/im-service/'; then
               BUILD_IM_SERVICE=true
             fi
           fi

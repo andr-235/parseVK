@@ -35,15 +35,15 @@ pull_runtime_images_for_services() {
   fi
 
   if should_include_service prometheus "$@"; then
-    pull_image "prom/prometheus:latest"
+    pull_image "prom/prometheus:v3.11.3"
   fi
 
   if should_include_service node-exporter "$@"; then
-    pull_image "prom/node-exporter:latest"
+    pull_image "prom/node-exporter:v1.11.1"
   fi
 
   if should_include_service grafana "$@"; then
-    pull_image "grafana/grafana:latest"
+    pull_image "grafana/grafana:13.0.1-security-01"
   fi
 
   if should_include_service identity-service "$@"; then

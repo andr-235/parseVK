@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common.sh"
 
-MIGRATION_SERVICES="identity tasks vk content"
+MIGRATION_SERVICES="identity tasks vk content moderation im"
 
 ensure_migration_images() {
   for svc in $MIGRATION_SERVICES; do
