@@ -1,4 +1,4 @@
-[← Назад к README](../README.md) · [AGENTS →](AGENTS.md)
+[Back to README](../README.md) · [Configuration →](configuration.md)
 
 # API Reference
 
@@ -46,5 +46,5 @@
 
 ## См. также
 
-- [Архитектура](.ai-factory/ARCHITECTURE.md) — взаимодействие сервисов
+- [Архитектура](../.ai-factory/ARCHITECTURE.md) — взаимодействие сервисов
 - [README](../README.md) — общая информация

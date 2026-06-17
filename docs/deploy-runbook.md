@@ -1,3 +1,5 @@
+[← Testing](testing.md) · [Back to README](../README.md)
+
 # Deploy Runbook
 
 ## Overview
@@ -62,3 +64,8 @@ The workflow detects which services need rebuilding by comparing against the las
 ```bash
 ./deploy.sh USER@SERVER_HOST
 ```
+
+## See Also
+
+- [Configuration](configuration.md) — environment variables for production
+- [Testing](testing.md) — CI/CD testing pipeline

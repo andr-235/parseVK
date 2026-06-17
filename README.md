@@ -27,7 +27,10 @@ docker compose up -d
 | [Инструкции](INSTRUCTIONS.md) | Стек, архитектура, быстрый старт, разработка |
 | [AGENTS](AGENTS.md) | AI Playbook для разработчиков и ассистентов |
 | [API Reference](docs/api.md) | API Gateway эндпоинты |
+| [Configuration](docs/configuration.md) | Переменные окружения, secrets |
 | [Архитектура](.ai-factory/ARCHITECTURE.md) | Микросервисы, event-driven |
+| [Testing](docs/testing.md) | Тесты: pytest, vitest, go test |
+| [Deploy](docs/deploy-runbook.md) | Production deployment runbook |
 | [Дизайн](DESIGN.md) | Дизайн-токены, тема оформления |
 | [PRODUCT](PRODUCT.md) | Описание продукта и пользователей |
 | [ADR](docs/adr/) | Architecture Decision Records |

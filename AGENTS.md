@@ -13,6 +13,7 @@
 * **Запрет самоаппрува**: Категорически запрещено создавать GitHub-аппрувы (approve) пулл-реквестов от имени того же пользователя, который ведет переписку. Это нарушает правила взаимного контроля.
 * **Использование специализированных навыков (Skills)**: Для всех типовых процедур (планирование задач, реализация, ревью, мердж, хэндофф) используйте строго репозиторные навыки из каталога `.agents/skills/`.
 * **Тонкий CLI**: Инструмент `parsevkctl` должен оставаться тонким детерминированным CLI для автоматизации рутины (создание веток, смена статусов, слияние). Сложная ИИ-логика принятия решений должна находиться в слоях Customization (Skills, Rules).
+
 * **Соблюдение границ Scope**: Всегда строго следуйте разделам `Scope` и `Out of Scope` в описании задачи. Не производите непредусмотренный рефакторинг или изменения в других микросервисах.
 * **Честная валидация**: Никогда не утверждайте, что тесты пройдены, если вы их физически не запускали.
 * **Обязательный Handoff**: Всегда предоставляйте финальный отчет (handoff) по установленной форме после реализации или ревью.
@@ -543,5 +544,39 @@ cache = {}
 * Не создавай PR из default branch.
 * Не делай self-approve.
 * Не пиши официальные GitHub review comments без прямого запроса пользователя.
+
+---
+
+## Documentation
+
+| Document | Path | Description |
+|----------|------|-------------|
+| README | README.md | Project landing page |
+| Instructions | INSTRUCTIONS.md | Full development guide (stack, setup, architecture) |
+| API Reference | docs/api.md | API Gateway endpoints |
+| Configuration | docs/configuration.md | Environment variables and secrets |
+| Architecture | .ai-factory/ARCHITECTURE.md | Microservices + Three-Tier pattern |
+| Testing | docs/testing.md | Test setup (pytest, vitest, go test) |
+| Deploy Runbook | docs/deploy-runbook.md | Production deployment guide |
+| Design System | DESIGN.md | Design tokens, theme, components |
+| Product | PRODUCT.md | Product requirements and user stories |
+
+## AI Context Files
+
+| File | Purpose |
+|------|---------|
+| AGENTS.md | AI agent rules and workflow for this repository |
+| .ai-factory/DESCRIPTION.md | Project description, tech stack, and features |
+| .ai-factory/ARCHITECTURE.md | Architecture guidelines (Microservices + Three-Tier) |
+| .ai-factory/ROADMAP.md | Project roadmap and milestones |
+| .ai-factory/rules/base.md | Auto-detected codebase conventions and rules |
+| INSTRUCTIONS.md | Detailed development setup and runbook |
+| docs/api.md | API Gateway endpoints |
+| docs/configuration.md | Environment variables and secrets |
+| docs/testing.md | Test setup (pytest, vitest, go test) |
+| docs/deploy-runbook.md | Production deployment guide |
+| DESIGN.md | Design system tokens and component guidelines |
+| PRODUCT.md | Product requirements and user stories |
+| GEMINI.md | Legacy Gemini agent playbook |
 
 ---
