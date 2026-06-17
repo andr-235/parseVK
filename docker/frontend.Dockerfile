@@ -20,9 +20,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 COPY front/ ./
 
 # Формируем production-конфиг, чтобы фронтенд использовал проксируемый API.
-RUN cat <<EOF > .env.production
-VITE_API_URL=${VITE_API_URL}
-EOF
+RUN echo "VITE_API_URL=/api/v1" > .env.production
 
 # Build with cache mount for Vite cache
 RUN --mount=type=cache,target=/app/node_modules/.vite \
