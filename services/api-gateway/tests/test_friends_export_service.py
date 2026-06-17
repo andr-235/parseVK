@@ -26,8 +26,11 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from fastapi import HTTPException
+
 from app.modules.friends_export.models import (
     DoneEventData,
+    ErrorEventData,
     FriendsExportStartResponse,
     FriendsJobDetailResponse,
     FriendsJobLogEntry,
@@ -36,11 +39,12 @@ from app.modules.friends_export.models import (
     LogEventData,
     ProgressEventData,
     SseDoneEvent,
+    SseErrorEvent,
     SseLogEvent,
     SseProgressEvent,
 )
 from app.modules.friends_export.service import FriendsExportService
-from fastapi import HTTPException
+
 
 # ---------------------------------------------------------------------------
 # Helpers

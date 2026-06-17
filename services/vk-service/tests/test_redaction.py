@@ -1,18 +1,17 @@
+import os
 import sys
+import pytest
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
-
 use_service_path()
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
-from app.modules.ok_friends.service import OkFriendsExportService
 from app.modules.vk_friends.service import VkFriendsExportService
+from app.modules.ok_friends.service import OkFriendsExportService
 
 
 @pytest.fixture

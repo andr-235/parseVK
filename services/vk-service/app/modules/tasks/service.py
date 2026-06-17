@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -12,7 +13,7 @@ CONSUMER_NAME = "vk-service.tasks"
 
 
 def utcnow() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 class TaskEventsRepository:
@@ -86,7 +87,7 @@ class TaskEventsHandler:
         task_id = event.task_id()
         run_id = str(event.event_id)
         task_run = await self.repository.get_task_run(task_id)
-
+        
         if task_run is not None:
             if task_run.status == "done":
                 return None
@@ -96,9 +97,8 @@ class TaskEventsHandler:
         else:
             task_run = await self.repository.create_task_run(event, run_id)
 
-        import logging
-
         import httpx
+        import logging
 
         logger = logging.getLogger("vk-service.tasks")
 
@@ -114,7 +114,7 @@ class TaskEventsHandler:
                 detail = "Unknown conflict"
                 try:
                     detail = exc.response.json().get("detail", detail)
-                except Exception:  # noqa: S110
+                except Exception:
                     pass
 
                 # Любой 409 конфликт от start_execution означает, что tasks-service находится в несовместимом состоянии

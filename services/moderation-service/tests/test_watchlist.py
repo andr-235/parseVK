@@ -1,18 +1,16 @@
-import sys
-from datetime import UTC, datetime
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
+import sys
+from pathlib import Path
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
-
 use_service_path()
 
-from app.db.models import WatchlistAuthor, WatchlistSettings
-from app.modules.watchlist.schemas import UpdateWatchlistAuthorSchema
+from app.db.models import WatchlistSettings, WatchlistAuthor, ModerationComment
 from app.modules.watchlist.service import WatchlistService
+from app.modules.watchlist.schemas import WatchlistSettingsUpdateSchema, UpdateWatchlistAuthorSchema
 
 
 @pytest.fixture
@@ -131,7 +129,7 @@ async def test_refresh_active_authors_success(mock_get):
         author_vk_id=8888,
         status="ACTIVE",
         last_activity_at=None,
-        monitoring_started_at=datetime.now(UTC),
+        monitoring_started_at=datetime.now(timezone.utc),
     )
 
     mock_resp = MagicMock()

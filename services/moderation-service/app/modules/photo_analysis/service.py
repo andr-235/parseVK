@@ -1,22 +1,23 @@
 import logging
 
+from sqlalchemy import select, delete, and_
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import httpx
 from app.core.config import settings
 from app.db.models import PhotoAnalysis
-from app.modules.photo_analysis.api_client import PhotoAnalysisClient
-from app.modules.photo_analysis.mappers import (
-    build_summary_dto,
-    map_item_to_schema,
-    utcnow,
-)
 from app.modules.photo_analysis.schemas import (
     AnalyzePhotosSchema,
     PhotoAnalysisListSchema,
     PhotoAnalysisSummarySchema,
 )
-from sqlalchemy import and_, delete, select
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.modules.photo_analysis.api_client import PhotoAnalysisClient
+from app.modules.photo_analysis.mappers import (
+    utcnow,
+    map_item_to_schema,
+    build_summary_dto,
+)
 
 logger = logging.getLogger("moderation-service.photo-analysis.service")
 
@@ -30,14 +31,10 @@ class PhotoAnalysisService:
         )
 
     def _http_client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            headers={"X-Internal-Service-Token": settings.internal_service_token}, timeout=httpx.Timeout(15.0)
-        )
+        return httpx.AsyncClient(headers={"X-Internal-Service-Token": settings.internal_service_token}, timeout=httpx.Timeout(15.0))
 
     async def analyze_by_vk_user(self, vk_user_id: int, options: AnalyzePhotosSchema) -> PhotoAnalysisListSchema:
-        logger.info(
-            "Starting photo analysis for vk_user_id=%d, limit=%s, force=%s", vk_user_id, options.limit, options.force
-        )
+        logger.info("Starting photo analysis for vk_user_id=%d, limit=%s, force=%s", vk_user_id, options.limit, options.force)
         photos_to_process = await self.client.prepare_photos(vk_user_id, options)
         if not photos_to_process:
             logger.info("No photos found, marking author verified")
@@ -90,7 +87,7 @@ class PhotoAnalysisService:
                     "explanation": stmt.excluded.explanation,
                     "analyzed_at": now,
                     "updated_at": now,
-                },
+                }
             )
             await self.session.execute(stmt)
 
@@ -99,31 +96,17 @@ class PhotoAnalysisService:
         return await self.list_by_vk_user(vk_user_id)
 
     async def list_by_vk_user(self, vk_user_id: int) -> PhotoAnalysisListSchema:
-        stmt = (
-            select(PhotoAnalysis)
-            .where(PhotoAnalysis.author_vk_id == vk_user_id)
-            .order_by(PhotoAnalysis.analyzed_at.desc())
-        )
+        stmt = select(PhotoAnalysis).where(PhotoAnalysis.author_vk_id == vk_user_id).order_by(PhotoAnalysis.analyzed_at.desc())
         res = await self.session.execute(stmt)
         items = list(res.scalars().all())
         schema_items = [map_item_to_schema(i) for i in items]
         summary = build_summary_dto(items, len(items))
-        return PhotoAnalysisListSchema(
-            items=schema_items,
-            total=len(items),
-            suspiciousCount=summary.suspicious,
-            analyzedCount=len(items),
-            summary=summary,
-        )
+        return PhotoAnalysisListSchema(items=schema_items, total=len(items), suspiciousCount=summary.suspicious, analyzedCount=len(items), summary=summary)
 
     async def list_suspicious_by_vk_user(self, vk_user_id: int) -> PhotoAnalysisListSchema:
-        stmt = (
-            select(PhotoAnalysis)
-            .where(
-                and_(PhotoAnalysis.author_vk_id == vk_user_id, PhotoAnalysis.has_suspicious.is_(True))  # noqa: E712
-            )
-            .order_by(PhotoAnalysis.analyzed_at.desc())
-        )
+        stmt = select(PhotoAnalysis).where(
+            and_(PhotoAnalysis.author_vk_id == vk_user_id, PhotoAnalysis.has_suspicious == True)
+        ).order_by(PhotoAnalysis.analyzed_at.desc())
         res = await self.session.execute(stmt)
         items = list(res.scalars().all())
         schema_items = [map_item_to_schema(i) for i in items]

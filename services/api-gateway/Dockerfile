@@ -17,12 +17,6 @@ WORKDIR /app/services/api-gateway
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 
-RUN addgroup -g 1001 -S appuser && \
-    adduser -S -u 1001 -G appuser appuser && \
-    chown -R appuser:appuser /app
-
-USER appuser
-
 ENV PATH="/app/services/api-gateway/.venv/bin:$PATH"
 ENV PYTHONPATH="/app/libs/py/common:/app/services/api-gateway"
 

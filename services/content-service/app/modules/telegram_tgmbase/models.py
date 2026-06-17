@@ -1,12 +1,11 @@
-from datetime import UTC, datetime
-
-from app.db.base import Base
-from sqlalchemy import JSON, BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text
+from datetime import datetime, timezone
+from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Text, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.db.base import Base
 
 def utcnow() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 # Базовые таблицы tgmbase (пользователи, сообщения, группы)

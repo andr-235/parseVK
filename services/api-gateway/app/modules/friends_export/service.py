@@ -22,8 +22,10 @@ Ref: FASTAPI-MIG-010B / docs/FASTAPI_MIG_010_FRIENDS_EXPORT_INVENTORY.md
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
-from typing import Any, Literal
+from typing import Any, AsyncIterator, Literal
+
+from fastapi import HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.modules.friends_export.adapters import FriendsExportAdapter
 from app.modules.friends_export.models import (
@@ -31,8 +33,6 @@ from app.modules.friends_export.models import (
     FriendsJobDetailResponse,
     SseEvent,
 )
-from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
 
 _XLSX_CONTENT_TYPE = (
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

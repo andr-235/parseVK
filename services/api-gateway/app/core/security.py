@@ -1,10 +1,11 @@
 from typing import Any
 
-import jwt
-from common.security import stable_sha256
 from fastapi import Header, HTTPException, status
+import jwt
 from jwt import PyJWKClientError
 from jwt.algorithms import RSAAlgorithm
+
+from common.security import stable_sha256
 
 from app.core.config import settings
 

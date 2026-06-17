@@ -1,12 +1,11 @@
 {
   "name": "front",
   "private": true,
-  "version": "0.32.2",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "check:push": "bun run lint && bun run build && bun run test",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

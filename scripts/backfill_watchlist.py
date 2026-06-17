@@ -2,13 +2,16 @@ import asyncio
 import os
 import re
 import sys
-
 import asyncpg
 
 # Local dev defaults
-OLD_DB_URL = os.getenv("OLD_DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/vk_api")
+OLD_DB_URL = os.getenv(
+    "OLD_DATABASE_URL",
+    "postgresql://postgres:postgres@localhost:5432/vk_api"
+)
 NEW_DB_URL = os.getenv(
-    "NEW_DATABASE_URL", "postgresql://moderation:moderation_dev_password_change_me@localhost:5438/moderation"
+    "NEW_DATABASE_URL",
+    "postgresql://moderation:moderation_dev_password_change_me@localhost:5438/moderation"
 )
 
 
@@ -37,13 +40,13 @@ async def backfill():
     try:
         # 1. Backfill WatchlistSettings
         print("Reading old WatchlistSettings...")
-        old_settings = await old_conn.fetch('SELECT * FROM "WatchlistSettings" ORDER BY id LIMIT 1')
-
+        old_settings = await old_conn.fetch("SELECT * FROM \"WatchlistSettings\" ORDER BY id LIMIT 1")
+        
         settings_id = 1
         if old_settings:
             s = old_settings[0]
             print(f"Found existing settings: trackAll={s['trackAllComments']}, pollInterval={s['pollIntervalMinutes']}")
-
+            
             # Upsert into new DB
             await new_conn.execute(
                 """
@@ -60,7 +63,7 @@ async def backfill():
                 s["pollIntervalMinutes"],
                 s["maxAuthors"],
                 s["createdAt"],
-                s["updatedAt"],
+                s["updatedAt"]
             )
             settings_id = s["id"]
         else:
@@ -75,7 +78,7 @@ async def backfill():
 
         # 2. Backfill WatchlistAuthor
         print("Reading old WatchlistAuthors...")
-        old_authors = await old_conn.fetch('SELECT * FROM "WatchlistAuthor"')
+        old_authors = await old_conn.fetch("SELECT * FROM \"WatchlistAuthor\"")
         print(f"Found {len(old_authors)} authors to migrate")
 
         # Map to track old author ID -> new author ID mapping
@@ -84,7 +87,7 @@ async def backfill():
         for a in old_authors:
             # We map status from camelCase (ACTIVE, PAUSED, STOPPED) to UPPERCASE
             status = str(a["status"]).upper()
-
+            
             # Insert and get the new ID in new DB
             new_author_id = await new_conn.fetchval(
                 """
@@ -112,7 +115,7 @@ async def backfill():
                 a["monitoringStoppedAt"],
                 settings_id,
                 a["createdAt"],
-                a["updatedAt"],
+                a["updatedAt"]
             )
             author_id_map[a["id"]] = new_author_id
             print(f"Migrated WatchlistAuthor VK ID {a['authorVkId']} -> New ID {new_author_id}")
@@ -120,7 +123,7 @@ async def backfill():
         # 3. Backfill Comments mapping
         print("Reading old Comments mapping...")
         old_comments = await old_conn.fetch(
-            'SELECT id, "ownerId", "vkCommentId", "watchlistAuthorId" FROM "Comment" WHERE "watchlistAuthorId" IS NOT NULL'
+            "SELECT id, \"ownerId\", \"vkCommentId\", \"watchlistAuthorId\" FROM \"Comment\" WHERE \"watchlistAuthorId\" IS NOT NULL"
         )
         print(f"Found {len(old_comments)} comments linked to watchlist authors")
 
@@ -128,7 +131,7 @@ async def backfill():
         for c in old_comments:
             old_author_id = c["watchlistAuthorId"]
             new_author_id = author_id_map.get(old_author_id)
-
+            
             if not new_author_id:
                 continue
 
@@ -146,15 +149,15 @@ async def backfill():
                 WHERE external_key LIKE $2
                 """,
                 new_author_id,
-                pattern,
+                pattern
             )
-
+            
             # extract count of updated rows
             # update_res is usually e.g. "UPDATE 1"
             try:
                 count = int(update_res.split()[-1])
                 updated_comments_count += count
-            except Exception:  # noqa: S110
+            except Exception:
                 pass
 
         print(f"Successfully linked {updated_comments_count} comments in new moderation database")

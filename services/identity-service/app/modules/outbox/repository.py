@@ -1,10 +1,11 @@
 from datetime import timedelta
 from uuid import UUID
 
-from app.db.models import OUTBOX_FAILED, OUTBOX_PENDING, OUTBOX_PUBLISHED, OutboxEvent, utc_now
 from common.events import EventEnvelope
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import OUTBOX_FAILED, OUTBOX_PENDING, OUTBOX_PUBLISHED, OutboxEvent, utc_now
 
 MAX_OUTBOX_ATTEMPTS = 5
 

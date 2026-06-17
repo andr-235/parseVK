@@ -1,9 +1,8 @@
 import hashlib
 import logging
+import httpx
 from typing import Any
 from urllib.parse import urlencode
-
-import httpx
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
@@ -14,7 +13,7 @@ OK_API_BASE_URL = "https://api.ok.ru"
 
 
 def calculate_md5(data: str) -> str:
-    return hashlib.md5(data.encode("utf-8"), usedforsecurity=False).hexdigest().lower()
+    return hashlib.md5(data.encode("utf-8")).hexdigest().lower()
 
 
 def sign_ok_request(
@@ -88,7 +87,7 @@ class OkApiClient:
             url_path = f"/api/{method_path}"
 
         url = f"{OK_API_BASE_URL}{url_path}"
-
+        
         # Mask credentials in log message
         masked_query_params = {}
         for k, v in query_params.items():
@@ -129,7 +128,7 @@ class OkApiClient:
 
     async def friends_get(self, **params) -> list[str]:
         response = await self._call("friends.get", is_users_info=False, **params)
-
+        
         friends = []
         if isinstance(response, list):
             friends = response
@@ -150,7 +149,7 @@ class OkApiClient:
             "emptyPictures": "true" if empty_pictures else "false",
         }
         response = await self._call("users.getInfo", is_users_info=True, **params)
-
+        
         if isinstance(response, list):
             return response
         if isinstance(response, dict) and "users" in response:

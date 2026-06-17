@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.db.models import Task, TaskAuditLog
 from app.modules.automation.repository import AutomationRepository
@@ -152,7 +152,7 @@ class AutomationService:
     def _next_run_at(self, settings) -> str | None:
         if not settings.enabled:
             return None
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         local_now = now - timedelta(minutes=settings.timezone_offset_minutes)
         local_next = local_now.replace(
             hour=settings.run_hour, minute=settings.run_minute, second=0, microsecond=0

@@ -1,5 +1,6 @@
-from app.modules.tasks.service import TasksGatewayService, get_tasks_gateway_service
 from fastapi import APIRouter, Depends, Request, Response
+
+from app.modules.tasks.service import TasksGatewayService, get_tasks_gateway_service
 
 router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
 

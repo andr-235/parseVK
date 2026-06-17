@@ -1,12 +1,11 @@
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from typing import Any
-
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
-class JobStatus(StrEnum):
+class JobStatus(str, Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     DONE = "DONE"
@@ -14,7 +13,11 @@ class JobStatus(StrEnum):
 
 
 class CamelModel(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, from_attributes=True)
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True
+    )
 
 
 class VkFriendsExportStartRequest(BaseModel):

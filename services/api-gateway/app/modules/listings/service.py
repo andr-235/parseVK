@@ -2,16 +2,13 @@ import json
 from pathlib import PurePath
 from typing import Any
 
-from app.clients.content.client import (
-    ContentClient,
-    ContentClientHTTPError,
-    ContentClientUnavailableError,
-)
+from fastapi import HTTPException, Request, UploadFile, status
+from fastapi.responses import Response
+
+from app.clients.content.client import ContentClient, ContentClientHTTPError, ContentClientUnavailableError
 from app.core.config import settings
 from app.modules.auth.router import bearer_token, get_auth_service, request_ids
 from app.modules.auth.service import GatewayAuthService
-from fastapi import HTTPException, Request, UploadFile, status
-from fastapi.responses import Response
 
 
 class ListingsGatewayService:

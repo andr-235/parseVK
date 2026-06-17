@@ -1,18 +1,10 @@
 from typing import Any
+from fastapi import HTTPException, Request, status
 
-from app.clients.content.client import (
-    ContentClient,
-    ContentClientHTTPError,
-    ContentClientUnavailableError,
-)
-from app.clients.vk_service.client import (
-    VkServiceClient,
-    VkServiceClientHTTPError,
-    VkServiceClientUnavailableError,
-)
+from app.clients.content.client import ContentClient, ContentClientHTTPError, ContentClientUnavailableError
+from app.clients.vk_service.client import VkServiceClient, VkServiceClientHTTPError, VkServiceClientUnavailableError
 from app.modules.auth.router import bearer_token, get_auth_service, request_ids
 from app.modules.auth.service import GatewayAuthService
-from fastapi import HTTPException, Request, status
 
 
 class ContentGatewayService:
