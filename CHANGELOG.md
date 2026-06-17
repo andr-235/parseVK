@@ -1,3 +1,10 @@
+## [0.33.8](https://github.com/andr-235/parseVK/compare/v0.33.7...v0.33.8) (2026-06-17)
+
+
+### Bug Fixes
+
+* **identity-service:** make initial migration idempotent with IF NOT EXISTS ([2861d0b](https://github.com/andr-235/parseVK/commit/2861d0bb24fd4a33ef3483978ae23b7c21e284a5))
+
 ## [0.33.7](https://github.com/andr-235/parseVK/compare/v0.33.6...v0.33.7) (2026-06-17)
 
 
