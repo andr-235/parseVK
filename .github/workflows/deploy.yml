@@ -127,8 +127,9 @@ jobs:
           PREV_COMMIT="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
           CURRENT_COMMIT=$(git rev-parse HEAD)
 
-          BUILD_FRONTEND=false
-          BUILD_DB_BACKUP=false
+            BUILD_FRONTEND=false
+            BUILD_DB_BACKUP=false
+            BUILD_IM_SERVICE=false
 
           if [ -z "$PREV_COMMIT" ] || ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
             BUILD_FRONTEND=true
@@ -146,10 +147,15 @@ jobs:
             if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(docker/db-backup/|docker-compose\.deploy\.yml|\.dockerignore)'; then
               BUILD_DB_BACKUP=true
             fi
+
+            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/im-service/'; then
+              BUILD_IM_SERVICE=true
+            fi
           fi
 
           echo "build_frontend=$BUILD_FRONTEND" >> "$GITHUB_OUTPUT"
           echo "build_db_backup=$BUILD_DB_BACKUP" >> "$GITHUB_OUTPUT"
+          echo "build_im_service=$BUILD_IM_SERVICE" >> "$GITHUB_OUTPUT"
 
       - name: Build and start containers
         if: steps.deployment_context.outputs.skip_deploy != 'true'
@@ -165,6 +171,10 @@ jobs:
 
           if [ "${{ steps.changed_services.outputs.build_db_backup }}" = "true" ]; then
             SERVICES_TO_BUILD="$SERVICES_TO_BUILD db_backup"
+          fi
+
+          if [ "${{ steps.changed_services.outputs.build_im_service }}" = "true" ]; then
+            SERVICES_TO_BUILD="$SERVICES_TO_BUILD im-service im-migrate"
           fi
 
           if [ -n "$SERVICES_TO_BUILD" ]; then

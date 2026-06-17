@@ -69,6 +69,18 @@ pull_runtime_images_for_services() {
   if should_include_service api-gateway "$@"; then
     pull_image "python:3.12-slim"
   fi
+
+  if should_include_service moderation-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service telegram-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service im-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
 }
 
 pull_build_base_images_for_services() {
@@ -98,6 +110,18 @@ pull_build_base_images_for_services() {
   fi
 
   if should_include_service api-gateway "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service moderation-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service telegram-service "$@"; then
+    pull_image "python:3.12-slim"
+  fi
+
+  if should_include_service im-service "$@"; then
     pull_image "python:3.12-slim"
   fi
 }
