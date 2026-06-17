@@ -1,21 +1,12 @@
 import secrets
 from typing import Any
 
-<<<<<<< HEAD
-from fastapi import Header, HTTPException, status
-=======
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 import jwt
 from common.security import stable_sha256
 from fastapi import Header, HTTPException, Request, status
 from jwt import PyJWKClientError
 from jwt.algorithms import RSAAlgorithm
 
-<<<<<<< HEAD
-from common.security import stable_sha256
-
-=======
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.config import settings
 
 

@@ -1,14 +1,9 @@
 import re
 from typing import Any
-<<<<<<< HEAD
-from app.core.config import settings
-
-=======
 
 from app.core.config import settings
 
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 def redact_secrets(text: Any) -> str:
     """
     Universally redacts sensitive keys and values from logs, errors, and JSON responses.

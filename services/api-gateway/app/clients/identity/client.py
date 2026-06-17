@@ -1,18 +1,7 @@
-<<<<<<< HEAD
-import httpx
-from app.clients.identity.methods import (
-    IdentityClientMethods,
-    IdentityClientError,
-    IdentityClientHTTPError,
-    IdentityClientUnavailableError,
-)
-from app.clients.internal import InternalServiceClient
-=======
 import logging
 from typing import Any
 
 from app.clients.base import ServiceClient
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.config import settings
 
 logger = logging.getLogger("api-gateway.identity.client")
