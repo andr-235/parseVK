@@ -78,7 +78,7 @@ async def delete_group(
     try:
         await content_gateway_service.forward(request, "DELETE", f"/internal/content/groups/{vk_group_id}")
     except Exception:
-        pass
+        logger.warning("Failed to delete group from content-service (non-critical)", exc_info=True)
     return {"status": "success"}
 
 
@@ -112,6 +112,7 @@ async def search_region_groups(
             json=vk_ids,
         )
     except Exception:
+        logger.warning("Failed to fetch existing groups from content service (non-critical)", exc_info=True)
         existing = []
 
     existing_ids = {group["vkId"] for group in existing}

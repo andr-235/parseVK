@@ -6,7 +6,7 @@ from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClien
 from app.core.config import settings
 from app.core.security import bearer_token
 from app.core.utils import request_ids
-from app.modules.auth.router import get_auth_service
+from app.modules.auth.router import create_auth_service
 from app.modules.auth.service import GatewayAuthService
 from fastapi import HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
@@ -15,7 +15,7 @@ from fastapi.responses import Response
 class ListingsGatewayService:
     def __init__(self, client: ServiceClient | None = None, auth_service: GatewayAuthService | None = None):
         self.client = client or ServiceClient(service_name="Listings", base_url=settings.listings_base_url, internal_token=settings.internal_service_token)
-        self.auth_service = auth_service or get_auth_service()
+        self.auth_service = auth_service or create_auth_service()
 
     async def list_listings(self, request: Request):
         return await self.forward_json(request, "GET", "/internal/content/listings", params=dict(request.query_params))

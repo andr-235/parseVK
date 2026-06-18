@@ -1,6 +1,9 @@
+import logging
 
 from app.clients.base import ServiceClient
 from app.clients.vk_service.client import VkServiceClient
+
+logger = logging.getLogger(__name__)
 from app.core.config import settings
 from app.core.utils import request_ids
 from app.modules._base import BaseGatewayService
@@ -19,8 +22,9 @@ class ContentGatewayService(BaseGatewayService):
         request_id, correlation_id = request_ids(request)
         vk_ids = [group["id"] for group in vk_groups]
         try:
-            existing = await self.client.request("POST", "/internal/content/groups/bulk", json=vk_ids, user_id="", request_id=request_id, correlation_id=correlation_id)
-        except Exception:
+            existing = await self.client.request("POST", "/internal/content/groups/bulk", json=vk_ids, request_id=request_id, correlation_id=correlation_id)
+        except Exception as exc:
+            logger.warning("Failed to fetch existing groups from content service: %s", exc)
             existing = []
 
         existing_ids = {group["vkId"] for group in existing}

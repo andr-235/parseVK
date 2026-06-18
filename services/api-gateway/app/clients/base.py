@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 from typing import Any
 
 import httpx
-from app.clients.internal import (
+from app.clients.errors import (
     InternalClientHTTPError,
     InternalClientUnavailableError,
-    InternalServiceClient,
 )
+from app.clients.internal import InternalServiceClient
 
 
 class ServiceClientError(Exception):
@@ -47,14 +49,28 @@ class ServiceClient:
         self.base_url = self._internal.base_url
 
     async def close(self) -> None:
-        await self._internal.close()
+        await self._internal.aclose()
+
+    async def aclose(self) -> None:
+        await self._internal.aclose()
+
+    async def __aenter__(self) -> ServiceClient:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object | None,
+    ) -> None:
+        await self.aclose()
 
     async def request(
         self,
         method: str,
         path: str,
         *,
-        user_id: str,
+        user_id: str | None = None,
         request_id: str | None = None,
         correlation_id: str | None = None,
         params: dict | None = None,
@@ -84,7 +100,7 @@ class ServiceClient:
         self,
         path: str,
         *,
-        user_id: str,
+        user_id: str | None = None,
         request_id: str | None = None,
         correlation_id: str | None = None,
         params: dict | None = None,

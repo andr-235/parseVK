@@ -1,6 +1,12 @@
+from __future__ import annotations
+
 from typing import Any
 
 import httpx
+from app.clients.errors import (
+    InternalClientHTTPError,
+    InternalClientUnavailableError,
+)
 from common.headers import (
     CALLER_SERVICE_HEADER,
     CORRELATION_ID_HEADER,
@@ -10,24 +16,6 @@ from common.headers import (
 
 USER_ID_HEADER = "X-User-ID"
 CALLER_SERVICE = "api-gateway"
-
-
-class InternalClientError(Exception):
-    """Base error for internal service client failures."""
-
-
-class InternalClientHTTPError(InternalClientError):
-    def __init__(self, *, service_name: str, status_code: int, detail: Any) -> None:
-        self.service_name = service_name
-        self.status_code = status_code
-        self.detail = detail
-        super().__init__(f"{service_name} service returned HTTP {status_code}")
-
-
-class InternalClientUnavailableError(InternalClientError):
-    def __init__(self, *, service_name: str) -> None:
-        self.service_name = service_name
-        super().__init__(f"{service_name} service is unavailable")
 
 
 class InternalServiceClient:
@@ -47,8 +35,22 @@ class InternalServiceClient:
         self._owns_client = client is None
 
     async def close(self) -> None:
+        await self.aclose()
+
+    async def aclose(self) -> None:
         if self._owns_client:
             await self._client.aclose()
+
+    async def __aenter__(self) -> InternalServiceClient:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object | None,
+    ) -> None:
+        await self.aclose()
 
     def headers(
         self,

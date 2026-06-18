@@ -18,20 +18,20 @@ class IdentityClient(ServiceClient):
         )
 
     async def jwks(self) -> dict[str, Any]:
-        return await self.request("GET", "/.well-known/jwks.json", user_id="")
+        return await self.request("GET", "/.well-known/jwks.json")
 
     async def login(self, payload: Any, *, request_id: str | None = None, correlation_id: str | None = None) -> Any:
         from app.clients.identity.schemas import IdentityAuthResponse
-        result = await self.request("POST", "/internal/auth/login", user_id="", request_id=request_id, correlation_id=correlation_id, json=payload.model_dump())
+        result = await self.request("POST", "/internal/auth/login", request_id=request_id, correlation_id=correlation_id, json=payload.model_dump())
         return IdentityAuthResponse.model_validate(result)
 
     async def refresh(self, refresh_token: str, *, request_id: str | None = None, correlation_id: str | None = None) -> Any:
         from app.clients.identity.schemas import IdentityAuthResponse
-        result = await self.request("POST", "/internal/auth/refresh", user_id="", request_id=request_id, correlation_id=correlation_id, json={"refresh_token": refresh_token})
+        result = await self.request("POST", "/internal/auth/refresh", request_id=request_id, correlation_id=correlation_id, json={"refresh_token": refresh_token})
         return IdentityAuthResponse.model_validate(result)
 
     async def logout(self, refresh_token: str, *, request_id: str | None = None, correlation_id: str | None = None) -> None:
-        await self.request("POST", "/internal/auth/logout", user_id="", request_id=request_id, correlation_id=correlation_id, json={"refresh_token": refresh_token})
+        await self.request("POST", "/internal/auth/logout", request_id=request_id, correlation_id=correlation_id, json={"refresh_token": refresh_token})
 
     async def me(self, user_id: str, *, request_id: str | None = None, correlation_id: str | None = None) -> Any:
         from app.clients.identity.schemas import IdentityUser

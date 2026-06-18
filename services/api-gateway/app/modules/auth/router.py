@@ -1,4 +1,5 @@
 import secrets
+from collections.abc import AsyncGenerator
 
 from app.clients.identity.client import IdentityClient
 from app.core.config import settings
@@ -11,7 +12,17 @@ from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
-def get_auth_service() -> GatewayAuthService:
+async def get_auth_service() -> AsyncGenerator[GatewayAuthService, None]:
+    async with IdentityClient() as client:
+        yield GatewayAuthService(client)
+
+
+def create_auth_service() -> GatewayAuthService:
+    """Synchronous factory for service constructors (legacy pattern).
+
+    Creates IdentityClient without cleanup — used only during the migration
+    period. New code should use get_auth_service() with Depends instead.
+    """
     return GatewayAuthService(IdentityClient())
 
 

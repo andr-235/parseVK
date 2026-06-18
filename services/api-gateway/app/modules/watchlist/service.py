@@ -1,6 +1,9 @@
+import logging
 from typing import Any
 
 from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
+
+logger = logging.getLogger(__name__)
 from app.core.config import settings
 from fastapi import HTTPException, status
 
@@ -45,7 +48,8 @@ class WatchlistGatewayService:
             return {}
         try:
             profiles = await self.content_client.request("POST", "/authors/bulk", user_id=user_id, json=vk_author_ids)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to fetch author profiles from content service: %s", exc)
             return {}
         return {p["vkAuthorId"]: p for p in (profiles or []) if p}
 
