@@ -14,6 +14,19 @@ permissions:
   contents: read
 
 jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+
   dependency-scan:
     name: Scan Dependencies
     runs-on: ubuntu-latest
