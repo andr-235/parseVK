@@ -1,3 +1,10 @@
+## [0.35.2](https://github.com/andr-235/parseVK/compare/v0.35.1...v0.35.2) (2026-06-18)
+
+
+### Bug Fixes
+
+* **docker:** move useradd before COPY and remove --no-install-project in all service Dockerfiles ([9aefc24](https://github.com/andr-235/parseVK/commit/9aefc24a8d0665f5517eb57c965324488917b4e3))
+
 ## [0.35.1](https://github.com/andr-235/parseVK/compare/v0.35.0...v0.35.1) (2026-06-18)
 
 
