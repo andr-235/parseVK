@@ -1,3 +1,13 @@
+## [0.35.1](https://github.com/andr-235/parseVK/compare/v0.35.0...v0.35.1) (2026-06-18)
+
+
+### Bug Fixes
+
+* **deploy:** add /api/ catch-all to nginx and align VITE_API_URL ([b650364](https://github.com/andr-235/parseVK/commit/b6503645da7c6e7c303f7e4c6ea935825c2bb3a9))
+* **deploy:** use docker-compose.yml instead of docker-compose.deploy.yml ([a60781b](https://github.com/andr-235/parseVK/commit/a60781b0b5db38949d871ca3e9d92f52bae863cb))
+* **docker:** add missing chown paths for nginx conf.d and /run in frontend Dockerfile ([e22a3d9](https://github.com/andr-235/parseVK/commit/e22a3d9d3d38e63bf923d9eb4d10f48946fd6e8f))
+* **front:** remove non-existent react-hooks rule, fix any type, ignore coverage dirs in eslint ([5a398d2](https://github.com/andr-235/parseVK/commit/5a398d21339e42aafc415ae8251c3a2a0353159a))
+
 <<<<<<< HEAD
 ## [0.32.2](https://github.com/andr-235/parseVK/compare/v0.32.1...v0.32.2) (2026-06-15)
 =======
