@@ -2,6 +2,8 @@ from .vk_friends_service import VkFriendsExportService
 from .ok_friends_service import OkFriendsExportService
 from .ingestion_service import IngestionService
 from .task_handler import TaskEventsHandler, TaskEvent
+from .outbox_service import OutboxService
+from .vk_api_service import VkApiService
 
 __all__ = [
     "VkFriendsExportService",
@@ -9,4 +11,8 @@ __all__ = [
     "IngestionService",
     "TaskEventsHandler",
     "TaskEvent",
+    "OutboxService",
+    "VkApiService",
 ]
+
+
