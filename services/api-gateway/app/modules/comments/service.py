@@ -1,8 +1,38 @@
+import re
 from typing import Any
 
 from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
 from app.core.config import settings
 from fastapi import HTTPException, status
+
+_VK_POST_EXTERNAL_RE = re.compile(r"^vk_(-?\d+)_(\d+)$")
+
+
+def _parse_owner_id(post_external_key: str | None) -> int | None:
+    if not post_external_key:
+        return None
+    m = _VK_POST_EXTERNAL_RE.match(post_external_key)
+    return int(m.group(1)) if m else None
+
+
+def _format_comment(item: dict) -> dict:
+    owner_id = item.get("ownerId") or _parse_owner_id(item.get("post_external_key"))
+    date = item.get("date") or item.get("created_at")
+    date_str = date.isoformat() if hasattr(date, "isoformat") else str(date or "")
+    return {
+        "id": item["id"],
+        "text": item.get("text", ""),
+        "ownerId": owner_id,
+        "createdAt": date_str,
+        "author": {
+            "displayName": None,
+            "fullName": None,
+            "profileUrl": f"https://vk.com/id{item['author_vk_id']}" if item.get("author_vk_id") else None,
+            "screenName": None,
+        },
+        "group": None,
+        "isRead": item.get("is_read", False),
+    }
 
 
 class CommentsGatewayService:
@@ -28,7 +58,13 @@ class CommentsGatewayService:
             params["keywords"] = kw["keywords"]
 
         raw = await self._moderation_request("GET", "/internal/moderation/comments", user_id=kw.get("user_id"), request_id=kw.get("request_id"), correlation_id=kw.get("correlation_id"), params=params)
-        return {"items": raw["items"], "total": raw["total"], "hasMore": raw["has_more"], "readCount": raw["read_count"], "unreadCount": raw["unread_count"]}
+        return {
+            "items": [_format_comment(i) for i in raw["items"]],
+            "total": raw["total"],
+            "hasMore": raw["has_more"],
+            "readCount": raw["read_count"],
+            "unreadCount": raw["unread_count"],
+        }
 
     async def get_comments_cursor(self, cursor: str | None, limit: int, **kw: Any) -> dict:
         params: dict = {"limit": limit}
@@ -41,7 +77,7 @@ class CommentsGatewayService:
             params["keywords"] = kw["keywords"]
 
         raw = await self._moderation_request("GET", "/internal/moderation/comments/cursor", user_id=kw.get("user_id"), request_id=kw.get("request_id"), correlation_id=kw.get("correlation_id"), params=params)
-        return {"items": raw["items"], "nextCursor": raw["next_cursor"], "hasMore": raw["has_more"], "total": raw["total"], "readCount": raw["read_count"], "unreadCount": raw["unread_count"]}
+        return {"items": [_format_comment(i) for i in raw["items"]], "nextCursor": raw["next_cursor"], "hasMore": raw["has_more"], "total": raw["total"], "readCount": raw["read_count"], "unreadCount": raw["unread_count"]}
 
     async def patch_read_status(self, id: int, payload: dict, **kw: Any) -> dict:
         is_read = payload.get("isRead") if payload.get("isRead") is not None else payload.get("is_read")
