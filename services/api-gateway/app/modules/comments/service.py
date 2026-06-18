@@ -28,6 +28,7 @@ def _format_comment(item: dict, author_profile: dict | None = None, group_profil
         "id": item["id"],
         "text": item.get("text", ""),
         "ownerId": owner_id,
+        "authorVkId": author_vk_id,
         "createdAt": date_str,
         "author": {
             "displayName": author_profile.get("displayName") if author_profile else None,
