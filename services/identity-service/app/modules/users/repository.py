@@ -1,17 +1,9 @@
 from uuid import UUID
 
-<<<<<<< HEAD
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db.models import RefreshToken, User, utc_now
-
-=======
 from app.db.models import RefreshToken, User, utc_now
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 class UsersRepository:
     def __init__(self, session: AsyncSession):

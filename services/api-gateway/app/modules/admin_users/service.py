@@ -1,15 +1,7 @@
-<<<<<<< HEAD
-from fastapi import HTTPException, Request, status
-
-from app.clients.identity.client import IdentityClient, IdentityClientHTTPError, IdentityClientUnavailableError
-from app.modules.auth.router import bearer_token, get_auth_service, request_ids
-from app.modules.auth.service import GatewayAuthService
-=======
 from app.clients.identity.client import IdentityClient
 from app.modules._base import BaseGatewayService
 from app.modules.auth.service import GatewayAuthService
 from fastapi import HTTPException, Request, status
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class AdminUsersGatewayService(BaseGatewayService):

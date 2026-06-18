@@ -1,14 +1,3 @@
-<<<<<<< HEAD
-from collections.abc import AsyncGenerator
-
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from app.core.config import settings
-
-import sys
-from sqlalchemy.pool import NullPool
-
-=======
 import sys
 from collections.abc import AsyncGenerator
 
@@ -17,7 +6,6 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 if "pytest" in sys.modules:
     engine = create_async_engine(settings.database_url, poolclass=NullPool)
 else:

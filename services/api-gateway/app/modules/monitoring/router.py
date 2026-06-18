@@ -1,13 +1,7 @@
 from typing import Annotated, Any
-<<<<<<< HEAD
-from fastapi import APIRouter, Body, Depends, Request
-
-from app.modules.monitoring.service import MonitoringGatewayService, get_monitoring_gateway_service
-=======
 
 from app.modules.monitoring.service import MonitoringGatewayService, get_monitoring_gateway_service
 from fastapi import APIRouter, Body, Depends, Request
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 router = APIRouter(prefix="/api/v1/monitoring", tags=["monitoring"])
 

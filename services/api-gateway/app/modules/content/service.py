@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-from typing import Any
-from fastapi import HTTPException, Request, status
-=======
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 from app.clients.base import ServiceClient
 from app.clients.vk_service.client import VkServiceClient
@@ -10,10 +5,7 @@ from app.core.config import settings
 from app.core.utils import request_ids
 from app.modules._base import BaseGatewayService
 from app.modules.auth.service import GatewayAuthService
-<<<<<<< HEAD
-=======
 from fastapi import Request
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class ContentGatewayService(BaseGatewayService):

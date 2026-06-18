@@ -11,15 +11,9 @@ from _service_path import use_service_path
 
 use_service_path()
 
-<<<<<<< HEAD
-from common.events import EventEnvelope
-from app.db.models import OUTBOX_FAILED, OUTBOX_PENDING, OUTBOX_PUBLISHED, OutboxEvent
-from app.modules.outbox import repository
-=======
 from app.db.models import OUTBOX_FAILED, OUTBOX_PENDING, OUTBOX_PUBLISHED, OutboxEvent
 from app.modules.outbox import repository
 from common.events import EventEnvelope
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class FakeScalars:

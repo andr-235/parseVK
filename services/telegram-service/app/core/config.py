@@ -15,8 +15,6 @@ class Settings(BaseSettings):
     telegram_bot_token: str | None = Field(default=None, validation_alias="TELEGRAM_BOT_TOKEN")
     telegram_session_string: str | None = Field(default=None, validation_alias="TELEGRAM_SESSION_STRING")
 
-<<<<<<< HEAD
-=======
     @field_validator("telegram_api_id", mode="before")
     @classmethod
     def coerce_empty_string(cls, v: object) -> object:
@@ -25,6 +23,5 @@ class Settings(BaseSettings):
         return v
 
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 settings = Settings()
 

@@ -1,32 +1,16 @@
-<<<<<<< HEAD
-from fastapi import APIRouter, Depends, Query
-
 from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.watchlist.schemas import (
-    WatchlistSettingsSchema,
-    WatchlistSettingsUpdateSchema,
-    WatchlistAuthorSchema,
-=======
-from app.core.security import require_internal_token
-from app.db.session import get_session
-from app.modules.watchlist.schemas import (
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     CreateWatchlistAuthorSchema,
     UpdateWatchlistAuthorSchema,
     WatchlistAuthorDetailsSchema,
     WatchlistAuthorListSchema,
-<<<<<<< HEAD
-)
-from app.modules.watchlist.service import WatchlistService
-=======
     WatchlistAuthorSchema,
     WatchlistSettingsSchema,
     WatchlistSettingsUpdateSchema,
 )
 from app.modules.watchlist.service import WatchlistService
 from fastapi import APIRouter, Depends, Query
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 router = APIRouter(
     prefix="/internal/watchlist",

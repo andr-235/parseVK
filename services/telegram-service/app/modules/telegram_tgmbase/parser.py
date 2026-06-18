@@ -1,9 +1,6 @@
 import io
 from datetime import datetime
-<<<<<<< HEAD:services/content-service/app/modules/telegram_tgmbase/parser.py
-=======
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da:services/telegram-service/app/modules/telegram_tgmbase/parser.py
 from openpyxl import load_workbook
 
 

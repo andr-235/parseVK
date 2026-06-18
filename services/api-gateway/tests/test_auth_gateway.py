@@ -12,11 +12,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-<<<<<<< HEAD
-from app.clients.identity.schemas import IdentityAuthResponse, IdentityUser
-=======
 from app.clients.identity.schemas import IdentityUser
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.config import settings
 from app.main import create_app
 from app.modules.auth.router import get_auth_service
@@ -41,7 +37,9 @@ class FakeGatewayService:
         self.me_called = True
         return self._user()
 
-    async def change_password(self, access_token, payload, *, request_id, correlation_id):
+    async def change_password(
+        self, access_token, payload, *, request_id, correlation_id
+    ):
         self.change_password_payload = payload
         return self._auth_response("access-changed"), "refresh-changed"
 
@@ -75,7 +73,9 @@ async def test_login_sets_refresh_cookie():
     app = create_app()
     app.dependency_overrides[get_auth_service] = get_fake_service
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         response = await client.post(
             "/api/v1/auth/login",
             json={"username": "admin", "password": "password"},
@@ -109,7 +109,9 @@ async def test_me_calls_identity_after_token_validation():
 
     app.dependency_overrides[get_auth_service] = get_service
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         response = await client.get(
             "/api/v1/auth/me",
             headers={"Authorization": "Bearer access-token"},
@@ -130,7 +132,9 @@ async def test_change_password_accepts_frontend_camel_case_payload():
 
     app.dependency_overrides[get_auth_service] = get_service
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
         client.cookies.set(settings.csrf_cookie_name, "csrf-token")
         response = await client.post(
             "/api/v1/auth/change-password",

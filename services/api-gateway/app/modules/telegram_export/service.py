@@ -1,18 +1,8 @@
 from typing import Any
-<<<<<<< HEAD
-from fastapi import HTTPException, status
-
-from app.clients.telegram import (
-    TelegramServiceClient,
-    TelegramServiceClientHTTPError,
-    TelegramServiceClientUnavailableError,
-)
-=======
 
 from app.clients.base import ServiceClientHTTPError, ServiceClientUnavailableError
 from app.clients.telegram.client import TelegramServiceClient
 from fastapi import HTTPException, status
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class TelegramExportGatewayService:

@@ -1,13 +1,3 @@
-<<<<<<< HEAD:services/content-service/app/modules/telegram_tgmbase/models.py
-from datetime import datetime, timezone
-from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Text, ForeignKey, JSON
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.db.base import Base
-
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
-=======
 from datetime import UTC, datetime
 
 from app.db.base import Base
@@ -17,7 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da:services/telegram-service/app/db/models.py
 
 
 # Базовые таблицы tgmbase (пользователи, сообщения, группы)

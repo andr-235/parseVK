@@ -1,17 +1,9 @@
 from uuid import UUID
 
-<<<<<<< HEAD
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db.models import RefreshToken, utc_now
-from app.modules.outbox.service import add_identity_event
-=======
 from app.db.models import RefreshToken, utc_now
 from app.modules.outbox.service import add_identity_event
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class RefreshTokensRepository:

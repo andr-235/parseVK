@@ -2,15 +2,6 @@ import json
 from pathlib import PurePath
 from typing import Any
 
-<<<<<<< HEAD
-from fastapi import HTTPException, Request, UploadFile, status
-from fastapi.responses import Response
-
-from app.clients.content.client import ContentClient, ContentClientHTTPError, ContentClientUnavailableError
-from app.core.config import settings
-from app.modules.auth.router import bearer_token, get_auth_service, request_ids
-from app.modules.auth.service import GatewayAuthService
-=======
 from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
 from app.core.config import settings
 from app.core.security import bearer_token
@@ -19,7 +10,6 @@ from app.modules.auth.router import get_auth_service
 from app.modules.auth.service import GatewayAuthService
 from fastapi import HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class ListingsGatewayService:

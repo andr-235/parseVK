@@ -1,9 +1,5 @@
 import sys
-<<<<<<< HEAD:services/content-service/tests/test_listings_service.py
-from datetime import datetime, timezone
-=======
 from datetime import UTC, datetime
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da:services/listings-service/tests/test_listings_service.py
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,13 +11,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
-<<<<<<< HEAD:services/content-service/tests/test_listings_service.py
-from app.modules.listings.service import ListingsService
-from app.modules.listings.csv_export import format_csv_header, format_csv_row
-=======
 from app.modules.listings.csv_export import format_csv_header, format_csv_row
 from app.modules.listings.service import ListingsService
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da:services/listings-service/tests/test_listings_service.py
 
 
 class FakeRepository:
@@ -77,13 +68,8 @@ class FakeRepository:
             "manual_overrides": [],
             "manual_note": None,
             "archived": False,
-<<<<<<< HEAD:services/content-service/tests/test_listings_service.py
-            "created_at": datetime(2026, 5, 24, tzinfo=timezone.utc),
-            "updated_at": datetime(2026, 5, 24, tzinfo=timezone.utc),
-=======
             "created_at": datetime(2026, 5, 24, tzinfo=UTC),
             "updated_at": datetime(2026, 5, 24, tzinfo=UTC),
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da:services/listings-service/tests/test_listings_service.py
         }
         defaults.update(data)
         return SimpleNamespace(**defaults)
@@ -108,7 +94,14 @@ async def test_import_creates_updates_and_preserves_manual_overrides():
         }
     )
 
-    assert created == {"processed": 1, "created": 1, "updated": 0, "skipped": 0, "failed": 0, "errors": []}
+    assert created == {
+        "processed": 1,
+        "created": 1,
+        "updated": 0,
+        "skipped": 0,
+        "failed": 0,
+        "errors": [],
+    }
     row = repository.rows["https://example.test/flat"]
     row.manual_overrides = ["title"]
 
@@ -174,13 +167,34 @@ async def test_import_rejects_empty_payload_with_frontend_compatible_shape():
 @pytest.mark.parametrize(
     ("payload", "expected"),
     [
-        ({"url": "https://example.test/flat", "images": "bad"}, "images должен быть массивом строк"),
-        ({"url": "https://example.test/flat", "images": ["ok", 1]}, "каждый элемент images должен быть строкой"),
-        ({"url": "https://example.test/flat", "publishedAt": "not-a-date"}, "publishedAt должен быть датой в формате ISO"),
-        ({"url": "https://example.test/flat", "sourceParsedAt": "not-a-date"}, "sourceParsedAt должен быть датой в формате ISO"),
-        ({"url": "https://example.test/flat", "title": 123}, "title должен быть строкой"),
-        ({"url": "https://example.test/flat", "source": 123}, "source должен быть строкой"),
-        ({"url": "https://example.test/flat", "price": {}}, "price должен быть строкой или числом"),
+        (
+            {"url": "https://example.test/flat", "images": "bad"},
+            "images должен быть массивом строк",
+        ),
+        (
+            {"url": "https://example.test/flat", "images": ["ok", 1]},
+            "каждый элемент images должен быть строкой",
+        ),
+        (
+            {"url": "https://example.test/flat", "publishedAt": "not-a-date"},
+            "publishedAt должен быть датой в формате ISO",
+        ),
+        (
+            {"url": "https://example.test/flat", "sourceParsedAt": "not-a-date"},
+            "sourceParsedAt должен быть датой в формате ISO",
+        ),
+        (
+            {"url": "https://example.test/flat", "title": 123},
+            "title должен быть строкой",
+        ),
+        (
+            {"url": "https://example.test/flat", "source": 123},
+            "source должен быть строкой",
+        ),
+        (
+            {"url": "https://example.test/flat", "price": {}},
+            "price должен быть строкой или числом",
+        ),
     ],
 )
 async def test_import_rejects_invalid_dto_field_types(payload, expected):

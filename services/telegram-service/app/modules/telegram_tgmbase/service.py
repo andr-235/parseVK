@@ -1,14 +1,5 @@
 import logging
 import re
-<<<<<<< HEAD:services/content-service/app/modules/telegram_tgmbase/service.py
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.modules.telegram_tgmbase.import_service import DlImportService
-from app.modules.telegram_tgmbase.match_runs import DlMatchRuns
-from app.modules.telegram_tgmbase.match_processor import DlMatchProcessor
-from app.modules.telegram_tgmbase.search import TelegramTgmbaseSearchService
-from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
-=======
 
 from app.modules.telegram_tgmbase.import_service import DlImportService
 from app.modules.telegram_tgmbase.mapper import TelegramTgmbaseMapper
@@ -16,7 +7,6 @@ from app.modules.telegram_tgmbase.match_processor import DlMatchProcessor
 from app.modules.telegram_tgmbase.match_runs import DlMatchRuns
 from app.modules.telegram_tgmbase.search import TelegramTgmbaseSearchService
 from sqlalchemy.ext.asyncio import AsyncSession
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da:services/telegram-service/app/modules/telegram_tgmbase/service.py
 
 logger = logging.getLogger("content-service.telegram-tgmbase.service")
 

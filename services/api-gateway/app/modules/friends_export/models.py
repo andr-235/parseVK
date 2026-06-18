@@ -10,30 +10,17 @@ Ref: FASTAPI-MIG-010B / docs/FASTAPI_MIG_010_FRIENDS_EXPORT_INVENTORY.md
 
 from __future__ import annotations
 
-<<<<<<< HEAD
-from enum import Enum
-from typing import Annotated, Any, Literal, Union
-
-from pydantic import BaseModel, Field
-
-
-=======
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 # ---------------------------------------------------------------------------
 # Job status enum
 # ---------------------------------------------------------------------------
 
 
-<<<<<<< HEAD
-class JobStatus(str, Enum):
-=======
 class JobStatus(StrEnum):
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     DONE = "DONE"
@@ -132,11 +119,7 @@ class ErrorEventData(BaseModel):
 # ---------------------------------------------------------------------------
 
 SseEventData = Annotated[
-<<<<<<< HEAD
-    Union[ProgressEventData, LogEventData, DoneEventData, ErrorEventData],
-=======
     ProgressEventData | LogEventData | DoneEventData | ErrorEventData,
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     Field(discriminator=None),  # not discriminated at the model level — type is the tag
 ]
 
@@ -161,8 +144,4 @@ class SseErrorEvent(BaseModel):
     data: ErrorEventData
 
 
-<<<<<<< HEAD
-SseEvent = Union[SseProgressEvent, SseLogEvent, SseDoneEvent, SseErrorEvent]
-=======
 SseEvent = SseProgressEvent | SseLogEvent | SseDoneEvent | SseErrorEvent
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da

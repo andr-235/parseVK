@@ -1,11 +1,6 @@
 import sys
-<<<<<<< HEAD
-from datetime import datetime, timezone
-from pathlib import Path
-=======
 from pathlib import Path
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -15,16 +10,7 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.main import create_app
-<<<<<<< HEAD
-from app.modules.monitoring.router import get_monitoring_service
-from app.modules.monitoring.schemas import (
-    MonitoringGroupResponse,
-    MonitoringGroupsResponse,
-    MonitorMessagesResponse,
-)
-=======
 from app.modules.monitoring.dependencies import get_monitoring_service
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class FakeMonitoringService:

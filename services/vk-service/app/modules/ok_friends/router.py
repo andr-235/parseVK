@@ -1,31 +1,18 @@
 import os
 import uuid
-<<<<<<< HEAD
-=======
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.core.security import require_internal_token
-<<<<<<< HEAD
-from app.modules.ok_friends.service import OkFriendsExportService
-=======
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.modules.ok_friends.schemas import (
     OkFriendsExportStartRequest,
     OkFriendsExportStartResponse,
     OkFriendsJobDetailResponse,
-<<<<<<< HEAD
-    OkFriendsJobState,
-    OkFriendsJobLogEntry,
-)
-=======
     OkFriendsJobLogEntry,
     OkFriendsJobState,
 )
 from app.modules.ok_friends.service import OkFriendsExportService
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 router = APIRouter(
     prefix="/internal/ok/friends",

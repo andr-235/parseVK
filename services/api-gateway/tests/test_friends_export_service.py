@@ -26,16 +26,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
-<<<<<<< HEAD
-from fastapi import HTTPException
-
 from app.modules.friends_export.models import (
     DoneEventData,
-    ErrorEventData,
-=======
-from app.modules.friends_export.models import (
-    DoneEventData,
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     FriendsExportStartResponse,
     FriendsJobDetailResponse,
     FriendsJobLogEntry,
@@ -44,19 +36,11 @@ from app.modules.friends_export.models import (
     LogEventData,
     ProgressEventData,
     SseDoneEvent,
-<<<<<<< HEAD
-    SseErrorEvent,
-=======
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
     SseLogEvent,
     SseProgressEvent,
 )
 from app.modules.friends_export.service import FriendsExportService
-<<<<<<< HEAD
-
-=======
 from fastapi import HTTPException
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -175,7 +159,9 @@ async def test_get_job_returns_adapter_result():
 @pytest.mark.asyncio
 async def test_get_job_reraises_http_404():
     adapter = _make_adapter(
-        get_job=AsyncMock(side_effect=HTTPException(status_code=404, detail="Not found"))
+        get_job=AsyncMock(
+            side_effect=HTTPException(status_code=404, detail="Not found")
+        )
     )
     service = FriendsExportService(adapter)
 
@@ -242,14 +228,14 @@ async def test_stream_produces_sse_formatted_events():
     # First chunk: progress event
     assert chunks[0].startswith("data: ")
     assert chunks[0].endswith("\n\n")
-    progress_payload = json.loads(chunks[0][len("data: "):].strip())
+    progress_payload = json.loads(chunks[0][len("data: ") :].strip())
     assert progress_payload["type"] == "progress"
     assert progress_payload["data"]["fetchedCount"] == 50
     assert progress_payload["data"]["totalCount"] == 100
     assert progress_payload["data"]["limitApplied"] is False
 
     # Second chunk: done event
-    done_payload = json.loads(chunks[1][len("data: "):].strip())
+    done_payload = json.loads(chunks[1][len("data: ") :].strip())
     assert done_payload["type"] == "done"
     assert done_payload["data"]["jobId"] == "job-uuid-1"
     assert done_payload["data"]["status"] == "DONE"
@@ -277,7 +263,7 @@ async def test_stream_emits_safe_error_event_on_adapter_exception():
 
     # Must emit exactly 2 events: the progress one + the injected safe error
     assert len(chunks) == 2
-    error_payload = json.loads(chunks[-1][len("data: "):].strip())
+    error_payload = json.loads(chunks[-1][len("data: ") :].strip())
     assert error_payload["type"] == "error"
     assert "internal db crash" not in error_payload["data"]["message"]
     assert error_payload["data"]["message"] == "Stream interrupted"
@@ -286,9 +272,7 @@ async def test_stream_emits_safe_error_event_on_adapter_exception():
 @pytest.mark.asyncio
 async def test_stream_log_event_shape():
     async def _log_stream(job_id: str):
-        yield SseLogEvent(
-            data=LogEventData(level="info", message="Fetching page 1")
-        )
+        yield SseLogEvent(data=LogEventData(level="info", message="Fetching page 1"))
 
     adapter = _make_adapter()
     adapter.stream_job = _log_stream
@@ -298,7 +282,7 @@ async def test_stream_log_event_shape():
     chunks = [chunk async for chunk in response.body_iterator]
 
     assert len(chunks) == 1
-    payload = json.loads(chunks[0][len("data: "):].strip())
+    payload = json.loads(chunks[0][len("data: ") :].strip())
     assert payload["type"] == "log"
     assert payload["data"]["level"] == "info"
     assert payload["data"]["message"] == "Fetching page 1"
@@ -323,9 +307,7 @@ async def test_download_xlsx_sets_correct_headers():
     assert response.headers["content-disposition"] == (
         'attachment; filename="vk_friends_export_job-uuid-1.xlsx"'
     )
-    assert response.headers["content-length"] == str(
-        len(b"PK\x03\x04fake-xlsx-bytes")
-    )
+    assert response.headers["content-length"] == str(len(b"PK\x03\x04fake-xlsx-bytes"))
 
 
 @pytest.mark.asyncio
@@ -335,7 +317,9 @@ async def test_download_xlsx_ok_provider_filename():
 
     response = await service.download_xlsx("job-uuid-2", "ok")
 
-    assert "ok_friends_export_job-uuid-2.xlsx" in response.headers["content-disposition"]
+    assert (
+        "ok_friends_export_job-uuid-2.xlsx" in response.headers["content-disposition"]
+    )
 
 
 @pytest.mark.asyncio

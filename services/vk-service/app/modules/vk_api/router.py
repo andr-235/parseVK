@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-from datetime import datetime, timezone
-import re
-import httpx
-from fastapi import APIRouter, Depends, Query, Header, HTTPException, UploadFile, File
-from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.config import settings
-=======
 import re
 from datetime import UTC, datetime
 
@@ -16,7 +6,6 @@ from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Uplo
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.vk_api.client import VkApiClient

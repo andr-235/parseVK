@@ -1,17 +1,9 @@
 from typing import Annotated, Any
 
-<<<<<<< HEAD
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
-
-from app.modules.listings.service import ListingsGatewayService, get_listings_gateway_service
-
-=======
 from app.modules.listings.service import ListingsGatewayService, get_listings_gateway_service
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 router = APIRouter(prefix="/api/v1", tags=["listings"])
 
 

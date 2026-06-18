@@ -1,17 +1,10 @@
 import hashlib
 import logging
-<<<<<<< HEAD
-import httpx
-from typing import Any
-from urllib.parse import urlencode
-
-=======
 from typing import Any
 from urllib.parse import urlencode
 
 import httpx
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.config import settings
 from app.core.redaction import redact_secrets
 

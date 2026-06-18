@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-from datetime import datetime, timezone
-
-from sqlalchemy import select, update
-=======
 from datetime import UTC, datetime
 
 from sqlalchemy import select
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,21 +8,13 @@ from app.db.models import VkAuthor, VkComment, VkGroup, VkPost
 
 
 def utcnow() -> datetime:
-<<<<<<< HEAD
-    return datetime.now(timezone.utc)
-=======
     return datetime.now(UTC)
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 def vk_timestamp(value: int | None) -> datetime | None:
     if value is None:
         return None
-<<<<<<< HEAD
-    return datetime.fromtimestamp(int(value), timezone.utc)
-=======
     return datetime.fromtimestamp(int(value), UTC)
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class IngestionRepository:

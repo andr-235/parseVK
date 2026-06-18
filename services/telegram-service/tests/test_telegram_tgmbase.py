@@ -6,18 +6,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
-<<<<<<< HEAD:services/content-service/tests/test_telegram_tgmbase.py
-use_service_path()
-
-from app.modules.telegram_tgmbase.service import TelegramTgmbaseService
-from app.modules.telegram_tgmbase.parser import TelegramDlImportParseResult, TelegramDlImportRow
-=======
 
 use_service_path()
 
 from app.modules.telegram_tgmbase.parser import TelegramDlImportParseResult, TelegramDlImportRow
 from app.modules.telegram_tgmbase.service import TelegramTgmbaseService
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da:services/telegram-service/tests/test_telegram_tgmbase.py
 
 
 @pytest.fixture

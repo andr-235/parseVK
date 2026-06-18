@@ -1,14 +1,4 @@
 import sys
-<<<<<<< HEAD
-import pytest
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _service_path import use_service_path
-use_service_path()
-
-from app.modules.keywords.morphology import normalize_for_keyword_match, KeywordMorphologyService
-=======
 from pathlib import Path
 
 import pytest
@@ -19,7 +9,6 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.modules.keywords.morphology import KeywordMorphologyService, normalize_for_keyword_match
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.modules.keywords.recalculation import build_match_pattern
 
 
@@ -69,14 +58,9 @@ def test_build_match_pattern():
 
 
 from unittest.mock import AsyncMock, MagicMock
-<<<<<<< HEAD
-from app.modules.keywords.service import KeywordsService
-from app.db.models import Keyword
-=======
 
 from app.db.models import Keyword
 from app.modules.keywords.service import KeywordsService
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 @pytest.mark.anyio

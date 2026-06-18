@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-from fastapi import APIRouter, Depends, Request, status
-from fastapi.responses import StreamingResponse
-
-=======
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.security import require_auth
 from app.core.utils import request_ids
 from app.modules.telegram_export.schemas import (
@@ -15,11 +9,8 @@ from app.modules.telegram_export.service import (
     TelegramExportGatewayService,
     get_telegram_export_gateway_service,
 )
-<<<<<<< HEAD
-=======
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import StreamingResponse
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 router = APIRouter(
     prefix="/api/v1/telegram",

@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-from .crud_service import ContentRepo, ContentCrudService
-=======
 import logging
 
 from .author_service import AuthorContentService, AuthorRepositoryProto
@@ -8,7 +5,6 @@ from .group_service import GroupContentService, GroupRepositoryProto
 from .post_service import PostContentService, PostRepositoryProto
 
 logger = logging.getLogger(__name__)
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class ContentService:

@@ -1,82 +1,17 @@
 import logging
 from typing import Any
 
-<<<<<<< HEAD
-from app.clients.moderation.client import (
-    ModerationClient,
-    ModerationClientHTTPError,
-    ModerationClientUnavailableError,
-)
-from fastapi import HTTPException, UploadFile, status
-
-from app.modules.keywords.keyword_crud import KeywordCrudService
-from app.modules.keywords.keyword_forms import KeywordFormsService
-=======
 from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
 from app.core.config import settings
 from fastapi import HTTPException, UploadFile, status
 
 logger = logging.getLogger("api-gateway.keywords.service")
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class KeywordsGatewayService:
     def __init__(self, client: ServiceClient | None = None):
         self.client = client or ServiceClient(service_name="Moderation", base_url=settings.moderation_base_url, internal_token=settings.internal_service_token)
 
-<<<<<<< HEAD
-        _request = lambda m, p, **kw: svc._request(m, p, **kw)
-        _fmt_kw = lambda kw: svc._format_keyword(kw)
-
-        self._crud = KeywordCrudService(request=_request, format_keyword=_fmt_kw)
-        self._forms = KeywordFormsService(request=_request)
-
-    async def _request(
-        self,
-        method: str,
-        path: str,
-        *,
-        user_id: str | None = None,
-        request_id: str | None = None,
-        correlation_id: str | None = None,
-        params: dict | None = None,
-        json: Any | None = None,
-    ) -> dict:
-        try:
-            return await self.moderation_client.request(
-                method, path,
-                user_id=user_id, request_id=request_id, correlation_id=correlation_id,
-                params=params, json=json,
-            )
-        except ModerationClientHTTPError as exc:
-            detail = (
-                exc.detail.get("detail", exc.detail)
-                if isinstance(exc.detail, dict)
-                else exc.detail
-            )
-            raise HTTPException(status_code=exc.status_code, detail=detail) from exc
-        except ModerationClientUnavailableError:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Moderation service unavailable",
-            )
-
-    def _format_keyword(self, kw: dict) -> dict:
-        return {
-            "id": kw["id"], "word": kw["word"], "category": kw.get("category"),
-            "isPhrase": kw.get("is_phrase", False),
-            "createdAt": kw.get("created_at"), "updatedAt": kw.get("updated_at"),
-        }
-
-    def _format_job(self, job: dict) -> dict:
-        return {
-            "id": job["id"], "status": job["status"],
-            "singleKeywordId": job.get("single_keyword_id"),
-            "startedAt": job.get("started_at"), "finishedAt": job.get("finished_at"),
-            "error": job.get("error"), "requestedBy": job.get("requested_by"),
-            "createdAt": job.get("created_at"),
-        }
-=======
     async def _request(self, method: str, path: str, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None, params: dict | None = None, json: Any | None = None) -> dict:
         try:
             return await self.client.request(method, path, user_id=user_id or "", request_id=request_id, correlation_id=correlation_id, params=params, json=json)
@@ -91,7 +26,6 @@ class KeywordsGatewayService:
 
     def _format_job(self, job: dict) -> dict:
         return {"id": job["id"], "status": job["status"], "singleKeywordId": job.get("single_keyword_id"), "startedAt": job.get("started_at"), "finishedAt": job.get("finished_at"), "error": job.get("error"), "requestedBy": job.get("requested_by"), "createdAt": job.get("created_at")}
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
     async def get_all_keywords(self, page: int, limit: int, search: str | None = None, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         params: dict[str, Any] = {"page": page, "limit": limit}

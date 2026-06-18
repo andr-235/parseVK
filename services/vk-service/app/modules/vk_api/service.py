@@ -1,16 +1,4 @@
 import logging
-<<<<<<< HEAD
-from uuid import UUID
-
-from sqlalchemy import delete, or_, select, func, update
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db.models import VkAuthor, VkComment, VkGroup, VkPost
-from app.modules.ingestion.repository import IngestionRepository
-from app.modules.outbox.repository import OutboxRepository
-from app.modules.outbox.service import OutboxService
-from app.db.models import utcnow
-=======
 
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +7,6 @@ from app.db.models import VkAuthor, VkComment, VkGroup, VkPost, utcnow
 from app.modules.ingestion.repository import IngestionRepository
 from app.modules.outbox.repository import OutboxRepository
 from app.modules.outbox.service import OutboxService
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 logger = logging.getLogger(__name__)
 

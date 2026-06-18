@@ -1,23 +1,3 @@
-<<<<<<< HEAD
-from fastapi import APIRouter, Depends, Query, BackgroundTasks, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.security import require_internal_token
-from app.db.session import get_session
-from app.modules.keywords.schemas import (
-    KeywordCreate,
-    KeywordUpdateCategory,
-    KeywordResponse,
-    BulkAddKeywords,
-    BulkAddResponse,
-    KeywordFormDto,
-    KeywordFormsResponse,
-    KeywordsListResponse,
-    KeywordRecalculationJobResponse,
-    KeywordFormsRebuildResponse,
-)
-from app.modules.keywords.service import KeywordsService
-=======
 from app.core.security import require_internal_token
 from app.db.session import get_session
 from app.modules.keywords.schemas import (
@@ -35,7 +15,6 @@ from app.modules.keywords.schemas import (
 from app.modules.keywords.service import KeywordsService
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 router = APIRouter(
     prefix="/internal/moderation/keywords",

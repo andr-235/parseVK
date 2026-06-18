@@ -1,18 +1,10 @@
 import logging
 from datetime import datetime
 
-<<<<<<< HEAD
-from sqlalchemy import or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db.models import ImMessage, MonitoringGroup
-
-=======
 from app.db.models import ImMessage, MonitoringGroup
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 logger = logging.getLogger(__name__)
 
 

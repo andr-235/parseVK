@@ -1,15 +1,8 @@
 from typing import Protocol
 
-<<<<<<< HEAD
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db.models import OutboxEvent
-from app.modules.outbox.repository import lock_pending_batch, mark_failed_or_retry, mark_published
-=======
 from app.db.models import OutboxEvent
 from app.modules.outbox.repository import lock_pending_batch, mark_failed_or_retry, mark_published
 from sqlalchemy.ext.asyncio import AsyncSession
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 IDENTITY_EVENTS_TOPIC = "identity.events"
 

@@ -1,15 +1,7 @@
-<<<<<<< HEAD
-from common.events import EventEnvelope
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.modules.outbox.repository import add_event
-
-=======
 from app.modules.outbox.repository import add_event
 from common.events import EventEnvelope
 from sqlalchemy.ext.asyncio import AsyncSession
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 async def add_identity_event(
     session: AsyncSession,

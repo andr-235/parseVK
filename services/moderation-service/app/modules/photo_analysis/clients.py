@@ -1,8 +1,5 @@
 import logging
-<<<<<<< HEAD
-=======
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 import httpx
 from app.core.config import settings
 

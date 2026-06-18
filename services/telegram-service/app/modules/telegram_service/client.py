@@ -1,17 +1,9 @@
-<<<<<<< HEAD
-import logging
-import asyncio
-import random
-from datetime import datetime, timezone
-from urllib.parse import urlparse
-=======
 import asyncio
 import logging
 import random
 from datetime import UTC, datetime
 from urllib.parse import urlparse
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.config import settings
 
 logger = logging.getLogger("telegram-service.client")
@@ -321,11 +313,7 @@ class TelegramApiClient:
         admins = {}
         if isinstance(entity, (Channel, Chat)):
             try:
-<<<<<<< HEAD
-                from telethon.tl.types import ChannelParticipantsAdmins, ChannelParticipantCreator
-=======
                 from telethon.tl.types import ChannelParticipantCreator, ChannelParticipantsAdmins
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
                 async for user in self.client.iter_participants(entity, filter=ChannelParticipantsAdmins):
                     role = "Administrator"
                     if hasattr(user, 'participant') and isinstance(user.participant, ChannelParticipantCreator):

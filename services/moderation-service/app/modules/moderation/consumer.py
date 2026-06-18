@@ -3,10 +3,6 @@ import json
 import logging
 
 from aiokafka import AIOKafkaConsumer
-<<<<<<< HEAD
-
-=======
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.core.config import settings
 from app.db.session import async_session_maker
 from app.modules.moderation.schemas import VkEvent

@@ -1,9 +1,4 @@
-<<<<<<< HEAD
-from dataclasses import dataclass
-from datetime import datetime, timezone
-=======
 from datetime import UTC, datetime
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from uuid import UUID
 
 from sqlalchemy import select
@@ -17,11 +12,7 @@ CONSUMER_NAME = "vk-service.tasks"
 
 
 def utcnow() -> datetime:
-<<<<<<< HEAD
-    return datetime.now(timezone.utc)
-=======
     return datetime.now(UTC)
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class TaskEventsRepository:
@@ -105,16 +96,10 @@ class TaskEventsHandler:
         else:
             task_run = await self.repository.create_task_run(event, run_id)
 
-<<<<<<< HEAD
-        import httpx
-        import logging
-
-=======
         import logging
 
         import httpx
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
         logger = logging.getLogger("vk-service.tasks")
 
         try:

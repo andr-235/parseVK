@@ -1,19 +1,10 @@
 import logging
-<<<<<<< HEAD
-from fastapi import BackgroundTasks
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-
-from app.db.models import Keyword, KeywordRecalculationJob
-from app.modules.keywords.recalculation import RecalculationWorker
-=======
 
 from app.db.models import Keyword, KeywordRecalculationJob
 from app.modules.keywords.recalculation import RecalculationWorker
 from fastapi import BackgroundTasks
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 logger = logging.getLogger(__name__)
 

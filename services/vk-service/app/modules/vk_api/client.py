@@ -1,12 +1,7 @@
 from datetime import datetime
 
-<<<<<<< HEAD
-from app.modules.vk_api.base import VkApiBaseClient, VkApiAdapter, VkApiConfigurationError
-from app.modules.vk_api import api_methods
-=======
 from app.modules.vk_api import api_methods
 from app.modules.vk_api.base import VkApiAdapter, VkApiBaseClient, VkApiConfigurationError
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 __all__ = ["VkApiClient", "VkApiAdapter", "VkApiConfigurationError"]
 

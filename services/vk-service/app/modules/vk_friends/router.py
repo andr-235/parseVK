@@ -1,31 +1,18 @@
 import os
 import uuid
-<<<<<<< HEAD
-=======
 
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from app.core.security import require_internal_token
-<<<<<<< HEAD
-from app.modules.vk_friends.service import VkFriendsExportService
-=======
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.modules.vk_friends.schemas import (
     VkFriendsExportStartRequest,
     VkFriendsExportStartResponse,
     VkFriendsJobDetailResponse,
-<<<<<<< HEAD
-    VkFriendsJobState,
-    VkFriendsJobLogEntry,
-)
-=======
     VkFriendsJobLogEntry,
     VkFriendsJobState,
 )
 from app.modules.vk_friends.service import VkFriendsExportService
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 router = APIRouter(
     prefix="/internal/vk/friends",

@@ -1,9 +1,5 @@
 import sys
-<<<<<<< HEAD
-from datetime import datetime, timezone
-=======
 from datetime import UTC, datetime
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from pathlib import Path
 
 import pytest
@@ -14,13 +10,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
-<<<<<<< HEAD
-from app.main import create_app
-from app.db.models import ModerationComment
-=======
 from app.db.models import ModerationComment
 from app.main import create_app
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 from app.modules.moderation.router import get_moderation_service
 
 
@@ -36,11 +27,7 @@ class FakeModerationService:
             external_key="123_456_789",
             post_external_key="123_456",
             text="Тестовый комментарий",
-<<<<<<< HEAD
-            date=datetime.now(timezone.utc),
-=======
             date=datetime.now(UTC),
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
             author_vk_id=98765,
             is_read=False,
             source="TASK",

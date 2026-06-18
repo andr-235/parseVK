@@ -8,21 +8,12 @@ from app.modules.listings.csv_export import (
     parse_csv_fields,
 )
 from app.modules.listings.helpers import (
-<<<<<<< HEAD:services/content-service/app/modules/listings/service.py
-    dt,
-    string_value,
-    integer_value,
-    float_value,
-    date_value,
-    normalize_manual_overrides,
-=======
     date_value,
     dt,
     float_value,
     integer_value,
     normalize_manual_overrides,
     string_value,
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da:services/listings-service/app/modules/listings/service.py
 )
 from app.modules.listings.import_service import ListingsImportService
 from fastapi import HTTPException, status
@@ -39,14 +30,24 @@ class ListingsService:
         )
 
     async def list_listings(
-        self, *, page: int, page_size: int, search: str | None,
-        source: str | None, archived: bool | None,
-        sort_by: str | None, sort_order: str,
+        self,
+        *,
+        page: int,
+        page_size: int,
+        search: str | None,
+        source: str | None,
+        archived: bool | None,
+        sort_by: str | None,
+        sort_order: str,
     ) -> dict:
         rows, total, sources = await self.repository.list_listings(
-            page=page, page_size=page_size, search=search,
-            source=source, archived=archived,
-            sort_by=sort_by, sort_order=sort_order,
+            page=page,
+            page_size=page_size,
+            search=search,
+            source=source,
+            archived=archived,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
         return {
             "items": [self.to_dto(row) for row in rows],
@@ -58,14 +59,21 @@ class ListingsService:
         }
 
     async def export_csv(
-        self, *, search: str | None, source: str | None,
-        archived: bool | None, all: bool, fields: str | None,
+        self,
+        *,
+        search: str | None,
+        source: str | None,
+        archived: bool | None,
+        all: bool,
+        fields: str | None,
     ) -> tuple[str, str]:
         resolved_search = None if all else search
         resolved_source = None if all else source
         resolved_archived = None if all else archived
         rows = await self.repository.find_for_export(
-            search=resolved_search, source=resolved_source, archived=resolved_archived,
+            search=resolved_search,
+            source=resolved_source,
+            archived=resolved_archived,
         )
         selected = parse_csv_fields(fields)
         lines = [format_csv_header(selected)]

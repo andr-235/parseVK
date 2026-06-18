@@ -1,12 +1,4 @@
 from typing import Any
-<<<<<<< HEAD
-from fastapi import HTTPException, Request, status
-import httpx
-
-from app.clients.content.client import ContentClient, ContentClientHTTPError, ContentClientUnavailableError
-from app.modules.auth.router import bearer_token, get_auth_service, request_ids
-from app.modules.auth.service import GatewayAuthService
-=======
 
 import httpx
 from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
@@ -16,7 +8,6 @@ from app.core.utils import request_ids
 from app.modules.auth.router import get_auth_service
 from app.modules.auth.service import GatewayAuthService
 from fastapi import HTTPException, Request, status
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da
 
 
 class TelegramTgmbaseGatewayService:

@@ -1,21 +1,3 @@
-<<<<<<< HEAD:services/content-service/app/modules/telegram_tgmbase/router.py
-from fastapi import APIRouter, Depends, File, UploadFile, Query, BackgroundTasks, Response
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.db.session import get_tgmbase_session
-from app.modules.telegram_tgmbase.service import TelegramTgmbaseService
-from app.modules.telegram_tgmbase.schemas import (
-    TelegramDlImportUploadResponseSchema,
-    DlImportFileSchema,
-    TelegramDlImportContactsPageSchema,
-    TelegramDlMatchRunSchema,
-    TelegramDlMatchResultSchema,
-    TelegramDlMatchResultMessagesGroupSchema,
-    TelegramDlMatchExcludeChatSchema,
-    TgmbaseSearchRequestSchema,
-    TgmbaseSearchResponseSchema
-)
-=======
 from app.modules.telegram_tgmbase.dependencies import get_tgmbase_service
 from app.modules.telegram_tgmbase.schemas import (
     DlImportFileSchema,
@@ -30,7 +12,6 @@ from app.modules.telegram_tgmbase.schemas import (
 )
 from app.modules.telegram_tgmbase.service import TelegramTgmbaseService
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, Response, UploadFile
->>>>>>> 59c5b02f74109d896c970438b9ab9949727f89da:services/telegram-service/app/modules/telegram_tgmbase/router.py
 
 router = APIRouter(
     prefix="",
