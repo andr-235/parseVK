@@ -222,20 +222,20 @@ markers =
 ## Tasks
 
 ### Phase 0: Test Safety Net & Preparation
-- [ ] **Task 0.1: Run baseline test suite**
+- [x] **Task 0.1: Run baseline test suite**
   - **Subject:** Execute existing tests before refactoring
   - **Description:** Run all tests within `services/vk-service/tests` and check execution status to guarantee that refactoring starts from a green state.
   - **Logging:** Standard pytest stdout dump.
   - **Files:** `services/vk-service/tests/`
 
-- [ ] **Task 0.2: Create backup branch**
+- [x] **Task 0.2: Create backup branch**
   - **Subject:** Create pre-refactor backup git branch
   - **Description:** Run `git branch backup/pre-refactor-$(date +%Y%m%d)` to create a snapshot branch. This acts as a fallback checkpoint for catastrophic failures.
   - **Logging:** Git branch command output.
   - **Files:** None (Git metadata changes only).
 
 ### Phase 1: Domain Models Split (Decomposition)
-- [ ] **Task 1.1: Decompose SQL models into domain model files**
+- [x] **Task 1.1: Decompose SQL models into domain model files**
   - **Subject:** Group domain models by bounded context
   - **Description:** Decompose SQL models into separate files under `app/domain/models/` ensuring `__tablename__`, index definitions, constraints, and foreign keys are preserved exactly as defined in `app/db/models.py`.
     - Write ingestion models (`VkGroup`, `VkAuthor`, `VkPost`, `VkComment`) to `app/domain/models/vk_ingestion.py`.
@@ -257,14 +257,14 @@ markers =
   - **Files:**
     - `services/vk-service/app/domain/repositories/`
 
-- [ ] **Task 1.3: Set up base imports/metadata redirect in `app/db/base.py`**
+- [x] **Task 1.3: Set up base imports/metadata redirect in `app/db/base.py`**
   - **Subject:** Prepare metadata imports for Alembic
   - **Description:** Adjust `app/db/base.py` (which Alembic imports to collect SQL models) to reference models from the new `app/domain/models/` folder instead of `app/db/models.py`.
   - **Logging:** Standard migration compilation checks.
   - **Files:** `services/vk-service/app/db/base.py`
   - **Blocked by:** Task 1.1
 
-- [ ] **Task 1.4: Update Alembic configuration env.py**
+- [x] **Task 1.4: Update Alembic configuration env.py**
   - **Subject:** Update env.py imports for decomposed models
   - **Description:** Modify `alembic/env.py` to import metadata and models from `app/domain/models/` packages instead of `app/db/models.py` to prevent Alembic from failing to collect schemas.
   - **Logging:** Alembic schema checks metadata dump.
