@@ -1,3 +1,10 @@
+## [0.35.6](https://github.com/andr-235/parseVK/compare/v0.35.5...v0.35.6) (2026-06-18)
+
+
+### Bug Fixes
+
+* **api-gateway:** map moderation comment fields for frontend compatibility ([aca4327](https://github.com/andr-235/parseVK/commit/aca4327cada73c792946637fc6de0a4475f091da))
+
 ## [0.35.5](https://github.com/andr-235/parseVK/compare/v0.35.4...v0.35.5) (2026-06-18)
 
 
