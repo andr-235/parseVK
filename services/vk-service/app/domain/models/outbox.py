@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 from uuid import UUID as PyUUID
 from uuid import uuid4
+
+from app.db.base import Base
 from sqlalchemy import (
     DateTime,
     Index,
@@ -11,8 +13,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
-
-from app.db.base import Base
 
 
 def utcnow() -> datetime:

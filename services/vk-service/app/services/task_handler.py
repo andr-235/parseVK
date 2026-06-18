@@ -3,12 +3,12 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
 import httpx
+from pydantic import BaseModel, ConfigDict
 
-from app.infrastructure.tasks_client.client import TasksClient
-from app.domain.repositories.tasks import TaskEventsRepository
 from app.domain.models.tasks import VkTaskRun
+from app.domain.repositories.tasks import TaskEventsRepository
+from app.infrastructure.tasks_client.client import TasksClient
 
 CONSUMER_NAME = "vk-service.tasks"
 logger = logging.getLogger("vk-service.tasks")

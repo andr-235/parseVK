@@ -1,4 +1,6 @@
 from datetime import UTC, datetime
+
+from app.db.base import Base
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -10,8 +12,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
-
-from app.db.base import Base
 
 
 def utcnow() -> datetime:

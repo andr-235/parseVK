@@ -5,8 +5,8 @@ from datetime import datetime
 from uuid import UUID
 
 from app.core.config import settings
-from app.infrastructure.db.session import SessionLocal
 from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
+from app.infrastructure.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
 

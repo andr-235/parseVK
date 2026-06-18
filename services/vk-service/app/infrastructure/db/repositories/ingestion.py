@@ -1,9 +1,12 @@
 from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.domain.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost
 from app.domain.repositories.ingestion import IngestionRepository
-from app.domain.models.vk_ingestion import VkGroup, VkAuthor, VkPost, VkComment
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)

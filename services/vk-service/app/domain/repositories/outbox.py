@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+
 from app.domain.models.outbox import OutboxEvent
+
 
 class OutboxRepository(ABC):
     @abstractmethod

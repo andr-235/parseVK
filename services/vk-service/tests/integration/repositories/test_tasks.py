@@ -1,6 +1,8 @@
 import uuid
+
 import pytest
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
+
 
 @pytest.mark.anyio
 async def test_tasks_repository_flow(db_session):

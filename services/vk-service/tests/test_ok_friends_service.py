@@ -10,12 +10,12 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.core.config import settings
-from app.main import create_app
 from app.api.schemas.ok_friends import JobStatus
-from app.services.ok_friends_service import OkFriendsExportService
+from app.core.config import settings
 from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
 from app.infrastructure.ok_client.client import OkApiClient
+from app.main import create_app
+from app.services.ok_friends_service import OkFriendsExportService
 
 
 @pytest.fixture

@@ -9,8 +9,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.modules.tasks.events import TaskEvent
-from app.modules.tasks.service import TaskEventsHandler
+from app.services.task_handler import TaskEvent, TaskEventsHandler
 
 
 @pytest.fixture
@@ -33,13 +32,22 @@ class FakeRepository:
     async def get_task_run(self, task_id):
         return self.runs.get(task_id)
 
-    async def create_task_run(self, event, run_id):
+    async def create_task_run(
+        self,
+        task_id: int,
+        owner_user_id: str,
+        run_id: str,
+        scope: str,
+        mode: str,
+        group_ids: list[int],
+        post_limit: int | None = None,
+    ):
         run = FakeTaskRun(
-            task_id=event.task_id(),
+            task_id=task_id,
             run_id=run_id,
             status="pending",
         )
-        self.runs[event.task_id()] = run
+        self.runs[task_id] = run
         return run
 
     async def save(self):

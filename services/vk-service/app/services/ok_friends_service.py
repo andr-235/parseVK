@@ -1,10 +1,11 @@
 import logging
 import uuid
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
+from app.domain.models.ok_friends import OkFriendsExportJob, OkFriendsJobLog
 from app.domain.repositories.ok_friends import OkFriendsRepository
 from app.infrastructure.ok_client.client import OkApiClient
-from app.domain.models.ok_friends import OkFriendsExportJob, OkFriendsJobLog
 from app.services.ok_friends.formatters import flatten_user_info
 from app.services.ok_friends.workbook import EXPORT_BATCH_SIZE, write_xlsx_file
 

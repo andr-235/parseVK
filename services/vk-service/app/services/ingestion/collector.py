@@ -5,6 +5,7 @@ from typing import Any
 from app.infrastructure.tasks_client.client import TasksClient
 from app.infrastructure.vk_client.base import VkApiAdapter
 
+
 @dataclass
 class IngestionResult:
     groups: int = 0

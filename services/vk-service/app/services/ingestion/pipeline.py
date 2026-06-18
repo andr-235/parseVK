@@ -10,6 +10,7 @@ import sqlalchemy.exc
 from app.infrastructure.tasks_client.client import TasksClient
 from app.services.ingestion.collector import IngestionResult
 
+
 def utcnow() -> datetime:
     return datetime.now(UTC)
 

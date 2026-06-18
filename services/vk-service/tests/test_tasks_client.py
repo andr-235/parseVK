@@ -10,7 +10,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.clients.tasks.client import TasksClient
+from app.infrastructure.tasks_client.client import TasksClient
 
 
 @pytest.fixture

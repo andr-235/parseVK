@@ -1,24 +1,25 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
+from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
+from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
+from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
+
 # Repositories
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
-from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
-from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
-from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
-from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
-
-# Clients
-from app.infrastructure.vk_client.client import VkApiClient
 from app.infrastructure.ok_client.client import OkApiClient
 from app.infrastructure.tasks_client.client import TasksClient
 
+# Clients
+from app.infrastructure.vk_client.client import VkApiClient
+from app.services.ingestion_service import IngestionService
+from app.services.ok_friends_service import OkFriendsExportService
+from app.services.outbox_service import OutboxService
+from app.services.task_handler import TaskEventsHandler
+from app.services.vk_api_service import VkApiService
+
 # Services
 from app.services.vk_friends_service import VkFriendsExportService
-from app.services.ok_friends_service import OkFriendsExportService
-from app.services.ingestion_service import IngestionService
-from app.services.task_handler import TaskEventsHandler
-from app.services.outbox_service import OutboxService
-from app.services.vk_api_service import VkApiService
 
 # Shared Client Singletons (VkApiClient & OkApiClient are stateless/managed cleanly)
 _vk_client = VkApiClient()

@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
-from app.tasks import publish_outbox_forever, TaskEventsConsumer
+from app.tasks import TaskEventsConsumer, publish_outbox_forever
 
 
 @asynccontextmanager

@@ -1,11 +1,12 @@
 from typing import Any
 
-from app.infrastructure.tasks_client.client import TasksClient
 from app.core.config import settings
+from app.domain.repositories.ingestion import IngestionRepository
+from app.infrastructure.tasks_client.client import TasksClient
+from app.infrastructure.vk_client.base import VkApiAdapter
 from app.services.ingestion.collector import DataCollector, IngestionResult
 from app.services.ingestion.pipeline import IngestionPipeline
-from app.infrastructure.vk_client.base import VkApiAdapter
-from app.domain.repositories.ingestion import IngestionRepository
+
 
 class IngestionService:
     def __init__(

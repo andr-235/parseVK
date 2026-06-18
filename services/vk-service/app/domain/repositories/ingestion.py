@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class IngestionRepository(ABC):
     @abstractmethod
     async def upsert_group(self, group: dict, revive_if_deleted: bool = False) -> None:

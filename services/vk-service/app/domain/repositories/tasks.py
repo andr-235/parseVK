@@ -1,6 +1,8 @@
 import uuid
 from abc import ABC, abstractmethod
+
 from app.domain.models.tasks import VkTaskRun
+
 
 class TaskEventsRepository(ABC):
     @abstractmethod

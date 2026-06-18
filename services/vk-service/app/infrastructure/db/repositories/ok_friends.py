@@ -1,10 +1,14 @@
 import uuid
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.domain.repositories.ok_friends import OkFriendsRepository
-from app.domain.models.ok_friends import OkFriendsExportJob, OkFriendsJobLog, OkFriendsRecord
+
 from app.core.redaction import redact_secrets
+from app.domain.models.ok_friends import OkFriendsExportJob, OkFriendsJobLog, OkFriendsRecord
+from app.domain.repositories.ok_friends import OkFriendsRepository
+
 
 class SqlAlchemyOkFriendsRepository(OkFriendsRepository):
     def __init__(self, session: AsyncSession):

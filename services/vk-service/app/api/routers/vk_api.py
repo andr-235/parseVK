@@ -5,12 +5,12 @@ import httpx
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_vk_api_service_dep
+from app.api.schemas.vk_api import SaveGroupRequest
 from app.core.security import require_internal_token
 from app.infrastructure.db.session import get_session
 from app.infrastructure.vk_client.client import VkApiClient
 from app.services.vk_api_service import VkApiService
-from app.api.dependencies import get_vk_api_service_dep
-from app.api.schemas.vk_api import SaveGroupRequest
 
 router = APIRouter(
     prefix="/internal/vk",
@@ -265,6 +265,7 @@ async def upload_groups(
     }
 
 from pydantic import BaseModel
+
 
 class UsersRequest(BaseModel):
     user_ids: list[int]

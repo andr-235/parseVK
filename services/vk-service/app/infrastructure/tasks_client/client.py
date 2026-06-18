@@ -1,6 +1,9 @@
 from uuid import uuid4
+
 import httpx
+
 from app.core.config import settings
+
 
 class TasksClient:
     def __init__(

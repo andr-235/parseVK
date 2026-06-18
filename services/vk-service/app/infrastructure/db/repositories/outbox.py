@@ -1,10 +1,13 @@
 from datetime import UTC, datetime
 from uuid import uuid4
+
 from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.domain.repositories.outbox import OutboxRepository
+
 from app.domain.models.outbox import OutboxEvent
+from app.domain.repositories.outbox import OutboxRepository
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)

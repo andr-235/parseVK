@@ -11,12 +11,12 @@ use_service_path()
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
+from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
+from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
+from app.infrastructure.ok_client.client import OkApiClient
+from app.infrastructure.vk_client.client import VkApiClient
 from app.services.ok_friends_service import OkFriendsExportService
 from app.services.vk_friends_service import VkFriendsExportService
-from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
-from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
-from app.infrastructure.vk_client.client import VkApiClient
-from app.infrastructure.ok_client.client import OkApiClient
 
 
 @pytest.fixture

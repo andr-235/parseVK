@@ -1,6 +1,7 @@
 import pytest
 from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
 
+
 @pytest.mark.anyio
 async def test_outbox_repository_flow(db_session):
     repo = SqlAlchemyOutboxRepository(db_session)

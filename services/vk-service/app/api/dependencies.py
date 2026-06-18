@@ -1,11 +1,13 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.infrastructure.db.session import get_session
+
 import app.bootstrap as bootstrap
-from app.services.vk_friends_service import VkFriendsExportService
-from app.services.ok_friends_service import OkFriendsExportService
+from app.infrastructure.db.session import get_session
 from app.services.ingestion_service import IngestionService
+from app.services.ok_friends_service import OkFriendsExportService
 from app.services.vk_api_service import VkApiService
+from app.services.vk_friends_service import VkFriendsExportService
+
 
 async def get_vk_friends_service_dep(
     session: AsyncSession = Depends(get_session)

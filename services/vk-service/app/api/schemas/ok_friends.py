@@ -1,8 +1,10 @@
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+
 
 class JobStatus(str, Enum):
     PENDING = "PENDING"

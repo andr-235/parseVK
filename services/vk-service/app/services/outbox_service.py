@@ -1,5 +1,6 @@
 from app.domain.repositories.outbox import OutboxRepository
 
+
 class OutboxService:
     def __init__(self, repository: OutboxRepository):
         self.repository = repository

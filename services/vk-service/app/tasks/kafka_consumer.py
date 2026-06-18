@@ -3,10 +3,11 @@ from contextlib import suppress
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.bootstrap import get_ingestion_service, get_task_events_handler
 from app.core.config import settings
 from app.infrastructure.db.session import SessionLocal
-from app.bootstrap import get_task_events_handler, get_ingestion_service
 from app.services.task_handler import TaskEvent
+
 
 class TaskEventsConsumer:
     def __init__(

@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
-from app.core.security import require_internal_token
+from app.api.dependencies import get_ok_friends_service_dep
 from app.api.schemas.ok_friends import (
     OkFriendsExportStartRequest,
     OkFriendsExportStartResponse,
@@ -12,8 +12,8 @@ from app.api.schemas.ok_friends import (
     OkFriendsJobLogEntry,
     OkFriendsJobState,
 )
+from app.core.security import require_internal_token
 from app.services.ok_friends_service import OkFriendsExportService
-from app.api.dependencies import get_ok_friends_service_dep
 
 router = APIRouter(
     prefix="/internal/ok/friends",
@@ -24,8 +24,8 @@ router = APIRouter(
 async def run_export_job_background(job_id: uuid.UUID, params: dict) -> None:
     import asyncio
     await asyncio.sleep(0.1)  # Allow API request transaction to commit and release SQLite lock
-    from app.infrastructure.db.session import SessionLocal
     from app.bootstrap import get_ok_friends_service
+    from app.infrastructure.db.session import SessionLocal
     async with SessionLocal() as session:
         service = get_ok_friends_service(session)
         await service.run_export_job(job_id, params)

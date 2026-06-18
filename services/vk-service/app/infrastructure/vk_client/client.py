@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from app.infrastructure.vk_client import api_methods
 from app.infrastructure.vk_client.base import VkApiAdapter, VkApiBaseClient, VkApiConfigurationError
 

@@ -1,6 +1,6 @@
-import uuid
 import pytest
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
+
 
 @pytest.mark.anyio
 async def test_vk_friends_repository_flow(db_session):

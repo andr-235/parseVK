@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 
+
 async def get_groups(api_call, group_ids: list[int], fields: list[str] | None = None) -> list[dict]:
     if not group_ids:
         return []

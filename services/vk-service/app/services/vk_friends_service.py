@@ -1,10 +1,11 @@
 import logging
 import uuid
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
+from app.domain.models.vk_friends import VkFriendsExportJob, VkFriendsJobLog
 from app.domain.repositories.vk_friends import VkFriendsRepository
 from app.infrastructure.vk_client.client import VkApiClient
-from app.domain.models.vk_friends import VkFriendsExportJob, VkFriendsJobLog
 from app.services.vk_friends.formatters import map_vk_user_to_flat_dto
 from app.services.vk_friends.workbook import EXPORT_BATCH_SIZE, write_xlsx_file
 

@@ -10,12 +10,12 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.core.config import settings
-from app.main import create_app
 from app.api.schemas.vk_friends import JobStatus
-from app.services.vk_friends_service import VkFriendsExportService
+from app.core.config import settings
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
 from app.infrastructure.vk_client.client import VkApiClient
+from app.main import create_app
+from app.services.vk_friends_service import VkFriendsExportService
 
 
 @pytest.fixture

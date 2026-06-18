@@ -1,6 +1,7 @@
 import pytest
 from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
 
+
 @pytest.mark.anyio
 async def test_ingestion_repository_flow(db_session):
     repo = SqlAlchemyIngestionRepository(db_session)
