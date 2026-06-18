@@ -1,3 +1,12 @@
+## [0.35.3](https://github.com/andr-235/parseVK/compare/v0.35.2...v0.35.3) (2026-06-18)
+
+
+### Bug Fixes
+
+* **api-gateway:** enrich watchlist authors with profiles from content-service ([8d9ea90](https://github.com/andr-235/parseVK/commit/8d9ea90acdc67e2b4a4d846cd797108562cb2cd5))
+* **api-gateway:** return keywords key instead of items in list response ([7fc99c6](https://github.com/andr-235/parseVK/commit/7fc99c6150696a1d0b9586abf0c38d9a0e28df13))
+* **content-service:** replace pydantic v1 from_attributes with model_validate ([5a9904b](https://github.com/andr-235/parseVK/commit/5a9904bd54378b2a55f089f9447ed93f6003eb5f))
+
 ## [0.35.2](https://github.com/andr-235/parseVK/compare/v0.35.1...v0.35.2) (2026-06-18)
 
 
