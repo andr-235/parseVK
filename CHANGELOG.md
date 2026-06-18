@@ -1,3 +1,10 @@
+## [0.37.1](https://github.com/andr-235/parseVK/compare/v0.37.0...v0.37.1) (2026-06-18)
+
+
+### Bug Fixes
+
+* **comments:** use authorVkId instead of ownerId for author fallback ([3c9aa76](https://github.com/andr-235/parseVK/commit/3c9aa76e13ea9f5e5266903ae2ed95ebf68dacfa))
+
 # [0.37.0](https://github.com/andr-235/parseVK/compare/v0.36.0...v0.37.0) (2026-06-18)
 
 
