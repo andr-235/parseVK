@@ -598,7 +598,7 @@ services:
       API_URL: http://api-gateway:8000
       GATEWAY_API_URL: http://api-gateway:8000
     ports:
-      - "127.0.0.1:8080:80"
+      - "0.0.0.0:8080:80"
     healthcheck:
       test:
         [
