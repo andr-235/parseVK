@@ -1,3 +1,10 @@
+## [0.37.2](https://github.com/andr-235/parseVK/compare/v0.37.1...v0.37.2) (2026-06-18)
+
+
+### Bug Fixes
+
+* **api-gateway:** fix content-service enrichment paths in comments ([de348ba](https://github.com/andr-235/parseVK/commit/de348ba1226cf6a32c6c23bbaa5caf9222489210))
+
 ## [0.37.1](https://github.com/andr-235/parseVK/compare/v0.37.0...v0.37.1) (2026-06-18)
 
 
