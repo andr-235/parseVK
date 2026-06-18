@@ -250,7 +250,7 @@ markers =
     - `services/vk-service/app/domain/models/tasks.py`
     - `services/vk-service/app/domain/models/outbox.py`
 
-- [ ] **Task 1.2: Define abstract repository interfaces in Domain**
+- [x] **Task 1.2: Define abstract repository interfaces in Domain**
   - **Subject:** Establish abstract database boundaries
   - **Description:** Create interface files under `app/domain/repositories/` outlining standard database access methods for VkFriends, OkFriends, Ingestion, Tasks, and Outbox. Ensure zero dependency on SQLAlchemy constructs inside interfaces.
   - **Logging:** Clean Python type-checker validation.
