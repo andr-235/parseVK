@@ -32,7 +32,7 @@ class KeywordsGatewayService:
         if search:
             params["search"] = search
         result = await self._request("GET", "/internal/moderation/keywords", user_id=user_id, request_id=request_id, correlation_id=correlation_id, params=params)
-        return {"items": [self._format_keyword(kw) for kw in result.get("items", [])], "total": result.get("total", 0), "page": result.get("page", page), "limit": result.get("limit", limit)}
+        return {"keywords": [self._format_keyword(kw) for kw in result.get("keywords", [])], "total": result.get("total", 0), "page": result.get("page", page), "limit": result.get("limit", limit)}
 
     async def add_keyword(self, payload: dict, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         backend = {"word": payload["word"], "category": payload.get("category"), "is_phrase": payload.get("isPhrase", False)}
