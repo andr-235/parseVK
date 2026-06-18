@@ -60,10 +60,15 @@ def _default_target_dsn(service: str) -> str:
 
 @dataclass
 class ColumnMap:
-    """Maps a legacy column to a target column with optional transform."""
+    """Maps a legacy column to a target column with optional transform.
+
+    If select_only is True, the column is fetched from legacy but not
+    inserted into the target (useful for transform dependencies).
+    """
     legacy: str
     target: str
     transform: Callable[[Any], Any] | None = None
+    select_only: bool = False
 
 
 def const(value: Any) -> Callable:
@@ -283,7 +288,7 @@ SERVICE_MIGRATIONS: dict[str, list[TableMapping]] = {
             columns=[
                 ColumnMap("id", "id", map_int),
                 ColumnMap(None, "external_key",
-                          lambda r: f"vk_{r.get('ownerId')}_{r.get('vkPostId')}_{r.get('vkCommentId')}"
+                          lambda r: f"vk_{r.get('ownerId')}_{r.get('postId')}_{r.get('vkCommentId')}"
                           if r else None),
                 ColumnMap("ownerId", "vk_owner_id", map_int),
                 ColumnMap("postId", "vk_post_id", map_int),
@@ -460,7 +465,7 @@ SERVICE_MIGRATIONS: dict[str, list[TableMapping]] = {
             target_table="moderation_comments",
             columns=[
                 ColumnMap(None, "external_key",
-                          lambda r: f"vk_{r.get('ownerId')}_{r.get('vkPostId')}_{r.get('vkCommentId')}"
+                          lambda r: f"vk_{r.get('ownerId')}_{r.get('postId')}_{r.get('vkCommentId')}"
                           if r else None),
                 ColumnMap(None, "post_external_key",
                           lambda r: f"vk_{r.get('ownerId')}_{r.get('postId')}" if r else None),
@@ -472,6 +477,9 @@ SERVICE_MIGRATIONS: dict[str, list[TableMapping]] = {
                 ColumnMap(None, "matched_keywords", const("[]")),
                 ColumnMap(None, "watchlist_author_id", const(None)),
                 ColumnMap("updatedAt", "updated_at", map_ts),
+                ColumnMap("ownerId", "_", select_only=True),
+                ColumnMap("postId", "_", select_only=True),
+                ColumnMap("vkCommentId", "_", select_only=True),
             ],
             conflict_target="external_key",
             order_by="id",
@@ -639,8 +647,8 @@ class UpsertEngine:
             mapping.legacy_table, total,
         )
 
-        # Target column list for INSERT
-        target_cols = [cm.target for cm in mapping.columns]
+        # Target column list for INSERT (exclude select_only columns)
+        target_cols = [cm.target for cm in mapping.columns if not cm.select_only]
 
         # Build conflict clause
         if isinstance(mapping.conflict_target, list):
