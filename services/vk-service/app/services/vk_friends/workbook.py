@@ -5,10 +5,14 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from app.services.vk_friends.formatters import FRIEND_FIELDS, FRIEND_HEADERS_RU, format_cell_value
+from app.core.config import settings
+from app.services.vk_friends.constants import FRIEND_FIELDS, FRIEND_HEADERS_RU
+from app.services.vk_friends.formatters import format_cell_value
 
 EXPORT_BATCH_SIZE = 1000
-EXPORT_DIR = os.path.abspath(os.path.join(os.getcwd(), ".temp", "vk-friends"))
+
+def get_export_dir() -> str:
+    return os.path.abspath(os.path.join(os.getcwd(), settings.vk_friends_export_dir))
 
 def _create_sheet(wb: openpyxl.Workbook) -> Any:
     ws = wb.active
@@ -29,9 +33,10 @@ def _auto_adjust_columns(ws: Any) -> None:
         ws.column_dimensions[col_letter].width = max(14, max_len + 2)
 
 def write_xlsx_file(job_id: str, rows: list[dict[str, Any]]) -> str:
-    os.makedirs(EXPORT_DIR, exist_ok=True)
+    export_dir = get_export_dir()
+    os.makedirs(export_dir, exist_ok=True)
     file_name = f"vk_friends_{job_id}.xlsx"
-    file_path = os.path.join(EXPORT_DIR, file_name)
+    file_path = os.path.join(export_dir, file_name)
 
     wb = openpyxl.Workbook()
     ws = _create_sheet(wb)

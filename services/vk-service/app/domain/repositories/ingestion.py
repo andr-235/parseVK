@@ -11,6 +11,10 @@ class IngestionRepository(ABC):
         """Fetch list of all active VK groups monitored."""
 
     @abstractmethod
+    async def soft_delete_group(self, vk_group_id: int) -> bool:
+        """Soft delete group and clean up its posts, comments and author if no content left."""
+
+    @abstractmethod
     async def upsert_author(self, author: dict) -> None:
         """Upsert collected VK author profile details."""
 

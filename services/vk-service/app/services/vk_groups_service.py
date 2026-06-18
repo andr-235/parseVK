@@ -1,21 +1,13 @@
 import logging
-from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, or_, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.domain.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost
 from app.domain.repositories.ingestion import IngestionRepository
 from app.services.domain_events_service import OutboxService
 
 logger = logging.getLogger(__name__)
 
-def utcnow() -> datetime:
-    return datetime.now(UTC)
 
 class VkGroupsService:
-    def __init__(self, session: AsyncSession, ingestion_repo: IngestionRepository, outbox_service: OutboxService):
-        self.session = session
+    def __init__(self, ingestion_repo: IngestionRepository, outbox_service: OutboxService):
         self.ingestion = ingestion_repo
         self.outbox = outbox_service
 
@@ -25,56 +17,13 @@ class VkGroupsService:
         return group_data
 
     async def delete_group(self, vk_group_id: int, correlation_id: str | None = None) -> bool:
-        now = utcnow()
-        owner_id = -vk_group_id
-
-        group_exists = await self.session.scalar(
-            select(VkGroup.vk_group_id).where(
-                VkGroup.vk_group_id == vk_group_id,
-                VkGroup.deleted_at.is_(None),
-            )
-        )
-        if group_exists is None:
-            return True
-
-        await self.session.execute(
-            update(VkGroup).where(VkGroup.vk_group_id == vk_group_id).values(deleted_at=now)
-        )
-
-        post_ids = (
-            await self.session.scalars(
-                select(VkPost.vk_post_id).where(
-                    or_(
-                        VkPost.vk_group_id == vk_group_id,
-                        VkPost.vk_owner_id == owner_id,
-                    )
-                )
-            )
-        ).all()
-
-        if post_ids:
-            await self.session.execute(delete(VkComment).where(VkComment.vk_post_id.in_(post_ids)))
-            await self.session.execute(
-                delete(VkPost).where(VkPost.vk_post_id.in_(post_ids))
-            )
-
-        author_has_content = await self.session.scalar(
-            select(func.count()).select_from(
-                select(VkPost.vk_post_id).where(VkPost.author_vk_id == owner_id).union(
-                    select(VkComment.vk_comment_id).where(VkComment.author_vk_id == owner_id)
-                ).subquery()
-            )
-        )
-        if (author_has_content or 0) == 0:
-            await self.session.execute(delete(VkAuthor).where(VkAuthor.vk_author_id == owner_id))
-
-        await self.outbox.emit_group_deleted(vk_group_id, correlation_id=correlation_id)
-        return True
+        success = await self.ingestion.soft_delete_group(vk_group_id)
+        if success:
+            await self.outbox.emit_group_deleted(vk_group_id, correlation_id=correlation_id)
+        return success
 
     async def delete_all_groups(self, correlation_id: str | None = None) -> list[int]:
-        group_ids = (await self.session.scalars(
-            select(VkGroup.vk_group_id).where(VkGroup.deleted_at.is_(None))
-        )).all()
+        group_ids = await self.ingestion.get_active_group_ids()
         for vk_group_id in group_ids:
             await self.delete_group(vk_group_id, correlation_id=correlation_id)
-        return list(group_ids)
+        return group_ids

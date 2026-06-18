@@ -31,6 +31,7 @@ async def get_vk_groups_service_dep(
 
 
 from app.domain.repositories.ok_friends import OkFriendsRepository
+from app.domain.repositories.vk_friends import VkFriendsRepository
 
 
 async def get_ok_friends_repository_dep(
@@ -38,5 +39,12 @@ async def get_ok_friends_repository_dep(
 ) -> OkFriendsRepository:
     from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
     return SqlAlchemyOkFriendsRepository(session)
+
+
+async def get_vk_friends_repository_dep(
+    session: AsyncSession = Depends(get_session)
+) -> VkFriendsRepository:
+    from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
+    return SqlAlchemyVkFriendsRepository(session)
 
 

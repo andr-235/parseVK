@@ -57,7 +57,6 @@ def get_vk_groups_service(session: AsyncSession) -> VkGroupsService:
     outbox_repo = SqlAlchemyOutboxRepository(session)
     outbox_service = OutboxService(outbox_repo)
     return VkGroupsService(
-        session=session,
         ingestion_repo=ingestion_repo,
         outbox_service=outbox_service,
     )

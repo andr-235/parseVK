@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,6 +64,56 @@ class SqlAlchemyIngestionRepository(IngestionRepository):
             select(VkGroup.vk_group_id).where(VkGroup.deleted_at.is_(None))
         )
         return list(result.all())
+
+    async def soft_delete_group(self, vk_group_id: int) -> bool:
+        now = utcnow()
+        owner_id = -vk_group_id
+
+        # Проверка существования
+        group_exists = await self.session.scalar(
+            select(VkGroup.vk_group_id).where(
+                VkGroup.vk_group_id == vk_group_id,
+                VkGroup.deleted_at.is_(None),
+            )
+        )
+        if group_exists is None:
+            return True
+
+        # Мягкое удаление группы
+        await self.session.execute(
+            update(VkGroup).where(VkGroup.vk_group_id == vk_group_id).values(deleted_at=now)
+        )
+
+        # Удаление постов и комментариев
+        post_ids = (
+            await self.session.scalars(
+                select(VkPost.vk_post_id).where(
+                    or_(
+                        VkPost.vk_group_id == vk_group_id,
+                        VkPost.vk_owner_id == owner_id,
+                    )
+                )
+            )
+        ).all()
+
+        if post_ids:
+            await self.session.execute(delete(VkComment).where(VkComment.vk_post_id.in_(post_ids)))
+            await self.session.execute(
+                delete(VkPost).where(VkPost.vk_post_id.in_(post_ids))
+            )
+
+        # Удаление автора, если нет контента
+        author_has_content = await self.session.scalar(
+            select(func.count()).select_from(
+                select(VkPost.vk_post_id).where(VkPost.author_vk_id == owner_id).union(
+                    select(VkComment.vk_comment_id).where(VkComment.author_vk_id == owner_id)
+                ).subquery()
+            )
+        )
+        if (author_has_content or 0) == 0:
+            await self.session.execute(delete(VkAuthor).where(VkAuthor.vk_author_id == owner_id))
+
+        return True
 
     async def upsert_author(self, author: dict) -> None:
         now = utcnow()

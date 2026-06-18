@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
-from app.api.dependencies import get_vk_friends_service_dep
+from app.api.dependencies import get_vk_friends_repository_dep
 from app.api.schemas.vk_friends import (
     VkFriendsExportStartRequest,
     VkFriendsExportStartResponse,
@@ -13,7 +13,7 @@ from app.api.schemas.vk_friends import (
     VkFriendsJobState,
 )
 from app.core.security import require_internal_token
-from app.services.vk_friends_service import VkFriendsExportService
+from app.domain.repositories.vk_friends import VkFriendsRepository
 
 router = APIRouter(
     prefix="/internal/vk/friends",
@@ -34,13 +34,13 @@ async def run_export_job_background(job_id: uuid.UUID, params: dict) -> None:
 async def start_export(
     payload: VkFriendsExportStartRequest,
     background_tasks: BackgroundTasks,
-    service: VkFriendsExportService = Depends(get_vk_friends_service_dep),
+    repo: VkFriendsRepository = Depends(get_vk_friends_repository_dep),
 ) -> VkFriendsExportStartResponse:
     params = payload.params
     vk_user_id = params.get("user_id")
 
     # Create job in database
-    job = await service.create_job(params, vk_user_id=vk_user_id)
+    job = await repo.create_job(params, vk_user_id=vk_user_id)
 
     # Launch processing in background with a dedicated background session
     background_tasks.add_task(run_export_job_background, job.id, params)
@@ -50,18 +50,18 @@ async def start_export(
 @router.get("/jobs/{job_id}", response_model=VkFriendsJobDetailResponse)
 async def get_job(
     job_id: str,
-    service: VkFriendsExportService = Depends(get_vk_friends_service_dep),
+    repo: VkFriendsRepository = Depends(get_vk_friends_repository_dep),
 ) -> VkFriendsJobDetailResponse:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from err
 
-    job = await service.get_job_by_id(job_uuid)
+    job = await repo.get_job_by_id(job_uuid)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    logs = await service.get_job_logs(job_uuid, limit=200)
+    logs = await repo.get_job_logs(job_uuid, limit=200)
 
     job_state = VkFriendsJobState(
         id=str(job.id),
@@ -90,14 +90,14 @@ async def get_job(
 @router.get("/jobs/{job_id}/download/xlsx")
 async def download_xlsx(
     job_id: str,
-    service: VkFriendsExportService = Depends(get_vk_friends_service_dep),
+    repo: VkFriendsRepository = Depends(get_vk_friends_repository_dep),
 ) -> FileResponse:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from err
 
-    job = await service.get_job_by_id(job_uuid)
+    job = await repo.get_job_by_id(job_uuid)
     if not job or not job.xlsx_path:
         raise HTTPException(status_code=404, detail="XLSX file not found")
 
@@ -114,21 +114,21 @@ async def download_xlsx(
 @router.get("/jobs/{job_id}/logs/raw")
 async def get_raw_logs(
     job_id: str,
-    service: VkFriendsExportService = Depends(get_vk_friends_service_dep),
+    repo: VkFriendsRepository = Depends(get_vk_friends_repository_dep),
 ) -> dict:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from err
 
-    job = await service.get_job_by_id(job_uuid)
+    job = await repo.get_job_by_id(job_uuid)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    logs = await service.get_job_logs(job_uuid, limit=500)
+    logs = await repo.get_job_logs(job_uuid, limit=500)
     
     # Sort chronologically for gateway SSE event stream
-    logs_sorted = sorted(logs, key=lambda l: l.created_at)
+    logs_sorted = sorted(logs, key=lambda log_item: log_item.created_at)
 
     return {
         "job": {
