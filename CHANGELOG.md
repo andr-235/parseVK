@@ -1,3 +1,10 @@
+## [0.35.7](https://github.com/andr-235/parseVK/compare/v0.35.6...v0.35.7) (2026-06-18)
+
+
+### Bug Fixes
+
+* **scripts:** include source columns in SELECT for computed external_key ([58db5c4](https://github.com/andr-235/parseVK/commit/58db5c4ed80e797feb715909676ab7fa4044f09b))
+
 ## [0.35.6](https://github.com/andr-235/parseVK/compare/v0.35.5...v0.35.6) (2026-06-18)
 
 
