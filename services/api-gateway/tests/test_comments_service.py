@@ -126,12 +126,12 @@ async def test_get_comments_with_enrichment():
 
         async def request(self, method: str, path: str, **kwargs):
             self.bulk_calls.append({"method": method, "path": path, "json": kwargs.get("json")})
-            if path == "/authors/bulk":
+            if path == "/internal/content/authors/bulk":
                 return [
                     {"vkAuthorId": 100, "displayName": "Иван Иванов", "fullName": "Иван Иванов", "screenName": "ivanov", "profileUrl": "https://vk.com/id100"},
                     {"vkAuthorId": 101, "displayName": "Петр Петров", "fullName": "Петр Петров", "screenName": "petrov", "profileUrl": "https://vk.com/id101"},
                 ]
-            if path == "/groups/bulk":
+            if path == "/internal/content/groups/bulk":
                 return [
                     {"vkGroupId": 213672075, "name": "Моя красивая квакадилина", "screenName": "club213672075"},
                 ]

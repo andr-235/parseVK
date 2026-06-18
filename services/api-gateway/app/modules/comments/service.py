@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any
 
@@ -47,6 +48,9 @@ def _format_comment(item: dict, author_profile: dict | None = None, group_profil
     }
 
 
+logger = logging.getLogger(__name__)
+
+
 class CommentsGatewayService:
     def __init__(self, moderation_client: ServiceClient | None = None, content_client: ServiceClient | None = None):
         self.moderation_client = moderation_client or ServiceClient(service_name="Moderation", base_url=settings.moderation_base_url, internal_token=settings.internal_service_token)
@@ -74,17 +78,17 @@ class CommentsGatewayService:
 
         if author_ids:
             try:
-                profiles = await self.content_client.request("POST", "/authors/bulk", user_id=user_id, json=author_ids)
+                profiles = await self.content_client.request("POST", "/internal/content/authors/bulk", user_id=user_id, json=author_ids)
                 author_profiles = {p["vkAuthorId"]: p for p in (profiles or []) if p}
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to fetch authors from content-service: %s", exc)
 
         if group_vk_ids:
             try:
-                profiles = await self.content_client.request("POST", "/groups/bulk", user_id=user_id, json=list(group_vk_ids))
+                profiles = await self.content_client.request("POST", "/internal/content/groups/bulk", user_id=user_id, json=list(group_vk_ids))
                 group_profiles = {p["vkGroupId"]: p for p in (profiles or []) if p}
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to fetch groups from content-service: %s", exc)
 
         return author_profiles, group_profiles
 
