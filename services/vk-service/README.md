@@ -12,7 +12,9 @@
   - `dependencies.py` — инфраструктурные зависимости для роутеров FastAPI.
 - **Business Logic Layer (`app/services/`)**:
   - `vk_friends_service.py`, `ok_friends_service.py` — сервисы управления жизненным циклом задач экспорта.
-  - `ingestion_service.py`, `vk_api_service.py` — сервисы сбора групп и адаптации API-запросов к ВКонтакте.
+  - `ingestion_service.py`, `vk_groups_service.py` — сервисы сбора, сохранения и удаления групп ВКонтакте.
+  - `domain_events_service.py` — сервис публикации доменных событий (outbox pattern).
+  - `task_events_service.py` — сервис обработки входящих событий жизненного цикла задач.
   - `workbook.py` — генерация отчетов XLSX.
 - **Domain Layer (`app/domain/`)**:
   - `models/` — чистые доменные сущности (задачи экспорта, события outbox, группы).
