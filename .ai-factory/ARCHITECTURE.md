@@ -38,7 +38,29 @@ parseVK/
 └── docker/                        # Dockerfiles, compose configs
 ```
 
-Each service follows:
+Each service follows one of the architectural patterns below:
+
+### Layered Architecture (Refactored Services, e.g., `vk-service`)
+
+Follows a strict clean layered structure with a dependency flow of: `api / tasks -> services -> domain <- infrastructure`.
+
+```
+services/vk-service/
+├── app/
+│   ├── api/            # Presentation layer (routers, schemas, dependencies)
+│   ├── services/       # Business logic (application services, formatters, pipelines)
+│   ├── domain/         # Domain model & repository interfaces (core contracts)
+│   ├── infrastructure/ # Implementation details (SQLAlchemy repositories, API clients, DB sessions)
+│   ├── tasks/          # Background processes (Kafka consumer, outbox worker)
+│   ├── bootstrap.py    # Composition Root (manual DI injection)
+│   └── main.py         # FastAPI application entrypoint
+├── alembic/           # Database migrations
+├── tests/             # Unit and Integration tests
+├── pyproject.toml     # uv-managed dependencies and tools config
+└── Dockerfile
+```
+
+### Legacy Three-Tier Structure (Other Services)
 
 ```
 services/<name>/
@@ -52,6 +74,7 @@ services/<name>/
 ├── pyproject.toml
 └── Dockerfile
 ```
+
 
 ## Dependency Rules
 
