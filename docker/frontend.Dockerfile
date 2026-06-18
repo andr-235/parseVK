@@ -3,10 +3,7 @@ FROM oven/bun:1-alpine AS build
 
 WORKDIR /app
 
-ARG VITE_API_URL
 ARG BUILDKIT_INLINE_CACHE=1
-
-ENV VITE_API_URL=${VITE_API_URL}
 
 # Copy package files first for better layer caching
 COPY front/package.json ./

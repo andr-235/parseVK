@@ -589,8 +589,6 @@ services:
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     depends_on:
       api-gateway:
         condition: service_healthy
