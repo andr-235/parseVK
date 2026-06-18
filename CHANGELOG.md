@@ -1,3 +1,10 @@
+## [0.35.4](https://github.com/andr-235/parseVK/compare/v0.35.3...v0.35.4) (2026-06-18)
+
+
+### Bug Fixes
+
+* **scripts:** add Comment mapping for moderation-service migration ([89fef9a](https://github.com/andr-235/parseVK/commit/89fef9a7e727d4cf8734ddd064c78cfc62790908))
+
 ## [0.35.3](https://github.com/andr-235/parseVK/compare/v0.35.2...v0.35.3) (2026-06-18)
 
 
