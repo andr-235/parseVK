@@ -45,7 +45,7 @@ class TaskEvent(BaseModel):
         value = self.payload.get("postLimit")
         return int(value) if value is not None else None
 
-class TaskEventsHandler:
+class TaskEventsService:
     def __init__(
         self,
         repository: TaskEventsRepository,

@@ -5,12 +5,12 @@ import httpx
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_vk_api_service_dep
+from app.api.dependencies import get_vk_groups_service_dep
 from app.api.schemas.vk_api import SaveGroupRequest
 from app.core.security import require_internal_token
 from app.infrastructure.db.session import get_session
 from app.infrastructure.vk_client.client import VkApiClient
-from app.services.vk_api_service import VkApiService
+from app.services.vk_groups_service import VkGroupsService
 
 router = APIRouter(
     prefix="/internal/vk",
@@ -111,8 +111,8 @@ async def save_single_group(
         )
 
     # 3. Сохраняем группу и отправляем событие через Outbox
-    from app.bootstrap import get_vk_api_service
-    svc = get_vk_api_service(session)
+    from app.bootstrap import get_vk_groups_service
+    svc = get_vk_groups_service(session)
     await svc.save_group(group_data, correlation_id=x_correlation_id)
 
     # 4. Формируем IGroupResponse
@@ -186,7 +186,7 @@ async def get_user_photos(
 
 @router.delete("/groups/all")
 async def delete_all_groups(
-    service: VkApiService = Depends(get_vk_api_service_dep),
+    service: VkGroupsService = Depends(get_vk_groups_service_dep),
     x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
 ):
     group_ids = await service.delete_all_groups(correlation_id=x_correlation_id)
@@ -195,7 +195,7 @@ async def delete_all_groups(
 @router.delete("/groups/{vk_group_id}")
 async def delete_group(
     vk_group_id: int,
-    service: VkApiService = Depends(get_vk_api_service_dep),
+    service: VkGroupsService = Depends(get_vk_groups_service_dep),
     x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
 ):
     ok = await service.delete_group(vk_group_id, correlation_id=x_correlation_id)

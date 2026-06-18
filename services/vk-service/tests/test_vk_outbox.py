@@ -9,8 +9,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.services.domain_events_service import OutboxService
 from app.services.ingestion_service import IngestionService
-from app.services.outbox_service import OutboxService
 from app.tasks.outbox_worker import kafka_key_for_event
 
 

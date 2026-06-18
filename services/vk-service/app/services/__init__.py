@@ -1,18 +1,18 @@
+from .domain_events_service import OutboxService
 from .ingestion_service import IngestionService
 from .ok_friends_service import OkFriendsExportService
-from .outbox_service import OutboxService
-from .task_handler import TaskEvent, TaskEventsHandler
-from .vk_api_service import VkApiService
+from .task_events_service import TaskEvent, TaskEventsService
 from .vk_friends_service import VkFriendsExportService
+from .vk_groups_service import VkGroupsService
 
 __all__ = [
     "VkFriendsExportService",
     "OkFriendsExportService",
     "IngestionService",
-    "TaskEventsHandler",
+    "TaskEventsService",
     "TaskEvent",
     "OutboxService",
-    "VkApiService",
+    "VkGroupsService",
 ]
 
 

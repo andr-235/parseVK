@@ -12,14 +12,14 @@ from app.infrastructure.tasks_client.client import TasksClient
 
 # Clients
 from app.infrastructure.vk_client.client import VkApiClient
+from app.services.domain_events_service import OutboxService
 from app.services.ingestion_service import IngestionService
 from app.services.ok_friends_service import OkFriendsExportService
-from app.services.outbox_service import OutboxService
-from app.services.task_handler import TaskEventsHandler
-from app.services.vk_api_service import VkApiService
+from app.services.task_events_service import TaskEventsService
 
 # Services
 from app.services.vk_friends_service import VkFriendsExportService
+from app.services.vk_groups_service import VkGroupsService
 
 # Shared Client Singletons (VkApiClient & OkApiClient are stateless/managed cleanly)
 _vk_client = VkApiClient()
@@ -45,18 +45,18 @@ def get_ingestion_service(session: AsyncSession) -> IngestionService:
         outbox_service=outbox_service,
     )
 
-def get_task_events_handler(session: AsyncSession) -> TaskEventsHandler:
+def get_task_events_handler(session: AsyncSession) -> TaskEventsService:
     repository = SqlAlchemyTaskEventsRepository(session)
-    return TaskEventsHandler(
+    return TaskEventsService(
         repository=repository,
         tasks_client=_tasks_client,
     )
 
-def get_vk_api_service(session: AsyncSession) -> VkApiService:
+def get_vk_groups_service(session: AsyncSession) -> VkGroupsService:
     ingestion_repo = SqlAlchemyIngestionRepository(session)
     outbox_repo = SqlAlchemyOutboxRepository(session)
     outbox_service = OutboxService(outbox_repo)
-    return VkApiService(
+    return VkGroupsService(
         session=session,
         ingestion_repo=ingestion_repo,
         outbox_service=outbox_service,

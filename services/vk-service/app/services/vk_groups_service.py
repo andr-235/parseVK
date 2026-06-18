@@ -6,14 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost
 from app.domain.repositories.ingestion import IngestionRepository
-from app.services.outbox_service import OutboxService
+from app.services.domain_events_service import OutboxService
 
 logger = logging.getLogger(__name__)
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
 
-class VkApiService:
+class VkGroupsService:
     def __init__(self, session: AsyncSession, ingestion_repo: IngestionRepository, outbox_service: OutboxService):
         self.session = session
         self.ingestion = ingestion_repo
