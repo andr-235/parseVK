@@ -273,7 +273,7 @@ markers =
   - **Blocked by:** Task 1.1
 
 ### Phase 2: Infrastructure Layer Restructuring
-- [ ] **Task 2.1: Implement concrete SQLAlchemy repositories**
+- [x] **Task 2.1: Implement concrete SQLAlchemy repositories**
   - **Subject:** Add SqlAlchemy implementations matching domain interfaces
   - **Description:**
     Implement repository wrapper classes in `app/infrastructure/db/repositories/`. Inject `AsyncSession` into constructors and move all raw queries/updates from `crud_service` and modules repository files into these implementations.
@@ -282,7 +282,7 @@ markers =
     - `services/vk-service/app/infrastructure/db/repositories/`
   - **Blocked by:** Task 1.1, Task 1.2
 
-- [ ] **Task 2.2: Relocate third-party clients to Infrastructure**
+- [x] **Task 2.2: Relocate third-party clients to Infrastructure**
   - **Subject:** Move VK API, OK API wrappers, and internal HTTP clients
   - **Description:** Move third-party API clients to `app/infrastructure/` and update internal configuration imports to reference `app/core/config.py` properly.
     - Move `app/modules/vk_api/client.py` and `api_methods.py` into `app/infrastructure/vk_client/`.
@@ -294,7 +294,7 @@ markers =
     - `services/vk-service/app/infrastructure/ok_client/`
     - `services/vk-service/app/infrastructure/tasks_client/`
 
-- [ ] **Task 2.3: Implement INTEGRATION tests for repositories**
+- [x] **Task 2.3: Implement INTEGRATION tests for repositories**
   - **Subject:** Add integration tests for concrete database repositories
   - **Description:** Setup integration tests in `tests/integration/repositories/` using standard test database connection structures to test real SQL queries and updates against PostgreSQL.
   - **Logging:** Pytest run logs.
@@ -303,7 +303,7 @@ markers =
   - **Blocked by:** Task 2.1
 
 ### Phase 3: Pure Application Services Layer
-- [ ] **Task 3.1: Relocate and adapt use case logic to Services**
+- [x] **Task 3.1: Relocate and adapt use case logic to Services**
   - **Subject:** Relocate business rules to app/services
   - **Description:** Relocate and adapt `VkFriendsExportService`, `OkFriendsExportService`, `IngestionService`, and `TaskEventsHandler` under `app/services/` (preserving exact business logic/rules, changing only structure). Ensure services accept abstract repositories and API clients via dependency injection rather than directly instantiating DB sessions or HTTP client modules.
   - **Logging:** Add high-resolution logging points on job execution states.
@@ -314,7 +314,7 @@ markers =
     - `services/vk-service/app/services/task_handler.py`
 
 ### Phase 4: API Presentation Layer
-- [ ] **Task 4.1: Establish Composition Root and API dependencies**
+- [x] **Task 4.1: Establish Composition Root and API dependencies**
   - **Subject:** Configure bootstrap.py and api/dependencies.py
   - **Description:**
     - Create Composition Root in `app/bootstrap.py` to instantiate services and wire concrete repository implementations.
@@ -326,7 +326,7 @@ markers =
     - `services/vk-service/app/api/dependencies.py`
     - `services/vk-service/app/api/schemas/`
 
-- [ ] **Task 4.2: Build clean Presentation API Routers**
+- [x] **Task 4.2: Build clean Presentation API Routers**
   - **Subject:** Move routers to presentation layer
   - **Description:**
     Relocate endpoint handlers from modules to `app/api/routers/` (e.g. `vk_friends.py`, `ok_friends.py`, `vk_api.py`). Use FastAPI dependency injection (`Depends(get_vk_friends_service_dep)`) to instantiate app services.
@@ -336,7 +336,7 @@ markers =
   - **Blocked by:** Task 4.1
 
 ### Phase 5: Background Daemon Tasks
-- [ ] **Task 5.1: Structure tasks and workers**
+- [x] **Task 5.1: Structure tasks and workers**
   - **Subject:** Re-align Outbox and Kafka consumer processes
   - **Description:** Move logic from `app/modules/outbox/publisher.py` to `app/tasks/outbox_worker.py` and `app/modules/tasks/consumer.py` to `app/tasks/kafka_consumer.py`, preserving polling intervals, retry logic, and error handling.
   - **Logging:** Detailed outbox lock/publish and consumer topic partition commit logging.
@@ -345,21 +345,21 @@ markers =
     - `services/vk-service/app/tasks/kafka_consumer.py`
 
 ### Phase 6: Core Hookup & Final Verification
-- [ ] **Task 6.1: Update app initialization (`main.py`)**
+- [x] **Task 6.1: Update app initialization (`main.py`)**
   - **Subject:** Adapt startup lifespan and router attachments
   - **Description:** Reconfigure `app/main.py` imports to load routers and startup lifespan loops from new presentation (`api`) and tasks (`tasks`) modules. Remove all references to the obsolete `app/modules` folder.
   - **Logging:** Startup health configurations.
   - **Files:**
     - `services/vk-service/app/main.py`
 
-- [ ] **Task 6.2: Adapt tests & verify green execution**
+- [x] **Task 6.2: Adapt tests & verify green execution**
   - **Subject:** Correct imports in tests and execute tests suite
   - **Description:** Adapt all unit and integration tests to new import locations, reorganizing tests into `tests/unit` and `tests/integration`, and update fixtures in `tests/conftest.py` to import models from `app/domain/models/` packages.
   - **Logging:** Standard pytest exit logs.
   - **Files:**
     - `services/vk-service/tests/`
 
-- [ ] **Task 6.3: Verification & Cleanup**
+- [x] **Task 6.3: Verification & Cleanup**
   - **Subject:** Safely delete obsolete modules directories
   - **Description:**
     Perform directory deletion in safe steps:
@@ -370,14 +370,14 @@ markers =
   - **Files:**
     - `services/vk-service/app/`
 
-- [ ] **Task 6.4: Update documentation**
+- [x] **Task 6.4: Update documentation**
   - **Subject:** Update ARCHITECTURE.md and README.md docs
   - **Description:** Document the new layered structure layout (Presentation API, Application Services, Domain Models/Interfaces, Infrastructure) in `.ai-factory/ARCHITECTURE.md` and appropriate services READMEs.
   - **Logging:** Standard verification checkpoints.
   - **Files:**
     - `.ai-factory/ARCHITECTURE.md`
 
-- [ ] **Task 6.5: Update CI/CD pipeline**
+- [x] **Task 6.5: Update CI/CD pipeline**
   - **Subject:** Verify CI workflows and Docker builds
   - **Description:** Update pytest execution markers command triggers in `.github/workflows/` (or equivalent pipelines), update test coverage configs if applicable, and verify that docker container builds continue to compile successfully with the refactored structure.
   - **Logging:** CI verification status.
