@@ -5,12 +5,31 @@ from app.core.config import settings
 from fastapi import HTTPException, status
 
 
+def _map_watchlist_item(item: dict, profile: dict | None = None) -> dict:
+    return {
+        "id": item["id"],
+        "authorVkId": item["author_vk_id"],
+        "status": item["status"],
+        "lastCheckedAt": item.get("last_checked_at"),
+        "lastActivityAt": item.get("last_activity_at"),
+        "foundCommentsCount": item.get("found_comments_count", 0),
+        "monitoringStartedAt": item["monitoring_started_at"],
+        "monitoringStoppedAt": item.get("monitoring_stopped_at"),
+        "author": profile,
+        "summary": {
+            "total": 0,
+            "suspicious": 0,
+            "lastAnalyzedAt": None,
+            "categories": [],
+            "levels": [],
+        },
+    }
+
+
 class WatchlistGatewayService:
     def __init__(self, moderation_client: ServiceClient | None = None, content_client: ServiceClient | None = None):
         self.moderation_client = moderation_client or ServiceClient(service_name="Moderation", base_url=settings.moderation_base_url, internal_token=settings.internal_service_token)
         self.content_client = content_client or ServiceClient(service_name="Content", base_url=settings.content_base_url, internal_token=settings.internal_service_token)
-        self.moderation_url = self.moderation_client.base_url
-        self.content_url = self.content_client.base_url
 
     async def _moderation_request(self, method: str, path: str, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None, params: dict | None = None, json: Any | None = None) -> dict:
         try:
@@ -21,15 +40,39 @@ class WatchlistGatewayService:
         except ServiceClientUnavailableError:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Moderation service unavailable") from None
 
+    async def _fetch_profiles(self, vk_author_ids: list[int], user_id: str = "") -> dict[int, dict]:
+        if not vk_author_ids:
+            return {}
+        try:
+            profiles = await self.content_client.request("POST", "/authors/bulk", user_id=user_id, json=vk_author_ids)
+        except Exception:
+            return {}
+        return {p["vkAuthorId"]: p for p in (profiles or []) if p}
+
     async def get_authors(self, offset: int, limit: int, exclude_stopped: bool, **kw: Any) -> dict:
         params = {"offset": offset, "limit": limit, "excludeStopped": exclude_stopped}
         data = await self._moderation_request("GET", "/internal/watchlist/authors", params=params, **kw)
-        return {"items": data["items"], "total": data["total"], "hasMore": data["hasMore"]}
+        items = data.get("items", [])
+        vk_ids = [i["author_vk_id"] for i in items if i.get("author_vk_id")]
+        user_id = kw.get("user_id", "")
+        profiles = await self._fetch_profiles(vk_ids, user_id=user_id)
+        return {
+            "items": [_map_watchlist_item(i, profiles.get(i.get("author_vk_id"))) for i in items],
+            "total": data["total"],
+            "hasMore": data["hasMore"],
+        }
 
     async def get_author_details(self, id: int, offset: int, limit: int, **kw: Any) -> dict:
         params = {"offset": offset, "limit": limit}
         data = await self._moderation_request("GET", f"/internal/watchlist/authors/{id}", params=params, **kw)
-        return {**data, "comments": data["comments"]}
+        item = {k: v for k, v in data.items() if k != "comments"}
+        vk_ids = [item["author_vk_id"]] if item.get("author_vk_id") else []
+        user_id = kw.get("user_id", "")
+        profiles = await self._fetch_profiles(vk_ids, user_id=user_id)
+        return {
+            **_map_watchlist_item(item, profiles.get(item.get("author_vk_id"))),
+            "comments": data["comments"],
+        }
 
     async def create_author(self, payload: dict, **kw: Any) -> dict:
         backend_payload = {}
@@ -37,7 +80,13 @@ class WatchlistGatewayService:
             backend_payload["author_vk_id"] = payload["authorVkId"]
         if "commentId" in payload:
             backend_payload["comment_id"] = payload["commentId"]
-        return await self._moderation_request("POST", "/internal/watchlist/authors", json=backend_payload, **kw)
+        item = await self._moderation_request("POST", "/internal/watchlist/authors", json=backend_payload, **kw)
+        profile = None
+        if item.get("author_vk_id"):
+            user_id = kw.get("user_id", "")
+            profiles = await self._fetch_profiles([item["author_vk_id"]], user_id=user_id)
+            profile = profiles.get(item["author_vk_id"])
+        return _map_watchlist_item(item, profile)
 
     async def update_author(self, id: int, payload: dict, **kw: Any) -> dict:
         return await self._moderation_request("PATCH", f"/internal/watchlist/authors/{id}", json=payload, **kw)
