@@ -100,28 +100,27 @@ async def test_vk_job_logs_leak_prevention(db_session):
 @pytest.mark.anyio
 async def test_ok_job_logs_leak_prevention(db_session):
     repo = SqlAlchemyOkFriendsRepository(db_session)
-    ok_service = OkFriendsExportService(repo=repo, ok_client=OkApiClient())
-    job = await ok_service.create_job({"user_id": 888}, ok_user_id=888)
+    job = await repo.create_job({"user_id": 888}, ok_user_id=888)
 
     # 1. Log a message with secrets
-    await ok_service.append_log(
+    await repo.append_log(
         job.id,
         level="INFO",
         message="Request to http://api.ok.ru/fb.do?session_key=ok_key_333&sig=ok_sig_444",
     )
 
     # 2. Fail job with error secrets
-    await ok_service.fail_job(
+    await repo.fail_job(
         job.id,
         error="OK API request failed: session_key=ok_key_333 invalid",
         fetched_count=0,
     )
 
     # Retrieve from DB and assert redaction
-    job_db = await ok_service.get_job_by_id(job.id)
+    job_db = await repo.get_job_by_id(job.id)
     assert job_db.error == "OK API request failed: session_key=<redacted> invalid"
 
-    logs = await ok_service.get_job_logs(job.id)
+    logs = await repo.get_job_logs(job.id)
     assert len(logs) == 2
     messages = [log.message for log in logs]
     assert not any("ok_key_333" in m for m in messages)

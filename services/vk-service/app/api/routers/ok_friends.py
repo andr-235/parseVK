@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
-from app.api.dependencies import get_ok_friends_service_dep
+from app.api.dependencies import get_ok_friends_repository_dep
 from app.api.schemas.ok_friends import (
     OkFriendsExportStartRequest,
     OkFriendsExportStartResponse,
@@ -13,7 +13,7 @@ from app.api.schemas.ok_friends import (
     OkFriendsJobState,
 )
 from app.core.security import require_internal_token
-from app.services.ok_friends_service import OkFriendsExportService
+from app.domain.repositories.ok_friends import OkFriendsRepository
 
 router = APIRouter(
     prefix="/internal/ok/friends",
@@ -34,7 +34,7 @@ async def run_export_job_background(job_id: uuid.UUID, params: dict) -> None:
 async def start_export(
     payload: OkFriendsExportStartRequest,
     background_tasks: BackgroundTasks,
-    service: OkFriendsExportService = Depends(get_ok_friends_service_dep),
+    repo: OkFriendsRepository = Depends(get_ok_friends_repository_dep),
 ) -> OkFriendsExportStartResponse:
     params = payload.params
     fid_raw = params.get("fid")
@@ -46,7 +46,7 @@ async def start_export(
             raise HTTPException(status_code=400, detail="Invalid OK user ID (fid) format, must be numeric string")
 
     # Create job in database
-    job = await service.create_job(params, ok_user_id=ok_user_id)
+    job = await repo.create_job(params, ok_user_id=ok_user_id)
 
     # Launch processing in background
     background_tasks.add_task(run_export_job_background, job.id, params)
@@ -56,18 +56,18 @@ async def start_export(
 @router.get("/jobs/{job_id}", response_model=OkFriendsJobDetailResponse)
 async def get_job(
     job_id: str,
-    service: OkFriendsExportService = Depends(get_ok_friends_service_dep),
+    repo: OkFriendsRepository = Depends(get_ok_friends_repository_dep),
 ) -> OkFriendsJobDetailResponse:
     try:
         job_uuid = uuid.UUID(job_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid job ID format")
 
-    job = await service.get_job_by_id(job_uuid)
+    job = await repo.get_job_by_id(job_uuid)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    logs = await service.get_job_logs(job_uuid, limit=200)
+    logs = await repo.get_job_logs(job_uuid, limit=200)
 
     job_state = OkFriendsJobState(
         id=str(job.id),
@@ -96,14 +96,14 @@ async def get_job(
 @router.get("/jobs/{job_id}/download/xlsx")
 async def download_xlsx(
     job_id: str,
-    service: OkFriendsExportService = Depends(get_ok_friends_service_dep),
+    repo: OkFriendsRepository = Depends(get_ok_friends_repository_dep),
 ) -> FileResponse:
     try:
         job_uuid = uuid.UUID(job_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid job ID format")
 
-    job = await service.get_job_by_id(job_uuid)
+    job = await repo.get_job_by_id(job_uuid)
     if not job or not job.xlsx_path:
         raise HTTPException(status_code=404, detail="XLSX file not found")
 
@@ -120,18 +120,18 @@ async def download_xlsx(
 @router.get("/jobs/{job_id}/logs/raw")
 async def get_raw_logs(
     job_id: str,
-    service: OkFriendsExportService = Depends(get_ok_friends_service_dep),
+    repo: OkFriendsRepository = Depends(get_ok_friends_repository_dep),
 ) -> dict:
     try:
         job_uuid = uuid.UUID(job_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid job ID format")
 
-    job = await service.get_job_by_id(job_uuid)
+    job = await repo.get_job_by_id(job_uuid)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    logs = await service.get_job_logs(job_uuid, limit=500)
+    logs = await repo.get_job_logs(job_uuid, limit=500)
     
     # Sort chronologically for gateway SSE event stream
     logs_sorted = sorted(logs, key=lambda l: l.created_at)

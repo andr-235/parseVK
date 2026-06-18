@@ -5,10 +5,13 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from app.core.config import settings
 from app.services.ok_friends.formatters import format_cell_value, to_russian_header
 
 EXPORT_BATCH_SIZE = 1000
-EXPORT_DIR = os.path.abspath(os.path.join(os.getcwd(), ".temp", "ok-friends"))
+
+def get_export_dir() -> str:
+    return os.path.abspath(os.path.join(os.getcwd(), settings.ok_friends_export_dir))
 
 def _collect_ordered_keys(rows: list[dict[str, Any]]) -> list[str]:
     seen_keys = set()
@@ -43,9 +46,10 @@ def _auto_adjust_columns(ws: Any) -> None:
         ws.column_dimensions[col_letter].width = min(max(14, max_len + 2), 100)
 
 def write_xlsx_file(job_id: str, rows: list[dict[str, Any]]) -> str:
-    os.makedirs(EXPORT_DIR, exist_ok=True)
+    export_dir = get_export_dir()
+    os.makedirs(export_dir, exist_ok=True)
     file_name = f"ok_friends_{job_id}.xlsx"
-    file_path = os.path.join(EXPORT_DIR, file_name)
+    file_path = os.path.join(export_dir, file_name)
 
     if not rows:
         raise ValueError("No data to export")
