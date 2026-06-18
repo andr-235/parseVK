@@ -13,6 +13,7 @@
 - [x] **Frontend Design System & Core Pages** — 12 of 18 pages working (comments, tasks, groups, authors, watchlist, keywords, telegram, monitoring, auth, admin)
 - [ ] **Listings Module (Avito & CSV Export)** — backend exists, frontend is placeholder
 - [ ] **Friends Export (VK & OK)** — backend exists (XLSX export), frontends are placeholders
+- [ ] **Рефакторинг микросервисов (vk-service к Clean Architecture)** — реструктуризация vk-service на FastAPI к правильной слоистой архитектуре
 - [ ] **Monitoring Groups** — frontend page implemented but not connected in router
 - [ ] **Metrics & Analytics Dashboard** — placeholder page
 - [ ] **Settings Page** — placeholder page
