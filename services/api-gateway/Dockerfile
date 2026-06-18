@@ -7,6 +7,8 @@ ENV PYTHONUNBUFFERED=1
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
+RUN groupadd -r -g 1001 appuser && useradd -r -u 1001 -g appuser appuser
+
 WORKDIR /app
 
 COPY --chown=appuser:appuser libs/py/common ./libs/py/common
@@ -15,12 +17,10 @@ COPY --chown=appuser:appuser services/api-gateway ./services/api-gateway
 WORKDIR /app/services/api-gateway
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-install-project
+    uv sync --frozen --no-dev
 
 ENV PATH="/app/services/api-gateway/.venv/bin:$PATH"
 ENV PYTHONPATH="/app/libs/py/common:/app/services/api-gateway"
-
-RUN groupadd -r -g 1001 appuser && useradd -r -u 1001 -g appuser appuser
 
 EXPOSE 8000
 
