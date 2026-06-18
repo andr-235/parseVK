@@ -10,9 +10,12 @@ import sqlalchemy.exc
 from app.infrastructure.tasks_client.client import TasksClient
 from app.services.ingestion.collector import IngestionResult
 
+logger = logging.getLogger("vk-service.ingestion")
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
+
 
 class IngestionPipeline:
     def __init__(
@@ -37,11 +40,7 @@ class IngestionPipeline:
                 task_run, group_ids, correlation_id=correlation_id
             )
 
-            task_run.status = "done"
-            task_run.finished_at = utcnow()
-            task_run.processed_items = result.processed_items
-            task_run.total_items = result.processed_items
-            task_run.updated_at = utcnow()
+            self._mark_task_done(task_run, result)
 
             await self.tasks_client.complete_execution(
                 task_run.task_id,
@@ -62,18 +61,12 @@ class IngestionPipeline:
             return result
 
         except Exception as exc:
-            logger = logging.getLogger("vk-service.ingestion")
             logger.exception(
                 "Task execution failed for task_run.task_id=%s", task_run.task_id
             )
             sanitized_error = self._on_error(str(exc))
 
-            task_run.status = "failed"
-            task_run.finished_at = utcnow()
-            task_run.last_error = sanitized_error
-            task_run.processed_items = getattr(task_run, "processed_items", 0)
-            task_run.total_items = getattr(task_run, "total_items", 0)
-            task_run.updated_at = utcnow()
+            self._mark_task_failed(task_run, sanitized_error)
 
             if self.outbox:
                 await self.outbox.emit_task_failed(
@@ -95,26 +88,7 @@ class IngestionPipeline:
                     correlation_id=correlation_id,
                 )
             except httpx.HTTPStatusError as callback_exc:
-                if callback_exc.response.status_code == 409:
-                    detail = "Unknown conflict"
-                    try:
-                        detail = callback_exc.response.json().get("detail", detail)
-                    except Exception:
-                        pass
-                    task_run.last_error = (
-                        f"{sanitized_error} | Callback conflict: {detail}"
-                    )
-
-                    logger = logging.getLogger("vk-service.ingestion")
-                    logger.warning(
-                        "Fail callback returned 409 for task_id=%s, run_id=%s. Detail: %s. "
-                        "Not retrying as tasks-service is in a different lifecycle state.",
-                        task_run.task_id,
-                        task_run.run_id,
-                        detail,
-                    )
-                else:
-                    raise callback_exc from exc
+                self._handle_fail_callback_conflict(callback_exc, task_run, sanitized_error, exc)
 
             except (
                 httpx.RequestError,
@@ -123,20 +97,56 @@ class IngestionPipeline:
             ) as callback_exc:
                 raise callback_exc from exc
 
-            is_infra_error = isinstance(
-                exc, (sqlalchemy.exc.DBAPIError, asyncio.CancelledError)
-            )
-            if isinstance(exc, httpx.RequestError) and not isinstance(
-                exc, httpx.HTTPStatusError
-            ):
-                is_infra_error = True
-            elif (
-                isinstance(exc, httpx.HTTPStatusError)
-                and exc.response.status_code >= 500
-            ):
-                is_infra_error = True
-
-            if is_infra_error:
+            if self._is_infrastructure_error(exc):
                 raise
 
             return IngestionResult()
+
+    def _mark_task_done(self, task_run: Any, result: IngestionResult) -> None:
+        task_run.status = "done"
+        task_run.finished_at = utcnow()
+        task_run.processed_items = result.processed_items
+        task_run.total_items = result.processed_items
+        task_run.updated_at = utcnow()
+
+    def _mark_task_failed(self, task_run: Any, sanitized_error: str) -> None:
+        task_run.status = "failed"
+        task_run.finished_at = utcnow()
+        task_run.last_error = sanitized_error
+        task_run.processed_items = getattr(task_run, "processed_items", 0)
+        task_run.total_items = getattr(task_run, "total_items", 0)
+        task_run.updated_at = utcnow()
+
+    @staticmethod
+    def _is_infrastructure_error(exc: Exception) -> bool:
+        if isinstance(exc, (sqlalchemy.exc.DBAPIError, asyncio.CancelledError)):
+            return True
+        if isinstance(exc, httpx.RequestError) and not isinstance(exc, httpx.HTTPStatusError):
+            return True
+        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500:
+            return True
+        return False
+
+    def _handle_fail_callback_conflict(
+        self,
+        callback_exc: httpx.HTTPStatusError,
+        task_run: Any,
+        sanitized_error: str,
+        original_exc: Exception,
+    ) -> None:
+        if callback_exc.response.status_code == 409:
+            conflict_detail = "Unknown conflict"
+            try:
+                conflict_detail = callback_exc.response.json().get("detail", conflict_detail)
+            except Exception:
+                pass
+            task_run.last_error = f"{sanitized_error} | Callback conflict: {conflict_detail}"
+            logger.warning(
+                "Fail callback returned 409 for task_id=%s, run_id=%s. Detail: %s. "
+                "Not retrying as tasks-service is in a different lifecycle state.",
+                task_run.task_id,
+                task_run.run_id,
+                conflict_detail,
+            )
+        else:
+            raise callback_exc from original_exc

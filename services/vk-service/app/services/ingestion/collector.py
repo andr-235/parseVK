@@ -1,9 +1,12 @@
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 from app.infrastructure.tasks_client.client import TasksClient
 from app.infrastructure.vk_client.base import VkApiAdapter
+
+logger = logging.getLogger("vk-service.ingestion")
 
 
 @dataclass
@@ -26,6 +29,7 @@ class IngestionResult:
     @property
     def processed_items(self) -> int:
         return self.groups + self.posts + self.comments
+
 
 class DataCollector:
     def __init__(
@@ -54,8 +58,6 @@ class DataCollector:
     async def collect(
         self, task_run: Any, group_ids: list[int], *, correlation_id: str | None = None
     ) -> IngestionResult:
-        import logging
-
         result = IngestionResult()
         result.errors = []
         groups = await self.adapter.get_groups(group_ids)
@@ -70,17 +72,17 @@ class DataCollector:
                 posts_response = await self.adapter.get_posts(
                     group_id, mode=task_run.mode, post_limit=task_run.post_limit
                 )
-            except Exception as exc:
-                sanitized = self._on_error(str(exc))
-                result.errors.append({"group_id": group_id, "error": sanitized})
+            except Exception as error:
+                sanitized_error = self._on_error(str(error))
+                result.errors.append({"group_id": group_id, "error": sanitized_error})
                 continue
 
             posts = posts_response["items"]
             author_profiles: dict[int, dict] = {}
-            for p in posts_response.get("profiles", []):
-                author_profiles[p["id"]] = p
-            for g in posts_response.get("groups", []):
-                author_profiles[g["id"]] = g
+            for profile in posts_response.get("profiles", []):
+                author_profiles[profile["id"]] = profile
+            for group_profile in posts_response.get("groups", []):
+                author_profiles[group_profile["id"]] = group_profile
 
             post_comments: list[list[dict]] = []
             valid_posts: list[dict] = []
@@ -88,7 +90,6 @@ class DataCollector:
                 owner_id = post.get("owner_id")
                 post_id = post.get("id")
                 if owner_id is None or post_id is None:
-                    logger = logging.getLogger("vk-service.ingestion")
                     logger.warning("Skipping post without owner_id or id: %s", post.get("id"))
                     continue
                 post_comments.append([])
@@ -96,15 +97,15 @@ class DataCollector:
                 comments_response = await self.adapter.get_comments(int(owner_id), int(post_id))
                 comments = comments_response["items"]
                 post_comments[-1] = comments
-                for p in comments_response.get("profiles", []):
-                    author_profiles.setdefault(p["id"], p)
-                for g in comments_response.get("groups", []):
-                    author_profiles.setdefault(g["id"], g)
+                for profile in comments_response.get("profiles", []):
+                    author_profiles.setdefault(profile["id"], profile)
+                for group_profile in comments_response.get("groups", []):
+                    author_profiles.setdefault(group_profile["id"], group_profile)
             posts = valid_posts
 
             await self._enrich_user_profiles(author_profiles)
 
-            for idx, post in enumerate(posts):
+            for post_index, post in enumerate(posts):
                 if await self._upsert_post_author(post, author_profiles):
                     result.authors += 1
                 await self.repository.upsert_post(post, task_id=task_run.task_id, group_id=group_id)
@@ -114,7 +115,7 @@ class DataCollector:
                     )
                 result.posts += 1
 
-                for comment in post_comments[idx]:
+                for comment in post_comments[post_index]:
                     if await self._upsert_comment_author(comment, author_profiles):
                         result.authors += 1
                     await self.repository.upsert_comment(comment, task_id=task_run.task_id)
@@ -147,20 +148,22 @@ class DataCollector:
         return result
 
     async def _enrich_user_profiles(self, profiles: dict[int, dict]) -> None:
-        user_ids = [uid for uid in profiles if uid > 0 and not profiles[uid].get("photo_50")]
-        if not user_ids:
+        user_ids_without_photo = [
+            user_id for user_id in profiles if user_id > 0 and not profiles[user_id].get("photo_50")
+        ]
+        if not user_ids_without_photo:
             return
         try:
-            enriched = await self.adapter.get_users(
-                user_ids,
+            enriched_users = await self.adapter.get_users(
+                user_ids_without_photo,
                 fields=["photo_50", "photo_100", "photo_200", "domain", "screen_name"],
             )
         except Exception:
             return
-        for user in enriched:
-            uid = user.get("id")
-            if uid and uid in profiles:
-                profiles[uid].update(user)
+        for user in enriched_users:
+            user_id = user.get("id")
+            if user_id and user_id in profiles:
+                profiles[user_id].update(user)
 
     async def _upsert_post_author(self, post: dict, profiles: dict[int, dict]) -> bool:
         from_id = post.get("from_id")
@@ -183,16 +186,20 @@ class DataCollector:
         return True
 
     def _author_payload(self, from_id: int, profiles: dict[int, dict] | None = None) -> dict:
-        vk_id = int(from_id)
-        profile = profiles.get(vk_id) if profiles else None
-        if profile is None and vk_id < 0:
-            profile = profiles.get(abs(vk_id)) if profiles else None
+        author_vk_id = int(from_id)
+        profile = profiles.get(author_vk_id) if profiles else None
+        if profile is None and author_vk_id < 0:
+            profile = profiles.get(abs(author_vk_id)) if profiles else None
         if profile:
-            name = profile.get("name") or f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip() or str(vk_id)
+            display_name = (
+                profile.get("name")
+                or f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip()
+                or str(author_vk_id)
+            )
             return {
-                "vk_author_id": vk_id,
-                "type": "group" if vk_id < 0 else "user",
-                "display_name": name,
+                "vk_author_id": author_vk_id,
+                "type": "group" if author_vk_id < 0 else "user",
+                "display_name": display_name,
                 "first_name": profile.get("first_name", ""),
                 "last_name": profile.get("last_name", ""),
                 "photo_50": profile.get("photo_50") or profile.get("photo"),
@@ -203,8 +210,8 @@ class DataCollector:
                 "raw": {"from_id": from_id},
             }
         return {
-            "vk_author_id": vk_id,
-            "type": "group" if vk_id < 0 else "user",
-            "display_name": str(vk_id),
+            "vk_author_id": author_vk_id,
+            "type": "group" if author_vk_id < 0 else "user",
+            "display_name": str(author_vk_id),
             "raw": {"from_id": from_id},
         }
