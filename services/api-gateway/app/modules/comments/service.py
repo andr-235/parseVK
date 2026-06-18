@@ -34,11 +34,13 @@ def _format_comment(item: dict, author_profile: dict | None = None, group_profil
             "fullName": author_profile.get("fullName") if author_profile else None,
             "profileUrl": f"https://vk.com/id{author_vk_id}" if author_vk_id else None,
             "screenName": author_profile.get("screenName") if author_profile else None,
+            "photo50": author_profile.get("photo50") if author_profile else None,
         },
         "group": {
             "name": group_profile.get("name"),
             "screenName": group_profile.get("screenName"),
             "vkGroupId": group_profile.get("vkGroupId"),
+            "photo50": group_profile.get("photo50") if group_profile else None,
         } if group_profile else None,
         "isRead": item.get("is_read", False),
     }

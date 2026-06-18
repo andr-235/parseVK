@@ -15,7 +15,11 @@ export type Comment = {
   group: string
   author: string
   authorUrl?: string
+  authorScreenName?: string
+  authorAvatar?: string
   groupUrl?: string
+  groupScreenName?: string
+  groupAvatar?: string
   date: string
   status: Status
 }

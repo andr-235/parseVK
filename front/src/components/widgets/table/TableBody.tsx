@@ -31,24 +31,46 @@ export const TableBody = memo(function TableBody({ rows, selectedId, focusedInde
             />
           </td>
           <td className="break-words whitespace-normal px-3 py-2 text-text-primary">{c.text}</td>
-          <td className="hidden px-3 py-2 sm:table-cell truncate">
+          <td className="hidden px-3 py-2 sm:table-cell">
             {c.groupUrl ? (
               <a href={c.groupUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                className="text-text-secondary underline decoration-transparent hover:decoration-text-secondary transition-colors duration-150">
-                {c.group}
+                className="flex items-center gap-2 text-text-secondary underline decoration-transparent hover:decoration-text-secondary transition-colors duration-150">
+                {c.groupAvatar && (
+                  <img src={c.groupAvatar} alt="" className="size-6 shrink-0 rounded-full" loading="lazy" />
+                )}
+                <div className="truncate">
+                  <div className="truncate">{c.group}</div>
+                  {c.groupScreenName && <div className="truncate text-[11px] text-text-muted">@{c.groupScreenName}</div>}
+                </div>
               </a>
             ) : (
-              <span className="text-text-secondary">{c.group}</span>
+              <span className="flex items-center gap-2 text-text-secondary">
+                {c.groupAvatar && (
+                  <img src={c.groupAvatar} alt="" className="size-6 shrink-0 rounded-full" loading="lazy" />
+                )}
+                <span className="truncate">{c.group}</span>
+              </span>
             )}
           </td>
-          <td className="hidden px-3 py-2 sm:table-cell truncate">
+          <td className="hidden px-3 py-2 sm:table-cell">
             {c.authorUrl ? (
               <a href={c.authorUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                className="text-text-secondary underline decoration-transparent hover:decoration-text-secondary transition-colors duration-150">
-                {c.author}
+                className="flex items-center gap-2 text-text-secondary underline decoration-transparent hover:decoration-text-secondary transition-colors duration-150">
+                {c.authorAvatar && (
+                  <img src={c.authorAvatar} alt="" className="size-6 shrink-0 rounded-full" loading="lazy" />
+                )}
+                <div className="truncate">
+                  <div className="truncate">{c.author}</div>
+                  {c.authorScreenName && <div className="truncate text-[11px] text-text-muted">@{c.authorScreenName}</div>}
+                </div>
               </a>
             ) : (
-              <span className="text-text-secondary">{c.author}</span>
+              <span className="flex items-center gap-2 text-text-secondary">
+                {c.authorAvatar && (
+                  <img src={c.authorAvatar} alt="" className="size-6 shrink-0 rounded-full" loading="lazy" />
+                )}
+                <span className="truncate">{c.author}</span>
+              </span>
             )}
           </td>
           <td className="hidden px-3 py-2 text-text-secondary md:table-cell">{c.date}</td>

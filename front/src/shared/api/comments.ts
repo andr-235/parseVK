@@ -6,12 +6,14 @@ type BackendAuthor = {
   fullName?: string
   profileUrl?: string
   screenName?: string
+  photo50?: string
 }
 
 type BackendGroup = {
   name: string
   screenName?: string
   vkGroupId?: number
+  photo50?: string
 }
 
 type BackendComment = {
@@ -45,7 +47,11 @@ function mapComment(bc: BackendComment): Comment {
     group: bc.group?.name ?? (bc.ownerId < 0 ? `Группа #${Math.abs(bc.ownerId)}` : `Пользователь #${bc.ownerId}`),
     author: bc.author?.displayName ?? bc.author?.fullName ?? `vk${bc.ownerId}`,
     authorUrl: bc.author?.profileUrl,
+    authorScreenName: bc.author?.screenName,
+    authorAvatar: bc.author?.photo50,
     groupUrl: bc.group?.screenName ? `https://vk.com/${bc.group.screenName}` : (bc.ownerId < 0 ? `https://vk.com/club${Math.abs(bc.ownerId)}` : undefined),
+    groupScreenName: bc.group?.screenName,
+    groupAvatar: bc.group?.photo50,
     date: formatDate(bc.createdAt),
     status: (bc.isRead ? 'Проверка' : 'Новый') as Status,
   }

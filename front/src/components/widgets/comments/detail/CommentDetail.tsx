@@ -57,27 +57,47 @@ export function CommentDetail({ comment, onClose, onAddToWatchlist, isAddingToWa
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-1">
               Группа
             </p>
-            {comment.groupUrl ? (
-              <a href={comment.groupUrl} target="_blank" rel="noopener noreferrer"
-                className="text-sm text-accent underline decoration-transparent hover:decoration-accent transition-colors duration-150">
-                {comment.group}
-              </a>
-            ) : (
-              <p className="text-sm text-text-secondary">{comment.group}</p>
-            )}
+            <div className="flex items-center gap-2">
+              {comment.groupAvatar && (
+                <img src={comment.groupAvatar} alt="" className="size-8 rounded-full" loading="lazy" />
+              )}
+              <div className="min-w-0">
+                {comment.groupUrl ? (
+                  <a href={comment.groupUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-sm text-accent underline decoration-transparent hover:decoration-accent transition-colors duration-150 truncate block">
+                    {comment.group}
+                  </a>
+                ) : (
+                  <p className="text-sm text-text-secondary truncate">{comment.group}</p>
+                )}
+                {comment.groupScreenName && (
+                  <p className="text-[11px] text-text-muted truncate">@{comment.groupScreenName}</p>
+                )}
+              </div>
+            </div>
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-1">
               Автор
             </p>
-            {comment.authorUrl ? (
-              <a href={comment.authorUrl} target="_blank" rel="noopener noreferrer"
-                className="text-sm text-accent underline decoration-transparent hover:decoration-accent transition-colors duration-150">
-                {comment.author}
-              </a>
-            ) : (
-              <p className="text-sm text-text-secondary">{comment.author}</p>
-            )}
+            <div className="flex items-center gap-2">
+              {comment.authorAvatar && (
+                <img src={comment.authorAvatar} alt="" className="size-8 rounded-full" loading="lazy" />
+              )}
+              <div className="min-w-0">
+                {comment.authorUrl ? (
+                  <a href={comment.authorUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-sm text-accent underline decoration-transparent hover:decoration-accent transition-colors duration-150 truncate block">
+                    {comment.author}
+                  </a>
+                ) : (
+                  <p className="text-sm text-text-secondary truncate">{comment.author}</p>
+                )}
+                {comment.authorScreenName && (
+                  <p className="text-[11px] text-text-muted truncate">@{comment.authorScreenName}</p>
+                )}
+              </div>
+            </div>
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-1">
