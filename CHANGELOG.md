@@ -1,3 +1,10 @@
+## [0.35.5](https://github.com/andr-235/parseVK/compare/v0.35.4...v0.35.5) (2026-06-18)
+
+
+### Bug Fixes
+
+* **deploy:** expose frontend on 0.0.0.0 for external access ([dbb4740](https://github.com/andr-235/parseVK/commit/dbb4740e5732f62778f9b965951d3217a922908e))
+
 ## [0.35.4](https://github.com/andr-235/parseVK/compare/v0.35.3...v0.35.4) (2026-06-18)
 
 
