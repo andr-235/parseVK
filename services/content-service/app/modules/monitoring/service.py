@@ -65,7 +65,7 @@ class MonitoringService:
         total = await self.repo.count_groups(messenger=messenger, search=search, category=category)
 
         return {
-            "items": [MonitoringGroupResponse.from_attributes(i) for i in items],
+            "items": [MonitoringGroupResponse.model_validate(i, from_attributes=True) for i in items],
             "total": total,
         }
 
@@ -76,7 +76,7 @@ class MonitoringService:
             name=dto.name,
             category=dto.category,
         )
-        return MonitoringGroupResponse.from_attributes(group)
+        return MonitoringGroupResponse.model_validate(group, from_attributes=True)
 
     async def update_group(self, id: int, dto: MonitoringGroupUpdate) -> MonitoringGroupResponse:
         update_data = dto.model_dump(exclude_unset=True)
@@ -97,7 +97,7 @@ class MonitoringService:
             group.category = dto.category
 
         await self.repo.session.flush()
-        return MonitoringGroupResponse.from_attributes(group)
+        return MonitoringGroupResponse.model_validate(group, from_attributes=True)
 
     async def delete_group(self, id: int) -> dict:
         success = await self.repo.delete_group(id)
