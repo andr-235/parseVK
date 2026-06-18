@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
 from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
 from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
@@ -13,6 +14,8 @@ from app.infrastructure.tasks_client.client import TasksClient
 # Clients
 from app.infrastructure.vk_client.client import VkApiClient
 from app.services.domain_events_service import OutboxService
+from app.services.ingestion.collector import DataCollector
+from app.services.ingestion.pipeline import IngestionPipeline
 from app.services.ingestion_service import IngestionService
 from app.services.ok_friends_service import OkFriendsExportService
 from app.services.task_events_service import TaskEventsService
@@ -38,10 +41,32 @@ def get_ingestion_service(session: AsyncSession) -> IngestionService:
     repository = SqlAlchemyIngestionRepository(session)
     outbox_repo = SqlAlchemyOutboxRepository(session)
     outbox_service = OutboxService(outbox_repo)
+
+    def sanitize_error(error: str) -> str:
+        token = getattr(_vk_client, "token", None) or settings.vk_token
+        if token and token in error:
+            return error.replace(token, "<redacted>")
+        return error
+
+    collector = DataCollector(
+        adapter=_vk_client,
+        repository=repository,
+        tasks_client=_tasks_client,
+        outbox=outbox_service,
+        on_error=sanitize_error,
+    )
+    pipeline = IngestionPipeline(
+        collector=collector,
+        tasks_client=_tasks_client,
+        outbox=outbox_service,
+        on_error=sanitize_error,
+    )
     return IngestionService(
         adapter=_vk_client,
         repository=repository,
         tasks_client=_tasks_client,
+        collector=collector,
+        pipeline=pipeline,
         outbox_service=outbox_service,
     )
 

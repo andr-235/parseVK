@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.domain.repositories.ingestion import IngestionRepository
 from app.infrastructure.tasks_client.client import TasksClient
 from app.infrastructure.vk_client.base import VkApiAdapter
+from app.services.domain_events_service import OutboxService
 from app.services.ingestion.collector import DataCollector, IngestionResult
 from app.services.ingestion.pipeline import IngestionPipeline
 
@@ -15,26 +16,27 @@ class IngestionService:
         adapter: VkApiAdapter,
         repository: IngestionRepository,
         tasks_client: TasksClient,
-        outbox_service=None,
+        collector: DataCollector | None = None,
+        pipeline: IngestionPipeline | None = None,
+        outbox_service: OutboxService | None = None,
     ):
         self.adapter = adapter
         self.repository = repository
         self.tasks_client = tasks_client
         self.outbox = outbox_service
 
-        svc = self
-        self.collector = DataCollector(
+        self.collector = collector or DataCollector(
             adapter=adapter,
             repository=repository,
             tasks_client=tasks_client,
             outbox=outbox_service,
-            on_error=lambda msg: svc._sanitize_error(msg),
+            on_error=self._sanitize_error,
         )
-        self.pipeline = IngestionPipeline(
+        self.pipeline = pipeline or IngestionPipeline(
             collector=self.collector,
             tasks_client=tasks_client,
             outbox=outbox_service,
-            on_error=lambda msg: svc._sanitize_error(msg),
+            on_error=self._sanitize_error,
         )
 
     def _sanitize_error(self, error: str) -> str:

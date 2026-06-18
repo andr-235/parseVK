@@ -1,11 +1,10 @@
 import logging
 from datetime import UTC, datetime
-from typing import Any, Literal
-from uuid import UUID
 
 import httpx
-from pydantic import BaseModel, ConfigDict
 
+from app.domain.events.task_events import TaskEvent
+from app.domain.events.task_event_mapper import TaskEventMapper
 from app.domain.models.tasks import VkTaskRun
 from app.domain.repositories.tasks import TaskEventsRepository
 from app.infrastructure.tasks_client.client import TasksClient
@@ -13,37 +12,10 @@ from app.infrastructure.tasks_client.client import TasksClient
 CONSUMER_NAME = "vk-service.tasks"
 logger = logging.getLogger("vk-service.tasks")
 
+
 def utcnow() -> datetime:
     return datetime.now(UTC)
 
-class TaskEvent(BaseModel):
-    event_id: UUID
-    event_type: Literal["task.created", "task.resumed", "task.deleted"]
-    event_version: int
-    aggregate_id: str
-    correlation_id: str | None = None
-    payload: dict[str, Any]
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-    def task_id(self) -> int:
-        return int(self.payload["taskId"])
-
-    def owner_user_id(self) -> str:
-        return str(self.payload.get("ownerUserId") or "unknown")
-
-    def scope(self) -> str:
-        return str(self.payload.get("scope") or "all")
-
-    def mode(self) -> str:
-        return str(self.payload.get("mode") or "recent_posts")
-
-    def group_ids(self) -> list[int]:
-        return [int(item) for item in self.payload.get("groupIds") or []]
-
-    def post_limit(self) -> int | None:
-        value = self.payload.get("postLimit")
-        return int(value) if value is not None else None
 
 class TaskEventsService:
     def __init__(
@@ -71,7 +43,7 @@ class TaskEventsService:
         return result
 
     async def _handle_created_or_resumed(self, event: TaskEvent) -> VkTaskRun | None:
-        task_id = event.task_id()
+        task_id = TaskEventMapper.get_task_id(event)
         run_id = str(event.event_id)
         task_run = await self.repository.get_task_run(task_id)
 
@@ -84,12 +56,12 @@ class TaskEventsService:
         else:
             task_run = await self.repository.create_task_run(
                 task_id=task_id,
-                owner_user_id=event.owner_user_id(),
+                owner_user_id=TaskEventMapper.get_owner_user_id(event),
                 run_id=run_id,
-                scope=event.scope(),
-                mode=event.mode(),
-                group_ids=event.group_ids(),
-                post_limit=event.post_limit(),
+                scope=TaskEventMapper.get_scope(event),
+                mode=TaskEventMapper.get_mode(event),
+                group_ids=TaskEventMapper.get_group_ids(event),
+                post_limit=TaskEventMapper.get_post_limit(event),
             )
 
         try:
@@ -101,22 +73,7 @@ class TaskEventsService:
             )
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 409:
-                detail = "Unknown conflict"
-                try:
-                    detail = exc.response.json().get("detail", detail)
-                except Exception:
-                    pass
-
-                logger.warning(
-                    "Execution conflict for task_id=%s, run_id=%s. Conflict detail: %s. Transitioning local run to failed.",
-                    task_id,
-                    run_id,
-                    detail,
-                )
-                task_run.status = "failed"
-                task_run.finished_at = utcnow()
-                task_run.last_error = f"Conflict: {detail} (run {run_id})."
-                await self.repository.save()
+                await self._handle_conflict(task_run, run_id, exc)
                 return None
             raise
 
@@ -126,7 +83,7 @@ class TaskEventsService:
         return task_run
 
     async def _handle_deleted(self, event: TaskEvent) -> VkTaskRun | None:
-        task_id = event.task_id()
+        task_id = TaskEventMapper.get_task_id(event)
         task_run = await self.repository.get_task_run(task_id)
         if task_run is None:
             return None
@@ -134,3 +91,22 @@ class TaskEventsService:
         task_run.finished_at = utcnow()
         task_run.updated_at = utcnow()
         return task_run
+
+    async def _handle_conflict(self, task_run: VkTaskRun, run_id: str, exc: httpx.HTTPStatusError) -> None:
+        detail = self._extract_conflict_detail(exc)
+        logger.warning(
+            "Execution conflict for task_id=%s, run_id=%s. Conflict detail: %s. Transitioning local run to failed.",
+            task_run.task_id,
+            run_id,
+            detail,
+        )
+        task_run.status = "failed"
+        task_run.finished_at = utcnow()
+        task_run.last_error = f"Conflict: {detail} (run {run_id})."
+        await self.repository.save()
+
+    def _extract_conflict_detail(self, exc: httpx.HTTPStatusError) -> str:
+        try:
+            return exc.response.json().get("detail", "Unknown conflict")
+        except Exception:
+            return "Unknown conflict"

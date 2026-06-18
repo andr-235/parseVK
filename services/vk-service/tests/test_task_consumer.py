@@ -9,7 +9,9 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.services.task_events_service import TaskEvent, TaskEventsService
+from app.domain.events.task_event_mapper import TaskEventMapper
+from app.domain.events.task_events import TaskEvent
+from app.services.task_events_service import TaskEventsService
 
 
 @pytest.fixture
@@ -150,7 +152,7 @@ def test_missing_task_id_is_validation_safe():
     )
 
     with pytest.raises(KeyError) as error:
-        task_event.task_id()
+        TaskEventMapper.get_task_id(task_event)
 
     assert "taskId" in str(error.value)
 
