@@ -1,3 +1,10 @@
+## [0.35.8](https://github.com/andr-235/parseVK/compare/v0.35.7...v0.35.8) (2026-06-18)
+
+
+### Bug Fixes
+
+* **docker:** remove VITE_API_URL ARG/ENV from frontend build ([ffacc14](https://github.com/andr-235/parseVK/commit/ffacc1423bb391f66457880fe1c34167ed42916b))
+
 ## [0.35.7](https://github.com/andr-235/parseVK/compare/v0.35.6...v0.35.7) (2026-06-18)
 
 
