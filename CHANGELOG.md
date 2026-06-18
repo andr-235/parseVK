@@ -1,3 +1,10 @@
+# [0.36.0](https://github.com/andr-235/parseVK/compare/v0.35.8...v0.36.0) (2026-06-18)
+
+
+### Features
+
+* **api-gateway:** enrich comments with author and group profiles ([353328d](https://github.com/andr-235/parseVK/commit/353328d12d5002738b674a9a6fba6be1b56bbdc3))
+
 ## [0.35.8](https://github.com/andr-235/parseVK/compare/v0.35.7...v0.35.8) (2026-06-18)
 
 
