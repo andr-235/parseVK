@@ -12,8 +12,10 @@ use_service_path()
 
 from app.core.config import settings
 from app.main import create_app
-from app.modules.vk_friends.schemas import JobStatus
-from app.modules.vk_friends.service import VkFriendsExportService
+from app.api.schemas.vk_friends import JobStatus
+from app.services.vk_friends_service import VkFriendsExportService
+from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
+from app.infrastructure.vk_client.client import VkApiClient
 
 
 @pytest.fixture
@@ -22,8 +24,10 @@ def anyio_backend():
 
 
 @pytest.fixture
-def service() -> VkFriendsExportService:
-    return VkFriendsExportService()
+def service(db_session) -> VkFriendsExportService:
+    repo = SqlAlchemyVkFriendsRepository(db_session)
+    vk_client = VkApiClient()
+    return VkFriendsExportService(repo=repo, vk_client=vk_client)
 
 
 @pytest.mark.anyio
@@ -95,10 +99,8 @@ async def test_run_export_job_success(service: VkFriendsExportService):
     mock_client = AsyncMock()
     mock_client.friends_get.return_value = mock_vk_response
 
-    with patch.object(service, "_get_vk_client", return_value=mock_client), patch(
-        "app.modules.vk_friends.exporter.write_xlsx_file", return_value="/tmp/test.xlsx"
-    ) as mock_write:
-
+    service.vk_client = mock_client
+    with patch("app.services.vk_friends_service.write_xlsx_file", return_value="/tmp/test.xlsx") as mock_write:
         await service.run_export_job(job.id, {"user_id": 333})
 
         mock_client.friends_get.assert_called_once()
@@ -119,35 +121,37 @@ async def test_run_export_job_success(service: VkFriendsExportService):
 
 @pytest.mark.anyio
 async def test_api_routes():
+    from unittest.mock import AsyncMock, patch
     app = create_app()
     headers = {"X-Internal-Service-Token": settings.internal_service_token}
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
-        # Start export
-        start_payload = {"params": {"user_id": 777}}
-        res = await ac.post(
-            "/internal/vk/friends/export", json=start_payload, headers=headers
-        )
-        assert res.status_code == 201
-        data = res.json()
-        assert "jobId" in data
-        assert data["status"] == JobStatus.RUNNING.value
-        job_id = data["jobId"]
+    with patch("app.services.vk_friends_service.VkFriendsExportService.run_export_job", new_callable=AsyncMock):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            # Start export
+            start_payload = {"params": {"user_id": 777}}
+            res = await ac.post(
+                "/internal/vk/friends/export", json=start_payload, headers=headers
+            )
+            assert res.status_code == 201
+            data = res.json()
+            assert "jobId" in data
+            assert data["status"] == JobStatus.RUNNING.value
+            job_id = data["jobId"]
 
-        # Get job details
-        res_job = await ac.get(f"/internal/vk/friends/jobs/{job_id}", headers=headers)
-        assert res_job.status_code == 200
-        job_data = res_job.json()
-        assert job_data["job"]["id"] == job_id
-        assert "logs" in job_data
+            # Get job details
+            res_job = await ac.get(f"/internal/vk/friends/jobs/{job_id}", headers=headers)
+            assert res_job.status_code == 200
+            job_data = res_job.json()
+            assert job_data["job"]["id"] == job_id
+            assert "logs" in job_data
 
-        # Get raw logs
-        res_logs = await ac.get(
-            f"/internal/vk/friends/jobs/{job_id}/logs/raw", headers=headers
-        )
-        assert res_logs.status_code == 200
-        raw_data = res_logs.json()
-        assert "job" in raw_data
-        assert "logs" in raw_data
+            # Get raw logs
+            res_logs = await ac.get(
+                f"/internal/vk/friends/jobs/{job_id}/logs/raw", headers=headers
+            )
+            assert res_logs.status_code == 200
+            raw_data = res_logs.json()
+            assert "job" in raw_data
+            assert "logs" in raw_data

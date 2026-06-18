@@ -12,8 +12,10 @@ use_service_path()
 
 from app.core.config import settings
 from app.main import create_app
-from app.modules.ok_friends.schemas import JobStatus
-from app.modules.ok_friends.service import OkFriendsExportService
+from app.api.schemas.ok_friends import JobStatus
+from app.services.ok_friends_service import OkFriendsExportService
+from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
+from app.infrastructure.ok_client.client import OkApiClient
 
 
 @pytest.fixture
@@ -22,8 +24,10 @@ def anyio_backend():
 
 
 @pytest.fixture
-def service() -> OkFriendsExportService:
-    return OkFriendsExportService()
+def service(db_session) -> OkFriendsExportService:
+    repo = SqlAlchemyOkFriendsRepository(db_session)
+    ok_client = OkApiClient()
+    return OkFriendsExportService(repo=repo, ok_client=ok_client)
 
 
 @pytest.mark.anyio
@@ -90,9 +94,8 @@ async def test_run_export_job_success(service: OkFriendsExportService):
     mock_client.friends_get.return_value = mock_friends_response
     mock_client.users_get_info.return_value = mock_users_info_response
 
-    with patch.object(service, "_get_ok_client", return_value=mock_client), \
-         patch("app.modules.ok_friends.exporter.write_xlsx_file", return_value="/tmp/test_ok.xlsx") as mock_write:
-        
+    service.ok_client = mock_client
+    with patch("app.services.ok_friends_service.write_xlsx_file", return_value="/tmp/test_ok.xlsx") as mock_write:
         await service.run_export_job(job.id, {"fid": "333"})
         
         mock_client.friends_get.assert_called_once()
@@ -114,29 +117,31 @@ async def test_run_export_job_success(service: OkFriendsExportService):
 
 @pytest.mark.anyio
 async def test_api_routes():
+    from unittest.mock import AsyncMock, patch
     app = create_app()
     headers = {"X-Internal-Service-Token": settings.internal_service_token}
     
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        # Start export
-        start_payload = {"params": {"fid": "777"}}
-        res = await ac.post("/internal/ok/friends/export", json=start_payload, headers=headers)
-        assert res.status_code == 201
-        data = res.json()
-        assert "jobId" in data
-        assert data["status"] == JobStatus.RUNNING.value
-        job_id = data["jobId"]
+    with patch("app.services.ok_friends_service.OkFriendsExportService.run_export_job", new_callable=AsyncMock):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            # Start export
+            start_payload = {"params": {"fid": "777"}}
+            res = await ac.post("/internal/ok/friends/export", json=start_payload, headers=headers)
+            assert res.status_code == 201
+            data = res.json()
+            assert "jobId" in data
+            assert data["status"] == JobStatus.RUNNING.value
+            job_id = data["jobId"]
 
-        # Get job details
-        res_job = await ac.get(f"/internal/ok/friends/jobs/{job_id}", headers=headers)
-        assert res_job.status_code == 200
-        job_data = res_job.json()
-        assert job_data["job"]["id"] == job_id
-        assert "logs" in job_data
+            # Get job details
+            res_job = await ac.get(f"/internal/ok/friends/jobs/{job_id}", headers=headers)
+            assert res_job.status_code == 200
+            job_data = res_job.json()
+            assert job_data["job"]["id"] == job_id
+            assert "logs" in job_data
 
-        # Get raw logs
-        res_logs = await ac.get(f"/internal/ok/friends/jobs/{job_id}/logs/raw", headers=headers)
-        assert res_logs.status_code == 200
-        raw_data = res_logs.json()
-        assert "job" in raw_data
-        assert "logs" in raw_data
+            # Get raw logs
+            res_logs = await ac.get(f"/internal/ok/friends/jobs/{job_id}/logs/raw", headers=headers)
+            assert res_logs.status_code == 200
+            raw_data = res_logs.json()
+            assert "job" in raw_data
+            assert "logs" in raw_data

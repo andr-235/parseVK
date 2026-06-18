@@ -22,6 +22,8 @@ router = APIRouter(
 )
 
 async def run_export_job_background(job_id: uuid.UUID, params: dict) -> None:
+    import asyncio
+    await asyncio.sleep(0.1)  # Allow API request transaction to commit and release SQLite lock
     from app.infrastructure.db.session import SessionLocal
     from app.bootstrap import get_ok_friends_service
     async with SessionLocal() as session:

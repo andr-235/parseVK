@@ -11,8 +11,12 @@ use_service_path()
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
-from app.modules.ok_friends.service import OkFriendsExportService
-from app.modules.vk_friends.service import VkFriendsExportService
+from app.services.ok_friends_service import OkFriendsExportService
+from app.services.vk_friends_service import VkFriendsExportService
+from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
+from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
+from app.infrastructure.vk_client.client import VkApiClient
+from app.infrastructure.ok_client.client import OkApiClient
 
 
 @pytest.fixture
@@ -52,8 +56,9 @@ def test_redact_secrets_patterns():
 
 
 @pytest.mark.anyio
-async def test_vk_job_logs_leak_prevention():
-    vk_service = VkFriendsExportService()
+async def test_vk_job_logs_leak_prevention(db_session):
+    repo = SqlAlchemyVkFriendsRepository(db_session)
+    vk_service = VkFriendsExportService(repo=repo, vk_client=VkApiClient())
     job = await vk_service.create_job({"user_id": 999}, vk_user_id=999)
 
     # 1. Log a message with secrets
@@ -93,8 +98,9 @@ async def test_vk_job_logs_leak_prevention():
 
 
 @pytest.mark.anyio
-async def test_ok_job_logs_leak_prevention():
-    ok_service = OkFriendsExportService()
+async def test_ok_job_logs_leak_prevention(db_session):
+    repo = SqlAlchemyOkFriendsRepository(db_session)
+    ok_service = OkFriendsExportService(repo=repo, ok_client=OkApiClient())
     job = await ok_service.create_job({"user_id": 888}, ok_user_id=888)
 
     # 1. Log a message with secrets

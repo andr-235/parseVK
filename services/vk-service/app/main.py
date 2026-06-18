@@ -5,8 +5,7 @@ from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
-from app.modules.outbox.publisher import publish_outbox_forever
-from app.modules.tasks.consumer import TaskEventsConsumer
+from app.tasks import publish_outbox_forever, TaskEventsConsumer
 
 
 @asynccontextmanager
@@ -31,9 +30,9 @@ async def lifespan(app: FastAPI):
         await consumer.stop()
 
 
-from app.modules.ok_friends.router import router as ok_friends_router
-from app.modules.vk_api.router import router as vk_router
-from app.modules.vk_friends.router import router as vk_friends_router
+from app.api.routers.ok_friends import router as ok_friends_router
+from app.api.routers.vk_api import router as vk_router
+from app.api.routers.vk_friends import router as vk_friends_router
 
 
 def create_app() -> FastAPI:
@@ -48,7 +47,7 @@ def create_app() -> FastAPI:
         from fastapi import HTTPException
         from sqlalchemy import text
 
-        from app.db.session import engine
+        from app.infrastructure.db.session import engine
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
