@@ -1,3 +1,10 @@
+# [0.37.0](https://github.com/andr-235/parseVK/compare/v0.36.0...v0.37.0) (2026-06-18)
+
+
+### Features
+
+* **comments:** add avatars and screen names to comments table ([7ca33b5](https://github.com/andr-235/parseVK/commit/7ca33b5eb34b4e0557c6fc571f4ff0f5c2b09018))
+
 # [0.36.0](https://github.com/andr-235/parseVK/compare/v0.35.8...v0.36.0) (2026-06-18)
 
 
