@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime
 from typing import Protocol
 
 try:
@@ -9,39 +8,18 @@ except ImportError:  # pragma: no cover
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
+from app.domain.ports.vk_api import VkApiPort
 
 VK_API_VERSION = "5.199"
 
-class VkApiAdapter(Protocol):
-    async def get_groups(self, group_ids: list[int], fields: list[str] | None = None) -> list[dict]:
-        raise NotImplementedError
+# Backward-compatible alias: VkApiAdapter is the same as VkApiPort.
+# The canonical name is VkApiPort (domain layer).
+VkApiAdapter = VkApiPort
 
-    async def get_posts(self, group_id: int, *, mode: str, post_limit: int | None) -> dict:
-        raise NotImplementedError
-
-    async def get_comments(self, owner_id: int, post_id: int) -> dict:
-        raise NotImplementedError
-
-    async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:
-        raise NotImplementedError
-
-    async def get_author_comments_for_post(
-        self,
-        owner_id: int,
-        post_id: int,
-        author_vk_id: int,
-        baseline: datetime | None = None,
-        batch_size: int = 100,
-        max_pages: int = 10,
-        thread_items_count: int = 10,
-    ) -> list[dict]:
-        raise NotImplementedError
-
-    async def get_user_photos(self, user_id: int, count: int = 100, offset: int = 0) -> list[dict]:
-        raise NotImplementedError
 
 class VkApiConfigurationError(RuntimeError):
     pass
+
 
 class VkApiBaseClient:
     def __init__(self, *, token: str | None = None, vk_session_factory=None, call_runner=None):

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.infrastructure.tasks_client.client import TasksClient
-from app.infrastructure.vk_client.base import VkApiAdapter
+from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 
 logger = logging.getLogger("vk-service.ingestion")
 

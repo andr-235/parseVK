@@ -3,7 +3,7 @@ from typing import Any
 from app.core.config import settings
 from app.domain.repositories.ingestion import IngestionRepository
 from app.infrastructure.tasks_client.client import TasksClient
-from app.infrastructure.vk_client.base import VkApiAdapter
+from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.services.domain_events_service import OutboxService
 from app.services.ingestion.collector import DataCollector, IngestionResult
 from app.services.ingestion.pipeline import IngestionPipeline
