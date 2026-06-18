@@ -105,6 +105,60 @@ async def test_get_comments_preserves_upstream_http_status():
 
 
 @pytest.mark.asyncio
+async def test_get_comments_with_enrichment():
+    class EnrichingModerationClient:
+        async def request(self, method: str, path: str, **kwargs):
+            return {
+                "items": [
+                    {"id": 1, "text": "comment 1", "date": None, "is_read": False,
+                     "author_vk_id": 100, "post_external_key": "vk_-213672075_500",
+                     "matched_keywords": [], "external_key": "1"},
+                    {"id": 2, "text": "comment 2", "date": None, "is_read": True,
+                     "author_vk_id": 101, "post_external_key": "vk_-213672075_501",
+                     "matched_keywords": [], "external_key": "2"},
+                ],
+                "total": 2, "has_more": False, "read_count": 1, "unread_count": 1,
+            }
+
+    class EnrichingContentClient:
+        def __init__(self):
+            self.bulk_calls = []
+
+        async def request(self, method: str, path: str, **kwargs):
+            self.bulk_calls.append({"method": method, "path": path, "json": kwargs.get("json")})
+            if path == "/authors/bulk":
+                return [
+                    {"vkAuthorId": 100, "displayName": "Иван Иванов", "fullName": "Иван Иванов", "screenName": "ivanov", "profileUrl": "https://vk.com/id100"},
+                    {"vkAuthorId": 101, "displayName": "Петр Петров", "fullName": "Петр Петров", "screenName": "petrov", "profileUrl": "https://vk.com/id101"},
+                ]
+            if path == "/groups/bulk":
+                return [
+                    {"vkGroupId": 213672075, "name": "Моя красивая квакадилина", "screenName": "club213672075"},
+                ]
+            return []
+
+    service = CommentsGatewayService(
+        moderation_client=EnrichingModerationClient(),
+        content_client=EnrichingContentClient(),
+    )
+    result = await service.get_comments(page=1, limit=20)
+
+    assert result["total"] == 2
+
+    c1 = result["items"][0]
+    assert c1["author"]["displayName"] == "Иван Иванов"
+    assert c1["group"]["name"] == "Моя красивая квакадилина"
+    assert c1["group"]["vkGroupId"] == 213672075
+
+    c2 = result["items"][1]
+    assert c2["author"]["displayName"] == "Петр Петров"
+    assert c2["group"]["name"] == "Моя красивая квакадилина"
+    assert c2["isRead"] is True
+
+    assert len(service.content_client.bulk_calls) == 2  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
 async def test_get_comments_maps_unavailable_upstream_to_503():
     class UnavailableModerationClient:
         async def request(self, method: str, path: str, **kwargs):

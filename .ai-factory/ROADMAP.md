@@ -1,30 +1,32 @@
 # Project Roadmap
 
-> Платформа социальной аналитики для поиска, мониторинга и выявления противоправных высказываний в социальных сетях и мессенджерах.
+> A social media analytics platform for monitoring and detecting illegal/extremist content across VK, Telegram, and WhatsApp.
 
 ## Milestones
 
-- [ ] **Рефакторинг и упрощение `content-service`** — Реструктуризация Router-Service-Repository слоев, декомпозиция хранения сущностей и оптимизация запросов.
-- [ ] **Контур модерации контента (`moderation-service`)** — Автоматическая классификация комментариев и постов на предмет нарушений, интеграция с очередями модераторов.
-- [ ] **Рефакторинг веб-интерфейса (`front`)** — Приведение сложных страниц (включая TasksPage и GroupSelectModal) к стандартам кодовой базы (файлы < 150 строк, вынос хуков).
-- [x] **Базовая инфраструктура и API Gateway** — Настройка Docker Compose, PostgreSQL (6 БД), Redis, Kafka и API Gateway на FastAPI.
-- [x] **Сервис авторизации и учетных записей (`identity-service`)** — Миграция JWT-аутентификации, пользователей и ролей на FastAPI.
-- [x] **Интеграция с ВКонтакте (`vk-service`)** — Сбор постов и комментариев через VK API с передачей событий в Kafka.
-- [x] **Интеграция с Telegram (`telegram-service`)** — Мониторинг каналов и чатов с использованием Telethon.
-- [x] **Интеграция с WhatsApp (`im-service`)** — Подключение интеграции через Wappi.pro API.
-- [x] **Оркестрация задач парсинга (`tasks-service`)** — Создание планировщика и координатора парсинг-сессий.
-- [x] **Инструментарий автоматизации разработчика (`parsevkctl`)** — Разработка CLI-инструмента на Go для управления задачами, ветками и PR.
-- [x] **Система мониторинга и наблюдаемости** — Интеграция с Prometheus + Grafana для сбора системных и прикладных метрик.
+- [x] **Legacy Monolith Migration (FastAPI Rewrite)** — all 9 microservices migrated from Node.js/Prisma to Python FastAPI with Router → Service → Repository pattern
+- [x] **Authentication & Authorization** — JWT auth, refresh tokens, user roles, admin user management
+- [x] **VK Parsing Pipeline** — full content collection: posts, comments, authors, groups via VK API with Kafka event-driven processing
+- [x] **Content Moderation Pipeline** — keyword matching (with morphology), watchlist tracking, photo analysis, comment moderation status
+- [x] **Telegram Integration** — Telethon client, tgmbase import/matching/search, Telegram export
+- [x] **WhatsApp (IM) Integration** — Wappi.pro client, message ingestion, Kafka consumer
+- [x] **Frontend Design System & Core Pages** — 12 of 18 pages working (comments, tasks, groups, authors, watchlist, keywords, telegram, monitoring, auth, admin)
+- [ ] **Listings Module (Avito & CSV Export)** — backend exists, frontend is placeholder
+- [ ] **Friends Export (VK & OK)** — backend exists (XLSX export), frontends are placeholders
+- [ ] **Monitoring Groups** — frontend page implemented but not connected in router
+- [ ] **Metrics & Analytics Dashboard** — placeholder page
+- [ ] **Settings Page** — placeholder page
+- [ ] **CI/CD & Infrastructure Hardening** — update CI for FastAPI services, remove legacy `api/` directory, clean up Docker Compose
+- [ ] **Advanced Search (Elasticsearch)** — full-text search across comments, authors, posts
 
 ## Completed
 
 | Milestone | Date |
 |-----------|------|
-| Базовая инфраструктура и API Gateway | 2026-05-15 |
-| Сервис авторизации и учетных записей (`identity-service`) | 2026-05-20 |
-| Интеграция с ВКонтакте (`vk-service`) | 2026-05-28 |
-| Интеграция с Telegram (`telegram-service`) | 2026-06-02 |
-| Интеграция с WhatsApp (`im-service`) | 2026-06-08 |
-| Оркестрация задач парсинга (`tasks-service`) | 2026-06-11 |
-| Инструментарий автоматизации разработчика (`parsevkctl`) | 2026-06-12 |
-| Система мониторинга и наблюдаемости | 2026-06-15 |
+| Legacy Monolith Migration (FastAPI Rewrite) | 2026-06-18 |
+| Authentication & Authorization | 2026-06-18 |
+| VK Parsing Pipeline | 2026-06-18 |
+| Content Moderation Pipeline | 2026-06-18 |
+| Telegram Integration | 2026-06-18 |
+| WhatsApp (IM) Integration | 2026-06-18 |
+| Frontend Design System & Core Pages | 2026-06-18 |
