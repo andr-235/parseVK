@@ -70,6 +70,86 @@ services/<name>/
 - **Service → Service (async):** Kafka topics (`parsevk.tasks.events`, `parsevk.vk.events`, `parsevk.im.events`)
 - **Service → Service (sync):** Direct HTTP calls between services (e.g., vk-service → tasks-service)
 
+## API Gateway Internal Architecture (Three-Tier)
+
+The API Gateway (`services/api-gateway`) applies a three-tier pattern internally for its own module structure — not to be confused with the microservice-level three-tier:
+
+```
+HTTP Request → Router (HTTP concerns) → Service (business logic) → Client (backend HTTP)
+```
+
+Each module in `app/modules/<name>/` follows this pattern:
+
+| Layer | File | Responsibility | FastAPI Dependency |
+|-------|------|---------------|--------------------|
+| **Router** | `router.py` | Route registration, request validation, response formatting | `Request`, `Depends()` |
+| **Service** | `service.py` | Business logic, enrichment, error translation | **No `Request` dependency** |
+| **Client** | `app/clients/<name>/client.py` | Typed HTTP client for backend service | Inherits `ServiceClient` |
+
+### Request Flow + Exception Translation
+
+```
+Router → Service (forward_service_request) → Client (request) → Backend Service
+                                                      ↓
+                                            ServiceClientHTTPError  ← httpx.HTTPStatusError
+                                            ServiceClientUnavailableError ← httpx.RequestError
+                                                      ↓
+                                            BackendServiceError / BackendUnavailableError
+                                                      ↓
+                                            translate_gateway_error() → HTTPException
+Router ← Service raises GatewayError ←
+```
+
+**Exception hierarchy** — all domain exceptions inherit from `GatewayError`:
+
+| Exception | Origin | Router HTTP Status |
+|-----------|--------|--------------------|
+| `BackendServiceError` | `ServiceClientHTTPError` (4xx/5xx from backend) | Preserved (404, 409, etc.) |
+| `BackendUnavailableError` | `ServiceClientUnavailableError` (connection refused/timeout) | 502 Bad Gateway |
+| `ServiceNotFoundError` | Domain logic | 404 |
+| `ServiceValidationError` | Domain logic | 422 |
+| `ServiceAuthError` | Domain logic | 401 |
+| `ServiceForbiddenError` | Domain logic | 403 |
+| `ServiceConflictError` | Domain logic | 409 |
+
+### Core forwarding function
+
+Services call `forward_service_request()` from `app/modules/_base.py` which:
+- Accepts a `ServiceClient` (not `Request`), making services testable without FastAPI
+- Translates `ServiceClientHTTPError` → `BackendServiceError`
+- Translates `ServiceClientUnavailableError` → `BackendUnavailableError`
+- Passes through `user_id`, `request_id`, `correlation_id`, `params`, `json`, `files`
+
+### Example: Comments Module
+
+```python
+# app/modules/comments/service.py — no Request dependency
+class CommentsGatewayService:
+    def __init__(self, moderation_client: ServiceClient, content_client: ServiceClient):
+        self.moderation_client = moderation_client
+        self.content_client = content_client
+
+    async def get_comments(self, post_id: int, user_id: str, ...) -> list[dict]:
+        raw = await forward_service_request(
+            self.moderation_client, "GET", f"/internal/comments/{post_id}",
+            user_id=user_id, params={"page": page, "limit": limit},
+        )
+        enriched = await self._enrich_comments(raw, user_id)
+        return [format_comment(c) for c in enriched]
+```
+
+### Example: Backend Service Client
+
+```python
+# app/clients/content/client.py — typed client for content-service
+class ContentServiceClient(ServiceClient):
+    async def search_authors(self, query: str, user_id: str, ...) -> list[dict]:
+        return await self.request(
+            "GET", "/internal/authors/search",
+            user_id=user_id, params={"q": query},
+        )
+```
+
 ## Key Principles
 
 1. **Database per Service:** 8 PostgreSQL databases (identity, tasks, vk, content, moderation, im, telegram, listings). No shared databases.

@@ -17,6 +17,17 @@ from common.headers import (
 USER_ID_HEADER = "X-User-ID"
 CALLER_SERVICE = "api-gateway"
 
+async def _get_service_bytes(raw_request_func, path: str, **kwargs) -> bytes:
+    response = await raw_request_func("GET", path, **kwargs)
+    return response.content
+
+
+def _response_detail(response: httpx.Response) -> Any:
+    try:
+        return response.json()
+    except ValueError:
+        return response.text
+
 
 class InternalServiceClient:
     def __init__(
@@ -33,9 +44,6 @@ class InternalServiceClient:
         self.internal_token = internal_token
         self._client = client or httpx.AsyncClient(base_url=self.base_url, timeout=timeout)
         self._owns_client = client is None
-
-    async def close(self) -> None:
-        await self.aclose()
 
     async def aclose(self) -> None:
         if self._owns_client:
@@ -128,7 +136,7 @@ class InternalServiceClient:
             raise InternalClientHTTPError(
                 service_name=self.service_name,
                 status_code=exc.response.status_code,
-                detail=self._response_detail(exc.response),
+                detail=_response_detail(exc.response),
             ) from exc
         except httpx.RequestError as exc:
             raise InternalClientUnavailableError(service_name=self.service_name) from exc
@@ -136,25 +144,6 @@ class InternalServiceClient:
     async def get_bytes(
         self,
         path: str,
-        *,
-        user_id: str | None = None,
-        request_id: str | None = None,
-        correlation_id: str | None = None,
-        params: dict | None = None,
+        **kwargs,
     ) -> bytes:
-        response = await self.raw_request(
-            "GET",
-            path,
-            user_id=user_id,
-            request_id=request_id,
-            correlation_id=correlation_id,
-            params=params,
-        )
-        return response.content
-
-    @staticmethod
-    def _response_detail(response: httpx.Response) -> Any:
-        try:
-            return response.json()
-        except ValueError:
-            return response.text
+        return await _get_service_bytes(self.raw_request, path, **kwargs)
