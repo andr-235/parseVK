@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     kafka_topic_vk: str = "parsevk.vk.events"
     kafka_consumer_enabled: bool = False
     outbox_publish_enabled: bool = False
+    ok_friends_export_dir: str = ".temp/ok-friends"
+    vk_friends_export_dir: str = ".temp/vk-friends"
     vk_token: str = Field(default="", repr=False)
     ok_access_token: str = Field(default="", repr=False)
     ok_application_key: str = Field(default="", repr=False)

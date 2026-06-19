@@ -9,7 +9,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.modules.vk_api.client import VkApiClient
+from app.infrastructure.vk_client.client import VkApiClient
 
 
 @pytest.fixture

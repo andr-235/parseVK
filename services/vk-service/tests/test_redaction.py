@@ -11,8 +11,8 @@ use_service_path()
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
-from app.modules.ok_friends.service import OkFriendsExportService
-from app.modules.vk_friends.service import VkFriendsExportService
+from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
+from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
 
 
 @pytest.fixture
@@ -52,19 +52,19 @@ def test_redact_secrets_patterns():
 
 
 @pytest.mark.anyio
-async def test_vk_job_logs_leak_prevention():
-    vk_service = VkFriendsExportService()
-    job = await vk_service.create_job({"user_id": 999}, vk_user_id=999)
+async def test_vk_job_logs_leak_prevention(db_session):
+    repo = SqlAlchemyVkFriendsRepository(db_session)
+    job = await repo.create_job({"user_id": 999}, vk_user_id=999)
 
     # 1. Log a message with secrets
-    await vk_service.append_log(
+    await repo.append_log(
         job.id,
         level="INFO",
         message="Request to http://api.vk.com/method/friends.get?access_token=secret_token_111&sig=secret_sig_222",
     )
 
     # 2. Update progress with warning secrets
-    await vk_service.update_progress(
+    await repo.update_progress(
         job.id,
         fetched_count=10,
         total_count=100,
@@ -72,18 +72,18 @@ async def test_vk_job_logs_leak_prevention():
     )
 
     # 3. Fail job with error secrets
-    await vk_service.fail_job(
+    await repo.fail_job(
         job.id,
         error="VK API request failed: access_token=secret_token_111 invalid key",
         fetched_count=10,
     )
 
     # Retrieve from DB and assert redaction
-    job_db = await vk_service.get_job_by_id(job.id)
+    job_db = await repo.get_job_by_id(job.id)
     assert job_db.warning == "Token access_token=<redacted> is expiring soon"
     assert job_db.error == "VK API request failed: access_token=<redacted> invalid key"
 
-    logs = await vk_service.get_job_logs(job.id)
+    logs = await repo.get_job_logs(job.id)
     assert len(logs) == 2
     messages = [log.message for log in logs]
     assert not any("secret_token_111" in m for m in messages)
@@ -93,29 +93,29 @@ async def test_vk_job_logs_leak_prevention():
 
 
 @pytest.mark.anyio
-async def test_ok_job_logs_leak_prevention():
-    ok_service = OkFriendsExportService()
-    job = await ok_service.create_job({"user_id": 888}, ok_user_id=888)
+async def test_ok_job_logs_leak_prevention(db_session):
+    repo = SqlAlchemyOkFriendsRepository(db_session)
+    job = await repo.create_job({"user_id": 888}, ok_user_id=888)
 
     # 1. Log a message with secrets
-    await ok_service.append_log(
+    await repo.append_log(
         job.id,
         level="INFO",
         message="Request to http://api.ok.ru/fb.do?session_key=ok_key_333&sig=ok_sig_444",
     )
 
     # 2. Fail job with error secrets
-    await ok_service.fail_job(
+    await repo.fail_job(
         job.id,
         error="OK API request failed: session_key=ok_key_333 invalid",
         fetched_count=0,
     )
 
     # Retrieve from DB and assert redaction
-    job_db = await ok_service.get_job_by_id(job.id)
+    job_db = await repo.get_job_by_id(job.id)
     assert job_db.error == "OK API request failed: session_key=<redacted> invalid"
 
-    logs = await ok_service.get_job_logs(job.id)
+    logs = await repo.get_job_logs(job.id)
     assert len(logs) == 2
     messages = [log.message for log in logs]
     assert not any("ok_key_333" in m for m in messages)

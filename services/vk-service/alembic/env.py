@@ -2,8 +2,22 @@ from logging.config import fileConfig
 
 from alembic import context
 from app.core.config import settings
-from app.db import models  # noqa: F401
 from app.db.base import Base
+from app.domain.models.ok_friends import (  # noqa: F401
+    OkFriendsExportJob,
+    OkFriendsJobLog,
+    OkFriendsRecord,
+)
+from app.domain.models.outbox import OutboxEvent  # noqa: F401
+from app.domain.models.tasks import ProcessedEvent, VkTaskRun  # noqa: F401
+from app.domain.models.vk_friends import (  # noqa: F401
+    VkFriendsExportJob,
+    VkFriendsJobLog,
+    VkFriendsRecord,
+)
+
+# Import all domain models to ensure they are registered with DeclarativeBase metadata for Alembic
+from app.domain.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config

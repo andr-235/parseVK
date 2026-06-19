@@ -9,8 +9,9 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.modules.tasks.events import TaskEvent
-from app.modules.tasks.service import TaskEventsHandler
+from app.domain.events.task_event_mapper import TaskEventMapper
+from app.domain.events.task_events import TaskEvent
+from app.services.task_events_service import TaskEventsService
 
 
 @pytest.fixture
@@ -33,13 +34,22 @@ class FakeRepository:
     async def get_task_run(self, task_id):
         return self.runs.get(task_id)
 
-    async def create_task_run(self, event, run_id):
+    async def create_task_run(
+        self,
+        task_id: int,
+        owner_user_id: str,
+        run_id: str,
+        scope: str,
+        mode: str,
+        group_ids: list[int],
+        post_limit: int | None = None,
+    ):
         run = FakeTaskRun(
-            task_id=event.task_id(),
+            task_id=task_id,
             run_id=run_id,
             status="pending",
         )
-        self.runs[event.task_id()] = run
+        self.runs[task_id] = run
         return run
 
     async def save(self):
@@ -91,7 +101,7 @@ def event(event_type="task.created", task_id=1, event_id=None):
 async def test_created_event_calls_start_execution():
     repository = FakeRepository()
     tasks_client = FakeTasksClient()
-    handler = TaskEventsHandler(repository, tasks_client)
+    handler = TaskEventsService(repository, tasks_client)
     task_event = event()
 
     result = await handler.handle(task_event)
@@ -106,7 +116,7 @@ async def test_created_event_calls_start_execution():
 async def test_duplicate_event_does_not_call_tasks_client_twice():
     repository = FakeRepository()
     tasks_client = FakeTasksClient()
-    handler = TaskEventsHandler(repository, tasks_client)
+    handler = TaskEventsService(repository, tasks_client)
     task_event = event()
 
     await handler.handle(task_event)
@@ -121,7 +131,7 @@ async def test_deleted_event_marks_run_cancelled():
     repository = FakeRepository()
     repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="running")
     tasks_client = FakeTasksClient()
-    handler = TaskEventsHandler(repository, tasks_client)
+    handler = TaskEventsService(repository, tasks_client)
 
     result = await handler.handle(event(event_type="task.deleted", task_id=1))
 
@@ -142,7 +152,7 @@ def test_missing_task_id_is_validation_safe():
     )
 
     with pytest.raises(KeyError) as error:
-        task_event.task_id()
+        TaskEventMapper.get_task_id(task_event)
 
     assert "taskId" in str(error.value)
 
@@ -152,7 +162,7 @@ async def test_completed_task_event_does_not_move_lifecycle_backward():
     repository = FakeRepository()
     repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="done")
     tasks_client = FakeTasksClient()
-    handler = TaskEventsHandler(repository, tasks_client)
+    handler = TaskEventsService(repository, tasks_client)
 
     result = await handler.handle(event(task_id=1))
 
@@ -166,7 +176,7 @@ async def test_running_task_event_same_run_id_returns_none_preventing_reexecutio
     repository = FakeRepository()
     repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="running")
     tasks_client = FakeTasksClient()
-    handler = TaskEventsHandler(repository, tasks_client)
+    handler = TaskEventsService(repository, tasks_client)
 
     task_event = event(task_id=1)
     task_event.payload["taskId"] = "1"
@@ -188,7 +198,7 @@ async def test_conflict_409_different_run_id_marks_failed_without_loop():
         raise httpx.HTTPStatusError("Conflict", request=httpx.Request("POST", "http://test"), response=resp)
         
     tasks_client.start_execution = mock_start_execution
-    handler = TaskEventsHandler(repository, tasks_client)
+    handler = TaskEventsService(repository, tasks_client)
 
     task_event = event(task_id=1)
     result = await handler.handle(task_event)

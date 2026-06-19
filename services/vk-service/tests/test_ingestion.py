@@ -9,8 +9,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.modules.ingestion.service import IngestionService
-from app.modules.vk_api.client import VkApiClient, VkApiConfigurationError
+from app.infrastructure.vk_client.client import VkApiClient, VkApiConfigurationError
+from app.services.ingestion_service import IngestionService
 
 
 class StubVkApiClient:
