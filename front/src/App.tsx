@@ -2,6 +2,8 @@ import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
 import { Skeleton } from './components/ui'
+import { setOnUnauthorized } from './shared/api/client'
+import { useAuth } from './store/auth'
 
 const CommentsPage = lazy(() => import('./pages/comments/CommentsPage').then(m => ({ default: m.CommentsPage })))
 const TasksPage = lazy(() => import('./pages/tasks/TasksPage').then(m => ({ default: m.TasksPage })))
@@ -23,7 +25,6 @@ const SettingsPage = lazy(() => import('./pages/settings/SettingsPage').then(m =
 const AdminUsersPage = lazy(() => import('./pages/admin-users/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })))
 const LoginPage = lazy(() => import('./pages/login/LoginPage').then(m => ({ default: m.LoginPage })))
 const ChangePasswordPage = lazy(() => import('./pages/change-password/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
-import { useAuth } from './store/auth'
 
 function AuthOutlet() {
   const { user, isInitialized, init } = useAuth()
@@ -31,6 +32,10 @@ function AuthOutlet() {
   useEffect(() => {
     init()
   }, [init])
+
+  useEffect(() => {
+    setOnUnauthorized(() => useAuth.getState().logout())
+  }, [])
 
   if (!isInitialized) {
     return (
