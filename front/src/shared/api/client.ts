@@ -35,7 +35,7 @@ function processQueue(err: unknown, token: string | null = null) {
 }
 
 function getCsrfToken(): string {
-  const name = '__Host-csrf_token'
+  const name = 'csrf_token'
   const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))
   return match ? decodeURIComponent(match[1]) : ''
 }
