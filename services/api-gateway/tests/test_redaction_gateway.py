@@ -12,6 +12,7 @@ use_service_path()
 
 from app.clients.base import ServiceClientHTTPError
 from app.core.config import settings
+from app.core.exceptions import BackendServiceError
 from app.core.redaction import redact_secrets
 from app.modules.friends_export.service import FriendsExportService
 from app.modules.ok_friends.adapters import OkFriendsAdapter
@@ -51,6 +52,7 @@ def test_redact_secrets_gateway():
 @pytest.mark.anyio
 async def test_vk_adapter_redacts_errors_and_logs():
     client_mock = AsyncMock()
+    client_mock.service_name = "VkService"
 
     # Setup HTTP error containing secrets
     client_mock.request.side_effect = ServiceClientHTTPError(
@@ -62,14 +64,14 @@ async def test_vk_adapter_redacts_errors_and_logs():
     adapter = VkFriendsAdapter(client=client_mock, user_id="user-1")
 
     # 1. Test start_export redaction
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(BackendServiceError) as excinfo:
         await adapter.start_export({"user_id": 123})
     assert excinfo.value.status_code == 400
     assert "secret_vk_token_here" not in excinfo.value.detail
     assert "access_token=<redacted>" in excinfo.value.detail
 
     # 2. Test get_job redaction
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(BackendServiceError) as excinfo:
         await adapter.get_job("job-123")
     assert excinfo.value.status_code == 400
     assert "secret_vk_token_here" not in excinfo.value.detail
@@ -124,6 +126,7 @@ async def test_vk_adapter_redacts_sse_stream():
 @pytest.mark.anyio
 async def test_ok_adapter_redacts_errors_and_logs():
     client_mock = AsyncMock()
+    client_mock.service_name = "VkService"
 
     # Setup HTTP error containing secrets
     client_mock.request.side_effect = ServiceClientHTTPError(
@@ -135,14 +138,14 @@ async def test_ok_adapter_redacts_errors_and_logs():
     adapter = OkFriendsAdapter(client=client_mock, user_id="user-1")
 
     # 1. Test start_export redaction
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(BackendServiceError) as excinfo:
         await adapter.start_export({"user_id": 123})
     assert excinfo.value.status_code == 400
     assert "secret_ok_token_here" not in excinfo.value.detail
     assert "access_token=<redacted>" in excinfo.value.detail
 
     # 2. Test get_job redaction
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(BackendServiceError) as excinfo:
         await adapter.get_job("job-123")
     assert excinfo.value.status_code == 400
     assert "secret_ok_token_here" not in excinfo.value.detail

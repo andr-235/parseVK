@@ -67,7 +67,7 @@ class WatchlistGatewayService:
         data = await self._moderation_request("GET", "/internal/watchlist/authors", params=params, **kw)
         items = data.get("items", [])
         vk_ids = [i["author_vk_id"] for i in items if i.get("author_vk_id")]
-        user_id = kw.get("user_id", "")
+        user_id = kw.get("user_id")
         profiles = await self._fetch_profiles(vk_ids, user_id=user_id)
         return {
             "items": [_map_watchlist_item(i, profiles.get(i.get("author_vk_id"))) for i in items],
@@ -80,7 +80,7 @@ class WatchlistGatewayService:
         data = await self._moderation_request("GET", f"/internal/watchlist/authors/{id}", params=params, **kw)
         item = {k: v for k, v in data.items() if k != "comments"}
         vk_ids = [item["author_vk_id"]] if item.get("author_vk_id") else []
-        user_id = kw.get("user_id", "")
+        user_id = kw.get("user_id")
         profiles = await self._fetch_profiles(vk_ids, user_id=user_id)
         return {
             **_map_watchlist_item(item, profiles.get(item.get("author_vk_id"))),

@@ -58,9 +58,8 @@ class FakeCommentsGatewayService:
             "unreadCount": 1,
         }
 
-    async def patch_read_status(self, id: int, payload: dict, **kwargs):
-        is_read = payload.get("isRead", payload.get("is_read", True))
-        return {**COMMENT_STUB, "id": id, "isRead": is_read}
+    async def patch_read_status(self, comment_id: int, *, is_read: bool, **kwargs):
+        return {**COMMENT_STUB, "id": comment_id, "isRead": is_read}
 
     async def search_comments(self, payload: dict, **kwargs):
         return {

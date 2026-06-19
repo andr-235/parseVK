@@ -16,6 +16,7 @@ from app.modules.watchlist.service import WatchlistGatewayService
 
 class RecordingModerationClient:
     base_url = "http://moderation"
+    service_name = "Moderation"
 
     def __init__(self, response: dict):
         self.response = response
@@ -28,6 +29,7 @@ class RecordingModerationClient:
 
 class EmptyContentClient:
     base_url = "http://content"
+    service_name = "Content"
 
     async def request(self, method: str, path: str, **kwargs):
         return []
@@ -35,6 +37,7 @@ class EmptyContentClient:
 
 class RecordingContentClient:
     base_url = "http://content"
+    service_name = "Content"
 
     def __init__(self, profiles: list[dict] | None = None):
         self.profiles = profiles or []
@@ -83,6 +86,7 @@ async def test_gateway_create_author_payload_translation():
             "author_vk_id": 123,
             "comment_id": 456,
         },
+        "files": None,
     }]
     assert result["authorVkId"] == 123
     assert result["author"] is None
@@ -309,6 +313,7 @@ async def test_gateway_update_settings_payload_translation():
             "poll_interval_minutes": 10,
             "max_authors": 30,
         },
+        "files": None,
     }]
     assert result["trackAllComments"] is True
     assert result["pollIntervalMinutes"] == 10
@@ -319,6 +324,7 @@ async def test_gateway_update_settings_payload_translation():
 async def test_gateway_create_author_preserves_conflict_status():
     class ConflictModerationClient:
         base_url = "http://moderation"
+        service_name = "Moderation"
 
         async def request(self, method: str, path: str, **kwargs):
             raise ServiceClientHTTPError(service_name="Moderation", status_code=409, detail={"detail": "duplicate"})
@@ -332,13 +338,14 @@ async def test_gateway_create_author_preserves_conflict_status():
         await service.create_author({"authorVkId": 123})
 
     assert exc_info.value.status_code == 409
-    assert exc_info.value.detail == "duplicate"
+    assert exc_info.value.detail == "Moderation service error: duplicate"
 
 
 @pytest.mark.asyncio
-async def test_gateway_watchlist_maps_unavailable_upstream_to_503():
+async def test_gateway_watchlist_maps_unavailable_upstream_to_502():
     class UnavailableModerationClient:
         base_url = "http://moderation"
+        service_name = "Moderation"
 
         async def request(self, method: str, path: str, **kwargs):
             raise ServiceClientUnavailableError(service_name="Moderation")
@@ -351,5 +358,5 @@ async def test_gateway_watchlist_maps_unavailable_upstream_to_503():
     with pytest.raises(HTTPException) as exc_info:
         await service.get_authors(offset=0, limit=20, exclude_stopped=True)
 
-    assert exc_info.value.status_code == 503
-    assert exc_info.value.detail == "Moderation service unavailable"
+    assert exc_info.value.status_code == 502
+    assert "service error" in exc_info.value.detail

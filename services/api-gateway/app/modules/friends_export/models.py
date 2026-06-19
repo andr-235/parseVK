@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Shared Pydantic models for the friends export contract.
 
@@ -7,8 +9,6 @@ contract stable across provider migrations.
 
 Ref: FASTAPI-MIG-010B / docs/FASTAPI_MIG_010_FRIENDS_EXPORT_INVENTORY.md
 """
-
-from __future__ import annotations
 
 from enum import StrEnum
 from typing import Annotated, Any, Literal

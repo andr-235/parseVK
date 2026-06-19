@@ -30,14 +30,27 @@ class FriendsExportService:
     async def start(self, params: dict[str, Any]) -> FriendsExportStartResponse:
         try:
             return await self._adapter.start_export(params)
+        except HTTPException:
+            raise
         except (BackendServiceError, BackendUnavailableError) as exc:
             raise translate_gateway_error(exc) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="Upstream error starting friends export",
+            ) from exc
 
     async def get_job(self, job_id: str) -> FriendsJobDetailResponse:
         try:
             return await self._adapter.get_job(job_id)
+        except HTTPException:
+            raise
         except (BackendServiceError, BackendUnavailableError) as exc:
             raise translate_gateway_error(exc) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502, detail="Upstream error fetching job state",
+            ) from exc
 
     async def stream(self, job_id: str) -> StreamingResponse:
         try:
@@ -71,6 +84,8 @@ class FriendsExportService:
     ) -> StreamingResponse:
         try:
             data = await self._adapter.get_xlsx_bytes(job_id)
+        except HTTPException:
+            raise
         except (BackendServiceError, BackendUnavailableError) as exc:
             raise translate_gateway_error(exc) from exc
         except Exception as exc:

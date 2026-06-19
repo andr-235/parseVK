@@ -48,7 +48,9 @@ async def test_adapter_start_export():
         user_id="user-777",
         request_id="req-111",
         correlation_id="corr-222",
-        json={"params": {"fid": "999"}}
+        params=None,
+        json={"params": {"fid": "999"}},
+        files=None,
     )
 
 

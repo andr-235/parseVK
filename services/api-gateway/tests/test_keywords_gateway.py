@@ -11,11 +11,13 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.clients.base import ServiceClientHTTPError, ServiceClientUnavailableError
+from app.modules.keywords.mappers.keyword_mapper import format_job, format_keyword
 from app.modules.keywords.service import KeywordsGatewayService
 
 
 class RecordingModerationClient:
     base_url = "http://moderation"
+    service_name = "Moderation"
 
     def __init__(self, response: dict):
         self.response = response
@@ -27,19 +29,17 @@ class RecordingModerationClient:
 
 
 def test_format_keyword():
-    service = KeywordsGatewayService()
-    
     raw = {
         "id": 1,
         "word": "кошка",
         "category": "животные",
         "is_phrase": True,
         "created_at": "2026-05-24T12:00:00Z",
-        "updated_at": "2026-05-24T12:05:00Z"
+        "updated_at": "2026-05-24T12:05:00Z",
     }
-    
-    formatted = service._format_keyword(raw)
-    
+
+    formatted = format_keyword(raw)
+
     assert formatted["id"] == 1
     assert formatted["word"] == "кошка"
     assert formatted["category"] == "животные"
@@ -49,8 +49,6 @@ def test_format_keyword():
 
 
 def test_format_job():
-    service = KeywordsGatewayService()
-    
     raw = {
         "id": 1,
         "status": "pending",
@@ -59,11 +57,11 @@ def test_format_job():
         "finished_at": None,
         "error": None,
         "requested_by": "api",
-        "created_at": "2026-05-24T11:59:00Z"
+        "created_at": "2026-05-24T11:59:00Z",
     }
-    
-    formatted = service._format_job(raw)
-    
+
+    formatted = format_job(raw)
+
     assert formatted["id"] == 1
     assert formatted["status"] == "pending"
     assert formatted["singleKeywordId"] == 12
@@ -86,29 +84,25 @@ class DummyFile:
 @pytest.mark.asyncio
 async def test_upload_keywords_validations():
     service = KeywordsGatewayService()
-    
-    # 1. Пустое имя файла
+
     empty_name_file = DummyFile("", b"content")
     with pytest.raises(HTTPException) as exc_info:
         await service.upload_keywords(empty_name_file)
     assert exc_info.value.status_code == 400
     assert "Empty filename" in exc_info.value.detail
 
-    # 2. Пустой файл
     empty_content_file = DummyFile("test.txt", b"")
     with pytest.raises(HTTPException) as exc_info:
         await service.upload_keywords(empty_content_file)
     assert exc_info.value.status_code == 400
     assert "Uploaded file is empty" in exc_info.value.detail
 
-    # 3. Превышение лимита 5 МБ
     huge_file = DummyFile("test.txt", b"a" * (5 * 1024 * 1024 + 1))
     with pytest.raises(HTTPException) as exc_info:
         await service.upload_keywords(huge_file)
     assert exc_info.value.status_code == 400
     assert "exceeds 5MB size limit" in exc_info.value.detail
 
-    # 4. Некорректная кодировка (не UTF-8)
     invalid_encoding_file = DummyFile("test.txt", b"\x80\x81\x82")
     with pytest.raises(HTTPException) as exc_info:
         await service.upload_keywords(invalid_encoding_file)
@@ -150,6 +144,7 @@ async def test_add_keyword_uses_typed_client_payload_and_context():
             "category": "animals",
             "is_phrase": False,
         },
+        "files": None,
     }]
 
 
@@ -157,6 +152,7 @@ async def test_add_keyword_uses_typed_client_payload_and_context():
 async def test_keywords_preserves_upstream_http_status_detail():
     class FailingModerationClient:
         base_url = "http://moderation"
+        service_name = "Moderation"
 
         async def request(self, method: str, path: str, **kwargs):
             raise ServiceClientHTTPError(service_name="Moderation", status_code=404, detail={"detail": "missing"})
@@ -167,13 +163,14 @@ async def test_keywords_preserves_upstream_http_status_detail():
         await service.delete_keyword(99)
 
     assert exc_info.value.status_code == 404
-    assert exc_info.value.detail == "missing"
+    assert exc_info.value.detail == "Moderation service error: missing"
 
 
 @pytest.mark.asyncio
-async def test_keywords_maps_unavailable_upstream_to_503():
+async def test_keywords_maps_unavailable_upstream_to_502():
     class UnavailableModerationClient:
         base_url = "http://moderation"
+        service_name = "Moderation"
 
         async def request(self, method: str, path: str, **kwargs):
             raise ServiceClientUnavailableError(service_name="Moderation")
@@ -183,5 +180,5 @@ async def test_keywords_maps_unavailable_upstream_to_503():
     with pytest.raises(HTTPException) as exc_info:
         await service.get_all_keywords(page=1, limit=50)
 
-    assert exc_info.value.status_code == 503
-    assert exc_info.value.detail == "Moderation service unavailable"
+    assert exc_info.value.status_code == 502
+    assert "service error" in exc_info.value.detail

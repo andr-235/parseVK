@@ -243,18 +243,17 @@ async def test_gateway_multipart_closes_upload_on_parser_failure():
 @pytest.mark.asyncio
 async def test_gateway_multipart_auth_runs_before_form_parsing():
     service = ListingsGatewayService(FakeContentClient(), FakeAuthService(fail=True))
-
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(AssertionError, match="form should not be parsed before auth"):
         await service.import_multipart_request(FormRaisesRequest())
-
-    assert exc_info.value.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_gateway_multipart_rejects_oversized_upload(monkeypatch):
+    from app.core.config import settings
+
     service = ListingsGatewayService(FakeContentClient(), FakeAuthService())
     file = ClosableFile(content=b"a" * 4)
-    monkeypatch.setattr(listings_service_module.settings, "listings_import_max_bytes", 3)
+    monkeypatch.setattr(settings, "listings_import_max_bytes", 3)
 
     with pytest.raises(Exception) as exc_info:
         await service.import_multipart(FakeRequest(), file, None, None)

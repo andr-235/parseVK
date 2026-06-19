@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Adapter Protocol for friends export providers.
 
@@ -18,8 +20,6 @@ Security requirement (applies to all adapters):
 
 Ref: FASTAPI-MIG-010B / docs/FASTAPI_MIG_010_FRIENDS_EXPORT_INVENTORY.md
 """
-
-from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from typing import Any, Protocol, runtime_checkable
