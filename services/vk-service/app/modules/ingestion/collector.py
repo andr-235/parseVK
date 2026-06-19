@@ -28,6 +28,21 @@ class IngestionResult:
         return self.groups + self.posts + self.comments
 
 
+_GROUP_FIELDS = [
+    "members_count",
+    "city",
+    "activity",
+    "status",
+    "verified",
+    "description",
+    "addresses",
+    "counters",
+    "photo_50",
+    "photo_100",
+    "photo_200",
+]
+
+
 class DataCollector:
     def __init__(
         self,
@@ -59,7 +74,7 @@ class DataCollector:
 
         result = IngestionResult()
         result.errors = []
-        groups = await self.adapter.get_groups(group_ids)
+        groups = await self.adapter.get_groups(group_ids, fields=_GROUP_FIELDS)
         for group in groups:
             group_id = int(group["id"])
             await self.repository.upsert_group(group)

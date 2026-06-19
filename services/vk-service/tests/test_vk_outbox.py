@@ -19,7 +19,7 @@ class StubVkApiClient:
 
     token = ""
 
-    async def get_groups(self, group_ids: list) -> list:
+    async def get_groups(self, group_ids: list, fields: list[str] | None = None) -> list:
         return [{"id": gid, "name": f"Group {gid}"} for gid in group_ids]
 
     async def get_posts(self, group_id: int, *, mode: str, post_limit: int) -> dict:
