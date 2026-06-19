@@ -1,3 +1,15 @@
+# [0.39.0](https://github.com/andr-235/parseVK/compare/v0.38.0...v0.39.0) (2026-06-19)
+
+
+### Features
+
+* **vk-service:** define abstract repository interfaces in domain/repositories ([461178c](https://github.com/andr-235/parseVK/commit/461178c87413e45157ffefc3116e0f0098315b3a))
+* **vk-service:** implement composition root, dependencies and presentation routers ([57a255f](https://github.com/andr-235/parseVK/commit/57a255f5b06d23bd466a71ae45b23ec450215646))
+* **vk-service:** implement concrete repositories and relocate third-party clients ([451a00d](https://github.com/andr-235/parseVK/commit/451a00da4525ebcd197edefbdd8c68503a937867))
+* **vk-service:** relocate and adapt use case logic to Services ([93d9f7d](https://github.com/andr-235/parseVK/commit/93d9f7dffcd5dd919a74527173da00f50b3267df))
+* **vk-service:** relocate background tasks and workers to app/tasks ([56f6ea9](https://github.com/andr-235/parseVK/commit/56f6ea91719825af53eb3e8c9b9f933de2adc02f))
+* **vk-service:** update main entrypoint and adapt test suites for layered architecture ([52f9a85](https://github.com/andr-235/parseVK/commit/52f9a857c8782c1d35ac8a31c250f9bde26b3cac))
+
 # [0.38.0](https://github.com/andr-235/parseVK/compare/v0.37.8...v0.38.0) (2026-06-19)
 
 
