@@ -1,3 +1,10 @@
+## [0.37.8](https://github.com/andr-235/parseVK/compare/v0.37.7...v0.37.8) (2026-06-19)
+
+
+### Bug Fixes
+
+* **front:** add 401 refresh token flow and migrate_data script ([9472636](https://github.com/andr-235/parseVK/commit/94726361b7b1435cb378640d05f122d1bc104699))
+
 ## [0.37.7](https://github.com/andr-235/parseVK/compare/v0.37.6...v0.37.7) (2026-06-19)
 
 
