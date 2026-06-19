@@ -1,3 +1,10 @@
+## [0.37.5](https://github.com/andr-235/parseVK/compare/v0.37.4...v0.37.5) (2026-06-19)
+
+
+### Bug Fixes
+
+* **moderation-service:** replace heuristic pagination total with real COUNT(*) ([5a388ad](https://github.com/andr-235/parseVK/commit/5a388ad905680dca84f4eb72525197697e9afdc2))
+
 ## [0.37.4](https://github.com/andr-235/parseVK/compare/v0.37.3...v0.37.4) (2026-06-19)
 
 
