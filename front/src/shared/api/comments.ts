@@ -1,60 +1,84 @@
 import { apiGet } from './client'
 import { type Comment, type Status } from '../../types/comments'
 
-type BackendAuthor = {
-  displayName?: string
-  fullName?: string
-  profileUrl?: string
-  screenName?: string
-  photo50?: string
+type AuthorDTO = {
+  display_name?: string
+  full_name?: string
+  profile_url?: string
+  screen_name?: string
+  photo_50?: string
 }
 
-type BackendGroup = {
+type GroupDTO = {
   name: string
-  screenName?: string
-  vkGroupId?: number
-  photo50?: string
+  screen_name?: string
+  vk_group_id?: number
+  photo_50?: string
 }
 
-type BackendComment = {
+type CommentDTO = {
   id: number
   text: string
-  ownerId: number
-  authorVkId?: number
-  createdAt: string
-  author?: BackendAuthor
-  group?: BackendGroup
-  isRead: boolean
+  owner_id: number
+  author_vk_id?: number
+  created_at: string
+  author?: AuthorDTO
+  group?: GroupDTO
+  is_read: boolean
 }
 
-type BackendListResponse = {
-  items: BackendComment[]
+type CommentListResponse = {
+  items: CommentDTO[]
   total: number
   hasMore: boolean
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string | undefined | null): string {
+  if (!iso) {
+    console.warn('[comments] formatDate: missing date input')
+    return '—'
+  }
   const dt = new Date(iso)
+  if (isNaN(dt.getTime())) {
+    console.warn('[comments] formatDate: invalid date string', iso)
+    return '—'
+  }
   const day = String(dt.getDate()).padStart(2, '0')
   const month = String(dt.getMonth() + 1).padStart(2, '0')
   const year = dt.getFullYear()
   return `${day}.${month}.${year}`
 }
 
-function mapComment(bc: BackendComment): Comment {
+function mapComment(dto: CommentDTO): Comment {
+  const groupName = dto.group?.name ?? (dto.owner_id < 0
+    ? `Группа #${Math.abs(dto.owner_id)}`
+    : `Пользователь #${dto.owner_id}`)
+
+  let authorName = dto.author?.display_name ?? dto.author?.full_name
+  if (!authorName && dto.author_vk_id) {
+    authorName = `Пользователь #${dto.author_vk_id}`
+  }
+  if (!authorName && dto.owner_id) {
+    authorName = `vk${dto.owner_id}`
+  }
+  if (!authorName) {
+    console.warn('[comments] mapComment: no author identity for comment', dto.id)
+    authorName = 'Неизвестный'
+  }
+
   return {
-    id: bc.id,
-    text: bc.text,
-    group: bc.group?.name ?? (bc.ownerId < 0 ? `Группа #${Math.abs(bc.ownerId)}` : `Пользователь #${bc.ownerId}`),
-    author: bc.author?.displayName ?? bc.author?.fullName ?? (bc.authorVkId ? `Пользователь #${bc.authorVkId}` : `vk${bc.ownerId}`),
-    authorUrl: bc.author?.profileUrl || (bc.authorVkId ? `https://vk.com/id${bc.authorVkId}` : undefined),
-    authorScreenName: bc.author?.screenName,
-    authorAvatar: bc.author?.photo50,
-    groupUrl: bc.group?.screenName ? `https://vk.com/${bc.group.screenName}` : (bc.ownerId < 0 ? `https://vk.com/club${Math.abs(bc.ownerId)}` : undefined),
-    groupScreenName: bc.group?.screenName,
-    groupAvatar: bc.group?.photo50,
-    date: formatDate(bc.createdAt),
-    status: (bc.isRead ? 'Проверка' : 'Новый') as Status,
+    id: dto.id,
+    text: dto.text,
+    group: groupName,
+    author: authorName,
+    authorUrl: dto.author?.profile_url || (dto.author_vk_id ? `https://vk.com/id${dto.author_vk_id}` : undefined),
+    authorScreenName: dto.author?.screen_name,
+    authorAvatar: dto.author?.photo_50,
+    groupUrl: dto.group?.screen_name ? `https://vk.com/${dto.group.screen_name}` : (dto.owner_id < 0 ? `https://vk.com/club${Math.abs(dto.owner_id)}` : undefined),
+    groupScreenName: dto.group?.screen_name,
+    groupAvatar: dto.group?.photo_50,
+    date: formatDate(dto.created_at),
+    status: (dto.is_read ? 'Проверка' : 'Новый') as Status,
   }
 }
 
@@ -65,7 +89,7 @@ export type CommentsQueryParams = {
 }
 
 export async function fetchComments(params: CommentsQueryParams): Promise<{ comments: Comment[]; total: number }> {
-  const data = await apiGet<BackendListResponse>('/comments', {
+  const data = await apiGet<CommentListResponse>('/comments', {
     offset: (params.page - 1) * params.pageSize,
     limit: params.pageSize,
     search: params.search || undefined,
