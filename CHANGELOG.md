@@ -1,3 +1,10 @@
+## [0.37.7](https://github.com/andr-235/parseVK/compare/v0.37.6...v0.37.7) (2026-06-19)
+
+
+### Bug Fixes
+
+* **front:** add 401 refresh token flow to prevent tasks page hang on expired JWT ([1aac558](https://github.com/andr-235/parseVK/commit/1aac558b43715d9ac3194d648174bb29f9c92431))
+
 ## [0.37.6](https://github.com/andr-235/parseVK/compare/v0.37.5...v0.37.6) (2026-06-19)
 
 
