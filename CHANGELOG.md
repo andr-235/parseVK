@@ -1,3 +1,10 @@
+## [0.37.3](https://github.com/andr-235/parseVK/compare/v0.37.2...v0.37.3) (2026-06-19)
+
+
+### Bug Fixes
+
+* **api-gateway:** add missing keyword_source param to CommentsGatewayService ([69cac35](https://github.com/andr-235/parseVK/commit/69cac35f18aa3c13f50988a385936918e46a9714))
+
 ## [0.37.2](https://github.com/andr-235/parseVK/compare/v0.37.1...v0.37.2) (2026-06-18)
 
 
