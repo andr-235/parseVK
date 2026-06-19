@@ -71,6 +71,10 @@ describe('time utilities', () => {
       expect(formatDateTime(null)).toBe('—')
     })
 
+    it('returns dash for empty string', () => {
+      expect(formatDateTime('')).toBe('—')
+    })
+
     it('formats date correctly in Russian locale format', () => {
       const date = new Date('2026-06-07T12:30:00Z')
       const expected = date.toLocaleString('ru-RU', {
