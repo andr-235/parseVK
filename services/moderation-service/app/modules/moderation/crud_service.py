@@ -67,6 +67,12 @@ class ModerationCrudService:
         read_count = stats_row.read_count
         unread_count = stats_row.unread_count
 
+        count_stmt = select(func.count()).select_from(
+            select(ModerationComment).where(and_(*base_filters)).subquery()
+        )
+        total_result = await self.session.execute(count_stmt)
+        total = total_result.scalar() or 0
+
         data_query = (
             select(ModerationComment)
             .where(and_(*base_filters))
@@ -78,7 +84,6 @@ class ModerationCrudService:
 
         has_more = len(all_items) > limit
         items = all_items[:limit]
-        total = (page - 1) * limit + len(all_items)
 
         return {
             "items": items,

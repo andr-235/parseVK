@@ -33,16 +33,35 @@ class _ScalarsResult:
         return self._items
 
 
+class _DualResult:
+    def __init__(self, scalars_items, scalar_value):
+        self._scalars_items = scalars_items
+        self._scalar_value = scalar_value
+
+    def scalars(self):
+        return _ScalarsResult(self._scalars_items)
+
+    def scalar(self):
+        return self._scalar_value
+
+
 class RecordingSession:
-    def __init__(self, stats: tuple[int, int], items: list[ModerationComment]):
+    def __init__(self, stats: tuple[int, int], items: list[ModerationComment], total: int | None = None):
         self._stats = stats
         self._items = items
+        self._total = total if total is not None else len(items)
         self.statements = []
+        self._executed = 0
 
     async def execute(self, statement):
         self.statements.append(statement)
-        if len(self.statements) == 1:
+        self._executed += 1
+        if self._executed == 1:
             return _StatsResult(*self._stats)
+        if self._executed == 2:
+            return _DualResult(scalars_items=self._items, scalar_value=self._total)
+        if self._executed == 3:
+            return _ScalarsResult(self._items)
         return _ScalarsResult(self._items)
 
 
