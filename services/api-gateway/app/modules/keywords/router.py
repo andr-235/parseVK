@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.modules.keywords.crud_router import crud_router
 from app.modules.keywords.forms_router import forms_router
 from fastapi import APIRouter

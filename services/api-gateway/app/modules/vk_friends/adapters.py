@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.clients.vk_service.client import VkServiceClient
 from app.modules.friends_export.provider_adapter import ProviderFriendsAdapter
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Annotated, Any
 
 from app.modules.listings.service import ListingsGatewayService, get_listings_gateway_service

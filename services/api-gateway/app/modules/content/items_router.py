@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.modules.content.service import (
     ContentGatewayService,
     get_content_gateway_service,

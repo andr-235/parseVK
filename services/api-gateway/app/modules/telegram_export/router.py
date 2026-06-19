@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.core.security import require_auth
 from app.core.utils import request_ids
 from app.modules.telegram_export.schemas import (

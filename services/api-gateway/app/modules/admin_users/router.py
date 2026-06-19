@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.modules.admin_users.service import (
     AdminUsersGatewayService,
     get_admin_users_gateway_service,

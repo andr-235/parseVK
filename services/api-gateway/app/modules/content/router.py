@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.modules.content.groups_router import groups_router
 from app.modules.content.items_router import items_router
 from app.modules.content.service import get_content_gateway_service  # noqa: F401

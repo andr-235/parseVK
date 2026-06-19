@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.core.security import require_auth
 from app.modules.telegram_tgmbase.capabilities_router import capabilities_router
 from app.modules.telegram_tgmbase.dl_import_router import dl_import_router

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.modules.telegram_tgmbase.schemas import TelegramTgmbaseCapabilitiesResponse
 from fastapi import APIRouter
 

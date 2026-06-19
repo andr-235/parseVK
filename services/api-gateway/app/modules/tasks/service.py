@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.clients.base import ServiceClient
 from app.core.config import settings
 from app.modules._base import BaseGatewayService

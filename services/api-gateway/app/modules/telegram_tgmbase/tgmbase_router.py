@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.modules.telegram_tgmbase.service import (
     TelegramTgmbaseGatewayService,
     get_telegram_tgmbase_gateway_service,

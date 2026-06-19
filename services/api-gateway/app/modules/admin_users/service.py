@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.clients.identity.client import IdentityClient
 from app.modules._base import BaseGatewayService
 from app.modules.auth.service import GatewayAuthService

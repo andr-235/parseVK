@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Annotated, Any
 
 from app.modules.monitoring.service import MonitoringGatewayService, get_monitoring_gateway_service

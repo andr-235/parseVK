@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from app.modules.tasks.service import TasksGatewayService, get_tasks_gateway_service
 from fastapi import APIRouter, Depends, Request, Response
 
