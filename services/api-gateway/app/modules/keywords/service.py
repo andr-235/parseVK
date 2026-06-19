@@ -1,43 +1,47 @@
+from __future__ import annotations
+
 import logging
 from typing import Any
 
-from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
-from app.core.config import settings
-from fastapi import HTTPException, UploadFile, status
+from app.clients.moderation.client import ModerationServiceClient
+from app.core.exceptions import BackendServiceError, BackendUnavailableError
+from app.modules._base import forward_service_request, translate_gateway_error
+from app.modules.keywords.mappers.keyword_mapper import format_job, format_keyword
+from fastapi import HTTPException, UploadFile
 
 logger = logging.getLogger("api-gateway.keywords.service")
 
 
 class KeywordsGatewayService:
-    def __init__(self, client: ServiceClient | None = None):
-        self.client = client or ServiceClient(service_name="Moderation", base_url=settings.moderation_base_url, internal_token=settings.internal_service_token)
+    def __init__(self, client: ModerationServiceClient | None = None):
+        self.client = client or ModerationServiceClient()
 
     async def _request(self, method: str, path: str, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None, params: dict | None = None, json: Any | None = None) -> dict:
         try:
-            return await self.client.request(method, path, user_id=user_id or "", request_id=request_id, correlation_id=correlation_id, params=params, json=json)
-        except ServiceClientHTTPError as exc:
-            detail = exc.detail.get("detail", exc.detail) if isinstance(exc.detail, dict) else exc.detail
-            raise HTTPException(status_code=exc.status_code, detail=detail) from exc
-        except ServiceClientUnavailableError:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Moderation service unavailable") from None
-
-    def _format_keyword(self, kw: dict) -> dict:
-        return {"id": kw["id"], "word": kw["word"], "category": kw.get("category"), "isPhrase": kw.get("is_phrase", False), "createdAt": kw.get("created_at"), "updatedAt": kw.get("updated_at")}
-
-    def _format_job(self, job: dict) -> dict:
-        return {"id": job["id"], "status": job["status"], "singleKeywordId": job.get("single_keyword_id"), "startedAt": job.get("started_at"), "finishedAt": job.get("finished_at"), "error": job.get("error"), "requestedBy": job.get("requested_by"), "createdAt": job.get("created_at")}
+            return await forward_service_request(
+                self.client,
+                method,
+                path,
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                params=params,
+                json=json,
+            )
+        except (BackendServiceError, BackendUnavailableError) as exc:
+            raise translate_gateway_error(exc) from exc
 
     async def get_all_keywords(self, page: int, limit: int, search: str | None = None, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         params: dict[str, Any] = {"page": page, "limit": limit}
         if search:
             params["search"] = search
         result = await self._request("GET", "/internal/moderation/keywords", user_id=user_id, request_id=request_id, correlation_id=correlation_id, params=params)
-        return {"keywords": [self._format_keyword(kw) for kw in result.get("keywords", [])], "total": result.get("total", 0), "page": result.get("page", page), "limit": result.get("limit", limit)}
+        return {"keywords": [format_keyword(kw) for kw in result.get("keywords", [])], "total": result.get("total", 0), "page": result.get("page", page), "limit": result.get("limit", limit)}
 
     async def add_keyword(self, payload: dict, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         backend = {"word": payload["word"], "category": payload.get("category"), "is_phrase": payload.get("isPhrase", False)}
         result = await self._request("POST", "/internal/moderation/keywords/add", user_id=user_id, request_id=request_id, correlation_id=correlation_id, json=backend)
-        return self._format_keyword(result)
+        return format_keyword(result)
 
     async def bulk_add_keywords(self, payload: dict, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         return await self._request("POST", "/internal/moderation/keywords/bulk-add", user_id=user_id, request_id=request_id, correlation_id=correlation_id, json=payload)
@@ -58,14 +62,14 @@ class KeywordsGatewayService:
 
     async def update_keyword_category(self, id: int, payload: dict, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         result = await self._request("PATCH", f"/internal/moderation/keywords/{id}", user_id=user_id, request_id=request_id, correlation_id=correlation_id, json=payload)
-        return self._format_keyword(result)
+        return format_keyword(result)
 
     async def delete_all_keywords(self, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         return await self._request("DELETE", "/internal/moderation/keywords/all", user_id=user_id, request_id=request_id, correlation_id=correlation_id)
 
     async def delete_keyword(self, id: int, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         result = await self._request("DELETE", f"/internal/moderation/keywords/{id}", user_id=user_id, request_id=request_id, correlation_id=correlation_id)
-        return self._format_keyword(result)
+        return format_keyword(result)
 
     async def get_keyword_forms(self, id: int, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         return await self._request("GET", f"/internal/moderation/keywords/{id}/forms", user_id=user_id, request_id=request_id, correlation_id=correlation_id)
@@ -88,7 +92,7 @@ class KeywordsGatewayService:
 
     async def get_recalculation_job_status(self, id: int, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         raw = await self._request("GET", f"/internal/moderation/keywords/recalculation-jobs/{id}", user_id=user_id, request_id=request_id, correlation_id=correlation_id)
-        return self._format_job(raw)
+        return format_job(raw)
 
     async def rebuild_keyword_forms(self, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         raw = await self._request("POST", "/internal/moderation/keywords/rebuild-forms", user_id=user_id, request_id=request_id, correlation_id=correlation_id)

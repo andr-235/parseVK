@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import logging
 from typing import Any
 
-from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
+from app.clients.content.client import ContentServiceClient
+from app.clients.moderation.client import ModerationServiceClient
+from app.core.exceptions import BackendServiceError, BackendUnavailableError
+from app.modules._base import forward_service_request, translate_gateway_error
 
 logger = logging.getLogger(__name__)
-from app.core.config import settings
-from fastapi import HTTPException, status
 
 
-def _map_watchlist_item(item: dict, profile: dict | None = None) -> dict:
+def _map_watchlist_item(item: dict[str, Any], profile: dict[str, Any] | None = None) -> dict[str, Any]:
     return {
         "id": item["id"],
         "authorVkId": item["author_vk_id"],
@@ -30,25 +33,31 @@ def _map_watchlist_item(item: dict, profile: dict | None = None) -> dict:
 
 
 class WatchlistGatewayService:
-    def __init__(self, moderation_client: ServiceClient | None = None, content_client: ServiceClient | None = None):
-        self.moderation_client = moderation_client or ServiceClient(service_name="Moderation", base_url=settings.moderation_base_url, internal_token=settings.internal_service_token)
-        self.content_client = content_client or ServiceClient(service_name="Content", base_url=settings.content_base_url, internal_token=settings.internal_service_token)
+    def __init__(self, moderation_client: ModerationServiceClient | None = None, content_client: ContentServiceClient | None = None):
+        self.moderation_client = moderation_client or ModerationServiceClient()
+        self.content_client = content_client or ContentServiceClient()
 
     async def _moderation_request(self, method: str, path: str, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None, params: dict | None = None, json: Any | None = None) -> dict:
         try:
-            return await self.moderation_client.request(method, path, user_id=user_id or "", request_id=request_id, correlation_id=correlation_id, params=params, json=json)
-        except ServiceClientHTTPError as exc:
-            detail = exc.detail.get("detail", exc.detail) if isinstance(exc.detail, dict) else exc.detail
-            raise HTTPException(status_code=exc.status_code, detail=detail) from exc
-        except ServiceClientUnavailableError:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Moderation service unavailable") from None
+            return await forward_service_request(
+                self.moderation_client,
+                method, path,
+                user_id=user_id, request_id=request_id, correlation_id=correlation_id,
+                params=params, json=json,
+            )
+        except (BackendServiceError, BackendUnavailableError) as exc:
+            raise translate_gateway_error(exc) from exc
 
-    async def _fetch_profiles(self, vk_author_ids: list[int], user_id: str = "") -> dict[int, dict]:
+    async def _fetch_profiles(self, vk_author_ids: list[int], user_id: str | None = None) -> dict[int, dict]:
         if not vk_author_ids:
             return {}
         try:
-            profiles = await self.content_client.request("POST", "/authors/bulk", user_id=user_id, json=vk_author_ids)
-        except Exception as exc:
+            profiles = await forward_service_request(
+                self.content_client,
+                "POST", "/authors/bulk",
+                user_id=user_id, json=vk_author_ids,
+            )
+        except (BackendServiceError, BackendUnavailableError) as exc:
             logger.warning("Failed to fetch author profiles from content service: %s", exc)
             return {}
         return {p["vkAuthorId"]: p for p in (profiles or []) if p}

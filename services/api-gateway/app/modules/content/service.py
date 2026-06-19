@@ -1,56 +1,104 @@
+from __future__ import annotations
+
 import logging
 
-from app.clients.base import ServiceClient
+from app.clients.content.client import ContentServiceClient
 from app.clients.vk_service.client import VkServiceClient
+from app.core.exceptions import BackendServiceError, BackendUnavailableError
+from app.modules._base import BaseGatewayService, forward_service_request
+from app.modules.auth.service import GatewayAuthService
+from app.modules.content.mappers.group_mapper import (
+    group_exists_in_database,
+    map_vk_group_to_item,
+)
+from app.modules.content.schemas import GroupMergeResponse
 
 logger = logging.getLogger(__name__)
-from app.core.config import settings
-from app.core.utils import request_ids
-from app.modules._base import BaseGatewayService
-from app.modules.auth.service import GatewayAuthService
-from fastapi import Request
 
 
 class ContentGatewayService(BaseGatewayService):
-    def __init__(self, client: ServiceClient | None = None, auth_service: GatewayAuthService | None = None):
+    def __init__(self, client: ContentServiceClient | None = None, auth_service: GatewayAuthService | None = None):
         super().__init__(
-            client or ServiceClient(service_name="Content", base_url=settings.content_base_url, internal_token=settings.internal_service_token),
+            client or ContentServiceClient(),
             auth_service,
         )
 
-    async def merge_groups(self, request: Request, vk_groups: list[dict]) -> dict:
-        request_id, correlation_id = request_ids(request)
+    async def merge_groups(
+        self,
+        vk_groups: list[dict],
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> GroupMergeResponse:
         vk_ids = [group["id"] for group in vk_groups]
         try:
-            existing = await self.client.request("POST", "/internal/content/groups/bulk", json=vk_ids, request_id=request_id, correlation_id=correlation_id)
-        except Exception as exc:
+            existing = await forward_service_request(
+                self.client,
+                "POST",
+                "/internal/content/groups/bulk",
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                json=vk_ids,
+            )
+        except (BackendServiceError, BackendUnavailableError) as exc:
             logger.warning("Failed to fetch existing groups from content service: %s", exc)
             existing = []
 
         existing_ids = {group["vkId"] for group in existing}
         items = []
-        for g in vk_groups:
-            g_id = g.get("id")
-            exists = g_id in existing_ids
-            items.append({
-                "id": g_id, "vkId": g_id, "vkGroupId": g_id,
-                "name": g.get("name"), "screenName": g.get("screen_name"), "screen_name": g.get("screen_name"),
-                "isClosed": g.get("is_closed"), "is_closed": g.get("is_closed"),
-                "deactivated": g.get("deactivated"), "type": g.get("type"),
-                "photo50": g.get("photo_50"), "photo_50": g.get("photo_50"),
-                "photo100": g.get("photo_100"), "photo_100": g.get("photo_100"),
-                "photo200": g.get("photo_200"), "photo_200": g.get("photo_200"),
-                "activity": g.get("activity"), "ageLimits": g.get("age_limits"), "age_limits": g.get("age_limits"),
-                "description": g.get("description"), "membersCount": g.get("members_count"), "members_count": g.get("members_count"),
-                "status": g.get("status"), "verified": g.get("verified"),
-                "wall": g.get("wall"), "addresses": g.get("addresses"),
-                "city": g.get("city"), "counters": g.get("counters"),
-                "existsInDb": exists,
-            })
+        for group in vk_groups:
+            group_id = group.get("id")
+            exists_in_database = group_exists_in_database(group_id, existing_ids)
+            items.append(map_vk_group_to_item(group, exists_in_database))
 
-        exists_in_db = [item for item in items if item["existsInDb"]]
-        missing = [item for item in items if not item["existsInDb"]]
-        return {"total": len(items), "groups": items, "existsInDb": exists_in_db, "missing": missing}
+        exists_in_database = [item for item in items if item["exists_in_db"]]
+        missing = [item for item in items if not item["exists_in_db"]]
+        return GroupMergeResponse(
+            total=len(items),
+            groups=items,
+            exists_in_db=exists_in_database,
+            missing=missing,
+        )
+
+    async def search_region_groups(
+        self,
+        vk_service: VkGatewayService,
+        query: str | None,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> GroupMergeResponse:
+        """Search VK groups by region and merge with database status."""
+        params = {}
+        if query:
+            params["query"] = query
+
+        try:
+            vk_groups = await forward_service_request(
+                vk_service.client,
+                "GET",
+                "/internal/vk/groups/search/region",
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                params=params,
+            )
+        except (BackendServiceError, BackendUnavailableError) as exc:
+            logger.error("VK service search failed: %s", exc)
+            raise
+
+        if not vk_groups:
+            return GroupMergeResponse(total=0, groups=[], exists_in_db=[], missing=[])
+
+        return await self.merge_groups(
+            vk_groups,
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
 
 
 class VkGatewayService(BaseGatewayService):

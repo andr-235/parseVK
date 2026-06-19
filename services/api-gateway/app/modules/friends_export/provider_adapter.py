@@ -1,27 +1,23 @@
-import asyncio
+from __future__ import annotations
+
 from collections.abc import AsyncIterator
 from typing import Any
 
 from app.clients.base import ServiceClientHTTPError, ServiceClientUnavailableError
 from app.clients.vk_service.client import VkServiceClient
+from app.core.exceptions import BackendServiceError, BackendUnavailableError
 from app.core.redaction import redact_secrets
+from app.modules._base import forward_service_request
 from app.modules.friends_export.models import (
-    DoneEventData,
     ErrorEventData,
     FriendsExportStartResponse,
     FriendsJobDetailResponse,
     FriendsJobLogEntry,
-    FriendsJobState,
     JobStatus,
-    LogEventData,
-    ProgressEventData,
-    SseDoneEvent,
     SseErrorEvent,
     SseEvent,
-    SseLogEvent,
-    SseProgressEvent,
 )
-from fastapi import HTTPException
+from app.modules.friends_export.sse_stream import parse_job_state, poll_job_stream
 
 
 class ProviderFriendsAdapter:
@@ -50,7 +46,8 @@ class ProviderFriendsAdapter:
 
     async def start_export(self, params: dict[str, Any]) -> FriendsExportStartResponse:
         try:
-            res = await self.client.request(
+            res = await forward_service_request(
+                self.client,
                 "POST",
                 f"{self._base_path}/export",
                 user_id=self.user_id,
@@ -58,117 +55,66 @@ class ProviderFriendsAdapter:
                 correlation_id=self.correlation_id,
                 json={"params": params},
             )
-            return FriendsExportStartResponse(
-                jobId=res["jobId"],
-                status=JobStatus(res["status"]),
-            )
-        except ServiceClientHTTPError as exc:
-            raise HTTPException(
+        except BackendServiceError as exc:
+            raise BackendServiceError(
+                service_name=exc.service_name,
                 status_code=exc.status_code,
                 detail=redact_secrets(exc.detail),
             ) from exc
-        except ServiceClientUnavailableError as exc:
-            raise HTTPException(status_code=502, detail=self.unavailable_detail) from exc
+        except BackendUnavailableError as exc:
+            raise BackendUnavailableError(
+                service_name=exc.service_name,
+                detail=self.unavailable_detail,
+            ) from exc
+        return FriendsExportStartResponse(
+            jobId=res["jobId"],
+            status=JobStatus(res["status"]),
+        )
 
     async def get_job(self, job_id: str) -> FriendsJobDetailResponse:
         try:
-            res = await self.client.request(
+            res = await forward_service_request(
+                self.client,
                 "GET",
                 f"{self._base_path}/jobs/{job_id}",
                 user_id=self.user_id,
                 request_id=self.request_id,
                 correlation_id=self.correlation_id,
             )
-            return FriendsJobDetailResponse(
-                job=self._job_state(res["job"]),
-                logs=[self._log_entry(log) for log in res["logs"]],
-            )
-        except ServiceClientHTTPError as exc:
-            raise HTTPException(
+        except BackendServiceError as exc:
+            raise BackendServiceError(
+                service_name=exc.service_name,
                 status_code=exc.status_code,
                 detail=redact_secrets(exc.detail),
             ) from exc
-        except ServiceClientUnavailableError as exc:
-            raise HTTPException(status_code=502, detail=self.unavailable_detail) from exc
+        except BackendUnavailableError as exc:
+            raise BackendUnavailableError(
+                service_name=exc.service_name,
+                detail=self.unavailable_detail,
+            ) from exc
+
+        return FriendsJobDetailResponse(
+            job=parse_job_state(res["job"]),
+            logs=[FriendsJobLogEntry(**log) for log in res["logs"]],
+        )
 
     async def stream_job(self, job_id: str) -> AsyncIterator[SseEvent]:
-        emitted_logs_count = 0
-        last_progress_count = -1
         max_polls = 600
         poll_count = 0
 
-        while poll_count < max_polls:
-            try:
-                res = await self.client.request(
-                    "GET",
-                    f"{self._base_path}/jobs/{job_id}/logs/raw",
-                    user_id=self.user_id,
-                    request_id=self.request_id,
-                    correlation_id=self.correlation_id,
-                )
-            except Exception as exc:
-                yield SseErrorEvent(
-                    data=ErrorEventData(
-                        message=redact_secrets(f"Upstream connection lost: {exc}")
-                    )
-                )
-                return
-
-            job = res["job"]
-            logs = res["logs"]
-            status = job["status"]
-
-            if len(logs) > emitted_logs_count:
-                for log in logs[emitted_logs_count:]:
-                    yield SseLogEvent(
-                        data=LogEventData(
-                            level=log["level"],
-                            message=redact_secrets(log["message"]),
-                            meta=log["meta"],
-                        )
-                    )
-                emitted_logs_count = len(logs)
-
-            fetched = job["fetchedCount"]
-            total = job["totalCount"]
-            limit_applied = fetched == 5000 and job.get("warning") is not None
-
-            if fetched != last_progress_count:
-                yield SseProgressEvent(
-                    data=ProgressEventData(
-                        fetchedCount=fetched,
-                        totalCount=total,
-                        limitApplied=limit_applied,
-                    )
-                )
-                last_progress_count = fetched
-
-            if status == JobStatus.DONE.value:
-                yield SseDoneEvent(
-                    data=DoneEventData(
-                        jobId=job["id"],
-                        fetchedCount=fetched,
-                        totalCount=total,
-                        warning=(
-                            redact_secrets(job["warning"]) if job.get("warning") else None
-                        ),
-                        xlsxPath=job["xlsxPath"],
-                    )
-                )
-                return
-
-            if status == JobStatus.FAILED.value:
-                yield SseErrorEvent(
-                    data=ErrorEventData(
-                        message=redact_secrets(job.get("error") or "Export failed")
-                    )
-                )
-                return
-
-            await asyncio.sleep(1.0)
+        async for event in poll_job_stream(
+            self.client,
+            self._base_path,
+            job_id,
+            user_id=self.user_id,
+            request_id=self.request_id,
+            correlation_id=self.correlation_id,
+        ):
+            yield event
             poll_count += 1
-
-        yield SseErrorEvent(data=ErrorEventData(message="Export timeout exceeded"))
+            if poll_count >= max_polls:
+                yield SseErrorEvent(data=ErrorEventData(message="Export timeout exceeded"))
+                return
 
     async def get_xlsx_bytes(self, job_id: str) -> bytes:
         try:
@@ -180,32 +126,13 @@ class ProviderFriendsAdapter:
                 correlation_id=self.correlation_id,
             )
         except ServiceClientHTTPError as exc:
-            raise HTTPException(
+            raise BackendServiceError(
+                service_name=self.client.service_name,
                 status_code=exc.status_code,
                 detail=redact_secrets(exc.detail),
             ) from exc
         except ServiceClientUnavailableError as exc:
-            raise HTTPException(status_code=502, detail=self.unavailable_detail) from exc
-
-    @staticmethod
-    def _job_state(job: dict[str, Any]) -> FriendsJobState:
-        return FriendsJobState(
-            id=job["id"],
-            status=JobStatus(job["status"]),
-            fetchedCount=job["fetchedCount"],
-            totalCount=job["totalCount"],
-            warning=redact_secrets(job["warning"]) if job.get("warning") else None,
-            error=redact_secrets(job["error"]) if job.get("error") else None,
-            xlsxPath=job["xlsxPath"],
-            createdAt=job["createdAt"],
-        )
-
-    @staticmethod
-    def _log_entry(log: dict[str, Any]) -> FriendsJobLogEntry:
-        return FriendsJobLogEntry(
-            id=log["id"],
-            level=log["level"],
-            message=redact_secrets(log["message"]),
-            meta=log["meta"],
-            createdAt=log["createdAt"],
-        )
+            raise BackendUnavailableError(
+                service_name=self.client.service_name,
+                detail=self.unavailable_detail,
+            ) from exc

@@ -1,49 +1,33 @@
+from __future__ import annotations
+
 from typing import Any
 
-import httpx
-from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
-from app.core.config import settings
-from app.core.security import bearer_token
-from app.core.utils import request_ids
-from app.modules.auth.router import create_auth_service
+from app.clients.errors import InternalClientHTTPError, InternalClientUnavailableError
+from app.clients.telegram.client import TelegramServiceClient
+from app.modules._base import BaseGatewayService
 from app.modules.auth.service import GatewayAuthService
 from fastapi import HTTPException, Request, status
 
 
-class TelegramTgmbaseGatewayService:
-    def __init__(self, client: ServiceClient | None = None, auth_service: GatewayAuthService | None = None):
-        self.client = client or ServiceClient(service_name="Telegram", base_url=settings.telegram_service_base_url, internal_token=settings.internal_service_token)
-        self.auth_service = auth_service or create_auth_service()
+class TelegramTgmbaseGatewayService(BaseGatewayService):
+    def __init__(self, client: TelegramServiceClient | None = None, auth_service: GatewayAuthService | None = None):
+        super().__init__(client or TelegramServiceClient(), auth_service)
 
-    async def forward(self, request: Request, method: str, path: str, *, params: dict | None = None, json: Any | None = None, files: Any | None = None):
-        authorization = request.headers.get("Authorization")
+    async def forward_raw(self, request: Request, method: str, path: str, *, params: dict[str, Any] | None = None) -> Any:
+        claims = await self.claims(request)
+        request_id, correlation_id = self._extract_ids(request)
         try:
-            claims = await self.auth_service.validate_token(bearer_token(authorization))
-        except Exception as exc:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized") from exc
-
-        request_id, correlation_id = request_ids(request)
-        try:
-            return await self.client.request(method, path, user_id=str(claims["sub"]), request_id=request_id, correlation_id=correlation_id, params=params, json=json, files=files)
-        except ServiceClientHTTPError as exc:
+            return await self.client.raw_request(method, path, user_id=str(claims["sub"]), request_id=request_id, correlation_id=correlation_id, params=params)
+        except InternalClientHTTPError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        except ServiceClientUnavailableError:
+        except InternalClientUnavailableError:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Telegram service error") from None
 
-    async def forward_raw(self, request: Request, method: str, path: str, *, params: dict | None = None) -> httpx.Response:
-        authorization = request.headers.get("Authorization")
-        try:
-            claims = await self.auth_service.validate_token(bearer_token(authorization))
-        except Exception as exc:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized") from exc
+    @staticmethod
+    def _extract_ids(request: Request) -> tuple[str | None, str | None]:
+        from app.core.utils import request_ids
 
-        request_id, correlation_id = request_ids(request)
-        try:
-            return await self.client._internal.raw_request(method, path, user_id=str(claims["sub"]), request_id=request_id, correlation_id=correlation_id, params=params)
-        except ServiceClientHTTPError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        except ServiceClientUnavailableError:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Telegram service error") from None
+        return request_ids(request)
 
 
 def get_telegram_tgmbase_gateway_service() -> TelegramTgmbaseGatewayService:

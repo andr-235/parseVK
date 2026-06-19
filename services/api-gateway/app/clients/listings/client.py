@@ -6,21 +6,19 @@ from app.clients.base import ServiceClient
 from app.core.config import settings
 
 
-class TelegramServiceClient(ServiceClient):
+class ListingsClient(ServiceClient):
     def __init__(self) -> None:
         from httpx import Timeout
 
         super().__init__(
-            service_name="Telegram",
-            base_url=settings.telegram_service_base_url,
+            service_name="Listings",
+            base_url=settings.listings_base_url,
             internal_token=settings.internal_service_token,
             timeout=Timeout(timeout=30.0, connect=5.0, read=30.0, write=10.0),
         )
 
-    async def raw_request(
+    async def get_export_raw(
         self,
-        method: str,
-        path: str,
         *,
         user_id: str | None = None,
         request_id: str | None = None,
@@ -28,25 +26,10 @@ class TelegramServiceClient(ServiceClient):
         params: dict[str, Any] | None = None,
     ) -> Any:
         return await self._internal.raw_request(
-            method,
-            path,
+            "GET",
+            "/internal/content/listings/export",
             user_id=user_id,
             request_id=request_id,
             correlation_id=correlation_id,
             params=params,
-        )
-
-    async def get_xlsx_bytes(
-        self,
-        job_id: str,
-        *,
-        user_id: str,
-        request_id: str | None = None,
-        correlation_id: str | None = None,
-    ) -> bytes:
-        return await self.get_bytes(
-            f"/internal/telegram/jobs/{job_id}/download/xlsx",
-            user_id=user_id,
-            request_id=request_id,
-            correlation_id=correlation_id,
         )

@@ -41,24 +41,24 @@ Created: 2026-06-19
 
 ## Phase 3: Module refactoring — content
 
-- [ ] Task 10: Create ContentServiceClient (thin HTTP wrapper)
-- [ ] Task 11: Extract mappers for content module
-- [ ] Task 12: Move business logic from groups_router to service
-- [ ] Task 13: Fix content service — remove Request, use domain exceptions
+- [x] Task 10: Create ContentServiceClient (thin HTTP wrapper)
+- [x] Task 11: Extract mappers for content module
+- [x] Task 12: Move business logic from groups_router to service
+- [x] Task 13: Fix content service — remove Request, use domain exceptions
 <!-- Commit checkpoint: tasks 10-13 -->
 
 ## Phase 4: Module refactoring — comments + friends_export
 
-- [ ] Task 14: Refactor comments service
-- [ ] Task 15: Refactor friends_export — split provider_adapter
-- [ ] Task 16: Refactor friends_export service
+- [x] Task 14: Refactor comments service
+- [x] Task 15: Refactor friends_export — split provider_adapter
+- [x] Task 16: Refactor friends_export service
 <!-- Commit checkpoint: tasks 14-16 -->
 
 ## Phase 5: Module refactoring — remaining
 
-- [ ] Task 17: Refactor listings service
-- [ ] Task 18: Refactor telegram_tgmbase service
-- [ ] Task 19: Refactor remaining small modules
+- [x] Task 17: Refactor listings service
+- [x] Task 18: Refactor telegram_tgmbase service
+- [x] Task 19: Refactor remaining small modules (keywords, telegram_export, watchlist, cleanup metrics)
 <!-- Commit checkpoint: tasks 17-19 -->
 
 ## Phase 6: Tests

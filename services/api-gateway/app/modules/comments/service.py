@@ -1,75 +1,42 @@
+from __future__ import annotations
+
 import logging
-import re
 from typing import Any
 
-from app.clients.base import ServiceClient, ServiceClientHTTPError, ServiceClientUnavailableError
-from app.core.config import settings
-from fastapi import HTTPException, status
-
-_VK_POST_EXTERNAL_RE = re.compile(r"^vk_(-?\d+)_(\d+)$")
-
-
-def _parse_owner_id(post_external_key: str | None) -> int | None:
-    if not post_external_key:
-        return None
-    m = _VK_POST_EXTERNAL_RE.match(post_external_key)
-    return int(m.group(1)) if m else None
-
-
-def _get_owner_id(item: dict) -> int | None:
-    return item.get("ownerId") or _parse_owner_id(item.get("post_external_key"))
-
-
-def _format_comment(item: dict, author_profile: dict | None = None, group_profile: dict | None = None) -> dict:
-    owner_id = _get_owner_id(item)
-    date = item.get("date") or item.get("created_at")
-    date_str = date.isoformat() if hasattr(date, "isoformat") else str(date or "")
-    author_vk_id = item.get("author_vk_id")
-    return {
-        "id": item["id"],
-        "text": item.get("text", ""),
-        "ownerId": owner_id,
-        "authorVkId": author_vk_id,
-        "createdAt": date_str,
-        "author": {
-            "displayName": author_profile.get("displayName") if author_profile else None,
-            "fullName": author_profile.get("fullName") if author_profile else None,
-            "profileUrl": f"https://vk.com/id{author_vk_id}" if author_vk_id else None,
-            "screenName": author_profile.get("screenName") if author_profile else None,
-            "photo50": author_profile.get("photo50") if author_profile else None,
-        },
-        "group": {
-            "name": group_profile.get("name"),
-            "screenName": group_profile.get("screenName"),
-            "vkGroupId": group_profile.get("vkGroupId"),
-            "photo50": group_profile.get("photo50") if group_profile else None,
-        } if group_profile else None,
-        "isRead": item.get("is_read", False),
-    }
-
+from app.clients.content.client import ContentServiceClient
+from app.clients.moderation.client import ModerationServiceClient
+from app.core.exceptions import BackendServiceError, BackendUnavailableError
+from app.modules._base import forward_service_request
+from app.modules.comments.mappers.comment_mapper import (
+    format_comment_detail,
+    format_comment_search_item,
+    get_owner_id,
+    group_by_post,
+)
+from app.modules.comments.schemas import CommentsCursorResponse, CommentsListResponse
 
 logger = logging.getLogger(__name__)
 
 
 class CommentsGatewayService:
-    def __init__(self, moderation_client: ServiceClient | None = None, content_client: ServiceClient | None = None):
-        self.moderation_client = moderation_client or ServiceClient(service_name="Moderation", base_url=settings.moderation_base_url, internal_token=settings.internal_service_token)
-        self.content_client = content_client or ServiceClient(service_name="Content", base_url=settings.content_base_url, internal_token=settings.internal_service_token)
+    def __init__(
+        self,
+        moderation_client: ModerationServiceClient | None = None,
+        content_client: ContentServiceClient | None = None,
+    ):
+        self.moderation_client = moderation_client or ModerationServiceClient()
+        self.content_client = content_client or ContentServiceClient()
 
-    async def _moderation_request(self, method: str, path: str, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None, params: dict | None = None, json: Any | None = None) -> dict:
-        try:
-            return await self.moderation_client.request(method, path, user_id=user_id or "", request_id=request_id, correlation_id=correlation_id, params=params, json=json)
-        except ServiceClientHTTPError as exc:
-            detail = exc.detail.get("detail", exc.detail) if isinstance(exc.detail, dict) else exc.detail
-            raise HTTPException(status_code=exc.status_code, detail=detail) from exc
-        except ServiceClientUnavailableError:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Moderation service unavailable") from None
-
-    async def _enrich_comments(self, items: list[dict], user_id: str = "") -> tuple[dict[int, dict], dict[int, dict]]:
+    async def _enrich_comments(
+        self,
+        items: list[dict[str, Any]],
+        *,
+        user_id: str | None = None,
+    ) -> tuple[dict[int, dict], dict[int, dict]]:
         author_ids = list({i["author_vk_id"] for i in items if i.get("author_vk_id")})
         group_vk_ids = set()
-        for i in items:
-            owner_id = _get_owner_id(i)
+        for item in items:
+            owner_id = get_owner_id(item)
             if owner_id and owner_id < 0:
                 group_vk_ids.add(abs(owner_id))
 
@@ -78,71 +45,147 @@ class CommentsGatewayService:
 
         if author_ids:
             try:
-                profiles = await self.content_client.request("POST", "/internal/content/authors/bulk", user_id=user_id, json=author_ids)
+                profiles = await forward_service_request(
+                    self.content_client,
+                    "POST",
+                    "/internal/content/authors/bulk",
+                    user_id=user_id,
+                    json=author_ids,
+                )
                 author_profiles = {p["vkAuthorId"]: p for p in (profiles or []) if p}
-            except Exception as exc:
+            except (BackendServiceError, BackendUnavailableError) as exc:
                 logger.warning("Failed to fetch authors from content-service: %s", exc)
 
         if group_vk_ids:
             try:
-                profiles = await self.content_client.request("POST", "/internal/content/groups/bulk", user_id=user_id, json=list(group_vk_ids))
-                group_profiles = {p["vkGroupId"]: p for p in (profiles or []) if p}
-            except Exception as exc:
+                profiles = await forward_service_request(
+                    self.content_client,
+                    "POST",
+                    "/internal/content/groups/bulk",
+                    user_id=user_id,
+                    json=list(group_vk_ids),
+                )
+                group_profiles = {p["vkGroupId"]: p for p in (profiles or []) if p} if profiles else {}
+            except (BackendServiceError, BackendUnavailableError) as exc:
                 logger.warning("Failed to fetch groups from content-service: %s", exc)
 
         return author_profiles, group_profiles
 
-    async def _format_items(self, items: list[dict], user_id: str = "") -> list[dict]:
+    async def _format_items(
+        self,
+        items: list[dict[str, Any]],
+        *,
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         author_profiles, group_profiles = await self._enrich_comments(items, user_id=user_id)
         result = []
-        for i in items:
-            owner_id = _get_owner_id(i)
+        for item in items:
+            owner_id = get_owner_id(item)
             group_profile = group_profiles.get(abs(owner_id)) if owner_id and owner_id < 0 else None
-            result.append(_format_comment(i, author_profiles.get(i.get("author_vk_id")), group_profile))
+            result.append(format_comment_detail(item, author_profiles.get(item.get("author_vk_id")), group_profile))
         return result
 
-    async def get_comments(self, page: int, limit: int, **kw: Any) -> dict:
-        params: dict = {"page": page, "limit": limit}
-        for k, v in [("readStatus", kw.get("read_status")), ("search", kw.get("search"))]:
-            if v:
-                params[k] = v
-        if kw.get("keywords"):
-            params["keywords"] = kw["keywords"]
+    async def get_comments(
+        self,
+        *,
+        page: int = 1,
+        limit: int = 20,
+        search: str | None = None,
+        keywords: str | None = None,
+        read_status: str | None = None,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> CommentsListResponse:
+        raw = await forward_service_request(
+            self.moderation_client,
+            "GET",
+            "/internal/moderation/comments",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            params={k: v for k, v in {
+                "page": page,
+                "limit": limit,
+                "search": search,
+                "keywords": keywords,
+                "readStatus": read_status,
+            }.items() if v is not None},
+        )
+        return CommentsListResponse(
+            items=await self._format_items(raw["items"], user_id=user_id),
+            total=raw["total"],
+            has_more=raw["has_more"],
+            read_count=raw["read_count"],
+            unread_count=raw["unread_count"],
+        )
 
-        raw = await self._moderation_request("GET", "/internal/moderation/comments", user_id=kw.get("user_id"), request_id=kw.get("request_id"), correlation_id=kw.get("correlation_id"), params=params)
-        return {
-            "items": await self._format_items(raw["items"], user_id=kw.get("user_id", "")),
-            "total": raw["total"],
-            "hasMore": raw["has_more"],
-            "readCount": raw["read_count"],
-            "unreadCount": raw["unread_count"],
-        }
+    async def get_comments_cursor(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 20,
+        search: str | None = None,
+        keywords: str | None = None,
+        read_status: str | None = None,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> CommentsCursorResponse:
+        raw = await forward_service_request(
+            self.moderation_client,
+            "GET",
+            "/internal/moderation/comments/cursor",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            params={k: v for k, v in {
+                "cursor": cursor,
+                "limit": limit,
+                "search": search,
+                "keywords": keywords,
+                "readStatus": read_status,
+            }.items() if v is not None},
+        )
+        return CommentsCursorResponse(
+            items=await self._format_items(raw["items"], user_id=user_id),
+            next_cursor=raw.get("next_cursor"),
+            has_more=raw["has_more"],
+            total=raw["total"],
+            read_count=raw["read_count"],
+            unread_count=raw["unread_count"],
+        )
 
-    async def get_comments_cursor(self, cursor: str | None, limit: int, **kw: Any) -> dict:
-        params: dict = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
-        for k, v in [("readStatus", kw.get("read_status")), ("search", kw.get("search"))]:
-            if v:
-                params[k] = v
-        if kw.get("keywords"):
-            params["keywords"] = kw["keywords"]
-
-        raw = await self._moderation_request("GET", "/internal/moderation/comments/cursor", user_id=kw.get("user_id"), request_id=kw.get("request_id"), correlation_id=kw.get("correlation_id"), params=params)
-        return {"items": await self._format_items(raw["items"], user_id=kw.get("user_id", "")), "nextCursor": raw["next_cursor"], "hasMore": raw["has_more"], "total": raw["total"], "readCount": raw["read_count"], "unreadCount": raw["unread_count"]}
-
-    async def patch_read_status(self, id: int, payload: dict, **kw: Any) -> dict:
-        is_read = payload.get("isRead") if payload.get("isRead") is not None else payload.get("is_read")
-        if is_read is None:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=422, detail="isRead field is required")
+    async def patch_read_status(
+        self,
+        comment_id: int,
+        *,
+        is_read: bool,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
         if not isinstance(is_read, bool):
-            from fastapi import HTTPException
-            raise HTTPException(status_code=422, detail="isRead field must be a boolean")
+            raise ValueError("is_read must be a boolean")
 
-        return await self._moderation_request("PATCH", f"/internal/moderation/comments/{id}/read", user_id=kw.get("user_id"), request_id=kw.get("request_id"), correlation_id=kw.get("correlation_id"), params=None, json={"is_read": is_read})
+        return await forward_service_request(
+            self.moderation_client,
+            "PATCH",
+            f"/internal/moderation/comments/{comment_id}/read",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            json={"is_read": is_read},
+        )
 
-    async def search_comments(self, payload: dict, **kw: Any) -> dict:
+    async def search_comments(
+        self,
+        payload: dict[str, Any],
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
         query = payload.get("query", "")
         view_mode = payload.get("viewMode", "comments")
         page = payload.get("page", 1)
@@ -150,7 +193,7 @@ class CommentsGatewayService:
         keywords: list[str] = payload.get("keywords") or []
         read_status = payload.get("readStatus")
 
-        params: dict = {"page": page, "limit": page_size}
+        params: dict[str, Any] = {"page": page, "limit": page_size}
         if query:
             params["search"] = query
         if keywords:
@@ -158,46 +201,31 @@ class CommentsGatewayService:
         if read_status and read_status != "all":
             params["readStatus"] = read_status
 
-        raw = await self._moderation_request("GET", "/internal/moderation/comments", user_id=kw.get("user_id"), request_id=kw.get("request_id"), correlation_id=kw.get("correlation_id"), params=params)
+        raw = await forward_service_request(
+            self.moderation_client,
+            "GET",
+            "/internal/moderation/comments",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            params=params,
+        )
         raw_items = raw.get("items", [])
         total = raw.get("total", len(raw_items))
 
         if view_mode == "posts":
-            items = self._group_by_post(raw_items, query)
+            items = group_by_post(raw_items, query)
         else:
-            items = [self._format_comment_search_item(item, query) for item in raw_items]
+            items = [format_comment_search_item(item, query) for item in raw_items]
 
-        return {"source": "fallback", "viewMode": view_mode, "total": total, "page": page, "pageSize": page_size, "items": items}
-
-    def _group_by_post(self, raw_items: list[dict], query: str | None = None) -> list[dict]:
-        grouped: dict[str, dict] = {}
-        for item in raw_items:
-            post_id = item.get("post_id") or item.get("postId") or "unknown"
-            if post_id not in grouped:
-                grouped[post_id] = {"postId": post_id, "postText": item.get("post_text") or item.get("postText", ""), "comments": []}
-            grouped[post_id]["comments"].append(_format_comment_for_group(item))
-        return list(grouped.values())
-
-    def _format_comment_search_item(self, item: dict, query: str | None = None) -> dict:
         return {
-            "id": item.get("id"), "text": item.get("text", ""),
-            "authorVkId": item.get("author_vk_id") or item.get("authorVkId"),
-            "authorName": item.get("author_name") or item.get("authorName", "Unknown"),
-            "postId": item.get("post_id") or item.get("postId"),
-            "postText": item.get("post_text") or item.get("postText", ""),
-            "date": item.get("date") or item.get("created_at"),
-            "readStatus": item.get("read_status") if item.get("read_status") is not None else item.get("readStatus"),
+            "source": "fallback",
+            "viewMode": view_mode,
+            "total": total,
+            "page": page,
+            "pageSize": page_size,
+            "items": items,
         }
-
-
-def _format_comment_for_group(item: dict) -> dict:
-    return {
-        "id": item.get("id"), "text": item.get("text", ""),
-        "authorVkId": item.get("author_vk_id") or item.get("authorVkId"),
-        "authorName": item.get("author_name") or item.get("authorName", "Unknown"),
-        "date": item.get("date") or item.get("created_at"),
-        "readStatus": item.get("read_status") if item.get("read_status") is not None else item.get("readStatus"),
-    }
 
 
 def get_comments_gateway_service() -> CommentsGatewayService:

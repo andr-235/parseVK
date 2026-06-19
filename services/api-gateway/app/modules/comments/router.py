@@ -86,13 +86,23 @@ async def update_read_status(
     service: CommentsGatewayService = SERVICE_DEPENDENCY,
 ):
     request_id, correlation_id = request_ids(request)
-    return await service.patch_read_status(
-        id,
-        payload,
-        user_id=str(auth_claims["sub"]),
-        request_id=request_id,
-        correlation_id=correlation_id,
-    )
+    is_read = payload.get("isRead") if payload.get("isRead") is not None else payload.get("is_read")
+    if is_read is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=422, detail="isRead field is required")
+    try:
+        return await service.patch_read_status(
+            id,
+            is_read=bool(is_read),
+            user_id=str(auth_claims["sub"]),
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
+    except ValueError as exc:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/search")
