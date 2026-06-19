@@ -1,3 +1,10 @@
+## [0.37.4](https://github.com/andr-235/parseVK/compare/v0.37.3...v0.37.4) (2026-06-19)
+
+
+### Bug Fixes
+
+* **front:** rename backend types to DTO with snake_case fields and add null guards ([067c3f2](https://github.com/andr-235/parseVK/commit/067c3f2d70e9e474af4d19b754106a255f509dd4))
+
 ## [0.37.3](https://github.com/andr-235/parseVK/compare/v0.37.2...v0.37.3) (2026-06-19)
 
 
