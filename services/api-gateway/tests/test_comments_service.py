@@ -157,6 +157,56 @@ async def test_get_comments_with_enrichment():
 
 
 @pytest.mark.asyncio
+async def test_get_comments_passes_keyword_source():
+    class RecordingModerationClient:
+        def __init__(self):
+            self.calls = []
+
+        async def request(self, method: str, path: str, **kwargs):
+            self.calls.append({"method": method, "path": path, **kwargs})
+            return {
+                "items": [],
+                "total": 0,
+                "has_more": False,
+                "read_count": 0,
+                "unread_count": 0,
+            }
+
+    service = CommentsGatewayService(
+        moderation_client=RecordingModerationClient(),
+        content_client=EmptyContentClient(),
+    )
+
+    await service.get_comments(
+        page=1,
+        limit=20,
+        keywords=["foo", "bar"],
+        keyword_source="manual",
+        user_id="user-1",
+        request_id="req-1",
+        correlation_id="corr-1",
+    )
+
+    assert service.moderation_client.calls == [
+        {
+            "method": "GET",
+            "path": "/internal/moderation/comments",
+            "user_id": "user-1",
+            "request_id": "req-1",
+            "correlation_id": "corr-1",
+            "params": {
+                "page": 1,
+                "limit": 20,
+                "keywords": ["foo", "bar"],
+                "keywordSource": "manual",
+            },
+            "json": None,
+            "files": None,
+        }
+    ]
+
+
+@pytest.mark.asyncio
 async def test_get_comments_maps_unavailable_upstream_to_502():
     class UnavailableModerationClient:
         async def request(self, method: str, path: str, **kwargs):
