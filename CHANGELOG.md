@@ -1,3 +1,10 @@
+# [0.38.0](https://github.com/andr-235/parseVK/compare/v0.37.8...v0.38.0) (2026-06-19)
+
+
+### Features
+
+* **api-gateway:** add IdentityClientMethods with typed auth endpoints ([bdf68e0](https://github.com/andr-235/parseVK/commit/bdf68e0594b2e53422cc4b87abb9c346d75233a3))
+
 ## [0.37.8](https://github.com/andr-235/parseVK/compare/v0.37.7...v0.37.8) (2026-06-19)
 
 
