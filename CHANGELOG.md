@@ -1,3 +1,10 @@
+## [0.37.6](https://github.com/andr-235/parseVK/compare/v0.37.5...v0.37.6) (2026-06-19)
+
+
+### Bug Fixes
+
+* **vk-service:** pass fields parameter to get_groups in DataCollector ([8663580](https://github.com/andr-235/parseVK/commit/8663580ac27b1333588d120ec8cba206cbe7882d))
+
 ## [0.37.5](https://github.com/andr-235/parseVK/compare/v0.37.4...v0.37.5) (2026-06-19)
 
 
