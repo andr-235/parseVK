@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 
@@ -48,3 +49,23 @@ async def test_ready_returns_service_unavailable():
 
     assert response.status_code == 503
     assert "Database is not ready" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_request_boundary_logs_correlation_status_and_duration(caplog):
+    app = create_app()
+    with caplog.at_level(logging.INFO):
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            response = await client.get(
+                "/health",
+                headers={"X-Correlation-ID": "corr-123"},
+            )
+
+    assert response.headers["X-Correlation-ID"] == "corr-123"
+    assert "operation=GET /health" in caplog.text
+    assert "correlation_id=corr-123" in caplog.text
+    assert "status=200" in caplog.text
+    assert "duration_ms=" in caplog.text

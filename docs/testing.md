@@ -34,6 +34,17 @@ checks, the 150-line production-file gate, repository mappings, and Kafka
 retry/offset behavior. A PostgreSQL-backed migration check must run
 `upgrade head -> downgrade 30edcb443fca -> upgrade head`.
 
+PostgreSQL integration tests are opt-in and require a disposable database whose
+name contains `test`:
+
+```powershell
+$env:CONTENT_TEST_DATABASE_URL="postgresql+asyncpg://content:content@localhost:5435/content_test"
+uv run pytest tests/integration/ -v
+```
+
+The suite resets this database, verifies the duplicate migration guard,
+upgrade/downgrade/upgrade, metadata parity, repository idempotency, and rollback.
+
 ## Frontend (Vitest)
 
 ```powershell

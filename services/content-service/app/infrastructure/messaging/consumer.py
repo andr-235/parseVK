@@ -55,24 +55,52 @@ class KafkaProjectionConsumer:
             await self.stop()
 
     async def process_message(self, message) -> bool:
-        payload = self._decode(message.value)
-        event = self.event_model.model_validate(payload)
+        context = {
+            "event_id": None,
+            "event_type": None,
+            "correlation_id": None,
+        }
         for attempt in range(1, self.max_attempts + 1):
             try:
+                payload = self._decode(message.value)
+                if isinstance(payload, dict):
+                    context.update(
+                        {
+                            key: payload.get(key)
+                            for key in context
+                        }
+                    )
+                event = self.event_model.model_validate(payload)
+                context.update(
+                    {
+                        key: getattr(event, key, context[key])
+                        for key in context
+                    }
+                )
                 async with self.session_factory() as session:
                     async with session.begin():
                         await self.handler_factory(session).handle(event)
                 await self._consumer.commit()
+                logger.debug(
+                    "Kafka event committed: topic=%s offset=%s "
+                    "event_id=%s correlation_id=%s",
+                    self.topic,
+                    message.offset,
+                    context["event_id"],
+                    context["correlation_id"],
+                )
                 return True
             except Exception:
                 logger.exception(
                     "Kafka event processing failed: topic=%s partition=%s "
-                    "offset=%s event_id=%s event_type=%s attempt=%s/%s",
+                    "offset=%s event_id=%s event_type=%s correlation_id=%s "
+                    "attempt=%s/%s",
                     self.topic,
                     message.partition,
                     message.offset,
-                    getattr(event, "event_id", None),
-                    getattr(event, "event_type", None),
+                    context["event_id"],
+                    context["event_type"],
+                    context["correlation_id"],
                     attempt,
                     self.max_attempts,
                 )
@@ -85,10 +113,14 @@ class KafkaProjectionConsumer:
         if assignment:
             self._consumer.pause(*assignment)
         logger.error(
-            "Kafka consumer paused after poison event: topic=%s group=%s offset=%s",
+            "Kafka consumer paused after poison event: topic=%s "
+            "group=%s offset=%s event_id=%s event_type=%s correlation_id=%s",
             self.topic,
             self.group_id,
             message.offset,
+            context["event_id"],
+            context["event_type"],
+            context["correlation_id"],
         )
         return False
 

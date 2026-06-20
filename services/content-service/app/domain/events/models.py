@@ -3,6 +3,16 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+VK_EVENT_TYPES = (
+    "vk.group_collected",
+    "vk.group_deleted",
+    "vk.author_collected",
+    "vk.post_collected",
+    "vk.comment_collected",
+)
+IM_EVENT_TYPES = ("im.message_collected", "im.group_collected")
+UNKNOWN_EVENT_POLICY = "retry"
+
 
 class EventEnvelope(BaseModel):
     event_id: UUID
@@ -35,13 +45,7 @@ class VkCommentPayload(BaseModel):
 
 
 class VkEvent(EventEnvelope):
-    event_type: Literal[
-        "vk.group_collected",
-        "vk.group_deleted",
-        "vk.author_collected",
-        "vk.post_collected",
-        "vk.comment_collected",
-    ]
+    event_type: Literal[*VK_EVENT_TYPES]
     payload: (
         VkGroupPayload
         | VkGroupDeletedPayload
@@ -65,7 +69,7 @@ class ImGroupPayload(BaseModel):
 
 
 class ImEvent(EventEnvelope):
-    event_type: Literal["im.message_collected", "im.group_collected"]
+    event_type: Literal[*IM_EVENT_TYPES]
     payload: ImMessagePayload | ImGroupPayload
 
     model_config = ConfigDict(populate_by_name=True)

@@ -9,7 +9,13 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.domain.events.models import ImEvent, VkEvent
+from app.domain.events.models import (
+    IM_EVENT_TYPES,
+    UNKNOWN_EVENT_POLICY,
+    VK_EVENT_TYPES,
+    ImEvent,
+    VkEvent,
+)
 from app.services.projections.im import ImProjectionService
 from app.services.projections.vk import VkProjectionService
 
@@ -69,3 +75,9 @@ async def test_vk_group_deleted_contract_marks_event_processed():
     assert await service.handle(envelope) is True
     assert ("group_deleted", 42) in repository.calls
     assert ("processed", "vk.group_deleted") in repository.calls
+
+
+def test_unknown_events_have_explicit_retry_policy():
+    assert "vk.comment_collected" in VK_EVENT_TYPES
+    assert "im.message_collected" in IM_EVENT_TYPES
+    assert UNKNOWN_EVENT_POLICY == "retry"
