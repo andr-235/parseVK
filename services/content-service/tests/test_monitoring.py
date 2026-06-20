@@ -79,6 +79,8 @@ class FakeMonitoringService:
         }
 
     async def update_group(self, id, values):
+        if not values:
+            raise ValueError("No group fields supplied")
         self.calls.append(("update_group", id, values))
         return {
             "id": id,
@@ -164,6 +166,18 @@ async def test_update_group(monitor_app, monitor_service):
     assert data["id"] == 5
     assert data["name"] == "Updated Group"
     assert monitor_service.calls[0][0] == "update_group"
+
+
+@pytest.mark.anyio
+async def test_empty_group_update_returns_validation_error(monitor_app):
+    async with AsyncClient(
+        transport=ASGITransport(app=monitor_app),
+        base_url="http://test",
+    ) as client:
+        response = await client.patch("/monitoring/groups/5", json={})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "No group fields supplied"
 
 
 @pytest.mark.anyio

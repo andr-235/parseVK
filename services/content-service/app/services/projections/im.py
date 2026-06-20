@@ -1,6 +1,11 @@
 import logging
 
-from app.domain.events.models import ImEvent, ImGroupPayload, ImMessagePayload
+from app.domain.events.models import (
+    IM_LIFECYCLE_EVENT_TYPES,
+    ImEvent,
+    ImGroupPayload,
+    ImMessagePayload,
+)
 
 logger = logging.getLogger(__name__)
 CONSUMER_NAME = "content-service.im"
@@ -16,7 +21,15 @@ class ImProjectionService:
             logger.info("Duplicate IM event ignored: event_id=%s", event.event_id)
             return False
         payload = event.payload
-        if isinstance(payload, ImMessagePayload):
+        if event.event_type in IM_LIFECYCLE_EVENT_TYPES:
+            logger.debug(
+                "IM lifecycle event ignored by content projection: event_id=%s "
+                "event_type=%s correlation_id=%s",
+                event.event_id,
+                event.event_type,
+                event.correlation_id,
+            )
+        elif isinstance(payload, ImMessagePayload):
             await self.repository.upsert_message(
                 payload.messenger,
                 payload.message_id,

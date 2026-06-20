@@ -9,8 +9,19 @@ VK_EVENT_TYPES = (
     "vk.author_collected",
     "vk.post_collected",
     "vk.comment_collected",
+    "vk.task_progress_updated",
+    "vk.task_completed",
+    "vk.task_failed",
 )
-IM_EVENT_TYPES = ("im.message_collected", "im.group_collected")
+IM_EVENT_TYPES = (
+    "im.message_collected",
+    "im.group_collected",
+    "im.task_progress_updated",
+    "im.task_completed",
+    "im.task_failed",
+)
+VK_LIFECYCLE_EVENT_TYPES = frozenset(VK_EVENT_TYPES[-3:])
+IM_LIFECYCLE_EVENT_TYPES = frozenset(IM_EVENT_TYPES[-3:])
 UNKNOWN_EVENT_POLICY = "retry"
 
 
@@ -44,6 +55,16 @@ class VkCommentPayload(BaseModel):
     task_id: int | None = Field(default=None, alias="taskId")
 
 
+class TaskLifecyclePayload(BaseModel):
+    task_id: int = Field(alias="taskId")
+    run_id: str = Field(alias="runId")
+    processed_items: int | None = Field(default=None, alias="processedItems")
+    total_items: int | None = Field(default=None, alias="totalItems")
+    progress: float | None = None
+    stats: dict[str, Any] | None = None
+    error: str | None = None
+
+
 class VkEvent(EventEnvelope):
     event_type: Literal[*VK_EVENT_TYPES]
     payload: (
@@ -52,6 +73,7 @@ class VkEvent(EventEnvelope):
         | VkAuthorPayload
         | VkPostPayload
         | VkCommentPayload
+        | TaskLifecyclePayload
     )
 
     model_config = ConfigDict(populate_by_name=True)
@@ -70,6 +92,6 @@ class ImGroupPayload(BaseModel):
 
 class ImEvent(EventEnvelope):
     event_type: Literal[*IM_EVENT_TYPES]
-    payload: ImMessagePayload | ImGroupPayload
+    payload: ImMessagePayload | ImGroupPayload | TaskLifecyclePayload
 
     model_config = ConfigDict(populate_by_name=True)

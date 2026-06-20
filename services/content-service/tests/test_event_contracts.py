@@ -77,6 +77,38 @@ async def test_vk_group_deleted_contract_marks_event_processed():
     assert ("processed", "vk.group_deleted") in repository.calls
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("model", "service_type", "event_type", "payload"),
+    [
+        (
+            VkEvent,
+            VkProjectionService,
+            "vk.task_completed",
+            {"taskId": 1, "runId": "run-1", "stats": {}},
+        ),
+        (
+            ImEvent,
+            ImProjectionService,
+            "im.task_failed",
+            {"taskId": 2, "runId": "run-2", "error": "failed"},
+        ),
+    ],
+)
+async def test_lifecycle_events_are_accepted_and_marked_processed(
+    model,
+    service_type,
+    event_type,
+    payload,
+):
+    repository = EventRepository()
+    service = service_type(repository)
+    envelope = event(model, event_type, payload)
+
+    assert await service.handle(envelope) is True
+    assert repository.calls == [("processed", event_type)]
+
+
 def test_unknown_events_have_explicit_retry_policy():
     assert "vk.comment_collected" in VK_EVENT_TYPES
     assert "im.message_collected" in IM_EVENT_TYPES

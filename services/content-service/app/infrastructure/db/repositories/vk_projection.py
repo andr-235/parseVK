@@ -26,6 +26,7 @@ class VkProjectionRepository(SqlAlchemyProcessedEventRepository):
 
     async def upsert_group(self, group: dict) -> None:
         values = normalize_group_fields(group)
+        values["last_collected_at"] = datetime.now(UTC)
         statement = insert(ContentGroup).values(**values)
         statement = statement.on_conflict_do_update(
             index_elements=[ContentGroup.vk_group_id],

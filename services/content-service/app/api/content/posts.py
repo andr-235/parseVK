@@ -11,7 +11,11 @@ Service = Annotated[PostService, Depends(get_post_service)]
 
 
 @router.get("/posts")
-async def list_posts(service: Service, page: int = Query(1, ge=1), limit: int = 20):
+async def list_posts(
+    service: Service,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+):
     return await service.list_posts(page, limit)
 
 
@@ -24,7 +28,11 @@ async def get_post(external_key: str, service: Service):
 
 
 @router.get("/comments")
-async def list_comments(service: Service, page: int = Query(1, ge=1), limit: int = 20):
+async def list_comments(
+    service: Service,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+):
     return await service.list_comments(page, limit)
 
 

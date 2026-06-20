@@ -1,6 +1,7 @@
 import logging
 
 from app.domain.events.models import (
+    VK_LIFECYCLE_EVENT_TYPES,
     VkAuthorPayload,
     VkCommentPayload,
     VkEvent,
@@ -23,7 +24,15 @@ class VkProjectionService:
             logger.info("Duplicate VK event ignored: event_id=%s", event.event_id)
             return False
         payload = event.payload
-        if isinstance(payload, VkGroupPayload):
+        if event.event_type in VK_LIFECYCLE_EVENT_TYPES:
+            logger.debug(
+                "VK lifecycle event ignored by content projection: event_id=%s "
+                "event_type=%s correlation_id=%s",
+                event.event_id,
+                event.event_type,
+                event.correlation_id,
+            )
+        elif isinstance(payload, VkGroupPayload):
             await self.repository.upsert_group(payload.group)
         elif isinstance(payload, VkGroupDeletedPayload):
             await self.repository.delete_group(payload.vk_group_id)

@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -17,6 +18,7 @@ from app.infrastructure.db.models import (
     ContentPost,
     ProcessedEvent,
 )
+from app.infrastructure.db.repositories.vk_projection import VkProjectionRepository
 from app.services.projections.vk import VkProjectionService
 
 
@@ -76,6 +78,17 @@ def test_model_tables_exist_and_processed_key_is_per_consumer():
     assert ProcessedEvent.__tablename__ == "processed_events"
     names = {item.name for item in ProcessedEvent.__table__.constraints if item.name}
     assert "uq_processed_events_consumer_event" in names
+
+
+@pytest.mark.anyio
+async def test_group_projection_sets_collection_timestamp():
+    session = AsyncMock()
+    repository = VkProjectionRepository(session)
+
+    await repository.upsert_group({"id": 1, "name": "Group"})
+
+    statement = session.execute.await_args.args[0]
+    assert statement.compile().params["last_collected_at"] is not None
 
 
 @pytest.mark.anyio

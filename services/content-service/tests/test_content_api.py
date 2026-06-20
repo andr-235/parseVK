@@ -248,6 +248,22 @@ async def test_content_posts_pagination_and_detail(app):
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("path", ["posts", "comments"])
+@pytest.mark.parametrize("limit", [0, 101])
+async def test_post_and_comment_limits_are_bounded(app, path, limit):
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.get(
+            f"/internal/content/{path}?limit={limit}",
+            headers=headers(),
+        )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.anyio
 async def test_authors_list_supports_legacy_filters_sort_and_offset_pagination(
     app,
     repository,
