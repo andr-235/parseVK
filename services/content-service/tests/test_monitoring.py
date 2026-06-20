@@ -9,8 +9,11 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.api.monitoring.dependencies import (
+    get_monitoring_groups,
+    get_monitoring_messages,
+)
 from app.main import create_app
-from app.modules.monitoring.dependencies import get_monitoring_service
 
 
 class FakeMonitoringService:
@@ -40,6 +43,9 @@ class FakeMonitoringService:
             "hasMore": False,
         }
 
+    async def list_messages(self, **kwargs):
+        return await self.get_messages(**kwargs)
+
     async def get_groups(self, **kwargs):
         self.calls.append(("get_groups", kwargs))
         return {
@@ -57,26 +63,29 @@ class FakeMonitoringService:
             "total": 1
         }
 
-    async def create_group(self, dto):
-        self.calls.append(("create_group", dto))
+    async def list_groups(self, **kwargs):
+        return await self.get_groups(**kwargs)
+
+    async def create_group(self, values):
+        self.calls.append(("create_group", values))
         return {
             "id": 1,
-            "messenger": dto.messenger,
-            "chat_id": dto.chat_id,
-            "name": dto.name,
-            "category": dto.category,
+            "messenger": values["messenger"],
+            "chat_id": values["chat_id"],
+            "name": values["name"],
+            "category": values.get("category"),
             "created_at": "2026-05-25T12:00:00Z",
             "updated_at": "2026-05-25T12:00:00Z"
         }
 
-    async def update_group(self, id, dto):
-        self.calls.append(("update_group", id, dto))
+    async def update_group(self, id, values):
+        self.calls.append(("update_group", id, values))
         return {
             "id": id,
-            "messenger": dto.messenger or "whatsapp",
-            "chat_id": dto.chat_id or "123",
-            "name": dto.name or "Updated Group",
-            "category": dto.category or "work",
+            "messenger": values.get("messenger") or "whatsapp",
+            "chat_id": values.get("chat_id") or "123",
+            "name": values.get("name") or "Updated Group",
+            "category": values.get("category") or "work",
             "created_at": "2026-05-25T12:00:00Z",
             "updated_at": "2026-05-25T12:00:00Z"
         }
@@ -98,7 +107,8 @@ def monitor_app(monitor_service):
     async def service_override():
         return monitor_service
 
-    app.dependency_overrides[get_monitoring_service] = service_override
+    app.dependency_overrides[get_monitoring_groups] = service_override
+    app.dependency_overrides[get_monitoring_messages] = service_override
     return app
 
 

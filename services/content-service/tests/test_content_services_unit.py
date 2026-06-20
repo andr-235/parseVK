@@ -3,18 +3,19 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
 
 use_service_path()
 
-from app.modules.content.author_service import AuthorContentService
-from app.modules.content.group_service import GroupContentService
-from app.modules.content.helpers.author_mappers import author_to_dict, split_display_name
-from app.modules.content.helpers.group_mappers import normalize_group_fields
-from app.modules.content.post_service import PostContentService
+from app.domain.content.errors import InvalidFilterError
+from app.infrastructure.db.mappers.authors import author_to_dict, split_display_name
+from app.infrastructure.db.mappers.groups import normalize_group_fields
+from app.services.content.author_commands import AuthorCommandService
+from app.services.content.authors import AuthorQueryService
+from app.services.content.groups import GroupService
+from app.services.content.posts import PostService
 
 
 @pytest.fixture
@@ -28,7 +29,7 @@ def anyio_backend():
 async def test_group_service_list_normalization():
     mock_repo = AsyncMock()
     mock_repo.list_groups.return_value = {"items": [], "total": 0}
-    service = GroupContentService(mock_repo)
+    service = GroupService(mock_repo)
 
     await service.list_groups(page=1, limit=10, search="  my group  ", sort_order="invalid")
 
@@ -44,7 +45,7 @@ async def test_group_service_list_normalization():
 @pytest.mark.anyio
 async def test_group_service_delete_group_flow():
     mock_repo = AsyncMock()
-    service = GroupContentService(mock_repo)
+    service = GroupService(mock_repo)
 
     # Case 1: Group not found
     mock_repo.get_group.return_value = None
@@ -60,7 +61,7 @@ async def test_group_service_delete_group_flow():
 @pytest.mark.anyio
 async def test_group_service_save_group():
     mock_repo = AsyncMock()
-    service = GroupContentService(mock_repo)
+    service = GroupService(mock_repo)
     group_data = {"id": 456, "name": "Test Group"}
     mock_repo.get_group.return_value = {"id": 456, "name": "Test Group"}
 
@@ -74,7 +75,7 @@ async def test_group_service_save_group():
 @pytest.mark.anyio
 async def test_post_service_forward_calls():
     mock_repo = AsyncMock()
-    service = PostContentService(mock_repo)
+    service = PostService(mock_repo)
 
     mock_repo.list_posts.return_value = {"items": []}
     mock_repo.get_post.return_value = {"id": "123"}
@@ -97,12 +98,11 @@ async def test_post_service_forward_calls():
 @pytest.mark.anyio
 async def test_author_service_validation():
     mock_repo = AsyncMock()
-    service = AuthorContentService(mock_repo)
+    service = AuthorQueryService(mock_repo)
 
     # Invalid sort field
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(InvalidFilterError):
         await service.list_authors(sort_by="invalid_field")
-    assert exc_info.value.status_code == 400
 
     # Valid sort field
     mock_repo.list_authors.return_value = {"items": []}
@@ -115,7 +115,7 @@ async def test_author_service_enrichment():
     mock_repo = AsyncMock()
     mock_photo_analysis = AsyncMock()
     mock_photo_analysis.enrichment_budget_seconds = 2.0
-    service = AuthorContentService(mock_repo, photo_analysis=mock_photo_analysis)
+    service = AuthorQueryService(mock_repo, mock_photo_analysis)
 
     mock_repo.get_author.return_value = {"vkUserId": 777, "displayName": "Alex"}
     mock_photo_analysis.summaries_by_vk_author_ids.return_value = {
@@ -130,7 +130,7 @@ async def test_author_service_enrichment():
 @pytest.mark.anyio
 async def test_author_service_delete():
     mock_repo = AsyncMock()
-    service = AuthorContentService(mock_repo)
+    service = AuthorCommandService(mock_repo)
 
     mock_repo.get_author.return_value = None
     assert await service.delete_author(999) is False

@@ -1,6 +1,7 @@
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -10,9 +11,15 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.api.content.dependencies import (
+    get_author_query,
+    get_group_service,
+    get_post_service,
+)
 from app.main import create_app
-from app.modules.content.dependencies import get_content_service
-from app.modules.content.service import ContentService
+from app.services.content.authors import AuthorQueryService
+from app.services.content.groups import GroupService
+from app.services.content.posts import PostService
 
 
 @pytest.fixture
@@ -187,99 +194,6 @@ class FakePhotoAnalysisClient:
         }
 
 
-class FakeService:
-    def __init__(self, repo, photo_analysis):
-        self._repo = repo
-        self._photo_analysis = photo_analysis
-
-    async def list_groups(self, page, limit, search=None, sort_by=None, sort_order="desc"):
-        return await self._repo.list_groups(page, limit, search, sort_by, sort_order)
-
-    async def search_groups(self, q, limit):
-        return await self._repo.search_groups(q, limit)
-
-    async def get_group(self, vk_group_id):
-        return await self._repo.get_group(vk_group_id)
-
-    async def list_posts(self, page, limit):
-        return await self._repo.list_posts(page, limit)
-
-    async def get_post(self, external_key):
-        return await self._repo.get_post(external_key)
-
-    async def list_comments(self, page, limit):
-        return await self._repo.list_comments(page, limit)
-
-    async def _enrich_author_summaries(self, items):
-        vk_author_ids = [int(item["vkUserId"]) for item in items if item.get("vkUserId") is not None]
-        if not vk_author_ids:
-            return
-        try:
-            import asyncio
-            budget = getattr(self._photo_analysis, "enrichment_budget_seconds", 2.0)
-            summaries = await asyncio.wait_for(
-                self._photo_analysis.summaries_by_vk_author_ids(vk_author_ids),
-                timeout=budget,
-            )
-        except Exception:
-            return
-        for item in items:
-            summary = summaries.get(int(item["vkUserId"]))
-            if summary is not None:
-                item["summary"] = summary
-                item["photosCount"] = summary.get("total", item.get("photosCount"))
-
-    async def list_authors(
-        self,
-        limit=20,
-        page=None,
-        offset=None,
-        search=None,
-        city=None,
-        verified=None,
-        author_type=None,
-        sort_by=None,
-        sort_order="desc",
-    ):
-        if city is not None:
-            from fastapi import HTTPException, status
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Author city filter is not supported by the content projection")
-        if verified not in {None, "", "all"}:
-            from fastapi import HTTPException, status
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Author verified filter is not supported by the content projection")
-        if sort_by and sort_by not in {"fullName", "created_at", "updatedAt"}:
-            from fastapi import HTTPException, status
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported author sort field: {sort_by}")
-        resolved_offset = offset if offset is not None else ((page or 1) - 1) * limit
-        payload = await self._repo.list_authors(
-            offset=resolved_offset, limit=limit, search=search,
-            city=city, verified=None if verified in {None, "", "all"} else (verified in {"true", "1"}),
-            sort_by=sort_by, sort_order=sort_order if sort_order in {"asc", "desc"} else "desc",
-        )
-        await self._enrich_author_summaries(payload.get("items", []))
-        return payload
-
-    async def get_author(self, vk_author_id):
-        row = await self._repo.get_author(vk_author_id)
-        if row is not None:
-            await self._enrich_author_summaries([row])
-        return row
-
-    async def list_authors_bulk(self, vk_author_ids):
-        items = await self._repo.list_authors_bulk(vk_author_ids)
-        await self._enrich_author_summaries(items)
-        return items
-
-    async def verify_author(self, vk_author_id):
-        return await self._repo._update_author_verified_at(vk_author_id)
-
-    async def list_posts_bulk(self, external_keys):
-        return await self._repo.list_posts_bulk(external_keys)
-
-    async def list_groups_bulk(self, vk_group_ids):
-        return await self._repo.list_groups_bulk(vk_group_ids)
-
-
 @pytest.fixture
 def repository():
     return FakeRepository()
@@ -292,17 +206,19 @@ def photo_analysis_client():
 
 @pytest.fixture
 def service_instance(repository, photo_analysis_client):
-    return FakeService(repository, photo_analysis_client)
+    return SimpleNamespace(
+        _authors=AuthorQueryService(repository, photo_analysis_client),
+        _groups=GroupService(repository),
+        _posts=PostService(repository),
+    )
 
 
 @pytest.fixture
 def app(service_instance):
     app = create_app()
-
-    async def service_override():
-        return service_instance
-
-    app.dependency_overrides[get_content_service] = service_override
+    app.dependency_overrides[get_author_query] = lambda: service_instance._authors
+    app.dependency_overrides[get_group_service] = lambda: service_instance._groups
+    app.dependency_overrides[get_post_service] = lambda: service_instance._posts
     return app
 
 
@@ -334,9 +250,9 @@ async def test_content_posts_pagination_and_detail(app):
 @pytest.mark.anyio
 async def test_authors_list_supports_legacy_filters_sort_and_offset_pagination(
     app,
-    service_instance,
+    repository,
+    photo_analysis_client,
 ):
-    repo = service_instance._repo
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(
             "/internal/content/authors?offset=0&limit=1&search=ada&sortBy=fullName&sortOrder=asc",
@@ -350,7 +266,7 @@ async def test_authors_list_supports_legacy_filters_sort_and_offset_pagination(
     assert payload["items"][0]["vkUserId"] == 101
     assert payload["items"][0]["fullName"] == "Ada Lovelace"
     assert payload["items"][0]["summary"]["total"] == 3
-    assert repo.calls[0] == (
+    assert repository.calls[0] == (
         "list_authors",
         0,
         1,
@@ -360,24 +276,27 @@ async def test_authors_list_supports_legacy_filters_sort_and_offset_pagination(
         "fullName",
         "asc",
     )
-    assert service_instance._photo_analysis.calls == [[101]]
+    assert photo_analysis_client.calls == [[101]]
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize(
-    "query",
-    [
-        "sortBy=photosCount",
-        "city=Yakutsk",
-        "verified=true",
-        "verified=false",
-    ],
-)
-async def test_authors_reject_projection_limited_query_params(app, query):
+async def test_authors_reject_unsupported_sort_field(app):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/internal/content/authors?sortBy=photosCount",
+            headers=headers(),
+        )
+
+    assert response.status_code == 400
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("query", ["city=Yakutsk", "verified=true", "verified=false"])
+async def test_authors_support_city_and_verified_filters(app, query):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(f"/internal/content/authors?{query}", headers=headers())
 
-    assert response.status_code == 400
+    assert response.status_code == 200
 
 
 @pytest.mark.anyio
@@ -390,7 +309,7 @@ async def test_authors_empty_state_keeps_legacy_shape(app):
 
 
 @pytest.mark.anyio
-async def test_authors_accept_updated_at_sort(app, service_instance):
+async def test_authors_accept_updated_at_sort(app, repository):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(
             "/internal/content/authors?sortBy=updatedAt&sortOrder=desc",
@@ -398,7 +317,7 @@ async def test_authors_accept_updated_at_sort(app, service_instance):
         )
 
     assert response.status_code == 200
-    assert service_instance._repo.calls[0] == (
+    assert repository.calls[0] == (
         "list_authors",
         0,
         20,
@@ -411,7 +330,7 @@ async def test_authors_accept_updated_at_sort(app, service_instance):
 
 
 @pytest.mark.anyio
-async def test_authors_accept_created_at_sort(app, service_instance):
+async def test_authors_accept_created_at_sort(app, repository):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(
             "/internal/content/authors?sortBy=created_at&sortOrder=desc",
@@ -419,7 +338,7 @@ async def test_authors_accept_created_at_sort(app, service_instance):
         )
 
     assert response.status_code == 200
-    assert service_instance._repo.calls[0] == (
+    assert repository.calls[0] == (
         "list_authors",
         0,
         20,
@@ -433,12 +352,7 @@ async def test_authors_accept_created_at_sort(app, service_instance):
 
 @pytest.mark.anyio
 async def test_content_service_accepts_created_at_sort(repository, photo_analysis_client):
-    service = ContentService(
-        group_repo=repository,
-        post_repo=repository,
-        author_repo=repository,
-        photo_analysis=photo_analysis_client,
-    )
+    service = AuthorQueryService(repository, photo_analysis_client)
 
     await service.list_authors(sort_by="created_at", sort_order="desc")
 
@@ -472,9 +386,9 @@ async def test_author_photo_analysis_failure_does_not_fail_response(repository):
 
     async def service_override():
         fake_pa = FakePhotoAnalysisClient(fail=True)
-        return FakeService(repository, fake_pa)
+        return AuthorQueryService(repository, fake_pa)
 
-    app.dependency_overrides[get_content_service] = service_override
+    app.dependency_overrides[get_author_query] = service_override
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/internal/content/authors?limit=1", headers=headers())
@@ -487,19 +401,18 @@ async def test_author_photo_analysis_failure_does_not_fail_response(repository):
 async def test_author_photo_analysis_slow_client_uses_global_budget(repository):
     """Slow enrichment should be cancelled by per-request budget, not block the response."""
     fake_pa = FakePhotoAnalysisClient(delay_seconds=0.2, enrichment_budget_seconds=0.05)
-    svc = FakeService(repository, fake_pa)
+    svc = AuthorQueryService(repository, fake_pa)
 
     started = time.perf_counter()
-    item = svc._repo.author(1, 101, "Ada Lovelace", "2026-05-01T00:00:00+00:00")
-    await svc._enrich_author_summaries([item])
+    result = await svc.get_author(101)
     elapsed = time.perf_counter() - started
 
     assert elapsed < 0.15, f"Expected < 0.15s, got {elapsed:.3f}s"
-    assert item.get("summary") is None
+    assert result.get("summary") is None
 
 
 @pytest.mark.anyio
-async def test_groups_list_supports_search_sort_and_pagination(app, service_instance):
+async def test_groups_list_supports_search_sort_and_pagination(app, repository):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(
             "/internal/content/groups?page=1&limit=1&search=beta&sortBy=name&sortOrder=asc",
@@ -510,7 +423,7 @@ async def test_groups_list_supports_search_sort_and_pagination(app, service_inst
     payload = response.json()
     assert payload["total"] == 1
     assert payload["items"][0]["vkId"] == 20
-    assert service_instance._repo.calls[0] == ("list_groups", 1, 1, "beta", "name", "asc")
+    assert repository.calls[0] == ("list_groups", 1, 1, "beta", "name", "asc")
 
 
 @pytest.mark.anyio

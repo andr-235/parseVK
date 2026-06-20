@@ -40,7 +40,7 @@ parseVK/
 
 Each service follows one of the architectural patterns below:
 
-### Layered Architecture (Refactored Services, e.g., `vk-service`)
+### Layered Architecture (Refactored Services, e.g., `vk-service`, `content-service`)
 
 Follows a strict clean layered structure with a dependency flow of: `api / tasks -> services -> domain <- infrastructure`.
 
@@ -59,6 +59,11 @@ services/vk-service/
 ├── pyproject.toml     # uv-managed dependencies and tools config
 └── Dockerfile
 ```
+
+`content-service` follows the same dependency direction and additionally keeps
+Kafka transport in `app/infrastructure/messaging/`, while `app/tasks/` owns
+worker lifecycle. Its application services and domain contracts do not import
+FastAPI, SQLAlchemy, HTTPX, aiokafka, or concrete infrastructure adapters.
 
 ### Legacy Three-Tier Structure (Other Services)
 

@@ -19,6 +19,21 @@ uv run pytest tests/ -v
 
 Конфиг тестов — корневой `pyproject.toml` (testpaths для 6 сервисов + libs, asyncio_mode=auto).
 
+### Content service architecture and migrations
+
+```powershell
+cd services/content-service
+uv run pytest tests/ -v
+uv run ruff check app tests alembic
+uv run alembic heads
+uv run alembic history
+```
+
+Tests include HTTP/event contracts, application services, dependency-direction
+checks, the 150-line production-file gate, repository mappings, and Kafka
+retry/offset behavior. A PostgreSQL-backed migration check must run
+`upgrade head -> downgrade 30edcb443fca -> upgrade head`.
+
 ## Frontend (Vitest)
 
 ```powershell

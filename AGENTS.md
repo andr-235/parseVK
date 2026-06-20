@@ -555,7 +555,7 @@ cache = {}
   * `identity-service/` — аутентификация (JWT), управление пользователями и ролями
   * `tasks-service/` — оркестрация задач на парсинг
   * `vk-service/` — интеграция с API ВКонтакте
-  * `content-service/` — хранилище авторов и групп (упрощенная версия)
+  * `content-service/` — слоистое хранилище контента и monitoring projections (`api / tasks -> services -> domain <- infrastructure`)
   * `telegram-service/` — клиент Telegram (Telethon), импорт и матчинг tgmbase
   * `listings-service/` — сервис хранения объявлений (Avito и др.) и выгрузки CSV
   * `moderation-service/` — пайплайн автоматической модерации контента

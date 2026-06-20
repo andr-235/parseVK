@@ -25,6 +25,22 @@
 | `WAPPI_*` | IM-сервис (WhatsApp через Wappi.pro) |
 | `VPN_SERVICE_TELEGRAM_URL` | SOCKS5-прокси для Telegram |
 
+## Content service
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CONTENT_KAFKA_GROUP_VK` | `content-service` | Consumer group for VK projection events |
+| `CONTENT_KAFKA_GROUP_IM` | `content-service-im` | Consumer group for IM projection events |
+| `CONTENT_KAFKA_RETRY_MAX_ATTEMPTS` | `3` | Maximum transient processing attempts |
+| `CONTENT_KAFKA_RETRY_BACKOFF_SECONDS` | `1` | Delay between retry attempts |
+| `CONTENT_KAFKA_POISON_POLICY` | `pause` | Exhausted-message policy: `pause` or `stop` |
+| `CONTENT_VK_SERVICE_BASE_URL` | `http://vk-service:8000` | Internal VK service URL |
+| `CONTENT_LOG_LEVEL` | `INFO` | Runtime log level |
+
+Legacy `MONITOR_*` variables remain accepted for backward compatibility. The
+current monitoring repository reads messages from the content-service database;
+remove legacy variables only after deployment configuration has been audited.
+
 ## Пример .env
 
 ```bash

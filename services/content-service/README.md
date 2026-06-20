@@ -1,33 +1,63 @@
-# ParseVK — Content Service
+# ParseVK Content Service
 
-Микросервис для сохранения, поиска и извлечения контента (посты, комментарии, группы, профили авторов) из различных источников.
+Хранилище и read-модель контента ParseVK: группы, авторы, посты,
+комментарии, IM-сообщения и группы мониторинга.
 
-## Структура модуля Content (`app/modules/content/`)
+## Архитектура
 
-В рамках рефакторинга и упрощения сервиса, слои роутеров, сервисов и репозиториев были декомпозированы в соответствии с правилом ограничения размера файлов (< 150 строк):
+Сервис использует dependency flow:
 
-- **Роутеры (`router.py`)**: Выступает в роли легковесного фасада, монтирующего специализированные под-роутеры:
-  - `groups_router.py` — эндпоинты для работы с сообществами.
-  - `posts_router.py` — эндпоинты для работы с постами и комментариями.
-  - `authors_router.py` — эндпоинты для работы с профилями авторов.
-- **Внедрение зависимостей (`dependencies.py`)**: Отвечает за инстанцирование `ContentService` с передачей репозиториев, предотвращая циклические импорты.
-- **Слой сервисов (`service.py`)**: Фасад `ContentService`, распределяющий вызовы между специализированными сервисами:
-  - `author_service.py` — бизнес-логика авторов.
-  - `group_service.py` — бизнес-логика групп.
-  - `post_service.py` — бизнес-логика постов.
-- **Слой репозиториев**:
-  - `author_repository.py` — запросы к таблице авторов.
-  - `group_repository.py` — запросы к таблице групп.
-  - `message_repository.py` — запросы к постам и комментариям.
-- **Вспомогательные модули (`helpers/`)**:
-  - `helpers/author_mappers.py` — маппинги авторов (словарь $\leftrightarrow$ модель, правила сортировки, парсинг имен).
-  - `helpers/group_mappers.py` — нормализация полей групп, маппинги и сортировка.
-  - `helpers/author_helpers.py` — тяжелая логика обновления профилей авторов через `vk-service` и обогащение фото-аналитикой.
-
-## Запуск тестов
-
-Тесты запускаются локально с помощью `pytest` из папки сервиса:
-
-```bash
-uv run pytest
+```text
+api / tasks -> services -> domain <- infrastructure
 ```
+
+- `app/api/` — FastAPI routers, schemas и dependency factories.
+- `app/services/` — application use cases без FastAPI, SQLAlchemy и Kafka.
+- `app/domain/` — repository/client Protocols, typed events и ошибки.
+- `app/infrastructure/db/` — SQLAlchemy models, repositories и session factory.
+- `app/infrastructure/clients/` — VK и moderation HTTP adapters.
+- `app/infrastructure/messaging/` — Kafka transport, retry и poison policy.
+- `app/tasks/` — lifecycle фоновых projection workers.
+- `app/bootstrap.py` — composition root.
+
+Routers не создают repositories или clients. Application services зависят
+только от узких Protocols. Транзакция Kafka-события завершается до commit
+offset.
+
+## Контракты
+
+- Content API: `/internal/content/*`, требуется internal service token.
+- Monitoring API: `/monitoring/*`; текущая политика доступа сохранена.
+- Kafka topics: `parsevk.vk.events`, `parsevk.im.events`.
+- IM identity: `(messenger, chat_external_id, external_id)`.
+
+## Запуск проверок
+
+```powershell
+cd services/content-service
+uv run pytest tests/ -v
+uv run ruff check app tests alembic
+uv run alembic heads
+uv run alembic history
+```
+
+Для migration smoke требуется PostgreSQL:
+
+```powershell
+uv run alembic upgrade head
+uv run alembic downgrade 30edcb443fca
+uv run alembic upgrade head
+```
+
+## Kafka failure policy
+
+Transient failures повторяются согласно `CONTENT_KAFKA_RETRY_*`. После
+исчерпания попыток policy `pause` останавливает чтение назначенных partitions,
+не коммитит offset и переводит readiness в ошибку. Policy `stop` завершает
+consumer исключением.
+
+## Безопасность логов
+
+Логи содержат event ID/type, topic, partition, offset и correlation ID.
+Токены, database URLs с credentials и полные пользовательские payloads
+логировать нельзя.

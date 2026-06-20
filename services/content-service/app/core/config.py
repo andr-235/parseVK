@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,11 +13,18 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_vk: str = "parsevk.vk.events"
     kafka_topic_im: str = "parsevk.im.events"
+    kafka_group_vk: str = "content-service"
+    kafka_group_im: str = "content-service-im"
     kafka_consumer_enabled: bool = False
+    kafka_retry_max_attempts: int = 3
+    kafka_retry_backoff_seconds: float = 1.0
+    kafka_poison_policy: Literal["pause", "stop"] = "pause"
+    vk_service_base_url: str = "http://vk-service:8000"
     photo_analysis_base_url: str | None = None
     photo_analysis_timeout_seconds: float = 1.5
     photo_analysis_max_concurrency: int = 5
     photo_analysis_enrichment_budget_seconds: float = 2.0
+    log_level: str = "INFO"
 
     # Настройки внешней БД мониторинга (WhatsApp / Max)
     monitor_database_url: str | None = Field(default=None, validation_alias="MONITOR_DATABASE_URL")

@@ -11,8 +11,11 @@ from _service_path import use_service_path  # noqa: E402
 
 use_service_path()
 
-from app.db.models import ImMessage  # noqa: E402
-from app.modules.monitoring.repository import MonitoringRepository  # noqa: E402
+from app.infrastructure.db.models import ImMessage  # noqa: E402
+from app.infrastructure.db.repositories.monitoring import (  # noqa: E402
+    MonitoringGroupRepository,
+    MonitoringMessageRepository,
+)
 
 
 @pytest.fixture
@@ -28,7 +31,7 @@ def make_repository(rows, model_type=ImMessage):
     result_mock = MagicMock()
     result_mock.scalars.return_value = scalars_mock
     session.execute = AsyncMock(return_value=result_mock)
-    return MonitoringRepository(session), session
+    return MonitoringMessageRepository(session), session
 
 
 @pytest.mark.asyncio
@@ -61,7 +64,7 @@ async def test_find_messages_uses_sqlalchemy_statement():
 
 @pytest.mark.asyncio
 async def test_get_groups_uses_sqlalchemy_statement():
-    from app.db.models import MonitoringGroup
+    from app.infrastructure.db.models import MonitoringGroup
 
     group = MagicMock(spec=MonitoringGroup)
     group.id = 1
@@ -76,9 +79,9 @@ async def test_get_groups_uses_sqlalchemy_statement():
     result_mock = MagicMock()
     result_mock.scalars.return_value = scalars_mock
     session.execute = AsyncMock(return_value=result_mock)
-    repository = MonitoringRepository(session)
+    repository = MonitoringGroupRepository(session)
 
-    rows = await repository.get_groups()
+    rows = await repository.list_groups()
 
     assert len(rows) == 1
     assert rows[0].name == "Group 1"
@@ -99,7 +102,7 @@ async def test_find_distinct_chats_uses_sqlalchemy_statement():
     session = AsyncMock()
     result_mock = iter([row])
     session.execute = AsyncMock(return_value=result_mock)
-    repository = MonitoringRepository(session)
+    repository = MonitoringMessageRepository(session)
 
     chats = await repository.find_distinct_chats()
 
