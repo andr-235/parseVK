@@ -1,3 +1,10 @@
+## [0.39.1](https://github.com/andr-235/parseVK/compare/v0.39.0...v0.39.1) (2026-06-21)
+
+
+### Bug Fixes
+
+* **tasks:** add missing cancel endpoint and global exception handler ([07747f0](https://github.com/andr-235/parseVK/commit/07747f0f67d20f94f67eba87e65c78f90f3be464))
+
 # [0.39.0](https://github.com/andr-235/parseVK/compare/v0.38.0...v0.39.0) (2026-06-19)
 
 
