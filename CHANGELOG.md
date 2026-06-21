@@ -1,3 +1,10 @@
+## [0.39.3](https://github.com/andr-235/parseVK/compare/v0.39.2...v0.39.3) (2026-06-21)
+
+
+### Bug Fixes
+
+* **vk-service,tasks-service:** add crash recovery for background asyncio tasks ([d2a8826](https://github.com/andr-235/parseVK/commit/d2a8826ca49686b9a0650bcc35ce0c65af31e5d7))
+
 ## [0.39.2](https://github.com/andr-235/parseVK/compare/v0.39.1...v0.39.2) (2026-06-21)
 
 
