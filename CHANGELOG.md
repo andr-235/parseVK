@@ -1,3 +1,10 @@
+## [0.39.4](https://github.com/andr-235/parseVK/compare/v0.39.3...v0.39.4) (2026-06-21)
+
+
+### Bug Fixes
+
+* **vk-service:** add structured VK API error code handling ([7b277a9](https://github.com/andr-235/parseVK/commit/7b277a92c2fb7f431a84c21ce734857f23b4e567))
+
 ## [0.39.3](https://github.com/andr-235/parseVK/compare/v0.39.2...v0.39.3) (2026-06-21)
 
 
