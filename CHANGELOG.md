@@ -1,3 +1,10 @@
+## [0.39.2](https://github.com/andr-235/parseVK/compare/v0.39.1...v0.39.2) (2026-06-21)
+
+
+### Bug Fixes
+
+* **tasks:** reset stale id sequences to fix duplicate key errors ([a0d63b6](https://github.com/andr-235/parseVK/commit/a0d63b663c3fbbd08c5e7b6d6a80fd473fca4684))
+
 ## [0.39.1](https://github.com/andr-235/parseVK/compare/v0.39.0...v0.39.1) (2026-06-21)
 
 
