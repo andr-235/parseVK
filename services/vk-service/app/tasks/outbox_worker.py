@@ -67,6 +67,7 @@ class OutboxPublisher:
 
 
 async def publish_outbox_forever() -> None:
+    logger.info("VK outbox publisher starting")
     while True:
         try:
             async with SessionLocal() as session:

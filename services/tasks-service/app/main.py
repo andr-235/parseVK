@@ -14,8 +14,32 @@ from app.modules.tasks.router import router as tasks_router
 
 logger = logging.getLogger(__name__)
 
+_outbox_publisher_healthy: list[bool] = [False]
+
+
+async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
+    retry_delay = 1
+    while True:
+        try:
+            if health_flag is not None:
+                health_flag[0] = True
+            await coro_factory()
+            break
+        except asyncio.CancelledError:
+            logger.info("%s cancelled, stopping supervise", name)
+            if health_flag is not None:
+                health_flag[0] = False
+            break
+        except Exception as e:
+            if health_flag is not None:
+                health_flag[0] = False
+            logger.error("%s crashed: %s. Restarting in %ds...", name, e, retry_delay)
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, 30)
+
 
 async def publish_outbox_forever() -> None:
+    logger.info("Tasks outbox publisher starting")
     while True:
         try:
             async with SessionLocal() as session:
@@ -30,7 +54,9 @@ async def publish_outbox_forever() -> None:
 async def lifespan(app: FastAPI):
     task = None
     if settings.outbox_publish_enabled:
-        task = asyncio.create_task(publish_outbox_forever())
+        task = asyncio.create_task(
+            supervise("Outbox publisher", publish_outbox_forever, health_flag=_outbox_publisher_healthy)
+        )
     try:
         yield
     finally:
@@ -45,7 +71,10 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, str]:
-        return {"status": "UP"}
+        return {
+            "status": "UP",
+            "outboxPublisher": "healthy" if _outbox_publisher_healthy[0] else "unhealthy",
+        }
 
     @app.get("/ready")
     async def ready() -> dict[str, str]:

@@ -1,12 +1,15 @@
 import json
+import logging
 from contextlib import suppress
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bootstrap import get_ingestion_service, get_task_events_handler
 from app.core.config import settings
-from app.infrastructure.db.session import SessionLocal
 from app.domain.events.task_events import TaskEvent
+from app.infrastructure.db.session import SessionLocal
+
+logger = logging.getLogger(__name__)
 
 
 class TaskEventsConsumer:
@@ -21,6 +24,11 @@ class TaskEventsConsumer:
     async def run_forever(self) -> None:
         from aiokafka import AIOKafkaConsumer
 
+        logger.info(
+            "Kafka consumer starting, topic=%s, group=%s",
+            settings.kafka_topic_tasks,
+            "vk-service",
+        )
         self._consumer = AIOKafkaConsumer(
             settings.kafka_topic_tasks,
             bootstrap_servers=settings.kafka_bootstrap_servers,
@@ -28,6 +36,7 @@ class TaskEventsConsumer:
             enable_auto_commit=False,
         )
         await self._consumer.start()
+        logger.info("Kafka consumer started, waiting for messages")
         try:
             async for message in self._consumer:
                 await self.handle_message(message.value)
