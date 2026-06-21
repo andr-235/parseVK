@@ -258,6 +258,38 @@ class TasksCrudService:
         )
         return task_to_response(task)
 
+    async def cancel_task(self, owner_user_id: str, task_id: int) -> dict | None:
+        task = await self.repository.get_task(owner_user_id, task_id)
+        if not task:
+            return None
+        if task.status != "running":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Can only cancel running tasks",
+            )
+        task.status = "cancelled"
+        await self.repository.add_audit(
+            TaskAuditLog(
+                owner_user_id=owner_user_id,
+                aggregate_type="task",
+                aggregate_id=str(task.id),
+                task_id=task.id,
+                event_type="task.cancelled",
+                event_data={"taskId": str(task.id)},
+            )
+        )
+        await self.outbox.add_event(
+            event_type="task.cancelled",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            payload={
+                "taskId": str(task.id),
+                "ownerUserId": owner_user_id,
+            },
+        )
+        task = await self.repository.touch_task(task)
+        return task_to_response(task)
+
     async def delete_task(self, owner_user_id: str, task_id: int) -> None:
         task = await self.repository.get_task(owner_user_id, task_id)
         if not task:

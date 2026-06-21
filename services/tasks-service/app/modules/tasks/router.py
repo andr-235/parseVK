@@ -139,6 +139,18 @@ async def check_task(
     return task
 
 
+@router.post("/{task_id}/cancel")
+async def cancel_task(
+    task_id: int,
+    owner_user_id: Annotated[str, Depends(require_owner_user_id)],
+    service: TasksService = Depends(get_tasks_service),
+):
+    task = await service.cancel_task(owner_user_id, task_id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    return task
+
+
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
     task_id: int,

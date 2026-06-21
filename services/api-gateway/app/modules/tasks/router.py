@@ -84,6 +84,15 @@ async def check_task(
     return await service.forward(request, "POST", f"/internal/tasks/{task_id}/check")
 
 
+@router.post("/{task_id}/cancel")
+async def cancel_task(
+    task_id: int,
+    request: Request,
+    service: TasksGatewayService = Depends(get_tasks_gateway_service),
+):
+    return await service.forward(request, "POST", f"/internal/tasks/{task_id}/cancel")
+
+
 @router.delete("/{task_id}", status_code=204)
 async def delete_task(
     task_id: int,

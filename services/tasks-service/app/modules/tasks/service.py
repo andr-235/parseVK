@@ -56,6 +56,9 @@ class TasksService:
     async def check_task(self, owner_user_id: str, task_id: int) -> dict | None:
         return await self.crud.check_task(owner_user_id, task_id)
 
+    async def cancel_task(self, owner_user_id: str, task_id: int) -> dict | None:
+        return await self.crud.cancel_task(owner_user_id, task_id)
+
     async def delete_task(self, owner_user_id: str, task_id: int) -> None:
         return await self.crud.delete_task(owner_user_id, task_id)
 

@@ -2,7 +2,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
@@ -61,6 +62,14 @@ def create_app() -> FastAPI:
 
     app.include_router(automation_router)
     app.include_router(tasks_router)
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        logger.exception("Unhandled exception: %s", exc)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "type": type(exc).__name__},
+        )
 
     Instrumentator().instrument(app).expose(app)
 
