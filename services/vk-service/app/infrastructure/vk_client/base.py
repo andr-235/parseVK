@@ -1,15 +1,22 @@
 import asyncio
+import logging
 from collections.abc import Callable
 from typing import Any
 
 try:
     import vk_api
+    from vk_api.exceptions import ApiError as VkApiLibraryError
+    _VK_API_ERRORS = (VkApiLibraryError,)
 except ImportError:  # pragma: no cover
     vk_api = None
+    _VK_API_ERRORS = ()
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
+from app.domain.exceptions.vk_api import map_vk_error
 from app.domain.ports.vk_api import VkApiPort
+
+logger = logging.getLogger("vk-service.vk_client")
 
 VK_API_VERSION = "5.199"
 
@@ -66,6 +73,11 @@ class VkApiBaseClient:
 
         try:
             return api_method(**params)
+        except _VK_API_ERRORS as exc:
+            code = exc.code
+            msg = exc.error.get("error_msg", "Unknown error")
+            logger.warning("VK API error [%d]: %s (method=%s)", code, msg, method)
+            raise map_vk_error(code, redact_secrets(msg), method) from exc
         except Exception as exc:
             raise RuntimeError(self._safe_error_message(exc)) from exc
 

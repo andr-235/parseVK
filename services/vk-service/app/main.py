@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
+from app.domain.exceptions.vk_api import VkApiAuthError
 from app.tasks import TaskEventsConsumer, publish_outbox_forever
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,16 @@ async def supervise(name: str, coro_factory, health_flag: list[bool] | None = No
             break
         except asyncio.CancelledError:
             logger.info("%s cancelled, stopping supervise", name)
+            if health_flag is not None:
+                health_flag[0] = False
+            break
+        except VkApiAuthError as e:
+            logger.critical(
+                "%s failed with VK API auth error [%d]: %s. "
+                "VK application token may be blocked or invalid. "
+                "Stopping retries.",
+                name, e.code, e.error_msg,
+            )
             if health_flag is not None:
                 health_flag[0] = False
             break
@@ -80,6 +91,7 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {
             "status": "UP",
+            "vkTokenConfigured": "yes" if settings.vk_token else "no",
             "kafkaConsumer": "healthy" if _consumer_healthy[0] else "unhealthy",
             "outboxPublisher": "healthy" if _publisher_healthy[0] else "unhealthy",
         }

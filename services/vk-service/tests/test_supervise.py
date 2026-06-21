@@ -9,6 +9,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.domain.exceptions.vk_api import VkApiAuthError
 from app.main import supervise
 
 
@@ -62,3 +63,14 @@ async def test_supervise_no_health_flag():
         pass
 
     await supervise("test", ok)
+
+
+@pytest.mark.anyio
+async def test_supervise_stops_on_vk_auth_error():
+    health_flag = [False]
+
+    async def failing():
+        raise VkApiAuthError(8, "Application is blocked")
+
+    await supervise("test", failing, health_flag=health_flag)
+    assert health_flag[0] is False

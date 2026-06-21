@@ -9,7 +9,13 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.domain.exceptions.vk_api import (
+    VkApiAuthError,
+    VkApiInfrastructureError,
+    VkApiRateLimitError,
+)
 from app.infrastructure.vk_client.client import VkApiClient, VkApiConfigurationError
+from app.services.ingestion.pipeline import IngestionPipeline
 from app.services.ingestion_service import IngestionService
 
 
@@ -267,5 +273,31 @@ def test_vk_token_redaction():
     err = "Failed with secret-token-123 in message"
     sanitized = service._sanitize_error(err)
     assert sanitized == "Failed with <redacted> in message"
+
+
+class TestIsInfrastructureError:
+    def test_dbapi_error_is_infrastructure(self):
+        import sqlalchemy.exc
+        assert IngestionPipeline._is_infrastructure_error(sqlalchemy.exc.DBAPIError(False, None, None))
+
+    def test_cancelled_error_is_infrastructure(self):
+        import asyncio
+        assert IngestionPipeline._is_infrastructure_error(asyncio.CancelledError())
+
+    def test_request_error_is_infrastructure(self):
+        import httpx
+        assert IngestionPipeline._is_infrastructure_error(httpx.RequestError("timeout", request=httpx.Request("GET", "http://test")))
+
+    def test_rate_limit_is_infrastructure(self):
+        assert IngestionPipeline._is_infrastructure_error(VkApiRateLimitError(6, "rate limit"))
+
+    def test_infrastructure_vk_error_is_infrastructure(self):
+        assert IngestionPipeline._is_infrastructure_error(VkApiInfrastructureError(10, "server error"))
+
+    def test_auth_error_is_not_infrastructure(self):
+        assert not IngestionPipeline._is_infrastructure_error(VkApiAuthError(8, "blocked"))
+
+    def test_value_error_is_not_infrastructure(self):
+        assert not IngestionPipeline._is_infrastructure_error(ValueError("bad"))
 
 

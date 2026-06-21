@@ -24,7 +24,7 @@ async def test_health_returns_up():
         response = await client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "UP", "kafkaConsumer": "unhealthy", "outboxPublisher": "unhealthy"}
+    assert response.json() == {"status": "UP", "vkTokenConfigured": "no", "kafkaConsumer": "unhealthy", "outboxPublisher": "unhealthy"}
 
 
 @pytest.mark.anyio
