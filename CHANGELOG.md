@@ -1,3 +1,10 @@
+# [0.40.0](https://github.com/andr-235/parseVK/compare/v0.39.4...v0.40.0) (2026-06-22)
+
+
+### Features
+
+* **vk-service:** add VK token diagnostics for startup and health check ([abff535](https://github.com/andr-235/parseVK/commit/abff535c38ec9cf3bf76b69091986279a525eb3d))
+
 ## [0.39.4](https://github.com/andr-235/parseVK/compare/v0.39.3...v0.39.4) (2026-06-21)
 
 
