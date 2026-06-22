@@ -11,9 +11,10 @@ export type Props = {
   onClose: () => void
   onAddToWatchlist?: () => void
   isAddingToWatchlist?: boolean
+  onStatusChange?: (status: string) => void
 }
 
-export function CommentDetail({ comment, onClose, onAddToWatchlist, isAddingToWatchlist }: Props) {
+export function CommentDetail({ comment, onClose, onAddToWatchlist, isAddingToWatchlist, onStatusChange }: Props) {
   useKeyPress('Escape', onClose, !!comment)
   const detailRef = useFocusTrap(!!comment)
 
@@ -118,10 +119,10 @@ export function CommentDetail({ comment, onClose, onAddToWatchlist, isAddingToWa
           </div>
         </div>
         <div className="flex gap-2 pt-2 flex-wrap">
-          <Button variant="primary" semantic="success" size="sm" aria-label="Отметить как чисто" icon={<CheckCircle size={14} />}>
+          <Button variant="primary" semantic="success" size="sm" aria-label="Отметить как чисто" icon={<CheckCircle size={14} />} onClick={() => onStatusChange?.('Чисто')}>
             Чисто
           </Button>
-          <Button variant="primary" semantic="danger" size="sm" aria-label="Отметить как нарушение" icon={<Flag size={14} />}>
+          <Button variant="primary" semantic="danger" size="sm" aria-label="Отметить как нарушение" icon={<Flag size={14} />} onClick={() => onStatusChange?.('Нарушение')}>
             Нарушение
           </Button>
           {onAddToWatchlist && (
@@ -138,9 +139,11 @@ export function CommentDetail({ comment, onClose, onAddToWatchlist, isAddingToWa
               {isAddingToWatchlist ? 'Добавление...' : 'На карандаш'}
             </Button>
           )}
-          <Button variant="secondary" semantic="default" size="sm" aria-label="Открыть в источнике" icon={<ExternalLink size={14} />}>
-            Открыть
-          </Button>
+          {comment.postUrl && (
+            <Button variant="secondary" semantic="default" size="sm" aria-label="Открыть в источнике" icon={<ExternalLink size={14} />} onClick={() => { if (comment.postUrl) window.open(comment.postUrl, '_blank', 'noopener') }}>
+              Открыть
+            </Button>
+          )}
         </div>
       </div>
     </aside>

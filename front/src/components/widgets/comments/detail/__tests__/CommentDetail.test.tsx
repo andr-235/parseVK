@@ -11,6 +11,7 @@ const mockComment: Comment = {
   author: 'Иван Иванов',
   date: '01.06.2026',
   status: 'Новый',
+  postUrl: 'https://vk.com/wall-123_456',
 }
 
 describe('CommentDetail', () => {

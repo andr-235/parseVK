@@ -23,6 +23,7 @@ export type Comment = {
   groupAvatar?: string
   date: string
   status: Status
+  postUrl?: string
 }
 
 export type UndoEntry = {

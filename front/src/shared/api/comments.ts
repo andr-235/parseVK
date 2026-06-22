@@ -1,4 +1,4 @@
-import { apiGet } from './client'
+import { apiGet, apiPatch } from './client'
 import { type Comment, type Status } from '../../types/comments'
 
 type AuthorDTO = {
@@ -26,6 +26,8 @@ type CommentDTO = {
   author?: AuthorDTO
   group?: GroupDTO
   is_read: boolean
+  status?: string
+  post_url?: string
 }
 
 type CommentListResponse = {
@@ -80,7 +82,8 @@ function mapComment(dto: CommentDTO): Comment {
     groupScreenName: dto.group?.screen_name,
     groupAvatar: dto.group?.photo_50,
     date: formatDate(dto.created_at),
-    status: (dto.is_read ? 'Проверка' : 'Новый') as Status,
+    status: (dto.status ?? (dto.is_read ? 'Проверка' : 'Новый')) as Status,
+    postUrl: dto.post_url,
   }
 }
 
@@ -100,4 +103,8 @@ export async function fetchComments(params: CommentsQueryParams): Promise<{ comm
     comments: data.items.map(mapComment),
     total: data.total,
   }
+}
+
+export async function updateCommentStatus(id: number, status: string): Promise<void> {
+  await apiPatch(`/comments/${id}/status`, { status })
 }

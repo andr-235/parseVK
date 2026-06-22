@@ -101,7 +101,7 @@ export const TableBody = memo(function TableBody({ rows, selectedId, focusedInde
                   <Pencil size={14} />
                 </Button>
               )}
-              <Button variant="icon" onClick={(e) => e.stopPropagation()} aria-label="Открыть post в источнике">
+              <Button variant="icon" onClick={(e) => { e.stopPropagation(); if (c.postUrl) window.open(c.postUrl, '_blank', 'noopener') }} aria-label="Открыть post в источнике">
                 <ExternalLink size={14} />
               </Button>
             </div>

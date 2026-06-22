@@ -32,9 +32,10 @@ type CommentsTableProps = {
   selectedId: number | null
   onError?: (msg: string | null) => void
   onAddToWatchlist?: (commentId: number) => void
+  onUpdateStatus?: (id: number, status: string) => void
 }
 
-export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist }: CommentsTableProps) {
+export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist, onUpdateStatus }: CommentsTableProps) {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [page, setPage] = useState(1)
@@ -127,7 +128,8 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist 
       if (prev[id] === newStatus) return prev
       return { ...prev, [id]: newStatus }
     })
-  }, [])
+    onUpdateStatus?.(id, newStatus)
+  }, [onUpdateStatus])
 
   const handleToggleAll = useCallback(() => toggleAll(paged.map((c) => c.id)), [toggleAll, paged])
   const resetFilters = useCallback(() => { setSearch(''); setGroupFilter('Все группы'); setStatusFilter('Все статусы'); setPage(1) }, [])
