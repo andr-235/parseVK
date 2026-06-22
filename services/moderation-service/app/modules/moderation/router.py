@@ -5,6 +5,7 @@ from app.modules.moderation.schemas import (
     CommentModerationList,
     CommentModerationState,
     UpdateCommentReadStatus,
+    UpdateCommentStatus,
 )
 from app.modules.moderation.service import ModerationService
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -83,6 +84,18 @@ async def update_read_status(
     service: ModerationService = Depends(get_moderation_service),
 ):
     updated = await service.update_read_status(id, payload.is_read)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+    return updated
+
+
+@router.patch("/comments/{id}/status", response_model=CommentModerationState)
+async def update_comment_status(
+    id: int,
+    payload: UpdateCommentStatus,
+    service: ModerationService = Depends(get_moderation_service),
+):
+    updated = await service.update_status(id, payload.status)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
     return updated

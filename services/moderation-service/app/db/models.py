@@ -27,6 +27,7 @@ class ModerationComment(Base):
     __table_args__ = (
         Index("ix_moderation_comments_date_id", "date", "id"),
         Index("ix_moderation_comments_is_read", "is_read"),
+        Index("ix_moderation_comments_status", "status"),
         Index("ix_moderation_comments_watchlist_author_id", "watchlist_author_id"),
     )
 
@@ -37,6 +38,7 @@ class ModerationComment(Base):
     date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     author_vk_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="Новый")
     source: Mapped[str] = mapped_column(String(32), nullable=False, default="TASK")
     matched_keywords: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
     watchlist_author_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("watchlist_authors.id", ondelete="SET NULL"), nullable=True)

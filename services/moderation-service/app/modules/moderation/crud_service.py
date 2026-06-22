@@ -183,6 +183,16 @@ class ModerationCrudService:
         await self.session.execute(stmt)
         return {"id": id, "is_read": is_read}
 
+    async def update_status(self, id: int, status: str) -> dict[str, Any]:
+        logger.debug("ModerationCrudService.update_status: id=%d, status=%s", id, status)
+        stmt = (
+            update(ModerationComment)
+            .where(ModerationComment.id == id)
+            .values(status=status, updated_at=datetime.now(UTC))
+        )
+        await self.session.execute(stmt)
+        return {"id": id, "status": status}
+
     async def is_processed(self, event_id: UUID) -> bool:
         logger.debug("ModerationCrudService.is_processed: event_id=%s", event_id)
         stmt = select(ProcessedEvent).where(

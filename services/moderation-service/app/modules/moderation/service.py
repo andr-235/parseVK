@@ -63,6 +63,9 @@ class ModerationService:
     async def update_read_status(self, id: int, is_read: bool):
         return await self.crud.update_read_status(id, is_read)
 
+    async def update_status(self, id: int, status: str):
+        return await self.crud.update_status(id, status)
+
     async def handle_event(self, event: VkEvent) -> bool:
         logger.debug("ModerationService.handle_event: event_id=%s type=%s", event.event_id, event.event_type)
         if await self.crud.is_processed(event.event_id):
