@@ -1,3 +1,10 @@
+## [0.41.1](https://github.com/andr-235/parseVK/compare/v0.41.0...v0.41.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* **moderation-service:** return actual matched text fragments instead of keyword base forms ([0845add](https://github.com/andr-235/parseVK/commit/0845add0958a8ed1f7e3351d3f6d8fb49ac7b263))
+
 # [0.41.0](https://github.com/andr-235/parseVK/compare/v0.40.5...v0.41.0) (2026-06-22)
 
 
