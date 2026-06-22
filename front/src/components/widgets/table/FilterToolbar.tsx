@@ -1,11 +1,12 @@
 import { Download, X } from 'lucide-react'
 import { Button, Input, Select } from '../../ui'
-import { GROUP_OPTIONS, STATUS_FILTER_OPTIONS } from './constants'
+import { STATUS_FILTER_OPTIONS } from './constants'
 
 export type FilterToolbarProps = {
   search: string
   onSearchChange: (v: string) => void
   groupFilter: string
+  groupOptions: readonly string[]
   onGroupFilterChange: (v: string) => void
   statusFilter: string
   onStatusFilterChange: (v: string) => void
@@ -15,7 +16,7 @@ export type FilterToolbarProps = {
 
 export function FilterToolbar({
   search, onSearchChange,
-  groupFilter, onGroupFilterChange,
+  groupFilter, groupOptions, onGroupFilterChange,
   statusFilter, onStatusFilterChange,
   onReset, selectedCount,
 }: FilterToolbarProps) {
@@ -26,7 +27,7 @@ export function FilterToolbar({
         placeholder="Поиск по тексту..."
         aria-label="Поиск по тексту комментариев"
       />
-      <Select value={groupFilter} options={GROUP_OPTIONS} onChange={onGroupFilterChange} label="Фильтр по группе" />
+      <Select value={groupFilter} options={groupOptions} onChange={onGroupFilterChange} label="Фильтр по группе" />
       <Select value={statusFilter} options={STATUS_FILTER_OPTIONS} onChange={onStatusFilterChange} label="Фильтр по статусу" />
       <Button variant="secondary" size="xs" onClick={onReset} aria-label="Сбросить все фильтры" icon={<X size={12} />}>
         Сбросить

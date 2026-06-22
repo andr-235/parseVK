@@ -91,10 +91,14 @@ async def lifespan(app: FastAPI):
         consumer_task = asyncio.create_task(
             supervise("Kafka consumer", run_consumer, health_flag=_consumer_healthy)
         )
+    else:
+        logger.info("VK Kafka consumer disabled by configuration")
     if settings.outbox_publish_enabled:
         publisher_task = asyncio.create_task(
             supervise("Outbox publisher", run_publisher, health_flag=_publisher_healthy)
         )
+    else:
+        logger.info("VK outbox publisher disabled by configuration")
     try:
         yield
     finally:
@@ -137,7 +141,7 @@ def create_app() -> FastAPI:
                 await conn.execute(text("SELECT 1"))
             return {"status": "READY"}
         except Exception as e:
-            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}")
+            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}") from e
 
     app.include_router(vk_router)
     app.include_router(vk_friends_router)

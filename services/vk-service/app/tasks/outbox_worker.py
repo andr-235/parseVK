@@ -26,16 +26,24 @@ def kafka_key_for_event(event_type: str, payload: dict, aggregate_id: str) -> st
 
 
 class OutboxPublisher:
-    def __init__(self, repository: SqlAlchemyOutboxRepository, *, topic: str | None = None):
+    def __init__(
+        self,
+        repository: SqlAlchemyOutboxRepository,
+        *,
+        topic: str | None = None,
+        producer_factory=None,
+    ):
         self.repository = repository
         self.topic = topic or settings.kafka_topic_vk
+        self._producer_factory = producer_factory
         self._producer = None
 
     async def publish_pending(self, *, limit: int = 100) -> int:
         from aiokafka import AIOKafkaProducer
 
         if self._producer is None:
-            self._producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_bootstrap_servers)
+            producer_factory = self._producer_factory or AIOKafkaProducer
+            self._producer = producer_factory(bootstrap_servers=settings.kafka_bootstrap_servers)
             await self._producer.start()
 
         count = 0
@@ -55,6 +63,12 @@ class OutboxPublisher:
                 self.topic,
                 key=key.encode("utf-8"),
                 value=json.dumps(envelope, default=json_default).encode("utf-8"),
+            )
+            logger.debug(
+                "Published VK outbox event id=%s type=%s topic=%s",
+                event.id,
+                event.event_type,
+                self.topic,
             )
             await self.repository.mark_published(event)
             count += 1
