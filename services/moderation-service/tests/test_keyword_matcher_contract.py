@@ -21,7 +21,7 @@ def keyword(word, *, forms=None, is_phrase=False):
 def test_keyword_matcher_handles_punctuation_and_forms():
     candidates = build_keyword_candidates([keyword("опасно", forms=["опасная"])])
 
-    assert match_keyword_candidates(candidates, "Опасная, ситуация.") == ["опасно"]
+    assert match_keyword_candidates(candidates, "Опасная, ситуация.") == ["Опасная"]
     assert match_keyword_candidates(candidates, "безопасная ситуация") == []
 
 

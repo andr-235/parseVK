@@ -67,8 +67,8 @@ def test_keyword_candidates_match_words_and_forms():
     )
     candidates = build_keyword_candidates([keyword])
 
-    assert match_keyword_candidates(candidates, "У этой кошки черный хвост") == ["кошка"]
-    assert match_keyword_candidates(candidates, "кошки") == ["кошка"]
+    assert match_keyword_candidates(candidates, "У этой кошки черный хвост") == ["кошки"]
+    assert match_keyword_candidates(candidates, "кошки") == ["кошки"]
     assert match_keyword_candidates(candidates, "кошкин дом") == []
 
 

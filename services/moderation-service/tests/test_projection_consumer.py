@@ -113,7 +113,7 @@ async def test_handle_event_saves_matching_comment_and_marks_processed():
     assert saved["text"] == "Привет, мир!"
     assert saved["author_vk_id"] == 999
     assert saved["source"] == "VK"
-    assert saved["matched_keywords"] == ["привет"]
+    assert saved["matched_keywords"] == ["Привет"]
 
 
 @pytest.mark.anyio

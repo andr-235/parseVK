@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from app.db.models import Keyword
-from app.modules.keywords.morphology import normalize_for_keyword_match
+from app.modules.keywords.morphology import YO_TO_E, normalize_for_keyword_match
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +53,21 @@ def match_keyword_candidates(candidates: Iterable[KeywordCandidate], text: str |
     if not normalized_text:
         logger.debug("Keyword match skipped: empty normalized text")
         return []
-    matched = {
-        candidate.word
-        for candidate in candidates
-        if any(pattern.search(normalized_text) for pattern in candidate.patterns)
-    }
+    matched: set[str] = set()
+    for candidate in candidates:
+        for pattern in candidate.patterns:
+            if pattern.search(normalized_text):
+                m = pattern.search(text) if text else None
+                if m:
+                    matched.add(m.group())
+                else:
+                    text_yo = text.translate(YO_TO_E) if text else None
+                    m2 = pattern.search(text_yo) if text_yo else None
+                    if m2:
+                        matched.add(m2.group())
+                    else:
+                        matched.add(candidate.word)
+                break
     logger.debug("Keyword match completed: matched_count=%d", len(matched))
     return sorted(matched)
 
