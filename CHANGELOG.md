@@ -1,3 +1,10 @@
+## [0.40.3](https://github.com/andr-235/parseVK/compare/v0.40.2...v0.40.3) (2026-06-22)
+
+
+### Bug Fixes
+
+* moderated comment page ([91d2948](https://github.com/andr-235/parseVK/commit/91d29481cc1ca3768cf4aa0f802a8c1461a40e07))
+
 ## [0.40.2](https://github.com/andr-235/parseVK/compare/v0.40.1...v0.40.2) (2026-06-22)
 
 
