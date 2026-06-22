@@ -1,3 +1,10 @@
+## [0.42.1](https://github.com/andr-235/parseVK/compare/v0.42.0...v0.42.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* **front:** truncate long comment text with ellipsis instead of wrapping ([6644c16](https://github.com/andr-235/parseVK/commit/6644c16da7cf63ad1bc3670d66c218d80f3af6a7))
+
 # [0.42.0](https://github.com/andr-235/parseVK/compare/v0.41.2...v0.42.0) (2026-06-22)
 
 
