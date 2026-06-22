@@ -8,6 +8,7 @@ describe('FilterToolbar', () => {
     search: '',
     onSearchChange: vi.fn(),
     groupFilter: 'Все группы',
+    groupOptions: ['Все группы', 'Группа 1'],
     onGroupFilterChange: vi.fn(),
     statusFilter: 'Все статусы',
     onStatusFilterChange: vi.fn(),

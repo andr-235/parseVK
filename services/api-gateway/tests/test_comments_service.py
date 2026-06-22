@@ -97,7 +97,7 @@ async def test_get_comments_preserves_upstream_http_status():
         content_client=EmptyContentClient(),
     )
 
-    with pytest.raises(BackendServiceError) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await service.get_comments(page=1, limit=20)
 
     assert exc_info.value.status_code == 409
@@ -217,7 +217,8 @@ async def test_get_comments_maps_unavailable_upstream_to_502():
         content_client=EmptyContentClient(),
     )
 
-    with pytest.raises(BackendUnavailableError) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await service.get_comments(page=1, limit=20)
 
-    assert exc_info.value.service_name == "Moderation"
+    assert exc_info.value.status_code == 502
+    assert exc_info.value.detail == "Moderation service error"

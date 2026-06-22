@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
@@ -8,6 +9,8 @@ from app.core.config import settings
 from app.modules.moderation.consumer import ProjectionConsumer
 from app.modules.moderation.router import router as moderation_router
 from app.modules.photo_analysis.router import router as photo_analysis_router
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -30,6 +33,8 @@ async def lifespan(app: FastAPI):
     monitor_task = None
     if settings.kafka_consumer_enabled:
         task = asyncio.create_task(consumer.run_forever())
+    else:
+        logger.info("Moderation Kafka consumer disabled by configuration")
     
     # Запускаем фоновый мониторинг авторов watchlist
     monitor_task = asyncio.create_task(publish_watchlist_monitor_forever(async_session_maker))
@@ -66,7 +71,7 @@ def create_app() -> FastAPI:
                 await conn.execute(text("SELECT 1"))
             return {"status": "READY"}
         except Exception as e:
-            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}")
+            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}") from e
 
     from app.modules.keywords.router import router as keywords_router
     from app.modules.watchlist.router import router as watchlist_router

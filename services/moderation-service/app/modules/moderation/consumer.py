@@ -39,9 +39,15 @@ class ProjectionConsumer:
         await self.start()
         try:
             async for msg in self.consumer:
+                event_id = None
+                event_type = None
+                correlation_id = None
                 try:
                     payload = json.loads(msg.value.decode("utf-8"))
                     event = VkEvent.model_validate(payload)
+                    event_id = event.event_id
+                    event_type = event.event_type
+                    correlation_id = event.correlation_id
                     logger.debug(
                         "Moderation Kafka message received event_id=%s type=%s offset=%s",
                         event.event_id,
@@ -54,8 +60,11 @@ class ProjectionConsumer:
                     await self.consumer.commit()
                 except Exception as e:
                     logger.exception(
-                        "Error processing moderation Kafka message offset=%s",
+                        "Error processing moderation Kafka message offset=%s event_id=%s type=%s correlation_id=%s",
                         getattr(msg, "offset", None),
+                        event_id,
+                        event_type,
+                        correlation_id,
                         exc_info=e,
                     )
         except asyncio.CancelledError:

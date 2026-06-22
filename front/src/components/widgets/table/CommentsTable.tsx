@@ -64,6 +64,11 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist 
     }))
   }, [serverComments, statusOverrides])
 
+  const groupOptions = useMemo(() => {
+    const groups = Array.from(new Set(localComments.map((c) => c.group))).sort((a, b) => a.localeCompare(b, 'ru'))
+    return ['Все группы', ...groups]
+  }, [localComments])
+
   const total = query.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
@@ -127,6 +132,12 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist 
   const handleToggleAll = useCallback(() => toggleAll(paged.map((c) => c.id)), [toggleAll, paged])
   const resetFilters = useCallback(() => { setSearch(''); setGroupFilter('Все группы'); setStatusFilter('Все статусы'); setPage(1) }, [])
 
+  useEffect(() => {
+    if (groupFilter !== 'Все группы' && !groupOptions.includes(groupFilter)) {
+      setGroupFilter('Все группы')
+    }
+  }, [groupFilter, groupOptions])
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     const rows = pagedRef.current
     const idx = focusedIndex
@@ -165,7 +176,7 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist 
 
       <FilterToolbar
         search={search} onSearchChange={setSearch}
-        groupFilter={groupFilter} onGroupFilterChange={(v) => { setGroupFilter(v); setPage(1) }}
+        groupFilter={groupFilter} groupOptions={groupOptions} onGroupFilterChange={(v) => { setGroupFilter(v); setPage(1) }}
         statusFilter={statusFilter} onStatusFilterChange={(v) => { setStatusFilter(v); setPage(1) }}
         onReset={resetFilters} selectedCount={count}
       />
@@ -181,7 +192,10 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist 
       )}
 
       {paged.length === 0 ? (
-        <EmptyState onReset={resetFilters} />
+        <EmptyState
+          onReset={resetFilters}
+          message={localComments.length > 0 ? 'Комментарии скрыты текущими фильтрами' : 'Ничего не найдено'}
+        />
       ) : (
         <>
           <TableShell tableRef={tableRef} onKeyDown={handleKeyDown} ariaLabel="Таблица комментариев. Используйте стрелки для навигации, C/V/R для статусов.">

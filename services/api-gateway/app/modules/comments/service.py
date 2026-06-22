@@ -6,7 +6,7 @@ from typing import Any
 from app.clients.content.client import ContentServiceClient
 from app.clients.moderation.client import ModerationServiceClient
 from app.core.exceptions import BackendServiceError, BackendUnavailableError
-from app.modules._base import forward_service_request
+from app.modules._base import forward_service_request, translate_gateway_error
 from app.modules.comments.mappers.comment_mapper import (
     format_comment_detail,
     format_comment_search_item,
@@ -26,6 +26,38 @@ class CommentsGatewayService:
     ):
         self.moderation_client = moderation_client or ModerationServiceClient()
         self.content_client = content_client or ContentServiceClient()
+
+    async def _moderation_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+        params: dict | None = None,
+        json: Any | None = None,
+    ) -> Any:
+        try:
+            return await forward_service_request(
+                self.moderation_client,
+                method,
+                path,
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                params=params,
+                json=json,
+            )
+        except (BackendServiceError, BackendUnavailableError) as exc:
+            logger.warning(
+                "Moderation request failed method=%s path=%s request_id=%s correlation_id=%s",
+                method,
+                path,
+                request_id,
+                correlation_id,
+            )
+            raise translate_gateway_error(exc) from exc
 
     async def _enrich_comments(
         self,
@@ -98,8 +130,7 @@ class CommentsGatewayService:
         request_id: str | None = None,
         correlation_id: str | None = None,
     ) -> CommentsListResponse:
-        raw = await forward_service_request(
-            self.moderation_client,
+        raw = await self._moderation_request(
             "GET",
             "/internal/moderation/comments",
             user_id=user_id,
@@ -135,8 +166,7 @@ class CommentsGatewayService:
         request_id: str | None = None,
         correlation_id: str | None = None,
     ) -> CommentsCursorResponse:
-        raw = await forward_service_request(
-            self.moderation_client,
+        raw = await self._moderation_request(
             "GET",
             "/internal/moderation/comments/cursor",
             user_id=user_id,
@@ -172,8 +202,7 @@ class CommentsGatewayService:
         if not isinstance(is_read, bool):
             raise ValueError("is_read must be a boolean")
 
-        return await forward_service_request(
-            self.moderation_client,
+        return await self._moderation_request(
             "PATCH",
             f"/internal/moderation/comments/{comment_id}/read",
             user_id=user_id,
@@ -205,8 +234,7 @@ class CommentsGatewayService:
         if read_status and read_status != "all":
             params["readStatus"] = read_status
 
-        raw = await forward_service_request(
-            self.moderation_client,
+        raw = await self._moderation_request(
             "GET",
             "/internal/moderation/comments",
             user_id=user_id,
