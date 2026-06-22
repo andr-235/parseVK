@@ -1,3 +1,10 @@
+## [0.40.1](https://github.com/andr-235/parseVK/compare/v0.40.0...v0.40.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* **vk-service:** map unknown VK API errors to domain error instead of auth ([7efe22f](https://github.com/andr-235/parseVK/commit/7efe22f5dacaa1b496c67e99f2ba1c991339e5c5))
+
 # [0.40.0](https://github.com/andr-235/parseVK/compare/v0.39.4...v0.40.0) (2026-06-22)
 
 
