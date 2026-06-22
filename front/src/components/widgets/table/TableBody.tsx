@@ -31,7 +31,7 @@ export const TableBody = memo(function TableBody({ rows, selectedId, focusedInde
               onClick={(e) => e.stopPropagation()} aria-label={`Выбрать комментарий ${c.id}`}
             />
           </td>
-          <td className="break-words whitespace-normal px-3 py-2 text-text-primary">
+          <td className="min-w-0 max-w-md truncate px-3 py-2 text-text-primary">
             <HighlightedText text={c.text} keywords={c.matchedKeywords} />
           </td>
           <td className="hidden px-3 py-2 sm:table-cell">
