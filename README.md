@@ -11,6 +11,20 @@ docker compose up -d
 
 После запуска: **Frontend** http://localhost:8080, **API Gateway** http://localhost:3002, **Grafana** http://localhost:3001
 
+## Пример
+
+```bash
+# Создать задачу парсинга группы ВКонтакте
+curl -X POST http://localhost:3002/api/v1/tasks \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"type": "vk_group", "target": "durov"}'
+
+# Проверить статус
+curl http://localhost:3002/api/v1/tasks \
+  -H "Authorization: Bearer <token>"
+```
+
 ## Технологический стек
 
 | Слой | Технологии |
@@ -24,14 +38,14 @@ docker compose up -d
 
 | Раздел | Описание |
 |--------|---------|
-| [Инструкции](INSTRUCTIONS.md) | Стек, архитектура, быстрый старт, разработка |
-| [AGENTS](AGENTS.md) | AI Playbook для разработчиков и ассистентов |
+| [Getting Started](docs/getting-started.md) | Установка, настройка, локальная разработка |
+| [Архитектура](docs/architecture.md) | Микросервисы, слои, data flow |
 | [API Reference](docs/api.md) | API Gateway эндпоинты |
 | [Configuration](docs/configuration.md) | Переменные окружения, secrets |
-| [Архитектура](.ai-factory/ARCHITECTURE.md) | Микросервисы, event-driven |
 | [Testing](docs/testing.md) | Тесты: pytest, vitest, go test |
-| [Deploy](docs/deploy-runbook.md) | Production deployment runbook |
-| [Дизайн](DESIGN.md) | Дизайн-токены, тема оформления |
+| [Deploy Runbook](docs/deploy-runbook.md) | Production deployment |
+| [Design System](DESIGN.md) | Дизайн-токены, тема оформления |
+| [AGENTS](AGENTS.md) | AI Playbook для разработчиков |
 | [PRODUCT](PRODUCT.md) | Описание продукта и пользователей |
 | [ADR](docs/adr/) | Architecture Decision Records |
 

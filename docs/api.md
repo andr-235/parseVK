@@ -1,4 +1,4 @@
-[Back to README](../README.md) · [Configuration →](configuration.md)
+[← Architecture](architecture.md) · [Back to README](../README.md) · [Configuration →](configuration.md)
 
 # API Reference
 
@@ -161,6 +161,6 @@ Service-слой ответственен за:
 
 ## См. также
 
-- [Архитектура](../.ai-factory/ARCHITECTURE.md) — взаимодействие сервисов
+- [Архитектура](architecture.md) — взаимодействие сервисов
 - [README](../README.md) — общая информация
 - [Конфигурация](configuration.md) — переменные окружения

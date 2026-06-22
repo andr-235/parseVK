@@ -571,10 +571,10 @@ cache = {}
 | Document | Path | Description |
 |----------|------|-------------|
 | README | README.md | Project landing page |
-| Instructions | INSTRUCTIONS.md | Full development guide (stack, setup, architecture) |
+| Getting Started | docs/getting-started.md | Installation, setup, local development |
+| Architecture | docs/architecture.md | Microservices, layers, data flow |
 | API Reference | docs/api.md | API Gateway endpoints |
 | Configuration | docs/configuration.md | Environment variables and secrets |
-| Architecture | .ai-factory/ARCHITECTURE.md | Microservices + Three-Tier pattern |
 | Testing | docs/testing.md | Test setup (pytest, vitest, go test) |
 | Deploy Runbook | docs/deploy-runbook.md | Production deployment guide |
 | Design System | DESIGN.md | Design tokens, theme, components |
