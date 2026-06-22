@@ -75,6 +75,16 @@ class TaskEventsService:
             if exc.response.status_code == 409:
                 await self._handle_conflict(task_run, run_id, exc)
                 return None
+            if exc.response.status_code == 404:
+                logger.warning(
+                    "[FIX] Task %s not found in tasks-service (may have been deleted), skipping",
+                    task_id,
+                )
+                task_run.status = "failed"
+                task_run.finished_at = utcnow()
+                task_run.last_error = f"Task {task_id} not found in tasks-service"
+                task_run.updated_at = utcnow()
+                return None
             raise
 
         task_run.status = "running"
