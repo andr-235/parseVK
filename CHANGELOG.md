@@ -1,3 +1,10 @@
+## [0.40.5](https://github.com/andr-235/parseVK/compare/v0.40.4...v0.40.5) (2026-06-22)
+
+
+### Bug Fixes
+
+* **vk-service:** handle 404 from tasks-service start_execution ([7c4614d](https://github.com/andr-235/parseVK/commit/7c4614dc0c142b01937f662c5511a24c9e288bfb))
+
 ## [0.40.4](https://github.com/andr-235/parseVK/compare/v0.40.3...v0.40.4) (2026-06-22)
 
 
