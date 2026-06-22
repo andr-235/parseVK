@@ -7,12 +7,19 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.domain.exceptions.vk_api import VkApiAuthError
+from app.infrastructure.vk_client.client import VkApiClient, VkApiConfigurationError
 from app.tasks import TaskEventsConsumer, publish_outbox_forever
 
 logger = logging.getLogger(__name__)
 
 _consumer_healthy: list[bool] = [False]
 _publisher_healthy: list[bool] = [False]
+
+
+def _mask(value: str, keep: int = 4) -> str:
+    if len(value) <= keep:
+        return "****"
+    return value[:keep] + "*" * min(len(value) - keep, 8)
 
 
 async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
@@ -46,8 +53,30 @@ async def supervise(name: str, coro_factory, health_flag: list[bool] | None = No
             retry_delay = min(retry_delay * 2, 30)
 
 
+async def _check_vk_token_at_startup() -> None:
+    try:
+        client = VkApiClient()
+        await client._call("users.get", user_ids="1")
+        logger.info("VK token test OK — token is valid")
+    except VkApiAuthError as e:
+        logger.critical(
+            "VK token test FAILED with auth error [%d]: %s. "
+            "The VK application or token is invalid/blocked.",
+            e.code, e.error_msg,
+        )
+    except VkApiConfigurationError as e:
+        logger.warning("VK token test skipped: %s", e)
+    except Exception as e:
+        logger.warning("VK token test could not complete: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info(
+        "VK service starting, token=%s",
+        _mask(settings.vk_token) if settings.vk_token else "(not set)",
+    )
+    asyncio.create_task(_check_vk_token_at_startup())
     consumer = TaskEventsConsumer()
     consumer_task = None
     publisher_task = None
@@ -92,6 +121,7 @@ def create_app() -> FastAPI:
         return {
             "status": "UP",
             "vkTokenConfigured": "yes" if settings.vk_token else "no",
+            "vkTokenMasked": _mask(settings.vk_token) if settings.vk_token else "",
             "kafkaConsumer": "healthy" if _consumer_healthy[0] else "unhealthy",
             "outboxPublisher": "healthy" if _publisher_healthy[0] else "unhealthy",
         }

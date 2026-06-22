@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import get_vk_groups_service_dep
 from app.api.schemas.vk_api import SaveGroupRequest
 from app.core.security import require_internal_token
+from app.domain.exceptions.vk_api import VkApiAuthError
 from app.infrastructure.db.session import get_session
 from app.infrastructure.vk_client.client import VkApiClient
 from app.services.vk_groups_service import VkGroupsService
@@ -277,3 +278,35 @@ async def get_users(
 ):
     client = VkApiClient()
     return await client.get_users(user_ids=payload.user_ids, fields=payload.fields)
+
+
+@router.post("/test-token")
+async def test_vk_token():
+    client = VkApiClient()
+    try:
+        result = await client._call("users.get", user_ids="1")
+        return {"status": "ok", "vkTokenMasked": _mask(settings.vk_token)}
+    except VkApiAuthError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "auth_error",
+                "code": e.code,
+                "error": e.error_msg,
+                "vkTokenMasked": _mask(settings.vk_token),
+            },
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "error": str(e),
+            },
+        )
+
+
+def _mask(value: str, keep: int = 4) -> str:
+    if len(value) <= keep:
+        return "****"
+    return value[:keep] + "*" * min(len(value) - keep, 8)
