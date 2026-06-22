@@ -1,3 +1,10 @@
+# [0.41.0](https://github.com/andr-235/parseVK/compare/v0.40.5...v0.41.0) (2026-06-22)
+
+
+### Features
+
+* filter comments with empty matched_keywords and highlight keywords ([faedd04](https://github.com/andr-235/parseVK/commit/faedd047c710aba58b12297bf6282c1def55ee86))
+
 ## [0.40.5](https://github.com/andr-235/parseVK/compare/v0.40.4...v0.40.5) (2026-06-22)
 
 
