@@ -1,6 +1,10 @@
+import asyncio
 import logging
+from datetime import UTC, datetime
 
+from app.db.models import KeywordRecalculationJob
 from app.modules.keywords.matcher import KeywordMatcher
+from app.modules.keywords.recalculation import RecalculationWorker
 from app.modules.keywords.repository import KeywordMatchRepository
 from app.modules.moderation.comment_event_mapper import (
     InvalidVkCommentEvent,
@@ -8,14 +12,15 @@ from app.modules.moderation.comment_event_mapper import (
 )
 from app.modules.moderation.crud_service import ModerationCrudService
 from app.modules.moderation.schemas import VkEvent
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
 
 class ModerationService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, session_maker: async_sessionmaker | None = None):
         self.session = session
+        self.session_maker = session_maker
         svc = self
         self.crud = ModerationCrudService(
             session,
@@ -65,6 +70,8 @@ class ModerationService:
             return False
         if event.event_type == "vk.comment_collected":
             await self._handle_comment_collected(event)
+        elif event.event_type == "vk.task_completed":
+            await self._handle_task_completed(event)
         else:
             logger.warning("ModerationService.handle_event: unsupported event type=%s", event.event_type)
         await self.crud.mark_processed(event.event_id, event.event_type)
@@ -96,3 +103,25 @@ class ModerationService:
             payload["external_key"],
             len(matched_keywords),
         )
+
+    async def _handle_task_completed(self, event: VkEvent) -> None:
+        sm = self.session_maker
+        if not sm:
+            logger.warning(
+                "ModerationService._handle_task_completed: session_maker not available, skipping recalculation"
+            )
+            return
+        async with sm() as session:
+            job = KeywordRecalculationJob(
+                status="pending",
+                created_at=datetime.now(UTC),
+            )
+            session.add(job)
+            await session.commit()
+            job_id = job.id
+        logger.info(
+            "ModerationService._handle_task_completed: created recalculation job=%d from event=%s",
+            job_id, event.event_id,
+        )
+        worker = RecalculationWorker(sm)
+        asyncio.create_task(worker.run_recalculation(job_id))

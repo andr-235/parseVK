@@ -55,7 +55,7 @@ class ProjectionConsumer:
                         msg.offset,
                     )
                     async with async_session_maker() as session:
-                        service = ModerationService(session)
+                        service = ModerationService(session, session_maker=async_session_maker)
                         await service.handle_event(event)
                     await self.consumer.commit()
                 except Exception as e:
