@@ -48,7 +48,11 @@ class TaskEventsConsumer:
         if isinstance(raw_value, bytes):
             raw_value = raw_value.decode("utf-8")
         payload = json.loads(raw_value) if isinstance(raw_value, str) else raw_value
-        event = TaskEvent.model_validate(payload)
+        try:
+            event = TaskEvent.model_validate(payload)
+        except Exception as exc:
+            logger.warning("[FIX] Skipping unknown event: %s, payload: %s", exc, payload)
+            return
         async with self.session_factory() as session:
             async with session.begin():
                 handler = get_task_events_handler(session)

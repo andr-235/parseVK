@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 class TaskEvent(BaseModel):
     event_id: UUID
-    event_type: Literal["task.created", "task.resumed", "task.deleted"]
+    event_type: Literal["task.created", "task.resumed", "task.deleted", "task.cancelled", "task.failed"]
     event_version: int
     aggregate_id: str
     correlation_id: str | None = None

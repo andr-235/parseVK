@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 
 import httpx
 
-from app.domain.events.task_events import TaskEvent
 from app.domain.events.task_event_mapper import TaskEventMapper
+from app.domain.events.task_events import TaskEvent
 from app.domain.models.tasks import VkTaskRun
 from app.domain.repositories.tasks import TaskEventsRepository
 from app.infrastructure.tasks_client.client import TasksClient
@@ -33,8 +33,8 @@ class TaskEventsService:
         if await self.repository.is_processed(self.consumer_name, event.event_id):
             return None
 
-        if event.event_type == "task.deleted":
-            result = await self._handle_deleted(event)
+        if event.event_type in {"task.deleted", "task.cancelled", "task.failed"}:
+            result = await self._handle_termination(event)
         else:
             result = await self._handle_created_or_resumed(event)
 
@@ -82,12 +82,17 @@ class TaskEventsService:
         task_run.updated_at = utcnow()
         return task_run
 
-    async def _handle_deleted(self, event: TaskEvent) -> VkTaskRun | None:
+    async def _handle_termination(self, event: TaskEvent) -> VkTaskRun | None:
         task_id = TaskEventMapper.get_task_id(event)
         task_run = await self.repository.get_task_run(task_id)
         if task_run is None:
             return None
-        task_run.status = "cancelled"
+
+        if event.event_type == "task.failed":
+            task_run.status = "failed"
+        else:
+            task_run.status = "cancelled"
+
         task_run.finished_at = utcnow()
         task_run.updated_at = utcnow()
         return task_run
