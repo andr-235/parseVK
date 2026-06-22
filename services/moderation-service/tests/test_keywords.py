@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -8,6 +9,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.modules.keywords.matcher import build_keyword_candidates, match_keyword_candidates
 from app.modules.keywords.morphology import KeywordMorphologyService, normalize_for_keyword_match
 from app.modules.keywords.recalculation import build_match_pattern
 
@@ -55,6 +57,31 @@ def test_build_match_pattern():
     pattern_phrase = build_match_pattern("черная кошка", "черная кошка", is_phrase=True)
     assert pattern_phrase.startswith("(?<![a-zA-Z0-9_\\u0400-\\u04FF])")
     assert pattern_phrase.endswith("(?![a-zA-Z0-9_\\u0400-\\u04FF])")
+
+
+def test_keyword_candidates_match_words_and_forms():
+    keyword = SimpleNamespace(
+        word="кошка",
+        is_phrase=False,
+        keyword_forms=[SimpleNamespace(form="кошки")],
+    )
+    candidates = build_keyword_candidates([keyword])
+
+    assert match_keyword_candidates(candidates, "У этой кошки черный хвост") == ["кошка"]
+    assert match_keyword_candidates(candidates, "кошки") == ["кошка"]
+    assert match_keyword_candidates(candidates, "кошкин дом") == []
+
+
+def test_keyword_candidates_match_phrase_boundaries():
+    keyword = SimpleNamespace(
+        word="черная кошка",
+        is_phrase=True,
+        keyword_forms=[],
+    )
+    candidates = build_keyword_candidates([keyword])
+
+    assert match_keyword_candidates(candidates, "Там была черная кошка.") == ["черная кошка"]
+    assert match_keyword_candidates(candidates, "черная кошкарядом") == []
 
 
 from unittest.mock import AsyncMock, MagicMock

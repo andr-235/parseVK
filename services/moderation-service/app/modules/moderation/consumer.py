@@ -21,14 +21,19 @@ class ProjectionConsumer:
             bootstrap_servers=settings.kafka_bootstrap_servers,
             group_id="moderation-service-group",
             auto_offset_reset="earliest",
+            enable_auto_commit=False,
         )
         await self.consumer.start()
-        logger.info("Kafka consumer started")
+        logger.info(
+            "Moderation Kafka consumer started topic=%s group=%s",
+            settings.kafka_topic_vk,
+            "moderation-service-group",
+        )
 
     async def stop(self):
         if self.consumer:
             await self.consumer.stop()
-            logger.info("Kafka consumer stopped")
+            logger.info("Moderation Kafka consumer stopped")
 
     async def run_forever(self):
         await self.start()
@@ -37,10 +42,21 @@ class ProjectionConsumer:
                 try:
                     payload = json.loads(msg.value.decode("utf-8"))
                     event = VkEvent.model_validate(payload)
+                    logger.debug(
+                        "Moderation Kafka message received event_id=%s type=%s offset=%s",
+                        event.event_id,
+                        event.event_type,
+                        msg.offset,
+                    )
                     async with async_session_maker() as session:
                         service = ModerationService(session)
                         await service.handle_event(event)
+                    await self.consumer.commit()
                 except Exception as e:
-                    logger.exception("Error processing message", exc_info=e)
+                    logger.exception(
+                        "Error processing moderation Kafka message offset=%s",
+                        getattr(msg, "offset", None),
+                        exc_info=e,
+                    )
         except asyncio.CancelledError:
             pass

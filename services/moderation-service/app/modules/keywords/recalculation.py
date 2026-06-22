@@ -1,31 +1,20 @@
 import logging
-import re
 from datetime import UTC, datetime, timedelta
 
-from app.db.models import Keyword, KeywordRecalculationJob, ModerationComment
-from app.modules.keywords.morphology import normalize_for_keyword_match
+from app.db.models import KeywordRecalculationJob, ModerationComment
+from app.modules.keywords.matcher import (
+    build_match_pattern,  # noqa: F401 - compatibility import for existing tests/callers
+    match_keyword_candidates,
+)
+from app.modules.keywords.repository import KeywordMatchRepository
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlalchemy.orm import selectinload
 
 logger = logging.getLogger(__name__)
-
-WORD_CHARS_PATTERN = r"[a-zA-Z0-9_\u0400-\u04FF]"
-WORD_CHAR_RE = re.compile(WORD_CHARS_PATTERN)
 
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
-
-
-def build_match_pattern(escaped_keyword: str, normalized_word: str, is_phrase: bool) -> str:
-    starts_with_word_char = bool(WORD_CHAR_RE.match(normalized_word[0]))
-    ends_with_word_char = bool(WORD_CHAR_RE.match(normalized_word[-1]))
-
-    boundary_start = f"(?<!{WORD_CHARS_PATTERN})" if starts_with_word_char else ""
-    boundary_end = f"(?!{WORD_CHARS_PATTERN})" if ends_with_word_char else ""
-
-    return f"{boundary_start}{escaped_keyword}{boundary_end}"
 
 
 class RecalculationWorker:
@@ -136,39 +125,10 @@ class RecalculationWorker:
         deleted = 0
 
         async with self.session_maker() as session:
-            # 1. Загружаем ключевые слова и их формы
-            stmt = select(Keyword).options(selectinload(Keyword.keyword_forms))
-            if single_keyword_id:
-                stmt = stmt.where(Keyword.id == single_keyword_id)
-            result = await session.execute(stmt)
-            keywords = result.scalars().all()
+            candidates = await KeywordMatchRepository(session).load_candidates(single_keyword_id)
 
-        if not keywords:
+        if not candidates:
             return {"processed": 0, "updated": 0, "created": 0, "deleted": 0}
-
-        # Строим кандидатов на сопоставление
-        candidates = []
-        for kw in keywords:
-            # собираем нормализованное слово и формы
-            all_forms = {normalize_for_keyword_match(kw.word)}
-            for form_obj in kw.keyword_forms:
-                fn = normalize_for_keyword_match(form_obj.form)
-                if fn:
-                    all_forms.add(fn)
-
-            # компилируем регулярки для каждой формы
-            patterns = []
-            for form in all_forms:
-                escaped = re.escape(form)
-                pattern_str = build_match_pattern(escaped, form, kw.is_phrase)
-                patterns.append(re.compile(pattern_str, re.IGNORECASE))
-
-            candidates.append({
-                "word": kw.word,
-                "is_phrase": kw.is_phrase,
-                "patterns": patterns,
-                "id": kw.id
-            })
 
         # 2. Обрабатываем комментарии батчами по 1000
         batch_size = 1000
@@ -186,27 +146,14 @@ class RecalculationWorker:
 
                 for comment in comments:
                     processed += 1
-                    normalized_text = normalize_for_keyword_match(comment.text)
-
-                    # Сбор совпавших ключевых слов
-                    matched = set()
-                    if normalized_text:
-                        for cand in candidates:
-                            # если хотя бы одна регулярка совпадает
-                            matched_any = False
-                            for pattern in cand["patterns"]:
-                                if pattern.search(normalized_text):
-                                    matched_any = True
-                                    break
-                            if matched_any:
-                                matched.add(cand["word"])
+                    matched = set(match_keyword_candidates(candidates, comment.text))
 
                     # Сравниваем с текущими
                     current_matched = set(comment.matched_keywords or [])
 
                     if single_keyword_id:
                         # Если пересчитываем только ОДНО слово:
-                        target_word = keywords[0].word
+                        target_word = candidates[0].word
                         # Определяем, должно ли оно сейчас совпадать
                         should_match = target_word in matched
                         is_currently_matched = target_word in current_matched

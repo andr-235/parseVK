@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -11,8 +11,9 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.db.models import ModerationComment, ProcessedEvent
+from app.modules.keywords.matcher import build_keyword_candidates
 from app.modules.moderation.schemas import VkEvent
-from app.modules.moderation.service import CONSUMER_NAME, ModerationService
+from app.modules.moderation.service import ModerationService
 
 
 @pytest.fixture
@@ -20,12 +21,41 @@ def anyio_backend():
     return "asyncio"
 
 
-def test_model_tables_exist():
-    assert ModerationComment.__tablename__ == "moderation_comments"
-    assert ProcessedEvent.__tablename__ == "processed_events"
-    names = {item.name for item in ProcessedEvent.__table__.constraints if item.name}
-    assert "uq_processed_events_consumer_event" in names
+class FakeSession:
+    def __init__(self):
+        self.commits = 0
 
+    async def commit(self):
+        self.commits += 1
+
+
+class FakeCrud:
+    def __init__(self, *, processed: bool = False):
+        self.processed = processed
+        self.upserts = []
+        self.marked = []
+
+    async def is_processed(self, event_id):
+        return self.processed
+
+    async def upsert_comment(self, payload):
+        self.upserts.append(payload)
+        return payload
+
+    async def mark_processed(self, event_id, event_type):
+        self.marked.append((event_id, event_type))
+
+
+class FakeKeywordRepository:
+    def __init__(self, words: list[str]):
+        keywords = [
+            SimpleNamespace(word=word, is_phrase=False, keyword_forms=[])
+            for word in words
+        ]
+        self.candidates = build_keyword_candidates(keywords)
+
+    async def load_candidates(self):
+        return self.candidates
 
 def envelope(event_type, payload):
     return VkEvent.model_validate(
@@ -39,70 +69,81 @@ def envelope(event_type, payload):
     )
 
 
-@pytest.mark.anyio
-async def test_handle_event_inserts_comment_and_marks_processed():
-    # Создаем мок сессии
-    session = AsyncMock()
-    session.add = MagicMock()
-    
-    # Эмулируем, что событие еще не обработано
-    session.scalar.return_value = None
-    
+def service_with(crud: FakeCrud, repository: FakeKeywordRepository, session: FakeSession):
     service = ModerationService(session)
-    
-    event_payload = {
-        "comment": {
-            "id": 789,
-            "owner_id": 123,
-            "post_id": 456,
-            "from_id": 999,
-            "date": 1600000000,
-            "text": "Привет, мир!"
-        }
-    }
-    event = envelope("vk.comment_collected", event_payload)
-    
-    # Вызываем обработчик события
+    service.crud = crud
+    service.keyword_repository = repository
+    return service
+
+def test_model_tables_exist():
+    assert ModerationComment.__tablename__ == "moderation_comments"
+    assert ProcessedEvent.__tablename__ == "processed_events"
+    names = {item.name for item in ProcessedEvent.__table__.constraints if item.name}
+    assert "uq_processed_events_consumer_event" in names
+
+
+@pytest.mark.anyio
+async def test_handle_event_saves_matching_comment_and_marks_processed():
+    session = FakeSession()
+    crud = FakeCrud()
+    service = service_with(crud, FakeKeywordRepository(["привет"]), session)
+    event = envelope(
+        "vk.comment_collected",
+        {
+            "comment": {
+                "id": 789,
+                "owner_id": -123,
+                "post_id": 456,
+                "from_id": 999,
+                "date": 1600000000,
+                "text": "Привет, мир!",
+            }
+        },
+    )
+
     result = await service.handle_event(event)
-    
+
     assert result is True
-    
-    # Проверяем, что проверили, было ли событие обработано
-    session.scalar.assert_called_once()
-    
-    # Проверяем, что событие помечено как обработанное (добавлено в сессию)
-    added_objects = [args[0] for args, _ in session.add.call_args_list]
-    assert len(added_objects) == 1
-    assert isinstance(added_objects[0], ProcessedEvent)
-    assert added_objects[0].event_id == event.event_id
-    assert added_objects[0].consumer_name == CONSUMER_NAME
-    
-    # Проверяем, что вызван execute для upsert_comment (SQLAlchemy insert statement)
-    assert session.execute.call_count == 1
-    
-    # Проверяем, что транзакция закомичена
-    assert session.commit.call_count == 1
+    assert session.commits == 1
+    assert crud.marked == [(event.event_id, "vk.comment_collected")]
+    assert len(crud.upserts) == 1
+    saved = crud.upserts[0]
+    assert saved["external_key"] == "vk_-123_456_789"
+    assert saved["post_external_key"] == "vk_-123_456"
+    assert saved["text"] == "Привет, мир!"
+    assert saved["author_vk_id"] == 999
+    assert saved["source"] == "VK"
+    assert saved["matched_keywords"] == ["привет"]
+
+
+@pytest.mark.anyio
+async def test_handle_event_skips_non_matching_comment_but_marks_processed():
+    session = FakeSession()
+    crud = FakeCrud()
+    service = service_with(crud, FakeKeywordRepository(["опасно"]), session)
+    event = envelope(
+        "vk.comment_collected",
+        {"comment": {"id": 1, "owner_id": -1, "post_id": 2, "text": "обычный текст"}},
+    )
+
+    result = await service.handle_event(event)
+
+    assert result is True
+    assert crud.upserts == []
+    assert crud.marked == [(event.event_id, "vk.comment_collected")]
+    assert session.commits == 1
 
 
 @pytest.mark.anyio
 async def test_handle_duplicate_event_is_skipped():
-    session = AsyncMock()
-    
-    # Эмулируем, что событие уже было обработано
-    session.scalar.return_value = uuid4()
-    
-    service = ModerationService(session)
-    
+    session = FakeSession()
+    crud = FakeCrud(processed=True)
+    service = service_with(crud, FakeKeywordRepository(["привет"]), session)
     event = envelope("vk.comment_collected", {"comment": {"id": 1}})
-    
-    # Обрабатываем событие
+
     result = await service.handle_event(event)
-    
+
     assert result is False
-    
-    # Метод execute не должен вызываться для дубликата
-    assert session.execute.call_count == 0
-    # add не должен вызываться для дубликата
-    assert session.add.call_count == 0
-    # commit не должен вызываться для дубликата
-    assert session.commit.call_count == 0
+    assert crud.upserts == []
+    assert crud.marked == []
+    assert session.commits == 0
