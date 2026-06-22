@@ -1,3 +1,12 @@
+# [0.43.0](https://github.com/andr-235/parseVK/compare/v0.42.1...v0.43.0) (2026-06-22)
+
+
+### Features
+
+* **api-gateway:** add status proxy and post_url to response ([e82677b](https://github.com/andr-235/parseVK/commit/e82677b86f4fecdda46f42ef50b1b298fe45a013))
+* **frontend:** wire status persistence and postUrl link ([2e0ebed](https://github.com/andr-235/parseVK/commit/2e0ebed965ea2c39fb4fe2d51b04ad5d4119f636))
+* **moderation-service:** add status column and PATCH endpoint ([a101668](https://github.com/andr-235/parseVK/commit/a10166896e439e432b99c667abda378ffe1440b1))
+
 ## [0.42.1](https://github.com/andr-235/parseVK/compare/v0.42.0...v0.42.1) (2026-06-22)
 
 
