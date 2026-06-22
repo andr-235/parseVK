@@ -1,3 +1,10 @@
+## [0.40.2](https://github.com/andr-235/parseVK/compare/v0.40.1...v0.40.2) (2026-06-22)
+
+
+### Bug Fixes
+
+* **moderation-service:** match raw vk comments by keywords ([48841a3](https://github.com/andr-235/parseVK/commit/48841a36b35d4fe07160685c479c3df75c44b916))
+
 ## [0.40.1](https://github.com/andr-235/parseVK/compare/v0.40.0...v0.40.1) (2026-06-22)
 
 
