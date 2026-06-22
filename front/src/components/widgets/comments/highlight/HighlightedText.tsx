@@ -54,7 +54,7 @@ export function HighlightedText({ text, keywords }: HighlightedTextProps) {
         result.push(text.slice(lastEnd, start))
       }
       result.push(
-        <mark key={start} className="bg-yellow-200 text-inherit rounded-sm px-0.5">
+        <mark key={start} className="bg-yellow-300 text-gray-900 rounded-sm px-0.5">
           {text.slice(start, end)}
         </mark>,
       )
