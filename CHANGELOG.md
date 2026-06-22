@@ -1,3 +1,10 @@
+# [0.42.0](https://github.com/andr-235/parseVK/compare/v0.41.2...v0.42.0) (2026-06-22)
+
+
+### Features
+
+* **moderation-service:** trigger keyword recalculation on vk.task_completed ([61ee7c8](https://github.com/andr-235/parseVK/commit/61ee7c88a52d9bd9e70782e95eca5f7ed030f1f7))
+
 ## [0.41.2](https://github.com/andr-235/parseVK/compare/v0.41.1...v0.41.2) (2026-06-22)
 
 
