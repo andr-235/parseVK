@@ -1,3 +1,10 @@
+## [0.40.4](https://github.com/andr-235/parseVK/compare/v0.40.3...v0.40.4) (2026-06-22)
+
+
+### Bug Fixes
+
+* **vk-service:** handle task.cancelled and task.failed events in Kafka consumer ([8909c8d](https://github.com/andr-235/parseVK/commit/8909c8dc8d5ad2eb96d091c5b13476281864b42c)), closes [#issue](https://github.com/andr-235/parseVK/issues/issue)
+
 ## [0.40.3](https://github.com/andr-235/parseVK/compare/v0.40.2...v0.40.3) (2026-06-22)
 
 
