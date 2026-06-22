@@ -40,4 +40,4 @@ def map_vk_error(code: int, error_msg: str, method: str = "") -> VkApiDomainErro
         return VkApiCaptchaError(code, error_msg, method)
     if code == VK_API_INFRA_CODE:
         return VkApiInfrastructureError(code, error_msg, method)
-    return VkApiAuthError(code, error_msg, method)
+    return VkApiDomainError(code, error_msg, method)

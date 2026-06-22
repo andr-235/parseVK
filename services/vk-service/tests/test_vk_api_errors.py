@@ -44,9 +44,10 @@ class TestMapVkError:
         assert isinstance(exc, VkApiInfrastructureError)
         assert exc.code == 10
 
-    def test_unknown_code_defaults_to_auth(self):
+    def test_unknown_code_defaults_to_domain_error(self):
         exc = map_vk_error(999, "unknown")
-        assert isinstance(exc, VkApiAuthError)
+        assert isinstance(exc, VkApiDomainError)
+        assert not isinstance(exc, VkApiAuthError)
         assert exc.code == 999
 
 
