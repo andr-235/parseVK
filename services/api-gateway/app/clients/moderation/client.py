@@ -71,3 +71,14 @@ class ModerationServiceClient(ServiceClient):
         correlation_id: str | None = None,
     ) -> dict[str, Any]:
         return await self.request("PATCH", f"/internal/moderation/comments/{comment_id}/read", user_id=user_id, request_id=request_id, correlation_id=correlation_id, json={"is_read": is_read})
+
+    async def patch_status(
+        self,
+        comment_id: int,
+        *,
+        status: str,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        return await self.request("PATCH", f"/internal/moderation/comments/{comment_id}/status", user_id=user_id, request_id=request_id, correlation_id=correlation_id, json={"status": status})

@@ -107,6 +107,32 @@ async def update_read_status(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.patch("/{id}/status")
+async def update_comment_status(
+    request: Request,
+    id: int,
+    payload: Annotated[dict, Body()],
+    auth_claims: dict = AUTH_DEPENDENCY,
+    service: CommentsGatewayService = SERVICE_DEPENDENCY,
+):
+    request_id, correlation_id = request_ids(request)
+    status = payload.get("status")
+    if not status:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="status field is required")
+    try:
+        return await service.patch_comment_status(
+            id,
+            status=str(status),
+            user_id=str(auth_claims["sub"]),
+            request_id=request_id,
+            correlation_id=correlation_id,
+        )
+    except ValueError as exc:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @router.post("/search")
 async def search_comments(
     request: Request,

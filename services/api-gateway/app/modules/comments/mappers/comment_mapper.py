@@ -26,6 +26,12 @@ def format_comment_detail(
     date = item.get("date") or item.get("created_at")
     date_str = date.isoformat() if hasattr(date, "isoformat") else str(date or "")
     author_vk_id = item.get("author_vk_id")
+    post_external_key = item.get("post_external_key")
+    post_url = None
+    if post_external_key:
+        m = _VK_POST_EXTERNAL_RE.match(post_external_key)
+        if m:
+            post_url = f"https://vk.com/wall{m.group(1)}_{m.group(2)}"
     return {
         "id": item["id"],
         "text": item.get("text", ""),
@@ -33,6 +39,8 @@ def format_comment_detail(
         "author_vk_id": author_vk_id,
         "created_at": date_str,
         "matched_keywords": item.get("matched_keywords") or [],
+        "status": item.get("status", "Новый"),
+        "post_url": post_url,
         "author": {
             "display_name": author_profile.get("displayName") if author_profile else None,
             "full_name": author_profile.get("fullName") if author_profile else None,

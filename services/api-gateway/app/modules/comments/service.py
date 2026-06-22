@@ -211,6 +211,28 @@ class CommentsGatewayService:
             json={"is_read": is_read},
         )
 
+    async def patch_comment_status(
+        self,
+        comment_id: int,
+        *,
+        status: str,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        valid = {"Чисто", "Нарушение", "Новый", "Проверка"}
+        if status not in valid:
+            raise ValueError(f"Invalid status: {status}. Must be one of {valid}")
+
+        return await self._moderation_request(
+            "PATCH",
+            f"/internal/moderation/comments/{comment_id}/status",
+            user_id=user_id,
+            request_id=request_id,
+            correlation_id=correlation_id,
+            json={"status": status},
+        )
+
     async def search_comments(
         self,
         payload: dict[str, Any],
