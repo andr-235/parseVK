@@ -12,6 +12,7 @@ export const statusColors: Record<Status, string> = {
 export type Comment = {
   id: number
   text: string
+  matchedKeywords: string[]
   group: string
   author: string
   authorUrl?: string

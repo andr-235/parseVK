@@ -2,6 +2,7 @@ import { X, CheckCircle, Flag, ExternalLink, Bookmark } from 'lucide-react'
 import { useKeyPress } from '../../../../shared/hooks/useKeyPress'
 import { useFocusTrap } from '../../../../shared/hooks/useFocusTrap'
 import { Button } from '../../../ui'
+import { HighlightedText } from '../highlight/HighlightedText'
 import { statusColors } from '../../../../types/comments'
 import type { Comment } from '../../../../types/comments'
 
@@ -50,7 +51,9 @@ export function CommentDetail({ comment, onClose, onAddToWatchlist, isAddingToWa
           <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-1">
             Текст
           </p>
-          <p className="text-sm leading-relaxed text-text-primary">{comment.text}</p>
+          <p className="text-sm leading-relaxed text-text-primary">
+            <HighlightedText text={comment.text} keywords={comment.matchedKeywords} />
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>

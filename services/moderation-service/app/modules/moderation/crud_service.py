@@ -31,6 +31,8 @@ class ModerationCrudService:
                 ModerationComment.matched_keywords.contains(kw) for kw in keywords
             ]
             filters.append(or_(*keyword_filters))
+        else:
+            filters.append(func.jsonb_array_length(ModerationComment.matched_keywords) > 0)
         return filters
 
     async def get_comments(

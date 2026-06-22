@@ -32,6 +32,7 @@ def format_comment_detail(
         "owner_id": owner_id,
         "author_vk_id": author_vk_id,
         "created_at": date_str,
+        "matched_keywords": item.get("matched_keywords") or [],
         "author": {
             "display_name": author_profile.get("displayName") if author_profile else None,
             "full_name": author_profile.get("fullName") if author_profile else None,

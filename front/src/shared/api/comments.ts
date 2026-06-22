@@ -19,6 +19,7 @@ type GroupDTO = {
 type CommentDTO = {
   id: number
   text: string
+  matched_keywords: string[]
   owner_id: number
   author_vk_id?: number
   created_at: string
@@ -69,6 +70,7 @@ function mapComment(dto: CommentDTO): Comment {
   return {
     id: dto.id,
     text: dto.text,
+    matchedKeywords: dto.matched_keywords ?? [],
     group: groupName,
     author: authorName,
     authorUrl: dto.author?.profile_url || (dto.author_vk_id ? `https://vk.com/id${dto.author_vk_id}` : undefined),

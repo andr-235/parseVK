@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { CheckCircle, Flag, ExternalLink, Pencil } from 'lucide-react'
 import { Button, Checkbox } from '../../ui'
 import { StatusCell } from './StatusCell'
+import { HighlightedText } from '../comments/highlight/HighlightedText'
 import type { Comment, Status } from '../../../types/comments'
 
 export type TableBodyProps = {
@@ -30,7 +31,9 @@ export const TableBody = memo(function TableBody({ rows, selectedId, focusedInde
               onClick={(e) => e.stopPropagation()} aria-label={`Выбрать комментарий ${c.id}`}
             />
           </td>
-          <td className="break-words whitespace-normal px-3 py-2 text-text-primary">{c.text}</td>
+          <td className="max-w-0 break-words whitespace-normal px-3 py-2 text-text-primary">
+            <HighlightedText text={c.text} keywords={c.matchedKeywords} />
+          </td>
           <td className="hidden px-3 py-2 sm:table-cell">
             {c.groupUrl ? (
               <a href={c.groupUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}

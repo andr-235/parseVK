@@ -17,6 +17,7 @@ describe('fetchComments', () => {
         {
           id: 1,
           text: 'Test comment',
+          matched_keywords: ['test'],
           owner_id: -123,
           created_at: '2026-06-01T10:00:00Z',
           author: { display_name: 'Group Name', full_name: 'Full' },
@@ -26,6 +27,7 @@ describe('fetchComments', () => {
         {
           id: 2,
           text: 'Another comment',
+          matched_keywords: [],
           owner_id: 456,
           created_at: '2026-05-15T00:00:00Z',
           is_read: false,
@@ -43,6 +45,7 @@ describe('fetchComments', () => {
     expect(result.comments[0]).toEqual({
       id: 1,
       text: 'Test comment',
+      matchedKeywords: ['test'],
       group: 'Group Name',
       author: 'Group Name',
       authorUrl: undefined,
@@ -58,6 +61,7 @@ describe('fetchComments', () => {
     expect(result.comments[1]).toEqual({
       id: 2,
       text: 'Another comment',
+      matchedKeywords: [],
       group: 'Пользователь #456',
       author: 'vk456',
       authorUrl: undefined,
