@@ -1,3 +1,10 @@
+## [0.41.2](https://github.com/andr-235/parseVK/compare/v0.41.1...v0.41.2) (2026-06-22)
+
+
+### Bug Fixes
+
+* **front:** improve highlight contrast and restore text column width ([2d9c985](https://github.com/andr-235/parseVK/commit/2d9c9859d4b19d9ef4b40d836337aa5e57f3bdf0))
+
 ## [0.41.1](https://github.com/andr-235/parseVK/compare/v0.41.0...v0.41.1) (2026-06-22)
 
 
