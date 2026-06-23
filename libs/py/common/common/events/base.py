@@ -4,6 +4,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
+from common.events.types import ImEventType, TaskEventType, VkEventType
+
 
 class EventEnvelope(BaseModel):
     event_id: UUID = Field(default_factory=uuid4)
@@ -38,3 +40,15 @@ class ConsumerEvent(BaseModel):
     aggregate_id: str
     correlation_id: str | None = None
     payload: dict[str, Any]
+
+
+class TaskEvent(ConsumerEvent):
+    event_type: TaskEventType
+
+
+class VkEvent(ConsumerEvent):
+    event_type: VkEventType
+
+
+class ImEvent(ConsumerEvent):
+    event_type: ImEventType

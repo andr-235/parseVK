@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     internal_service_token: str = "dev-internal-token"
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_tasks: str = "parsevk.tasks.events"
+    kafka_topic_tasks_dlq: str = "parsevk.tasks.dlq"
     outbox_publish_enabled: bool = False
 
 

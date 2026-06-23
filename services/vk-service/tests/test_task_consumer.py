@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 from uuid import uuid4
@@ -10,7 +11,7 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.domain.events.task_event_mapper import TaskEventMapper
-from app.domain.events.task_events import TaskEvent
+from common.events import TaskEvent
 from app.services.task_events_service import TaskEventsService
 
 
@@ -185,6 +186,61 @@ async def test_running_task_event_same_run_id_returns_none_preventing_reexecutio
 
     assert result is None
     assert len(tasks_client.calls) == 0
+
+
+@pytest.mark.anyio
+async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
+    from unittest.mock import AsyncMock, patch
+    from app.tasks.kafka_consumer import TaskEventsConsumer
+
+    consumer = TaskEventsConsumer(session_factory=AsyncMock())
+    consumer._consumer = AsyncMock()
+
+    msg = AsyncMock()
+    msg.value = b"not valid json{{{"
+    msg.offset = 42
+
+    with patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock) as mock_send:
+        await consumer._handle_processing_failure(msg)
+        mock_send.assert_awaited_once()
+
+    consumer._consumer.commit.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
+    from unittest.mock import AsyncMock
+    from types import SimpleNamespace
+    from datetime import UTC, datetime, timedelta
+    from app.tasks.kafka_consumer import TaskEventsConsumer
+    from uuid import uuid4
+
+    consumer = TaskEventsConsumer()
+    consumer._consumer = AsyncMock()
+
+    raw_value = json.dumps({
+        "event_id": str(uuid4()),
+        "event_type": "task.created",
+    }).encode()
+
+    row = SimpleNamespace(
+        next_retry_at=datetime.now(UTC) + timedelta(hours=1),
+        retry_count=1,
+    )
+
+    async def scalar_mock(*a, **kw):
+        return row
+
+    session = AsyncMock()
+    session.scalar = scalar_mock
+    session.__aenter__ = AsyncMock(return_value=session)
+
+    consumer.session_factory = lambda: session
+
+    result = await consumer._skip_due_to_retry_backoff(raw_value)
+
+    assert result is True
+    consumer._consumer.commit.assert_awaited_once()
 
 
 @pytest.mark.anyio

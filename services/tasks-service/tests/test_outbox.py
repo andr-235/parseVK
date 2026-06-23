@@ -183,3 +183,163 @@ async def test_tasks_service_outbox_events_contract():
         }
     )
 
+
+def _make_event(event_id: str, attempts: int = 0, status: str = "pending"):
+    from datetime import UTC, datetime
+    from uuid import UUID
+    from unittest.mock import MagicMock
+
+    event = MagicMock()
+    event.id = UUID(event_id)
+    event.event_type = "task.created"
+    event.event_version = 1
+    event.aggregate_type = "task"
+    event.aggregate_id = "42"
+    event.correlation_id = None
+    event.dedupe_key = None
+    event.payload = {"taskId": "42", "ownerUserId": "u1"}
+    event.status = status
+    event.attempts = attempts
+    event.locked_at = None
+    event.published_at = None
+    event.last_error = None
+    event.created_at = datetime.now(UTC)
+    return event
+
+
+@pytest.fixture(autouse=True)
+def enable_outbox():
+    from app.core.config import settings
+    original = settings.outbox_publish_enabled
+    settings.outbox_publish_enabled = True
+    yield
+    settings.outbox_publish_enabled = original
+
+
+@pytest.mark.anyio
+async def test_publish_batch_calls_mark_published_on_success():
+    from unittest.mock import AsyncMock, patch
+
+    from app.modules.outbox.publisher import OutboxPublisher
+
+    repo = AsyncMock()
+    repo.lock_pending.return_value = [_make_event("00000000-0000-0000-0000-000000000001")]
+
+    session = AsyncMock()
+    publisher = OutboxPublisher(session)
+    publisher.repository = repo
+
+    producer_instance = AsyncMock()
+    producer_instance.start = AsyncMock()
+    producer_instance.stop = AsyncMock()
+
+    with patch("aiokafka.AIOKafkaProducer", return_value=producer_instance):
+        result = await publisher.publish_batch()
+
+    assert result == 1
+    repo.mark_published.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_publish_batch_calls_mark_failed_on_error():
+    from unittest.mock import AsyncMock, patch
+
+    from app.modules.outbox.publisher import OutboxPublisher, MAX_OUTBOX_ATTEMPTS
+
+    event = _make_event("00000000-0000-0000-0000-000000000002", attempts=3)
+    repo = AsyncMock()
+    repo.lock_pending.return_value = [event]
+
+    session = AsyncMock()
+    publisher = OutboxPublisher(session)
+    publisher.repository = repo
+
+    producer_instance = AsyncMock()
+    producer_instance.start = AsyncMock()
+    producer_instance.stop = AsyncMock()
+    producer_instance.send_and_wait = AsyncMock(side_effect=RuntimeError("kafka down"))
+
+    with patch("aiokafka.AIOKafkaProducer", return_value=producer_instance):
+        result = await publisher.publish_batch()
+
+    assert result == 1
+    repo.mark_failed.assert_awaited_once_with(event, "kafka down", max_attempts=MAX_OUTBOX_ATTEMPTS)
+    repo.mark_published.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_publish_batch_sends_to_dlq_after_max_attempts():
+    from unittest.mock import AsyncMock, patch
+
+    from app.modules.outbox.publisher import OutboxPublisher, MAX_OUTBOX_ATTEMPTS
+
+    event = _make_event("00000000-0000-0000-0000-000000000003", attempts=MAX_OUTBOX_ATTEMPTS - 1)
+    repo = AsyncMock()
+
+    async def mark_failed_side_effect(event, error, **kwargs):
+        event.attempts += 1
+
+    repo.mark_failed = AsyncMock(side_effect=mark_failed_side_effect)
+    repo.lock_pending.return_value = [event]
+
+    session = AsyncMock()
+    publisher = OutboxPublisher(session)
+    publisher.repository = repo
+
+    producer_instance = AsyncMock()
+    producer_instance.start = AsyncMock()
+    producer_instance.stop = AsyncMock()
+
+    send_calls = []
+
+    async def send_and_wait_side_effect(topic, **kwargs):
+        send_calls.append(topic)
+        if topic == "parsevk.tasks.events":
+            raise RuntimeError("kafka down")
+
+    producer_instance.send_and_wait = AsyncMock(side_effect=send_and_wait_side_effect)
+
+    with patch("aiokafka.AIOKafkaProducer", return_value=producer_instance):
+        result = await publisher.publish_batch()
+
+    assert result == 1
+    repo.mark_failed.assert_awaited_once()
+    assert len(send_calls) == 2
+    assert send_calls[0] == "parsevk.tasks.events"
+    assert send_calls[1] == "parsevk.tasks.dlq"
+
+
+@pytest.mark.anyio
+async def test_publish_batch_no_dlq_below_max_attempts():
+    from unittest.mock import AsyncMock, patch
+
+    from app.modules.outbox.publisher import OutboxPublisher
+
+    event = _make_event("00000000-0000-0000-0000-000000000004", attempts=1)
+    repo = AsyncMock()
+    repo.lock_pending.return_value = [event]
+
+    session = AsyncMock()
+    publisher = OutboxPublisher(session)
+    publisher.repository = repo
+
+    producer_instance = AsyncMock()
+    producer_instance.start = AsyncMock()
+    producer_instance.stop = AsyncMock()
+
+    send_calls = []
+
+    async def send_and_wait_side_effect(topic, **kwargs):
+        send_calls.append(topic)
+        raise RuntimeError("kafka down")
+
+    producer_instance.send_and_wait = AsyncMock(side_effect=send_and_wait_side_effect)
+
+    with patch("aiokafka.AIOKafkaProducer", return_value=producer_instance):
+        result = await publisher.publish_batch()
+
+    assert result == 1
+    repo.mark_failed.assert_awaited_once()
+    assert len(send_calls) == 1
+    assert send_calls[0] == "parsevk.tasks.events"
+

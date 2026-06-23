@@ -37,3 +37,43 @@ groups:
         annotations:
           summary: "Высокая доля ретраев VK API"
           description: "Доля ретраев VK API > 20% в течение 10 минут"
+
+      - alert: OutboxBacklogHigh
+        expr: |
+          sum by(service) (outbox_pending_events) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox backlog высокий ({{ $value }} событий)"
+          description: "Сервис {{ $labels.service }}: outbox_pending_events > 100 в течение 5 минут"
+
+      - alert: ConsumerLagHigh
+        expr: |
+          (kafka_consumer_lag > 1000 or kafka_consumer_lag_vk > 1000 or kafka_consumer_lag_im > 1000)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consumer lag высокий ({{ $value }})"
+          description: "Consumer group {{ $labels.consumer_group }} partition {{ $labels.partition }} lag > 1000 в течение 10 минут"
+
+      - alert: DLQNonZeroOffset
+        expr: |
+          sum by(topic) (kafka_topic_partition_current_offset{topic=~".*dlq"}) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DLQ топик {{ $labels.topic }} не пуст"
+          description: "В DLQ топике {{ $labels.topic }} есть сообщения (offset > 0) в течение 5 минут"
+
+      - alert: KafkaConsumerDown
+        expr: |
+          up{job=~"vk-service|im-service|content-service|moderation-service|tasks-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Consumer {{ $labels.job }} не отвечает"
+          description: "up{job={{ $labels.job }}} == 0 в течение 1 минуты"

@@ -11,7 +11,7 @@ from app.modules.moderation.comment_event_mapper import (
     map_vk_comment_event,
 )
 from app.modules.moderation.crud_service import ModerationCrudService
-from app.modules.moderation.schemas import VkEvent
+from common.events import VkEvent
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)

@@ -1,19 +1,20 @@
 import json
 import logging
-from contextlib import suppress
 
 from prometheus_client import Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bootstrap import get_ingestion_service, get_task_events_handler
 from app.core.config import settings
-from app.domain.events.task_events import TaskEvent
+from app.domain.models.tasks import ProcessedEvent
+from common.events import TaskEvent
+from common.kafka.consumer import BaseEventConsumer
 from app.infrastructure.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
 
+CONSUMER_NAME = "vk-service"
 DLQ_TOPIC = "parsevk.tasks.dlq"
-MAX_CONSUMER_RETRIES = 3
 
 _consumer_lag = Gauge(
     "kafka_consumer_lag",
@@ -22,58 +23,23 @@ _consumer_lag = Gauge(
 )
 
 
-class TaskEventsConsumer:
+class TaskEventsConsumer(BaseEventConsumer):
+    consumer_group = "vk-service"
+    consumer_name = CONSUMER_NAME
+    dlq_topic = DLQ_TOPIC
+
     def __init__(
         self,
         *,
         session_factory: async_sessionmaker | None = None,
     ):
-        self.session_factory = session_factory or SessionLocal
-        self._consumer = None
-        self._retry_count: dict[str, int] = {}
-
-    async def run_forever(self) -> None:
-        from aiokafka import AIOKafkaConsumer
-
-        logger.info(
-            "Kafka consumer starting, topic=%s, group=%s",
-            settings.kafka_topic_tasks,
-            "vk-service",
-        )
-        self._consumer = AIOKafkaConsumer(
-            settings.kafka_topic_tasks,
+        super().__init__(
+            session_factory=session_factory or SessionLocal,
+            kafka_topic=settings.kafka_topic_tasks,
             bootstrap_servers=settings.kafka_bootstrap_servers,
-            group_id="vk-service",
-            enable_auto_commit=False,
+            model_class=ProcessedEvent,
+            lag_gauge=_consumer_lag,
         )
-        await self._consumer.start()
-        logger.info("Kafka consumer started, waiting for messages")
-        try:
-            async for message in self._consumer:
-                message_key = f"{message.partition}:{message.offset}"
-                try:
-                    await self.handle_message(message.value)
-                    await self._consumer.commit()
-                    self._retry_count.pop(message_key, None)
-                except Exception:
-                    retries = self._retry_count.get(message_key, 0) + 1
-                    self._retry_count[message_key] = retries
-                    if retries >= MAX_CONSUMER_RETRIES:
-                        logger.exception(
-                            "Error processing message at offset %s after %d retries, sending to DLQ",
-                            message.offset, retries,
-                        )
-                        await self._send_to_dlq(message.value)
-                        self._retry_count.pop(message_key, None)
-                        await self._consumer.commit()
-                    else:
-                        logger.exception(
-                            "Error processing message at offset %s (retry %d/%d)",
-                            message.offset, retries, MAX_CONSUMER_RETRIES,
-                        )
-                self._update_lag_metric(message)
-        finally:
-            await self.stop()
 
     async def handle_message(self, raw_value: bytes | str | dict) -> None:
         if isinstance(raw_value, bytes):
@@ -94,33 +60,3 @@ class TaskEventsConsumer:
                 if task_run is not None and event.event_type in {"task.created", "task.resumed"}:
                     ingestion = get_ingestion_service(session)
                     await ingestion.execute(task_run, correlation_id=event.correlation_id)
-
-    def _update_lag_metric(self, message) -> None:
-        try:
-            lag = message.highwater_mark - message.offset - 1 if message.highwater_mark is not None else 0
-            _consumer_lag.labels(
-                topic=message.topic,
-                consumer_group="vk-service",
-                partition=str(message.partition),
-            ).set(max(lag, 0))
-        except Exception:
-            pass
-
-    async def _send_to_dlq(self, raw_value: bytes) -> None:
-        from aiokafka import AIOKafkaProducer
-
-        producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_bootstrap_servers)
-        await producer.start()
-        try:
-            await producer.send_and_wait(DLQ_TOPIC, value=raw_value)
-            logger.info("Sent failed message to DLQ topic=%s", DLQ_TOPIC)
-        except Exception:
-            logger.exception("Failed to send message to DLQ topic=%s", DLQ_TOPIC)
-        finally:
-            await producer.stop()
-
-    async def stop(self) -> None:
-        if self._consumer is not None:
-            with suppress(Exception):
-                await self._consumer.stop()
-            self._consumer = None

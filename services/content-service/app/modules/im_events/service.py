@@ -1,8 +1,9 @@
 import logging
 from datetime import UTC, datetime
 
-from common.events import ConsumerEvent
+from common.events import ImEvent
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ImMessage, ProcessedEvent
@@ -14,10 +15,6 @@ logger = logging.getLogger(__name__)
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
-
-
-class ImEvent(ConsumerEvent):
-    pass
 
 
 class ImEventRepository:
@@ -36,9 +33,13 @@ class ImEventRepository:
         )
 
     async def mark_processed(self, consumer_name: str, event_id: UUID, event_type: str) -> None:
-        self.session.add(
-            ProcessedEvent(consumer_name=consumer_name, event_id=event_id, event_type=event_type, processed_at=utcnow())
+        stmt = pg_insert(ProcessedEvent).values(
+            consumer_name=consumer_name, event_id=event_id, event_type=event_type, processed_at=utcnow(),
+        ).on_conflict_do_update(
+            constraint="uq_processed_events_consumer_event",
+            set_={"processed_at": utcnow(), "retry_count": 0, "last_error": None, "next_retry_at": None},
         )
+        await self.session.execute(stmt)
 
     async def upsert_message(self, messenger: str, message_id: str, chat_id: str) -> None:
         from sqlalchemy.dialects.postgresql import insert

@@ -11,7 +11,7 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.modules.keywords.matcher import build_keyword_candidates
-from app.modules.moderation.schemas import VkEvent
+from common.events import VkEvent
 from app.modules.moderation.service import ModerationService
 
 

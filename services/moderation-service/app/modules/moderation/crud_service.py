@@ -6,6 +6,7 @@ from uuid import UUID
 
 from app.db.models import ModerationComment, ProcessedEvent
 from sqlalchemy import and_, case, func, or_, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 CONSUMER_NAME = "moderation-service"
@@ -230,10 +231,14 @@ class ModerationCrudService:
 
     async def mark_processed(self, event_id: UUID, event_type: str) -> None:
         logger.debug("ModerationCrudService.mark_processed: event_id=%s, type=%s", event_id, event_type)
-        event = ProcessedEvent(
+        now = datetime.now(UTC)
+        stmt = insert(ProcessedEvent).values(
             consumer_name=CONSUMER_NAME,
             event_id=event_id,
             event_type=event_type,
-            processed_at=datetime.now(UTC),
+            processed_at=now,
+        ).on_conflict_do_update(
+            constraint="uq_processed_events_consumer_event",
+            set_={"processed_at": now, "retry_count": 0, "last_error": None, "next_retry_at": None},
         )
-        self.session.add(event)
+        await self.session.execute(stmt)

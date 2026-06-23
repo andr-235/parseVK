@@ -4,6 +4,7 @@ from uuid import UUID
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.tasks.client import TasksClient
@@ -35,9 +36,13 @@ class TaskEventsRepository:
         )
 
     async def mark_processed(self, consumer_name: str, event_id: UUID, event_type: str) -> None:
-        self.session.add(
-            ProcessedEvent(consumer_name=consumer_name, event_id=event_id, event_type=event_type, processed_at=utcnow())
+        stmt = pg_insert(ProcessedEvent).values(
+            consumer_name=consumer_name, event_id=event_id, event_type=event_type, processed_at=utcnow(),
+        ).on_conflict_do_update(
+            constraint="uq_processed_events_consumer_event",
+            set_={"processed_at": utcnow(), "retry_count": 0, "last_error": None, "next_retry_at": None},
         )
+        await self.session.execute(stmt)
 
     async def get_task_run(self, task_id: int) -> ImTaskRun | None:
         return await self.session.scalar(select(ImTaskRun).where(ImTaskRun.task_id == task_id))

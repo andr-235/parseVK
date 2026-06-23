@@ -1,4 +1,4 @@
-from app.domain.events.task_events import TaskEvent
+from common.events import TaskEvent
 
 
 class TaskEventMapper:

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 import httpx
 
 from app.domain.events.task_event_mapper import TaskEventMapper
-from app.domain.events.task_events import TaskEvent
+from common.events import TaskEvent
 from app.domain.models.tasks import VkTaskRun
 from app.domain.repositories.tasks import TaskEventsRepository
 from app.infrastructure.tasks_client.client import TasksClient

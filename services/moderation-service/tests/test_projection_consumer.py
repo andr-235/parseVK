@@ -12,7 +12,7 @@ use_service_path()
 
 from app.db.models import ModerationComment, ProcessedEvent
 from app.modules.keywords.matcher import build_keyword_candidates
-from app.modules.moderation.schemas import VkEvent
+from common.events import VkEvent
 from app.modules.moderation.service import ModerationService
 
 
@@ -147,3 +147,54 @@ async def test_handle_duplicate_event_is_skipped():
     assert crud.upserts == []
     assert crud.marked == []
     assert session.commits == 0
+
+
+@pytest.mark.anyio
+async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg_moderation():
+    from unittest.mock import AsyncMock, patch
+    from app.modules.moderation.consumer import ProjectionConsumer
+
+    consumer = ProjectionConsumer()
+    consumer._consumer = AsyncMock()
+
+    msg = AsyncMock()
+    msg.value = b"not valid json{{{"
+    msg.offset = 42
+
+    with patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock) as mock_send:
+        await consumer._handle_processing_failure(msg)
+        mock_send.assert_awaited_once()
+
+    consumer._consumer.commit.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff_moderation():
+    from unittest.mock import AsyncMock, patch
+    from json import dumps
+    from uuid import uuid4
+    from datetime import UTC, datetime, timedelta
+    from app.modules.moderation.consumer import ProjectionConsumer
+
+    consumer = ProjectionConsumer()
+    consumer._consumer = AsyncMock()
+
+    raw_value = dumps({
+        "event_id": str(uuid4()),
+        "event_type": "vk.comment_collected",
+    }).encode()
+
+    row = AsyncMock()
+    row.next_retry_at = datetime.now(UTC) + timedelta(hours=1)
+    row.retry_count = 1
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=row)
+    session.__aenter__ = AsyncMock(return_value=session)
+
+    consumer.session_factory = lambda: session
+
+    result = await consumer._skip_due_to_retry_backoff(raw_value)
+
+    assert result is True
+    consumer._consumer.commit.assert_awaited_once()

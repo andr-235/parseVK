@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 
-from common.events import ConsumerEvent
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,10 +19,6 @@ def vk_timestamp(value: int | None) -> datetime | None:
     return datetime.fromtimestamp(int(value), UTC)
 
 
-class VkEvent(ConsumerEvent):
-    pass
-
-
 class ProjectionRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -40,7 +35,13 @@ class ProjectionRepository:
         )
 
     async def mark_processed(self, consumer_name: str, event_id: UUID, event_type: str) -> None:
-        self.session.add(ProcessedEvent(consumer_name=consumer_name, event_id=event_id, event_type=event_type))
+        stmt = insert(ProcessedEvent).values(
+            consumer_name=consumer_name, event_id=event_id, event_type=event_type, processed_at=utcnow(),
+        ).on_conflict_do_update(
+            constraint="uq_processed_events_consumer_event",
+            set_={"processed_at": utcnow(), "retry_count": 0, "last_error": None, "next_retry_at": None},
+        )
+        await self.session.execute(stmt)
 
     async def upsert_group(self, group: dict) -> None:
         now = utcnow()

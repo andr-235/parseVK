@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from common.events import ConsumerEvent
 from pydantic import BaseModel, ConfigDict
 
 
@@ -25,10 +24,6 @@ class UpdateCommentReadStatus(BaseModel):
 
 class UpdateCommentStatus(BaseModel):
     status: str
-
-
-class VkEvent(ConsumerEvent):
-    pass
 
 
 class CommentModerationList(BaseModel):

@@ -1,11 +1,7 @@
-from typing import Any, Literal
-
-from common.events import ConsumerEvent
+from common.events import TaskEvent as _TaskEvent
 
 
-class TaskEvent(ConsumerEvent):
-    event_type: Literal["task.created", "task.resumed", "task.deleted"]
-
+class TaskEvent(_TaskEvent):
     def task_id(self) -> int:
         return int(self.payload["taskId"])
 
