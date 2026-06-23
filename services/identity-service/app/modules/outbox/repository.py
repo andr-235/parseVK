@@ -1,9 +1,10 @@
-from datetime import timedelta
+from datetime import timedelta, UTC, datetime
 from uuid import UUID
 
 from app.db.models import OUTBOX_FAILED, OUTBOX_PENDING, OUTBOX_PUBLISHED, OutboxEvent, utc_now
 from common.events import EventEnvelope
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 MAX_OUTBOX_ATTEMPTS = 5
@@ -15,22 +16,28 @@ async def add_event(
     *,
     aggregate_type: str,
     aggregate_id: str,
-) -> OutboxEvent:
-    outbox_event = OutboxEvent(
+    dedupe_key: str | None = None,
+) -> None:
+    stmt = insert(OutboxEvent).values(
         id=event.event_id,
         event_type=event.event_type,
         event_version=event.event_version,
         aggregate_type=aggregate_type,
         aggregate_id=aggregate_id,
         correlation_id=event.correlation_id,
+        dedupe_key=dedupe_key,
         payload=event.model_dump(mode="json"),
         status=OUTBOX_PENDING,
         attempts=0,
-        next_attempt_at=utc_now(),
+        next_attempt_at=datetime.now(UTC),
+        created_at=datetime.now(UTC),
     )
-    session.add(outbox_event)
-    await session.flush()
-    return outbox_event
+    if dedupe_key:
+        stmt = stmt.on_conflict_do_nothing(
+            index_elements=[OutboxEvent.dedupe_key],
+            index_where=text("dedupe_key IS NOT NULL"),
+        )
+    await session.execute(stmt)
 
 
 async def lock_pending_batch(session: AsyncSession, limit: int = 100) -> list[OutboxEvent]:
