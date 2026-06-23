@@ -1,3 +1,10 @@
+## [0.44.2](https://github.com/andr-235/parseVK/compare/v0.44.1...v0.44.2) (2026-06-23)
+
+
+### Bug Fixes
+
+* **content-service:** add missing UUID import in processor ([2c0c838](https://github.com/andr-235/parseVK/commit/2c0c838965075a9fd42b4ee927f03f0739a7ebab))
+
 ## [0.44.1](https://github.com/andr-235/parseVK/compare/v0.44.0...v0.44.1) (2026-06-23)
 
 
