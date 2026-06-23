@@ -188,44 +188,71 @@ class ContentServiceClient(ServiceClient):
 | Topic | Partitions | Producer (Outbox) | Consumers | Event Types |
 |-------|-----------|-------------------|-----------|-------------|
 | `parsevk.tasks.events` | 3 | tasks-service | vk-service, im-service | `task.created`, `.resumed`, `.deleted`, `.cancelled`, `.failed`, `.automation_settings_updated`, `.automation_run_requested` |
-| `parsevk.vk.events` | 3 | vk-service | content-service, moderation-service | `vk.group_collected`, `.author_collected`, `.post_collected`, `.comment_collected`, `.task_progress_updated`, `.task_completed`, `.task_failed` |
+| `parsevk.vk.events` | 3 | vk-service | content-service, moderation-service | `vk.group_collected`, `.group_deleted`, `.author_collected`, `.post_collected`, `.comment_collected`, `.task_progress_updated`, `.task_completed`, `.task_failed` |
 | `parsevk.im.events` | 3 | im-service | content-service | `im.message_collected`, `.group_collected`, `.task_progress_updated`, `.task_completed`, `.task_failed` |
-| `parsevk.tasks.dlq` | 3 | — | — | Any event type exceeding retry limit |
-| `parsevk.vk.dlq` | 3 | — | — | Any event type exceeding retry limit |
-| `parsevk.im.dlq` | 3 | — | — | Any event type exceeding retry limit |
-| `identity.events` | 3 | identity-service | — | `identity.user_logged_in`, `.user_logged_out`, `.token_refreshed` |
-| `identity.dlq` | 3 | — | — | Failed identity outbox events |
+| `identity.events` | 3 | identity-service | — | `identity.user_created`, `.user_logged_in`, `.user_logged_out`, `.password_changed` |
+| `parsevk.vk.dlq` | 3 | vk-service | — | Failed vk outbox events exceeding retry limit |
+| `parsevk.im.dlq` | 3 | im-service | — | Failed im outbox events exceeding retry limit |
+| `identity.dlq` | 3 | identity-service | — | Failed identity outbox events exceeding retry limit |
+| `parsevk.tasks.dlq` | 3 | — | — | Created in docker-compose but tasks-service does NOT produce to it |
+
+### Services Without Kafka
+
+| Service | Reason |
+|---------|--------|
+| **api-gateway** | No outbox, no consumer, no Kafka code — pure HTTP proxy |
+| **listings-service** | No outbox, no consumer, no Kafka code |
+| **telegram-service** | No outbox, no consumer, no Kafka code |
 
 ### Principal Event Flows
 
 ```
-Frontend → api-gateway (HTTP) → tasks-service
-  → Outbox → parsevk.tasks.events
-    → vk-service consumer
-      → HTTP → tasks-service: /execution/start
-      → VK API ingestion
-      → Outbox → parsevk.vk.events
-        → content-service: upsert projections
-        → moderation-service: analyze comments
+                            ┌────────────────┐
+                            │ identity.svc   │──→ identity.events
+                            │ (publisher)    │──→ identity.dlq
+                            └────────────────┘
+
+                            ┌────────────────┐
+                            │ tasks.svc      │──→ parsevk.tasks.events
+                            │ (publisher)    │──→ (NO DLQ - dead-end at "failed")
+                            └──────┬─────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    ▼              ▼              ▼
+            ┌────────────┐ ┌────────────┐
+            │ vk.svc     │ │ im.svc     │
+            │ consumer   │ │ consumer   │
+            │ producer   │ │ producer   │
+            └──────┬─────┘ └──────┬─────┘
+                   │              │
+                   │ parsevk.vk.events  parsevk.im.events
+                   │              │
+                   ▼              ▼
+            ┌────────────┐ ┌────────────┐ ┌────────────┐
+            │ content.svc│ │ content.svc│ │ moderation │
+            │ (VK cons)  │ │ (IM cons)  │ │ (VK cons)  │
+            └────────────┘ └────────────┘ └────────────┘
 ```
 
 ### Compliance Score
 
 | Pattern | Status | Details |
 |---------|--------|---------|
-| ✅ Outbox Pattern | Done (3/4) | tasks, vk, im — active. identity — dead code (writes to outbox, no Kafka publisher) |
-| ✅ Idempotent Consumers | Done | `processed_events` table + `enable_auto_commit=False` across all consumers |
-| ✅ Exponential Retry | Done | `next_attempt_at = now + min(2^attempts, 300)s`, max 5 attempts |
-| ✅ Producer Deduplication | Partial | vk, im have `dedupe_key` UNIQUE partial index. tasks, identity do not |
-| ✅ Event Envelope | Partial | `EventEnvelope` in `libs/py/common/` exists but NOT used by any service — each service defines its own Pydantic models |
-| ❌ Dead Letter Queue | Missing | Failed events get `status="failed"` in outbox with no DLQ, no alerts |
-| ❌ Consumer-Side Retry | Missing | If `handle_message()` crashes, offset is not committed. Repeated re-read on restart, no backoff |
-| ✅ Event Versioning | Done | `event_version` checked in all consumers, versioning policy documented |
-| ❌ Distributed Tracing | Missing | No OpenTelemetry/Jaeger. `correlation_id` is propagated but not traced |
-| ❌ Consumer Lag Monitoring | Missing | Kafka consumer lag metrics not exported (only vk-service has Kafka health endpoint) |
-| ❌ Single-Partition Topics | Missing | All topics have 1 partition — no horizontal scaling, no parallel consumption |
-| ❌ Transactional Outbox | Missing | Outbox does not use Kafka transactions / exactly-once semantics |
-| ⚠️ Shared Event Schemas | Missing | Event Pydantic models are copy-pasted across services. No shared event schema package |
+| ✅ Outbox Pattern | Done (4/4 producers) | tasks, vk, im, identity — all active with publisher |
+| ✅ Transactional Outbox | Done | All producers: business logic + outbox insert in same DB transaction. `SELECT ... FOR UPDATE SKIP LOCKED` for publisher |
+| ✅ Idempotent Consumers | Done | `processed_events` table with `UNIQUE(consumer_name, event_id)` across all 4 consumers |
+| ✅ Exponential Outbox Backoff | Done | `next_attempt_at = now + min(2^attempts, 300)s`, max 5 attempts across all producers |
+| ✅ Producer Deduplication | Done | `dedupe_key` with `ON CONFLICT DO NOTHING` across all 4 outbox services |
+| ✅ Event Versioning | Done | `event_version` field in all outbox tables + checked by all consumers (though never exercised — always version 1) |
+| ✅ Multi-Partition Topics | Done | All topics have 3 partitions (configured in docker-compose.yml) |
+| ✅ Consumer Lag Monitoring | Done | `kafka_consumer_lag` Prometheus metric in all 4 consumers (vk, im, content×2, moderation) |
+| ✅ Health Endpoints | Done | All 6 Kafka-related services expose /health with kafka/outboxPublisher status |
+| ✅ Dead Letter Queue | Done (6/9) | vk, im, identity have producer-side + consumer-side DLQ. content, moderation have consumer-side DLQ. **Only tasks-service lacks DLQ** |
+| ⚠️ Consumer Retry (In-Memory) | Partial | All consumers have `_retry_count` dict with max 3 retries, but **in-memory only** — lost on restart |
+| ❌ Shared Event Schemas | Missing | `EventEnvelope`/`WireEvent`/`ConsumerEvent` exist in `libs/py/common/events/` but only identity-service uses them. All consumer services (vk, im, content, moderation) define copy-pasted local Pydantic models |
+| ❌ Distributed Tracing | Missing | No OpenTelemetry/Jaeger. `correlation_id` propagated but not traced across service boundaries |
+| ❌ `identity.events` Has No Consumers | Fire-and-Forget | Identity publishes events but no service subscribes — events are produced with zero observable effect |
+| ❌ Exactly-Once Semantics | Missing | No `transactional.id` or explicit `enable.idempotence` config on any producer (aiokafka defaults apply) |
 
 ### Schema Evolution & Versioning Policy
 
@@ -234,21 +261,22 @@ All event envelopes carry an `event_version` integer field. Current version is `
 - **Backward-compatible changes** (adding optional fields, extending enums): bump minor. Consumers must ignore unknown fields.
 - **Breaking changes** (removing/renaming fields, changing types): bump `event_version`. Consumers validate and reject unknown versions with a warning.
 - **Policy**: Producers MUST NOT produce events with unsupported versions. Consumers MUST reject events with unknown versions (logged + skipped). Migration path: stand up new version in parallel, then deprecate old version after all consumers have been updated.
+- **Real-world note:** `event_version` infrastructure exists but has never been exercised — all events are always version 1.
 
 ### Required Improvements for Full EDA Compliance
 
-| Priority | Task | Impact |
-|----------|------|--------|
-| P0 | **Fix identity-service outbox** — add Kafka config, start `OutboxPublisher` | Dead events become live |
-| P0 | **Shared event schemas** — extract to `libs/py/common/`, use `EventEnvelope` | Eliminate copy-paste, enable contract testing |
-| P1 | **Dead Letter Queue** — dedicated DLQ topic, move failed events, alert | Prevent data loss |
-| P1 | **Consumer retry with backoff** — `retry_count` + backoff per consumer, DLQ on exhaustion | Reliable processing |
-| P1 | **Multi-partition topics** — 3+ partitions, keyed by `aggregate_id` | Horizontal scaling |
-| P2 | **Event versioning & schema registry** — evolution policy, backward compat checks | Safe schema changes |
-| P2 | **Kafka monitoring** — consumer lag metrics, health endpoints for all services | Observability |
-| P2 | **OpenTelemetry** — distributed tracing through Kafka messages | Traceability |
-| P3 | **Transactional outbox** — Kafka transactions / exactly-once | Idempotent guarantees |
-| P3 | **Integration tests with testcontainers** — Kafka consumer/producer tests | Reliability |
+| Priority | Task | Details | Files |
+|----------|------|---------|-------|
+| P0 | **tasks-service DLQ** | Only producer without DLQ transport. Add DLQ publisher when outbox retries exhausted | `services/tasks-service/app/modules/outbox/` |
+| P0 | **Shared event schemas** | Extract local VkEvent/TaskEvent/ImEvent models to `libs/py/common/events/`. All consumers currently copy-paste | `libs/py/common/common/events/` + all consumer services |
+| P1 | **Persistent consumer retry** | Move `_retry_count` from in-memory dict to DB-backed (use `processed_events` table). Survive restarts | All 4 consumer services |
+| P1 | **Consumer-side backoff** | Add `next_attempt_at` style backoff to consumers instead of immediate retry | All 4 consumer services |
+| P1 | **DLQ monitoring/alerting** | Add Prometheus alert rules for DLQ topic non-zero offset. No one monitors failed events today | `monitoring/prometheus/` |
+| P2 | **Consumer for identity.events** | Either add a consumer or remove the publisher. Currently fire-and-forget with no observable effect | `services/identity-service/` |
+| P2 | **OpenTelemetry tracing** | Propagate trace context through Kafka message headers. Add OTLP exporter | `libs/py/common/` + all services |
+| P2 | **Schema registry** | Formal schema registry for event versioning. Currently `event_version` exists but versioning policy is manual | `libs/py/common/events/` |
+| P3 | **Exactly-once semantics** | Configure Kafka transactions with `transactional.id` on producers | All 4 producer services |
+| P3 | **Integration tests** | Add testcontainers-based Kafka tests for all consumer/producer services (only vk-service has them today) | All services with Kafka |
 
 ## Code Examples
 

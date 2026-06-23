@@ -18,6 +18,7 @@
 - [ ] **Metrics & Analytics Dashboard** — placeholder page
 - [ ] **Settings Page** — placeholder page
 - [ ] **CI/CD & Infrastructure Hardening** — update CI for FastAPI services, remove legacy `api/` directory, clean up Docker Compose
+- [ ] **EDA Hardening & Shared Schemas** — shared event schemas in `libs/py/common/`, tasks-service DLQ, persistent consumer retry, DLQ monitoring alerts
 - [ ] **Advanced Search (Elasticsearch)** — full-text search across comments, authors, posts
 
 ## Completed
