@@ -12,6 +12,29 @@ from app.modules.photo_analysis.router import router as photo_analysis_router
 
 logger = logging.getLogger(__name__)
 
+_consumer_healthy: list[bool] = [False]
+
+
+async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
+    retry_delay = 1
+    while True:
+        try:
+            if health_flag is not None:
+                health_flag[0] = True
+            await coro_factory()
+            break
+        except asyncio.CancelledError:
+            logger.info("%s cancelled, stopping supervise", name)
+            if health_flag is not None:
+                health_flag[0] = False
+            break
+        except Exception as e:
+            if health_flag is not None:
+                health_flag[0] = False
+            logger.error("%s crashed: %s. Restarting in %ds...", name, e, retry_delay)
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, 30)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,10 +55,16 @@ async def lifespan(app: FastAPI):
     task = None
     monitor_task = None
     if settings.kafka_consumer_enabled:
-        task = asyncio.create_task(consumer.run_forever())
+
+        async def run_consumer():
+            await consumer.run_forever()
+
+        task = asyncio.create_task(
+            supervise("Kafka consumer", run_consumer, health_flag=_consumer_healthy)
+        )
     else:
         logger.info("Moderation Kafka consumer disabled by configuration")
-    
+
     # Запускаем фоновый мониторинг авторов watchlist
     monitor_task = asyncio.create_task(publish_watchlist_monitor_forever(async_session_maker))
 
@@ -55,10 +84,18 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
+    try:
+        from common.tracing import setup_opentelemetry
+        setup_opentelemetry("moderation-service")
+    except Exception:
+        pass
 
     @app.get("/health")
     async def health() -> dict[str, str]:
-        return {"status": "UP"}
+        result: dict[str, str] = {"status": "UP"}
+        if settings.kafka_consumer_enabled:
+            result["kafkaConsumer"] = "healthy" if _consumer_healthy[0] else "unhealthy"
+        return result
 
     @app.get("/ready")
     async def ready() -> dict[str, str]:

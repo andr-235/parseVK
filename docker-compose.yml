@@ -126,9 +126,14 @@ services:
     command: >
       /bin/sh -c "
       until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 2; done;
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.tasks.events --partitions 1 --replication-factor 1;
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.vk.events --partitions 1 --replication-factor 1;
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.im.events --partitions 1 --replication-factor 1
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.tasks.events --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.vk.events --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.im.events --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic identity.events --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.tasks.dlq --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.vk.dlq --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.im.dlq --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic identity.dlq --partitions 3 --replication-factor 1
       "
     networks:
       - backend
@@ -178,6 +183,9 @@ services:
       IDENTITY_ADMIN_USERNAME: ${IDENTITY_ADMIN_USERNAME:-admin}
       IDENTITY_ADMIN_PASSWORD: ${IDENTITY_ADMIN_PASSWORD:-admin-change-me}
       IDENTITY_ADMIN_EMAIL: ${IDENTITY_ADMIN_EMAIL:-}
+      IDENTITY_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      IDENTITY_OUTBOX_PUBLISH_ENABLED: ${IDENTITY_OUTBOX_PUBLISH_ENABLED:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s
@@ -301,6 +309,7 @@ services:
       VK_SERVICE_OUTBOX_PUBLISH_ENABLED: ${VK_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
       VK_SERVICE_DEFAULT_GROUP_IDS: '${VK_SERVICE_DEFAULT_GROUP_IDS:-[1]}'
       VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-}}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s
@@ -360,6 +369,7 @@ services:
       CONTENT_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       CONTENT_KAFKA_CONSUMER_ENABLED: ${CONTENT_KAFKA_CONSUMER_ENABLED:-true}
       CONTENT_KAFKA_TOPIC_IM: ${CONTENT_KAFKA_TOPIC_IM:-parsevk.im.events}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s
@@ -472,6 +482,7 @@ services:
       MODERATION_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       MODERATION_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       MODERATION_KAFKA_CONSUMER_ENABLED: ${MODERATION_KAFKA_CONSUMER_ENABLED:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s
@@ -663,6 +674,16 @@ services:
       prometheus:
         condition: service_started
 
+  jaeger:
+    image: jaegertracing/jaeger:2.4.0
+    ports:
+      - "127.0.0.1:16686:16686"  # UI
+      - "127.0.0.1:4318:4318"    # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - monitoring
+
   im-db:
     image: postgres:16.14
     platform: linux/amd64
@@ -720,6 +741,7 @@ services:
       IM_SERVICE_WAPPI_REQUEST_TIMEOUT: ${WAPPI_REQUEST_TIMEOUT:-30}
       IM_SERVICE_WAPPI_PAGE_SIZE: ${WAPPI_PAGE_SIZE:-100}
       IM_SERVICE_WAPPI_INCLUDE_SYSTEM_MESSAGES: ${WAPPI_INCLUDE_SYSTEM_MESSAGES:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       IM_SERVICE_MAX_PROFILE_ID: ${MAX_PROFILE_ID}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]

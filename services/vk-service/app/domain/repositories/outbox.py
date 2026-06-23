@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from uuid import UUID
 
 from app.domain.models.outbox import OutboxEvent
 
@@ -22,5 +23,13 @@ class OutboxRepository(ABC):
         """Fetch list of pending events that are due to publish."""
 
     @abstractmethod
+    async def lock_pending_batch(self, limit: int = 100) -> list[OutboxEvent]:
+        """FOR UPDATE SKIP LOCKED batch of pending events."""
+
+    @abstractmethod
     async def mark_published(self, event: OutboxEvent) -> None:
         """Mark event status to published and fill publish timestamp."""
+
+    @abstractmethod
+    async def mark_failed_or_retry(self, event_id: UUID, error: str) -> bool:
+        """Increment attempts; retry with backoff or mark as failed. Returns True if permanently failed."""

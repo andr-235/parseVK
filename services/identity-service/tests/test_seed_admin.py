@@ -41,6 +41,23 @@ class FakeSession:
     async def commit(self):
         self.state["commits"] += 1
 
+    async def execute(self, stmt):
+        from app.db.models import OutboxEvent
+
+        from sqlalchemy.dialects.postgresql import Insert
+
+        if isinstance(stmt, Insert):
+            params = stmt.compile().params
+            event = OutboxEvent(
+                event_type=params["event_type"],
+                event_version=params["event_version"],
+                aggregate_type=params["aggregate_type"],
+                aggregate_id=params["aggregate_id"],
+                payload={"payload": params["payload"]},
+            )
+            self.state["outbox_events"].append(event)
+        return None
+
 
 class FakeSessionFactory:
     def __init__(self, state):

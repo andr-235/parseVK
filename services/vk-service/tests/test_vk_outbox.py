@@ -41,6 +41,18 @@ class FakeOutboxRepository:
     async def add_event(self, **kwargs):
         self.events.append(kwargs)
 
+    async def list_pending(self, *, limit=100):
+        return []
+
+    async def lock_pending_batch(self, limit=100):
+        return []
+
+    async def mark_published(self, event):
+        pass
+
+    async def mark_failed_or_retry(self, event_id, error):
+        return False
+
 
 class FakeIngestionRepository:
     async def upsert_group(self, group):

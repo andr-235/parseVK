@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     jwt_key_id: str = "identity-dev-key-1"
     refresh_token_ttl_days: int = 30
     refresh_token_inactivity_days: int = 7
+    kafka_bootstrap_servers: str = Field(default="kafka:9092")
+    outbox_publish_enabled: bool = Field(default=False)
 
 
 settings = Settings()

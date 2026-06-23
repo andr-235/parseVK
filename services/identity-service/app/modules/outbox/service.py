@@ -20,4 +20,5 @@ async def add_identity_event(
         ),
         aggregate_type="user",
         aggregate_id=user_id,
+        dedupe_key=f"{event_type}:{user_id}",
     )

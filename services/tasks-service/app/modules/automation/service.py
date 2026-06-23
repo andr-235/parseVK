@@ -46,6 +46,7 @@ class AutomationService:
             aggregate_type="task_automation_settings",
             aggregate_id=owner_user_id,
             correlation_id=correlation_id,
+            dedupe_key=f"task.automation_settings_updated:{owner_user_id}",
             payload={
                 "ownerUserId": owner_user_id,
                 "enabled": settings.enabled,
@@ -127,6 +128,7 @@ class AutomationService:
             aggregate_type="task",
             aggregate_id=str(task.id),
             correlation_id=correlation_id,
+            dedupe_key=f"task.automation_run_requested:{task.id}",
             payload={"taskId": str(task.id), "ownerUserId": owner_user_id, "source": "automation"},
         )
         await self.repository.update_last_run_at(settings)

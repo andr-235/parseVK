@@ -125,6 +125,7 @@ async def test_tasks_service_outbox_events_contract():
         aggregate_type="task",
         aggregate_id="42",
         correlation_id=None,
+        dedupe_key="task.created:42",
         payload={
             "taskId": "42",
             "ownerUserId": "user-1",
@@ -150,6 +151,7 @@ async def test_tasks_service_outbox_events_contract():
         aggregate_type="task",
         aggregate_id="42",
         correlation_id=None,
+        dedupe_key="task.created:42",
         payload={
             "taskId": "42",
             "ownerUserId": "user-1",
@@ -169,6 +171,7 @@ async def test_tasks_service_outbox_events_contract():
         event_type="task.resumed",
         aggregate_type="task",
         aggregate_id="42",
+        dedupe_key="task.resumed:42",
         payload={
             "taskId": "42",
             "ownerUserId": "user-1",

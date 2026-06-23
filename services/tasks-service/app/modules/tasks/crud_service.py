@@ -59,6 +59,7 @@ class TasksCrudService:
             aggregate_type="task",
             aggregate_id=str(task.id),
             correlation_id=correlation_id,
+            dedupe_key=f"task.created:{task.id}",
             payload={
                 "taskId": str(task.id),
                 "ownerUserId": owner_user_id,
@@ -229,6 +230,7 @@ class TasksCrudService:
             event_type="task.resumed",
             aggregate_type="task",
             aggregate_id=str(task.id),
+            dedupe_key=f"task.resumed:{task.id}",
             payload={
                 "taskId": str(task.id),
                 "ownerUserId": owner_user_id,
@@ -282,6 +284,7 @@ class TasksCrudService:
             event_type="task.cancelled",
             aggregate_type="task",
             aggregate_id=str(task.id),
+            dedupe_key=f"task.cancelled:{task.id}",
             payload={
                 "taskId": str(task.id),
                 "ownerUserId": owner_user_id,
@@ -318,6 +321,7 @@ class TasksCrudService:
             event_type="task.deleted",
             aggregate_type="task",
             aggregate_id=str(task.id),
+            dedupe_key=f"task.deleted:{task.id}",
             payload={"taskId": str(task.id), "ownerUserId": owner_user_id, "taskSnapshot": snapshot},
         )
         await self.repository.delete_task(task)

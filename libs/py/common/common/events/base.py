@@ -16,3 +16,25 @@ class EventEnvelope(BaseModel):
 
     def to_json_bytes(self) -> bytes:
         return self.model_dump_json().encode("utf-8")
+
+
+class WireEvent(BaseModel):
+    event_id: UUID
+    event_type: str
+    event_version: int
+    aggregate_type: str
+    aggregate_id: str
+    correlation_id: str | None = None
+    payload: dict[str, Any]
+    created_at: str
+
+    model_config = {"extra": "ignore"}
+
+
+class ConsumerEvent(BaseModel):
+    event_id: UUID
+    event_type: str
+    event_version: int
+    aggregate_id: str
+    correlation_id: str | None = None
+    payload: dict[str, Any]

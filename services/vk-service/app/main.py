@@ -119,6 +119,11 @@ from app.api.routers.vk_friends import router as vk_friends_router
 
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
+    try:
+        from common.tracing import setup_opentelemetry
+        setup_opentelemetry("vk-service")
+    except Exception:
+        pass
 
     @app.get("/health")
     async def health() -> dict[str, str]:

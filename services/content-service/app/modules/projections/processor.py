@@ -1,8 +1,6 @@
 from datetime import UTC, datetime
-from typing import Any
-from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from common.events import ConsumerEvent
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,15 +20,8 @@ def vk_timestamp(value: int | None) -> datetime | None:
     return datetime.fromtimestamp(int(value), UTC)
 
 
-class VkEvent(BaseModel):
-    event_id: UUID
-    event_type: str
-    event_version: int
-    aggregate_id: str
-    correlation_id: str | None = None
-    payload: dict[str, Any]
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+class VkEvent(ConsumerEvent):
+    pass
 
 
 class ProjectionRepository:

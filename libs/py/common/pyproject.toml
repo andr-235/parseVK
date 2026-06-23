@@ -2,7 +2,12 @@
 name = "parsevk-common"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.8"]
+dependencies = [
+    "pydantic>=2.8",
+    "opentelemetry-api>=1.30",
+    "opentelemetry-sdk>=1.30",
+    "opentelemetry-exporter-otlp-proto-http>=1.30",
+]
 
 [build-system]
 requires = ["hatchling"]

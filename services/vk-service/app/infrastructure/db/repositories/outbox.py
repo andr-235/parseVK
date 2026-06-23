@@ -1,5 +1,5 @@
-from datetime import UTC, datetime
-from uuid import uuid4
+from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid4
 
 from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.models.outbox import OutboxEvent
 from app.domain.repositories.outbox import OutboxRepository
 
+MAX_OUTBOX_ATTEMPTS = 5
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
@@ -56,7 +57,36 @@ class SqlAlchemyOutboxRepository(OutboxRepository):
         )
         return list(result)
 
+    async def lock_pending_batch(self, limit: int = 100) -> list[OutboxEvent]:
+        result = await self.session.scalars(
+            select(OutboxEvent)
+            .where(OutboxEvent.status == "pending", OutboxEvent.next_attempt_at <= utcnow())
+            .order_by(OutboxEvent.created_at.asc())
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        batch = list(result)
+        now = utcnow()
+        for event in batch:
+            event.locked_at = now
+        return batch
+
     async def mark_published(self, event: OutboxEvent) -> None:
         event.status = "published"
         event.published_at = utcnow()
         await self.session.flush()
+
+    async def mark_failed_or_retry(self, event_id: UUID, error: str) -> bool:
+        event = await self.session.get(OutboxEvent, event_id)
+        if not event:
+            return False
+        event.attempts += 1
+        event.last_error = error
+        if event.attempts >= MAX_OUTBOX_ATTEMPTS:
+            event.status = "failed"
+            await self.session.flush()
+            return True
+        event.status = "pending"
+        event.next_attempt_at = utcnow() + timedelta(seconds=min(2**event.attempts, 300))
+        await self.session.flush()
+        return False

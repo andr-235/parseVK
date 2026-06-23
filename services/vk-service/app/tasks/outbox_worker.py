@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.core.config import settings
@@ -9,6 +9,8 @@ from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
 from app.infrastructure.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
+
+VK_DLQ_TOPIC = "parsevk.vk.dlq"
 
 
 def json_default(value):
@@ -47,32 +49,68 @@ class OutboxPublisher:
             await self._producer.start()
 
         count = 0
-        for event in await self.repository.list_pending(limit=limit):
-            envelope = {
-                "event_id": str(event.id),
-                "event_type": event.event_type,
-                "event_version": event.event_version,
-                "aggregate_type": event.aggregate_type,
-                "aggregate_id": event.aggregate_id,
-                "correlation_id": event.correlation_id,
-                "payload": event.payload,
-                "created_at": event.created_at.isoformat(),
-            }
-            key = kafka_key_for_event(event.event_type, event.payload, event.aggregate_id)
-            await self._producer.send_and_wait(
-                self.topic,
-                key=key.encode("utf-8"),
-                value=json.dumps(envelope, default=json_default).encode("utf-8"),
-            )
-            logger.debug(
-                "Published VK outbox event id=%s type=%s topic=%s",
-                event.id,
-                event.event_type,
-                self.topic,
-            )
-            await self.repository.mark_published(event)
-            count += 1
+        for event in await self.repository.lock_pending_batch(limit=limit):
+            try:
+                envelope = {
+                    "event_id": str(event.id),
+                    "event_type": event.event_type,
+                    "event_version": event.event_version,
+                    "aggregate_type": event.aggregate_type,
+                    "aggregate_id": event.aggregate_id,
+                    "correlation_id": event.correlation_id,
+                    "payload": event.payload,
+                    "created_at": event.created_at.isoformat() if event.created_at else datetime.now(UTC).isoformat(),
+                }
+                key = kafka_key_for_event(event.event_type, event.payload, event.aggregate_id)
+                await self._producer.send_and_wait(
+                    self.topic,
+                    key=key.encode("utf-8"),
+                    value=json.dumps(envelope, default=json_default).encode("utf-8"),
+                )
+                logger.debug(
+                    "Published VK outbox event id=%s type=%s topic=%s",
+                    event.id,
+                    event.event_type,
+                    self.topic,
+                )
+                await self.repository.mark_published(event)
+                count += 1
+            except Exception:
+                logger.exception(
+                    "Failed to publish VK outbox event id=%s type=%s",
+                    event.id,
+                    event.event_type,
+                )
+                is_failed = await self.repository.mark_failed_or_retry(event.id, "publish_error")
+                if is_failed:
+                    try:
+                        await self._publish_to_dlq(event)
+                    except Exception:
+                        logger.exception("Failed to send VK event to DLQ id=%s", event.id)
         return count
+
+    async def _publish_to_dlq(self, event) -> None:
+        envelope = {
+            "event_id": str(event.id),
+            "event_type": event.event_type,
+            "event_version": event.event_version,
+            "aggregate_type": event.aggregate_type,
+            "aggregate_id": event.aggregate_id,
+            "correlation_id": event.correlation_id,
+            "payload": event.payload,
+            "created_at": event.created_at.isoformat() if event.created_at else datetime.now(UTC).isoformat(),
+            "dlq_reason": "max_retries_exceeded",
+        }
+        key = kafka_key_for_event(event.event_type, event.payload, event.aggregate_id)
+        await self._producer.send_and_wait(
+            VK_DLQ_TOPIC,
+            key=key.encode("utf-8"),
+            value=json.dumps(envelope, default=json_default).encode("utf-8"),
+        )
+        logger.warning(
+            "Moved VK outbox event id=%s type=%s to DLQ after %d attempts",
+            event.id, event.event_type, event.attempts,
+        )
 
     async def stop(self) -> None:
         if self._producer is not None:

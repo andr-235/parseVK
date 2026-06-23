@@ -1,0 +1,97 @@
+{
+  "id": null,
+  "uid": "parsevk-kafka-health",
+  "title": "ParseVK Kafka Health",
+  "tags": ["parsevk", "kafka"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 0,
+  "panels": [
+    {
+      "title": "Consumer Lag — vk-service",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "kafka_consumer_lag{topic=~\"parsevk.*|identity.*\", consumer_group=\"vk-service\"}",
+          "legendFormat": "{{topic}} p{{partition}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Consumer Lag — im-service",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "kafka_consumer_lag{topic=~\"parsevk.*|identity.*\", consumer_group=\"im-service\"}",
+          "legendFormat": "{{topic}} p{{partition}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "title": "Consumer Lag — content-service (vk)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "kafka_consumer_lag_vk{consumer_group=\"content-service\"}",
+          "legendFormat": "p{{partition}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "title": "Consumer Lag — content-service (im)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "kafka_consumer_lag_im{consumer_group=\"content-service-im\"}",
+          "legendFormat": "p{{partition}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    },
+    {
+      "title": "Consumer Lag — moderation-service",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "kafka_consumer_lag{topic=~\"parsevk.*|identity.*\", consumer_group=\"moderation-service-group\"}",
+          "legendFormat": "{{topic}} p{{partition}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+    },
+    {
+      "title": "DLQ Topic Size",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by(topic) (kafka_topic_partition_current_offset{topic=~\"parsevk.*dlq|identity.*dlq\"})",
+          "legendFormat": "{{topic}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+    },
+    {
+      "title": "Outbox Publisher Health",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "up{job=~\"identity-service|vk-service|im-service|tasks-service\"}",
+          "legendFormat": "{{job}}"
+        }
+      ],
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 }
+    }
+  ],
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" }
+}

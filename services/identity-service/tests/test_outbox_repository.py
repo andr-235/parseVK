@@ -29,6 +29,7 @@ class FakeSession:
         self.added = []
         self.events = {}
         self.statement = None
+        self.insert_values = None
 
     def add(self, value):
         self.added.append(value)
@@ -44,9 +45,16 @@ class FakeSession:
     async def get(self, model, event_id):
         return self.events.get(event_id)
 
+    async def execute(self, stmt):
+        from sqlalchemy.dialects.postgresql import Insert
+
+        if isinstance(stmt, Insert):
+            self.insert_values = stmt.compile().params
+        return None
+
 
 @pytest.mark.asyncio
-async def test_add_event_stores_payload_and_correlation_id():
+async def test_add_event_uses_insert_statement():
     session = FakeSession()
     event = EventEnvelope(
         event_type="identity.user_logged_in",
@@ -55,13 +63,33 @@ async def test_add_event_stores_payload_and_correlation_id():
         payload={"user_id": "u1"},
     )
 
-    stored = await repository.add_event(
+    result = await repository.add_event(
         session, event, aggregate_type="user", aggregate_id="u1"
     )
 
-    assert stored.id == event.event_id
-    assert stored.payload["payload"] == {"user_id": "u1"}
-    assert stored.correlation_id == "corr-1"
+    assert result is None
+    assert session.insert_values is not None
+    assert session.insert_values["event_type"] == "identity.user_logged_in"
+    assert session.insert_values["aggregate_type"] == "user"
+    assert session.insert_values["aggregate_id"] == "u1"
+    assert session.insert_values["correlation_id"] == "corr-1"
+
+
+@pytest.mark.asyncio
+async def test_add_event_with_dedupe_key():
+    session = FakeSession()
+    event = EventEnvelope(
+        event_type="identity.user_registered",
+        producer="identity-service",
+        payload={"user_id": "u1"},
+    )
+
+    result = await repository.add_event(
+        session, event, aggregate_type="user", aggregate_id="u1", dedupe_key="identity.user_registered:u1"
+    )
+
+    assert result is None
+    assert session.insert_values["dedupe_key"] == "identity.user_registered:u1"
 
 
 @pytest.mark.asyncio

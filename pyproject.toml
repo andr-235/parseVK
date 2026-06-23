@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
-addopts = ["--import-mode=importlib"]
+addopts = ["--import-mode=importlib", "-m", "not integration"]
 asyncio_mode = "auto"
+markers = ["integration: tests requiring Docker (testcontainers)"]
 testpaths = [
   "libs/py/common/tests",
   "services/api-gateway/tests",

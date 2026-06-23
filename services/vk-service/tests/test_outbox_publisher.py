@@ -28,8 +28,14 @@ class FakeOutboxRepository:
     async def list_pending(self, *, limit=100):
         return self.events[:limit]
 
+    async def lock_pending_batch(self, limit=100):
+        return self.events[:limit]
+
     async def mark_published(self, event):
         self.published.append(event.id)
+
+    async def mark_failed_or_retry(self, event_id, error):
+        return False
 
 
 class FakeProducer:

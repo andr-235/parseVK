@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -80,6 +80,7 @@ class OutboxEvent(Base):
     aggregate_type: Mapped[str] = mapped_column(String(255), nullable=False)
     aggregate_id: Mapped[str] = mapped_column(Text, nullable=False)
     correlation_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    dedupe_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default=OUTBOX_PENDING)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -96,4 +97,10 @@ class OutboxEvent(Base):
     __table_args__ = (
         Index("ix_outbox_events_status_next_attempt", "status", "next_attempt_at"),
         Index("ix_outbox_events_aggregate", "aggregate_type", "aggregate_id"),
+        Index(
+            "uq_outbox_events_dedupe_key",
+            "dedupe_key",
+            unique=True,
+            postgresql_where=text("dedupe_key IS NOT NULL"),
+        ),
     )

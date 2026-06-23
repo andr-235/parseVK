@@ -1,15 +1,7 @@
-from typing import Any, Literal
-from uuid import UUID
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from common.events import ConsumerEvent
 
 
-class TaskEvent(BaseModel):
-    event_id: UUID
+class TaskEvent(ConsumerEvent):
     event_type: Literal["task.created", "task.resumed", "task.deleted", "task.cancelled", "task.failed"]
-    event_version: int
-    aggregate_id: str
-    correlation_id: str | None = None
-    payload: dict[str, Any]
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)

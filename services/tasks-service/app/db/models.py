@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -119,6 +120,12 @@ class OutboxEvent(Base):
     __table_args__ = (
         Index("ix_outbox_events_status_next_attempt", "status", "next_attempt_at"),
         Index("ix_outbox_events_aggregate", "aggregate_type", "aggregate_id"),
+        Index(
+            "uq_outbox_events_dedupe_key",
+            "dedupe_key",
+            unique=True,
+            postgresql_where=text("dedupe_key IS NOT NULL"),
+        ),
     )
 
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -127,6 +134,7 @@ class OutboxEvent(Base):
     aggregate_type: Mapped[str] = mapped_column(String(128), nullable=False)
     aggregate_id: Mapped[str] = mapped_column(String(128), nullable=False)
     correlation_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    dedupe_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

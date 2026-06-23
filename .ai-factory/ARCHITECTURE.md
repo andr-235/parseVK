@@ -181,6 +181,75 @@ class ContentServiceClient(ServiceClient):
 4. **File Size Limit:** Max 100-150 lines per file. Decompose into modules when exceeded. Exceptions: configs, migrations, autogen.
 5. **Type Safety:** Pydantic v2 schemas for all I/O. TypeScript types for frontend. Pydantic Settings for all configs.
 
+## Event-Driven Architecture Compliance
+
+### Current State — Kafka Topics & Event Flow
+
+| Topic | Partitions | Producer (Outbox) | Consumers | Event Types |
+|-------|-----------|-------------------|-----------|-------------|
+| `parsevk.tasks.events` | 3 | tasks-service | vk-service, im-service | `task.created`, `.resumed`, `.deleted`, `.cancelled`, `.failed`, `.automation_settings_updated`, `.automation_run_requested` |
+| `parsevk.vk.events` | 3 | vk-service | content-service, moderation-service | `vk.group_collected`, `.author_collected`, `.post_collected`, `.comment_collected`, `.task_progress_updated`, `.task_completed`, `.task_failed` |
+| `parsevk.im.events` | 3 | im-service | content-service | `im.message_collected`, `.group_collected`, `.task_progress_updated`, `.task_completed`, `.task_failed` |
+| `parsevk.tasks.dlq` | 3 | — | — | Any event type exceeding retry limit |
+| `parsevk.vk.dlq` | 3 | — | — | Any event type exceeding retry limit |
+| `parsevk.im.dlq` | 3 | — | — | Any event type exceeding retry limit |
+| `identity.events` | 3 | identity-service | — | `identity.user_logged_in`, `.user_logged_out`, `.token_refreshed` |
+| `identity.dlq` | 3 | — | — | Failed identity outbox events |
+
+### Principal Event Flows
+
+```
+Frontend → api-gateway (HTTP) → tasks-service
+  → Outbox → parsevk.tasks.events
+    → vk-service consumer
+      → HTTP → tasks-service: /execution/start
+      → VK API ingestion
+      → Outbox → parsevk.vk.events
+        → content-service: upsert projections
+        → moderation-service: analyze comments
+```
+
+### Compliance Score
+
+| Pattern | Status | Details |
+|---------|--------|---------|
+| ✅ Outbox Pattern | Done (3/4) | tasks, vk, im — active. identity — dead code (writes to outbox, no Kafka publisher) |
+| ✅ Idempotent Consumers | Done | `processed_events` table + `enable_auto_commit=False` across all consumers |
+| ✅ Exponential Retry | Done | `next_attempt_at = now + min(2^attempts, 300)s`, max 5 attempts |
+| ✅ Producer Deduplication | Partial | vk, im have `dedupe_key` UNIQUE partial index. tasks, identity do not |
+| ✅ Event Envelope | Partial | `EventEnvelope` in `libs/py/common/` exists but NOT used by any service — each service defines its own Pydantic models |
+| ❌ Dead Letter Queue | Missing | Failed events get `status="failed"` in outbox with no DLQ, no alerts |
+| ❌ Consumer-Side Retry | Missing | If `handle_message()` crashes, offset is not committed. Repeated re-read on restart, no backoff |
+| ✅ Event Versioning | Done | `event_version` checked in all consumers, versioning policy documented |
+| ❌ Distributed Tracing | Missing | No OpenTelemetry/Jaeger. `correlation_id` is propagated but not traced |
+| ❌ Consumer Lag Monitoring | Missing | Kafka consumer lag metrics not exported (only vk-service has Kafka health endpoint) |
+| ❌ Single-Partition Topics | Missing | All topics have 1 partition — no horizontal scaling, no parallel consumption |
+| ❌ Transactional Outbox | Missing | Outbox does not use Kafka transactions / exactly-once semantics |
+| ⚠️ Shared Event Schemas | Missing | Event Pydantic models are copy-pasted across services. No shared event schema package |
+
+### Schema Evolution & Versioning Policy
+
+All event envelopes carry an `event_version` integer field. Current version is `1`.
+
+- **Backward-compatible changes** (adding optional fields, extending enums): bump minor. Consumers must ignore unknown fields.
+- **Breaking changes** (removing/renaming fields, changing types): bump `event_version`. Consumers validate and reject unknown versions with a warning.
+- **Policy**: Producers MUST NOT produce events with unsupported versions. Consumers MUST reject events with unknown versions (logged + skipped). Migration path: stand up new version in parallel, then deprecate old version after all consumers have been updated.
+
+### Required Improvements for Full EDA Compliance
+
+| Priority | Task | Impact |
+|----------|------|--------|
+| P0 | **Fix identity-service outbox** — add Kafka config, start `OutboxPublisher` | Dead events become live |
+| P0 | **Shared event schemas** — extract to `libs/py/common/`, use `EventEnvelope` | Eliminate copy-paste, enable contract testing |
+| P1 | **Dead Letter Queue** — dedicated DLQ topic, move failed events, alert | Prevent data loss |
+| P1 | **Consumer retry with backoff** — `retry_count` + backoff per consumer, DLQ on exhaustion | Reliable processing |
+| P1 | **Multi-partition topics** — 3+ partitions, keyed by `aggregate_id` | Horizontal scaling |
+| P2 | **Event versioning & schema registry** — evolution policy, backward compat checks | Safe schema changes |
+| P2 | **Kafka monitoring** — consumer lag metrics, health endpoints for all services | Observability |
+| P2 | **OpenTelemetry** — distributed tracing through Kafka messages | Traceability |
+| P3 | **Transactional outbox** — Kafka transactions / exactly-once | Idempotent guarantees |
+| P3 | **Integration tests with testcontainers** — Kafka consumer/producer tests | Reliability |
+
 ## Code Examples
 
 ### Router (api-gateway, proxy route)
@@ -232,6 +301,7 @@ class VkFriendsExportRepository:
 
 - ❌ **Business logic in Router or Repository:** Always belongs in Service layer.
 - ❌ **Synchronous chains:** Service A → Service B → Service C over HTTP. Use Kafka for async flows.
+- ❌ **Dead outbox publishers:** Every service with an outbox table MUST have a running publisher. Identity-service is currently non-compliant.
 - ❌ **Shared databases between services:** Each service owns its DB. Access foreign data only via API.
 - ❌ **Silent exceptions:** Never `except: pass`. Always log the reason.
 - ❌ **Files > 150 lines:** Decompose into smaller modules.

@@ -1,9 +1,7 @@
 import logging
 from datetime import UTC, datetime
-from typing import Any
-from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from common.events import ConsumerEvent
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,15 +16,8 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class ImEvent(BaseModel):
-    event_id: UUID
-    event_type: str
-    event_version: int
-    aggregate_id: str
-    correlation_id: str | None = None
-    payload: dict[str, Any]
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+class ImEvent(ConsumerEvent):
+    pass
 
 
 class ImEventRepository:
