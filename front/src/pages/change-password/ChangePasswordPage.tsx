@@ -32,7 +32,7 @@ export function ChangePasswordPage() {
     if (field === 'oldPassword' && !oldPassword) return 'Введите старый пароль'
     if (field === 'newPassword') {
       if (!newPassword) return 'Введите новый пароль'
-      if (newPassword.length < 8) return 'Минимум 8 символов'
+      if (newPassword.length < 12) return 'Минимум 12 символов'
     }
     if (field === 'confirmPassword') {
       if (!confirmPassword) return 'Подтвердите новый пароль'
@@ -54,8 +54,8 @@ export function ChangePasswordPage() {
       setError('Заполните все поля')
       return
     }
-    if (newPassword.length < 8) {
-      setError('Новый пароль должен быть не менее 8 символов')
+    if (newPassword.length < 12) {
+      setError('Новый пароль должен быть не менее 12 символов')
       return
     }
     if (newPassword !== confirmPassword) {

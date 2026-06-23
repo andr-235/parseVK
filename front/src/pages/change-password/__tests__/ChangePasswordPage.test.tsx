@@ -77,7 +77,7 @@ describe('ChangePasswordPage', () => {
     const confirmPwd = screen.getByLabelText('Подтверждение')
 
     await user.type(oldPwd, 'oldpass')
-    await user.type(newPwd, 'newpass123')
+    await user.type(newPwd, 'newpass12345')
     await user.type(confirmPwd, 'different')
     await user.tab()
 
@@ -90,11 +90,11 @@ describe('ChangePasswordPage', () => {
     renderPage()
 
     await user.type(screen.getByLabelText('Старый пароль'), 'oldpass')
-    await user.type(screen.getByLabelText('Новый пароль'), 'newpass123')
-    await user.type(screen.getByLabelText('Подтверждение'), 'newpass123')
+    await user.type(screen.getByLabelText('Новый пароль'), 'newpass12345')
+    await user.type(screen.getByLabelText('Подтверждение'), 'newpass12345')
     await user.click(screen.getByRole('button', { name: 'Сменить пароль' }))
 
-    expect(mockChangePassword).toHaveBeenCalledWith('oldpass', 'newpass123')
+    expect(mockChangePassword).toHaveBeenCalledWith('oldpass', 'newpass12345')
   })
 
   it('shows success after change', async () => {
@@ -103,8 +103,8 @@ describe('ChangePasswordPage', () => {
     renderPage()
 
     await user.type(screen.getByLabelText('Старый пароль'), 'oldpass')
-    await user.type(screen.getByLabelText('Новый пароль'), 'newpass123')
-    await user.type(screen.getByLabelText('Подтверждение'), 'newpass123')
+    await user.type(screen.getByLabelText('Новый пароль'), 'newpass12345')
+    await user.type(screen.getByLabelText('Подтверждение'), 'newpass12345')
     await user.click(screen.getByRole('button', { name: 'Сменить пароль' }))
 
     expect(await screen.findByText('Пароль успешно изменён')).toBeInTheDocument()
@@ -117,8 +117,8 @@ describe('ChangePasswordPage', () => {
     renderPage()
 
     await user.type(screen.getByLabelText('Старый пароль'), 'wrong')
-    await user.type(screen.getByLabelText('Новый пароль'), 'newpass123')
-    await user.type(screen.getByLabelText('Подтверждение'), 'newpass123')
+    await user.type(screen.getByLabelText('Новый пароль'), 'newpass12345')
+    await user.type(screen.getByLabelText('Подтверждение'), 'newpass12345')
     await user.click(screen.getByRole('button', { name: 'Сменить пароль' }))
 
     expect(await screen.findByText('Старый пароль неправильный')).toBeInTheDocument()

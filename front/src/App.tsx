@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
 import { Skeleton } from './components/ui'
 import { setOnUnauthorized } from './shared/api/client'
@@ -26,8 +26,9 @@ const AdminUsersPage = lazy(() => import('./pages/admin-users/AdminUsersPage').t
 const LoginPage = lazy(() => import('./pages/login/LoginPage').then(m => ({ default: m.LoginPage })))
 const ChangePasswordPage = lazy(() => import('./pages/change-password/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
 
-function AuthOutlet() {
+export function AuthOutlet() {
   const { user, isInitialized, init } = useAuth()
+  const location = useLocation()
 
   useEffect(() => {
     init()
@@ -62,7 +63,16 @@ function AuthOutlet() {
     return <Navigate to="/login" replace />
   }
 
+  if (user.isTemporaryPassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
+  }
+
   return <Outlet />
+}
+
+export function AdminOutlet() {
+  const user = useAuth((state) => state.user)
+  return user?.role === 'admin' ? <Outlet /> : <Navigate to="/comments" replace />
 }
 
 function App() {
@@ -91,7 +101,9 @@ function App() {
             <Route path="/ok/friends-export" element={<OkFriendsExportPage />} />
             <Route path="/metrics" element={<MetricsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route element={<AdminOutlet />}>
+              <Route path="/admin/users" element={<AdminUsersPage />} />
+            </Route>
           </Route>
         </Route>
       </Routes>
