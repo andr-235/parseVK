@@ -1,5 +1,6 @@
 import logging
 from datetime import UTC, datetime
+from uuid import UUID
 
 from common.events import ImEvent
 from sqlalchemy import select
