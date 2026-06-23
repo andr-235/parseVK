@@ -1,3 +1,11 @@
+# [0.44.0](https://github.com/andr-235/parseVK/compare/v0.43.0...v0.44.0) (2026-06-23)
+
+
+### Features
+
+* complete EDA compliance — tracing, dedupe, integration tests ([5097141](https://github.com/andr-235/parseVK/commit/50971413d3c1200a2707f4f32f235358efbcb639))
+* **telegram-service:** add FastAPI microservice with Telethon integration ([14630aa](https://github.com/andr-235/parseVK/commit/14630aae053a2e30a405ee5609d685da98769c36))
+
 # [0.43.0](https://github.com/andr-235/parseVK/compare/v0.42.1...v0.43.0) (2026-06-22)
 
 
