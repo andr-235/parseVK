@@ -1,85 +1,107 @@
-# ruff: noqa: B008
-
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.telegram_service.repository import TelegramServiceRepository
+from app.core.security import require_internal_token
+from app.db.session import get_session
 from app.modules.telegram_service.schemas import (
-    TelegramExportStartRequest,
+    TelegramExportStartResponse,
+    TelegramJobDetailResponse,
+    TelegramJobLogEntry,
+    TelegramJobState,
 )
 from app.modules.telegram_service.service import TelegramServiceService
+from app.modules.telegram_service.repository import TelegramServiceRepository
 
-_repo = TelegramServiceRepository()
+router = APIRouter(
+    prefix="/internal/telegram",
+    tags=["telegram"],
+    dependencies=[Depends(require_internal_token)],
+)
 
 
-def get_repo() -> TelegramServiceRepository:
-    return _repo
-
-
-def get_service(repo: TelegramServiceRepository = Depends(get_repo)) -> TelegramServiceService:
+def get_service(session: AsyncSession = Depends(get_session)) -> TelegramServiceService:
+    repo = TelegramServiceRepository(session)
     return TelegramServiceService(repo)
-
-
-router = APIRouter(prefix="/internal/telegram", tags=["telegram"])
 
 
 @router.get("/dialogs")
 async def get_dialogs(
     service: TelegramServiceService = Depends(get_service),
-):
+) -> list[dict]:
     return await service.get_user_dialogs()
 
 
-@router.post("/live-parse")
-async def start_live_parse(
-    params: TelegramExportStartRequest,
-    service: TelegramServiceService = Depends(get_service),
-):
-    return await service.start_live_parse(params.model_dump())
-
-
-@router.post("/export", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/export", response_model=TelegramExportStartResponse, status_code=status.HTTP_201_CREATED
+)
 async def start_export(
-    params: TelegramExportStartRequest,
+    params: dict,
     service: TelegramServiceService = Depends(get_service),
-):
-    return await service.start_export(params.model_dump())
+) -> TelegramExportStartResponse:
+    return await service.start_export(params)
 
 
-@router.get("/jobs/{job_id}")
+@router.post(
+    "/live-parse", response_model=TelegramExportStartResponse, status_code=status.HTTP_201_CREATED
+)
+async def start_live_parse(
+    params: dict,
+    service: TelegramServiceService = Depends(get_service),
+) -> TelegramExportStartResponse:
+    return await service.start_live_parse(params)
+
+
+@router.get("/jobs/{job_id}", response_model=TelegramJobDetailResponse)
 async def get_job(
-    job_id: uuid.UUID,
+    job_id: str,
     service: TelegramServiceService = Depends(get_service),
-):
-    result = await service.get_job_detail(job_id)
-    if result is None:
+) -> TelegramJobDetailResponse:
+    try:
+        job_uuid = uuid.UUID(job_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID format")
+
+    result = await service.get_job_detail(job_uuid)
+    if not result:
         raise HTTPException(status_code=404, detail="Job not found")
     return result
 
 
 @router.post("/jobs/{job_id}/cancel")
 async def cancel_job(
-    job_id: uuid.UUID,
+    job_id: str,
     service: TelegramServiceService = Depends(get_service),
-):
-    success = await service.cancel_job(job_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Job not found or already completed")
+) -> dict:
+    try:
+        job_uuid = uuid.UUID(job_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID format")
+
+    cancelled = await service.cancel_job(job_uuid)
+    if not cancelled:
+        raise HTTPException(status_code=404, detail="Job not found or already finished")
     return {"status": "cancelled"}
 
 
 @router.get("/jobs/{job_id}/download/xlsx")
 async def download_xlsx(
-    job_id: uuid.UUID,
+    job_id: str,
     service: TelegramServiceService = Depends(get_service),
-):
-    xlsx_bytes = await service.get_xlsx_bytes(job_id)
-    if xlsx_bytes is None:
-        raise HTTPException(status_code=404, detail="XLSX not found")
+) -> Response:
+    try:
+        job_uuid = uuid.UUID(job_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID format")
+
+    xlsx_bytes = await service.get_xlsx_bytes(job_uuid)
+    if not xlsx_bytes:
+        raise HTTPException(status_code=404, detail="XLSX file not found")
+
     return Response(
         content=xlsx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=telegram_export_{job_id}.xlsx"},
+        headers={"Content-Disposition": f'attachment; filename="telegram_export_{job_id}.xlsx"'},
     )

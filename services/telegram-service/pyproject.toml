@@ -3,16 +3,16 @@ name = "parsevk-telegram-service"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-  "fastapi>=0.115",
-  "uvicorn[standard]>=0.30",
-  "pydantic-settings>=2.4",
-  "telethon>=1.38",
-  "python-socks>=2.4",
-  "openpyxl>=3.1",
-  "alembic>=1.13",
   "asyncpg>=0.29",
+  "fastapi>=0.115",
+  "httpx>=0.27",
+  "openpyxl>=3.1.5",
+  "pydantic-settings>=2.4",
+  "python-multipart>=0.0.18",
+  "python_socks>=2.4",
   "sqlalchemy[asyncio]>=2.0",
-  "python-multipart>=0.0.29",
+  "telethon>=1.34",
+  "uvicorn[standard]>=0.30",
 ]
 
 [project.optional-dependencies]
