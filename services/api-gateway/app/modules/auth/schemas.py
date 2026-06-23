@@ -14,6 +14,7 @@ class AuthUser(BaseModel):
     role: str
     is_active: bool
     is_superuser: bool
+    is_temporary_password: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -25,7 +26,7 @@ class ChangePasswordRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     old_password: str = Field(min_length=1)
-    new_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=12, max_length=128)
 
 
 class AuthResponse(BaseModel):

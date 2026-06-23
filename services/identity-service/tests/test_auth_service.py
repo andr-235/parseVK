@@ -68,6 +68,7 @@ def make_user(active: bool = True) -> User:
         role=ROLE_ADMIN,
         is_active=active,
         is_superuser=True,
+        is_temporary_password=True,
     )
 
 
@@ -130,3 +131,4 @@ async def test_password_change_revokes_old_sessions():
 
     assert result.refresh_token
     assert users_repo.revoked_all
+    assert users_repo.user.is_temporary_password is False

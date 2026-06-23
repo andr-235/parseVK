@@ -3,9 +3,10 @@ import { apiGet, apiPost } from './client'
 export interface AuthUser {
   id: string
   username: string
-  role: string
+  role: 'admin' | 'user'
   isActive: boolean
   isSuperuser: boolean
+  isTemporaryPassword?: boolean
 }
 
 export interface AuthResponse {

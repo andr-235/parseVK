@@ -90,6 +90,7 @@ async def test_login_sets_refresh_cookie():
             "role": "admin",
             "isActive": True,
             "isSuperuser": True,
+            "isTemporaryPassword": False,
         },
     }
     set_cookie = response.headers.get("set-cookie", "")
@@ -118,7 +119,14 @@ async def test_me_calls_identity_after_token_validation():
         )
 
     assert response.status_code == 200
-    assert set(response.json()) == {"id", "username", "role", "isActive", "isSuperuser"}
+    assert set(response.json()) == {
+        "id",
+        "username",
+        "role",
+        "isActive",
+        "isSuperuser",
+        "isTemporaryPassword",
+    }
     assert service.me_called
 
 

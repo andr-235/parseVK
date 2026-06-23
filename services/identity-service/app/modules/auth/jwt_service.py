@@ -55,4 +55,5 @@ class JwtService:
             role=user.role,
             is_active=user.is_active,
             is_superuser=user.is_superuser,
+            is_temporary_password=bool(user.is_temporary_password),
         )

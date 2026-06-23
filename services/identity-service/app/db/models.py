@@ -29,6 +29,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(64), nullable=False, default=ROLE_USER)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_superuser: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_temporary_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     password_changed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now
     )

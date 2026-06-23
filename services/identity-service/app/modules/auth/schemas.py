@@ -24,7 +24,7 @@ class MeRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     user_id: UUID
     old_password: str = Field(min_length=1)
-    new_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=12, max_length=128)
 
 
 class AuthResponse(BaseModel):

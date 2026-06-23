@@ -7,9 +7,10 @@ export type SelectProps<T extends string> = {
   onChange: (v: T) => void
   label: string
   id?: string
+  optionLabels?: Partial<Record<T, string>>
 }
 
-export function Select<T extends string>({ value, options, onChange, label, id }: SelectProps<T>) {
+export function Select<T extends string>({ value, options, onChange, label, id, optionLabels }: SelectProps<T>) {
   const [open, setOpen] = useState(false)
   const [focusIdx, setFocusIdx] = useState(-1)
   const ref = useClickOutside(() => { setOpen(false); setFocusIdx(-1) })
@@ -66,7 +67,7 @@ export function Select<T extends string>({ value, options, onChange, label, id }
         aria-haspopup="listbox"
         className="flex h-8 items-center gap-1 rounded-md border border-border bg-bg-main px-2 text-sm text-text-secondary hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors duration-150"
       >
-        {value}
+        {optionLabels?.[value] ?? value}
         <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" className="opacity-60 shrink-0">
           <path d="M0 2l4 4 4-4z" />
         </svg>
@@ -91,7 +92,7 @@ export function Select<T extends string>({ value, options, onChange, label, id }
               onClick={() => { onChange(o); close() }}
               className={`flex w-full items-center px-2.5 py-1.5 text-left transition-colors duration-150 ${focusIdx === i ? 'bg-bg-hover' : ''} ${o === value ? 'bg-accent-soft text-accent font-medium' : 'text-text-secondary'}`}
             >
-              {o}
+              {optionLabels?.[o] ?? o}
             </button>
           ))}
         </div>

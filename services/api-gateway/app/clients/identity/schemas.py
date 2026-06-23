@@ -11,6 +11,7 @@ class IdentityUser(BaseModel):
     role: str
     is_active: bool
     is_superuser: bool
+    is_temporary_password: bool = False
 
 
 class IdentityLoginRequest(BaseModel):

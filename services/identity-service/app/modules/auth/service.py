@@ -103,6 +103,7 @@ class AuthService:
             raise AuthError("Unauthorized")
         user.password_hash = hash_password(new_password)
         user.password_changed_at = utc_now()
+        user.is_temporary_password = False
         await self.users.revoke_all_refresh_tokens(user.id)
         await self.users.save_user(user)
         await self._add_identity_event("identity.password_changed", str(user.id))

@@ -152,7 +152,7 @@ async function apiFetchBlob(url: string, options: RequestInit): Promise<Blob> {
   return res.blob()
 }
 
-export async function apiGet<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
+export async function apiGet<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
   const url = new URL(`${BASE_URL}${path}`, window.location.origin)
   if (params) {
     for (const [k, v] of Object.entries(params)) {
@@ -205,4 +205,3 @@ export async function apiGetBlob(path: string): Promise<Blob> {
     credentials: 'include',
   })
 }
-

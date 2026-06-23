@@ -1,22 +1,35 @@
-from __future__ import annotations
+from typing import Any
 
 from app.clients.identity.client import IdentityClient
-from app.modules._base import BaseGatewayService
-from app.modules.auth.service import GatewayAuthService
-from fastapi import HTTPException, Request, status
+from app.core.exceptions import BackendServiceError, BackendUnavailableError
+from app.modules._base import forward_service_request, translate_gateway_error
 
 
-class AdminUsersGatewayService(BaseGatewayService):
-    def __init__(self, client: IdentityClient | None = None, auth_service: GatewayAuthService | None = None):
-        super().__init__(client or IdentityClient(), auth_service)
+class AdminUsersGatewayService:
+    def __init__(self, client: IdentityClient | None = None):
+        self.client = client or IdentityClient()
 
-    async def forward(self, request: Request, method: str, path: str, *, json: dict | None = None, params: dict | None = None):
-        claims = await self.claims(request)
-        roles: list[str] = claims.get("roles") or []
-        if "admin" not in roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-        return await super().forward(request, method, path, json=json, params=params)
-
-
-def get_admin_users_gateway_service() -> AdminUsersGatewayService:
-    return AdminUsersGatewayService()
+    async def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        user_id: str,
+        request_id: str | None,
+        correlation_id: str | None,
+        params: dict | None = None,
+        json: Any | None = None,
+    ) -> Any:
+        try:
+            return await forward_service_request(
+                self.client,
+                method,
+                path,
+                user_id=user_id,
+                request_id=request_id,
+                correlation_id=correlation_id,
+                params=params,
+                json=json,
+            )
+        except (BackendServiceError, BackendUnavailableError) as exc:
+            raise translate_gateway_error(exc) from exc
