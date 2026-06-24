@@ -1,3 +1,10 @@
+# [0.45.0](https://github.com/andr-235/parseVK/compare/v0.44.3...v0.45.0) (2026-06-24)
+
+
+### Features
+
+* **tasks-service:** add background automation scheduler loop with config and health ([83b7996](https://github.com/andr-235/parseVK/commit/83b7996c8918af505ab71f9e71c49a5bae5c6c00)), closes [#155](https://github.com/andr-235/parseVK/issues/155)
+
 ## [0.44.3](https://github.com/andr-235/parseVK/compare/v0.44.2...v0.44.3) (2026-06-23)
 
 
