@@ -143,10 +143,10 @@ class AutomationService:
             "task": task_to_response(task),
         }
 
-    async def check_and_run_due(self, settings: TaskAutomationSettings) -> None:
+    async def check_and_run_due(self, settings: TaskAutomationSettings, _now: datetime | None = None) -> None:
         if not settings.enabled:
             return
-        now_utc = datetime.now(UTC)
+        now_utc = _now if _now is not None else datetime.now(UTC)
         local_today = now_utc - timedelta(minutes=settings.timezone_offset_minutes)
         local_scheduled = local_today.replace(
             hour=settings.run_hour, minute=settings.run_minute, second=0, microsecond=0
