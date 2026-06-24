@@ -8,13 +8,16 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.db.session import SessionLocal
+from app.modules.automation.repository import AutomationRepository
 from app.modules.automation.router import router as automation_router
+from app.modules.automation.service import AutomationService
 from app.modules.outbox.publisher import OutboxPublisher
 from app.modules.tasks.router import router as tasks_router
 
 logger = logging.getLogger(__name__)
 
 _outbox_publisher_healthy: list[bool] = [False]
+_automation_scheduler_healthy: list[bool] = [False]
 
 
 async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
@@ -50,20 +53,48 @@ async def publish_outbox_forever() -> None:
         await asyncio.sleep(2)
 
 
+async def run_automation_scheduler_forever() -> None:
+    logger.info("Automation scheduler starting")
+    while True:
+        try:
+            async with SessionLocal() as session:
+                async with session.begin():
+                    settings_list = await AutomationRepository(session).list_enabled_settings()
+                    for s in settings_list:
+                        try:
+                            await AutomationService(session).check_and_run_due(s)
+                        except Exception:
+                            logger.exception("Automation scheduler failed for user %s", s.owner_user_id)
+                    count = len(settings_list)
+                    if count:
+                        logger.info("Automation scheduler check: %d settings processed", count)
+        except Exception:
+            logger.exception("automation scheduler loop failed")
+        await asyncio.sleep(30)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = None
+    tasks: list[asyncio.Task] = []
     if settings.outbox_publish_enabled:
-        task = asyncio.create_task(
-            supervise("Outbox publisher", publish_outbox_forever, health_flag=_outbox_publisher_healthy)
+        tasks.append(
+            asyncio.create_task(
+                supervise("Outbox publisher", publish_outbox_forever, health_flag=_outbox_publisher_healthy)
+            )
+        )
+    if settings.automation_scheduler_enabled:
+        tasks.append(
+            asyncio.create_task(
+                supervise("Automation scheduler", run_automation_scheduler_forever, health_flag=_automation_scheduler_healthy)
+            )
         )
     try:
         yield
     finally:
-        if task:
-            task.cancel()
+        for t in tasks:
+            t.cancel()
             with suppress(asyncio.CancelledError):
-                await task
+                await t
 
 
 def create_app() -> FastAPI:
@@ -74,6 +105,7 @@ def create_app() -> FastAPI:
         return {
             "status": "UP",
             "outboxPublisher": "healthy" if _outbox_publisher_healthy[0] else "unhealthy",
+            "automationScheduler": "healthy" if _automation_scheduler_healthy[0] else "unhealthy",
         }
 
     @app.get("/ready")

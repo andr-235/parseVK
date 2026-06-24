@@ -1,6 +1,10 @@
+import logging
+
 from datetime import UTC, datetime, timedelta
 
-from app.db.models import Task, TaskAuditLog
+from app.db.models import Task, TaskAuditLog, TaskAutomationSettings
+
+logger = logging.getLogger(__name__)
 from app.modules.automation.repository import AutomationRepository
 from app.modules.automation.schemas import AutomationSettingsUpdate
 from app.modules.outbox.service import OutboxService
@@ -138,6 +142,27 @@ class AutomationService:
             "settings": await self._settings_response(owner_user_id, settings),
             "task": task_to_response(task),
         }
+
+    async def check_and_run_due(self, settings: TaskAutomationSettings) -> None:
+        if not settings.enabled:
+            return
+        now_utc = datetime.now(UTC)
+        local_today = now_utc - timedelta(minutes=settings.timezone_offset_minutes)
+        local_scheduled = local_today.replace(
+            hour=settings.run_hour, minute=settings.run_minute, second=0, microsecond=0
+        )
+        utc_scheduled = local_scheduled + timedelta(minutes=settings.timezone_offset_minutes)
+        if utc_scheduled > now_utc:
+            return
+        last_run = settings.last_run_at
+        if last_run is not None and last_run.replace(tzinfo=UTC) >= utc_scheduled:
+            logger.info("Skipped: already ran today for user %s", settings.owner_user_id)
+            return
+        if await self.repository.has_active_automation_task(settings.owner_user_id):
+            logger.info("Active task in progress, skipping automation for user %s", settings.owner_user_id)
+            return
+        logger.info("Triggered automation run for user %s", settings.owner_user_id)
+        await self.run(settings.owner_user_id)
 
     async def _settings_response(self, owner_user_id: str, settings) -> dict:
         return {

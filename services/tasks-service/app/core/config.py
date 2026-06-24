@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     kafka_topic_tasks: str = "parsevk.tasks.events"
     kafka_topic_tasks_dlq: str = "parsevk.tasks.dlq"
     outbox_publish_enabled: bool = False
+    automation_scheduler_enabled: bool = False
 
 
 settings = Settings()

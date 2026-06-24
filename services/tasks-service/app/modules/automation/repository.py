@@ -1,7 +1,11 @@
+import logging
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Task, TaskAutomationSettings, utcnow
+
+logger = logging.getLogger(__name__)
 
 
 class AutomationRepository:
@@ -51,6 +55,14 @@ class AutomationRepository:
             .order_by(Task.updated_at.desc(), Task.id.desc())
             .limit(1)
         )
+
+    async def list_enabled_settings(self) -> list[TaskAutomationSettings]:
+        rows = await self.session.scalars(
+            select(TaskAutomationSettings).where(TaskAutomationSettings.enabled.is_(True))
+        )
+        result = list(rows.all())
+        logger.info("Found %d enabled automation settings", len(result))
+        return result
 
     async def update_last_run_at(self, settings: TaskAutomationSettings) -> None:
         settings.last_run_at = utcnow()
