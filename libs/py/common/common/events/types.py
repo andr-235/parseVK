@@ -3,6 +3,7 @@ from typing import Literal
 TaskEventType = Literal[
     "task.created",
     "task.resumed",
+    "task.automation_run_requested",
     "task.deleted",
     "task.cancelled",
     "task.failed",

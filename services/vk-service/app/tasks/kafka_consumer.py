@@ -1,14 +1,14 @@
 import json
 import logging
 
+from common.events import TaskEvent
+from common.kafka.consumer import BaseEventConsumer
 from prometheus_client import Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bootstrap import get_ingestion_service, get_task_events_handler
 from app.core.config import settings
 from app.domain.models.tasks import ProcessedEvent
-from common.events import TaskEvent
-from common.kafka.consumer import BaseEventConsumer
 from app.infrastructure.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,6 @@ class TaskEventsConsumer(BaseEventConsumer):
             async with session.begin():
                 handler = get_task_events_handler(session)
                 task_run = await handler.handle(event)
-                if task_run is not None and event.event_type in {"task.created", "task.resumed"}:
+                if task_run is not None and event.event_type in {"task.created", "task.resumed", "task.automation_run_requested"}:
                     ingestion = get_ingestion_service(session)
                     await ingestion.execute(task_run, correlation_id=event.correlation_id)
