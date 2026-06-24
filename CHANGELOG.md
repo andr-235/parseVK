@@ -1,3 +1,10 @@
+## [0.44.3](https://github.com/andr-235/parseVK/compare/v0.44.2...v0.44.3) (2026-06-23)
+
+
+### Bug Fixes
+
+* **admin-users:** harden user management workflow ([61e9027](https://github.com/andr-235/parseVK/commit/61e90276dac0c9b422a820c64d10f880e9fbff3b)), closes [#270](https://github.com/andr-235/parseVK/issues/270)
+
 ## [0.44.2](https://github.com/andr-235/parseVK/compare/v0.44.1...v0.44.2) (2026-06-23)
 
 
