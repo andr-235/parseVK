@@ -1,3 +1,10 @@
+## [0.45.1](https://github.com/andr-235/parseVK/compare/v0.45.0...v0.45.1) (2026-06-24)
+
+
+### Bug Fixes
+
+* **vk-service:** handle task.automation_run_requested event type ([6a621bb](https://github.com/andr-235/parseVK/commit/6a621bb5da63520eef6aae5d95dcfc135b3ad597))
+
 # [0.45.0](https://github.com/andr-235/parseVK/compare/v0.44.3...v0.45.0) (2026-06-24)
 
 
