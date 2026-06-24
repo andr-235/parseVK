@@ -21,6 +21,7 @@
 | `FASTAPI_INTERNAL_SERVICE_TOKEN` | Токен для межсервисного HTTP |
 | `VK_TOKEN` | VK API токен (права: wall, groups, users, offline) |
 | `TELEGRAM_API_ID/HASH` | Telegram API credentials (Telethon) |
+| `TASKS_AUTOMATION_SCHEDULER_ENABLED` | Включает фоновый планировщик автоматизации задач (tasks-service) |
 | `VITE_*` | Frontend-переменные (Vite env) |
 | `WAPPI_*` | IM-сервис (WhatsApp через Wappi.pro) |
 | `VPN_SERVICE_TELEGRAM_URL` | SOCKS5-прокси для Telegram |
