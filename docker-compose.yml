@@ -530,10 +530,9 @@ services:
     environment:
       TELEGRAM_SERVICE_DATABASE_URL: ${TELEGRAM_SERVICE_DATABASE_URL:-postgresql+asyncpg://telegram_service:telegram_dev_password_change_me@telegram-db:5432/telegram_service}
       UV_CACHE_DIR: /tmp/uv-cache
-    command: ["uv", "run", "alembic", "upgrade", "head"]
+    command: ["uv", "run", "alembic", "upgrade", "heads"]
     networks:
       - backend
-
   telegram-service:
     build:
       context: .
