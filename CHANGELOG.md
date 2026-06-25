@@ -1,3 +1,10 @@
+## [0.45.7](https://github.com/andr-235/parseVK/compare/v0.45.6...v0.45.7) (2026-06-25)
+
+
+### Bug Fixes
+
+* use heads for telegram-migrate due to multiple heads ([62bea22](https://github.com/andr-235/parseVK/commit/62bea2260c3d1bd11a777d471e1f8e3bb03a660f))
+
 ## [0.45.6](https://github.com/andr-235/parseVK/compare/v0.45.5...v0.45.6) (2026-06-25)
 
 
