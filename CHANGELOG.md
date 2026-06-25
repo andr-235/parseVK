@@ -1,3 +1,10 @@
+## [0.45.6](https://github.com/andr-235/parseVK/compare/v0.45.5...v0.45.6) (2026-06-25)
+
+
+### Bug Fixes
+
+* add alembic dependency to telegram-service ([60c9da3](https://github.com/andr-235/parseVK/commit/60c9da3c7010e0a10e4014e54e808f2c115f5189))
+
 ## [0.45.5](https://github.com/andr-235/parseVK/compare/v0.45.4...v0.45.5) (2026-06-25)
 
 
