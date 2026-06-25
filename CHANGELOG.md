@@ -1,3 +1,10 @@
+## [0.45.4](https://github.com/andr-235/parseVK/compare/v0.45.3...v0.45.4) (2026-06-25)
+
+
+### Bug Fixes
+
+* set UV_CACHE_DIR for migrate containers to prevent cache permission error ([7b09682](https://github.com/andr-235/parseVK/commit/7b09682fc709e33d1e414b5ca73374b5652d7ca9))
+
 ## [0.45.3](https://github.com/andr-235/parseVK/compare/v0.45.2...v0.45.3) (2026-06-25)
 
 
