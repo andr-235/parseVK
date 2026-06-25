@@ -24,6 +24,7 @@ class BaseEventConsumer(ABC):
         self._consumer = None
         self._repo = ProcessedEventRepository(model_class, self.consumer_name)
         self._lag_gauge = lag_gauge
+        self._pending_resume_tasks: set[asyncio.Task] = set()
 
     async def run_forever(self) -> None:
         from aiokafka import AIOKafkaConsumer
@@ -54,6 +55,8 @@ class BaseEventConsumer(ABC):
         except asyncio.CancelledError:
             pass
         finally:
+            for task in self._pending_resume_tasks:
+                task.cancel()
             await self.stop()
 
     async def _skip_due_to_retry_backoff(self, raw_value: bytes) -> bool:
@@ -66,13 +69,6 @@ class BaseEventConsumer(ABC):
             return False
         async with self.session_factory() as session:
             row = await self._repo.get_event(session, event_id)
-            if row is not None and row.next_retry_at is not None and row.next_retry_at > datetime.now(UTC):
-                logger.info(
-                    "Skipping event %s (type=%s) due to backoff until %s, committing offset",
-                    event_id, event_type, row.next_retry_at,
-                )
-                await self._consumer.commit()
-                return True
             if row is not None and row.retry_count >= self.max_consumer_retries:
                 logger.warning(
                     "Event %s (type=%s) exceeded max retries (%d), sending to DLQ",
@@ -84,6 +80,8 @@ class BaseEventConsumer(ABC):
         return False
 
     async def _handle_processing_failure(self, message) -> None:
+        from aiokafka import TopicPartition
+
         payload = decode_payload(message.value)
         event_id = payload.get("event_id") if payload else None
         event_type = payload.get("event_type", "") if payload else ""
@@ -110,6 +108,14 @@ class BaseEventConsumer(ABC):
                         "Failed to process event %s (retry %d/%d, next at %s)",
                         event_id, updated or 1, self.max_consumer_retries, next_retry,
                     )
+                    tp = TopicPartition(message.topic, message.partition)
+                    self._consumer.pause(tp)
+                    resume_delay = (next_retry - datetime.now(UTC)).total_seconds()
+                    task = asyncio.create_task(
+                        self._delayed_resume(tp, max(resume_delay, 0))
+                    )
+                    self._pending_resume_tasks.add(task)
+                    task.add_done_callback(self._pending_resume_tasks.discard)
         else:
             logger.warning(
                 "Poison pill detected at offset %s (no event_id), sending to DLQ and committing offset",
@@ -117,6 +123,14 @@ class BaseEventConsumer(ABC):
             )
             await send_to_dlq(message.value, self.dlq_topic, self.bootstrap_servers)
             await self._consumer.commit()
+
+    async def _delayed_resume(self, tp, delay: float) -> None:
+        await asyncio.sleep(delay)
+        try:
+            self._consumer.resume(tp)
+            logger.info("Resumed partition %s after retry backoff", tp)
+        except Exception:
+            logger.exception("Failed to resume partition %s", tp)
 
     def _update_lag_metric(self, message) -> None:
         if self._lag_gauge is None:
