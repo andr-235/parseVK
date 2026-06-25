@@ -1,3 +1,10 @@
+## [0.45.3](https://github.com/andr-235/parseVK/compare/v0.45.2...v0.45.3) (2026-06-25)
+
+
+### Bug Fixes
+
+* use uv run alembic in migrate containers to avoid PATH issues ([c2c7b0c](https://github.com/andr-235/parseVK/commit/c2c7b0cc692019978dc3baa724b5460cbe2cd1bf))
+
 ## [0.45.2](https://github.com/andr-235/parseVK/compare/v0.45.1...v0.45.2) (2026-06-25)
 
 
