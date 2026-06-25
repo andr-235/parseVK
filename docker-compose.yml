@@ -138,18 +138,18 @@ services:
     networks:
       - backend
 
-   identity-migrate:
-     build:
-       context: .
-       dockerfile: services/identity-service/Dockerfile
-     restart: "no"
-     depends_on:
-       identity-db:
-         condition: service_healthy
-     environment:
-       IDENTITY_DATABASE_URL: postgresql+asyncpg://${IDENTITY_POSTGRES_USER:-identity}:${IDENTITY_POSTGRES_PASSWORD:-identity}@identity-db:5432/${IDENTITY_POSTGRES_DB:-identity}
-       UV_CACHE_DIR: /tmp/uv-cache
-     command: ["uv", "run", "alembic", "upgrade", "head"]
+  identity-migrate:
+    build:
+      context: .
+      dockerfile: services/identity-service/Dockerfile
+    restart: "no"
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    environment:
+      IDENTITY_DATABASE_URL: postgresql+asyncpg://${IDENTITY_POSTGRES_USER:-identity}:${IDENTITY_POSTGRES_PASSWORD:-identity}@identity-db:5432/${IDENTITY_POSTGRES_DB:-identity}
+      UV_CACHE_DIR: /tmp/uv-cache
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
       - backend
 
@@ -216,18 +216,18 @@ services:
     networks:
       - backend
 
-   tasks-migrate:
-     build:
-       context: .
-       dockerfile: services/tasks-service/Dockerfile
-     restart: "no"
-     depends_on:
-       tasks-db:
-         condition: service_healthy
-     environment:
-       TASKS_DATABASE_URL: postgresql+asyncpg://${TASKS_POSTGRES_USER:-tasks}:${TASKS_POSTGRES_PASSWORD:-tasks}@tasks-db:5432/${TASKS_POSTGRES_DB:-tasks}
-       UV_CACHE_DIR: /tmp/uv-cache
-     command: ["uv", "run", "alembic", "upgrade", "head"]
+  tasks-migrate:
+    build:
+      context: .
+      dockerfile: services/tasks-service/Dockerfile
+    restart: "no"
+    depends_on:
+      tasks-db:
+        condition: service_healthy
+    environment:
+      TASKS_DATABASE_URL: postgresql+asyncpg://${TASKS_POSTGRES_USER:-tasks}:${TASKS_POSTGRES_PASSWORD:-tasks}@tasks-db:5432/${TASKS_POSTGRES_DB:-tasks}
+      UV_CACHE_DIR: /tmp/uv-cache
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
       - backend
 
@@ -276,19 +276,19 @@ services:
     networks:
       - backend
 
-   vk-migrate:
-     build:
-       context: .
-       dockerfile: services/vk-service/Dockerfile
-     restart: "no"
-     depends_on:
-       vk-db:
-         condition: service_healthy
-     environment:
-       VK_SERVICE_DATABASE_URL: ${VK_SERVICE_DATABASE_URL:-postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk}
-       VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-dev-vk-token}}
-       UV_CACHE_DIR: /tmp/uv-cache
-     command: ["uv", "run", "alembic", "upgrade", "head"]
+  vk-migrate:
+    build:
+      context: .
+      dockerfile: services/vk-service/Dockerfile
+    restart: "no"
+    depends_on:
+      vk-db:
+        condition: service_healthy
+    environment:
+      VK_SERVICE_DATABASE_URL: ${VK_SERVICE_DATABASE_URL:-postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk}
+      VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-dev-vk-token}}
+      UV_CACHE_DIR: /tmp/uv-cache
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
       - backend
 
@@ -343,18 +343,18 @@ services:
     networks:
       - backend
 
-   content-migrate:
-     build:
-       context: .
-       dockerfile: services/content-service/Dockerfile
-     restart: "no"
-     depends_on:
-       content-db:
-         condition: service_healthy
-     environment:
-       CONTENT_DATABASE_URL: ${CONTENT_DATABASE_URL:-postgresql+asyncpg://content:content_dev_password_change_me@content-db:5432/content}
-       UV_CACHE_DIR: /tmp/uv-cache
-     command: ["uv", "run", "alembic", "upgrade", "head"]
+  content-migrate:
+    build:
+      context: .
+      dockerfile: services/content-service/Dockerfile
+    restart: "no"
+    depends_on:
+      content-db:
+        condition: service_healthy
+    environment:
+      CONTENT_DATABASE_URL: ${CONTENT_DATABASE_URL:-postgresql+asyncpg://content:content_dev_password_change_me@content-db:5432/content}
+      UV_CACHE_DIR: /tmp/uv-cache
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
       - backend
 
@@ -404,18 +404,18 @@ services:
     networks:
       - backend
 
-   listings-migrate:
-     build:
-       context: .
-       dockerfile: services/listings-service/Dockerfile
-     restart: "no"
-     depends_on:
-       listings-db:
-         condition: service_healthy
-     environment:
-       LISTINGS_DATABASE_URL: ${LISTINGS_DATABASE_URL:-postgresql+asyncpg://listings:listings_dev_password_change_me@listings-db:5432/listings}
-       UV_CACHE_DIR: /tmp/uv-cache
-     command: ["uv", "run", "alembic", "upgrade", "head"]
+  listings-migrate:
+    build:
+      context: .
+      dockerfile: services/listings-service/Dockerfile
+    restart: "no"
+    depends_on:
+      listings-db:
+        condition: service_healthy
+    environment:
+      LISTINGS_DATABASE_URL: ${LISTINGS_DATABASE_URL:-postgresql+asyncpg://listings:listings_dev_password_change_me@listings-db:5432/listings}
+      UV_CACHE_DIR: /tmp/uv-cache
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
       - backend
 
@@ -459,18 +459,18 @@ services:
     networks:
       - backend
 
-   moderation-migrate:
-     build:
-       context: .
-       dockerfile: services/moderation-service/Dockerfile
-     restart: "no"
-     depends_on:
-       moderation-db:
-         condition: service_healthy
-     environment:
-       MODERATION_DATABASE_URL: ${MODERATION_DATABASE_URL:-postgresql+asyncpg://moderation:moderation_dev_password_change_me@moderation-db:5432/moderation}
-       UV_CACHE_DIR: /tmp/uv-cache
-     command: ["uv", "run", "alembic", "upgrade", "head"]
+  moderation-migrate:
+    build:
+      context: .
+      dockerfile: services/moderation-service/Dockerfile
+    restart: "no"
+    depends_on:
+      moderation-db:
+        condition: service_healthy
+    environment:
+      MODERATION_DATABASE_URL: ${MODERATION_DATABASE_URL:-postgresql+asyncpg://moderation:moderation_dev_password_change_me@moderation-db:5432/moderation}
+      UV_CACHE_DIR: /tmp/uv-cache
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
       - backend
 
@@ -519,18 +519,18 @@ services:
     networks:
       - backend
 
-   telegram-migrate:
-     build:
-       context: .
-       dockerfile: services/telegram-service/Dockerfile
-     restart: "no"
-     depends_on:
-       telegram-db:
-         condition: service_healthy
-     environment:
-       TELEGRAM_SERVICE_DATABASE_URL: ${TELEGRAM_SERVICE_DATABASE_URL:-postgresql+asyncpg://telegram_service:telegram_dev_password_change_me@telegram-db:5432/telegram_service}
-       UV_CACHE_DIR: /tmp/uv-cache
-     command: ["uv", "run", "alembic", "upgrade", "head"]
+  telegram-migrate:
+    build:
+      context: .
+      dockerfile: services/telegram-service/Dockerfile
+    restart: "no"
+    depends_on:
+      telegram-db:
+        condition: service_healthy
+    environment:
+      TELEGRAM_SERVICE_DATABASE_URL: ${TELEGRAM_SERVICE_DATABASE_URL:-postgresql+asyncpg://telegram_service:telegram_dev_password_change_me@telegram-db:5432/telegram_service}
+      UV_CACHE_DIR: /tmp/uv-cache
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
       - backend
 
@@ -712,18 +712,18 @@ services:
     networks:
       - backend
 
-   im-migrate:
-     build:
-       context: .
-       dockerfile: services/im-service/Dockerfile
-     restart: "no"
-     depends_on:
-       im-db:
-         condition: service_healthy
-     environment:
-       IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
-       UV_CACHE_DIR: /tmp/uv-cache
-     command: ["uv", "run", "alembic", "upgrade", "head"]
+  im-migrate:
+    build:
+      context: .
+      dockerfile: services/im-service/Dockerfile
+    restart: "no"
+    depends_on:
+      im-db:
+        condition: service_healthy
+    environment:
+      IM_SERVICE_DATABASE_URL: ${IM_SERVICE_DATABASE_URL:-postgresql+asyncpg://im:im_dev_password_change_me@im-db:5432/im}
+      UV_CACHE_DIR: /tmp/uv-cache
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
       - backend
 
