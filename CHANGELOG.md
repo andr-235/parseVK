@@ -1,3 +1,10 @@
+## [0.45.2](https://github.com/andr-235/parseVK/compare/v0.45.1...v0.45.2) (2026-06-25)
+
+
+### Bug Fixes
+
+* **kafka:** pause partition on consumer failure to prevent offset loss ([55c2395](https://github.com/andr-235/parseVK/commit/55c239539bf1e71384e4e9b97bc85db0d5b123fc))
+
 ## [0.45.1](https://github.com/andr-235/parseVK/compare/v0.45.0...v0.45.1) (2026-06-24)
 
 
