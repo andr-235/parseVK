@@ -1,3 +1,10 @@
+## [0.50.4](https://github.com/andr-235/parseVK/compare/v0.50.3...v0.50.4) (2026-06-26)
+
+
+### Performance Improvements
+
+* **im-service:** replace ILIKE keyword search with Python-side filtering and cursor pagination ([04a5fa0](https://github.com/andr-235/parseVK/commit/04a5fa0f3c1233aeb64daaf2457e38e1d41a3856))
+
 ## [0.50.3](https://github.com/andr-235/parseVK/compare/v0.50.2...v0.50.3) (2026-06-26)
 
 
