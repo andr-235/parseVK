@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     max_profile_id: str = Field(default="", validation_alias="MAX_PROFILE_ID")
 
+    notifier_poll_interval: int = 60
+
     @model_validator(mode="after")
     def warn_if_missing_creds(self) -> "Settings":
         if not self.wappi_api_token and self.kafka_consumer_enabled:
