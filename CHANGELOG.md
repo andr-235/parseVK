@@ -1,3 +1,10 @@
+## [0.49.4](https://github.com/andr-235/parseVK/compare/v0.49.3...v0.49.4) (2026-06-26)
+
+
+### Bug Fixes
+
+* **im-service:** add aliases for camelCase fields in SearchMessagesRequest ([3ff91dd](https://github.com/andr-235/parseVK/commit/3ff91dd9f5316ae73b65897c432cb226d6d7e979))
+
 ## [0.49.3](https://github.com/andr-235/parseVK/compare/v0.49.2...v0.49.3) (2026-06-26)
 
 
