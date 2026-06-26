@@ -1,20 +1,22 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { SearchX, ArrowUpRight, MessageCircle, Bell, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
+import { SearchX, ArrowUpRight, MessageCircle, Bell, Plus, Pencil, Trash2 } from 'lucide-react'
 import { useDebounce } from '../../shared/hooks/useDebounce'
 import { useFeedback } from '../../shared/hooks/useFeedback'
-import { fetchMonitoringMessages, fetchMonitoringGroups, createMonitoringGroup, updateMonitoringGroup, deleteMonitoringGroup } from '../../shared/api/monitoring'
+import { searchByKeywords, listGroups, createGroup, updateGroup, deleteGroup } from '../../shared/api/im'
 import { PageShell } from '../../components/layout/PageShell'
 import { MonitoringMessageDetail } from './components/MonitoringMessageDetail'
-import { MonitoringGroupForm } from '../monitoring-groups/components/MonitoringGroupForm'
+import { MonitoringGroupForm } from './components/MonitoringGroupForm'
 import { Input, Button, Skeleton, ErrorState, ConfirmAction, FeedbackToast } from '../../components/ui'
 import { EmptyState } from '../../components/widgets/table/EmptyState'
 import { formatDateTime } from '../../shared/utils/time'
-import type { MonitorMessage, Messenger, MonitoringGroup } from '../../types/monitoring'
+import type { ImMessage, ImGroup } from '../../types/im'
+
+type Messenger = 'whatsapp' | 'max'
 
 type Section = 'messages' | 'groups'
-type EditingState = { type: 'create' } | { type: 'edit'; group: MonitoringGroup } | null
+type EditingState = { type: 'create' } | { type: 'edit'; group: ImGroup } | null
 
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'messages', label: 'Сообщения' },
@@ -38,7 +40,7 @@ export function MonitoringPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [page, setPage] = useState(1)
-  const [selectedMessage, setSelectedMessage] = useState<MonitorMessage | null>(null)
+  const [selectedMessage, setSelectedMessage] = useState<ImMessage | null>(null)
 
   const [editing, setEditing] = useState<EditingState>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
@@ -48,11 +50,10 @@ export function MonitoringPage() {
   }
 
   const messagesQuery = useQuery({
-    queryKey: ['monitoring-messages', messenger, debouncedSearch, page],
+    queryKey: ['im-messages', messenger, debouncedSearch, page],
     queryFn: () =>
-      fetchMonitoringMessages({
-        sources: [messenger],
-        keywords: debouncedSearch ? [debouncedSearch] : [],
+      searchByKeywords({
+        messenger,
         page,
         limit: PAGE_SIZE,
       }),
@@ -61,40 +62,35 @@ export function MonitoringPage() {
   })
 
   const groupsQuery = useQuery({
-    queryKey: ['monitoring-groups', messenger, debouncedSearch],
-    queryFn: () => fetchMonitoringGroups({ messenger, search: debouncedSearch || undefined }),
+    queryKey: ['im-groups', messenger, debouncedSearch],
+    queryFn: () => listGroups({ messenger, search: debouncedSearch || undefined }),
     enabled: section === 'groups',
   })
 
-  const invalidateGroups = () => queryClient.invalidateQueries({ queryKey: ['monitoring-groups'] })
+  const invalidateGroups = () => queryClient.invalidateQueries({ queryKey: ['im-groups'] })
 
   const createMutation = useMutation({
-    mutationFn: createMonitoringGroup,
+    mutationFn: (data: { messenger: string; chatId: string; name: string; category?: string | null }) =>
+      createGroup(data),
     onSuccess: () => { invalidateGroups(); setEditing(null); showFeedback('success', 'Группа добавлена') },
     onError: (err) => showFeedback('error', `Ошибка: ${err instanceof Error ? err.message : String(err)}`),
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Parameters<typeof updateMonitoringGroup>[1] }) =>
-      updateMonitoringGroup(id, payload),
+    mutationFn: ({ id, payload }: { id: number; payload: { name?: string | null; category?: string | null } }) =>
+      updateGroup(id, payload),
     onSuccess: () => { invalidateGroups(); setEditing(null); showFeedback('success', 'Группа обновлена') },
     onError: (err) => showFeedback('error', `Ошибка: ${err instanceof Error ? err.message : String(err)}`),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: deleteMonitoringGroup,
+    mutationFn: (id: number) => deleteGroup(id),
     onSuccess: () => { invalidateGroups(); setDeletingId(null); showFeedback('success', 'Группа удалена') },
     onError: (err) => showFeedback('error', `Ошибка: ${err instanceof Error ? err.message : String(err)}`),
   })
 
-  const syncMutation = useMutation({
-    mutationFn: (m: Messenger) => fetchMonitoringGroups({ messenger: m, sync: true }),
-    onSuccess: () => { invalidateGroups(); showFeedback('success', 'Синхронизация завершена') },
-    onError: (err) => showFeedback('error', `Ошибка синхронизации: ${err instanceof Error ? err.message : String(err)}`),
-  })
-
   const messages = useMemo(() => messagesQuery.data?.items ?? [], [messagesQuery.data])
-  const hasMore = messagesQuery.data?.hasMore ?? false
+  const hasMore = messagesQuery.data ? messagesQuery.data.page * messagesQuery.data.limit < messagesQuery.data.total : false
   const groups = useMemo(() => groupsQuery.data?.items ?? [], [groupsQuery.data])
   const isSaving = createMutation.isPending || updateMutation.isPending
 
@@ -113,13 +109,13 @@ export function MonitoringPage() {
     setSelectedMessage(null)
   }
 
-  const handleSelectMessage = (msg: MonitorMessage) => {
+  const handleSelectMessage = (msg: ImMessage) => {
     setSelectedMessage((prev) => (prev?.id === msg.id ? null : msg))
   }
 
   const handleSaveGroup = useCallback((data: { name: string; chatId: string; messenger: Messenger; category: string }) => {
     if (editing?.type === 'edit') {
-      updateMutation.mutate({ id: editing.group.id, payload: data })
+      updateMutation.mutate({ id: editing.group.id, payload: { name: data.name, category: data.category } })
     } else {
       createMutation.mutate(data)
     }
@@ -180,31 +176,11 @@ export function MonitoringPage() {
           className="max-w-xs"
         />
         {section === 'groups' && (
-          <>
-            <Button variant="primary" size="sm" onClick={() => setEditing({ type: 'create' })} icon={<Plus size={14} />}>
-              Добавить группу
-            </Button>
-            <Button
-              variant="secondary" size="sm"
-              onClick={() => syncMutation.mutate(messenger)}
-              disabled={syncMutation.isPending}
-              icon={<RefreshCw size={14} className={syncMutation.isPending ? 'animate-spin' : ''} />}
-            >
-              {syncMutation.isPending ? 'Синхронизация...' : 'Синхронизировать'}
-            </Button>
-          </>
+          <Button variant="primary" size="sm" onClick={() => setEditing({ type: 'create' })} icon={<Plus size={14} />}>
+            Добавить группу
+          </Button>
         )}
       </div>
-
-      {section === 'messages' && messagesQuery.data?.usedKeywords && messagesQuery.data.usedKeywords.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-1.5">
-          {messagesQuery.data.usedKeywords.map((kw) => (
-            <span key={kw} className="rounded-sm bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent">
-              {kw}
-            </span>
-          ))}
-        </div>
-      )}
 
       <div className="flex flex-1 min-h-0">
         <div className="flex flex-1 flex-col min-w-0">
@@ -243,7 +219,7 @@ export function MonitoringPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {messages.map((msg: MonitorMessage) => {
+                      {messages.map((msg: ImMessage) => {
                         const isSelected = selectedMessage?.id === msg.id
                         return (
                           <tr key={msg.id} onClick={() => handleSelectMessage(msg)}
@@ -328,7 +304,7 @@ export function MonitoringPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {groups.map((g: MonitoringGroup) => {
+                    {groups.map((g: ImGroup) => {
                       const isDeleting = deletingId === g.id
                       return (
                         <tr key={g.id} className="border-b border-border transition-colors duration-150 hover:bg-bg-hover">

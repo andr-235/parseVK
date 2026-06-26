@@ -3,11 +3,11 @@ import { X } from 'lucide-react'
 import { useKeyPress } from '../../../shared/hooks/useKeyPress'
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap'
 import { Input, Button, Select } from '../../../components/ui'
-import type { MonitoringGroup, Messenger } from '../../../types/monitoring'
+import type { ImGroup } from '../../../types/im'
 
 type Props = {
-  group: MonitoringGroup | null
-  onSave: (data: { name: string; chatId: string; messenger: Messenger; category: string }) => void
+  group: ImGroup | null
+  onSave: (data: { name: string; chatId: string; messenger: string; category: string }) => void
   onClose: () => void
   isLoading: boolean
 }
@@ -21,7 +21,7 @@ export function MonitoringGroupForm({ group, onSave, onClose, isLoading }: Props
 
   const [name, setName] = useState('')
   const [chatId, setChatId] = useState('')
-  const [messenger, setMessenger] = useState<Messenger>('whatsapp')
+  const [messenger, setMessenger] = useState('whatsapp')
   const [category, setCategory] = useState('')
 
   useEffect(() => {

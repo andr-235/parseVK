@@ -128,6 +128,59 @@ async def test_notifier_new_messages_forwards_path():
 
 
 @pytest.mark.asyncio
+async def test_list_monitoring_groups_forwards_to_im_service():
+    client = RecordingIMClient({"items": [], "total": 0})
+
+    result = await forward_service_request(
+        client, "GET", "/internal/monitoring/groups",
+        params={"messenger": "whatsapp"},
+    )
+
+    assert result == {"items": [], "total": 0}
+    assert client.calls[0]["method"] == "GET"
+    assert client.calls[0]["path"] == "/internal/monitoring/groups"
+    assert client.calls[0]["params"] == {"messenger": "whatsapp"}
+
+
+@pytest.mark.asyncio
+async def test_create_monitoring_group_forwards_to_im_service():
+    client = RecordingIMClient({"id": 1, "messenger": "whatsapp", "chat_id": "chat-1", "name": "Test"})
+
+    result = await forward_service_request(
+        client, "POST", "/internal/monitoring/groups",
+        json={"messenger": "whatsapp", "chat_id": "chat-1", "name": "Test"},
+    )
+
+    assert result["name"] == "Test"
+    assert client.calls[0]["method"] == "POST"
+    assert client.calls[0]["path"] == "/internal/monitoring/groups"
+    assert client.calls[0]["json"]["chat_id"] == "chat-1"
+
+
+@pytest.mark.asyncio
+async def test_update_monitoring_group_forwards_to_im_service():
+    client = RecordingIMClient({"id": 1, "name": "Updated"})
+
+    await forward_service_request(
+        client, "PATCH", "/internal/monitoring/groups/5",
+        json={"name": "Updated"},
+    )
+
+    assert client.calls[0]["method"] == "PATCH"
+    assert client.calls[0]["path"] == "/internal/monitoring/groups/5"
+
+
+@pytest.mark.asyncio
+async def test_delete_monitoring_group_forwards_to_im_service():
+    client = RecordingIMClient({"deleted": True})
+
+    await forward_service_request(client, "DELETE", "/internal/monitoring/groups/5")
+
+    assert client.calls[0]["method"] == "DELETE"
+    assert client.calls[0]["path"] == "/internal/monitoring/groups/5"
+
+
+@pytest.mark.asyncio
 async def test_im_maps_upstream_http_error():
     class FailingClient:
         base_url = "http://im-service:8000"

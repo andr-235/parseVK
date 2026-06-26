@@ -10,6 +10,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.modules.keywords.router import router as keywords_router
+from app.modules.monitoring_groups.router import router as monitoring_groups_router
 from app.modules.notifier.router import router as notifier_router
 from app.modules.outbox.publisher import publish_outbox_forever
 from app.modules.search.router import router as search_router
@@ -111,6 +112,7 @@ def create_app() -> FastAPI:
         pass
 
     app.include_router(keywords_router)
+    app.include_router(monitoring_groups_router)
     app.include_router(search_router)
     app.include_router(notifier_router)
 

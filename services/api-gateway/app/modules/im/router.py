@@ -79,3 +79,40 @@ async def get_new_messages(
 ):
     params = dict(request.query_params)
     return await service.forward_json(request, "GET", "/internal/notifier/new-messages", params=params)
+
+
+@router.get("/groups")
+async def list_monitoring_groups(
+    request: Request,
+    service: ImGatewayService = Depends(get_im_gateway_service),
+):
+    params = dict(request.query_params)
+    return await service.forward_json(request, "GET", "/internal/monitoring/groups", params=params)
+
+
+@router.post("/groups", status_code=201)
+async def create_monitoring_group(
+    request: Request,
+    payload: Annotated[dict[str, Any], Body()],
+    service: ImGatewayService = Depends(get_im_gateway_service),
+):
+    return await service.forward_json(request, "POST", "/internal/monitoring/groups", json=payload)
+
+
+@router.patch("/groups/{group_id}")
+async def update_monitoring_group(
+    group_id: int,
+    request: Request,
+    payload: Annotated[dict[str, Any], Body()],
+    service: ImGatewayService = Depends(get_im_gateway_service),
+):
+    return await service.forward_json(request, "PATCH", f"/internal/monitoring/groups/{group_id}", json=payload)
+
+
+@router.delete("/groups/{group_id}")
+async def delete_monitoring_group(
+    group_id: int,
+    request: Request,
+    service: ImGatewayService = Depends(get_im_gateway_service),
+):
+    return await service.forward_json(request, "DELETE", f"/internal/monitoring/groups/{group_id}")

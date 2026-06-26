@@ -3,10 +3,10 @@ import { useKeyPress } from '../../../shared/hooks/useKeyPress'
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap'
 import { Button } from '../../../components/ui'
 import { formatDateTime } from '../../../shared/utils/time'
-import type { MonitorMessage } from '../../../types/monitoring'
+import type { ImMessage } from '../../../types/im'
 
 type Props = {
-  message: MonitorMessage | null
+  message: ImMessage | null
   onClose: () => void
 }
 
@@ -84,12 +84,12 @@ export function MonitoringMessageDetail({ message, onClose }: Props) {
               <p className="text-sm text-text-secondary">{formatDateTime(message.createdAt)}</p>
             </div>
           )}
-          {message.source && (
+          {message.messenger && (
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-text-muted mb-1">
                 Источник
               </p>
-              <p className="text-sm text-text-secondary">{messengerLabels[message.source] ?? message.source}</p>
+              <p className="text-sm text-text-secondary">{messengerLabels[message.messenger] ?? message.messenger}</p>
             </div>
           )}
         </div>
