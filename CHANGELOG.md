@@ -1,3 +1,10 @@
+## [0.49.1](https://github.com/andr-235/parseVK/compare/v0.49.0...v0.49.1) (2026-06-26)
+
+
+### Bug Fixes
+
+* **api-gateway,moderation-service:** increase keywords limit to 1000 ([264e18b](https://github.com/andr-235/parseVK/commit/264e18ba55536ec810bca3954cb7eb6521121752))
+
 # [0.49.0](https://github.com/andr-235/parseVK/compare/v0.48.1...v0.49.0) (2026-06-26)
 
 
