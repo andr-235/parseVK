@@ -1,3 +1,4 @@
+import json
 import logging
 from collections.abc import Callable, Coroutine
 
@@ -169,7 +170,7 @@ class KeywordCrudService:
         if enabled is not None:
             stmt = stmt.where(Keyword.enabled == enabled)
         if scope is not None:
-            stmt = stmt.where(Keyword.scopes.any(scope))
+            stmt = stmt.where(Keyword.scopes.contains(json.dumps([scope])))
 
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total_result = await self.session.execute(count_stmt)
