@@ -39,3 +39,16 @@ class SearchMessagesRequest(BaseModel):
     keywords: list[str] = Field(default_factory=list)
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=50, ge=1, le=200)
+    cursor: str | None = None
+
+
+class PageInfo(BaseModel):
+    hasMore: bool = False
+    nextCursor: str | None = None
+
+
+class KeywordSearchResponse(BaseModel):
+    items: list[SearchMessageItem]
+    pageInfo: PageInfo = Field(default_factory=PageInfo)
+    total: None = None
+    totalMode: str = "not_calculated"

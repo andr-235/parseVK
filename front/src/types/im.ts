@@ -17,6 +17,16 @@ export type ImSearchResponse = {
   limit: number
 }
 
+export type ImKeywordSearchResponse = {
+  items: ImMessage[]
+  pageInfo: {
+    hasMore: boolean
+    nextCursor: string | null
+  }
+  total: null
+  totalMode: string
+}
+
 export type ImGroup = {
   id: number
   messenger: string

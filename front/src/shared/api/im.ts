@@ -1,5 +1,5 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from './client'
-import type { ImMessage, ImSearchResponse, ImGroup, ImGroupCreatePayload, ImGroupUpdatePayload } from '../../types/im'
+import type { ImMessage, ImSearchResponse, ImKeywordSearchResponse, ImGroup, ImGroupCreatePayload, ImGroupUpdatePayload } from '../../types/im'
 
 type ImMessageRaw = {
   id: number
@@ -66,10 +66,29 @@ export type SearchMessagesPostParams = {
   keywords?: string[]
   page?: number
   limit?: number
+  cursor?: string | null
 }
 
-export async function searchMessagesPost(params: SearchMessagesPostParams): Promise<ImSearchResponse> {
-  const raw = await apiPost<ImSearchResponseRaw>('/im/messages/search', params)
+type ImKeywordSearchResponseRaw = {
+  items: ImMessageRaw[]
+  pageInfo: {
+    hasMore: boolean
+    nextCursor: string | null
+  }
+  total: null
+  totalMode: string
+}
+
+export async function searchMessagesPost(params: SearchMessagesPostParams): Promise<ImSearchResponse | ImKeywordSearchResponse> {
+  const raw = await apiPost<ImSearchResponseRaw | ImKeywordSearchResponseRaw>('/im/messages/search', params)
+  if ('pageInfo' in raw) {
+    return {
+      items: raw.items.map(mapMessage),
+      pageInfo: raw.pageInfo,
+      total: null,
+      totalMode: 'not_calculated',
+    }
+  }
   return mapSearchResponse(raw)
 }
 

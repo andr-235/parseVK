@@ -13,7 +13,7 @@ import { MonitoringGroupForm } from './components/MonitoringGroupForm'
 import { Input, Button, Skeleton, ErrorState, ConfirmAction, FeedbackToast } from '../../components/ui'
 import { EmptyState } from '../../components/widgets/table/EmptyState'
 import { formatDateTime } from '../../shared/utils/time'
-import type { ImMessage, ImGroup } from '../../types/im'
+import type { ImMessage, ImGroup, ImKeywordSearchResponse } from '../../types/im'
 
 type Messenger = 'whatsapp' | 'max'
 
@@ -42,6 +42,8 @@ export function MonitoringPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [page, setPage] = useState(1)
+  const [keywordCursors, setKeywordCursors] = useState<string[]>([""])
+  const [keywordPageIdx, setKeywordPageIdx] = useState(0)
   const [selectedMessage, setSelectedMessage] = useState<ImMessage | null>(null)
   const [useKeywords, setUseKeywords] = useState(true)
 
@@ -60,14 +62,16 @@ export function MonitoringPage() {
       data.keywords.map((kw) => kw.word),
   })
 
+  const cursor = keywordCursors[keywordPageIdx] ?? ""
+
   const kwMessagesQuery = useQuery({
-    queryKey: ['im-messages-keyword', messenger, debouncedSearch, page, keywordsQuery.data],
+    queryKey: ['im-messages-keyword', messenger, debouncedSearch, cursor, keywordsQuery.data],
     queryFn: () => searchMessagesPost({
       messenger,
       query: debouncedSearch || undefined,
       onlyWithKeywords: true,
       keywords: keywordsQuery.data ?? [],
-      page,
+      cursor: cursor || null,
       limit: PAGE_SIZE,
     }),
     placeholderData: (prev) => prev,
@@ -112,9 +116,18 @@ export function MonitoringPage() {
   })
 
   const messages = useMemo(() => messagesQuery.data?.items ?? [], [messagesQuery.data])
-  const hasMore = messagesQuery.data ? messagesQuery.data.page * messagesQuery.data.limit < messagesQuery.data.total : false
+  const hasMoreAll = useMemo(() => {
+    if (!messagesQuery.data) return false
+    if ('pageInfo' in messagesQuery.data) return messagesQuery.data.pageInfo.hasMore
+    return messagesQuery.data.page * messagesQuery.data.limit < messagesQuery.data.total
+  }, [messagesQuery.data])
   const groups = useMemo(() => groupsQuery.data?.items ?? [], [groupsQuery.data])
   const isSaving = createMutation.isPending || updateMutation.isPending
+
+  const resetKeywordPagination = () => {
+    setKeywordCursors([""])
+    setKeywordPageIdx(0)
+  }
 
   const handleSectionChange = (s: Section) => {
     setSearchParams((prev) => { const n = new URLSearchParams(prev); n.set('section', s); return n })
@@ -122,6 +135,7 @@ export function MonitoringPage() {
     setPage(1)
     setSelectedMessage(null)
     setEditing(null)
+    resetKeywordPagination()
   }
 
   const handleMessengerChange = (m: Messenger) => {
@@ -129,6 +143,13 @@ export function MonitoringPage() {
     setPage(1)
     setSearch('')
     setSelectedMessage(null)
+    resetKeywordPagination()
+  }
+
+  const handleToggleKeywords = (val: boolean) => {
+    setUseKeywords(val)
+    setPage(1)
+    resetKeywordPagination()
   }
 
   const handleSelectMessage = (msg: ImMessage) => {
@@ -192,7 +213,7 @@ export function MonitoringPage() {
         <div className="mb-4 flex flex-col gap-2">
           <div className="flex items-center gap-1 rounded-md border border-border bg-bg-panel p-0.5 w-fit">
             <button
-              onClick={() => { setUseKeywords(true); setPage(1) }}
+              onClick={() => handleToggleKeywords(true)}
               className={`rounded px-3 py-1.5 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 useKeywords
                   ? 'bg-accent text-text-on-accent font-medium'
@@ -202,7 +223,7 @@ export function MonitoringPage() {
               С ключевыми словами
             </button>
             <button
-              onClick={() => { setUseKeywords(false); setPage(1) }}
+              onClick={() => handleToggleKeywords(false)}
               className={`rounded px-3 py-1.5 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                 !useKeywords
                   ? 'bg-accent text-text-on-accent font-medium'
@@ -336,7 +357,22 @@ export function MonitoringPage() {
                     </tbody>
                   </table>
                 </div>
-                {(hasMore || page > 1) && (
+                {useKeywords && messagesQuery.data && 'pageInfo' in messagesQuery.data ? (
+                  <div className="mt-3 flex items-center text-sm text-text-secondary">
+                    <span role="status">Показано: {messages.length}</span>
+                    {hasMoreAll && (
+                      <Button variant="ghost" size="xs" onClick={() => {
+                        const next = (messagesQuery.data as ImKeywordSearchResponse).pageInfo.nextCursor
+                        if (next) {
+                          setKeywordCursors(prev => [...prev, next])
+                          setKeywordPageIdx(prev => prev + 1)
+                        }
+                      }} semantic="default" className="ml-auto">
+                        Загрузить ещё
+                      </Button>
+                    )}
+                  </div>
+                ) : (hasMoreAll || page > 1) && (
                   <div className="mt-3 flex items-center justify-between text-sm text-text-secondary">
                     <span role="status">
                       {messagesQuery.data && (
@@ -348,8 +384,8 @@ export function MonitoringPage() {
                       {page > 1 && <button onClick={() => setPage(1)} className="flex min-w-[28px] items-center justify-center rounded text-xs text-text-secondary hover:bg-bg-hover transition-colors duration-150 py-1" aria-label="Первая страница">1</button>}
                       {page > 2 && <span className="text-xs text-text-muted px-1">&hellip;</span>}
                       <span className="flex min-w-[28px] items-center justify-center rounded text-xs bg-accent-soft text-accent font-medium py-1">{page}</span>
-                      {hasMore && <button onClick={() => setPage((p) => p + 1)} className="flex min-w-[28px] items-center justify-center rounded text-xs text-text-secondary hover:bg-bg-hover transition-colors duration-150 py-1" aria-label="Следующая страница">{page + 1}</button>}
-                      <Button variant="ghost" size="xs" onClick={() => setPage((p) => p + 1)} disabled={!hasMore} aria-label="Следующая страница" semantic="default">Вперёд</Button>
+                      {hasMoreAll && <button onClick={() => setPage((p) => p + 1)} className="flex min-w-[28px] items-center justify-center rounded text-xs text-text-secondary hover:bg-bg-hover transition-colors duration-150 py-1" aria-label="Следующая страница">{page + 1}</button>}
+                      <Button variant="ghost" size="xs" onClick={() => setPage((p) => p + 1)} disabled={!hasMoreAll} aria-label="Следующая страница" semantic="default">Вперёд</Button>
                     </nav>
                   </div>
                 )}

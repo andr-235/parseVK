@@ -32,6 +32,6 @@ async def search_messages_post(
     token: str = Depends(require_internal_token),
     service: SearchService = Depends(get_search_service),
 ) -> dict:
+    if body.only_with_keywords and body.keywords:
+        return await service.search_messages_by_keywords(body)
     return await service.search_messages_dto(body)
-
-

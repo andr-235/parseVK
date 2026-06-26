@@ -40,6 +40,24 @@ class SearchService:
         )
         return {"items": items, "total": total, "page": dto.page, "limit": dto.limit}
 
+    async def search_messages_by_keywords(self, dto: SearchMessagesRequest) -> dict:
+        rows, matched_kws, has_more, next_cursor = await self.repository.search_messages_by_keywords(dto)
+        items = []
+        for msg, kws in zip(rows, matched_kws, strict=False):
+            d = _message_to_dict(msg)
+            d["matched_keywords"] = kws
+            items.append(d)
+        logger.info(
+            "Search messages by keywords: messenger=%s keywords=%d has_more=%s",
+            dto.messenger, len(dto.keywords), has_more,
+        )
+        return {
+            "items": items,
+            "pageInfo": {"hasMore": has_more, "nextCursor": next_cursor},
+            "total": None,
+            "totalMode": "not_calculated",
+        }
+
 
 def _compute_matched_keywords(text: str, keywords: list[str]) -> list[str]:
     if not text or not keywords:
