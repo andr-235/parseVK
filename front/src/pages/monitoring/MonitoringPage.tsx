@@ -113,7 +113,7 @@ export function MonitoringPage() {
     setSelectedMessage((prev) => (prev?.id === msg.id ? null : msg))
   }
 
-  const handleSaveGroup = useCallback((data: { name: string; chatId: string; messenger: Messenger; category: string }) => {
+  const handleSaveGroup = useCallback((data: { name: string; chatId: string; messenger: string; category: string }) => {
     if (editing?.type === 'edit') {
       updateMutation.mutate({ id: editing.group.id, payload: { name: data.name, category: data.category } })
     } else {
