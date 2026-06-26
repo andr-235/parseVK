@@ -1,3 +1,10 @@
+## [0.50.1](https://github.com/andr-235/parseVK/compare/v0.50.0...v0.50.1) (2026-06-26)
+
+
+### Bug Fixes
+
+* **monitoring:** split messages query to prevent placeholderData cross-mode leak ([5635920](https://github.com/andr-235/parseVK/commit/5635920946575412df35026e68ed3ff603017b20))
+
 # [0.50.0](https://github.com/andr-235/parseVK/compare/v0.49.4...v0.50.0) (2026-06-26)
 
 
