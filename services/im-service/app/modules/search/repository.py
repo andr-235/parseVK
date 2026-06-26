@@ -1,6 +1,7 @@
 import logging
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, any_, func, select
+from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ImMessage
@@ -67,8 +68,8 @@ class SearchRepository:
             base = base.where(and_(*conditions))
 
         if dto.only_with_keywords and dto.keywords:
-            kw_filters = [ImMessage.text.ilike(f"%{kw}%") for kw in dto.keywords]
-            base = base.where(or_(*kw_filters))
+            patterns = [f"%{kw}%" for kw in dto.keywords]
+            base = base.where(ImMessage.text.op("ILIKE")(any_(array(patterns))))
 
         count_q = select(func.count()).select_from(base.subquery())
         total = await self.session.scalar(count_q) or 0
