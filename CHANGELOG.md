@@ -1,3 +1,10 @@
+## [0.48.1](https://github.com/andr-235/parseVK/compare/v0.48.0...v0.48.1) (2026-06-26)
+
+
+### Bug Fixes
+
+* **monitoring:** type mismatch in handleSaveGroup callback ([7816ef5](https://github.com/andr-235/parseVK/commit/7816ef53c041f1a88b7b8f42571a712e6a2d66d2))
+
 # [0.48.0](https://github.com/andr-235/parseVK/compare/v0.47.0...v0.48.0) (2026-06-26)
 
 
