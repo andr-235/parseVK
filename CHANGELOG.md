@@ -1,3 +1,10 @@
+## [0.50.3](https://github.com/andr-235/parseVK/compare/v0.50.2...v0.50.3) (2026-06-26)
+
+
+### Bug Fixes
+
+* **monitoring:** ensure kwMessagesQuery only fires when keywords are loaded ([313f618](https://github.com/andr-235/parseVK/commit/313f6188c578287c0dc72ee50620e67f96219802))
+
 ## [0.50.2](https://github.com/andr-235/parseVK/compare/v0.50.1...v0.50.2) (2026-06-26)
 
 
