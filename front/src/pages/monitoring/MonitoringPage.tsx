@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { SearchX, ArrowUpRight, MessageCircle, Bell, Plus, Pencil, Trash2 } from 'lucide-react'
+import { SearchX, ArrowUpRight, MessageCircle, Bell, Plus, Pencil, Trash2, ChevronRight } from 'lucide-react'
 import { useDebounce } from '../../shared/hooks/useDebounce'
 import { useFeedback } from '../../shared/hooks/useFeedback'
 import { searchMessagesPost, searchMessages, listGroups, createGroup, updateGroup, deleteGroup } from '../../shared/api/im'
@@ -213,14 +213,19 @@ export function MonitoringPage() {
             </button>
           </div>
           {useKeywords && keywordsQuery.data && keywordsQuery.data.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-text-muted">Ключевые слова:</span>
-              {keywordsQuery.data.map((word: string) => (
-                <span key={word} className="inline-flex items-center rounded-md border border-border bg-bg-panel px-2 py-0.5 text-xs text-text-secondary">
-                  {word}
-                </span>
-              ))}
-            </div>
+            <details className="group">
+              <summary className="cursor-pointer text-xs text-text-muted hover:text-text-primary transition-colors duration-150 select-none list-none flex items-center gap-1">
+                <ChevronRight size={12} className="transition-transform duration-150 group-open:rotate-90" />
+                Ключевые слова: {keywordsQuery.data.length}
+              </summary>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {keywordsQuery.data.map((word: string) => (
+                  <span key={word} className="inline-flex items-center rounded-md border border-border bg-bg-panel px-2 py-0.5 text-xs text-text-secondary">
+                    {word}
+                  </span>
+                ))}
+              </div>
+            </details>
           )}
           {useKeywords && keywordsQuery.isError && (
             <p className="text-xs text-danger">Не удалось загрузить ключевые слова</p>
