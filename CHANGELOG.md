@@ -1,3 +1,10 @@
+## [0.50.2](https://github.com/andr-235/parseVK/compare/v0.50.1...v0.50.2) (2026-06-26)
+
+
+### Performance Improvements
+
+* **im-service:** use ILIKE ANY and composite GIN index for keyword search ([ff20db9](https://github.com/andr-235/parseVK/commit/ff20db998e01f949df602e2df1ae118af0bfaac3))
+
 ## [0.50.1](https://github.com/andr-235/parseVK/compare/v0.50.0...v0.50.1) (2026-06-26)
 
 
