@@ -62,22 +62,16 @@ export function MonitoringPage() {
 
   const kwMessagesQuery = useQuery({
     queryKey: ['im-messages-keyword', messenger, debouncedSearch, page, keywordsQuery.data],
-    queryFn: () => {
-      const words = keywordsQuery.data ?? []
-      if (words.length === 0) {
-        return { items: [], total: 0, page: 1, limit: PAGE_SIZE }
-      }
-      return searchMessagesPost({
-        messenger,
-        query: debouncedSearch || undefined,
-        onlyWithKeywords: true,
-        keywords: words,
-        page,
-        limit: PAGE_SIZE,
-      })
-    },
+    queryFn: () => searchMessagesPost({
+      messenger,
+      query: debouncedSearch || undefined,
+      onlyWithKeywords: true,
+      keywords: keywordsQuery.data ?? [],
+      page,
+      limit: PAGE_SIZE,
+    }),
     placeholderData: (prev) => prev,
-    enabled: section === 'messages' && useKeywords,
+    enabled: section === 'messages' && useKeywords && !!keywordsQuery.data && keywordsQuery.data.length > 0,
   })
 
   const allMessagesQuery = useQuery({
