@@ -103,20 +103,6 @@ class ProcessedEvent(Base):
     next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class ImKeyword(Base):
-    __tablename__ = "im_keywords"
-    __table_args__ = (
-        UniqueConstraint("messenger", "user_id", "keyword", name="uq_im_keywords_messenger_user_keyword"),
-        Index("ix_im_keywords_user_messenger", "user_id", "messenger"),
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    messenger: Mapped[str] = mapped_column(String(32), nullable=False)
-    user_id: Mapped[str] = mapped_column(String(128), nullable=False)
-    keyword: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-
-
 class ImUserNotifierState(Base):
     __tablename__ = "im_user_notifier_state"
     __table_args__ = (

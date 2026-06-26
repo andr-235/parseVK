@@ -9,6 +9,8 @@ def format_keyword(kw: dict[str, Any]) -> dict[str, Any]:
         "word": kw["word"],
         "category": kw.get("category"),
         "isPhrase": kw.get("is_phrase", False),
+        "enabled": kw.get("enabled", True),
+        "scopes": kw.get("scopes", ["moderation", "im-monitoring"]),
         "createdAt": kw.get("created_at"),
         "updatedAt": kw.get("updated_at"),
     }

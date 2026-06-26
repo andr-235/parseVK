@@ -2,8 +2,9 @@ import logging
 
 from fastapi import APIRouter, Depends, Query
 
-from app.core.security import require_internal_token, require_owner_user_id
+from app.core.security import require_internal_token
 from app.modules.search.dependencies import get_search_service
+from app.modules.search.schemas import SearchMessagesRequest
 from app.modules.search.service import SearchService
 
 logger = logging.getLogger(__name__)
@@ -25,13 +26,12 @@ async def search_messages(
     return await service.search_messages(messenger, q, chat_id, author, page, limit)
 
 
-@router.get("/messages/by-keywords")
-async def search_by_keywords(
-    messenger: str | None = None,
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=50, ge=1, le=200),
-    user_id: str = Depends(require_owner_user_id),
+@router.post("/messages/search")
+async def search_messages_post(
+    body: SearchMessagesRequest,
     token: str = Depends(require_internal_token),
     service: SearchService = Depends(get_search_service),
 ) -> dict:
-    return await service.search_by_keywords(user_id, messenger, page, limit)
+    return await service.search_messages_dto(body)
+
+

@@ -8,34 +8,6 @@ from fastapi import APIRouter, Body, Depends, Request
 router = APIRouter(prefix="/api/v1/im", tags=["im"])
 
 
-@router.get("/keywords")
-async def list_keywords(
-    request: Request,
-    messenger: str | None = None,
-    service: ImGatewayService = Depends(get_im_gateway_service),
-):
-    params = dict(request.query_params)
-    return await service.forward_json(request, "GET", "/internal/keywords", params=params)
-
-
-@router.post("/keywords", status_code=201)
-async def add_keyword(
-    request: Request,
-    payload: Annotated[dict[str, Any], Body()],
-    service: ImGatewayService = Depends(get_im_gateway_service),
-):
-    return await service.forward_json(request, "POST", "/internal/keywords", json=payload)
-
-
-@router.delete("/keywords/{keyword_id}")
-async def delete_keyword(
-    keyword_id: int,
-    request: Request,
-    service: ImGatewayService = Depends(get_im_gateway_service),
-):
-    return await service.forward_json(request, "DELETE", f"/internal/keywords/{keyword_id}")
-
-
 @router.get("/search/messages")
 async def search_messages(
     request: Request,
@@ -45,13 +17,13 @@ async def search_messages(
     return await service.forward_json(request, "GET", "/internal/search/messages", params=params)
 
 
-@router.get("/search/by-keywords")
-async def search_by_keywords(
+@router.post("/messages/search")
+async def search_messages_post(
     request: Request,
+    payload: Annotated[dict[str, Any], Body()],
     service: ImGatewayService = Depends(get_im_gateway_service),
 ):
-    params = dict(request.query_params)
-    return await service.forward_json(request, "GET", "/internal/search/messages/by-keywords", params=params)
+    return await service.forward_json(request, "POST", "/internal/search/messages/search", json=payload)
 
 
 @router.get("/notifier/state")

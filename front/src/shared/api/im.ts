@@ -11,6 +11,7 @@ type ImMessageRaw = {
   content_type: string | null
   created_at: string | null
   ingested_at: string
+  matched_keywords: string[]
 }
 
 type ImSearchResponseRaw = {
@@ -30,6 +31,7 @@ function mapMessage(raw: ImMessageRaw): ImMessage {
     messenger: raw.messenger,
     contentUrl: raw.content_url,
     contentType: raw.content_type,
+    matchedKeywords: raw.matched_keywords ?? [],
   }
 }
 
@@ -56,14 +58,18 @@ export async function searchMessages(params: SearchMessagesParams): Promise<ImSe
   return mapSearchResponse(raw)
 }
 
-export type SearchByKeywordsParams = {
+export type SearchMessagesPostParams = {
   messenger?: string
+  query?: string
+  chatId?: string
+  onlyWithKeywords?: boolean
+  keywords?: string[]
   page?: number
   limit?: number
 }
 
-export async function searchByKeywords(params: SearchByKeywordsParams): Promise<ImSearchResponse> {
-  const raw = await apiGet<ImSearchResponseRaw>('/im/search/by-keywords', params as Record<string, string | number | undefined>)
+export async function searchMessagesPost(params: SearchMessagesPostParams): Promise<ImSearchResponse> {
+  const raw = await apiPost<ImSearchResponseRaw>('/im/messages/search', params)
   return mapSearchResponse(raw)
 }
 

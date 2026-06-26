@@ -79,15 +79,16 @@ async def test_search_messages_forwards_to_im_service():
 
 
 @pytest.mark.asyncio
-async def test_search_by_keywords_forwards_params():
-    client = RecordingIMClient({"items": [], "count": 0})
+async def test_search_messages_post_forwards_body():
+    client = RecordingIMClient({"items": [], "total": 0, "page": 1, "limit": 25})
 
     await forward_service_request(
-        client, "GET", "/internal/search/messages/by-keywords",
-        params={"messenger": "whatsapp"},
+        client, "POST", "/internal/search/messages/search",
+        json={"messenger": "whatsapp", "only_with_keywords": True, "keywords": ["дрон", "бпла"], "page": 1, "limit": 25},
     )
 
-    assert client.calls[0]["path"] == "/internal/search/messages/by-keywords"
+    assert client.calls[0]["path"] == "/internal/search/messages/search"
+    assert client.calls[0].get("json") == {"messenger": "whatsapp", "only_with_keywords": True, "keywords": ["дрон", "бпла"], "page": 1, "limit": 25}
 
 
 @pytest.mark.asyncio

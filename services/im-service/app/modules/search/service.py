@@ -1,6 +1,7 @@
 import logging
 
 from app.modules.search.repository import SearchRepository
+from app.modules.search.schemas import SearchMessagesRequest
 
 logger = logging.getLogger(__name__)
 
@@ -26,20 +27,25 @@ class SearchService:
         )
         return {"items": items, "total": total, "page": page, "limit": limit}
 
-    async def search_by_keywords(
-        self,
-        user_id: str,
-        messenger: str | None,
-        page: int = 1,
-        limit: int = 50,
-    ) -> dict:
-        rows, total = await self.repository.search_by_keywords(user_id, messenger, page, limit)
+    async def search_messages_dto(self, dto: SearchMessagesRequest) -> dict:
+        rows, total = await self.repository.search_messages_dto(dto)
         items = [_message_to_dict(r) for r in rows]
+        if dto.only_with_keywords and dto.keywords:
+            for msg_dict, row in zip(items, rows, strict=False):
+                matched = _compute_matched_keywords(msg_dict.get("text") or "", dto.keywords)
+                msg_dict["matched_keywords"] = matched
         logger.info(
-            "Search by keywords: user_id=%s messenger=%s total=%d page=%d",
-            user_id, messenger, total, page,
+            "Search messages DTO: messenger=%s query=%s total=%d page=%d keywords=%d",
+            dto.messenger, dto.query, total, dto.page, len(dto.keywords),
         )
-        return {"items": items, "total": total, "page": page, "limit": limit}
+        return {"items": items, "total": total, "page": dto.page, "limit": dto.limit}
+
+
+def _compute_matched_keywords(text: str, keywords: list[str]) -> list[str]:
+    if not text or not keywords:
+        return []
+    text_lower = text.lower()
+    return [kw for kw in keywords if kw.lower() in text_lower]
 
 
 def _message_to_dict(msg) -> dict:
@@ -55,4 +61,5 @@ def _message_to_dict(msg) -> dict:
         "content_type": msg.content_type,
         "created_at": msg.created_at,
         "ingested_at": msg.ingested_at,
+        "matched_keywords": [],
     }

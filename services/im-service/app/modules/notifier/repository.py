@@ -4,7 +4,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import ImKeyword, ImMessage, ImUserNotifierState
+from app.db.models import ImMessage, ImUserNotifierState
 
 logger = logging.getLogger(__name__)
 
@@ -71,13 +71,6 @@ class NotifierRepository:
             .order_by(ImMessage.id.asc())
             .limit(limit)
         )
-        result = await self.session.scalars(stmt)
-        return list(result.all())
-
-    async def list_users_with_keywords(self, messenger: str | None = None) -> list[str]:
-        stmt = select(ImKeyword.user_id).distinct()
-        if messenger:
-            stmt = stmt.where(ImKeyword.messenger == messenger)
         result = await self.session.scalars(stmt)
         return list(result.all())
 

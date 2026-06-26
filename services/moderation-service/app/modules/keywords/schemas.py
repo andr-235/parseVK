@@ -7,6 +7,8 @@ class KeywordBase(BaseModel):
     word: str
     category: str | None = None
     is_phrase: bool = False
+    enabled: bool = True
+    scopes: list[str] = ['moderation', 'im-monitoring']
 
 
 class KeywordCreate(KeywordBase):
@@ -22,6 +24,8 @@ class KeywordResponse(BaseModel):
     word: str
     category: str | None
     is_phrase: bool
+    enabled: bool = True
+    scopes: list[str] = ['moderation', 'im-monitoring']
     created_at: datetime
     updated_at: datetime
 
@@ -65,7 +69,7 @@ class KeywordFormsResponse(BaseModel):
 
 
 class KeywordsListResponse(BaseModel):
-    keywords: list[KeywordResponse]
+    items: list[KeywordResponse]
     total: int
     page: int
     limit: int

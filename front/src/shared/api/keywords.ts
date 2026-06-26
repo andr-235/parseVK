@@ -5,6 +5,8 @@ export type Keyword = {
   word: string
   category: string | null
   isPhrase: boolean
+  enabled: boolean
+  scopes: string[]
   createdAt: string
   updatedAt: string
 }
@@ -14,6 +16,8 @@ type BackendKeyword = {
   word: string
   category: string | null
   isPhrase: boolean
+  enabled: boolean
+  scopes: string[]
   createdAt: string
   updatedAt: string
 }
@@ -24,6 +28,8 @@ function mapKeyword(b: BackendKeyword): Keyword {
     word: b.word,
     category: b.category,
     isPhrase: b.isPhrase,
+    enabled: b.enabled,
+    scopes: b.scopes,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   }
@@ -40,6 +46,8 @@ export type KeywordsQueryParams = {
   page?: number
   limit?: number
   search?: string
+  enabled?: boolean
+  scope?: string
 }
 
 export async function fetchKeywords(params?: KeywordsQueryParams): Promise<KeywordsResponse> {

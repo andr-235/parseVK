@@ -4,6 +4,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ImMessage
+from app.modules.search.schemas import SearchMessagesRequest
 
 logger = logging.getLogger(__name__)
 
@@ -44,36 +45,37 @@ class SearchRepository:
         result = await self.session.scalars(stmt)
         return list(result.all()), total
 
-    async def search_by_keywords(
+    async def search_messages_dto(
         self,
-        user_id: str,
-        messenger: str | None,
-        page: int,
-        limit: int,
+        dto: SearchMessagesRequest,
     ) -> tuple[list[ImMessage], int]:
-        from app.db.models import ImKeyword
+        conditions = []
 
-        kw_stmt = select(ImKeyword.keyword).where(ImKeyword.user_id == user_id)
-        if messenger:
-            kw_stmt = kw_stmt.where(ImKeyword.messenger == messenger)
-        kw_result = await self.session.scalars(kw_stmt)
-        keywords = list(kw_result.all())
-
-        if not keywords:
-            return [], 0
-
-        patterns = [f"%{kw}%" for kw in keywords]
-        conditions = [ImMessage.text.ilike(p) for p in patterns]
+        if dto.messenger:
+            conditions.append(ImMessage.messenger == dto.messenger)
+        if dto.query:
+            conditions.append(ImMessage.text.ilike(f"%{dto.query}%"))
+        if dto.chat_id:
+            conditions.append(ImMessage.chat_external_id == dto.chat_id)
+        if dto.date_from:
+            conditions.append(ImMessage.created_at >= dto.date_from)
+        if dto.date_to:
+            conditions.append(ImMessage.created_at <= dto.date_to)
 
         base = select(ImMessage)
-        if messenger:
-            base = base.where(ImMessage.messenger == messenger)
-        base = base.where(or_(*conditions))
+        if conditions:
+            base = base.where(and_(*conditions))
+
+        if dto.only_with_keywords and dto.keywords:
+            kw_filters = [ImMessage.text.ilike(f"%{kw}%") for kw in dto.keywords]
+            base = base.where(or_(*kw_filters))
 
         count_q = select(func.count()).select_from(base.subquery())
         total = await self.session.scalar(count_q) or 0
 
-        offset = (page - 1) * limit
-        stmt = base.order_by(ImMessage.created_at.desc().nullslast()).offset(offset).limit(limit)
+        offset = (dto.page - 1) * dto.limit
+        stmt = base.order_by(ImMessage.created_at.desc().nullslast()).offset(offset).limit(dto.limit)
         result = await self.session.scalars(stmt)
         return list(result.all()), total
+
+

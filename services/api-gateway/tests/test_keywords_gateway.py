@@ -34,6 +34,8 @@ def test_format_keyword():
         "word": "кошка",
         "category": "животные",
         "is_phrase": True,
+        "enabled": True,
+        "scopes": ["moderation", "im-monitoring"],
         "created_at": "2026-05-24T12:00:00Z",
         "updated_at": "2026-05-24T12:05:00Z",
     }
@@ -44,6 +46,8 @@ def test_format_keyword():
     assert formatted["word"] == "кошка"
     assert formatted["category"] == "животные"
     assert formatted["isPhrase"] is True
+    assert formatted["enabled"] is True
+    assert formatted["scopes"] == ["moderation", "im-monitoring"]
     assert formatted["createdAt"] == "2026-05-24T12:00:00Z"
     assert formatted["updatedAt"] == "2026-05-24T12:05:00Z"
 

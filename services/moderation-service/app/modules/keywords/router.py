@@ -36,9 +36,11 @@ async def get_keywords(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=50, ge=1, le=100),
     search: str | None = Query(default=None),
+    enabled: bool | None = Query(default=None),
+    scope: str | None = Query(default=None),
     service: KeywordsService = Depends(get_keywords_service),
 ):
-    return await service.get_keywords(page=page, limit=limit, search=search)
+    return await service.get_keywords(page=page, limit=limit, search=search, enabled=enabled, scope=scope)
 
 
 @router.post("/add", response_model=KeywordResponse)

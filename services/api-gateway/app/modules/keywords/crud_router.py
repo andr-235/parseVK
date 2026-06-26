@@ -16,18 +16,24 @@ AUTH_DEPENDENCY = Depends(require_auth)
 SERVICE_DEPENDENCY = Depends(get_keywords_gateway_service)
 
 
+ENABLED_QUERY = Query(default=None)
+SCOPE_QUERY = Query(default=None)
+
+
 @crud_router.get("/")
 async def get_keywords(
     request: Request,
     page: int = PAGE_QUERY,
     limit: int = LIMIT_QUERY,
     search: str | None = SEARCH_QUERY,
+    enabled: bool | None = ENABLED_QUERY,
+    scope: str | None = SCOPE_QUERY,
     auth_claims: dict = AUTH_DEPENDENCY,
     service: KeywordsGatewayService = SERVICE_DEPENDENCY,
 ):
     request_id, correlation_id = request_ids(request)
     return await service.get_all_keywords(
-        page=page, limit=limit, search=search,
+        page=page, limit=limit, search=search, enabled=enabled, scope=scope,
         user_id=str(auth_claims["sub"]),
         request_id=request_id, correlation_id=correlation_id,
     )

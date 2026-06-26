@@ -154,7 +154,8 @@ class KeywordCrudService:
         return await self.bulk_add_keywords(words, background_tasks)
 
     async def get_keywords(
-        self, page: int = 1, limit: int = 50, search: str | None = None
+        self, page: int = 1, limit: int = 50, search: str | None = None,
+        enabled: bool | None = None, scope: str | None = None,
     ) -> dict:
         offset = (page - 1) * limit
         stmt = select(Keyword)
@@ -165,6 +166,10 @@ class KeywordCrudService:
                     Keyword.category.ilike(f"%{search}%"),
                 )
             )
+        if enabled is not None:
+            stmt = stmt.where(Keyword.enabled == enabled)
+        if scope is not None:
+            stmt = stmt.where(Keyword.scopes.any(scope))
 
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total_result = await self.session.execute(count_stmt)
@@ -174,7 +179,7 @@ class KeywordCrudService:
         result = await self.session.execute(stmt)
         keywords = result.scalars().all()
 
-        return {"keywords": keywords, "total": total, "page": page, "limit": limit}
+        return {"items": keywords, "total": total, "page": page, "limit": limit}
 
     async def delete_keyword(self, id: int) -> Keyword:
         stmt = select(Keyword).where(Keyword.id == id)

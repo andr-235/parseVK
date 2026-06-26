@@ -47,8 +47,8 @@ class KeywordsService:
     async def add_keywords_from_file(self, content, background_tasks=None):
         return await self.crud.add_keywords_from_file(content, background_tasks)
 
-    async def get_keywords(self, page=1, limit=50, search=None):
-        return await self.crud.get_keywords(page, limit, search)
+    async def get_keywords(self, page=1, limit=50, search=None, enabled=None, scope=None):
+        return await self.crud.get_keywords(page, limit, search, enabled, scope)
 
     async def delete_keyword(self, id):
         return await self.crud.delete_keyword(id)

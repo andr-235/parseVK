@@ -75,6 +75,8 @@ class Keyword(Base):
     word: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     category: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_phrase: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    scopes: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="'[\"moderation\", \"im-monitoring\"]'::jsonb")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
 

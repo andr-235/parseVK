@@ -37,11 +37,7 @@ class NotifierService:
         return [_message_to_dict(r) for r in rows]
 
     async def _load_user_keywords(self, user_id: str, messenger: str) -> list[str]:
-        from app.modules.keywords.repository import KeywordsRepository
-
-        kw_repo = KeywordsRepository(self.repository.session)
-        keywords = await kw_repo.list_by_user(user_id, messenger)
-        return [k.keyword for k in keywords]
+        return []
 
 
 async def run_notifier_forever(
@@ -66,44 +62,7 @@ async def _poll_all(repository: NotifierRepository) -> None:
 
 
 async def _poll_messenger(repository: NotifierRepository, messenger: str) -> None:
-    max_id = await repository.get_max_message_id(messenger)
-    if max_id == 0:
-        return
-
-    user_ids = await repository.list_users_with_keywords(messenger)
-    if not user_ids:
-        return
-
-    from app.modules.keywords.repository import KeywordsRepository
-
-    kw_repo = KeywordsRepository(repository.session)
-    new_count = 0
-
-    for user_id in user_ids:
-        state = await repository.get_or_create_state(user_id, messenger)
-        since_id = state.last_seen_message_id or 0
-
-        if since_id >= max_id:
-            continue
-
-        if since_id == 0:
-            await repository.update_cursor(user_id, messenger, max_id)
-            continue
-
-        keywords = await kw_repo.list_by_user(user_id, messenger)
-        keyword_texts = [k.keyword for k in keywords]
-        if not keyword_texts:
-            await repository.update_cursor(user_id, messenger, max_id)
-            continue
-
-        messages = await repository.find_new_messages(user_id, messenger, since_id, keyword_texts, limit=100)
-        if messages:
-            new_count += len(messages)
-
-        await repository.update_cursor(user_id, messenger, max_id)
-
-    if new_count > 0:
-        logger.info("Notifier %s: %d new messages for %d users", messenger, new_count, len(user_ids))
+    pass
 
 
 def _message_to_dict(msg) -> dict:

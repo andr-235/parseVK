@@ -31,12 +31,16 @@ class KeywordsGatewayService:
         except (BackendServiceError, BackendUnavailableError) as exc:
             raise translate_gateway_error(exc) from exc
 
-    async def get_all_keywords(self, page: int, limit: int, search: str | None = None, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
+    async def get_all_keywords(self, page: int, limit: int, search: str | None = None, enabled: bool | None = None, scope: str | None = None, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         params: dict[str, Any] = {"page": page, "limit": limit}
         if search:
             params["search"] = search
+        if enabled is not None:
+            params["enabled"] = enabled
+        if scope is not None:
+            params["scope"] = scope
         result = await self._request("GET", "/internal/moderation/keywords", user_id=user_id, request_id=request_id, correlation_id=correlation_id, params=params)
-        return {"keywords": [format_keyword(kw) for kw in result.get("keywords", [])], "total": result.get("total", 0), "page": result.get("page", page), "limit": result.get("limit", limit)}
+        return {"keywords": [format_keyword(kw) for kw in result.get("items", [])], "total": result.get("total", 0), "page": result.get("page", page), "limit": result.get("limit", limit)}
 
     async def add_keyword(self, payload: dict, *, user_id: str | None = None, request_id: str | None = None, correlation_id: str | None = None) -> dict:
         backend = {"word": payload["word"], "category": payload.get("category"), "is_phrase": payload.get("isPhrase", False)}

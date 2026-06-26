@@ -4,7 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { SearchX, ArrowUpRight, MessageCircle, Bell, Plus, Pencil, Trash2 } from 'lucide-react'
 import { useDebounce } from '../../shared/hooks/useDebounce'
 import { useFeedback } from '../../shared/hooks/useFeedback'
-import { searchByKeywords, listGroups, createGroup, updateGroup, deleteGroup } from '../../shared/api/im'
+import { searchMessagesPost, searchMessages, listGroups, createGroup, updateGroup, deleteGroup } from '../../shared/api/im'
+import { fetchKeywords } from '../../shared/api/keywords'
+import type { Keyword } from '../../shared/api/keywords'
 import { PageShell } from '../../components/layout/PageShell'
 import { MonitoringMessageDetail } from './components/MonitoringMessageDetail'
 import { MonitoringGroupForm } from './components/MonitoringGroupForm'
@@ -41,6 +43,7 @@ export function MonitoringPage() {
   const debouncedSearch = useDebounce(search, 300)
   const [page, setPage] = useState(1)
   const [selectedMessage, setSelectedMessage] = useState<ImMessage | null>(null)
+  const [useKeywords, setUseKeywords] = useState(true)
 
   const [editing, setEditing] = useState<EditingState>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
@@ -49,14 +52,33 @@ export function MonitoringPage() {
     setSearchParams((prev) => { const n = new URLSearchParams(prev); n.set(key, value); return n })
   }
 
+  const keywordsQuery = useQuery({
+    queryKey: ['monitoring-keywords', messenger],
+    queryFn: () => fetchKeywords({ enabled: true, scope: 'im-monitoring', limit: 1000 }),
+    enabled: section === 'messages' && useKeywords,
+    select: (data: { keywords: Keyword[]; total: number; page: number; limit: number }) =>
+      data.keywords.map((kw) => kw.word),
+  })
+
   const messagesQuery = useQuery({
-    queryKey: ['im-messages', messenger, debouncedSearch, page],
-    queryFn: () =>
-      searchByKeywords({
-        messenger,
-        page,
-        limit: PAGE_SIZE,
-      }),
+    queryKey: ['im-messages', messenger, useKeywords, debouncedSearch, page, keywordsQuery.data],
+    queryFn: () => {
+      if (useKeywords) {
+        const words = keywordsQuery.data ?? []
+        if (words.length === 0) {
+          return { items: [], total: 0, page: 1, limit: PAGE_SIZE }
+        }
+        return searchMessagesPost({
+          messenger,
+          query: debouncedSearch || undefined,
+          onlyWithKeywords: true,
+          keywords: words,
+          page,
+          limit: PAGE_SIZE,
+        })
+      }
+      return searchMessages({ messenger, q: debouncedSearch || undefined, page, limit: PAGE_SIZE })
+    },
     placeholderData: (prev) => prev,
     enabled: section === 'messages',
   })
@@ -166,6 +188,49 @@ export function MonitoringPage() {
         ))}
       </div>
 
+      {section === 'messages' && (
+        <div className="mb-4 flex flex-col gap-2">
+          <div className="flex items-center gap-1 rounded-md border border-border bg-bg-panel p-0.5 w-fit">
+            <button
+              onClick={() => { setUseKeywords(true); setPage(1) }}
+              className={`rounded px-3 py-1.5 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                useKeywords
+                  ? 'bg-accent text-text-on-accent font-medium'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              С ключевыми словами
+            </button>
+            <button
+              onClick={() => { setUseKeywords(false); setPage(1) }}
+              className={`rounded px-3 py-1.5 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                !useKeywords
+                  ? 'bg-accent text-text-on-accent font-medium'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Без ключевых слов
+            </button>
+          </div>
+          {useKeywords && keywordsQuery.data && keywordsQuery.data.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-text-muted">Ключевые слова:</span>
+              {keywordsQuery.data.map((word: string) => (
+                <span key={word} className="inline-flex items-center rounded-md border border-border bg-bg-panel px-2 py-0.5 text-xs text-text-secondary">
+                  {word}
+                </span>
+              ))}
+            </div>
+          )}
+          {useKeywords && keywordsQuery.isError && (
+            <p className="text-xs text-danger">Не удалось загрузить ключевые слова</p>
+          )}
+          {useKeywords && keywordsQuery.data && keywordsQuery.data.length === 0 && !keywordsQuery.isLoading && (
+            <p className="text-xs text-text-muted">Нет активных ключевых слов для мониторинга</p>
+          )}
+        </div>
+      )}
+
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Input
           type="search"
@@ -212,6 +277,7 @@ export function MonitoringPage() {
                     <thead>
                       <tr className="border-b border-border bg-bg-sidebar text-left text-xs font-medium uppercase tracking-wider text-text-muted">
                         <th className="px-3 py-2 font-medium">Текст</th>
+                        <th className="px-3 py-2 font-medium hidden sm:table-cell">Совпадения</th>
                         <th className="px-3 py-2 font-medium hidden sm:table-cell">Чат</th>
                         <th className="px-3 py-2 font-medium hidden sm:table-cell">Автор</th>
                         <th className="px-3 py-2 font-medium hidden md:table-cell">Дата</th>
@@ -226,6 +292,19 @@ export function MonitoringPage() {
                             className={`border-b border-border transition-colors duration-150 cursor-pointer ${isSelected ? 'bg-accent-soft' : 'hover:bg-bg-hover'}`}>
                             <td className="max-w-xs truncate px-3 py-2 text-text-primary">
                               {msg.text ?? <span className="text-text-muted italic">Нет текста</span>}
+                            </td>
+                            <td className="px-3 py-2 hidden sm:table-cell">
+                              {msg.matchedKeywords && msg.matchedKeywords.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {msg.matchedKeywords.map((kw) => (
+                                    <span key={kw} className="inline-flex items-center rounded bg-accent-soft px-1.5 py-0.5 text-xs text-accent font-medium">
+                                      {kw}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-text-muted italic text-xs">—</span>
+                              )}
                             </td>
                             <td className="px-3 py-2 text-text-secondary truncate hidden sm:table-cell max-w-[120px]">
                               {msg.chat ?? '—'}

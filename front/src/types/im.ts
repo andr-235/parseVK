@@ -7,6 +7,7 @@ export type ImMessage = {
   messenger: string
   contentUrl: string | null
   contentType: string | null
+  matchedKeywords: string[]
 }
 
 export type ImSearchResponse = {
