@@ -6,7 +6,6 @@ from uuid import uuid4
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _service_path import service_path
 
 from app.modules.tasks.consumer import TaskEventsConsumer
 
@@ -36,9 +35,9 @@ async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
 
 @pytest.mark.anyio
 async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
-    from unittest.mock import AsyncMock
-    from types import SimpleNamespace
     from datetime import UTC, datetime, timedelta
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
 
     consumer = TaskEventsConsumer(session_factory=AsyncMock(), tasks_client=AsyncMock())
     consumer._consumer = AsyncMock()

@@ -1,6 +1,7 @@
 import json
 import logging
 
+from common.kafka.consumer import BaseEventConsumer
 from prometheus_client import Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -13,7 +14,6 @@ from app.modules.ingestion.service import IngestionService
 from app.modules.outbox.repository import OutboxRepository
 from app.modules.outbox.service import OutboxService
 from app.modules.tasks.events import TaskEvent
-from common.kafka.consumer import BaseEventConsumer
 from app.modules.tasks.service import TaskEventsHandler, TaskEventsRepository
 
 logger = logging.getLogger(__name__)
