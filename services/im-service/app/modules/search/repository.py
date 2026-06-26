@@ -11,6 +11,21 @@ from app.modules.search.schemas import SearchMessagesRequest
 logger = logging.getLogger(__name__)
 
 MATCH_BATCH_SIZE = 5000
+MATCH_MAX_SCAN = 25000
+
+
+def _parse_cursor(cursor: str) -> tuple[datetime, int] | None:
+    try:
+        ts_str, id_str = cursor.rsplit("_", 1)
+        return datetime.fromisoformat(ts_str), int(id_str)
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def _build_cursor(msg: ImMessage) -> str | None:
+    if msg.created_at is None:
+        return None
+    return f"{msg.created_at.isoformat()}_{msg.id}"
 
 
 class SearchRepository:
@@ -101,44 +116,57 @@ class SearchRepository:
         if conditions:
             base = base.where(and_(*conditions))
 
-        if dto.cursor:
-            try:
-                cursor_ts_str, cursor_id_str = dto.cursor.rsplit("_", 1)
-                cursor_ts = datetime.fromisoformat(cursor_ts_str)
-                cursor_id = int(cursor_id_str)
-            except (ValueError, TypeError, AttributeError):
-                pass
-            else:
-                base = base.where(
-                    or_(
-                        ImMessage.created_at < cursor_ts,
-                        and_(ImMessage.created_at == cursor_ts, ImMessage.id < cursor_id),
-                    )
-                )
-
-        stmt = base.order_by(ImMessage.created_at.desc().nullslast()).limit(MATCH_BATCH_SIZE)
-        result = await self.session.scalars(stmt)
-        rows = list(result.all())
-
+        limit = dto.limit
         keywords = dto.keywords
-        matched_messages: list[ImMessage] = []
-        matched_keywords_list: list[list[str]] = []
+        matched: list[ImMessage] = []
+        matched_kws: list[list[str]] = []
+        total_scanned = 0
+        scan_cursor: str | None = dto.cursor or None
 
-        for msg in rows:
-            text_lower = (msg.text or "").lower()
-            found = [kw for kw in keywords if kw.lower() in text_lower]
-            if found:
-                matched_messages.append(msg)
-                matched_keywords_list.append(found)
+        while len(matched) <= limit and total_scanned < MATCH_MAX_SCAN:
+            q = base
 
-        has_more = len(matched_messages) > dto.limit
-        page_msgs = matched_messages[: dto.limit]
-        page_kws = matched_keywords_list[: dto.limit]
+            if scan_cursor:
+                parsed = _parse_cursor(scan_cursor)
+                if parsed:
+                    cursor_ts, cursor_id = parsed
+                    q = q.where(
+                        or_(
+                            ImMessage.created_at < cursor_ts,
+                            and_(ImMessage.created_at == cursor_ts, ImMessage.id < cursor_id),
+                        )
+                    )
+
+            stmt = q.order_by(ImMessage.created_at.desc().nullslast()).limit(MATCH_BATCH_SIZE)
+            result = await self.session.scalars(stmt)
+            batch = list(result.all())
+
+            if not batch:
+                break
+
+            for msg in batch:
+                text_lower = (msg.text or "").lower()
+                found = [kw for kw in keywords if kw.lower() in text_lower]
+                if found:
+                    matched.append(msg)
+                    matched_kws.append(found)
+
+            total_scanned += len(batch)
+            last_msg = batch[-1]
+            scan_cursor = _build_cursor(last_msg)
+
+            if len(batch) < MATCH_BATCH_SIZE:
+                break
+
+        has_more = len(matched) > limit
+        page_msgs = matched[:limit]
+        page_kws = matched_kws[:limit]
 
         next_cursor = None
         if has_more and page_msgs:
-            last_msg = page_msgs[-1]
-            if last_msg.created_at:
-                next_cursor = f"{last_msg.created_at.isoformat()}_{last_msg.id}"
+            next_cursor = _build_cursor(page_msgs[-1])
+        elif total_scanned > 0 and total_scanned >= MATCH_MAX_SCAN and scan_cursor:
+            next_cursor = scan_cursor
+            has_more = True
 
         return page_msgs, page_kws, has_more, next_cursor
