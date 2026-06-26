@@ -1,3 +1,10 @@
+# [0.48.0](https://github.com/andr-235/parseVK/compare/v0.47.0...v0.48.0) (2026-06-26)
+
+
+### Features
+
+* **monitoring:** switch monitoring page data source to im-service ([67347d1](https://github.com/andr-235/parseVK/commit/67347d1461cf708d3116c677365e5aa97189e098))
+
 # [0.47.0](https://github.com/andr-235/parseVK/compare/v0.46.0...v0.47.0) (2026-06-26)
 
 
