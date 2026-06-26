@@ -1,3 +1,10 @@
+# [0.50.0](https://github.com/andr-235/parseVK/compare/v0.49.4...v0.50.0) (2026-06-26)
+
+
+### Features
+
+* **monitoring:** make keywords collapsible and fix onlyWithKeywords alias ([0fbb080](https://github.com/andr-235/parseVK/commit/0fbb08023ac6c554ec7fa809db3953b07e29c865))
+
 ## [0.49.4](https://github.com/andr-235/parseVK/compare/v0.49.3...v0.49.4) (2026-06-26)
 
 
