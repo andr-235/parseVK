@@ -3,7 +3,15 @@ from fastapi import Header, HTTPException, status
 from app.core.config import settings
 
 
-async def require_internal_token(authorization: str = Header(..., alias="X-Internal-Token")) -> str:
+async def require_internal_token(authorization: str = Header(..., alias="X-Internal-Service-Token")) -> str:
     if authorization != settings.internal_service_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid internal token")
     return authorization
+
+
+async def require_owner_user_id(
+    x_user_id: str | None = Header(default=None, alias="X-User-ID"),
+) -> str:
+    if not x_user_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing X-User-ID")
+    return x_user_id
