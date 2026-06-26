@@ -60,28 +60,34 @@ export function MonitoringPage() {
       data.keywords.map((kw) => kw.word),
   })
 
-  const messagesQuery = useQuery({
-    queryKey: ['im-messages', messenger, useKeywords, debouncedSearch, page, keywordsQuery.data],
+  const kwMessagesQuery = useQuery({
+    queryKey: ['im-messages-keyword', messenger, debouncedSearch, page, keywordsQuery.data],
     queryFn: () => {
-      if (useKeywords) {
-        const words = keywordsQuery.data ?? []
-        if (words.length === 0) {
-          return { items: [], total: 0, page: 1, limit: PAGE_SIZE }
-        }
-        return searchMessagesPost({
-          messenger,
-          query: debouncedSearch || undefined,
-          onlyWithKeywords: true,
-          keywords: words,
-          page,
-          limit: PAGE_SIZE,
-        })
+      const words = keywordsQuery.data ?? []
+      if (words.length === 0) {
+        return { items: [], total: 0, page: 1, limit: PAGE_SIZE }
       }
-      return searchMessages({ messenger, q: debouncedSearch || undefined, page, limit: PAGE_SIZE })
+      return searchMessagesPost({
+        messenger,
+        query: debouncedSearch || undefined,
+        onlyWithKeywords: true,
+        keywords: words,
+        page,
+        limit: PAGE_SIZE,
+      })
     },
     placeholderData: (prev) => prev,
-    enabled: section === 'messages',
+    enabled: section === 'messages' && useKeywords,
   })
+
+  const allMessagesQuery = useQuery({
+    queryKey: ['im-messages-all', messenger, debouncedSearch, page],
+    queryFn: () => searchMessages({ messenger, q: debouncedSearch || undefined, page, limit: PAGE_SIZE }),
+    placeholderData: (prev) => prev,
+    enabled: section === 'messages' && !useKeywords,
+  })
+
+  const messagesQuery = useKeywords ? kwMessagesQuery : allMessagesQuery
 
   const groupsQuery = useQuery({
     queryKey: ['im-groups', messenger, debouncedSearch],
