@@ -23,6 +23,7 @@ class WappiPoller:
         self._last_poll: dict[str, int | None] = {}
 
     async def start(self) -> None:
+        now = int(time.time())
         for messenger in ("whatsapp", "max"):
             max_created = await self.repository.session.scalar(
                 select(func.max(ImMessage.created_at)).where(ImMessage.messenger == messenger)
@@ -31,8 +32,8 @@ class WappiPoller:
                 self._last_poll[messenger] = int(max_created.timestamp())
                 logger.info("Poller %s: last message from %s", messenger, max_created.isoformat())
             else:
-                self._last_poll[messenger] = None
-                logger.info("Poller %s: no previous messages, starting from beginning", messenger)
+                self._last_poll[messenger] = now
+                logger.info("Poller %s: no previous messages, starting from now", messenger)
 
     async def poll_messenger(self, messenger: str) -> int:
         client = self._wappi if messenger == "whatsapp" else self._max
