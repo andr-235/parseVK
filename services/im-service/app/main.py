@@ -6,13 +6,17 @@ from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
+from app.modules.keywords.router import router as keywords_router
+from app.modules.notifier.router import router as notifier_router
 from app.modules.outbox.publisher import publish_outbox_forever
+from app.modules.search.router import router as search_router
 from app.modules.tasks.consumer import TaskEventsConsumer
 
 logger = logging.getLogger(__name__)
 
 _consumer_healthy: list[bool] = [False]
 _publisher_healthy: list[bool] = [False]
+_notifier_healthy: list[bool] = [False]
 
 
 async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
@@ -41,12 +45,22 @@ async def lifespan(app: FastAPI):
     consumer = TaskEventsConsumer()
     consumer_task = None
     publisher_task = None
+    notifier_task = None
 
     async def run_consumer():
         await consumer.run_forever()
 
     async def run_publisher():
         await publish_outbox_forever()
+
+    async def run_notifier():
+        from app.db.session import SessionLocal
+        from app.modules.notifier.repository import NotifierRepository
+        from app.modules.notifier.service import run_notifier_forever
+
+        async with SessionLocal() as session:
+            repository = NotifierRepository(session)
+            await run_notifier_forever(repository, poll_interval=settings.notifier_poll_interval)
 
     if settings.kafka_consumer_enabled:
         consumer_task = asyncio.create_task(
@@ -56,13 +70,16 @@ async def lifespan(app: FastAPI):
         publisher_task = asyncio.create_task(
             supervise("Outbox publisher", run_publisher, health_flag=_publisher_healthy)
         )
+    notifier_task = asyncio.create_task(
+        supervise("Notifier", run_notifier, health_flag=_notifier_healthy)
+    )
     try:
         yield
     finally:
-        for task in (consumer_task, publisher_task):
+        for task in (consumer_task, publisher_task, notifier_task):
             if task:
                 task.cancel()
-        for task in (consumer_task, publisher_task):
+        for task in (consumer_task, publisher_task, notifier_task):
             if task:
                 with suppress(asyncio.CancelledError):
                     await task
@@ -77,6 +94,10 @@ def create_app() -> FastAPI:
     except Exception:
         pass
 
+    app.include_router(keywords_router)
+    app.include_router(search_router)
+    app.include_router(notifier_router)
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         result: dict[str, str] = {"status": "UP"}
@@ -84,6 +105,7 @@ def create_app() -> FastAPI:
             result["kafkaConsumer"] = "healthy" if _consumer_healthy[0] else "unhealthy"
         if settings.outbox_publish_enabled:
             result["outboxPublisher"] = "healthy" if _publisher_healthy[0] else "unhealthy"
+        result["notifier"] = "healthy" if _notifier_healthy[0] else "unhealthy"
         return result
 
     @app.get("/ready")
