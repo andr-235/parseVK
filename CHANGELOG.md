@@ -1,3 +1,10 @@
+## [0.49.3](https://github.com/andr-235/parseVK/compare/v0.49.2...v0.49.3) (2026-06-26)
+
+
+### Bug Fixes
+
+* **moderation-service:** pass Python list to JSONB contains instead of string ([996543d](https://github.com/andr-235/parseVK/commit/996543d1d7f80fd38d86aab9b1eb18d77837c9ca))
+
 ## [0.49.2](https://github.com/andr-235/parseVK/compare/v0.49.1...v0.49.2) (2026-06-26)
 
 
