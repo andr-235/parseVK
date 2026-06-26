@@ -28,12 +28,14 @@ class SearchResponse(BaseModel):
 
 
 class SearchMessagesRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     messenger: str | None = None
     query: str | None = None
-    chat_id: str | None = None
-    date_from: datetime | None = None
-    date_to: datetime | None = None
-    only_with_keywords: bool = False
+    chat_id: str | None = Field(default=None, alias='chatId')
+    date_from: datetime | None = Field(default=None, alias='dateFrom')
+    date_to: datetime | None = Field(default=None, alias='dateTo')
+    only_with_keywords: bool = Field(default=False, alias='onlyWithKeywords')
     keywords: list[str] = Field(default_factory=list)
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=50, ge=1, le=200)
