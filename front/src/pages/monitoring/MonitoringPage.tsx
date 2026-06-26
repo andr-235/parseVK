@@ -376,7 +376,7 @@ export function MonitoringPage() {
                   <div className="mt-3 flex items-center justify-between text-sm text-text-secondary">
                     <span role="status">
                       {messagesQuery.data && (
-                        <>{(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, messagesQuery.data.total)} из {messagesQuery.data.total}</>
+                        <>{(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, messagesQuery.data.total as number)} из {messagesQuery.data.total}</>
                       )}
                     </span>
                     <nav className="flex items-center gap-1" aria-label="Пагинация">
