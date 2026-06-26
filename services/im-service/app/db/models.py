@@ -131,6 +131,21 @@ class ImUserNotifierState(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
 
 
+class MonitoringGroup(Base):
+    __tablename__ = "monitoring_groups"
+    __table_args__ = (
+        UniqueConstraint("messenger", "chat_id", name="uq_monitoring_groups_messenger_chat"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    messenger: Mapped[str] = mapped_column(String(32), nullable=False)
+    chat_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
 class OutboxEvent(Base):
     __tablename__ = "outbox_events"
     __table_args__ = (
