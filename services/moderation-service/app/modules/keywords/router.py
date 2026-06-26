@@ -34,7 +34,7 @@ async def get_keywords_service(
 @router.get("", response_model=KeywordsListResponse)
 async def get_keywords(
     page: int = Query(default=1, ge=1),
-    limit: int = Query(default=50, ge=1, le=100),
+    limit: int = Query(default=50, ge=1, le=1000),
     search: str | None = Query(default=None),
     enabled: bool | None = Query(default=None),
     scope: str | None = Query(default=None),

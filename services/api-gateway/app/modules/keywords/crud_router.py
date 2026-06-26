@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Depends, File, Query, Request, UploadFile
 crud_router = APIRouter()
 
 PAGE_QUERY = Query(default=1, ge=1)
-LIMIT_QUERY = Query(default=50, ge=1, le=100)
+LIMIT_QUERY = Query(default=50, ge=1, le=1000)
 SEARCH_QUERY = Query(default=None)
 AUTH_DEPENDENCY = Depends(require_auth)
 SERVICE_DEPENDENCY = Depends(get_keywords_gateway_service)
