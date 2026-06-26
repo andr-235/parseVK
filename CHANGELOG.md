@@ -1,3 +1,11 @@
+## [0.50.5](https://github.com/andr-235/parseVK/compare/v0.50.4...v0.50.5) (2026-06-26)
+
+
+### Bug Fixes
+
+* **front:** TS error - total can be null in keyword search type ([ae5f626](https://github.com/andr-235/parseVK/commit/ae5f626d05da880515ac4e2807cffda07c2355a5))
+* **im-service:** correct cursor semantics for keyword search ([172c594](https://github.com/andr-235/parseVK/commit/172c5947986b364c7b3de50585c38b2b9a9d4b5c))
+
 ## [0.50.4](https://github.com/andr-235/parseVK/compare/v0.50.3...v0.50.4) (2026-06-26)
 
 
