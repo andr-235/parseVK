@@ -1,3 +1,10 @@
+# [0.49.0](https://github.com/andr-235/parseVK/compare/v0.48.1...v0.49.0) (2026-06-26)
+
+
+### Features
+
+* **im-service:** replace local keywords with moderation-service keywords ([3d17b01](https://github.com/andr-235/parseVK/commit/3d17b01a4d534d9998c1164e3159deb0133ee5a1))
+
 ## [0.48.1](https://github.com/andr-235/parseVK/compare/v0.48.0...v0.48.1) (2026-06-26)
 
 
