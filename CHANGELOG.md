@@ -1,3 +1,10 @@
+## [0.49.2](https://github.com/andr-235/parseVK/compare/v0.49.1...v0.49.2) (2026-06-26)
+
+
+### Bug Fixes
+
+* **moderation-service:** fix JSONB scopes filter - use contains instead of any ([62da03d](https://github.com/andr-235/parseVK/commit/62da03d0db9c5f02bdf46290fb034e9fc6cc3adb))
+
 ## [0.49.1](https://github.com/andr-235/parseVK/compare/v0.49.0...v0.49.1) (2026-06-26)
 
 
