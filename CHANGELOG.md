@@ -1,3 +1,20 @@
+# [0.46.0](https://github.com/andr-235/parseVK/compare/v0.45.7...v0.46.0) (2026-06-26)
+
+
+### Bug Fixes
+
+* **im-service:** align internal token header with project standard ([99d6750](https://github.com/andr-235/parseVK/commit/99d67502547bfedb3bd8abaeec76c8a216ad7310))
+
+
+### Features
+
+* **api-gateway:** add IM gateway module ([6530af2](https://github.com/andr-235/parseVK/commit/6530af24badfd492c4b8f54466e8e7c4a8017d5e))
+* **im-service:** add keyword and notifier state DB models + GIN index ([f6791dd](https://github.com/andr-235/parseVK/commit/f6791dd0d19343508316456cc3264f1b9416eb21))
+* **im-service:** add keywords module ([7b31ac4](https://github.com/andr-235/parseVK/commit/7b31ac454fa898de0e061e5117c9f6170e5071e2))
+* **im-service:** add message notifier module ([5a11340](https://github.com/andr-235/parseVK/commit/5a11340fb5788eabe903ffe9e2125c548eb6969d))
+* **im-service:** add search module ([97fc408](https://github.com/andr-235/parseVK/commit/97fc4083b5cd79dfa8cdbca80f9c8613e0cade2a))
+* **im-service:** wire up routers and notifier ([863a369](https://github.com/andr-235/parseVK/commit/863a369f603aaaeba6fe8eae44d474a27be7d746))
+
 ## [0.45.7](https://github.com/andr-235/parseVK/compare/v0.45.6...v0.45.7) (2026-06-25)
 
 
