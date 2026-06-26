@@ -1,6 +1,9 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager, suppress
+
+logging.basicConfig(level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper()))
 
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -17,6 +20,7 @@ logger = logging.getLogger(__name__)
 _consumer_healthy: list[bool] = [False]
 _publisher_healthy: list[bool] = [False]
 _notifier_healthy: list[bool] = [False]
+_poller_healthy: list[bool] = [False]
 
 
 async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
@@ -62,6 +66,15 @@ async def lifespan(app: FastAPI):
             repository = NotifierRepository(session)
             await run_notifier_forever(repository, poll_interval=settings.notifier_poll_interval)
 
+    async def run_poller():
+        from app.db.session import SessionLocal
+        from app.modules.ingestion.repository import IngestionRepository
+        from app.modules.poller.service import run_poller_forever
+
+        async with SessionLocal() as session:
+            repository = IngestionRepository(session)
+            await run_poller_forever(repository, poll_interval=settings.wappi_poll_interval)
+
     if settings.kafka_consumer_enabled:
         consumer_task = asyncio.create_task(
             supervise("Kafka consumer", run_consumer, health_flag=_consumer_healthy)
@@ -73,13 +86,16 @@ async def lifespan(app: FastAPI):
     notifier_task = asyncio.create_task(
         supervise("Notifier", run_notifier, health_flag=_notifier_healthy)
     )
+    poller_task = asyncio.create_task(
+        supervise("WappiPoller", run_poller, health_flag=_poller_healthy)
+    )
     try:
         yield
     finally:
-        for task in (consumer_task, publisher_task, notifier_task):
+        for task in (consumer_task, publisher_task, notifier_task, poller_task):
             if task:
                 task.cancel()
-        for task in (consumer_task, publisher_task, notifier_task):
+        for task in (consumer_task, publisher_task, notifier_task, poller_task):
             if task:
                 with suppress(asyncio.CancelledError):
                     await task
@@ -106,6 +122,7 @@ def create_app() -> FastAPI:
         if settings.outbox_publish_enabled:
             result["outboxPublisher"] = "healthy" if _publisher_healthy[0] else "unhealthy"
         result["notifier"] = "healthy" if _notifier_healthy[0] else "unhealthy"
+        result["poller"] = "healthy" if _poller_healthy[0] else "unhealthy"
         return result
 
     @app.get("/ready")

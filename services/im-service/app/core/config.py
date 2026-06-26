@@ -1,4 +1,4 @@
-from pydantic import Field, model_validator
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,15 +15,15 @@ class Settings(BaseSettings):
     kafka_consumer_enabled: bool = False
     outbox_publish_enabled: bool = False
 
-    wappi_api_url: str = Field(default="https://wappi.pro", validation_alias="WAPPI_API_URL")
-    wappi_api_token: str = Field(default="", validation_alias="WAPPI_API_TOKEN")
-    wappi_profile_id: str = Field(default="", validation_alias="WAPPI_PROFILE_ID")
-    wappi_poll_interval: int = Field(default=600, validation_alias="WAPPI_POLL_INTERVAL")
-    wappi_request_timeout: int = Field(default=30, validation_alias="WAPPI_REQUEST_TIMEOUT")
-    wappi_page_size: int = Field(default=100, validation_alias="WAPPI_PAGE_SIZE")
-    wappi_include_system: bool = Field(default=True, validation_alias="WAPPI_INCLUDE_SYSTEM_MESSAGES")
+    wappi_api_url: str = "https://wappi.pro"
+    wappi_api_token: str = ""
+    wappi_profile_id: str = ""
+    wappi_poll_interval: int = 600
+    wappi_request_timeout: int = 30
+    wappi_page_size: int = 100
+    wappi_include_system: bool = True
 
-    max_profile_id: str = Field(default="", validation_alias="MAX_PROFILE_ID")
+    max_profile_id: str = ""
 
     notifier_poll_interval: int = 60
 
@@ -31,13 +31,13 @@ class Settings(BaseSettings):
     def warn_if_missing_creds(self) -> "Settings":
         if not self.wappi_api_token and self.kafka_consumer_enabled:
             import logging
-            logging.getLogger(__name__).warning("WAPPI_API_TOKEN is not set — WhatsApp ingestion will fail")
+            logging.getLogger(__name__).warning("IM_SERVICE_WAPPI_API_TOKEN is not set — WhatsApp ingestion will fail")
         if not self.wappi_profile_id and self.kafka_consumer_enabled:
             import logging
-            logging.getLogger(__name__).warning("WAPPI_PROFILE_ID is not set — WhatsApp ingestion will fail")
+            logging.getLogger(__name__).warning("IM_SERVICE_WAPPI_PROFILE_ID is not set — WhatsApp ingestion will fail")
         if not self.max_profile_id and self.kafka_consumer_enabled:
             import logging
-            logging.getLogger(__name__).warning("MAX_PROFILE_ID is not set — Max ingestion will fail")
+            logging.getLogger(__name__).warning("IM_SERVICE_MAX_PROFILE_ID is not set — Max ingestion will fail")
         return self
 
 
