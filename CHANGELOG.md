@@ -1,3 +1,15 @@
+# [0.47.0](https://github.com/andr-235/parseVK/compare/v0.46.0...v0.47.0) (2026-06-26)
+
+
+### Bug Fixes
+
+* **im-service:** prevent Max poller from re-fetching all history ([a408289](https://github.com/andr-235/parseVK/commit/a408289594ea7ca7f84069e35359cc24111fcc9d))
+
+
+### Features
+
+* **im-service:** add continuous Wappi/Max polling and fix env config ([318c0f5](https://github.com/andr-235/parseVK/commit/318c0f5fc88e2fe3257a9b4759de17e5aa14f00c))
+
 # [0.46.0](https://github.com/andr-235/parseVK/compare/v0.45.7...v0.46.0) (2026-06-26)
 
 
