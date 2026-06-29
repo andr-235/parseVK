@@ -102,7 +102,12 @@ describe('VkFriendsExportPage', () => {
     const input = screen.getByLabelText('ID пользователя VK')
     await user.type(input, '12345')
     await user.click(screen.getByRole('button', { name: 'Запустить экспорт' }))
-    expect(mockStartExport).toHaveBeenCalledWith({ user_id: 12345 }, expect.any(Object))
+    expect(mockStartExport).toHaveBeenCalledWith({
+      user_id: 12345,
+      count: 5000,
+      offset: 0,
+      fields: ['photo_100', 'city', 'country', 'domain', 'sex', 'bdate', 'status', 'last_seen', 'verified'],
+    }, expect.any(Object))
   })
 
   it('shows running state with progress and logs', () => {

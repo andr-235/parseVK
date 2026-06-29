@@ -3,7 +3,14 @@ import type { FriendsExportStartResponse, FriendsJobDetailResponse } from './fri
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1'
 
-export async function startVkFriendsExport(params: { user_id?: number }): Promise<FriendsExportStartResponse> {
+export type StartVkFriendsExportParams = {
+  user_id?: number
+  count?: number
+  offset?: number
+  fields?: string[]
+}
+
+export async function startVkFriendsExport(params: StartVkFriendsExportParams): Promise<FriendsExportStartResponse> {
   console.log('[vk-friends] startExport:', params)
   try {
     const result = await apiPost<FriendsExportStartResponse>('/vk/friends/export', { params })

@@ -3,7 +3,13 @@ import type { FriendsExportStartResponse, FriendsJobDetailResponse } from './fri
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1'
 
-export async function startOkFriendsExport(params: { fid?: string }): Promise<FriendsExportStartResponse> {
+export type StartOkFriendsExportParams = {
+  fid?: string
+  limit?: number
+  offset?: number
+}
+
+export async function startOkFriendsExport(params: StartOkFriendsExportParams): Promise<FriendsExportStartResponse> {
   console.log('[ok-friends] startExport:', params)
   try {
     const result = await apiPost<FriendsExportStartResponse>('/ok/friends/export', { params })
