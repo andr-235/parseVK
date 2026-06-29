@@ -1,3 +1,10 @@
+## [0.52.2](https://github.com/andr-235/parseVK/compare/v0.52.1...v0.52.2) (2026-06-29)
+
+
+### Bug Fixes
+
+* **front:** replace EventSource with fetch for SSE auth ([5120643](https://github.com/andr-235/parseVK/commit/5120643b50b0d11edd96ec2d0f1855de5bc7fa03))
+
 ## [0.52.1](https://github.com/andr-235/parseVK/compare/v0.52.0...v0.52.1) (2026-06-29)
 
 
