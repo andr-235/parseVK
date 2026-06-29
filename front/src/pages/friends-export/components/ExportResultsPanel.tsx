@@ -26,12 +26,6 @@ export function ExportResultsPanel({ stream, onDownload, onReset }: ExportResult
           <Button variant="primary" onClick={onDownload} disabled={!canDownload} icon={<Download size={16} aria-hidden="true" />}>
             Скачать XLSX
           </Button>
-          <Button variant="secondary" disabled>
-            Скачать DOCX
-          </Button>
-          <Button variant="secondary" disabled>
-            Скачать JSON
-          </Button>
           <Button variant="secondary" onClick={onReset} icon={<RefreshCw size={16} aria-hidden="true" />}>
             {canDownload ? 'Новый экспорт' : stream.status === 'error' ? 'Повторить' : 'Сбросить'}
           </Button>

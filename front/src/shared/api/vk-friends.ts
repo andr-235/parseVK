@@ -5,9 +5,6 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1'
 
 export type StartVkFriendsExportParams = {
   user_id?: number
-  count?: number
-  offset?: number
-  fields?: string[]
 }
 
 export async function startVkFriendsExport(params: StartVkFriendsExportParams): Promise<FriendsExportStartResponse> {

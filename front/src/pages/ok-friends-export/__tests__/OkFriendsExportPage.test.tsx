@@ -90,7 +90,7 @@ describe('OkFriendsExportPage', () => {
     const input = screen.getByLabelText('ID пользователя OK')
     await user.type(input, '67890')
     await user.click(screen.getByRole('button', { name: 'Запустить экспорт' }))
-    expect(mockStartExport).toHaveBeenCalledWith({ fid: '67890', limit: 5000, offset: 0 }, expect.any(Object))
+    expect(mockStartExport).toHaveBeenCalledWith({ fid: '67890' }, expect.any(Object))
   })
 
   it('shows done state with download button', () => {
