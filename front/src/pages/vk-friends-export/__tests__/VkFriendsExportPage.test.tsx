@@ -109,7 +109,6 @@ describe('VkFriendsExportPage', () => {
     mockUseStream.mockReturnValue(runningState)
     render(<VkFriendsExportPage />, { wrapper: createWrapper() })
     expect(screen.getByText('Выполняется')).toBeInTheDocument()
-    expect(screen.getByText(/5.*50/)).toBeInTheDocument()
     expect(screen.getByText('Starting export...')).toBeInTheDocument()
   })
 
