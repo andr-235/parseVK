@@ -1,3 +1,10 @@
+## [0.52.1](https://github.com/andr-235/parseVK/compare/v0.52.0...v0.52.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* **friends-export:** simplify export forms ([21b666f](https://github.com/andr-235/parseVK/commit/21b666f269073d98e55320fc5e98e1ed3a72257b))
+
 # [0.52.0](https://github.com/andr-235/parseVK/compare/v0.51.0...v0.52.0) (2026-06-29)
 
 
