@@ -1,3 +1,10 @@
+## [0.52.3](https://github.com/andr-235/parseVK/compare/v0.52.2...v0.52.3) (2026-06-29)
+
+
+### Bug Fixes
+
+* **front:** retry SSE stream on 404 after job creation ([4c7c897](https://github.com/andr-235/parseVK/commit/4c7c8973deccd6ab991771af6949bf3dcefe8aef))
+
 ## [0.52.2](https://github.com/andr-235/parseVK/compare/v0.52.1...v0.52.2) (2026-06-29)
 
 
