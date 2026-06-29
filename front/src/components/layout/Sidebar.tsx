@@ -59,8 +59,8 @@ function getGroups(isAdmin: boolean): NavGroup[] {
     {
       label: 'Экспорт',
       items: [
-        { label: 'Друзья VK', path: '/vk/friends-export', icon: <UserPlus size={18} />, soon: true },
-        { label: 'Друзья OK', path: '/ok/friends-export', icon: <UserMinus size={18} />, soon: true },
+        { label: 'Друзья VK', path: '/vk/friends-export', icon: <UserPlus size={18} /> },
+        { label: 'Друзья OK', path: '/ok/friends-export', icon: <UserMinus size={18} /> },
       ],
     },
     {

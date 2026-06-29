@@ -12,7 +12,7 @@
 - [x] **WhatsApp (IM) Integration** — Wappi.pro client, message ingestion, Kafka consumer
 - [x] **Frontend Design System & Core Pages** — 12 of 18 pages working (comments, tasks, groups, authors, watchlist, keywords, telegram, monitoring, auth, admin)
 - [ ] **Listings Module (Avito & CSV Export)** — backend exists, frontend is placeholder
-- [ ] **Friends Export (VK & OK)** — backend exists (XLSX export), frontends are placeholders
+- [x] **Friends Export (VK & OK)** — backend exists (XLSX export), frontends implemented
 - [ ] **Рефакторинг микросервисов (vk-service к Clean Architecture)** — реструктуризация vk-service на FastAPI к правильной слоистой архитектуре
 - [ ] **Monitoring Groups** — frontend page implemented but not connected in router
 - [ ] **Metrics & Analytics Dashboard** — placeholder page
@@ -32,3 +32,4 @@
 | Telegram Integration | 2026-06-18 |
 | WhatsApp (IM) Integration | 2026-06-18 |
 | Frontend Design System & Core Pages | 2026-06-18 |
+| Friends Export (VK & OK) | 2026-06-29 |
