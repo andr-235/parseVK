@@ -63,7 +63,7 @@ describe('OkFriendsExportPage', () => {
 
   it('renders export form', () => {
     render(<OkFriendsExportPage />, { wrapper: createWrapper() })
-    expect(screen.getByLabelText('ID пользователя OK (fid)')).toBeInTheDocument()
+    expect(screen.getByLabelText('ID пользователя OK')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Запустить экспорт' })).toBeInTheDocument()
   })
 
@@ -77,7 +77,7 @@ describe('OkFriendsExportPage', () => {
   it('shows validation error on non-numeric fid', async () => {
     const user = userEvent.setup()
     render(<OkFriendsExportPage />, { wrapper: createWrapper() })
-    const input = screen.getByLabelText('ID пользователя OK (fid)')
+    const input = screen.getByLabelText('ID пользователя OK')
     await user.type(input, 'abc')
     await user.click(screen.getByRole('button', { name: 'Запустить экспорт' }))
     expect(screen.getByText('ID должен содержать только цифры')).toBeInTheDocument()
@@ -87,7 +87,7 @@ describe('OkFriendsExportPage', () => {
     mockStartExport.mockResolvedValueOnce({ jobId: 'job-1', status: 'PENDING' })
     const user = userEvent.setup()
     render(<OkFriendsExportPage />, { wrapper: createWrapper() })
-    const input = screen.getByLabelText('ID пользователя OK (fid)')
+    const input = screen.getByLabelText('ID пользователя OK')
     await user.type(input, '67890')
     await user.click(screen.getByRole('button', { name: 'Запустить экспорт' }))
     expect(mockStartExport).toHaveBeenCalledWith({ fid: '67890' }, expect.any(Object))
@@ -108,7 +108,7 @@ describe('OkFriendsExportPage', () => {
       .mockReturnValue(doneState)
     const user = userEvent.setup()
     render(<OkFriendsExportPage />, { wrapper: createWrapper() })
-    const input = screen.getByLabelText('ID пользователя OK (fid)')
+    const input = screen.getByLabelText('ID пользователя OK')
     await user.type(input, '67890')
     await user.click(screen.getByRole('button', { name: 'Запустить экспорт' }))
     await user.click(screen.getByRole('button', { name: 'Скачать XLSX' }))

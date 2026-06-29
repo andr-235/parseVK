@@ -29,8 +29,8 @@ export function VkExportForm({ onSubmit, disabled, isLoading }: VkExportFormProp
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="vk-user-id" className="text-xs font-medium text-text-muted">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="vk-user-id" className="text-xs font-medium text-text-muted tracking-wide uppercase">
           ID пользователя VK
         </label>
         <Input
@@ -45,8 +45,13 @@ export function VkExportForm({ onSubmit, disabled, isLoading }: VkExportFormProp
         />
         {error && <p className="text-xs text-danger" role="alert">{error}</p>}
       </div>
-      <Button type="submit" variant="primary" size="sm" disabled={disabled || isLoading} icon={isLoading ? <Spinner size={14} /> : undefined}>
-        {isLoading ? 'Запуск...' : 'Запустить экспорт'}
+      <Button type="submit" variant="primary" size="sm" disabled={disabled || isLoading}>
+        {isLoading ? (
+          <span className="flex items-center gap-1.5">
+            <Spinner size={14} />
+            Запуск...
+          </span>
+        ) : 'Запустить экспорт'}
       </Button>
     </form>
   )

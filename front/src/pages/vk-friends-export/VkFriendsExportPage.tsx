@@ -81,11 +81,7 @@ export function VkFriendsExportPage() {
     <PageShell title="Экспорт друзей VK">
       <FeedbackToast feedback={feedback} onDismiss={dismissFeedback} />
 
-      <div className="mb-6">
-        <p className="mb-3 text-sm text-text-secondary">
-          Выгрузите список друзей пользователя ВКонтакте в формате XLSX.
-        </p>
-
+      <div className="pb-5 mb-5 border-b border-border">
         <VkExportForm
           onSubmit={handleExport}
           disabled={stream.status === 'running' || stream.status === 'connecting'}
@@ -93,22 +89,31 @@ export function VkFriendsExportPage() {
         />
       </div>
 
+      {stream.status === 'idle' && !exportMutation.isPending && (
+        <p className="text-sm text-text-muted leading-relaxed max-w-prose">
+          Введите ID пользователя ВКонтакте и нажмите «Запустить экспорт».
+          Ход выполнения будет отображаться ниже.
+        </p>
+      )}
+
       {(stream.status === 'connecting' || stream.status === 'running') && (
-        <div className="mb-6 space-y-3 rounded-lg border border-border bg-bg-panel p-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2.5 text-sm font-medium text-text-primary">
             <Spinner size={16} />
-            <span>Экспорт выполняется...</span>
+            <span>Экспорт выполняется</span>
           </div>
 
           {stream.progress.totalCount > 0 && (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs text-text-muted">
+            <div className="space-y-1.5 max-w-sm">
+              <div className="flex items-center justify-between text-xs text-text-secondary">
                 <span>Прогресс</span>
-                <span>{stream.progress.fetchedCount} / {stream.progress.totalCount}</span>
+                <span className="font-mono tabular-nums">
+                  {stream.progress.fetchedCount}&thinsp;/&thinsp;{stream.progress.totalCount}
+                </span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-bg-main">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-panel">
                 <div
-                  className="h-full rounded-full bg-accent transition-all duration-500"
+                  className="h-full rounded-full bg-accent transition-all duration-700 ease-out"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
@@ -116,35 +121,44 @@ export function VkFriendsExportPage() {
           )}
 
           {stream.logs.length > 0 && (
-            <div className="max-h-40 overflow-y-auto rounded border border-border bg-bg-main p-2 font-mono text-xs">
-              {stream.logs.map((event, i) => (
-                event.type === 'log' && (
-                  <div key={i} className={`py-0.5 ${
-                    event.data.level === 'error' ? 'text-danger' :
-                    event.data.level === 'warn' ? 'text-warning' : 'text-text-secondary'
-                  }`}>
-                    {event.data.message}
-                  </div>
-                )
-              ))}
-              <div ref={logEndRef} />
-            </div>
+            <details className="group">
+              <summary className="inline-flex items-center gap-1.5 text-xs font-medium text-text-muted cursor-pointer hover:text-text-secondary transition-colors duration-150 select-none">
+                Лог экспорта
+                <span className="text-text-muted/60">{stream.logs.filter(e => e.type === 'log').length}</span>
+              </summary>
+              <div className="mt-2 max-h-40 overflow-y-auto rounded border border-border bg-bg-panel p-2 font-mono text-xs leading-relaxed">
+                {stream.logs.map((event, i) => (
+                  event.type === 'log' && (
+                    <div key={i} className={`py-0.5 ${
+                      event.data.level === 'error' ? 'text-danger' :
+                      event.data.level === 'warn' ? 'text-warning' : 'text-text-secondary'
+                    }`}>
+                      {event.data.message}
+                    </div>
+                  )
+                ))}
+                <div ref={logEndRef} />
+              </div>
+            </details>
           )}
         </div>
       )}
 
       {stream.status === 'done' && (
-        <div className="mb-6 space-y-3 rounded-lg border border-border bg-bg-panel p-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-success">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2.5 text-sm font-medium text-success">
             <Check size={16} />
             <span>Экспорт завершён</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
+          <div className="flex items-center gap-2 text-sm text-text-secondary">
             <FileSpreadsheet size={16} />
-            <span>Собрано: {stream.progress.fetchedCount}</span>
+            <span className="font-mono tabular-nums font-medium text-text-primary">
+              {stream.progress.fetchedCount}
+            </span>
+            <span>записей собрано</span>
             {stream.progress.totalCount > 0 && (
-              <span>(всего: {stream.progress.totalCount})</span>
+              <span className="text-text-muted">из {stream.progress.totalCount}</span>
             )}
           </div>
 
@@ -160,8 +174,11 @@ export function VkFriendsExportPage() {
       )}
 
       {stream.status === 'error' && (
-        <div className="mb-6 space-y-3 rounded-lg border border-border bg-bg-panel p-4">
-          <p className="text-sm text-danger">{stream.error}</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-2 text-sm text-danger">
+            <span className="mt-0.5 shrink-0">✕</span>
+            <span>{stream.error}</span>
+          </div>
           <Button variant="secondary" size="sm" onClick={handleReset} icon={<RefreshCw size={14} />}>
             Повторить
           </Button>
