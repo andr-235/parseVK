@@ -1,3 +1,10 @@
+# [0.52.0](https://github.com/andr-235/parseVK/compare/v0.51.0...v0.52.0) (2026-06-29)
+
+
+### Features
+
+* **friends-export:** redesign export pages ([5ced43a](https://github.com/andr-235/parseVK/commit/5ced43a749b797f31638a315f6c7764735012473))
+
 # [0.51.0](https://github.com/andr-235/parseVK/compare/v0.50.5...v0.51.0) (2026-06-29)
 
 
