@@ -61,8 +61,11 @@ export function LoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-4"
       >
-        <h1 className="text-center text-2xl font-semibold text-text-primary">ParseVK</h1>
-        <div className="space-y-4 rounded-lg border border-border bg-bg-panel p-6">
+        <div className="space-y-1">
+          <h1 className="text-center text-2xl font-semibold text-text-primary">ParseVK</h1>
+          <p className="text-center text-sm text-text-secondary">Панель аналитики и экспорта</p>
+        </div>
+        <div className="space-y-4 rounded-lg border border-border bg-bg-elevated p-6">
           <div className="space-y-1.5">
             <label htmlFor="login-username" className="text-xs font-medium uppercase tracking-wider text-text-secondary">Логин</label>
             <Input
@@ -107,7 +110,7 @@ export function LoginPage() {
             <span className="text-sm text-text-primary">Запомнить меня</span>
           </label>
           {error && (
-            <p className="text-xs text-danger" role="alert">{error}</p>
+            <div className="rounded-md bg-danger-soft px-3 py-2 text-xs text-danger" role="alert">{error}</div>
           )}
           <Button
             type="submit"
