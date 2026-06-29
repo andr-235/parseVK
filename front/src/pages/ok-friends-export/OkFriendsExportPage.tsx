@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Download, RefreshCw, Check, FileSpreadsheet } from 'lucide-react'
+import { Download, RefreshCw, Check } from 'lucide-react'
 import { Button, FeedbackToast } from '../../components/ui'
 import { Spinner } from '../../components/ui/Spinner'
 import { PageShell } from '../../components/layout/PageShell'
@@ -81,7 +81,7 @@ export function OkFriendsExportPage() {
     <PageShell title="Экспорт друзей OK">
       <FeedbackToast feedback={feedback} onDismiss={dismissFeedback} />
 
-      <div className="pb-5 mb-5 border-b border-border">
+      <div className="bg-bg-panel rounded-lg p-4 mb-8">
         <OkExportForm
           onSubmit={handleExport}
           disabled={stream.status === 'running' || stream.status === 'connecting'}
@@ -89,49 +89,38 @@ export function OkFriendsExportPage() {
         />
       </div>
 
-      {stream.status === 'idle' && !exportMutation.isPending && (
-        <p className="text-sm text-text-muted leading-relaxed max-w-prose">
-          Введите ID пользователя Одноклассников и нажмите «Запустить экспорт».
-          Ход выполнения будет отображаться ниже.
-        </p>
-      )}
-
-      {(stream.status === 'connecting' || stream.status === 'running') && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2.5 text-sm font-medium text-text-primary">
-            <Spinner size={16} />
-            <span>Экспорт выполняется</span>
+      {stream.status === 'running' && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Spinner size={14} />
+              <span className="text-sm font-medium text-text-primary">Выполняется</span>
+            </div>
+            {stream.progress.totalCount > 0 && (
+              <span className="text-xs tabular-nums text-text-muted">
+                {stream.progress.fetchedCount}&thinsp;/&thinsp;{stream.progress.totalCount}
+              </span>
+            )}
           </div>
-
           {stream.progress.totalCount > 0 && (
-            <div className="space-y-1.5 max-w-sm">
-              <div className="flex items-center justify-between text-xs text-text-secondary">
-                <span>Прогресс</span>
-                <span className="font-mono tabular-nums">
-                  {stream.progress.fetchedCount}&thinsp;/&thinsp;{stream.progress.totalCount}
-                </span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-panel">
-                <div
-                  className="h-full rounded-full bg-accent transition-all duration-700 ease-out"
-                  style={{ width: `${progressPct}%` }}
-                />
-              </div>
+            <div className="h-1 bg-bg-panel rounded-full overflow-hidden">
+              <div
+                className="h-full bg-accent rounded-full transition-all duration-700 ease-out"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
           )}
-
           {stream.logs.length > 0 && (
             <details className="group">
-              <summary className="inline-flex items-center gap-1.5 text-xs font-medium text-text-muted cursor-pointer hover:text-text-secondary transition-colors duration-150 select-none">
-                Лог экспорта
-                <span className="text-text-muted/60">{stream.logs.filter(e => e.type === 'log').length}</span>
+              <summary className="text-xs text-text-muted cursor-pointer hover:text-text-secondary transition-colors select-none">
+                Лог · {stream.logs.filter(e => e.type === 'log').length}
               </summary>
-              <div className="mt-2 max-h-40 overflow-y-auto rounded border border-border bg-bg-panel p-2 font-mono text-xs leading-relaxed">
+              <div className="mt-3 max-h-48 overflow-y-auto font-mono text-xs leading-relaxed text-text-secondary space-y-1">
                 {stream.logs.map((event, i) => (
                   event.type === 'log' && (
-                    <div key={i} className={`py-0.5 ${
+                    <div key={i} className={`${
                       event.data.level === 'error' ? 'text-danger' :
-                      event.data.level === 'warn' ? 'text-warning' : 'text-text-secondary'
+                      event.data.level === 'warn' ? 'text-warning' : ''
                     }`}>
                       {event.data.message}
                     </div>
@@ -145,28 +134,27 @@ export function OkFriendsExportPage() {
       )}
 
       {stream.status === 'done' && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2.5 text-sm font-medium text-success">
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-success">
             <Check size={16} />
             <span>Экспорт завершён</span>
           </div>
-
-          <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <FileSpreadsheet size={16} />
-            <span className="font-mono tabular-nums font-medium text-text-primary">
+          <div>
+            <span className="text-4xl font-semibold text-text-primary tabular-nums leading-none">
               {stream.progress.fetchedCount}
             </span>
-            <span>записей собрано</span>
-            {stream.progress.totalCount > 0 && (
-              <span className="text-text-muted">из {stream.progress.totalCount}</span>
-            )}
+            <div className="text-sm text-text-secondary mt-1">
+              записей собрано
+              {stream.progress.totalCount > 0 && (
+                <span className="text-text-muted ml-1">из {stream.progress.totalCount}</span>
+              )}
+            </div>
           </div>
-
-          <div className="flex gap-2">
-            <Button variant="primary" size="sm" onClick={handleDownload} icon={<Download size={14} />}>
+          <div className="flex gap-3">
+            <Button variant="primary" onClick={handleDownload} icon={<Download size={16} />}>
               Скачать XLSX
             </Button>
-            <Button variant="secondary" size="sm" onClick={handleReset} icon={<RefreshCw size={14} />}>
+            <Button variant="secondary" onClick={handleReset} icon={<RefreshCw size={16} />}>
               Новый экспорт
             </Button>
           </div>
@@ -174,12 +162,15 @@ export function OkFriendsExportPage() {
       )}
 
       {stream.status === 'error' && (
-        <div className="space-y-3">
-          <div className="flex items-start gap-2 text-sm text-danger">
-            <span className="mt-0.5 shrink-0">✕</span>
-            <span>{stream.error}</span>
+        <div className="space-y-4">
+          <div className="flex items-start gap-2.5">
+            <span className="text-sm shrink-0 mt-0.5 text-danger">✕</span>
+            <div>
+              <p className="text-sm font-medium text-danger">Не удалось выполнить экспорт</p>
+              <p className="text-sm text-text-secondary mt-1">{stream.error}</p>
+            </div>
           </div>
-          <Button variant="secondary" size="sm" onClick={handleReset} icon={<RefreshCw size={14} />}>
+          <Button variant="secondary" onClick={handleReset} icon={<RefreshCw size={16} />}>
             Повторить
           </Button>
         </div>

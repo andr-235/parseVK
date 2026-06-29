@@ -39,13 +39,13 @@ export function VkExportForm({ onSubmit, disabled, isLoading }: VkExportFormProp
           min="1"
           value={userId}
           onChange={(e) => { setUserId(e.target.value); setError(null) }}
-          placeholder="Например: 12345"
+          placeholder="12345"
           disabled={disabled}
           aria-invalid={!!error}
         />
         {error && <p className="text-xs text-danger" role="alert">{error}</p>}
       </div>
-      <Button type="submit" variant="primary" size="sm" disabled={disabled || isLoading}>
+      <Button type="submit" variant="primary" disabled={disabled || isLoading}>
         {isLoading ? (
           <span className="flex items-center gap-1.5">
             <Spinner size={14} />
