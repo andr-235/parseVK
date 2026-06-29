@@ -14,6 +14,8 @@ export type FriendsExportStreamState = {
 }
 
 const MAX_LOG_LINES = 500
+const RETRY_MAX_ATTEMPTS = 5
+const RETRY_BASE_DELAY_MS = 200
 
 function parseSseChunk(buffer: string): { events: SseEvent[]; rest: string } {
   const events: SseEvent[] = []
@@ -79,7 +81,7 @@ export function useFriendsExportStream(
 
     let buffer = ''
 
-    async function connect() {
+    async function connect(attempt = 0) {
       try {
         const token = getAccessToken()
         const headers: Record<string, string> = { Accept: 'text/event-stream' }
@@ -88,6 +90,13 @@ export function useFriendsExportStream(
         }
 
         const response = await fetch(url, { headers, signal: abortController.signal })
+
+        if (response.status === 404 && attempt < RETRY_MAX_ATTEMPTS) {
+          const delay = RETRY_BASE_DELAY_MS * 2 ** attempt
+          console.log('[FIX] SSE 404, retrying', { attempt, delay, url })
+          await new Promise((resolve) => setTimeout(resolve, delay))
+          return connect(attempt + 1)
+        }
 
         if (!response.ok) {
           console.warn('[FIX] SSE connection failed', { status: response.status, url })

@@ -126,4 +126,36 @@ describe('useFriendsExportStream', () => {
     expect(result.current.logs).toEqual([])
     expect(result.current.error).toBeNull()
   })
+
+  it('should retry on 404 and succeed when job becomes available', async () => {
+    vi.useRealTimers()
+
+    let callCount = 0
+    const mockFetch = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({ ok: false, status: 404 })
+      }
+      return Promise.resolve({ ok: true, body: { getReader: () => createMockReader([]) } })
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    renderHook(() => useFriendsExportStream('job-123', mockStreamUrlBuilder))
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2), { timeout: 5000 })
+  })
+
+  it('should set error after exhausting 404 retries', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 404 })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = renderHook(() => useFriendsExportStream('job-123', mockStreamUrlBuilder))
+
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('error')
+      expect(result.current.error).toContain('404')
+    })
+  })
 })
