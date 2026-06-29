@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SseEvent } from '../api/friends-export-types'
+import { getAccessToken } from '../api/client'
 
 type StreamStatus = 'idle' | 'connecting' | 'running' | 'done' | 'error'
 
@@ -14,6 +15,27 @@ export type FriendsExportStreamState = {
 
 const MAX_LOG_LINES = 500
 
+function parseSseChunk(buffer: string): { events: SseEvent[]; rest: string } {
+  const events: SseEvent[] = []
+  const parts = buffer.split('\n\n')
+  const rest = parts.pop() ?? ''
+
+  for (const part of parts) {
+    for (const line of part.split('\n')) {
+      if (line.startsWith('data: ')) {
+        try {
+          const parsed: SseEvent = JSON.parse(line.slice(6))
+          events.push(parsed)
+        } catch (err) {
+          console.warn('[useFriendsExportStream] parse error:', err)
+        }
+      }
+    }
+  }
+
+  return { events, rest }
+}
+
 export function useFriendsExportStream(
   jobId: string | null,
   streamUrlBuilder: (jobId: string) => string,
@@ -23,93 +45,129 @@ export function useFriendsExportStream(
   const [status, setStatus] = useState<StreamStatus>('idle')
   const [xlsxPath, setXlsxPath] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const eventSourceRef = useRef<EventSource | null>(null)
-  const reconnectAttemptRef = useRef(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const statusRef = useRef<StreamStatus>('idle')
+
+  const setStatusSafe = useCallback((newStatus: StreamStatus) => {
+    statusRef.current = newStatus
+    setStatus(newStatus)
+  }, [])
 
   const reset = useCallback(() => {
     setLogs([])
     setProgress({ fetchedCount: 0, totalCount: 0 })
-    setStatus('idle')
+    setStatusSafe('idle')
     setXlsxPath(null)
     setError(null)
-    reconnectAttemptRef.current = false
-  }, [])
+  }, [setStatusSafe])
 
   useEffect(() => {
     if (!jobId) {
-      setStatus('idle')
+      setStatusSafe('idle')
       return
     }
 
     const url = streamUrlBuilder(jobId)
     console.log('[useFriendsExportStream] connecting:', url)
 
-    setStatus('connecting')
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
+    setStatusSafe('connecting')
     setError(null)
     setXlsxPath(null)
 
-    const es = new EventSource(url)
-    eventSourceRef.current = es
+    let buffer = ''
 
-    es.onmessage = (event: MessageEvent) => {
+    async function connect() {
       try {
-        const parsed: SseEvent = JSON.parse(event.data)
-        console.log('[useFriendsExportStream] event:', parsed.type, parsed.data)
+        const token = getAccessToken()
+        const headers: Record<string, string> = { Accept: 'text/event-stream' }
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+        }
 
-        if (parsed.type === 'progress') {
-          setProgress({
-            fetchedCount: parsed.data.fetchedCount,
-            totalCount: parsed.data.totalCount,
-          })
-          if (status === 'connecting') {
-            setStatus('running')
+        const response = await fetch(url, { headers, signal: abortController.signal })
+
+        if (!response.ok) {
+          console.warn('[FIX] SSE connection failed', { status: response.status, url })
+          if (response.status === 401) {
+            setError('Unauthorized — session expired')
+          } else {
+            setError(`Connection failed: ${response.status}`)
           }
-        } else if (parsed.type === 'log') {
-          setLogs((prev) => {
-            const next = [...prev, parsed]
-            return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next
-          })
-          if (status === 'connecting') {
-            setStatus('running')
+          setStatusSafe('error')
+          return
+        }
+
+        const reader = response.body?.getReader()
+        if (!reader) {
+          setStatusSafe('error')
+          setError('Stream not supported')
+          return
+        }
+
+        const decoder = new TextDecoder()
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const { events, rest } = parseSseChunk(buffer)
+          buffer = rest
+
+          for (const parsed of events) {
+            console.log('[useFriendsExportStream] event:', parsed.type, parsed.data)
+
+            if (parsed.type === 'progress') {
+              setProgress({
+                fetchedCount: parsed.data.fetchedCount,
+                totalCount: parsed.data.totalCount,
+              })
+              if (statusRef.current === 'connecting') {
+                setStatusSafe('running')
+              }
+            } else if (parsed.type === 'log') {
+              setLogs((prev) => {
+                const next = [...prev, parsed]
+                return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next
+              })
+              if (statusRef.current === 'connecting') {
+                setStatusSafe('running')
+              }
+            } else if (parsed.type === 'done') {
+              console.log('[useFriendsExportStream] done:', parsed.data)
+              setXlsxPath(parsed.data.xlsxPath)
+              setStatusSafe('done')
+              abortController.abort()
+            } else if (parsed.type === 'error') {
+              console.log('[useFriendsExportStream] error:', parsed.data.message)
+              setError(parsed.data.message)
+              setStatusSafe('error')
+              abortController.abort()
+            }
           }
-        } else if (parsed.type === 'done') {
-          console.log('[useFriendsExportStream] done:', parsed.data)
-          setXlsxPath(parsed.data.xlsxPath)
-          setStatus('done')
-          es.close()
-          eventSourceRef.current = null
-        } else if (parsed.type === 'error') {
-          console.log('[useFriendsExportStream] error:', parsed.data.message)
-          setError(parsed.data.message)
-          setStatus('error')
-          es.close()
-          eventSourceRef.current = null
         }
       } catch (err) {
-        console.warn('[useFriendsExportStream] parse error:', err)
+        if (abortController.signal.aborted) {
+          console.log('[useFriendsExportStream] aborted')
+          return
+        }
+        console.error('[useFriendsExportStream] connection error:', err)
+        setStatusSafe('error')
+        setError('Connection lost')
       }
     }
 
-    es.onerror = () => {
-      console.warn('[useFriendsExportStream] connection error')
-      if (!reconnectAttemptRef.current && es.readyState !== EventSource.CLOSED) {
-        reconnectAttemptRef.current = true
-        console.log('[useFriendsExportStream] attempting reconnect...')
-        es.close()
-        return
-      }
-      setError('Connection lost')
-      setStatus('error')
-      es.close()
-      eventSourceRef.current = null
-    }
+    connect()
 
     return () => {
       console.log('[useFriendsExportStream] cleanup')
-      es.close()
-      eventSourceRef.current = null
+      abortController.abort()
+      abortControllerRef.current = null
     }
-  }, [jobId, streamUrlBuilder])
+  }, [jobId, streamUrlBuilder, setStatusSafe])
 
   return { logs, progress, status, xlsxPath, error, reset }
 }
