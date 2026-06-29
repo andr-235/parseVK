@@ -1,3 +1,14 @@
+# [0.51.0](https://github.com/andr-235/parseVK/compare/v0.50.5...v0.51.0) (2026-06-29)
+
+
+### Features
+
+* **front:** add shared friends export types ([232c860](https://github.com/andr-235/parseVK/commit/232c860709eb6493b2607b938efb94219ffacbe6))
+* **front:** add shared useFriendsExportStream hook ([f3ffa67](https://github.com/andr-235/parseVK/commit/f3ffa677fb6added1855b8754bb3ff8e170aa6c2))
+* **front:** add VK/OK friends export API modules ([923a530](https://github.com/andr-235/parseVK/commit/923a530af790b6e21706999ea1d8e039d586312c))
+* **front:** implement OK friends export page ([db0e859](https://github.com/andr-235/parseVK/commit/db0e859cd8b7c4bc3e27a4589e18b10cfc81d102))
+* **front:** implement VK friends export page ([7e21c5c](https://github.com/andr-235/parseVK/commit/7e21c5ced90a2245f664bf634b4327aec3ac8681))
+
 ## [0.50.5](https://github.com/andr-235/parseVK/compare/v0.50.4...v0.50.5) (2026-06-26)
 
 
