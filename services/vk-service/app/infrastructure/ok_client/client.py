@@ -76,8 +76,9 @@ class OkApiClient:
 
         query_params = {**api_params, "sig": sig}
         if self.access_token:
-            token_key = "session_key" if is_users_info else "access_token"
-            query_params[token_key] = self.access_token
+            query_params["session_key"] = self.access_token
+            if not is_users_info:
+                query_params["access_token"] = self.access_token
 
         if is_users_info:
             url_path = "/fb.do"
@@ -90,7 +91,7 @@ class OkApiClient:
         # Mask credentials in log message
         masked_query_params = {}
         for k, v in query_params.items():
-            if k in ("session_key", "sig"):
+            if k in ("access_token", "session_key", "sig"):
                 masked_query_params[k] = "***"
             else:
                 masked_query_params[k] = v
