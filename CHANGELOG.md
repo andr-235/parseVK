@@ -1,3 +1,10 @@
+## [0.52.4](https://github.com/andr-235/parseVK/compare/v0.52.3...v0.52.4) (2026-06-30)
+
+
+### Bug Fixes
+
+* **vk-service:** commit job before background task and add OK API credentials ([cb1a31d](https://github.com/andr-235/parseVK/commit/cb1a31de6682626f40cbe55e04b58526c03c1e30))
+
 ## [0.52.3](https://github.com/andr-235/parseVK/compare/v0.52.2...v0.52.3) (2026-06-29)
 
 
