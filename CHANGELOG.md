@@ -1,3 +1,10 @@
+## [0.52.6](https://github.com/andr-235/parseVK/compare/v0.52.5...v0.52.6) (2026-06-30)
+
+
+### Bug Fixes
+
+* **ok-client:** send both access_token and session_key for REST API methods ([7e67fe9](https://github.com/andr-235/parseVK/commit/7e67fe93691e601787938589591cb40c4d0f217a))
+
 ## [0.52.5](https://github.com/andr-235/parseVK/compare/v0.52.4...v0.52.5) (2026-06-30)
 
 
